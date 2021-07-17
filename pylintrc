@@ -1,0 +1,2 @@
+init-hook="./src"
+disable=reportMissingModuleSource
