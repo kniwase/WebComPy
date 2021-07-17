@@ -1,2 +1,2 @@
-init-hook="./src"
+init-hook="./webcompy"
 disable=reportMissingModuleSource
