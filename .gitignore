@@ -137,3 +137,4 @@ cython_debug/
 
 # dev dir
 dev/*
+index.html
