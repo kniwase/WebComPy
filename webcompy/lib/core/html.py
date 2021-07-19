@@ -1,7 +1,10 @@
-from typing import List, Literal, Tuple
+from typing import Any, List, Literal, Tuple
 from itertools import zip_longest
 from browser import window, load
 from javascript import RegExp, String
+
+
+parseFromString = window.DOMParser.new().parseFromString
 
 
 self_closing_tag_pattern = RegExp.new(r'<([a-zA-Z0-9-]+)([^<>]*?)/>', 'g')
@@ -22,6 +25,12 @@ def cleanse_html(html_text: str) -> str:
     html_text = (' '.join(lines)).replace('> ', '>')
     html_text = conv_self_closing_tags(html_text)
     return html_text
+
+
+def parse_html(html_text: str) -> List[Any]:
+    doc = parseFromString(cleanse_html(html_text), 'text/html')
+    nodes: List[Any] = doc.getElementsByTagName('body')[0].childNodes
+    return nodes
 
 
 def parse_markdown(markdown_text: str) -> str:
