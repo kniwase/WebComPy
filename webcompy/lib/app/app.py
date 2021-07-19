@@ -13,7 +13,8 @@ class ComponentsOption(TypedDict):
 def init_webcompy(
     components: Iterable[Union[Type[WebcompyComponent], ComponentsOption]] = [],
     routes: Iterable[RoutesOption] = [],
-    global_styles: Iterable[Union[Style, ImportCss]] = []
+    global_styles: Iterable[Union[Style, ImportCss]] = [],
+    on_loaded: Optional[Callable[[], Any]] = None
 ) -> None:
     routes_frozen = tuple(routes)
 
@@ -31,6 +32,9 @@ def init_webcompy(
             styles.append(scoped_css)
 
     document.head <= html.STYLE('\n'.join(styles))
+
+    if on_loaded is not None:
+        on_loaded()
 
 
 def get_component_name_pair(
