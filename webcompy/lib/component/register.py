@@ -1,4 +1,4 @@
-from typing import (Any, Optional, Type, Callable)
+from typing import (Any, Dict, Optional, Type, Callable)
 from browser import webcomponent
 import re
 from .utils import get_component_class_name
@@ -8,11 +8,15 @@ from ..core import pop_obj
 
 def register_webcomponent(component: Type[Any], name: Optional[str] = None):
     class WebComponent:
+        attachShadow: Callable[[Dict[str, Any]], Any]
         appendChild: Callable[[Any], None]
-        shadow_root: Any
+        root: Any
 
         def __init__(self) -> None:
-            self.root = self
+            if component._use_shadow_dom:
+                self.root = self.attachShadow({'mode': 'open'})
+            else:
+                self.root = self
             self._webcompy_component = component(self, self.root)
 
         @property
