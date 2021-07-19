@@ -27,7 +27,7 @@ def init_webcompy(
     for component, name in component_name_pair:
         element_name = register_webcomponent(component, name)
         scoped_css = '\n'.join(f'{element_name} {style}'
-                               for style in component.scoped_styles)
+                               for style in component.get_scoped_styles())
         if scoped_css:
             styles.append(scoped_css)
 

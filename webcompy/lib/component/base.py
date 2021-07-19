@@ -23,7 +23,7 @@ parseFromString = window.DOMParser.new().parseFromString
 
 
 class WebcompyComponentBase(metaclass=ABCMeta):
-    scoped_styles: List[Style]
+    _scoped_styles: List[Style]
 
     _conponent: Any
     _refs: Dict[str, Any]
@@ -49,6 +49,11 @@ class WebcompyComponentBase(metaclass=ABCMeta):
                                 vdom_mapping,
                                 rdom_mapping)
         self.on_rendered()
+
+    @classmethod
+    @final
+    def get_scoped_styles(cls) -> List[Style]:
+        return cls._scoped_styles
 
     @property
     @final

@@ -6,9 +6,7 @@ from ..core import Style
 def define_component(template: str, styles: List[Style] = []):
     def deco(cls: Type[WebcompyComponentBase]):
         class WebcompyComponent(cls):
-            _template = template
-            scoped_styles = styles
-            _refs = {}
+            cls._scoped_styles = styles
 
             def __init__(self, conponent: Any) -> None:
                 self._conponent = conponent
