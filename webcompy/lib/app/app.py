@@ -1,4 +1,13 @@
-from typing import Iterable, Optional, Type, Union, TypedDict, List, Tuple
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    Optional,
+    Type,
+    Union,
+    TypedDict,
+    List,
+    Tuple)
 from ..component import WebcompyComponent, register_webcomponent
 from browser import html, document
 from ..core import Style, ImportCss

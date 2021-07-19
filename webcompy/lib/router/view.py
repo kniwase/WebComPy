@@ -20,17 +20,18 @@ def create_router_view(routes: Iterable[RoutesOption]):
 
         def __init__(self) -> None:
             self.routes = self.map_routes(routes)
-            self._template = self.generate_template()
+            self._set_template(self.generate_template())
             window.onhashchange = self.onhashchange
 
         def map_routes(self, routes: Iterable[RoutesOption]):
             return {r['path']: get_component_tag_name(r['component'])
                     for r in routes}
+        
+        def on_connected(self) -> None:
+            self._set_template(self.generate_template())
 
         def onhashchange(self, _: Any):
-            self._template = self.generate_template()
-            self.init_vdom()
-            self.render()
+            self._set_template(self.generate_template())
 
         def generate_template(self):
             uri = window.location.hash[1:]

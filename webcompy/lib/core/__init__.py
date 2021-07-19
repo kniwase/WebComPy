@@ -1,12 +1,12 @@
 from .style import (Style, ImportCss)
 from .dom import (update_dom, generate_rnode_mapping)
 from .obj_repository import (add_obj, pop_obj)
-from .html import (parse_markdown, cleanse_html, split_text_nodes)
+from .html import (parse_html, parse_markdown, cleanse_html, split_text_nodes)
 from .uniq_id import (generate_uid, generate_uid_str)
 from .reactive import (
     Reactive,
-    reactive_text_evaluater,
-    reactive_prop_evaluater)
+    eval_reactive_text,
+    eval_reactive_prop)
 from .event import (
     register_emitted_arg,
     get_callback_function,
@@ -29,12 +29,13 @@ __all__ = [
     'TypeAttributes',
     'TypeAttributeValue',
     'EventCallback',
+    'parse_html',
     'parse_markdown',
     'cleanse_html',
     'split_text_nodes',
     'Reactive',
-    'reactive_text_evaluater',
-    'reactive_prop_evaluater',
+    'eval_reactive_text',
+    'eval_reactive_prop',
     'add_obj',
     'pop_obj',
     'get_callback_function',

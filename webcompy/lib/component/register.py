@@ -12,7 +12,8 @@ def register_webcomponent(component: Type[Any], name: Optional[str] = None):
         shadow_root: Any
 
         def __init__(self) -> None:
-            self._webcompy_component = component(self)
+            self.root = self
+            self._webcompy_component = component(self, self.root)
 
         @property
         def is_webcompy_component(self) -> bool:
@@ -20,7 +21,6 @@ def register_webcomponent(component: Type[Any], name: Optional[str] = None):
 
         def connectedCallback(self):
             self._webcompy_component.on_connected()
-            self._webcompy_component.init_vdom()
             self._webcompy_component.render()
 
         def disconnectedCallback(self):
