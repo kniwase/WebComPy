@@ -66,7 +66,7 @@ class Reactive(Generic[T]):
         return self.__setter_callbacks
 
 
-def reactive_text_evaluater(
+def eval_reactive_text(
     stat: str,
     globals: Dict[str, Any],
     locals: Optional[Dict[str, Any]] = {}
@@ -80,7 +80,7 @@ def reactive_text_evaluater(
         return repr(value)
 
 
-def reactive_prop_evaluater(
+def eval_reactive_prop(
     stat: str,
     globals: Dict[str, Any],
     locals: Optional[Dict[str, Any]] = {}
