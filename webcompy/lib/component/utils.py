@@ -8,9 +8,9 @@ def camel_replacer(match: str, *_: str) -> str:
     return '-' + match.lower()
 
 
-def convert_camel_to_kebab(text: str):
+def convert_camel_to_kebab(text: str) -> str:
     return String.new(text).replace(camel_pattern, camel_replacer).strip('-')
 
 
-def convert_snake_to_kebab(text: str):
+def convert_snake_to_kebab(text: str) -> str:
     return String.new(text).replace('_', '-')

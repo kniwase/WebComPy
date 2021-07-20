@@ -3,12 +3,12 @@ from typing import (
     Callable,
     Dict,
     List,
-    NewType,
     Optional,
     Union,
     cast,
     final)
 from browser import window
+from abc import ABCMeta, abstractmethod
 from ..core import (
     VNode,
     VTextNode,
@@ -26,7 +26,7 @@ from ..core import (
     generate_uid_str)
 
 
-class WebcompyComponentBase:
+class WebcompyComponentBase(metaclass=ABCMeta):
     _scoped_styles: List[Style]
     _use_shadow_dom: bool
 
@@ -38,27 +38,6 @@ class WebcompyComponentBase:
 
     __template_nodes: List[Any]
     __vdom: List[Union[VNode, VTextNode]]
-
-    @final
-    def render(self):
-        if not hasattr(self, '_WebcompyComponentBase__vdom'):
-            self.__vdom = self._parse_nodes(self.__template_nodes)
-        vdom_mapping = generate_vnode_mapping(self.__vdom)
-        rdom_mapping = generate_rnode_mapping(self._root.child_nodes)
-        self._refs = update_dom(self._root,
-                                vdom_mapping,
-                                rdom_mapping)
-        self.on_rendered()
-
-    @classmethod
-    @final
-    def get_scoped_styles(cls) -> List[Style]:
-        return cls._scoped_styles
-
-    @classmethod
-    @final
-    def get_tag_name(cls) -> str:
-        return cls._tag_name
 
     @property
     @final
@@ -82,6 +61,17 @@ class WebcompyComponentBase:
         ...
 
     @final
+    def _render(self):
+        if not hasattr(self, '_WebcompyComponentBase__vdom'):
+            self.__vdom = self._parse_nodes(self.__template_nodes)
+        vdom_mapping = generate_vnode_mapping(self.__vdom)
+        rdom_mapping = generate_rnode_mapping(self._root.child_nodes)
+        self._refs = update_dom(self._root,
+                                vdom_mapping,
+                                rdom_mapping)
+        self.on_rendered()
+
+    @final
     def _get_component_vars(self):
         return self._component_vars
 
@@ -91,7 +81,7 @@ class WebcompyComponentBase:
         if hasattr(self, '_WebcompyComponentBase__vdom'):
             self.__vdom = self._parse_nodes(self.__template_nodes)
             if hasattr(self, '_root'):
-                self.render()
+                self._render()
 
     @final
     def _eval_statement(
@@ -172,4 +162,26 @@ class WebcompyComponentBase:
         return parent
 
 
-WebcompyComponent = NewType('WebcompyComponent', WebcompyComponentBase)
+class WebcompyComponent(WebcompyComponentBase):
+    @abstractmethod
+    def __init__(self, conponent: Any, root: Any) -> None:
+        ...
+
+    @abstractmethod
+    def get_render(self) -> Callable[[], None]:
+        ...
+
+    @classmethod
+    @abstractmethod
+    def get_shadow_dom_mode(cls) -> bool:
+        ...
+
+    @classmethod
+    @abstractmethod
+    def get_scoped_styles(cls) -> List[Style]:
+        ...
+
+    @classmethod
+    @abstractmethod
+    def get_tag_name(cls) -> str:
+        ...

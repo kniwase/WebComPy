@@ -1,21 +1,23 @@
 from typing import (Any, Dict, Type, Callable)
 from browser import webcomponent
+from .base import WebcompyComponent
 from .prop import get_observed_attributes, get_prop_callback
 from ..core import pop_obj
 
 
-def register_webcomponent(component: Type[Any]):
+def register_webcomponent(component: Type[WebcompyComponent]):
     class WebComponent:
         attachShadow: Callable[[Dict[str, Any]], Any]
         appendChild: Callable[[Any], None]
         root: Any
 
         def __init__(self) -> None:
-            if component._use_shadow_dom:
+            if component.get_shadow_dom_mode():
                 self.root = self.attachShadow({'mode': 'open'})
             else:
                 self.root = self
             self._webcompy_component = component(self, self.root)
+            self._render = self._webcompy_component.get_render()
 
         @property
         def is_webcompy_component(self) -> bool:
@@ -23,7 +25,7 @@ def register_webcomponent(component: Type[Any]):
 
         def connectedCallback(self):
             self._webcompy_component.on_connected()
-            self._webcompy_component.render()
+            self._render()
 
         def disconnectedCallback(self):
             self._webcompy_component.on_disconnected()

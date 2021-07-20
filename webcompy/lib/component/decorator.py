@@ -31,10 +31,12 @@ FuncStyleComponent = Union[
 ]
 
 
-def define_component(template: str,
-                     styles: List[Style] = [],
-                     tag_name: Optional[str] = None,
-                     use_shadow_dom: bool = False):
+def define_component(
+    template: str,
+    styles: List[Style] = [],
+    use_shadow_dom: bool = False,
+    tag_name: Optional[str] = None,
+):
     @overload
     def deco(
         definition: FuncStyleComponent
@@ -48,22 +50,19 @@ def define_component(template: str,
         ...
 
     def deco(definition: Any) -> Type[WebcompyComponent]:
-        def get_tag_name() -> str:
-            if tag_name is not None:
-                return tag_name
-            elif isinstance(definition, FunctionType):
-                return convert_snake_to_kebab(definition.__name__)
-            elif issubclass(definition, WebcompyComponentBase):
-                return convert_camel_to_kebab(definition.__name__)
-            else:
-                raise TypeError()
-
+        name = None
+        if tag_name is not None:
+            name = tag_name
         if isinstance(definition, FunctionType):
+            if name is None:
+                name = convert_snake_to_kebab(definition.__name__)
             ComponentWithVars = function_component_factory(
                 definition,
-                get_tag_name
+                name
             )
         elif issubclass(definition, WebcompyComponentBase):
+            if name is None:
+                name = convert_camel_to_kebab(definition.__name__)
             ComponentWithVars = class_component_factory(
                 definition
             )
@@ -71,7 +70,7 @@ def define_component(template: str,
             raise TypeError()
 
         class Component(ComponentWithVars):
-            _tag_name = get_tag_name()
+            _tag_name = name
 
             _scoped_styles = styles
             _use_shadow_dom = use_shadow_dom
@@ -83,6 +82,21 @@ def define_component(template: str,
                 self._conponent = conponent
                 self._root = root
 
+            def get_render(self):
+                return self._render
+
+            @classmethod
+            def get_shadow_dom_mode(cls) -> bool:
+                return cls._use_shadow_dom
+
+            @classmethod
+            def get_scoped_styles(cls) -> List[Style]:
+                return cls._scoped_styles
+
+            @classmethod
+            def get_tag_name(cls) -> str:
+                return cls._tag_name
+
         return cast(Type[WebcompyComponent], Component)
     return deco
 
@@ -91,10 +105,7 @@ def get_prop_callback_name(name: str):
     return f'on_change_prop_{name}'
 
 
-def register_props(
-    definition: FuncStyleComponent,
-    get_tag_name: Callable[[], str],
-):
+def register_props(definition: FuncStyleComponent, tag_name: str):
     params = tuple(signature(definition).parameters.items())
     props_def: Dict[str, Reactive[Any]] = {}
     if len(params) >= 1:
@@ -109,7 +120,6 @@ def register_props(
         else:
             raise TypeError('Props must be a dict.')
 
-    tag_name = get_tag_name()
     for name in props_def:
         set_prop_callback(name, tag_name, get_prop_callback_name(name))
 
@@ -140,11 +150,8 @@ def setup_factory(
     return setup
 
 
-def function_component_factory(
-    definition: FuncStyleComponent,
-    get_tag_name: Callable[[], str],
-):
-    params, props_def = register_props(definition, get_tag_name)
+def function_component_factory(definition: FuncStyleComponent, tag_name: str):
+    params, props_def = register_props(definition, tag_name)
     setup = setup_factory(definition, params, props_def)
 
     class Component(WebcompyComponentBase):
@@ -163,9 +170,7 @@ def function_component_factory(
     return Component
 
 
-def class_component_factory(
-    cls: Type[WebcompyComponentBase]
-):
+def class_component_factory(cls: Type[WebcompyComponentBase]):
     class Component(cls):
         def __init__(self) -> None:
             super().__init__()
