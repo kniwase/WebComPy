@@ -1,10 +1,9 @@
-from typing import Iterable, Any, Type, TypedDict
+from typing import Iterable, Any, Type, TypedDict, cast
 from browser import window
 from ..component import (
     WebcompyComponentBase,
     WebcompyComponent,
-    define_component,
-    get_component_tag_name
+    define_component
 )
 
 
@@ -13,7 +12,9 @@ class RoutesOption(TypedDict):
     component: Type[WebcompyComponent]
 
 
-def create_router_view(routes: Iterable[RoutesOption]):
+def create_router_view(
+        routes: Iterable[RoutesOption]
+) -> Type[WebcompyComponent]:
     @define_component('')
     class RouterView(WebcompyComponentBase):
         prop: dict[str, str] = {'path': ''}
@@ -26,7 +27,7 @@ def create_router_view(routes: Iterable[RoutesOption]):
         def map_routes(self, routes: Iterable[RoutesOption]):
             return {r['path']: r['component'].tag_name
                     for r in routes}
-        
+
         def on_connected(self) -> None:
             self._set_template(self.generate_template())
 
@@ -43,4 +44,4 @@ def create_router_view(routes: Iterable[RoutesOption]):
             else:
                 return "<div></div>"
 
-    return RouterView
+    return cast(Type[WebcompyComponent], RouterView)

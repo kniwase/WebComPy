@@ -1,4 +1,13 @@
-from typing import (Any, Callable, Dict, List, Optional, Union, cast, final)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    NewType,
+    Optional,
+    Union,
+    cast,
+    final)
 from browser import window
 from abc import ABCMeta, abstractmethod
 from ..core import (
@@ -168,4 +177,4 @@ class WebcompyComponentBase(metaclass=ABCMeta):
         return parent
 
 
-WebcompyComponent = WebcompyComponentBase
+WebcompyComponent = NewType('WebcompyComponent', WebcompyComponentBase)
