@@ -4,8 +4,7 @@ from typing import (
     Iterable,
     Optional,
     Type,
-    Union,
-    List)
+    Union)
 from ..component import WebcompyComponent, register_webcomponent
 from browser import html, document
 from ..core import Style, ImportCss
@@ -18,13 +17,8 @@ def init_webcompy(
     global_styles: Iterable[Union[Style, ImportCss]] = [],
     on_loaded: Optional[Callable[[], Any]] = None
 ) -> None:
-    routes_frozen = tuple(routes)
-
-    all_components: List[Type[WebcompyComponent]] = []
-    all_components.extend(components)
-    all_components.extend(r['component'] for r in routes_frozen)
-
-    router_component = create_router_view(routes_frozen)
+    router_component = create_router_view(routes)
+    all_components = list(components)
     all_components.append(router_component)
 
     styles = ['\n'.join(map(str, global_styles))]

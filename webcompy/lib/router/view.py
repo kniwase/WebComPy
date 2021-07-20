@@ -42,6 +42,6 @@ def create_router_view(
             elif '*' in self.routes:
                 return '<{tag} :route="prop" />'.format(tag=self.routes['*'])
             else:
-                return "<div></div>"
+                return "<div><span>Not Found</span></div>"
 
     return cast(Type[WebcompyComponent], RouterView)
