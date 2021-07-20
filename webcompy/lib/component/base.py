@@ -9,7 +9,6 @@ from typing import (
     cast,
     final)
 from browser import window
-from abc import ABCMeta, abstractmethod
 from ..core import (
     VNode,
     VTextNode,
@@ -27,7 +26,7 @@ from ..core import (
     generate_uid_str)
 
 
-class WebcompyComponentBase(metaclass=ABCMeta):
+class WebcompyComponentBase:
     _scoped_styles: List[Style]
     _use_shadow_dom: bool
 
@@ -39,11 +38,6 @@ class WebcompyComponentBase(metaclass=ABCMeta):
 
     __template_nodes: List[Any]
     __vdom: List[Union[VNode, VTextNode]]
-
-    @staticmethod
-    @abstractmethod
-    def get_element_name() -> str:
-        ...
 
     @final
     def render(self):

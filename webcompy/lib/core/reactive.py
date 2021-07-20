@@ -64,6 +64,10 @@ class Reactive(Generic[T]):
     @property
     def setter_actions(self):
         return self.__setter_callbacks
+    
+    def clone(self):
+        new: Reactive[T] = Reactive(self.__value)
+        return new
 
 
 def eval_reactive_text(
