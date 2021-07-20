@@ -6,69 +6,57 @@ from typing import (
     Union,
     Optional,
     Callable,
-    Coroutine
+    Coroutine,
+    cast
 )
 from .event import event_handler_wrapper
 from .obj_repository import add_obj
+from browser import html, document
+from abc import abstractmethod
 
 
 EventCallback = Union[Callable[[], Union[None, Coroutine[Any, Any, None]]],
                       Callable[[Any], Union[None, Coroutine[Any, Any, None]]]]
-TypeAttributeValue = Union[str, EventCallback, Any, None]
+TypeAttributeValue = Union[str, EventCallback, None]
 TypeAttributes = Dict[str, TypeAttributeValue]
 
 
 class VNodeBase:
-    __rnode: Optional[Any] = None
+    def __init__(self, tag: str) -> None:
+        self._tag: str = tag.lower()
+        self._parent: Optional[VNode] = None
 
-    def __init__(
-        self,
-        tag: str,
-        attrs: Optional[TypeAttributes] = None
-    ) -> None:
-        self.tag: str = tag.lower()
-        self.children: List[Union[VNode, VTextNode]] = []
-        self.parent: Optional[VNodeBase] = None
-        if attrs is not None:
-            self.set_attrs(attrs)
+        self._rnode: Optional[Any] = None
 
-    def set_attrs(self, attrs: TypeAttributes):
-        self.event_callbacks = self.__extract_event_callback(attrs)
-        self.attrs = self.__convert_attributes(attrs)
+    @property
+    def tag(self):
+        return self._tag
+
+    @property
+    def parent(self):
+        return self._parent
 
     @property
     def rnode(self):
-        return self.__rnode
+        return self._rnode
 
     @rnode.setter
     def rnode(self, rnode: Any):
-        self.__rnode = rnode
+        self._rnode = rnode
 
-    @staticmethod
-    def __extract_event_callback(attrs: TypeAttributes):
-        return {
-            k[1:]: event_handler_wrapper(v)
-            for k, v in attrs.items()
-            if k.startswith('@') and callable(v)
-        }
-
-    @staticmethod
-    def __convert_attributes(attrs: TypeAttributes):
-        ret: Dict[str, Optional[str]] = {}
-        props = ((k, v) for k, v in attrs.items() if not k.startswith('@'))
-        for k, v in props:
-            k_lower = k.lower()
-            if isinstance(v, str):
-                ret[k_lower] = v
-            elif v is None:
-                ret[k_lower] = None
-        return ret
+    @abstractmethod
+    def generate_rnode(self) -> Any:
+        ...
 
 
 class VTextNode(VNodeBase):
     def __init__(self, text: str) -> None:
-        super().__init__('#text', {})
+        super().__init__('#text')
         self.text: str = text
+
+    def generate_rnode(self) -> Any:
+        self._rnode = document.createTextNode(self.text)
+        return self._rnode
 
 
 class VReactiveTextNode(VTextNode):
@@ -87,28 +75,82 @@ class VNode(VNodeBase):
         tag: str,
         attrs: Optional[TypeAttributes] = None
     ) -> None:
-        super().__init__(tag, attrs)
+        super().__init__(tag)
+
+        self.children: List[Union[VNode, VTextNode]] = []
+        self._attrs: dict[str, Optional[str]] = {}
+        self._event_callbacks: dict[str, EventCallback] = {}
+
+        if attrs is not None:
+            for name, value in attrs:
+                if self.__is_event_callback(name, value):
+                    func = cast(EventCallback, value)
+                    self.bind_event_callback(name, func)
+                else:
+                    self.set_attribute(name, value)
+
+    @property
+    def attrs(self):
+        return self._attrs
+
+    @property
+    def event_callbacks(self):
+        return self._event_callbacks
 
     def append_child(self, child: Any):
         self.children.append(self._set_parent(child))
 
+    def set_attribute(self, name: str, value: Union[str, Any, None]):
+        name = name.lower()
+        if isinstance(value, str) or value is None:
+            if name.startswith(':'):
+                del_target = name
+                name = name[1:]
+            else:
+                del_target = name[1:]
+        else:
+            if name.startswith(':'):
+                del_target = name[1:]
+            else:
+                del_target = name
+                name = ':' + name
+            value = add_obj(value, 'prop:')
+        # Update VNode Attrs
+        self._attrs[name] = value
+        if del_target in self._attrs:
+            del self._attrs[del_target]
+        # Update Real Node Attrs
+        if self.rnode:
+            self.rnode.attrs[name] = value
+            if del_target in self.rnode.attrs:
+                del self.rnode.attrs[del_target]
+
+    def bind_event_callback(self, event_name: str, func: EventCallback):
+        if callable(func):
+            if event_name.startswith('@'):
+                event_name = event_name[1:]
+            self._event_callbacks[event_name] = event_handler_wrapper(func)
+        else:
+            raise TypeError()
+
+    def generate_rnode(self) -> Any:
+        self._rnode: Any = html.maketag(self.tag)()
+        for name, value in self._attrs.items():
+            self._rnode.attrs[name] = value
+        for event_name, callback in self._event_callbacks.items():
+            self._rnode.bind(event_name, callback)
+        return self._rnode
+
     def _set_parent(self, child: Any):
         if isinstance(child, (VNode, VTextNode)):
-            child.parent = self
+            child._parent = self
             return child
         else:
             raise TypeError()
 
-    def update_attr(self, name: str, value: Union[str, Any, None]):
-        if self.rnode:
-            if isinstance(value, str) or value is None:
-                if name.startswith(':'):
-                    name = name[1:]
-                self.rnode.attrs[name] = value
-            else:
-                if not name.startswith(':'):
-                    name = ':' + name
-                self.rnode.attrs[name] = add_obj(value, 'prop:')
+    @staticmethod
+    def __is_event_callback(name: str, value: TypeAttributeValue):
+        return name.startswith('@') and callable(value)
 
 
 def generate_node_mapping(nodes: List[Union[VNode, VTextNode]],
@@ -117,7 +159,8 @@ def generate_node_mapping(nodes: List[Union[VNode, VTextNode]],
     for idx, node in enumerate(nodes):
         current: Tuple[int, ...] = (*parents, idx)
         mapping[current] = node
-        generate_node_mapping(node.children, current, mapping)
+        if isinstance(node, VNode):
+            generate_node_mapping(node.children, current, mapping)
     return mapping
 
 

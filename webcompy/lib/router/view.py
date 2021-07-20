@@ -1,10 +1,9 @@
-from typing import Iterable, Any, Type, TypedDict
+from typing import Iterable, Any, Type, TypedDict, cast
 from browser import window
 from ..component import (
     WebcompyComponentBase,
     WebcompyComponent,
-    define_component,
-    get_component_tag_name
+    define_component
 )
 
 
@@ -13,24 +12,27 @@ class RoutesOption(TypedDict):
     component: Type[WebcompyComponent]
 
 
-def create_router_view(routes: Iterable[RoutesOption]):
+def create_router_view(
+        routes: Iterable[RoutesOption]
+) -> Type[WebcompyComponent]:
     @define_component('')
     class RouterView(WebcompyComponentBase):
         prop: dict[str, str] = {'path': ''}
 
         def __init__(self) -> None:
             self.routes = self.map_routes(routes)
-            self._template = self.generate_template()
+            self._set_template(self.generate_template())
             window.onhashchange = self.onhashchange
 
         def map_routes(self, routes: Iterable[RoutesOption]):
-            return {r['path']: get_component_tag_name(r['component'])
+            return {r['path']: r['component'].get_tag_name()
                     for r in routes}
 
+        def on_connected(self) -> None:
+            self._set_template(self.generate_template())
+
         def onhashchange(self, _: Any):
-            self._template = self.generate_template()
-            self.init_vdom()
-            self.render()
+            self._set_template(self.generate_template())
 
         def generate_template(self):
             uri = window.location.hash[1:]
@@ -40,6 +42,6 @@ def create_router_view(routes: Iterable[RoutesOption]):
             elif '*' in self.routes:
                 return '<{tag} :route="prop" />'.format(tag=self.routes['*'])
             else:
-                return "<div></div>"
+                return "<div><span>Not Found</span></div>"
 
-    return RouterView
+    return cast(Type[WebcompyComponent], RouterView)

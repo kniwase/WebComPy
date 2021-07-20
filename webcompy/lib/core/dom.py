@@ -1,5 +1,4 @@
 from typing import (Any, Dict, List, Tuple, Union)
-from browser import html, document
 from .node import VNode, VTextNode
 
 
@@ -62,20 +61,11 @@ def update_node(rnode: Any,
 
 def create_node(vnode: Union[VNode, VTextNode],
                 refs: Dict[str, Any]):
+    node = vnode.generate_rnode()
     if isinstance(vnode, VNode):
-        attrs = {k: v for k, v in vnode.attrs.items() if k != 'style'}
-        node = html.maketag(vnode.tag)(**attrs)
-        for k, v in vnode.attrs.items():
-            if k == 'style':
-                node.attrs[k] = v
-        for event_name, callback in vnode.event_callbacks.items():
-            node.bind(event_name, callback)
         for key, value in vnode.attrs.items():
             if key == 'ref' and isinstance(value, str):
                 refs[value] = node
-    else:
-        node = document.createTextNode(vnode.text)
-    vnode.rnode = node
     return node
 
 
