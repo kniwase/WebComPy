@@ -25,7 +25,7 @@ def create_router_view(
             window.onhashchange = self.onhashchange
 
         def map_routes(self, routes: Iterable[RoutesOption]):
-            return {r['path']: r['component'].tag_name
+            return {r['path']: r['component'].get_tag_name()
                     for r in routes}
 
         def on_connected(self) -> None:

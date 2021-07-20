@@ -30,13 +30,13 @@ def register_webcomponent(component: Type[Any]):
             del self._webcompy_component
 
         def observedAttributes(self):
-            observed_attributes = get_observed_attributes(component.tag_name)
+            observed_attributes = get_observed_attributes(component.get_tag_name())
             return observed_attributes
 
         def attributeChangedCallback(
                 self, prop_name: str, _: int, new: str, __: Any):
             prop_callback_name = get_prop_callback(
-                component.tag_name,
+                component.get_tag_name(),
                 prop_name[1:] if prop_name.startswith(':') else prop_name
             )
             if prop_callback_name:
@@ -46,6 +46,4 @@ def register_webcomponent(component: Type[Any]):
                     value = pop_obj(new) if prop_name.startswith(':') else new
                     prop_callback(value)
 
-    webcomponent.define(component.tag_name, WebComponent)
-
-    return component.tag_name
+    webcomponent.define(component.get_tag_name(), WebComponent)

@@ -24,7 +24,7 @@ def init_webcompy(
     styles = ['\n'.join(map(str, global_styles))]
 
     for component in all_components:
-        scoped_css = '\n'.join(f'{component.tag_name} {style}'
+        scoped_css = '\n'.join(f'{component.get_tag_name()} {style}'
                                for style in component.get_scoped_styles())
         if scoped_css:
             styles.append(scoped_css)

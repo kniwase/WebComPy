@@ -28,8 +28,6 @@ from ..core import (
 
 
 class WebcompyComponentBase(metaclass=ABCMeta):
-    tag_name: str
-
     _scoped_styles: List[Style]
     _use_shadow_dom: bool
 
@@ -37,6 +35,7 @@ class WebcompyComponentBase(metaclass=ABCMeta):
     _root: Any
     _refs: Dict[str, Any]
     _component_vars: Dict[str, Any]
+    _tag_name: str
 
     __template_nodes: List[Any]
     __vdom: List[Union[VNode, VTextNode]]
@@ -61,6 +60,11 @@ class WebcompyComponentBase(metaclass=ABCMeta):
     @final
     def get_scoped_styles(cls) -> List[Style]:
         return cls._scoped_styles
+
+    @classmethod
+    @final
+    def get_tag_name(cls) -> str:
+        return cls._tag_name
 
     @property
     @final

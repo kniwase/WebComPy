@@ -51,7 +51,7 @@ def define_component(template: str,
             raise TypeError()
 
         class Component(ComponentWithVars):
-            tag_name = get_tag_name()
+            _tag_name = get_tag_name()
 
             _scoped_styles = styles
             _use_shadow_dom = use_shadow_dom

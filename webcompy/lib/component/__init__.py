@@ -8,7 +8,5 @@ __all__ = [
     'WebcompyComponent',
     'define_component',
     'register_webcomponent',
-    'get_observed_attributes',
-    'get_component_tag_name',
     'prop',
 ]
