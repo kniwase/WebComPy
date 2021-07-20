@@ -1,5 +1,6 @@
 from typing import Any, Callable, Type, Dict, List
 from .base import WebcompyComponentBase
+from .utils import convert_camel_to_kebab
 from javascript import RegExp, String
 
 
@@ -12,7 +13,8 @@ def prop(prop_name: str):
     def deco(method: Callable[[Type[WebcompyComponentBase], Any], None]):
         res = String.new(str(method)).match(pattern)
         if res:
-            component_name, method_name = res[1:]
+            component_name: str = convert_camel_to_kebab(res[1])
+            method_name: str = res[2]
             if component_name not in repository:
                 repository[component_name] = {}
             repository[component_name][prop_name] = method_name
@@ -22,7 +24,8 @@ def prop(prop_name: str):
 
 def get_observed_attributes(component_name: str) -> List[str]:
     if component_name in repository:
-        prop_names = ((name, ':' + name) for name in repository[component_name].keys())
+        prop_names = ((name, ':' + name)
+                      for name in repository[component_name].keys())
         return [name for names in prop_names for name in names]
     else:
         return list()
