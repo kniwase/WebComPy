@@ -5,11 +5,13 @@ from ..core import Style
 
 def define_component(template: str,
                      styles: List[Style] = [],
+                     tag_name: Optional[str] = None,
                      use_shadow_dom: bool = False):
     def deco(cls: Type[WebcompyComponentBase]):
         class WebcompyComponent(cls):
             cls._scoped_styles = styles
             _use_shadow_dom = use_shadow_dom
+        tag_name = tag_name
 
             def __init__(self, conponent: Any, root: Any) -> None:
                 super().__init__()

@@ -19,6 +19,8 @@ from ..core import (
 
 
 class WebcompyComponentBase(metaclass=ABCMeta):
+    tag_name: str
+
     _scoped_styles: List[Style]
     _use_shadow_dom: bool
 

@@ -5,61 +5,40 @@ from typing import (
     Optional,
     Type,
     Union,
-    TypedDict,
-    List,
-    Tuple)
+    List)
 from ..component import WebcompyComponent, register_webcomponent
 from browser import html, document
 from ..core import Style, ImportCss
 from ..router import create_router_view, RoutesOption
 
 
-class ComponentsOption(TypedDict):
-    name: str
-    component: Type[WebcompyComponent]
-
-
 def init_webcompy(
-    components: Iterable[Union[Type[WebcompyComponent], ComponentsOption]] = [],
+    components: Iterable[Type[WebcompyComponent]] = [],
     routes: Iterable[RoutesOption] = [],
     global_styles: Iterable[Union[Style, ImportCss]] = [],
     on_loaded: Optional[Callable[[], Any]] = None
 ) -> None:
     routes_frozen = tuple(routes)
 
-    component_name_pair = get_component_name_pair(routes_frozen, components)
-    component_name_pair.append((create_router_view(routes_frozen),
-                                'router-view'))
+    all_components: List[Type[WebcompyComponent]] = []
+    all_components.extend(components)
+    all_components.extend(r['component'] for r in routes_frozen)
+
+    router_component = create_router_view(routes_frozen)
+    all_components.append(router_component)
 
     styles = ['\n'.join(map(str, global_styles))]
 
-    for component, name in component_name_pair:
-        element_name = register_webcomponent(component, name)
-        scoped_css = '\n'.join(f'{element_name} {style}'
+    for component in all_components:
+        scoped_css = '\n'.join(f'{component.tag_name} {style}'
                                for style in component.get_scoped_styles())
         if scoped_css:
             styles.append(scoped_css)
 
     document.head <= html.STYLE('\n'.join(styles))
 
+    for component in all_components:
+        register_webcomponent(component)
+
     if on_loaded is not None:
         on_loaded()
-
-
-def get_component_name_pair(
-        routes: Tuple[RoutesOption, ...],
-        components: Iterable[Union[Type[WebcompyComponent], ComponentsOption]]):
-    ret: List[Tuple[Type[WebcompyComponent], Optional[str]]] = []
-
-    for r in routes:
-        ret.append((r['component'], None))
-
-    for option in components:
-        if isinstance(option, dict):
-            name = option['name']
-            component = option['component']
-        else:
-            name = None
-            component = option
-        ret.append((component, name))
-    return ret
