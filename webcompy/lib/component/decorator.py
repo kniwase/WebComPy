@@ -17,6 +17,11 @@ def define_component(template: str,
 
             def __init__(self, conponent: Any, root: Any) -> None:
                 super().__init__()
+                self._component_vars = {
+                    name: getattr(self, name)
+                    for name in dir(self)
+                    if not (name in set(dir(WebcompyComponentBase)) or name.startswith('_'))
+                }
                 self._set_template(template)
                 self._refs = {}
                 self._conponent = conponent

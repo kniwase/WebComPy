@@ -36,6 +36,7 @@ class WebcompyComponentBase(metaclass=ABCMeta):
     _conponent: Any
     _root: Any
     _refs: Dict[str, Any]
+    _component_vars: Dict[str, Any]
 
     __template_nodes: List[Any]
     __vdom: List[Union[VNode, VTextNode]]
@@ -82,14 +83,9 @@ class WebcompyComponentBase(metaclass=ABCMeta):
     def on_disconnected(self) -> None:
         ...
 
-    @property
     @final
-    def _public_attrs(self):
-        return {
-            name: getattr(self, name)
-            for name in dir(self)
-            if not (name in set(dir(WebcompyComponentBase)) or name.startswith('_'))
-        }
+    def _get_component_vars(self):
+        return self._component_vars
 
     @final
     def _set_template(self, template: str):
@@ -107,7 +103,7 @@ class WebcompyComponentBase(metaclass=ABCMeta):
         setter_action: Callable[[], None]
     ) -> Any:
         reactives: List[Reactive[Any]] = [
-            v for v in self._public_attrs.values()
+            v for v in self._get_component_vars().values()
             if isinstance(v, Reactive)
         ]
         for r in reactives:
@@ -115,7 +111,7 @@ class WebcompyComponentBase(metaclass=ABCMeta):
                 key = generate_uid_str(reactive.setter_actions, 'update:')
                 reactive.setter_actions[key] = setter_action
             r.getter_actions['eval_statement:set_setter'] = set_setter
-        ret = evaluater(stat, self._public_attrs, {})
+        ret = evaluater(stat, self._get_component_vars(), {})
         for reactive in reactives:
             del reactive.getter_actions['eval_statement:set_setter']
         return ret
@@ -136,12 +132,13 @@ class WebcompyComponentBase(metaclass=ABCMeta):
                     eval_reactive_prop,
                     lambda: vnode.set_attribute(
                         k[1:],
-                        eval_reactive_prop(stat, self._public_attrs)
+                        eval_reactive_prop(stat, self._get_component_vars())
                     )
                 )
                 vnode.set_attribute(k, value)
             elif v and k.startswith('@'):
-                vnode.bind_event_callback(k, eval(v, self._public_attrs, {}))
+                vnode.bind_event_callback(
+                    k, eval(v, self._get_component_vars(), {}))
             else:
                 vnode.set_attribute(k, v)
         return vnode
@@ -166,7 +163,7 @@ class WebcompyComponentBase(metaclass=ABCMeta):
                         value = self._eval_statement(
                             stat, eval_reactive_text, lambda: reactive_node.update(
                                 eval_reactive_text(
-                                    stat, self._public_attrs)))
+                                    stat, self._get_component_vars())))
                         reactive_node.update(value)
                         text_node = reactive_node
                     parent.append_child(text_node)
