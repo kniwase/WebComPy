@@ -7,6 +7,7 @@ from ..core import pop_obj
 
 def register_webcomponent(component: Type[WebcompyComponent]):
     class WebComponent:
+        attrs: Dict[str, Any]
         attachShadow: Callable[[Dict[str, Any]], Any]
         appendChild: Callable[[Any], None]
         root: Any
@@ -32,20 +33,18 @@ def register_webcomponent(component: Type[WebcompyComponent]):
             del self._webcompy_component
 
         def observedAttributes(self):
-            observed_attributes = get_observed_attributes(component.get_tag_name())
-            return observed_attributes
+            return get_observed_attributes(component.get_tag_name())
 
         def attributeChangedCallback(
                 self, prop_name: str, _: int, new: str, __: Any):
-            prop_callback_name = get_prop_callback(
-                component.get_tag_name(),
-                prop_name[1:] if prop_name.startswith(':') else prop_name
+            prop_callback: Callable[[Any], None] = getattr(
+                self._webcompy_component,
+                get_prop_callback(component.get_tag_name(), prop_name)
             )
-            if prop_callback_name:
-                prop_callback = self._webcompy_component.__getattribute__(
-                    prop_callback_name)
-                if prop_callback:
-                    value = pop_obj(new) if prop_name.startswith(':') else new
-                    prop_callback(value)
+            if not prop_name.startswith(':'):
+                prop_callback(new)
+            elif prop_name in self.attrs:
+                prop_callback(pop_obj(new))
+                del self.attrs[prop_name]
 
     webcomponent.define(component.get_tag_name(), WebComponent)

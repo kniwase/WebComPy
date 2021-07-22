@@ -1,4 +1,4 @@
-from typing import Any, Callable, Type, Dict, List, Optional
+from typing import Any, Callable, Type, Dict, List
 from .base import WebcompyComponentBase
 from .utils import convert_camel_to_kebab
 from javascript import RegExp, String
@@ -39,8 +39,7 @@ def get_observed_attributes(component_name: str) -> List[str]:
         return list()
 
 
-def get_prop_callback(component_name: str, prop_name: str) -> Optional[str]:
-    if component_name in repository and prop_name in repository[component_name]:
-        return repository[component_name][prop_name]
-    else:
-        return None
+def get_prop_callback(component_name: str, prop_name: str) -> str:
+    if prop_name.startswith(':'):
+        prop_name = prop_name[1:]
+    return repository[component_name][prop_name]
