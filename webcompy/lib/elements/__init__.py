@@ -1,4 +1,4 @@
-from .view import create_router_view, RoutesOption
+from .router import create_router_view, RoutesOption
 
 __all__ = [
     'create_router_view',

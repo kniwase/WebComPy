@@ -8,7 +8,7 @@ from typing import (
 from ..component import WebcompyComponent, register_webcomponent
 from browser import html, document
 from ..core import Style, ImportCss
-from ..router import create_router_view, RoutesOption
+from ..elements import create_router_view, RoutesOption
 
 
 def init_webcompy(
