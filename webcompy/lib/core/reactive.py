@@ -1,5 +1,10 @@
-from typing import (Any, Callable, Dict, Optional, TypeVar, Generic, Union, cast)
-from inspect import signature
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Optional,
+    TypeVar,
+    Generic)
 
 
 T = TypeVar('T')
@@ -8,63 +13,40 @@ T = TypeVar('T')
 class Reactive(Generic[T]):
     def __init__(self, value: T) -> None:
         self.__value: T = value
-        self.__getter_callbacks: Dict[
-            str,
-            Union[
-                Callable[[Reactive[T], T], Any],
-                Callable[[], Any]]
-        ] = {}
-        self.__setter_callbacks: Dict[
-            str,
-            Union[
-                Callable[[Reactive[T], T, T], Any],
-                Callable[[], Any]]
-        ] = {}
+        self.__getter_callbacks: Dict[str, Callable[[T], Any]] = {}
+        self.__setter_callbacks: Dict[str, Callable[[T, T], Any]] = {}
 
     @property
     def value(self) -> T:
         for callback in self.__getter_callbacks.values():
-            params = signature(callback).parameters
-            if len(params):
-                callback = cast(Callable[[Reactive[T], T], Any], callback)
-                callback(self, self.__value)
-            else:
-                callback = cast(Callable[[], Any], callback)
-                callback()
+            callback(self.__value)
         return self.__value
-
-    def __str__(self) -> str:
-        for callback in self.__getter_callbacks.values():
-            params = signature(callback).parameters
-            if len(params):
-                callback = cast(Callable[[Reactive[T], T], Any], callback)
-                callback(self, self.__value)
-            else:
-                callback = cast(Callable[[], Any], callback)
-                callback()
-        return self.__value.__str__()
 
     @value.setter
     def value(self, value: T):
         old_value = self.__value
         self.__value: T = value
         for callback in self.__setter_callbacks.values():
-            params = signature(callback).parameters
-            if len(params):
-                callback = cast(Callable[[Reactive[T], T, T], Any], callback)
-                callback(self, old_value, self.__value)
-            else:
-                callback = cast(Callable[[], Any], callback)
-                callback()
+            callback(old_value, self.__value)
 
-    @property
-    def getter_actions(self):
-        return self.__getter_callbacks
+    def add_getter_action(self, name: str, action: Callable[[T], Any]):
+        self.__getter_callbacks[name] = action
 
-    @property
-    def setter_actions(self):
-        return self.__setter_callbacks
-    
+    def add_setter_action(self, name: str, action: Callable[[T, T], Any]):
+        self.__setter_callbacks[name] = action
+
+    def remove_getter_action(self, name: str):
+        del self.__getter_callbacks[name]
+
+    def remove_setter_action(self, name: str):
+        del self.__setter_callbacks[name]
+
+    def get_getter_actions(self):
+        return dict(self.__getter_callbacks.items())
+
+    def get_setter_actions(self):
+        return dict(self.__setter_callbacks.items())
+
     def clone(self):
         new: Reactive[T] = Reactive(self.__value)
         return new

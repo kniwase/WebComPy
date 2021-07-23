@@ -88,20 +88,21 @@ class WebcompyComponentBase(metaclass=ABCMeta):
         self,
         stat: str,
         evaluater: Callable[[str, Dict[str, Any], Optional[Dict[str, Any]]], Any],
-        setter_action: Callable[[], None]
+        setter_action: Callable[[Any, Any], None]
     ) -> Any:
         reactives: List[Reactive[Any]] = [
             v for v in self._get_component_vars().values()
             if isinstance(v, Reactive)
         ]
         for r in reactives:
-            def set_setter(reactive: Reactive[Any], _: Any):
-                key = generate_uid_str(reactive.setter_actions, 'update:')
-                reactive.setter_actions[key] = setter_action
-            r.getter_actions['eval_statement:set_setter'] = set_setter
+            def set_setter(_: Any, reactive: Reactive[Any] = r):
+                key = generate_uid_str(
+                    reactive.get_setter_actions(), 'update:')
+                reactive.add_setter_action(key, setter_action)
+            r.add_getter_action('eval_statement:set_setter', set_setter)
         ret = evaluater(stat, self._get_component_vars(), {})
         for reactive in reactives:
-            del reactive.getter_actions['eval_statement:set_setter']
+            reactive.remove_getter_action('eval_statement:set_setter')
         return ret
 
     @final
@@ -115,13 +116,17 @@ class WebcompyComponentBase(metaclass=ABCMeta):
         for k, v in node_attrs:
             if v and k.startswith(':'):
                 stat = v
-                value = self._eval_statement(
-                    stat,
-                    eval_reactive_prop,
-                    lambda: vnode.set_attribute(
+
+                def set_attribute(*_: Any):
+                    return vnode.set_attribute(
                         k[1:],
                         eval_reactive_prop(stat, self._get_component_vars())
                     )
+
+                value = self._eval_statement(
+                    stat,
+                    eval_reactive_prop,
+                    set_attribute
                 )
                 vnode.set_attribute(k, value)
             elif v and k.startswith('@'):
@@ -148,10 +153,18 @@ class WebcompyComponentBase(metaclass=ABCMeta):
                     else:
                         reactive_node = VReactiveTextNode()
                         stat = v
-                        value = self._eval_statement(
-                            stat, eval_reactive_text, lambda: reactive_node.update(
+
+                        def update(*_: Any):
+                            return reactive_node.update(
                                 eval_reactive_text(
-                                    stat, self._get_component_vars())))
+                                    stat, self._get_component_vars())
+                            )
+
+                        value = self._eval_statement(
+                            stat,
+                            eval_reactive_text,
+                            update
+                        )
                         reactive_node.update(value)
                         text_node = reactive_node
                     parent.append_child(text_node)
