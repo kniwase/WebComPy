@@ -80,13 +80,18 @@ def define_component(
                 self._set_template(template)
                 self._refs = {}
 
-            def init_component(self, conponent: Any, root: Any) -> None:
+            def __init_component__(
+                self,
+                conponent: Any,
+                root: Any,
+                initial_props: Dict[str, Any]
+            ) -> None:
+                super()._init_vars(initial_props)
                 self._conponent = conponent
                 self._root = root
 
-            @property
-            def render(self):
-                return self._render
+            def __render__(self):
+                self._render()
 
             @classmethod
             def get_shadow_dom_mode(cls) -> bool:
@@ -134,13 +139,19 @@ def setup_factory(
     params: Tuple[Tuple[str, Parameter], ...],
     props_def: Dict[str, Reactive[Any]],
 ):
-    def setup(definition: FuncStyleComponent = definition):
+    def setup(
+        initial_props: Dict[str, Any],
+        definition: FuncStyleComponent = definition
+    ):
         props: Dict[str, Reactive[Any]]
         if len(params) >= 1:
             props = {
                 name: prop.clone()
                 for name, prop in props_def.items()
             }
+            for name, value in initial_props.items():
+                if name in props.keys():
+                    props[name].value = value
             definition = cast(DefFuncWithProps, definition)
             vars = definition(props)
         else:
@@ -160,15 +171,17 @@ def function_component_factory(definition: FuncStyleComponent, tag_name: str):
     class Component(WebcompyComponentBase):
         def __init__(self) -> None:
             super().__init__()
-            vars, props = setup()
-            self.__set_props(props)
-            self._component_vars = vars
 
         def __set_props(self, props: Dict[str, Reactive[Any]]):
-            for name, reactive in props.items():
-                def set_prop(value: Any):
+            for name, r in props.items():
+                def set_prop(value: Any, reactive: Reactive[Any] = r):
                     reactive.value = value
                 self.__setattr__(get_prop_callback_name(name), set_prop)
+
+        def _init_vars(self, initial_props: Dict[str, Any]) -> None:
+            vars, props = setup(initial_props)
+            self.__set_props(props)
+            self._component_vars = vars
 
     return Component
 
@@ -177,9 +190,12 @@ def class_component_factory(cls: Type[WebcompyComponentBase]):
     class Component(cls):
         def __init__(self) -> None:
             super().__init__()
+
+        def _init_vars(self, initial_props: Dict[str, Any]) -> None:
             self._component_vars = {
                 name: getattr(self, name)
                 for name in dir(self)
                 if not (name in set(dir(WebcompyComponentBase)) or name.startswith('_'))
             }
+
     return Component

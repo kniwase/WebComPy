@@ -177,12 +177,16 @@ class WebcompyComponentBase(metaclass=ABCMeta):
 
 class WebcompyComponent(WebcompyComponentBase):
     @abstractmethod
-    def init_component(self, conponent: Any, root: Any) -> None:
+    def __init_component__(
+        self,
+        conponent: Any,
+        root: Any,
+        props: Dict[str, Any]
+    ) -> None:
         ...
 
-    @property
     @abstractmethod
-    def render(self) -> Callable[[], None]:
+    def __render__(self) -> Callable[[], None]:
         ...
 
     @classmethod
