@@ -25,7 +25,7 @@ DefFuncWithProps = Callable[
     [Dict[str, Reactive[Any]]],
     Optional[Dict[str, Any]]
 ]
-FuncStyleComponent = Union[
+FunctionStyleComponent = Union[
     DefFunc,
     DefFuncWithProps,
 ]
@@ -39,7 +39,7 @@ def define_component(
 ):
     @overload
     def deco(
-        definition: FuncStyleComponent
+        definition: FunctionStyleComponent
     ) -> Type[WebcompyComponent]:
         ...
 
@@ -113,7 +113,7 @@ def get_prop_callback_name(name: str):
     return f'on_change_prop_{name}'
 
 
-def register_props(definition: FuncStyleComponent, tag_name: str):
+def register_props(definition: FunctionStyleComponent, tag_name: str):
     params = tuple(signature(definition).parameters.items())
     props_def: Dict[str, Reactive[Any]] = {}
     if len(params) >= 1:
@@ -135,13 +135,13 @@ def register_props(definition: FuncStyleComponent, tag_name: str):
 
 
 def setup_factory(
-    definition: FuncStyleComponent,
+    definition: FunctionStyleComponent,
     params: Tuple[Tuple[str, Parameter], ...],
     props_def: Dict[str, Reactive[Any]],
 ):
     def setup(
         initial_props: Dict[str, Any],
-        definition: FuncStyleComponent = definition
+        definition: FunctionStyleComponent = definition
     ):
         props: Dict[str, Reactive[Any]]
         if len(params) >= 1:
@@ -164,7 +164,10 @@ def setup_factory(
     return setup
 
 
-def function_component_factory(definition: FuncStyleComponent, tag_name: str):
+def function_component_factory(
+    definition: FunctionStyleComponent,
+    tag_name: str
+):
     params, props_def = register_props(definition, tag_name)
     setup = setup_factory(definition, params, props_def)
 
