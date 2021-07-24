@@ -10,27 +10,24 @@ def register_webcomponent(component: Type[WebcompyComponent]):
         attrs: Dict[str, Any]
         attachShadow: Callable[[Dict[str, Any]], Any]
         appendChild: Callable[[Any], None]
+        webcompy_component: WebcompyComponent
         root: Any
 
         def __init__(self) -> None:
+            self.webcompy_component = component()
             if component.get_shadow_dom_mode():
                 self.root = self.attachShadow({'mode': 'open'})
             else:
                 self.root = self
-            self._webcompy_component = component(self, self.root)
-            self._render = self._webcompy_component.get_render()
-
-        @property
-        def is_webcompy_component(self) -> bool:
-            return True
 
         def connectedCallback(self):
-            self._webcompy_component.on_connected()
-            self._render()
+            self.webcompy_component.init_component(self, self.root)
+            self.webcompy_component.on_connected()
+            self.webcompy_component.render(True)
 
         def disconnectedCallback(self):
-            self._webcompy_component.on_disconnected()
-            del self._webcompy_component
+            self.webcompy_component.on_disconnected()
+            del self.webcompy_component
 
         def observedAttributes(self):
             return get_observed_attributes(component.get_tag_name())
@@ -38,7 +35,7 @@ def register_webcomponent(component: Type[WebcompyComponent]):
         def attributeChangedCallback(
                 self, prop_name: str, _: int, new: str, __: Any):
             prop_callback: Callable[[Any], None] = getattr(
-                self._webcompy_component,
+                self.webcompy_component,
                 get_prop_callback(component.get_tag_name(), prop_name)
             )
             if not prop_name.startswith(':'):

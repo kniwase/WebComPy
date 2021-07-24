@@ -75,14 +75,17 @@ def define_component(
             _scoped_styles = styles
             _use_shadow_dom = use_shadow_dom
 
-            def __init__(self, conponent: Any, root: Any) -> None:
+            def __init__(self) -> None:
                 super().__init__()
                 self._set_template(template)
                 self._refs = {}
+
+            def init_component(self, conponent: Any, root: Any) -> None:
                 self._conponent = conponent
                 self._root = root
 
-            def get_render(self):
+            @property
+            def render(self):
                 return self._render
 
             @classmethod
