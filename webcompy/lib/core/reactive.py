@@ -4,7 +4,8 @@ from typing import (
     Dict,
     Optional,
     TypeVar,
-    Generic)
+    Generic,
+    final)
 
 
 T = TypeVar('T')
@@ -80,3 +81,116 @@ def eval_reactive_prop(
         return None
     else:
         return value
+
+
+class DefaultFactory:
+    def __init__(self, factory: Callable[[], Any]) -> None:
+        self.__factory__ = factory
+
+
+def default_factory(factory: Callable[[], Any]) -> Any:
+    return DefaultFactory(factory)
+
+
+class ReactiveData:
+    __reactive_data_fields: Dict[str, Reactive[Any]]
+    __reactive_data_default_values: Dict[str, Any]
+
+    @final
+    def __init__(self) -> None:
+        self.__reactive_data_fields = {}
+        self.__reactive_data_default_values = self.__get_default_values()
+
+        for name, value in self.__reactive_data_default_values.items():
+            self.__reactive_data_fields[name] = Reactive(value)
+            if not hasattr(self.__class__, name) or not isinstance(getattr(self.__class__, name), property):
+                setattr(
+                    self.__class__,
+                    name,
+                    property(
+                        self.__getter_factory(name),
+                        self.__setter_factory(name)
+                    )
+                )
+
+    @property
+    @final
+    def field_names(self):
+        return self.__reactive_data_fields.keys()
+
+    @final
+    def as_dict(self):
+        return {name: getattr(self, name) for name in self.field_names}
+
+    def set_field_getter_action(
+        self,
+        field_name: str,
+        action_name: str,
+        action: Callable[[Any], Any]
+    ):
+        field = self.__reactive_data_fields[field_name]
+        field.set_getter_action(action_name, action)
+
+    def set_field_setter_action(
+        self,
+        field_name: str,
+        action_name: str,
+        action: Callable[[Any, Any], Any]
+    ):
+        field = self.__reactive_data_fields[field_name]
+        field.set_setter_action(action_name, action)
+
+    def remove_field_getter_action(
+        self,
+        field_name: str,
+        action_name: str
+    ):
+        field = self.__reactive_data_fields[field_name]
+        field.remove_getter_action(action_name)
+
+    def remove_field_setter_action(
+        self,
+        field_name: str,
+        action_name: str
+    ):
+        field = self.__reactive_data_fields[field_name]
+        field.remove_setter_action(action_name)
+
+    def get_field_getter_actions(self, field_name: str):
+        field = self.__reactive_data_fields[field_name]
+        return field.get_getter_actions()
+
+    def get_field_setter_actions(self, field_name: str):
+        field = self.__reactive_data_fields[field_name]
+        return field.get_setter_actions()
+
+    def __get_default_values(self):
+        default_values: Dict[str, Optional[Any]] = {}
+        for name in set(self.__class__.__annotations__.keys()):
+            if name.startswith('_'):
+                continue
+            if hasattr(self.__class__, name):
+                value = getattr(self.__class__, name)
+                if isinstance(value, DefaultFactory):
+                    value = value.__factory__()
+                default_values[name] = value
+            else:
+                default_values[name] = None
+        return default_values
+
+    def __getter_factory(self, name: str):
+        reactive_data_fields = self.__reactive_data_fields
+
+        def getter(_: Any):
+            value = reactive_data_fields[name].value
+            return value
+
+        return getter
+
+    def __setter_factory(self, name: str):
+        reactive_data_fields = self.__reactive_data_fields
+
+        def setter(_: Any, value: Any):
+            reactive_data_fields[name].value = value
+
+        return setter

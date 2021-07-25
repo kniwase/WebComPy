@@ -5,6 +5,8 @@ from .html import (parse_html, parse_markdown, cleanse_html, split_text_nodes)
 from .uniq_id import (generate_uid, generate_uid_str)
 from .reactive import (
     Reactive,
+    ReactiveData,
+    default_factory,
     eval_reactive_text,
     eval_reactive_prop)
 from .event import (
@@ -34,6 +36,8 @@ __all__ = [
     'cleanse_html',
     'split_text_nodes',
     'Reactive',
+    'ReactiveData',
+    'default_factory',
     'eval_reactive_text',
     'eval_reactive_prop',
     'add_obj',
