@@ -98,8 +98,8 @@ class WebcompyComponentBase(metaclass=ABCMeta):
             def set_setter(_: Any, reactive: Reactive[Any] = r):
                 key = generate_uid_str(
                     reactive.get_setter_actions(), 'update:')
-                reactive.add_setter_action(key, setter_action)
-            r.add_getter_action('eval_statement:set_setter', set_setter)
+                reactive.set_setter_action(key, setter_action)
+            r.set_getter_action('eval_statement:set_setter', set_setter)
         ret = evaluater(stat, self._get_component_vars(), {})
         for reactive in reactives:
             reactive.remove_getter_action('eval_statement:set_setter')

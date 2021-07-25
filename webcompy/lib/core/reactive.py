@@ -29,10 +29,10 @@ class Reactive(Generic[T]):
         for callback in self.__setter_callbacks.values():
             callback(old_value, self.__value)
 
-    def add_getter_action(self, name: str, action: Callable[[T], Any]):
+    def set_getter_action(self, name: str, action: Callable[[T], Any]):
         self.__getter_callbacks[name] = action
 
-    def add_setter_action(self, name: str, action: Callable[[T, T], Any]):
+    def set_setter_action(self, name: str, action: Callable[[T, T], Any]):
         self.__setter_callbacks[name] = action
 
     def remove_getter_action(self, name: str):
