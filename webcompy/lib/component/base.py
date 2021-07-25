@@ -15,6 +15,7 @@ from ..core import (
     VReactiveTextNode,
     Style,
     Reactive,
+    ReactiveData,
     eval_reactive_text,
     eval_reactive_prop,
     generate_rnode_mapping,
@@ -90,19 +91,48 @@ class WebcompyComponentBase(metaclass=ABCMeta):
         evaluater: Callable[[str, Dict[str, Any], Optional[Dict[str, Any]]], Any],
         setter_action: Callable[[Any, Any], None]
     ) -> Any:
-        reactives: List[Reactive[Any]] = [
+        reactives: List[Union[Reactive[Any], ReactiveData]] = [
             v for v in self._get_component_vars().values()
-            if isinstance(v, Reactive)
+            if isinstance(v, (Reactive, ReactiveData))
         ]
         for r in reactives:
-            def set_setter(_: Any, reactive: Reactive[Any] = r):
-                key = generate_uid_str(
-                    reactive.get_setter_actions(), 'update:')
-                reactive.set_setter_action(key, setter_action)
-            r.set_getter_action('eval_statement:set_setter', set_setter)
+            if isinstance(r, Reactive):
+                def set_setter(_: Any, reactive: Reactive[Any] = r):
+                    key = generate_uid_str(
+                        reactive.get_setter_actions(), 'update:')
+                    reactive.set_setter_action(key, setter_action)
+                r.set_getter_action('eval_statement:set_setter', set_setter)
+            else:
+                for n in r.field_names:
+                    def set_filed_setter(
+                        _: Any,
+                        reactive: ReactiveData = r,
+                        field_name: str = n
+                    ):
+                        key = generate_uid_str(
+                            reactive.get_field_getter_actions(field_name),
+                            'update:'
+                        )
+                        reactive.set_field_setter_action(
+                            field_name,
+                            key,
+                            setter_action
+                        )
+                    r.set_field_getter_action(
+                        n,
+                        'eval_statement:set_setter',
+                        set_filed_setter
+                    )
         ret = evaluater(stat, self._get_component_vars(), {})
         for reactive in reactives:
-            reactive.remove_getter_action('eval_statement:set_setter')
+            if isinstance(reactive, Reactive):
+                reactive.remove_getter_action('eval_statement:set_setter')
+            else:
+                for field_name in reactive.field_names:
+                    reactive.remove_field_getter_action(
+                        field_name,
+                        'eval_statement:set_setter'
+                    )
         return ret
 
     @final
