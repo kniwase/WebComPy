@@ -93,17 +93,15 @@ def default_factory(factory: Callable[[], Any]) -> Any:
 
 
 class ReactiveData:
-    __reactive_data_fields: Dict[str, Reactive[Any]]
-    __reactive_data_default_values: Dict[str, Any]
-
     @final
     def __init__(self) -> None:
-        self.__reactive_data_fields = {}
+        self.__reactive_data_fields: Dict[str, Reactive[Any]] = {}
         self.__reactive_data_default_values = self.__get_default_values()
 
         for name, value in self.__reactive_data_default_values.items():
             self.__reactive_data_fields[name] = Reactive(value)
-            if not hasattr(self.__class__, name) or not isinstance(getattr(self.__class__, name), property):
+            if not hasattr(self.__class__, name) or \
+                    not isinstance(getattr(self.__class__, name), property):
                 setattr(
                     self.__class__,
                     name,
@@ -166,7 +164,16 @@ class ReactiveData:
 
     def __get_default_values(self):
         default_values: Dict[str, Optional[Any]] = {}
-        for name in set(self.__class__.__annotations__.keys()):
+        field_names = set(
+            name
+            for name in self.__class__.__annotations__.keys()
+            if not name.startswith('_')
+        ).union(
+            name
+            for name in dir(self.__class__)
+            if name not in dir(ReactiveData)
+        )
+        for name in field_names:
             if name.startswith('_'):
                 continue
             if hasattr(self.__class__, name):
