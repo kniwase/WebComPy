@@ -5,6 +5,7 @@ from typing import (
     Optional,
     TypeVar,
     Generic,
+    cast,
     final)
 
 
@@ -41,6 +42,14 @@ class Reactive(Generic[T]):
 
     def remove_setter_action(self, name: str):
         del self.__setter_callbacks[name]
+
+    def remove_all_getter_actions(self):
+        del self.__getter_callbacks
+        self.__getter_callbacks = {}
+
+    def remove_all_setter_actions(self):
+        del self.__setter_callbacks
+        self.__setter_callbacks = {}
 
     def get_getter_actions(self):
         return dict(self.__getter_callbacks.items())
@@ -93,13 +102,22 @@ def default_factory(factory: Callable[[], Any]) -> Any:
 
 
 class ReactiveData:
+    __reactive_data_fields: Dict[str, Reactive[Any]]
+    __reactive_data_default_values: Dict[str, Optional[Any]]
+
     @final
     def __init__(self) -> None:
-        self.__reactive_data_fields: Dict[str, Reactive[Any]] = {}
-        self.__reactive_data_default_values = self.__get_default_values()
+        self.__setup__(self.__get_default_values())
 
-        for name, value in self.__reactive_data_default_values.items():
-            self.__reactive_data_fields[name] = Reactive(value)
+    def __setup__(self, fields: Dict[str, Optional[Any]]):
+        self.__reactive_data_fields = {}
+        self.__reactive_data_default_values = {}
+        for name, value in fields.items():
+            self.__reactive_data_default_values[name] = value
+            if name not in self.__reactive_data_fields:
+                self.__reactive_data_fields[name] = Reactive(value)
+            else:
+                self.__reactive_data_fields[name].value = value
             if not hasattr(self.__class__, name) or \
                     not isinstance(getattr(self.__class__, name), property):
                 setattr(
@@ -110,6 +128,35 @@ class ReactiveData:
                         self.__setter_factory(name)
                     )
                 )
+        for name in tuple(self.__reactive_data_default_values.keys()):
+            if name not in fields:
+                del self.__reactive_data_default_values[name]
+        for name in tuple(self.__reactive_data_fields.keys()):
+            if name not in fields:
+                del self.__reactive_data_fields[name]
+        for name in dir(self.__class__):
+            if name not in fields and \
+                    isinstance(getattr(self.__class__, name), property):
+                delattr(self.__class__, name)
+
+    @final
+    def get_field_value(self, field_name: str):
+        value = self.__reactive_data_fields[field_name].value
+        return value
+
+    @final
+    def set_field_value(self, field_name: str, value: Any):
+        self.__reactive_data_fields[field_name].value = value
+
+    def __getter_factory(self, field_name: str):
+        def getter(self: Any):
+            return self.get_field_value(field_name)
+        return getter
+
+    def __setter_factory(self, field_name: str):
+        def setter(self: Any, value: Any):
+            self.set_field_value(field_name, value)
+        return setter
 
     @property
     @final
@@ -119,6 +166,12 @@ class ReactiveData:
     @final
     def as_dict(self):
         return {name: getattr(self, name) for name in self.field_names}
+
+    @final
+    def clone(self: T) -> T:
+        new_data = cast(ReactiveData, self.__class__())
+        new_data.__setup__(cast(Any, self).__reactive_data_default_values)
+        return cast(T, new_data)
 
     def set_field_getter_action(
         self,
@@ -154,6 +207,16 @@ class ReactiveData:
         field = self.__reactive_data_fields[field_name]
         field.remove_setter_action(action_name)
 
+    def remove_all_field_getter_actions(self):
+        for field_name in self.field_names:
+            field = self.__reactive_data_fields[field_name]
+            field.remove_all_getter_actions()
+
+    def remove_all_field_setter_actions(self):
+        for field_name in self.field_names:
+            field = self.__reactive_data_fields[field_name]
+            field.remove_all_setter_actions()
+
     def get_field_getter_actions(self, field_name: str):
         field = self.__reactive_data_fields[field_name]
         return field.get_getter_actions()
@@ -184,20 +247,3 @@ class ReactiveData:
             else:
                 default_values[name] = None
         return default_values
-
-    def __getter_factory(self, name: str):
-        reactive_data_fields = self.__reactive_data_fields
-
-        def getter(_: Any):
-            value = reactive_data_fields[name].value
-            return value
-
-        return getter
-
-    def __setter_factory(self, name: str):
-        reactive_data_fields = self.__reactive_data_fields
-
-        def setter(_: Any, value: Any):
-            reactive_data_fields[name].value = value
-
-        return setter
