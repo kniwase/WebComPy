@@ -1,6 +1,6 @@
 from typing import Any, cast
 from webcompy.reactive._base import ReactiveBase
-from webcompy.brython._modules import browser, DOMNode
+from webcompy.brython import browser, DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.exception import WebComPyException
 

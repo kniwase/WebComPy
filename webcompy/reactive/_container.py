@@ -20,4 +20,4 @@ class ReactiveReceivable:
 
     def __purge_reactive_members__(self) -> None:
         if hasattr(self, "__reactive_members__"):
-            print(self.__reactive_members__)
+            pass

@@ -19,7 +19,7 @@ from webcompy.elements.typealias._element_property import (
 )
 from webcompy.router._router import Router
 from webcompy.router._pages import WebComPyRouterException
-from webcompy.brython._modules import browser, DOMEvent
+from webcompy.brython import browser, DOMEvent
 from webcompy.utils._serialize import is_json_seriarizable
 
 
