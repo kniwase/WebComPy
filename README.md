@@ -3,6 +3,7 @@
 Python client-side web framework
 
 ## ToDo
+- Add PyScript support ([Github Repo](https://github.com/pyscript/pyscript))
 - Add CLI tool
 - Add provide/inject (DI)
 - Add JavaScript/CSS libraries loader
