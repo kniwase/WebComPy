@@ -19,28 +19,26 @@ class AppRootComponent(NonPropsComponentBase):
 class AppDocumentRoot(Component):
     routes: list[str]
     _router: Router | None
-    _initilized: bool
 
     def __init__(
         self, root_component: ComponentGenerator[None], router: Router | None
     ) -> None:
-        self._initilized = False
         self._router = router
         if self._router:
             RouterView.__set_router__(self._router)
             TypedRouterLink.__set_router__(self._router)
         super().__init__(AppRootComponent, None, {"root": lambda: root_component(None)})
+        self.routes = [p[0] for p in self._router.__routes__] if self._router else []
+        self.router_mode = self._router.__mode__ if self._router else None
+
+    def render(self):
         if browser:
             style_node = browser.document.createElement("style")
             style_node.textContent = self._style
             browser.document.body.appendChild(style_node)
-        self._render()
-        self.routes = [p[0] for p in self._router.__routes__] if self._router else []
+            self._render()
 
     def _render(self):
-        if not self._initilized:
-            self._initilized = True
-            self._init_component()
         self._mount_node()
         self._property["on_before_rendering"]()
         for child in self._children:

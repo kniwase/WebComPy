@@ -8,19 +8,26 @@ from webcompy.exception import WebComPyException
 
 
 class ElementAbstract(ReactiveReceivable):
-    _parent: ElementAbstract
     _node_idx: int
     _node_cache: DOMNode | None = None
     _mounted: bool | None = None
     _remount_to: DOMNode | None = None
-
     _callback_ids: set[int]
+    __parent: ElementAbstract
 
     def __init__(self) -> None:
         self._node_cache = None
         self._mounted = None
         self._remount_to = None
         self._callback_ids: set[int] = set()
+
+    @property
+    def _parent(self) -> "ElementAbstract":
+        return self.__parent
+
+    @_parent.setter
+    def _parent(self, parent: "ElementAbstract"):
+        self.__parent = parent
 
     def _render(self):
         self._mount_node()

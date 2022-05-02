@@ -6,6 +6,7 @@ from webcompy.elements.types._text import NewLine
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.exception import WebComPyException
 from webcompy.elements.types._dynamic import DynamicElement
+from webcompy.brython import browser
 
 
 T = TypeVar("T")
@@ -27,12 +28,16 @@ class RepeatElement(DynamicElement):
             raise ValueError("Argument 'sequence' must be Reactive Object.")
         super().__init__()
 
+    def _on_set_parent(self):
+        if not browser:
+            self._children = self._generate_children()
+
     def _generate_children(self):
         return list(
             filter(
                 None,
                 map(
-                    partial(self._create_child_element, self._parent),
+                    partial(self._create_child_element, self._parent, None),
                     map(self._template, self._sequence.value),
                 ),
             )
@@ -53,10 +58,10 @@ class RepeatElement(DynamicElement):
         for _ in range(len(self._children)):
             self._children.pop(-1)._remove_element()
         self._children = self._generate_children()
-        for c_idx, child in enumerate(self._children):
-            child._node_idx = self._node_idx + c_idx
-            child._render()
+        self._re_index_children(False)
         self._parent._re_index_children(False)
+        for child in self._children:
+            child._render()
 
 
 class MultiLineTextElement(RepeatElement):
@@ -75,7 +80,7 @@ class MultiLineTextElement(RepeatElement):
             filter(
                 None,
                 map(
-                    partial(self._create_child_element, self._parent),
+                    partial(self._create_child_element, self._parent, None),
                     chain.from_iterable(
                         zip(
                             lines,
