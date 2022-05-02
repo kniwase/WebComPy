@@ -1,5 +1,5 @@
 from webcompy.elements import html
-from webcompy.brython._modules import DOMNode
+from webcompy.brython import DOMNode, browser
 from webcompy.components._abstract import NonPropsComponentBase
 from webcompy.components._component import Component
 from webcompy.components._generator import ComponentGenerator, ComponentStore
@@ -7,7 +7,6 @@ from webcompy.components._decorators import component_template
 from webcompy.router._router import Router
 from webcompy.router._view import RouterView
 from webcompy.router._link import TypedRouterLink
-from webcompy.brython._modules import browser
 from webcompy.exception import WebComPyException
 
 

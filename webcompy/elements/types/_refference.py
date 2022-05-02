@@ -1,4 +1,4 @@
-from webcompy.brython._modules import DOMNode
+from webcompy.brython import DOMNode
 from webcompy.exception import WebComPyException
 
 

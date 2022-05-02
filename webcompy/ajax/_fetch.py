@@ -3,7 +3,7 @@ from typing import Any, Dict, Literal, Union
 import urllib.parse
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.exception import WebComPyException
-from webcompy.brython._modules import browser
+from webcompy.brython import browser
 
 
 # HttpClient

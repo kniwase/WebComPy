@@ -3,8 +3,7 @@ from abc import abstractmethod
 from typing import cast
 from webcompy.reactive._base import ReactiveStore
 from webcompy.reactive._container import ReactiveReceivable
-from webcompy.brython._modules import DOMNode
-from webcompy.brython._modules import browser
+from webcompy.brython import DOMNode, browser
 from webcompy.exception import WebComPyException
 
 
