@@ -1,11 +1,10 @@
 from typing import Any, Callable, Coroutine, Generic, ParamSpec, TypeVar
+from webcompy.brython import browser
 from webcompy.reactive._base import ReactiveBase
 
-try:
-    from browser import aio  # type: ignore
-
-    aio_run: Any = aio.run  # type: ignore
-except ModuleNotFoundError:
+if browser:
+    aio_run: Any = browser.aio.run
+else:
     import asyncio
 
     aio_run: Any = asyncio.run

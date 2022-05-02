@@ -5,6 +5,7 @@ from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.exception import WebComPyException
 from webcompy.elements.types._dynamic import DynamicElement
+from webcompy.brython import browser
 
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
@@ -27,6 +28,12 @@ class SwitchElement(DynamicElement):
         self._rendered_idx = None
         super().__init__()
 
+    def _on_set_parent(self):
+        if not browser:
+            idx, generator = self._select_generator()
+            self._rendered_idx = idx
+            self._children = self._generate_children(generator)
+
     def _select_generator(self) -> tuple[int, Callable[[], ElementChildren]]:
         if isinstance(self._cases, ReactiveBase):
             cases = self._cases.value
@@ -43,7 +50,7 @@ class SwitchElement(DynamicElement):
             return (-1, lambda: None)
 
     def _generate_children(self, generator: NodeGenerator) -> list[ElementAbstract]:
-        ele = self._create_child_element(self._parent, generator())
+        ele = self._create_child_element(self._parent, None, generator())
         return [ele] if ele is not None else []
 
     def _render(self):

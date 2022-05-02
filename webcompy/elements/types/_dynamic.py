@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import NoReturn
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._base import ElementWithChildren
@@ -5,12 +6,19 @@ from webcompy.exception import WebComPyException
 
 
 class DynamicElement(ElementWithChildren):
+    __parent: ElementWithChildren
+
     @property
     def _node_count(self) -> int:
         return sum(child._node_count for child in self._children)
 
-    def _create_child_element(self, parent: ElementWithChildren, child: ElementChildren):
-        child_element = super()._create_child_element(parent, child)
+    def _create_child_element(
+        self,
+        parent: "ElementWithChildren",
+        node_idx: int | None,
+        child: ElementChildren,
+    ):
+        child_element = super()._create_child_element(parent, node_idx, child)
         if isinstance(child_element, DynamicElement):
             raise WebComPyException("Nested DynamicElement is not allowed.")
         return child_element
@@ -23,3 +31,16 @@ class DynamicElement(ElementWithChildren):
 
     def _render_html(self, count: int, indent: int) -> str:
         return "\n".join(child._render_html(count, indent) for child in self._children)
+
+    @property
+    def _parent(self) -> "ElementWithChildren":
+        return self.__parent
+
+    @_parent.setter
+    def _parent(self, parent: "ElementWithChildren"):
+        self.__parent = parent
+        self._on_set_parent()
+
+    @abstractmethod
+    def _on_set_parent(self):
+        ...
