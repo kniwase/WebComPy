@@ -18,10 +18,12 @@ class AppRootComponent(NonPropsComponentBase):
 
 class AppDocumentRoot(Component):
     _router: Router | None
+    __loading: bool
 
     def __init__(
         self, root_component: ComponentGenerator[None], router: Router | None
     ) -> None:
+        self.__loading = True
         self._router = router
         if self._router:
             RouterView.__set_router__(self._router)
@@ -29,10 +31,13 @@ class AppDocumentRoot(Component):
         super().__init__(AppRootComponent, None, {"root": lambda: root_component(None)})
 
     @property
-    def __render__(self):
+    def render(self):
         return self._render
 
     def _render(self):
+        if browser and self.__loading:
+            self.__loading = False
+            browser.document.getElementById("webcompy-loading").remove()
         self._mount_node()
         self._property["on_before_rendering"]()
         for child in self._children:
@@ -61,11 +66,17 @@ class AppDocumentRoot(Component):
 
     @property
     def routes(self):
-        return [p[0] for p in self._router.__routes__] if self._router else None
+        return self._router.__routes__ if self._router else None
 
     @property
     def router_mode(self):
         return self._router.__mode__ if self._router else None
+
+    def set_path(self, path: str):
+        if self._router:
+            self._router.__set_path__(path, None)
+        else:
+            return None
 
     @property
     def style(self):
@@ -74,3 +85,13 @@ class AppDocumentRoot(Component):
             for component in ComponentStore.components.values()
             if (style := component.scoped_style)
         )
+
+    def _render_html(self, count: int, indent: int) -> str:
+        hidden = self._attrs.get("hidden")
+        self._attrs["hidden"] = True
+        html = super()._render_html(count, indent)
+        if hidden is None:
+            del self._attrs["hidden"]
+        else:
+            self._attrs["hidden"] = hidden
+        return html

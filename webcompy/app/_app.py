@@ -16,17 +16,5 @@ class WebComPyApp:
         self._root = AppDocumentRoot(root_component, router)
 
     @property
-    def __routes__(self):
-        return self._root.routes
-
-    @property
-    def __router_mode__(self):
-        return self._root.router_mode
-
-    @property
-    def __render__(self):
-        return self._root.__render__
-
-    @property
-    def __component_styles__(self):
-        return self._root.style
+    def __component__(self):
+        return self._root

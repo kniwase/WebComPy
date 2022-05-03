@@ -13,3 +13,4 @@ class WebComPyConfig:
     head: Head = field(default_factory=Head)
     base: str = "/"
     server_port: int = 8080
+    ssr: bool = True

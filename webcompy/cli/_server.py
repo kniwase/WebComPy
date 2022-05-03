@@ -1,3 +1,4 @@
+from functools import partial
 import mimetypes
 import pathlib
 from tempfile import TemporaryDirectory
@@ -39,25 +40,36 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
             raise HTTPException(404)
 
     app = get_app(config)
-    index_html = generate_html(
-        app_package_name=config.app_package,
-        component_styles=app.__component_styles__,
-        base=config.base,
-        dev_mode=dev_mode,
-    ).render_html()
+    html_generator = partial(
+        generate_html,
+        config.app_package,
+        app.__component__.style,
+        config.base,
+        dev_mode,
+    )
 
-    if app.__router_mode__ == "history" and app.__routes__:
-        for route in app.__routes__:
+    if app.__component__.router_mode == "history" and app.__component__.routes:
 
-            @fastapi_app.get(f"/{route}")
-            async def _():
-                return HTMLResponse(index_html)
+        @fastapi_app.get("/{path:path}")
+        async def _(path: str):
+            routes = r if (r := app.__component__.routes) else []
+            matched = [
+                route
+                for route, match_targeted_routes, _, _ in routes
+                if match_targeted_routes(path.strip("/"))
+            ]
+            if matched:
+                app.__component__.set_path(matched[0])
+                return HTMLResponse(html_generator(app.__component__))
+            else:
+                raise HTTPException(404)
 
     else:
+        html = html_generator(None)
 
         @fastapi_app.get("/")
         async def _():
-            return HTMLResponse(index_html)
+            return HTMLResponse(html)
 
     return fastapi_app
 

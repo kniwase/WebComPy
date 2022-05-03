@@ -84,7 +84,7 @@ class Router:
             map(urllib.parse.unquote, self._location.value.split("?", 2))
         )
         pathname, search = (
-            [decoded_href[0], ""] if len(decoded_href) == 1 else decoded_href
+            (decoded_href[0], "") if len(decoded_href) == 1 else decoded_href
         )
         return pathname, search
 

@@ -1,5 +1,6 @@
 from webcompy.elements.types import Element
 from webcompy.elements.typealias import ElementChildren
+from webcompy.components._component import Component
 
 
 class HtmlElement(Element):
@@ -18,7 +19,7 @@ class HtmlElement(Element):
         )
 
     def render_html(self):
-        return "<!doctype html>" + self._render_html(0, 0)
+        return self._render_html(0, 0)
 
     def _get_belonging_component(self):
         return ""
@@ -28,64 +29,70 @@ class HtmlElement(Element):
 
 
 def generate_html(
-    *,
     app_package_name: str,
     component_styles: str,
     base: str,
     dev_mode: bool,
+    app: Component | None,
 ):
-    return HtmlElement(
-        "html",
-        {},
-        HtmlElement(
-            "head",
+    return (
+        "<!doctype html>"
+        + HtmlElement(
+            "html",
             {},
-            HtmlElement("base", {"href": base}),
-            HtmlElement("meta", {"charset": "utf-8"}),
-            HtmlElement("style", {}, "[hidden] { display: none; }"),
-        ),
-        HtmlElement(
-            "body",
-            {
-                "onload": "brython({debug: 1, cache: false, indexedDB: true})"
-                if dev_mode
-                else "brython({debug: 0, cache: true, indexedDB: true})"
-            },
-            HtmlElement("div", {"id": "webcompy-app"}, "loading..."),
             HtmlElement(
-                "script",
+                "head",
+                {},
+                HtmlElement("base", {"href": base}),
+                HtmlElement("meta", {"charset": "utf-8"}),
+                HtmlElement("style", {}, "[hidden] { display: none; }"),
+                HtmlElement("style", {}, *component_styles.split("\n")),
+            ),
+            HtmlElement(
+                "body",
                 {
-                    "type": "text/javascript",
-                    "src": "_scripts/brython.js",
+                    "onload": "brython({debug: 1, cache: false, indexedDB: true})"
+                    if dev_mode
+                    else "brython({debug: 0, cache: true, indexedDB: true})"
                 },
+                HtmlElement("div", {"id": "webcompy-loading"}, "loading..."),
+                app
+                if app
+                else HtmlElement("div", {"id": "webcompy-app", "hidden": ""}),
+                HtmlElement(
+                    "script",
+                    {
+                        "type": "text/javascript",
+                        "src": "_scripts/brython.js",
+                    },
+                ),
+                HtmlElement(
+                    "script",
+                    {
+                        "type": "text/javascript",
+                        "src": "_scripts/brython_stdlib.js",
+                    },
+                ),
+                HtmlElement(
+                    "script",
+                    {
+                        "type": "text/javascript",
+                        "src": "_scripts/webcompy.brython.js",
+                    },
+                ),
+                HtmlElement(
+                    "script",
+                    {
+                        "type": "text/javascript",
+                        "src": f"_scripts/{app_package_name}.brython.js",
+                    },
+                ),
+                HtmlElement(
+                    "script",
+                    {"type": "text/python"},
+                    f"from {app_package_name} import webcompyapp\n",
+                    "webcompyapp.__component__.render()",
+                ),
             ),
-            HtmlElement(
-                "script",
-                {
-                    "type": "text/javascript",
-                    "src": "_scripts/brython_stdlib.js",
-                },
-            ),
-            HtmlElement(
-                "script",
-                {
-                    "type": "text/javascript",
-                    "src": "_scripts/webcompy.brython.js",
-                },
-            ),
-            HtmlElement(
-                "script",
-                {
-                    "type": "text/javascript",
-                    "src": f"_scripts/{app_package_name}.brython.js",
-                },
-            ),
-            HtmlElement(
-                "script",
-                {"type": "text/python"},
-                f"from {app_package_name} import webcompyapp\n",
-                "webcompyapp.__render__()",
-            ),
-            HtmlElement("style", {}, *component_styles.split("\n")),
-        ),
+        ).render_html()
     )
