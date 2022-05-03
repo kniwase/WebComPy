@@ -17,7 +17,6 @@ class AppRootComponent(NonPropsComponentBase):
 
 
 class AppDocumentRoot(Component):
-    routes: list[str]
     _router: Router | None
 
     def __init__(
@@ -28,15 +27,10 @@ class AppDocumentRoot(Component):
             RouterView.__set_router__(self._router)
             TypedRouterLink.__set_router__(self._router)
         super().__init__(AppRootComponent, None, {"root": lambda: root_component(None)})
-        self.routes = [p[0] for p in self._router.__routes__] if self._router else []
-        self.router_mode = self._router.__mode__ if self._router else None
 
-    def render(self):
-        if browser:
-            style_node = browser.document.createElement("style")
-            style_node.textContent = self._style
-            browser.document.body.appendChild(style_node)
-            self._render()
+    @property
+    def __render__(self):
+        return self._render
 
     def _render(self):
         self._mount_node()
@@ -66,14 +60,17 @@ class AppDocumentRoot(Component):
         return (self,)
 
     @property
-    def _style(self):
+    def routes(self):
+        return [p[0] for p in self._router.__routes__] if self._router else None
+
+    @property
+    def router_mode(self):
+        return self._router.__mode__ if self._router else None
+
+    @property
+    def style(self):
         return "\n".join(
             style
             for component in ComponentStore.components.values()
             if (style := component.scoped_style)
         )
-
-    def render_html(self, path: str | None = None, indent: int = 2):
-        if self._router and path is not None:
-            self._router.__set_path__(path, None)
-        return self._render_html(0, indent)
