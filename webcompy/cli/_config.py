@@ -14,3 +14,6 @@ class WebComPyConfig:
     base: str = "/"
     server_port: int = 8080
     ssr: bool = True
+
+    def __post_init__(self):
+        self.base = f"/{base}" if (base := self.base.strip("/")) else "/"

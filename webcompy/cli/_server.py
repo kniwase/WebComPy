@@ -1,8 +1,9 @@
 from functools import partial
+from re import compile as re_compile, escape as re_escape
 import mimetypes
 import pathlib
 from tempfile import TemporaryDirectory
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from starlette.types import ASGIApp
 import uvicorn  # type: ignore
@@ -47,27 +48,41 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
         config.base,
         dev_mode,
     )
+    base_url_stripper = partial(re_compile("^" + re_escape(config.base)).sub, "")
 
     if app.__component__.router_mode == "history" and app.__component__.routes:
+        routes = r if (r := app.__component__.routes) else []
+        if config.base != "/":
+            endpoint = config.base + "/{path:path}"
+        else:
+            endpoint = "/{path:path}"
 
-        @fastapi_app.get("/{path:path}")
-        async def _(path: str):
-            routes = r if (r := app.__component__.routes) else []
+        @fastapi_app.get(endpoint)
+        async def _(path: str, accept: str | None = Header(None)):
+            requested_path = base_url_stripper(path).strip("/")
+            accept_types = (accept if accept else "").split(",")
             matched = [
                 route
                 for route, match_targeted_routes, _, _ in routes
-                if match_targeted_routes(path.strip("/"))
+                if match_targeted_routes(requested_path)
             ]
             if matched:
                 app.__component__.set_path(matched[0])
+                return HTMLResponse(html_generator(app.__component__))
+            elif "text/html" in accept_types:
+                app.__component__.set_path(requested_path)
                 return HTMLResponse(html_generator(app.__component__))
             else:
                 raise HTTPException(404)
 
     else:
+        if config.base != "/":
+            endpoint = config.base + "/"
+        else:
+            endpoint = "/"
         html = html_generator(None)
 
-        @fastapi_app.get("/")
+        @fastapi_app.get(endpoint)
         async def _():
             return HTMLResponse(html)
 

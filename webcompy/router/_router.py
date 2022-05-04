@@ -91,12 +91,12 @@ class Router:
     def _get_elements_generator(self, args: RouteType) -> Tuple[Any, NodeGenerator]:
         match_targeted_routes, path_param_names, component = args[1:]
         current_path, search = self._get_current_path()
+        if self.__mode__ == "history" and self.__base_url__:
+            current_path = self._base_url_stripper(current_path)
         match = match_targeted_routes(current_path.strip("/"))
         if match:
             props = self._generate_router_context(
-                self._base_url_stripper(current_path)
-                if self.__mode__ == "history" and self.__base_url__
-                else current_path,
+                current_path,
                 search,
                 match,
                 path_param_names,
@@ -138,14 +138,7 @@ class Router:
         )
 
     def _generate_route_matcher(self, path: str):
-        return re_compile(
-            _convert_to_regex_pattern(
-                re_escape(self.__base_url__ + "/" + path)
-                if (self.__mode__ == "history" and self.__base_url__)
-                else re_escape(path)
-            )
-            + "$"
-        ).match
+        return re_compile(_convert_to_regex_pattern(re_escape(path)) + "$").match
 
     def _generate_routes(self, pages: Sequence[RouterPage]) -> list[RouteType]:
         return [
