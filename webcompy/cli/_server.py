@@ -3,8 +3,11 @@ from re import compile as re_compile, escape as re_escape
 import mimetypes
 import pathlib
 from tempfile import TemporaryDirectory
-from fastapi import FastAPI, HTTPException, Header
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import HTMLResponse, PlainTextResponse
+from starlette.routing import Route
+from starlette.exceptions import HTTPException
 from starlette.types import ASGIApp
 import uvicorn  # type: ignore
 from webcompy.cli._argparser import get_params
@@ -30,10 +33,8 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
             for p in pathlib.Path(temp).iterdir()
         }
 
-    fastapi_app = FastAPI()
-
-    @fastapi_app.get("/_scripts/{filename}")
-    async def _(filename: str):
+    async def send_script_file(request: Request):
+        filename: str = request.path_params.get("filename", "")  # type: ignore
         if filename in script_files.keys():
             content, media_type = script_files[filename]
             return PlainTextResponse(content, media_type=media_type)
@@ -51,21 +52,21 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
     base_url_stripper = partial(re_compile("^" + re_escape(config.base)).sub, "")
 
     if app.__component__.router_mode == "history" and app.__component__.routes:
-        routes = r if (r := app.__component__.routes) else []
-        if config.base != "/":
-            endpoint = config.base + "/{path:path}"
-        else:
-            endpoint = "/{path:path}"
 
-        @fastapi_app.get(endpoint)
-        async def _(path: str, accept: str | None = Header(None)):
+        async def send_html(request: Request):  # type: ignore
+            # get requested path
+            path: str = request.path_params.get("path", "")  # type: ignore
             requested_path = base_url_stripper(path).strip("/")
-            accept_types = (accept if accept else "").split(",")
+            # get accept types
+            accept_types: list[str] = request.headers.get("accept", "").split(",")
+            # search requested page
+            routes = r if (r := app.__component__.routes) else []
             matched = [
                 route
                 for route, match_targeted_routes, _, _ in routes
                 if match_targeted_routes(requested_path)
             ]
+            # response html
             if matched:
                 app.__component__.set_path(matched[0])
                 return HTMLResponse(html_generator(app.__component__))
@@ -75,18 +76,23 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
             else:
                 raise HTTPException(404)
 
-    else:
-        if config.base != "/":
-            endpoint = config.base + "/"
-        else:
-            endpoint = "/"
-        html = html_generator(None)
+        html_route = (
+            config.base + "/{path:path}" if config.base != "/" else "/{path:path}"
+        )
 
-        @fastapi_app.get(endpoint)
-        async def _():
+    else:
+
+        async def send_html(_: Request):  # type: ignore
             return HTMLResponse(html)
 
-    return fastapi_app
+        html_route = config.base + "/" if config.base != "/" else "/"
+        html = html_generator(None)
+
+    routes = [
+        Route("/_scripts/{filename:path}", send_script_file),
+        Route(html_route, send_html),
+    ]
+    return Starlette(routes=routes)
 
 
 def run_server():
