@@ -68,10 +68,12 @@ class Router:
     def __default__(self) -> ElementChildren:
         if self._default:
             current_path, search = self._get_current_path()
+            if current_path == "//:404://":
+                current_path = "/404.html"
+            elif self.__mode__ == "history" and self.__base_url__:
+                current_path = self._base_url_stripper(current_path)
             props = self._generate_router_context(
-                self._base_url_stripper(current_path)
-                if self.__mode__ == "history" and self.__base_url__
-                else current_path,
+                current_path,
                 search,
                 None,
                 [],

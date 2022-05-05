@@ -4,31 +4,6 @@ from webcompy.app._app import WebComPyApp
 from webcompy.cli._config import WebComPyConfig
 
 
-_WEBCOMPY_ESSENTIAL_SCRIPTS = (
-    (
-        {
-            "type": "text/javascript",
-            "src": "_scripts/brython.js",
-        },
-        None,
-    ),
-    (
-        {
-            "type": "text/javascript",
-            "src": "_scripts/brython_stdlib.js",
-        },
-        None,
-    ),
-    (
-        {
-            "type": "text/javascript",
-            "src": "_scripts/webcompy.brython.js",
-        },
-        None,
-    ),
-)
-
-
 class _HtmlElement(Element):
     def __init__(
         self,
@@ -71,16 +46,37 @@ def generate_html(
     app: WebComPyApp,
     prerender: bool,
 ):
-    scripts: list[tuple[dict[str, str], str | None]] = list(_WEBCOMPY_ESSENTIAL_SCRIPTS)
-    scripts.append(
+    base = b if (b := config.base) == "/" else f"{b}/"
+    scripts: list[tuple[dict[str, str], str | None]] = [
         (
             {
                 "type": "text/javascript",
-                "src": f"_scripts/{config.app_package}.brython.js",
+                "src": f"{base}_scripts/brython.js",
             },
             None,
         ),
-    )
+        (
+            {
+                "type": "text/javascript",
+                "src": f"{base}_scripts/brython_stdlib.js",
+            },
+            None,
+        ),
+        (
+            {
+                "type": "text/javascript",
+                "src": f"{base}_scripts/webcompy.brython.js",
+            },
+            None,
+        ),
+        (
+            {
+                "type": "text/javascript",
+                "src": f"{base}_scripts/{config.app_package}.brython.js",
+            },
+            None,
+        ),
+    ]
     scripts.extend(app.__scripts__)
     scripts.append(
         (
@@ -94,10 +90,8 @@ def generate_html(
                 {"type": "text/javascript"},
                 "\n".join(
                     (
-                        "var stream= new EventSource('{base}_webcompy_reload');".format(
-                            base=b if (b := config.base) == "/" else f"{b}/"
-                        ),
-                        "stream.addEventListener('error', (e) => { window.location.reload(); });"
+                        f"var stream= new EventSource('{base}_webcompy_reload');",
+                        "stream.addEventListener('error', (e) => { window.location.reload(); });",
                     )
                 ),
             )
@@ -127,7 +121,7 @@ def generate_html(
                     _HtmlElement("meta", attrs)
                     for attrs in app.__head__.get("meta", [])
                 ],
-                _HtmlElement("base", {"href": config.base}),
+                _HtmlElement("base", {"href": base}),
                 _HtmlElement("style", {}, "*[hidden] { display: none; }"),
                 _HtmlElement("style", {}, *app.__component__.style.split("\n")),
                 *[

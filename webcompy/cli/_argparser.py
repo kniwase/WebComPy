@@ -3,23 +3,24 @@ import sys
 from typing import Any, Literal
 
 
-def get_params() -> tuple[Literal["start"], dict[str, Any]]:
+def get_params() -> tuple[Literal["start", "generate"], dict[str, Any]]:
     def _command(subcommand_name: str):
         return lambda: subcommand_name
 
-    parser = ArgumentParser(prog="python -m webcompy", add_help=True)
+    maincommand = "webcompy-cli"
+    parser = ArgumentParser(prog=maincommand, add_help=True)
     subparsers = parser.add_subparsers()
 
     # start
     subcommand_name = "start"
     parser_start = subparsers.add_parser(
         subcommand_name,
-        help=f"see `{subcommand_name} --help`",
+        help=f"Starts HTTP server. See `{maincommand} {subcommand_name} --help` for options.",
     )
     parser_start.add_argument(
         "--dev",
         action="store_true",
-        help="launch dev server",
+        help="launch dev server with hot-reload",
     )
     parser_start.add_argument(
         "--port",
@@ -27,6 +28,19 @@ def get_params() -> tuple[Literal["start"], dict[str, Any]]:
         help="server port",
     )
     parser_start.set_defaults(__command_getter__=_command(subcommand_name))
+
+    # generate
+    subcommand_name = "generate"
+    parser_generate = subparsers.add_parser(
+        subcommand_name,
+        help=f"Generates static html files. See `{maincommand} {subcommand_name} --help` for options.",
+    )
+    parser_generate.add_argument(
+        "--dist",
+        type=str,
+        help="dist dir",
+    )
+    parser_generate.set_defaults(__command_getter__=_command(subcommand_name))
 
     # parse
     args = parser.parse_args()

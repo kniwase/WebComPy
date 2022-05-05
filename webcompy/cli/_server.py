@@ -20,14 +20,20 @@ from webcompy.cli._brython_cli import (
 )
 from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._html import generate_html
-from webcompy.cli._utils import get_app, get_config
+from webcompy.cli._utils import (
+    get_app,
+    get_config,
+    get_webcompy_packge_dir,
+)
 
 
 def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
     with TemporaryDirectory() as temp:
         install_brython_scripts(temp)
-        make_brython_package("webcompy", temp)
-        make_brython_package("dev", temp)
+        make_brython_package(get_webcompy_packge_dir(), temp)
+        make_brython_package(
+            str(pathlib.Path(f"./{config.app_package}").absolute()), temp
+        )
         script_files: dict[str, tuple[bytes, str]] = {
             p.name: (
                 p.open("rb").read(),
@@ -49,6 +55,9 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
     base_url_stripper = partial(re_compile("^" + re_escape(config.base)).sub, "")
 
     if app.__component__.router_mode == "history" and app.__component__.routes:
+        html_route = (
+            config.base + "/{path:path}" if config.base != "/" else "/{path:path}"
+        )
 
         async def send_html(request: Request):  # type: ignore
             # get requested path
@@ -66,22 +75,20 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
             else:
                 raise HTTPException(404)
 
-        html_route = (
-            config.base + "/{path:path}" if config.base != "/" else "/{path:path}"
-        )
     else:
+        html_route = config.base
+        html = html_generator(app, False)
 
         async def send_html(_: Request):  # type: ignore
             return HTMLResponse(html)
 
-        html_route = config.base + "/" if config.base != "/" else "/"
-        html = html_generator(app, False)
-
+    if (base := config.base) != "/":
+        base = f"{base}/"
     routes = [
-        Route("/_scripts/{filename:path}", send_script_file),
+        Route(base + "_scripts/{filename:path}", send_script_file),
         Route(html_route, send_html),
     ]
-    
+
     if dev_mode:
 
         async def loop():
@@ -92,9 +99,10 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
         async def sse(_: Request):
             return EventSourceResponse(loop())
 
-        reload_route = "{base}_webcompy_reload".format(
-            base=b if (b := config.base) == "/" else f"{b}/"
-        )
+        if config.base == "/":
+            reload_route = "/_webcompy_reload"
+        else:
+            reload_route = f"{config.base}/_webcompy_reload"
         routes.insert(0, Route(reload_route, endpoint=sse))
 
     return Starlette(routes=routes)
@@ -103,5 +111,5 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
 def run_server():
     _, args = get_params()
     config = get_config()
-    port = config.server_port if args["port"] is None else args["port"]
+    port = config.server_port if args.get("port") is None else args["port"]
     uvicorn.run("webcompy.cli._asgi_app:app", port=port, reload=args["dev"])
