@@ -1,48 +1,54 @@
 # WebComPy
 
-Python client-side web framework
+Python client-side web framework which works on Browser.
 
 ## ToDo
 - Add PyScript support ([Github Repo](https://github.com/pyscript/pyscript))
-- Add CLI tool
 - Add provide/inject (DI)
-- Add JavaScript/CSS libraries loader
 - Add Plugin System
 
 ## Sample Code
 ```python
-from webcompy.app import WebComPyApp
+from webcompy.reactive import Reactive, computed_property, computed
+from webcompy.elements import html, repeat, switch
 from webcompy.brython import DOMEvent
-from webcompy.components import ComponentContext, define_component
-from webcompy.elements import html, event, repeat
-from webcompy.reactive import Reactive, computed
+from webcompy.router import RouterContext
+from webcompy.components import (
+    define_component,
+    ComponentContext,
+    TypedComponentBase,
+    component_class,
+    on_before_rendering,
+    component_template,
+)
 
 
 @define_component
-def FizzbuzzCore(context: ComponentContext[Reactive[int]]):
+def FizzbuzzList(context: ComponentContext[Reactive[int]]):
     @computed
-    def numbers():
-        return [
-            "FizzBuzz"
-            if n % 15 == 0
-            else "Fizz"
-            if n % 5 == 0
-            else "Buzz"
-            if n % 3 == 0
-            else str(n)
-            for n in map(lambda n: n + 1, range(context.props.value))
-        ]
+    def fizzbuzz():
+        li: list[str] = []
+        for n in range(1, context.props.value + 1):
+            if n % 15 == 0:
+                li.append("FizzBuzz")
+            elif n % 5 == 0:
+                li.append("Fizz")
+            elif n % 3 == 0:
+                li.append("Buzz")
+            else:
+                li.append(str(n))
+        return li
 
-    return html.UL(
+    return html.DIV(
         {},
-        repeat(
-            numbers,
-            lambda s: html.LI({}, s),
+        html.UL(
+            {},
+            repeat(fizzbuzz, lambda s: html.LI({}, s)),
         ),
     )
 
 
-FizzbuzzCore.scoped_style = {
+FizzbuzzList.scoped_style = {
     "ul": {
         "border": "dashed 2px #668ad8",
         "background": "#f1f8ff",
@@ -60,35 +66,71 @@ FizzbuzzCore.scoped_style = {
 }
 
 
-@define_component
-def Fizzbuzz(context: ComponentContext[None]):
-    count = Reactive(10)
+@component_class
+class Fizzbuzz(TypedComponentBase(props_type=RouterContext)):
+    def __init__(self) -> None:
+        self.opened = Reactive(True)
+        self.count = Reactive(10)
 
-    def add(ev: DOMEvent):
-        count.value += 1
+    @computed_property
+    def toggle_button_text(self):
+        return "Hide" if self.opened.value else "Open"
 
-    def pop(ev: DOMEvent):
-        if count.value:
-            count.value -= 1
+    @on_before_rendering
+    def on_before_rendering(self):
+        self.count.value = 10
 
-    @context.on_before_rendering
-    def _():
-        count.value = 10
+    def add(self, ev: DOMEvent):
+        self.count.value += 1
 
-    return html.DIV(
-        {},
-        html.H1({}, "FizzBuzz"),
-        html.P(
+    def pop(self, ev: DOMEvent):
+        if self.count.value > 0:
+            self.count.value -= 1
+
+    def toggle(self, ev: DOMEvent):
+        self.opened.value = not self.opened.value
+
+    @component_template
+    def template(self):
+        return html.DIV(
             {},
-            html.BUTTON({event("click"): add}, "Add"),
-            html.BUTTON({event("click"): pop}, "Pop"),
-        ),
-        FizzbuzzCore(
-            props=count,
-        ),
-    )
+            html.H3(
+                {},
+                "FizzBuzz",
+            ),
+            html.P(
+                {},
+                html.BUTTON(
+                    {"@click": self.toggle},
+                    self.toggle_button_text,
+                ),
+                html.BUTTON(
+                    {"@click": self.add},
+                    "Add",
+                ),
+                html.BUTTON(
+                    {"@click": self.pop},
+                    "Pop",
+                ),
+            ),
+            html.P(
+                {},
+                "Count: ",
+                self.count,
+            ),
+            switch(
+                {
+                    "case": self.opened,
+                    "generator": lambda: FizzbuzzList(props=self.count),
+                },
+                default=lambda: html.H5(
+                    {},
+                    "FizzBuzz Hidden",
+                ),
+            ),
+        )
 
-
-app = WebComPyApp(root_component=Fizzbuzz)
-app.init()
 ```
+
+## Lisence
+This project is licensed under the MIT License, see the LICENSE.txt file for details.
