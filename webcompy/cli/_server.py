@@ -1,5 +1,6 @@
 import asyncio
 from functools import partial
+from operator import truth
 from re import compile as re_compile, escape as re_escape
 import mimetypes
 import pathlib
@@ -57,16 +58,9 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
             accept_types: list[str] = request.headers.get("accept", "").split(",")
             # search requested page
             routes = r if (r := app.__component__.routes) else []
-            matched = [
-                route
-                for route, match_targeted_routes, _, _ in routes
-                if match_targeted_routes(requested_path)
-            ]
+            is_matched = truth(tuple(filter(lambda r: r[1](requested_path), routes)))
             # response html
-            if matched:
-                app.__component__.set_path(matched[0])
-                return HTMLResponse(html_generator(app, True))
-            elif "text/html" in accept_types:
+            if is_matched or "text/html" in accept_types:
                 app.__component__.set_path(requested_path)
                 return HTMLResponse(html_generator(app, True))
             else:
@@ -75,7 +69,6 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
         html_route = (
             config.base + "/{path:path}" if config.base != "/" else "/{path:path}"
         )
-
     else:
 
         async def send_html(_: Request):  # type: ignore

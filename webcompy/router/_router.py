@@ -27,6 +27,7 @@ RouteType: TypeAlias = Tuple[
     Callable[[str], Match[str] | None],
     List[str],
     ComponentGenerator[RouterContext],
+    RouterPage,
 ]
 
 _convert_to_regex_pattern = partial(re_compile(r"\\\{[^\{\}/]+\\\}").sub, r"([^/]*?)")
@@ -89,7 +90,7 @@ class Router:
         return pathname, search
 
     def _get_elements_generator(self, args: RouteType) -> Tuple[Any, NodeGenerator]:
-        match_targeted_routes, path_param_names, component = args[1:]
+        match_targeted_routes, path_param_names, component = args[1:-1]
         current_path, search = self._get_current_path()
         if self.__mode__ == "history" and self.__base_url__:
             current_path = self._base_url_stripper(current_path)
@@ -142,8 +143,8 @@ class Router:
 
     def _generate_routes(self, pages: Sequence[RouterPage]) -> list[RouteType]:
         return [
-            (*path, component)
-            for path, component in zip(
+            (*path, component, page)
+            for path, component, page in zip(
                 map(
                     lambda path: (
                         path,
@@ -153,6 +154,7 @@ class Router:
                     map(lambda page: page["path"].strip("/"), pages),
                 ),
                 map(lambda page: page["component"], pages),
+                pages,
             )
         ]
 
