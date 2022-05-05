@@ -1,3 +1,4 @@
+import asyncio
 from functools import partial
 from re import compile as re_compile, escape as re_escape
 import mimetypes
@@ -9,6 +10,7 @@ from starlette.responses import HTMLResponse, PlainTextResponse
 from starlette.routing import Route
 from starlette.exceptions import HTTPException
 from starlette.types import ASGIApp
+from sse_starlette.sse import EventSourceResponse
 import uvicorn  # type: ignore
 from webcompy.cli._argparser import get_params
 from webcompy.cli._brython_cli import (
@@ -86,6 +88,22 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
         Route("/_scripts/{filename:path}", send_script_file),
         Route(html_route, send_html),
     ]
+    
+    if dev_mode:
+
+        async def loop():
+            while True:
+                await asyncio.sleep(60)
+                yield None
+
+        async def sse(_: Request):
+            return EventSourceResponse(loop())
+
+        reload_route = "{base}_webcompy_reload".format(
+            base=b if (b := config.base) == "/" else f"{b}/"
+        )
+        routes.insert(0, Route(reload_route, endpoint=sse))
+
     return Starlette(routes=routes)
 
 

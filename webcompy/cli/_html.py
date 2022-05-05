@@ -88,6 +88,20 @@ def generate_html(
             f"from {config.app_package} import webcompyapp\nwebcompyapp.__component__.render()",
         )
     )
+    if dev_mode:
+        scripts.append(
+            (
+                {"type": "text/javascript"},
+                "\n".join(
+                    (
+                        "var stream= new EventSource('{base}_webcompy_reload');".format(
+                            base=b if (b := config.base) == "/" else f"{b}/"
+                        ),
+                        "stream.addEventListener('error', (e) => { window.location.reload(); });"
+                    )
+                ),
+            )
+        )
     if title := app.__head__.get("title"):
         title = _HtmlElement("title", {}, title)
     else:
