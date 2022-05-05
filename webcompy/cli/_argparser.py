@@ -3,11 +3,11 @@ import sys
 from typing import Any, Literal
 
 
-def get_params() -> tuple[Literal["start", "generate"], dict[str, Any]]:
+def get_params() -> tuple[Literal["start", "generate", "init"], dict[str, Any]]:
     def _command(subcommand_name: str):
         return lambda: subcommand_name
 
-    maincommand = "webcompy-cli"
+    maincommand = "python -m webcompy"
     parser = ArgumentParser(prog=maincommand, add_help=True)
     subparsers = parser.add_subparsers()
 
@@ -41,6 +41,14 @@ def get_params() -> tuple[Literal["start", "generate"], dict[str, Any]]:
         help="dist dir",
     )
     parser_generate.set_defaults(__command_getter__=_command(subcommand_name))
+
+    # init
+    subcommand_name = "init"
+    parser_init = subparsers.add_parser(
+        subcommand_name,
+        help="Creates new project on current dir.",
+    )
+    parser_init.set_defaults(__command_getter__=_command(subcommand_name))
 
     # parse
     args = parser.parse_args()
