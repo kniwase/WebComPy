@@ -42,13 +42,7 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
             raise HTTPException(404)
 
     app = get_app(config)
-    html_generator = partial(
-        generate_html,
-        config.app_package,
-        app.__component__.style,
-        config.base,
-        dev_mode,
-    )
+    html_generator = partial(generate_html, config, dev_mode)
     base_url_stripper = partial(re_compile("^" + re_escape(config.base)).sub, "")
 
     if app.__component__.router_mode == "history" and app.__component__.routes:
@@ -69,10 +63,10 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
             # response html
             if matched:
                 app.__component__.set_path(matched[0])
-                return HTMLResponse(html_generator(app.__component__))
+                return HTMLResponse(html_generator(app, True))
             elif "text/html" in accept_types:
                 app.__component__.set_path(requested_path)
-                return HTMLResponse(html_generator(app.__component__))
+                return HTMLResponse(html_generator(app, True))
             else:
                 raise HTTPException(404)
 
@@ -86,7 +80,7 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
             return HTMLResponse(html)
 
         html_route = config.base + "/" if config.base != "/" else "/"
-        html = html_generator(None)
+        html = html_generator(app, False)
 
     routes = [
         Route("/_scripts/{filename:path}", send_script_file),
