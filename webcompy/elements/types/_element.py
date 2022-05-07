@@ -18,11 +18,16 @@ class ElementBase(ElementWithChildren):
 
     def _init_node(self) -> DOMNode:
         if browser:
-            node: DOMNode = browser.document.createElement(self._tag_name)
+            prerendered_node = self._get_prerendered_node()
+            if prerendered_node and not hasattr(prerendered_node, "__webcompy_node__"):
+                node = prerendered_node
+                self._mounted = True
+            else:
+                node: DOMNode = browser.document.createElement(self._tag_name)
+                for name, value in self._get_processed_attrs().items():
+                    if value is not None:
+                        node.setAttribute(name, value)
             node.__webcompy_node__ = True
-            for name, value in self._get_processed_attrs().items():
-                if value is not None:
-                    node.setAttribute(name, value)
             for name, value in self._attrs.items():
                 if isinstance(value, ReactiveBase):
                     self._set_callback_id(

@@ -11,14 +11,24 @@ class NewLine(ElementAbstract):
 
     def _init_node(self) -> DOMNode:
         if browser:
-            node = browser.html.BR()
+            prerendered_node = self._get_prerendered_node()
+            if prerendered_node and not hasattr(prerendered_node, "__webcompy_node__"):
+                node = prerendered_node
+                self._mounted = True
+            else:
+                node = browser.html.BR()
             node.__webcompy_node__ = True
             return node
         else:
             raise WebComPyException("Not in Browser environment.")
 
-    def _render_html(self, count: int, indent: int) -> str:
-        return (" " * indent * count) + "<br>"
+    def _render_html(
+        self, newline: bool = False, indent: int = 2, count: int = 0
+    ) -> str:
+        if newline:
+            return (" " * indent * count) + "<br>"
+        else:
+            return "<br>"
 
 
 class _HTMLTextElement(DOMNode):
@@ -40,10 +50,13 @@ class TextElement(ElementAbstract):
             text = value if isinstance(value, str) else str(value)
         else:
             text = self._text
-        return text.replace("\n", " ")
+        return text
 
     def _init_node(self) -> DOMNode:
         if browser:
+            prerendered_node = self._get_prerendered_node()
+            if prerendered_node and prerendered_node.nodeName == "#text":
+                prerendered_node.remove()
             node = browser.document.createTextNode(self._get_text())
             node.__webcompy_node__ = True
             return node
@@ -58,5 +71,10 @@ class TextElement(ElementAbstract):
     def _get_node(self) -> _HTMLTextElement:
         return cast(_HTMLTextElement, super()._get_node())
 
-    def _render_html(self, count: int, indent: int) -> str:
-        return (" " * indent * count) + self._get_text()
+    def _render_html(
+        self, newline: bool = False, indent: int = 2, count: int = 0
+    ) -> str:
+        if newline:
+            return (" " * indent * count) + self._get_text()
+        else:
+            return self._get_text()

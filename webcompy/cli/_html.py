@@ -1,6 +1,7 @@
 from webcompy.elements.types import Element
 from webcompy.elements.typealias import ElementChildren
 from webcompy.app._app import WebComPyApp
+from webcompy.utils import strip_multiline_text
 from webcompy.cli._config import WebComPyConfig
 
 
@@ -20,7 +21,7 @@ class _HtmlElement(Element):
         )
 
     def render_html(self):
-        return self._render_html(0, 0)
+        return self._render_html(False, 0)
 
     def _get_belonging_component(self):
         return ""
@@ -34,7 +35,7 @@ def _load_scripts(scripts: list[tuple[dict[str, str], str | None]]):
         _HtmlElement(
             "script",
             attrs,
-            *(s.split("\n") if (s := script) else []),
+            strip_multiline_text(script if script else ""),
         )
         for attrs, script in scripts
     ]
@@ -81,18 +82,23 @@ def generate_html(
     scripts.append(
         (
             {"type": "text/python"},
-            f"from {config.app_package} import webcompyapp\nwebcompyapp.__component__.render()",
+            """
+                from {app_package} import webcompyapp
+                webcompyapp.__component__.render()
+            """.format(
+                app_package=config.app_package
+            ),
         )
     )
     if dev_mode:
         scripts.append(
             (
                 {"type": "text/javascript"},
-                "\n".join(
-                    (
-                        f"var stream= new EventSource('{base}_webcompy_reload');",
-                        "stream.addEventListener('error', (e) => { window.location.reload(); });",
-                    )
+                """
+                    var stream= new EventSource('{base}_webcompy_reload');
+                    stream.addEventListener('error', (e) => window.location.reload());
+                """.format(
+                    base=base
                 ),
             )
         )

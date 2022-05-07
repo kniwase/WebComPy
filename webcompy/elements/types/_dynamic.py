@@ -29,8 +29,12 @@ class DynamicElement(ElementWithChildren):
     def _get_node(self) -> NoReturn:
         raise WebComPyException("'DynamicElement' does not have its own node.")
 
-    def _render_html(self, count: int, indent: int) -> str:
-        return "\n".join(child._render_html(count, indent) for child in self._children)
+    def _render_html(
+        self, newline: bool = False, indent: int = 2, count: int = 0
+    ) -> str:
+        return ("\n" if newline else "").join(
+            child._render_html(newline, indent, count) for child in self._children
+        )
 
     @property
     def _parent(self) -> "ElementWithChildren":

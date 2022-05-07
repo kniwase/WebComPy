@@ -38,7 +38,6 @@ class AppDocumentRoot(Component):
         if browser and self.__loading:
             self.__loading = False
             browser.document.getElementById("webcompy-loading").remove()
-        self._mount_node()
         self._property["on_before_rendering"]()
         for child in self._children:
             child._render()
@@ -46,17 +45,17 @@ class AppDocumentRoot(Component):
 
     def _init_node(self) -> DOMNode:
         if browser:
-            node = browser.document.createElement("div")
-            node.setAttribute("id", "webcompy-app")
+            node = browser.document.getElementById("webcompy-app")
+            for name in tuple(node.attrs.keys()):
+                if name != "id":
+                    del node.attrs[name]
             node.__webcompy_node__ = True
             return node
         else:
             raise WebComPyException("Not in Browser environment.")
 
     def _mount_node(self):
-        if browser:
-            old_node = browser.document.getElementById("webcompy-app")
-            old_node.parent.replaceChild(self._get_node(), old_node)
+        pass
 
     def _get_belonging_component(self):
         return ""
@@ -86,10 +85,12 @@ class AppDocumentRoot(Component):
             if (style := component.scoped_style)
         )
 
-    def _render_html(self, count: int, indent: int) -> str:
+    def _render_html(
+        self, newline: bool = False, indent: int = 2, count: int = 0
+    ) -> str:
         hidden = self._attrs.get("hidden")
         self._attrs["hidden"] = True
-        html = super()._render_html(count, indent)
+        html = super()._render_html(newline, indent, count)
         if hidden is None:
             del self._attrs["hidden"]
         else:
