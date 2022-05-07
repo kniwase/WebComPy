@@ -12,16 +12,23 @@ from webcompy.elements.types._text import TextElement
 
 
 class ElementWithChildren(ElementAbstract):
-    _parent: ElementWithChildren
-
     _tag_name: HtmlTags
     _attrs: dict[str, AttrValue] = {}
     _event_handlers: dict[str, EventHandler] = {}
     _children: list[ElementAbstract] = []
+    __parent: ElementWithChildren
 
     def __init__(self) -> None:
         self._node_cache = None
         self._callback_ids: set[int] = set()
+
+    @property
+    def _parent(self) -> "ElementWithChildren":
+        return self.__parent
+
+    @_parent.setter
+    def _parent(self, parent: "ElementWithChildren"):  # type: ignore
+        self.__parent = parent
 
     def _render(self):
         super()._render()
@@ -56,7 +63,10 @@ class ElementWithChildren(ElementAbstract):
                 child._remove_element(True, False)
 
     def _create_child_element(
-        self, parent: "ElementWithChildren", child: ElementChildren
+        self,
+        parent: "ElementWithChildren",
+        node_idx: int | None,
+        child: ElementChildren,
     ):
         if child is None:
             return None
@@ -64,6 +74,8 @@ class ElementWithChildren(ElementAbstract):
             element = TextElement(child)
         else:
             element = child
+        if node_idx is not None:
+            element._node_idx = node_idx
         element._parent = parent
         return element
 
@@ -82,18 +94,16 @@ class ElementWithChildren(ElementAbstract):
                     child._re_index_children(True)
 
     def _append_child(self, child: ElementChildren):
-        child_ele = self._create_child_element(self, child)
+        if self._children_length == 0:
+            node_idx = 0
+        else:
+            node_idx = self._children[-1]._node_idx + self._children[-1]._node_count
+        child_ele = self._create_child_element(self, node_idx, child)
         if child_ele is not None:
-            if self._children_length == 0:
-                child_ele._node_idx = 0
-            else:
-                child_ele._node_idx = (
-                    self._children[-1]._node_idx + self._children[-1]._node_count
-                )
             self._children.append(child_ele)
 
     def _insert_child(self, index: int, child: ElementChildren):
-        child_ele = self._create_child_element(self, child)
+        child_ele = self._create_child_element(self, None, child)
         if child_ele is not None:
             self._children.insert(index, child_ele)
             self._re_index_children(False)
@@ -116,18 +126,23 @@ class ElementWithChildren(ElementAbstract):
     def _get_belonging_components(self) -> tuple[Any, ...]:
         return self._parent._get_belonging_components()
 
-    def _render_html(self, count: int, indent: int) -> str:
+    def _render_html(
+        self, newline: bool = False, indent: int = 2, count: int = 0
+    ) -> str:
         attrs: str = " ".join(
             f'{name}="{value}"' if value else name
             for name, value in self._get_processed_attrs().items()
             if value is not None
         )
-        return "\n".join(
+        separator = "\n" if newline else ""
+        indent_text = (" " * indent * count) if newline else ""
+        return separator.join(
             (
-                f'{" " * indent * count}<{self._tag_name}{" " + attrs if attrs else ""}>',
-                "\n".join(
-                    child._render_html(count + 1, indent) for child in self._children
+                f'{indent_text}<{self._tag_name}{" " + attrs if attrs else ""}>',
+                separator.join(
+                    child._render_html(newline, indent, count + 1)
+                    for child in self._children
                 ),
-                f'{" " * indent * count}</{self._tag_name}>',
+                f"{indent_text}</{self._tag_name}>",
             )
         )

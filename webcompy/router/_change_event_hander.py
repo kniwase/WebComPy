@@ -1,6 +1,6 @@
 from typing import Any, Literal
 from webcompy.reactive._base import ReactiveBase
-from webcompy.brython._modules import browser
+from webcompy.brython import browser
 
 
 class Location(ReactiveBase[str]):
@@ -39,7 +39,7 @@ class Location(ReactiveBase[str]):
     @ReactiveBase._change_event
     def __set_path__(self, path: str, state: dict[str, Any] | None):
         self._state = state
-        if self.__mode__ == "hash":
+        if self.__mode__ == "hash" and path.startswith("#"):
             self._value = path[1:]
         else:
             self._value = path

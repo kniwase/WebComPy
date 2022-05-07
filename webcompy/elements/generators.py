@@ -10,7 +10,7 @@ from typing import (
     Union,
 )
 from webcompy.elements.types._text import TextElement, NewLine
-from webcompy.elements.types._element import Element
+from webcompy.elements.types._element import ElementBase, Element
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._repeat import RepeatElement, MultiLineTextElement
 from webcompy.elements.types._switch import SwitchElement
@@ -56,7 +56,7 @@ def create_element(
 
 
 ChildNode: TypeAlias = Union[
-    Element,
+    ElementBase,
     TextElement,
     MultiLineTextElement,
     NewLine,

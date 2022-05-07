@@ -6,7 +6,7 @@ from typing import (
     Union,
 )
 from webcompy.reactive._base import ReactiveBase
-from webcompy.brython._modules import DOMEvent
+from webcompy.brython import DOMEvent
 from webcompy.elements.types._abstract import ElementAbstract
 
 

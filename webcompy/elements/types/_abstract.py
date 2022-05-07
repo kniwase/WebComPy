@@ -3,19 +3,17 @@ from abc import abstractmethod
 from typing import cast
 from webcompy.reactive._base import ReactiveStore
 from webcompy.reactive._container import ReactiveReceivable
-from webcompy.brython._modules import DOMNode
-from webcompy.brython._modules import browser
+from webcompy.brython import DOMNode, browser
 from webcompy.exception import WebComPyException
 
 
 class ElementAbstract(ReactiveReceivable):
-    _parent: ElementAbstract
     _node_idx: int
     _node_cache: DOMNode | None = None
     _mounted: bool | None = None
     _remount_to: DOMNode | None = None
-
     _callback_ids: set[int]
+    __parent: ElementAbstract
 
     def __init__(self) -> None:
         self._node_cache = None
@@ -23,11 +21,19 @@ class ElementAbstract(ReactiveReceivable):
         self._remount_to = None
         self._callback_ids: set[int] = set()
 
+    @property
+    def _parent(self) -> "ElementAbstract":
+        return self.__parent
+
+    @_parent.setter
+    def _parent(self, parent: "ElementAbstract"):
+        self.__parent = parent
+
     def _render(self):
         self._mount_node()
 
     def _mount_node(self):
-        if node := self._get_node():
+        if not self._mounted and (node := self._get_node()):
             parent_node = self._parent._get_node()
             if self._mounted is None:
                 if parent_node.childNodes.length <= self._node_idx:
@@ -79,6 +85,15 @@ class ElementAbstract(ReactiveReceivable):
     def _clear_node_cache(self, recursive: bool = True):
         self._node_cache = None
 
+    def _get_prerendered_node(self) -> DOMNode | None:
+        parent_node = self._parent._get_node()
+        if parent_node.childNodes.length > self._node_idx:
+            prerendered_node: DOMNode = parent_node.childNodes[self._node_idx]
+            return prerendered_node
+        return None
+
     @abstractmethod
-    def _render_html(self, count: int, indent: int) -> str:
+    def _render_html(
+        self, newline: bool = False, indent: int = 2, count: int = 0
+    ) -> str:
         ...

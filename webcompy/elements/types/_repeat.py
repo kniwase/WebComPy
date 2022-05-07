@@ -1,11 +1,12 @@
 from functools import partial
 from itertools import chain
 from typing import Any, Callable, List, TypeVar
-from webcompy.reactive import ReactiveBase
+from webcompy.reactive import ReactiveBase, computed
 from webcompy.elements.types._text import NewLine
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.exception import WebComPyException
 from webcompy.elements.types._dynamic import DynamicElement
+from webcompy.brython import browser
 
 
 T = TypeVar("T")
@@ -27,12 +28,16 @@ class RepeatElement(DynamicElement):
             raise ValueError("Argument 'sequence' must be Reactive Object.")
         super().__init__()
 
+    def _on_set_parent(self):
+        if not browser:
+            self._children = self._generate_children()
+
     def _generate_children(self):
         return list(
             filter(
                 None,
                 map(
-                    partial(self._create_child_element, self._parent),
+                    partial(self._create_child_element, self._parent, None),
                     map(self._template, self._sequence.value),
                 ),
             )
@@ -60,33 +65,19 @@ class RepeatElement(DynamicElement):
 
 
 class MultiLineTextElement(RepeatElement):
-    _text: str | ReactiveBase[Any]
-
     def __init__(self, text: str | ReactiveBase[Any]) -> None:
-        self._text = text
-        super(RepeatElement, self).__init__()
-
-    def _generate_children(self):
-        if isinstance(self._text, str):
-            lines = self._text.split("\n")
-        else:
-            lines = str(self._text.value).split("\n")
-        return list(
-            filter(
-                None,
-                map(
-                    partial(self._create_child_element, self._parent),
+        super().__init__(
+            computed(
+                lambda: list(
                     chain.from_iterable(
-                        zip(
-                            lines,
-                            map(lambda _: NewLine(), lines),
+                        map(
+                            lambda line: (line, NewLine()),
+                            str(
+                                text.value if isinstance(text, ReactiveBase) else text
+                            ).split("\n"),
                         )
-                    ),
-                ),
-            )
-        )[:-1]
-
-    def _render(self):
-        self._refresh()
-        if isinstance(self._text, ReactiveBase):
-            self._set_callback_id(self._text.on_after_updating(self._refresh))
+                    )
+                )[:-1]
+            ),
+            lambda s: s,
+        )

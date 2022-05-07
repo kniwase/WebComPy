@@ -1,4 +1,4 @@
-from typing import Any, TypedDict
+from typing import Any, Dict, List, TypedDict
 from webcompy.components import ComponentGenerator
 from webcompy.router._context import TypedRouterContext
 from webcompy.components import WebComPyComponentException
@@ -14,4 +14,5 @@ class RouterPageRequired(TypedDict):
 
 
 class RouterPage(RouterPageRequired, total=False):
+    path_params: List[Dict[str, str]]
     meta: Any
