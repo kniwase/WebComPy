@@ -114,6 +114,6 @@ def run_server():
     uvicorn.run(
         "webcompy.cli._asgi_app:app",
         host="0.0.0.0",
-        port=args.get("port", config.server_port),
+        port=port if (port := args["port"]) else config.server_port,
         reload=args["dev"],
     )
