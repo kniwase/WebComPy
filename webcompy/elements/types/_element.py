@@ -18,7 +18,24 @@ class ElementBase(ElementWithChildren):
 
     def _init_node(self) -> DOMNode:
         if browser:
-            node: DOMNode = browser.document.createElement(self._tag_name)
+            prerendered_node = self._get_prerendered_node()
+            if prerendered_node and not hasattr(prerendered_node, "__webcompy_node__"):
+                node = prerendered_node
+                self._mounted = True
+                attr_names_to_remove = set(
+                    name
+                    for name, value in self._get_processed_attrs().items()
+                    if value is None and name in node.attrs.keys()
+                )
+                attr_names_to_remove.update(
+                    name
+                    for name in node.attrs.keys()
+                    if name not in self._get_processed_attrs().keys()
+                )
+                for name in attr_names_to_remove:
+                    node.removeAttribute(name)
+            else:
+                node: DOMNode = browser.document.createElement(self._tag_name)
             node.__webcompy_node__ = True
             for name, value in self._get_processed_attrs().items():
                 if value is not None:

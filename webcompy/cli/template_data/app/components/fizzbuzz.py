@@ -1,29 +1,5 @@
-# WebComPy
-
-## What is WebComPy
-WebComPy is Python client-side web framework on Browser (powered by [Brython](https://github.com/brython-dev/brython), thank you very much!), which has following features.
-
-- Component-based declarative rendering
-- Automatic DOM refreshing
-- Built-in router
-
-## Get started
-```
-mkdir webcompy-project
-cd webcompy-project
-pip install webcompy
-python -m webcompy init
-python -m webcompy start --dev
-```
-
-then access `http://127.0.0.1:8080/WebComPy/`.
-
-## Sample Code
-```python
 from webcompy.reactive import Reactive, computed_property, computed
 from webcompy.elements import html, repeat, switch
-from webcompy.brython import DOMEvent
-from webcompy.router import RouterContext
 from webcompy.components import (
     define_component,
     ComponentContext,
@@ -32,12 +8,14 @@ from webcompy.components import (
     on_before_rendering,
     component_template,
 )
+from webcompy.router import RouterContext
+from webcompy.brython import DOMEvent
 
 
 @define_component
 def FizzbuzzList(context: ComponentContext[Reactive[int]]):
     @computed
-    def fizzbuzz():
+    def numbers():
         li: list[str] = []
         for n in range(1, context.props.value + 1):
             if n % 15 == 0:
@@ -54,7 +32,7 @@ def FizzbuzzList(context: ComponentContext[Reactive[int]]):
         {},
         html.UL(
             {},
-            repeat(fizzbuzz, lambda s: html.LI({}, s)),
+            repeat(numbers, lambda s: html.LI({}, s)),
         ),
     )
 
@@ -105,7 +83,7 @@ class Fizzbuzz(TypedComponentBase(props_type=RouterContext)):
     def template(self):
         return html.DIV(
             {},
-            html.H3(
+            html.H2(
                 {},
                 "FizzBuzz",
             ),
@@ -134,19 +112,9 @@ class Fizzbuzz(TypedComponentBase(props_type=RouterContext)):
                     "case": self.opened,
                     "generator": lambda: FizzbuzzList(props=self.count),
                 },
-                default=lambda: html.H5(
+                default=lambda: html.DIV(
                     {},
                     "FizzBuzz Hidden",
                 ),
             ),
         )
-
-```
-
-## ToDo
-- Add PyScript support ([Github Repo](https://github.com/pyscript/pyscript))
-- Add provide/inject (DI)
-- Add Plugin System
-
-## Lisence
-This project is licensed under the MIT License, see the LICENSE.txt file for details.

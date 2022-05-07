@@ -11,6 +11,11 @@ from . import (
     utils,
 )
 
+if brython.browser:
+    cli = None
+else:
+    from . import cli
+
 
 __all__ = [
     "brython",
@@ -23,4 +28,5 @@ __all__ = [
     "aio",
     "ajax",
     "utils",
+    "cli",
 ]

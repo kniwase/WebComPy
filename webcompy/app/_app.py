@@ -1,11 +1,20 @@
+from typing import Dict, List, Optional, Tuple, TypedDict
 from webcompy.components import ComponentGenerator
 from webcompy.router import Router
 from webcompy.app._root_component import AppDocumentRoot
 
 
+class Head(TypedDict, total=False):
+    title: str
+    meta: List[Dict[str, str]]
+    link: List[Dict[str, str]]
+    script: List[Tuple[Dict[str, str], Optional[str]]]
+
+
 class WebComPyApp:
     _root: AppDocumentRoot
-    _router: Router | None
+    _head: Head
+    _scripts: List[Tuple[Dict[str, str], Optional[str]]]
 
     def __init__(
         self,
@@ -13,29 +22,59 @@ class WebComPyApp:
         root_component: ComponentGenerator[None],
         router: Router | None = None,
     ) -> None:
+        self._head: Head = {"meta": [], "link": [], "script": []}
+        self._scripts = []
         self._root = AppDocumentRoot(root_component, router)
 
-    @property
-    def __render__(self):
-        return self._root.render
+    def set_title(self, title: str):
+        self._head["title"] = title
 
-    def __generate__(self):
-        import pathlib
-        import os
-        import shutil
-
-        dist = pathlib.Path.cwd() / "dist"
-        if dist.exists():
-            shutil.rmtree(dist)
-        os.mkdir(dist)
-        if len(self._root.routes) and self._root.router_mode == "history":
-            for path in self._root.routes:
-                page_dir = dist / path
-                if not page_dir.exists():
-                    os.makedirs(page_dir)
-                html = self._root.render_html(path, indent=0)
-                with (page_dir / "index.html").open("w", encoding="utf8") as f:
-                    f.write(html)
+    def append_meta(self, attributes: Dict[str, str]):
+        if "meta" in self._head:
+            self._head["meta"].append(attributes)
         else:
-            html = self._root.render_html(indent=0)
-            (dist / "index.html").open("w", encoding="utf8").write(html)
+            self._head["meta"] = [attributes]
+
+    def append_link(self, attributes: Dict[str, str]):
+        if "link" in self._head:
+            self._head["link"].append(attributes)
+        else:
+            self._head["link"] = [attributes]
+
+    def append_script(
+        self,
+        attributes: Dict[str, str],
+        script: str | None = None,
+        in_head: bool = False,
+    ):
+        if not in_head:
+            self._scripts.append((attributes, script))
+        elif "script" in self._head:
+            self._head["script"].append((attributes, script))
+        else:
+            self._head["script"] = [(attributes, script)]
+
+    def set_head(self, head: Head):
+        self._head = head
+
+    def update_head(self, head: Head):
+        if "title" in head:
+            self.set_title(head["title"])
+        for meta in head.get("meta", []):
+            self.append_meta(meta)
+        for link in head.get("link", []):
+            self.append_link(link)
+        for attrs, script in head.get("script", []):
+            self.append_script(attrs, script, True)
+
+    @property
+    def __component__(self):
+        return self._root
+
+    @property
+    def __head__(self):
+        return self._head
+
+    @property
+    def __scripts__(self):
+        return self._scripts

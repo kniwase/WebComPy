@@ -12,7 +12,6 @@ from typing import (
     cast,
     final,
 )
-from weakref import WeakValueDictionary
 
 
 V = TypeVar("V")
@@ -34,13 +33,9 @@ class ReactiveStore:
     __dependency: list["ReactiveBase[Any]"] | None
 
     def __init__(self) -> None:
-        self.__instances = cast(Any, WeakValueDictionary({}))
-        self.__on_before_updating = cast(
-            dict[int, Callable[[Any], Any]], WeakValueDictionary({})
-        )
-        self.__on_after_updating = cast(
-            dict[int, Callable[[Any], Any]], WeakValueDictionary({})
-        )
+        self.__instances = {}
+        self.__on_before_updating = {}
+        self.__on_after_updating = {}
         self.__callback_ids = {}
         self.__latest_instance_id = 0
         self.__latest_callback_id = 0

@@ -25,14 +25,16 @@ from webcompy.utils._serialize import is_json_seriarizable
 
 ParamsType = TypeVar("ParamsType")
 QueryParamsType = TypeVar("QueryParamsType")
+PathParamsType = TypeVar("PathParamsType")
 
 
-class TypedRouterLink(Generic[ParamsType, QueryParamsType], Element):
+class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Element):
     _router: ClassVar[Union[Router, None]] = None
     _base_url: ClassVar[str]
 
-    _query: ReactiveBase[dict[str, str]]
-    _params: ReactiveBase[dict[str, Any]]
+    _query: ReactiveBase[dict[str, str]] | None
+    _params: ReactiveBase[dict[str, Any]] | None
+    _path_params: ReactiveBase[dict[str, str]] | None
 
     def __init__(
         self,
@@ -41,14 +43,24 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType], Element):
         text: List[Union[str, ReactiveBase[Any]]],
         params: ReactiveBase[ParamsType] | None = None,
         query: ReactiveBase[QueryParamsType] | None = None,
+        path_params: ReactiveBase[PathParamsType] | None = None,
         attrs: Dict[str, AttrValue] | None = None,
     ) -> None:
         if TypedRouterLink._router is None:
             raise WebComPyRouterException("'Router' instance is not declarated.")
         self._given_attrs = attrs
         self._to = to
-        self._query = cast(ReactiveBase[dict[str, str]], query)
-        self._params = cast(ReactiveBase[dict[str, Any]], params)
+        self._query = (
+            cast(ReactiveBase[dict[str, str]], query) if query is not None else None
+        )
+        self._params = (
+            cast(ReactiveBase[dict[str, Any]], params) if params is not None else None
+        )
+        self._path_params = (
+            cast(ReactiveBase[dict[str, str]], path_params)
+            if path_params is not None
+            else None
+        )
         self._text = text
         super().__init__(
             "a",
@@ -139,6 +151,8 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType], Element):
         to = self._to.value if isinstance(self._to, ReactiveBase) else self._to
         path_encoded = "/".join(map(urllib.parse.quote, to.strip("/").split("/")))
         to = f"/{path_encoded}/" if path_encoded else "/"
+        if self._path_params is not None:
+            to = to.format(**self._path_params.value)
         query_encoded = urllib.parse.urlencode(self._query.value if self._query else {})
         query = "?" + query_encoded if query_encoded else ""
         if TypedRouterLink._router:
@@ -152,4 +166,4 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType], Element):
             return to + query
 
 
-RouterLink: TypeAlias = TypedRouterLink[dict[str, Any], dict[str, str]]
+RouterLink: TypeAlias = TypedRouterLink[dict[str, Any], dict[str, str], dict[str, str]]

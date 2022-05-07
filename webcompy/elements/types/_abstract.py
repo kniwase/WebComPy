@@ -33,7 +33,7 @@ class ElementAbstract(ReactiveReceivable):
         self._mount_node()
 
     def _mount_node(self):
-        if node := self._get_node():
+        if not self._mounted and (node := self._get_node()):
             parent_node = self._parent._get_node()
             if self._mounted is None:
                 if parent_node.childNodes.length <= self._node_idx:
@@ -85,6 +85,15 @@ class ElementAbstract(ReactiveReceivable):
     def _clear_node_cache(self, recursive: bool = True):
         self._node_cache = None
 
+    def _get_prerendered_node(self) -> DOMNode | None:
+        parent_node = self._parent._get_node()
+        if parent_node.childNodes.length > self._node_idx:
+            prerendered_node: DOMNode = parent_node.childNodes[self._node_idx]
+            return prerendered_node
+        return None
+
     @abstractmethod
-    def _render_html(self, count: int, indent: int) -> str:
+    def _render_html(
+        self, newline: bool = False, indent: int = 2, count: int = 0
+    ) -> str:
         ...

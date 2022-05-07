@@ -126,18 +126,23 @@ class ElementWithChildren(ElementAbstract):
     def _get_belonging_components(self) -> tuple[Any, ...]:
         return self._parent._get_belonging_components()
 
-    def _render_html(self, count: int, indent: int) -> str:
+    def _render_html(
+        self, newline: bool = False, indent: int = 2, count: int = 0
+    ) -> str:
         attrs: str = " ".join(
             f'{name}="{value}"' if value else name
             for name, value in self._get_processed_attrs().items()
             if value is not None
         )
-        return "\n".join(
+        separator = "\n" if newline else ""
+        indent_text = (" " * indent * count) if newline else ""
+        return separator.join(
             (
-                f'{" " * indent * count}<{self._tag_name}{" " + attrs if attrs else ""}>',
-                "\n".join(
-                    child._render_html(count + 1, indent) for child in self._children
+                f'{indent_text}<{self._tag_name}{" " + attrs if attrs else ""}>',
+                separator.join(
+                    child._render_html(newline, indent, count + 1)
+                    for child in self._children
                 ),
-                f'{" " * indent * count}</{self._tag_name}>',
+                f"{indent_text}</{self._tag_name}>",
             )
         )
