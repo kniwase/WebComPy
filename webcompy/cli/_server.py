@@ -111,5 +111,9 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
 def run_server():
     _, args = get_params()
     config = get_config()
-    port = config.server_port if args.get("port") is None else args["port"]
-    uvicorn.run("webcompy.cli._asgi_app:app", port=port, reload=args["dev"])
+    uvicorn.run(
+        "webcompy.cli._asgi_app:app",
+        host="0.0.0.0",
+        port=args.get("port", config.server_port),
+        reload=args["dev"],
+    )
