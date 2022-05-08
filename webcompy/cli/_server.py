@@ -28,6 +28,8 @@ from webcompy.cli._utils import (
 
 
 def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
+    app = get_app(config)
+    
     with TemporaryDirectory() as temp:
         install_brython_scripts(temp)
         make_brython_package(get_webcompy_packge_dir(), temp)
@@ -50,7 +52,6 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
         else:
             raise HTTPException(404)
 
-    app = get_app(config)
     html_generator = partial(generate_html, config, dev_mode)
     base_url_stripper = partial(re_compile("^" + re_escape(config.base)).sub, "")
 

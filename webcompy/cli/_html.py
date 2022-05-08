@@ -30,6 +30,60 @@ class _HtmlElement(Element):
         return tuple()
 
 
+class _Loadscreen(_HtmlElement):
+    def __init__(self) -> None:
+        super().__init__(
+            "div",
+            {"id": "webcompy-loading"},
+            _HtmlElement(
+                "style",
+                {},
+                """
+                body {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                    width: 100vw;
+                    height: 100vh;
+                }
+                .container {
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    position: fixed;
+                }
+                .loader {
+                    border: 12px solid lightgray;
+                    border-radius: 50%;
+                    border-top: 12px solid skyblue;
+                    width: 100px;
+                    height: 100px;
+                    animation: spin 1s linear infinite;
+                }
+                @keyframes spin{
+                    0%{
+                        transform: rotate(0deg);
+                    }
+                    100%{
+                        transform: rotate(360deg);
+                    }
+                }
+                """,
+            ),
+            _HtmlElement(
+                "div",
+                {"class": "container"},
+                _HtmlElement(
+                    "div",
+                    {"class": "loader"},
+                ),
+            ),
+        ),
+
+
 def _load_scripts(scripts: list[tuple[dict[str, str], str | None]]):
     return [
         _HtmlElement(
@@ -83,8 +137,8 @@ def generate_html(
         (
             {"type": "text/python"},
             """
-                from {app_package} import webcompyapp
-                webcompyapp.__component__.render()
+                from {app_package}.bootstrap import app
+                app.__component__.render()
             """.format(
                 app_package=config.app_package
             ),
@@ -139,8 +193,8 @@ def generate_html(
             _HtmlElement(
                 "body",
                 {"onload": f"brython({brython_options})"},
+                _Loadscreen(),
                 app_root,
-                _HtmlElement("div", {"id": "webcompy-loading"}, "loading..."),
                 *_load_scripts(scripts),
             ),
         ).render_html()

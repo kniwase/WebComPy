@@ -1,3 +1,4 @@
+from importlib import import_module
 import os
 import pathlib
 import sys
@@ -9,7 +10,7 @@ from webcompy.app._app import WebComPyApp
 
 def get_config() -> WebComPyConfig:
     try:
-        webcompy_config = __import__("webcompy_config")
+        webcompy_config = import_module("webcompy_config")
     except ModuleNotFoundError:
         raise WebComPyCliException(
             "No python module named 'webcompy_config'",
@@ -34,10 +35,16 @@ def get_config() -> WebComPyConfig:
 
 def get_app(config: WebComPyConfig) -> WebComPyApp:
     try:
-        bootstrap = __import__(config.app_package)
+        import_module(config.app_package)
     except ModuleNotFoundError:
         raise WebComPyCliException(
             f"No python module named '{config.app_package}'",
+        )
+    try:
+        bootstrap = import_module(config.app_package + ".bootstrap")
+    except AttributeError:
+        raise WebComPyCliException(
+            f"No python module named 'bootstrap' in '{config.app_package}'",
         )
     app_instances = tuple(
         it
