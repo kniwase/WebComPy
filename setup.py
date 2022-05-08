@@ -31,7 +31,7 @@ template_files = [
 
 setup(
     name=package_name,
-    version="0.0.1",
+    version="0.0.2",
     description="Python client-side web framework which works on Browser",
     long_description=(root_dir / "README.md").open("r", encoding="utf8").read(),
     long_description_content_type="text/markdown",
