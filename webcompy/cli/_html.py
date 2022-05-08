@@ -83,8 +83,8 @@ def generate_html(
         (
             {"type": "text/python"},
             """
-                from {app_package} import webcompyapp
-                webcompyapp.__component__.render()
+                from {app_package}.bootstrap import app
+                app.__component__.render()
             """.format(
                 app_package=config.app_package
             ),
