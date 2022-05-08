@@ -27,7 +27,7 @@ def generate_static_site():
         shutil.rmtree(dist_dir)
     os.mkdir(dist_dir)
 
-    scripts_dir = dist_dir / "_scripts"
+    scripts_dir = dist_dir / "scripts"
     os.mkdir(scripts_dir)
     install_brython_scripts(
         str(scripts_dir),

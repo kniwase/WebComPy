@@ -38,40 +38,42 @@ class _Loadscreen(_HtmlElement):
             _HtmlElement(
                 "style",
                 {},
-                """
-                body {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                    width: 100vw;
-                    height: 100vh;
-                }
-                .container {
-                    width: 100%;
-                    height: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    position: fixed;
-                }
-                .loader {
-                    border: 12px solid lightgray;
-                    border-radius: 50%;
-                    border-top: 12px solid skyblue;
-                    width: 100px;
-                    height: 100px;
-                    animation: spin 1s linear infinite;
-                }
-                @keyframes spin{
-                    0%{
-                        transform: rotate(0deg);
+                strip_multiline_text(
+                    """
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                        width: 100vw;
+                        height: 100vh;
                     }
-                    100%{
-                        transform: rotate(360deg);
+                    .container {
+                        width: 100%;
+                        height: 100%;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        position: fixed;
                     }
-                }
-                """,
+                    .loader {
+                        border: 12px solid lightgray;
+                        border-radius: 50%;
+                        border-top: 12px solid skyblue;
+                        width: 100px;
+                        height: 100px;
+                        animation: spin 1s linear infinite;
+                    }
+                    @keyframes spin{
+                        0%{
+                            transform: rotate(0deg);
+                        }
+                        100%{
+                            transform: rotate(360deg);
+                        }
+                    }
+                    """
+                ),
             ),
             _HtmlElement(
                 "div",
@@ -106,28 +108,28 @@ def generate_html(
         (
             {
                 "type": "text/javascript",
-                "src": f"{base}_scripts/brython.js",
+                "src": f"{base}scripts/brython.js",
             },
             None,
         ),
         (
             {
                 "type": "text/javascript",
-                "src": f"{base}_scripts/brython_stdlib.js",
+                "src": f"{base}scripts/brython_stdlib.js",
             },
             None,
         ),
         (
             {
                 "type": "text/javascript",
-                "src": f"{base}_scripts/webcompy.brython.js",
+                "src": f"{base}scripts/webcompy.brython.js",
             },
             None,
         ),
         (
             {
                 "type": "text/javascript",
-                "src": f"{base}_scripts/{config.app_package}.brython.js",
+                "src": f"{base}scripts/{config.app_package}.brython.js",
             },
             None,
         ),
