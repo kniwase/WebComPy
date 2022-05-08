@@ -134,7 +134,3 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
-
-# dev files
-/dev
-/webcompy_config.py
