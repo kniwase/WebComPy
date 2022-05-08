@@ -46,7 +46,7 @@ class Context(Generic[PropsType]):
     ) -> None:
         self.__props = props
         self.__slots = slots
-        self.__component_name = component_name
+        self._component_name = component_name
         self.__on_before_rendering = None
         self.__on_after_rendering = None
         self.__on_before_destroy = None
@@ -66,7 +66,7 @@ class Context(Generic[PropsType]):
             return fallback()
         else:
             logging.warning(
-                f"Componet '{self.__component_name}' is not given a slot named '{name}'"
+                f"Componet '{self._component_name}' is not given a slot named '{name}'"
             )
             return None
 
