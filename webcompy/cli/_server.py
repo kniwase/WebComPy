@@ -86,7 +86,7 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
     if (base := config.base) != "/":
         base = f"{base}/"
     routes = [
-        Route(base + "_scripts/{filename:path}", send_script_file),
+        Route(base + "scripts/{filename:path}", send_script_file),
         Route(html_route, send_html),
     ]
 

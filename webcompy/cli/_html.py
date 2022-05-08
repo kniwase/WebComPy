@@ -108,28 +108,28 @@ def generate_html(
         (
             {
                 "type": "text/javascript",
-                "src": f"{base}_scripts/brython.js",
+                "src": f"{base}scripts/brython.js",
             },
             None,
         ),
         (
             {
                 "type": "text/javascript",
-                "src": f"{base}_scripts/brython_stdlib.js",
+                "src": f"{base}scripts/brython_stdlib.js",
             },
             None,
         ),
         (
             {
                 "type": "text/javascript",
-                "src": f"{base}_scripts/webcompy.brython.js",
+                "src": f"{base}scripts/webcompy.brython.js",
             },
             None,
         ),
         (
             {
                 "type": "text/javascript",
-                "src": f"{base}_scripts/{config.app_package}.brython.js",
+                "src": f"{base}scripts/{config.app_package}.brython.js",
             },
             None,
         ),
