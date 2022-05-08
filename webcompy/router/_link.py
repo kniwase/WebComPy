@@ -149,10 +149,10 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
     @computed_property
     def _href(self) -> str:
         to = self._to.value if isinstance(self._to, ReactiveBase) else self._to
-        path_encoded = "/".join(map(urllib.parse.quote, to.strip("/").split("/")))
-        to = f"/{path_encoded}/" if path_encoded else "/"
         if self._path_params is not None:
             to = to.format(**self._path_params.value)
+        path_encoded = "/".join(map(urllib.parse.quote, to.strip("/").split("/")))
+        to = f"/{path_encoded}/" if path_encoded else "/"
         query_encoded = urllib.parse.urlencode(self._query.value if self._query else {})
         query = "?" + query_encoded if query_encoded else ""
         if TypedRouterLink._router:
