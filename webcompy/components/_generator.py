@@ -75,7 +75,7 @@ class ComponentGenerator(Generic[PropsType]):
     @property
     def scoped_style(self) -> str:
         style = self.__style
-        return "\n".join(
+        return " ".join(
             f"{selector} {{ "
             + " ".join(f"{name}: {value};" for name, value in props.items())
             + " }"

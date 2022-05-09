@@ -1,5 +1,6 @@
 from webcompy.elements import html
-from webcompy.brython import DOMNode, browser
+from webcompy.elements._dom_objs import DOMNode
+from webcompy._browser._modules import browser
 from webcompy.components._abstract import NonPropsComponentBase
 from webcompy.components._component import Component
 from webcompy.components._generator import ComponentGenerator, ComponentStore
@@ -79,7 +80,7 @@ class AppDocumentRoot(Component):
 
     @property
     def style(self):
-        return "\n".join(
+        return " ".join(
             style
             for component in ComponentStore.components.values()
             if (style := component.scoped_style)

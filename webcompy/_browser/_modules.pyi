@@ -1,5 +1,5 @@
 from typing import Any, Callable, Type
-from webcompy.brython._typing._dom_objs import DOMNode, DOMEvent
+from webcompy.elements._dom_objs import DOMNode, DOMEvent
 
 class BrythonBrowserModule:
     class javascript:

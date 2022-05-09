@@ -2,7 +2,7 @@ from webcompy.reactive import Reactive
 from webcompy.elements import html
 from webcompy.components import define_component, ComponentContext
 from webcompy.router import RouterContext
-from webcompy.brython import DOMEvent
+from webcompy.elements import DOMEvent
 
 
 @define_component

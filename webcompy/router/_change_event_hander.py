@@ -1,6 +1,6 @@
 from typing import Any, Literal
 from webcompy.reactive._base import ReactiveBase
-from webcompy.brython import browser
+from webcompy._browser._modules import browser
 
 
 class Location(ReactiveBase[str]):

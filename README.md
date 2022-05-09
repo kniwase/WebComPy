@@ -1,7 +1,7 @@
 # WebComPy
 
 ## What is WebComPy
-[WebComPy](https://github.com/kniwase/WebComPy) is Python client-side web framework on Browser (powered by [Brython](https://github.com/brython-dev/brython), thank you very much!), which has following features.
+[WebComPy](https://github.com/kniwase/WebComPy) is Python frontend framework on Browser (powered by [Brython](https://github.com/brython-dev/brython), thank you very much!), which has following features.
 
 - Component-based declarative rendering
 - Automatic DOM refreshing
@@ -27,8 +27,7 @@ then access [http://127.0.0.1:8080/WebComPy/](http://127.0.0.1:8080/WebComPy/)
 ## Sample Code
 ```python
 from webcompy.reactive import Reactive, computed_property, computed
-from webcompy.elements import html, repeat, switch
-from webcompy.brython import DOMEvent
+from webcompy.elements import html, repeat, switch, DOMEvent
 from webcompy.router import RouterContext
 from webcompy.components import (
     define_component,

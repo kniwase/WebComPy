@@ -32,14 +32,14 @@ template_files = [
 setup(
     name=package_name,
     version="0.0.2",
-    description="Python client-side web framework which works on Browser",
+    description="Python frontend framework which works on Browser",
     long_description=(root_dir / "README.md").open("r", encoding="utf8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/kniwase/WebComPy",
     author="Kento Niwase",
     author_email="kento.niwase@outlook.com",
     license="MIT",
-    keywords="browser,front-end,client-side,framework",
+    keywords="browser,frontend,framework,front-end,client-side",
     packages=find_packages(exclude=["docs_src", "template"]),
     package_data={
         "webcompy": [

@@ -6,7 +6,7 @@ from webcompy.components import (
     on_before_rendering,
     component_template,
 )
-from webcompy.brython import DOMEvent
+from webcompy.elements import DOMEvent
 
 
 @component_class
