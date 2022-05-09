@@ -31,7 +31,7 @@ template_files = [
 
 setup(
     name=package_name,
-    version="0.0.2",
+    version="0.0.3",
     description="Python frontend framework which works on Browser",
     long_description=(root_dir / "README.md").open("r", encoding="utf8").read(),
     long_description_content_type="text/markdown",
