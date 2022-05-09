@@ -11,10 +11,10 @@ from . import (
     utils,
 )
 
-if brython.browser:
-    cli = None
-else:
+if utils.ENVIRONMENT == "other":
     from . import cli
+else:
+    cli = None
 
 
 __all__ = [
