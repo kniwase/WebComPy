@@ -1,6 +1,6 @@
 from typing import Any, Iterable, cast
 from webcompy.reactive._base import ReactiveBase
-from webcompy.brython import browser
+from webcompy._browser._modules import browser
 from webcompy.elements.types._base import ElementWithChildren
 from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.typealias._element_property import (

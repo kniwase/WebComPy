@@ -1,5 +1,5 @@
 from typing import Any, Callable, Coroutine, Generic, ParamSpec, TypeVar
-from webcompy.brython import browser
+from webcompy._browser._modules import browser
 from webcompy.reactive._base import ReactiveBase
 
 if browser:

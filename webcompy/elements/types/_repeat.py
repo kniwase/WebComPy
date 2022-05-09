@@ -6,7 +6,7 @@ from webcompy.elements.types._text import NewLine
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.exception import WebComPyException
 from webcompy.elements.types._dynamic import DynamicElement
-from webcompy.brython import browser
+from webcompy._browser._modules import browser
 
 
 T = TypeVar("T")

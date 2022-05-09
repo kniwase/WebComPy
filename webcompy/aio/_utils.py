@@ -1,4 +1,4 @@
-from webcompy.brython import browser
+from webcompy._browser._modules import browser
 
 
 async def sleep(delay: float) -> None:

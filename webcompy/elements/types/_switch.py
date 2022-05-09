@@ -5,7 +5,7 @@ from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.exception import WebComPyException
 from webcompy.elements.types._dynamic import DynamicElement
-from webcompy.brython import browser
+from webcompy._browser._modules import browser
 
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]

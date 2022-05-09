@@ -1,5 +1,4 @@
 from . import (
-    brython,
     aio,
     ajax,
     app,
@@ -10,6 +9,7 @@ from . import (
     router,
     utils,
 )
+from ._browser import browser
 
 if utils.ENVIRONMENT == "other":
     from . import cli
@@ -18,7 +18,7 @@ else:
 
 
 __all__ = [
-    "brython",
+    "browser",
     "app",
     "reactive",
     "elements",
