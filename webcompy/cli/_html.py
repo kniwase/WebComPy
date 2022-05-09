@@ -38,41 +38,11 @@ class _Loadscreen(_HtmlElement):
             _HtmlElement(
                 "style",
                 {},
-                strip_multiline_text(
-                    """
-                    body {
-                        margin: 0;
-                        padding: 0;
-                        box-sizing: border-box;
-                        width: 100vw;
-                        height: 100vh;
-                    }
-                    .container {
-                        width: 100%;
-                        height: 100%;
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: center;
-                        position: fixed;
-                    }
-                    .loader {
-                        border: 12px solid lightgray;
-                        border-radius: 50%;
-                        border-top: 12px solid skyblue;
-                        width: 100px;
-                        height: 100px;
-                        animation: spin 1s linear infinite;
-                    }
-                    @keyframes spin{
-                        0%{
-                            transform: rotate(0deg);
-                        }
-                        100%{
-                            transform: rotate(360deg);
-                        }
-                    }
-                    """
+                " ".join(
+                    f"{selector} {{ "
+                    + " ".join(f"{name}: {value};" for name, value in props.items())
+                    + " }"
+                    for selector, props in self._style.items()
                 ),
             ),
             _HtmlElement(
@@ -83,7 +53,44 @@ class _Loadscreen(_HtmlElement):
                     {"class": "loader"},
                 ),
             ),
-        ),
+        )
+
+    @property
+    def _style(self):
+        return {
+            "body": {
+                "margin": "0",
+                "padding": "0",
+                "box-sizing": "border-box",
+                "width": "100vw",
+                "height": "100vh",
+            },
+            ".container": {
+                "width": "100%",
+                "height": "100%",
+                "display": "flex",
+                "flex-direction": "column",
+                "align-items": "center",
+                "justify-content": "center",
+                "position": "fixed",
+            },
+            ".loader": {
+                "border": "12px solid lightgray",
+                "border-radius": "50%",
+                "border-top": "12px solid skyblue",
+                "width": "100px",
+                "height": "100px",
+                "animation": "spin 1s linear infinite",
+            },
+            "@keyframes spin": {
+                "0%": {
+                    "transform": "rotate(0deg)",
+                },
+                "100%": {
+                    "transform": "rotate(360deg)",
+                },
+            },
+        }
 
 
 def _load_scripts(scripts: list[tuple[dict[str, str], str | None]]):
@@ -138,24 +145,28 @@ def generate_html(
     scripts.append(
         (
             {"type": "text/python"},
-            """
+            strip_multiline_text(
+                """
                 from {app_package}.bootstrap import app
                 app.__component__.render()
-            """.format(
-                app_package=config.app_package
-            ),
+                """.format(
+                    app_package=config.app_package
+                )
+            ).strip(),
         )
     )
     if dev_mode:
         scripts.append(
             (
                 {"type": "text/javascript"},
-                """
+                strip_multiline_text(
+                    """
                     var stream= new EventSource('{base}_webcompy_reload');
                     stream.addEventListener('error', (e) => window.location.reload());
-                """.format(
-                    base=base
-                ),
+                    """.format(
+                        base=base
+                    )
+                ).strip(),
             )
         )
     if title := app.__head__.get("title"):

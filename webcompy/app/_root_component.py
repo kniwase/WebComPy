@@ -79,7 +79,7 @@ class AppDocumentRoot(Component):
 
     @property
     def style(self):
-        return "\n".join(
+        return " ".join(
             style
             for component in ComponentStore.components.values()
             if (style := component.scoped_style)
