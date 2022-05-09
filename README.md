@@ -1,7 +1,7 @@
 # WebComPy
 
 ## What is WebComPy
-[WebComPy](https://github.com/kniwase/WebComPy) is Python client-side web framework on Browser (powered by [Brython](https://github.com/brython-dev/brython), thank you very much!), which has following features.
+[WebComPy](https://github.com/kniwase/WebComPy) is Python frontend framework on Browser (powered by [Brython](https://github.com/brython-dev/brython), thank you very much!), which has following features.
 
 - Component-based declarative rendering
 - Automatic DOM refreshing

@@ -20,11 +20,11 @@ app.set_head(
             },
             {
                 "name": "description",
-                "content": "WebComPy is Python client-side web framework on Browser",
+                "content": "WebComPy is Python frontend framework on Browser",
             },
             {
                 "name": "keywords",
-                "content": "python,framework,browser,front-end,client-side",
+                "content": "python,framework,browser,frontend,client-side",
             },
         ],
         "link": [
