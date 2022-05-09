@@ -1,5 +1,6 @@
 from webcompy.elements import html
-from webcompy.brython import DOMNode, browser
+from webcompy.elements._dom_objs import DOMNode
+from webcompy.brython import browser
 from webcompy.components._abstract import NonPropsComponentBase
 from webcompy.components._component import Component
 from webcompy.components._generator import ComponentGenerator, ComponentStore

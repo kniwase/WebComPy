@@ -1,9 +1,10 @@
 from __future__ import annotations
 from abc import abstractmethod
 from typing import cast
+from webcompy.elements._dom_objs import DOMNode
 from webcompy.reactive._base import ReactiveStore
 from webcompy.reactive._container import ReactiveReceivable
-from webcompy.brython import DOMNode, browser
+from webcompy.brython import browser
 from webcompy.exception import WebComPyException
 
 

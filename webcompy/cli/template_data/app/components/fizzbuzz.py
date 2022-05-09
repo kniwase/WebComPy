@@ -9,7 +9,7 @@ from webcompy.components import (
     component_template,
 )
 from webcompy.router import RouterContext
-from webcompy.brython import DOMEvent
+from webcompy.elements import DOMEvent
 
 
 @define_component

@@ -1,7 +1,8 @@
-from typing import Any, cast
+from typing import Any
 from webcompy.reactive._base import ReactiveBase
-from webcompy.brython import browser, DOMNode
+from webcompy.brython import browser
 from webcompy.elements.types._abstract import ElementAbstract
+from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException
 
 
@@ -31,13 +32,7 @@ class NewLine(ElementAbstract):
             return "<br>"
 
 
-class _HTMLTextElement(DOMNode):
-    textContent: str
-
-
 class TextElement(ElementAbstract):
-    _node_cache: _HTMLTextElement | None
-
     def __init__(self, text: str | ReactiveBase[Any]) -> None:
         self._text = text
         super().__init__()
@@ -67,9 +62,6 @@ class TextElement(ElementAbstract):
         node = self._get_node()
         if node:
             node.textContent = new_text
-
-    def _get_node(self) -> _HTMLTextElement:
-        return cast(_HTMLTextElement, super()._get_node())
 
     def _render_html(
         self, newline: bool = False, indent: int = 2, count: int = 0

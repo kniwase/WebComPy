@@ -11,6 +11,7 @@ from webcompy.elements.generators import (
     break_line,
 )
 from webcompy.elements import html
+from webcompy.elements._dom_objs import DOMNode, DOMEvent
 
 
 __all__ = [
@@ -25,4 +26,6 @@ __all__ = [
     "text",
     "break_line",
     "DomNodeRef",
+    "DOMNode",
+    "DOMEvent",
 ]

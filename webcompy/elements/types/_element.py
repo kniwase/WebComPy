@@ -1,6 +1,6 @@
 from typing import Any, Iterable, cast
 from webcompy.reactive._base import ReactiveBase
-from webcompy.brython import browser, DOMNode
+from webcompy.brython import browser
 from webcompy.elements.types._base import ElementWithChildren
 from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.typealias._element_property import (
@@ -9,6 +9,7 @@ from webcompy.elements.typealias._element_property import (
     EventHandler,
 )
 from webcompy.elements.types._refference import DomNodeRef
+from webcompy.elements._dom_objs import DOMNode
 from webcompy.aio import resolve_async
 from webcompy.exception import WebComPyException
 

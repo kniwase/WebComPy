@@ -17,9 +17,10 @@ from webcompy.elements.typealias._element_property import (
     ElementChildren,
     AttrValue,
 )
+from webcompy.elements._dom_objs import DOMEvent
 from webcompy.router._router import Router
 from webcompy.router._pages import WebComPyRouterException
-from webcompy.brython import browser, DOMEvent
+from webcompy.brython import browser
 from webcompy.utils._serialize import is_json_seriarizable
 
 
