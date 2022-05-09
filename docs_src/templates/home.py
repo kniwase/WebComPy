@@ -15,7 +15,7 @@ def Home(_: ComponentContext[None]):
             ),
             html.DIV(
                 {"class": "body"},
-                "WebComPy is Python client-side web framework on Browser which has following features.",
+                "WebComPy is Python frontend framework on Browser which has following features.",
                 html.UL(
                     {},
                     html.LI({}, "Component-based declarative rendering"),
