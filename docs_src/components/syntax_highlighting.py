@@ -2,7 +2,7 @@ from typing import TypedDict
 from webcompy.elements import html, DomNodeRef
 from webcompy.components import define_component, ComponentContext
 from webcompy.utils import strip_multiline_text
-from webcompy.brython import browser
+from webcompy._browser._modules import browser
 
 
 class SyntaxHighlightingProps(TypedDict):

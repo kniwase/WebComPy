@@ -27,8 +27,7 @@ then access [http://127.0.0.1:8080/WebComPy/](http://127.0.0.1:8080/WebComPy/)
 ## Sample Code
 ```python
 from webcompy.reactive import Reactive, computed_property, computed
-from webcompy.elements import html, repeat, switch
-from webcompy.brython import DOMEvent
+from webcompy.elements import html, repeat, switch, DOMEvent
 from webcompy.router import RouterContext
 from webcompy.components import (
     define_component,
