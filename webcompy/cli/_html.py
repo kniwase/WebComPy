@@ -39,9 +39,19 @@ class _Loadscreen(_HtmlElement):
                 "style",
                 {},
                 " ".join(
-                    f"{selector} {{ "
-                    + " ".join(f"{name}: {value};" for name, value in props.items())
-                    + " }"
+                    f"{selector}{{"
+                    + "".join(
+                        name
+                        + (
+                            "{{{}}}".format(
+                                "".join(f"{n}:{v};" for n, v in value.items())
+                            )
+                            if isinstance(value, dict)
+                            else f":{value};"
+                        )
+                        for name, value in props.items()
+                    )
+                    + "}"
                     for selector, props in self._style.items()
                 ),
             ),
