@@ -18,16 +18,19 @@ def install_brython_scripts(dest: pathlib.Path):
         for p in (dest_abs / n for n in DEST_FILES):
             if p.exists():
                 os.remove(p)
-
     with TemporaryDirectory() as temp_dir:
         temp_dir = pathlib.Path(temp_dir)
-        os.chdir(temp_dir)
-        sys.argv.append("--install")
-        brython_main()
-        for child in temp_dir.iterdir():
-            if child.name.lower() in DEST_FILES:
-                shutil.copy(child, dest_abs)
-        os.chdir(temp_dir.parent)
+        try:
+            os.chdir(temp_dir)
+            sys.argv.append("--install")
+            brython_main()
+            for child in temp_dir.iterdir():
+                if child.name.lower() in DEST_FILES:
+                    shutil.copy(child, dest_abs)
+        except Exception as error:
+            raise error
+        finally:
+            os.chdir(temp_dir.parent)
 
 
 @external_cli_tool_wrapper
