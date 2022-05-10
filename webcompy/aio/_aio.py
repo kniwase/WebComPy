@@ -1,13 +1,24 @@
 from typing import Any, Callable, Coroutine, Generic, ParamSpec, TypeVar
-from webcompy._browser._modules import browser
+from webcompy._browser._modules import browser_pyscript, browser_brython
 from webcompy.reactive._base import ReactiveBase
 
-if browser:
-    aio_run: Any = browser.aio.run
+if browser_pyscript:
+
+    def aio_run(coroutine: Coroutine[Any, Any, Any]):  # type: ignore
+        async def resolve_awaitable():
+            try:
+                await coroutine
+            except Exception as error:
+                browser_pyscript.console.error(str(error))  # type: ignore
+
+        browser_pyscript.pyodide.webloop.WebLoop().run_until_complete(resolve_awaitable())  # type: ignore
+
+elif browser_brython:
+    aio_run: Callable[[Coroutine[Any, Any, Any]], None] = browser_brython.aio.run
 else:
     import asyncio
 
-    aio_run: Any = asyncio.run
+    aio_run: Callable[[Coroutine[Any, Any, Any]], None] = asyncio.run
 
 
 A = ParamSpec("A")

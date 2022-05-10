@@ -47,9 +47,9 @@ class AppDocumentRoot(Component):
     def _init_node(self) -> DOMNode:
         if browser:
             node = browser.document.getElementById("webcompy-app")
-            for name in tuple(node.attrs.keys()):
+            for name in tuple(node.getAttributeNames()):
                 if name != "id":
-                    del node.attrs[name]
+                    node.removeAttribute(name)
             node.__webcompy_node__ = True
             return node
         else:
