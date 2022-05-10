@@ -17,7 +17,7 @@ class NewLine(ElementAbstract):
                 node = prerendered_node
                 self._mounted = True
             else:
-                node = browser.html.BR()
+                node = browser.document.createElement("br")
             node.__webcompy_node__ = True
             return node
         else:

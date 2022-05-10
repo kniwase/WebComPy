@@ -3,16 +3,10 @@ import os
 import pathlib
 import shutil
 from webcompy.cli._argparser import get_params
-from webcompy.cli._brython_cli import (
-    install_brython_scripts,
-    make_brython_package,
-)
+from webcompy.cli._pyscript_wheel import make_webcompy_app_package_pyscript
+from webcompy.cli._brython_cli import make_webcompy_app_package_brython
 from webcompy.cli._html import generate_html
-from webcompy.cli._utils import (
-    get_app,
-    get_config,
-    get_webcompy_packge_dir,
-)
+from webcompy.cli._utils import get_app, get_config, get_webcompy_packge_dir
 
 
 def generate_static_site():
@@ -27,18 +21,17 @@ def generate_static_site():
         shutil.rmtree(dist_dir)
     os.mkdir(dist_dir)
 
-    scripts_dir = dist_dir / "scripts"
+    scripts_dir = dist_dir / "webcompy-app-package"
     os.mkdir(scripts_dir)
-    install_brython_scripts(
-        str(scripts_dir),
+    make_webcompy_app_package = (
+        make_webcompy_app_package_pyscript
+        if config.environment == "pyscript"
+        else make_webcompy_app_package_brython
     )
-    make_brython_package(
+    make_webcompy_app_package(
+        scripts_dir,
         get_webcompy_packge_dir(),
-        str(scripts_dir),
-    )
-    make_brython_package(
-        str(pathlib.Path(f"./{config.app_package}").absolute()),
-        str(scripts_dir),
+        pathlib.Path(f"./{config.app_package}").absolute(),
     )
 
     html_generator = partial(generate_html, config, False)

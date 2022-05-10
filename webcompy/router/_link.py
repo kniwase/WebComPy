@@ -113,7 +113,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                 )
         if not browser:
             return
-        href: str = ev.currentTarget.attrs["href"]
+        href: str = ev.currentTarget.getAttribute("href")
         current_path = (
             browser.window.location.pathname
             if TypedRouterLink._router.__mode__ == "history"
@@ -132,11 +132,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                     logging.warn(
                         "Argument 'params' of RouterLink should be a Reactive Object of json-serializable dict."
                     )
-            browser.window.history.pushState(
-                state,
-                browser.javascript.NULL,
-                href,
-            )
+            browser.window.history.pushState(state, None, href)
             TypedRouterLink._router.__set_path__(href, params)
 
     def _generate_attrs(self) -> dict[str, AttrValue]:

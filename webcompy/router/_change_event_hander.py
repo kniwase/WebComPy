@@ -53,11 +53,12 @@ class Location(ReactiveBase[str]):
             path: str = browser.window.location.hash
         else:
             path: str = ""
-        if browser:
-            if browser.window.history.state is browser.javascript.NULL:
-                self._state = None
-            else:
-                self._state = browser.window.history.state.to_dict()
+        if (
+            browser
+            and hasattr(browser.window.history, "state")
+            and browser.window.history.state
+        ):
+            self._state = browser.window.history.state.to_dict()
         else:
             self._state = None
         self.__set_path__(path, self._state)

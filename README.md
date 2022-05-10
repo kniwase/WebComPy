@@ -1,12 +1,13 @@
 # WebComPy
 
 ## What is WebComPy
-[WebComPy](https://github.com/kniwase/WebComPy) is Python frontend framework on Browser (powered by [Brython](https://github.com/brython-dev/brython), thank you very much!), which has following features.
+[WebComPy](https://github.com/kniwase/WebComPy) is Python frontend framework for [PyScript](https://github.com/pyscript/pyscript), which has following features.
 
 - Component-based declarative rendering
 - Automatic DOM refreshing
 - Built-in router
-- Built-in server / Static Site Generation
+- CLI tool (Project template, Build-in HTTP server, Static Site Generator)
+- Type Annotation
 
 ## Get started
 ```
@@ -15,6 +16,7 @@ cd webcompy-project
 pip install webcompy
 python -m webcompy init
 python -m webcompy start --dev
+python -m webcompy generate  # for generating static site
 ```
 
 then access [http://127.0.0.1:8080/WebComPy/](http://127.0.0.1:8080/WebComPy/)
@@ -149,7 +151,6 @@ class Fizzbuzz(TypedComponentBase(props_type=RouterContext)):
 ```
 
 ## ToDo
-- Add PyScript support ([Github Repo](https://github.com/pyscript/pyscript))
 - Add provide/inject (DI)
 - Add Plugin System
 

@@ -1,4 +1,4 @@
-from typing import Any, Callable, Protocol, Union
+from typing import Any, Protocol
 
 
 class DOMNode(Protocol):
@@ -8,40 +8,6 @@ class DOMNode(Protocol):
         ...
 
     def __setattr__(self, name: str, obj: Any) -> Any:
-        ...
-
-    def bind(self, event_name: str, handler: Callable[["DOMEvent"], Any]) -> None:
-        """The handler function is called when the event evt_name occurs on the element.
-
-        Args:
-            event_name (str)
-            handler (Callable[[DOMEvent], Any])
-        """
-        ...
-
-    def unbind(
-        self,
-        event_name: str,
-        handler: Union[Callable[["DOMEvent"], Any], None] = ...,
-    ) -> None:
-        """Removes the association of function handler to the event named evt_name.
-        If handler is omitted, removes all the associations for the event.
-
-        Args:
-            event_name (str): _description_
-            handler (Callable[[DOMEvent], Any], optional): Defaults to None.
-        """
-        ...
-
-    def events(self, event_name: str) -> list[Callable[["DOMEvent"], Any]]:
-        """Returns the list of functions that handle the event named evt_name.
-
-        Args:
-            event_name (str): _description_
-
-        Returns:
-            list[Callable[["DOMEvent"], Any]]
-        """
         ...
 
 

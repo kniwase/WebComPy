@@ -4,4 +4,8 @@ config = WebComPyConfig(
     app_package="docs_src",
     dist="docs",
     base="/WebComPy",
+    dependencies=[
+        "numpy",
+        "pydantic",
+    ],
 )

@@ -1,4 +1,4 @@
-from typing import Any, Iterable, cast
+from typing import Any, Callable, Iterable, cast
 from webcompy.reactive._base import ReactiveBase
 from webcompy._browser._modules import browser
 from webcompy.elements.types._base import ElementWithChildren
@@ -9,9 +9,20 @@ from webcompy.elements.typealias._element_property import (
     EventHandler,
 )
 from webcompy.elements.types._refference import DomNodeRef
-from webcompy.elements._dom_objs import DOMNode
+from webcompy.elements._dom_objs import DOMNode, DOMEvent
 from webcompy.aio import resolve_async
 from webcompy.exception import WebComPyException
+from webcompy._browser._modules import browser_pyscript
+
+
+def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent], Any]:
+    def event_handler(ev: Any):
+        resolve_async(_event_handler(ev))
+
+    if browser_pyscript:
+        return browser_pyscript.pyodide.create_proxy(event_handler)
+    else:
+        return event_handler
 
 
 class ElementBase(ElementWithChildren):
@@ -26,11 +37,11 @@ class ElementBase(ElementWithChildren):
                 attr_names_to_remove = set(
                     name
                     for name, value in self._get_processed_attrs().items()
-                    if value is None and name in node.attrs.keys()
+                    if value is None and name in tuple(node.getAttributeNames())
                 )
                 attr_names_to_remove.update(
                     name
-                    for name in node.attrs.keys()
+                    for name in tuple(node.getAttributeNames())
                     if name not in self._get_processed_attrs().keys()
                 )
                 for name in attr_names_to_remove:
@@ -46,8 +57,9 @@ class ElementBase(ElementWithChildren):
                     self._set_callback_id(
                         value.on_after_updating(self._generate_attr_updater(name))
                     )
-            for name, callback in self._event_handlers.items():
-                node.bind(name, lambda ev: resolve_async(callback(ev)))
+            for name, func in self._event_handlers.items():
+                event_handler = _generate_event_handler(func)
+                node.addEventListener(name, event_handler, False)
             if self._ref:
                 self._ref.__init_node__(node)
             return node
