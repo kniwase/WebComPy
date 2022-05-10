@@ -36,13 +36,13 @@ class AppDocumentRoot(Component):
         return self._render
 
     def _render(self):
-        if browser and self.__loading:
-            self.__loading = False
-            browser.document.getElementById("webcompy-loading").remove()
         self._property["on_before_rendering"]()
         for child in self._children:
             child._render()
         self._property["on_after_rendering"]()
+        if browser and self.__loading:
+            self.__loading = False
+            browser.document.getElementById("webcompy-loading").remove()
 
     def _init_node(self) -> DOMNode:
         if browser:
