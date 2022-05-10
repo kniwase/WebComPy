@@ -53,12 +53,13 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
             raise HTTPException(404)
 
     html_generator = partial(generate_html, config, dev_mode)
-    base_url_stripper = partial(re_compile("^" + re_escape(config.base)).sub, "")
+    base_url_stripper = partial(
+        re_compile("^" + re_escape("/" + config.base.strip("/"))).sub,
+        "",
+    )
 
     if app.__component__.router_mode == "history" and app.__component__.routes:
-        html_route = (
-            config.base + "/{path:path}" if config.base != "/" else "/{path:path}"
-        )
+        html_route = config.base + "{path:path}"
 
         async def send_html(request: Request):  # type: ignore
             # get requested path
@@ -77,16 +78,17 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
                 raise HTTPException(404)
 
     else:
-        html_route = config.base
+        html_route = "/" + config.base.strip("/")
         html = html_generator(app, False)
 
         async def send_html(_: Request):  # type: ignore
             return HTMLResponse(html)
 
-    if (base := config.base) != "/":
-        base = f"{base}/"
     routes = [
-        Route(base + "scripts/{filename:path}", send_script_file),
+        Route(
+            config.base + "webcompy-app-package/{filename:path}",
+            send_script_file,
+        ),
         Route(html_route, send_html),
     ]
 
@@ -100,11 +102,7 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
         async def sse(_: Request):
             return EventSourceResponse(loop())
 
-        if config.base == "/":
-            reload_route = "/_webcompy_reload"
-        else:
-            reload_route = f"{config.base}/_webcompy_reload"
-        routes.insert(0, Route(reload_route, endpoint=sse))
+        routes.insert(0, Route(f"{config.base}_webcompy_reload", endpoint=sse))
 
     return Starlette(routes=routes)
 

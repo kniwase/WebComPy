@@ -125,28 +125,28 @@ def generate_html(
         (
             {
                 "type": "text/javascript",
-                "src": f"{base}scripts/brython.js",
+                        "src": f"{config.base}scripts/brython.js",
             },
             None,
         ),
         (
             {
                 "type": "text/javascript",
-                "src": f"{base}scripts/brython_stdlib.js",
+                        "src": f"{config.base}scripts/brython_stdlib.js",
             },
             None,
         ),
         (
             {
                 "type": "text/javascript",
-                "src": f"{base}scripts/webcompy.brython.js",
+                        "src": f"{config.base}scripts/webcompy.brython.js",
             },
             None,
         ),
         (
             {
                 "type": "text/javascript",
-                "src": f"{base}scripts/{config.app_package}.brython.js",
+                        "src": f"{config.base}scripts/{config.app_package}.brython.js",
             },
             None,
         ),
@@ -174,7 +174,7 @@ def generate_html(
                     var stream= new EventSource('{base}_webcompy_reload');
                     stream.addEventListener('error', (e) => window.location.reload());
                     """.format(
-                        base=base
+                        base=config.base
                     )
                 ).strip(),
             )

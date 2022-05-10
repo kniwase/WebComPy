@@ -8,4 +8,4 @@ class WebComPyConfig:
     dist: str = "dist"
 
     def __post_init__(self):
-        self.base = f"/{base}" if (base := self.base.strip("/")) else "/"
+        self.base = f"/{base}/" if (base := self.base.strip("/")) else "/"
