@@ -142,7 +142,44 @@ def generate_html(
     scripts_body: Scripts = []
 
     if config.environment == "pyscript":
-        pass
+        scripts_head.append(
+            (
+                {
+                    "type": "text/javascript",
+                    "defer": "",
+                    "src": "https://pyscript.net/alpha/pyscript.js",
+                },
+                None,
+            )
+        )
+        app_loader.extend(
+            [
+                _HtmlElement(
+                    "py-env",
+                    {"hidden": ""},
+                    "\n"
+                    + strip_multiline_text(
+                        f"""
+                        - '{config.base}webcompy-app-package/webcompy-0.0.0-py3-none-any.whl'
+                        - '{config.base}webcompy-app-package/app-0.0.0-py3-none-any.whl'
+                        """
+                    ).strip()
+                    + "\n",
+                ),
+                _HtmlElement(
+                    "py-script",
+                    {"hidden": ""},
+                    "\n"
+                    + strip_multiline_text(
+                        f"""
+                        from {config.app_package}.bootstrap import app
+                        app.__component__.render()
+                        """
+                    ).strip()
+                    + "\n",
+                ),
+            ]
+        )
     else:
         scripts_body.extend(
             [
