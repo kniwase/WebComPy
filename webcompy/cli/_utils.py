@@ -64,11 +64,11 @@ def get_app(config: WebComPyConfig) -> WebComPyApp:
     return app
 
 
-def get_webcompy_packge_dir(path: pathlib.Path | None = None) -> str:
+def get_webcompy_packge_dir(path: pathlib.Path | None = None) -> pathlib.Path:
     if path is None:
         path = pathlib.Path(__file__)
     if path.is_dir() and path.name == "webcompy":
-        return str(path.absolute())
+        return path.absolute()
     else:
         return get_webcompy_packge_dir(path.parent)
 

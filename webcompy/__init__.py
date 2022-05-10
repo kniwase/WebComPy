@@ -9,7 +9,11 @@ from . import (
     router,
     utils,
 )
-from ._browser import browser
+from ._browser import (
+    browser_pyscript,
+    browser_brython,
+    browser,
+)
 
 if utils.ENVIRONMENT == "other":
     from . import cli
@@ -18,6 +22,8 @@ else:
 
 
 __all__ = [
+    "browser_pyscript",
+    "browser_brython",
     "browser",
     "app",
     "reactive",

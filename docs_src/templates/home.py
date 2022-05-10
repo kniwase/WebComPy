@@ -15,13 +15,17 @@ def Home(_: ComponentContext[None]):
             ),
             html.DIV(
                 {"class": "body"},
-                "WebComPy is Python frontend framework on Browser, which has following features.",
+                "WebComPy is Python frontend framework for PyScript, which has following features.",
                 html.UL(
                     {},
                     html.LI({}, "Component-based declarative rendering"),
                     html.LI({}, "Automatic DOM refreshing"),
                     html.LI({}, "Built-in router"),
-                    html.LI({}, "Built-in server / Static Site Generation"),
+                    html.LI(
+                        {},
+                        "CLI tools (Project template, Build-in HTTP server, Static Site Generator)",
+                    ),
+                    html.LI({}, "Type Annotation"),
                 ),
             ),
         ),
@@ -43,8 +47,22 @@ def Home(_: ComponentContext[None]):
                             pip install webcompy
                             python -m webcompy init
                             python -m webcompy start --dev
-                        """
+                        """,
                     }
+                ),
+            ),
+        ),
+        html.SECTION(
+            {"class": "content"},
+            html.H2(
+                {"class": "heading"},
+                "Source Code",
+            ),
+            html.DIV(
+                {"class": "body"},
+                html.A(
+                    {"href": "https://github.com/kniwase/WebComPy"},
+                    "Project Home",
                 ),
             ),
         ),

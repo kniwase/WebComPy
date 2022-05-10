@@ -3,7 +3,7 @@ from typing import Any, Dict, Literal, Union
 import urllib.parse
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.exception import WebComPyException
-from webcompy._browser._modules import browser
+from webcompy._browser._modules import browser, browser_pyscript
 
 
 # HttpClient
@@ -115,18 +115,27 @@ class HttpClient:
                 elif body_data is not None:
                     body = body_data
                 elif form_data is not None:
-                    body = browser.window.FormData.new()
+                    if browser_pyscript:
+                        body = browser_pyscript.FormData.new()
+                    else:
+                        body = browser.window.FormData.new()
                     for key, value in form_data.items():
                         body.set(key, value)
                 elif form_element is not None:
-                    body = browser.window.FormData.new(form_element.node)
+                    if browser_pyscript:
+                        body = browser_pyscript.FormData.new(form_element.node)
+                    else:
+                        body = browser.window.FormData.new(form_element.node)
                 else:
-                    body = browser.javascript.UNDEFINED
+                    body = None
                 options = {"method": method, "headers": req_headers, "body": body}
             else:
                 options = {"method": method, "headers": req_headers}
             try:
-                res = await browser.window.fetch(send_url, options)
+                if browser_pyscript:
+                    res = await browser_pyscript.fetch(send_url, **options)
+                else:
+                    res = await browser.window.fetch(send_url, options)
             except Exception as err:
                 raise WebComPyHttpClientException(str(err))
             else:

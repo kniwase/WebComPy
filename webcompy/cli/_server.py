@@ -14,51 +14,52 @@ from starlette.types import ASGIApp
 from sse_starlette.sse import EventSourceResponse
 import uvicorn  # type: ignore
 from webcompy.cli._argparser import get_params
-from webcompy.cli._brython_cli import (
-    install_brython_scripts,
-    make_brython_package,
-)
+from webcompy.cli._pyscript_wheel import make_webcompy_app_package_pyscript
+from webcompy.cli._brython_cli import make_webcompy_app_package_brython
 from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._html import generate_html
-from webcompy.cli._utils import (
-    get_app,
-    get_config,
-    get_webcompy_packge_dir,
-)
+from webcompy.cli._utils import get_app, get_config, get_webcompy_packge_dir
 
 
 def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
     app = get_app(config)
-    
+
     with TemporaryDirectory() as temp:
-        install_brython_scripts(temp)
-        make_brython_package(get_webcompy_packge_dir(), temp)
-        make_brython_package(
-            str(pathlib.Path(f"./{config.app_package}").absolute()), temp
+        temp_path = pathlib.Path(temp)
+        make_webcompy_app_package = (
+            make_webcompy_app_package_pyscript
+            if config.environment == "pyscript"
+            else make_webcompy_app_package_brython
         )
-        script_files: dict[str, tuple[bytes, str]] = {
+        make_webcompy_app_package(
+            temp_path,
+            get_webcompy_packge_dir(),
+            pathlib.Path(f"./{config.app_package}").absolute(),
+        )
+        app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (
                 p.open("rb").read(),
                 t if (t := mimetypes.guess_type(p)[0]) else "application/octet-stream",
             )
-            for p in pathlib.Path(temp).iterdir()
+            for p in temp_path.iterdir()
         }
 
-    async def send_script_file(request: Request):
+    async def send_app_package_file(request: Request):
         filename: str = request.path_params.get("filename", "")  # type: ignore
-        if filename in script_files.keys():
-            content, media_type = script_files[filename]
+        if filename in app_package_files.keys():
+            content, media_type = app_package_files[filename]
             return PlainTextResponse(content, media_type=media_type)
         else:
             raise HTTPException(404)
 
     html_generator = partial(generate_html, config, dev_mode)
-    base_url_stripper = partial(re_compile("^" + re_escape(config.base)).sub, "")
+    base_url_stripper = partial(
+        re_compile("^" + re_escape("/" + config.base.strip("/"))).sub,
+        "",
+    )
 
     if app.__component__.router_mode == "history" and app.__component__.routes:
-        html_route = (
-            config.base + "/{path:path}" if config.base != "/" else "/{path:path}"
-        )
+        html_route = config.base + "{path:path}"
 
         async def send_html(request: Request):  # type: ignore
             # get requested path
@@ -77,16 +78,17 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
                 raise HTTPException(404)
 
     else:
-        html_route = config.base
+        html_route = "/" + config.base.strip("/")
         html = html_generator(app, False)
 
         async def send_html(_: Request):  # type: ignore
             return HTMLResponse(html)
 
-    if (base := config.base) != "/":
-        base = f"{base}/"
     routes = [
-        Route(base + "scripts/{filename:path}", send_script_file),
+        Route(
+            config.base + "webcompy-app-package/{filename:path}",
+            send_app_package_file,
+        ),
         Route(html_route, send_html),
     ]
 
@@ -100,11 +102,7 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
         async def sse(_: Request):
             return EventSourceResponse(loop())
 
-        if config.base == "/":
-            reload_route = "/_webcompy_reload"
-        else:
-            reload_route = f"{config.base}/_webcompy_reload"
-        routes.insert(0, Route(reload_route, endpoint=sse))
+        routes.insert(0, Route(f"{config.base}_webcompy_reload", endpoint=sse))
 
     return Starlette(routes=routes)
 
