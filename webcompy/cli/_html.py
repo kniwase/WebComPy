@@ -158,6 +158,11 @@ def generate_html(
                     "py-env",
                     {"hidden": ""},
                     "\n"
+                    + "\n".join(
+                        f"- '{p}'" if p.endswith(".whl") else f"- {p}"
+                        for p in config.dependencies
+                    )
+                    + "\n"
                     + strip_multiline_text(
                         f"""
                         - '{config.base}webcompy-app-package/webcompy-0.0.0-py3-none-any.whl'
