@@ -49,7 +49,10 @@ def MatpoltlibSample(context: ComponentContext[None]):
 
     return html.DIV(
         {},
-        html.H5({}, "Square Wave",),
+        html.H5(
+            {},
+            "Square Wave",
+        ),
         html.P(
             {},
             "Value: ",
@@ -102,5 +105,7 @@ MatpoltlibSample.scoped_style = {
     },
     "input, img": {
         "width": "100%",
+        "max-width": "600px",
+        "height": "auto",
     },
 }
