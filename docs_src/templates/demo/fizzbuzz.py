@@ -1,4 +1,4 @@
-from webcompy.reactive import Reactive, computed_property
+from webcompy.reactive import Reactive, computed_property, computed
 from webcompy.elements import html, repeat, switch
 from webcompy.components import (
     TypedComponentBase,
@@ -34,11 +34,10 @@ class Fizzbuzz(TypedComponentBase(props_type=None)):
         return "Hide" if self.opened.value else "Open"
 
     def add(self, ev: DOMEvent):
-        if self.opened.value:
-            self.count.value += 1
+        self.count.value += 1
 
     def pop(self, ev: DOMEvent):
-        if self.opened.value and self.count.value > 0:
+        if self.count.value > 0:
             self.count.value -= 1
 
     def toggle(self, ev: DOMEvent):
@@ -55,11 +54,17 @@ class Fizzbuzz(TypedComponentBase(props_type=None)):
             html.P(
                 {},
                 html.BUTTON(
-                    {"@click": self.add, "disabled": self.opened},
+                    {
+                        "@click": self.add,
+                        "disabled": computed(lambda: not self.opened.value),
+                    },
                     "Add",
                 ),
                 html.BUTTON(
-                    {"@click": self.pop, "disabled": self.opened},
+                    {
+                        "@click": self.pop,
+                        "disabled": computed(lambda: not self.opened.value),
+                    },
                     "Pop",
                 ),
                 html.BUTTON(

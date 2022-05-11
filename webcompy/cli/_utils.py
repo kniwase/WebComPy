@@ -1,3 +1,4 @@
+from datetime import datetime
 from importlib import import_module
 import os
 import pathlib
@@ -92,3 +93,13 @@ def external_cli_tool_wrapper(func: Callable[P, T]) -> Callable[P, T]:
         return ret
 
     return inner
+
+
+def generate_app_version():
+    now = datetime.now()
+    return "{}.{}.{}".format(
+        now.strftime("%y"),
+        now.strftime("%j"),
+        (int(now.strftime("%H")) * 60 + int(now.strftime("%M"))) * 60
+        + int(now.strftime("%S")),
+    )

@@ -3,6 +3,7 @@ from webcompy.elements.types import Element
 from webcompy.elements.typealias import ElementChildren
 from webcompy.app._app import WebComPyApp
 from webcompy.cli._config import WebComPyConfig
+from webcompy._version import __version__ as webcompy_version
 
 
 Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]
@@ -120,8 +121,9 @@ def _load_scripts(scripts: Scripts):
 def generate_html(
     config: WebComPyConfig,
     dev_mode: bool,
-    app: WebComPyApp,
     prerender: bool,
+    app_version: str,
+    app: WebComPyApp,
 ):
     title = (
         _HtmlElement("title", {}, title)
@@ -160,8 +162,8 @@ def generate_html(
                     f"- '{p}'" if p.endswith(".whl") else f"- {p}"
                     for p in [
                         *config.dependencies,
-                        f"{config.base}webcompy-app-package/webcompy-0.0.0-py3-none-any.whl",
-                        f"{config.base}webcompy-app-package/app-0.0.0-py3-none-any.whl",
+                        f"{config.base}webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
+                        f"{config.base}webcompy-app-package/app-{app_version}-py3-none-any.whl",
                     ]
                 )
                 + "\n",

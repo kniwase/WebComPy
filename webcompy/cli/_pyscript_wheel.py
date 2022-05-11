@@ -6,15 +6,16 @@ from setuptools import setup, find_packages
 from tempfile import TemporaryDirectory
 from webcompy.cli._utils import external_cli_tool_wrapper
 from webcompy.cli._exception import WebComPyCliException
+from webcompy._version import __version__ as webcompy_version
 
 
 @external_cli_tool_wrapper
-def make_wheel(name: str, package_dir: pathlib.Path, dest: pathlib.Path):
+def make_wheel(name: str, package_dir: pathlib.Path, dest: pathlib.Path, version: str):
     if not (package_dir_path := package_dir.absolute()).exists():
         raise WebComPyCliException(f"Package dir '{package_dir}' does not exist")
     if not (dest_path := dest.absolute()).exists():
         os.mkdir(dest_path)
-    wheel_file_name = f"{name}-0.0.0-py3-none-any.whl"
+    wheel_file_name = f"{name}-{version}-py3-none-any.whl"
     with TemporaryDirectory() as temp:
         temp = pathlib.Path(temp)
         wheel_temp = pathlib.Path(temp)
@@ -45,6 +46,7 @@ def make_wheel(name: str, package_dir: pathlib.Path, dest: pathlib.Path):
                     p: str(package_dir_path.parent / p.replace(".", "/"))
                     for p in packages
                 },
+                version=version,
             )
             wheel_dest = dest_path / wheel_file_name
             if wheel_dest.exists():
@@ -65,6 +67,7 @@ def make_webcompy_app_package_pyscript(
     dest: pathlib.Path,
     webcompy_package_dir: pathlib.Path,
     package_dir: pathlib.Path,
+    app_version: str,
 ):
-    make_wheel("webcompy", webcompy_package_dir, dest)
-    make_wheel("app", package_dir, dest)
+    make_wheel("webcompy", webcompy_package_dir, dest, webcompy_version)
+    make_wheel("app", package_dir, dest, app_version)

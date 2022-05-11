@@ -2,6 +2,7 @@ import os
 import pathlib
 from setuptools import setup, find_packages
 from pathlib import Path
+import webcompy
 
 
 def _get_files(path: pathlib.Path, suffix: str) -> list[str]:
@@ -31,7 +32,7 @@ template_files = [
 
 setup(
     name=package_name,
-    version="0.0.5",
+    version=webcompy.__version__,
     description="Python frontend framework which works on Browser",
     long_description=(root_dir / "README.md").open("r", encoding="utf8").read(),
     long_description_content_type="text/markdown",
