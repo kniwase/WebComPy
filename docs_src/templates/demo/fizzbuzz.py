@@ -34,10 +34,11 @@ class Fizzbuzz(TypedComponentBase(props_type=None)):
         return "Hide" if self.opened.value else "Open"
 
     def add(self, ev: DOMEvent):
-        self.count.value += 1
+        if self.opened.value:
+            self.count.value += 1
 
     def pop(self, ev: DOMEvent):
-        if self.count.value > 0:
+        if self.opened.value and self.count.value > 0:
             self.count.value -= 1
 
     def toggle(self, ev: DOMEvent):
@@ -54,16 +55,16 @@ class Fizzbuzz(TypedComponentBase(props_type=None)):
             html.P(
                 {},
                 html.BUTTON(
-                    {"@click": self.toggle},
-                    self.toggle_button_text,
-                ),
-                html.BUTTON(
-                    {"@click": self.add},
+                    {"@click": self.add, "disabled": self.opened},
                     "Add",
                 ),
                 html.BUTTON(
-                    {"@click": self.pop},
+                    {"@click": self.pop, "disabled": self.opened},
                     "Pop",
+                ),
+                html.BUTTON(
+                    {"@click": self.toggle},
+                    self.toggle_button_text,
                 ),
             ),
             html.P(

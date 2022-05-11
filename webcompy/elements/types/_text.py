@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 from webcompy.reactive._base import ReactiveBase
 from webcompy._browser._modules import browser
 from webcompy.elements.types._abstract import ElementAbstract
@@ -12,12 +12,19 @@ class NewLine(ElementAbstract):
 
     def _init_node(self) -> DOMNode:
         if browser:
-            prerendered_node = self._get_prerendered_node()
-            if prerendered_node and not hasattr(prerendered_node, "__webcompy_node__"):
-                node = prerendered_node
-                self._mounted = True
-            else:
-                node = browser.document.createElement("br")
+            node: DOMNode | None = None
+            existing_node = self._get_existing_node()
+            if existing_node:
+                if (
+                    getattr(existing_node, "__webcompy_prerendered_node__", False)
+                    and existing_node.nodeName.lower() == "br"
+                ):
+                    node = existing_node
+                    self._mounted = True
+                else:
+                    existing_node.remove()
+            if not node:
+                node = cast(DOMNode, browser.document.createElement("br"))
             node.__webcompy_node__ = True
             return node
         else:
@@ -49,9 +56,13 @@ class TextElement(ElementAbstract):
 
     def _init_node(self) -> DOMNode:
         if browser:
-            prerendered_node = self._get_prerendered_node()
-            if prerendered_node and prerendered_node.nodeName == "#text":
-                prerendered_node.remove()
+            existing_node = self._get_existing_node()
+            if existing_node:
+                if (
+                    getattr(existing_node, "__webcompy_prerendered_node__", False)
+                    and existing_node.nodeName.lower() == "#text"
+                ):
+                    existing_node.remove()
             node = browser.document.createTextNode(self._get_text())
             node.__webcompy_node__ = True
             return node

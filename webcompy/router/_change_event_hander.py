@@ -15,10 +15,6 @@ class Location(ReactiveBase[str]):
         self._base_url = base_url.strip().strip("/")
         self.set_mode(mode)
         if browser:
-            if self.__mode__ == "hash" and self._value == "":
-                browser.window.location.replace(
-                    f"/{self._base_url}/#/" if self._base_url else "/#/"
-                )
             browser.window.addEventListener("popstate", self._refresh_path, False)
 
     @ReactiveBase._change_event

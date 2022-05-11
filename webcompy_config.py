@@ -6,6 +6,6 @@ config = WebComPyConfig(
     base="/WebComPy",
     dependencies=[
         "numpy",
-        "pydantic",
+        "matplotlib",
     ],
 )

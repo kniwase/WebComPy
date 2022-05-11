@@ -51,9 +51,15 @@ class AppDocumentRoot(Component):
                 if name != "id":
                     node.removeAttribute(name)
             node.__webcompy_node__ = True
+            self._mark_as_prerendered(node)
             return node
         else:
             raise WebComPyException("Not in Browser environment.")
+    
+    def _mark_as_prerendered(self, node: DOMNode):
+        node.__webcompy_prerendered_node__ = True
+        for child in getattr(node, "childNodes", []):
+            self._mark_as_prerendered(child)
 
     def _mount_node(self):
         pass

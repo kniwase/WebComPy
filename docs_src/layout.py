@@ -37,6 +37,10 @@ def Root(_: ComponentContext[None]):
                     "title": "ToDo List",
                     "to": "/sample/todo",
                 },
+                {
+                    "title": "Matplotlib Sample",
+                    "to": "/sample/matplotlib",
+                },
             ],
         },
     ]

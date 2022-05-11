@@ -9,7 +9,7 @@ app = WebComPyApp(
 )
 app.set_head(
     {
-        "title": "WebComPy - Python Client-Side Web Framework",
+        "title": "WebComPy - Python Frontend Framework",
         "meta": [
             {
                 "charset": "utf-8",

@@ -2,7 +2,6 @@ from typing import TypeAlias
 from webcompy.elements.types import Element
 from webcompy.elements.typealias import ElementChildren
 from webcompy.app._app import WebComPyApp
-from webcompy.utils import strip_multiline_text
 from webcompy.cli._config import WebComPyConfig
 
 
@@ -112,7 +111,7 @@ def _load_scripts(scripts: Scripts):
         _HtmlElement(
             "script",
             attrs,
-            strip_multiline_text(script if script else ""),
+            script if script else "",
         )
         for attrs, script in scripts
     ]
@@ -152,38 +151,35 @@ def generate_html(
                 None,
             )
         )
-        app_loader.extend(
-            [
-                _HtmlElement(
-                    "py-env",
-                    {"hidden": ""},
-                    "\n"
-                    + "\n".join(
-                        f"- '{p}'" if p.endswith(".whl") else f"- {p}"
-                        for p in config.dependencies
+        app_loader.append(
+            _HtmlElement(
+                "py-env",
+                {"hidden": ""},
+                "\n"
+                + "\n".join(
+                    f"- '{p}'" if p.endswith(".whl") else f"- {p}"
+                    for p in [
+                        *config.dependencies,
+                        f"{config.base}webcompy-app-package/webcompy-0.0.0-py3-none-any.whl",
+                        f"{config.base}webcompy-app-package/app-0.0.0-py3-none-any.whl",
+                    ]
+                )
+                + "\n",
+            )
+        )
+        app_loader.append(
+            _HtmlElement(
+                "py-script",
+                {"hidden": ""},
+                "\n"
+                + "\n".join(
+                    (
+                        f"from {config.app_package}.bootstrap import app",
+                        "app.__component__.render()",
                     )
-                    + "\n"
-                    + strip_multiline_text(
-                        f"""
-                        - '{config.base}webcompy-app-package/webcompy-0.0.0-py3-none-any.whl'
-                        - '{config.base}webcompy-app-package/app-0.0.0-py3-none-any.whl'
-                        """
-                    ).strip()
-                    + "\n",
-                ),
-                _HtmlElement(
-                    "py-script",
-                    {"hidden": ""},
-                    "\n"
-                    + strip_multiline_text(
-                        f"""
-                        from {config.app_package}.bootstrap import app
-                        app.__component__.render()
-                        """
-                    ).strip()
-                    + "\n",
-                ),
-            ]
+                )
+                + "\n",
+            )
         )
     else:
         scripts_body.extend(
@@ -223,24 +219,24 @@ def generate_html(
                 [
                     (
                         {"type": "text/python"},
-                        strip_multiline_text(
-                            """
-                            from {app_package}.bootstrap import app
-                            app.__component__.render()
-                            """.format(
-                                app_package=config.app_package
+                        "\n"
+                        + "\n".join(
+                            (
+                                f"from {config.app_package}.bootstrap import app",
+                                "app.__component__.render()",
                             )
-                        ).strip(),
+                        )
+                        + "\n",
                     ),
                     (
                         {"type": "text/javascript"},
-                        "brython("
-                        + (
-                            "{debug: 1, cache: false, indexedDB: true}"
-                            if dev_mode
-                            else "{debug: 0, cache: true, indexedDB: true}"
-                        )
-                        + ");",
+                        "brython({{{brython_options}}});".format(
+                            brython_options=(
+                                "debug: 1, cache: false, indexedDB: true"
+                                if dev_mode
+                                else "debug: 0, cache: true, indexedDB: true"
+                            )
+                        ),
                     ),
                 ]
             )
@@ -252,14 +248,12 @@ def generate_html(
         scripts_body.append(
             (
                 {"type": "text/javascript"},
-                strip_multiline_text(
-                    """
-                    var stream= new EventSource('{base}_webcompy_reload');
-                    stream.addEventListener('error', (e) => window.location.reload());
-                    """.format(
-                        base=config.base
+                " ".join(
+                    (
+                        f"var stream = new EventSource('{config.base}_webcompy_reload');",
+                        "stream.addEventListener('error', (e) => window.location.reload());",
                     )
-                ).strip(),
+                ),
             )
         )
 
