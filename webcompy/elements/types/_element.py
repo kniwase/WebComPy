@@ -30,24 +30,31 @@ class ElementBase(ElementWithChildren):
 
     def _init_node(self) -> DOMNode:
         if browser:
-            prerendered_node = self._get_prerendered_node()
-            if prerendered_node and not hasattr(prerendered_node, "__webcompy_node__"):
-                node = prerendered_node
-                self._mounted = True
-                attr_names_to_remove = set(
-                    name
-                    for name, value in self._get_processed_attrs().items()
-                    if value is None and name in tuple(node.getAttributeNames())
-                )
-                attr_names_to_remove.update(
-                    name
-                    for name in tuple(node.getAttributeNames())
-                    if name not in self._get_processed_attrs().keys()
-                )
-                for name in attr_names_to_remove:
-                    node.removeAttribute(name)
-            else:
-                node: DOMNode = browser.document.createElement(self._tag_name)
+            node: DOMNode | None = None
+            existing_node = self._get_existing_node()
+            if existing_node:
+                if (
+                    getattr(existing_node, "__webcompy_prerendered_node__", False)
+                    and existing_node.nodeName.lower() == self._tag_name
+                ):
+                    node = existing_node
+                    self._mounted = True
+                    attr_names_to_remove = set(
+                        name
+                        for name, value in self._get_processed_attrs().items()
+                        if value is None and name in tuple(node.getAttributeNames())
+                    )
+                    attr_names_to_remove.update(
+                        name
+                        for name in tuple(node.getAttributeNames())
+                        if name not in self._get_processed_attrs().keys()
+                    )
+                    for name in attr_names_to_remove:
+                        node.removeAttribute(name)
+                else:
+                    existing_node.remove()
+            if not node:
+                node = cast(DOMNode, browser.document.createElement(self._tag_name))
             node.__webcompy_node__ = True
             for name, value in self._get_processed_attrs().items():
                 if value is not None:

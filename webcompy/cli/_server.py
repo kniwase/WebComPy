@@ -7,23 +7,22 @@ import pathlib
 from tempfile import TemporaryDirectory
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, PlainTextResponse
+from starlette.responses import HTMLResponse, Response
 from starlette.routing import Route
 from starlette.exceptions import HTTPException
 from starlette.types import ASGIApp
 from sse_starlette.sse import EventSourceResponse
 import uvicorn  # type: ignore
+from webcompy.app._app import WebComPyApp
 from webcompy.cli._argparser import get_params
 from webcompy.cli._pyscript_wheel import make_webcompy_app_package_pyscript
 from webcompy.cli._brython_cli import make_webcompy_app_package_brython
 from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._html import generate_html
-from webcompy.cli._utils import get_app, get_config, get_webcompy_packge_dir
+from webcompy.cli._utils import get_config, get_webcompy_packge_dir
 
 
-def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
-    app = get_app(config)
-
+def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
     with TemporaryDirectory() as temp:
         temp_path = pathlib.Path(temp)
         make_webcompy_app_package = (
@@ -48,11 +47,11 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
         filename: str = request.path_params.get("filename", "")  # type: ignore
         if filename in app_package_files.keys():
             content, media_type = app_package_files[filename]
-            return PlainTextResponse(content, media_type=media_type)
+            return Response(content, media_type=media_type)
         else:
             raise HTTPException(404)
 
-    html_generator = partial(generate_html, config, dev_mode)
+    html_generator = partial(generate_html, config, dev_mode, prerender=True)
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + config.base.strip("/"))).sub,
         "",
@@ -73,13 +72,14 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
             # response html
             if is_matched or "text/html" in accept_types:
                 app.__component__.set_path(requested_path)
-                return HTMLResponse(html_generator(app, True))
+                return HTMLResponse(html_generator(app))
             else:
                 raise HTTPException(404)
 
     else:
-        html_route = "/" + config.base.strip("/")
-        html = html_generator(app, False)
+        html_route = config.base
+        app.__component__.set_path("/")
+        html = html_generator(app)
 
         async def send_html(_: Request):  # type: ignore
             return HTMLResponse(html)

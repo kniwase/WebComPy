@@ -34,7 +34,7 @@ def generate_static_site():
         pathlib.Path(f"./{config.app_package}").absolute(),
     )
 
-    html_generator = partial(generate_html, config, False)
+    html_generator = partial(generate_html, config, False, prerender=True)
     if app.__component__.router_mode == "history" and app.__component__.routes:
         for p, _, _, _, page in app.__component__.routes:
             if path_params := page.get("path_params"):
@@ -45,17 +45,18 @@ def generate_static_site():
                 if not (path_dir := dist_dir / path).exists():
                     os.makedirs(path_dir)
                 app.__component__.set_path(path)
-                html = html_generator(app, True)
+                html = html_generator(app)
                 html_path = path_dir / "index.html"
                 html_path.open("w", encoding="utf8").write(html)
                 print(html_path)
         app.__component__.set_path("//:404://")
-        html = html_generator(app, True)
+        html = html_generator(app)
         html_path = dist_dir / "404.html"
         html_path.open("w", encoding="utf8").write(html)
         print(html_path)
     else:
-        html = html_generator(app, False)
+        app.__component__.set_path("/")
+        html = html_generator(app)
         html_path = dist_dir / "index.html"
         html_path.open("w", encoding="utf8").write(html)
         print(html_path)
