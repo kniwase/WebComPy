@@ -54,6 +54,7 @@ def make_webcompy_app_package_brython(
     dest: pathlib.Path,
     webcompy_package_dir: pathlib.Path,
     package_dir: pathlib.Path,
+    app_version: str,
 ):
     install_brython_scripts(dest)
     make_brython_package(webcompy_package_dir, dest)

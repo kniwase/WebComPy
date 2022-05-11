@@ -6,7 +6,12 @@ from webcompy.cli._argparser import get_params
 from webcompy.cli._pyscript_wheel import make_webcompy_app_package_pyscript
 from webcompy.cli._brython_cli import make_webcompy_app_package_brython
 from webcompy.cli._html import generate_html
-from webcompy.cli._utils import get_app, get_config, get_webcompy_packge_dir
+from webcompy.cli._utils import (
+    get_app,
+    get_config,
+    get_webcompy_packge_dir,
+    generate_app_version,
+)
 
 
 def generate_static_site():
@@ -15,6 +20,7 @@ def generate_static_site():
     _, args = get_params()
     config = get_config()
     dist = config.dist if args.get("dist") is None else args["dist"]
+    app_version = generate_app_version()
 
     dist_dir = pathlib.Path(dist).absolute()
     if dist_dir.exists():
@@ -32,9 +38,10 @@ def generate_static_site():
         scripts_dir,
         get_webcompy_packge_dir(),
         pathlib.Path(f"./{config.app_package}").absolute(),
+        app_version,
     )
 
-    html_generator = partial(generate_html, config, False, prerender=True)
+    html_generator = partial(generate_html, config, False, True, app_version)
     if app.__component__.router_mode == "history" and app.__component__.routes:
         for p, _, _, _, page in app.__component__.routes:
             if path_params := page.get("path_params"):

@@ -19,10 +19,18 @@ from webcompy.cli._pyscript_wheel import make_webcompy_app_package_pyscript
 from webcompy.cli._brython_cli import make_webcompy_app_package_brython
 from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._html import generate_html
-from webcompy.cli._utils import get_config, get_webcompy_packge_dir
+from webcompy.cli._utils import (
+    get_config,
+    get_webcompy_packge_dir,
+    generate_app_version,
+)
 
 
-def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
+def create_asgi_app(
+    app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = False
+) -> ASGIApp:
+    app_version = generate_app_version()
+
     with TemporaryDirectory() as temp:
         temp_path = pathlib.Path(temp)
         make_webcompy_app_package = (
@@ -34,6 +42,7 @@ def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = F
             temp_path,
             get_webcompy_packge_dir(),
             pathlib.Path(f"./{config.app_package}").absolute(),
+            app_version,
         )
         app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (
@@ -51,7 +60,7 @@ def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = F
         else:
             raise HTTPException(404)
 
-    html_generator = partial(generate_html, config, dev_mode, prerender=True)
+    html_generator = partial(generate_html, config, dev_mode, True, app_version)
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + config.base.strip("/"))).sub,
         "",
