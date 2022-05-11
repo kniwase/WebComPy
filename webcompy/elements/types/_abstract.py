@@ -86,11 +86,11 @@ class ElementAbstract(ReactiveReceivable):
     def _clear_node_cache(self, recursive: bool = True):
         self._node_cache = None
 
-    def _get_prerendered_node(self) -> DOMNode | None:
+    def _get_existing_node(self) -> DOMNode | None:
         parent_node = self._parent._get_node()
         if parent_node.childNodes.length > self._node_idx:
-            prerendered_node: DOMNode = parent_node.childNodes[self._node_idx]
-            return prerendered_node
+            existing_node: DOMNode = parent_node.childNodes[self._node_idx]
+            return existing_node
         return None
 
     @abstractmethod
