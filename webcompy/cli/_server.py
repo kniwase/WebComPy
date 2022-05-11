@@ -52,7 +52,7 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
         else:
             raise HTTPException(404)
 
-    html_generator = partial(generate_html, config, dev_mode)
+    html_generator = partial(generate_html, config, dev_mode, prerender=True)
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + config.base.strip("/"))).sub,
         "",
@@ -73,13 +73,14 @@ def create_asgi_app(config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
             # response html
             if is_matched or "text/html" in accept_types:
                 app.__component__.set_path(requested_path)
-                return HTMLResponse(html_generator(app, True))
+                return HTMLResponse(html_generator(app))
             else:
                 raise HTTPException(404)
 
     else:
-        html_route = "/" + config.base.strip("/")
-        html = html_generator(app, False)
+        html_route = config.base
+        app.__component__.set_path("/")
+        html = html_generator(app)
 
         async def send_html(_: Request):  # type: ignore
             return HTMLResponse(html)
