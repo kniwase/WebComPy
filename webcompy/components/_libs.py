@@ -38,11 +38,20 @@ class Context(Generic[PropsType]):
     __on_after_rendering: Callable[[], Any] | None
     __on_before_destroy: Callable[[], Any] | None
 
+    __title_getter: Callable[[], str]
+    __meta_getter: Callable[[], dict[str, dict[str, str]]]
+    __title_setter: Callable[[str], None]
+    __meta_setter: Callable[[str, dict[str, str]], None]
+
     def __init__(
         self,
         props: PropsType,
         slots: Dict[str, NodeGenerator],
         component_name: str,
+        title_getter: Callable[[], str],
+        meta_getter: Callable[[], dict[str, dict[str, str]]],
+        title_setter: Callable[[str], None],
+        meta_setter: Callable[[str, dict[str, str]], None],
     ) -> None:
         self.__props = props
         self.__slots = slots
@@ -50,6 +59,10 @@ class Context(Generic[PropsType]):
         self.__on_before_rendering = None
         self.__on_after_rendering = None
         self.__on_before_destroy = None
+        self.__title_getter = title_getter
+        self.__meta_getter = meta_getter
+        self.__title_setter = title_setter
+        self.__meta_setter = meta_setter
 
     @property
     def props(self) -> PropsType:
@@ -78,6 +91,18 @@ class Context(Generic[PropsType]):
 
     def on_before_destroy(self, func: Callable[[], Any]) -> None:
         self.__on_before_destroy = func
+
+    def get_title(self):
+        return self.__title_getter()
+
+    def get_meta(self):
+        return self.__meta_getter()
+
+    def set_title(self, title: str):
+        self.__title_setter(title)
+
+    def set_meta(self, key: str, attributes: dict[str, str]):
+        self.__meta_setter(key, attributes)
 
     def __get_lifecyclehooks__(self) -> _Lifecyclehooks:
         hooks: _Lifecyclehooks = {}
