@@ -1,6 +1,7 @@
 from typing import TypeAlias
-from webcompy.elements.types import Element
+from webcompy.elements.types import Element, RepeatElement
 from webcompy.elements.typealias import ElementChildren
+from webcompy.reactive._computed import computed
 from webcompy.app._app import WebComPyApp
 from webcompy.cli._config import WebComPyConfig
 from webcompy._version import __version__ as webcompy_version
@@ -125,11 +126,6 @@ def generate_html(
     app_version: str,
     app: WebComPyApp,
 ):
-    title = (
-        _HtmlElement("title", {}, title)
-        if (title := app.__head__.get("title"))
-        else None
-    )
     app_root = (
         app.__component__
         if prerender
@@ -244,8 +240,8 @@ def generate_html(
             )
         )
 
-    scripts_head.extend(app.__head__.get("script", []))
-    scripts_body.extend(app.__scripts__)
+    scripts_head.extend(app.__component__.head["script"])
+    scripts_body.extend(app.__component__.scripts)
     if dev_mode:
         scripts_body.append(
             (
@@ -267,11 +263,13 @@ def generate_html(
             _HtmlElement(
                 "head",
                 {},
-                title,
-                *[
-                    _HtmlElement("meta", attrs)
-                    for attrs in app.__head__.get("meta", [])
-                ],
+                _HtmlElement("title", {}, app.__component__.head["title"]),
+                RepeatElement(
+                    sequence=computed(
+                        lambda: list(app.__component__.head["meta"].value.values())
+                    ),
+                    template=lambda attrs: _HtmlElement("meta", attrs),
+                ),
                 _HtmlElement("base", {"href": config.base}),
                 _HtmlElement(
                     "style",
@@ -280,7 +278,7 @@ def generate_html(
                 ),
                 *[
                     _HtmlElement("link", attrs)
-                    for attrs in app.__head__.get("link", [])
+                    for attrs in app.__component__.head.get("link", [])
                 ],
                 *_load_scripts(scripts_head),
             ),

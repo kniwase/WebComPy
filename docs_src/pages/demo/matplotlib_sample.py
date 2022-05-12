@@ -6,12 +6,15 @@ from ...templates.demo.matplotlib_sample import MatpoltlibSample
 
 
 @define_component
-def MatpoltlibSamplePage(_: ComponentContext[RouterContext]):
+def MatpoltlibSamplePage(context: ComponentContext[RouterContext]):
+    title = "Matplotlib Sample"
+    context.set_title(f"{title} - WebCompy Demo")
+
     return html.DIV(
         {},
         DemoDisplay(
             {
-                "title": "Matplotlib Sample",
+                "title": title,
                 "code": """
                     import base64
                     from io import BytesIO

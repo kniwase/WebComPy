@@ -4,7 +4,9 @@ from webcompy.router import RouterContext
 
 
 @define_component
-def Home(_: ComponentContext[RouterContext]):
+def Home(context: ComponentContext[RouterContext]):
+    context.set_title("WebCompy Template")
+    
     return html.H3(
         {},
         "WebCompy Template",

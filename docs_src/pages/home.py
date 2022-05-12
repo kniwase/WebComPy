@@ -5,5 +5,5 @@ from ..templates.home import Home
 
 
 @define_component
-def HomePage(_: ComponentContext[RouterContext]):
+def HomePage(context: ComponentContext[RouterContext]):
     return html.DIV({}, Home(None))

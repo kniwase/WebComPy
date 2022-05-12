@@ -5,6 +5,8 @@ from webcompy.router import RouterContext
 
 @define_component
 def NotFound(context: ComponentContext[RouterContext]):
+    context.set_title("NotFound - WebCompy Template")
+
     return html.DIV(
         {},
         html.H3(

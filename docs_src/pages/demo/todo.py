@@ -6,12 +6,15 @@ from ...templates.demo.todo import ToDoList
 
 
 @define_component
-def ToDoListPage(_: ComponentContext[RouterContext]):
+def ToDoListPage(context: ComponentContext[RouterContext]):
+    title = "ToDo List"
+    context.set_title(f"{title} - WebCompy Demo")
+
     return html.DIV(
         {},
         DemoDisplay(
             {
-                "title": "ToDo List",
+                "title": title,
                 "code": """
                     from typing import Any, TypedDict
                     from webcompy.elements import html, repeat, DomNodeRef
