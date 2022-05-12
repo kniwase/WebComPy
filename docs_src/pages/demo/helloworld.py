@@ -6,12 +6,15 @@ from ...templates.demo.helloworld import HelloWorld
 
 
 @define_component
-def HelloWorldPage(_: ComponentContext[RouterContext]):
+def HelloWorldPage(context: ComponentContext[RouterContext]):
+    title = "HelloWorld"
+    context.set_title(f"{title} - WebCompy Demo")
+
     return html.DIV(
         {},
         DemoDisplay(
             {
-                "title": "HelloWorld",
+                "title": title,
                 "code": """
                     from webcompy.elements import html
                     from webcompy.components import define_component, ComponentContext

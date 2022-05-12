@@ -10,23 +10,23 @@ app = WebComPyApp(
 app.set_head(
     {
         "title": "WebComPy - Python Frontend Framework",
-        "meta": [
-            {
+        "meta": {
+            "charset": {
                 "charset": "utf-8",
             },
-            {
+            "viewport": {
                 "name": "viewport",
                 "content": "width=device-width, initial-scale=1.0",
             },
-            {
+            "description": {
                 "name": "description",
                 "content": "WebComPy is Python frontend framework on Browser",
             },
-            {
+            "keywords": {
                 "name": "keywords",
                 "content": "python,framework,browser,frontend,client-side",
             },
-        ],
+        },
         "link": [
             {
                 "rel": "stylesheet",

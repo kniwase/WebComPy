@@ -2,6 +2,8 @@ from typing import Any, Callable, Protocol
 from webcompy.elements._dom_objs import DOMNode, DOMEvent
 
 class PyScriptBrowserModule(Protocol):
+    def __getattr__(self, name: str) -> Any: ...
+    def __setattr__(self, name: str, obj: Any) -> Any: ...
     pyodide: Any
     addEventListener: Any
     alert: Any
