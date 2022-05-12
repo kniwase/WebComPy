@@ -92,16 +92,16 @@ class Context(Generic[PropsType]):
     def on_before_destroy(self, func: Callable[[], Any]) -> None:
         self.__on_before_destroy = func
 
-    def get_title(self):
+    def get_title(self) -> str:
         return self.__title_getter()
 
-    def get_meta(self):
+    def get_meta(self) -> dict[str, dict[str, str]]:
         return self.__meta_getter()
 
-    def set_title(self, title: str):
+    def set_title(self, title: str) -> None:
         self.__title_setter(title)
 
-    def set_meta(self, key: str, attributes: dict[str, str]):
+    def set_meta(self, key: str, attributes: dict[str, str]) -> None:
         self.__meta_setter(key, attributes)
 
     def __get_lifecyclehooks__(self) -> _Lifecyclehooks:
@@ -136,6 +136,18 @@ class ComponentContext(Protocol[PropsType]):
     def on_before_destroy(self, func: Callable[[], Any]) -> None:
         ...
 
+    def get_title(self) -> str:
+        ...
+
+    def get_meta(self) -> dict[str, dict[str, str]]:
+        ...
+
+    def set_title(self, title: str) -> None:
+        ...
+
+    def set_meta(self, key: str, attributes: dict[str, str]) -> None:
+        ...
+
 
 class ClassStyleComponentContenxt(Protocol[PropsType]):
     @property
@@ -147,6 +159,18 @@ class ClassStyleComponentContenxt(Protocol[PropsType]):
         name: str,
         fallback: NodeGenerator | None = None,
     ) -> ElementChildren:
+        ...
+
+    def get_title(self) -> str:
+        ...
+
+    def get_meta(self) -> dict[str, dict[str, str]]:
+        ...
+
+    def set_title(self, title: str) -> None:
+        ...
+
+    def set_meta(self, key: str, attributes: dict[str, str]) -> None:
         ...
 
 
