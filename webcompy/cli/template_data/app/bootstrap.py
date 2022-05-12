@@ -9,8 +9,10 @@ app = WebComPyApp(
 app.set_head(
     {
         "title": "WebComPy Template",
-        "meta": [
-            {"charset": "utf-8"},
-        ],
+        "meta": {
+            "charset": {
+                "charset": "utf-8",
+            },
+        },
     }
 )
