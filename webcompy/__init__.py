@@ -8,6 +8,7 @@ from . import (
     reactive,
     router,
     utils,
+    logging,
 )
 from ._browser import (
     browser_pyscript,
@@ -37,4 +38,5 @@ __all__ = [
     "ajax",
     "utils",
     "cli",
+    "logging",
 ]
