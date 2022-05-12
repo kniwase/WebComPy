@@ -5,5 +5,7 @@ from ...templates.document.home import DocumentHome
 
 
 @define_component
-def DocumentHomePage(_: ComponentContext[RouterContext]):
+def DocumentHomePage(context: ComponentContext[RouterContext]):
+    context.set_title("Documents - WebCompy")
+    
     return html.DIV({}, DocumentHome(None))

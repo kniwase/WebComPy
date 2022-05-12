@@ -6,12 +6,15 @@ from ...components.demo_display import DemoDisplay
 
 
 @define_component
-def FizzbuzzPage(_: ComponentContext[RouterContext]):
+def FizzbuzzPage(context: ComponentContext[RouterContext]):
+    title = "FizzBuzz"
+    context.set_title(f"{title} - WebCompy Demo")
+
     return html.DIV(
         {},
         DemoDisplay(
             {
-                "title": "FizzBuzz",
+                "title": title,
                 "code": """
                     from webcompy.reactive import Reactive, computed_property
                     from webcompy.elements import html, repeat, switch
