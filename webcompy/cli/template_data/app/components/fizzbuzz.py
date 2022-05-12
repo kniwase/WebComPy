@@ -58,6 +58,8 @@ FizzbuzzList.scoped_style = {
 @component_class
 class Fizzbuzz(TypedComponentBase(props_type=RouterContext)):
     def __init__(self) -> None:
+        self.context.set_title("FizzBuzz - WebCompy Template")
+
         self.opened = Reactive(True)
         self.count = Reactive(10)
 

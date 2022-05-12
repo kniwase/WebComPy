@@ -6,7 +6,9 @@ from webcompy.elements import DOMEvent
 
 
 @define_component
-def InOutSample(_: ComponentContext[RouterContext]):
+def InOutSample(context: ComponentContext[RouterContext]):
+    context.set_title("Text Input Sample - WebCompy Template")
+
     text = Reactive("")
 
     def on_input(ev: DOMEvent):
