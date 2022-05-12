@@ -70,9 +70,12 @@ class TextElement(ElementAbstract):
             raise WebComPyException("Not in Browser environment.")
 
     def _update_text(self, new_text: str):
-        node = self._get_node()
-        if node:
-            node.textContent = new_text
+        if browser:
+            node = self._get_node()
+            if node:
+                node.textContent = new_text
+        else:
+            self._text = new_text
 
     def _render_html(
         self, newline: bool = False, indent: int = 2, count: int = 0
