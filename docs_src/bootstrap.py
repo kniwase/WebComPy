@@ -26,6 +26,10 @@ app.set_head(
                 "name": "keywords",
                 "content": "python,framework,browser,frontend,client-side",
             },
+            "google-site-verification": {
+                "name": "google-site-verification",
+                "content": "qRIOGfRioPW7wInrUcunEcZZICOQK1VGZgsP-mlGicA",
+            },
         },
         "link": [
             {
