@@ -27,7 +27,7 @@ def generate_static_site():
         shutil.rmtree(dist_dir)
     os.mkdir(dist_dir)
 
-    scripts_dir = dist_dir / "webcompy-app-package"
+    scripts_dir = dist_dir / "_webcompy-app-package"
     os.mkdir(scripts_dir)
     make_webcompy_app_package = (
         make_webcompy_app_package_pyscript
@@ -67,4 +67,5 @@ def generate_static_site():
         html_path = dist_dir / "index.html"
         html_path.open("w", encoding="utf8").write(html)
         print(html_path)
+    (dist_dir / ".nojekyll").touch()
     print("done")

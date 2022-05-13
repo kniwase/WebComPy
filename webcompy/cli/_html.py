@@ -158,8 +158,8 @@ def generate_html(
                     f"- '{p}'" if p.endswith(".whl") else f"- {p}"
                     for p in [
                         *config.dependencies,
-                        f"{config.base}webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
-                        f"{config.base}webcompy-app-package/app-{app_version}-py3-none-any.whl",
+                        f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
+                        f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
                     ]
                 )
                 + "\n",
@@ -179,34 +179,49 @@ def generate_html(
                 + "\n",
             )
         )
+        app_loader.append(
+            _HtmlElement(
+                "script",
+                {"type": "text/javascript", "id": "livereloadscript-remover"},
+                " ".join(
+                    (
+                        "window.addEventListener('load', () => {",
+                        "ele = document.getElementById('livereloadscript');"
+                        "if (ele) { ele.remove() };",
+                        "document.getElementById('livereloadscript-remover').remove();",
+                        "});",
+                    )
+                ),
+            )
+        )
     else:
         scripts_body.extend(
             [
                 (
                     {
                         "type": "text/javascript",
-                        "src": f"{config.base}webcompy-app-package/brython.js",
+                        "src": f"{config.base}_webcompy-app-package/brython.js",
                     },
                     None,
                 ),
                 (
                     {
                         "type": "text/javascript",
-                        "src": f"{config.base}webcompy-app-package/brython_stdlib.js",
+                        "src": f"{config.base}_webcompy-app-package/brython_stdlib.js",
                     },
                     None,
                 ),
                 (
                     {
                         "type": "text/javascript",
-                        "src": f"{config.base}webcompy-app-package/webcompy.brython.js",
+                        "src": f"{config.base}_webcompy-app-package/webcompy.brython.js",
                     },
                     None,
                 ),
                 (
                     {
                         "type": "text/javascript",
-                        "src": f"{config.base}webcompy-app-package/{config.app_package}.brython.js",
+                        "src": f"{config.base}_webcompy-app-package/{config.app_package}.brython.js",
                     },
                     None,
                 ),
