@@ -67,4 +67,5 @@ def generate_static_site():
         html_path = dist_dir / "index.html"
         html_path.open("w", encoding="utf8").write(html)
         print(html_path)
+    (dist_dir / ".nojekyll").touch()
     print("done")
