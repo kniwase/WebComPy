@@ -95,7 +95,7 @@ def create_asgi_app(
 
     routes = [
         Route(
-            config.base + "webcompy-app-package/{filename:path}",
+            config.base + "_webcompy-app-package/{filename:path}",
             send_app_package_file,
         ),
         Route(html_route, send_html),

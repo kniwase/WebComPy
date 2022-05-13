@@ -27,7 +27,7 @@ def generate_static_site():
         shutil.rmtree(dist_dir)
     os.mkdir(dist_dir)
 
-    scripts_dir = dist_dir / "webcompy-app-package"
+    scripts_dir = dist_dir / "_webcompy-app-package"
     os.mkdir(scripts_dir)
     make_webcompy_app_package = (
         make_webcompy_app_package_pyscript
