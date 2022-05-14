@@ -28,8 +28,8 @@ T = TypeVar("T")
 # Async
 def resolve_async(
     coroutine: Coroutine[Any, Any, T],
-    on_done: Callable[[T], None] | None = None,
-    on_error: Callable[[Exception], None] | None = None,
+    on_done: Callable[[T], Any] | None = None,
+    on_error: Callable[[Exception], Any] | None = None,
 ):
     async def resolve(
         coroutine: Coroutine[Any, Any, T],
@@ -50,8 +50,8 @@ def resolve_async(
 class AsyncWrapper(Generic[T]):
     def __init__(
         self,
-        resolver: Callable[[T], None] = lambda _: None,
-        error: Callable[[Exception], None] = lambda _: None,
+        resolver: Callable[[T], Any] = lambda _: None,
+        error: Callable[[Exception], Any] = lambda _: None,
     ) -> None:
         self.resolver = resolver
         self.error = error

@@ -3,3 +3,4 @@ wheel
 starlette
 sse-starlette
 uvicorn
+aiofiles
