@@ -152,7 +152,7 @@ def generate_html(
         app_loader.append(
             _HtmlElement(
                 "py-env",
-                {"hidden": ""},
+                {},
                 "\n"
                 + "\n".join(
                     f"- '{p}'" if p.endswith(".whl") else f"- {p}"
@@ -168,7 +168,7 @@ def generate_html(
         app_loader.append(
             _HtmlElement(
                 "py-script",
-                {"hidden": ""},
+                {},
                 "\n"
                 + "\n".join(
                     (
@@ -177,21 +177,6 @@ def generate_html(
                     )
                 )
                 + "\n",
-            )
-        )
-        app_loader.append(
-            _HtmlElement(
-                "script",
-                {"type": "text/javascript", "id": "livereloadscript-remover"},
-                " ".join(
-                    (
-                        "window.addEventListener('load', () => {",
-                        "ele = document.getElementById('livereloadscript');"
-                        "if (ele) { ele.remove() };",
-                        "document.getElementById('livereloadscript-remover').remove();",
-                        "});",
-                    )
-                ),
             )
         )
     else:
@@ -289,7 +274,13 @@ def generate_html(
                 _HtmlElement(
                     "style",
                     {},
-                    " ".join(("*[hidden]{display: none;}", app.__component__.style)),
+                    " ".join(
+                        (
+                            "*[hidden]{display: none;}",
+                            "py-script, py-env, py-loader {display: none;}",
+                            app.__component__.style,
+                        )
+                    ),
                 ),
                 *[
                     _HtmlElement("link", attrs)
