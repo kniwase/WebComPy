@@ -41,6 +41,10 @@ def Root(_: ComponentContext[None]):
                     "title": "Matplotlib Sample",
                     "to": "/sample/matplotlib",
                 },
+                {
+                    "title": "Fetch Sample",
+                    "to": "/sample/fetch",
+                },
             ],
         },
     ]
