@@ -25,4 +25,7 @@ def get_static_files(static_file_dir: pathlib.Path):
     get_relative_path = partial(
         re_complie("^" + re_escape(str(static_file_dir) + os.sep)).sub, ""
     )
-    return tuple(map(get_relative_path, map(str, _list_up_files(static_file_dir))))
+    return tuple(
+        get_relative_path(str(p)).replace("\\", "/")
+        for p in _list_up_files(static_file_dir)
+    )
