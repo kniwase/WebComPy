@@ -21,7 +21,7 @@ def FetchSample(context: ComponentContext[None]):
     async def fetch_user_data():
         res = await HttpClient.get("fetch_sample/sample.json")
         logging.info(res)
-        users.value = res.json()["dat"]
+        users.value = res.json()["data"]
         json_text.value = res.text
 
     @context.on_after_rendering
