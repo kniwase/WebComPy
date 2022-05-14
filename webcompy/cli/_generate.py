@@ -12,6 +12,7 @@ from webcompy.cli._utils import (
     get_webcompy_packge_dir,
     generate_app_version,
 )
+from webcompy.cli._static_files import get_static_files
 
 
 def generate_static_site():
@@ -27,7 +28,20 @@ def generate_static_site():
         shutil.rmtree(dist_dir)
     os.mkdir(dist_dir)
 
-    scripts_dir = dist_dir / "webcompy-app-package"
+    nojekyll_path = dist_dir / ".nojekyll"
+    nojekyll_path.touch()
+    print(nojekyll_path)
+
+    static_files_dir = pathlib.Path(f"./{config.static_files_dir}").absolute()
+    for relative_path in get_static_files(static_files_dir):
+        src = static_files_dir / relative_path
+        dst = dist_dir / relative_path
+        if not (parent := dst.parent).exists():
+            os.makedirs(parent)
+        shutil.copy(src, dst)
+        print(dst)
+
+    scripts_dir = dist_dir / "_webcompy-app-package"
     os.mkdir(scripts_dir)
     make_webcompy_app_package = (
         make_webcompy_app_package_pyscript
@@ -40,6 +54,8 @@ def generate_static_site():
         pathlib.Path(f"./{config.app_package}").absolute(),
         app_version,
     )
+    for p in scripts_dir.iterdir():
+        print(p)
 
     html_generator = partial(generate_html, config, False, True, app_version)
     if app.__component__.router_mode == "history" and app.__component__.routes:
@@ -67,4 +83,5 @@ def generate_static_site():
         html_path = dist_dir / "index.html"
         html_path.open("w", encoding="utf8").write(html)
         print(html_path)
+
     print("done")

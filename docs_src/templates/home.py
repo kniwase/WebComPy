@@ -89,19 +89,3 @@ Home.scoped_style = {
         "font-size": "20px",
     },
 }
-
-
-# What is WebComPy
-#
-
-# Component-based declarative rendering
-# Automatic DOM refreshing
-# Built-in router
-# Built-in server / Static Site Generation
-# Get started
-# mkdir webcompy-project
-# cd webcompy-project
-# pip install webcompy
-# python -m webcompy init
-# python -m webcompy start --dev
-# then access http://127.0.0.1:8080/WebComPy/
