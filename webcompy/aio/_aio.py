@@ -1,35 +1,50 @@
-from typing import Any, Callable, Coroutine, Generic, ParamSpec, TypeVar
+from traceback import TracebackException
+from re import compile as re_complie, escape as re_escape
+from typing import Any, Callable, Coroutine, Generic, ParamSpec, TypeAlias, TypeVar
 from webcompy._browser._modules import browser_pyscript, browser_brython
 from webcompy.reactive._base import ReactiveBase
+from webcompy import logging
+
+AsysncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
 
 if browser_pyscript:
-
-    def aio_run(coroutine: Coroutine[Any, Any, Any]):  # type: ignore
-        async def resolve_awaitable():
-            try:
-                await coroutine
-            except Exception as error:
-                browser_pyscript.console.error(str(error))  # type: ignore
-
-        browser_pyscript.pyodide.webloop.WebLoop().run_until_complete(resolve_awaitable())  # type: ignore
-
+    aio_run: AsysncResolver = (
+        browser_pyscript.pyodide.webloop.WebLoop().run_until_complete
+    )
 elif browser_brython:
-    aio_run: Callable[[Coroutine[Any, Any, Any]], None] = browser_brython.aio.run
+    aio_run: AsysncResolver = browser_brython.aio.run
 else:
     import asyncio
 
-    aio_run: Callable[[Coroutine[Any, Any, Any]], None] = asyncio.run
+    aio_run: AsysncResolver = asyncio.run
 
 
 A = ParamSpec("A")
 T = TypeVar("T")
 
 
+_package_name = "/webcompy/"
+_filepath_in_package = _package_name + __file__.split(_package_name)[-1]
+_is_traceback_in_this_file = re_complie(
+    r'\s+File\s+".+' + re_escape(_filepath_in_package) + r'",\s+line\s+[0-9]+,\s+in\s+'
+).match
+
+
+def _log_error(error: Exception):
+    logging.error(
+        "".join(
+            row
+            for row in TracebackException.from_exception(error).format()
+            if not _is_traceback_in_this_file(row)
+        )
+    )
+
+
 # Async
 def resolve_async(
     coroutine: Coroutine[Any, Any, T],
     on_done: Callable[[T], Any] | None = None,
-    on_error: Callable[[Exception], Any] | None = None,
+    on_error: Callable[[Exception], Any] | None = _log_error,
 ):
     async def resolve(
         coroutine: Coroutine[Any, Any, T],
@@ -50,8 +65,8 @@ def resolve_async(
 class AsyncWrapper(Generic[T]):
     def __init__(
         self,
-        resolver: Callable[[T], Any] = lambda _: None,
-        error: Callable[[Exception], Any] = lambda _: None,
+        resolver: Callable[[T], Any] | None = None,
+        error: Callable[[Exception], Any] | None = _log_error,
     ) -> None:
         self.resolver = resolver
         self.error = error
