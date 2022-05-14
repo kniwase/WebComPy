@@ -1,3 +1,4 @@
+from inspect import iscoroutinefunction
 from typing import Any, Callable, Iterable, cast
 from webcompy.reactive._base import ReactiveBase
 from webcompy._browser._modules import browser
@@ -17,7 +18,10 @@ from webcompy._browser._modules import browser_pyscript
 
 def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent], Any]:
     def event_handler(ev: Any):
-        resolve_async(_event_handler(ev))
+        if iscoroutinefunction(_event_handler):
+            resolve_async(_event_handler(ev))
+        else:
+            _event_handler(ev)
 
     if browser_pyscript:
         return browser_pyscript.pyodide.create_proxy(event_handler)
@@ -27,6 +31,7 @@ def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent]
 
 class ElementBase(ElementWithChildren):
     _ref: DomNodeRef | None
+    _event_handlers_added: dict[str, Any]
 
     def _init_node(self) -> DOMNode:
         if browser:
@@ -64,9 +69,11 @@ class ElementBase(ElementWithChildren):
                     self._set_callback_id(
                         value.on_after_updating(self._generate_attr_updater(name))
                     )
+            self._event_handlers_added = {}
             for name, func in self._event_handlers.items():
                 event_handler = _generate_event_handler(func)
                 node.addEventListener(name, event_handler, False)
+                self._event_handlers_added[name] = event_handler
             if self._ref:
                 self._ref.__init_node__(node)
             return node
@@ -93,6 +100,11 @@ class ElementBase(ElementWithChildren):
                 self._append_child(child)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
+        node = self._get_node()
+        for name, event_handler in self._event_handlers_added.items():
+            node.removeEventListener(name, event_handler)
+            if browser_pyscript:
+                event_handler.destroy()
         if self._ref is not None:
             self._ref.__reset_node__()
         super()._remove_element(recursive, remove_node)
