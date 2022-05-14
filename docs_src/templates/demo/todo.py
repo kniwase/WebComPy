@@ -81,6 +81,7 @@ def ToDoList(_: ComponentContext[None]):
                     "done": Reactive(False),
                 }
             )
+        input_ref.node.value = ""
 
     def remove_done_items(_: Any):
         items_remove = reversed(
