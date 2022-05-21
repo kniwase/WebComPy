@@ -32,7 +32,7 @@ def ToDoListPage(context: ComponentContext[RouterContext]):
                         input_ref = DomNodeRef()
 
                         def on_change_state(_: Any):
-                            context.props["done"].value = input_ref.node.checked
+                            context.props["done"].value = input_ref.checked
 
                         return html.LI(
                             {},
@@ -91,7 +91,7 @@ def ToDoListPage(context: ComponentContext[RouterContext]):
                         )
 
                         def append_item(_: Any):
-                            title = input_ref.node.value
+                            title = input_ref.value
                             if title:
                                 data.append(
                                     {
@@ -99,6 +99,7 @@ def ToDoListPage(context: ComponentContext[RouterContext]):
                                         "done": Reactive(False),
                                     }
                                 )
+                            input_ref.value = ""
 
                         def remove_done_items(_: Any):
                             items_remove = reversed(

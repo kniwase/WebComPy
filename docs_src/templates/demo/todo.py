@@ -14,7 +14,7 @@ def ToDoItem(context: ComponentContext[TodoData]):
     input_ref = DomNodeRef()
 
     def on_change_state(_: Any):
-        context.props["done"].value = input_ref.node.checked
+        context.props["done"].value = input_ref.checked
 
     return html.LI(
         {},
@@ -73,7 +73,7 @@ def ToDoList(_: ComponentContext[None]):
     )
 
     def append_item(_: Any):
-        title = input_ref.node.value
+        title = input_ref.value
         if title:
             data.append(
                 {
@@ -81,7 +81,7 @@ def ToDoList(_: ComponentContext[None]):
                     "done": Reactive(False),
                 }
             )
-        input_ref.node.value = ""
+        input_ref.value = ""
 
     def remove_done_items(_: Any):
         items_remove = reversed(

@@ -17,7 +17,7 @@ def SyntaxHighlighting(context: ComponentContext[SyntaxHighlightingProps]):
     @context.on_after_rendering
     def _():
         if browser:
-            browser.window.hljs.highlightElement(code_ref.node)
+            browser.window.hljs.highlightElement(code_ref.element)
 
     return html.PRE(
         {},
