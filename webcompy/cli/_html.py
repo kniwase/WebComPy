@@ -1,3 +1,4 @@
+import base64
 from typing import TypeAlias
 from webcompy.elements.types import Element, RepeatElement
 from webcompy.elements.typealias import ElementChildren
@@ -108,12 +109,27 @@ class _Loadscreen(_HtmlElement):
         }
 
 
+def _get_text_datauri(text: str, mimetype: str):
+    return f"data:{mimetype};base64,{base64.b64encode(text.encode()).decode()}"
+
+
 def _load_scripts(scripts: Scripts):
     return [
         _HtmlElement(
             "script",
-            attrs,
-            script if script else "",
+            {
+                **attrs,
+                **(
+                    {
+                        "src": _get_text_datauri(
+                            (script if script else ""),
+                            attrs["type"],
+                        )
+                    }
+                    if script
+                    else {}
+                ),
+            },
         )
         for attrs, script in scripts
     ]
@@ -156,11 +172,11 @@ def generate_html(
                 "\n"
                 + "\n".join(
                     f"- '{p}'" if p.endswith(".whl") else f"- {p}"
-                    for p in [
+                    for p in {
                         *config.dependencies,
                         f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
                         f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
-                    ]
+                    }
                 )
                 + "\n",
             )
@@ -168,15 +184,17 @@ def generate_html(
         app_loader.append(
             _HtmlElement(
                 "py-script",
-                {},
-                "\n"
-                + "\n".join(
-                    (
-                        f"from {config.app_package}.bootstrap import app",
-                        "app.__component__.render()",
+                {
+                    "src": _get_text_datauri(
+                        "\n".join(
+                            (
+                                f"from {config.app_package}.bootstrap import app",
+                                "app.__component__.render()",
+                            )
+                        ),
+                        "text/python",
                     )
-                )
-                + "\n",
+                },
             )
         )
     else:
@@ -246,7 +264,7 @@ def generate_html(
         scripts_body.append(
             (
                 {"type": "text/javascript"},
-                " ".join(
+                "\n".join(
                     (
                         f"var stream = new EventSource('{config.base}_webcompy_reload');",
                         "stream.addEventListener('error', (e) => window.location.reload());",
@@ -277,7 +295,7 @@ def generate_html(
                     " ".join(
                         (
                             "*[hidden]{display: none;}",
-                            "py-script, py-env, py-loader {display: none;}",
+                            "py-script, py-env, py-config, py-loader {display: none;}",
                             app.__component__.style,
                         )
                     ),

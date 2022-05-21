@@ -36,17 +36,17 @@ def MatpoltlibSamplePage(context: ComponentContext[RouterContext]):
                         count = Reactive(15)
 
                         def on_change(ev: DOMEvent):
-                            count.value = int(input_ref.node.value)
+                            count.value = int(input_ref.value)
 
                         def add(ev: DOMEvent):
                             if count.value < 30:
                                 count.value += 1
-                                input_ref.node.value = str(count.value)
+                                input_ref.value = str(count.value)
 
                         def pop(ev: DOMEvent):
                             if count.value > 1:
                                 count.value -= 1
-                                input_ref.node.value = str(count.value)
+                                input_ref.value = str(count.value)
 
                         calc_square_wave = np.vectorize(
                             lambda x: np.vectorize(lambda k: (1 / (2 * k + 1)) * np.sin((2 * k + 1) * x))(
@@ -67,7 +67,10 @@ def MatpoltlibSamplePage(context: ComponentContext[RouterContext]):
 
                         return html.DIV(
                             {},
-                            html.H5({}, "Square Wave",),
+                            html.H5(
+                                {},
+                                "Square Wave",
+                            ),
                             html.P(
                                 {},
                                 "Value: ",

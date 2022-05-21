@@ -2,9 +2,10 @@ from typing import TypedDict
 from webcompy.elements import html, repeat
 from webcompy.components import define_component, ComponentContext
 from webcompy.reactive import ReactiveList, Reactive
-from webcompy.aio import AsyncWrapper
+from webcompy.aio import AsyncWrapper, resolve_async
 from webcompy.ajax import HttpClient
 from webcompy import logging
+from asyncio import Queue
 
 
 class User(TypedDict):
@@ -16,17 +17,24 @@ class User(TypedDict):
 def FetchSample(context: ComponentContext[None]):
     users = ReactiveList[User]([])
     json_text = Reactive("")
+    queue = Queue[str](maxsize=1)
 
     @AsyncWrapper()
-    async def fetch_user_data():
-        res = await HttpClient.get("fetch_sample/sample.json")
+    async def fetch_user_data(url: str):
+        res = await HttpClient.get(url)
         logging.info(res)
         users.value = res.json()["data"]
-        json_text.value = res.text
+
+    @AsyncWrapper()
+    async def async_test():
+        res = await HttpClient.get("fetch_sample/sample.json")
+        await queue.put(res.text)
 
     @context.on_after_rendering
     def _():
-        fetch_user_data()
+        fetch_user_data("fetch_sample/sample.json")
+        async_test()
+        resolve_async(queue.get(), json_text.set_value)
 
     return html.DIV(
         {},
