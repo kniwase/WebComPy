@@ -47,9 +47,8 @@ def create_element(
         if isinstance(value, DomNodeRef):
             if name == ":ref":
                 ref = value
-        elif callable(value):
-            if name.startswith("@"):
-                events[name[1:]] = value
+        elif name.startswith("@") and callable(value):
+            events[name[1:]] = value
         else:
             attrs[name] = value
     return Element(tag_name, attrs, events, ref, children)
