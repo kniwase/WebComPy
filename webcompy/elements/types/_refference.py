@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException

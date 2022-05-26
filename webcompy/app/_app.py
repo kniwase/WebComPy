@@ -1,3 +1,4 @@
+from __future__ import annotations
 from webcompy.components import ComponentGenerator
 from webcompy.router import Router
 from webcompy.app._root_component import AppDocumentRoot

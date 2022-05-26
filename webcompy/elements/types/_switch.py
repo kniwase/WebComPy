@@ -1,5 +1,7 @@
+from __future__ import annotations
 from operator import truth
-from typing import Any, Callable, List, Tuple, TypeAlias, cast
+from typing import Any, Callable, Union, cast
+from typing_extensions import TypeAlias
 from webcompy.reactive._base import ReactiveBase
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.typealias._element_property import ElementChildren
@@ -11,7 +13,7 @@ from webcompy._browser._modules import browser
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
 SwitchCasesReactive: TypeAlias = list[tuple[ReactiveBase[Any], NodeGenerator]]
 SwitchCasesReactiveList: TypeAlias = ReactiveBase[list[tuple[Any, NodeGenerator]]]
-SwitchCases: TypeAlias = SwitchCasesReactive | SwitchCasesReactiveList
+SwitchCases: TypeAlias = Union[SwitchCasesReactive, SwitchCasesReactiveList]
 
 
 class SwitchElement(DynamicElement):
@@ -34,7 +36,7 @@ class SwitchElement(DynamicElement):
         else:
             cases = self._cases
         for idx, (cond, generator) in enumerate(
-            cast(List[Tuple[ReactiveBase[Any] | Any, NodeGenerator]], cases)
+            cast(list[tuple[Union[ReactiveBase[Any], Any], NodeGenerator]], cases)
         ):
             if truth(cond.value if isinstance(cond, ReactiveBase) else cond):
                 return (idx, generator)

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import ClassVar, List, TypedDict, Union
 from webcompy.elements.types import Element, SwitchElement
 from webcompy.components import ComponentGenerator, WebComPyComponentException

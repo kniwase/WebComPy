@@ -1,3 +1,4 @@
+from __future__ import annotations
 import hashlib
 from typing import (
     Any,
@@ -7,11 +8,11 @@ from typing import (
     Generic,
     NoReturn,
     Type,
-    TypeAlias,
     TypeVar,
     final,
     overload,
 )
+from typing_extensions import TypeAlias
 from re import compile as re_compile
 from webcompy.components._libs import (
     ClassStyleComponentContenxt,

@@ -1,4 +1,6 @@
-from typing import Any, Tuple, Type, TypeAlias, TypeVar
+from __future__ import annotations
+from typing import Any, Tuple, Type, TypeVar
+from typing_extensions import TypeAlias
 from webcompy.components._abstract import TypedComponentBase
 from webcompy.router._context import RouterContext, TypedRouterContext
 from webcompy.router._link import TypedRouterLink

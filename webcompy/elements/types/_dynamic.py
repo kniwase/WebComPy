@@ -1,3 +1,4 @@
+from __future__ import annotations
 from abc import abstractmethod
 from typing import NoReturn
 from webcompy.elements.typealias._element_property import ElementChildren

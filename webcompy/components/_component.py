@@ -1,4 +1,6 @@
-from typing import Any, Callable, ClassVar, Type, TypeAlias, TypeGuard, Union
+from __future__ import annotations
+from typing import Any, Callable, ClassVar, Type
+from typing_extensions import TypeAlias, TypeGuard
 from uuid import UUID, uuid4
 from webcompy.elements.types._element import ElementBase, Element
 from webcompy.components._libs import Context, ComponentProperty, generate_id
@@ -43,7 +45,7 @@ class Component(ElementBase):
 
     def __init__(
         self,
-        component_def: Union[FuncComponentDef, ClassComponentDef],
+        component_def: FuncComponentDef | ClassComponentDef,
         props: Any,
         slots: dict[str, Callable[[], ElementChildren]],
     ) -> None:
@@ -57,7 +59,7 @@ class Component(ElementBase):
 
     def __setup(
         self,
-        component_def: Union[FuncComponentDef, ClassComponentDef],
+        component_def: FuncComponentDef | ClassComponentDef,
         props: Any,
         slots: dict[str, Callable[[], ElementChildren]],
     ) -> ComponentProperty:

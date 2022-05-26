@@ -1,3 +1,4 @@
+from __future__ import annotations
 from abc import abstractmethod
 from functools import wraps
 from typing import (
@@ -5,13 +6,13 @@ from typing import (
     Callable,
     ClassVar,
     Generic,
-    ParamSpec,
     Set,
     Type,
     TypeVar,
     cast,
     final,
 )
+from typing_extensions import ParamSpec
 
 
 V = TypeVar("V")

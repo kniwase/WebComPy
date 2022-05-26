@@ -1,4 +1,5 @@
-from typing import Any, Generic, NoReturn, TypeAlias, TypeVar, final
+from typing import Any, Generic, NoReturn, TypeVar, final
+from typing_extensions import TypeAlias
 
 
 ParamsType = TypeVar("ParamsType")

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, Literal
 from webcompy.reactive._base import ReactiveBase
 from webcompy._browser._modules import browser, browser_pyscript

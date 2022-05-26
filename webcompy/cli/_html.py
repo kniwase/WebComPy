@@ -1,14 +1,17 @@
+from __future__ import annotations
 import base64
-from typing import TypeAlias
+from typing import Optional
+from typing_extensions import TypeAlias
 from webcompy.elements.types import Element, RepeatElement
 from webcompy.elements.typealias import ElementChildren
+from webcompy.components._component import Component
 from webcompy.reactive._computed import computed
 from webcompy.app._app import WebComPyApp
 from webcompy.cli._config import WebComPyConfig
 from webcompy._version import __version__ as webcompy_version
 
 
-Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]
+Scripts: TypeAlias = list[tuple[dict[str, str], Optional[str]]]
 
 
 class _HtmlElement(Element):
@@ -32,8 +35,8 @@ class _HtmlElement(Element):
     def _get_belonging_component(self):
         return ""
 
-    def _get_belonging_components(self):
-        return tuple()
+    def _get_belonging_components(self) -> tuple[Component, ...]:
+        return tuple([])
 
 
 class _Loadscreen(_HtmlElement):
@@ -172,11 +175,11 @@ def generate_html(
                 "\n"
                 + "\n".join(
                     f"- '{p}'" if p.endswith(".whl") else f"- {p}"
-                    for p in {
-                        *config.dependencies,
+                    for p in (
+                        *{*config.dependencies, "typing_extensions"},
                         f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
                         f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
-                    }
+                    )
                 )
                 + "\n",
             )
