@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TypedDict
 from uuid import uuid4
 from webcompy.elements import html

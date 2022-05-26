@@ -1,4 +1,5 @@
-from typing import Any, cast
+from __future__ import annotations
+from typing import Any, Union, cast
 from webcompy.reactive._base import ReactiveBase
 from webcompy._browser._modules import browser
 from webcompy.elements.types._abstract import ElementAbstract
@@ -40,7 +41,7 @@ class NewLine(ElementAbstract):
 
 
 class TextElement(ElementAbstract):
-    def __init__(self, text: str | ReactiveBase[Any]) -> None:
+    def __init__(self, text: Union[str, ReactiveBase[Any]]) -> None:
         self._text = text
         super().__init__()
         if isinstance(self._text, ReactiveBase):

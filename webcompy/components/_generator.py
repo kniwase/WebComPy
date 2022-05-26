@@ -1,3 +1,4 @@
+from __future__ import annotations
 from re import compile as re_compile
 from typing import (
     Any,
@@ -5,10 +6,10 @@ from typing import (
     Final,
     Generic,
     Type,
-    TypeAlias,
     TypeVar,
     Union,
 )
+from typing_extensions import TypeAlias
 from webcompy.components._component import Component
 from webcompy.components._abstract import ComponentAbstract
 from webcompy.components._libs import (ComponentContext, NodeGenerator, WebComPyComponentException, generate_id)

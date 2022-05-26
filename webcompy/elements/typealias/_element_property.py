@@ -1,10 +1,5 @@
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    TypeAlias,
-    Union,
-)
+from typing import Any, Callable, Coroutine, Union
+from typing_extensions import TypeAlias
 from webcompy.reactive._base import ReactiveBase
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements._dom_objs import DOMEvent

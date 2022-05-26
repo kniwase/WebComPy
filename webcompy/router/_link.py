@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 from typing import (
     Any,
@@ -5,11 +6,11 @@ from typing import (
     Dict,
     Generic,
     List,
-    TypeAlias,
     TypeVar,
     Union,
     cast,
 )
+from typing_extensions import TypeAlias
 import urllib.parse
 from webcompy.reactive import ReactiveBase, computed_property
 from webcompy.elements.types._element import Element

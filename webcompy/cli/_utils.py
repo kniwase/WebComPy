@@ -1,9 +1,11 @@
+from __future__ import annotations
 from datetime import datetime
 from importlib import import_module
 import os
 import pathlib
 import sys
-from typing import Callable, ParamSpec, TypeVar
+from typing import Callable, TypeVar
+from typing_extensions import ParamSpec
 from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._exception import WebComPyCliException
 from webcompy.app._app import WebComPyApp

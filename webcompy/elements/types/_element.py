@@ -1,3 +1,4 @@
+from __future__ import annotations
 from inspect import iscoroutinefunction
 from typing import Any, Callable, Iterable, cast
 from webcompy.reactive._base import ReactiveBase

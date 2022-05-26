@@ -1,3 +1,4 @@
+from __future__ import annotations
 import hashlib
 import logging
 from typing import (
@@ -7,11 +8,11 @@ from typing import (
     Generic,
     Literal,
     Protocol,
-    TypeAlias,
     TypeVar,
     TypedDict,
     final,
 )
+from typing_extensions import TypeAlias
 from webcompy.exception import WebComPyException
 from webcompy.elements.typealias._element_property import ElementChildren
 

@@ -1,6 +1,8 @@
+from __future__ import annotations
 from traceback import TracebackException
 from re import compile as re_complie, escape as re_escape
-from typing import Any, Callable, Coroutine, Generic, ParamSpec, TypeAlias, TypeVar
+from typing import Any, Callable, Coroutine, Generic, TypeVar, Union
+from typing_extensions import ParamSpec, TypeAlias
 from webcompy._browser._modules import browser_pyscript, browser_brython
 from webcompy.reactive._base import ReactiveBase
 from webcompy import logging
@@ -78,7 +80,7 @@ class AsyncWrapper(Generic[T]):
         return inner
 
 
-class AsyncComputed(ReactiveBase[T | None]):
+class AsyncComputed(ReactiveBase[Union[T, None]]):
     _done: bool
     _exception: Exception | None
 
