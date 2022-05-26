@@ -172,11 +172,11 @@ def generate_html(
                 "\n"
                 + "\n".join(
                     f"- '{p}'" if p.endswith(".whl") else f"- {p}"
-                    for p in {
-                        *config.dependencies,
+                    for p in (
+                        *{*config.dependencies, "typing_extensions"},
                         f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
                         f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
-                    }
+                    )
                 )
                 + "\n",
             )
