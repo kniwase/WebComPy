@@ -18,5 +18,5 @@ class _PyScriptBrowserModule(ModuleType):
                 )
 
 
-browser_pyscript = _PyScriptBrowserModule()
-__all__ = ["browser_pyscript"]
+browser = _PyScriptBrowserModule()
+__all__ = ["browser"]

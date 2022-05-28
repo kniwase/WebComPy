@@ -14,7 +14,6 @@ from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements._dom_objs import DOMNode, DOMEvent
 from webcompy.aio import resolve_async
 from webcompy.exception import WebComPyException
-from webcompy._browser._modules import browser_pyscript
 
 
 def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent], Any]:
@@ -24,8 +23,8 @@ def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent]
         else:
             _event_handler(ev)
 
-    if browser_pyscript:
-        return browser_pyscript.pyodide.create_proxy(event_handler)
+    if browser:
+        return browser.pyodide.create_proxy(event_handler)
     else:
         return event_handler
 
@@ -104,7 +103,7 @@ class ElementBase(ElementWithChildren):
         node = self._get_node()
         for name, event_handler in self._event_handlers_added.items():
             node.removeEventListener(name, event_handler)
-            if browser_pyscript:
+            if browser:
                 event_handler.destroy()
         if self._ref is not None:
             self._ref.__reset_node__()

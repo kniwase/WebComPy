@@ -3,18 +3,16 @@ from traceback import TracebackException
 from re import compile as re_complie, escape as re_escape
 from typing import Any, Callable, Coroutine, Generic, TypeVar, Union
 from typing_extensions import ParamSpec, TypeAlias
-from webcompy._browser._modules import browser_pyscript, browser_brython
+from webcompy._browser._modules import browser
 from webcompy.reactive._base import ReactiveBase
 from webcompy import logging
 
 AsysncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
 
-if browser_pyscript:
+if browser:
     aio_run: AsysncResolver = (
-        browser_pyscript.pyodide.webloop.WebLoop().run_until_complete
+        browser.pyodide.webloop.WebLoop().run_until_complete
     )
-elif browser_brython:
-    aio_run: AsysncResolver = browser_brython.aio.run
 else:
     import asyncio
 

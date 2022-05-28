@@ -3,7 +3,7 @@ from typing import Any, Dict, Literal, Union
 import urllib.parse
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.exception import WebComPyException
-from webcompy._browser._modules import browser, browser_pyscript
+from webcompy._browser._modules import browser
 
 
 # HttpClient
@@ -88,58 +88,49 @@ class HttpClient:
         form_data: Union[Dict[str, Union[str, bytes]], None] = None,
         form_element: Union[DomNodeRef, None] = None,
     ) -> Response:
+        # query
+        if query_params is not None:
+            send_url = url + "?" + urllib.parse.urlencode(query_params)
+        else:
+            send_url = url
+        # header
+        req_headers = dict(
+            tuple(map(urllib.parse.quote, map(str, it)))
+            for it in (headers if headers else {}).items()
+        )
+        # body
+        has_body = any(
+            (
+                json is not None,
+                body_data is not None,
+                form_data is not None,
+                form_element is not None,
+            )
+        )
         if browser:
-            # query
-            if query_params is not None:
-                send_url = url + "?" + urllib.parse.urlencode(query_params)
-            else:
-                send_url = url
-            # header
-            req_headers = dict(
-                tuple(map(urllib.parse.quote, map(str, it)))
-                for it in (headers if headers else {}).items()
-            )
-            # body
-            has_body = any(
-                (
-                    json is not None,
-                    body_data is not None,
-                    form_data is not None,
-                    form_element is not None,
-                )
-            )
-            if has_body:
+            if method not in {"GET", "OPTIONS", "HEAD"} and has_body:
                 if json is not None:
                     req_headers["Content-Type"] = "application/json"
                     body = json_dumps(json, ensure_ascii=True)
                 elif body_data is not None:
                     body = body_data
                 elif form_data is not None:
-                    if browser_pyscript:
-                        body = browser_pyscript.FormData.new()
-                    else:
-                        body = browser.window.FormData.new()
+                    body = browser.FormData.new()
                     for key, value in form_data.items():
                         body.set(key, value)
                 elif form_element is not None:
-                    if browser_pyscript:
-                        body = browser_pyscript.FormData.new(form_element.node)
-                    else:
-                        body = browser.window.FormData.new(form_element.node)
+                    body = browser.FormData.new(form_element.node)
                 else:
                     body = None
                 options = {"method": method, "headers": req_headers, "body": body}
             else:
                 options = {"method": method, "headers": req_headers}
             try:
-                if browser_pyscript:
-                    res = await browser_pyscript.fetch(send_url, **options)
-                else:
-                    res = await browser.window.fetch(send_url, options)
+                res = await browser.fetch(send_url, **options)
             except Exception as err:
                 raise WebComPyHttpClientException(str(err))
             else:
-                return Response(
+                res = Response(
                     text=(await res.text()),
                     headers=dict(zip(res.headers.keys(), res.headers.values())),
                     status_code=res.status,
@@ -148,6 +139,7 @@ class HttpClient:
                 )
         else:
             raise WebComPyHttpClientException
+        return res
 
     @classmethod
     async def get(
@@ -156,13 +148,12 @@ class HttpClient:
         query_params: Union[Dict[str, str], None] = None,
         headers: Union[Dict[str, str], None] = None,
     ) -> Response:
-        if browser:
-            res = await HttpClient.request(
-                "GET", url, headers=headers, query_params=query_params
-            )
-            return res
-        else:
-            raise WebComPyHttpClientException
+        return await HttpClient.request(
+            "GET",
+            url,
+            headers=headers,
+            query_params=query_params,
+        )
 
     @classmethod
     async def head(
@@ -171,13 +162,12 @@ class HttpClient:
         query_params: Union[Dict[str, str], None] = None,
         headers: Union[Dict[str, str], None] = None,
     ) -> Response:
-        if browser:
-            res = await HttpClient.request(
-                "HEAD", url, headers=headers, query_params=query_params
-            )
-            return res
-        else:
-            raise WebComPyHttpClientException
+        return await HttpClient.request(
+            "HEAD",
+            url,
+            headers=headers,
+            query_params=query_params,
+        )
 
     @classmethod
     async def options(
@@ -186,13 +176,12 @@ class HttpClient:
         query_params: Union[Dict[str, str], None] = None,
         headers: Union[Dict[str, str], None] = None,
     ) -> Response:
-        if browser:
-            res = await HttpClient.request(
-                "OPTIONS", url, headers=headers, query_params=query_params
-            )
-            return res
-        else:
-            raise WebComPyHttpClientException
+        return await HttpClient.request(
+            "OPTIONS",
+            url,
+            headers=headers,
+            query_params=query_params,
+        )
 
     @classmethod
     async def post(
@@ -205,20 +194,16 @@ class HttpClient:
         form_data: Union[Dict[str, Union[str, bytes]], None] = None,
         form_element: Union[DomNodeRef, None] = None,
     ) -> Response:
-        if browser:
-            res = await HttpClient.request(
-                "POST",
-                url,
-                headers=headers,
-                query_params=query_params,
-                json=json,
-                body_data=body_data,
-                form_data=form_data,
-                form_element=form_element,
-            )
-            return res
-        else:
-            raise WebComPyHttpClientException
+        return await HttpClient.request(
+            "POST",
+            url,
+            headers=headers,
+            query_params=query_params,
+            json=json,
+            body_data=body_data,
+            form_data=form_data,
+            form_element=form_element,
+        )
 
     @classmethod
     async def put(
@@ -231,20 +216,16 @@ class HttpClient:
         form_data: Union[Dict[str, Union[str, bytes]], None] = None,
         form_element: Union[DomNodeRef, None] = None,
     ) -> Response:
-        if browser:
-            res = await HttpClient.request(
-                "PUT",
-                url,
-                headers=headers,
-                query_params=query_params,
-                json=json,
-                body_data=body_data,
-                form_data=form_data,
-                form_element=form_element,
-            )
-            return res
-        else:
-            raise WebComPyHttpClientException
+        return await HttpClient.request(
+            "PUT",
+            url,
+            headers=headers,
+            query_params=query_params,
+            json=json,
+            body_data=body_data,
+            form_data=form_data,
+            form_element=form_element,
+        )
 
     @classmethod
     async def delete(
@@ -257,20 +238,16 @@ class HttpClient:
         form_data: Union[Dict[str, Union[str, bytes]], None] = None,
         form_element: Union[DomNodeRef, None] = None,
     ) -> Response:
-        if browser:
-            res = await HttpClient.request(
-                "DELETE",
-                url,
-                headers=headers,
-                query_params=query_params,
-                json=json,
-                body_data=body_data,
-                form_data=form_data,
-                form_element=form_element,
-            )
-            return res
-        else:
-            raise WebComPyHttpClientException
+        return await HttpClient.request(
+            "DELETE",
+            url,
+            headers=headers,
+            query_params=query_params,
+            json=json,
+            body_data=body_data,
+            form_data=form_data,
+            form_element=form_element,
+        )
 
     @classmethod
     async def patch(
@@ -283,17 +260,13 @@ class HttpClient:
         form_data: Union[Dict[str, Union[str, bytes]], None] = None,
         form_element: Union[DomNodeRef, None] = None,
     ) -> Response:
-        if browser:
-            res = await HttpClient.request(
-                "PATCH",
-                url,
-                headers=headers,
-                query_params=query_params,
-                json=json,
-                body_data=body_data,
-                form_data=form_data,
-                form_element=form_element,
-            )
-            return res
-        else:
-            raise WebComPyHttpClientException
+        return await HttpClient.request(
+            "PATCH",
+            url,
+            headers=headers,
+            query_params=query_params,
+            json=json,
+            body_data=body_data,
+            form_data=form_data,
+            form_element=form_element,
+        )
