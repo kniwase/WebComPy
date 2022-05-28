@@ -157,110 +157,49 @@ def generate_html(
     scripts_head: Scripts = []
     scripts_body: Scripts = []
 
-    if config.environment == "pyscript":
-        scripts_head.append(
-            (
-                {
-                    "type": "text/javascript",
-                    "defer": "",
-                    "src": "https://pyscript.net/alpha/pyscript.js",
-                },
-                None,
-            )
+    scripts_head.append(
+        (
+            {
+                "type": "text/javascript",
+                "defer": "",
+                "src": "https://pyscript.net/alpha/pyscript.js",
+            },
+            None,
         )
-        app_loader.append(
-            _HtmlElement(
-                "py-env",
-                {},
-                "\n"
-                + "\n".join(
-                    f"- '{p}'" if p.endswith(".whl") else f"- {p}"
-                    for p in (
-                        *{*config.dependencies, "typing_extensions"},
-                        f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
-                        f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
-                    )
+    )
+    app_loader.append(
+        _HtmlElement(
+            "py-env",
+            {},
+            "\n"
+            + "\n".join(
+                f"- '{p}'" if p.endswith(".whl") else f"- {p}"
+                for p in (
+                    *{*config.dependencies, "typing_extensions"},
+                    f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
+                    f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
                 )
-                + "\n",
             )
+            + "\n",
         )
-        app_loader.append(
-            _HtmlElement(
-                "py-script",
-                {
-                    "src": _get_text_datauri(
-                        "\n".join(
-                            (
-                                f"from {config.app_package}.bootstrap import app",
-                                "app.__component__.render()",
-                            )
-                        ),
-                        "text/python",
-                    )
-                },
-            )
-        )
-    else:
-        scripts_body.extend(
-            [
-                (
-                    {
-                        "type": "text/javascript",
-                        "src": f"{config.base}_webcompy-app-package/brython.js",
-                    },
-                    None,
-                ),
-                (
-                    {
-                        "type": "text/javascript",
-                        "src": f"{config.base}_webcompy-app-package/brython_stdlib.js",
-                    },
-                    None,
-                ),
-                (
-                    {
-                        "type": "text/javascript",
-                        "src": f"{config.base}_webcompy-app-package/webcompy.brython.js",
-                    },
-                    None,
-                ),
-                (
-                    {
-                        "type": "text/javascript",
-                        "src": f"{config.base}_webcompy-app-package/{config.app_package}.brython.js",
-                    },
-                    None,
-                ),
-            ]
-        )
-        app_loader.extend(
-            _load_scripts(
-                [
-                    (
-                        {"type": "text/python"},
-                        "\n"
-                        + "\n".join(
-                            (
-                                f"from {config.app_package}.bootstrap import app",
-                                "app.__component__.render()",
-                            )
+    )
+    app_loader.append(
+        _HtmlElement(
+            "py-script",
+            {
+                "src": _get_text_datauri(
+                    "\n".join(
+                        (
+                            f"from {config.app_package}.bootstrap import app",
+                            "app.__component__.render()",
                         )
-                        + "\n",
                     ),
-                    (
-                        {"type": "text/javascript"},
-                        "brython({{{brython_options}}});".format(
-                            brython_options=(
-                                "debug: 1, cache: false, indexedDB: true"
-                                if dev_mode
-                                else "debug: 0, cache: true, indexedDB: true"
-                            )
-                        ),
-                    ),
-                ]
-            )
+                    "text/python",
+                )
+            },
         )
-
+    )
+    
     scripts_head.extend(app.__component__.head["script"])
     scripts_body.extend(app.__component__.scripts)
     if dev_mode:

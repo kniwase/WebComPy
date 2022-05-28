@@ -16,8 +16,7 @@ from sse_starlette.sse import EventSourceResponse
 import uvicorn  # type: ignore
 from webcompy.app._app import WebComPyApp
 from webcompy.cli._argparser import get_params
-from webcompy.cli._pyscript_wheel import make_webcompy_app_package_pyscript
-from webcompy.cli._brython_cli import make_webcompy_app_package_brython
+from webcompy.cli._pyscript_wheel import make_webcompy_app_package
 from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._html import generate_html
 from webcompy.cli._utils import (
@@ -36,11 +35,6 @@ def create_asgi_app(
     # App Packages
     with TemporaryDirectory() as temp:
         temp_path = pathlib.Path(temp)
-        make_webcompy_app_package = (
-            make_webcompy_app_package_pyscript
-            if config.environment == "pyscript"
-            else make_webcompy_app_package_brython
-        )
         make_webcompy_app_package(
             temp_path,
             get_webcompy_packge_dir(),

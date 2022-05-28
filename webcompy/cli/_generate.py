@@ -3,8 +3,7 @@ import os
 import pathlib
 import shutil
 from webcompy.cli._argparser import get_params
-from webcompy.cli._pyscript_wheel import make_webcompy_app_package_pyscript
-from webcompy.cli._brython_cli import make_webcompy_app_package_brython
+from webcompy.cli._pyscript_wheel import make_webcompy_app_package
 from webcompy.cli._html import generate_html
 from webcompy.cli._utils import (
     get_app,
@@ -43,11 +42,6 @@ def generate_static_site():
 
     scripts_dir = dist_dir / "_webcompy-app-package"
     os.mkdir(scripts_dir)
-    make_webcompy_app_package = (
-        make_webcompy_app_package_pyscript
-        if config.environment == "pyscript"
-        else make_webcompy_app_package_brython
-    )
     make_webcompy_app_package(
         scripts_dir,
         get_webcompy_packge_dir(),

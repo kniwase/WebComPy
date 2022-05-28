@@ -63,7 +63,7 @@ def make_wheel(name: str, package_dir: pathlib.Path, dest: pathlib.Path, version
             os.chdir(cwd)
 
 
-def make_webcompy_app_package_pyscript(
+def make_webcompy_app_package(
     dest: pathlib.Path,
     webcompy_package_dir: pathlib.Path,
     package_dir: pathlib.Path,

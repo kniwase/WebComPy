@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any, Literal
 from webcompy.reactive._base import ReactiveBase
-from webcompy._browser._modules import browser, browser_pyscript
+from webcompy._browser._modules import browser
 
 
 class Location(ReactiveBase[str]):
@@ -16,14 +16,11 @@ class Location(ReactiveBase[str]):
         self._base_url = base_url.strip().strip("/")
         self.set_mode(mode)
         if browser:
-            if browser_pyscript:
-                browser_pyscript.window.addEventListener(
-                    "popstate",
-                    browser_pyscript.pyodide.create_proxy(self._refresh_path),
-                    False,
-                )
-            else:
-                browser.window.addEventListener("popstate", self._refresh_path, False)
+            browser.window.addEventListener(
+                "popstate",
+                browser.pyodide.create_proxy(self._refresh_path),
+                False,
+            )
 
     @ReactiveBase._change_event
     def set_mode(self, mode: Literal["hash", "history"]):
