@@ -1,5 +1,4 @@
 from __future__ import annotations
-import base64
 from typing import Optional
 from typing_extensions import TypeAlias
 from webcompy.elements.types import Element, RepeatElement
@@ -8,6 +7,7 @@ from webcompy.components._component import Component
 from webcompy.reactive._computed import computed
 from webcompy.app._app import WebComPyApp
 from webcompy.cli._config import WebComPyConfig
+from webcompy.utils import strip_multiline_text
 from webcompy._version import __version__ as webcompy_version
 
 
@@ -112,27 +112,12 @@ class _Loadscreen(_HtmlElement):
         }
 
 
-def _get_text_datauri(text: str, mimetype: str):
-    return f"data:{mimetype};base64,{base64.b64encode(text.encode()).decode()}"
-
-
 def _load_scripts(scripts: Scripts):
     return [
         _HtmlElement(
             "script",
-            {
-                **attrs,
-                **(
-                    {
-                        "src": _get_text_datauri(
-                            (script if script else ""),
-                            attrs["type"],
-                        )
-                    }
-                    if script
-                    else {}
-                ),
-            },
+            attrs,
+            script,
         )
         for attrs, script in scripts
     ]
@@ -169,44 +154,46 @@ def generate_html(
     )
     app_loader.append(
         _HtmlElement(
-            "py-env",
+            "py-script",
             {},
             "\n"
-            + "\n".join(
-                f"- '{p}'" if p.endswith(".whl") else f"- {p}"
-                for p in (
-                    *{*config.dependencies, "typing_extensions"},
-                    f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
-                    f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
-                )
-            )
-            + "\n",
-        )
-    )
-    app_loader.append(
-        _HtmlElement(
-            "py-script",
-            {
-                "src": _get_text_datauri(
-                    "\n".join(
-                        (
-                            f"from {config.app_package}.bootstrap import app",
-                            "app.__component__.render()",
+            + strip_multiline_text(
+                """
+                import micropip, pyodide, js
+                from traceback import TracebackException
+                async def bootstarp():
+                    try:
+                        await micropip.install([{dependencies}])
+                        from {app_package_name}.bootstrap import app
+                        app.__component__.render()
+                    except Exception as err:
+                        js.console.error("".join(TracebackException.from_exception(err).format()))
+                try:
+                    pyodide.webloop.WebLoop().run_until_complete(bootstarp())
+                except Exception as err:
+                    js.console.error("".join(TracebackException.from_exception(err).format()))
+                """.format(
+                    app_package_name=config.app_package,
+                    dependencies=",".join(
+                        '"' + p + '"'
+                        for p in (
+                            *{*config.dependencies, "typing_extensions"},
+                            f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
+                            f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
                         )
                     ),
-                    "text/python",
                 )
-            },
+            ),
         )
     )
-    
+
     scripts_head.extend(app.__component__.head["script"])
     scripts_body.extend(app.__component__.scripts)
     if dev_mode:
         scripts_body.append(
             (
                 {"type": "text/javascript"},
-                "\n".join(
+                " ".join(
                     (
                         f"var stream = new EventSource('{config.base}_webcompy_reload');",
                         "stream.addEventListener('error', (e) => window.location.reload());",
@@ -237,7 +224,7 @@ def generate_html(
                     " ".join(
                         (
                             "*[hidden]{display: none;}",
-                            "py-script, py-env, py-config, py-loader {display: none;}",
+                            "py-script, py-config, py-loader {display: none;}",
                             app.__component__.style,
                         )
                     ),
