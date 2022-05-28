@@ -48,6 +48,17 @@ app.set_head(
 app.append_script(
     {
         "type": "text/javascript",
+        "src": "https://cdnjs.cloudflare.com/ajax/libs/eruda/2.4.1/eruda.min.js",
+    },
+    in_head=True,
+)
+app.append_script(
+    {"type": "text/javascript"},
+    script="eruda.init();",
+)
+app.append_script(
+    {
+        "type": "text/javascript",
         "src": "https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js",
         "integrity": "sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM",
         "crossorigin": "anonymous",
