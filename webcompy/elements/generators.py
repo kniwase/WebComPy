@@ -1,14 +1,13 @@
+from __future__ import annotations
 from typing import (
     Any,
     Callable,
-    Dict,
-    List,
     NewType,
-    TypeAlias,
     TypeVar,
     TypedDict,
     Union,
 )
+from typing_extensions import TypeAlias
 from webcompy.elements.types._text import TextElement, NewLine
 from webcompy.elements.types._element import ElementBase, Element
 from webcompy.elements.types._refference import DomNodeRef
@@ -37,11 +36,11 @@ def event(event_name: str):
 def create_element(
     tag_name: HtmlTags,
     /,
-    attributes: Dict[str | EventKey | _ref, AttrValue | EventHandler | DomNodeRef],
+    attributes: dict[str | EventKey | _ref, AttrValue | EventHandler | DomNodeRef],
     *children: ElementChildren,
 ) -> Element:
-    attrs: Dict[str, AttrValue] = {}
-    events: Dict[str, EventHandler] = {}
+    attrs: dict[str, AttrValue] = {}
+    events: dict[str, EventHandler] = {}
     ref: DomNodeRef | None = None
     for name, value in attributes.items():
         if isinstance(value, DomNodeRef):
@@ -67,7 +66,7 @@ NodeGenerator: TypeAlias = Callable[[], ChildNode]
 
 
 def repeat(
-    sequence: ReactiveBase[List[T]],
+    sequence: ReactiveBase[list[T]],
     template: Callable[[T], ChildNode],
 ):
     return RepeatElement(sequence, template)

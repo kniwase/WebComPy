@@ -10,11 +10,7 @@ from . import (
     utils,
     logging,
 )
-from ._browser import (
-    browser_pyscript,
-    browser_brython,
-    browser,
-)
+from ._browser import browser
 from ._version import __version__
 
 if utils.ENVIRONMENT == "other":
@@ -25,8 +21,6 @@ else:
 
 __all__ = [
     "__version__",
-    "browser_pyscript",
-    "browser_brython",
     "browser",
     "app",
     "reactive",

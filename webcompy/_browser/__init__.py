@@ -1,7 +1,5 @@
-from webcompy._browser._modules import browser_pyscript, browser_brython, browser
+from webcompy._browser._modules import browser
 
 __all__ = [
-    "browser_pyscript",
-    "browser_brython",
     "browser",
 ]

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from functools import partial
 from re import compile as re_compile, escape as re_escape
 import urllib.parse
@@ -8,11 +9,12 @@ from typing import (
     List,
     Literal,
     Match,
+    Optional,
     Sequence,
     Tuple,
-    TypeAlias,
     Union,
 )
+from typing_extensions import TypeAlias
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.components import ComponentGenerator, WebComPyComponentException
 from webcompy.elements.types._switch import NodeGenerator
@@ -24,7 +26,7 @@ from webcompy.router._context import TypedRouterContext, RouterContext
 
 RouteType: TypeAlias = Tuple[
     str,
-    Callable[[str], Match[str] | None],
+    Callable[[str], Optional[Match[str]]],
     List[str],
     ComponentGenerator[RouterContext],
     RouterPage,

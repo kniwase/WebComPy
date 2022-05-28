@@ -11,12 +11,17 @@ class _PyScriptBrowserModule(ModuleType):
         )
         js = import_module("js")
         for name in dir(js):
-            if not name.startswith("_"):
-                self.__setattr__(
-                    name,
-                    getattr(js, name),
-                )
+            if name.startswith("_"):
+                continue
+            try:
+                attr = getattr(js, name)
+            except AttributeError:
+                try:
+                    attr = import_module("js", name)
+                except ModuleNotFoundError:
+                    continue
+            self.__setattr__(name, attr)
 
 
-browser_pyscript = _PyScriptBrowserModule()
-__all__ = ["browser_pyscript"]
+browser = _PyScriptBrowserModule()
+__all__ = ["browser"]

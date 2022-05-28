@@ -1,4 +1,4 @@
-brython ~= 3.10
+typing_extensions
 wheel
 starlette
 sse-starlette

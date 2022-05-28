@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, Callable, Iterable, List, TypeVar, cast, overload
 from webcompy.reactive._base import Reactive, ReactiveBase
 
