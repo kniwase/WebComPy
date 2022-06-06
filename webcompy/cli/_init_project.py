@@ -50,3 +50,4 @@ def init_project():
         print(project_filepath)
     if not (staic_files_dir := (cwd / "static")).exists():
         os.makedirs(staic_files_dir)
+    (cwd / "__init__.py").touch()
