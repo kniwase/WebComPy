@@ -45,7 +45,7 @@ def generate_static_site():
     make_webcompy_app_package(
         scripts_dir,
         get_webcompy_packge_dir(),
-        pathlib.Path(f"./{config.app_package}").absolute(),
+        config.app_package_path,
         app_version,
     )
     for p in scripts_dir.iterdir():
