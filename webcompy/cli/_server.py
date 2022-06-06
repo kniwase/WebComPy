@@ -38,7 +38,7 @@ def create_asgi_app(
         make_webcompy_app_package(
             temp_path,
             get_webcompy_packge_dir(),
-            pathlib.Path(f"./{config.app_package}").absolute(),
+            config.app_package_path,
             app_version,
         )
         app_package_files: dict[str, tuple[bytes, str]] = {
@@ -58,9 +58,9 @@ def create_asgi_app(
             return Response(content, media_type=media_type)
         else:
             raise HTTPException(404)
-    
+
     app_package_files_route = Route(
-        config.base + "_webcompy-app-package/{filename:path}",
+        "/_webcompy-app-package/{filename:path}",
         send_app_package_file,
     )
 
@@ -77,7 +77,7 @@ def create_asgi_app(
                 content = await f.read()
             return Response(content, media_type=media_type)
 
-        static_file_routes.append(Route(config.base + relative_path, send_file))
+        static_file_routes.append(Route("/" + relative_path, send_file))
 
     # HTMLs
     html_generator = partial(generate_html, config, dev_mode, True, app_version)
@@ -104,7 +104,7 @@ def create_asgi_app(
             else:
                 raise HTTPException(404)
 
-        html_route = Route(config.base + "{path:path}", send_html)
+        html_route = Route("/{path:path}", send_html)
     else:
         app.__component__.set_path("/")
         html = html_generator(app)
@@ -112,7 +112,7 @@ def create_asgi_app(
         async def send_html(_: Request):  # type: ignore
             return HTMLResponse(html)
 
-        html_route = Route(config.base, send_html)
+        html_route = Route("/", send_html)
 
     # Hot Reloader
     if dev_mode:
@@ -125,7 +125,7 @@ def create_asgi_app(
         async def sse(_: Request):
             return EventSourceResponse(loop())
 
-        dev_routes = [Route(f"{config.base}_webcompy_reload", endpoint=sse)]
+        dev_routes = [Route("/_webcompy_reload", endpoint=sse)]
     else:
         dev_routes: list[Route] = []
 

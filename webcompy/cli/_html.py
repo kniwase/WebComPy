@@ -173,7 +173,7 @@ def generate_html(
                 except Exception as err:
                     js.console.error("".join(TracebackException.from_exception(err).format()))
                 """.format(
-                    app_package_name=config.app_package,
+                    app_package_name=config.app_package_path.name,
                     dependencies=",".join(
                         '"' + p + '"'
                         for p in (
