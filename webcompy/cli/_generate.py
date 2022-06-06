@@ -31,7 +31,7 @@ def generate_static_site():
     nojekyll_path.touch()
     print(nojekyll_path)
 
-    static_files_dir = pathlib.Path(f"./{config.static_files_dir}").absolute()
+    static_files_dir = config.static_files_dir_path.absolute()
     for relative_path in get_static_files(static_files_dir):
         src = static_files_dir / relative_path
         dst = dist_dir / relative_path
