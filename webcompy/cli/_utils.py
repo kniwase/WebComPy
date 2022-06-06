@@ -38,16 +38,16 @@ def get_config() -> WebComPyConfig:
 
 def get_app(config: WebComPyConfig) -> WebComPyApp:
     try:
-        import_module(config.app_package)
+        import_module(config.app_package_path.name)
     except ModuleNotFoundError:
         raise WebComPyCliException(
-            f"No python module named '{config.app_package}'",
+            f"No python module named '{config.app_package_path.name}'",
         )
     try:
-        bootstrap = import_module(config.app_package + ".bootstrap")
+        bootstrap = import_module(config.app_package_path.name + ".bootstrap")
     except AttributeError:
         raise WebComPyCliException(
-            f"No python module named 'bootstrap' in '{config.app_package}'",
+            f"No python module named 'bootstrap' in '{config.app_package_path.name}'",
         )
     app_instances = tuple(
         it

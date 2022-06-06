@@ -38,7 +38,7 @@ def create_asgi_app(
         make_webcompy_app_package(
             temp_path,
             get_webcompy_packge_dir(),
-            pathlib.Path(f"./{config.app_package}").absolute(),
+            config.app_package_path,
             app_version,
         )
         app_package_files: dict[str, tuple[bytes, str]] = {
@@ -58,7 +58,7 @@ def create_asgi_app(
             return Response(content, media_type=media_type)
         else:
             raise HTTPException(404)
-    
+
     app_package_files_route = Route(
         config.base + "_webcompy-app-package/{filename:path}",
         send_app_package_file,
