@@ -6,7 +6,7 @@ class WebComPyConfig:
     app_package_path: Path
     base: str
     server_port: int
-    static_files_dir: str
+    static_files_dir_path: Path
     dist: str
     dependencies: list[str]
 
@@ -15,7 +15,7 @@ class WebComPyConfig:
         app_package: Path | str,
         base: str = "/",
         server_port: int = 8080,
-        static_files_dir: str = "static",
+        static_files_dir: Path | str = "static",
         dist: str = "dist",
         dependencies: list[str] | None = None,
     ) -> None:
@@ -25,6 +25,9 @@ class WebComPyConfig:
             self.app_package_path = Path(f"./{app_package}").absolute()
         self.base = f"/{base}/" if (base := base.strip("/")) else "/"
         self.server_port = server_port
-        self.static_files_dir = static_files_dir
+        if isinstance(static_files_dir, Path):
+            self.app_package_path = static_files_dir.absolute()
+        else:
+            self.static_files_dir_path = self.app_package_path.parent / static_files_dir
         self.dist = dist
         self.dependencies = [*dependencies] if dependencies else []
