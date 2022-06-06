@@ -108,6 +108,7 @@ class HttpClient:
             )
         )
         if browser:
+            req_headers = browser.pyodide.create_proxy(req_headers)
             if method not in {"GET", "OPTIONS", "HEAD"} and has_body:
                 if json is not None:
                     req_headers["Content-Type"] = "application/json"
@@ -126,20 +127,22 @@ class HttpClient:
             else:
                 options = {"method": method, "headers": req_headers}
             try:
-                res = await browser.fetch(send_url, **options)
+                res = (await browser.fetch(send_url, **options)).to_py()
             except Exception as err:
                 raise WebComPyHttpClientException(str(err))
             else:
-                res = Response(
+                ret = Response(
                     text=(await res.text()),
                     headers=dict(zip(res.headers.keys(), res.headers.values())),
                     status_code=res.status,
                     reason=res.statusText,
                     ok=res.ok,
                 )
+            finally:
+                req_headers.destroy()
         else:
             raise WebComPyHttpClientException
-        return res
+        return ret
 
     @classmethod
     async def get(
