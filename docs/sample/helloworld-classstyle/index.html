@@ -21,7 +21,7 @@ import micropip, pyodide, js
 from traceback import TracebackException
 async def bootstarp():
     try:
-        await micropip.install(["typing_extensions","numpy","matplotlib","/WebComPy/_webcompy-app-package/webcompy-0.0.12-py3-none-any.whl","/WebComPy/_webcompy-app-package/app-22.157.55511-py3-none-any.whl"])
+        await micropip.install(["typing_extensions","matplotlib","numpy","/WebComPy/_webcompy-app-package/webcompy-0.0.13-py3-none-any.whl","/WebComPy/_webcompy-app-package/app-22.157.57090-py3-none-any.whl"])
         from docs_src.bootstrap import app
         app.__component__.render()
     except Exception as err:
