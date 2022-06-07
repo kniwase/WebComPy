@@ -55,7 +55,7 @@ class Response:
         if not self._ok:
             raise WebComPyHttpClientException
 
-    def json(self, **kwargs: Any) -> dict[str, Any]:
+    def json(self, **kwargs: Any) -> Any:
         return json_loads(self._text, **kwargs)
 
     @property
