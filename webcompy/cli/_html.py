@@ -147,7 +147,7 @@ def generate_html(
             {
                 "type": "text/javascript",
                 "defer": "",
-                "src": "https://pyscript.net/alpha/pyscript.js",
+                "src": "https://pyscript.net/latest/pyscript.js",
             },
             None,
         )
