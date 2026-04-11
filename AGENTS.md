@@ -33,13 +33,16 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 
 ## Build & Run Commands
 
-- Dev server: `python -m webcompy start --dev`
-- Static site generation: `python -m webcompy generate`
-- Project scaffolding: `python -m webcompy init`
+- Install dependencies: `uv sync`
+- Dev server: `uv run python -m webcompy start --dev`
+- Static site generation: `uv run python -m webcompy generate`
+- Project scaffolding: `uv run python -m webcompy init`
+- Build package: `uv build`
 
 ## Code Conventions
 
-- Python 3.9+ (uses `X | Y` union syntax from 3.10)
+- Python 3.12+ (aligned with latest PyScript/Pyodide runtime)
+- Package management with `uv` — use `uv add <package>` to add dependencies, `uv lock` to update lockfile
 - Type annotations throughout (package includes `py.typed` marker and `.pyi` stubs)
 - No comments in code unless explicitly requested
 - Component classes use decorators: `@component_template`, `@on_before_rendering`
