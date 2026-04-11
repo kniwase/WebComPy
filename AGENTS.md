@@ -39,6 +39,13 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - Project scaffolding: `uv run python -m webcompy init`
 - Build package: `uv build`
 
+## Lint & Type Check Commands
+
+- Lint: `uv run ruff check .`
+- Format: `uv run ruff format .`
+- Type check: `uv run pyright`
+- Pre-commit hooks run ruff (lint + format) and pyright automatically on commit
+
 ## Code Conventions
 
 - Python 3.12+ (aligned with latest PyScript/Pyodide runtime)
