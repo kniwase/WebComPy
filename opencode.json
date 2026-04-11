@@ -1,0 +1,37 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "watcher": {
+    "ignore": ["docs/**", ".git/**", "__pycache__/**", "*.pyc"]
+  },
+  "agent": {
+    "webcompy-docs": {
+      "description": "Generates and maintains the documentation site under docs_src/",
+      "mode": "subagent",
+      "prompt": "You are working on the WebComPy documentation site. Only modify files in docs_src/. Never edit docs/ directly as it is generated output.",
+      "permission": {
+        "edit": "ask"
+      }
+    },
+    "browser-runtime": {
+      "description": "Analyzes and modifies code that runs in the PyScript/browser environment (reactive, components, elements, router)",
+      "mode": "subagent",
+      "prompt": "You are working on browser-side WebComPy code that runs via PyScript/Emscripten. Remember: no standard library modules are available at runtime; browser APIs are accessed through js module. The reactive system must work without server-side Python."
+    },
+    "server-runtime": {
+      "description": "Analyzes and modifies server-side code (CLI, dev server, static site generator)",
+      "mode": "subagent",
+      "prompt": "You are working on server-side WebComPy code (CLI tools, Starlette dev server, static site generator). This code runs in standard Python with uvicorn, aiofiles, etc."
+    }
+  },
+  "command": {
+    "dev": {
+      "template": "Start the WebComPy development server with hot-reload enabled",
+      "description": "Start dev server"
+    },
+    "generate-docs": {
+      "template": "Generate the static documentation site from docs_src/ using `python -m webcompy generate`",
+      "description": "Generate docs site"
+    }
+  }
+}
