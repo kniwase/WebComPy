@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "webcompy"
+version = "0.0.13"
+description = "Python frontend framework which works on Browser"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+    { name = "Kento Niwase", email = "kento.niwase@gmail.com" },
+]
+keywords = ["browser", "frontend", "framework", "front-end", "client-side"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "typing_extensions",
+    "starlette",
+    "sse-starlette",
+    "uvicorn",
+    "aiofiles",
+]
+
+[project.urls]
+Homepage = "https://github.com/kniwase/WebComPy"
+
+[tool.hatch.build.targets.wheel]
+packages = ["webcompy"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+
+[tool.hatch.build]
+exclude = ["docs_src", "docs", "template"]
+
+[dependency-groups]
+dev = [
+    "wheel",
+]
