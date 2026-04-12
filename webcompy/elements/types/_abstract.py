@@ -1,11 +1,13 @@
 from __future__ import annotations
+
 from abc import abstractmethod
 from typing import cast
+
+from webcompy._browser._modules import browser
 from webcompy.elements._dom_objs import DOMNode
+from webcompy.exception import WebComPyException
 from webcompy.reactive._base import ReactiveStore
 from webcompy.reactive._container import ReactiveReceivable
-from webcompy._browser._modules import browser
-from webcompy.exception import WebComPyException
 
 
 class ElementAbstract(ReactiveReceivable):
@@ -23,11 +25,11 @@ class ElementAbstract(ReactiveReceivable):
         self._callback_ids: set[int] = set()
 
     @property
-    def _parent(self) -> "ElementAbstract":
+    def _parent(self) -> ElementAbstract:
         return self.__parent
 
     @_parent.setter
-    def _parent(self, parent: "ElementAbstract"):
+    def _parent(self, parent: ElementAbstract):
         self.__parent = parent
 
     def _render(self):
@@ -50,15 +52,14 @@ class ElementAbstract(ReactiveReceivable):
     def _detach_node(self):
         if browser and self._node_cache:
             parent_node = self._parent._get_node()
-            self._remount_to = cast(DOMNode, browser.document.createTextNode(""))
+            self._remount_to = cast("DOMNode", browser.document.createTextNode(""))
             parent_node.replaceChild(self._remount_to, self._node_cache)
             self._mounted = False
         else:
             raise WebComPyException("Not in Browser environment.")
 
     @abstractmethod
-    def _init_node(self) -> DOMNode:
-        ...
+    def _init_node(self) -> DOMNode: ...
 
     def _set_callback_id(self, callback_id: int):
         self._callback_ids.add(callback_id)
@@ -94,7 +95,4 @@ class ElementAbstract(ReactiveReceivable):
         return None
 
     @abstractmethod
-    def _render_html(
-        self, newline: bool = False, indent: int = 2, count: int = 0
-    ) -> str:
-        ...
+    def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str: ...

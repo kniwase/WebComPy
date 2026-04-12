@@ -1,6 +1,7 @@
 from webcompy.router import Router
-from .components.home import Home
+
 from .components.fizzbuzz import Fizzbuzz
+from .components.home import Home
 from .components.input import InOutSample
 from .components.not_found import NotFound
 
@@ -10,5 +11,5 @@ router = Router(
     {"path": "/input", "component": InOutSample},
     default=NotFound,
     mode="history",
-    base_url="/WebComPy"
+    base_url="/WebComPy",
 )

@@ -1,8 +1,7 @@
-from webcompy.elements.types._base import ElementWithChildren
+from tests.conftest import FakeDOMNode
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._text import TextElement
 from webcompy.reactive import Reactive
-from tests.conftest import FakeDOMNode
 
 
 class FakeRootElement(Element):
@@ -78,8 +77,9 @@ class TestInsertChild:
 
 class TestPopChild:
     def test_pop_child_removes_at_index(self, monkeypatch):
-        from tests.conftest import FakeBrowserModule
         import importlib
+
+        from tests.conftest import FakeBrowserModule
 
         fake = FakeBrowserModule()
         for mod_name in [

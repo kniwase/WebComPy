@@ -4,16 +4,13 @@ from typing import Any, Protocol
 class DOMNode(Protocol):
     __webcompy_node__: bool
 
-    def __getattr__(self, name: str) -> Any:
-        ...
+    def __getattr__(self, name: str) -> Any: ...
 
-    def __setattr__(self, name: str, obj: Any) -> Any:
-        ...
+    def __setattr__(self, name: str, obj: Any) -> Any: ...
 
 
 class DOMEvent(Protocol):
-    def __getattr__(self, _: str) -> Any:
-        ...
+    def __getattr__(self, _: str) -> Any: ...
 
     @property
     def bubbles(self) -> bool:

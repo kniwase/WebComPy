@@ -1,9 +1,9 @@
-from webcompy.elements import html
 from webcompy.components import (
     TypedComponentBase,
     component_class,
     component_template,
 )
+from webcompy.elements import html
 
 
 @component_class

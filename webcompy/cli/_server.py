@@ -1,35 +1,36 @@
 import asyncio
-from functools import partial
-from operator import truth
-from re import compile as re_compile, escape as re_escape
 import mimetypes
 import pathlib
+from functools import partial
+from operator import truth
+from re import compile as re_compile
+from re import escape as re_escape
 from tempfile import TemporaryDirectory
+
 import aiofiles
+import uvicorn  # type: ignore
+from sse_starlette.sse import EventSourceResponse
 from starlette.applications import Starlette
+from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, Response
 from starlette.routing import Route
-from starlette.exceptions import HTTPException
 from starlette.types import ASGIApp
-from sse_starlette.sse import EventSourceResponse
-import uvicorn  # type: ignore
+
 from webcompy.app._app import WebComPyApp
 from webcompy.cli._argparser import get_params
-from webcompy.cli._pyscript_wheel import make_webcompy_app_package
 from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._html import generate_html
+from webcompy.cli._pyscript_wheel import make_webcompy_app_package
+from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
+    generate_app_version,
     get_config,
     get_webcompy_packge_dir,
-    generate_app_version,
 )
-from webcompy.cli._static_files import get_static_files
 
 
-def create_asgi_app(
-    app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = False
-) -> ASGIApp:
+def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
     app_version = generate_app_version()
 
     # App Packages
@@ -44,16 +45,14 @@ def create_asgi_app(
         app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (
                 p.open("rb").read(),
-                t
-                if (t := mimetypes.guess_type(str(p))[0])
-                else "application/octet-stream",
+                t if (t := mimetypes.guess_type(str(p))[0]) else "application/octet-stream",
             )
             for p in temp_path.iterdir()
         }
 
     async def send_app_package_file(request: Request):
         filename: str = request.path_params.get("filename", "")  # type: ignore
-        if filename in app_package_files.keys():
+        if filename in app_package_files:
             content, media_type = app_package_files[filename]
             return Response(content, media_type=media_type)
         else:
@@ -72,10 +71,10 @@ def create_asgi_app(
         if (media_type := mimetypes.guess_type(str(static_file))[0]) is None:
             media_type = "application/octet-stream"
 
-        async def send_file(request: Request):
-            async with aiofiles.open(static_file, "rb") as f:
+        async def send_file(request: Request, _static_file=static_file, _media_type=media_type):
+            async with aiofiles.open(_static_file, "rb") as f:
                 content = await f.read()
-            return Response(content, media_type=media_type)
+            return Response(content, media_type=_media_type)
 
         static_file_routes.append(Route("/" + relative_path, send_file))
 

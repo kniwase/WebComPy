@@ -1,5 +1,5 @@
-from types import ModuleType
 from importlib import import_module
+from types import ModuleType
 
 
 class _PyScriptBrowserModule(ModuleType):

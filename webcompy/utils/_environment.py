@@ -4,7 +4,7 @@ from typing import Final, Literal
 def _get_environment() -> Literal["pyscript", "other"]:
     import platform
 
-    if "Emscripten" == platform.system():
+    if platform.system() == "Emscripten":
         return "pyscript"
     else:
         return "other"

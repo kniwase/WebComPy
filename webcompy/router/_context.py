@@ -1,6 +1,4 @@
-from typing import Any, Generic, NoReturn, TypeVar, final
-from typing_extensions import TypeAlias
-
+from typing import Any, Generic, NoReturn, TypeAlias, TypeVar, final
 
 ParamsType = TypeVar("ParamsType")
 QueryParamsType = TypeVar("QueryParamsType")
@@ -15,9 +13,7 @@ class TypedRouterContext(Generic[ParamsType, QueryParamsType, PathParamsType]):
 
     @final
     def __init__(self) -> NoReturn:
-        raise NotImplementedError(
-            "RouterContext cannot generate an instance by constructor"
-        )
+        raise NotImplementedError("RouterContext cannot generate an instance by constructor")
 
     @classmethod
     def __create_instance__(
@@ -54,14 +50,9 @@ class TypedRouterContext(Generic[ParamsType, QueryParamsType, PathParamsType]):
     def __repr__(self):
         return (
             "RouterContext("
-            + ", ".join(
-                f"{name}={repr(getattr(self, name))}"
-                for name in ("path", "query", "path_params", "params")
-            )
+            + ", ".join(f"{name}={getattr(self, name)!r}" for name in ("path", "query", "path_params", "params"))
             + ")"
         )
 
 
-RouterContext: TypeAlias = TypedRouterContext[
-    dict[str, Any], dict[str, str], dict[str, str]
-]
+RouterContext: TypeAlias = TypedRouterContext[dict[str, Any], dict[str, str], dict[str, str]]

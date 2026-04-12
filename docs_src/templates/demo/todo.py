@@ -1,6 +1,7 @@
 from typing import Any, TypedDict
-from webcompy.elements import html, repeat, DomNodeRef
-from webcompy.components import define_component, ComponentContext
+
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import DomNodeRef, html, repeat
 from webcompy.reactive import Reactive, ReactiveList, computed
 
 
@@ -30,13 +31,7 @@ def ToDoItem(context: ComponentContext[TodoData]):
         ),
         " ",
         html.SPAN(
-            {
-                "style": computed(
-                    lambda: "text-decoration: line-through;"
-                    if context.props["done"].value
-                    else ""
-                )
-            },
+            {"style": computed(lambda: "text-decoration: line-through;" if context.props["done"].value else "")},
             context.props["title"],
         ),
     )
@@ -68,7 +63,7 @@ def ToDoList(_: ComponentContext[None]):
             {
                 "title": Reactive("Create WebComPy project"),
                 "done": Reactive(False),
-            }
+            },
         ]
     )
 
@@ -84,9 +79,7 @@ def ToDoList(_: ComponentContext[None]):
         input_ref.value = ""
 
     def remove_done_items(_: Any):
-        items_remove = reversed(
-            [idx for idx, item in enumerate(data.value) if item["done"].value]
-        )
+        items_remove = reversed([idx for idx, item in enumerate(data.value) if item["done"].value])
         for idx in items_remove:
             data.pop(idx)
 

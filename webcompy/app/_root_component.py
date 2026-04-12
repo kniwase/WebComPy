@@ -1,18 +1,20 @@
 from __future__ import annotations
+
 from typing import TypedDict
 from uuid import uuid4
-from webcompy.elements import html
-from webcompy.elements._dom_objs import DOMNode
+
 from webcompy._browser._modules import browser
 from webcompy.components._abstract import NonPropsComponentBase
 from webcompy.components._component import Component
-from webcompy.components._generator import ComponentGenerator, ComponentStore
 from webcompy.components._decorators import component_template
+from webcompy.components._generator import ComponentGenerator, ComponentStore
+from webcompy.elements import html
+from webcompy.elements._dom_objs import DOMNode
+from webcompy.exception import WebComPyException
+from webcompy.reactive import Computed
+from webcompy.router._link import TypedRouterLink
 from webcompy.router._router import Router
 from webcompy.router._view import RouterView
-from webcompy.router._link import TypedRouterLink
-from webcompy.reactive import Computed
-from webcompy.exception import WebComPyException
 
 
 class Head(TypedDict, total=False):
@@ -42,9 +44,7 @@ class AppDocumentRoot(Component):
     _scripts_head: list[tuple[dict[str, str], str | None]]
     __loading: bool
 
-    def __init__(
-        self, root_component: ComponentGenerator[None], router: Router | None
-    ) -> None:
+    def __init__(self, root_component: ComponentGenerator[None], router: Router | None) -> None:
         self._instance_id = uuid4()
         self.__loading = True
         self._router = router
@@ -100,7 +100,7 @@ class AppDocumentRoot(Component):
     def _get_belonging_component(self):
         return ""
 
-    def _get_belonging_components(self) -> tuple["Component", ...]:
+    def _get_belonging_components(self) -> tuple[Component, ...]:
         return (self,)
 
     @property
@@ -119,15 +119,9 @@ class AppDocumentRoot(Component):
 
     @property
     def style(self):
-        return " ".join(
-            style
-            for component in ComponentStore.components.values()
-            if (style := component.scoped_style)
-        )
+        return " ".join(style for component in ComponentStore.components.values() if (style := component.scoped_style))
 
-    def _render_html(
-        self, newline: bool = False, indent: int = 2, count: int = 0
-    ) -> str:
+    def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str:
         hidden = self._attrs.get("hidden")
         self._attrs["hidden"] = True
         html = super()._render_html(newline, indent, count)

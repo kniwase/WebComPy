@@ -1,8 +1,7 @@
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import DOMEvent, html
 from webcompy.reactive import Reactive
-from webcompy.elements import html
-from webcompy.components import define_component, ComponentContext
 from webcompy.router import RouterContext
-from webcompy.elements import DOMEvent
 
 
 @define_component

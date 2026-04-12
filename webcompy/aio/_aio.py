@@ -1,18 +1,21 @@
 from __future__ import annotations
+
+from collections.abc import Callable, Coroutine
+from re import compile as re_complie
+from re import escape as re_escape
 from traceback import TracebackException
-from re import compile as re_complie, escape as re_escape
-from typing import Any, Callable, Coroutine, Generic, TypeVar, Union
-from typing_extensions import ParamSpec, TypeAlias
+from typing import Any, Generic, TypeAlias, TypeVar
+
+from typing_extensions import ParamSpec
+
+from webcompy import logging
 from webcompy._browser._modules import browser
 from webcompy.reactive._base import ReactiveBase
-from webcompy import logging
 
 AsysncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
 
 if browser:
-    aio_run: AsysncResolver = (
-        browser.pyodide.webloop.WebLoop().run_until_complete
-    )
+    aio_run: AsysncResolver = browser.pyodide.webloop.WebLoop().run_until_complete
 else:
     import asyncio
 
@@ -32,11 +35,7 @@ _is_traceback_in_this_file = re_complie(
 
 def _log_error(error: Exception):
     logging.error(
-        "".join(
-            row
-            for row in TracebackException.from_exception(error).format()
-            if not _is_traceback_in_this_file(row)
-        )
+        "".join(row for row in TracebackException.from_exception(error).format() if not _is_traceback_in_this_file(row))
     )
 
 
@@ -78,7 +77,7 @@ class AsyncWrapper(Generic[T]):
         return inner
 
 
-class AsyncComputed(ReactiveBase[Union[T, None]]):
+class AsyncComputed(ReactiveBase[T | None]):
     _done: bool
     _exception: Exception | None
 

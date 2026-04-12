@@ -1,12 +1,11 @@
-from webcompy.reactive import Reactive, computed_property, computed
-from webcompy.elements import html, repeat, switch
 from webcompy.components import (
     TypedComponentBase,
     component_class,
-    on_before_rendering,
     component_template,
+    on_before_rendering,
 )
-from webcompy.elements import DOMEvent
+from webcompy.elements import DOMEvent, html, repeat, switch
+from webcompy.reactive import Reactive, computed, computed_property
 
 
 @component_class

@@ -1,19 +1,20 @@
 from __future__ import annotations
-from operator import truth
-from typing import Any, Callable, Union, cast
-from typing_extensions import TypeAlias
-from webcompy.reactive._base import ReactiveBase
-from webcompy.elements.types._abstract import ElementAbstract
-from webcompy.elements.typealias._element_property import ElementChildren
-from webcompy.exception import WebComPyException
-from webcompy.elements.types._dynamic import DynamicElement
-from webcompy._browser._modules import browser
 
+from collections.abc import Callable
+from operator import truth
+from typing import Any, TypeAlias, cast
+
+from webcompy._browser._modules import browser
+from webcompy.elements.typealias._element_property import ElementChildren
+from webcompy.elements.types._abstract import ElementAbstract
+from webcompy.elements.types._dynamic import DynamicElement
+from webcompy.exception import WebComPyException
+from webcompy.reactive._base import ReactiveBase
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
 SwitchCasesReactive: TypeAlias = list[tuple[ReactiveBase[Any], NodeGenerator]]
 SwitchCasesReactiveList: TypeAlias = ReactiveBase[list[tuple[Any, NodeGenerator]]]
-SwitchCases: TypeAlias = Union[SwitchCasesReactive, SwitchCasesReactiveList]
+SwitchCases: TypeAlias = SwitchCasesReactive | SwitchCasesReactiveList
 
 
 class SwitchElement(DynamicElement):
@@ -31,13 +32,8 @@ class SwitchElement(DynamicElement):
         super().__init__()
 
     def _select_generator(self) -> tuple[int, Callable[[], ElementChildren]]:
-        if isinstance(self._cases, ReactiveBase):
-            cases = self._cases.value
-        else:
-            cases = self._cases
-        for idx, (cond, generator) in enumerate(
-            cast(list[tuple[Union[ReactiveBase[Any], Any], NodeGenerator]], cases)
-        ):
+        cases = self._cases.value if isinstance(self._cases, ReactiveBase) else self._cases
+        for idx, (cond, generator) in enumerate(cast("list[tuple[ReactiveBase[Any] | Any, NodeGenerator]]", cases)):
             if truth(cond.value if isinstance(cond, ReactiveBase) else cond):
                 return (idx, generator)
         if self._default:
@@ -66,9 +62,7 @@ class SwitchElement(DynamicElement):
             return
         parent_node = self._parent._get_node()
         if not parent_node:
-            raise WebComPyException(
-                f"'{self.__class__.__name__}' does not have its parent."
-            )
+            raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
         self._rendered_idx = idx
         for _ in range(len(self._children)):
             self._children.pop(-1)._remove_element()

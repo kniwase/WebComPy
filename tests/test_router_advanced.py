@@ -1,19 +1,17 @@
-from webcompy.router._router import Router
-from webcompy.router._change_event_hander import Location
-from webcompy.router._pages import RouterPage
-from webcompy.components import ComponentGenerator, WebComPyComponentException
-from webcompy.router._context import TypedRouterContext
-from webcompy.reactive import Reactive
 from unittest.mock import MagicMock
+
+from webcompy.components import ComponentGenerator, WebComPyComponentException
+from webcompy.router._pages import RouterPage
+from webcompy.router._router import Router
 
 
 class TestRouterSingleton:
     def test_only_one_instance_allowed(self):
         page = RouterPage(path="/", component=MagicMock(spec=ComponentGenerator))
-        r1 = Router(page, mode="hash")
+        _r1 = Router(page, mode="hash")
         try:
             Router(page, mode="hash")
-            assert False, "Should have raised"
+            raise AssertionError("Should have raised")
         except WebComPyComponentException:
             pass
 
@@ -42,13 +40,13 @@ class TestRouterRouteGeneration:
         page = RouterPage(path="/users", component=MagicMock(spec=ComponentGenerator))
         r = Router(page, mode="hash")
         assert len(r.__routes__) == 1
-        path_str, matcher, param_names, component, page_obj = r.__routes__[0]
+        path_str, _matcher, _param_names, _component, _page_obj = r.__routes__[0]
         assert path_str == "users"
 
     def test_generate_routes_with_params(self):
         page = RouterPage(path="/users/{id}", component=MagicMock(spec=ComponentGenerator))
         r = Router(page, mode="hash")
-        path_str, matcher, param_names, component, page_obj = r.__routes__[0]
+        _path_str, _matcher, param_names, _component, _page_obj = r.__routes__[0]
         assert "id" in param_names
 
 
@@ -109,12 +107,12 @@ class TestRouterSetPath:
 
 class TestRouterDefault:
     def test_default_with_default_component(self):
-        mock_gen = MagicMock(spec=ComponentGenerator)
+        _mock_gen = MagicMock(spec=ComponentGenerator)
         page = RouterPage(path="/nonexistent", component=MagicMock(spec=ComponentGenerator))
         default_gen = MagicMock(spec=ComponentGenerator)
         r = Router(page, default=default_gen, mode="hash")
         r._location._value = "/not-a-route"
-        result = r.__default__()
+        r.__default__()
         default_gen.assert_called_once()
 
     def test_default_without_default_returns_not_found(self):

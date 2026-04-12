@@ -2,11 +2,13 @@ import os
 import pathlib
 import shutil
 import sys
-from setuptools import setup, find_packages
 from tempfile import TemporaryDirectory
-from webcompy.cli._utils import external_cli_tool_wrapper
-from webcompy.cli._exception import WebComPyCliException
+
+from setuptools import find_packages, setup
+
 from webcompy._version import __version__ as webcompy_version
+from webcompy.cli._exception import WebComPyCliException
+from webcompy.cli._utils import external_cli_tool_wrapper
 
 
 @external_cli_tool_wrapper
@@ -42,20 +44,13 @@ def make_wheel(name: str, package_dir: pathlib.Path, dest: pathlib.Path, version
             setup(
                 name=name,
                 packages=packages,
-                package_dir={
-                    p: str(package_dir_path.parent / p.replace(".", "/"))
-                    for p in packages
-                },
+                package_dir={p: str(package_dir_path.parent / p.replace(".", "/")) for p in packages},
                 version=version,
             )
             wheel_dest = dest_path / wheel_file_name
             if wheel_dest.exists():
                 os.remove(wheel_dest)
-            wheel_file_path = tuple(
-                it
-                for it in wheel_temp.iterdir()
-                if it.is_file() and it.name == wheel_file_name
-            )[0]
+            wheel_file_path = next(it for it in wheel_temp.iterdir() if it.is_file() and it.name == wheel_file_name)
             shutil.copy(wheel_file_path, wheel_dest)
         except Exception as error:
             raise error

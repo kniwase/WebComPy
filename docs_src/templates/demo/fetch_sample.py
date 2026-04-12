@@ -1,11 +1,12 @@
+from asyncio import Queue
 from typing import TypedDict
-from webcompy.elements import html, repeat
-from webcompy.components import define_component, ComponentContext
-from webcompy.reactive import ReactiveList, Reactive
+
+from webcompy import logging
 from webcompy.aio import AsyncWrapper, resolve_async
 from webcompy.ajax import HttpClient
-from webcompy import logging
-from asyncio import Queue
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html, repeat
+from webcompy.reactive import Reactive, ReactiveList
 
 
 class User(TypedDict):

@@ -5,10 +5,10 @@ from . import (
     components,
     elements,
     exception,
+    logging,
     reactive,
     router,
     utils,
-    logging,
 )
 from ._browser import browser
 from ._version import __version__
@@ -21,16 +21,16 @@ else:
 
 __all__ = [
     "__version__",
-    "browser",
-    "app",
-    "reactive",
-    "elements",
-    "components",
-    "router",
-    "exception",
     "aio",
     "ajax",
-    "utils",
+    "app",
+    "browser",
     "cli",
+    "components",
+    "elements",
+    "exception",
     "logging",
+    "reactive",
+    "router",
+    "utils",
 ]

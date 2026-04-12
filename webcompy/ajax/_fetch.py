@@ -1,8 +1,11 @@
-from json import loads as json_loads, dumps as json_dumps
-from typing import Any, Dict, Literal, Union
-import urllib.parse
+import urllib.parse  # noqa: I001
+from json import dumps as json_dumps
+from json import loads as json_loads
+from typing import Any, Literal
+
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.exception import WebComPyException
+
 from webcompy._browser._modules import browser
 
 
@@ -81,23 +84,19 @@ class HttpClient:
         cls,
         method: Literal["GET", "OPTIONS", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
         url: str,
-        headers: Union[Dict[str, str], None] = None,
-        query_params: Union[Dict[str, str], None] = None,
-        json: Union[Dict[str, Any], None] = None,
-        body_data: Union[str, bytes, None] = None,
-        form_data: Union[Dict[str, Union[str, bytes]], None] = None,
-        form_element: Union[DomNodeRef, None] = None,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
     ) -> Response:
         # query
-        if query_params is not None:
-            send_url = url + "?" + urllib.parse.urlencode(query_params)
-        else:
-            send_url = url
+        send_url = url + "?" + urllib.parse.urlencode(query_params) if query_params is not None else url
         # header
-        req_headers = dict(
-            tuple(map(urllib.parse.quote, map(str, it)))
-            for it in (headers if headers else {}).items()
-        )
+        req_headers = {
+            urllib.parse.quote(str(k)): urllib.parse.quote(str(v)) for k, v in (headers if headers else {}).items()
+        }
         # body
         has_body = any(
             (
@@ -129,11 +128,11 @@ class HttpClient:
             try:
                 res = (await browser.fetch(send_url, **options)).to_py()
             except Exception as err:
-                raise WebComPyHttpClientException(str(err))
+                raise WebComPyHttpClientException(str(err)) from err
             else:
                 ret = Response(
                     text=(await res.text()),
-                    headers=dict(zip(res.headers.keys(), res.headers.values())),
+                    headers=dict(zip(res.headers.keys(), res.headers.values(), strict=True)),
                     status_code=res.status,
                     reason=res.statusText,
                     ok=res.ok,
@@ -148,8 +147,8 @@ class HttpClient:
     async def get(
         cls,
         url: str,
-        query_params: Union[Dict[str, str], None] = None,
-        headers: Union[Dict[str, str], None] = None,
+        query_params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> Response:
         return await HttpClient.request(
             "GET",
@@ -162,8 +161,8 @@ class HttpClient:
     async def head(
         cls,
         url: str,
-        query_params: Union[Dict[str, str], None] = None,
-        headers: Union[Dict[str, str], None] = None,
+        query_params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> Response:
         return await HttpClient.request(
             "HEAD",
@@ -176,8 +175,8 @@ class HttpClient:
     async def options(
         cls,
         url: str,
-        query_params: Union[Dict[str, str], None] = None,
-        headers: Union[Dict[str, str], None] = None,
+        query_params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> Response:
         return await HttpClient.request(
             "OPTIONS",
@@ -190,12 +189,12 @@ class HttpClient:
     async def post(
         cls,
         url: str,
-        headers: Union[Dict[str, str], None] = None,
-        query_params: Union[Dict[str, str], None] = None,
-        json: Union[Dict[str, Any], None] = None,
-        body_data: Union[str, bytes, None] = None,
-        form_data: Union[Dict[str, Union[str, bytes]], None] = None,
-        form_element: Union[DomNodeRef, None] = None,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
     ) -> Response:
         return await HttpClient.request(
             "POST",
@@ -212,12 +211,12 @@ class HttpClient:
     async def put(
         cls,
         url: str,
-        headers: Union[Dict[str, str], None] = None,
-        query_params: Union[Dict[str, str], None] = None,
-        json: Union[Dict[str, Any], None] = None,
-        body_data: Union[str, bytes, None] = None,
-        form_data: Union[Dict[str, Union[str, bytes]], None] = None,
-        form_element: Union[DomNodeRef, None] = None,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
     ) -> Response:
         return await HttpClient.request(
             "PUT",
@@ -234,12 +233,12 @@ class HttpClient:
     async def delete(
         cls,
         url: str,
-        headers: Union[Dict[str, str], None] = None,
-        query_params: Union[Dict[str, str], None] = None,
-        json: Union[Dict[str, Any], None] = None,
-        body_data: Union[str, bytes, None] = None,
-        form_data: Union[Dict[str, Union[str, bytes]], None] = None,
-        form_element: Union[DomNodeRef, None] = None,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
     ) -> Response:
         return await HttpClient.request(
             "DELETE",
@@ -256,12 +255,12 @@ class HttpClient:
     async def patch(
         cls,
         url: str,
-        headers: Union[Dict[str, str], None] = None,
-        query_params: Union[Dict[str, str], None] = None,
-        json: Union[Dict[str, Any], None] = None,
-        body_data: Union[str, bytes, None] = None,
-        form_data: Union[Dict[str, Union[str, bytes]], None] = None,
-        form_element: Union[DomNodeRef, None] = None,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
     ) -> Response:
         return await HttpClient.request(
             "PATCH",

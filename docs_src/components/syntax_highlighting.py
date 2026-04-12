@@ -1,8 +1,9 @@
 from typing import TypedDict
-from webcompy.elements import html, DomNodeRef
-from webcompy.components import define_component, ComponentContext
-from webcompy.utils import strip_multiline_text
+
 from webcompy import browser
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import DomNodeRef, html
+from webcompy.utils import strip_multiline_text
 
 
 class SyntaxHighlightingProps(TypedDict):

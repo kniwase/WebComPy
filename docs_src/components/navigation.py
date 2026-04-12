@@ -1,6 +1,7 @@
-from typing import List, TypedDict
+from typing import TypedDict
+
+from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
-from webcompy.components import define_component, ComponentContext
 from webcompy.router import RouterLink
 
 
@@ -15,11 +16,11 @@ class _PageRequired(TypedDict):
 
 class Page(_PageRequired, total=False):
     to: str
-    children: List[_SubPage]
+    children: list[_SubPage]
 
 
 @define_component
-def Navbar(context: ComponentContext[List[Page]]):
+def Navbar(context: ComponentContext[list[Page]]):
     def generate_navitem(page: Page, idx: int):
         if "children" in page:
             main = (
@@ -59,7 +60,6 @@ def Navbar(context: ComponentContext[List[Page]]):
                         "class": "nav-link dropdown-toggle",
                         "data-bs-toggle": "dropdown",
                         "role": "button",
-                        "data-bs-toggle": "dropdown",
                         "aria-expanded": "false",
                     },
                     page["title"],
@@ -108,10 +108,7 @@ def Navbar(context: ComponentContext[List[Page]]):
                 {"class": "collapse navbar-collapse", "id": "navbarNav"},
                 html.UL(
                     {"class": "navbar-nav"},
-                    *tuple(
-                        generate_navitem(page, idx)
-                        for idx, page in enumerate(context.props)
-                    ),
+                    *tuple(generate_navitem(page, idx) for idx, page in enumerate(context.props)),
                 ),
             ),
         ),

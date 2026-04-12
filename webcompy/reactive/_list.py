@@ -1,12 +1,14 @@
 from __future__ import annotations
-from typing import Any, Callable, Iterable, List, TypeVar, cast, overload
-from webcompy.reactive._base import Reactive, ReactiveBase
 
+from collections.abc import Callable, Iterable
+from typing import Any, TypeVar, cast, overload
+
+from webcompy.reactive._base import Reactive, ReactiveBase
 
 V = TypeVar("V")
 
 
-class ReactiveList(Reactive[List[V]]):
+class ReactiveList(Reactive[list[V]]):
     def __init__(self, init_value: list[V]) -> None:
         super().__init__(init_value)
 
@@ -51,31 +53,27 @@ class ReactiveList(Reactive[List[V]]):
         self._value.reverse()
 
     @overload
-    def __getitem__(self, idx: int) -> V:
-        ...
+    def __getitem__(self, idx: int) -> V: ...
 
     @overload
-    def __getitem__(self, idx: slice) -> list[V]:
-        ...
+    def __getitem__(self, idx: slice) -> list[V]: ...
 
     @ReactiveBase._get_evnet
     def __getitem__(self, idx: int | slice):
         return self._value.__getitem__(idx)
 
     @overload
-    def __setitem__(self, idx: int, value: V) -> None:
-        ...
+    def __setitem__(self, idx: int, value: V) -> None: ...
 
     @overload
-    def __setitem__(self, idx: slice, value: Iterable[V]) -> None:
-        ...
+    def __setitem__(self, idx: slice, value: Iterable[V]) -> None: ...
 
     @ReactiveBase._change_event
     def __setitem__(self, idx: int | slice, value: V | Iterable[V]):
         if isinstance(idx, int):
-            self._value.__setitem__(idx, cast(V, value))
+            self._value.__setitem__(idx, cast("V", value))
         else:
-            self._value.__setitem__(idx, cast(Iterable[V], value))
+            self._value.__setitem__(idx, cast("Iterable[V]", value))
 
     @ReactiveBase._get_evnet
     def __len__(self):

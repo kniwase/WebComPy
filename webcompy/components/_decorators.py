@@ -1,5 +1,7 @@
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable
+from typing import Any
+
 from webcompy.elements.types._element import Element
 
 
@@ -8,7 +10,7 @@ def component_template(method: Callable[[Any], Element]):
     def inner(self: Any) -> Element:
         return method(self)
 
-    setattr(inner, "__webcompy_component_class_property__", "template")
+    inner.__webcompy_component_class_property__ = "template"
     return inner
 
 
@@ -17,11 +19,7 @@ def on_before_rendering(method: Callable[[Any], None]):
     def inner(self: Any):
         method(self)
 
-    setattr(
-        inner,
-        "__webcompy_component_class_property__",
-        "on_before_rendering",
-    )
+    inner.__webcompy_component_class_property__ = "on_before_rendering"
     return inner
 
 
@@ -30,11 +28,7 @@ def on_after_rendering(method: Callable[[Any], None]):
     def inner(self: Any):
         method(self)
 
-    setattr(
-        inner,
-        "__webcompy_component_class_property__",
-        "on_after_rendering",
-    )
+    inner.__webcompy_component_class_property__ = "on_after_rendering"
     return inner
 
 
@@ -43,5 +37,5 @@ def on_before_destroy(method: Callable[[Any], None]):
     def inner(self: Any):
         method(self)
 
-    setattr(inner, "__webcompy_component_class_property__", "on_before_destroy")
+    inner.__webcompy_component_class_property__ = "on_before_destroy"
     return inner

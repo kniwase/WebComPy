@@ -1,21 +1,23 @@
 from __future__ import annotations
+
 from typing import Any
-from webcompy.reactive._base import ReactiveBase
-from webcompy.elements.types._abstract import ElementAbstract
-from webcompy.elements.typealias._html_tag_names import HtmlTags
+
 from webcompy.elements.typealias._element_property import (
-    ElementChildren,
     AttrValue,
+    ElementChildren,
     EventHandler,
 )
+from webcompy.elements.typealias._html_tag_names import HtmlTags
+from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._text import TextElement
+from webcompy.reactive._base import ReactiveBase
 
 
 class ElementWithChildren(ElementAbstract):
     _tag_name: HtmlTags
-    _attrs: dict[str, AttrValue] = {}
-    _event_handlers: dict[str, EventHandler] = {}
-    _children: list[ElementAbstract] = []
+    _attrs: dict[str, AttrValue] = {}  # noqa: RUF012
+    _event_handlers: dict[str, EventHandler] = {}  # noqa: RUF012
+    _children: list[ElementAbstract] = []  # noqa: RUF012
     __parent: ElementWithChildren
 
     def __init__(self) -> None:
@@ -23,11 +25,11 @@ class ElementWithChildren(ElementAbstract):
         self._callback_ids: set[int] = set()
 
     @property
-    def _parent(self) -> "ElementWithChildren":
+    def _parent(self) -> ElementWithChildren:
         return self.__parent
 
     @_parent.setter
-    def _parent(self, parent: "ElementWithChildren"):  # type: ignore
+    def _parent(self, parent: ElementWithChildren):  # type: ignore
         self.__parent = parent
 
     def _render(self):
@@ -45,10 +47,7 @@ class ElementWithChildren(ElementAbstract):
         return attrs
 
     def _proc_attr(self, value: AttrValue):
-        if isinstance(value, ReactiveBase):
-            obj = value.value
-        else:
-            obj = value
+        obj = value.value if isinstance(value, ReactiveBase) else value
         if isinstance(obj, bool):
             return "" if obj else None
         elif isinstance(obj, int):
@@ -64,7 +63,7 @@ class ElementWithChildren(ElementAbstract):
 
     def _create_child_element(
         self,
-        parent: "ElementWithChildren",
+        parent: ElementWithChildren,
         node_idx: int | None,
         child: ElementChildren,
     ):
@@ -94,10 +93,7 @@ class ElementWithChildren(ElementAbstract):
                     child._re_index_children(True)
 
     def _append_child(self, child: ElementChildren):
-        if self._children_length == 0:
-            node_idx = 0
-        else:
-            node_idx = self._children[-1]._node_idx + self._children[-1]._node_count
+        node_idx = 0 if self._children_length == 0 else self._children[-1]._node_idx + self._children[-1]._node_count
         child_ele = self._create_child_element(self, node_idx, child)
         if child_ele is not None:
             self._children.append(child_ele)
@@ -126,9 +122,7 @@ class ElementWithChildren(ElementAbstract):
     def _get_belonging_components(self) -> tuple[Any, ...]:
         return self._parent._get_belonging_components()
 
-    def _render_html(
-        self, newline: bool = False, indent: int = 2, count: int = 0
-    ) -> str:
+    def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str:
         attrs: str = " ".join(
             f'{name}="{value}"' if value else name
             for name, value in self._get_processed_attrs().items()
@@ -138,11 +132,8 @@ class ElementWithChildren(ElementAbstract):
         indent_text = (" " * indent * count) if newline else ""
         return separator.join(
             (
-                f'{indent_text}<{self._tag_name}{" " + attrs if attrs else ""}>',
-                separator.join(
-                    child._render_html(newline, indent, count + 1)
-                    for child in self._children
-                ),
+                f"{indent_text}<{self._tag_name}{' ' + attrs if attrs else ''}>",
+                separator.join(child._render_html(newline, indent, count + 1) for child in self._children),
                 f"{indent_text}</{self._tag_name}>",
             )
         )

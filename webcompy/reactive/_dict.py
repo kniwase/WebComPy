@@ -1,14 +1,14 @@
-from typing import Any, Dict, TypeVar
-from webcompy.reactive._base import Reactive, ReactiveBase
+from typing import Any, TypeVar
 
+from webcompy.reactive._base import Reactive, ReactiveBase
 
 K = TypeVar("K")
 V = TypeVar("V")
 
 
-class ReactiveDict(Reactive[Dict[K, V]]):
-    def __init__(self, init_value: dict[K, V] = {}) -> None:
-        super().__init__(init_value)
+class ReactiveDict(Reactive[dict[K, V]]):
+    def __init__(self, init_value: dict[K, V] | None = None) -> None:
+        super().__init__(init_value if init_value is not None else {})
 
     @ReactiveBase._get_evnet
     def __getitem__(self, key: K):

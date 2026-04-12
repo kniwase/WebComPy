@@ -1,9 +1,11 @@
 from __future__ import annotations
-from typing import ClassVar, List, TypedDict, Union
-from webcompy.elements.types import Element, SwitchElement
+
+from typing import ClassVar, TypedDict
+
 from webcompy.components import ComponentGenerator, WebComPyComponentException
-from webcompy.router._router import Router
+from webcompy.elements.types import Element, SwitchElement
 from webcompy.router._context import RouterContext
+from webcompy.router._router import Router
 
 
 class RouterPageRequired(TypedDict):
@@ -12,18 +14,16 @@ class RouterPageRequired(TypedDict):
 
 class RouterPage(RouterPageRequired, total=False):
     component: ComponentGenerator[RouterContext]
-    children: List["RouterPage"]
+    children: list[RouterPage]
 
 
 class RouterView(Element):
-    _instance: ClassVar[Union["RouterView", None]] = None
-    _router: ClassVar[Union[Router, None]] = None
+    _instance: ClassVar[RouterView | None] = None
+    _router: ClassVar[Router | None] = None
 
     def __init__(self) -> None:
         if RouterView._instance:
-            raise WebComPyComponentException(
-                "Only one instance of 'RouterView' can exist."
-            )
+            raise WebComPyComponentException("Only one instance of 'RouterView' can exist.")
         else:
             RouterView._instance = self
         if RouterView._router is None:
@@ -32,11 +32,7 @@ class RouterView(Element):
         super().__init__(
             tag_name="div",
             attrs={"webcompy-routerview": True},
-            children=[
-                SwitchElement(
-                    RouterView._router.__cases__, RouterView._router.__default__
-                )
-            ],
+            children=[SwitchElement(RouterView._router.__cases__, RouterView._router.__default__)],
         )
 
     @staticmethod

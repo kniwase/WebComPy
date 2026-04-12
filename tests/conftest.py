@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 
 class FakeDOMNode:
@@ -88,9 +89,7 @@ class FakeDOMNode:
             self.__event_listeners[event] = [h for h in self.__event_listeners[event] if h is not handler]
 
     def __setattr__(self, name, value):
-        if name.startswith("_FakeDOMNode__"):
-            object.__setattr__(self, name, value)
-        elif name in (
+        if name.startswith("_FakeDOMNode__") or name in (
             "__webcompy_node__",
             "__webcompy_prerendered_node__",
         ):

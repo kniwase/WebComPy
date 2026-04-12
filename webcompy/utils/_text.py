@@ -1,8 +1,6 @@
 from functools import partial
 from itertools import dropwhile
 from re import compile as re_compile
-from typing import Any
-
 
 _is_blank_line = re_compile(r"^\s*$").match
 _get_head_blanks = re_compile(r"^\s+").match

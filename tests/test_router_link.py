@@ -1,10 +1,11 @@
-from webcompy.router._link import TypedRouterLink, RouterLink
-from webcompy.router._router import Router
-from webcompy.router._pages import RouterPage, WebComPyRouterException
-from webcompy.reactive import Reactive
-from webcompy.elements.types._element import Element
-from tests.conftest import FakeDOMNode, FakeDOMEvent
 from unittest.mock import MagicMock
+
+from tests.conftest import FakeDOMEvent
+from webcompy.elements.types._element import Element
+from webcompy.reactive import Reactive
+from webcompy.router._link import TypedRouterLink
+from webcompy.router._pages import RouterPage, WebComPyRouterException
+from webcompy.router._router import Router
 
 
 class FakeRootElement(Element):
@@ -90,7 +91,7 @@ class TestRouterLinkInit:
         TypedRouterLink._router = None
         try:
             TypedRouterLink(to="/home", text=["Home"])
-            assert False, "Should have raised"
+            raise AssertionError("Should have raised")
         except WebComPyRouterException:
             pass
 
@@ -104,7 +105,7 @@ class TestRouterLinkOnClickValidation:
         ev = FakeDOMEvent(href="/home")
         try:
             link._on_click(ev)
-            assert False, "Should have raised"
+            raise AssertionError("Should have raised")
         except (WebComPyRouterException, TypeError):
             pass
 
@@ -116,7 +117,7 @@ class TestRouterLinkOnClickValidation:
         ev = FakeDOMEvent(href="/home")
         try:
             link._on_click(ev)
-            assert False, "Should have raised"
+            raise AssertionError("Should have raised")
         except WebComPyRouterException:
             pass
 

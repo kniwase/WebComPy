@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from typing import Any, Literal
-from webcompy.reactive._base import ReactiveBase
+
 from webcompy._browser._modules import browser
+from webcompy.reactive._base import ReactiveBase
 
 
 class Location(ReactiveBase[str]):
@@ -47,18 +49,12 @@ class Location(ReactiveBase[str]):
 
     def _refresh_path(self, _: Any = None):
         if browser and self.__mode__ == "history":
-            path: str = (
-                browser.window.location.pathname + browser.window.location.search
-            )
+            path: str = browser.window.location.pathname + browser.window.location.search
         elif browser and self.__mode__ == "hash":
             path: str = browser.window.location.hash
         else:
             path: str = ""
-        if (
-            browser
-            and hasattr(browser.window.history, "state")
-            and browser.window.history.state
-        ):
+        if browser and hasattr(browser.window.history, "state") and browser.window.history.state:
             self._state = browser.window.history.state.to_dict()
         else:
             self._state = None

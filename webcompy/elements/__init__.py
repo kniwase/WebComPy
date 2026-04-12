@@ -1,31 +1,28 @@
-from webcompy.elements.types._refference import DomNodeRef
-from webcompy.elements import types
-from webcompy.elements import typealias
+from webcompy.elements.types._refference import DomNodeRef  # noqa: I001
+from webcompy.elements import html, typealias, types
+from webcompy.elements._dom_objs import DOMEvent, DOMNode
 from webcompy.elements.generators import (
+    break_line,
+    create_element,
     event,
     noderef,
-    create_element,
     repeat,
     switch,
     text,
-    break_line,
 )
-from webcompy.elements import html
-from webcompy.elements._dom_objs import DOMNode, DOMEvent
-
 
 __all__ = [
-    "types",
-    "typealias",
-    "html",
-    "event",
-    "noderef",
+    "DOMEvent",
+    "DOMNode",
+    "DomNodeRef",
+    "break_line",
     "create_element",
+    "event",
+    "html",
+    "noderef",
     "repeat",
     "switch",
     "text",
-    "break_line",
-    "DomNodeRef",
-    "DOMNode",
-    "DOMEvent",
+    "typealias",
+    "types",
 ]

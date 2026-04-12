@@ -1,9 +1,11 @@
 import base64
 from io import BytesIO
+
 import numpy as np
 from matplotlib import pyplot as plt
-from webcompy.elements import html, DOMEvent, DomNodeRef
-from webcompy.components import define_component, ComponentContext
+
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import DOMEvent, DomNodeRef, html
 from webcompy.reactive import Reactive, computed
 
 
@@ -43,9 +45,7 @@ def MatpoltlibSample(context: ComponentContext[None]):
         fig.canvas.draw()
         buffer = BytesIO()
         fig.savefig(buffer, format="png")
-        return "data:image/png;base64,{}".format(
-            base64.b64encode(buffer.getvalue()).decode()
-        )
+        return f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode()}"
 
     return html.DIV(
         {},
