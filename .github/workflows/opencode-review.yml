@@ -17,6 +17,7 @@ jobs:
           persist-credentials: false
       - uses: anomalyco/opencode/github@latest
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_COMPAT_API_KEY: ${{ secrets.OPENAI_COMPAT_API_KEY }}
           OPENAI_COMPAT_BASE_URL: ${{ secrets.OPENAI_COMPAT_BASE_URL }}
           OPENAI_COMPAT_MODEL: ${{ secrets.OPENAI_COMPAT_MODEL }}
