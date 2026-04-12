@@ -6,7 +6,7 @@ from webcompy.components._abstract import TypedComponentBase
 from webcompy.router._context import RouterContext, TypedRouterContext
 from webcompy.router._link import TypedRouterLink
 
-RoutedComponent: TypeAlias = TypedComponentBase(RouterContext)
+RoutedComponent = TypedComponentBase(RouterContext)  # type: ignore[assignment]
 
 
 ParamsType = TypeVar("ParamsType")
