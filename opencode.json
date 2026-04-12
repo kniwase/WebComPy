@@ -1,6 +1,25 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "instructions": ["AGENTS.md"],
+  "provider": {
+    "openai-compat": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "OpenAI Compatible",
+      "options": {
+        "baseURL": "{env:OPENAI_COMPAT_BASE_URL}",
+        "apiKey": "{env:OPENAI_COMPAT_API_KEY}"
+      },
+      "models": {
+        "{env:OPENAI_COMPAT_MODEL}": {
+          "name": "Review Model",
+          "limit": {
+            "context": 128000,
+            "output": 64000
+          }
+        }
+      }
+    }
+  },
   "watcher": {
     "ignore": ["docs/**", ".git/**", "__pycache__/**", "*.pyc"]
   },
