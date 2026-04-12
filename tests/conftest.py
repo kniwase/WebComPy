@@ -170,12 +170,64 @@ class FakeDocument:
         return self._elements.get(id_str)
 
 
+class FakeDOMEvent:
+    def __init__(self, href="/"):
+        self.preventDefault = MagicMock()
+        self.currentTarget = MagicMock()
+        self.currentTarget.getAttribute = MagicMock(return_value=href)
+
+
+class FakeFetchResponse:
+    def __init__(self, text="", headers=None, status=200, status_text="OK", ok=True):
+        self._text = text
+        self._headers = headers or {}
+        self._status = status
+        self._status_text = status_text
+        self._ok = ok
+
+    async def text(self):
+        return self._text
+
+    def to_py(self):
+        return self
+
+    @property
+    def headers(self):
+        return self._headers
+
+    @property
+    def status(self):
+        return self._status
+
+    @property
+    def statusText(self):
+        return self._status_text
+
+    @property
+    def ok(self):
+        return self._ok
+
+
+class FakeFormData:
+    def __init__(self):
+        self._data = {}
+
+    def set(self, key, value):
+        self._data[key] = value
+
+    @classmethod
+    def new(cls):
+        return cls()
+
+
 class FakeBrowserModule:
     def __init__(self):
         self.document = FakeDocument()
         self.window = FakeWindow()
         self.pyodide = FakePyodide()
         self.console = FakeConsole()
+        self.fetch = MagicMock()
+        self.FormData = FakeFormData
 
     def __getattr__(self, name):
         return MagicMock()
@@ -196,3 +248,21 @@ def fake_browser(monkeypatch):
 @pytest.fixture
 def fake_document(fake_browser):
     return fake_browser.document
+
+
+@pytest.fixture(autouse=True)
+def reset_router_singleton():
+    from webcompy.router._router import Router
+
+    Router._instance = None
+    yield
+    Router._instance = None
+
+
+@pytest.fixture(autouse=True)
+def reset_router_link():
+    from webcompy.router._link import TypedRouterLink
+
+    TypedRouterLink._router = None
+    yield
+    TypedRouterLink._router = None
