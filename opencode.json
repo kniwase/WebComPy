@@ -13,8 +13,8 @@
         "{env:OPENAI_COMPAT_MODEL}": {
           "name": "Review Model",
           "limit": {
-            "context": "{env:OPENAI_COMPAT_MODEL_LIMIT_CONTEXT}",
-            "output": "{env:OPENAI_COMPAT_MODEL_LIMIT_OUTPUT}"
+            "context": 128000,
+            "output": 64000
           }
         }
       }
