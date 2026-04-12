@@ -94,7 +94,9 @@ class HttpClient:
         # query
         send_url = url + "?" + urllib.parse.urlencode(query_params) if query_params is not None else url
         # header
-        req_headers = dict(tuple(map(urllib.parse.quote, map(str, it))) for it in (headers if headers else {}).items())
+        req_headers = {
+            urllib.parse.quote(str(k)): urllib.parse.quote(str(v)) for k, v in (headers if headers else {}).items()
+        }
         # body
         has_body = any(
             (

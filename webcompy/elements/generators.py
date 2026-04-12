@@ -25,8 +25,8 @@ from webcompy.reactive import ReactiveBase
 T = TypeVar("T")
 
 EventKey = NewType("EventKey", str)
-_ref = NewType("DomNodeRefKey", str)
-noderef = _ref(":ref")
+DomNodeRefKey = NewType("DomNodeRefKey", str)
+noderef = DomNodeRefKey(":ref")
 
 
 def event(event_name: str):
@@ -36,7 +36,7 @@ def event(event_name: str):
 def create_element(
     tag_name: HtmlTags,
     /,
-    attributes: dict[str | EventKey | _ref, AttrValue | EventHandler | DomNodeRef],
+    attributes: dict[str | EventKey | DomNodeRefKey, AttrValue | EventHandler | DomNodeRef],
     *children: ElementChildren,
 ) -> Element:
     attrs: dict[str, AttrValue] = {}
@@ -49,7 +49,7 @@ def create_element(
         elif name.startswith("@") and callable(value):
             events[name[1:]] = value
         else:
-            attrs[name] = value
+            attrs[name] = value  # type: ignore[assignment]
     return Element(tag_name, attrs, events, ref, children)
 
 

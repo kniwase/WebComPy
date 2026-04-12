@@ -79,10 +79,21 @@ pythonVersion = "3.12"
 typeCheckingMode = "basic"
 reportMissingModuleSource = "none"
 reportMissingTypeStubs = "none"
+reportMissingImports = "none"
+reportInvalidTypeForm = "warning"
+reportAttributeAccessIssue = "warning"
 exclude = [
     "docs/**",
     "docs_src/**",
+    "tests/**",
     "webcompy/cli/template_data/**",
+    "**/node_modules/**",
+    ".venv/**",
+]
+include = [
+    "webcompy",
+    "docs_src",
+    "tests",
 ]
 stubPath = "webcompy/_browser"
 

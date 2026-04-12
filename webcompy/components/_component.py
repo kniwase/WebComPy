@@ -16,7 +16,7 @@ ClassComponentDef: TypeAlias = type[ComponentAbstract[Any]]
 
 
 def _is_function_style_component_def(obj: Any) -> TypeGuard[FuncComponentDef]:
-    return callable(obj) and getattr(obj, "__webcompy_componet_definition__", None)
+    return bool(callable(obj) and getattr(obj, "__webcompy_componet_definition__", None))
 
 
 def _is_class_style_component_def(obj: Any) -> TypeGuard[ClassComponentDef]:
