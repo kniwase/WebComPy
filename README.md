@@ -13,10 +13,9 @@
 ```
 mkdir webcompy-project
 cd webcompy-project
-pip install webcompy
-python -m webcompy init
-python -m webcompy start --dev
-python -m webcompy generate  # for generating static site
+uv run python -m webcompy init
+uv run python -m webcompy start --dev
+uv run python -m webcompy generate  # for generating static site
 ```
 
 then access [http://127.0.0.1:8080/WebComPy/](http://127.0.0.1:8080/WebComPy/)
