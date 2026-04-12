@@ -1,33 +1,30 @@
 from __future__ import annotations
-from functools import partial
-from re import compile as re_compile, escape as re_escape
+
 import urllib.parse
+from collections.abc import Callable, Sequence
+from functools import partial
+from re import Match
+from re import compile as re_compile
+from re import escape as re_escape
 from typing import (
     Any,
-    Callable,
     ClassVar,
-    List,
     Literal,
-    Match,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
+    TypeAlias,
 )
-from typing_extensions import TypeAlias
-from webcompy.elements.typealias._element_property import ElementChildren
+
 from webcompy.components import ComponentGenerator, WebComPyComponentException
+from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._switch import NodeGenerator
 from webcompy.reactive._computed import computed_property
 from webcompy.router._change_event_hander import Location
+from webcompy.router._context import RouterContext, TypedRouterContext
 from webcompy.router._pages import RouterPage
-from webcompy.router._context import TypedRouterContext, RouterContext
 
-
-RouteType: TypeAlias = Tuple[
+RouteType: TypeAlias = tuple[
     str,
-    Callable[[str], Optional[Match[str]]],
-    List[str],
+    Callable[[str], Match[str] | None],
+    list[str],
     ComponentGenerator[RouterContext],
     RouterPage,
 ]
@@ -37,7 +34,7 @@ _get_path_params = re_compile(r"{([^\{\}/]+)}").findall
 
 
 class Router:
-    _instance: ClassVar[Union["Router", None]] = None
+    _instance: ClassVar[Router | None] = None
 
     _location: Location
     __mode__: Literal["hash", "history"]
@@ -56,9 +53,7 @@ class Router:
             Router._instance = self
         self.__mode__ = mode
         self.__base_url__ = base_url.strip().strip("/")
-        self._base_url_stripper = partial(
-            re_compile("^" + re_escape("/" + self.__base_url__)).sub, ""
-        )
+        self._base_url_stripper = partial(re_compile("^" + re_escape("/" + self.__base_url__)).sub, "")
         self._location = Location(self.__mode__, self.__base_url__)
         self.__routes__ = self._generate_routes(pages)
         self._default = default
@@ -85,15 +80,11 @@ class Router:
             return "Not Found"
 
     def _get_current_path(self):
-        decoded_href = tuple(
-            map(urllib.parse.unquote, self._location.value.split("?", 2))
-        )
-        pathname, search = (
-            (decoded_href[0], "") if len(decoded_href) == 1 else decoded_href
-        )
+        decoded_href = tuple(map(urllib.parse.unquote, self._location.value.split("?", 2)))
+        pathname, search = (decoded_href[0], "") if len(decoded_href) == 1 else decoded_href
         return pathname, search
 
-    def _get_elements_generator(self, args: RouteType) -> Tuple[Any, NodeGenerator]:
+    def _get_elements_generator(self, args: RouteType) -> tuple[Any, NodeGenerator]:
         match_targeted_routes, path_param_names, component = args[1:-1]
         current_path, search = self._get_current_path()
         if self.__mode__ == "history" and self.__base_url__:
@@ -115,26 +106,22 @@ class Router:
         pathname: str,
         search: str,
         match: Match[str] | None,
-        path_param_names: List[str],
+        path_param_names: list[str],
     ):
         query = (
             {
                 name: value
                 for name, value in (
-                    [it[0], ""] if len(it) == 1 else it
-                    for it in (q.split("=", 2) for q in search.split("&"))
+                    [it[0], ""] if len(it) == 1 else it for it in (q.split("=", 2) for q in search.split("&"))
                 )
                 if name and value
             }
             if search
             else {}
         )
-        if match:
-            path_params = (
-                dict(zip(path_param_names, match.groups())) if path_param_names else {}
-            )
-        else:
-            path_params = {}
+        path_params = (
+            (dict(zip(path_param_names, match.groups(), strict=True)) if path_param_names else {}) if match else {}
+        )
         return TypedRouterContext.__create_instance__(
             path=pathname,
             query_params=query,
@@ -159,6 +146,7 @@ class Router:
                 ),
                 map(lambda page: page["component"], pages),
                 pages,
+                strict=True,
             )
         ]
 

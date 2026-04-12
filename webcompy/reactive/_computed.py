@@ -1,7 +1,8 @@
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
+
 from webcompy.reactive._base import ReactiveBase
 from webcompy.reactive._container import ReactiveReceivable
-
 
 V = TypeVar("V")
 
@@ -16,9 +17,7 @@ class Computed(ReactiveBase[V]):
     ) -> None:
         self.__calc = func
         init_value, self._dependencies = self._store.detect_dependency(self.__calc)
-        self._dependency_callback_ids = [
-            reactive.on_after_updating(self._compute) for reactive in self._dependencies
-        ]
+        self._dependency_callback_ids = [reactive.on_after_updating(self._compute) for reactive in self._dependencies]
         super().__init__(init_value)
 
     @property

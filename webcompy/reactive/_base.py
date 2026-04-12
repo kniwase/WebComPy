@@ -1,37 +1,36 @@
 from __future__ import annotations
+
 from abc import abstractmethod
+from collections.abc import Callable
 from functools import wraps
 from typing import (
     Any,
-    Callable,
     ClassVar,
     Generic,
-    Set,
-    Type,
     TypeVar,
     cast,
     final,
 )
-from typing_extensions import ParamSpec
 
+from typing_extensions import ParamSpec
 
 V = TypeVar("V")
 A = ParamSpec("A")
 T = TypeVar("T")
 
 
-def _instantiate(cls: Type[T]) -> T:
+def _instantiate(cls: type[T]) -> T:
     return cls()
 
 
 @_instantiate
 class ReactiveStore:
-    __instances: dict[int, "ReactiveBase[Any]"]
+    __instances: dict[int, ReactiveBase[Any]]
     __on_before_updating: dict[int, Callable[[Any], Any]]
     __on_after_updating: dict[int, Callable[[Any], Any]]
-    __callback_ids: dict[int, Set[int]]
+    __callback_ids: dict[int, set[int]]
     __latest_callback_id: int
-    __dependency: list["ReactiveBase[Any]"] | None
+    __dependency: list[ReactiveBase[Any]] | None
 
     def __init__(self) -> None:
         self.__instances = {}
@@ -42,47 +41,41 @@ class ReactiveStore:
         self.__latest_callback_id = 0
         self.__dependency = None
 
-    def add_reactive_instance(self, reactive: "ReactiveBase[Any]"):
+    def add_reactive_instance(self, reactive: ReactiveBase[Any]):
         self.__latest_instance_id += 1
         reactive.__reactive_id__ = self.__latest_instance_id
         self.__instances[reactive.__reactive_id__] = reactive
         self.__callback_ids[reactive.__reactive_id__] = set()
 
-    def add_on_after_updating(
-        self, reactive: "ReactiveBase[Any]", func: Callable[[Any], Any]
-    ):
+    def add_on_after_updating(self, reactive: ReactiveBase[Any], func: Callable[[Any], Any]):
         self.__latest_callback_id += 1
         callback_id = self.__latest_callback_id
         self.__on_after_updating[callback_id] = func
         self.__callback_ids[reactive.__reactive_id__].add(callback_id)
         return callback_id
 
-    def add_on_before_updating(
-        self, reactive: "ReactiveBase[Any]", func: Callable[[Any], Any]
-    ):
+    def add_on_before_updating(self, reactive: ReactiveBase[Any], func: Callable[[Any], Any]):
         self.__latest_callback_id += 1
         callback_id = self.__latest_callback_id
         self.__on_before_updating[callback_id] = func
         self.__callback_ids[reactive.__reactive_id__].add(callback_id)
         return callback_id
 
-    def callback_after_updating(self, instance: "ReactiveBase[Any]", value: Any):
+    def callback_after_updating(self, instance: ReactiveBase[Any], value: Any):
         for idx, func in tuple(self.__on_after_updating.items()):
             if idx in self.__callback_ids[instance.__reactive_id__]:
                 func(value)
 
-    def callback_before_updating(self, instance: "ReactiveBase[Any]", value: Any):
+    def callback_before_updating(self, instance: ReactiveBase[Any], value: Any):
         for idx, func in tuple(self.__on_before_updating.items()):
             if idx in self.__callback_ids[instance.__reactive_id__]:
                 func(value)
 
-    def resister(self, reactive: "ReactiveBase[Any]"):
+    def resister(self, reactive: ReactiveBase[Any]):
         if self.__dependency is not None:
             self.__dependency.append(reactive)
 
-    def detect_dependency(
-        self, func: Callable[[], V]
-    ) -> tuple[V, list["ReactiveBase[Any]"]]:
+    def detect_dependency(self, func: Callable[[], V]) -> tuple[V, list[ReactiveBase[Any]]]:
         self.__dependency = []
         value = func()
         dependency = self.__dependency
@@ -91,8 +84,7 @@ class ReactiveStore:
         return value, [
             reactive
             for reactive in dependency
-            if reactive.__reactive_id__ not in uniq_ids
-            and not uniq_ids.add(reactive.__reactive_id__)
+            if reactive.__reactive_id__ not in uniq_ids and not uniq_ids.add(reactive.__reactive_id__)
         ]
 
     def remove_callback(self, callback_id: int):
@@ -121,8 +113,7 @@ class ReactiveBase(Generic[V]):
 
     @property
     @abstractmethod
-    def value(self) -> V:
-        ...
+    def value(self) -> V: ...
 
     @final
     def on_after_updating(self, func: Callable[[V], Any]):
@@ -137,7 +128,7 @@ class ReactiveBase(Generic[V]):
     def _change_event(reactive_obj_method: Callable[A, V]) -> Callable[A, V]:
         @wraps(reactive_obj_method)
         def method(*args: A.args, **kwargs: A.kwargs) -> V:
-            instance = cast(ReactiveBase[V], args[0])
+            instance = cast("ReactiveBase[V]", args[0])
             ReactiveBase._store.callback_before_updating(instance, instance._value)
             ret = reactive_obj_method(*args, **kwargs)
             ReactiveBase._store.callback_after_updating(instance, ret)
@@ -150,7 +141,7 @@ class ReactiveBase(Generic[V]):
     def _get_evnet(reactive_obj_method: Callable[A, V]) -> Callable[A, V]:
         @wraps(reactive_obj_method)
         def method(*args: A.args, **kwargs: A.kwargs) -> V:
-            ReactiveBase._store.resister(cast(ReactiveBase[V], args[0]))
+            ReactiveBase._store.resister(cast("ReactiveBase[V]", args[0]))
             return reactive_obj_method(*args, **kwargs)
 
         return method

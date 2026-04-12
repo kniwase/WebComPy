@@ -1,19 +1,22 @@
 from __future__ import annotations
+
+from collections.abc import Callable, Iterable
 from inspect import iscoroutinefunction
-from typing import Any, Callable, Iterable, cast
-from webcompy.reactive._base import ReactiveBase
+from typing import Any, cast
+
 from webcompy._browser._modules import browser
-from webcompy.elements.types._base import ElementWithChildren
-from webcompy.elements.typealias._html_tag_names import HtmlTags
+from webcompy.aio import resolve_async
+from webcompy.elements._dom_objs import DOMEvent, DOMNode
 from webcompy.elements.typealias._element_property import (
-    ElementChildren,
     AttrValue,
+    ElementChildren,
     EventHandler,
 )
+from webcompy.elements.typealias._html_tag_names import HtmlTags
+from webcompy.elements.types._base import ElementWithChildren
 from webcompy.elements.types._refference import DomNodeRef
-from webcompy.elements._dom_objs import DOMNode, DOMEvent
-from webcompy.aio import resolve_async
 from webcompy.exception import WebComPyException
+from webcompy.reactive._base import ReactiveBase
 
 
 def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent], Any]:
@@ -50,25 +53,21 @@ class ElementBase(ElementWithChildren):
                         if value is None and name in tuple(node.getAttributeNames())
                     )
                     attr_names_to_remove.update(
-                        name
-                        for name in tuple(node.getAttributeNames())
-                        if name not in self._get_processed_attrs().keys()
+                        name for name in tuple(node.getAttributeNames()) if name not in self._get_processed_attrs()
                     )
                     for name in attr_names_to_remove:
                         node.removeAttribute(name)
                 else:
                     existing_node.remove()
             if not node:
-                node = cast(DOMNode, browser.document.createElement(self._tag_name))
+                node = cast("DOMNode", browser.document.createElement(self._tag_name))
             node.__webcompy_node__ = True
             for name, value in self._get_processed_attrs().items():
                 if value is not None:
                     node.setAttribute(name, value)
             for name, value in self._attrs.items():
                 if isinstance(value, ReactiveBase):
-                    self._set_callback_id(
-                        value.on_after_updating(self._generate_attr_updater(name))
-                    )
+                    self._set_callback_id(value.on_after_updating(self._generate_attr_updater(name)))
             self._event_handlers_added = {}
             for name, func in self._event_handlers.items():
                 event_handler = _generate_event_handler(func)
@@ -114,12 +113,12 @@ class Element(ElementBase):
     def __init__(
         self,
         tag_name: HtmlTags,
-        attrs: dict[str, AttrValue] = {},
-        events: dict[str, EventHandler] = {},
+        attrs: dict[str, AttrValue] | None = None,
+        events: dict[str, EventHandler] | None = None,
         ref: DomNodeRef | None = None,
-        children: Iterable[ElementChildren] = [],
+        children: Iterable[ElementChildren] | None = None,
     ) -> None:
-        self._tag_name = cast(HtmlTags, tag_name.lower())
+        self._tag_name = cast("HtmlTags", tag_name.lower())
         self._attrs = attrs if attrs else dict()
         self._event_handlers = events if events else dict()
         self._ref = ref

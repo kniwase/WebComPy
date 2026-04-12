@@ -1,4 +1,5 @@
 from typing import Any, Protocol
+
 # from webcompy.elements._dom_objs import DOMNode, DOMEvent
 
 class BrowserModule(Protocol):

@@ -1,9 +1,9 @@
-from webcompy.elements import html
 from webcompy.components import (
-    component_class,
     NonPropsComponentBase,
+    component_class,
     component_template,
 )
+from webcompy.elements import html
 from webcompy.router import RouterLink
 
 

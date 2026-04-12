@@ -1,17 +1,18 @@
-from functools import partial
 import os
 import pathlib
 import shutil
+from functools import partial
+
 from webcompy.cli._argparser import get_params
-from webcompy.cli._pyscript_wheel import make_webcompy_app_package
 from webcompy.cli._html import generate_html
+from webcompy.cli._pyscript_wheel import make_webcompy_app_package
+from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
+    generate_app_version,
     get_app,
     get_config,
     get_webcompy_packge_dir,
-    generate_app_version,
 )
-from webcompy.cli._static_files import get_static_files
 
 
 def generate_static_site():
@@ -54,10 +55,7 @@ def generate_static_site():
     html_generator = partial(generate_html, config, False, True, app_version)
     if app.__component__.router_mode == "history" and app.__component__.routes:
         for p, _, _, _, page in app.__component__.routes:
-            if path_params := page.get("path_params"):
-                paths = {p.format(**params) for params in path_params}
-            else:
-                paths = {p}
+            paths = {p.format(**params) for params in path_params} if (path_params := page.get("path_params")) else {p}
             for path in paths:
                 if not (path_dir := dist_dir / path).exists():
                     os.makedirs(path_dir)

@@ -1,17 +1,18 @@
 from __future__ import annotations
-from typing import Any, Callable, ClassVar, Type
-from typing_extensions import TypeAlias, TypeGuard
+
+from collections.abc import Callable
+from typing import Any, ClassVar, TypeAlias, TypeGuard
 from uuid import UUID, uuid4
-from webcompy.elements.types._element import ElementBase, Element
-from webcompy.components._libs import Context, ComponentProperty, generate_id
+
 from webcompy.components._abstract import ComponentAbstract
+from webcompy.components._libs import ComponentProperty, Context, generate_id
 from webcompy.elements.typealias._element_property import ElementChildren
+from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
 from webcompy.reactive import ReactiveDict, computed_property
 
-
 FuncComponentDef: TypeAlias = Callable[[Context[Any]], ElementChildren]
-ClassComponentDef: TypeAlias = Type[ComponentAbstract[Any]]
+ClassComponentDef: TypeAlias = type[ComponentAbstract[Any]]
 
 
 def _is_function_style_component_def(obj: Any) -> TypeGuard[FuncComponentDef]:
@@ -33,11 +34,7 @@ class HeadPropsStore:
 
     @computed_property
     def head_meta(self):
-        return {
-            key: attributes
-            for meta in self.head_metas.values()
-            for key, attributes in meta.items()
-        }
+        return {key: attributes for meta in self.head_metas.values() for key, attributes in meta.items()}
 
 
 class Component(ElementBase):
@@ -102,9 +99,7 @@ class Component(ElementBase):
     def __init_component(self, property: ComponentProperty):
         node = property["template"]
         if not isinstance(node, Element):
-            raise WebComPyException(
-                "Root Node of Component must be instance of 'Element'"
-            )
+            raise WebComPyException("Root Node of Component must be instance of 'Element'")
         self._tag_name = node._tag_name
         self._attrs = {
             **node._attrs,
@@ -132,7 +127,7 @@ class Component(ElementBase):
     def _get_belonging_component(self):
         return self._property["component_id"]
 
-    def _get_belonging_components(self) -> tuple["Component", ...]:
+    def _get_belonging_components(self) -> tuple[Component, ...]:
         return (*self._parent._get_belonging_components(), self)
 
     def _set_title(self, title: str):

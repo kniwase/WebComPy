@@ -1,26 +1,26 @@
 from __future__ import annotations
+
 import hashlib
+from collections.abc import Callable
+from re import compile as re_compile
 from typing import (
     Any,
-    Callable,
     ClassVar,
     Final,
     Generic,
     NoReturn,
-    Type,
+    TypeAlias,
     TypeVar,
     final,
     overload,
 )
-from typing_extensions import TypeAlias
-from re import compile as re_compile
+
 from webcompy.components._libs import (
     ClassStyleComponentContenxt,
     ComponentProperty,
     WebComPyComponentException,
 )
 from webcompy.reactive._container import ReactiveReceivable
-
 
 _camel_to_kebab_pattern: Final = re_compile("((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))")
 _combinator_pattern: Final = re_compile(r"\s*,\s*|\s*>\s*|\s*\+\s*|\s*~[^=]\s*|\s* \s*")
@@ -42,22 +42,16 @@ class ComponentAbstract(ReactiveReceivable, Generic[PropsType]):
 
     @final
     def __new__(cls) -> NoReturn:
-        raise WebComPyComponentException(
-            "Component class cannot generate an instance by constructor"
-        )
+        raise WebComPyComponentException("Component class cannot generate an instance by constructor")
 
     @final
     def __init_subclass__(cls) -> None:
-        cls.__webcompy_component_id__ = hashlib.md5(
-            cls.__get_name__().encode()
-        ).hexdigest()
+        cls.__webcompy_component_id__ = hashlib.md5(cls.__get_name__().encode()).hexdigest()
         return super().__init_subclass__()
 
     @final
     @classmethod
-    def __get_component_instance__(
-        cls, context: ClassStyleComponentContenxt[PropsType]
-    ):
+    def __get_component_instance__(cls, context: ClassStyleComponentContenxt[PropsType]):
         component = super().__new__(cls)
         component.__context = context
         component.__init__()
@@ -96,21 +90,19 @@ NonPropsComponentBase: TypeAlias = ComponentAbstract[None]
 
 @overload
 def TypedComponentBase(
-    props_type: Type[PropsType],
-) -> Type[ComponentAbstract[PropsType]]:
-    ...
+    props_type: type[PropsType],
+) -> type[ComponentAbstract[PropsType]]: ...
 
 
 @overload
 def TypedComponentBase(
     props_type: None,
-) -> Type[NonPropsComponentBase]:
-    ...
+) -> type[NonPropsComponentBase]: ...
 
 
 def TypedComponentBase(
-    props_type: Type[PropsType] | None,
-) -> Type[ComponentAbstract[PropsType]] | Type[NonPropsComponentBase]:
+    props_type: type[PropsType] | None,
+) -> type[ComponentAbstract[PropsType]] | type[NonPropsComponentBase]:
     if props_type is None:
         return NonPropsComponentBase
     else:

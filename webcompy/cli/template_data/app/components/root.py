@@ -1,6 +1,7 @@
-from webcompy.elements import html
 from webcompy.components import ComponentContext, define_component
+from webcompy.elements import html
 from webcompy.router import RouterView
+
 from .navigation import Navigation
 
 

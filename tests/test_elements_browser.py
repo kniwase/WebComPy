@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import pytest
-from webcompy.exception import WebComPyException
-from webcompy.elements.types._text import TextElement, NewLine
+
+from tests.conftest import FakeDOMNode
 from webcompy.elements.types._element import Element, _generate_event_handler
 from webcompy.elements.types._refference import DomNodeRef
-from webcompy.elements.types._abstract import ElementAbstract
-from tests.conftest import FakeDOMNode
+from webcompy.elements.types._text import NewLine, TextElement
+from webcompy.exception import WebComPyException
 
 
 class FakeRootElement(Element):
@@ -140,7 +140,7 @@ class TestElementNoBrowser:
         el._node_idx = 0
         try:
             el._init_node()
-            assert False, "Should have raised"
+            raise AssertionError("Should have raised")
         except WebComPyException as e:
             assert "Not in Browser" in str(e)
 
@@ -151,7 +151,7 @@ class TestElementNoBrowser:
         text_el._node_idx = 0
         try:
             text_el._init_node()
-            assert False, "Should have raised"
+            raise AssertionError("Should have raised")
         except WebComPyException:
             pass
 
@@ -162,7 +162,7 @@ class TestElementNoBrowser:
         br._node_idx = 0
         try:
             br._init_node()
-            assert False, "Should have raised"
+            raise AssertionError("Should have raised")
         except WebComPyException:
             pass
 

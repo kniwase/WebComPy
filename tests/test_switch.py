@@ -1,6 +1,6 @@
 from webcompy.elements.types._switch import SwitchElement
-from webcompy.reactive import Reactive
 from webcompy.elements.types._text import TextElement
+from webcompy.reactive import Reactive
 
 
 class TestSelectGenerator:
@@ -51,14 +51,14 @@ class TestSelectGenerator:
     def test_reactive_cases_list(self):
         r = Reactive([("hello", lambda: "ok")])
         sw = SwitchElement(r, None)
-        idx, gen = sw._select_generator()
+        idx, _gen = sw._select_generator()
         assert idx == 0
 
 
 class TestOnSetParent:
     def test_on_set_parent_initializes_children(self):
-        from webcompy.elements.types._element import Element
         from tests.conftest import FakeDOMNode
+        from webcompy.elements.types._element import Element
 
         class FakeRootElement(Element):
             _get_belonging_component = lambda self: ""
@@ -76,8 +76,8 @@ class TestOnSetParent:
         assert sw._rendered_idx == 0
 
     def test_on_set_parent_registers_reactive_callback(self):
-        from webcompy.elements.types._element import Element
         from tests.conftest import FakeDOMNode
+        from webcompy.elements.types._element import Element
 
         class FakeRootElement(Element):
             _get_belonging_component = lambda self: ""

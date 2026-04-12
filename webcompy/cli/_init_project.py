@@ -2,6 +2,7 @@ import os
 import pathlib
 import shutil
 import sys
+
 from webcompy.cli._utils import get_webcompy_packge_dir
 
 
@@ -16,9 +17,7 @@ def _get_files(path: pathlib.Path, suffix: str) -> list[str]:
 
 
 def init_project():
-    template_data_dir = (
-        pathlib.Path(get_webcompy_packge_dir()) / "cli" / "template_data"
-    )
+    template_data_dir = pathlib.Path(get_webcompy_packge_dir()) / "cli" / "template_data"
     cwd = pathlib.Path().cwd().absolute()
     filepath_pairs = [
         (

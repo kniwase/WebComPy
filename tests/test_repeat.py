@@ -1,8 +1,8 @@
-from webcompy.elements.types._repeat import RepeatElement
-from webcompy.elements.types._element import Element
-from webcompy.elements.types._text import TextElement, NewLine
-from webcompy.reactive import ReactiveList
 from tests.conftest import FakeDOMNode
+from webcompy.elements.types._element import Element
+from webcompy.elements.types._repeat import RepeatElement
+from webcompy.elements.types._text import TextElement
+from webcompy.reactive import ReactiveList
 
 
 class FakeRootElement(Element):
@@ -21,7 +21,7 @@ class TestRepeatElementValidation:
     def test_non_reactive_sequence_raises(self):
         try:
             RepeatElement([1, 2, 3], lambda x: TextElement(str(x)))
-            assert False, "Should have raised ValueError"
+            raise AssertionError("Should have raised ValueError")
         except ValueError as e:
             assert "Reactive" in str(e)
 

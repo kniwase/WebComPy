@@ -1,6 +1,6 @@
 from functools import partial
-from webcompy.elements.generators import create_element, text, break_line
 
+from webcompy.elements.generators import break_line, create_element, text
 
 TEXT = text
 BR = lambda: break_line()
@@ -42,7 +42,7 @@ CODE = partial(create_element, "code")
 DATA = partial(create_element, "data")
 DFN = partial(create_element, "dfn")
 EM = partial(create_element, "em")
-I = partial(create_element, "i")
+I = partial(create_element, "i")  # noqa: E741
 KBD = partial(create_element, "kbd")
 MARK = partial(create_element, "mark")
 Q = partial(create_element, "q")

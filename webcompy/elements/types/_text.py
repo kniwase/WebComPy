@@ -1,10 +1,12 @@
 from __future__ import annotations
-from typing import Any, Union, cast
-from webcompy.reactive._base import ReactiveBase
+
+from typing import Any, cast
+
 from webcompy._browser._modules import browser
-from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements._dom_objs import DOMNode
+from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.exception import WebComPyException
+from webcompy.reactive._base import ReactiveBase
 
 
 class NewLine(ElementAbstract):
@@ -25,15 +27,13 @@ class NewLine(ElementAbstract):
                 else:
                     existing_node.remove()
             if not node:
-                node = cast(DOMNode, browser.document.createElement("br"))
+                node = cast("DOMNode", browser.document.createElement("br"))
             node.__webcompy_node__ = True
             return node
         else:
             raise WebComPyException("Not in Browser environment.")
 
-    def _render_html(
-        self, newline: bool = False, indent: int = 2, count: int = 0
-    ) -> str:
+    def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str:
         if newline:
             return (" " * indent * count) + "<br>"
         else:
@@ -41,7 +41,7 @@ class NewLine(ElementAbstract):
 
 
 class TextElement(ElementAbstract):
-    def __init__(self, text: Union[str, ReactiveBase[Any]]) -> None:
+    def __init__(self, text: str | ReactiveBase[Any]) -> None:
         self._text = text
         super().__init__()
         if isinstance(self._text, ReactiveBase):
@@ -58,12 +58,12 @@ class TextElement(ElementAbstract):
     def _init_node(self) -> DOMNode:
         if browser:
             existing_node = self._get_existing_node()
-            if existing_node:
-                if (
-                    getattr(existing_node, "__webcompy_prerendered_node__", False)
-                    and existing_node.nodeName.lower() == "#text"
-                ):
-                    existing_node.remove()
+            if (
+                existing_node
+                and getattr(existing_node, "__webcompy_prerendered_node__", False)
+                and existing_node.nodeName.lower() == "#text"
+            ):
+                existing_node.remove()
             node = browser.document.createTextNode(self._get_text())
             node.__webcompy_node__ = True
             return node
@@ -78,9 +78,7 @@ class TextElement(ElementAbstract):
         else:
             self._text = new_text
 
-    def _render_html(
-        self, newline: bool = False, indent: int = 2, count: int = 0
-    ) -> str:
+    def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str:
         if newline:
             return (" " * indent * count) + self._get_text()
         else:

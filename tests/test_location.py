@@ -1,5 +1,4 @@
 from webcompy.router._change_event_hander import Location
-from webcompy.reactive import Reactive
 
 
 class TestLocationInit:
@@ -57,10 +56,10 @@ class TestLocationRefreshPath:
         assert loc._value == ""
 
     def test_refresh_path_with_browser(self):
+
+        import webcompy.router._change_event_hander as cem
         from tests.conftest import FakeBrowserModule
         from webcompy._browser import _modules
-        import webcompy.router._change_event_hander as cem
-        from unittest.mock import MagicMock
 
         fake = FakeBrowserModule()
         old_mod = _modules.browser
@@ -78,9 +77,9 @@ class TestLocationRefreshPath:
             cem.browser = old_cem
 
     def test_refresh_path_hash_mode_with_browser(self):
+        import webcompy.router._change_event_hander as cem
         from tests.conftest import FakeBrowserModule
         from webcompy._browser import _modules
-        import webcompy.router._change_event_hander as cem
 
         fake = FakeBrowserModule()
         old_mod = _modules.browser

@@ -1,20 +1,21 @@
 from __future__ import annotations
+
 import hashlib
 import logging
+from collections.abc import Callable
 from typing import (
     Any,
-    Callable,
-    Dict,
     Generic,
     Literal,
     Protocol,
-    TypeVar,
+    TypeAlias,
     TypedDict,
+    TypeVar,
     final,
 )
-from typing_extensions import TypeAlias
-from webcompy.exception import WebComPyException
+
 from webcompy.elements.typealias._element_property import ElementChildren
+from webcompy.exception import WebComPyException
 
 
 class WebComPyComponentException(WebComPyException):
@@ -47,7 +48,7 @@ class Context(Generic[PropsType]):
     def __init__(
         self,
         props: PropsType,
-        slots: Dict[str, NodeGenerator],
+        slots: dict[str, NodeGenerator],
         component_name: str,
         title_getter: Callable[[], str],
         meta_getter: Callable[[], dict[str, dict[str, str]]],
@@ -79,9 +80,7 @@ class Context(Generic[PropsType]):
         elif fallback is not None:
             return fallback()
         else:
-            logging.warning(
-                f"Componet '{self._component_name}' is not given a slot named '{name}'"
-            )
+            logging.warning(f"Componet '{self._component_name}' is not given a slot named '{name}'")
             return None
 
     def on_before_rendering(self, func: Callable[[], Any]) -> None:
@@ -118,61 +117,46 @@ class Context(Generic[PropsType]):
 
 class ComponentContext(Protocol[PropsType]):
     @property
-    def props(self) -> PropsType:
-        ...
+    def props(self) -> PropsType: ...
 
     def slots(
         self,
         name: str,
         fallback: NodeGenerator | None = None,
-    ) -> ElementChildren:
-        ...
+    ) -> ElementChildren: ...
 
-    def on_before_rendering(self, func: Callable[[], Any]) -> None:
-        ...
+    def on_before_rendering(self, func: Callable[[], Any]) -> None: ...
 
-    def on_after_rendering(self, func: Callable[[], Any]) -> None:
-        ...
+    def on_after_rendering(self, func: Callable[[], Any]) -> None: ...
 
-    def on_before_destroy(self, func: Callable[[], Any]) -> None:
-        ...
+    def on_before_destroy(self, func: Callable[[], Any]) -> None: ...
 
-    def get_title(self) -> str:
-        ...
+    def get_title(self) -> str: ...
 
-    def get_meta(self) -> dict[str, dict[str, str]]:
-        ...
+    def get_meta(self) -> dict[str, dict[str, str]]: ...
 
-    def set_title(self, title: str) -> None:
-        ...
+    def set_title(self, title: str) -> None: ...
 
-    def set_meta(self, key: str, attributes: dict[str, str]) -> None:
-        ...
+    def set_meta(self, key: str, attributes: dict[str, str]) -> None: ...
 
 
 class ClassStyleComponentContenxt(Protocol[PropsType]):
     @property
-    def props(self) -> PropsType:
-        ...
+    def props(self) -> PropsType: ...
 
     def slots(
         self,
         name: str,
         fallback: NodeGenerator | None = None,
-    ) -> ElementChildren:
-        ...
+    ) -> ElementChildren: ...
 
-    def get_title(self) -> str:
-        ...
+    def get_title(self) -> str: ...
 
-    def get_meta(self) -> dict[str, dict[str, str]]:
-        ...
+    def get_meta(self) -> dict[str, dict[str, str]]: ...
 
-    def set_title(self, title: str) -> None:
-        ...
+    def set_title(self, title: str) -> None: ...
 
-    def set_meta(self, key: str, attributes: dict[str, str]) -> None:
-        ...
+    def set_meta(self, key: str, attributes: dict[str, str]) -> None: ...
 
 
 @final

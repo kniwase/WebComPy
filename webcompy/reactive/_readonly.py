@@ -1,7 +1,7 @@
 from typing import NoReturn, TypeVar, final
+
 from webcompy.reactive._base import ReactiveBase
 from webcompy.reactive._computed import Computed
-
 
 V = TypeVar("V")
 
@@ -9,9 +9,7 @@ V = TypeVar("V")
 class ReadonlyReactive(Computed[V]):
     @final
     def __init__(self) -> NoReturn:
-        raise NotImplementedError(
-            "ReadonlyReactive cannot generate an instance by constructor"
-        )
+        raise NotImplementedError("ReadonlyReactive cannot generate an instance by constructor")
 
     @classmethod
     def __create_instance__(cls, reactive: ReactiveBase[V]):

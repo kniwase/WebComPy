@@ -1,17 +1,17 @@
 from __future__ import annotations
-from typing import Optional
-from typing_extensions import TypeAlias
-from webcompy.elements.types import Element, RepeatElement
-from webcompy.elements.typealias import ElementChildren
-from webcompy.components._component import Component
-from webcompy.reactive._computed import computed
+
+from typing import TypeAlias
+
+from webcompy._version import __version__ as webcompy_version
 from webcompy.app._app import WebComPyApp
 from webcompy.cli._config import WebComPyConfig
+from webcompy.components._component import Component
+from webcompy.elements.typealias import ElementChildren
+from webcompy.elements.types import Element, RepeatElement
+from webcompy.reactive._computed import computed
 from webcompy.utils import strip_multiline_text
-from webcompy._version import __version__ as webcompy_version
 
-
-Scripts: TypeAlias = list[tuple[dict[str, str], Optional[str]]]
+Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]
 
 
 class _HtmlElement(Element):
@@ -52,9 +52,7 @@ class _Loadscreen(_HtmlElement):
                     + "".join(
                         name
                         + (
-                            "{{{}}}".format(
-                                "".join(f"{n}:{v};" for n, v in value.items())
-                            )
+                            "{{{}}}".format("".join(f"{n}:{v};" for n, v in value.items()))
                             if isinstance(value, dict)
                             else f":{value};"
                         )
@@ -212,9 +210,7 @@ def generate_html(
                 {},
                 _HtmlElement("title", {}, app.__component__.head["title"]),
                 RepeatElement(
-                    sequence=computed(
-                        lambda: list(app.__component__.head["meta"].value.values())
-                    ),
+                    sequence=computed(lambda: list(app.__component__.head["meta"].value.values())),
                     template=lambda attrs: _HtmlElement("meta", attrs),
                 ),
                 _HtmlElement("base", {"href": config.base}),
@@ -229,10 +225,7 @@ def generate_html(
                         )
                     ),
                 ),
-                *[
-                    _HtmlElement("link", attrs)
-                    for attrs in app.__component__.head.get("link", [])
-                ],
+                *[_HtmlElement("link", attrs) for attrs in app.__component__.head.get("link", [])],
                 *_load_scripts(scripts_head),
             ),
             _HtmlElement(

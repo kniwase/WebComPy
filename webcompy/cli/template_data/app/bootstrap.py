@@ -1,6 +1,7 @@
 from webcompy.app import WebComPyApp
-from .router import router
+
 from .components.root import Root
+from .router import router
 
 app = WebComPyApp(
     root_component=Root,

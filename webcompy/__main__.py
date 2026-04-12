@@ -1,7 +1,7 @@
 from webcompy.cli._argparser import get_params
-from webcompy.cli._server import run_server
 from webcompy.cli._generate import generate_static_site
 from webcompy.cli._init_project import init_project
+from webcompy.cli._server import run_server
 
 
 def main():

@@ -1,14 +1,18 @@
 from __future__ import annotations
-from datetime import datetime
-from importlib import import_module
+
 import os
 import pathlib
 import sys
-from typing import Callable, TypeVar
+from collections.abc import Callable
+from datetime import datetime
+from importlib import import_module
+from typing import TypeVar
+
 from typing_extensions import ParamSpec
+
+from webcompy.app._app import WebComPyApp
 from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._exception import WebComPyCliException
-from webcompy.app._app import WebComPyApp
 
 
 def get_config() -> WebComPyConfig:
@@ -17,20 +21,16 @@ def get_config() -> WebComPyConfig:
     except ModuleNotFoundError:
         raise WebComPyCliException(
             "No python module named 'webcompy_config'",
-        )
+        ) from None
     configs = tuple(
-        it
-        for name in dir(webcompy_config)
-        if isinstance(it := getattr(webcompy_config, name), WebComPyConfig)
+        it for name in dir(webcompy_config) if isinstance(it := getattr(webcompy_config, name), WebComPyConfig)
     )
     if len(configs) == 0:
         raise WebComPyCliException(
             "No WebComPyConfig instance in 'webcompy_config.py'",
         )
     elif len(configs) == 0:
-        raise WebComPyCliException(
-            "Multiple WebComPyConfig instances in 'webcompy_config.py'"
-        )
+        raise WebComPyCliException("Multiple WebComPyConfig instances in 'webcompy_config.py'")
     else:
         config = configs[0]
     return config
@@ -42,18 +42,14 @@ def get_app(config: WebComPyConfig) -> WebComPyApp:
     except ModuleNotFoundError:
         raise WebComPyCliException(
             f"No python module named '{config.app_package_path.name}'",
-        )
+        ) from None
     try:
         bootstrap = import_module(config.app_package_path.name + ".bootstrap")
     except AttributeError:
         raise WebComPyCliException(
             f"No python module named 'bootstrap' in '{config.app_package_path.name}'",
-        )
-    app_instances = tuple(
-        it
-        for name in dir(bootstrap)
-        if isinstance(it := getattr(bootstrap, name), WebComPyApp)
-    )
+        ) from None
+    app_instances = tuple(it for name in dir(bootstrap) if isinstance(it := getattr(bootstrap, name), WebComPyApp))
     if len(app_instances) == 0:
         raise WebComPyCliException(
             "No WebComPyApp instance in 'bootstrap.py'",
@@ -102,6 +98,5 @@ def generate_app_version():
     return "{}.{}.{}".format(
         now.strftime("%y"),
         now.strftime("%j"),
-        (int(now.strftime("%H")) * 60 + int(now.strftime("%M"))) * 60
-        + int(now.strftime("%S")),
+        (int(now.strftime("%H")) * 60 + int(now.strftime("%M"))) * 60 + int(now.strftime("%S")),
     )

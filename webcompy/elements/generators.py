@@ -1,26 +1,26 @@
 from __future__ import annotations
+
+from collections.abc import Callable
 from typing import (
     Any,
-    Callable,
     NewType,
-    TypeVar,
+    TypeAlias,
     TypedDict,
-    Union,
+    TypeVar,
 )
-from typing_extensions import TypeAlias
-from webcompy.elements.types._text import TextElement, NewLine
-from webcompy.elements.types._element import ElementBase, Element
-from webcompy.elements.types._refference import DomNodeRef
-from webcompy.elements.types._repeat import RepeatElement, MultiLineTextElement
-from webcompy.elements.types._switch import SwitchElement
-from webcompy.elements.typealias._html_tag_names import HtmlTags
+
 from webcompy.elements.typealias._element_property import (
     AttrValue,
-    EventHandler,
     ElementChildren,
+    EventHandler,
 )
+from webcompy.elements.typealias._html_tag_names import HtmlTags
+from webcompy.elements.types._element import Element, ElementBase
+from webcompy.elements.types._refference import DomNodeRef
+from webcompy.elements.types._repeat import MultiLineTextElement, RepeatElement
+from webcompy.elements.types._switch import SwitchElement
+from webcompy.elements.types._text import NewLine, TextElement
 from webcompy.reactive import ReactiveBase
-
 
 T = TypeVar("T")
 
@@ -53,15 +53,7 @@ def create_element(
     return Element(tag_name, attrs, events, ref, children)
 
 
-ChildNode: TypeAlias = Union[
-    ElementBase,
-    TextElement,
-    MultiLineTextElement,
-    NewLine,
-    ReactiveBase[Any],
-    str,
-    None,
-]
+ChildNode: TypeAlias = ElementBase | TextElement | MultiLineTextElement | NewLine | ReactiveBase[Any] | str | None
 NodeGenerator: TypeAlias = Callable[[], ChildNode]
 
 

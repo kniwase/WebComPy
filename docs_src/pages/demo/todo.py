@@ -1,6 +1,7 @@
+from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
-from webcompy.components import define_component, ComponentContext
 from webcompy.router import RouterContext
+
 from ...components.demo_display import DemoDisplay
 from ...templates.demo.todo import ToDoList
 

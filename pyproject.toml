@@ -55,7 +55,13 @@ select = [
     "RUF",  # ruff-specific rules
 ]
 ignore = [
-    "E501",  # line too long (handled by formatter)
+    "E501",   # line too long (handled by formatter)
+    "UP046",  # Generic class with multiple TypeVars - PEP 695 migration is too invasive
+    "UP040",  # Non-PEP695 type alias - breaks TypeAlias subclassing
+    "UP047",  # Non-PEP695 generic function - migration is too invasive
+    "E731",   # lambda assignment - intentional in many places
+    "TC001",  # typing-only first-party import - too many false positives with __future__ annotations
+    "TC003",  # typing-only standard-library import - too many false positives with __future__ annotations
 ]
 
 [tool.pytest.ini_options]

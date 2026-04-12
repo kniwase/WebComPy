@@ -1,5 +1,5 @@
-from argparse import ArgumentParser
 import sys
+from argparse import ArgumentParser
 from typing import Any, Literal
 
 
@@ -53,7 +53,7 @@ def get_params() -> tuple[Literal["start", "generate", "init"], dict[str, Any]]:
     # parse
     args = parser.parse_args()
     if hasattr(args, "__command_getter__"):
-        subcommand_name = getattr(args, "__command_getter__")()
+        subcommand_name = args.__command_getter__()
         args_dict = {n: getattr(args, n) for n in dir(args) if not n.startswith("_")}
         return subcommand_name, args_dict
     else:

@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from webcompy.cli import WebComPyConfig
 
 config = WebComPyConfig(
