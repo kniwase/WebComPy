@@ -11,8 +11,9 @@
 
 ## Get started
 ```
-mkdir webcompy-project
+uv init webcompy-project
 cd webcompy-project
+uv add webcompy
 uv run python -m webcompy init
 uv run python -m webcompy start --dev
 uv run python -m webcompy generate  # for generating static site
@@ -153,5 +154,5 @@ class Fizzbuzz(TypedComponentBase(props_type=RouterContext)):
 - Add provide/inject (DI)
 - Add Plugin System
 
-## Lisence
+## License
 This project is licensed under the MIT License, see the LICENSE.txt file for details.
