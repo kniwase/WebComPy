@@ -11,7 +11,11 @@
       },
       "models": {
         "{env:OPENAI_COMPAT_MODEL}": {
-          "name": "Review Model"
+          "name": "Review Model",
+          "limit": {
+            "context": "{env:OPENAI_COMPAT_MODEL_LIMIT_CONTEXT}",
+            "output": "{env:OPENAI_COMPAT_MODEL_LIMIT_OUTPUT}"
+          }
         }
       }
     }
