@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import html as html_module
+import json
 from typing import TypeAlias
 
 from webcompy._version import __version__ as webcompy_version
@@ -12,6 +14,9 @@ from webcompy.reactive._computed import computed
 from webcompy.utils import strip_multiline_text
 
 Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]
+
+PYSCRIPT_VERSION = "2025.11.1"
+PYSCRIPT_BASE_URL = f"https://pyscript.net/releases/{PYSCRIPT_VERSION}"
 
 
 class _HtmlElement(Element):
@@ -136,54 +141,36 @@ def generate_html(
             {"id": "webcompy-app", "hidden": ""},
         )
     )
-    app_loader: list[_HtmlElement] = []
     scripts_head: Scripts = []
     scripts_body: Scripts = []
 
     scripts_head.append(
         (
             {
-                "type": "text/javascript",
-                "defer": "",
-                "src": "https://pyscript.net/alpha/pyscript.js",
+                "type": "module",
+                "src": f"{PYSCRIPT_BASE_URL}/core.js",
             },
             None,
         )
     )
-    app_loader.append(
-        _HtmlElement(
-            "py-script",
-            {},
-            "\n"
-            + strip_multiline_text(
-                """
-                import micropip, pyodide, js
-                from traceback import TracebackException
-                async def bootstarp():
-                    try:
-                        await micropip.install([{dependencies}])
-                        from {app_package_name}.bootstrap import app
-                        app.__component__.render()
-                    except Exception as err:
-                        js.console.error("".join(TracebackException.from_exception(err).format()))
-                try:
-                    pyodide.webloop.WebLoop().run_until_complete(bootstarp())
-                except Exception as err:
-                    js.console.error("".join(TracebackException.from_exception(err).format()))
-                """.format(
-                    app_package_name=config.app_package_path.name,
-                    dependencies=",".join(
-                        '"' + p + '"'
-                        for p in (
-                            *{*config.dependencies, "typing_extensions"},
-                            f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
-                            f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
-                        )
-                    ),
-                )
-            ),
-        )
+
+    py_packages = [
+        *config.dependencies,
+        "typing_extensions",
+        f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
+        f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
+    ]
+    py_config = html_module.escape(
+        json.dumps({"packages": py_packages}),
+        quote=True,
     )
+    py_script = strip_multiline_text(
+        f"""
+        from {config.app_package_path.name}.bootstrap import app
+        app.__component__.render()
+        """
+    )
+    app_loader_html = f'<script type="py" config="{py_config}">\n{py_script}\n</script>'
 
     scripts_head.extend(app.__component__.head["script"])
     scripts_body.extend(app.__component__.scripts)
@@ -200,41 +187,41 @@ def generate_html(
             )
         )
 
-    return (
-        "<!doctype html>"
-        + _HtmlElement(
-            "html",
+    return "<!doctype html>" + _HtmlElement(
+        "html",
+        {},
+        _HtmlElement(
+            "head",
             {},
+            _HtmlElement("title", {}, app.__component__.head["title"]),
+            RepeatElement(
+                sequence=computed(lambda: list(app.__component__.head["meta"].value.values())),
+                template=lambda attrs: _HtmlElement("meta", attrs),
+            ),
+            _HtmlElement("base", {"href": config.base}),
             _HtmlElement(
-                "head",
-                {},
-                _HtmlElement("title", {}, app.__component__.head["title"]),
-                RepeatElement(
-                    sequence=computed(lambda: list(app.__component__.head["meta"].value.values())),
-                    template=lambda attrs: _HtmlElement("meta", attrs),
-                ),
-                _HtmlElement("base", {"href": config.base}),
-                _HtmlElement(
-                    "style",
-                    {},
-                    " ".join(
-                        (
-                            "*[hidden]{display: none;}",
-                            "py-script, py-config, py-loader {display: none;}",
-                            app.__component__.style,
-                        )
-                    ),
-                ),
-                *[_HtmlElement("link", attrs) for attrs in app.__component__.head.get("link", [])],
-                *_load_scripts(scripts_head),
+                "link",
+                {"rel": "stylesheet", "href": f"{PYSCRIPT_BASE_URL}/core.css"},
             ),
             _HtmlElement(
-                "body",
+                "style",
                 {},
-                _Loadscreen(),
-                app_root,
-                *_load_scripts(scripts_body),
-                *app_loader,
+                " ".join(
+                    (
+                        "*[hidden]{display: none;}",
+                        app.__component__.style,
+                    )
+                ),
             ),
-        ).render_html()
-    )
+            *[_HtmlElement("link", attrs) for attrs in app.__component__.head.get("link", [])],
+            *_load_scripts(scripts_head),
+        ),
+        _HtmlElement(
+            "body",
+            {},
+            _Loadscreen(),
+            app_root,
+            *_load_scripts(scripts_body),
+            "<!--webcompy-app-loader-->",
+        ),
+    ).render_html().replace("<!--webcompy-app-loader-->", app_loader_html)

@@ -107,11 +107,16 @@ class FakeDOMNode:
         return object.__getattribute__(self, name)
 
 
-class FakePyodide:
+class FakePyodideFfi:
     def create_proxy(self, func):
         proxy = MagicMock(side_effect=func)
         proxy.destroy = MagicMock()
         return proxy
+
+
+class FakePyodide:
+    def __init__(self):
+        self.ffi = FakePyodideFfi()
 
 
 class FakeConsole:
@@ -253,8 +258,12 @@ def fake_document(fake_browser):
 def reset_router_singleton():
     from webcompy.router._router import Router
 
+    if Router._instance is not None:
+        Router._instance._location.destroy()
     Router._instance = None
     yield
+    if Router._instance is not None:
+        Router._instance._location.destroy()
     Router._instance = None
 
 

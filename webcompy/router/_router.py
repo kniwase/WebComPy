@@ -17,7 +17,7 @@ from webcompy.components import ComponentGenerator, WebComPyComponentException
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._switch import NodeGenerator
 from webcompy.reactive._computed import computed_property
-from webcompy.router._change_event_hander import Location
+from webcompy.router._change_event_handler import Location
 from webcompy.router._context import RouterContext, TypedRouterContext
 from webcompy.router._pages import RouterPage
 

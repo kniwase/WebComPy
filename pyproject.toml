@@ -100,10 +100,12 @@ stubPath = "webcompy/_browser"
 [dependency-groups]
 dev = [
     "nodeenv>=1.10.0",
+    "playwright>=1.58.0",
     "pre-commit>=4.5.1",
     "pyright>=1.1.408",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
+    "pytest-playwright>=0.7.2",
     "ruff>=0.15.10",
     "setuptools>=82.0.1",
     "wheel",
