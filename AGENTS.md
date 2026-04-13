@@ -33,8 +33,9 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 
 ## Build & Run Commands
 
-- Install dependencies: `uv sync`
-- Dev server: `uv run python -m webcompy start --dev`
+- Install dependencies: `uv sync` (use `uv sync --dev --no-group docs` for lightweight setup without matplotlib/numpy)
+- Dev server: `uv run python -m webcompy start --dev` (default port: 8080)
+- Dev server (with Playwright MCP): Requires Node.js/npx. (1) Run `uv run python -m webcompy start --dev`, (2) use Playwright MCP tools to navigate to `http://localhost:8080/WebComPy/`. If the server fails to start, check `webcompy_config.py` for port conflicts.
 - Static site generation: `uv run python -m webcompy generate`
 - Project scaffolding: `uv run python -m webcompy init`
 - Build package: `uv build`
@@ -58,6 +59,7 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 
 - Python 3.12+ (aligned with latest PyScript/Pyodide runtime)
 - Package management with `uv` — use `uv add <package>` to add dependencies, `uv lock` to update lockfile
+- Temporary files MUST be placed under `.tmp/` (e.g., `.tmp/e2e-test-app/`). Never use `/tmp` or other system directories
 - Type annotations throughout (package includes `py.typed` marker and `.pyi` stubs)
 - No comments in code unless explicitly requested
 - Component classes use decorators: `@component_template`, `@on_before_rendering`
@@ -68,6 +70,7 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - Do NOT edit files in `docs/` — they are generated output
 - The `.pyi` stub file at `webcompy/_browser/_modules.pyi` provides type hints for browser APIs
 - `webcompy/cli/template_data/` contains the project template for `webcompy init`
+- Playwright MCP is configured in `opencode.json` (currently pinned to `@0.0.70`; update when needed)
 
 ## Git Conventions
 

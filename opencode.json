@@ -43,9 +43,16 @@
       "prompt": "You are working on server-side WebComPy code (CLI tools, Starlette dev server, static site generator). This code runs in standard Python with uvicorn, aiofiles, etc."
     }
   },
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "@playwright/mcp@0.0.70", "--isolated", "--console-level=debug"],
+      "enabled": true
+    }
+  },
   "command": {
     "dev": {
-      "template": "Start the WebComPy development server with hot-reload enabled",
+      "template": "Start the WebComPy development server. Run `uv run python -m webcompy start --dev` from the project root (default port 8080). Requires Node.js/npx for Playwright MCP. The server serves the docs_src app at http://localhost:8080/WebComPy/. Once the server is running, use Playwright MCP tools to navigate to the URL.",
       "description": "Start dev server"
     },
     "generate-docs": {
