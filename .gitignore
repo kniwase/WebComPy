@@ -132,3 +132,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# Temporary directory for opencode
+.tmp/

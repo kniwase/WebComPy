@@ -58,6 +58,7 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 
 - Python 3.12+ (aligned with latest PyScript/Pyodide runtime)
 - Package management with `uv` — use `uv add <package>` to add dependencies, `uv lock` to update lockfile
+- Temporary files MUST be placed under `.tmp/` (e.g., `.tmp/e2e-test-app/`). Never use `/tmp` or other system directories
 - Type annotations throughout (package includes `py.typed` marker and `.pyi` stubs)
 - No comments in code unless explicitly requested
 - Component classes use decorators: `@component_template`, `@on_before_rendering`
