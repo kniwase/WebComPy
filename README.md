@@ -11,13 +11,15 @@
 
 ## Get started
 ```
-mkdir webcompy-project
+uv init webcompy-project        # create a new project directory
 cd webcompy-project
-pip install webcompy
-python -m webcompy init
-python -m webcompy start --dev
-python -m webcompy generate  # for generating static site
+uv add webcompy                 # install webcompy from PyPI
+uv run python -m webcompy init  # scaffold WebComPy project files
+uv run python -m webcompy start --dev
+uv run python -m webcompy generate  # for generating static site
 ```
+
+> Note: `uv init` creates a stub `hello.py` that can be deleted after running `webcompy init`.
 
 then access [http://127.0.0.1:8080/WebComPy/](http://127.0.0.1:8080/WebComPy/)
 
@@ -150,9 +152,13 @@ class Fizzbuzz(TypedComponentBase(props_type=RouterContext)):
 
 ```
 
+## Contributing
+
+See [AGENTS.md](AGENTS.md) for development setup, tooling, and coding conventions.
+
 ## ToDo
 - Add provide/inject (DI)
 - Add Plugin System
 
-## Lisence
+## License
 This project is licensed under the MIT License, see the LICENSE.txt file for details.

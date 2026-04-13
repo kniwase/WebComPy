@@ -44,7 +44,15 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - Lint: `uv run ruff check .`
 - Format: `uv run ruff format .`
 - Type check: `uv run pyright`
+- Test: `uv run python -m pytest tests/ --tb=short`
+- Test with coverage: `uv run python -m pytest tests/ --tb=short --cov=webcompy --cov-report=term-missing`
 - Pre-commit hooks run ruff (lint + format) and pyright automatically on commit
+
+## CI
+
+- **Lint + Typecheck + Test**: runs on push to `main` and PRs (`.github/workflows/ci.yml`)
+- **Automated PR review**: runs on PRs via OpenCode with an OpenAI-compatible provider (`.github/workflows/opencode-review.yml`)
+- Coverage report is uploaded as a CI artifact
 
 ## Code Conventions
 
