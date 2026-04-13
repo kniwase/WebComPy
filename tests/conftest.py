@@ -258,8 +258,12 @@ def fake_document(fake_browser):
 def reset_router_singleton():
     from webcompy.router._router import Router
 
+    if Router._instance is not None:
+        Router._instance._location.destroy()
     Router._instance = None
     yield
+    if Router._instance is not None:
+        Router._instance._location.destroy()
     Router._instance = None
 
 

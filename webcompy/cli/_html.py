@@ -222,5 +222,6 @@ def generate_html(
             _Loadscreen(),
             app_root,
             *_load_scripts(scripts_body),
+            "<!--webcompy-app-loader-->",
         ),
-    ).render_html().replace("</body>", f"{app_loader_html}</body>")
+    ).render_html().replace("<!--webcompy-app-loader-->", app_loader_html)
