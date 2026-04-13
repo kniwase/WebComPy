@@ -118,9 +118,6 @@ class FakePyodide:
     def __init__(self):
         self.ffi = FakePyodideFfi()
 
-    def create_proxy(self, func):
-        return self.ffi.create_proxy(func)
-
 
 class FakeConsole:
     def __init__(self):
