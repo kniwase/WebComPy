@@ -52,7 +52,7 @@
   },
   "command": {
     "dev": {
-      "template": "Start the WebComPy development server with hot-reload enabled",
+      "template": "Start the WebComPy development server. Run `uv run python -m webcompy start --dev --port 8080` from the project root. The server serves the docs_src app at http://localhost:8080/WebComPy/",
       "description": "Start dev server"
     },
     "generate-docs": {
