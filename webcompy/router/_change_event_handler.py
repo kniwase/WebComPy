@@ -16,13 +16,24 @@ class Location(ReactiveBase[str]):
         super().__init__("")
         self._state = None
         self._base_url = base_url.strip().strip("/")
+        self._popstate_proxy = None
         self.set_mode(mode)
         if browser:
+            self._popstate_proxy = browser.pyodide.ffi.create_proxy(self._refresh_path)
             browser.window.addEventListener(
                 "popstate",
-                browser.pyodide.ffi.create_proxy(self._refresh_path),
+                self._popstate_proxy,
                 False,
             )
+
+    def destroy(self) -> None:
+        if browser and self._popstate_proxy is not None:
+            browser.window.removeEventListener(
+                "popstate",
+                self._popstate_proxy,
+            )
+            self._popstate_proxy.destroy()
+            self._popstate_proxy = None
 
     @ReactiveBase._change_event
     def set_mode(self, mode: Literal["hash", "history"]):
