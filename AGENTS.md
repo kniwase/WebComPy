@@ -35,7 +35,7 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 
 - Install dependencies: `uv sync`
 - Dev server: `uv run python -m webcompy start --dev`
-- Dev server (with Playwright MCP): Start the dev server, then use Playwright MCP tools to navigate to `http://localhost:8080/WebComPy/`
+- Dev server (with Playwright MCP): (1) Run `uv run python -m webcompy start --dev`, (2) use Playwright MCP tools to navigate to `http://localhost:8080/WebComPy/`
 - Static site generation: `uv run python -m webcompy generate`
 - Project scaffolding: `uv run python -m webcompy init`
 - Build package: `uv build`

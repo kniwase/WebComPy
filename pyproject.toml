@@ -99,8 +99,10 @@ stubPath = "webcompy/_browser"
 
 [dependency-groups]
 dev = [
+    # Pinned to match Pyodide 0.28.0 versions (required by dev server for docs_src)
     "matplotlib==3.8.4",
     "nodeenv>=1.10.0",
+    # Pinned to match Pyodide 0.28.0 versions (required by dev server for docs_src)
     "numpy==2.2.5",
     "pre-commit>=4.5.1",
     "pyright>=1.1.408",
