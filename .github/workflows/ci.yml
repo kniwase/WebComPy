@@ -24,6 +24,14 @@ jobs:
       - run: uv sync
       - run: uv run pyright
 
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --all-groups
+      - run: uv run python -m webcompy generate
+
   test:
     runs-on: ubuntu-latest
     steps:

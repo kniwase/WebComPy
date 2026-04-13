@@ -135,3 +135,6 @@ cython_debug/
 
 # Temporary directory for opencode
 .tmp/
+
+# Generated docs site
+/docs/
