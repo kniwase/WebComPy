@@ -107,11 +107,19 @@ class FakeDOMNode:
         return object.__getattribute__(self, name)
 
 
-class FakePyodide:
+class FakePyodideFfi:
     def create_proxy(self, func):
         proxy = MagicMock(side_effect=func)
         proxy.destroy = MagicMock()
         return proxy
+
+
+class FakePyodide:
+    def __init__(self):
+        self.ffi = FakePyodideFfi()
+
+    def create_proxy(self, func):
+        return self.ffi.create_proxy(func)
 
 
 class FakeConsole:

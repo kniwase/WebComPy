@@ -20,7 +20,7 @@ class Location(ReactiveBase[str]):
         if browser:
             browser.window.addEventListener(
                 "popstate",
-                browser.pyodide.create_proxy(self._refresh_path),
+                browser.pyodide.ffi.create_proxy(self._refresh_path),
                 False,
             )
 

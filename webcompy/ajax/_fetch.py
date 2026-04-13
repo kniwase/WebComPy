@@ -107,7 +107,7 @@ class HttpClient:
             )
         )
         if browser:
-            req_headers = browser.pyodide.create_proxy(req_headers)
+            req_headers = browser.pyodide.ffi.create_proxy(req_headers)
             if method not in {"GET", "OPTIONS", "HEAD"} and has_body:
                 if json is not None:
                     req_headers["Content-Type"] = "application/json"
