@@ -109,7 +109,7 @@ dev = [
     "wheel",
 ]
 docs = [
-    # Must remain compatible with numpy==2.2.5 (pinned to match Pyodide 0.28.0)
+    # Pyodide 0.28.0 ships matplotlib 3.10.3; >=3.9.0,<4 ensures compatibility with numpy==2.2.5
     "matplotlib>=3.9.0,<4",
     # Pinned to match Pyodide 0.28.0 version (required by dev server for docs_src)
     "numpy==2.2.5",
