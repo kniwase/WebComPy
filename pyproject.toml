@@ -99,7 +99,9 @@ stubPath = "webcompy/_browser"
 
 [dependency-groups]
 dev = [
+    "matplotlib==3.8.4",
     "nodeenv>=1.10.0",
+    "numpy==2.2.5",
     "pre-commit>=4.5.1",
     "pyright>=1.1.408",
     "pytest>=9.0.3",
