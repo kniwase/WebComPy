@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html as html_module
 import json
 from typing import TypeAlias
 
@@ -13,6 +14,9 @@ from webcompy.reactive._computed import computed
 from webcompy.utils import strip_multiline_text
 
 Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]
+
+PYSCRIPT_VERSION = "2025.11.1"
+PYSCRIPT_BASE_URL = f"https://pyscript.net/releases/{PYSCRIPT_VERSION}"
 
 
 class _HtmlElement(Element):
@@ -144,34 +148,29 @@ def generate_html(
         (
             {
                 "type": "module",
-                "src": "https://pyscript.net/releases/2025.11.1/core.js",
+                "src": f"{PYSCRIPT_BASE_URL}/core.js",
             },
             None,
         )
     )
 
     py_packages = [
-        *{*config.dependencies, "typing_extensions"},
+        *config.dependencies,
+        "typing_extensions",
         f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
         f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
     ]
-    py_config = json.dumps({"packages": py_packages})
-    py_script = strip_multiline_text(
-        """
-        import micropip, js
-        from traceback import TracebackException
-        try:
-            await micropip.install([{dependencies}])
-            from {app_package_name}.bootstrap import app
-            app.__component__.render()
-        except Exception as err:
-            js.console.error("".join(TracebackException.from_exception(err).format()))
-        """.format(
-            app_package_name=config.app_package_path.name,
-            dependencies=",".join('"' + p + '"' for p in py_packages),
-        )
+    py_config = html_module.escape(
+        json.dumps({"packages": py_packages}),
+        quote=True,
     )
-    app_loader_html = f"<script type=\"py\" config='{py_config}'>\n{py_script}\n</script>"
+    py_script = strip_multiline_text(
+        f"""
+        from {config.app_package_path.name}.bootstrap import app
+        app.__component__.render()
+        """
+    )
+    app_loader_html = f'<script type="py" config="{py_config}">\n{py_script}\n</script>'
 
     scripts_head.extend(app.__component__.head["script"])
     scripts_body.extend(app.__component__.scripts)
@@ -202,7 +201,7 @@ def generate_html(
             _HtmlElement("base", {"href": config.base}),
             _HtmlElement(
                 "link",
-                {"rel": "stylesheet", "href": "https://pyscript.net/releases/2025.11.1/core.css"},
+                {"rel": "stylesheet", "href": f"{PYSCRIPT_BASE_URL}/core.css"},
             ),
             _HtmlElement(
                 "style",
