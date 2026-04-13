@@ -11,10 +11,10 @@
 
 ## Get started
 ```
-uv init webcompy-project
+uv init webcompy-project        # create a new project directory
 cd webcompy-project
-uv add webcompy
-uv run python -m webcompy init
+uv add webcompy                 # install webcompy from PyPI
+uv run python -m webcompy init  # scaffold WebComPy project files
 uv run python -m webcompy start --dev
 uv run python -m webcompy generate  # for generating static site
 ```
@@ -149,6 +149,10 @@ class Fizzbuzz(TypedComponentBase(props_type=RouterContext)):
         )
 
 ```
+
+## Contributing
+
+See [AGENTS.md](AGENTS.md) for development setup, tooling, and coding conventions.
 
 ## ToDo
 - Add provide/inject (DI)
