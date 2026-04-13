@@ -1,4 +1,4 @@
-from webcompy.router._change_event_hander import Location
+from webcompy.router._change_event_handler import Location
 
 
 class TestLocationInit:
@@ -57,7 +57,7 @@ class TestLocationRefreshPath:
 
     def test_refresh_path_with_browser(self):
 
-        import webcompy.router._change_event_hander as cem
+        import webcompy.router._change_event_handler as cem
         from tests.conftest import FakeBrowserModule
         from webcompy._browser import _modules
 
@@ -77,7 +77,7 @@ class TestLocationRefreshPath:
             cem.browser = old_cem
 
     def test_refresh_path_hash_mode_with_browser(self):
-        import webcompy.router._change_event_hander as cem
+        import webcompy.router._change_event_handler as cem
         from tests.conftest import FakeBrowserModule
         from webcompy._browser import _modules
 
