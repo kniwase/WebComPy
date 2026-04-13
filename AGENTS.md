@@ -33,7 +33,7 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 
 ## Build & Run Commands
 
-- Install dependencies: `uv sync` (add `--group docs` for dev server with docs_src)
+- Install dependencies: `uv sync` (use `uv sync --dev --no-group docs` for lightweight setup without matplotlib/numpy)
 - Dev server: `uv run python -m webcompy start --dev` (default port: 8080)
 - Dev server (with Playwright MCP): Requires Node.js/npx. (1) Run `uv run python -m webcompy start --dev`, (2) use Playwright MCP tools to navigate to `http://localhost:8080/WebComPy/`. If the server fails to start, check `webcompy_config.py` for port conflicts.
 - Static site generation: `uv run python -m webcompy generate`
