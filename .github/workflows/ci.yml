@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  issue_comment:
+    types: [created]
 
 jobs:
   lint:
@@ -52,3 +54,67 @@ jobs:
         with:
           name: coverage-report
           path: coverage.xml
+
+  review:
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/opencode'))
+    needs: [lint, typecheck, generate, test]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run OpenCode Review
+        id: opencode-review
+        uses: anomalyco/opencode/github@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_COMPAT_API_KEY: ${{ secrets.OPENAI_COMPAT_API_KEY }}
+          OPENAI_COMPAT_BASE_URL: ${{ secrets.OPENAI_COMPAT_BASE_URL }}
+          OPENAI_COMPAT_MODEL: ${{ secrets.OPENAI_COMPAT_MODEL }}
+        with:
+          model: openai-compat/${{ secrets.OPENAI_COMPAT_MODEL }}
+          use_github_token: true
+          prompt: |
+            Review this pull request:
+            - Check for code quality issues
+            - Look for potential bugs
+            - Suggest improvements
+            - Refer to the results of the CI checks (lint, typecheck, generate, test) that ran before this review
+            At the end of your review, include EXACTLY ONE of these lines:
+            REVIEW_RESULT: approved
+            or
+            REVIEW_RESULT: changes_requested
+
+      - name: Submit PR review based on result
+        if: always() && steps.opencode-review.outcome != 'cancelled'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          COMMENT_ID=$(gh api repos/$REPO/issues/$PR_NUMBER/comments \
+            --jq '[.[] | select(.body | test("REVIEW_RESULT:")) | .id] | last // empty')
+
+          if [ -z "$COMMENT_ID" ]; then
+            echo "No review result marker found in comments, posting as approved"
+            gh pr review $PR_NUMBER --approve --body "OpenCode review completed (no explicit result marker found)."
+            exit 0
+          fi
+
+          COMMENT_BODY=$(gh api repos/$REPO/issues/comments/$COMMENT_ID --jq '.body')
+
+          if echo "$COMMENT_BODY" | grep -q "REVIEW_RESULT: changes_requested"; then
+            gh pr review $PR_NUMBER --request-changes --body "OpenCode review found issues that should be addressed before merging."
+            echo "::error::Review requests changes - merge blocked"
+            exit 1
+          else
+            gh pr review $PR_NUMBER --approve --body "OpenCode review completed, no blocking issues found."
+          fi
