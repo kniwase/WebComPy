@@ -15,7 +15,7 @@ from webcompy.utils import strip_multiline_text
 
 Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]
 
-PYSCRIPT_VERSION = "2025.11.1"
+PYSCRIPT_VERSION = "2026.3.1"
 PYSCRIPT_BASE_URL = f"https://pyscript.net/releases/{PYSCRIPT_VERSION}"
 
 
@@ -161,7 +161,7 @@ def generate_html(
         f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
     ]
     py_config = html_module.escape(
-        json.dumps({"packages": py_packages}),
+        json.dumps({"packages": py_packages, "experimental_create_proxy": "auto"}),
         quote=True,
     )
     py_script = strip_multiline_text(
