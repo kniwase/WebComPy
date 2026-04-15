@@ -1,6 +1,13 @@
 from typing import Any, Protocol
 
-# from webcompy.elements._dom_objs import DOMNode, DOMEvent
+class PyScriptFfi(Protocol):
+    create_proxy: Any
+    is_none: Any
+    to_js: Any
+    assign: Any
+
+class PyScriptModule(Protocol):
+    ffi: PyScriptFfi
 
 class PyodideFfi(Protocol):
     create_proxy: Any
@@ -12,6 +19,7 @@ class PyodideModule(Protocol):
 class BrowserModule(Protocol):
     def __getattr__(self, name: str) -> Any: ...
     def __setattr__(self, name: str, obj: Any) -> Any: ...
+    pyscript: PyScriptModule
     pyodide: PyodideModule
     addEventListener: Any
     alert: Any
@@ -69,7 +77,6 @@ class BrowserModule(Protocol):
     isPrototypeOf: Any
     isSecureContext: Any
     length: Any
-    loadPyodide: Any
     localStorage: Any
     location: Any
     locationbar: Any
@@ -248,7 +255,6 @@ class BrowserModule(Protocol):
     styleMedia: Any
     toLocaleString: Any
     toString: Any
-    to_py: Any
     toolbar: Any
     top: Any
     trustedTypes: Any
