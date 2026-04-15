@@ -46,16 +46,33 @@ jobs:
         with:
           cache: true
       - run: uv sync
-      - run: uv run python -m pytest tests/ --tb=short --cov=webcompy --cov-report=xml --cov-report=term-missing
+      - run: uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --cov=webcompy --cov-report=xml --cov-report=term-missing
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-report
           path: coverage.xml
 
+  e2e:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          cache: true
+      - run: uv sync
+      - run: uv run playwright install chromium
+      - run: uv run python -m pytest tests/e2e/ --tb=short
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-server-log
+          path: tests/e2e/.e2e-server.log
+
   review:
     if: always()
-    needs: [lint, typecheck, generate, test]
+    needs: [lint, typecheck, generate, test, e2e]
     runs-on: ubuntu-latest
     concurrency:
       group: review-${{ github.event.pull_request.number }}
@@ -86,7 +103,7 @@ jobs:
             - Check for code quality issues
             - Look for potential bugs
             - Suggest improvements
-            - Refer to the results of the CI checks (lint, typecheck, generate, test) that ran before this review
+            - Refer to the results of the CI checks (lint, typecheck, generate, test, e2e) that ran before this review
             At the end of your review, include EXACTLY ONE of these lines:
             REVIEW_RESULT: approved
             or

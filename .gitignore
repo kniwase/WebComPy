@@ -135,3 +135,6 @@ cython_debug/
 
 # Generated docs site
 /docs/
+
+# E2E test server log
+.e2e-server.log
