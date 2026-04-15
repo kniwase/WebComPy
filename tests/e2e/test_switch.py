@@ -1,4 +1,7 @@
+import pytest
 from playwright.sync_api import expect
+
+pytestmark = pytest.mark.e2e
 
 
 def test_switch_default_state(page_on):

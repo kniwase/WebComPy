@@ -54,6 +54,7 @@ jobs:
           path: coverage.xml
 
   e2e:
+    needs: [lint, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -102,7 +103,7 @@ jobs:
             - Check for code quality issues
             - Look for potential bugs
             - Suggest improvements
-            - Refer to the results of the CI checks (lint, typecheck, generate, test) that ran before this review
+            - Refer to the results of the CI checks (lint, typecheck, generate, test, e2e) that ran before this review
             At the end of your review, include EXACTLY ONE of these lines:
             REVIEW_RESULT: approved
             or

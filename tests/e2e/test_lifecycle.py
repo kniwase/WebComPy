@@ -1,4 +1,7 @@
+import pytest
 from playwright.sync_api import expect
+
+pytestmark = pytest.mark.e2e
 
 
 def test_lifecycle_hooks_fire(page_on):
