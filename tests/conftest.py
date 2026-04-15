@@ -215,9 +215,6 @@ class FakeFetchResponse:
     async def text(self):
         return self._text
 
-    def to_py(self):
-        return self
-
     @property
     def headers(self):
         return self._headers
