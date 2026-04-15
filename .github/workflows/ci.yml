@@ -54,6 +54,7 @@ jobs:
           path: coverage.xml
 
   review:
+    if: always()
     needs: [lint, typecheck, generate, test]
     runs-on: ubuntu-latest
     concurrency:
