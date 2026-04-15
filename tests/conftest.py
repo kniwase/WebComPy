@@ -107,6 +107,29 @@ class FakeDOMNode:
         return object.__getattribute__(self, name)
 
 
+class FakePyScriptFfi:
+    def create_proxy(self, func):
+        proxy = MagicMock(side_effect=func)
+        proxy.destroy = MagicMock()
+        return proxy
+
+    def is_none(self, value):
+        return value is None
+
+    def to_js(self, value, **kw):
+        return value
+
+    def assign(self, source, *args):
+        for arg in args:
+            source.update(arg)
+        return source
+
+
+class FakePyScript:
+    def __init__(self):
+        self.ffi = FakePyScriptFfi()
+
+
 class FakePyodideFfi:
     def create_proxy(self, func):
         proxy = MagicMock(side_effect=func)
@@ -228,6 +251,7 @@ class FakeBrowserModule:
     def __init__(self):
         self.document = FakeDocument()
         self.window = FakeWindow()
+        self.pyscript = FakePyScript()
         self.pyodide = FakePyodide()
         self.console = FakeConsole()
         self.fetch = MagicMock()
