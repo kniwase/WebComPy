@@ -27,7 +27,7 @@ def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent]
             _event_handler(ev)
 
     if browser:
-        return browser.pyodide.ffi.create_proxy(event_handler)
+        return browser.pyscript.ffi.create_proxy(event_handler)
     else:
         return event_handler
 

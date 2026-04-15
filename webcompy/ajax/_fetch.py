@@ -107,7 +107,7 @@ class HttpClient:
             )
         )
         if browser:
-            req_headers = browser.pyodide.ffi.create_proxy(req_headers)
+            req_headers = browser.pyscript.ffi.create_proxy(req_headers)
             if method not in {"GET", "OPTIONS", "HEAD"} and has_body:
                 if json is not None:
                     req_headers["Content-Type"] = "application/json"
@@ -126,13 +126,22 @@ class HttpClient:
             else:
                 options = {"method": method, "headers": req_headers}
             try:
-                res = (await browser.fetch(send_url, **options)).to_py()
+                res = await browser.fetch(send_url, **options)
             except Exception as err:
                 raise WebComPyHttpClientException(str(err)) from err
             else:
+                headers_js = res.headers
+                headers_keys = browser.pyscript.ffi.to_js(list(headers_js.keys()))
+                headers_values = browser.pyscript.ffi.to_js(list(headers_js.values()))
                 ret = Response(
                     text=(await res.text()),
-                    headers=dict(zip(res.headers.keys(), res.headers.values(), strict=True)),
+                    headers=dict(
+                        zip(
+                            headers_keys.to_py(),
+                            headers_values.to_py(),
+                            strict=True,
+                        )
+                    ),
                     status_code=res.status,
                     reason=res.statusText,
                     ok=res.ok,
