@@ -49,10 +49,16 @@ jobs:
           model: openai-compat/${{ secrets.OPENAI_COMPAT_MODEL }}
           use_github_token: true
           prompt: |
-            Review this pull request:
-            - Check for code quality issues
-            - Look for potential bugs
-            - Suggest improvements
+            Review this pull request. Follow these rules strictly:
+
+            1. Check previous review comments on this PR first. Do NOT repeat points that have already been raised and addressed. Do NOT re-raise issues that were already approved in a previous review round.
+
+            2. Focus ONLY on the code diff (the changes in this PR). Do not review code that was not changed.
+
+            3. If you are re-reviewing after changes were pushed, only review the NEW changes since the last review. Skip anything that was already reviewed and approved.
+
+            4. Check for code quality issues, potential bugs, and suggest improvements — but only for the changed code.
+
             At the end of your review, include EXACTLY ONE of these lines:
             REVIEW_RESULT: approved
             or
