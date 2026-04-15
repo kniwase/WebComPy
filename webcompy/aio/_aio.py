@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Coroutine
 from re import compile as re_complie
 from re import escape as re_escape
@@ -15,10 +16,8 @@ from webcompy.reactive._base import ReactiveBase
 AsysncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
 
 if browser:
-    aio_run: AsysncResolver = browser.pyodide.webloop.WebLoop().run_until_complete
+    aio_run: AsysncResolver = asyncio.get_event_loop().run_until_complete
 else:
-    import asyncio
-
     aio_run: AsysncResolver = asyncio.run
 
 

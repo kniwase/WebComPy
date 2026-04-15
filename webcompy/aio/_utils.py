@@ -1,4 +1,4 @@
-from webcompy._browser._modules import browser
+import asyncio
 
 
 async def sleep(delay: float) -> None:
@@ -7,5 +7,4 @@ async def sleep(delay: float) -> None:
     Args:
         delay (float): seconds
     """
-    if browser:
-        await browser.aio.sleep(delay)
+    await asyncio.sleep(delay)

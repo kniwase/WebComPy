@@ -19,7 +19,7 @@ class Location(ReactiveBase[str]):
         self._popstate_proxy = None
         self.set_mode(mode)
         if browser:
-            self._popstate_proxy = browser.pyodide.ffi.create_proxy(self._refresh_path)
+            self._popstate_proxy = browser.pyscript.ffi.create_proxy(self._refresh_path)
             browser.window.addEventListener(
                 "popstate",
                 self._popstate_proxy,
@@ -65,7 +65,11 @@ class Location(ReactiveBase[str]):
             path: str = browser.window.location.hash
         else:
             path: str = ""
-        if browser and hasattr(browser.window.history, "state") and browser.window.history.state:
+        if (
+            browser
+            and hasattr(browser.window.history, "state")
+            and not browser.pyscript.ffi.is_none(browser.window.history.state)
+        ):
             self._state = browser.window.history.state.to_dict()
         else:
             self._state = None
