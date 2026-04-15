@@ -6,6 +6,10 @@ class _PyScriptBrowserModule(ModuleType):
     def __init__(self) -> None:
         super().__init__("_module")
         self.__setattr__(
+            "pyscript",
+            import_module("pyscript"),
+        )
+        self.__setattr__(
             "pyodide",
             import_module("pyodide"),
         )
