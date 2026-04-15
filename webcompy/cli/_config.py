@@ -27,7 +27,7 @@ class WebComPyConfig:
         self.base = f"/{base}/" if (base := base.strip("/")) else "/"
         self.server_port = server_port
         if isinstance(static_files_dir, Path):
-            self.app_package_path = static_files_dir.absolute()
+            self.static_files_dir_path = static_files_dir.absolute()
         else:
             self.static_files_dir_path = self.app_package_path.parent / static_files_dir
         self.dist = dist
