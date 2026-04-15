@@ -15,8 +15,8 @@ class TestWebComPyConfig:
         assert config.app_package_path == app_dir.absolute()
 
     def test_base_normalization(self):
-        config = WebComPyConfig(app_package="myapp", base="/WebComPy")
-        assert config.base == "/WebComPy/"
+        config = WebComPyConfig(app_package="myapp", base="/myapp")
+        assert config.base == "/myapp/"
 
     def test_base_root(self):
         config = WebComPyConfig(app_package="myapp", base="/")
@@ -67,3 +67,11 @@ class TestWebComPyConfig:
     def test_dist_default(self):
         config = WebComPyConfig(app_package="myapp")
         assert config.dist == "dist"
+
+    def test_cname_default(self):
+        config = WebComPyConfig(app_package="myapp")
+        assert config.cname == ""
+
+    def test_cname_custom(self):
+        config = WebComPyConfig(app_package="myapp", cname="webcompy.net")
+        assert config.cname == "webcompy.net"

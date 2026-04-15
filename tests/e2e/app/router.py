@@ -23,5 +23,5 @@ router = Router(
     {"path": "/scoped-style", "component": ScopedStylePage},
     default=NotFound,
     mode="history",
-    base_url="/WebComPy",
+    base_url="",
 )

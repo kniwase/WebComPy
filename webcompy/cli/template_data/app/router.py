@@ -11,5 +11,5 @@ router = Router(
     {"path": "/input", "component": InOutSample},
     default=NotFound,
     mode="history",
-    base_url="/WebComPy",
+    base_url="",
 )

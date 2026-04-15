@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 E2E_DIR = Path(__file__).parent
-BASE_URL = "http://localhost:8088/WebComPy/"
+BASE_URL = "http://localhost:8088/"
 PORT = 8088
 PYSCRIPT_INIT_TIMEOUT = 120_000
 SERVER_LOG = Path(__file__).parent / ".e2e-server.log"

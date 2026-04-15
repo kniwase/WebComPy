@@ -21,10 +21,10 @@ uv run python -m webcompy generate  # for generating static site
 
 > Note: `uv init` creates a stub `hello.py` that can be deleted after running `webcompy init`.
 
-then access [http://127.0.0.1:8080/WebComPy/](http://127.0.0.1:8080/WebComPy/)
+then access [http://127.0.0.1:8080/](http://127.0.0.1:8080/)
 
 ## Documents and Demos
-- [Github Pages](https://kniwase.github.io/WebComPy/)
+- [webcompy.net](https://webcompy.net/)
     * [Source Codes](https://github.com/kniwase/WebComPy/tree/main/docs_src/)
     * [Generated Files](https://github.com/kniwase/WebComPy/tree/main/docs/)
 

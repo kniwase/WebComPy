@@ -19,7 +19,7 @@ def test_router_link_to_home(app_page):
     expect(app_page.locator("[data-testid='reactive-page']")).to_be_visible()
 
     app_page.locator("[data-testid='nav-home']").click()
-    expect(app_page).to_have_url(re.compile(r"/WebComPy"))
+    expect(app_page).to_have_url(re.compile(r"/$"))
     expect(app_page.locator("[data-testid='home-page']")).to_be_visible()
 
 

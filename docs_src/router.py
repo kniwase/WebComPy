@@ -21,5 +21,5 @@ router = Router(
     {"path": "/sample/fetch", "component": FetchSamplePage},
     default=NotFound,
     mode="history",
-    base_url="/WebComPy",
+    base_url="",
 )
