@@ -9,8 +9,6 @@ from webcompy.components import (
 from webcompy.elements import html
 from webcompy.reactive import Reactive
 
-render_log: list[str] = []
-
 
 @component_class
 class LifecyclePage(TypedComponentBase(props_type=None)):
@@ -20,16 +18,15 @@ class LifecyclePage(TypedComponentBase(props_type=None)):
 
     @on_before_rendering
     def before_render(self):
-        render_log.append("before_render")
+        pass
 
     @on_after_rendering
     def after_render(self):
-        render_log.append("after_render")
         self.render_count.value += 1
 
     @on_before_destroy
     def before_destroy(self):
-        render_log.append("before_destroy")
+        pass
 
     def increment(self, _):
         self.count.value += 1

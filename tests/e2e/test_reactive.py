@@ -1,7 +1,7 @@
 from playwright.sync_api import expect
 
 
-def test_reactive_text_update(app_page, page_on):
+def test_reactive_text_update(page_on):
     page = page_on("/reactive")
     expect(page.locator("[data-testid='reactive-page']")).to_be_visible()
 
@@ -21,7 +21,7 @@ def test_reactive_text_update(app_page, page_on):
     expect(page.locator("[data-testid='doubled']")).to_have_text("2")
 
 
-def test_reactive_list_operations(app_page, page_on):
+def test_reactive_list_operations(page_on):
     page = page_on("/reactive")
     expect(page.locator("[data-testid='reactive-page']")).to_be_visible()
 
@@ -34,7 +34,7 @@ def test_reactive_list_operations(app_page, page_on):
     expect(page.locator("[data-testid='list-count']")).to_have_text("3")
 
 
-def test_reactive_dict_operations(app_page, page_on):
+def test_reactive_dict_operations(page_on):
     page = page_on("/reactive")
     expect(page.locator("[data-testid='reactive-page']")).to_be_visible()
 
