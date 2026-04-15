@@ -14,7 +14,6 @@ class PyodideFfi(Protocol):
 
 class PyodideModule(Protocol):
     ffi: PyodideFfi
-    webloop: Any
 
 class BrowserModule(Protocol):
     def __getattr__(self, name: str) -> Any: ...

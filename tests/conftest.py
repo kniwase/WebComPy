@@ -130,18 +130,6 @@ class FakePyScript:
         self.ffi = FakePyScriptFfi()
 
 
-class FakePyodideFfi:
-    def create_proxy(self, func):
-        proxy = MagicMock(side_effect=func)
-        proxy.destroy = MagicMock()
-        return proxy
-
-
-class FakePyodide:
-    def __init__(self):
-        self.ffi = FakePyodideFfi()
-
-
 class FakeConsole:
     def __init__(self):
         self.log = MagicMock()
@@ -249,7 +237,6 @@ class FakeBrowserModule:
         self.document = FakeDocument()
         self.window = FakeWindow()
         self.pyscript = FakePyScript()
-        self.pyodide = FakePyodide()
         self.console = FakeConsole()
         self.fetch = MagicMock()
         self.FormData = FakeFormData

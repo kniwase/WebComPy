@@ -130,15 +130,13 @@ class HttpClient:
             except Exception as err:
                 raise WebComPyHttpClientException(str(err)) from err
             else:
-                headers_js = res.headers
-                headers_keys = browser.pyscript.ffi.to_js(list(headers_js.keys()))
-                headers_values = browser.pyscript.ffi.to_js(list(headers_js.values()))
+                headers_obj = res.headers
                 ret = Response(
                     text=(await res.text()),
                     headers=dict(
                         zip(
-                            headers_keys.to_py(),
-                            headers_values.to_py(),
+                            list(headers_obj.keys()),
+                            list(headers_obj.values()),
                             strict=True,
                         )
                     ),
