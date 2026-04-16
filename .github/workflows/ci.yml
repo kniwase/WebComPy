@@ -12,8 +12,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install -g @fission-ai/openspec@latest
-      - run: openspec validate --specs
+      - run: npx @fission-ai/openspec@latest validate --specs
       - name: Check that all changes are archived
         run: |
           unarchived=$(find openspec/changes/ -mindepth 1 -maxdepth 1 -type d ! -name archive)
