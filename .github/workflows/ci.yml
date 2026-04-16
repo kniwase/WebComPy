@@ -13,6 +13,14 @@ jobs:
         with:
           node-version: 20
       - run: npx openspec validate --specs
+      - name: Check that all changes are archived
+        run: |
+          unarchived=$(find openspec/changes/ -mindepth 1 -maxdepth 1 -type d ! -name archive)
+          if [ -n "$unarchived" ]; then
+            echo "::error::Unarchived changes found. Run /opsx-archive before merging to main."
+            echo "$unarchived"
+            exit 1
+          fi
 
   lint:
     needs: [openspec]

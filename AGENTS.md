@@ -91,6 +91,7 @@ WebComPy uses OpenSpec for spec-driven development. Specs define **what the fram
 - When a change is archived via `/opsx-archive`, the completed artifacts are moved to `openspec/changes/archive/<name>/` and the main specs (`openspec/specs/`) are updated with the finalized requirements.
 - `openspec/changes/` and `openspec/changes/archive/` directories are tracked in git (via `.gitkeep`). Never gitignore them.
 - Do NOT merge incomplete change artifacts to `main`. Only archived changes and updated specs belong on `main`.
+- CI enforces this: the `openspec` job fails if any unarchived change directories exist under `openspec/changes/` (excluding `archive/`).
 
 ### Spec Writing Guidelines
 
