@@ -1,71 +1,78 @@
 # Component System
 
-## Overview
+## Purpose
 
-WebComPy supports two component definition styles: function-style and class-style. Both produce `ComponentGenerator` objects that can be invoked to create `Component` instances (which extend `ElementBase` and render to the DOM).
+Components are the primary abstraction for building UIs. A component encapsulates a piece of the interface — its structure, behavior, and styling — into a reusable unit. This enables developers to decompose a complex page into manageable pieces, compose those pieces together, and reason about each piece independently.
 
-## Function-Style Components
+WebComPy supports two definition styles that serve different needs: function-style components provide a concise, setup-centric API for simple components, while class-style components offer lifecycle decorators and better organization for complex components. Both produce the same `ComponentGenerator` interface, so consumers cannot distinguish between the two styles.
 
-- Created via `@define_component` decorator on a setup function
-- Setup function receives a `ComponentContext[PropsType]` and returns `ElementChildren`
-- The function gets a `__webcompy_componet_definition__` attribute (note: "componet" typo)
-- Lifecycle hooks registered via context methods: `context.on_before_rendering(func)`, `context.on_after_rendering(func)`, `context.on_before_destroy(func)`
-- Slot access via `context.slots(name, fallback?)`
-- Document head management via `context.get_title()`, `context.set_title()`, `context.get_meta()`, `context.set_meta()`
+Components also provide scoped CSS to prevent styles from leaking between unrelated parts of the UI, and document head management so that each page component can declare its own title and meta tags.
 
-## Class-Style Components
+## Requirements
 
-- Subclass `ComponentAbstract[PropsType]` (or `NonPropsComponentBase` / `TypedComponentBase(PropsType)`)
-- **Cannot instantiate directly** (`__new__` raises `WebComPyComponentException`); use `__get_component_instance__(context)` instead
-- Template method decorated with `@component_template`
-- Lifecycle decorators: `@on_before_rendering`, `@on_after_rendering`, `@on_before_destroy`
-- Class name is converted to kebab-case for the component tag name via `_camel_to_kebab_pattern`
-- Component ID generated via MD5 hash of the name
+### Requirement: Components shall be defined as reusable, self-contained units
+A component SHALL encapsulate a template (what it renders), optional lifecycle hooks (what it does at key moments), and optional scoped CSS (how it looks). The component SHALL be invocable with props and slots to produce a rendered element.
 
-## ComponentGenerator
+#### Scenario: Creating a function-style component
+- **WHEN** a developer decorates a setup function with `@define_component`
+- **THEN** the function SHALL receive a `ComponentContext` with `props`, `slots()`, lifecycle hooks, and head management
+- **AND** the function SHALL return the component's template as an element tree
 
-- Wrapper that produces `Component` instances when called
-- Manages **scoped CSS** via `scoped_style` property (dict syntax)
-- CSS selectors are augmented with `[webcompy-cid-{id}]` attribute selectors
-- The `_combinator_pattern` regex handles CSS selector combinators (`,`, `>`, `+`, `~`, space) for scoping
-- **`ComponentStore`** (singleton): Global registry of all component generators by name; raises exception on duplicate names
+#### Scenario: Creating a class-style component
+- **WHEN** a developer subclasses `ComponentAbstract` with `@component_template` and optional lifecycle decorators
+- **THEN** the class SHALL define its template as a method
+- **AND** lifecycle hooks SHALL be registered via `@on_before_rendering`, `@on_after_rendering`, and `@on_before_destroy`
 
-## Component (Runtime Instance)
+### Requirement: Components shall receive data via props
+A parent component SHALL be able to pass data to a child component through props, which the child accesses as a typed object via `context.props` (function-style) or `self.context.props` (class-style).
 
-- Subclass of `ElementBase`, wrapping either a function-style or class-style component definition
-- **`__init_component(property)`**: Takes the rendered Element from the template, copies its tag/attrs/events/children, adds `webcompy-component` and `webcompy-cid-*` attributes
-- **`HeadPropsStore`** (class variable): Global `ReactiveDict` for `titles` and `head_metas`
-  - `title` is a `computed_property` returning the last title value
-  - `head_meta` is a `computed_property` flattening all meta dicts
-- **Lifecycle**: `_render()` calls `on_before_rendering`, then parent `_render()`, then `on_after_rendering`
-- **`_remove_element()`**: Removes title/meta entries from `HeadPropsStore` first, then calls `on_before_destroy`, then parent cleanup
+#### Scenario: Passing user data to a profile component
+- **WHEN** a parent renders `UserProfile(user_data)`
+- **THEN** the `UserProfile` component SHALL receive `user_data` as `context.props`
+- **AND** the component SHALL be able to use reactive values from props in its template
 
-## Context Types
+### Requirement: Components shall support slots for content projection
+A component SHALL define named slots that parent components can fill with content, enabling composition patterns where the parent controls what appears in certain regions of the child's template.
 
-### ComponentContext[PropsType] (Protocol)
+#### Scenario: Using a named slot with fallback
+- **WHEN** a component calls `context.slots("header", fallback=lambda: html.H1({}, "Default"))`
+- **AND** a parent provides content for the "header" slot
+- **THEN** the parent's content SHALL be rendered
+- **WHEN** no content is provided for the "header" slot
+- **THEN** the fallback SHALL be rendered
 
-- `props`, `slots()`, lifecycle hook registration, title/meta management
+### Requirement: Scoped CSS shall prevent style leakage between components
+A component's scoped CSS SHALL be automatically prefixed with an attribute selector unique to that component, ensuring that styles only apply to elements within that component.
 
-### Context[PropsType] (Implementation)
+#### Scenario: Defining scoped styles
+- **WHEN** a developer sets `generator.scoped_style = {".btn": {"color": "red"}}`
+- **THEN** the generated CSS SHALL be `.btn[webcompy-cid-{id}] { color: red; }`
+- **AND** the component's root element SHALL have the `webcompy-cid-{id}` attribute
+- **AND** the `.btn` style SHALL NOT affect `.btn` elements in other components
 
-- Concrete class implementing `ComponentContext`
-- Stores props, slots, component name, and callbacks
-- `__get_lifecyclehooks__()`: Returns dict of registered lifecycle callbacks
+### Requirement: Components shall manage their lifecycle
+Components SHALL provide hooks for before rendering, after rendering, and before destruction. These hooks allow components to perform side effects like fetching data, setting up subscriptions, or cleaning up resources.
 
-### ClassStyleComponentContenxt[PropsType] (Protocol)
+#### Scenario: Fetching data before rendering
+- **WHEN** a component registers `on_before_rendering` to load data from an API
+- **THEN** the data SHALL be available before the component renders
 
-- Subset of `ComponentContext` without lifecycle hook registration (those are class decorators)
+#### Scenario: Cleaning up before destruction
+- **WHEN** a component is removed from the DOM
+- **THEN** its `on_before_destroy` callback SHALL fire
+- **AND** the component's title and meta entries SHALL be removed from the document head
 
-## Scoped CSS
+### Requirement: Components shall manage document head properties
+Each component instance SHALL be able to set the document title and meta tags. When multiple components set the title, the most recently rendered one SHALL take precedence. When a component is destroyed, its head entries SHALL be removed.
 
-- Set via `ComponentGenerator.scoped_style = {...}` (dict of selector → declaration dict)
-- Each CSS rule selector is prefixed with `[webcompy-cid-{md5hash}]` to scope styles to the component
-- Combinators (`,`, `>`, `+`, `~`, space) are preserved in the transformation
-- The combined scoped style string is available via `ComponentGenerator.scoped_style` (property)
+#### Scenario: Setting the page title from a component
+- **WHEN** a component calls `context.set_title("My Page")`
+- **THEN** the document title SHALL update to "My Page"
+- **AND** when the component is destroyed, its title entry SHALL be removed
 
-## ComponentProperty (TypedDict)
+### Requirement: Component registration shall enforce unique names
+The framework SHALL maintain a global registry of component generators by name. If two components are registered with the same name, an error SHALL be raised.
 
-- `component_id`: str (MD5 hash)
-- `component_name`: str (kebab-case or function name)
-- `template`: ElementChildren
-- `on_before_rendering`, `on_after_rendering`, `on_before_destroy`: callbacks
+#### Scenario: Registering duplicate component names
+- **WHEN** a developer defines two components with the same name
+- **THEN** `WebComPyComponentException` SHALL be raised with a message about the duplicate

@@ -1,79 +1,65 @@
 # CLI
 
-## Overview
+## Purpose
 
-WebComPy provides three CLI commands: `start` (dev server), `generate` (static site generator), and `init` (project scaffolding). All are invoked via `python -m webcompy`.
+The command-line interface bridges the gap between development and deployment. It provides three essential capabilities: a development server for live iteration, a static site generator for production deployment, and project scaffolding for starting new applications. These tools handle the complexity of packaging Python code for browser execution, serving it during development, and producing deployable output — tasks that are unique to a framework that runs Python in the browser.
 
-## WebComPyConfig
+## Requirements
 
-Configuration class with the following fields:
-- `app_package_path`: Absolute path to the app package directory
-- `base`: URL base path (normalized to `/{base}/` format)
-- `server_port`: Dev server port (default 8080)
-- `static_files_dir_path`: Absolute path to static files directory
-- `dist`: Output directory name for static site (default `"dist"`)
-- `dependencies`: List of PyPI packages to include in PyScript config
-- `cname`: Custom domain name for CNAME file
+### Requirement: The dev server shall serve the application with hot-reload
+Running `python -m webcompy start --dev` SHALL start a Starlette+uvicorn server that serves the application and automatically reloads the browser when source files change.
 
-## start Command
+#### Scenario: Developing with hot-reload
+- **WHEN** a developer runs the dev server and edits a Python file
+- **THEN** the browser SHALL detect the change via an SSE connection and reload automatically
 
-### Dev Server (Starlette + uvicorn)
+### Requirement: The dev server shall serve application packages
+The dev server SHALL build Python wheel packages for both the webcompy framework and the application, and serve them at the `/_webcompy-app-package/` endpoint so that PyScript can load them in the browser.
 
-- **`create_asgi_app(app, config, dev_mode)`**: Builds a Starlette app with routes:
-  - `/_webcompy-app-package/{filename:path}`: Serves webcompy and app wheel packages
-  - Static files from `static/` directory
-  - HTML routes: root `/` for hash mode, `/{path:path}` for history mode
-  - `/_webcompy_reload` SSE endpoint for hot-reload in dev mode
-- **`run_server()`**: Invokes `uvicorn.run()` with the ASGI app
-- In dev mode, an SSE endpoint provides hot-reload capability (client reconnects on error)
-- App packages are built into a temporary directory on startup
+#### Scenario: Starting the dev server
+- **WHEN** a developer runs `python -m webcompy start --dev`
+- **THEN** the server SHALL build webcompy and app wheel packages on startup
+- **AND** serve them at `/_webcompy-app-package/{filename}`
+- **AND** the browser SHALL be able to import the application code
 
-### ASGI App Module (`_asgi_app.py`)
+### Requirement: The generate command shall produce deployable static files
+Running `python -m webcompy generate` SHALL produce a complete static site in the `dist/` directory, ready for deployment to any static hosting service.
 
-- Creates the Starlette app at module level (required by uvicorn's reload mechanism)
-- Mounts the app at `config.base`
+#### Scenario: Generating a multi-page application with history mode
+- **WHEN** routes are defined with history mode
+- **THEN** an `index.html` SHALL be generated for each route path
+- **AND** a `404.html` SHALL be generated for unmatched paths
+- **AND** wheel packages SHALL be placed in `dist/_webcompy-app-package/`
+- **AND** static files SHALL be copied from the configured directory
+- **AND** a `.nojekyll` file SHALL be created for GitHub Pages compatibility
 
-### HTML Generation (`_html.py`)
+#### Scenario: Generating a single-page application with hash mode
+- **WHEN** no router or hash mode is used
+- **THEN** a single `index.html` SHALL be generated at the dist root
+- **AND** all other assets SHALL be included as in the history mode case
 
-- Generates full HTML documents including:
-  - PyScript v2026.3.1 CSS and JS
-  - Loading screen with spinner animation
-  - App div (prerendered or hidden)
-  - PyScript config with package list (dependencies + webcompy wheel + app wheel)
-  - Bootstrap script: `from app_package.bootstrap import app; app.__component__.render()`
-- Dev mode injects SSE-based hot-reload script
+### Requirement: The init command shall scaffold a new project
+Running `python -m webcompy init` SHALL create the necessary project structure including a bootstrap file, static directory, and configuration template.
 
-## generate Command (SSG)
+#### Scenario: Scaffolding a new project
+- **WHEN** a developer runs `python -m webcompy init`
+- **THEN** template files SHALL be copied to the current directory
+- **AND** a `static/` directory with `__init__.py` SHALL be created
 
-- Creates the output directory (removes existing)
-- Writes `.nojekyll` file and optional `CNAME` file
-- Copies static files to `dist/`
-- Builds wheel packages into `dist/_webcompy-app-package/`
-- For **history mode with routes**: generates `index.html` per route path, plus `404.html`
-- For **hash mode**: generates a single `index.html`
-- Uses version-based wheel naming (`YY.JJJ.SSSSS` format generated by `generate_app_version()`)
+### Requirement: Application configuration shall be discovered dynamically
+The CLI SHALL dynamically import a `webcompy_config` module from the project directory to obtain the `WebComPyConfig` instance, including settings for the app package path, base URL, port, static files, and dependencies.
 
-## init Command
+#### Scenario: Configuring an application
+- **WHEN** a developer creates a `webcompy_config.py` with `config = WebComPyConfig(app_package="myapp", base="/app/")`
+- **THEN** the CLI SHALL discover and use this configuration
+- **AND** the base URL SHALL be normalized to `/app/`
 
-- Copies template files from `webcompy/cli/template_data/` to the current directory
-- Creates `static/` directory and `__init__.py`
+### Requirement: Generated HTML shall include PyScript bootstrapping
+Every generated HTML page SHALL include PyScript v2026.3.1 CSS and JS, a loading screen, the app div (either pre-rendered or hidden), and a PyScript configuration specifying all required Python packages.
 
-## Utilities (`_utils.py`)
-
-- **`get_config()`**: Imports `webcompy_config` module dynamically, extracts the `config` object
-- **`get_app(config)`**: Imports the app's `bootstrap` module, finds the `WebComPyApp` instance
-- **`generate_app_version()`**: Creates a date-based version string
-- **`external_cli_tool_wrapper()`**: Saves/restores `cwd` and `sys.argv` around external tool calls (for setuptools)
-
-## PyScript Wheel Building (`_pyscript_wheel.py`)
-
-- Uses `setuptools` to build `.whl` packages for both webcompy and the app package
-- Packages are built into a staging directory
-
-## Design Constraints
-
-- The dev server rebuilds wheel packages on every startup (no incremental builds)
-- SSG always removes the existing `dist/` directory before generating
-- PyScript version is pinned at `2026.3.1` in `_html.py`
-- Wheel version format: `YY.JJJ.SSSSS` (year, day-of-year, seconds-of-day)
-- The `webcompy_config.py` module is imported dynamically, not as a proper Python package
+#### Scenario: Inspecting generated HTML
+- **WHEN** a generated `index.html` is examined
+- **THEN** it SHALL contain a `<script type="module">` tag loading PyScript
+- **AND** a `<script type="py">` tag with the bootstrap code
+- **AND** a `<style>` tag with scoped component CSS
+- **AND** a loading screen div with `id="webcompy-loading"`

@@ -1,70 +1,65 @@
 # Async Utilities and HTTP Client
 
-## Overview
+## Purpose
 
-WebComPy provides async utilities (`AsyncComputed`, `AsyncWrapper`) integrated with the reactive system, and an HTTP client (`HttpClient`) that uses the browser Fetch API.
+Web applications frequently need to perform asynchronous operations: fetching data from APIs, loading resources, or running long computations. In a reactive system, these operations must integrate seamlessly — when an async operation completes, its result should flow into the reactive graph just like any synchronous state change, triggering UI updates automatically.
 
-## Async Module (`webcompy/aio/`)
+WebComPy provides `AsyncComputed` for reactive async values, `AsyncWrapper` for fire-and-forget async operations, and `HttpClient` for making HTTP requests from the browser. Together, these enable developers to work with asynchronous data using the same patterns as synchronous reactive state.
 
-### resolve_async()
+## Requirements
 
-- Takes a coroutine, optional `on_done` callback, optional `on_error` callback
-- Runs via `asyncio.run()` (standard Python) or `asyncio.get_event_loop().run_until_complete()` (PyScript/Emscripten)
-- Error reporting filters out stack frames from the webcompy package itself using regex matching
+### Requirement: Async operations shall integrate with the reactive system
+Developers SHALL be able to create a reactive value that starts unresolved and automatically updates when an async operation completes, triggering UI updates like any other reactive change.
 
-### AsyncWrapper[T]
+#### Scenario: Loading data from an API on page load
+- **WHEN** a developer creates `AsyncComputed(fetch_user_data())`
+- **THEN** `value` SHALL initially be `None`
+- **AND** any UI depending on this `AsyncComputed` SHALL reflect the loading state
+- **WHEN** the coroutine resolves
+- **THEN** `value` SHALL update to the result
+- **AND** `done` SHALL become `True`
+- **AND** the UI SHALL update automatically
 
-- Decorator factory that wraps an async callable
-- When called, runs the coroutine via `resolve_async()` with optional `resolver` and `error` callbacks
-- Returns `None` (fire-and-forget pattern)
+#### Scenario: Handling an async operation failure
+- **WHEN** the coroutine raises an exception
+- **THEN** `error` SHALL contain the exception
+- **AND** `done` SHALL be `False`
 
-### AsyncComputed[T]
+### Requirement: Fire-and-forget async operations shall be supported
+Developers SHALL be able to wrap async functions so that calling them runs the coroutine in the background without blocking or requiring the caller to await the result.
 
-- Extends `ReactiveBase[T | None]` — integrated with the reactive system
-- Constructed with a coroutine
-- `_value` is initialized to `None`
-- `resolve_async(coroutine, self._resolver, self._error)` is called on construction
-- **`_resolver(res: T)`**: Decorated with `_change_event`, sets `_done = True`, `_value = res`
-- **`_error(err: Exception)`**: Decorated with `_change_event`, sets `_done = False`, `_exception = err`
-- **`value`** property: decorated with `_get_evnet` for dependency tracking
-- **`error`** property: decorated with `_get_evnet`, returns `Exception | None`
-- **`done`** property: decorated with `_get_evnet`, returns `bool`
+#### Scenario: Triggering a background save
+- **WHEN** a developer wraps an async save function with `AsyncWrapper()`
+- **AND** calls the wrapped function from an event handler
+- **THEN** the coroutine SHALL run in the background
+- **AND** optional callbacks SHALL be invoked on success or failure
 
-### Design Constraints (Async)
+### Requirement: HTTP requests shall be made from the browser
+`HttpClient` SHALL provide methods for all common HTTP verbs (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS) that work in the browser environment using the Fetch API.
 
-- `AsyncComputed.value` is `T | None` — no way to distinguish "not yet resolved" from "resolved to None" without checking `done`
-- `_error` sets `_done = False` rather than a separate error state — this means error recovery sets done back to False
-- Stack trace filtering removes webcompy-internal frames for cleaner error messages
+#### Scenario: Fetching JSON data
+- **WHEN** a developer calls `await HttpClient.get(url)`
+- **THEN** a `Response` object SHALL be returned with `text`, `headers`, `status_code`, and `ok` properties
+- **AND** calling `response.json()` SHALL parse the response body as JSON
 
-## HTTP Client (`webcompy/ajax/`)
+#### Scenario: Posting form data
+- **WHEN** a developer calls `await HttpClient.post(url, form_data={"field": "value"})`
+- **THEN** a `FormData` object SHALL be constructed in the browser
+- **AND** the POST request SHALL be sent with the form data
 
-### HttpClient
+#### Scenario: Making a request outside the browser
+- **WHEN** `HttpClient.request()` is called on the server (where `browser` is `None`)
+- **THEN** `WebComPyHttpClientException` SHALL be raised
 
-- Async HTTP client using `browser.fetch()` (browser-only; raises `WebComPyHttpClientException` otherwise)
-- **Static methods**: `get()`, `head()`, `options()`, `post()`, `put()`, `patch()`, `delete()`
-- All delegate to `HttpClient.request()` with method-specific parameters
+### Requirement: HTTP responses shall provide convenient accessors
+`HttpClient` requests SHALL return a `Response` object with properties for common response data and methods for error handling.
 
-### HttpClient.request()
+#### Scenario: Accessing response metadata
+- **WHEN** a response is received
+- **THEN** `response.status_code` SHALL contain the HTTP status code
+- **AND** `response.ok` SHALL be `True` for 2xx status codes
+- **AND** `response.headers` SHALL contain the response headers as a dict
 
-- Parameters: `method`, `url`, `headers`, `query_params`, `json`, `body_data`, `form_data`, `form_element`
-- URL construction: appends query string if `query_params` provided
-- Headers are URL-encoded via `urllib.parse.quote`
-- Body handling:
-  - `json`: Sets `Content-Type: application/json`, serializes via `json_dumps`
-  - `body_data`: Used directly as body
-  - `form_data`: Creates `browser.FormData.new()` and calls `.set()` for each key-value pair
-  - `form_element`: Creates `browser.FormData.new(form_element.node)` from a DomNodeRef
-- Headers are proxied via `browser.pyscript.ffi.create_proxy()` and `.destroy()`ed in `finally`
-- Returns a `Response` object
-
-### Response
-
-- Properties: `text`, `headers`, `status_code`, `ok`
-- Methods: `json()` (parses response text via `json_loads`), `raise_for_status()` (raises `WebComPyHttpClientException` if not ok)
-
-### Design Constraints (Ajax)
-
-- Only works in browser environment — server-side usage raises exception
-- `form_element` parameter takes a `DomNodeRef` to access the actual DOM form node
-- No request timeout configuration
-- No response streaming support
+#### Scenario: Handling error responses
+- **WHEN** `response.raise_for_status()` is called on a response with a non-2xx status code
+- **THEN** `WebComPyHttpClientException` SHALL be raised

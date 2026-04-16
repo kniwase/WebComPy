@@ -1,107 +1,74 @@
 # Elements (Virtual DOM)
 
-## Overview
+## Purpose
 
-The element system is a Python-side virtual DOM that renders to real DOM nodes when in the browser. There is no virtual DOM diffing algorithm — the approach is direct DOM manipulation with reactive updates.
+The element system is how WebComPy represents and manipulates the user interface. Rather than requiring developers to write HTML templates or JSX, WebComPy provides a Python API for constructing element trees — each element corresponds to a DOM node, and reactive values can be used directly as attributes, text content, or list sources.
 
-## Element Hierarchy
+The system does not use virtual DOM diffing. Instead, it takes a direct approach: when a reactive value changes, the specific DOM node that depends on that value is updated in place. For dynamic content (conditional rendering and list rendering), the entire subtree is regenerated when the controlling value changes. This trades fine-grained efficiency for implementation simplicity.
 
-```
-ElementAbstract (ReactiveReceivable)
-  ├── _node_cache, _mounted, _remount_to
-  ├── _mount_node() / _detach_node() / _get_node()
-  ├── _render() → _mount_node()
-  └── _remove_element() → unregister callbacks, remove node
+## Requirements
 
-ElementWithChildren(ElementAbstract)
-  ├── _tag_name, _attrs, _event_handlers, _children, _parent
-  ├── _proc_attr() → process Reactive/bool/int/str attrs
-  ├── _get_processed_attrs() → inject component-scoping attributes
-  ├── _append_child / _insert_child / _pop_child / _re_index_children
-  ├── _render_html() → SSR string generation
-  └── _create_child_element() → wraps str/Reactive as TextElement
+### Requirement: Elements shall represent DOM nodes and compose into trees
+Developers SHALL be able to create element trees using a Python API where each element corresponds to a DOM node, with support for nested children, attributes, event handlers, and DOM references.
 
-ElementBase(ElementWithChildren)
-  ├── _ref: DomNodeRef, _event_handlers_added
-  ├── _init_node() → Create or reuse DOM node
-  └── _generate_attr_updater() → callback for reactive attr updates
+#### Scenario: Creating a simple element tree
+- **WHEN** a developer writes `html.DIV({"class": "container"}, html.H1({}, "Hello"), html.P({}, "World"))`
+- **THEN** an element tree SHALL be created with a `div` containing an `h1` and a `p`
+- **AND** the tree SHALL be renderable to browser DOM nodes or HTML strings
 
-Element(ElementBase)
-  └── Constructor takes tag_name, attrs, events, ref, children
+### Requirement: Reactive values in elements shall update the DOM automatically
+When a reactive value is used as an element attribute or text content, any change to that value SHALL automatically update the corresponding DOM node without manual intervention.
 
-DynamicElement(ElementWithChildren)
-  ├── No own DOM node (_init_node raises)
-  ├── _node_count = sum of children's node counts
-  ├── _on_set_parent() abstract hook
-  └── Nested DynamicElement raises WebComPyException
+#### Scenario: Using a reactive attribute
+- **WHEN** a developer writes `html.INPUT({"value": my_reactive_text})`
+- **AND** later sets `my_reactive_text.value = "new text"`
+- **THEN** the input element's `value` attribute SHALL update in the DOM
 
-RepeatElement(DynamicElement)
-  └── Reactive list rendering with template function
+#### Scenario: Using reactive text content
+- **WHEN** a developer writes `TextElement(my_count)` where `my_count` is a `Reactive`
+- **AND** later increments `my_count`
+- **THEN** the text content in the DOM SHALL update to reflect the new count
 
-SwitchElement(DynamicElement)
-  └── Conditional rendering (like v-if/v-switch)
+### Requirement: Conditional rendering shall display one branch at a time
+The `switch` construct SHALL evaluate a series of conditions and render the template of the first matching condition. When conditions change, the previous branch SHALL be removed and the new branch SHALL be rendered.
 
-TextElement(ElementAbstract)
-  └── Wraps str or Reactive, updates DOM text content
+#### Scenario: Switching between display modes
+- **WHEN** a developer defines `switch(cases=[(is_admin, lambda: AdminPanel()), (is_user, lambda: UserPanel())], default=lambda: GuestPanel())`
+- **AND** `is_admin` becomes `True`
+- **THEN** `AdminPanel` SHALL be rendered
+- **WHEN** `is_admin` becomes `False` and `is_user` becomes `True`
+- **THEN** `AdminPanel` SHALL be removed and `UserPanel` SHALL be rendered
 
-NewLine(ElementAbstract)
-  └── Renders <br>
+### Requirement: List rendering shall map a reactive list to element templates
+The `repeat` construct SHALL take a reactive list and a template function, and render one element per list item. When the list changes, all rendered items SHALL be removed and regenerated.
 
-MultiLineTextElement(RepeatElement)
-  └── Splits text on \n, interleaves with NewLine elements
-```
+#### Scenario: Rendering a list of items
+- **WHEN** a developer writes `repeat(items, lambda item: html.LI({}, item))`
+- **THEN** one `<li>` SHALL be rendered for each item in `items`
+- **WHEN** `items.append("new")` is called
+- **THEN** the entire list SHALL be regenerated with the new item included
 
-## DOM Node Lifecycle
+### Requirement: Pre-rendered DOM nodes shall be reused during hydration
+When the browser encounters an existing DOM node marked as pre-rendered with a matching tag name, the element SHALL reuse that node instead of creating a new one, enabling efficient hydration of server-rendered content.
 
-### Browser Environment
+#### Scenario: Hydrating a server-rendered page
+- **WHEN** the browser finds an existing DOM node with `__webcompy_prerendered_node__ = True` and a matching tag name
+- **THEN** the element SHALL adopt that node rather than creating a new one
+- **AND** attributes SHALL be updated to match the element's current state
 
-- `_init_node()` checks for existing pre-rendered node (`__webcompy_prerendered_node__`):
-  - If found with matching tag name, reuses it (hydration)
-  - Otherwise, removes existing node and creates new with `browser.document.createElement()`
-- Sets `__webcompy_node__ = True` marker on the node
-- For reactive attributes, registers `on_after_updating` callbacks via `_generate_attr_updater()`
-- Event handlers are proxied via `browser.pyscript.ffi.create_proxy()`
+### Requirement: Event handlers shall propagate user interactions to Python
+Developers SHALL be able to attach event handlers to elements using `@event_name` attribute syntax. In the browser, these handlers SHALL be properly proxied for PyScript interop and cleaned up when the element is removed.
 
-### SSR (Server-Side Rendering)
+#### Scenario: Handling a button click
+- **WHEN** a developer writes `html.BUTTON({"@click": on_click}, "Click me")`
+- **THEN** clicking the button in the browser SHALL invoke the `on_click` Python function
+- **AND** the event handler SHALL receive the DOM event object
 
-- `_render_html()` generates HTML strings
-- `ElementWithChildren._render_html()` produces `<tag attrs>children</tag>` format
-- `DynamicElement._render_html()` concatenates children's HTML
-- `AppDocumentRoot._render_html()` sets `hidden=True` on the app div during SSG
+### Requirement: DOM references shall allow direct access to real DOM nodes
+Developers SHALL be able to create a `DomNodeRef` and pass it as a `:ref` attribute to any element. After the element is rendered, the ref SHALL provide access to the underlying DOM node for imperative operations.
 
-## Hydration
-
-- `AppDocumentRoot._init_node()` finds `#webcompy-app` and marks all children as pre-rendered via `__webcompy_prerendered_node__ = True`
-- Pre-rendered nodes are reused during `_init_node()` if the tag name matches
-- After first render, `#webcompy-loading` element is removed from DOM
-
-## Reactive DOM Updates
-
-- **Attribute updates**: `ElementBase._init_node()` registers `on_after_updating` callbacks on reactive attrs. The callback updates the DOM attribute directly.
-- **Text updates**: `TextElement.__init__()` registers `on_after_updating` for reactive text content. The callback updates `node.textContent`.
-- **List updates**: `RepeatElement` registers `on_after_updating` on its sequence reactive. On change, all children are removed and regenerated.
-- **Switch updates**: `SwitchElement` tracks `_rendered_idx` to avoid unnecessary re-renders. Only regenerates when the active case changes.
-
-## Helper Functions (generators.py)
-
-- **`create_element(tag_name, attrs, *children)`**: Parses attribute dict, separates `@event` handlers and `:ref` DomNodeRefs
-- **`event(name)`**: Prefixes with `@` for event attribute key
-- **`noderef`**: Special key `":ref"` for DomNodeRef
-- **`repeat(sequence, template)`**: Creates `RepeatElement`
-- **`switch(*cases, default)`**: Creates `SwitchElement` from case tuples
-- **`text(text, enable_multiline)`**: Creates `MultiLineTextElement` or `TextElement`
-- **`break_line()`**: Creates `NewLine`
-
-## DomNodeRef
-
-- Proxy object for accessing real DOM nodes
-- `element` property raises `WebComPyException` if not initialized
-- `__getattr__` / `__setattr__` delegate to the underlying DOM node
-- `__init_node__(node)` / `__reset_node__()` manage the underlying reference
-
-## Design Constraints
-
-- **No virtual DOM diffing**: `RepeatElement` and `SwitchElement` completely regenerate children on change — no key-based reconciliation
-- **DynamicElement nesting is forbidden**: `DynamicElement._create_child_element()` raises `WebComPyException` if a child is also a `DynamicElement`
-- **Boolean attribute handling**: `True` renders as attribute present with empty string value, `False` removes the attribute
-- **Event handler proxying**: All event handlers are proxied via `pyscript.ffi.create_proxy()` in browser, and `destroy()` is called on removal
+#### Scenario: Focusing an input element
+- **WHEN** a developer creates `input_ref = DomNodeRef()` and passes it as `":ref"` on an input element
+- **AND** the element is rendered
+- **THEN** `input_ref.element` SHALL return the actual DOM input element
+- **AND** `input_ref.element.focus()` SHALL focus the input in the browser

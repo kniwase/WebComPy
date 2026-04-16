@@ -1,69 +1,71 @@
 # Router
 
-## Overview
+## Purpose
 
-WebComPy provides client-side routing with hash mode and history mode. The router is integrated with the reactive system — `Location` extends `ReactiveBase[str]`, so route changes propagate reactively.
+A front-end router solves a fundamental problem in single-page applications: synchronizing the browser's URL with the application's visible content. Without routing, navigating between "pages" requires a full page reload. With routing, only the relevant portion of the DOM changes while the browser URL updates, enabling a seamless user experience.
 
-## Router (Singleton)
+WebComPy provides two routing modes — hash mode for simple deployments (like static hosting services) and history mode for clean URLs (requiring server-side support). The router integrates with the reactive system so that URL changes automatically propagate to the UI: when a route changes, the page component updates without any manual wiring.
 
-- **Only one instance allowed** (`_instance` class variable; raises `WebComPyComponentException` on duplicate)
-- **Modes**: `"hash"` (`#/path`) or `"history"` (`/path`)
-- **`base_url`**: For sub-path deployment (normalized with leading/trailing slashes)
-- **Route definition**: `RouterPage` TypedDict with `path` (required), `component`, optional `path_params`, `meta`
-- **Path matching**: Routes compiled to regex patterns; `{param}` syntax for path params (e.g., `/users/{id}`)
-- **`__cases__`**: A `computed_property` that evaluates `SwitchElement` cases for all routes — integrates the router directly with `SwitchElement` for reactive route matching
-- **`__default__`**: Returns a 404 component or `"Not Found"` string
-- **`_generate_router_context()`**: Creates a `TypedRouterContext` with path, query params, path params, and state
+## Requirements
 
-## Location (`_change_event_handler.py`)
+### Requirement: The router shall synchronize the browser URL with displayed content
+When the URL changes — whether through user navigation (clicking links, using browser back/forward) or programmatic navigation — the router SHALL determine which page component to display and render it.
 
-- Extends `ReactiveBase[str]`
-- Wraps `browser.window.location` (hash or pathname+search)
-- Registers a `popstate` event listener via `browser.pyscript.ffi.create_proxy` on init
-- **`value`** property: reactive, uses `_get_evnet` for dependency tracking
-- **`state`** property: reactive, returns `history.state` parsed via `to_dict()`
-- **`set_mode(mode)`**: Changes mode and refreshes path (decorated with `_change_event`)
-- **`__set_path__(path, state)`**: Updates path and state (decorated with `_change_event`)
-- **`destroy()`**: Removes event listener and proxy
+#### Scenario: Clicking a navigation link
+- **WHEN** a user clicks a `RouterLink`
+- **THEN** the browser URL SHALL update without a full page reload
+- **AND** the page component matching the new URL SHALL replace the currently displayed page
 
-## RouterLink
+#### Scenario: Using browser back/forward buttons
+- **WHEN** a user presses the browser back button
+- **THEN** the router SHALL detect the URL change via `popstate`
+- **AND** the previously displayed page component SHALL be restored
 
-- Extends `Element`, renders as `<a>` tag
-- **`_href`**: `computed_property` that builds the URL (hash-prefixed for hash mode, path-based for history mode) with query params and path params
-- **`_on_click()`**: Prevents default, pushes state via `browser.window.history.pushState()`, calls `Router.__set_path__`
-- validates that `query` and `params` are dicts of the correct types
-- **`_refresh()`**: On reactive `to` change, regenerates attrs and children, re-renders
+### Requirement: The router shall support hash-based and history-based routing
+Hash mode SHALL use `#/path` URLs that work without server configuration. History mode SHALL use clean `/path` URLs that require server-side routing support.
 
-## RouterView (Singleton)
+#### Scenario: Deploying with hash mode
+- **WHEN** an app is configured with `Router(mode="hash")`
+- **THEN** all `RouterLink` URLs SHALL use the `#/path` format
+- **AND** the app SHALL work on any static hosting service without server configuration
 
-- **Only one instance allowed** (raises `WebComPyComponentException` on duplicate)
-- Renders a `SwitchElement` with `Router.__cases__` and `Router.__default__`
-- Sets `webcompy-routerview` attribute on the container div
-- `__set_router__(router)`: Class method to inject the router instance
+#### Scenario: Deploying with history mode
+- **WHEN** an app is configured with `Router(mode="history")`
+- **THEN** `RouterLink` URLs SHALL use clean `/path` format
+- **AND** the server SHALL be configured to redirect all routes to the app's entry point
 
-## TypedRouterContext
+### Requirement: Route definitions shall support path parameters
+Developers SHALL be able to define routes with dynamic segments (e.g., `/users/{id}`) that capture values from the URL and pass them to page components.
 
-- Generic context for route props: `TypedRouterContext[ParamsType, QueryParamsType, PathParamsType]`
-- Cannot be constructed directly (`__init__` raises `NotImplementedError`)
-- Created via `TypedRouterContext.__create_instance__(path=, state=, query_params=, path_params=)`
-- Properties: `path`, `params` (state), `query`, `path_params`
-- **`RouterContext`** type alias: `TypedRouterContext[dict[str, Any], dict[str, str], dict[str, str]]`
+#### Scenario: Navigating to a user profile
+- **WHEN** a route is defined as `/users/{id}` and the URL is `/users/42`
+- **THEN** the page component SHALL receive `path_params={"id": "42"}` in its router context
+- **AND** `RouterLink(to="/users/{id}", path_params=id_reactive)` SHALL generate `/users/42`
 
-## RoutedComponent
+### Requirement: Route context shall provide URL information to page components
+Each page component SHALL receive a router context containing the current path, path parameters, query parameters, and navigation state.
 
-- `TypedComponentBase(RouterContext)` — base class for page components that receive router context as props
+#### Scenario: Accessing route information in a component
+- **WHEN** a user navigates to `/search?q=python&page=2`
+- **THEN** the page component SHALL receive `context.props.path` as the full path
+- **AND** `context.props.query` as `{"q": "python", "page": "2"}`
+- **AND** `context.props.path_params` as any path parameters
 
-## create_typed_route()
+### Requirement: Navigation shall support passing state between pages
+When navigating via `RouterLink`, developers SHALL be able to pass state data that persists across navigation events (accessible via `history.state`).
 
-- Returns a tuple of typed context and link classes: `(TypedRouterContext[...], TypedRouterLink[...])`
-- Allows specifying custom types for params, query, and path_params
+#### Scenario: Passing data between pages
+- **WHEN** a `RouterLink` includes `params` with JSON-serializable data
+- **THEN** that data SHALL be stored in `history.state`
+- **AND** the destination page SHALL be able to access it via `context.props.params`
 
-## Design Constraints
+### Requirement: A default page shall be shown when no route matches
+When the current URL does not match any defined route, the router SHALL render a default component or display "Not Found".
 
-- Router and RouterView are both singletons (enforced at runtime)
-- `Router.__cases__` is a `computed_property` — route matching is reactively computed
-- `Location.__set_path__` is the central path update mechanism, decorated with `_change_event`
-- Path params use `{param}` syntax (similar to Flask)
-- Query parameters are URL-decoded; path segments are URL-encoded
-- `base_url` stripping uses regex in history mode
-- `popstate` proxy must be `destroy()`ed on cleanup
+#### Scenario: Navigating to an undefined route
+- **WHEN** the URL matches no defined route and no default component is provided
+- **THEN** the text "Not Found" SHALL be displayed
+
+#### Scenario: Navigating to an undefined route with a default component
+- **WHEN** the URL matches no defined route and a default component is provided
+- **THEN** the default component SHALL be rendered with the current path and query information

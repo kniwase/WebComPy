@@ -1,56 +1,65 @@
 # Application Bootstrapping
 
-## Overview
+## Purpose
 
-`WebComPyApp` is the entry point that ties together the root component, router, and document head management. It is instantiated by the user's `bootstrap.py` and discovered by the CLI.
+Bootstrapping is the process by which a WebComPy application comes to life. It bridges the gap between the developer's component definitions and the running application in the browser: connecting the root component to the DOM, initializing the router if one exists, setting up reactive head management, and removing the loading screen once the app is ready.
 
-## WebComPyApp
+On the server side, bootstrapping enables static site generation — rendering the component tree to HTML strings that can be served without browser execution.
 
-- Constructor: `WebComPyApp(*, root_component, router=None)`
-- `root_component`: A `ComponentGenerator[None]` (component with no props)
-- `router`: Optional `Router` instance
-- **`__component__`**: Returns the `AppDocumentRoot` instance
-- Delegates head management: `set_title`, `set_meta`, `append_link`, `append_script`, `set_head`, `update_head`
+## Requirements
 
-## AppDocumentRoot
+### Requirement: The application entry point shall connect a root component to the DOM
+`WebComPyApp` SHALL accept a root component and optional router, and create an application root that renders the component into the `#webcompy-app` DOM element.
 
-- Extends `Component`, wrapping `AppRootComponent`
-- `AppRootComponent` is a `NonPropsComponentBase` with template: `html.DIV({"id": "webcompy-app"}, context.slots("root"))`
-- If a router is provided, sets `RouterView.__set_router__` and `TypedRouterLink.__set_router__`
-- **In browser**: Sets up `Component._head_props.title` watcher to update `browser.document.title`
-- **Loading indicator**: On first `_render()`, removes `#webcompy-loading` DOM element
-- **Hydration**: `_init_node()` finds `#webcompy-app`, marks it and all children as pre-rendered
-- `_mount_node()` is a no-op (root is already in DOM)
-- Manages head props: `titles` (ReactiveDict), `head_metas` (ReactiveDict)
-- **`style`** property: Returns concatenated scoped CSS from all registered component generators
-- **`_render_html()`**: Sets `hidden=True` on the app div during SSG
+#### Scenario: Starting an app without a router
+- **WHEN** a developer creates `WebComPyApp(root_component=MyApp)`
+- **THEN** `MyApp` SHALL be rendered inside `<div id="webcompy-app">`
+- **AND** the app SHALL function as a single-page application with no routing
 
-## Head Management
+#### Scenario: Starting an app with a router
+- **WHEN** a developer creates `WebComPyApp(root_component=MyApp, router=my_router)`
+- **THEN** the router SHALL be connected to `RouterView` and `RouterLink`
+- **AND** URL-based navigation SHALL work
 
-- `Component._head_props` is a class-level `HeadPropsStore` (singleton across all components)
-  - `titles`: `ReactiveDict[UUID, str]` — keyed by component instance ID
-  - `head_metas`: `ReactiveDict[UUID, dict[str, dict[str, str]]]` — keyed by component instance ID
-- `HeadPropsStore.title`: `computed_property` returning the last title value
-- `HeadPropsStore.head_meta`: `computed_property` flattening all meta dicts
-- Components set titles/metas via `Component._set_title` / `Component._set_meta`, which store by instance UUID
-- On component destruction, the UUID key is removed from both dicts
+### Requirement: The application shall hydrate pre-rendered content
+When the browser finds existing DOM content inside `#webcompy-app`, the application SHALL reuse those nodes rather than recreating them, enabling fast initial page loads.
 
-## Bootstrap Flow (Browser)
+#### Scenario: Hydrating a server-rendered page
+- **WHEN** the browser loads a pre-rendered page containing `#webcompy-app`
+- **THEN** the application SHALL adopt existing DOM nodes
+- **AND** reactive bindings SHALL be attached to those nodes
+- **AND** no visible flash or content duplication SHALL occur
 
-1. PyScript loads the webcompy wheel and app wheel packages
-2. The bootstrap script runs: `from app_package.bootstrap import app; app.__component__.render()`
-3. `AppDocumentRoot._render()` iterates children and renders them
-4. Each Element creates/reuses DOM nodes, sets attributes, binds events
-5. `#webcompy-loading` div is removed after first render
+### Requirement: The loading indicator shall be removed on first render
+When the application finishes its first render, the `#webcompy-loading` element SHALL be removed from the DOM, revealing the fully rendered application.
 
-## Bootstrap Flow (SSG)
+#### Scenario: Initial page load
+- **WHEN** a user opens a WebComPy app
+- **THEN** a loading spinner SHALL be visible while PyScript initializes
+- **AND** once the app renders, the spinner SHALL disappear
 
-1. CLI discovers the `WebComPyApp` via `get_app(config)`
-2. For each route, `AppDocumentRoot._render_html()` generates the HTML string
-3. The generated HTML includes `<script type="module" src="pyscript core.js">`, a loading screen, and the app div with `hidden=True`
+### Requirement: The application shall manage the document head reactively
+When components set the document title or meta tags, those changes SHALL be reflected in the browser's document head. When a component is destroyed, its head entries SHALL be removed, and the most recently set title SHALL take effect.
 
-## Design Constraints
+#### Scenario: A page component sets the title
+- **WHEN** a page component calls `context.set_title("User Profile")`
+- **THEN** the browser tab title SHALL update to "User Profile"
+- **WHEN** the user navigates to a different page
+- **THEN** the previous page's title SHALL be removed and the new page's title SHALL take effect
 
-- `AppDocumentRoot._get_belonging_component()` returns empty string (root has no component scope)
-- `AppDocumentRoot._get_belonging_components()` returns `(self,)` (root is its own component scope)
-- Head props use UUID keyed by component instance ID — removed on component destruction
+### Requirement: The application shall support scoped CSS injection
+All registered components' scoped CSS SHALL be collected and injected into the document as a single `<style>` block during rendering.
+
+#### Scenario: Rendering multiple components with scoped styles
+- **WHEN** components `A` and `B` each define scoped CSS
+- **THEN** both styles SHALL appear in a single `<style>` element in the document head
+- **AND** each style SHALL only affect elements within its respective component
+
+### Requirement: Static site generation shall produce complete HTML pages
+The CLI SHALL render the application to HTML strings for each route, including PyScript bootstrapping code, dependency packages, and the loading screen.
+
+#### Scenario: Generating a static site
+- **WHEN** the generate command is run
+- **THEN** each route SHALL produce an `index.html` with pre-rendered content
+- **AND** the HTML SHALL include `<script>` tags for PyScript and package configuration
+- **AND** a loading screen SHALL be shown until PyScript finishes initialization

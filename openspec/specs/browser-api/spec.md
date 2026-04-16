@@ -1,62 +1,49 @@
 # Browser API Abstraction
 
-## Overview
+## Purpose
 
-WebComPy abstracts browser APIs behind a `browser` module that is `None` on the server and a `PyScriptBrowserModule` proxy in the browser. All DOM interaction code gates on `if browser:` checks.
+WebComPy applications need to interact with browser APIs — the DOM, event system, fetch, history, and more. These APIs only exist in the browser environment, but the same Python codebase must also run on the server for static site generation. The browser API abstraction layer solves this by providing a `browser` object that is `None` on the server and a dynamic proxy in the browser, allowing all browser-dependent code to be gated behind a simple `if browser:` check.
 
-## Environment Detection (`utils/_environment.py`)
+## Requirements
 
-- `ENVIRONMENT` is computed once at import time via `_get_environment()`
-- **`"pyscript"`**: When `platform.system() == "Emscripten"` (running in PyScript/Pyodide)
-- **`"other"`**: Standard Python (server-side)
+### Requirement: The framework shall detect the browser environment at import time
+The `ENVIRONMENT` variable SHALL be computed once when the module is imported: `"pyscript"` when running under PyScript (detected by `platform.system() == "Emscripten"`), and `"other"` otherwise.
 
-## Module Loading (`_browser/_modules.py`)
+#### Scenario: Running in the browser via PyScript
+- **WHEN** the application runs in PyScript/Emscripten
+- **THEN** `ENVIRONMENT` SHALL equal `"pyscript"`
+- **AND** `browser` SHALL be a proxy object providing access to browser APIs
 
-- If `ENVIRONMENT == "pyscript"`: imports `browser` from `_browser._pyscript`
-- Otherwise: `browser = None`
+#### Scenario: Running on a standard Python server
+- **WHEN** the application runs on a standard Python interpreter
+- **THEN** `ENVIRONMENT` SHALL equal `"other"`
+- **AND** `browser` SHALL be `None`
 
-## PyScript Browser Module (`_browser/_pyscript/__init__.py`)
+### Requirement: Browser API access shall be gated with explicit checks
+All code that uses browser APIs SHALL check `if browser:` before accessing browser-dependent functionality. Code that cannot function without browser APIs SHALL raise a clear error when `browser` is `None`.
 
-### _PyScriptBrowserModule
+#### Scenario: Creating a DOM element
+- **WHEN** the framework attempts to create a DOM element
+- **AND** `browser` is `None` (server environment)
+- **THEN** `WebComPyException` with message "Not in Browser environment." SHALL be raised
 
-- Extends `ModuleType` to act as a dynamic module-like object
-- On init, imports `pyscript`, `pyodide`, and `js` modules
-- All attributes from `js` (the browser `window` object) are set as attributes on the module
-- This creates a unified `browser` namespace providing:
-  - `browser.pyscript`: PyScript module (for `ffi.create_proxy`, `ffi.is_none`)
-  - `browser.pyodide`: Pyodide module
-  - `browser.document`: DOM document
-  - `browser.window`: Window object
-  - `browser.fetch`: Fetch API
-  - `browser.FormData`: FormData constructor
-  - All other `window` properties (hundreds, typed as `Any`)
+### Requirement: The browser proxy shall provide access to all window APIs
+When running in the browser, the `browser` object SHALL provide access to `document`, `window`, `pyscript`, `pyodide`, `fetch`, `FormData`, and all other properties of the JavaScript `window` object.
 
-## Type Stubs (`_browser/_modules.pyi`)
+#### Scenario: Accessing the document object
+- **WHEN** `browser.document` is accessed in the browser
+- **THEN** the actual `window.document` SHALL be returned
+- **AND** developers SHALL be able to call DOM methods like `createElement`, `getElementById`, etc.
 
-- Provides type hints for the `browser` module
-- `BrowserModule` Protocol with `pyscript`, `pyodide`, and hundreds of `window` properties/constructors
-- `PyScriptFfi` Protocol: `create_proxy`, `is_none`, `to_js`, `assign`
-- `browser: BrowserModule | None` — the key type annotation
+### Requirement: JavaScript proxy objects shall be created and destroyed properly
+Objects that bridge Python and JavaScript (such as event handlers) SHALL be created via `pyscript.ffi.create_proxy()` and SHALL be destroyed when no longer needed to prevent memory leaks.
 
-## Usage Pattern Across Codebase
+#### Scenario: Registering an event handler
+- **WHEN** a DOM event handler is registered
+- **THEN** the handler SHALL be wrapped with `pyscript.ffi.create_proxy()`
+- **AND** when the element is removed, `destroy()` SHALL be called on the proxy
 
-All browser-dependent code follows this pattern:
-
-```python
-from webcompy._browser._modules import browser
-
-if browser:
-    # DOM manipulation, event handling, etc.
-    node = browser.document.createElement("div")
-else:
-    # Server-side fallback (SSG, etc.)
-    raise WebComPyException("Not in Browser environment.")
-```
-
-## Design Constraints
-
-- No fallback implementations for browser APIs when running server-side (raises exceptions instead)
-- The `browser` module is a catch-all proxy — all `window` attributes are available but typed as `Any`
-- `pyscript.ffi.create_proxy()` must be paired with `.destroy()` to avoid memory leaks
-- `pyscript.ffi.is_none()` is used to check for JavaScript `null`/`undefined`
-- Simple binary detection: server or browser, no partial availability checks
+#### Scenario: Cleanup on element removal
+- **WHEN** an element with registered event handlers is removed from the DOM
+- **THEN** `removeEventListener` SHALL be called for each handler
+- **AND** each proxy SHALL be `destroy()`ed to release the JavaScript reference
