@@ -10,6 +10,7 @@ class WebComPyConfig:
     static_files_dir_path: Path
     dist: str
     dependencies: list[str]
+    cname: str
 
     def __init__(
         self,
@@ -19,6 +20,7 @@ class WebComPyConfig:
         static_files_dir: Path | str = "static",
         dist: str = "dist",
         dependencies: list[str] | None = None,
+        cname: str = "",
     ) -> None:
         if isinstance(app_package, Path):
             self.app_package_path = app_package.absolute()
@@ -32,3 +34,4 @@ class WebComPyConfig:
             self.static_files_dir_path = self.app_package_path.parent / static_files_dir
         self.dist = dist
         self.dependencies = [*dependencies] if dependencies else []
+        self.cname = cname

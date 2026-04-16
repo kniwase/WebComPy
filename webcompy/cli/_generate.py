@@ -32,6 +32,11 @@ def generate_static_site():
     nojekyll_path.touch()
     print(nojekyll_path)
 
+    if config.cname:
+        cname_path = dist_dir / "CNAME"
+        cname_path.open("w", encoding="utf8").write(config.cname)
+        print(cname_path)
+
     static_files_dir = config.static_files_dir_path.absolute()
     for relative_path in get_static_files(static_files_dir):
         src = static_files_dir / relative_path
