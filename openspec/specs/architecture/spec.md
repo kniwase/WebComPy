@@ -2,14 +2,16 @@
 
 ## Purpose
 
-WebComPy is a Python front-end framework that runs in the browser via PyScript, but its codebase must also execute on a standard Python server for development tooling and static site generation. This dual-environment architecture is the most fundamental architectural decision: every module must be aware of which context it runs in, and the framework provides clean boundaries so that application code (components, state, routing) works identically in both.
+WebComPy runs the same Python codebase in two environments: the browser (via PyScript/Emscripten) where the application actually executes and manipulates the DOM, and the server (standard CPython) used for development tooling and static site generation. This dual-environment architecture is the foundational structural decision — every module, from reactive state to routing, must work identically in both contexts, while environment-specific concerns (DOM access, PyScript bootstrapping, HTML serialization) are confined to clearly separated layers.
 
-A developer using WebComPy writes Python, defines components, and builds applications without thinking about the browser/server split — the framework handles that invisibly. The architecture ensures that reactive state propagation, component rendering, and routing behave the same way regardless of where the code executes, while the environment-specific concerns (DOM manipulation, PyScript bootstrapping, HTML generation) are confined to clearly separated layers.
+From a developer's perspective, this means writing Python once and having it work everywhere. The framework absorbs the complexity: developers define components, state, and routing, and the framework renders to DOM nodes in the browser or HTML strings on the server, all from the same source code.
+
+**What WebComPy does not yet provide:** The framework relies on multiple global singletons (`ReactiveStore`, `Router`, `RouterView`, `ComponentStore`, `Component._head_props`) which makes testing and isolation difficult. Browser environment detection is binary (Emscripten or other) with no partial API availability checks — code that only needs `localStorage`, for example, cannot gracefully degrade on server-side.
 
 ## Requirements
 
 ### Requirement: The framework shall operate in two environments from a single codebase
-The same Python source code SHALL execute correctly both in the browser (via PyScript/Emscripten) and on the server (standard CPython). In the browser, the framework manipulates the DOM directly. On the server, it generates HTML strings for static site generation. No application code should need to change between environments.
+The same Python source code SHALL execute correctly both in the browser (via PyScript/Emscripten) and on the server (standard CPython). In the browser, the framework manipulates the DOM directly and responds to user interaction. On the server, it generates HTML strings for static site generation. No application code should need to change between environments.
 
 #### Scenario: Rendering a component in the browser
 - **WHEN** a component with reactive state and a template is rendered in the browser
@@ -30,7 +32,7 @@ The `browser` object SHALL be `None` on the server and a proxy to the full brows
 - **AND** server-side code (SSG, configuration) SHALL not crash due to missing browser APIs
 
 ### Requirement: The application entry point shall connect all subsystems
-`WebComPyApp` SHALL serve as the single entry point that wires together the root component, the router, and the reactive head management system. Developers SHALL only need to provide a root component and optionally a router.
+`WebComPyApp` SHALL serve as the single entry point that wires together the root component, the router, and the reactive head management system. Developers SHALL only need to provide a root component and optionally a router — the framework handles all internal wiring.
 
 #### Scenario: Creating a minimal application
 - **WHEN** a developer writes `app = WebComPyApp(root_component=MyApp)`
@@ -43,7 +45,7 @@ The `browser` object SHALL be `None` on the server and a proxy to the full brows
 - **AND** URL changes SHALL trigger reactive UI updates
 
 ### Requirement: The project structure shall be discoverable by convention
-A WebComPy project SHALL follow a specific directory layout: a `webcompy_config.py` with a `WebComPyConfig` instance, and an app package with a `bootstrap.py` containing a `WebComPyApp` instance. The CLI SHALL discover these by convention.
+A WebComPy project SHALL follow a specific directory layout: a `webcompy_config.py` with a `WebComPyConfig` instance, and an app package with a `bootstrap.py` containing a `WebComPyApp` instance. The CLI SHALL discover these by convention, not by configuration files.
 
 #### Scenario: Starting the dev server
 - **WHEN** a developer runs `python -m webcompy start --dev`
@@ -53,12 +55,12 @@ A WebComPy project SHALL follow a specific directory layout: a `webcompy_config.
 - **AND** find the `WebComPyApp` instance
 
 ### Requirement: The CLI shall provide three distinct workflows
-The framework SHALL provide three commands: `start` (live development), `generate` (production deployment), and `init` (project scaffolding). Each SHALL serve a different purpose in the developer lifecycle.
+The framework SHALL provide three commands serving different phases of the development lifecycle: `start` for live development with hot-reload, `generate` for production static site generation, and `init` for project scaffolding.
 
 #### Scenario: Developing with hot-reload
 - **WHEN** a developer runs `python -m webcompy start --dev`
-- **THEN** a local server SHALL start with hot-reload capability
-- **AND** changes to the source code SHALL trigger a browser refresh
+- **THEN** a local server SHALL start with SSE-based hot-reload
+- **AND** changes to Python source files SHALL trigger a browser refresh
 
 #### Scenario: Generating a production build
 - **WHEN** a developer runs `python -m webcompy generate`
@@ -72,7 +74,7 @@ The framework SHALL provide three commands: `start` (live development), `generat
 - **AND** the developer SHALL be able to immediately run the dev server
 
 ### Requirement: Python packages shall be delivered to the browser via wheels
-The framework SHALL package itself and the application as Python wheels, which SHALL be served to the browser via PyScript's package loading mechanism. This enables the entire application — framework and user code alike — to run as standard Python in the browser.
+The framework SHALL package itself and the application as Python wheels. PyScript SHALL load these wheels in the browser, enabling the entire application — framework and user code alike — to run as standard Python without a JavaScript build step.
 
 #### Scenario: Loading an application in the browser
 - **WHEN** a user opens a WebComPy application in their browser
@@ -81,7 +83,7 @@ The framework SHALL package itself and the application as Python wheels, which S
 - **AND** no custom JavaScript build step SHALL be required
 
 ### Requirement: Hydration shall connect reactive bindings to pre-rendered content
-When the browser loads a page with pre-rendered HTML, the framework SHALL reuse existing DOM nodes instead of recreating them, connecting reactive bindings to those nodes for subsequent updates. This eliminates visible flash and layout shift on initial page load.
+When the browser loads a page with pre-rendered HTML, the framework SHALL reuse existing DOM nodes instead of recreating them, connecting reactive bindings for subsequent updates. This eliminates visible flash and layout shift on initial page load.
 
 #### Scenario: Loading a pre-rendered page
 - **WHEN** a user navigates to a WebComPy application
@@ -90,7 +92,7 @@ When the browser loads a page with pre-rendered HTML, the framework SHALL reuse 
 - **AND** no visible content flash or layout shift SHALL occur during hydration
 
 ### Requirement: Type hints shall be provided for browser APIs
-The framework SHALL include type hints (`.pyi` stub) for the browser API proxy, enabling IDE autocompletion and type checking for browser-dependent code. The `browser` object SHALL be typed as `BrowserModule | None` to reflect that it is unavailable on the server.
+The framework SHALL include type hints for the browser API proxy, enabling IDE autocompletion and type checking. The `browser` object SHALL be typed as `BrowserModule | None` to reflect that it is unavailable on the server, forcing developers to check before use.
 
 #### Scenario: Using browser APIs with type safety
 - **WHEN** a developer writes `if browser: browser.document.getElementById("app")`

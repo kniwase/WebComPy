@@ -6,6 +6,8 @@ A front-end router solves a fundamental problem in single-page applications: syn
 
 WebComPy provides two routing modes — hash mode for simple deployments (like static hosting services) and history mode for clean URLs (requiring server-side support). The router integrates with the reactive system so that URL changes automatically propagate to the UI: when a route changes, the page component updates without any manual wiring.
 
+**What WebComPy does not yet provide:** The router enforces singleton patterns for both `Router` and `RouterView`, which makes testing difficult without explicit cleanup. Other frameworks support nested routes, route guards (before/after navigation hooks), and lazy-loaded route components. The `Location` object's `popstate` proxy requires manual `destroy()` calls for cleanup.
+
 ## Requirements
 
 ### Requirement: The router shall synchronize the browser URL with displayed content

@@ -6,6 +6,8 @@ The element system is how WebComPy represents and manipulates the user interface
 
 The system does not use virtual DOM diffing. Instead, it takes a direct approach: when a reactive value changes, the specific DOM node that depends on that value is updated in place. For dynamic content (conditional rendering and list rendering), the entire subtree is regenerated when the controlling value changes. This trades fine-grained efficiency for implementation simplicity.
 
+**What WebComPy does not yet provide:** In frameworks like React and Vue, list rendering uses keys to reconcile individual items — only changed items are updated while the rest are reused. WebComPy's `repeat` regenerates all children on every list change. Similarly, conditional branches (`switch`) completely replace their subtree rather than patching it. Dynamic elements (repeat and switch) cannot be nested, and `TextElement` does not hydrate pre-rendered text nodes in SSR output.
+
 ## Requirements
 
 ### Requirement: Elements shall represent DOM nodes and compose into trees

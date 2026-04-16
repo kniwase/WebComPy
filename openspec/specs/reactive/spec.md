@@ -6,6 +6,8 @@ Reactive state is the foundation of a declarative UI. In a traditional imperativ
 
 WebComPy's reactive system provides primitive containers (`Reactive`), derived values (`Computed`), and collections (`ReactiveList`, `ReactiveDict`) that integrate seamlessly with the element system. Any part of the UI that reads a reactive value is automatically tracked as a dependent, and any change to that value triggers updates in all dependents — whether they are text content, element attributes, computed derivations, or conditional renderings.
 
+**What WebComPy does not yet provide:** In other reactive frameworks like Vue or SolidJS, list and dict mutations can trigger fine-grained updates for individual items. In WebComPy, `ReactiveList` and `ReactiveDict` are coarse-grained — any mutation triggers a full-collection change notification. Additionally, the `_get_evnet` method name (typo for `_get_event`) and `__webcompy_componet_definition__` attribute (typo for "component") are embedded throughout the codebase and await correction.
+
 ## Requirements
 
 ### Requirement: Primitive reactive values shall notify dependents on change

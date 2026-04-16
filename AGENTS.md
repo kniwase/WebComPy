@@ -73,6 +73,47 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - `webcompy/cli/template_data/` contains the project template for `webcompy init`
 - Playwright MCP is configured in `opencode.json` (currently pinned to `@0.0.70`; update when needed)
 
+## OpenSpec Workflow
+
+WebComPy uses OpenSpec for spec-driven development. Specs define **what the framework promises to users** (developer-facing behavior), not internal implementation details.
+
+### Workflow
+
+1. **Explore** (`/opsx-explore`): Investigate problems, compare approaches, clarify requirements before committing to a change.
+2. **Propose** (`/opsx-propose`): Create a change proposal with design, specs, and tasks. The proposal must reference existing specs and address known issues where relevant.
+3. **Apply** (`/opsx-apply`): Implement tasks from an approved change proposal.
+4. **Archive** (`/opsx-archive`): Finalize a completed change and update the main specs.
+
+### Spec Writing Guidelines
+
+- Write specs from the **developer's or end-user's perspective**, not the implementation's perspective.
+- Use `## Purpose` to explain *why* this capability exists and *what problem it solves*.
+- Use `## Requirements` with `### Requirement:` headers and `#### Scenario:` blocks using `WHEN/THEN/AND` format.
+- Describe **observable behavior**, not class hierarchies or method signatures.
+- Keep specs focused on capabilities. Internal refactoring that doesn't change user-facing behavior doesn't need a spec change.
+
+### Change Conventions
+
+- Change names MUST use the format `<type>/<short-description>` matching the branch prefix convention (e.g., `feat/list-reconciliation`, `fix/evnet-typo`, `refactor/singleton-removal`).
+- Proposals MUST include a "Known Issues Addressed" section when the change relates to any issue listed in `openspec/config.yaml` context.
+- Proposals MUST include a "Non-goals" section.
+- Tasks MUST be broken into chunks of max 2 hours.
+
+### Current Specs
+
+| Spec | Description |
+|------|-------------|
+| `overview` | Framework purpose, core promises, and development lifecycle |
+| `architecture` | Dual-environment model, project structure, CLI workflows, hydration |
+| `reactive` | Reactive state primitives and change propagation |
+| `components` | Component definition styles, props, slots, scoped CSS, lifecycle |
+| `elements` | DOM element creation, reactive updates, conditional/list rendering |
+| `router` | Client-side routing, hash/history modes, path params |
+| `app` | Application bootstrapping, hydration, head management |
+| `cli` | Dev server, SSG, project scaffolding, configuration |
+| `browser-api` | Browser environment detection and API abstraction |
+| `async` | Async operations, HTTP client integration |
+
 ## Git Conventions
 
 ### Commit Messages

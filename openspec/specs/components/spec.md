@@ -8,6 +8,8 @@ WebComPy supports two definition styles that serve different needs: function-sty
 
 Components also provide scoped CSS to prevent styles from leaking between unrelated parts of the UI, and document head management so that each page component can declare its own title and meta tags.
 
+**What WebComPy does not yet provide:** Other frameworks offer dependency injection (Vue's provide/inject, React's Context API) to share state across the component tree without passing props through every intermediate layer. WebComPy currently requires all shared state to be passed via props or accessed through global singletons. Component IDs are generated via MD5 hash, which is not collision-proof for very large applications.
+
 ## Requirements
 
 ### Requirement: Components shall be defined as reusable, self-contained units

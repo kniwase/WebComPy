@@ -6,6 +6,8 @@ Web applications frequently need to perform asynchronous operations: fetching da
 
 WebComPy provides `AsyncComputed` for reactive async values, `AsyncWrapper` for fire-and-forget async operations, and `HttpClient` for making HTTP requests from the browser. Together, these enable developers to work with asynchronous data using the same patterns as synchronous reactive state.
 
+**What WebComPy does not yet provide:** The current `AsyncComputed.value` is typed as `T | None`, making it impossible to distinguish "not yet resolved" from "resolved to None" without checking the `done` flag. Other frameworks like Vue and Svelte provide dedicated loading/error state primitives. Additionally, `AsyncComputed` conflates the error state with the pending state by setting `done = False` on both, and `HttpClient` only works in the browser — there is no server-side request capability for SSG data fetching.
+
 ## Requirements
 
 ### Requirement: Async operations shall integrate with the reactive system
