@@ -84,6 +84,14 @@ WebComPy uses OpenSpec for spec-driven development. Specs define **what the fram
 3. **Apply** (`/opsx-apply`): Implement tasks from an approved change proposal.
 4. **Archive** (`/opsx-archive`): Finalize a completed change and update the main specs.
 
+### Change Lifecycle and Git Policy
+
+- Change artifacts (proposal, design, specs, tasks) under `openspec/changes/<name>/` are **transient working documents** — they exist only on the feature branch during development.
+- Active change artifacts SHOULD be committed to the feature branch for review traceability.
+- When a change is archived via `/opsx-archive`, the completed artifacts are moved to `openspec/changes/archive/<name>/` and the main specs (`openspec/specs/`) are updated with the finalized requirements.
+- `openspec/changes/` and `openspec/changes/archive/` directories are tracked in git (via `.gitkeep`). Never gitignore them.
+- Do NOT merge incomplete change artifacts to `main`. Only archived changes and updated specs belong on `main`.
+
 ### Spec Writing Guidelines
 
 - Write specs from the **developer's or end-user's perspective**, not the implementation's perspective.

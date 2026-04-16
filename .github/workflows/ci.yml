@@ -5,7 +5,17 @@ on:
     branches: [main]
 
 jobs:
+  openspec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npx openspec validate --specs
+
   lint:
+    needs: [openspec]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,7 +80,7 @@ jobs:
 
   review:
     if: always()
-    needs: [lint, typecheck, generate, test, e2e]
+    needs: [openspec, lint, typecheck, generate, test, e2e]
     runs-on: ubuntu-latest
     concurrency:
       group: review-${{ github.event.pull_request.number }}
