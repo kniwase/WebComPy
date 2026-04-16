@@ -12,7 +12,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npx openspec validate --specs
+      - run: npm install -g openspec
+      - run: openspec validate --specs
       - name: Check that all changes are archived
         run: |
           unarchived=$(find openspec/changes/ -mindepth 1 -maxdepth 1 -type d ! -name archive)
