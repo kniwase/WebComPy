@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install -g openspec
+      - run: npm install -g @fission-ai/openspec@latest
       - run: openspec validate --specs
       - name: Check that all changes are archived
         run: |
