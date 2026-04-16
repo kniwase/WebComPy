@@ -1,20 +1,48 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Tech stack: Python 3.12+, PyScript (runs in browser via Pyodide/Emscripten)
+  Frontend framework: WebComPy — component-based, reactive, SPA
+  Server: Starlette + uvicorn (dev server, SSG)
+  Package manager: uv
+  Conventions: conventional commits, type annotations throughout, no comments unless requested
+
+  ## Known Issues (to be resolved in future changes)
+
+  ### Reactive System
+  - No element-level reactivity in ReactiveList/ReactiveDict — any mutation triggers full change notification
+  - _get_evnet (typo for _get_event) is consistently used throughout the codebase
+  - __purge_reactive_members__ in ReactiveReceivable is a no-op; reactive member cleanup relies on Python GC
+  - No key-based reconciliation for list rendering — RepeatElement rebuilds all children on change
+
+  ### Component System
+  - __webcompy_componet_definition__ (typo for "component") is consistently used
+  - Component IDs are MD5 hashes — not collision-proof
+
+  ### Element System
+  - No virtual DOM diffing — direct DOM manipulation only
+  - DynamicElement nesting is forbidden (raises exception)
+  - RepeatElement and SwitchElement completely regenerate children on change
+  - TextElement does not hydrate pre-rendered text nodes (always creates new text node)
+
+  ### Router
+  - Multiple global singletons (Router, RouterView) make testing require explicit cleanup
+  - Location popstate proxy must be manually destroy()ed
+
+  ### Async
+  - AsyncComputed.value is T | None — no way to distinguish "not yet resolved" from "resolved to None" without checking done flag
+  - AsyncComputed._error sets _done = False on error, conflating error state with pending state
+
+  ### General
+  - Multiple global singletons (ReactiveStore, Router, RouterView, ComponentStore, Component._head_props)
+  - Browser detection is binary (Emscripten vs other) — no partial API availability checks
+  - No provide/inject (DI) system (noted in README ToDo)
+  - No plugin system (noted in README ToDo)
 
 # Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - Always include a "Known Issues Addressed" section when a change relates to any known issue
+    - Always include a "Non-goals" section
+  tasks:
+    - Break tasks into chunks of max 2 hours
