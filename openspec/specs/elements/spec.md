@@ -6,7 +6,7 @@ The element system is how WebComPy represents and manipulates the user interface
 
 The system does not use virtual DOM diffing. Instead, it takes a direct approach: when a reactive value changes, the specific DOM node that depends on that value is updated in place. For dynamic content (conditional rendering and list rendering), the entire subtree is regenerated when the controlling value changes. This trades fine-grained efficiency for implementation simplicity.
 
-**What WebComPy does not yet provide:** WebComPy's `repeat` now supports key-based reconciliation for efficient DOM updates. However, conditional branches (`switch`) still completely replace their subtree rather than patching it. Dynamic elements (repeat and switch) cannot be nested, and `TextElement` does not hydrate pre-rendered text nodes in SSR output.
+**What WebComPy does not yet provide:** WebComPy's `repeat` now supports key-based reconciliation and dict-based rendering for efficient DOM updates. However, conditional branches (`switch`) still completely replace their subtree rather than patching it. Dynamic elements (repeat and switch) cannot be nested, and `TextElement` does not hydrate pre-rendered text nodes in SSR output.
 
 ## Requirements
 
@@ -48,11 +48,19 @@ The `switch` construct SHALL evaluate a series of conditions and render the temp
 - **THEN** the new component SHALL be fully mounted in the DOM before `on_after_rendering` runs
 - **AND** async operations SHALL execute in a clean event loop context (not nested within the reactive callback chain)
 
-### Requirement: List rendering shall map a reactive list to element templates
-The `repeat` construct SHALL take a reactive list, a template function, and an optional `key` function. The `key` function extracts a unique identifier from each list item for reconciliation. When `key` is provided, `RepeatElement` SHALL reuse existing DOM elements for items whose keys persist across mutations, remove elements whose keys are no longer in the list, and create new elements for newly added keys. When `key` is not provided, all rendered items SHALL be removed and regenerated (full rebuild behavior).
+### Requirement: List and dict rendering shall map reactive collections to element templates with type-safe overloads
+The `repeat` construct SHALL support five type-safe overload signatures:
 
-#### Scenario: Rendering a list of items with keys
-- **WHEN** a developer writes `repeat(items, lambda item: html.LI({}, item.name), key=lambda item: item.id)`
+1. `repeat(ReactiveDict[K, V], template: (V,) -> ChildNode)` — dict value-only, keyed by dict keys
+2. `repeat(ReactiveDict[K, V], template: (V, K) -> ChildNode)` — dict value+key, keyed by dict keys
+3. `repeat(ReactiveList[V], template: (V,) -> ChildNode)` — list unkeyed (backward compatible, full rebuild)
+4. `repeat(ReactiveList[V], template: (V, int) -> ChildNode)` — list with index as key
+5. `repeat(ReactiveList[V], template: (V, K) -> ChildNode), key: (V) -> K)` — list with custom key function
+
+When `key` is provided (overloads 2, 4, 5) or dict mode is used (overloads 1, 2), `RepeatElement` SHALL reuse existing DOM elements for items whose keys persist across mutations. When no `key` is provided and single-arg template is used (overload 3), all rendered items SHALL be removed and regenerated (full rebuild behavior).
+
+#### Scenario: Rendering a list of items with key function
+- **WHEN** a developer writes `repeat(items, lambda item, id: html.LI({"data-id": id}, item.name), key=lambda item: item.id)`
 - **THEN** one `<li>` SHALL be rendered for each item in `items`
 - **WHEN** `items.append(new_item)` is called
 - **THEN** only the new `<li>` SHALL be created and appended
@@ -63,6 +71,16 @@ The `repeat` construct SHALL take a reactive list, a template function, and an o
 - **THEN** one `<li>` SHALL be rendered for each item in `items`
 - **WHEN** `items.append(new_item)` is called
 - **THEN** the entire list SHALL be regenerated with the new item included
+
+#### Scenario: Rendering a ReactiveDict with value-only template
+- **WHEN** a developer writes `repeat(my_dict, lambda value: html.LI({}, value))`
+- **THEN** one `<li>` SHALL be rendered for each value in `my_dict`
+- **AND** dict keys SHALL be used as reconciliation identifiers for efficient DOM updates
+
+#### Scenario: Rendering a ReactiveDict with value-key template
+- **WHEN** a developer writes `repeat(my_dict, lambda value, key: html.LI({}, f"{key}: {value}"))`
+- **THEN** one `<li>` SHALL be rendered for each key-value pair in `my_dict`
+- **AND** dict keys SHALL be used as reconciliation identifiers for efficient DOM updates
 
 ### Requirement: Pre-rendered DOM nodes shall be reused during hydration
 When the browser encounters an existing DOM node marked as pre-rendered with a matching tag name, the element SHALL reuse that node instead of creating a new one, enabling efficient hydration of server-rendered content.
