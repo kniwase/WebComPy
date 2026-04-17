@@ -105,7 +105,7 @@ def FizzbuzzPage(context: ComponentContext[RouterContext]):
                                                 {},
                                                 repeat(
                                                     self.fizzbuzz_dict,
-                                                    lambda k, v: html.LI({}, v),
+                                                    lambda v, k: html.LI({}, v),
                                                 ),
                                             ),
                                         ),

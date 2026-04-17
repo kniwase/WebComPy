@@ -91,7 +91,7 @@ class Fizzbuzz(TypedComponentBase(props_type=None)):
                             {},
                             repeat(
                                 self.fizzbuzz_dict,
-                                lambda k, v: html.LI({}, v),
+                                lambda v, k: html.LI({}, v),
                             ),
                         ),
                     ),

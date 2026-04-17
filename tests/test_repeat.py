@@ -70,7 +70,7 @@ class TestRepeatElementKeySupport:
     def test_key_defaults_to_none(self):
         rl = ReactiveList(["a"])
         rep = RepeatElement(rl, lambda x: TextElement(x))
-        assert rep._key is None
+        assert rep._key_fn is None
 
 
 class TestMultiLineTextElement:
@@ -111,5 +111,5 @@ class TestRepeatElementDictMode:
 
     def test_dict_key_is_none(self):
         rd = ReactiveDict({"a": 1})
-        rep = RepeatElement(rd, lambda k, v: TextElement(str(v)))
-        assert rep._key is None
+        rep = RepeatElement(rd, lambda v, k: TextElement(str(v)))
+        assert rep._key_fn is None

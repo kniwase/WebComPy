@@ -34,7 +34,7 @@ def DictRepeatPage(context: ComponentContext[None]):
             {"data-testid": "dict-item-list"},
             repeat(
                 data,
-                lambda k, v: html.LI(
+                lambda v, k: html.LI(
                     {"data-testid": "dict-list-item", "data-key": k},
                     v,
                     html.INPUT({"data-testid": "dict-input", "value": v}),

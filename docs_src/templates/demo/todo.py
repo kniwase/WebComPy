@@ -96,7 +96,7 @@ def ToDoList(_: ComponentContext[None]):
             {},
             repeat(
                 data,
-                lambda k, v: ToDoItem({"props": v}),
+                lambda v, k: ToDoItem({"props": v}),
             ),
         ),
     )

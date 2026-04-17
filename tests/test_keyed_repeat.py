@@ -227,7 +227,7 @@ class TestDictKeyedReconciliation:
     def test_dict_template_receives_key_and_value(self, fake_browser_full):
         rd = ReactiveDict({"x": "hello", "y": "world"})
         received = []
-        rep = RepeatElement(rd, lambda k, v: (received.append((k, v)), TextElement(v))[1])
+        rep = RepeatElement(rd, lambda v, k: (received.append((k, v)), TextElement(v))[1])
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
