@@ -10,9 +10,9 @@
 
 ## 2. Unit Tests for DictMutation
 
-- [ ] 2.1 Create `tests/test_dict_mutation.py` with test cases for each mutation op (`set`, `delete`, `pop`, `clear`)
-- [ ] 2.2 Add test that `on_after_updating` callback still receives full dict value (not DictMutation)
-- [ ] 2.3 Add test that `_last_mutation` is `None` after construction and updated after each mutation
+- [x] 2.1 Create `tests/test_dict_mutation.py` with test cases for each mutation op (`set`, `delete`, `pop`, `clear`)
+- [x] 2.2 Add test that `on_after_updating` callback still receives full dict value (not DictMutation)
+- [x] 2.3 Add test that `_last_mutation` is `None` after construction and updated after each mutation
 
 ## 3. RepeatElement Dict Mode
 
