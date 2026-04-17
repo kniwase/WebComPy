@@ -3,6 +3,7 @@ from webcompy.router import Router
 from .pages.async_nav import AsyncNavPage
 from .pages.classstyle import ClassStylePage
 from .pages.component import FunctionStylePage
+from .pages.dict_repeat import DictRepeatPage
 from .pages.event import EventPage
 from .pages.home import HomePage
 from .pages.keyed_repeat import KeyedRepeatPage
@@ -22,6 +23,7 @@ router = Router(
     {"path": "/switch", "component": SwitchPage},
     {"path": "/repeat", "component": RepeatPage},
     {"path": "/keyed-repeat", "component": KeyedRepeatPage},
+    {"path": "/dict-repeat", "component": DictRepeatPage},
     {"path": "/lifecycle", "component": LifecyclePage},
     {"path": "/scoped-style", "component": ScopedStylePage},
     {"path": "/async-nav", "component": AsyncNavPage},

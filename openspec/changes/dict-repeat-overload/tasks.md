@@ -39,10 +39,10 @@
 
 ## 6. E2E Tests
 
-- [ ] 6.1 Create `tests/e2e/app/pages/dict_repeat.py` with a component using `ReactiveDict` + `repeat()`
-- [ ] 6.2 Create `tests/e2e/test_dict_repeat.py` with Playwright tests for add/delete/clear/reorder scenarios
-- [ ] 6.3 Update `tests/e2e/app/router.py` to include `/dict-repeat` route
-- [ ] 6.4 Test that input values are preserved when adding/removing dict entries
+- [x] 6.1 Create `tests/e2e/app/pages/dict_repeat.py` with a component using `ReactiveDict` + `repeat()`
+- [x] 6.2 Create `tests/e2e/test_dict_repeat.py` with Playwright tests for add/delete/clear/reorder scenarios
+- [x] 6.3 Update `tests/e2e/app/router.py` to include `/dict-repeat` route
+- [x] 6.4 Test that input values are preserved when adding/removing dict entries
 
 ## 7. Docs Examples Update
 
