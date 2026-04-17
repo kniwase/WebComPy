@@ -8,6 +8,7 @@ from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._text import TextElement
 from webcompy.exception import WebComPyException
 from webcompy.reactive import ReactiveList
+from webcompy.reactive._dict import ReactiveDict
 
 
 class FakeRootElement(Element):
@@ -155,3 +156,107 @@ class TestKeyedReconciliation:
         rl.append("c")
         assert len(rep._children) == 3
         assert rep._children[0] is not original_children[0]
+
+
+class TestDictKeyedReconciliation:
+    def test_dict_setitem_preserves_existing_children(self, fake_browser_full):
+        rd = ReactiveDict({"a": "1", "b": "2", "c": "3"})
+        rep = RepeatElement(rd, lambda k, v: TextElement(f"{k}:{v}"))
+        assert rep._is_dict is True
+        parent = _make_parent()
+        rep._parent = parent
+        rep._node_idx = 0
+        rep._reactive_activated = True
+        rep._set_callback_id(rd.on_after_updating(rep._refresh))
+        rep._refresh()
+        original_children = list(rep._children)
+        rd["d"] = "4"
+        assert len(rep._children) == 4
+        assert rep._children[0] is original_children[0]
+        assert rep._children[1] is original_children[1]
+        assert rep._children[2] is original_children[2]
+        assert rep._children_keys == ["a", "b", "c", "d"]
+
+    def test_dict_delitem_removes_only_deleted_child(self, fake_browser_full):
+        rd = ReactiveDict({"a": "1", "b": "2", "c": "3"})
+        rep = RepeatElement(rd, lambda k, v: TextElement(f"{k}:{v}"))
+        parent = _make_parent()
+        rep._parent = parent
+        rep._node_idx = 0
+        rep._reactive_activated = True
+        rep._set_callback_id(rd.on_after_updating(rep._refresh))
+        rep._refresh()
+        original_child_a = rep._children[0]
+        original_child_c = rep._children[2]
+        del rd["b"]
+        assert len(rep._children) == 2
+        assert rep._children[0] is original_child_a
+        assert rep._children[1] is original_child_c
+        assert rep._children_keys == ["a", "c"]
+
+    def test_dict_clear_removes_all_children(self, fake_browser_full):
+        rd = ReactiveDict({"a": "1", "b": "2"})
+        rep = RepeatElement(rd, lambda k, v: TextElement(f"{k}:{v}"))
+        parent = _make_parent()
+        rep._parent = parent
+        rep._node_idx = 0
+        rep._reactive_activated = True
+        rep._set_callback_id(rd.on_after_updating(rep._refresh))
+        rep._refresh()
+        rd.clear()
+        assert len(rep._children) == 0
+        assert rep._children_keys == []
+
+    def test_dict_keys_used_as_reconciliation_keys(self, fake_browser_full):
+        rd = ReactiveDict({1: "one", 2: "two", 3: "three"})
+        rep = RepeatElement(rd, lambda k, v: TextElement(f"{k}:{v}"))
+        parent = _make_parent()
+        rep._parent = parent
+        rep._node_idx = 0
+        rep._reactive_activated = True
+        rep._set_callback_id(rd.on_after_updating(rep._refresh))
+        rep._refresh()
+        original_children = list(rep._children)
+        rd[4] = "four"
+        assert len(rep._children) == 4
+        assert rep._children[0] is original_children[0]
+        assert rep._children[1] is original_children[1]
+        assert rep._children[2] is original_children[2]
+        assert rep._children_keys == [1, 2, 3, 4]
+
+    def test_dict_template_receives_key_and_value(self, fake_browser_full):
+        rd = ReactiveDict({"x": "hello", "y": "world"})
+        received = []
+        rep = RepeatElement(rd, lambda k, v: (received.append((k, v)), TextElement(v))[1])
+        parent = _make_parent()
+        rep._parent = parent
+        rep._node_idx = 0
+        rep._reactive_activated = True
+        rep._set_callback_id(rd.on_after_updating(rep._refresh))
+        rep._refresh()
+        assert ("x", "hello") in received
+        assert ("y", "world") in received
+
+    def test_dict_rejects_key_parameter(self):
+        rd = ReactiveDict({"a": 1})
+        try:
+            RepeatElement(rd, lambda k, v: TextElement(str(v)), key=lambda x: x)
+            raise AssertionError("Should have raised ValueError")
+        except ValueError as e:
+            assert "key" in str(e).lower()
+
+    def test_dict_pop_removes_entry(self, fake_browser_full):
+        rd = ReactiveDict({"a": "1", "b": "2", "c": "3"})
+        rep = RepeatElement(rd, lambda k, v: TextElement(f"{k}:{v}"))
+        parent = _make_parent()
+        rep._parent = parent
+        rep._node_idx = 0
+        rep._reactive_activated = True
+        rep._set_callback_id(rd.on_after_updating(rep._refresh))
+        rep._refresh()
+        original_child_a = rep._children[0]
+        original_child_c = rep._children[2]
+        rd.pop("b")
+        assert len(rep._children) == 2
+        assert rep._children[0] is original_child_a
+        assert rep._children[1] is original_child_c

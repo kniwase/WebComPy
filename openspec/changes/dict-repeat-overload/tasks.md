@@ -31,11 +31,11 @@
 
 ## 5. Unit Tests for Dict Repeat
 
-- [ ] 5.1 Add tests for `RepeatElement` with `ReactiveDict` input in `tests/test_keyed_repeat.py`
-- [ ] 5.2 Test rendering dict entries, adding entries, deleting entries, clearing dict
-- [ ] 5.3 Test that dict keys are used as reconciliation identifiers (no separate key function)
-- [ ] 5.4 Test that template receives `(key, value)` in dict mode
-- [ ] 5.5 Add dict-mode tests to `tests/test_repeat.py` for basic rendering
+- [x] 5.1 Add tests for `RepeatElement` with `ReactiveDict` input in `tests/test_keyed_repeat.py`
+- [x] 5.2 Test rendering dict entries, adding entries, deleting entries, clearing dict
+- [x] 5.3 Test that dict keys are used as reconciliation identifiers (no separate key function)
+- [x] 5.4 Test that template receives `(key, value)` in dict mode
+- [x] 5.5 Add dict-mode tests to `tests/test_repeat.py` for basic rendering
 
 ## 6. E2E Tests
 
