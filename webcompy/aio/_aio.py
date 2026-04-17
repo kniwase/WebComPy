@@ -17,7 +17,9 @@ AsyncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
 
 
 def _aio_run_browser(coro: Coroutine[Any, Any, Any]) -> None:
-    _aio_run_browser_tasks.append(asyncio.ensure_future(coro))
+    task = asyncio.ensure_future(coro)
+    _aio_run_browser_tasks.append(task)
+    task.add_done_callback(lambda t: _aio_run_browser_tasks.remove(t))
 
 
 _aio_run_browser_tasks: list[asyncio.Task[Any]] = []
