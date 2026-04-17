@@ -31,8 +31,9 @@ class ReactiveList(Reactive[list[V]]):
     @ReactiveBase._change_event
     def extend(self, value: Iterable[V]):
         start_index = len(self._value)
-        self._value.extend(value)
-        self._last_mutation = ListMutation(op="extend", index=start_index, value=list(value))
+        items = list(value)
+        self._value.extend(items)
+        self._last_mutation = ListMutation(op="extend", index=start_index, value=items)
 
     @ReactiveBase._change_event
     def pop(self, index: int | None = None):
