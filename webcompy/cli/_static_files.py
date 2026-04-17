@@ -1,7 +1,7 @@
 import os
 import pathlib
 from functools import partial
-from re import compile as re_complie
+from re import compile as re_compile
 from re import escape as re_escape
 
 from webcompy.cli._exception import WebComPyCliException
@@ -22,5 +22,5 @@ def get_static_files(static_file_dir: pathlib.Path):
         raise WebComPyCliException(
             f"'{static_file_dir}' is not directory",
         )
-    get_relative_path = partial(re_complie("^" + re_escape(str(static_file_dir) + os.sep)).sub, "")
+    get_relative_path = partial(re_compile("^" + re_escape(str(static_file_dir) + os.sep)).sub, "")
     return tuple(get_relative_path(str(p)).replace("\\", "/") for p in _list_up_files(static_file_dir))

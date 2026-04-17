@@ -21,7 +21,7 @@ class Computed(ReactiveBase[V]):
         super().__init__(init_value)
 
     @property
-    @ReactiveBase._get_evnet
+    @ReactiveBase._get_event
     def value(self) -> V:
         return self._value
 

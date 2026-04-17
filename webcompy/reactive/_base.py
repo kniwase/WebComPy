@@ -71,7 +71,7 @@ class ReactiveStore:
             if idx in self.__callback_ids[instance.__reactive_id__]:
                 func(value)
 
-    def resister(self, reactive: ReactiveBase[Any]):
+    def register(self, reactive: ReactiveBase[Any]):
         if self.__dependency is not None:
             self.__dependency.append(reactive)
 
@@ -92,13 +92,13 @@ class ReactiveStore:
             del self.__on_after_updating[callback_id]
         elif callback_id in self.__on_before_updating:
             del self.__on_before_updating[callback_id]
-        targeted_isntance_id: int | None = None
-        for isntance_id in self.__callback_ids:
-            if callback_id in self.__callback_ids[isntance_id]:
-                targeted_isntance_id = isntance_id
+        targeted_instance_id: int | None = None
+        for instance_id in self.__callback_ids:
+            if callback_id in self.__callback_ids[instance_id]:
+                targeted_instance_id = instance_id
                 break
-        if targeted_isntance_id is not None:
-            self.__callback_ids[targeted_isntance_id].remove(callback_id)
+        if targeted_instance_id is not None:
+            self.__callback_ids[targeted_instance_id].remove(callback_id)
 
 
 # Reactives
@@ -138,10 +138,10 @@ class ReactiveBase(Generic[V]):
 
     @final
     @staticmethod
-    def _get_evnet(reactive_obj_method: Callable[A, V]) -> Callable[A, V]:
+    def _get_event(reactive_obj_method: Callable[A, V]) -> Callable[A, V]:
         @wraps(reactive_obj_method)
         def method(*args: A.args, **kwargs: A.kwargs) -> V:
-            ReactiveBase._store.resister(cast("ReactiveBase[V]", args[0]))
+            ReactiveBase._store.register(cast("ReactiveBase[V]", args[0]))
             return reactive_obj_method(*args, **kwargs)
 
         return method
@@ -156,7 +156,7 @@ class Reactive(ReactiveBase[V]):
 
     @final
     @property
-    @ReactiveBase._get_evnet
+    @ReactiveBase._get_event
     def value(self) -> V:
         return self._value
 

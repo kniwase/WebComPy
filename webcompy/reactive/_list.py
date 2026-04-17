@@ -32,11 +32,11 @@ class ReactiveList(Reactive[list[V]]):
     def sort(self, key: Callable[[V], Any] = lambda it: it, reverse: bool = False):
         self._value.sort(key=key, reverse=reverse)
 
-    @ReactiveBase._get_evnet
+    @ReactiveBase._get_event
     def index(self, value: V):
         return self._value.index(value)
 
-    @ReactiveBase._get_evnet
+    @ReactiveBase._get_event
     def count(self, value: V):
         return self._value.count(value)
 
@@ -58,7 +58,7 @@ class ReactiveList(Reactive[list[V]]):
     @overload
     def __getitem__(self, idx: slice) -> list[V]: ...
 
-    @ReactiveBase._get_evnet
+    @ReactiveBase._get_event
     def __getitem__(self, idx: int | slice):
         return self._value.__getitem__(idx)
 
@@ -75,10 +75,10 @@ class ReactiveList(Reactive[list[V]]):
         else:
             self._value.__setitem__(idx, cast("Iterable[V]", value))
 
-    @ReactiveBase._get_evnet
+    @ReactiveBase._get_event
     def __len__(self):
         return len(self._value)
 
-    @ReactiveBase._get_evnet
+    @ReactiveBase._get_event
     def __iter__(self):
         return iter(self._value)

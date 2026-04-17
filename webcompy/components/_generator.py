@@ -28,19 +28,19 @@ def _instantiate(cls: type[T]) -> T:
 
 @_instantiate
 class ComponentStore:
-    __conponents: dict[str, ComponentGenerator[Any]]
+    __components: dict[str, ComponentGenerator[Any]]
 
     def __init__(self) -> None:
-        self.__conponents = {}
+        self.__components = {}
 
-    def add_component(self, name: str, componet_generator: ComponentGenerator[Any]):
-        if name in self.__conponents:
+    def add_component(self, name: str, component_generator: ComponentGenerator[Any]):
+        if name in self.__components:
             raise WebComPyComponentException(f"Duplicated Component Name: '{name}'")
-        self.__conponents[name] = componet_generator
+        self.__components[name] = component_generator
 
     @property
     def components(self) -> dict[str, ComponentGenerator[Any]]:
-        return self.__conponents
+        return self.__components
 
 
 PropsType = TypeVar("PropsType")
@@ -108,7 +108,7 @@ class ComponentGenerator(Generic[PropsType]):
 def define_component(
     setup: Callable[[ComponentContext[PropsType]], ElementChildren],
 ) -> ComponentGenerator[PropsType]:
-    setup.__webcompy_componet_definition__ = True
+    setup.__webcompy_component_definition__ = True
     return ComponentGenerator(setup.__name__, setup)
 
 
