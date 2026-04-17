@@ -1,4 +1,10 @@
-## ADDED Requirements
+# List Reconciliation
+
+## Purpose
+
+List rendering is one of the most common UI patterns, and when a reactive list changes, the framework should reuse existing DOM elements whenever possible rather than destroying and recreating the entire list. Key-based reconciliation allows `repeat()` to match list items by a unique identifier, preserving DOM state (focus, input values, scroll position) and reducing the number of DOM operations from O(n) full rebuild to O(changed items).
+
+## Requirements
 
 ### Requirement: Key-based reconciliation shall reuse existing DOM elements for list items with matching keys
 When a `repeat()` is created with a `key` function, the `RepeatElement` SHALL map each rendered child to its key. Upon list mutation, children whose keys still exist in the new list SHALL be reused (their DOM nodes preserved) rather than destroyed and recreated.
