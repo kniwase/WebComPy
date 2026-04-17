@@ -52,7 +52,7 @@
 
 ## 8. Lint, Type Check, and Final Verification
 
-- [ ] 8.1 Run `uv run ruff check .` and fix any issues
-- [ ] 8.2 Run `uv run ruff format .` and fix formatting
-- [ ] 8.3 Run `uv run pyright` and fix type errors
-- [ ] 8.4 Run `uv run python -m pytest tests/ --tb=short` and ensure all tests pass
+- [x] 8.1 Run `uv run ruff check .` and fix any issues
+- [x] 8.2 Run `uv run ruff format .` and fix formatting
+- [x] 8.3 Run `uv run pyright` and fix type errors
+- [x] 8.4 Run `uv run python -m pytest tests/ --tb=short` and ensure all tests pass
