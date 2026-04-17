@@ -6,7 +6,7 @@ Reactive state is the foundation of a declarative UI. In a traditional imperativ
 
 WebComPy's reactive system provides primitive containers (`Reactive`), derived values (`Computed`), and collections (`ReactiveList`, `ReactiveDict`) that integrate seamlessly with the element system. Any part of the UI that reads a reactive value is automatically tracked as a dependent, and any change to that value triggers updates in all dependents — whether they are text content, element attributes, computed derivations, or conditional renderings.
 
-**What WebComPy does not yet provide:** In other reactive frameworks like Vue or SolidJS, list and dict mutations can trigger fine-grained updates for individual items. In WebComPy, `ReactiveList` and `ReactiveDict` are coarse-grained — any mutation triggers a full-collection change notification.
+**What WebComPy does not yet provide:** In other reactive frameworks like Vue or SolidJS, dict mutations can trigger fine-grained updates for individual items. In WebComPy, `ReactiveDict` is coarse-grained — any mutation triggers a full-collection change notification. `ReactiveList` now exposes granular mutation metadata via `_last_mutation` for incremental consumers, but its core change notification remains full-collection.
 
 ## Requirements
 
@@ -49,6 +49,54 @@ A `computed_property` decorated on a class SHALL create a `Computed` instance on
 #### Scenario: Setting a key in a ReactiveDict
 - **WHEN** a developer calls `my_dict["key"] = value` on a `ReactiveDict`
 - **THEN** any computed or UI element that read from `my_dict` SHALL be notified
+
+### Requirement: ReactiveList shall expose mutation metadata after each mutating operation
+Each mutating method on `ReactiveList` (`append`, `extend`, `pop`, `insert`, `sort`, `remove`, `clear`, `reverse`, `__setitem__`) SHALL set a `_last_mutation` attribute on the instance describing the operation type, the affected index, and the value involved. This metadata enables consumers to perform incremental updates instead of full rebuilds.
+
+#### Scenario: Append mutation metadata
+- **WHEN** a developer calls `items.append("new_item")` on a `ReactiveList`
+- **THEN** `items._last_mutation.op` SHALL be `"append"`
+- **AND** `items._last_mutation.index` SHALL be the index of the newly appended item
+- **AND** `items._last_mutation.value` SHALL be the appended item
+
+#### Scenario: Pop mutation metadata
+- **WHEN** a developer calls `items.pop(1)` on a `ReactiveList`
+- **THEN** `items._last_mutation.op` SHALL be `"pop"`
+- **AND** `items._last_mutation.index` SHALL be `1`
+- **AND** `items._last_mutation.value` SHALL be the popped item
+
+#### Scenario: Insert mutation metadata
+- **WHEN** a developer calls `items.insert(0, "first")` on a `ReactiveList`
+- **THEN** `items._last_mutation.op` SHALL be `"insert"`
+- **AND** `items._last_mutation.index` SHALL be `0`
+- **AND** `items._last_mutation.value` SHALL be `"first"`
+
+#### Scenario: Clear mutation metadata
+- **WHEN** a developer calls `items.clear()` on a `ReactiveList`
+- **THEN** `items._last_mutation.op` SHALL be `"clear"`
+- **AND** `items._last_mutation.index` SHALL be `None`
+- **AND** `items._last_mutation.value` SHALL be `None`
+
+#### Scenario: Reverse mutation metadata
+- **WHEN** a developer calls `items.reverse()` on a `ReactiveList`
+- **THEN** `items._last_mutation.op` SHALL be `"reverse"`
+- **AND** `items._last_mutation.index` SHALL be `None`
+- **AND** `items._last_mutation.value` SHALL be `None`
+
+#### Scenario: Sort mutation metadata
+- **WHEN** a developer calls `items.sort()` on a `ReactiveList`
+- **THEN** `items._last_mutation.op` SHALL be `"sort"`
+- **AND** `items._last_mutation.index` SHALL be `None`
+- **AND** `items._last_mutation.value` SHALL be `None`
+
+### Requirement: ReactiveList mutation metadata shall not change the existing callback contract
+The `_last_mutation` attribute SHALL be an additional side-channel that does not alter the existing `on_after_updating` callback signature. Existing callbacks registered via `on_after_updating` SHALL continue to receive the same arguments as before and function without modification.
+
+#### Scenario: Existing on_after_updating callback unaffected
+- **WHEN** a developer has registered `my_list.on_after_updating(lambda val: print(val))` on a `ReactiveList`
+- **AND** calls `my_list.append("new")`
+- **THEN** the callback SHALL receive the full list value as before
+- **AND** the callback SHALL NOT receive `ListMutation` as an argument
 
 ### Requirement: Readonly views shall prevent external mutation of reactive values
 A `readonly()` wrapper SHALL provide a reactive value that tracks the source but does not expose a setter, allowing a component to share its state with children without giving them write access.

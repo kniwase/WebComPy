@@ -60,8 +60,9 @@ NodeGenerator: TypeAlias = Callable[[], ChildNode]
 def repeat(
     sequence: ReactiveBase[list[T]],
     template: Callable[[T], ChildNode],
+    key: Callable[[T], str | int] | None = None,
 ):
-    return RepeatElement(sequence, template)
+    return RepeatElement(sequence, template, key)
 
 
 class SwitchCase(TypedDict):
