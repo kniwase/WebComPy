@@ -63,6 +63,13 @@ NodeGenerator: TypeAlias = Callable[[], ChildNode]
 @overload
 def repeat(
     sequence: ReactiveBase[dict[K, V]],
+    template: Callable[[V], ChildNode],
+) -> RepeatElement: ...
+
+
+@overload
+def repeat(
+    sequence: ReactiveBase[dict[K, V]],
     template: Callable[[V, K], ChildNode],
 ) -> RepeatElement: ...
 
@@ -84,7 +91,7 @@ def repeat(
 @overload
 def repeat(
     sequence: ReactiveBase[list[V]],
-    template: Callable[[V], ChildNode],
+    template: Callable[[V, K], ChildNode],
     key: Callable[[V], K],
 ) -> RepeatElement: ...
 

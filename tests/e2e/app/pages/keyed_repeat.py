@@ -57,7 +57,7 @@ def KeyedRepeatPage(context: ComponentContext[None]):
             {"data-testid": "keyed-item-list"},
             repeat(
                 sequence=items,
-                template=lambda item: html.LI(
+                template=lambda item, k: html.LI(
                     {"data-testid": "keyed-list-item", "data-key": item["id"]},
                     item["label"],
                     html.INPUT({"data-testid": "keyed-input", "value": item["label"]}),

@@ -25,6 +25,13 @@ class RepeatElement(DynamicElement):
     def __init__(
         self,
         sequence: ReactiveBase[dict[K, V]],
+        template: Callable[[V], ElementChildren],
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
+        sequence: ReactiveBase[dict[K, V]],
         template: Callable[[V, K], ElementChildren],
     ) -> None: ...
 
@@ -46,7 +53,7 @@ class RepeatElement(DynamicElement):
     def __init__(
         self,
         sequence: ReactiveBase[list[V]],
-        template: Callable[[V], ElementChildren],
+        template: Callable[[V, K], ElementChildren],
         key: Callable[[V], K],
     ) -> None: ...
 
@@ -67,12 +74,9 @@ class RepeatElement(DynamicElement):
         self._has_key = is_dict or key is not None
         self._key_fn: Callable[[Any], str | int] | None = key if not is_dict else None
 
-        if is_dict:
+        if is_dict or key is not None:
             self._two_arg_template: Callable[[Any, str | int], ElementChildren] | None = template  # type: ignore[assignment]
             self._single_arg_template: Callable[[Any], ElementChildren] | None = None
-        elif key is not None:
-            self._two_arg_template = None
-            self._single_arg_template = template  # type: ignore[assignment]
         else:
             self._two_arg_template = None
             self._single_arg_template = template  # type: ignore[assignment]

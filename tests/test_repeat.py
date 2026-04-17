@@ -50,7 +50,7 @@ class TestRepeatElementOnSetParent:
 class TestRepeatElementKeySupport:
     def test_keyed_on_set_parent_populates_key_map(self):
         rl = ReactiveList(["a", "b", "c"])
-        rep = RepeatElement(rl, lambda x: TextElement(x), key=lambda x: x)
+        rep = RepeatElement(rl, lambda x, k: TextElement(x), key=lambda x: x)
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
@@ -60,7 +60,7 @@ class TestRepeatElementKeySupport:
 
     def test_keyed_empty_list(self):
         rl = ReactiveList([])
-        rep = RepeatElement(rl, lambda x: TextElement(x), key=lambda x: x)
+        rep = RepeatElement(rl, lambda x, k: TextElement(x), key=lambda x: x)
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0

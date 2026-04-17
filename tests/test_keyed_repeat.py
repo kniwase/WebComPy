@@ -49,7 +49,7 @@ def fake_browser_full(monkeypatch):
 class TestKeyedReconciliation:
     def test_append_preserves_existing_children(self, fake_browser_full):
         rl = ReactiveList(["a", "b", "c"])
-        rep = RepeatElement(rl, lambda x: TextElement(x), key=lambda x: x)
+        rep = RepeatElement(rl, lambda x, k: TextElement(x), key=lambda x: x)
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
@@ -66,7 +66,7 @@ class TestKeyedReconciliation:
 
     def test_pop_removes_only_popped_child(self, fake_browser_full):
         rl = ReactiveList(["a", "b", "c"])
-        rep = RepeatElement(rl, lambda x: TextElement(x), key=lambda x: x)
+        rep = RepeatElement(rl, lambda x, k: TextElement(x), key=lambda x: x)
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
@@ -83,7 +83,7 @@ class TestKeyedReconciliation:
 
     def test_insert_mid_list_preserves_existing(self, fake_browser_full):
         rl = ReactiveList(["a", "c"])
-        rep = RepeatElement(rl, lambda x: TextElement(x), key=lambda x: x)
+        rep = RepeatElement(rl, lambda x, k: TextElement(x), key=lambda x: x)
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
@@ -100,7 +100,7 @@ class TestKeyedReconciliation:
 
     def test_reverse_reuses_all_children(self, fake_browser_full):
         rl = ReactiveList(["a", "b", "c"])
-        rep = RepeatElement(rl, lambda x: TextElement(x), key=lambda x: x)
+        rep = RepeatElement(rl, lambda x, k: TextElement(x), key=lambda x: x)
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
@@ -117,7 +117,7 @@ class TestKeyedReconciliation:
 
     def test_clear_removes_all_children(self, fake_browser_full):
         rl = ReactiveList(["a", "b", "c"])
-        rep = RepeatElement(rl, lambda x: TextElement(x), key=lambda x: x)
+        rep = RepeatElement(rl, lambda x, k: TextElement(x), key=lambda x: x)
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
@@ -130,7 +130,7 @@ class TestKeyedReconciliation:
 
     def test_duplicate_keys_raise_exception(self, fake_browser_full):
         rl = ReactiveList(["a", "b"])
-        rep = RepeatElement(rl, lambda x: TextElement(x), key=lambda x: x)
+        rep = RepeatElement(rl, lambda x, k: TextElement(x), key=lambda x: x)
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
@@ -161,7 +161,7 @@ class TestKeyedReconciliation:
 class TestDictKeyedReconciliation:
     def test_dict_setitem_preserves_existing_children(self, fake_browser_full):
         rd = ReactiveDict({"a": "1", "b": "2", "c": "3"})
-        rep = RepeatElement(rd, lambda k, v: TextElement(f"{k}:{v}"))
+        rep = RepeatElement(rd, lambda v, k: TextElement(f"{k}:{v}"))
         assert rep._is_dict is True
         parent = _make_parent()
         rep._parent = parent
@@ -179,7 +179,7 @@ class TestDictKeyedReconciliation:
 
     def test_dict_delitem_removes_only_deleted_child(self, fake_browser_full):
         rd = ReactiveDict({"a": "1", "b": "2", "c": "3"})
-        rep = RepeatElement(rd, lambda k, v: TextElement(f"{k}:{v}"))
+        rep = RepeatElement(rd, lambda v, k: TextElement(f"{k}:{v}"))
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
@@ -196,7 +196,7 @@ class TestDictKeyedReconciliation:
 
     def test_dict_clear_removes_all_children(self, fake_browser_full):
         rd = ReactiveDict({"a": "1", "b": "2"})
-        rep = RepeatElement(rd, lambda k, v: TextElement(f"{k}:{v}"))
+        rep = RepeatElement(rd, lambda v, k: TextElement(f"{k}:{v}"))
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
@@ -209,7 +209,7 @@ class TestDictKeyedReconciliation:
 
     def test_dict_keys_used_as_reconciliation_keys(self, fake_browser_full):
         rd = ReactiveDict({1: "one", 2: "two", 3: "three"})
-        rep = RepeatElement(rd, lambda k, v: TextElement(f"{k}:{v}"))
+        rep = RepeatElement(rd, lambda v, k: TextElement(f"{k}:{v}"))
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
@@ -240,14 +240,14 @@ class TestDictKeyedReconciliation:
     def test_dict_rejects_key_parameter(self):
         rd = ReactiveDict({"a": 1})
         try:
-            RepeatElement(rd, lambda k, v: TextElement(str(v)), key=lambda x: x)
+            RepeatElement(rd, lambda v, k: TextElement(str(v)), key=lambda x: x)
             raise AssertionError("Should have raised ValueError")
         except ValueError as e:
             assert "key" in str(e).lower()
 
     def test_dict_pop_removes_entry(self, fake_browser_full):
         rd = ReactiveDict({"a": "1", "b": "2", "c": "3"})
-        rep = RepeatElement(rd, lambda k, v: TextElement(f"{k}:{v}"))
+        rep = RepeatElement(rd, lambda v, k: TextElement(f"{k}:{v}"))
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
