@@ -46,9 +46,9 @@
 
 ## 7. Docs Examples Update
 
-- [ ] 7.1 Refactor `docs_src/templates/demo/fizzbuzz.py` to use `ReactiveDict[int, str]` with keyed repeat
-- [ ] 7.2 Refactor `docs_src/templates/demo/todo.py` to use `ReactiveDict[str, TodoData]` with UUID4 keys and keyed repeat
-- [ ] 7.3 Update corresponding page components if needed
+- [x] 7.1 Refactor `docs_src/templates/demo/fizzbuzz.py` to use `ReactiveDict[int, str]` with keyed repeat
+- [x] 7.2 Refactor `docs_src/templates/demo/todo.py` to use `ReactiveDict[str, TodoData]` with UUID4 keys and keyed repeat
+- [x] 7.3 Update corresponding page components if needed
 
 ## 8. Lint, Type Check, and Final Verification
 

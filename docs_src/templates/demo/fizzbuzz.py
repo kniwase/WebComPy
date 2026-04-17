@@ -6,45 +6,51 @@ from webcompy.components import (
 )
 from webcompy.elements import DOMEvent, html, repeat, switch
 from webcompy.reactive import Reactive, computed, computed_property
+from webcompy.reactive._dict import ReactiveDict
 
 
 @component_class
 class Fizzbuzz(TypedComponentBase(props_type=None)):
     def __init__(self) -> None:
         self.opened = Reactive(True)
-        self.count = Reactive(10)
-
-    @computed_property
-    def fizzbuzz_list(self):
-        li: list[str] = []
-        for n in range(1, self.count.value + 1):
-            if n % 15 == 0:
-                li.append("FizzBuzz")
-            elif n % 5 == 0:
-                li.append("Fizz")
-            elif n % 3 == 0:
-                li.append("Buzz")
-            else:
-                li.append(str(n))
-        return li
+        self.fizzbuzz_dict: ReactiveDict[int, str] = ReactiveDict()
+        self._next_n = Reactive(1)
 
     @computed_property
     def toggle_button_text(self):
         return "Hide" if self.opened.value else "Open"
 
+    def _fizzbuzz(self, n: int) -> str:
+        if n % 15 == 0:
+            return "FizzBuzz"
+        elif n % 5 == 0:
+            return "Fizz"
+        elif n % 3 == 0:
+            return "Buzz"
+        else:
+            return str(n)
+
     def add(self, ev: DOMEvent):
-        self.count.value += 1
+        n = self._next_n.value
+        self.fizzbuzz_dict[n] = self._fizzbuzz(n)
+        self._next_n.value = n + 1
 
     def pop(self, ev: DOMEvent):
-        if self.count.value > 0:
-            self.count.value -= 1
+        if len(self.fizzbuzz_dict.value) > 0:
+            last_key = list(self.fizzbuzz_dict.value.keys())[-1]
+            self.fizzbuzz_dict.pop(last_key)
+            self._next_n.value -= 1
 
     def toggle(self, ev: DOMEvent):
         self.opened.value = not self.opened.value
 
     @on_before_rendering
     def on_before_rendering(self):
-        self.count.value = 10
+        self.fizzbuzz_dict.clear()
+        self._next_n.value = 1
+        for n in range(1, 11):
+            self.fizzbuzz_dict[n] = self._fizzbuzz(n)
+            self._next_n.value = n + 1
 
     @component_template
     def template(self):
@@ -74,7 +80,7 @@ class Fizzbuzz(TypedComponentBase(props_type=None)):
             html.P(
                 {},
                 "Count: ",
-                self.count,
+                computed(lambda: str(len(self.fizzbuzz_dict.value))),
             ),
             switch(
                 {
@@ -84,8 +90,8 @@ class Fizzbuzz(TypedComponentBase(props_type=None)):
                         html.UL(
                             {},
                             repeat(
-                                self.fizzbuzz_list,
-                                lambda s: html.LI({}, s),
+                                self.fizzbuzz_dict,
+                                lambda k, v: html.LI({}, v),
                             ),
                         ),
                     ),
