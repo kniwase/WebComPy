@@ -56,3 +56,13 @@
 - [x] 8.2 Run `uv run ruff format .` and fix formatting
 - [x] 8.3 Run `uv run pyright` and fix type errors
 - [x] 8.4 Run `uv run python -m pytest tests/ --tb=short` and ensure all tests pass
+
+## 9. Overload Refactoring
+
+- [x] 9.1 Add 5 `@overload` signatures to `RepeatElement.__init__` for type-safe template dispatch: dict `(V,)`, dict `(V, K)`, list `(V,)`, list `(V, int)`, list `(V, K)` with key
+- [x] 9.2 Add matching 5 `@overload` signatures to `repeat()` in `generators.py`
+- [x] 9.3 Refactor internal template dispatch: `_two_arg_template` / `_single_arg_template` + `_call_template(v, k)` instead of `_is_dict` + `_dict_template`
+- [x] 9.4 Change dict template signature from `(K, V)` to `(V, K)` — value first, key second
+- [x] 9.5 Change keyed-list template signature from `(V,)` to `(V, K)` — template receives key as second arg
+- [x] 9.6 Update all tests and docs examples for `(V, K)` template arg order
+- [x] 9.7 Run full lint + typecheck + test suite

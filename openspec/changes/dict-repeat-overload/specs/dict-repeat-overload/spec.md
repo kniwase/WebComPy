@@ -40,13 +40,22 @@ The `_last_mutation` attribute SHALL be an additional side-channel that does not
 - **THEN** the callback SHALL receive the full dict value as before
 - **AND** the callback SHALL NOT receive `DictMutation` as an argument
 
-### Requirement: repeat() shall accept ReactiveDict and use dict keys for reconciliation
-The `repeat()` function SHALL accept a `ReactiveDict[K, V]` as its first argument, where K is `str | int`. When a `ReactiveDict` is passed, the template function SHALL receive both the key and value as arguments with signature `(K, V) -> ChildNode`. The dict keys SHALL be used as reconciliation identifiers — no separate `key` function is needed or allowed for dict mode.
+### Requirement: repeat() shall accept ReactiveDict with type-safe overloads
+The `repeat()` function SHALL accept a `ReactiveDict[K, V]` as its first argument, where K is `str | int`. Two overloads are provided for dict mode:
+- `repeat(dict, template)` where `template: (V,) -> ChildNode` — value only
+- `repeat(dict, template)` where `template: (V, K) -> ChildNode` — value and key
 
-#### Scenario: Rendering a ReactiveDict with repeat()
-- **WHEN** a developer writes `repeat(my_dict, lambda key, value: html.LI({}, f"{key}: {value}"))`
+The dict keys SHALL be used as reconciliation identifiers — no separate `key` function is needed or allowed for dict mode.
+
+#### Scenario: Rendering a ReactiveDict with value-key template
+- **WHEN** a developer writes `repeat(my_dict, lambda value: html.LI({}, value))`
+- **THEN** one `<li>` SHALL be rendered for each value in `my_dict`
+- **AND** dict keys SHALL be used as reconciliation identifiers
+
+#### Scenario: Rendering a ReactiveDict with two-argument template
+- **WHEN** a developer writes `repeat(my_dict, lambda value, key: html.LI({}, f"{key}: {value}"))`
 - **THEN** one `<li>` SHALL be rendered for each key-value pair in `my_dict`
-- **AND** the dict keys SHALL be used as reconciliation identifiers
+- **AND** dict keys SHALL be used as reconciliation identifiers
 
 #### Scenario: Adding an entry to a ReactiveDict used in repeat()
 - **WHEN** a developer has `repeat(my_dict, template)` rendering 3 items
@@ -65,6 +74,27 @@ The `repeat()` function SHALL accept a `ReactiveDict[K, V]` as its first argumen
 - **AND** the dict is reordered such that iteration yields [C, A, B]
 - **THEN** the DOM nodes for keys A, B, C SHALL be reused (not removed or re-created)
 - **AND** the DOM nodes SHALL be reordered in the DOM to match the new iteration order
+
+### Requirement: repeat() shall accept ReactiveList with type-safe overloads
+The `repeat()` function SHALL accept a `ReactiveList[V]` with three overloads:
+- `repeat(list, template)` where `template: (V,) -> ChildNode` — unkeyed, full rebuild on mutation
+- `repeat(list, template)` where `template: (V, int) -> ChildNode` — keyed by list index
+- `repeat(list, template, key)` where `template: (V, K) -> ChildNode` and `key: (V) -> K` — keyed by custom key function
+
+When a `key` function is provided or list index mode is used, `RepeatElement` SHALL reuse existing DOM elements for items whose keys persist across mutations. When no `key` is provided and single-arg template is used, all rendered items SHALL be removed and regenerated (full rebuild behavior).
+
+#### Scenario: Rendering a list of items with key function
+- **WHEN** a developer writes `repeat(items, lambda item, id: html.LI({}, item.name), key=lambda item: item.id)`
+- **THEN** one `<li>` SHALL be rendered for each item in `items`
+- **WHEN** `items.append(new_item)` is called
+- **THEN** only the new `<li>` SHALL be created and appended
+- **AND** existing `<li>` elements SHALL remain in the DOM unchanged
+
+#### Scenario: Rendering a list of items without keys (backward compatible)
+- **WHEN** a developer writes `repeat(items, lambda item: html.LI({}, item.name))` without a `key` parameter
+- **THEN** one `<li>` SHALL be rendered for each item in `items`
+- **WHEN** `items.append(new_item)` is called
+- **THEN** the entire list SHALL be regenerated with the new item included
 
 ### Requirement: Dict repeat keys shall be str or int
 The `repeat()` overload for `ReactiveDict` SHALL accept dicts whose keys are `str` or `int`. This matches the key constraint of keyed list reconciliation and ensures keys can be used as DOM element identifiers.

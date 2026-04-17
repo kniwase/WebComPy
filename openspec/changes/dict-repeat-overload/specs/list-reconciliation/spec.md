@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
-### Requirement: Key-based reconciliation shall reuse existing DOM elements for list items with matching keys
-When a `repeat()` is created with a `key` function, the `RepeatElement` SHALL map each rendered child to its key. This also applies when `repeat()` receives a `ReactiveDict` — dict keys are used directly as reconciliation identifiers. Upon mutation, children whose keys still exist in the new list or dict SHALL be reused (their DOM nodes preserved) rather than destroyed and recreated.
+### Requirement: Key-based reconciliation shall reuse existing DOM elements for list items or dict entries with matching keys
+When a `repeat()` is created with a `key` function, an index key, or a `ReactiveDict`, the `RepeatElement` SHALL map each rendered child to its key. Upon mutation, children whose keys still exist in the new list or dict SHALL be reused (their DOM nodes preserved) rather than destroyed and recreated.
 
 #### Scenario: Appending an item to a keyed list
 - **WHEN** a developer creates `repeat(items, template, key=lambda item: item.id)` with 3 items
@@ -12,7 +12,7 @@ When a `repeat()` is created with a `key` function, the `RepeatElement` SHALL ma
 #### Scenario: Removing an item from a keyed list
 - **WHEN** a developer creates `repeat(items, template, key=lambda item: item.id)` with 3 items [A, B, C]
 - **AND** removes item B via `items.pop(1)`
-- **THEN** the DOM nodes for items A and C SHALL be reused (not removed or re-created)
+- **THEN** the DOM nodes for items A and C SHALL be reused (not removed or re-creation)
 - **AND** the DOM node for item B SHALL be removed
 
 #### Scenario: Dict entry addition with keyed reconciliation
