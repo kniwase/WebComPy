@@ -11,7 +11,7 @@ from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement
 from webcompy.elements.types._text import NewLine
 from webcompy.exception import WebComPyException
-from webcompy.reactive import ReactiveBase, ReactiveDict, computed
+from webcompy.reactive import ReactiveBase, computed
 
 K = TypeVar("K", str, int)
 V = TypeVar("V")
@@ -63,11 +63,11 @@ class RepeatElement(DynamicElement):
         template: Callable[[V], ElementChildren] | Callable[[V, K], ElementChildren],
         key: Callable[[V], K] | None = None,
     ) -> None:
-        is_dict = isinstance(sequence, ReactiveDict)
-        if is_dict and key is not None:
-            raise ValueError("Argument 'key' is not allowed when sequence is a ReactiveDict.")
         if not isinstance(sequence, ReactiveBase):
             raise ValueError("Argument 'sequence' must be Reactive Object.")
+        is_dict = isinstance(sequence.value, dict)
+        if is_dict and key is not None:
+            raise ValueError("Argument 'key' is not allowed when sequence is a ReactiveDict.")
 
         self._is_dict = is_dict
         self._sequence: ReactiveBase[Any] = sequence
