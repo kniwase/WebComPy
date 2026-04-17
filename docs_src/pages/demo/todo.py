@@ -122,7 +122,7 @@ def ToDoListPage(context: ComponentContext[RouterContext]):
                                 {},
                                 repeat(
                                     data,
-                                    lambda v, k: ToDoItem({"props": v}),
+                                    lambda v, k: ToDoItem(v),
                                 ),
                             ),
                         )
