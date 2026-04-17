@@ -101,6 +101,13 @@ WebComPy uses OpenSpec for spec-driven development. Specs define **what the fram
 - Describe **observable behavior**, not class hierarchies or method signatures.
 - Keep specs focused on capabilities. Internal refactoring that doesn't change user-facing behavior doesn't need a spec change.
 
+### Language Rules
+
+- All documents (proposals, designs, specs, tasks) and code comments MUST be written in English.
+- Internal reasoning and thinking MUST be conducted in English.
+- Communication with the user MUST use the language the user prefers (the language they are using).
+- The user's preferred language is inferred from the language used in their initial prompt and subsequent instructions.
+
 ### Change Conventions
 
 - Change names MUST use the format `<type>/<short-description>` matching the branch prefix convention (e.g., `feat/list-reconciliation`, `fix/evnet-typo`, `refactor/singleton-removal`).
