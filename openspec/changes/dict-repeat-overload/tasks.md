@@ -16,18 +16,18 @@
 
 ## 3. RepeatElement Dict Mode
 
-- [ ] 3.1 Add `_is_dict: bool` flag to `RepeatElement.__init__()` that detects `ReactiveDict` input
-- [ ] 3.2 Store dict-mode template (`Callable[[K, V], ChildNode]`) alongside list-mode template
-- [ ] 3.3 Update `_generate_children()` to iterate `dict.items()` and call template with `(key, value)` when in dict mode
-- [ ] 3.4 Update `_populate_key_map()` to use dict keys (no key function needed) when in dict mode
-- [ ] 3.5 Update `_reconcile_children()` to iterate `dict.items()` and use dict keys for reconciliation when in dict mode
-- [ ] 3.6 Update `_refresh()` to pass correct arguments for dict mode
+- [x] 3.1 Add `_is_dict: bool` flag to `RepeatElement.__init__()` that detects `ReactiveDict` input
+- [x] 3.2 Store dict-mode template (`Callable[[K, V], ChildNode]`) alongside list-mode template
+- [x] 3.3 Update `_generate_children()` to iterate `dict.items()` and call template with `(key, value)` when in dict mode
+- [x] 3.4 Update `_populate_key_map()` to use dict keys (no key function needed) when in dict mode
+- [x] 3.5 Update `_reconcile_children()` to iterate `dict.items()` and use dict keys for reconciliation when in dict mode
+- [x] 3.6 Update `_refresh()` to pass correct arguments for dict mode
 
 ## 4. repeat() Function Overload
 
-- [ ] 4.1 Add `@overload` signature for `repeat(ReactiveDict, Callable[[K, V], ChildNode])` in `generators.py`
-- [ ] 4.2 Update `RepeatElement.__init__` type annotations to accept `ReactiveDict[K, V]`
-- [ ] 4.3 Verify no `key` parameter is accepted when `sequence` is a `ReactiveDict` (raise if passed)
+- [x] 4.1 Add `@overload` signature for `repeat(ReactiveDict, Callable[[K, V], ChildNode])` in `generators.py`
+- [x] 4.2 Update `RepeatElement.__init__` type annotations to accept `ReactiveDict[K, V]`
+- [x] 4.3 Verify no `key` parameter is accepted when `sequence` is a `ReactiveDict` (raise if passed)
 
 ## 5. Unit Tests for Dict Repeat
 

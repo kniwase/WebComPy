@@ -20,9 +20,11 @@ from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._repeat import MultiLineTextElement, RepeatElement
 from webcompy.elements.types._switch import SwitchElement
 from webcompy.elements.types._text import NewLine, TextElement
-from webcompy.reactive import ReactiveBase
+from webcompy.reactive import ReactiveBase, ReactiveDict
 
 T = TypeVar("T")
+K = TypeVar("K", str, int)
+V = TypeVar("V")
 
 EventKey = NewType("EventKey", str)
 DomNodeRefKey = NewType("DomNodeRefKey", str)
@@ -58,8 +60,8 @@ NodeGenerator: TypeAlias = Callable[[], ChildNode]
 
 
 def repeat(
-    sequence: ReactiveBase[list[T]],
-    template: Callable[[T], ChildNode],
+    sequence: ReactiveBase[list[T]] | ReactiveDict[Any, Any],
+    template: Callable[..., Any],
     key: Callable[[T], str | int] | None = None,
 ):
     return RepeatElement(sequence, template, key)
