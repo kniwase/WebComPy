@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine
-from re import compile as re_complie
+from re import compile as re_compile
 from re import escape as re_escape
 from traceback import TracebackException
 from typing import Any, Generic, TypeAlias, TypeVar
@@ -13,12 +13,12 @@ from webcompy import logging
 from webcompy._browser._modules import browser
 from webcompy.reactive._base import ReactiveBase
 
-AsysncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
+AsyncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
 
 if browser:
-    aio_run: AsysncResolver = asyncio.get_event_loop().run_until_complete
+    aio_run: AsyncResolver = asyncio.get_event_loop().run_until_complete
 else:
-    aio_run: AsysncResolver = asyncio.run
+    aio_run: AsyncResolver = asyncio.run
 
 
 A = ParamSpec("A")
@@ -27,7 +27,7 @@ T = TypeVar("T")
 
 _package_name = "/webcompy/"
 _filepath_in_package = _package_name + __file__.split(_package_name)[-1]
-_is_traceback_in_this_file = re_complie(
+_is_traceback_in_this_file = re_compile(
     r'\s+File\s+".+' + re_escape(_filepath_in_package) + r'",\s+line\s+[0-9]+,\s+in\s+'
 ).match
 
@@ -100,16 +100,16 @@ class AsyncComputed(ReactiveBase[T | None]):
         self._exception = err
 
     @property
-    @ReactiveBase._get_evnet
+    @ReactiveBase._get_event
     def value(self) -> T | None:
         return self._value
 
     @property
-    @ReactiveBase._get_evnet
+    @ReactiveBase._get_event
     def error(self) -> Exception | None:
         return self._exception
 
     @property
-    @ReactiveBase._get_evnet
+    @ReactiveBase._get_event
     def done(self) -> bool:
         return self._done

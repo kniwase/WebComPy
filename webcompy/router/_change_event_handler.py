@@ -41,12 +41,12 @@ class Location(ReactiveBase[str]):
         self._refresh_path()
 
     @property
-    @ReactiveBase._get_evnet
+    @ReactiveBase._get_event
     def value(self):
         return self._value
 
     @property
-    @ReactiveBase._get_evnet
+    @ReactiveBase._get_event
     def state(self):
         return self._state
 
