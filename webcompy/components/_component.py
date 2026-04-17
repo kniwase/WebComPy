@@ -4,12 +4,30 @@ from collections.abc import Callable
 from typing import Any, ClassVar, TypeAlias, TypeGuard
 from uuid import UUID, uuid4
 
+from webcompy._browser._modules import browser
 from webcompy.components._abstract import ComponentAbstract
 from webcompy.components._libs import ComponentProperty, Context, generate_id
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
 from webcompy.reactive import ReactiveDict, computed_property
+
+_defer_after_rendering_depth: int = 0
+_deferred_after_rendering_callbacks: list[Callable[[], None]] = []
+
+
+def start_defer_after_rendering() -> None:
+    global _defer_after_rendering_depth
+    _defer_after_rendering_depth += 1
+
+
+def end_defer_after_rendering() -> list[Callable[[], None]]:
+    global _defer_after_rendering_depth, _deferred_after_rendering_callbacks
+    _defer_after_rendering_depth -= 1
+    callbacks = _deferred_after_rendering_callbacks[:]
+    _deferred_after_rendering_callbacks.clear()
+    return callbacks
+
 
 FuncComponentDef: TypeAlias = Callable[[Context[Any]], ElementChildren]
 ClassComponentDef: TypeAlias = type[ComponentAbstract[Any]]
@@ -114,7 +132,12 @@ class Component(ElementBase):
     def _render(self):
         self._property["on_before_rendering"]()
         super()._render()
-        self._property["on_after_rendering"]()
+        after_rendering = self._property["on_after_rendering"]
+        global _defer_after_rendering_depth, _deferred_after_rendering_callbacks
+        if _defer_after_rendering_depth > 0 and browser:
+            _deferred_after_rendering_callbacks.append(after_rendering)
+        else:
+            after_rendering()
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         if self._instance_id in Component._head_props.titles:
