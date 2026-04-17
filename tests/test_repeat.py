@@ -3,6 +3,7 @@ from webcompy.elements.types._element import Element
 from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._text import TextElement
 from webcompy.reactive import ReactiveList
+from webcompy.reactive._dict import ReactiveDict
 
 
 class FakeRootElement(Element):
@@ -49,7 +50,7 @@ class TestRepeatElementOnSetParent:
 class TestRepeatElementKeySupport:
     def test_keyed_on_set_parent_populates_key_map(self):
         rl = ReactiveList(["a", "b", "c"])
-        rep = RepeatElement(rl, lambda x: TextElement(x), key=lambda x: x)
+        rep = RepeatElement(rl, lambda x, k: TextElement(x), key=lambda x: x)
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
@@ -59,7 +60,7 @@ class TestRepeatElementKeySupport:
 
     def test_keyed_empty_list(self):
         rl = ReactiveList([])
-        rep = RepeatElement(rl, lambda x: TextElement(x), key=lambda x: x)
+        rep = RepeatElement(rl, lambda x, k: TextElement(x), key=lambda x: x)
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
@@ -69,7 +70,7 @@ class TestRepeatElementKeySupport:
     def test_key_defaults_to_none(self):
         rl = ReactiveList(["a"])
         rep = RepeatElement(rl, lambda x: TextElement(x))
-        assert rep._key is None
+        assert rep._key_fn is None
 
 
 class TestMultiLineTextElement:
@@ -82,3 +83,33 @@ class TestMultiLineTextElement:
         mlt._node_idx = 0
         mlt._on_set_parent()
         assert len(mlt._children) == 3
+
+
+class TestRepeatElementDictMode:
+    def test_dict_on_set_parent_generates_children(self):
+        rd = ReactiveDict({"a": 1, "b": 2})
+        rep = RepeatElement(rd, lambda k, v: TextElement(f"{k}:{v}"))
+        parent = _make_parent()
+        rep._parent = parent
+        rep._node_idx = 0
+        rep._on_set_parent()
+        assert len(rep._children) == 2
+
+    def test_dict_empty(self):
+        rd = ReactiveDict()
+        rep = RepeatElement(rd, lambda k, v: TextElement(str(v)))
+        parent = _make_parent()
+        rep._parent = parent
+        rep._node_idx = 0
+        rep._on_set_parent()
+        assert len(rep._children) == 0
+
+    def test_dict_is_dict_flag(self):
+        rd = ReactiveDict({"a": 1})
+        rep = RepeatElement(rd, lambda k, v: TextElement(str(v)))
+        assert rep._is_dict is True
+
+    def test_dict_key_is_none(self):
+        rd = ReactiveDict({"a": 1})
+        rep = RepeatElement(rd, lambda v, k: TextElement(str(v)))
+        assert rep._key_fn is None

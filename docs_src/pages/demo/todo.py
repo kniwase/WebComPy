@@ -17,10 +17,12 @@ def ToDoListPage(context: ComponentContext[RouterContext]):
             {
                 "title": title,
                 "code": """
+                    import uuid
                     from typing import Any, TypedDict
                     from webcompy.elements import html, repeat, DomNodeRef
                     from webcompy.components import define_component, ComponentContext
-                    from webcompy.reactive import Reactive, ReactiveList, computed
+                    from webcompy.reactive import Reactive, computed
+                    from webcompy.reactive._dict import ReactiveDict
 
 
                     class TodoData(TypedDict):
@@ -78,36 +80,34 @@ def ToDoListPage(context: ComponentContext[RouterContext]):
                     @define_component
                     def ToDoList(_: ComponentContext[None]):
                         input_ref = DomNodeRef()
-                        data: ReactiveList[TodoData] = ReactiveList(
-                            [
-                                {
+                        data: ReactiveDict[str, TodoData] = ReactiveDict(
+                            {
+                                str(uuid.uuid4()): {
                                     "title": Reactive("Try WebComPy"),
                                     "done": Reactive(False),
                                 },
-                                {
+                                str(uuid.uuid4()): {
                                     "title": Reactive("Create WebComPy project"),
                                     "done": Reactive(False),
-                                }
-                            ]
+                                },
+                            }
                         )
 
                         def append_item(_: Any):
                             title = input_ref.value
                             if title:
-                                data.append(
-                                    {
-                                        "title": Reactive(title),
-                                        "done": Reactive(False),
-                                    }
-                                )
+                                data[str(uuid.uuid4())] = {
+                                    "title": Reactive(title),
+                                    "done": Reactive(False),
+                                }
                             input_ref.value = ""
 
                         def remove_done_items(_: Any):
-                            items_remove = reversed(
-                                [idx for idx, item in enumerate(data.value) if item["done"].value]
-                            )
-                            for idx in items_remove:
-                                data.pop(idx)
+                            keys_to_remove = [
+                                k for k, v in data.value.items() if v["done"].value
+                            ]
+                            for k in keys_to_remove:
+                                del data[k]
 
                         return html.DIV(
                             {},
@@ -121,8 +121,8 @@ def ToDoListPage(context: ComponentContext[RouterContext]):
                             html.UL(
                                 {},
                                 repeat(
-                                    sequence=data,
-                                    template=ToDoItem,
+                                    data,
+                                    lambda v, k: ToDoItem(v),
                                 ),
                             ),
                         )

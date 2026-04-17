@@ -1,13 +1,13 @@
-# List Reconciliation
+# List and Dict Reconciliation
 
 ## Purpose
 
-List rendering is one of the most common UI patterns, and when a reactive list changes, the framework should reuse existing DOM elements whenever possible rather than destroying and recreating the entire list. Key-based reconciliation allows `repeat()` to match list items by a unique identifier, preserving DOM state (focus, input values, scroll position) and reducing the number of DOM operations from O(n) full rebuild to O(changed items).
+List and dict rendering are among the most common UI patterns, and when a reactive collection changes, the framework should reuse existing DOM elements whenever possible rather than destroying and recreating the entire list. Key-based reconciliation allows `repeat()` to match list items or dict entries by a unique identifier, preserving DOM state (focus, input values, scroll position) and reducing the number of DOM operations from O(n) full rebuild to O(changed items).
 
 ## Requirements
 
-### Requirement: Key-based reconciliation shall reuse existing DOM elements for list items with matching keys
-When a `repeat()` is created with a `key` function, the `RepeatElement` SHALL map each rendered child to its key. Upon list mutation, children whose keys still exist in the new list SHALL be reused (their DOM nodes preserved) rather than destroyed and recreated.
+### Requirement: Key-based reconciliation shall reuse existing DOM elements for list items or dict entries with matching keys
+When a `repeat()` is created with a `key` function, an index key, or a `ReactiveDict`, the `RepeatElement` SHALL map each rendered child to its key. This also applies when `repeat()` receives a `ReactiveDict` — dict keys are used directly as reconciliation identifiers. Upon mutation, children whose keys still exist in the new list or dict SHALL be reused (their DOM nodes preserved) rather than destroyed and recreated.
 
 #### Scenario: Appending an item to a keyed list
 - **WHEN** a developer creates `repeat(items, template, key=lambda item: item.id)` with 3 items
@@ -21,17 +21,17 @@ When a `repeat()` is created with a `key` function, the `RepeatElement` SHALL ma
 - **THEN** the DOM nodes for items A and C SHALL be reused (not removed or re-created)
 - **AND** the DOM node for item B SHALL be removed
 
-#### Scenario: Inserting an item in the middle of a keyed list
-- **WHEN** a developer creates `repeat(items, template, key=lambda item: item.id)` with 3 items [A, B, C]
-- **AND** inserts a new item D at index 1 via `items.insert(1, D)`
-- **THEN** the DOM nodes for items A, B, C SHALL be reused (not removed or re-created)
-- **AND** a new DOM node SHALL be created and inserted for item D at the correct position
+#### Scenario: Dict entry addition with keyed reconciliation
+- **WHEN** a developer creates `repeat(my_dict, template)` with 3 entries
+- **AND** adds a 4th entry via `my_dict["new"] = value`
+- **THEN** the 3 existing DOM nodes SHALL remain in place
+- **AND** a new DOM node SHALL be created for the new entry
 
-#### Scenario: Reordering items in a keyed list
-- **WHEN** a developer creates `repeat(items, template, key=lambda item: item.id)` with 3 items [A, B, C]
-- **AND** reverses the list via `items.reverse()`
-- **THEN** the DOM nodes for items A, B, C SHALL be reused (not removed or re-created)
-- **AND** the DOM nodes SHALL be reordered in the DOM to match the new list order [C, B, A]
+#### Scenario: Dict entry removal with keyed reconciliation
+- **WHEN** a developer creates `repeat(my_dict, template)` with entries [A, B, C]
+- **AND** removes entry B via `del my_dict["B"]`
+- **THEN** the DOM nodes for entries A and C SHALL be reused
+- **AND** the DOM node for entry B SHALL be removed
 
 ### Requirement: repeat without a key shall fall back to full rebuild
 When a `repeat()` is created without a `key` function, the `RepeatElement` SHALL continue to remove all existing children and regenerate them from scratch on every list mutation, preserving backward compatibility.

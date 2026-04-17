@@ -7,6 +7,7 @@ from typing import (
     TypeAlias,
     TypedDict,
     TypeVar,
+    overload,
 )
 
 from webcompy.elements.typealias._element_property import (
@@ -23,6 +24,8 @@ from webcompy.elements.types._text import NewLine, TextElement
 from webcompy.reactive import ReactiveBase
 
 T = TypeVar("T")
+K = TypeVar("K", str, int)
+V = TypeVar("V")
 
 EventKey = NewType("EventKey", str)
 DomNodeRefKey = NewType("DomNodeRefKey", str)
@@ -57,12 +60,48 @@ ChildNode: TypeAlias = ElementBase | TextElement | MultiLineTextElement | NewLin
 NodeGenerator: TypeAlias = Callable[[], ChildNode]
 
 
+@overload
 def repeat(
-    sequence: ReactiveBase[list[T]],
-    template: Callable[[T], ChildNode],
-    key: Callable[[T], str | int] | None = None,
-):
-    return RepeatElement(sequence, template, key)
+    sequence: ReactiveBase[dict[K, V]],
+    template: Callable[[V], ChildNode],
+) -> RepeatElement: ...
+
+
+@overload
+def repeat(
+    sequence: ReactiveBase[dict[K, V]],
+    template: Callable[[V, K], ChildNode],
+) -> RepeatElement: ...
+
+
+@overload
+def repeat(
+    sequence: ReactiveBase[list[V]],
+    template: Callable[[V], ChildNode],
+) -> RepeatElement: ...
+
+
+@overload
+def repeat(
+    sequence: ReactiveBase[list[V]],
+    template: Callable[[V, int], ChildNode],
+) -> RepeatElement: ...
+
+
+@overload
+def repeat(
+    sequence: ReactiveBase[list[V]],
+    template: Callable[[V, K], ChildNode],
+    key: Callable[[V], K],
+) -> RepeatElement: ...
+
+
+def repeat(
+    sequence: ReactiveBase[dict[K, V]] | ReactiveBase[list[V]],
+    template: Callable[[V], ChildNode] | Callable[[V, K], ChildNode],
+    key: Callable[[V], K] | None = None,
+) -> RepeatElement:
+    return RepeatElement(sequence, template, key)  # type: ignore[arg-type]
 
 
 class SwitchCase(TypedDict):
