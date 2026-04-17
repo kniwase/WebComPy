@@ -5,6 +5,7 @@ from operator import truth
 from typing import Any, TypeAlias, cast
 
 from webcompy._browser._modules import browser
+from webcompy.components._component import end_defer_after_rendering, start_defer_after_rendering
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement
@@ -67,9 +68,16 @@ class SwitchElement(DynamicElement):
         for _ in range(len(self._children)):
             self._children.pop(-1)._remove_element()
         self._children = self._generate_children(generator)
+        should_defer = browser is not None and self._reactive_activated
+        if should_defer:
+            start_defer_after_rendering()
         for c_idx, child in enumerate(self._children):
             child._node_idx = self._node_idx + c_idx
             child._render()
+        if should_defer and browser is not None:
+            deferred = end_defer_after_rendering()
+            for callback in deferred:
+                browser.window.setTimeout(callback, 0)
         self._parent._re_index_children(False)
 
     def _on_set_parent(self):

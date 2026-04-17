@@ -1,5 +1,6 @@
 from webcompy.router import Router
 
+from .pages.async_nav import AsyncNavPage
 from .pages.classstyle import ClassStylePage
 from .pages.component import FunctionStylePage
 from .pages.event import EventPage
@@ -21,6 +22,7 @@ router = Router(
     {"path": "/repeat", "component": RepeatPage},
     {"path": "/lifecycle", "component": LifecyclePage},
     {"path": "/scoped-style", "component": ScopedStylePage},
+    {"path": "/async-nav", "component": AsyncNavPage},
     default=NotFound,
     mode="history",
     base_url="",

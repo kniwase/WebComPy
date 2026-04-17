@@ -15,10 +15,17 @@ from webcompy.reactive._base import ReactiveBase
 
 AsyncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
 
-if browser:
-    aio_run: AsyncResolver = asyncio.get_event_loop().run_until_complete
-else:
-    aio_run: AsyncResolver = asyncio.run
+
+def _aio_run_browser(coro: Coroutine[Any, Any, Any]) -> None:
+    task = asyncio.ensure_future(coro)
+    _aio_run_browser_tasks.append(task)
+    task.add_done_callback(lambda t: _aio_run_browser_tasks.remove(t))
+
+
+_aio_run_browser_tasks: list[asyncio.Task[Any]] = []
+
+
+aio_run: AsyncResolver = _aio_run_browser if browser else asyncio.run
 
 
 A = ParamSpec("A")
