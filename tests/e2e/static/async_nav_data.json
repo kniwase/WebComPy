@@ -1,0 +1,4 @@
+{
+  "message": "Hello from async navigation!",
+  "items": ["alpha", "beta", "gamma"]
+}

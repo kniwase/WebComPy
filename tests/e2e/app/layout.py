@@ -21,6 +21,7 @@ def Root(_: ComponentContext[None]):
                 html.LI(
                     {}, RouterLink(to="/scoped-style", text=["ScopedStyle"], attrs={"data-testid": "nav-scoped-style"})
                 ),
+                html.LI({}, RouterLink(to="/async-nav", text=["AsyncNav"], attrs={"data-testid": "nav-async-nav"})),
             ),
         ),
         html.MAIN(
