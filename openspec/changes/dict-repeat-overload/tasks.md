@@ -1,12 +1,12 @@
 ## 1. DictMutation Data Model
 
-- [ ] 1.1 Create `DictMutation` dataclass in `webcompy/reactive/_dict.py` with fields `op: str`, `key: str | int | None`, `value: Any`
-- [ ] 1.2 Add `_last_mutation: DictMutation | None` attribute to `ReactiveDict.__init__()`
-- [ ] 1.3 Set `_last_mutation` on `__setitem__` (op=`"set"`, key, value)
-- [ ] 1.4 Set `_last_mutation` on `__delitem__` (op=`"delete"`, key, value of deleted item)
-- [ ] 1.5 Set `_last_mutation` on `pop` (op=`"pop"`, key, popped value)
-- [ ] 1.6 Set `_last_mutation` on `clear` (op=`"clear"`, key=None, value=None)
-- [ ] 1.7 Export `DictMutation` from `webcompy/reactive/__init__.py`
+- [x] 1.1 Create `DictMutation` dataclass in `webcompy/reactive/_dict.py` with fields `op: str`, `key: str | int | None`, `value: Any`
+- [x] 1.2 Add `_last_mutation: DictMutation | None` attribute to `ReactiveDict.__init__()`
+- [x] 1.3 Set `_last_mutation` on `__setitem__` (op=`"set"`, key, value)
+- [x] 1.4 Set `_last_mutation` on `__delitem__` (op=`"delete"`, key, value of deleted item)
+- [x] 1.5 Set `_last_mutation` on `pop` (op=`"pop"`, key, popped value)
+- [x] 1.6 Set `_last_mutation` on `clear` (op=`"clear"`, key=None, value=None)
+- [x] 1.7 Export `DictMutation` from `webcompy/reactive/__init__.py`
 
 ## 2. Unit Tests for DictMutation
 

@@ -1,11 +1,12 @@
 from webcompy.reactive._base import Reactive, ReactiveBase
 from webcompy.reactive._computed import Computed, computed, computed_property
-from webcompy.reactive._dict import ReactiveDict
+from webcompy.reactive._dict import DictMutation, ReactiveDict
 from webcompy.reactive._list import ReactiveList
 from webcompy.reactive._readonly import readonly
 
 __all__ = [
     "Computed",
+    "DictMutation",
     "Reactive",
     "ReactiveBase",
     "ReactiveDict",
