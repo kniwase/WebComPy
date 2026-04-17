@@ -6,7 +6,7 @@ The element system is how WebComPy represents and manipulates the user interface
 
 The system does not use virtual DOM diffing. Instead, it takes a direct approach: when a reactive value changes, the specific DOM node that depends on that value is updated in place. For dynamic content (conditional rendering and list rendering), the entire subtree is regenerated when the controlling value changes. This trades fine-grained efficiency for implementation simplicity.
 
-**What WebComPy does not yet provide:** In frameworks like React and Vue, list rendering uses keys to reconcile individual items — only changed items are updated while the rest are reused. WebComPy's `repeat` regenerates all children on every list change. Similarly, conditional branches (`switch`) completely replace their subtree rather than patching it. Dynamic elements (repeat and switch) cannot be nested, and `TextElement` does not hydrate pre-rendered text nodes in SSR output.
+**What WebComPy does not yet provide:** WebComPy's `repeat` now supports key-based reconciliation for efficient DOM updates. However, conditional branches (`switch`) still completely replace their subtree rather than patching it. Dynamic elements (repeat and switch) cannot be nested, and `TextElement` does not hydrate pre-rendered text nodes in SSR output.
 
 ## Requirements
 
@@ -49,12 +49,19 @@ The `switch` construct SHALL evaluate a series of conditions and render the temp
 - **AND** async operations SHALL execute in a clean event loop context (not nested within the reactive callback chain)
 
 ### Requirement: List rendering shall map a reactive list to element templates
-The `repeat` construct SHALL take a reactive list and a template function, and render one element per list item. When the list changes, all rendered items SHALL be removed and regenerated.
+The `repeat` construct SHALL take a reactive list, a template function, and an optional `key` function. The `key` function extracts a unique identifier from each list item for reconciliation. When `key` is provided, `RepeatElement` SHALL reuse existing DOM elements for items whose keys persist across mutations, remove elements whose keys are no longer in the list, and create new elements for newly added keys. When `key` is not provided, all rendered items SHALL be removed and regenerated (full rebuild behavior).
 
-#### Scenario: Rendering a list of items
-- **WHEN** a developer writes `repeat(items, lambda item: html.LI({}, item))`
+#### Scenario: Rendering a list of items with keys
+- **WHEN** a developer writes `repeat(items, lambda item: html.LI({}, item.name), key=lambda item: item.id)`
 - **THEN** one `<li>` SHALL be rendered for each item in `items`
-- **WHEN** `items.append("new")` is called
+- **WHEN** `items.append(new_item)` is called
+- **THEN** only the new `<li>` SHALL be created and appended
+- **AND** existing `<li>` elements SHALL remain in the DOM unchanged
+
+#### Scenario: Rendering a list of items without keys (backward compatible)
+- **WHEN** a developer writes `repeat(items, lambda item: html.LI({}, item.name))` without a `key` parameter
+- **THEN** one `<li>` SHALL be rendered for each item in `items`
+- **WHEN** `items.append(new_item)` is called
 - **THEN** the entire list SHALL be regenerated with the new item included
 
 ### Requirement: Pre-rendered DOM nodes shall be reused during hydration
