@@ -7,7 +7,7 @@ List and dict rendering are among the most common UI patterns, and when a reacti
 ## Requirements
 
 ### Requirement: Key-based reconciliation shall reuse existing DOM elements for list items or dict entries with matching keys
-When a `repeat()` is created with a `key` function, an index key, or a `ReactiveDict`, the `RepeatElement` SHALL map each rendered child to its key. This also applies when `repeat()` receives a `ReactiveDict` — dict keys are used directly as reconciliation identifiers. Upon mutation, children whose keys still exist in the new list or dict SHALL be reused (their DOM nodes preserved) rather than destroyed and recreated.
+When a `repeat()` is created with a `key` function, an index key, or a `ReactiveDict`, the `RepeatElement` SHALL map each rendered child to its key. This also applies when `repeat()` receives a `ReactiveDict` — dict keys are used directly as reconciliation identifiers. Upon mutation, children whose keys still exist in the new list or dict SHALL be reused (their DOM nodes preserved) rather than destroyed and recreated. When a reused child element contains a nested `DynamicElement`, the nested element SHALL remain functional with its reactive callbacks intact.
 
 #### Scenario: Appending an item to a keyed list
 - **WHEN** a developer creates `repeat(items, template, key=lambda item: item.id)` with 3 items
@@ -67,3 +67,9 @@ The `repeat()` function SHALL accept an optional `key` parameter of type `Callab
 #### Scenario: Using an integer key
 - **WHEN** a developer creates `repeat(rows, template, key=lambda r: r.pk)` where `r.pk` is an integer
 - **THEN** the integer PK SHALL be used to match existing children to list items
+
+#### Scenario: Keyed list with switch inside each item
+- **WHEN** a developer creates `repeat(items, lambda item, key: switch(cases=[(item.active, lambda: ActiveView())]), key=lambda item: item.id)`
+- **AND** mutates the list (e.g., appends an item)
+- **THEN** existing items with their `switch` elements SHALL be preserved
+- **AND** the new item's `switch` SHALL react to its own reactive conditions independently

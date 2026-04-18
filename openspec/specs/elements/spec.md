@@ -6,7 +6,7 @@ The element system is how WebComPy represents and manipulates the user interface
 
 The system does not use virtual DOM diffing. Instead, it takes a direct approach: when a reactive value changes, the specific DOM node that depends on that value is updated in place. For dynamic content (conditional rendering and list rendering), the entire subtree is regenerated when the controlling value changes. This trades fine-grained efficiency for implementation simplicity.
 
-**What WebComPy does not yet provide:** WebComPy's `repeat` now supports key-based reconciliation and dict-based rendering for efficient DOM updates. However, conditional branches (`switch`) still completely replace their subtree rather than patching it. Dynamic elements (repeat and switch) cannot be nested, and `TextElement` does not hydrate pre-rendered text nodes in SSR output.
+**What WebComPy does not yet provide:** WebComPy's `repeat` now supports key-based reconciliation and dict-based rendering for efficient DOM updates. However, conditional branches (`switch`) still completely replace their subtree rather than patching it, and `TextElement` does not hydrate pre-rendered text nodes in SSR output.
 
 ## Requirements
 
@@ -32,7 +32,7 @@ When a reactive value is used as an element attribute or text content, any chang
 - **THEN** the text content in the DOM SHALL update to reflect the new count
 
 ### Requirement: Conditional rendering shall display one branch at a time
-The `switch` construct SHALL evaluate a series of conditions and render the template of the first matching condition. When conditions change, the previous branch SHALL be removed and the new branch SHALL be rendered. When the `SwitchElement` is refreshed due to a reactive change (such as a route change), any `on_after_rendering` lifecycle hooks of newly created components SHALL be deferred until after the reactive propagation and DOM updates have completed.
+The `switch` construct SHALL evaluate a series of conditions and render the template of the first matching condition. When conditions change, the previous branch SHALL be removed and the new branch SHALL be rendered. The branch template MAY return a `DynamicElement` (such as a `repeat`), and the `SwitchElement` SHALL handle it as a transparent child with no DOM node of its own. When the `SwitchElement` is refreshed due to a reactive change (such as a route change), any `on_after_rendering` lifecycle hooks of newly created components SHALL be deferred until after the reactive propagation and DOM updates have completed.
 
 #### Scenario: Switching between display modes
 - **WHEN** a developer defines `switch(cases=[(is_admin, lambda: AdminPanel()), (is_user, lambda: UserPanel())], default=lambda: GuestPanel())`
@@ -47,6 +47,13 @@ The `switch` construct SHALL evaluate a series of conditions and render the temp
 - **AND** the new page component has an `on_after_rendering` hook that starts async operations
 - **THEN** the new component SHALL be fully mounted in the DOM before `on_after_rendering` runs
 - **AND** async operations SHALL execute in a clean event loop context (not nested within the reactive callback chain)
+
+#### Scenario: Switch branch containing a repeat element
+- **WHEN** a developer defines `switch(cases=[(is_list_view, lambda: repeat(items, item_template))])`
+- **AND** `is_list_view` becomes `True`
+- **THEN** the `repeat` SHALL render its items inside the switch's parent DOM node
+- **WHEN** `is_list_view` becomes `False`
+- **THEN** the `repeat` and all its rendered items SHALL be removed
 
 ### Requirement: List and dict rendering shall map reactive collections to element templates with type-safe overloads
 The `repeat` construct SHALL support five type-safe overload signatures:
