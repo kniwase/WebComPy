@@ -2,14 +2,17 @@ import hashlib
 import zipfile
 
 from webcompy.cli._wheel_builder import (
+    _assets_to_package_data,
     _collect_package_files,
     _discover_packages,
+    _generate_assets_registry,
     _normalize_name,
     _sha256_b64,
     _write_metadata,
     _write_record,
     _write_wheel,
     make_bundled_wheel,
+    make_webcompy_app_package,
     make_wheel,
 )
 
@@ -282,3 +285,96 @@ class TestMakeBundledWheel:
             lines = top_level.strip().split("\n")
             assert "webcompy" in lines
             assert "app" in lines
+
+
+class TestAssetsToPackageData:
+    def test_simple_asset(self, tmp_path):
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        data_dir = app_pkg / "data"
+        data_dir.mkdir()
+        (data_dir / "cities.json").write_text("[]")
+        result = _assets_to_package_data("myapp", {"logo": "data/cities.json"}, app_pkg)
+        assert "myapp" in result
+        assert any("cities.json" in p or "data/*" in p for p in result["myapp"])
+
+    def test_root_level_asset(self, tmp_path):
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        (app_pkg / "icon.png").write_bytes(b"\x89PNG")
+        result = _assets_to_package_data("myapp", {"icon": "icon.png"}, app_pkg)
+        assert "myapp" in result
+        assert any("icon.png" in p for p in result["myapp"])
+
+    def test_multiple_assets_same_dir(self, tmp_path):
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        data_dir = app_pkg / "data"
+        data_dir.mkdir()
+        (data_dir / "a.json").write_text("{}")
+        (data_dir / "b.json").write_text("{}")
+        result = _assets_to_package_data("myapp", {"a": "data/a.json", "b": "data/b.json"}, app_pkg)
+        assert "myapp" in result
+
+
+class TestGenerateAssetsRegistry:
+    def test_registry_content(self):
+        result = _generate_assets_registry("myapp", {"logo": "logo.png", "config": "data/config.json"})
+        assert '"logo"' in result
+        assert '"myapp/logo.png"' in result
+        assert '"config"' in result
+        assert '"myapp/data/config.json"' in result
+        assert "_REGISTRY" in result
+
+    def test_empty_assets(self):
+        result = _generate_assets_registry("myapp", {})
+        assert "_REGISTRY: dict[str, str] = {}" in result
+
+
+class TestMakeWebcompyAppPackageWithAssets:
+    def test_bundled_wheel_with_assets(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        (app_pkg / "logo.png").write_bytes(b"\x89PNG")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+            assets={"logo": "logo.png"},
+        )
+        with zipfile.ZipFile(result) as zf:
+            names = zf.namelist()
+            assert "myapp/logo.png" in names
+            assert "myapp/_assets_registry.py" in names
+            registry = zf.read("myapp/_assets_registry.py").decode()
+            assert '"logo"' in registry
+            assert '"myapp/logo.png"' in registry
+
+    def test_bundled_wheel_without_assets(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+        )
+        with zipfile.ZipFile(result) as zf:
+            names = zf.namelist()
+            assert "myapp/_assets_registry.py" not in names

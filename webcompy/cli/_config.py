@@ -11,7 +11,7 @@ class WebComPyConfig:
     dist: str
     dependencies: list[str]
     cname: str
-    package_data: dict[str, list[str]] | None
+    assets: dict[str, str] | None
 
     def __init__(
         self,
@@ -22,7 +22,7 @@ class WebComPyConfig:
         dist: str = "dist",
         dependencies: list[str] | None = None,
         cname: str = "",
-        package_data: dict[str, list[str]] | None = None,
+        assets: dict[str, str] | None = None,
     ) -> None:
         if isinstance(app_package, Path):
             self.app_package_path = app_package.absolute()
@@ -37,4 +37,4 @@ class WebComPyConfig:
         self.dist = dist
         self.dependencies = [*dependencies] if dependencies else []
         self.cname = cname
-        self.package_data = package_data
+        self.assets = assets

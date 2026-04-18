@@ -84,6 +84,35 @@ def _write_record(
     return "\n".join(lines) + "\n"
 
 
+def _assets_to_package_data(
+    app_package_name: str,
+    assets: dict[str, str],
+    app_package_dir: pathlib.Path,
+) -> dict[str, list[str]]:
+    package_data: dict[str, list[str]] = {}
+    patterns: set[str] = set()
+    for _key, rel_path in assets.items():
+        full_path = app_package_dir / rel_path
+        if full_path.is_file():
+            directory = str(pathlib.Path(rel_path).parent)
+            pattern = pathlib.Path(rel_path).name
+            glob_pattern = str(pathlib.Path(directory) / pattern).replace(os.sep, "/") if directory != "." else pattern
+        else:
+            glob_pattern = rel_path.replace(os.sep, "/")
+        if glob_pattern not in patterns:
+            patterns.add(glob_pattern)
+    package_data[app_package_name] = list(patterns)
+    return package_data
+
+
+def _generate_assets_registry(
+    app_package_name: str,
+    assets: dict[str, str],
+) -> str:
+    entries = ", ".join(f'"{key}": "{app_package_name}/{rel_path}"' for key, rel_path in assets.items())
+    return f"_REGISTRY: dict[str, str] = {{{entries}}}\n"
+
+
 def make_wheel(
     name: str,
     package_dir: pathlib.Path,
@@ -142,6 +171,7 @@ def make_bundled_wheel(
     dest: pathlib.Path,
     version: str,
     package_data: dict[str, list[str]] | None = None,
+    extra_files: list[tuple[str, bytes]] | None = None,
 ) -> pathlib.Path:
     dist_name = _normalize_name(name)
     dist_info = f"{dist_name}-{version}.dist-info"
@@ -177,6 +207,11 @@ def make_bundled_wheel(
             zf.writestr(arc_path, data)
             record_entries.append((arc_path, _sha256_b64(data), len(data)))
 
+        if extra_files:
+            for arc_path, content in extra_files:
+                zf.writestr(arc_path, content)
+                record_entries.append((arc_path, _sha256_b64(content), len(content)))
+
         zf.writestr(metadata_path, metadata_content)
         record_entries.append(
             (metadata_path, _sha256_b64(metadata_content.encode("utf-8")), len(metadata_content.encode("utf-8")))
@@ -201,9 +236,18 @@ def make_webcompy_app_package(
     webcompy_package_dir: pathlib.Path,
     package_dir: pathlib.Path,
     app_version: str,
-    package_data: dict[str, list[str]] | None = None,
+    assets: dict[str, str] | None = None,
 ) -> pathlib.Path:
     app_name = package_dir.name
+    package_data: dict[str, list[str]] | None = None
+    extra_files: list[tuple[str, bytes]] | None = None
+
+    if assets:
+        package_data = _assets_to_package_data(app_name, assets, package_dir)
+        registry_content = _generate_assets_registry(app_name, assets)
+        registry_arc_path = f"{app_name}/_assets_registry.py"
+        extra_files = [(registry_arc_path, registry_content.encode("utf-8"))]
+
     return make_bundled_wheel(
         name=app_name,
         package_dirs=[
@@ -213,4 +257,5 @@ def make_webcompy_app_package(
         dest=dest,
         version=app_version,
         package_data=package_data,
+        extra_files=extra_files,
     )

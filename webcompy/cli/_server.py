@@ -41,7 +41,7 @@ def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = F
             get_webcompy_packge_dir(),
             config.app_package_path,
             app_version,
-            config.package_data,
+            config.assets,
         )
         app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (

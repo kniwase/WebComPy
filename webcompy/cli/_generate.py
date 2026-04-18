@@ -53,7 +53,7 @@ def generate_static_site():
         get_webcompy_packge_dir(),
         config.app_package_path,
         app_version,
-        config.package_data,
+        config.assets,
     )
     for p in scripts_dir.iterdir():
         print(p)
