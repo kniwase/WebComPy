@@ -4,7 +4,6 @@ import html as html_module
 import json
 from typing import TypeAlias
 
-from webcompy._version import __version__ as webcompy_version
 from webcompy.app._app import WebComPyApp
 from webcompy.cli._config import WebComPyConfig
 from webcompy.components._component import Component
@@ -156,8 +155,6 @@ def generate_html(
 
     py_packages = [
         *config.dependencies,
-        "typing_extensions",
-        f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
         f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
     ]
     py_config = html_module.escape(
