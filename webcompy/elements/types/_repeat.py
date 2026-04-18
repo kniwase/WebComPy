@@ -8,7 +8,7 @@ from typing import Any, TypeVar, overload
 from webcompy._browser._modules import browser
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
-from webcompy.elements.types._dynamic import DynamicElement
+from webcompy.elements.types._dynamic import DynamicElement, _position_element_nodes
 from webcompy.elements.types._text import NewLine
 from webcompy.exception import WebComPyException
 from webcompy.reactive import ReactiveBase, computed
@@ -178,6 +178,7 @@ class RepeatElement(DynamicElement):
         parent_node = self._parent._get_node()
         new_children: list[ElementAbstract] = []
         new_key_to_child: dict[str | int, ElementAbstract] = {}
+        newly_created: set[int] = set()
 
         node_offset = self._node_idx
         for v, k in items:
@@ -190,23 +191,31 @@ class RepeatElement(DynamicElement):
                 if child_element is not None:
                     new_key_to_child[k] = child_element
                     new_children.append(child_element)
+                    newly_created.add(len(new_children) - 1)
 
         for c_idx, child in enumerate(new_children):
             child._node_idx = node_offset + c_idx
-            node = child._get_node()
-            if node:
-                expected_idx = child._node_idx
-                if expected_idx < parent_node.childNodes.length:
-                    ref_node = parent_node.childNodes[expected_idx]
-                    if ref_node is not node:
-                        parent_node.insertBefore(node, ref_node)
-                elif expected_idx >= parent_node.childNodes.length:
-                    parent_node.appendChild(node)
-                if not child._mounted:
-                    child._mounted = True
+            if isinstance(child, DynamicElement):
+                _position_element_nodes(child, parent_node, child._node_idx)
+            else:
+                node = child._get_node()
+                if node:
+                    expected_idx = child._node_idx
+                    if expected_idx < parent_node.childNodes.length:
+                        ref_node = parent_node.childNodes[expected_idx]
+                        if ref_node is not node:
+                            parent_node.insertBefore(node, ref_node)
+                    elif expected_idx >= parent_node.childNodes.length:
+                        parent_node.appendChild(node)
+                    if not child._mounted:
+                        child._mounted = True
 
-        for child in new_children:
-            if child._node_cache is None:
+        for c_idx, child in enumerate(new_children):
+            if c_idx in newly_created:
+                child._render()
+            elif isinstance(child, DynamicElement):
+                pass
+            elif child._node_cache is None:
                 child._render()
 
         self._children = new_children
