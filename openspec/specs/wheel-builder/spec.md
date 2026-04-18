@@ -1,4 +1,10 @@
-## ADDED Requirements
+# Wheel Builder
+
+## Purpose
+
+The wheel builder produces PEP 427-compliant Python wheels for browser deployment without depending on setuptools or wheel. It supports bundling the webcompy framework and user application into a single wheel, including non-Python asset files with runtime lookup via `load_asset`. This eliminates the `SetuptoolsDeprecationWarning` and reduces browser load overhead.
+
+## Requirements
 
 ### Requirement: The wheel builder shall produce PEP 427-compliant wheels without setuptools
 The CLI SHALL build Python wheels by manually constructing ZIP archives containing the package source tree and a `.dist-info` directory with `METADATA`, `WHEEL`, `top_level.txt`, and `RECORD` files. The builder SHALL NOT depend on `setuptools`, `distutils`, or `wheel`.
