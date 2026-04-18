@@ -1,4 +1,12 @@
-## ADDED Requirements
+# Nested DynamicElement
+
+## Purpose
+
+DynamicElement nesting allows `repeat` and `switch` elements to be used within each other. This enables common UI patterns like conditional list rendering (repeat inside switch) and per-item conditional rendering (switch inside repeat). Without nesting support, these patterns cannot be expressed in WebComPy, forcing developers into workarounds or unnecessary component splits.
+
+The key technical challenge is that DynamicElements have no DOM node of their own — their children are rendered directly into the nearest real DOM ancestor. Nested DynamicElements therefore need ancestor traversal to locate their DOM parent, and special cleanup logic to properly remove child nodes and reactive callbacks.
+
+## Requirements
 
 ### Requirement: DynamicElements shall support nesting within each other
 Developers SHALL be able to nest `repeat` and `switch` elements within each other at arbitrary depth. A `repeat` inside a `switch` branch, a `switch` inside a `repeat` template, and deeper nesting SHALL all be supported without raising exceptions.
