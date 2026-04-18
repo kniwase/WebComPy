@@ -37,3 +37,13 @@
 - [x] 5.2 Run the existing e2e test suite (`uv run python -m pytest tests/e2e/`) to verify browser-side behavior still works with the bundled wheel
 - [x] 5.3 Run the full test suite and lint/type checks: `uv run python -m pytest tests/`, `uv run ruff check .`, `uv run pyright`
 - [x] 5.4 Manual verification: start dev server (`uv run python -m webcompy start --dev`), verify the app loads in browser, check that `import webcompy` and the app package both work, and that `SetuptoolsDeprecationWarning` no longer appears
+
+## 6. Rename package_data to assets and add runtime asset loading
+
+- [x] 6.1 Rename `package_data` to `assets` in `WebComPyConfig` (dict[str, str] where key is asset key and value is path relative to app package)
+- [x] 6.2 Update `_wheel_builder.py`: rename `package_data` parameter to `assets` in `make_webcompy_app_package`, convert assets config to package_data internally, generate `_assets_registry.py` module in app package
+- [x] 6.3 Create `webcompy/assets.py` with `load_asset(key: str) -> bytes` and `AssetNotFoundError`, using `importlib.resources` to read asset bytes via `_assets_registry`
+- [x] 6.4 Export `load_asset` and `AssetNotFoundError` from `webcompy/__init__.py`
+- [x] 6.5 Update `_server.py` and `_generate.py` to pass `config.assets` instead of `config.package_data`
+- [x] 6.6 Add unit tests for `_assets_to_package_data`, `_generate_assets_registry`, `make_webcompy_app_package` with assets, and `load_asset`/`AssetNotFoundError`
+- [x] 6.7 Update specs to reflect `assets` configuration name and `load_asset` runtime API

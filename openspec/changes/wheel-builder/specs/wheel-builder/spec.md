@@ -17,22 +17,23 @@ The CLI SHALL build Python wheels by manually constructing ZIP archives containi
 - **THEN** it SHALL NOT import `setuptools`, `distutils`, or `wheel`
 - **AND** it SHALL only use Python standard library modules (`zipfile`, `hashlib`, `pathlib`, `os`, `re`)
 
-### Requirement: The wheel builder shall support package_data for non-Python files
-The wheel builder SHALL accept an optional `package_data` parameter specifying glob patterns for non-Python files to include in the wheel. Files matched by these patterns SHALL be placed inside the package tree in the wheel, making them accessible via `importlib.resources` at runtime.
+### Requirement: The wheel builder shall support assets for non-Python files
+The wheel builder SHALL accept an `assets` parameter specifying a mapping of string keys to file paths (relative to the app package directory). Files referenced by these paths SHALL be included in the wheel inside the package tree. Additionally, the builder SHALL generate an `_assets_registry.py` module inside the app package that maps each key to its full package-qualified path, enabling runtime asset lookup via `importlib.resources`.
 
-#### Scenario: Including JSON data files in a wheel
-- **WHEN** `package_data={"myapp": ["data/*.json"]}` is specified and `myapp/data/cities.json` exists
-- **THEN** the wheel SHALL contain `myapp/data/cities.json` at the correct path
-- **AND** the file SHALL be accessible via `importlib.resources.files("myapp").joinpath("data/cities.json")` after installation
+#### Scenario: Including asset files in a wheel
+- **WHEN** `assets={"logo": "logo.png", "config": "data/config.json"}` is specified and the referenced files exist in the app package
+- **THEN** the wheel SHALL contain `myapp/logo.png` and `myapp/data/config.json` at the correct paths
+- **AND** the wheel SHALL contain `myapp/_assets_registry.py` with a `_REGISTRY` dict mapping each key to its package path
 
-#### Scenario: Including files from a subpackage
-- **WHEN** `package_data={"myapp.components": ["templates/*.html"]}` is specified
-- **THEN** the wheel SHALL contain matching `.html` files under `myapp/components/templates/`
-- **AND** these files SHALL NOT be included if `package_data` is `None`
-
-#### Scenario: No package_data specified
-- **WHEN** `package_data` is `None` (default)
+#### Scenario: No assets specified
+- **WHEN** `assets` is `None` (default)
 - **THEN** the wheel SHALL contain only `.py`, `.pyi`, and `py.typed` files
+- **AND** the wheel SHALL NOT contain an `_assets_registry.py` module
+
+#### Scenario: Accessing assets at runtime
+- **WHEN** a developer calls `load_asset("logo")` in browser or server code
+- **THEN** the function SHALL return the raw `bytes` content of the asset file
+- **AND** `AssetNotFoundError` SHALL be raised if the key is not found in the registry or the registry module is missing
 
 ### Requirement: The wheel builder shall support bundling multiple packages into a single wheel
 The wheel builder SHALL be able to bundle multiple top-level packages (e.g., the webcompy framework and a user application) into a single wheel. The bundled wheel SHALL list all top-level packages in `top_level.txt`. Both packages SHALL be importable after PyScript loads the wheel.

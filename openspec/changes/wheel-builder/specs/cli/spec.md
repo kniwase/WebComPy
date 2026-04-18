@@ -9,10 +9,11 @@ The dev server SHALL build a single bundled Python wheel containing both the web
 - **AND** serve it at `/_webcompy-app-package/{filename}`
 - **AND** the browser SHALL be able to import both `webcompy` and the application package
 
-#### Scenario: Dev server with package_data
-- **WHEN** a developer configures `package_data={"myapp": ["data/*.json"]}` in `WebComPyConfig`
-- **THEN** the bundled wheel SHALL include the matching non-Python files inside the package tree
-- **AND** those files SHALL be accessible via `importlib.resources` in the browser
+#### Scenario: Dev server with assets
+- **WHEN** a developer configures `assets={"logo": "images/logo.png"}` in `WebComPyConfig`
+- **THEN** the bundled wheel SHALL include the matching asset files inside the package tree
+- **AND** an `_assets_registry.py` module SHALL be generated in the app package mapping `"logo"` to its package path
+- **AND** `load_asset("logo")` SHALL return the file content as `bytes`
 
 ### Requirement: The generate command shall produce deployable static files
 Running `python -m webcompy generate` SHALL produce a complete static site in the `dist/` directory, ready for deployment to any static hosting service.
@@ -44,14 +45,31 @@ Every generated HTML page SHALL include PyScript v2026.3.1 CSS and JS, a loading
 
 ## ADDED Requirements
 
-### Requirement: Application configuration shall support package_data
-`WebComPyConfig` SHALL accept a `package_data` parameter that specifies non-Python files to include in the application wheel, organized by package name with glob patterns.
+### Requirement: Application configuration shall support assets
+`WebComPyConfig` SHALL accept an `assets` parameter that maps string keys to file paths relative to the app package directory. These assets SHALL be included in the bundled wheel and accessible at runtime via `load_asset`.
 
-#### Scenario: Configuring package_data for application resources
-- **WHEN** a developer specifies `package_data={"myapp": ["data/*.json", "templates/*.html"]}`
-- **THEN** the CLI SHALL include matching files in the bundled wheel inside the `myapp` package tree
-- **AND** those files SHALL be accessible via `importlib.resources` in the browser environment
+#### Scenario: Configuring assets for application resources
+- **WHEN** a developer specifies `assets={"logo": "images/logo.png", "config": "data/settings.json"}`
+- **THEN** the CLI SHALL include the referenced files in the bundled wheel inside the app package tree
+- **AND** an `_assets_registry.py` module SHALL be generated mapping `"logo"` to `"app/images/logo.png"` and `"config"` to `"app/data/settings.json"`
+- **AND** those files SHALL be accessible via `load_asset("logo")` and `load_asset("config")` in the browser environment
 
-#### Scenario: Omitting package_data
-- **WHEN** a developer does not specify `package_data`
+#### Scenario: Omitting assets
+- **WHEN** a developer does not specify `assets`
 - **THEN** only Python source files, stub files, and `py.typed` markers SHALL be included in the wheel
+- **AND** no `_assets_registry.py` module SHALL be generated
+
+### Requirement: Assets shall be loadable by key at runtime
+The `webcompy.assets` module SHALL provide a `load_asset(key: str) -> bytes` function and an `AssetNotFoundError` exception. When called, `load_asset` SHALL look up the key in the app's `_assets_registry` module and return the file content as `bytes` using `importlib.resources`.
+
+#### Scenario: Loading an asset by key
+- **WHEN** `load_asset("logo")` is called in browser code where `_assets_registry` maps `"logo"` to `"app/images/logo.png"`
+- **THEN** the function SHALL return the raw `bytes` content of `app/images/logo.png`
+
+#### Scenario: Asset key not found
+- **WHEN** `load_asset("nonexistent")` is called
+- **THEN** `AssetNotFoundError` SHALL be raised with the key as an attribute
+
+#### Scenario: No assets registry module
+- **WHEN** `load_asset` is called but the `app._assets_registry` module cannot be imported
+- **THEN** `AssetNotFoundError` SHALL be raised
