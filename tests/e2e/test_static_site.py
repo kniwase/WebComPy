@@ -6,6 +6,7 @@ import subprocess
 import threading
 import time
 import urllib.request
+from functools import partial
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 import pytest
@@ -78,9 +79,10 @@ def static_site():
 
 @pytest.fixture(scope="session")
 def static_server(static_site):
-    _dist_dir, _, _ = static_site
+    dist_dir, _, _ = static_site
 
-    server = HTTPServer(("127.0.0.1", 0), _QuietHandler)
+    handler_class = partial(_QuietHandler, directory=str(dist_dir))
+    server = HTTPServer(("127.0.0.1", 0), handler_class)
     port = server.server_address[1]
 
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -135,4 +137,4 @@ class TestStaticSiteWheelFilename:
     def test_app_loads_in_browser(self, static_page):
         from playwright.sync_api import expect
 
-        expect(static_page.locator("#webcompy-app")).to_be_visible()
+        expect(static_page.locator("#webcompy-app")).to_be_visible(timeout=PYSCRIPT_INIT_TIMEOUT)
