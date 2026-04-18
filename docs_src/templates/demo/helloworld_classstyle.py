@@ -1,19 +1,13 @@
-from webcompy.components import (
-    TypedComponentBase,
-    component_class,
-    component_template,
-)
+from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 
 
-@component_class
-class HelloWorldClassstyle(TypedComponentBase(props_type=None)):
-    @component_template
-    def template(self):
-        return html.DIV(
+@define_component
+def HelloWorldClassstyle(_: ComponentContext[None]):
+    return html.DIV(
+        {},
+        html.H1(
             {},
-            html.H1(
-                {},
-                "Hello WebComPy!",
-            ),
-        )
+            "Hello WebComPy!",
+        ),
+    )

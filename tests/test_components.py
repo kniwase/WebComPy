@@ -1,54 +1,8 @@
-from webcompy.components._abstract import ComponentAbstract, _camel_to_kebab_pattern
-from webcompy.components._decorators import (
-    component_template,
-    on_after_rendering,
-    on_before_destroy,
-    on_before_rendering,
-)
 from webcompy.components._libs import (
     ComponentProperty,
     Context,
-    WebComPyComponentException,
     generate_id,
 )
-
-
-class TestDecorators:
-    def test_component_template_sets_property(self):
-        @component_template
-        def template(self):
-            return None
-
-        assert hasattr(template, "__webcompy_component_class_property__")
-        assert template.__webcompy_component_class_property__ == "template"
-
-    def test_on_before_rendering_sets_property(self):
-        @on_before_rendering
-        def before_render(self):
-            pass
-
-        assert before_render.__webcompy_component_class_property__ == "on_before_rendering"
-
-    def test_on_after_rendering_sets_property(self):
-        @on_after_rendering
-        def after_render(self):
-            pass
-
-        assert after_render.__webcompy_component_class_property__ == "on_after_rendering"
-
-    def test_on_before_destroy_sets_property(self):
-        @on_before_destroy
-        def before_destroy(self):
-            pass
-
-        assert before_destroy.__webcompy_component_class_property__ == "on_before_destroy"
-
-    def test_decorators_preserve_name(self):
-        @component_template
-        def my_template(self):
-            return None
-
-        assert my_template.__name__ == "my_template"
 
 
 class TestGenerateId:
@@ -65,24 +19,6 @@ class TestGenerateId:
         a = generate_id("ComponentA")
         b = generate_id("ComponentB")
         assert a != b
-
-
-class TestCamelToKebab:
-    def test_simple_camel(self):
-        assert _camel_to_kebab_pattern.sub(r"-\1", "MyComponent") == "My-Component"
-
-    def test_already_kebab(self):
-        result = _camel_to_kebab_pattern.sub(r"-\1", "my-component")
-        assert "my" in result
-
-
-class TestComponentAbstract:
-    def test_cannot_instantiate(self):
-        try:
-            ComponentAbstract()
-            raise AssertionError("Should have raised")
-        except (WebComPyComponentException, TypeError):
-            pass
 
 
 class TestContext:
