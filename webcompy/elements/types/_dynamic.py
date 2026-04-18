@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import NoReturn
 
-from webcompy.elements.typealias._element_property import ElementChildren
+from webcompy.elements._dom_objs import DOMNode
+from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._base import ElementWithChildren
-from webcompy.exception import WebComPyException
+from webcompy.reactive._base import ReactiveStore
 
 
 class DynamicElement(ElementWithChildren):
@@ -15,22 +15,17 @@ class DynamicElement(ElementWithChildren):
     def _node_count(self) -> int:
         return sum(child._node_count for child in self._children)
 
-    def _create_child_element(
-        self,
-        parent: ElementWithChildren,
-        node_idx: int | None,
-        child: ElementChildren,
-    ):
-        child_element = super()._create_child_element(parent, node_idx, child)
-        if isinstance(child_element, DynamicElement):
-            raise WebComPyException("Nested DynamicElement is not allowed.")
-        return child_element
+    def _get_node(self) -> DOMNode:
+        return self._parent._get_node()
 
-    def _init_node(self) -> NoReturn:
-        raise WebComPyException("'DynamicElement' does not have its own node.")
-
-    def _get_node(self) -> NoReturn:
-        raise WebComPyException("'DynamicElement' does not have its own node.")
+    def _remove_element(self, recursive: bool = True, remove_node: bool = True):
+        for callback_id in self._callback_ids:
+            ReactiveStore.remove_callback(callback_id)
+        self._clear_node_cache(False)
+        self.__purge_reactive_members__()
+        if recursive:
+            for child in self._children:
+                child._remove_element(True, True)
 
     def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str:
         return ("\n" if newline else "").join(child._render_html(newline, indent, count) for child in self._children)
@@ -46,3 +41,27 @@ class DynamicElement(ElementWithChildren):
 
     @abstractmethod
     def _on_set_parent(self): ...
+
+
+def _position_element_nodes(
+    element: ElementAbstract,
+    parent_node: DOMNode,
+    start_idx: int,
+) -> int:
+    if isinstance(element, DynamicElement):
+        idx = start_idx
+        for child in element._children:
+            idx = _position_element_nodes(child, parent_node, idx)
+        return idx
+    node = element._get_node()
+    if node:
+        if start_idx < parent_node.childNodes.length:
+            ref_node = parent_node.childNodes[start_idx]
+            if ref_node is not node:
+                parent_node.insertBefore(node, ref_node)
+        else:
+            parent_node.appendChild(node)
+        if not element._mounted:
+            element._mounted = True
+        return start_idx + element._node_count
+    return start_idx + element._node_count

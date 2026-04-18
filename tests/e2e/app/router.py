@@ -8,6 +8,7 @@ from .pages.event import EventPage
 from .pages.home import HomePage
 from .pages.keyed_repeat import KeyedRepeatPage
 from .pages.lifecycle import LifecyclePage
+from .pages.nested_dynamic import NestedDynamicPage
 from .pages.not_found import NotFound
 from .pages.reactive import ReactivePage
 from .pages.repeat import RepeatPage
@@ -24,6 +25,7 @@ router = Router(
     {"path": "/repeat", "component": RepeatPage},
     {"path": "/keyed-repeat", "component": KeyedRepeatPage},
     {"path": "/dict-repeat", "component": DictRepeatPage},
+    {"path": "/nested-dynamic", "component": NestedDynamicPage},
     {"path": "/lifecycle", "component": LifecyclePage},
     {"path": "/scoped-style", "component": ScopedStylePage},
     {"path": "/async-nav", "component": AsyncNavPage},
