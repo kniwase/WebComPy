@@ -29,6 +29,13 @@ class HeadReactive(TypedDict):
     script: list[tuple[dict[str, str], str | None]]
 
 
+def _app_root_setup(context):
+    return html.DIV({"id": "webcompy-app"}, context.slots("root"))
+
+
+_app_root_setup.__webcompy_component_definition__ = True
+
+
 @define_component
 def AppRootComponent(context):
     return html.DIV({"id": "webcompy-app"}, context.slots("root"))
@@ -59,7 +66,7 @@ class AppDocumentRoot(Component):
 
             Component._head_props.title.on_after_updating(updte_title)
 
-        super().__init__(AppRootComponent, None, {"root": lambda: root_component(None)})
+        super().__init__(_app_root_setup, None, {"root": lambda: root_component(None)})
 
     @property
     def render(self):
