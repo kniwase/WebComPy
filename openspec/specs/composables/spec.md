@@ -2,18 +2,18 @@
 
 ## Purpose
 
-Composables are reusable stateful logic functions that encapsulate reactive state and lifecycle behavior for use inside function-style component setup functions. They provide a composable alternative to class inheritance for sharing logic across components. Instead of extending a base class, a component calls composable functions during setup, and the returned reactive values integrate with the component's template and lifecycle.
+Composables are reusable stateful logic functions that encapsulate signal state and lifecycle behavior for use inside function-style component setup functions. They provide a composable alternative to class inheritance for sharing logic across components. Instead of extending a base class, a component calls composable functions during setup, and the returned signal values integrate with the component's template and lifecycle.
 
 WebComPy provides built-in composables (`useAsyncResult`, `useAsync`) for common async patterns, and standalone lifecycle decorators (`@on_before_rendering`, `@on_after_rendering`, `@on_before_destroy`) that register hooks implicitly via context variables.
 
 ## Requirements
 
 ### Requirement: Composables shall be reusable stateful logic functions
-Composables SHALL be plain Python functions (or function calls) that encapsulate reactive state and lifecycle logic for use inside function-style component setup functions. They SHALL be callable inside a `@define_component` setup function and return values that integrate with the reactive system (Reactive, Computed, AsyncResult, etc.).
+Composables SHALL be plain Python functions (or function calls) that encapsulate signal state and lifecycle logic for use inside function-style component setup functions. They SHALL be callable inside a `@define_component` setup function and return values that integrate with the signal system (Signal, Computed, AsyncResult, etc.).
 
 #### Scenario: Using a composable inside a component
 - **WHEN** a developer calls a composable function inside a `@define_component` setup function
-- **THEN** the returned reactive values SHALL be usable in the component's template
+- **THEN** the returned signal values SHALL be usable in the component's template
 - **AND** any lifecycle hooks registered by the composable SHALL fire at the correct times
 
 ### Requirement: Standalone lifecycle hooks shall register without explicit context
@@ -34,7 +34,7 @@ Composables SHALL be plain Python functions (or function calls) that encapsulate
 - **AND** lifecycle hooks registered in the parent's context SHALL not be affected by the child's context
 
 ### Requirement: useAsyncResult shall manage async operation results reactively
-`useAsyncResult` SHALL accept an async function, execute it, and return an `AsyncResult` object with reactive state, data, and error properties. It SHALL support automatic execution on rendering, reactive-driven refetching, and manual refetching.
+`useAsyncResult` SHALL accept an async function, execute it, and return an `AsyncResult` object with signal state, data, and error properties. It SHALL support automatic execution on rendering, reactive-driven refetching, and manual refetching.
 
 #### Scenario: Fetching data on component mount
 - **WHEN** a developer calls `useAsyncResult(fetch_data, immediate=True)` inside a component setup
@@ -48,8 +48,8 @@ Composables SHALL be plain Python functions (or function calls) that encapsulate
 - **AND** after successful fetch, `data.value` SHALL contain the fetched list
 - **AND** during refetch, `data.value` SHALL preserve the last successful value (SWR pattern)
 
-#### Scenario: Reactive-driven refetching with watch
-- **WHEN** a developer calls `useAsyncResult(fetch_search, watch=[query])` with `query` being a `Reactive`
+#### Scenario: Signal-driven refetching with watch
+- **WHEN** a developer calls `useAsyncResult(fetch_search, watch=[query])` with `query` being a `Signal`
 - **THEN** whenever `query.value` changes, `refetch()` SHALL be called automatically
 - **AND** the async function closure SHALL read the latest value of `query.value`
 
@@ -62,17 +62,17 @@ Composables SHALL be plain Python functions (or function calls) that encapsulate
 #### Scenario: Deferring execution with immediate=False
 - **WHEN** a developer calls `useAsyncResult(fetch_data, immediate=False)`
 - **THEN** the async function SHALL NOT be executed on component mount
-- **AND** the async function SHALL only execute when `refetch()` is called or a `watch` reactive changes
+- **AND** the async function SHALL only execute when `refetch()` is called or a `watch` signal changes
 
 #### Scenario: Watch cleanup on component destruction
 - **WHEN** a component using `useAsyncResult` with `watch` is destroyed
-- **THEN** all reactive subscriptions registered on watched Reactives SHALL be cleaned up via `consumer_destroy()`
-- **AND** subsequent changes to watched Reactives SHALL NOT trigger refetch
+- **THEN** all reactive subscriptions registered on watched Signals SHALL be cleaned up via `consumer_destroy()`
+- **AND** subsequent changes to watched Signals SHALL NOT trigger refetch
 
 ### Requirement: AsyncResult shall provide structured async state
-`AsyncResult` SHALL expose reactive state properties that enable declarative UI rendering of loading, success, and error states.
+`AsyncResult` SHALL expose signal state properties that enable declarative UI rendering of loading, success, and error states.
 
-#### Scenario: Accessing reactive state predicates
+#### Scenario: Accessing signal state predicates
 - **WHEN** a developer accesses `result.is_loading`, `result.is_success`, `result.is_error`, or `result.is_pending`
 - **THEN** each SHALL be a `Computed[bool]` that derives from `result.state`
 - **AND** exactly one of `is_loading`, `is_success`, `is_error` SHALL be `True` at any time (mutually exclusive)

@@ -1,29 +1,29 @@
-# Reactive System
+# Signal System
 
 ## Purpose
 
-Reactive state is the foundation of a declarative UI. In a traditional imperative approach, the developer must manually synchronize data changes with the DOM — finding the right elements, updating their content, toggling their attributes, and managing the order of updates. A reactive system eliminates this by establishing a dependency graph: when data changes, the system automatically propagates those changes to every part of the UI that depends on them.
+Signal state is the foundation of a declarative UI. In a traditional imperative approach, the developer must manually synchronize data changes with the DOM — finding the right elements, updating their content, toggling their attributes, and managing the order of updates. A signal system eliminates this by establishing a dependency graph: when data changes, the system automatically propagates those changes to every part of the UI that depends on them.
 
-WebComPy's reactive system provides primitive containers (`Reactive`), derived values (`Computed`), and collections (`ReactiveList`, `ReactiveDict`) that integrate seamlessly with the element system. Any part of the UI that reads a reactive value is automatically tracked as a dependent, and any change to that value triggers updates in all dependents — whether they are text content, element attributes, computed derivations, or conditional renderings.
+WebComPy's signal system provides primitive containers (`Signal`), derived values (`Computed`), and collections (`ReactiveList`, `ReactiveDict`) that integrate seamlessly with the element system. Any part of the UI that reads a reactive value is automatically tracked as a dependent, and any change to that value triggers updates in all dependents — whether they are text content, element attributes, computed derivations, or conditional renderings.
 
 **What WebComPy does not yet provide:** `ReactiveList` and `ReactiveDict` both now expose granular mutation metadata via `_last_mutation` for incremental consumers, but their core change notification remains full-collection. Per-key reactive subscriptions inside `ReactiveDict` are not yet available.
 
 ## Requirements
 
 ### Requirement: Primitive reactive values shall notify dependents on change
-A `Reactive` container SHALL hold a single value. When its value is set, all registered dependents SHALL be notified — both before the change (with the old value) and after the change (with the new value).
+A `Signal` container SHALL hold a single value. When its value is set, all registered dependents SHALL be notified — both before the change (with the old value) and after the change (with the new value).
 
 #### Scenario: Updating a reactive value
-- **WHEN** a developer sets `my_reactive.value = "new value"`
-- **THEN** any `Computed` or UI element that previously read `my_reactive.value` SHALL be notified with the new value
+- **WHEN** a developer sets `my_signal.value = "new value"`
+- **THEN** any `Computed` or UI element that previously read `my_signal.value` SHALL be notified with the new value
 
 #### Scenario: Reading a reactive value registers dependency
-- **WHEN** a `Computed` function reads `my_reactive.value` during its calculation
+- **WHEN** a `Computed` function reads `my_signal.value` during its calculation
 - **THEN** that `Computed` SHALL be automatically subscribed to `my_reactive`
 - **AND** future changes to `my_reactive` SHALL trigger recalculation of the `Computed`
 
 ### Requirement: Computed values shall derive from other reactives automatically
-A `Computed` SHALL evaluate a function, automatically discover which reactive values the function reads, and re-evaluate whenever any of those dependencies change.
+A `Computed` SHALL evaluate a function, automatically discover which signal values the function reads, and re-evaluate whenever any of those dependencies change.
 
 #### Scenario: Creating a computed full name
 - **WHEN** a developer creates `Computed(lambda: f"{first_name.value} {last_name.value}")`
@@ -39,7 +39,7 @@ A `computed_property` decorated on a class SHALL create a `Computed` instance on
 - **WHEN** accessed again on the same instance
 - **THEN** the cached `Computed` is returned without re-creation
 
-### Requirement: Reactive collections shall propagate changes
+### Requirement: Signal collections shall propagate changes
 `ReactiveList` and `ReactiveDict` SHALL behave like their standard Python counterparts for reading and mutation, but any mutation operation SHALL trigger change notifications so that dependent UI elements update. `ReactiveDict` now also exposes `_last_mutation` metadata after each mutating operation, enabling incremental consumers to determine what changed without comparing the full dict.
 
 #### Scenario: Appending to a ReactiveList used in a repeat template
@@ -93,7 +93,7 @@ Each mutating method on `ReactiveList` (`append`, `extend`, `pop`, `insert`, `so
 - **AND** `items._last_mutation.index` SHALL be `None`
 - **AND** `items._last_mutation.value` SHALL be `None`
 
-### Requirement: on_after_updating callbacks shall receive the current reactive value
+### Requirement: on_after_updating callbacks shall receive the current signal value
 The `on_after_updating` method SHALL register a callback that receives the current value of the reactive after a change. The `_last_mutation` attribute on `ReactiveList` and `ReactiveDict` SHALL be a separate side-channel for mutation metadata and SHALL NOT be passed as an argument to `on_after_updating` callbacks.
 
 #### Scenario: on_after_updating callback receives the current value
@@ -102,17 +102,17 @@ The `on_after_updating` method SHALL register a callback that receives the curre
 - **THEN** the callback SHALL receive the current list value
 - **AND** the callback SHALL NOT receive `ListMutation` as an argument
 
-### Requirement: Readonly views shall prevent external mutation of reactive values
-A `readonly()` wrapper SHALL provide a reactive value that tracks the source but does not expose a setter, allowing a component to share its state with children without giving them write access.
+### Requirement: Readonly views shall prevent external mutation of signal values
+A `readonly()` wrapper SHALL provide a signal value that tracks the source but does not expose a setter, allowing a component to share its state with children without giving them write access.
 
-#### Scenario: Passing reactive state to a child component
+#### Scenario: Passing signal state to a child component
 - **WHEN** a parent passes `readonly(my_state)` to a child component
 - **THEN** the child SHALL be able to read `my_state.value`
 - **AND** the child SHALL NOT be able to modify `my_state.value` through the readonly wrapper
 
-### Requirement: The reactive system shall support before-update and after-update callbacks
+### Requirement: The signal system shall support before-update and after-update callbacks
 Developers SHALL be able to register callbacks that fire before a reactive value changes (receiving the old value) and after it changes (receiving the new value), enabling side effects like logging, validation, or conditional DOM manipulation.
 
 #### Scenario: Logging state changes
 - **WHEN** a developer registers `my_reactive.on_after_updating(lambda new_val: print(f"Changed to {new_val}"))`
-- **THEN** each time `my_reactive.value` is set, the callback SHALL fire with the new value
+- **THEN** each time `my_signal.value` is set, the callback SHALL fire with the new value

@@ -9,9 +9,9 @@ context: |
 
   ## Known Issues (to be resolved in future changes)
 
-  ### Reactive System
+  ### Signal System
   - No element-level reactivity in ReactiveList/ReactiveDict — any mutation triggers full change notification (ReactiveList now exposes _last_mutation metadata for incremental consumers)
-  - __purge_reactive_members__ in ReactiveReceivable is a no-op; reactive member cleanup relies on Python GC
+  - __purge_signal_members__ in SignalReceivable properly calls consumer_destroy() for cleanup
 
   ### Component System
   - Component IDs are MD5 hashes — not collision-proof
@@ -30,7 +30,7 @@ context: |
   - AsyncComputed._error sets _done = False on error, conflating error state with pending state
 
   ### General
-  - Multiple global singletons (ReactiveStore, Router, RouterView, ComponentStore, Component._head_props)
+  - Multiple global singletons (Router, RouterView, ComponentStore, Component._head_props)
   - Browser detection is binary (Emscripten vs other) — no partial API availability checks
   - No provide/inject (DI) system (noted in README ToDo)
   - No plugin system (noted in README ToDo)

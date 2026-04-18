@@ -8,8 +8,8 @@ Internal identifier names should use correct English spelling. This spec documen
 
 All internal (private/dunder) API identifiers SHALL use the correct English spelling of their intended names.
 
-#### Scenario: Reactive event decorator uses correct spelling
-- **WHEN** a reactive class method is decorated with the event decorator
+#### Scenario: Signal event decorator uses correct spelling
+- **WHEN** a signal class method is decorated with the event decorator
 - **THEN** the decorator SHALL be named `_get_event` (not `_get_evnet`)
 
 #### Scenario: Component definition attribute uses correct spelling
