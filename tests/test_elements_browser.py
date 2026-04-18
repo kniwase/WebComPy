@@ -194,6 +194,57 @@ class TestTextElementWithBrowser:
         text_el._update_text("world")
         assert text_el._text == "world"
 
+    def test_hydrate_prerendered_text_node_reuses_node(self, fake_browser_full):
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        text_el = TextElement("hello")
+        text_el._parent = parent
+        text_el._node_idx = 0
+        existing_node = FakeDOMNode("#text", text_content="hello")
+        existing_node.__webcompy_prerendered_node__ = True
+        parent_node.appendChild(existing_node)
+        node = text_el._init_node()
+        assert node is existing_node
+        assert text_el._mounted is True
+        assert parent_node.childNodes.length == 1
+
+    def test_hydrate_prerendered_text_node_with_signal(self, fake_browser_full):
+        from webcompy.signal import Signal
+
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        sig = Signal("hello")
+        text_el = TextElement(sig)
+        text_el._parent = parent
+        text_el._node_idx = 0
+        existing_node = FakeDOMNode("#text", text_content="hello")
+        existing_node.__webcompy_prerendered_node__ = True
+        parent_node.appendChild(existing_node)
+        node = text_el._init_node()
+        assert node is existing_node
+        assert text_el._mounted is True
+        sig.value = "world"
+        assert text_el._get_node().textContent == "world"
+
+    def test_non_prerendered_text_node_removed_and_recreated(self, fake_browser_full):
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        text_el = TextElement("hello")
+        text_el._parent = parent
+        text_el._node_idx = 0
+        existing_node = FakeDOMNode("#text", text_content="stale")
+        parent_node.appendChild(existing_node)
+        node = text_el._init_node()
+        assert node is not existing_node
+        assert node.textContent == "hello"
+        assert node.__webcompy_node__ is True
+
 
 class TestNewLineWithBrowser:
     def test_init_node_creates_br(self, fake_browser_full):
