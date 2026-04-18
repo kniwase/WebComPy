@@ -11,7 +11,7 @@ from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement, _position_element_nodes
 from webcompy.elements.types._text import NewLine
 from webcompy.exception import WebComPyException
-from webcompy.reactive import ReactiveBase, computed
+from webcompy.signal import SignalBase, computed
 
 K = TypeVar("K", str, int)
 V = TypeVar("V")
@@ -24,53 +24,53 @@ class RepeatElement(DynamicElement):
     @overload
     def __init__(
         self,
-        sequence: ReactiveBase[dict[K, V]],
+        sequence: SignalBase[dict[K, V]],
         template: Callable[[V], ElementChildren],
     ) -> None: ...
 
     @overload
     def __init__(
         self,
-        sequence: ReactiveBase[dict[K, V]],
+        sequence: SignalBase[dict[K, V]],
         template: Callable[[V, K], ElementChildren],
     ) -> None: ...
 
     @overload
     def __init__(
         self,
-        sequence: ReactiveBase[list[V]],
+        sequence: SignalBase[list[V]],
         template: Callable[[V], ElementChildren],
     ) -> None: ...
 
     @overload
     def __init__(
         self,
-        sequence: ReactiveBase[list[V]],
+        sequence: SignalBase[list[V]],
         template: Callable[[V, int], ElementChildren],
     ) -> None: ...
 
     @overload
     def __init__(
         self,
-        sequence: ReactiveBase[list[V]],
+        sequence: SignalBase[list[V]],
         template: Callable[[V, K], ElementChildren],
         key: Callable[[V], K],
     ) -> None: ...
 
     def __init__(
         self,
-        sequence: ReactiveBase[dict[K, V]] | ReactiveBase[list[V]],
+        sequence: SignalBase[dict[K, V]] | SignalBase[list[V]],
         template: Callable[[V], ElementChildren] | Callable[[V, K], ElementChildren],
         key: Callable[[V], K] | None = None,
     ) -> None:
-        if not isinstance(sequence, ReactiveBase):
-            raise ValueError("Argument 'sequence' must be Reactive Object.")
+        if not isinstance(sequence, SignalBase):
+            raise ValueError("Argument 'sequence' must be Signal Object.")
         is_dict = isinstance(sequence.value, dict)
         if is_dict and key is not None:
             raise ValueError("Argument 'key' is not allowed when sequence is a ReactiveDict.")
 
         self._is_dict = is_dict
-        self._sequence: ReactiveBase[Any] = sequence
+        self._sequence: SignalBase[Any] = sequence
         self._has_key = is_dict or key is not None
         self._key_fn: Callable[[Any], str | int] | None = key if not is_dict else None
 
@@ -83,7 +83,7 @@ class RepeatElement(DynamicElement):
 
         self._key_to_child = {}
         self._children_keys = []
-        self._reactive_activated = False
+        self._signal_activated = False
         super().__init__()
 
     def _call_template(self, v: Any, k: str | int) -> ElementChildren:
@@ -137,8 +137,8 @@ class RepeatElement(DynamicElement):
 
     def _render(self):
         self._refresh()
-        if not self._reactive_activated:
-            self._reactive_activated = True
+        if not self._signal_activated:
+            self._signal_activated = True
             self._set_callback_id(self._sequence.on_after_updating(self._refresh))
 
     def _refresh(self, *args: Any):
@@ -224,14 +224,14 @@ class RepeatElement(DynamicElement):
 
 
 class MultiLineTextElement(RepeatElement):
-    def __init__(self, text: str | ReactiveBase[Any]) -> None:
+    def __init__(self, text: str | SignalBase[Any]) -> None:
         super().__init__(
             computed(
                 lambda: list(
                     chain.from_iterable(
                         map(
                             lambda line: (line, NewLine()),
-                            str(text.value if isinstance(text, ReactiveBase) else text).split("\n"),
+                            str(text.value if isinstance(text, SignalBase) else text).split("\n"),
                         )
                     )
                 )[:-1]

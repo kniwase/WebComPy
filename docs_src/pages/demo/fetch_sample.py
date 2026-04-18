@@ -20,7 +20,7 @@ def FetchSamplePage(context: ComponentContext[RouterContext]):
                     from typing import TypedDict
                     from webcompy.elements import html, repeat
                     from webcompy.components import define_component, ComponentContext
-                    from webcompy.reactive import ReactiveList, Reactive
+                    from webcompy.signal import ReactiveList, Signal
                     from webcompy.aio import AsyncWrapper
                     from webcompy.ajax import HttpClient
                     from webcompy import logging
@@ -34,7 +34,7 @@ def FetchSamplePage(context: ComponentContext[RouterContext]):
                     @define_component
                     def FetchSample(context: ComponentContext[None]):
                         users = ReactiveList[User]([])
-                        json_text = Reactive("")
+                        json_text = Signal("")
 
                         @AsyncWrapper()
                         async def fetch_user_data():

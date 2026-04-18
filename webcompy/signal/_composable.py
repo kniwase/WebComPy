@@ -7,9 +7,9 @@ T = TypeVar("T")
 
 
 def use_counter(initial: int = 0) -> tuple[Any, Callable[[], None], Callable[[], None]]:
-    from webcompy.reactive import Reactive
+    from webcompy.signal import Signal
 
-    count: Reactive[int] = Reactive(initial)
+    count: Signal[int] = Signal(initial)
 
     def increment() -> None:
         count.value += 1

@@ -2,12 +2,12 @@ from typing import TypedDict
 
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html, repeat
-from webcompy.reactive import Reactive, ReactiveList
+from webcompy.signal import ReactiveList, Signal
 
 
 class KeyedItem(TypedDict):
-    id: Reactive[str]
-    label: Reactive[str]
+    id: Signal[str]
+    label: Signal[str]
 
 
 @define_component
@@ -15,23 +15,23 @@ def KeyedRepeatPage(context: ComponentContext[None]):
     context.set_title("Keyed Repeat - E2E")
 
     items: ReactiveList[KeyedItem] = ReactiveList([])
-    counter = Reactive(0)
+    counter = Signal(0)
 
     def add_item(_):
         counter.value += 1
         c = counter.value
-        items.append({"id": Reactive(f"id-{c}"), "label": Reactive(f"Item {c}")})
+        items.append({"id": Signal(f"id-{c}"), "label": Signal(f"Item {c}")})
 
     def add_at_start(_):
         counter.value += 1
         c = counter.value
-        items.insert(0, {"id": Reactive(f"id-{c}"), "label": Reactive(f"Item {c}")})
+        items.insert(0, {"id": Signal(f"id-{c}"), "label": Signal(f"Item {c}")})
 
     def add_at_middle(_):
         counter.value += 1
         c = counter.value
         idx = len(items.value) // 2
-        items.insert(idx, {"id": Reactive(f"id-{c}"), "label": Reactive(f"Item {c}")})
+        items.insert(idx, {"id": Signal(f"id-{c}"), "label": Signal(f"Item {c}")})
 
     def remove_first(_):
         if len(items.value) > 0:

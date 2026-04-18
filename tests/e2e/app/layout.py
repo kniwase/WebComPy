@@ -12,7 +12,7 @@ def Root(_: ComponentContext[None]):
             html.UL(
                 {},
                 html.LI({}, RouterLink(to="/", text=["Home"], attrs={"data-testid": "nav-home"})),
-                html.LI({}, RouterLink(to="/reactive", text=["Reactive"], attrs={"data-testid": "nav-reactive"})),
+                html.LI({}, RouterLink(to="/reactive", text=["Signal"], attrs={"data-testid": "nav-reactive"})),
                 html.LI({}, RouterLink(to="/component", text=["Component"], attrs={"data-testid": "nav-component"})),
                 html.LI({}, RouterLink(to="/event", text=["Event"], attrs={"data-testid": "nav-event"})),
                 html.LI({}, RouterLink(to="/switch", text=["Switch"], attrs={"data-testid": "nav-switch"})),

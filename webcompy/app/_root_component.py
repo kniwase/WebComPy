@@ -9,10 +9,10 @@ from webcompy.components._generator import ComponentGenerator, ComponentStore, d
 from webcompy.elements import html
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException
-from webcompy.reactive import Computed
 from webcompy.router._link import TypedRouterLink
 from webcompy.router._router import Router
 from webcompy.router._view import RouterView
+from webcompy.signal import Computed
 
 
 class Head(TypedDict, total=False):
@@ -22,7 +22,7 @@ class Head(TypedDict, total=False):
     script: list[tuple[dict[str, str], str | None]]
 
 
-class HeadReactive(TypedDict):
+class HeadSignal(TypedDict):
     title: Computed[str]
     meta: Computed[dict[str, dict[str, str]]]
     link: list[dict[str, str]]
@@ -174,7 +174,7 @@ class AppDocumentRoot(Component):
             self.append_script(attrs, script, True)
 
     @property
-    def head(self) -> HeadReactive:
+    def head(self) -> HeadSignal:
         return {
             "title": Component._head_props.title,
             "meta": Component._head_props.head_meta,

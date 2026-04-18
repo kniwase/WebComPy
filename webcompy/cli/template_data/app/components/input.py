@@ -1,14 +1,14 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DOMEvent, html
-from webcompy.reactive import Reactive
 from webcompy.router import RouterContext
+from webcompy.signal import Signal
 
 
 @define_component
 def InOutSample(context: ComponentContext[RouterContext]):
     context.set_title("Text Input Sample - WebCompy Template")
 
-    text = Reactive("")
+    text = Signal("")
 
     def on_input(ev: DOMEvent):
         text.value = ev.target.value

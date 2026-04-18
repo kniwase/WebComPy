@@ -21,7 +21,7 @@ from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._repeat import MultiLineTextElement, RepeatElement
 from webcompy.elements.types._switch import SwitchElement
 from webcompy.elements.types._text import NewLine, TextElement
-from webcompy.reactive import ReactiveBase
+from webcompy.signal import SignalBase
 
 T = TypeVar("T")
 K = TypeVar("K", str, int)
@@ -56,48 +56,48 @@ def create_element(
     return Element(tag_name, attrs, events, ref, children)
 
 
-ChildNode: TypeAlias = ElementBase | TextElement | MultiLineTextElement | NewLine | ReactiveBase[Any] | str | None
+ChildNode: TypeAlias = ElementBase | TextElement | MultiLineTextElement | NewLine | SignalBase[Any] | str | None
 NodeGenerator: TypeAlias = Callable[[], ChildNode]
 
 
 @overload
 def repeat(
-    sequence: ReactiveBase[dict[K, V]],
+    sequence: SignalBase[dict[K, V]],
     template: Callable[[V], ChildNode],
 ) -> RepeatElement: ...
 
 
 @overload
 def repeat(
-    sequence: ReactiveBase[dict[K, V]],
+    sequence: SignalBase[dict[K, V]],
     template: Callable[[V, K], ChildNode],
 ) -> RepeatElement: ...
 
 
 @overload
 def repeat(
-    sequence: ReactiveBase[list[V]],
+    sequence: SignalBase[list[V]],
     template: Callable[[V], ChildNode],
 ) -> RepeatElement: ...
 
 
 @overload
 def repeat(
-    sequence: ReactiveBase[list[V]],
+    sequence: SignalBase[list[V]],
     template: Callable[[V, int], ChildNode],
 ) -> RepeatElement: ...
 
 
 @overload
 def repeat(
-    sequence: ReactiveBase[list[V]],
+    sequence: SignalBase[list[V]],
     template: Callable[[V, K], ChildNode],
     key: Callable[[V], K],
 ) -> RepeatElement: ...
 
 
 def repeat(
-    sequence: ReactiveBase[dict[K, V]] | ReactiveBase[list[V]],
+    sequence: SignalBase[dict[K, V]] | SignalBase[list[V]],
     template: Callable[[V], ChildNode] | Callable[[V, K], ChildNode],
     key: Callable[[V], K] | None = None,
 ) -> RepeatElement:
@@ -105,7 +105,7 @@ def repeat(
 
 
 class SwitchCase(TypedDict):
-    case: ReactiveBase[Any]
+    case: SignalBase[Any]
     generator: NodeGenerator
 
 
@@ -119,7 +119,7 @@ def switch(
     )
 
 
-def text(text: str | ReactiveBase[Any], enable_multiline: bool = True):
+def text(text: str | SignalBase[Any], enable_multiline: bool = True):
     if enable_multiline:
         return MultiLineTextElement(text)
     else:

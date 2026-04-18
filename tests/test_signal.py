@@ -1,7 +1,7 @@
 import pytest
 
-from webcompy.reactive import Computed, Reactive, ReactiveDict, ReactiveList, readonly
-from webcompy.reactive._graph import consumer_destroy, reset_graph_state
+from webcompy.signal import Computed, ReactiveDict, ReactiveList, Signal, readonly
+from webcompy.signal._graph import consumer_destroy, reset_graph_state
 
 
 @pytest.fixture(autouse=True)
@@ -13,30 +13,30 @@ def reset_reactive_state():
 
 class TestReactive:
     def test_initial_value(self):
-        r = Reactive(10)
+        r = Signal(10)
         assert r.value == 10
 
     def test_set_value(self):
-        r = Reactive(0)
+        r = Signal(0)
         r.value = 5
         assert r.value == 5
 
     def test_on_after_updating_callback(self):
-        r = Reactive(0)
+        r = Signal(0)
         results = []
         r.on_after_updating(lambda v: results.append(v))
         r.value = 42
         assert results == [42]
 
     def test_on_before_updating_callback(self):
-        r = Reactive(0)
+        r = Signal(0)
         old_values = []
         r.on_before_updating(lambda v: old_values.append(v))
         r.value = 1
         assert old_values == [0]
 
     def test_multiple_callbacks(self):
-        r = Reactive(0)
+        r = Signal(0)
         a = []
         b = []
         r.on_after_updating(lambda v: a.append(v))
@@ -45,7 +45,7 @@ class TestReactive:
         assert a == [1] and b == [1]
 
     def test_remove_callback(self):
-        r = Reactive(0)
+        r = Signal(0)
         results = []
         callback_node = r.on_after_updating(lambda v: results.append(v))
         r.value = 1
@@ -56,21 +56,21 @@ class TestReactive:
 
 class TestComputed:
     def test_basic_computation(self):
-        a = Reactive(1)
-        b = Reactive(2)
+        a = Signal(1)
+        b = Signal(2)
         c = Computed(lambda: a.value + b.value)
         assert c.value == 3
 
     def test_computed_updates_on_dependency_change(self):
-        a = Reactive(1)
-        b = Reactive(2)
+        a = Signal(1)
+        b = Signal(2)
         c = Computed(lambda: a.value + b.value)
         assert c.value == 3
         a.value = 10
         assert c.value == 12
 
     def test_computed_with_single_dependency(self):
-        a = Reactive(5)
+        a = Signal(5)
         c = Computed(lambda: a.value * 2)
         assert c.value == 10
         a.value = 7
@@ -181,12 +181,12 @@ class TestReactiveDict:
 
 class TestReadonly:
     def test_readonly_reflects_original(self):
-        r = Reactive(10)
+        r = Signal(10)
         ro = readonly(r)
         assert ro.value == 10
 
     def test_readonly_tracks_changes(self):
-        r = Reactive(10)
+        r = Signal(10)
         ro = readonly(r)
         r.value = 20
         assert ro.value == 20
@@ -194,46 +194,46 @@ class TestReadonly:
 
 class TestReactiveEqualitySkip:
     def test_same_value_no_callback(self):
-        r = Reactive(5)
+        r = Signal(5)
         results = []
         r.on_after_updating(lambda v: results.append(v))
         r.value = 5
         assert results == []
 
     def test_equal_value_no_callback(self):
-        r = Reactive([1, 2, 3])
+        r = Signal([1, 2, 3])
         results = []
         r.on_after_updating(lambda v: results.append(v))
         r.value = [1, 2, 3]
         assert results == []
 
     def test_different_value_fires_callback(self):
-        r = Reactive(5)
+        r = Signal(5)
         results = []
         r.on_after_updating(lambda v: results.append(v))
         r.value = 10
         assert results == [10]
 
     def test_version_increments_on_change(self):
-        r = Reactive(5)
+        r = Signal(5)
         assert r.version == 0
         r.value = 10
         assert r.version == 1
 
     def test_version_does_not_increment_on_same_value(self):
-        r = Reactive(5)
+        r = Signal(5)
         r.value = 5
         assert r.version == 0
 
     def test_on_before_updating_fires_before_change(self):
-        r = Reactive(0)
+        r = Signal(0)
         old_values = []
         r.on_before_updating(lambda v: old_values.append(v))
         r.value = 1
         assert old_values == [0]
 
     def test_on_after_updating_no_fire_same_value(self):
-        r = Reactive(0)
+        r = Signal(0)
         results = []
         r.on_after_updating(lambda v: results.append(v))
         r.value = 0
@@ -246,9 +246,9 @@ class TestComputedLazyEvaluation:
 
         def compute():
             call_count[0] += 1
-            return Reactive(1).value * 2
+            return Signal(1).value * 2
 
-        a = Reactive(1)
+        a = Signal(1)
         c = Computed(lambda: a.value * 2)
         assert c.value == 2
         initial_count = call_count[0]
@@ -256,14 +256,14 @@ class TestComputedLazyEvaluation:
         assert call_count[0] == initial_count
 
     def test_computed_recomputes_on_read_after_change(self):
-        a = Reactive(1)
+        a = Signal(1)
         c = Computed(lambda: a.value * 2)
         assert c.value == 2
         a.value = 10
         assert c.value == 20
 
     def test_computed_equality_skip(self):
-        a = Reactive(5)
+        a = Signal(5)
         c = Computed(lambda: abs(a.value))
         assert c.value == 5
         initial_version = c.version
@@ -273,7 +273,7 @@ class TestComputedLazyEvaluation:
 
     def test_computed_recomputes_only_once(self):
         compute_count = [0]
-        a = Reactive(1)
+        a = Signal(1)
         c = Computed(lambda: compute_count.__setitem__(0, compute_count[0] + 1) or a.value * 2)
         assert c.value == 2
         assert compute_count[0] == 1
@@ -284,7 +284,7 @@ class TestComputedLazyEvaluation:
 
 class TestComputedDiamondDependency:
     def test_diamond_computed_only_once(self):
-        a = Reactive(1)
+        a = Signal(1)
         b = Computed(lambda: a.value * 2)
         c = Computed(lambda: a.value + 10)
         d = Computed(lambda: b.value + c.value)
@@ -293,9 +293,9 @@ class TestComputedDiamondDependency:
         assert d.value == 2 * 2 + (2 + 10)
 
     def test_computed_dynamic_dependency_switch(self):
-        flag = Reactive(True)
-        a = Reactive("A")
-        b = Reactive("B")
+        flag = Signal(True)
+        a = Signal("A")
+        b = Signal("B")
         c = Computed(lambda: a.value if flag.value else b.value)
         assert c.value == "A"
         flag.value = False
@@ -308,7 +308,7 @@ class TestComputedDiamondDependency:
 
 class TestComputedCallbackContract:
     def test_computed_on_after_updating_on_change(self):
-        a = Reactive(1)
+        a = Signal(1)
         c = Computed(lambda: a.value * 2)
         results = []
         c.on_after_updating(lambda v: results.append(v))
@@ -316,7 +316,7 @@ class TestComputedCallbackContract:
         assert results == [10]
 
     def test_computed_callback_not_fired_on_equal_result(self):
-        a = Reactive(5)
+        a = Signal(5)
         c = Computed(lambda: abs(a.value))
         results = []
         c.on_after_updating(lambda v: results.append(v))

@@ -3,13 +3,13 @@ from typing import Any, TypedDict
 
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DomNodeRef, html, repeat
-from webcompy.reactive import Reactive, computed
-from webcompy.reactive._dict import ReactiveDict
+from webcompy.signal import Signal, computed
+from webcompy.signal._dict import ReactiveDict
 
 
 class TodoData(TypedDict):
-    title: Reactive[str]
-    done: Reactive[bool]
+    title: Signal[str]
+    done: Signal[bool]
 
 
 @define_component
@@ -59,12 +59,12 @@ def ToDoList(_: ComponentContext[None]):
     data: ReactiveDict[str, TodoData] = ReactiveDict(
         {
             str(uuid.uuid4()): {
-                "title": Reactive("Try WebComPy"),
-                "done": Reactive(False),
+                "title": Signal("Try WebComPy"),
+                "done": Signal(False),
             },
             str(uuid.uuid4()): {
-                "title": Reactive("Create WebComPy project"),
-                "done": Reactive(False),
+                "title": Signal("Create WebComPy project"),
+                "done": Signal(False),
             },
         }
     )
@@ -73,8 +73,8 @@ def ToDoList(_: ComponentContext[None]):
         title = input_ref.value
         if title:
             data[str(uuid.uuid4())] = {
-                "title": Reactive(title),
-                "done": Reactive(False),
+                "title": Signal(title),
+                "done": Signal(False),
             }
         input_ref.value = ""
 

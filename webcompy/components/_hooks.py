@@ -7,9 +7,9 @@ from typing import Any, TypeVar
 from webcompy.aio._aio import AsyncWrapper
 from webcompy.aio._async_result import AsyncResult
 from webcompy.components._libs import Context
-from webcompy.reactive._base import CallbackConsumerNode, ReactiveBase
-from webcompy.reactive._effect import EffectScope
-from webcompy.reactive._graph import consumer_destroy
+from webcompy.signal._base import CallbackConsumerNode, SignalBase
+from webcompy.signal._effect import EffectScope
+from webcompy.signal._graph import consumer_destroy
 
 _active_component_context: ContextVar[Context[Any]] = ContextVar("_active_component_context")
 _active_effect_scope: ContextVar[EffectScope | None] = ContextVar("_active_effect_scope", default=None)
@@ -49,7 +49,7 @@ def useAsyncResult(
     *,
     default: T | None = None,
     immediate: bool = True,
-    watch: Iterable[ReactiveBase[Any]] = (),
+    watch: Iterable[SignalBase[Any]] = (),
 ) -> AsyncResult[T]:
     result = AsyncResult(func, default=default)
 

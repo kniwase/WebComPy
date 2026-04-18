@@ -18,9 +18,9 @@ from webcompy.elements.typealias._element_property import (
     ElementChildren,
 )
 from webcompy.elements.types._element import Element
-from webcompy.reactive import ReactiveBase, computed_property
 from webcompy.router._pages import WebComPyRouterException
 from webcompy.router._router import Router
+from webcompy.signal import SignalBase, computed_property
 from webcompy.utils._serialize import is_json_seriarizable
 
 ParamsType = TypeVar("ParamsType")
@@ -32,27 +32,27 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
     _router: ClassVar[Router | None] = None
     _base_url: ClassVar[str]
 
-    _query: ReactiveBase[dict[str, str]] | None
-    _params: ReactiveBase[dict[str, Any]] | None
-    _path_params: ReactiveBase[dict[str, str]] | None
+    _query: SignalBase[dict[str, str]] | None
+    _params: SignalBase[dict[str, Any]] | None
+    _path_params: SignalBase[dict[str, str]] | None
 
     def __init__(
         self,
         *,
-        to: str | ReactiveBase[str],
-        text: list[str | ReactiveBase[Any]],
-        params: ReactiveBase[ParamsType] | None = None,
-        query: ReactiveBase[QueryParamsType] | None = None,
-        path_params: ReactiveBase[PathParamsType] | None = None,
+        to: str | SignalBase[str],
+        text: list[str | SignalBase[Any]],
+        params: SignalBase[ParamsType] | None = None,
+        query: SignalBase[QueryParamsType] | None = None,
+        path_params: SignalBase[PathParamsType] | None = None,
         attrs: dict[str, AttrValue] | None = None,
     ) -> None:
         if TypedRouterLink._router is None:
             raise WebComPyRouterException("'Router' instance is not declarated.")
         self._given_attrs = attrs
         self._to = to
-        self._query = cast("ReactiveBase[dict[str, str]]", query) if query is not None else None
-        self._params = cast("ReactiveBase[dict[str, Any]]", params) if params is not None else None
-        self._path_params = cast("ReactiveBase[dict[str, str]]", path_params) if path_params is not None else None
+        self._query = cast("SignalBase[dict[str, str]]", query) if query is not None else None
+        self._params = cast("SignalBase[dict[str, Any]]", params) if params is not None else None
+        self._path_params = cast("SignalBase[dict[str, str]]", path_params) if path_params is not None else None
         self._text = text
         super().__init__(
             "a",
@@ -60,7 +60,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
             events={"click": self._on_click},
             children=self._generate_children(),
         )
-        if isinstance(self._to, ReactiveBase):
+        if isinstance(self._to, SignalBase):
             self._set_callback_id(self._to.on_after_updating(self._refresh))
 
     @staticmethod
@@ -81,15 +81,15 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         if not TypedRouterLink._router:
             raise WebComPyRouterException("'Router' instance is not declarated.")
         if self._query is not None:
-            if not isinstance(self._query, ReactiveBase) or not isinstance(self._query.value, dict):  # type: ignore
-                raise WebComPyRouterException("Argument 'query' of RouterLink must be Reactive Object of Dict.")
+            if not isinstance(self._query, SignalBase) or not isinstance(self._query.value, dict):  # type: ignore
+                raise WebComPyRouterException("Argument 'query' of RouterLink must be Signal Object of Dict.")
             if any(not isinstance(k, str) for k in self._query.value):  # type: ignore
                 raise WebComPyRouterException("Keys of Argument 'query' of RouterLink must be str.")
             if any(not isinstance(v, str) for v in self._query.value.values()):  # type: ignore
                 raise WebComPyRouterException("Values of Argument 'query' of RouterLink must be str.")
         if self._params is not None:
-            if not isinstance(self._params, ReactiveBase) or not isinstance(self._params.value, dict):  # type: ignore
-                raise WebComPyRouterException("Argument 'params' of RouterLink must be Reactive Object of Dict.")
+            if not isinstance(self._params, SignalBase) or not isinstance(self._params.value, dict):  # type: ignore
+                raise WebComPyRouterException("Argument 'params' of RouterLink must be Signal Object of Dict.")
             if any(not isinstance(k, str) for k in self._params.value):  # type: ignore
                 raise WebComPyRouterException("Keys of Argument 'params' of RouterLink must be str.")
         if not browser:
@@ -110,9 +110,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                     state = params
                 else:
                     state = None
-                    logging.warn(
-                        "Argument 'params' of RouterLink should be a Reactive Object of json-serializable dict."
-                    )
+                    logging.warn("Argument 'params' of RouterLink should be a Signal Object of json-serializable dict.")
             browser.window.history.pushState(state, None, href)
             TypedRouterLink._router.__set_path__(href, params)
 
@@ -126,7 +124,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
 
     @computed_property
     def _href(self) -> str:
-        to = self._to.value if isinstance(self._to, ReactiveBase) else self._to
+        to = self._to.value if isinstance(self._to, SignalBase) else self._to
         if self._path_params is not None:
             to = to.format(**self._path_params.value)
         path_encoded = "/".join(map(urllib.parse.quote, to.strip("/").split("/")))

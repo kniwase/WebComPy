@@ -30,7 +30,7 @@ then access [http://127.0.0.1:8080/](http://127.0.0.1:8080/)
 
 ## Sample Code
 ```python
-from webcompy.reactive import Reactive, computed
+from webcompy.signal import Reactive, computed
 from webcompy.elements import html, repeat, switch, DOMEvent
 from webcompy.router import RouterContext
 from webcompy.components import (
@@ -85,8 +85,8 @@ FizzbuzzList.scoped_style = {
 
 @define_component
 def Fizzbuzz(context: ComponentContext[RouterContext]):
-    opened = Reactive(True)
-    count = Reactive(10)
+    opened = Signal(True)
+    count = Signal(10)
 
     @computed
     def toggle_button_text():

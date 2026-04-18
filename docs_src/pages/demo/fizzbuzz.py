@@ -17,8 +17,8 @@ def FizzbuzzPage(context: ComponentContext[RouterContext]):
             {
                 "title": title,
                 "code": """
-                    from webcompy.reactive import Reactive, computed
-                    from webcompy.reactive._dict import ReactiveDict
+                    from webcompy.signal import Signal, computed
+                    from webcompy.signal._dict import ReactiveDict
                     from webcompy.elements import html, repeat, switch, DOMEvent
                     from webcompy.components import (
                         define_component,
@@ -29,9 +29,9 @@ def FizzbuzzPage(context: ComponentContext[RouterContext]):
 
                     @define_component
                     def Fizzbuzz(context: ComponentContext[None]):
-                        opened = Reactive(True)
+                        opened = Signal(True)
                         fizzbuzz_dict: ReactiveDict[int, str] = ReactiveDict()
-                        _next_n = Reactive(1)
+                        _next_n = Signal(1)
 
                         @computed
                         def toggle_button_text():

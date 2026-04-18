@@ -6,11 +6,11 @@ from typing import Any, cast
 from webcompy._browser._modules import browser
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException
-from webcompy.reactive._container import ReactiveReceivable
-from webcompy.reactive._graph import consumer_destroy
+from webcompy.signal._container import SignalReceivable
+from webcompy.signal._graph import consumer_destroy
 
 
-class ElementAbstract(ReactiveReceivable):
+class ElementAbstract(SignalReceivable):
     _node_idx: int
     _node_cache: DOMNode | None = None
     _mounted: bool | None = None
@@ -72,7 +72,7 @@ class ElementAbstract(ReactiveReceivable):
             if node:
                 node.remove()
         self._clear_node_cache(False)
-        self.__purge_reactive_members__()
+        self.__purge_signal_members__()
         del self
 
     @property

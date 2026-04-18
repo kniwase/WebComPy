@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-_active_consumer: ReactiveNode | None = None
+_active_consumer: SignalNode | None = None
 _in_notification_phase: bool = False
 _epoch: int = 0
 
 
-class ReactiveEdge:
+class SignalEdge:
     __slots__ = (
         "consumer",
         "last_read_version",
@@ -17,26 +17,26 @@ class ReactiveEdge:
 
     def __init__(
         self,
-        producer: ReactiveNode,
-        consumer: ReactiveNode,
+        producer: SignalNode,
+        consumer: SignalNode,
     ) -> None:
         self.producer = producer
         self.consumer = consumer
         self.last_read_version: int = producer.version
-        self.prev_consumer: ReactiveEdge | None = None
-        self.next_consumer: ReactiveEdge | None = None
-        self.next_producer: ReactiveEdge | None = None
+        self.prev_consumer: SignalEdge | None = None
+        self.next_consumer: SignalEdge | None = None
+        self.next_producer: SignalEdge | None = None
 
 
-class ReactiveNode:
+class SignalNode:
     version: int
     last_clean_epoch: int
     dirty: bool
     recomputing: bool
-    producers: ReactiveEdge | None
-    producers_tail: ReactiveEdge | None
-    consumers: ReactiveEdge | None
-    consumers_tail: ReactiveEdge | None
+    producers: SignalEdge | None
+    producers_tail: SignalEdge | None
+    consumers: SignalEdge | None
+    consumers_tail: SignalEdge | None
     consumer_is_always_live: bool
 
     def __init__(self) -> None:
@@ -65,18 +65,18 @@ class _CallbackMixin:
 _SENTINEL = object()
 
 
-def set_active_consumer(consumer: ReactiveNode | None) -> ReactiveNode | None:
+def set_active_consumer(consumer: SignalNode | None) -> SignalNode | None:
     global _active_consumer
     prev = _active_consumer
     _active_consumer = consumer
     return prev
 
 
-def get_active_consumer() -> ReactiveNode | None:
+def get_active_consumer() -> SignalNode | None:
     return _active_consumer
 
 
-def producer_accessed(producer: ReactiveNode) -> None:
+def producer_accessed(producer: SignalNode) -> None:
     global _active_consumer
     if _active_consumer is None:
         return
@@ -85,18 +85,18 @@ def producer_accessed(producer: ReactiveNode) -> None:
     if edge is not None:
         edge.last_read_version = producer.version
     else:
-        edge = ReactiveEdge(producer, consumer)
+        edge = SignalEdge(producer, consumer)
         _append_producer_edge(consumer, edge)
         _append_consumer_edge(producer, edge)
         if _is_valid_link(edge):
             _track_live_consumer(edge)
 
 
-def producer_notify_consumers(producer: ReactiveNode) -> None:
+def producer_notify_consumers(producer: SignalNode) -> None:
     global _in_notification_phase
     _in_notification_phase = True
     try:
-        consumers_to_notify: list[ReactiveNode] = []
+        consumers_to_notify: list[SignalNode] = []
         edge = producer.consumers
         while edge is not None:
             consumer = edge.consumer
@@ -111,7 +111,7 @@ def producer_notify_consumers(producer: ReactiveNode) -> None:
         _in_notification_phase = False
 
 
-def producer_update_value_version(producer: ReactiveNode) -> None:
+def producer_update_value_version(producer: SignalNode) -> None:
     if _epoch == producer.last_clean_epoch:
         return
     if not producer.producer_must_recompute():
@@ -127,18 +127,18 @@ def producer_update_value_version(producer: ReactiveNode) -> None:
         producer.recomputing = False
 
 
-def producer_mark_clean(producer: ReactiveNode) -> None:
+def producer_mark_clean(producer: SignalNode) -> None:
     producer.dirty = False
     producer.last_clean_epoch = _epoch
 
 
-def consumer_mark_dirty(consumer: ReactiveNode) -> None:
+def consumer_mark_dirty(consumer: SignalNode) -> None:
     producer_notify_consumers(consumer)
     if isinstance(consumer, _CallbackMixin):
         consumer._on_marked_dirty()
 
 
-def consumer_poll_producers_for_change(consumer: ReactiveNode) -> bool:
+def consumer_poll_producers_for_change(consumer: SignalNode) -> bool:
     edge = consumer.producers
     while edge is not None:
         producer = edge.producer
@@ -150,7 +150,7 @@ def consumer_poll_producers_for_change(consumer: ReactiveNode) -> bool:
     return False
 
 
-def consumer_before_computation(consumer: ReactiveNode) -> ReactiveNode | None:
+def consumer_before_computation(consumer: SignalNode) -> SignalNode | None:
     global _active_consumer
     prev = _active_consumer
     _active_consumer = consumer
@@ -158,8 +158,8 @@ def consumer_before_computation(consumer: ReactiveNode) -> ReactiveNode | None:
 
 
 def consumer_after_computation(
-    consumer: ReactiveNode,
-    prev_consumer: ReactiveNode | None,
+    consumer: SignalNode,
+    prev_consumer: SignalNode | None,
 ) -> None:
     global _active_consumer
     _active_consumer = prev_consumer
@@ -172,11 +172,11 @@ def consumer_after_computation(
         edge = next_edge
 
 
-def finalize_consumer_after_computation(consumer: ReactiveNode) -> None:
+def finalize_consumer_after_computation(consumer: SignalNode) -> None:
     pass
 
 
-def consumer_destroy(consumer: ReactiveNode) -> None:
+def consumer_destroy(consumer: SignalNode) -> None:
     edge = consumer.producers
     while edge is not None:
         next_edge = edge.next_producer
@@ -198,10 +198,10 @@ def consumer_destroy(consumer: ReactiveNode) -> None:
 
 
 def producer_add_live_consumer(
-    producer: ReactiveNode,
-    consumer: ReactiveNode,
-) -> ReactiveEdge:
-    edge = ReactiveEdge(producer, consumer)
+    producer: SignalNode,
+    consumer: SignalNode,
+) -> SignalEdge:
+    edge = SignalEdge(producer, consumer)
     _append_producer_edge(consumer, edge)
     _append_consumer_edge(producer, edge)
     producer.version += 1
@@ -210,20 +210,20 @@ def producer_add_live_consumer(
     return edge
 
 
-def producer_remove_live_consumer_link(edge: ReactiveEdge) -> None:
+def producer_remove_live_consumer_link(edge: SignalEdge) -> None:
     _untrack_live_consumer(edge)
     _detach_consumer_edge(edge.producer, edge)
     _detach_producer_edge(edge.consumer, edge)
 
 
-def consumer_is_live(consumer: ReactiveNode) -> bool:
+def consumer_is_live(consumer: SignalNode) -> bool:
     return consumer.consumer_is_always_live
 
 
 def _find_consumer_edge(
-    producer: ReactiveNode,
-    consumer: ReactiveNode,
-) -> ReactiveEdge | None:
+    producer: SignalNode,
+    consumer: SignalNode,
+) -> SignalEdge | None:
     edge = producer.consumers
     while edge is not None:
         if edge.consumer is consumer:
@@ -232,7 +232,7 @@ def _find_consumer_edge(
     return None
 
 
-def _append_producer_edge(consumer: ReactiveNode, edge: ReactiveEdge) -> None:
+def _append_producer_edge(consumer: SignalNode, edge: SignalEdge) -> None:
     edge.prev_consumer = consumer.producers_tail
     if consumer.producers_tail is not None:
         consumer.producers_tail.next_producer = edge
@@ -241,7 +241,7 @@ def _append_producer_edge(consumer: ReactiveNode, edge: ReactiveEdge) -> None:
     consumer.producers_tail = edge
 
 
-def _append_consumer_edge(producer: ReactiveNode, edge: ReactiveEdge) -> None:
+def _append_consumer_edge(producer: SignalNode, edge: SignalEdge) -> None:
     edge.next_consumer = producer.consumers
     if producer.consumers is not None:
         producer.consumers.prev_consumer = edge
@@ -250,7 +250,7 @@ def _append_consumer_edge(producer: ReactiveNode, edge: ReactiveEdge) -> None:
         producer.consumers_tail = edge
 
 
-def _detach_producer_edge(consumer: ReactiveNode, edge: ReactiveEdge) -> None:
+def _detach_producer_edge(consumer: SignalNode, edge: SignalEdge) -> None:
     if edge.prev_consumer is not None:
         edge.prev_consumer.next_producer = edge.next_producer
     elif consumer.producers is edge:
@@ -263,7 +263,7 @@ def _detach_producer_edge(consumer: ReactiveNode, edge: ReactiveEdge) -> None:
     edge.next_producer = None
 
 
-def _detach_consumer_edge(producer: ReactiveNode, edge: ReactiveEdge) -> None:
+def _detach_consumer_edge(producer: SignalNode, edge: SignalEdge) -> None:
     if edge.prev_consumer is not None:
         edge.prev_consumer.next_consumer = edge.next_consumer
     elif producer.consumers is edge:
@@ -276,18 +276,18 @@ def _detach_consumer_edge(producer: ReactiveNode, edge: ReactiveEdge) -> None:
     edge.next_consumer = None
 
 
-def _is_valid_link(edge: ReactiveEdge) -> bool:
+def _is_valid_link(edge: SignalEdge) -> bool:
     consumer = edge.consumer
     if not consumer_is_live(consumer):
         return edge.last_read_version >= edge.producer.version
     return True
 
 
-def _track_live_consumer(edge: ReactiveEdge) -> None:
+def _track_live_consumer(edge: SignalEdge) -> None:
     pass
 
 
-def _untrack_live_consumer(edge: ReactiveEdge) -> None:
+def _untrack_live_consumer(edge: SignalEdge) -> None:
     pass
 
 

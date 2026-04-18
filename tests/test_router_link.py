@@ -2,10 +2,10 @@ from unittest.mock import MagicMock
 
 from tests.conftest import FakeDOMEvent
 from webcompy.elements.types._element import Element
-from webcompy.reactive import Reactive
 from webcompy.router._link import TypedRouterLink
 from webcompy.router._pages import RouterPage, WebComPyRouterException
 from webcompy.router._router import Router
+from webcompy.signal import Signal
 
 
 class FakeRootElement(Element):
@@ -45,7 +45,7 @@ class TestRouterLinkHref:
     def test_href_with_reactive_to(self):
         r = _make_router(mode="hash")
         TypedRouterLink.__set_router__(r)
-        to = Reactive("/home")
+        to = Signal("/home")
         link = TypedRouterLink(to=to, text=["Home"])
         href = link._href.value
         assert "home" in href
@@ -53,7 +53,7 @@ class TestRouterLinkHref:
     def test_href_with_query(self):
         r = _make_router(mode="hash")
         TypedRouterLink.__set_router__(r)
-        query = Reactive({"q": "test"})
+        query = Signal({"q": "test"})
         link = TypedRouterLink(to="/search", text=["Search"], query=query)
         href = link._href.value
         assert "?" in href
@@ -62,7 +62,7 @@ class TestRouterLinkHref:
     def test_href_with_path_params(self):
         r = _make_router(mode="hash")
         TypedRouterLink.__set_router__(r)
-        path_params = Reactive({"id": "42"})
+        path_params = Signal({"id": "42"})
         link = TypedRouterLink(to="/users/{id}", text=["User"], path_params=path_params)
         href = link._href.value
         assert "42" in href
@@ -101,7 +101,7 @@ class TestRouterLinkOnClickValidation:
         r = _make_router(mode="hash")
         TypedRouterLink.__set_router__(r)
         link = TypedRouterLink(to="/home", text=["Home"])
-        link._query = Reactive("not-a-dict")
+        link._query = Signal("not-a-dict")
         ev = FakeDOMEvent(href="/home")
         try:
             link._on_click(ev)
@@ -113,7 +113,7 @@ class TestRouterLinkOnClickValidation:
         r = _make_router(mode="hash")
         TypedRouterLink.__set_router__(r)
         link = TypedRouterLink(to="/home", text=["Home"])
-        link._params = Reactive("not-a-dict")
+        link._params = Signal("not-a-dict")
         ev = FakeDOMEvent(href="/home")
         try:
             link._on_click(ev)

@@ -10,7 +10,7 @@ from webcompy.components._libs import ComponentProperty, Context, generate_id
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
-from webcompy.reactive import ReactiveDict, computed_property
+from webcompy.signal import ReactiveDict, computed_property
 
 _defer_after_rendering_depth: int = 0
 _deferred_after_rendering_callbacks: list[Callable[[], None]] = []
@@ -74,7 +74,7 @@ class Component(ElementBase):
         slots: dict[str, Callable[[], ElementChildren]],
     ) -> ComponentProperty:
         from webcompy.components._hooks import _active_effect_scope
-        from webcompy.reactive._effect import create_effect_scope
+        from webcompy.signal._effect import create_effect_scope
 
         component_name = component_def.__name__
         context = Context(

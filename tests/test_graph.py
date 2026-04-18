@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from webcompy.reactive._graph import (
-    ReactiveNode,
+from webcompy.signal._graph import (
+    SignalNode,
     _find_consumer_edge,
     consumer_after_computation,
     consumer_before_computation,
@@ -21,7 +21,7 @@ from webcompy.reactive._graph import (
 )
 
 
-class SimpleReactiveNode(ReactiveNode):
+class SimpleSignalNode(SignalNode):
     def __init__(self, value=None):
         super().__init__()
         self._value = value
@@ -33,7 +33,7 @@ class SimpleReactiveNode(ReactiveNode):
         self.dirty = False
 
 
-class SimpleConsumerNode(ReactiveNode):
+class SimpleConsumerNode(SignalNode):
     def __init__(self):
         super().__init__()
         self.compute_count = 0
@@ -59,21 +59,21 @@ class TestGlobalState:
         assert get_active_consumer() is None
 
     def test_set_and_get_active_consumer(self):
-        node = SimpleReactiveNode()
+        node = SimpleSignalNode()
         prev = set_active_consumer(node)
         assert prev is None
         assert get_active_consumer() is node
 
     def test_set_active_consumer_returns_previous(self):
-        node1 = SimpleReactiveNode()
-        node2 = SimpleReactiveNode()
+        node1 = SimpleSignalNode()
+        node2 = SimpleSignalNode()
         set_active_consumer(node1)
         prev = set_active_consumer(node2)
         assert prev is node1
         assert get_active_consumer() is node2
 
     def test_reset_graph_state(self):
-        node = SimpleReactiveNode()
+        node = SimpleSignalNode()
         set_active_consumer(node)
         increment_epoch()
         reset_graph_state()
@@ -88,7 +88,7 @@ class TestGlobalState:
 
 class TestProducerConsumerEdges:
     def test_producer_accessed_creates_edge(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         set_active_consumer(consumer)
         producer_accessed(producer)
@@ -100,12 +100,12 @@ class TestProducerConsumerEdges:
         assert consumer.producers.producer is producer
 
     def test_producer_accessed_no_consumer(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         producer_accessed(producer)
         assert producer.consumers is None
 
     def test_producer_accessed_updates_existing_edge_version(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         set_active_consumer(consumer)
         producer_accessed(producer)
@@ -121,8 +121,8 @@ class TestProducerConsumerEdges:
         assert edge.last_read_version == 5
 
     def test_multiple_producers(self):
-        p1 = SimpleReactiveNode()
-        p2 = SimpleReactiveNode()
+        p1 = SimpleSignalNode()
+        p2 = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         set_active_consumer(consumer)
         producer_accessed(p1)
@@ -139,7 +139,7 @@ class TestProducerConsumerEdges:
         assert len(edges) == 2
 
     def test_multiple_consumers(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         c1 = SimpleConsumerNode()
         c2 = SimpleConsumerNode()
         set_active_consumer(c1)
@@ -161,7 +161,7 @@ class TestProducerConsumerEdges:
 
 class TestConsumerDestroy:
     def test_consumer_destroy_removes_edges(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         set_active_consumer(consumer)
         producer_accessed(producer)
@@ -172,8 +172,8 @@ class TestConsumerDestroy:
         assert producer.consumers is None or _find_consumer_edge(producer, consumer) is None
 
     def test_consumer_destroy_multiple_producers(self):
-        p1 = SimpleReactiveNode()
-        p2 = SimpleReactiveNode()
+        p1 = SimpleSignalNode()
+        p2 = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         set_active_consumer(consumer)
         producer_accessed(p1)
@@ -186,7 +186,7 @@ class TestConsumerDestroy:
         assert _find_consumer_edge(p2, consumer) is None
 
     def test_destroy_one_consumer_keeps_other(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         c1 = SimpleConsumerNode()
         c2 = SimpleConsumerNode()
         set_active_consumer(c1)
@@ -203,7 +203,7 @@ class TestConsumerDestroy:
 
 class TestDynamicDependencyRebuilding:
     def test_consumer_after_computation_removes_stale_edges(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         set_active_consumer(consumer)
         producer_accessed(producer)
@@ -213,8 +213,8 @@ class TestDynamicDependencyRebuilding:
         assert _find_consumer_edge(producer, consumer) is not None
 
     def test_stale_edge_removed_when_not_accessed(self):
-        p1 = SimpleReactiveNode()
-        p2 = SimpleReactiveNode()
+        p1 = SimpleSignalNode()
+        p2 = SimpleSignalNode()
         consumer = SimpleConsumerNode()
 
         set_active_consumer(consumer)
@@ -233,7 +233,7 @@ class TestDynamicDependencyRebuilding:
 
 class TestEpochBasedSkipChecks:
     def test_producer_update_skips_when_epoch_clean(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         increment_epoch()
         producer.last_clean_epoch = _find_consumer_edge_local_epoch()
         producer.dirty = False
@@ -246,7 +246,7 @@ class TestEpochBasedSkipChecks:
 
 class TestDiamondTopology:
     def test_diamond_dependency_notifies_consumer_once_via_dirty_flag(self):
-        a = SimpleReactiveNode()
+        a = SimpleSignalNode()
         b = SimpleConsumerNode()
         c = SimpleConsumerNode()
         d = SimpleConsumerNode()
@@ -280,7 +280,7 @@ class TestDiamondTopology:
         assert d.dirty is True
 
     def test_producer_notify_sets_dirty(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         set_active_consumer(consumer)
         producer_accessed(producer)
@@ -293,7 +293,7 @@ class TestDiamondTopology:
 
 class TestLiveVsNonLiveConsumer:
     def test_non_live_consumer_edge_not_tracked(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         consumer.consumer_is_always_live = False
 
@@ -306,7 +306,7 @@ class TestLiveVsNonLiveConsumer:
         assert consumer_is_live(consumer) is False
 
     def test_live_consumer_edge_tracked(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         consumer.consumer_is_always_live = True
 
@@ -315,7 +315,7 @@ class TestLiveVsNonLiveConsumer:
         assert consumer_is_live(consumer) is True
 
     def test_producer_remove_live_consumer_link(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         consumer.consumer_is_always_live = True
 
@@ -325,14 +325,14 @@ class TestLiveVsNonLiveConsumer:
 
 
 def _find_consumer_edge_local_epoch():
-    from webcompy.reactive._graph import _epoch
+    from webcompy.signal._graph import _epoch
 
     return _epoch
 
 
 class TestConsumerPollProducersForChange:
     def test_no_change_returns_false(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         set_active_consumer(consumer)
         producer_accessed(producer)
@@ -341,7 +341,7 @@ class TestConsumerPollProducersForChange:
         assert consumer_poll_producers_for_change(consumer) is False
 
     def test_version_change_returns_true(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         set_active_consumer(consumer)
         producer_accessed(producer)
@@ -351,7 +351,7 @@ class TestConsumerPollProducersForChange:
         assert consumer_poll_producers_for_change(consumer) is True
 
     def test_dirty_producer_triggers_recompute(self):
-        producer = SimpleReactiveNode()
+        producer = SimpleSignalNode()
         consumer = SimpleConsumerNode()
         set_active_consumer(consumer)
         producer_accessed(producer)

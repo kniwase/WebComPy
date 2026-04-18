@@ -7,8 +7,8 @@ from webcompy.elements.types._element import Element
 from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._text import TextElement
 from webcompy.exception import WebComPyException
-from webcompy.reactive import ReactiveList
-from webcompy.reactive._dict import ReactiveDict
+from webcompy.signal import ReactiveList
+from webcompy.signal._dict import ReactiveDict
 
 
 class FakeRootElement(Element):
@@ -53,7 +53,7 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rl.on_after_updating(rep._refresh))
         rep._refresh()
         original_children = list(rep._children)
@@ -70,7 +70,7 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rl.on_after_updating(rep._refresh))
         rep._refresh()
         original_child_a = rep._children[0]
@@ -87,7 +87,7 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rl.on_after_updating(rep._refresh))
         rep._refresh()
         original_child_a = rep._children[0]
@@ -104,7 +104,7 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rl.on_after_updating(rep._refresh))
         rep._refresh()
         original_children = list(rep._children)
@@ -121,7 +121,7 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rl.on_after_updating(rep._refresh))
         rep._refresh()
         rl.clear()
@@ -134,7 +134,7 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rl.on_after_updating(rep._refresh))
         rep._refresh()
         try:
@@ -149,7 +149,7 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rl.on_after_updating(rep._refresh))
         rep._refresh()
         original_children = list(rep._children)
@@ -166,7 +166,7 @@ class TestDictKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rd.on_after_updating(rep._refresh))
         rep._refresh()
         original_children = list(rep._children)
@@ -183,7 +183,7 @@ class TestDictKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rd.on_after_updating(rep._refresh))
         rep._refresh()
         original_child_a = rep._children[0]
@@ -200,7 +200,7 @@ class TestDictKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rd.on_after_updating(rep._refresh))
         rep._refresh()
         rd.clear()
@@ -213,7 +213,7 @@ class TestDictKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rd.on_after_updating(rep._refresh))
         rep._refresh()
         original_children = list(rep._children)
@@ -231,7 +231,7 @@ class TestDictKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rd.on_after_updating(rep._refresh))
         rep._refresh()
         assert ("x", "hello") in received
@@ -251,7 +251,7 @@ class TestDictKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
+        rep._signal_activated = True
         rep._set_callback_id(rd.on_after_updating(rep._refresh))
         rep._refresh()
         original_child_a = rep._children[0]

@@ -105,9 +105,9 @@ class TestElementInitNode:
 
 class TestElementUpdateAttr:
     def test_attr_updater_removes_attribute_on_bool_false(self, fake_browser_full):
-        from webcompy.reactive import Reactive
+        from webcompy.signal import Signal
 
-        value = Reactive(True)
+        value = Signal(True)
         el = _setup_element("input", {"disabled": value})
         el._init_node()
         node = el._get_node()
@@ -251,9 +251,9 @@ class TestElementAbstractWithBrowser:
 
 class TestReactiveAttrUpdate:
     def test_reactive_attr_registers_callback(self, fake_browser_full):
-        from webcompy.reactive import Reactive
+        from webcompy.signal import Signal
 
-        value = Reactive("initial")
+        value = Signal("initial")
         el = _setup_element("div", {"class": value})
         el._init_node()
         node = el._get_node()

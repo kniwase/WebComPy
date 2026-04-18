@@ -2,8 +2,8 @@ from tests.conftest import FakeDOMNode
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._text import TextElement
-from webcompy.reactive import ReactiveList
-from webcompy.reactive._dict import ReactiveDict
+from webcompy.signal import ReactiveList
+from webcompy.signal._dict import ReactiveDict
 
 
 class FakeRootElement(Element):
@@ -24,7 +24,7 @@ class TestRepeatElementValidation:
             RepeatElement([1, 2, 3], lambda x: TextElement(str(x)))
             raise AssertionError("Should have raised ValueError")
         except ValueError as e:
-            assert "Reactive" in str(e)
+            assert "Signal" in str(e)
 
 
 class TestRepeatElementOnSetParent:

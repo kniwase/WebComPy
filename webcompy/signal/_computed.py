@@ -1,9 +1,9 @@
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from webcompy.reactive._base import ReactiveBase
-from webcompy.reactive._container import ReactiveReceivable
-from webcompy.reactive._graph import (
+from webcompy.signal._base import SignalBase
+from webcompy.signal._container import SignalReceivable
+from webcompy.signal._graph import (
     _SENTINEL,
     consumer_after_computation,
     consumer_before_computation,
@@ -15,7 +15,7 @@ from webcompy.reactive._graph import (
 V = TypeVar("V")
 
 
-class Computed(ReactiveBase[V]):
+class Computed(SignalBase[V]):
     def __init__(
         self,
         func: Callable[[], V],
@@ -75,8 +75,8 @@ def computed_property(method: Callable[[Any], V]) -> Computed[V]:
     def getter(instance: Any) -> Computed[V]:
         if name not in instance.__dict__:
             _computed = Computed(lambda: method(instance))
-            if isinstance(instance, ReactiveReceivable):
-                instance.__set_reactive_member__(_computed)
+            if isinstance(instance, SignalReceivable):
+                instance.__set_signal_member__(_computed)
             instance.__dict__[name] = _computed
         return instance.__dict__[name]
 

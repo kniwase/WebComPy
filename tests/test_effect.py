@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from webcompy.reactive import Reactive, effect
-from webcompy.reactive._composable import use_counter
-from webcompy.reactive._effect import (
+from webcompy.signal import Signal, effect
+from webcompy.signal._composable import use_counter
+from webcompy.signal._effect import (
     effect_scope,
 )
-from webcompy.reactive._graph import reset_graph_state
+from webcompy.signal._graph import reset_graph_state
 
 
 @pytest.fixture(autouse=True)
@@ -20,14 +20,14 @@ def reset_state():
 class TestEffectBasic:
     def test_effect_executes_immediately(self):
         results = []
-        a = Reactive(1)
+        a = Signal(1)
         effect(lambda: results.append(a.value))
         assert len(results) == 1
         assert results[0] == 1
 
     def test_effect_re_executes_on_dependency_change(self):
         results = []
-        a = Reactive(1)
+        a = Signal(1)
         effect(lambda: results.append(a.value))
         assert results == [1]
         a.value = 2
@@ -35,8 +35,8 @@ class TestEffectBasic:
 
     def test_effect_tracks_multiple_dependencies(self):
         results = []
-        a = Reactive(1)
-        b = Reactive(2)
+        a = Signal(1)
+        b = Signal(2)
         effect(lambda: results.append(a.value + b.value))
         assert results == [3]
         a.value = 10
@@ -46,9 +46,9 @@ class TestEffectBasic:
 
     def test_effect_dynamic_dependencies(self):
         results = []
-        flag = Reactive(True)
-        a = Reactive("A")
-        b = Reactive("B")
+        flag = Signal(True)
+        a = Signal("A")
+        b = Signal("B")
         effect(lambda: results.append(a.value if flag.value else b.value))
         assert results == ["A"]
         flag.value = False
@@ -62,7 +62,7 @@ class TestEffectBasic:
 class TestEffectDispose:
     def test_effect_dispose_stops_execution(self):
         results = []
-        a = Reactive(1)
+        a = Signal(1)
         handle = effect(lambda: results.append(a.value))
         assert results == [1]
         handle.dispose()
@@ -71,7 +71,7 @@ class TestEffectDispose:
 
     def test_effect_cleanup_on_re_execution(self):
         cleanups = []
-        a = Reactive(1)
+        a = Signal(1)
 
         def effect_fn():
             val = a.value
@@ -88,7 +88,7 @@ class TestEffectDispose:
 class TestEffectOnCleanup:
     def test_on_cleanup_callback(self):
         cleanups = []
-        a = Reactive(1)
+        a = Signal(1)
         effect(lambda: a.value, on_cleanup=lambda: cleanups.append("cleaned"))
         a.value = 2
         assert len(cleanups) == 1
@@ -96,7 +96,7 @@ class TestEffectOnCleanup:
 
     def test_on_cleanup_on_dispose(self):
         cleanups = []
-        a = Reactive(1)
+        a = Signal(1)
         handle = effect(lambda: a.value, on_cleanup=lambda: cleanups.append("cleaned"))
         handle.dispose()
         assert "cleaned" in cleanups
@@ -105,7 +105,7 @@ class TestEffectOnCleanup:
 class TestEffectScope:
     def test_scope_dispose_cleans_up_effects(self):
         results = []
-        a = Reactive(1)
+        a = Signal(1)
 
         with effect_scope() as scope:
             effect(lambda: results.append(a.value))
@@ -117,7 +117,7 @@ class TestEffectScope:
 
     def test_nested_scopes(self):
         results = []
-        a = Reactive(1)
+        a = Signal(1)
 
         with effect_scope() as outer:
             effect(lambda: results.append(f"outer-{a.value}"))

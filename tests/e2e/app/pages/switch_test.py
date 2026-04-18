@@ -1,13 +1,13 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html, switch
-from webcompy.reactive import Reactive, computed
+from webcompy.signal import Signal, computed
 
 
 @define_component
 def SwitchPage(context: ComponentContext[None]):
     context.set_title("Switch - E2E")
 
-    flag = Reactive(True)
+    flag = Signal(True)
 
     def toggle(_):
         flag.value = not flag.value

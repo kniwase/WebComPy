@@ -33,7 +33,7 @@ def test_page_title_on_navigation(app_page):
     expect(app_page).to_have_title("Home - E2E")
 
     app_page.locator("[data-testid='nav-reactive']").click()
-    expect(app_page).to_have_title("Reactive - E2E")
+    expect(app_page).to_have_title("Signal - E2E")
 
 
 def test_browser_back_forward(app_page):

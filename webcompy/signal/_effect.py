@@ -6,8 +6,8 @@ from collections.abc import Callable
 from contextvars import ContextVar
 from typing import Any
 
-from webcompy.reactive._graph import (
-    ReactiveNode,
+from webcompy.signal._graph import (
+    SignalNode,
     _CallbackMixin,
     consumer_after_computation,
     consumer_before_computation,
@@ -27,7 +27,7 @@ _pending_effects: list[EffectNode] = []
 _scheduling_scheduled: bool = False
 
 
-class EffectNode(ReactiveNode, _CallbackMixin):
+class EffectNode(SignalNode, _CallbackMixin):
     _fn: Callable[[], Any]
     _cleanup_fn: Callable[[], Any] | None
     _on_cleanup: Callable[[], Any] | None

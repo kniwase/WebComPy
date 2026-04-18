@@ -8,7 +8,7 @@ from webcompy.elements.types._element import Element
 from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._switch import SwitchElement
 from webcompy.elements.types._text import TextElement
-from webcompy.reactive import Reactive, ReactiveList
+from webcompy.signal import ReactiveList, Signal
 
 
 class FakeRootElement(Element):
@@ -49,7 +49,7 @@ def fake_browser_full(monkeypatch):
 class TestGetNodeAncestorTraversal:
     def test_dynamic_element_gets_parent_node(self):
         parent = _make_parent()
-        cond = Reactive(True)
+        cond = Signal(True)
         sw = SwitchElement([(cond, lambda: TextElement("yes"))], None)
         sw._parent = parent
         sw._node_idx = 0
@@ -58,7 +58,7 @@ class TestGetNodeAncestorTraversal:
 
     def test_nested_dynamic_gets_grandparent_node(self):
         parent = _make_parent()
-        cond = Reactive(True)
+        cond = Signal(True)
         rl = ReactiveList(["a", "b"])
         inner = RepeatElement(rl, lambda x: TextElement(x))
         sw = SwitchElement([(cond, lambda: inner)], None)
@@ -75,7 +75,7 @@ class TestSwitchInsideRepeat:
         rep = RepeatElement(
             rl,
             lambda val: SwitchElement(
-                [(val if isinstance(val, Reactive) else Reactive(val), lambda: TextElement("on"))],
+                [(val if isinstance(val, Signal) else Signal(val), lambda: TextElement("on"))],
                 lambda: TextElement("off"),
             ),
         )
@@ -99,7 +99,7 @@ class TestSwitchInsideRepeat:
     def test_repeat_inside_switch_on_set_parent(self):
         from webcompy.elements.types._switch import SwitchElement
 
-        cond = Reactive(True)
+        cond = Signal(True)
         rl = ReactiveList(["x", "y"])
         inner_rep = RepeatElement(rl, lambda item: TextElement(item))
         sw = SwitchElement([(cond, lambda: inner_rep)], None)
@@ -111,7 +111,7 @@ class TestSwitchInsideRepeat:
         assert isinstance(sw._children[0], RepeatElement)
 
     def test_repeat_inside_switch_no_nesting_exception(self):
-        cond = Reactive(True)
+        cond = Signal(True)
         rl = ReactiveList(["x"])
         inner_rep = RepeatElement(rl, lambda item: TextElement(item))
         sw = SwitchElement([(cond, lambda: inner_rep)], None)
@@ -124,7 +124,7 @@ class TestSwitchInsideRepeat:
 
 class TestNestedDynamicElementCleanup:
     def test_switch_removal_cleans_up_nested_repeat_callbacks(self, fake_browser_full):
-        cond = Reactive(True)
+        cond = Signal(True)
         rl = ReactiveList(["a", "b"])
         inner_rep = RepeatElement(rl, lambda item: TextElement(item))
         sw = SwitchElement([(cond, lambda: inner_rep)], None)
@@ -141,7 +141,7 @@ class TestNestedDynamicElementCleanup:
     def test_repeat_removal_cleans_up_switch(self, fake_browser_full):
         rl = ReactiveList(["a"])
         sw = SwitchElement(
-            [(Reactive(True), lambda: TextElement("on"))],
+            [(Signal(True), lambda: TextElement("on"))],
             lambda: TextElement("off"),
         )
         rep = RepeatElement(rl, lambda item: sw)
@@ -180,7 +180,7 @@ class TestPositionElementNodes:
 
 class TestRenderHTMLWithNesting:
     def test_repeat_inside_switch_render_html(self):
-        cond = Reactive(True)
+        cond = Signal(True)
         rl = ReactiveList(["hello", "world"])
         inner_rep = RepeatElement(rl, lambda item: TextElement(item))
         sw = SwitchElement([(cond, lambda: inner_rep)], None)
@@ -211,7 +211,7 @@ class TestNodeCountWithNesting:
     def test_switch_node_count_sums_children(self):
         rl = ReactiveList(["a", "b", "c"])
         inner_rep = RepeatElement(rl, lambda item: TextElement(item))
-        cond = Reactive(True)
+        cond = Signal(True)
         sw = SwitchElement([(cond, lambda: inner_rep)], None)
         parent = _make_parent()
         sw._parent = parent

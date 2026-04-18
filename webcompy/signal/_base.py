@@ -7,8 +7,8 @@ from typing import Any, Generic, TypeVar, cast, final
 
 from typing_extensions import ParamSpec
 
-from webcompy.reactive._graph import (
-    ReactiveNode,
+from webcompy.signal._graph import (
+    SignalNode,
     _CallbackMixin,
     increment_epoch,
     producer_accessed,
@@ -22,15 +22,15 @@ A = ParamSpec("A")
 T = TypeVar("T")
 
 
-class CallbackConsumerNode(ReactiveNode, _CallbackMixin):
+class CallbackConsumerNode(SignalNode, _CallbackMixin):
     _callback: Callable[[Any], Any]
     _is_before: bool
-    _producer: ReactiveNode
+    _producer: SignalNode
 
     def __init__(
         self,
         callback: Callable[[Any], Any],
-        producer: ReactiveNode,
+        producer: SignalNode,
         is_before: bool = False,
     ) -> None:
         super().__init__()
@@ -49,7 +49,7 @@ class CallbackConsumerNode(ReactiveNode, _CallbackMixin):
     def _on_marked_dirty(self) -> None:
         if self._is_before:
             return
-        from webcompy.reactive._computed import Computed
+        from webcompy.signal._computed import Computed
 
         old_version = self._producer.version
         producer_update_value_version(self._producer)
@@ -62,7 +62,7 @@ class CallbackConsumerNode(ReactiveNode, _CallbackMixin):
         self._callback(value)
 
 
-class ReactiveBase(ReactiveNode, Generic[V]):
+class SignalBase(SignalNode, Generic[V]):
     _value: V
 
     def __init__(self, init_value: V) -> None:
@@ -88,7 +88,7 @@ class ReactiveBase(ReactiveNode, Generic[V]):
     def _change_event(reactive_obj_method: Callable[A, V]) -> Callable[A, V]:
         @wraps(reactive_obj_method)
         def method(*args: A.args, **kwargs: A.kwargs) -> V:
-            instance = cast("ReactiveBase[V]", args[0])
+            instance = cast("SignalBase[V]", args[0])
             _notify_before_callbacks(instance, instance._value)
             increment_epoch()
             ret = reactive_obj_method(*args, **kwargs)
@@ -103,14 +103,14 @@ class ReactiveBase(ReactiveNode, Generic[V]):
     def _get_event(reactive_obj_method: Callable[A, V]) -> Callable[A, V]:
         @wraps(reactive_obj_method)
         def method(*args: A.args, **kwargs: A.kwargs) -> V:
-            instance = cast("ReactiveBase[V]", args[0])
+            instance = cast("SignalBase[V]", args[0])
             producer_accessed(instance)
             return reactive_obj_method(*args, **kwargs)
 
         return method
 
 
-def _find_callback_consumer_nodes(producer: ReactiveNode) -> list[CallbackConsumerNode]:
+def _find_callback_consumer_nodes(producer: SignalNode) -> list[CallbackConsumerNode]:
     nodes: list[CallbackConsumerNode] = []
     edge = producer.consumers
     while edge is not None:
@@ -121,19 +121,19 @@ def _find_callback_consumer_nodes(producer: ReactiveNode) -> list[CallbackConsum
     return nodes
 
 
-def _notify_before_callbacks(producer: ReactiveNode, value: Any) -> None:
+def _notify_before_callbacks(producer: SignalNode, value: Any) -> None:
     for cb in _find_callback_consumer_nodes(producer):
         if cb._is_before:
             cb.notify(value)
 
 
-def _notify_after_callbacks(producer: ReactiveNode, value: Any) -> None:
+def _notify_after_callbacks(producer: SignalNode, value: Any) -> None:
     for cb in _find_callback_consumer_nodes(producer):
         if not cb._is_before:
             cb.notify(value)
 
 
-class Reactive(ReactiveBase[V]):
+class Signal(SignalBase[V]):
     @final
     def set_value(self, new_value: V) -> V:
         old_value = self._value
