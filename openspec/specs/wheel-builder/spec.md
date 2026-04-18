@@ -42,7 +42,7 @@ The wheel builder SHALL accept an `assets` parameter specifying a mapping of str
 - **AND** `AssetNotFoundError` SHALL be raised if the key is not found in the registry or the registry module is missing
 
 ### Requirement: The wheel builder shall support bundling multiple packages into a single wheel
-The wheel builder SHALL be able to bundle multiple top-level packages (e.g., the webcompy framework and a user application) into a single wheel. The bundled wheel SHALL list all top-level packages in `top_level.txt`. Both packages SHALL be importable after PyScript loads the wheel. The wheel filename SHALL be derived from the app package name using PEP 427 normalization, and a helper function SHALL compute this filename for use by all consumers.
+The wheel builder SHALL be able to bundle multiple top-level packages (e.g., the webcompy framework and a user application) into a single wheel. The bundled wheel SHALL list all top-level packages in `top_level.txt`. Both packages SHALL be importable after PyScript loads the wheel. The wheel filename SHALL be derived from the app package name using PEP 427 normalization (underscores, not hyphens, in the distribution name component), and a helper function SHALL compute this filename for use by all consumers.
 
 #### Scenario: Bundling framework and application
 - **WHEN** the CLI builds a bundled wheel containing `webcompy` and `myapp` packages
@@ -53,8 +53,8 @@ The wheel builder SHALL be able to bundle multiple top-level packages (e.g., the
 
 #### Scenario: Bundled wheel naming
 - **WHEN** the CLI builds a bundled wheel for an app package named `docs_src` with version `25.107.43200`
-- **THEN** the wheel file name SHALL be `docs-src-25.107.43200-py3-none-any.whl`
-- **AND** `get_wheel_filename("docs_src", "25.107.43200")` SHALL return `"docs-src-25.107.43200-py3-none-any.whl"`
+- **THEN** the wheel file name SHALL be `docs_src-25.107.43200-py3-none-any.whl`
+- **AND** `get_wheel_filename("docs_src", "25.107.43200")` SHALL return `"docs_src-25.107.43200-py3-none-any.whl"`
 - **AND** the filename SHALL match the URL referenced in the generated HTML
 
 #### Scenario: Wheel filename consistency across all consumers
