@@ -38,11 +38,11 @@ class _QuietHandler(SimpleHTTPRequestHandler):
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "e2e: End-to-end tests requiring a browser and dev server")
+    config.addinivalue_line("markers", "e2e: End-to-end tests requiring a browser and server")
 
 
 @pytest.fixture(scope="session")
-def dev_server():
+def prod_server():
     env = os.environ.copy()
     env["PYTHONPATH"] = str(E2E_DIR) + os.pathsep + env.get("PYTHONPATH", "")
 
@@ -57,7 +57,6 @@ def dev_server():
             "-m",
             "webcompy",
             "start",
-            "--dev",
             "--port",
             str(PORT),
         ],
@@ -75,7 +74,7 @@ def dev_server():
             if proc.poll() is not None:
                 log_file.close()
                 log_content = SERVER_LOG.read_text()
-                pytest.fail(f"Dev server exited prematurely (code {proc.returncode}):\n{log_content}")
+                pytest.fail(f"Server exited prematurely (code {proc.returncode}):\n{log_content}")
             time.sleep(1)
     else:
         log_file.close()
@@ -86,7 +85,7 @@ def dev_server():
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=5)
-        pytest.fail(f"Dev server did not start within 120 seconds:\n{log_content}")
+        pytest.fail(f"Server did not start within 120 seconds:\n{log_content}")
 
     yield proc
 
@@ -170,14 +169,14 @@ def static_server(static_site):
     server.shutdown()
 
 
-@pytest.fixture(params=["dev", "static"], ids=["dev", "static"])
+@pytest.fixture(params=["prod", "static"], ids=["prod", "static"])
 def serving_mode(request):
     return request.param
 
 
 @pytest.fixture
-def base_url(serving_mode, dev_server, static_server):
-    if serving_mode == "dev":
+def base_url(serving_mode, prod_server, static_server):
+    if serving_mode == "prod":
         return BASE_URL
     return static_server
 
