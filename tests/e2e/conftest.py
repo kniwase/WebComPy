@@ -175,23 +175,23 @@ def serving_mode(request):
 
 
 @pytest.fixture
-def base_url(serving_mode, prod_server, static_server):
+def server_url(serving_mode, prod_server, static_server):
     if serving_mode == "prod":
         return BASE_URL
     return static_server
 
 
 @pytest.fixture
-def app_page(page: Page, base_url):
-    page.goto(base_url)
+def app_page(page: Page, server_url):
+    page.goto(server_url)
     page.wait_for_selector("#webcompy-loading", state="hidden", timeout=PYSCRIPT_INIT_TIMEOUT)
     return page
 
 
 @pytest.fixture
-def page_on(page: Page, base_url) -> Callable[[str], Page]:
+def page_on(page: Page, server_url) -> Callable[[str], Page]:
     def _navigate(path: str) -> Page:
-        page.goto(f"{base_url}{path.lstrip('/')}")
+        page.goto(f"{server_url}{path.lstrip('/')}")
         page.wait_for_selector("#webcompy-loading", state="hidden", timeout=PYSCRIPT_INIT_TIMEOUT)
         return page
 
