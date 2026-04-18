@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 from webcompy._browser._modules import browser
 from webcompy.components._abstract import ComponentAbstract
+from webcompy.components._hooks import _active_component_context
 from webcompy.components._libs import ComponentProperty, Context, generate_id
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._element import Element, ElementBase
@@ -101,7 +102,11 @@ class Component(ElementBase):
                 self._set_title,
                 self._set_meta,
             )
-            template = component_def(context)
+            token = _active_component_context.set(context)
+            try:
+                template = component_def(context)
+            finally:
+                _active_component_context.reset(token)
             hooks = context.__get_lifecyclehooks__()
             return {
                 "component_id": generate_id(component_name),
