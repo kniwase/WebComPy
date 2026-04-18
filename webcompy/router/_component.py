@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Any, TypeAlias, TypeVar
 
-from webcompy.components._abstract import TypedComponentBase
+from webcompy.components._libs import ComponentContext
 from webcompy.router._context import RouterContext, TypedRouterContext
 from webcompy.router._link import TypedRouterLink
 
-RoutedComponent = TypedComponentBase(RouterContext)  # type: ignore[assignment]
+RoutedComponent = ComponentContext[RouterContext]
 
 
 ParamsType = TypeVar("ParamsType")

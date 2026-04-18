@@ -1,43 +1,34 @@
-from webcompy.components import (
-    NonPropsComponentBase,
-    component_class,
-    component_template,
-)
+from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 from webcompy.router import RouterLink
 
 
-@component_class
-class Navigation(NonPropsComponentBase):
-    def __init__(self) -> None:
-        pass
-
-    @component_template
-    def template(self):
-        return html.NAV(
+@define_component
+def Navigation(context: ComponentContext[None]):
+    return html.NAV(
+        {},
+        html.UL(
             {},
-            html.UL(
+            html.LI(
                 {},
-                html.LI(
-                    {},
-                    RouterLink(
-                        to="/",
-                        text=["Home"],
-                    ),
-                ),
-                html.LI(
-                    {},
-                    RouterLink(
-                        to="/fizzbuzz",
-                        text=["FizzBuzz"],
-                    ),
-                ),
-                html.LI(
-                    {},
-                    RouterLink(
-                        to="/input",
-                        text=["Text Input Sample"],
-                    ),
+                RouterLink(
+                    to="/",
+                    text=["Home"],
                 ),
             ),
-        )
+            html.LI(
+                {},
+                RouterLink(
+                    to="/fizzbuzz",
+                    text=["FizzBuzz"],
+                ),
+            ),
+            html.LI(
+                {},
+                RouterLink(
+                    to="/input",
+                    text=["Text Input Sample"],
+                ),
+            ),
+        ),
+    )

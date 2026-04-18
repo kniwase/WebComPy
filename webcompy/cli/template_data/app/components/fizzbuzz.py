@@ -1,13 +1,10 @@
 from webcompy.components import (
     ComponentContext,
-    TypedComponentBase,
-    component_class,
-    component_template,
     define_component,
     on_before_rendering,
 )
 from webcompy.elements import DOMEvent, html, repeat, switch
-from webcompy.reactive import Reactive, computed, computed_property
+from webcompy.reactive import Reactive, computed
 from webcompy.router import RouterContext
 
 
@@ -54,68 +51,65 @@ FizzbuzzList.scoped_style = {
 }
 
 
-@component_class
-class Fizzbuzz(TypedComponentBase(props_type=RouterContext)):
-    def __init__(self) -> None:
-        self.context.set_title("FizzBuzz - WebCompy Template")
+@define_component
+def Fizzbuzz(context: ComponentContext[RouterContext]):
+    context.set_title("FizzBuzz - WebComPy Template")
 
-        self.opened = Reactive(True)
-        self.count = Reactive(10)
+    opened = Reactive(True)
+    count = Reactive(10)
 
-    @computed_property
-    def toggle_button_text(self):
-        return "Hide" if self.opened.value else "Open"
+    @computed
+    def toggle_button_text():
+        return "Hide" if opened.value else "Open"
 
     @on_before_rendering
-    def on_before_rendering(self):
-        self.count.value = 10
+    def reset_count():
+        count.value = 10
 
-    def add(self, ev: DOMEvent):
-        self.count.value += 1
+    def add(ev: DOMEvent):
+        count.value += 1
 
-    def pop(self, ev: DOMEvent):
-        if self.count.value > 0:
-            self.count.value -= 1
+    def pop(ev: DOMEvent):
+        if count.value > 0:
+            count.value -= 1
 
-    def toggle(self, ev: DOMEvent):
-        self.opened.value = not self.opened.value
+    def toggle(ev: DOMEvent):
+        opened.value = not opened.value
 
-    @component_template
-    def template(self):
-        return html.DIV(
+    return html.DIV(
+        {},
+        html.H2(
             {},
-            html.H2(
+            "FizzBuzz",
+        ),
+        html.P(
+            {},
+            html.BUTTON(
+                {"@click": toggle},
+                toggle_button_text,
+            ),
+            html.BUTTON(
+                {"@click": add},
+                "Add",
+            ),
+            html.BUTTON(
+                {"@click": pop},
+                "Pop",
+            ),
+        ),
+        html.P(
+            {},
+            "Count: ",
+            count,
+        ),
+        switch(
+            {
+                "case": opened,
+                "generator": lambda: FizzbuzzList(props=count),
+            },
+            default=lambda: html.DIV(
                 {},
-                "FizzBuzz",
+                "FizzBuzz Hidden",
             ),
-            html.P(
-                {},
-                html.BUTTON(
-                    {"@click": self.toggle},
-                    self.toggle_button_text,
-                ),
-                html.BUTTON(
-                    {"@click": self.add},
-                    "Add",
-                ),
-                html.BUTTON(
-                    {"@click": self.pop},
-                    "Pop",
-                ),
-            ),
-            html.P(
-                {},
-                "Count: ",
-                self.count,
-            ),
-            switch(
-                {
-                    "case": self.opened,
-                    "generator": lambda: FizzbuzzList(props=self.count),
-                },
-                default=lambda: html.DIV(
-                    {},
-                    "FizzBuzz Hidden",
-                ),
-            ),
-        )
+        ),
+    )

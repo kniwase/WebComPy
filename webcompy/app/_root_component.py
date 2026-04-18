@@ -4,10 +4,8 @@ from typing import TypedDict
 from uuid import uuid4
 
 from webcompy._browser._modules import browser
-from webcompy.components._abstract import NonPropsComponentBase
 from webcompy.components._component import Component
-from webcompy.components._decorators import component_template
-from webcompy.components._generator import ComponentGenerator, ComponentStore
+from webcompy.components._generator import ComponentGenerator, ComponentStore, define_component
 from webcompy.elements import html
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException
@@ -31,10 +29,16 @@ class HeadReactive(TypedDict):
     script: list[tuple[dict[str, str], str | None]]
 
 
-class AppRootComponent(NonPropsComponentBase):
-    @component_template
-    def template(self):
-        return html.DIV({"id": "webcompy-app"}, self.context.slots("root"))
+def _app_root_setup(context):
+    return html.DIV({"id": "webcompy-app"}, context.slots("root"))
+
+
+_app_root_setup.__webcompy_component_definition__ = True
+
+
+@define_component
+def AppRootComponent(context):
+    return html.DIV({"id": "webcompy-app"}, context.slots("root"))
 
 
 class AppDocumentRoot(Component):
@@ -62,7 +66,7 @@ class AppDocumentRoot(Component):
 
             Component._head_props.title.on_after_updating(updte_title)
 
-        super().__init__(AppRootComponent, None, {"root": lambda: root_component(None)})
+        super().__init__(_app_root_setup, None, {"root": lambda: root_component(None)})
 
     @property
     def render(self):

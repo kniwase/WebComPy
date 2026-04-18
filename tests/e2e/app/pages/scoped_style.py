@@ -1,20 +1,16 @@
-from webcompy.components import (
-    TypedComponentBase,
-    component_class,
-    component_template,
-)
+from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 
 
-@component_class
-class ScopedStylePage(TypedComponentBase(props_type=None)):
-    @component_template
-    def template(self):
-        return html.DIV(
-            {"data-testid": "scoped-style-page"},
-            html.H2({}, "Scoped Style Tests"),
-            html.P({"data-testid": "styled-text", "class": "styled-text"}, "Styled text"),
-        )
+@define_component
+def ScopedStylePage(context: ComponentContext[None]):
+    context.set_title("Scoped Style - E2E")
+
+    return html.DIV(
+        {"data-testid": "scoped-style-page"},
+        html.H2({}, "Scoped Style Tests"),
+        html.P({"data-testid": "styled-text", "class": "styled-text"}, "Styled text"),
+    )
 
 
 ScopedStylePage.scoped_style = {
