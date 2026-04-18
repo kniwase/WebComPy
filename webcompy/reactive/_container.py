@@ -2,6 +2,7 @@ from typing import Any, cast
 from weakref import WeakValueDictionary
 
 from webcompy.reactive._base import ReactiveBase
+from webcompy.reactive._graph import consumer_destroy
 
 
 class ReactiveReceivable:
@@ -19,4 +20,6 @@ class ReactiveReceivable:
 
     def __purge_reactive_members__(self) -> None:
         if hasattr(self, "__reactive_members__"):
-            pass
+            for member in list(self.__reactive_members__.values()):
+                consumer_destroy(member)
+            self.__reactive_members__.clear()

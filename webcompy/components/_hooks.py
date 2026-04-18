@@ -8,8 +8,10 @@ from webcompy.aio._aio import AsyncWrapper
 from webcompy.aio._async_result import AsyncResult
 from webcompy.components._libs import Context
 from webcompy.reactive._base import ReactiveBase
+from webcompy.reactive._effect import EffectScope
 
 _active_component_context: ContextVar[Context[Any]] = ContextVar("_active_component_context")
+_active_effect_scope: ContextVar[EffectScope | None] = ContextVar("_active_effect_scope", default=None)
 
 T = TypeVar("T")
 

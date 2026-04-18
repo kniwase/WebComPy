@@ -129,4 +129,4 @@ class TestListMutationCallbackContract:
         rl.on_after_updating(lambda val: received.append(val))
         rl.pop(1)
         assert len(received) == 1
-        assert received[0] == 2
+        assert received[0] == [1, 3]

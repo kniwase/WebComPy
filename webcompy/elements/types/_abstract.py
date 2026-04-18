@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import cast
+from typing import Any, cast
 
 from webcompy._browser._modules import browser
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException
-from webcompy.reactive._base import ReactiveStore
 from webcompy.reactive._container import ReactiveReceivable
 
 
@@ -16,6 +15,7 @@ class ElementAbstract(ReactiveReceivable):
     _mounted: bool | None = None
     _remount_to: DOMNode | None = None
     _callback_ids: set[int]
+    _callback_producers: list[Any]
     __parent: ElementAbstract
 
     def __init__(self) -> None:
@@ -23,6 +23,7 @@ class ElementAbstract(ReactiveReceivable):
         self._mounted = None
         self._remount_to = None
         self._callback_ids: set[int] = set()
+        self._callback_producers: list[Any] = []
 
     @property
     def _parent(self) -> ElementAbstract:
@@ -61,11 +62,15 @@ class ElementAbstract(ReactiveReceivable):
     @abstractmethod
     def _init_node(self) -> DOMNode: ...
 
-    def _set_callback_id(self, callback_id: int):
+    def _set_callback_id(self, callback_id: int, producer: Any = None):
         self._callback_ids.add(callback_id)
+        if producer is not None:
+            self._callback_producers.append(producer)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         for callback_id in self._callback_ids:
+            from webcompy.reactive._base import ReactiveStore
+
             ReactiveStore.remove_callback(callback_id)
         if remove_node:
             node = self._get_node()

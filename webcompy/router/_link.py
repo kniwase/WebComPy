@@ -61,7 +61,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
             children=self._generate_children(),
         )
         if isinstance(self._to, ReactiveBase):
-            self._to.on_after_updating(self._refresh)
+            self._set_callback_id(self._to.on_after_updating(self._refresh))
 
     @staticmethod
     def __set_router__(router: Router | None):

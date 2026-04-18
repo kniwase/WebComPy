@@ -1,5 +1,15 @@
+import pytest
+
 from webcompy.reactive import Computed, Reactive, ReactiveDict, ReactiveList, readonly
 from webcompy.reactive._base import ReactiveStore
+from webcompy.reactive._graph import reset_graph_state
+
+
+@pytest.fixture(autouse=True)
+def reset_reactive_state():
+    reset_graph_state()
+    yield
+    reset_graph_state()
 
 
 class TestReactive:
@@ -181,3 +191,189 @@ class TestReadonly:
         ro = readonly(r)
         r.value = 20
         assert ro.value == 20
+
+
+class TestReactiveEqualitySkip:
+    def test_same_value_no_callback(self):
+        r = Reactive(5)
+        results = []
+        r.on_after_updating(lambda v: results.append(v))
+        r.value = 5
+        assert results == []
+
+    def test_equal_value_no_callback(self):
+        r = Reactive([1, 2, 3])
+        results = []
+        r.on_after_updating(lambda v: results.append(v))
+        r.value = [1, 2, 3]
+        assert results == []
+
+    def test_different_value_fires_callback(self):
+        r = Reactive(5)
+        results = []
+        r.on_after_updating(lambda v: results.append(v))
+        r.value = 10
+        assert results == [10]
+
+    def test_version_increments_on_change(self):
+        r = Reactive(5)
+        assert r.version == 0
+        r.value = 10
+        assert r.version == 1
+
+    def test_version_does_not_increment_on_same_value(self):
+        r = Reactive(5)
+        r.value = 5
+        assert r.version == 0
+
+    def test_on_before_updating_fires_before_change(self):
+        r = Reactive(0)
+        old_values = []
+        r.on_before_updating(lambda v: old_values.append(v))
+        r.value = 1
+        assert old_values == [0]
+
+    def test_on_after_updating_no_fire_same_value(self):
+        r = Reactive(0)
+        results = []
+        r.on_after_updating(lambda v: results.append(v))
+        r.value = 0
+        assert results == []
+
+
+class TestComputedLazyEvaluation:
+    def test_computed_not_recomputed_when_unread(self):
+        call_count = [0]
+
+        def compute():
+            call_count[0] += 1
+            return Reactive(1).value * 2
+
+        a = Reactive(1)
+        c = Computed(lambda: a.value * 2)
+        assert c.value == 2
+        initial_count = call_count[0]
+        a.value = 10
+        assert call_count[0] == initial_count
+
+    def test_computed_recomputes_on_read_after_change(self):
+        a = Reactive(1)
+        c = Computed(lambda: a.value * 2)
+        assert c.value == 2
+        a.value = 10
+        assert c.value == 20
+
+    def test_computed_equality_skip(self):
+        a = Reactive(5)
+        c = Computed(lambda: abs(a.value))
+        assert c.value == 5
+        initial_version = c.version
+        a.value = -5
+        assert c.value == 5
+        assert c.version == initial_version
+
+    def test_computed_recomputes_only_once(self):
+        compute_count = [0]
+        a = Reactive(1)
+        c = Computed(lambda: compute_count.__setitem__(0, compute_count[0] + 1) or a.value * 2)
+        assert c.value == 2
+        assert compute_count[0] == 1
+        a.value = 10
+        assert c.value == 20
+        assert compute_count[0] == 2
+
+
+class TestComputedDiamondDependency:
+    def test_diamond_computed_only_once(self):
+        a = Reactive(1)
+        b = Computed(lambda: a.value * 2)
+        c = Computed(lambda: a.value + 10)
+        d = Computed(lambda: b.value + c.value)
+        assert d.value == 1 * 2 + (1 + 10)
+        a.value = 2
+        assert d.value == 2 * 2 + (2 + 10)
+
+    def test_computed_dynamic_dependency_switch(self):
+        flag = Reactive(True)
+        a = Reactive("A")
+        b = Reactive("B")
+        c = Computed(lambda: a.value if flag.value else b.value)
+        assert c.value == "A"
+        flag.value = False
+        assert c.value == "B"
+        a.value = "A2"
+        assert c.value == "B"
+        b.value = "B2"
+        assert c.value == "B2"
+
+
+class TestComputedCallbackContract:
+    def test_computed_on_after_updating_on_change(self):
+        a = Reactive(1)
+        c = Computed(lambda: a.value * 2)
+        results = []
+        c.on_after_updating(lambda v: results.append(v))
+        a.value = 5
+        assert results == [10]
+
+    def test_computed_callback_not_fired_on_equal_result(self):
+        a = Reactive(5)
+        c = Computed(lambda: abs(a.value))
+        results = []
+        c.on_after_updating(lambda v: results.append(v))
+        a.value = -5
+        assert results == []
+
+
+class TestReactiveListEqualitySkip:
+    def test_set_value_same_list_no_callback(self):
+        rl = ReactiveList([1, 2, 3])
+        results = []
+        rl.on_after_updating(lambda v: results.append(v))
+        rl.value = [1, 2, 3]
+        assert results == []
+
+    def test_set_value_different_list_fires_callback(self):
+        rl = ReactiveList([1, 2, 3])
+        results = []
+        rl.on_after_updating(lambda v: results.append(v))
+        rl.value = [4, 5, 6]
+        assert len(results) == 1
+
+    def test_mutating_methods_always_propagate(self):
+        rl = ReactiveList([1, 2])
+        results = []
+        rl.on_after_updating(lambda v: results.append(v))
+        rl.append(2)
+        assert len(results) == 1
+
+    def test_len_tracks_depending(self):
+        rl = ReactiveList([1, 2, 3])
+        c = Computed(lambda: len(rl))
+        assert c.value == 3
+
+    def test_getitem_tracks_depending(self):
+        rl = ReactiveList([10, 20, 30])
+        c = Computed(lambda: rl[1])
+        assert c.value == 20
+
+    def test_iter_tracks_depending(self):
+        rl = ReactiveList([1, 2, 3])
+        c = Computed(lambda: list(rl))
+        assert c.value == [1, 2, 3]
+
+
+class TestReactiveDictEqualitySkip:
+    def test_set_value_same_dict_no_callback(self):
+        rd = ReactiveDict({"a": 1})
+        results = []
+        rd.on_after_updating(lambda v: results.append(v))
+        rd.value = {"a": 1}
+        assert results == []
+
+    def test_mutating_methods_always_propagate(self):
+        rd = ReactiveDict({"a": 1})
+        results = []
+        rd.on_after_updating(lambda v: results.append(v))
+        rd["a"] = 1
+        assert len(results) == 1

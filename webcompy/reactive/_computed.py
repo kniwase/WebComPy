@@ -3,31 +3,65 @@ from typing import Any, TypeVar
 
 from webcompy.reactive._base import ReactiveBase
 from webcompy.reactive._container import ReactiveReceivable
+from webcompy.reactive._graph import (
+    _SENTINEL,
+    consumer_after_computation,
+    consumer_before_computation,
+    consumer_poll_producers_for_change,
+    producer_accessed,
+    producer_update_value_version,
+)
 
 V = TypeVar("V")
 
 
 class Computed(ReactiveBase[V]):
-    _dependencies: list[ReactiveBase[Any]]
-    _dependency_callback_ids: list[int]
-
     def __init__(
         self,
         func: Callable[[], V],
     ) -> None:
         self.__calc = func
-        init_value, self._dependencies = self._store.detect_dependency(self.__calc)
-        self._dependency_callback_ids = [reactive.on_after_updating(self._compute) for reactive in self._dependencies]
-        super().__init__(init_value)
+        self._value: Any = _SENTINEL
+        super().__init__(_SENTINEL)  # type: ignore[arg-type]
+        prev_consumer = consumer_before_computation(self)
+        try:
+            self._value = self.__calc()
+        finally:
+            consumer_after_computation(self, prev_consumer)
+        self.last_clean_epoch = 0
+        self._mark_producer_versions()
+
+    def _mark_producer_versions(self) -> None:
+        edge = self.producers
+        while edge is not None:
+            edge.last_read_version = edge.producer.version
+            edge = edge.next_producer
+
+    def producer_must_recompute(self) -> bool:
+        if self.dirty:
+            return True
+        if self._value is _SENTINEL:
+            return True
+        return consumer_poll_producers_for_change(self)
+
+    def producer_recompute_value(self) -> None:
+        prev_consumer = consumer_before_computation(self)
+        old_value = self._value
+        try:
+            new_value = self.__calc()
+        finally:
+            consumer_after_computation(self, prev_consumer)
+        self._mark_producer_versions()
+        if (
+            old_value is not _SENTINEL and not (new_value is old_value or new_value == old_value)
+        ) or old_value is _SENTINEL:
+            self.version += 1
+        self._value = new_value
 
     @property
-    @ReactiveBase._get_event
     def value(self) -> V:
-        return self._value
-
-    @ReactiveBase._change_event
-    def _compute(self, *_: Any) -> V:
-        self._value = self.__calc()
+        producer_update_value_version(self)
+        producer_accessed(self)
         return self._value
 
 
