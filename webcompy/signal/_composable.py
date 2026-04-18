@@ -3,12 +3,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, TypeVar
 
+from webcompy.signal import Signal
+
 T = TypeVar("T")
 
 
 def use_counter(initial: int = 0) -> tuple[Any, Callable[[], None], Callable[[], None]]:
-    from webcompy.signal import Signal
-
     count: Signal[int] = Signal(initial)
 
     def increment() -> None:

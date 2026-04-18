@@ -45,7 +45,7 @@ class TextElement(ElementAbstract):
         self._text = text
         super().__init__()
         if isinstance(self._text, SignalBase):
-            self._set_callback_id(self._text.on_after_updating(self._update_text))
+            self._add_callback_node(self._text.on_after_updating(self._update_text))
 
     def _get_text(self) -> str:
         if isinstance(self._text, SignalBase):

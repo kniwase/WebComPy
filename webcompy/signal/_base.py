@@ -125,12 +125,6 @@ def _notify_before_callbacks(producer: SignalNode, value: Any) -> None:
             cb.notify(value)
 
 
-def _notify_after_callbacks(producer: SignalNode, value: Any) -> None:
-    for cb in _find_callback_consumer_nodes(producer):
-        if not cb._is_before:
-            cb.notify(value)
-
-
 class Signal(SignalBase[V]):
     @final
     def set_value(self, new_value: V) -> V:

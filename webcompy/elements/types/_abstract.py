@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any, cast
+from typing import cast
 
 from webcompy._browser._modules import browser
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException
+from webcompy.signal._base import CallbackConsumerNode
 from webcompy.signal._container import SignalReceivable
 from webcompy.signal._graph import consumer_destroy
 
@@ -15,14 +16,14 @@ class ElementAbstract(SignalReceivable):
     _node_cache: DOMNode | None = None
     _mounted: bool | None = None
     _remount_to: DOMNode | None = None
-    _callback_nodes: list[Any]
+    _callback_nodes: list[CallbackConsumerNode]
     __parent: ElementAbstract
 
     def __init__(self) -> None:
         self._node_cache = None
         self._mounted = None
         self._remount_to = None
-        self._callback_nodes: list[Any] = []
+        self._callback_nodes: list[CallbackConsumerNode] = []
 
     @property
     def _parent(self) -> ElementAbstract:
@@ -61,7 +62,7 @@ class ElementAbstract(SignalReceivable):
     @abstractmethod
     def _init_node(self) -> DOMNode: ...
 
-    def _set_callback_id(self, callback_node: Any):
+    def _add_callback_node(self, callback_node: CallbackConsumerNode):
         self._callback_nodes.append(callback_node)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):

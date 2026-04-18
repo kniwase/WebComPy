@@ -61,7 +61,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
             children=self._generate_children(),
         )
         if isinstance(self._to, SignalBase):
-            self._set_callback_id(self._to.on_after_updating(self._refresh))
+            self._add_callback_node(self._to.on_after_updating(self._refresh))
 
     @staticmethod
     def __set_router__(router: Router | None):
@@ -69,7 +69,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
 
     def _refresh(self, *_: Any):
         self._attrs = self._generate_attrs()
-        self._event_handlerst = {"click": self._on_click}
+        self._event_handlers = {"click": self._on_click}
         self._init_children(self._generate_children())
         self._render()
 

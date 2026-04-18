@@ -74,7 +74,7 @@ class EffectNode(SignalNode, _CallbackMixin):
                 fn()
 
     def producer_must_recompute(self) -> bool:
-        return self.dirty or True
+        return True
 
     def producer_recompute_value(self) -> None:
         self.dirty = False

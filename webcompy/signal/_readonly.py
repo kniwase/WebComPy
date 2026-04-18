@@ -1,4 +1,4 @@
-from typing import NoReturn, TypeVar, final
+from typing import TypeVar, final
 
 from webcompy.signal._base import SignalBase
 from webcompy.signal._computed import Computed
@@ -8,7 +8,7 @@ V = TypeVar("V")
 
 class ReadonlySignal(Computed[V]):
     @final
-    def __init__(self) -> NoReturn:
+    def __init__(self) -> None:
         raise NotImplementedError("ReadonlySignal cannot generate an instance by constructor")
 
     @classmethod

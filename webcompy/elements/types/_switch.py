@@ -51,11 +51,11 @@ class SwitchElement(DynamicElement):
         if not self._signal_activated:
             self._signal_activated = True
             if isinstance(self._cases, SignalBase):
-                self._set_callback_id(self._cases.on_after_updating(self._refresh))
+                self._add_callback_node(self._cases.on_after_updating(self._refresh))
             else:
                 for cond, _ in self._cases:
                     if isinstance(cond, SignalBase):  # type: ignore
-                        self._set_callback_id(cond.on_after_updating(self._refresh))
+                        self._add_callback_node(cond.on_after_updating(self._refresh))
 
     def _refresh(self, *args: Any):
         idx, generator = self._select_generator()
@@ -94,8 +94,8 @@ class SwitchElement(DynamicElement):
                 self._signal_activated = True
 
                 if isinstance(self._cases, SignalBase):
-                    self._set_callback_id(self._cases.on_after_updating(refresh))
+                    self._add_callback_node(self._cases.on_after_updating(refresh))
                 else:
                     for cond, _ in self._cases:
                         if isinstance(cond, SignalBase):  # type: ignore
-                            self._set_callback_id(cond.on_after_updating(refresh))
+                            self._add_callback_node(cond.on_after_updating(refresh))

@@ -139,7 +139,7 @@ class RepeatElement(DynamicElement):
         self._refresh()
         if not self._signal_activated:
             self._signal_activated = True
-            self._set_callback_id(self._sequence.on_after_updating(self._refresh))
+            self._add_callback_node(self._sequence.on_after_updating(self._refresh))
 
     def _refresh(self, *args: Any):
         parent_node = self._parent._get_node()

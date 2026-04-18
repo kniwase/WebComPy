@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from webcompy.signal import Signal, effect
+from webcompy.signal import Signal, computed, effect
 from webcompy.signal._composable import use_counter
 from webcompy.signal._effect import (
     effect_scope,
@@ -153,3 +153,40 @@ class TestComposable:
         scope.dispose()
         increment()
         assert results == [0]
+
+
+class TestEffectWithComputed:
+    def test_signal_computed_effect_chain(self):
+        a = Signal(1)
+        b = computed(lambda: a.value * 2)
+        results = []
+        effect(lambda: results.append(b.value))
+        assert results == [2]
+        a.value = 5
+        assert results[-1] == 10
+        a.value = 10
+        assert results[-1] == 20
+
+    def test_effect_tracks_computed_repeatedly(self):
+        a = Signal(0)
+        b = computed(lambda: a.value + 100)
+        results = []
+        effect(lambda: results.append(b.value))
+        assert results == [100]
+        a.value = 1
+        assert results[-1] == 101
+        a.value = 2
+        assert results[-1] == 102
+        a.value = 3
+        assert results[-1] == 103
+        assert len(results) == 4
+
+    def test_batched_effect_single_run_for_synchronous_changes(self):
+        a = Signal(1)
+        b = Signal(2)
+        results = []
+        effect(lambda: results.append(a.value + b.value))
+        assert results == [3]
+        a.value = 10
+        b.value = 20
+        assert len(results) >= 2

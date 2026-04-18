@@ -67,7 +67,7 @@ class ElementBase(ElementWithChildren):
                     node.setAttribute(name, value)
             for name, value in self._attrs.items():
                 if isinstance(value, SignalBase):
-                    self._set_callback_id(value.on_after_updating(self._generate_attr_updater(name)))
+                    self._add_callback_node(value.on_after_updating(self._generate_attr_updater(name)))
             self._event_handlers_added = {}
             for name, func in self._event_handlers.items():
                 event_handler = _generate_event_handler(func)

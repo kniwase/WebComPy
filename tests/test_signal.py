@@ -376,3 +376,33 @@ class TestReactiveDictEqualitySkip:
         rd.on_after_updating(lambda v: results.append(v))
         rd["a"] = 1
         assert len(results) == 1
+
+
+class TestComputedDirtyFlagReset:
+    def test_dirty_reset_after_recomputation_via_value_read(self):
+        a = Signal(1)
+        c = Computed(lambda: a.value * 2)
+        assert c.value == 2
+        assert not c.dirty
+        a.value = 5
+        assert c.value == 10
+        assert not c.dirty
+
+    def test_dirty_reset_enables_repeated_updates(self):
+        a = Signal(1)
+        results = []
+        c = Computed(lambda: a.value * 2)
+        c.on_after_updating(lambda v: results.append(v))
+        for i in range(5):
+            a.value = i
+        assert results == [i * 2 for i in range(5)]
+
+    def test_dirty_reset_with_callback_chain(self):
+        a = Signal(1)
+        b = Computed(lambda: a.value + 10)
+        results = []
+        b.on_after_updating(lambda v: results.append(v))
+        a.value = 2
+        a.value = 3
+        a.value = 4
+        assert results == [12, 13, 14]
