@@ -26,17 +26,7 @@ Developers SHALL be able to create a reactive value that starts unresolved and a
 - **AND** they SHALL be suitable for use as `switch()` case conditions
 - **AND** `result.is_loading` and `result.is_success` SHALL be mutually exclusive after the first execution
 
-## ADDED Requirements
+## REMOVED Requirements
 
-### Requirement: AsyncComputed and AsyncWrapper shall be deprecated in favor of composable async patterns
-`AsyncComputed` and `AsyncWrapper` SHALL continue to function but SHALL emit `DeprecationWarning` when used. Developers SHALL be directed to use `useAsyncResult` or `useAsync` instead.
-
-#### Scenario: Deprecation warning for AsyncComputed
-- **WHEN** a developer creates an `AsyncComputed` instance
-- **THEN** a `DeprecationWarning` SHALL be emitted
-- **AND** the instance SHALL continue to function as before
-
-#### Scenario: Deprecation warning for AsyncWrapper
-- **WHEN** a developer uses `@AsyncWrapper()` decorator
-- **THEN** a `DeprecationWarning` SHALL be emitted
-- **AND** the decorated function SHALL continue to function as before
+### Requirement: Fire-and-forget async operations shall be supported
+`AsyncWrapper` has been removed. Developers SHALL use `useAsync` for fire-and-forget async operations instead.

@@ -111,7 +111,3 @@ Composables SHALL be plain Python functions (or function calls) that encapsulate
 - **AND** calls `result.refetch()`
 - **THEN** the state SHALL transition correctly (PENDING → LOADING → SUCCESS or ERROR)
 - **AND** `data`, `error`, and computed predicates SHALL update accordingly
-
-## REMOVED Requirements
-
-(No requirements are removed in this change. Deprecation of class-style components and `context.on_xxx()` methods does not remove them — only marks them for future removal.)

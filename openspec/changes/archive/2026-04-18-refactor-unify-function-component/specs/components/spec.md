@@ -8,12 +8,6 @@ A component SHALL encapsulate a template (what it renders), optional lifecycle h
 - **THEN** the function SHALL receive a `ComponentContext` with `props`, `slots()`, lifecycle hooks, and head management
 - **AND** the function SHALL return the component's template as an element tree
 
-#### Scenario: Creating a class-style component (DEPRECATED)
-- **WHEN** a developer subclasses `ComponentAbstract` with `@component_template` and optional lifecycle decorators
-- **THEN** the class SHALL define its template as a method
-- **AND** lifecycle hooks SHALL be registered via `@on_before_rendering`, `@on_after_rendering`, and `@on_before_destroy`
-- **AND** a `DeprecationWarning` SHALL be emitted indicating that class-style components are deprecated in favor of function-style components with composables
-
 #### Scenario: Registering lifecycle hooks via standalone decorators
 - **WHEN** a developer uses `@on_after_rendering` as a decorator inside a function-style component setup
 - **THEN** the decorated function SHALL be registered as an after-rendering lifecycle hook
@@ -26,3 +20,8 @@ Components SHALL provide hooks for before rendering, after rendering, and before
 - **WHEN** a developer uses `@on_after_rendering` or `@on_before_destroy` inside a `@define_component` setup function
 - **THEN** the hooks SHALL fire at the same lifecycle points as `context.on_after_rendering()` and `context.on_before_destroy()`
 - **AND** the hooks SHALL be cleaned up when the component is destroyed
+
+## REMOVED Requirements
+
+### Requirement: Class-style component definitions have been removed
+`ComponentAbstract`, `@component_class`, `@component_template`, `TypedComponentBase`, `NonPropsComponentBase`, and `ClassStyleComponentContenxt` have been removed. All components SHALL be defined using function-style with `@define_component`.
