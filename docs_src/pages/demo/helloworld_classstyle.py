@@ -18,24 +18,18 @@ def HelloWorldClassstylePage(context: ComponentContext[RouterContext]):
                 "title": title,
                 "code": """
                     from webcompy.elements import html
-                    from webcompy.components import (
-                        TypedComponentBase,
-                        component_class,
-                        component_template,
-                    )
+                    from webcompy.components import define_component, ComponentContext
 
 
-                    @component_class
-                    class HelloWorldClassstyle(TypedComponentBase(props_type=None)):
-                        @component_template
-                        def template(self):
-                            return html.DIV(
+                    @define_component
+                    def HelloWorldClassstyle(_: ComponentContext[None]):
+                        return html.DIV(
+                            {},
+                            html.H1(
                                 {},
-                                html.H1(
-                                    {},
-                                    "Hello WebComPy!",
-                                ),
-                            )""",
+                                "Hello WebComPy!",
+                            ),
+                        )""",
             },
             slots={"component": lambda: HelloWorldClassstyle(None)},
         ),

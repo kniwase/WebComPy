@@ -10,7 +10,6 @@ from typing import (
     TypeVar,
 )
 
-from webcompy.components._abstract import ComponentAbstract
 from webcompy.components._component import Component
 from webcompy.components._libs import ComponentContext, NodeGenerator, WebComPyComponentException, generate_id
 from webcompy.elements.typealias._element_property import ElementChildren
@@ -45,7 +44,6 @@ class ComponentStore:
 
 PropsType = TypeVar("PropsType")
 FuncComponentDef: TypeAlias = Callable[[ComponentContext[PropsType]], ElementChildren]
-ClassComponentDef: TypeAlias = type[ComponentAbstract[PropsType]]
 
 
 class ComponentGenerator(Generic[PropsType]):
@@ -56,7 +54,7 @@ class ComponentGenerator(Generic[PropsType]):
     def __init__(
         self,
         name: str,
-        component_def: FuncComponentDef[PropsType] | ClassComponentDef[PropsType],
+        component_def: FuncComponentDef[PropsType],
     ) -> None:
         self.__style = {}
         self.__component_def = component_def
@@ -110,9 +108,3 @@ def define_component(
 ) -> ComponentGenerator[PropsType]:
     setup.__webcompy_component_definition__ = True
     return ComponentGenerator(setup.__name__, setup)
-
-
-def component_class(
-    component_def: type[ComponentAbstract[PropsType]],
-) -> ComponentGenerator[PropsType]:
-    return ComponentGenerator(component_def.__get_name__(), component_def)

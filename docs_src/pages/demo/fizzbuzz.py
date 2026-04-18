@@ -19,28 +19,25 @@ def FizzbuzzPage(context: ComponentContext[RouterContext]):
                 "code": """
                     from webcompy.reactive import Reactive, computed
                     from webcompy.reactive._dict import ReactiveDict
-                    from webcompy.elements import html, repeat, switch
+                    from webcompy.elements import html, repeat, switch, DOMEvent
                     from webcompy.components import (
-                        TypedComponentBase,
-                        component_class,
+                        define_component,
+                        ComponentContext,
                         on_before_rendering,
-                        component_template,
                     )
-                    from webcompy.elements import DOMEvent
 
 
-                    @component_class
-                    class Fizzbuzz(TypedComponentBase(props_type=None)):
-                        def __init__(self) -> None:
-                            self.opened = Reactive(True)
-                            self.fizzbuzz_dict: ReactiveDict[int, str] = ReactiveDict()
-                            self._next_n = Reactive(1)
+                    @define_component
+                    def Fizzbuzz(context: ComponentContext[None]):
+                        opened = Reactive(True)
+                        fizzbuzz_dict: ReactiveDict[int, str] = ReactiveDict()
+                        _next_n = Reactive(1)
 
                         @computed
-                        def toggle_button_text(self):
-                            return "Hide" if self.opened.value else "Open"
+                        def toggle_button_text():
+                            return "Hide" if opened.value else "Open"
 
-                        def _fizzbuzz(self, n: int) -> str:
+                        def _fizzbuzz(n: int) -> str:
                             if n % 15 == 0:
                                 return "FizzBuzz"
                             elif n % 5 == 0:
@@ -50,72 +47,70 @@ def FizzbuzzPage(context: ComponentContext[RouterContext]):
                             else:
                                 return str(n)
 
-                        def add(self, ev: DOMEvent):
-                            n = self._next_n.value
-                            self.fizzbuzz_dict[n] = self._fizzbuzz(n)
-                            self._next_n.value = n + 1
+                        def add(ev: DOMEvent):
+                            n = _next_n.value
+                            fizzbuzz_dict[n] = _fizzbuzz(n)
+                            _next_n.value = n + 1
 
-                        def pop(self, ev: DOMEvent):
-                            if len(self.fizzbuzz_dict.value) > 0:
-                                last_key = list(self.fizzbuzz_dict.value.keys())[-1]
-                                self.fizzbuzz_dict.pop(last_key)
-                                self._next_n.value -= 1
+                        def pop(ev: DOMEvent):
+                            if len(fizzbuzz_dict.value) > 0:
+                                last_key = list(fizzbuzz_dict.value.keys())[-1]
+                                fizzbuzz_dict.pop(last_key)
+                                _next_n.value -= 1
 
-                        def toggle(self, ev: DOMEvent):
-                            self.opened.value = not self.opened.value
+                        def toggle(ev: DOMEvent):
+                            opened.value = not opened.value
 
                         @on_before_rendering
-                        def on_before_rendering(self):
-                            self.fizzbuzz_dict.clear()
-                            self._next_n.value = 1
+                        def reset():
+                            fizzbuzz_dict.clear()
+                            _next_n.value = 1
                             for n in range(1, 11):
-                                self.fizzbuzz_dict[n] = self._fizzbuzz(n)
-                                self._next_n.value = n + 1
+                                fizzbuzz_dict[n] = _fizzbuzz(n)
+                                _next_n.value = n + 1
 
-                        @component_template
-                        def template(self):
-                            return html.DIV(
+                        return html.DIV(
+                            {},
+                            html.P(
                                 {},
-                                html.P(
-                                    {},
-                                    html.BUTTON(
-                                        {"@click": self.toggle},
-                                        self.toggle_button_text,
-                                    ),
-                                    html.BUTTON(
-                                        {"@click": self.add},
-                                        "Add",
-                                    ),
-                                    html.BUTTON(
-                                        {"@click": self.pop},
-                                        "Pop",
-                                    ),
+                                html.BUTTON(
+                                    {"@click": toggle},
+                                    toggle_button_text,
                                 ),
-                                html.P(
-                                    {},
-                                    "Count: ",
-                                    computed(lambda: str(len(self.fizzbuzz_dict.value))),
+                                html.BUTTON(
+                                    {"@click": add},
+                                    "Add",
                                 ),
-                                switch(
-                                    {
-                                        "case": self.opened,
-                                        "generator": lambda: html.DIV(
+                                html.BUTTON(
+                                    {"@click": pop},
+                                    "Pop",
+                                ),
+                            ),
+                            html.P(
+                                {},
+                                "Count: ",
+                                computed(lambda: str(len(fizzbuzz_dict.value))),
+                            ),
+                            switch(
+                                {
+                                    "case": opened,
+                                    "generator": lambda: html.DIV(
+                                        {},
+                                        html.UL(
                                             {},
-                                            html.UL(
-                                                {},
-                                                repeat(
-                                                    self.fizzbuzz_dict,
-                                                    lambda v, k: html.LI({}, v),
-                                                ),
+                                            repeat(
+                                                fizzbuzz_dict,
+                                                lambda v, k: html.LI({}, v),
                                             ),
                                         ),
-                                    },
-                                    default=lambda: html.DIV(
-                                        {},
-                                        "FizzBuzz Hidden",
                                     ),
+                                },
+                                default=lambda: html.DIV(
+                                    {},
+                                    "FizzBuzz Hidden",
                                 ),
-                            )
+                            ),
+                        )
 
 
                     Fizzbuzz.scoped_style = {

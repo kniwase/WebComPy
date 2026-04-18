@@ -140,25 +140,6 @@ class ComponentContext(Protocol[PropsType]):
     def set_meta(self, key: str, attributes: dict[str, str]) -> None: ...
 
 
-class ClassStyleComponentContenxt(Protocol[PropsType]):
-    @property
-    def props(self) -> PropsType: ...
-
-    def slots(
-        self,
-        name: str,
-        fallback: NodeGenerator | None = None,
-    ) -> ElementChildren: ...
-
-    def get_title(self) -> str: ...
-
-    def get_meta(self) -> dict[str, dict[str, str]]: ...
-
-    def set_title(self, title: str) -> None: ...
-
-    def set_meta(self, key: str, attributes: dict[str, str]) -> None: ...
-
-
 @final
 class ComponentProperty(TypedDict):
     component_id: str

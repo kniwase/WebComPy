@@ -5,7 +5,6 @@ from typing import Any, ClassVar, TypeAlias, TypeGuard
 from uuid import UUID, uuid4
 
 from webcompy._browser._modules import browser
-from webcompy.components._abstract import ComponentAbstract
 from webcompy.components._hooks import _active_component_context
 from webcompy.components._libs import ComponentProperty, Context, generate_id
 from webcompy.elements.typealias._element_property import ElementChildren
@@ -31,15 +30,10 @@ def end_defer_after_rendering() -> list[Callable[[], None]]:
 
 
 FuncComponentDef: TypeAlias = Callable[[Context[Any]], ElementChildren]
-ClassComponentDef: TypeAlias = type[ComponentAbstract[Any]]
 
 
 def _is_function_style_component_def(obj: Any) -> TypeGuard[FuncComponentDef]:
     return bool(callable(obj) and getattr(obj, "__webcompy_component_definition__", None))
-
-
-def _is_class_style_component_def(obj: Any) -> TypeGuard[ClassComponentDef]:
-    return isinstance(obj, type) and issubclass(obj, ComponentAbstract)
 
 
 class HeadPropsStore:
@@ -61,7 +55,7 @@ class Component(ElementBase):
 
     def __init__(
         self,
-        component_def: FuncComponentDef | ClassComponentDef,
+        component_def: FuncComponentDef,
         props: Any,
         slots: dict[str, Callable[[], ElementChildren]],
     ) -> None:
@@ -75,49 +69,34 @@ class Component(ElementBase):
 
     def __setup(
         self,
-        component_def: FuncComponentDef | ClassComponentDef,
+        component_def: FuncComponentDef,
         props: Any,
         slots: dict[str, Callable[[], ElementChildren]],
     ) -> ComponentProperty:
-        if _is_class_style_component_def(component_def):
-            return component_def.__get_component_instance__(
-                Context(
-                    props,
-                    slots,
-                    component_def.__get_name__(),
-                    lambda: Component._head_props.title.value,
-                    lambda: Component._head_props.head_meta.value,
-                    self._set_title,
-                    self._set_meta,
-                )
-            ).__get_component_property__()
-        elif _is_function_style_component_def(component_def):
-            component_name = component_def.__name__
-            context = Context(
-                props,
-                slots,
-                component_name,
-                lambda: Component._head_props.title.value,
-                lambda: Component._head_props.head_meta.value,
-                self._set_title,
-                self._set_meta,
-            )
-            token = _active_component_context.set(context)
-            try:
-                template = component_def(context)
-            finally:
-                _active_component_context.reset(token)
-            hooks = context.__get_lifecyclehooks__()
-            return {
-                "component_id": generate_id(component_name),
-                "component_name": component_name,
-                "template": template,
-                "on_before_rendering": hooks.get("on_before_rendering", lambda: None),
-                "on_after_rendering": hooks.get("on_after_rendering", lambda: None),
-                "on_before_destroy": hooks.get("on_before_destroy", lambda: None),
-            }
-        else:
-            raise WebComPyException("Invalid Component Definition")
+        component_name = component_def.__name__
+        context = Context(
+            props,
+            slots,
+            component_name,
+            lambda: Component._head_props.title.value,
+            lambda: Component._head_props.head_meta.value,
+            self._set_title,
+            self._set_meta,
+        )
+        token = _active_component_context.set(context)
+        try:
+            template = component_def(context)
+        finally:
+            _active_component_context.reset(token)
+        hooks = context.__get_lifecyclehooks__()
+        return {
+            "component_id": generate_id(component_name),
+            "component_name": component_name,
+            "template": template,
+            "on_before_rendering": hooks.get("on_before_rendering", lambda: None),
+            "on_after_rendering": hooks.get("on_after_rendering", lambda: None),
+            "on_before_destroy": hooks.get("on_before_destroy", lambda: None),
+        }
 
     def __init_component(self, property: ComponentProperty):
         node = property["template"]
