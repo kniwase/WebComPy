@@ -6,7 +6,7 @@ WebComPy runs the same Python codebase in two environments: the browser (via PyS
 
 From a developer's perspective, this means writing Python once and having it work everywhere. The framework absorbs the complexity: developers define components, state, and routing, and the framework renders to DOM nodes in the browser or HTML strings on the server, all from the same source code.
 
-**What WebComPy does not yet provide:** The framework relies on multiple global singletons (`ReactiveStore`, `Router`, `RouterView`, `ComponentStore`, `Component._head_props`) which makes testing and isolation difficult. Browser environment detection is binary (Emscripten or other) with no partial API availability checks — code that only needs `localStorage`, for example, cannot gracefully degrade on server-side.
+**What WebComPy does not yet provide:** The framework still relies on multiple global singletons (`Router`, `RouterView`, `ComponentStore`, `Component._head_props`) which makes testing and isolation difficult. Browser environment detection is binary (Emscripten or other) with no partial API availability checks — code that only needs `localStorage`, for example, cannot gracefully degrade on server-side.
 
 ## Requirements
 
@@ -14,9 +14,9 @@ From a developer's perspective, this means writing Python once and having it wor
 The same Python source code SHALL execute correctly both in the browser (via PyScript/Emscripten) and on the server (standard CPython). In the browser, the framework manipulates the DOM directly and responds to user interaction. On the server, it generates HTML strings for static site generation. No application code should need to change between environments.
 
 #### Scenario: Rendering a component in the browser
-- **WHEN** a component with reactive state and a template is rendered in the browser
+- **WHEN** a component with Signal-based state and a template is rendered in the browser
 - **THEN** the component SHALL create and manage real DOM nodes
-- **AND** reactive updates SHALL modify those DOM nodes directly
+- **AND** signal updates SHALL modify those DOM nodes directly
 
 #### Scenario: Rendering the same component on the server
 - **WHEN** the same component is rendered during static site generation

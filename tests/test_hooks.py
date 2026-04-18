@@ -10,7 +10,7 @@ from webcompy.components._hooks import (
     useAsyncResult,
 )
 from webcompy.components._libs import Context
-from webcompy.reactive import Reactive
+from webcompy.signal import Signal
 
 
 class TestStandaloneLifecycleHooks:
@@ -228,7 +228,7 @@ class TestUseAsyncResult:
         assert "on_after_rendering" not in hooks
 
     def test_watch_registers_callback(self):
-        query = Reactive("a")
+        query = Signal("a")
         refetched = []
 
         async def fetch():
@@ -248,7 +248,7 @@ class TestUseAsyncResult:
         assert refetched[-1] == "b"
 
     def test_on_before_destroy_cleans_up_watch(self):
-        query = Reactive("a")
+        query = Signal("a")
 
         def setup(ctx):
             return useAsyncResult(

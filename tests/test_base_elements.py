@@ -1,7 +1,7 @@
 from tests.conftest import FakeDOMNode
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._text import TextElement
-from webcompy.reactive import Reactive
+from webcompy.signal import Signal
 
 
 class FakeRootElement(Element):
@@ -33,7 +33,7 @@ class TestCreateChildElement:
     def test_reactive_child_creates_text_element(self):
         parent = _make_parent()
         el = FakeRootElement("div", {}, {}, None, None)
-        r = Reactive("world")
+        r = Signal("world")
         result = el._create_child_element(parent, 0, r)
         assert isinstance(result, TextElement)
 

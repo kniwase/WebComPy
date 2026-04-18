@@ -14,7 +14,7 @@ from webcompy.elements.generators import (
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._text import TextElement
 from webcompy.exception import WebComPyException
-from webcompy.reactive import Reactive, ReactiveList
+from webcompy.signal import ReactiveList, Signal
 
 
 class TestTypeAliases:
@@ -98,7 +98,7 @@ class TestGenerators:
         assert t._get_text() == "hello"
 
     def test_text_with_reactive(self):
-        r = Reactive("world")
+        r = Signal("world")
         t = text(r, enable_multiline=False)
         assert isinstance(t, TextElement)
         assert t._text is r
@@ -108,7 +108,7 @@ class TestGenerators:
         assert br._render_html() == "<br>"
 
     def test_switch_creates_switch_element(self):
-        r = Reactive(True)
+        r = Signal(True)
         gen = switch({"case": r, "generator": lambda: text("yes")}, default=lambda: text("no"))
         cases = gen._cases
         assert len(cases) == 1

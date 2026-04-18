@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Any, Generic, TypeVar
 
 from webcompy.aio._aio import aio_run
-from webcompy.reactive import Computed, Reactive
+from webcompy.signal import Computed, Signal
 
 T = TypeVar("T")
 _MISSING: Any = object()
@@ -26,9 +26,9 @@ class AsyncResult(Generic[T]):
     ) -> None:
         self._func = func
         self._has_default = default is not _MISSING
-        self._state: Reactive[AsyncState] = Reactive(AsyncState.PENDING)
-        self._data: Reactive[T | None] = Reactive(default if default is not _MISSING else None)
-        self._error: Reactive[Exception | None] = Reactive(None)
+        self._state: Signal[AsyncState] = Signal(AsyncState.PENDING)
+        self._data: Signal[T | None] = Signal(default if default is not _MISSING else None)
+        self._error: Signal[Exception | None] = Signal(None)
 
         self.is_pending: Computed[bool] = Computed(lambda: self._state.value == AsyncState.PENDING)
         self.is_loading: Computed[bool] = Computed(lambda: self._state.value == AsyncState.LOADING)
@@ -36,15 +36,15 @@ class AsyncResult(Generic[T]):
         self.is_error: Computed[bool] = Computed(lambda: self._state.value == AsyncState.ERROR)
 
     @property
-    def state(self) -> Reactive[AsyncState]:
+    def state(self) -> Signal[AsyncState]:
         return self._state
 
     @property
-    def data(self) -> Reactive[T | None]:
+    def data(self) -> Signal[T | None]:
         return self._data
 
     @property
-    def error(self) -> Reactive[Exception | None]:
+    def error(self) -> Signal[Exception | None]:
         return self._error
 
     def refetch(self, *_: Any) -> None:

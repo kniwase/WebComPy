@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from webcompy._browser._modules import browser
-from webcompy.reactive._base import ReactiveBase
+from webcompy.signal._base import SignalBase
 
 
-class Location(ReactiveBase[str]):
+class Location(SignalBase[str]):
     __mode__: Literal["hash", "history"]
     _value: str
     _state: dict[str, Any] | None
@@ -35,22 +35,22 @@ class Location(ReactiveBase[str]):
             self._popstate_proxy.destroy()
             self._popstate_proxy = None
 
-    @ReactiveBase._change_event
+    @SignalBase._change_event
     def set_mode(self, mode: Literal["hash", "history"]):
         self.__mode__ = mode
         self._refresh_path()
 
     @property
-    @ReactiveBase._get_event
+    @SignalBase._get_event
     def value(self):
         return self._value
 
     @property
-    @ReactiveBase._get_event
+    @SignalBase._get_event
     def state(self):
         return self._state
 
-    @ReactiveBase._change_event
+    @SignalBase._change_event
     def __set_path__(self, path: str, state: dict[str, Any] | None):
         self._state = state
         if self.__mode__ == "hash" and path.startswith("#"):

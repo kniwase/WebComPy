@@ -4,12 +4,12 @@ from webcompy.components import (
     on_before_rendering,
 )
 from webcompy.elements import DOMEvent, html, repeat, switch
-from webcompy.reactive import Reactive, computed
 from webcompy.router import RouterContext
+from webcompy.signal import Signal, computed
 
 
 @define_component
-def FizzbuzzList(context: ComponentContext[Reactive[int]]):
+def FizzbuzzList(context: ComponentContext[Signal[int]]):
     @computed
     def numbers():
         li: list[str] = []
@@ -55,8 +55,8 @@ FizzbuzzList.scoped_style = {
 def Fizzbuzz(context: ComponentContext[RouterContext]):
     context.set_title("FizzBuzz - WebComPy Template")
 
-    opened = Reactive(True)
-    count = Reactive(10)
+    opened = Signal(True)
+    count = Signal(10)
 
     @computed
     def toggle_button_text():

@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DOMEvent, DomNodeRef, html
-from webcompy.reactive import Reactive, computed
+from webcompy.signal import Signal, computed
 
 
 @define_component
@@ -17,7 +17,7 @@ def MatpoltlibSample(context: ComponentContext[None]):
     x = np.linspace(-5, 5, 250)  # type: ignore
     (line,) = ax.plot(x, np.array([0 for _ in x]))  # type: ignore
 
-    count = Reactive(15)
+    count = Signal(15)
 
     def on_change(ev: DOMEvent):
         count.value = int(input_ref.value)

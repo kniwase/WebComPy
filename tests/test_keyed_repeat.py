@@ -7,8 +7,8 @@ from webcompy.elements.types._element import Element
 from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._text import TextElement
 from webcompy.exception import WebComPyException
-from webcompy.reactive import ReactiveList
-from webcompy.reactive._dict import ReactiveDict
+from webcompy.signal import ReactiveList
+from webcompy.signal._dict import ReactiveDict
 
 
 class FakeRootElement(Element):
@@ -53,8 +53,8 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rl.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rl.on_after_updating(rep._refresh))
         rep._refresh()
         original_children = list(rep._children)
         rl.append("d")
@@ -70,8 +70,8 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rl.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rl.on_after_updating(rep._refresh))
         rep._refresh()
         original_child_a = rep._children[0]
         original_child_c = rep._children[2]
@@ -87,8 +87,8 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rl.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rl.on_after_updating(rep._refresh))
         rep._refresh()
         original_child_a = rep._children[0]
         original_child_c = rep._children[1]
@@ -104,8 +104,8 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rl.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rl.on_after_updating(rep._refresh))
         rep._refresh()
         original_children = list(rep._children)
         rl.reverse()
@@ -121,8 +121,8 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rl.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rl.on_after_updating(rep._refresh))
         rep._refresh()
         rl.clear()
         assert len(rep._children) == 0
@@ -134,8 +134,8 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rl.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rl.on_after_updating(rep._refresh))
         rep._refresh()
         try:
             rl.append("a")
@@ -149,8 +149,8 @@ class TestKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rl.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rl.on_after_updating(rep._refresh))
         rep._refresh()
         original_children = list(rep._children)
         rl.append("c")
@@ -166,8 +166,8 @@ class TestDictKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rd.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rd.on_after_updating(rep._refresh))
         rep._refresh()
         original_children = list(rep._children)
         rd["d"] = "4"
@@ -183,8 +183,8 @@ class TestDictKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rd.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rd.on_after_updating(rep._refresh))
         rep._refresh()
         original_child_a = rep._children[0]
         original_child_c = rep._children[2]
@@ -200,8 +200,8 @@ class TestDictKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rd.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rd.on_after_updating(rep._refresh))
         rep._refresh()
         rd.clear()
         assert len(rep._children) == 0
@@ -213,8 +213,8 @@ class TestDictKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rd.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rd.on_after_updating(rep._refresh))
         rep._refresh()
         original_children = list(rep._children)
         rd[4] = "four"
@@ -231,8 +231,8 @@ class TestDictKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rd.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rd.on_after_updating(rep._refresh))
         rep._refresh()
         assert ("x", "hello") in received
         assert ("y", "world") in received
@@ -251,8 +251,8 @@ class TestDictKeyedReconciliation:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._reactive_activated = True
-        rep._set_callback_id(rd.on_after_updating(rep._refresh))
+        rep._signal_activated = True
+        rep._add_callback_node(rd.on_after_updating(rep._refresh))
         rep._refresh()
         original_child_a = rep._children[0]
         original_child_c = rep._children[2]

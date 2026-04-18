@@ -10,12 +10,12 @@ from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement
 from webcompy.exception import WebComPyException
-from webcompy.reactive._base import ReactiveBase
+from webcompy.signal._base import SignalBase
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
-SwitchCasesReactive: TypeAlias = list[tuple[ReactiveBase[Any], NodeGenerator]]
-SwitchCasesReactiveList: TypeAlias = ReactiveBase[list[tuple[Any, NodeGenerator]]]
-SwitchCases: TypeAlias = SwitchCasesReactive | SwitchCasesReactiveList
+SwitchCasesSignal: TypeAlias = list[tuple[SignalBase[Any], NodeGenerator]]
+SwitchCasesSignalList: TypeAlias = SignalBase[list[tuple[Any, NodeGenerator]]]
+SwitchCases: TypeAlias = SwitchCasesSignal | SwitchCasesSignalList
 
 
 class SwitchElement(DynamicElement):
@@ -28,14 +28,14 @@ class SwitchElement(DynamicElement):
     ) -> None:
         self._cases = cases
         self._default = default
-        self._reactive_activated = False
+        self._signal_activated = False
         self._rendered_idx = None
         super().__init__()
 
     def _select_generator(self) -> tuple[int, Callable[[], ElementChildren]]:
-        cases = self._cases.value if isinstance(self._cases, ReactiveBase) else self._cases
-        for idx, (cond, generator) in enumerate(cast("list[tuple[ReactiveBase[Any] | Any, NodeGenerator]]", cases)):
-            if truth(cond.value if isinstance(cond, ReactiveBase) else cond):
+        cases = self._cases.value if isinstance(self._cases, SignalBase) else self._cases
+        for idx, (cond, generator) in enumerate(cast("list[tuple[SignalBase[Any] | Any, NodeGenerator]]", cases)):
+            if truth(cond.value if isinstance(cond, SignalBase) else cond):
                 return (idx, generator)
         if self._default:
             return (-1, self._default)
@@ -48,14 +48,14 @@ class SwitchElement(DynamicElement):
 
     def _render(self):
         self._refresh()
-        if not self._reactive_activated:
-            self._reactive_activated = True
-            if isinstance(self._cases, ReactiveBase):
-                self._set_callback_id(self._cases.on_after_updating(self._refresh))
+        if not self._signal_activated:
+            self._signal_activated = True
+            if isinstance(self._cases, SignalBase):
+                self._add_callback_node(self._cases.on_after_updating(self._refresh))
             else:
                 for cond, _ in self._cases:
-                    if isinstance(cond, ReactiveBase):  # type: ignore
-                        self._set_callback_id(cond.on_after_updating(self._refresh))
+                    if isinstance(cond, SignalBase):  # type: ignore
+                        self._add_callback_node(cond.on_after_updating(self._refresh))
 
     def _refresh(self, *args: Any):
         idx, generator = self._select_generator()
@@ -68,7 +68,7 @@ class SwitchElement(DynamicElement):
         for _ in range(len(self._children)):
             self._children.pop(-1)._remove_element()
         self._children = self._generate_children(generator)
-        should_defer = browser is not None and self._reactive_activated
+        should_defer = browser is not None and self._signal_activated
         if should_defer:
             start_defer_after_rendering()
         for c_idx, child in enumerate(self._children):
@@ -90,12 +90,12 @@ class SwitchElement(DynamicElement):
 
             refresh()
 
-            if not self._reactive_activated:
-                self._reactive_activated = True
+            if not self._signal_activated:
+                self._signal_activated = True
 
-                if isinstance(self._cases, ReactiveBase):
-                    self._set_callback_id(self._cases.on_after_updating(refresh))
+                if isinstance(self._cases, SignalBase):
+                    self._add_callback_node(self._cases.on_after_updating(refresh))
                 else:
                     for cond, _ in self._cases:
-                        if isinstance(cond, ReactiveBase):  # type: ignore
-                            self._set_callback_id(cond.on_after_updating(refresh))
+                        if isinstance(cond, SignalBase):  # type: ignore
+                            self._add_callback_node(cond.on_after_updating(refresh))

@@ -1,4 +1,4 @@
-from webcompy.reactive._dict import ReactiveDict
+from webcompy.signal._dict import ReactiveDict
 
 
 class TestDictMutationMetadata:

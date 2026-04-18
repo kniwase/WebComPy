@@ -16,7 +16,7 @@ from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._base import ElementWithChildren
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.exception import WebComPyException
-from webcompy.reactive._base import ReactiveBase
+from webcompy.signal._base import SignalBase
 
 
 def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent], Any]:
@@ -66,8 +66,8 @@ class ElementBase(ElementWithChildren):
                 if value is not None:
                     node.setAttribute(name, value)
             for name, value in self._attrs.items():
-                if isinstance(value, ReactiveBase):
-                    self._set_callback_id(value.on_after_updating(self._generate_attr_updater(name)))
+                if isinstance(value, SignalBase):
+                    self._add_callback_node(value.on_after_updating(self._generate_attr_updater(name)))
             self._event_handlers_added = {}
             for name, func in self._event_handlers.items():
                 event_handler = _generate_event_handler(func)

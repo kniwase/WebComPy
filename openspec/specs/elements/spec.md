@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The element system is how WebComPy represents and manipulates the user interface. Rather than requiring developers to write HTML templates or JSX, WebComPy provides a Python API for constructing element trees — each element corresponds to a DOM node, and reactive values can be used directly as attributes, text content, or list sources.
+The element system is how WebComPy represents and manipulates the user interface. Rather than requiring developers to write HTML templates or JSX, WebComPy provides a Python API for constructing element trees — each element corresponds to a DOM node, and signal values can be used directly as attributes, text content, or list sources.
 
 The system does not use virtual DOM diffing. Instead, it takes a direct approach: when a reactive value changes, the specific DOM node that depends on that value is updated in place. For dynamic content (conditional rendering and list rendering), the entire subtree is regenerated when the controlling value changes. This trades fine-grained efficiency for implementation simplicity.
 
@@ -18,21 +18,21 @@ Developers SHALL be able to create element trees using a Python API where each e
 - **THEN** an element tree SHALL be created with a `div` containing an `h1` and a `p`
 - **AND** the tree SHALL be renderable to browser DOM nodes or HTML strings
 
-### Requirement: Reactive values in elements shall update the DOM automatically
-When a reactive value is used as an element attribute or text content, any change to that value SHALL automatically update the corresponding DOM node without manual intervention.
+### Requirement: Signal values in elements shall update the DOM automatically
+When a signal value is used as an element attribute or text content, any change to that value SHALL automatically update the corresponding DOM node without manual intervention.
 
-#### Scenario: Using a reactive attribute
+#### Scenario: Using a signal attribute
 - **WHEN** a developer writes `html.INPUT({"value": my_reactive_text})`
 - **AND** later sets `my_reactive_text.value = "new text"`
 - **THEN** the input element's `value` attribute SHALL update in the DOM
 
-#### Scenario: Using reactive text content
-- **WHEN** a developer writes `TextElement(my_count)` where `my_count` is a `Reactive`
+#### Scenario: Using signal text content
+- **WHEN** a developer writes `TextElement(my_count)` where `my_count` is a `Signal`
 - **AND** later increments `my_count`
 - **THEN** the text content in the DOM SHALL update to reflect the new count
 
 ### Requirement: Conditional rendering shall display one branch at a time
-The `switch` construct SHALL evaluate a series of conditions and render the template of the first matching condition. When conditions change, the previous branch SHALL be removed and the new branch SHALL be rendered. The branch template MAY return a `DynamicElement` (such as a `repeat`), and the `SwitchElement` SHALL handle it as a transparent child with no DOM node of its own. When the `SwitchElement` is refreshed due to a reactive change (such as a route change), any `on_after_rendering` lifecycle hooks of newly created components SHALL be deferred until after the reactive propagation and DOM updates have completed.
+The `switch` construct SHALL evaluate a series of conditions and render the template of the first matching condition. When conditions change, the previous branch SHALL be removed and the new branch SHALL be rendered. The branch template MAY return a `DynamicElement` (such as a `repeat`), and the `SwitchElement` SHALL handle it as a transparent child with no DOM node of its own. When the `SwitchElement` is refreshed due to a signal change (such as a route change), any `on_after_rendering` lifecycle hooks of newly created components SHALL be deferred until after the reactive propagation and DOM updates have completed.
 
 #### Scenario: Switching between display modes
 - **WHEN** a developer defines `switch(cases=[(is_admin, lambda: AdminPanel()), (is_user, lambda: UserPanel())], default=lambda: GuestPanel())`
@@ -46,7 +46,7 @@ The `switch` construct SHALL evaluate a series of conditions and render the temp
 - **AND** the route changes from one page to another
 - **AND** the new page component has an `on_after_rendering` hook that starts async operations
 - **THEN** the new component SHALL be fully mounted in the DOM before `on_after_rendering` runs
-- **AND** async operations SHALL execute in a clean event loop context (not nested within the reactive callback chain)
+- **AND** async operations SHALL execute in a clean event loop context (not nested within the signal callback chain)
 
 #### Scenario: Switch branch containing a repeat element
 - **WHEN** a developer defines `switch(cases=[(is_list_view, lambda: repeat(items, item_template))])`
@@ -55,7 +55,7 @@ The `switch` construct SHALL evaluate a series of conditions and render the temp
 - **WHEN** `is_list_view` becomes `False`
 - **THEN** the `repeat` and all its rendered items SHALL be removed
 
-### Requirement: List and dict rendering shall map reactive collections to element templates with type-safe overloads
+### Requirement: List and dict rendering shall map signal collections to element templates with type-safe overloads
 The `repeat` construct SHALL support five type-safe overload signatures:
 
 1. `repeat(ReactiveDict[K, V], template: (V,) -> ChildNode)` — dict value-only, keyed by dict keys

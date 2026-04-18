@@ -26,10 +26,6 @@ def Root(_: ComponentContext[None]):
                     "to": "/sample/helloworld",
                 },
                 {
-                    "title": "HelloWorld (ClassStyle)",
-                    "to": "/sample/helloworld-classstyle",
-                },
-                {
                     "title": "FizzBuzz",
                     "to": "/sample/fizzbuzz",
                 },

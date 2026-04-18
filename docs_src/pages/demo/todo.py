@@ -21,13 +21,13 @@ def ToDoListPage(context: ComponentContext[RouterContext]):
                     from typing import Any, TypedDict
                     from webcompy.elements import html, repeat, DomNodeRef
                     from webcompy.components import define_component, ComponentContext
-                    from webcompy.reactive import Reactive, computed
-                    from webcompy.reactive._dict import ReactiveDict
+                    from webcompy.signal import Signal, computed
+                    from webcompy.signal._dict import ReactiveDict
 
 
                     class TodoData(TypedDict):
-                        title: Reactive[str]
-                        done: Reactive[bool]
+                        title: Signal[str]
+                        done: Signal[bool]
 
 
                     @define_component
@@ -83,12 +83,12 @@ def ToDoListPage(context: ComponentContext[RouterContext]):
                         data: ReactiveDict[str, TodoData] = ReactiveDict(
                             {
                                 str(uuid.uuid4()): {
-                                    "title": Reactive("Try WebComPy"),
-                                    "done": Reactive(False),
+                                    "title": Signal("Try WebComPy"),
+                                    "done": Signal(False),
                                 },
                                 str(uuid.uuid4()): {
-                                    "title": Reactive("Create WebComPy project"),
-                                    "done": Reactive(False),
+                                    "title": Signal("Create WebComPy project"),
+                                    "done": Signal(False),
                                 },
                             }
                         )
@@ -97,8 +97,8 @@ def ToDoListPage(context: ComponentContext[RouterContext]):
                             title = input_ref.value
                             if title:
                                 data[str(uuid.uuid4())] = {
-                                    "title": Reactive(title),
-                                    "done": Reactive(False),
+                                    "title": Signal(title),
+                                    "done": Signal(False),
                                 }
                             input_ref.value = ""
 

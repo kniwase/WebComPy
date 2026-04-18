@@ -10,7 +10,7 @@ from webcompy.cli._wheel_builder import get_wheel_filename
 from webcompy.components._component import Component
 from webcompy.elements.typealias import ElementChildren
 from webcompy.elements.types import Element, RepeatElement
-from webcompy.reactive._computed import computed
+from webcompy.signal._computed import computed
 from webcompy.utils import strip_multiline_text
 
 Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]

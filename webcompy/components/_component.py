@@ -10,7 +10,7 @@ from webcompy.components._libs import ComponentProperty, Context, generate_id
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
-from webcompy.reactive import ReactiveDict, computed_property
+from webcompy.signal import ReactiveDict, computed_property
 
 _defer_after_rendering_depth: int = 0
 _deferred_after_rendering_callbacks: list[Callable[[], None]] = []
@@ -73,6 +73,9 @@ class Component(ElementBase):
         props: Any,
         slots: dict[str, Callable[[], ElementChildren]],
     ) -> ComponentProperty:
+        from webcompy.components._hooks import _active_effect_scope
+        from webcompy.signal._effect import create_effect_scope
+
         component_name = component_def.__name__
         context = Context(
             props,
@@ -84,18 +87,27 @@ class Component(ElementBase):
             self._set_meta,
         )
         token = _active_component_context.set(context)
+        scope = create_effect_scope()
+        scope_token = _active_effect_scope.set(scope)
         try:
             template = component_def(context)
         finally:
             _active_component_context.reset(token)
+            _active_effect_scope.reset(scope_token)
         hooks = context.__get_lifecyclehooks__()
+        original_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
+
+        def on_before_destroy_with_scope_cleanup():
+            scope.dispose()
+            original_on_before_destroy()
+
         return {
             "component_id": generate_id(component_name),
             "component_name": component_name,
             "template": template,
             "on_before_rendering": hooks.get("on_before_rendering", lambda: None),
             "on_after_rendering": hooks.get("on_after_rendering", lambda: None),
-            "on_before_destroy": hooks.get("on_before_destroy", lambda: None),
+            "on_before_destroy": on_before_destroy_with_scope_cleanup,
         }
 
     def __init_component(self, property: ComponentProperty):

@@ -13,18 +13,18 @@ WebComPy's core promise is **reactivity by default**: when data changes, everyth
 ## Requirements
 
 ### Requirement: WebComPy shall enable building web applications entirely in Python
-Developers SHALL be able to define reactive state, compose UIs, handle user events, and manage navigation entirely in Python, without writing JavaScript. The application SHALL run in the browser via PyScript at runtime, and SHALL produce deployable static sites for production.
+Developers SHALL be able to define signal state, compose UIs, handle user events, and manage navigation entirely in Python, without writing JavaScript. The application SHALL run in the browser via PyScript at runtime, and SHALL produce deployable static sites for production.
 
-#### Scenario: Building a reactive counter component
-- **WHEN** a developer creates a component with a `Reactive(0)` counter and increments it on a button click
+#### Scenario: Building a signal counter component
+- **WHEN** a developer creates a component with a `Signal(0)` counter and increments it on a button click
 - **THEN** the displayed count SHALL update automatically without manual DOM manipulation
 - **AND** the application runs in the browser via PyScript without a server at runtime
 
-### Requirement: Reactive state changes shall automatically propagate to the UI
-When a reactive value changes, all parts of the UI that depend on that value — text content, attributes, computed derivations, list renderings, conditional branches — SHALL update without the developer writing any update logic. This is the foundational guarantee that makes declarative UI possible.
+### Requirement: Signal state changes shall automatically propagate to the UI
+When a signal value changes, all parts of the UI that depend on that value — text content, attributes, computed derivations, list renderings, conditional branches — SHALL update without the developer writing any update logic. This is the foundational guarantee that makes declarative UI possible.
 
 #### Scenario: Displaying a computed value
-- **WHEN** a `Computed` derives its value from one or more `Reactive` sources
+- **WHEN** a `Computed` derives its value from one or more `Signal` sources
 - **AND** any source value changes
 - **THEN** the computed value SHALL recalculate automatically
 - **AND** any UI element bound to the computed value SHALL update
@@ -46,8 +46,8 @@ The browser URL SHALL determine which page is displayed, and user navigation (li
 - **AND** the page component matching the new URL SHALL be displayed
 - **AND** the previous page component SHALL be destroyed
 
-### Requirement: Asynchronous operations shall integrate with the reactive system
-Developers SHALL be able to start async operations (HTTP requests, long computations) and have their results automatically reflected in the UI when they resolve, with loading and error states accessible through the reactive system.
+### Requirement: Asynchronous operations shall integrate with the signal system
+Developers SHALL be able to start async operations (HTTP requests, long computations) and have their results automatically reflected in the UI when they resolve, with loading and error states accessible through the signal system.
 
 #### Scenario: Fetching data from an API
 - **WHEN** a developer creates an `AsyncComputed` from an async function

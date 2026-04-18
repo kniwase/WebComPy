@@ -6,8 +6,8 @@ from . import (
     elements,
     exception,
     logging,
-    reactive,
     router,
+    signal,
     utils,
 )
 from ._browser import browser
@@ -33,7 +33,7 @@ __all__ = [
     "exception",
     "load_asset",
     "logging",
-    "reactive",
     "router",
+    "signal",
     "utils",
 ]

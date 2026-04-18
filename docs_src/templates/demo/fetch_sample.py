@@ -6,7 +6,7 @@ from webcompy.aio import AsyncWrapper, resolve_async
 from webcompy.ajax import HttpClient
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html, repeat
-from webcompy.reactive import Reactive, ReactiveList
+from webcompy.signal import ReactiveList, Signal
 
 
 class User(TypedDict):
@@ -17,7 +17,7 @@ class User(TypedDict):
 @define_component
 def FetchSample(context: ComponentContext[None]):
     users = ReactiveList[User]([])
-    json_text = Reactive("")
+    json_text = Signal("")
     queue = Queue[str](maxsize=1)
 
     @AsyncWrapper()

@@ -10,9 +10,9 @@ from .pages.keyed_repeat import KeyedRepeatPage
 from .pages.lifecycle import LifecyclePage
 from .pages.nested_dynamic import NestedDynamicPage
 from .pages.not_found import NotFound
-from .pages.reactive import ReactivePage
 from .pages.repeat import RepeatPage
 from .pages.scoped_style import ScopedStylePage
+from .pages.signal import ReactivePage
 from .pages.switch_test import SwitchPage
 
 router = Router(

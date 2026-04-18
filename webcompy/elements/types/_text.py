@@ -6,7 +6,7 @@ from webcompy._browser._modules import browser
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.exception import WebComPyException
-from webcompy.reactive._base import ReactiveBase
+from webcompy.signal._base import SignalBase
 
 
 class NewLine(ElementAbstract):
@@ -41,14 +41,14 @@ class NewLine(ElementAbstract):
 
 
 class TextElement(ElementAbstract):
-    def __init__(self, text: str | ReactiveBase[Any]) -> None:
+    def __init__(self, text: str | SignalBase[Any]) -> None:
         self._text = text
         super().__init__()
-        if isinstance(self._text, ReactiveBase):
-            self._set_callback_id(self._text.on_after_updating(self._update_text))
+        if isinstance(self._text, SignalBase):
+            self._add_callback_node(self._text.on_after_updating(self._update_text))
 
     def _get_text(self) -> str:
-        if isinstance(self._text, ReactiveBase):
+        if isinstance(self._text, SignalBase):
             value = self._text.value
             text = value if isinstance(value, str) else str(value)
         else:

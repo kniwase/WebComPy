@@ -9,7 +9,7 @@ from typing import Any, Generic, ParamSpec, TypeAlias, TypeVar
 
 from webcompy import logging
 from webcompy._browser._modules import browser
-from webcompy.reactive._base import ReactiveBase
+from webcompy.signal._base import SignalBase
 
 AsyncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
 
@@ -81,7 +81,7 @@ class AsyncWrapper(Generic[T]):
         return inner
 
 
-class AsyncComputed(ReactiveBase[T | None]):
+class AsyncComputed(SignalBase[T | None]):
     _done: bool
     _exception: Exception | None
 
@@ -94,27 +94,27 @@ class AsyncComputed(ReactiveBase[T | None]):
         self._exception = None
         resolve_async(coroutine, self._resolver, self._error)
 
-    @ReactiveBase._change_event
+    @SignalBase._change_event
     def _resolver(self, res: T):
         self._done = True
         self._value = res
 
-    @ReactiveBase._change_event
+    @SignalBase._change_event
     def _error(self, err: Exception):
         self._done = False
         self._exception = err
 
     @property
-    @ReactiveBase._get_event
+    @SignalBase._get_event
     def value(self) -> T | None:
         return self._value
 
     @property
-    @ReactiveBase._get_event
+    @SignalBase._get_event
     def error(self) -> Exception | None:
         return self._exception
 
     @property
-    @ReactiveBase._get_event
+    @SignalBase._get_event
     def done(self) -> bool:
         return self._done

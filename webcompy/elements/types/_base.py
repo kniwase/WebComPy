@@ -10,7 +10,7 @@ from webcompy.elements.typealias._element_property import (
 from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._text import TextElement
-from webcompy.reactive._base import ReactiveBase
+from webcompy.signal._base import SignalBase
 
 
 class ElementWithChildren(ElementAbstract):
@@ -22,7 +22,7 @@ class ElementWithChildren(ElementAbstract):
 
     def __init__(self) -> None:
         self._node_cache = None
-        self._callback_ids: set[int] = set()
+        self._callback_nodes: list[Any] = []
 
     @property
     def _parent(self) -> ElementWithChildren:
@@ -47,7 +47,7 @@ class ElementWithChildren(ElementAbstract):
         return attrs
 
     def _proc_attr(self, value: AttrValue):
-        obj = value.value if isinstance(value, ReactiveBase) else value
+        obj = value.value if isinstance(value, SignalBase) else value
         if isinstance(obj, bool):
             return "" if obj else None
         elif isinstance(obj, int):
@@ -69,7 +69,7 @@ class ElementWithChildren(ElementAbstract):
     ):
         if child is None:
             return None
-        elif isinstance(child, (str, ReactiveBase)):
+        elif isinstance(child, (str, SignalBase)):
             element = TextElement(child)
         else:
             element = child

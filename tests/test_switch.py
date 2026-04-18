@@ -1,6 +1,6 @@
 from webcompy.elements.types._switch import SwitchElement
 from webcompy.elements.types._text import TextElement
-from webcompy.reactive import Reactive
+from webcompy.signal import Signal
 
 
 class TestSelectGenerator:
@@ -33,7 +33,7 @@ class TestSelectGenerator:
         assert gen() is None
 
     def test_reactive_condition_truthy(self):
-        cond = Reactive(True)
+        cond = Signal(True)
         cases = [(cond, lambda: "reactive-yes")]
         sw = SwitchElement(cases, None)
         idx, gen = sw._select_generator()
@@ -41,7 +41,7 @@ class TestSelectGenerator:
         assert gen() == "reactive-yes"
 
     def test_reactive_condition_falsy(self):
-        cond = Reactive(False)
+        cond = Signal(False)
         cases = [(cond, lambda: "reactive-no")]
         sw = SwitchElement(cases, lambda: "fallback")
         idx, gen = sw._select_generator()
@@ -49,7 +49,7 @@ class TestSelectGenerator:
         assert gen() == "fallback"
 
     def test_reactive_cases_list(self):
-        r = Reactive([("hello", lambda: "ok")])
+        r = Signal([("hello", lambda: "ok")])
         sw = SwitchElement(r, None)
         idx, _gen = sw._select_generator()
         assert idx == 0
@@ -83,7 +83,7 @@ class TestOnSetParent:
             _get_belonging_component = lambda self: ""
             _get_belonging_components = lambda self: ()
 
-        cond = Reactive(True)
+        cond = Signal(True)
         cases = [(cond, lambda: TextElement("yes"))]
         sw = SwitchElement(cases, None)
         parent = FakeRootElement("div", {}, {}, None, None)
@@ -92,5 +92,5 @@ class TestOnSetParent:
         sw._parent = parent
         sw._node_idx = 0
         sw._on_set_parent()
-        assert sw._reactive_activated is True
-        assert len(sw._callback_ids) > 0
+        assert sw._signal_activated is True
+        assert len(sw._callback_nodes) > 0
