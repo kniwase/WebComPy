@@ -66,7 +66,7 @@ Composables SHALL be plain Python functions (or function calls) that encapsulate
 
 #### Scenario: Watch cleanup on component destruction
 - **WHEN** a component using `useAsyncResult` with `watch` is destroyed
-- **THEN** all `on_after_updating` callbacks registered on watched Reactives SHALL be removed
+- **THEN** all reactive subscriptions registered on watched Reactives SHALL be cleaned up via `consumer_destroy()`
 - **AND** subsequent changes to watched Reactives SHALL NOT trigger refetch
 
 ### Requirement: AsyncResult shall provide structured async state

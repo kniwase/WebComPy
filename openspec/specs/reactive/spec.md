@@ -93,13 +93,13 @@ Each mutating method on `ReactiveList` (`append`, `extend`, `pop`, `insert`, `so
 - **AND** `items._last_mutation.index` SHALL be `None`
 - **AND** `items._last_mutation.value` SHALL be `None`
 
-### Requirement: ReactiveList mutation metadata shall not change the existing callback contract
-The `_last_mutation` attribute SHALL be an additional side-channel that does not alter the existing `on_after_updating` callback signature. Existing callbacks registered via `on_after_updating` SHALL continue to receive the same arguments as before and function without modification.
+### Requirement: on_after_updating callbacks shall receive the current reactive value
+The `on_after_updating` method SHALL register a callback that receives the current value of the reactive after a change. The `_last_mutation` attribute on `ReactiveList` and `ReactiveDict` SHALL be a separate side-channel for mutation metadata and SHALL NOT be passed as an argument to `on_after_updating` callbacks.
 
-#### Scenario: Existing on_after_updating callback unaffected
+#### Scenario: on_after_updating callback receives the current value
 - **WHEN** a developer has registered `my_list.on_after_updating(lambda val: print(val))` on a `ReactiveList`
 - **AND** calls `my_list.append("new")`
-- **THEN** the callback SHALL receive the full list value as before
+- **THEN** the callback SHALL receive the current list value
 - **AND** the callback SHALL NOT receive `ListMutation` as an argument
 
 ### Requirement: Readonly views shall prevent external mutation of reactive values

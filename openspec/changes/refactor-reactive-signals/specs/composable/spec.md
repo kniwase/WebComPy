@@ -15,7 +15,7 @@ A `create_effect_scope()` SHALL be established within the component setup contex
 - **AND** changes to `count.value` SHALL NOT trigger the effect
 
 #### Scenario: Existing composable useAsyncResult can use effect for watch cleanup
-- **WHEN** `useAsyncResult` currently uses `reactive.on_after_updating(result.refetch)` plus `ReactiveStore.remove_callback` with `on_before_destroy` cleanup
+- **WHEN** `useAsyncResult` currently uses `reactive.on_after_updating(result.refetch)` plus `consumer_destroy()` with `on_before_destroy` cleanup
 - **THEN** this pattern SHALL be replaced by `effect()` which automatically tracks dependencies and cleans up on scope disposal
 - **AND** the `watch` parameter behavior SHALL remain identical from the user's perspective
 

@@ -10,7 +10,7 @@ The current reactive system has fundamental architectural limitations: Computed 
 - Implement dynamic dependency tracking: `Computed` rebuilds its producer edges on each re-evaluation, accommodating conditional branching that changes which reactive values are read
 - Introduce `effect()` primitive as a first-class live consumer with automatic dependency tracking, lifecycle-bound cleanup (`on_cleanup`), and scheduled execution — replacing the need for manual `on_after_updating` / `on_before_updating` registration in element code
 - Replace `CallbackConsumerNode` (the compatibility layer for `on_after_updating`) with proper graph-attached consumers that support `consumerDestroy()` for deterministic cleanup, fixing the `__purge_reactive_members__` no-op and untracked subscription leaks
-- Preserve the existing public API (`Reactive`, `Computed`, `computed`, `computed_property`, `ReactiveList`, `ReactiveDict`, `readonly`, `on_after_updating`, `on_before_updating`) as backward-compatible wrappers over the new graph
+- Remove the `ReactiveStore` singleton and compatibility shell entirely; all internal usage now goes through the reactive graph API directly
 - Add `effect(fn, on_cleanup=None)` as a new public API: declares a side-effect function that automatically tracks its reactive dependencies and re-executes when they change, with automatic cleanup on component destruction
 - Add composable pattern support (`useXxx`-style functions): functions returning `Reactive` / `Computed` tuples that are automatically scoped and cleaned up when the owning component is destroyed, enabled by the graph-based cleanup mechanism
 
@@ -18,7 +18,7 @@ The current reactive system has fundamental architectural limitations: Computed 
 
 - No element-level reactivity in ReactiveList/ReactiveDict — partial mitigation: equality checks prevent unnecessary propagation on same-value writes; element-level granularity remains a separate concern
 - `__purge_reactive_members__` in ReactiveReceivable is a no-op — replaced by `consumerDestroy()` on the reactive graph, providing deterministic cleanup of all producer/consumer edges
-- Multiple global singletons (ReactiveStore) — ReactiveStore eliminated as a functional singleton; retained only as a backward-compatible import shell; graph state lives on individual nodes
+- Multiple global singletons (ReactiveStore) — ReactiveStore completely removed; graph state lives on individual nodes
 - Computed captures dependencies at init only (dynamic branching bug) — fixed by incremental dependency rebuilding on each re-evaluation
 
 ## Non-goals
@@ -39,17 +39,7 @@ The current reactive system has fundamental architectural limitations: Computed 
 
 ### Modified Capabilities
 
-- `reactive`: Change propagation semantics from eager immediate callbacks to push/dirty-flag notification with lazy pull recomputation; add equality checks to skip same-value writes; add dynamic dependency tracking for Computed; replace ReactiveStore singleton with per-node graph; deterministic cleanup via consumerDestroy()
-- `components`: Component lifecycle integration with effect cleanup; __purge_reactive_members__ replaced by graph-based consumer disconnect on component destruction
-- `elements`: Element subscriptions migrate from on_after_updating to effect-based pattern; attribute and text updates use the graph's version-based equality to skip unnecessary DOM operations
-
-## Impact
-
-- **Core reactive module** (`webcompy/reactive/`): Full internal rewrite — `_base.py`, `_computed.py`, `_container.py` replaced; new `_graph.py` added; `_readonly.py` updated; `_list.py` and `_dict.py` updated for new change propagation
-- **Element system** (`webcompy/elements/types/`): `_abstract.py`, `_element.py`, `_text.py`, `_switch.py`, `_repeat.py`, `_dynamic.py` — subscription pattern migration from `on_after_updating` to `effect()`; `_dynamic.py` now has custom `_remove_element()` and `_position_element_nodes()` for nested DynamicElement support which must be preserved during migration; `_base.py` — reactive attribute processing update
-- **Component system** (`webcompy/components/`): `_component.py` — lifecycle integration with effect cleanup via `_active_component_context` ContextVar; `_hooks.py` — `useAsyncResult.watch` cleanup migration from `on_after_updating` + `ReactiveStore.remove_callback` to `effect()` or `consumerDestroy()`; `_abstract.py` (DELETED) — references removed; `__purge_reactive_members__` on `ReactiveReceivable` (`_container.py`) replaced by `consumerDestroy()`
-- **Async module** (`webcompy/aio/`): `_aio.py` — `AsyncComputed` updated for new change propagation; `_async_result.py` — `AsyncResult` (new) also uses `Reactive`/`Computed` internally and must be migrated
-- **Router** (`webcompy/router/`): `_link.py`, `_change_event_handler.py` — subscription cleanup fix (currently untracked)
-- **App root** (`webcompy/app/`): `_root_component.py` — subscription cleanup fix (currently untracked)
-- **Public API**: Fully backward-compatible — `Reactive`, `Computed`, `ReactiveList`, `ReactiveDict`, `computed`, `computed_property`, `readonly`, `on_after_updating`, `on_before_updating` all preserved; `effect` and `composable` are new additions
+- **reactive**: Change propagation semantics from eager immediate callbacks to push/dirty-flag notification with lazy pull recomputation; add equality checks to skip same-value writes; add dynamic dependency tracking for Computed; replace ReactiveStore singleton with per-node graph; deterministic cleanup via consumerDestroy()
+- **components**: Component lifecycle integration with effect cleanup; __purge_reactive_members__ replaced by graph-based consumer disconnect on component destruction
+- **elements**: Element subscriptions use CallbackConsumerNode with consumer_destroy() for cleanup; attribute and text updates use the graph's version-based equality to skip unnecessary DOM operations
 - **Tests**: `test_reactive.py`, `test_list_mutation.py`, `test_dict_mutation.py` — callback contract assertions adjusted (argument semantics change); new tests for lazy evaluation, dynamic dependencies, equality skipping, effect lifecycle, and graph operations

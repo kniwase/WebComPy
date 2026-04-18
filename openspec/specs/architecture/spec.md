@@ -6,7 +6,7 @@ WebComPy runs the same Python codebase in two environments: the browser (via PyS
 
 From a developer's perspective, this means writing Python once and having it work everywhere. The framework absorbs the complexity: developers define components, state, and routing, and the framework renders to DOM nodes in the browser or HTML strings on the server, all from the same source code.
 
-**What WebComPy does not yet provide:** The framework relies on multiple global singletons (`ReactiveStore`, `Router`, `RouterView`, `ComponentStore`, `Component._head_props`) which makes testing and isolation difficult. Browser environment detection is binary (Emscripten or other) with no partial API availability checks — code that only needs `localStorage`, for example, cannot gracefully degrade on server-side.
+**What WebComPy does not yet provide:** The framework still relies on multiple global singletons (`Router`, `RouterView`, `ComponentStore`, `Component._head_props`) which makes testing and isolation difficult. Browser environment detection is binary (Emscripten or other) with no partial API availability checks — code that only needs `localStorage`, for example, cannot gracefully degrade on server-side.
 
 ## Requirements
 

@@ -42,7 +42,7 @@ When a parent DynamicElement refreshes and removes children that contain nested 
 #### Scenario: Switch branch replacement cleans up nested repeat callbacks
 - **WHEN** a `switch` branch contains a `repeat` with keyed reconciliation
 - **AND** the `switch` condition changes, causing the branch to be replaced
-- **THEN** the `repeat`'s reactive callbacks SHALL be removed from `ReactiveStore`
+- **THEN** the `repeat`'s reactive callbacks SHALL be cleaned up via `consumer_destroy()`
 - **AND** the `repeat`'s DOM nodes SHALL be removed from the DOM
 
 ### Requirement: SSR rendering shall support nested DynamicElements
