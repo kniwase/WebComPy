@@ -7,6 +7,7 @@ from webcompy._browser._modules import browser
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException
 from webcompy.reactive._container import ReactiveReceivable
+from webcompy.reactive._graph import consumer_destroy
 
 
 class ElementAbstract(ReactiveReceivable):
@@ -14,16 +15,14 @@ class ElementAbstract(ReactiveReceivable):
     _node_cache: DOMNode | None = None
     _mounted: bool | None = None
     _remount_to: DOMNode | None = None
-    _callback_ids: set[int]
-    _callback_producers: list[Any]
+    _callback_nodes: list[Any]
     __parent: ElementAbstract
 
     def __init__(self) -> None:
         self._node_cache = None
         self._mounted = None
         self._remount_to = None
-        self._callback_ids: set[int] = set()
-        self._callback_producers: list[Any] = []
+        self._callback_nodes: list[Any] = []
 
     @property
     def _parent(self) -> ElementAbstract:
@@ -62,16 +61,12 @@ class ElementAbstract(ReactiveReceivable):
     @abstractmethod
     def _init_node(self) -> DOMNode: ...
 
-    def _set_callback_id(self, callback_id: int, producer: Any = None):
-        self._callback_ids.add(callback_id)
-        if producer is not None:
-            self._callback_producers.append(producer)
+    def _set_callback_id(self, callback_node: Any):
+        self._callback_nodes.append(callback_node)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
-        for callback_id in self._callback_ids:
-            from webcompy.reactive._base import ReactiveStore
-
-            ReactiveStore.remove_callback(callback_id)
+        for callback_node in self._callback_nodes:
+            consumer_destroy(callback_node)
         if remove_node:
             node = self._get_node()
             if node:

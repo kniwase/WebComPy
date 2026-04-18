@@ -5,7 +5,7 @@ from abc import abstractmethod
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._base import ElementWithChildren
-from webcompy.reactive._base import ReactiveStore
+from webcompy.reactive._graph import consumer_destroy
 
 
 class DynamicElement(ElementWithChildren):
@@ -19,8 +19,8 @@ class DynamicElement(ElementWithChildren):
         return self._parent._get_node()
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
-        for callback_id in self._callback_ids:
-            ReactiveStore.remove_callback(callback_id)
+        for callback_node in self._callback_nodes:
+            consumer_destroy(callback_node)
         self._clear_node_cache(False)
         self.__purge_reactive_members__()
         if recursive:

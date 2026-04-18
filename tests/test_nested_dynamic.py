@@ -132,7 +132,7 @@ class TestNestedDynamicElementCleanup:
         sw._parent = parent
         sw._node_idx = 0
         sw._refresh()
-        original_repeat_callbacks = len(inner_rep._callback_ids)
+        original_repeat_callbacks = len(inner_rep._callback_nodes)
         assert original_repeat_callbacks > 0
         cond.value = False
         sw._refresh()

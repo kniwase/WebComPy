@@ -1,8 +1,7 @@
 import pytest
 
 from webcompy.reactive import Computed, Reactive, ReactiveDict, ReactiveList, readonly
-from webcompy.reactive._base import ReactiveStore
-from webcompy.reactive._graph import reset_graph_state
+from webcompy.reactive._graph import consumer_destroy, reset_graph_state
 
 
 @pytest.fixture(autouse=True)
@@ -48,9 +47,9 @@ class TestReactive:
     def test_remove_callback(self):
         r = Reactive(0)
         results = []
-        callback_id = r.on_after_updating(lambda v: results.append(v))
+        callback_node = r.on_after_updating(lambda v: results.append(v))
         r.value = 1
-        ReactiveStore.remove_callback(callback_id)
+        consumer_destroy(callback_node)
         r.value = 2
         assert results == [1]
 

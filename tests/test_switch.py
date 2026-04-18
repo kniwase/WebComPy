@@ -93,4 +93,4 @@ class TestOnSetParent:
         sw._node_idx = 0
         sw._on_set_parent()
         assert sw._reactive_activated is True
-        assert len(sw._callback_ids) > 0
+        assert len(sw._callback_nodes) > 0

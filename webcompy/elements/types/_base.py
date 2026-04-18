@@ -22,7 +22,7 @@ class ElementWithChildren(ElementAbstract):
 
     def __init__(self) -> None:
         self._node_cache = None
-        self._callback_ids: set[int] = set()
+        self._callback_nodes: list[Any] = []
 
     @property
     def _parent(self) -> ElementWithChildren:
