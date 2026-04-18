@@ -80,7 +80,7 @@ def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = F
         static_file_routes.append(Route("/" + relative_path, send_file))
 
     # HTMLs
-    html_generator = partial(generate_html, config, dev_mode, True, app_version)
+    html_generator = partial(generate_html, config, dev_mode, True, app_version, config.app_package_path.name)
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + config.base.strip("/"))).sub,
         "",

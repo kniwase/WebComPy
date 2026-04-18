@@ -64,6 +64,10 @@ def _normalize_name(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
+def get_wheel_filename(name: str, version: str) -> str:
+    return f"{_normalize_name(name)}-{version}-py3-none-any.whl"
+
+
 def _write_metadata(name: str, version: str) -> str:
     return f"Metadata-Version: 2.4\nName: {name}\nVersion: {version}\n"
 
@@ -127,7 +131,7 @@ def make_wheel(
     top_levels: set[str] = set()
     for pkg in packages:
         top_levels.add(pkg.split(".")[0])
-    wheel_filename = f"{dist_name}-{version}-py3-none-any.whl"
+    wheel_filename = get_wheel_filename(name, version)
     wheel_path = dest / wheel_filename
     if wheel_path.exists():
         os.remove(wheel_path)
@@ -177,7 +181,7 @@ def make_bundled_wheel(
     dist_info = f"{dist_name}-{version}.dist-info"
     top_levels: set[str] = set()
     record_entries: list[tuple[str, str, int]] = []
-    wheel_filename = f"{dist_name}-{version}-py3-none-any.whl"
+    wheel_filename = get_wheel_filename(name, version)
     wheel_path = dest / wheel_filename
     if wheel_path.exists():
         os.remove(wheel_path)
