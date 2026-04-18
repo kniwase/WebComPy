@@ -37,7 +37,7 @@ A `DynamicElement` that is a child of another `DynamicElement` SHALL traverse up
 - **AND** the `RepeatElement` SHALL correctly insert and remove child DOM nodes within that `div`
 
 ### Requirement: Nested DynamicElement children shall be cleaned up on parent refresh
-When a parent DynamicElement refreshes and removes children that contain nested DynamicElements, all reactive callbacks registered by the nested DynamicElements SHALL be cleaned up via the existing `_remove_element` cascade.
+When a parent DynamicElement refreshes and removes children that contain nested DynamicElements, all signal subscriptions registered by the nested DynamicElements SHALL be cleaned up via the existing `_remove_element` cascade.
 
 #### Scenario: Switch branch replacement cleans up nested repeat callbacks
 - **WHEN** a `switch` branch contains a `repeat` with keyed reconciliation
