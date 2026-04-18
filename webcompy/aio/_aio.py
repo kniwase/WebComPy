@@ -9,7 +9,6 @@ from typing import Any, Generic, ParamSpec, TypeAlias, TypeVar
 
 from webcompy import logging
 from webcompy._browser._modules import browser
-from webcompy.signal._base import SignalBase
 
 AsyncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
 
@@ -79,42 +78,3 @@ class AsyncWrapper(Generic[T]):
             resolve_async(async_callable(*args, **kwargs), self.resolver, self.error)
 
         return inner
-
-
-class AsyncComputed(SignalBase[T | None]):
-    _done: bool
-    _exception: Exception | None
-
-    def __init__(
-        self,
-        coroutine: Coroutine[Any, Any, T],
-    ) -> None:
-        super().__init__(None)
-        self._done = False
-        self._exception = None
-        resolve_async(coroutine, self._resolver, self._error)
-
-    @SignalBase._change_event
-    def _resolver(self, res: T):
-        self._done = True
-        self._value = res
-
-    @SignalBase._change_event
-    def _error(self, err: Exception):
-        self._done = False
-        self._exception = err
-
-    @property
-    @SignalBase._get_event
-    def value(self) -> T | None:
-        return self._value
-
-    @property
-    @SignalBase._get_event
-    def error(self) -> Exception | None:
-        return self._exception
-
-    @property
-    @SignalBase._get_event
-    def done(self) -> bool:
-        return self._done

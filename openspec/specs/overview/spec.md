@@ -50,7 +50,7 @@ The browser URL SHALL determine which page is displayed, and user navigation (li
 Developers SHALL be able to start async operations (HTTP requests, long computations) and have their results automatically reflected in the UI when they resolve, with loading and error states accessible through the signal system.
 
 #### Scenario: Fetching data from an API
-- **WHEN** a developer creates an `AsyncComputed` from an async function
+- **WHEN** a developer creates an `AsyncResult` via `useAsyncResult(fetch_func)` inside a component setup
 - **THEN** the UI SHALL show a loading state until the operation completes
 - **AND** when the operation succeeds, the UI SHALL update with the result
 - **AND** when the operation fails, the UI SHALL be able to detect the error

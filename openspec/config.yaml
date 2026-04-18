@@ -25,10 +25,6 @@ context: |
   - Multiple global singletons (Router, RouterView) make testing require explicit cleanup
   - Location popstate proxy must be manually destroy()ed
 
-  ### Async
-  - AsyncComputed.value is T | None — no way to distinguish "not yet resolved" from "resolved to None" without checking done flag
-  - AsyncComputed._error sets _done = False on error, conflating error state with pending state
-
   ### General
   - Multiple global singletons (Router, RouterView, ComponentStore, Component._head_props)
   - Browser detection is binary (Emscripten vs other) — no partial API availability checks
