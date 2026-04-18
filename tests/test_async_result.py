@@ -104,6 +104,24 @@ class TestAsyncResultDefault:
         result.refetch()
         assert result.data.value == []
 
+    def test_default_none_is_preserved(self):
+        async def fetch():
+            raise ValueError("oops")
+
+        result = AsyncResult(fetch, default=None)
+        result.refetch()
+        assert result.data.value is None
+        assert result.state.value == AsyncState.ERROR
+
+    def test_default_zero_is_preserved(self):
+        async def fetch():
+            raise ValueError("oops")
+
+        result = AsyncResult(fetch, default=0)
+        result.refetch()
+        assert result.data.value == 0
+        assert result.state.value == AsyncState.ERROR
+
     def test_error_preserves_last_data_over_default(self):
         should_fail = False
 

@@ -8,6 +8,7 @@ from webcompy.aio._aio import aio_run
 from webcompy.reactive import Computed, Reactive
 
 T = TypeVar("T")
+_MISSING: Any = object()
 
 
 class AsyncState(Enum):
@@ -21,12 +22,12 @@ class AsyncResult(Generic[T]):
     def __init__(
         self,
         func: Callable[[], Coroutine[Any, Any, T]],
-        default: T | None = None,
+        default: T | None = _MISSING,
     ) -> None:
         self._func = func
-        self._has_default = default is not None
+        self._has_default = default is not _MISSING
         self._state: Reactive[AsyncState] = Reactive(AsyncState.PENDING)
-        self._data: Reactive[T | None] = Reactive(default)
+        self._data: Reactive[T | None] = Reactive(default if default is not _MISSING else None)
         self._error: Reactive[Exception | None] = Reactive(None)
 
         self.is_pending: Computed[bool] = Computed(lambda: self._state.value == AsyncState.PENDING)
