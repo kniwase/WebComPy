@@ -36,6 +36,24 @@ class _QuietHandler(SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
+    def do_GET(self):
+        resolved = self.translate_path(self.path.split("?")[0])
+        if pathlib.Path(resolved).is_file():
+            super().do_GET()
+        elif (pathlib.Path(resolved) / "index.html").is_file():
+            self.path = self.path.rstrip("/") + "/index.html"
+            super().do_GET()
+        else:
+            fallback = pathlib.Path(self.directory) / "404.html"
+            if fallback.is_file():
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html")
+                self.end_headers()
+                self.wfile.write(fallback.read_bytes())
+            else:
+                self.send_response(404)
+                self.end_headers()
+
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "e2e: End-to-end tests requiring a browser and server")
