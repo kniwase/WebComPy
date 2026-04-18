@@ -125,6 +125,7 @@ def producer_update_value_version(producer: SignalNode) -> None:
         producer.last_clean_epoch = _epoch
     finally:
         producer.recomputing = False
+    producer.dirty = False
 
 
 def producer_mark_clean(producer: SignalNode) -> None:
