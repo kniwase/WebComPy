@@ -58,7 +58,7 @@ def generate_static_site():
     for p in scripts_dir.iterdir():
         print(p)
 
-    html_generator = partial(generate_html, config, False, True, app_version)
+    html_generator = partial(generate_html, config, False, True, app_version, config.app_package_path.name)
     if app.__component__.router_mode == "history" and app.__component__.routes:
         for p, _, _, _, page in app.__component__.routes:
             paths = {p.format(**params) for params in path_params} if (path_params := page.get("path_params")) else {p}

@@ -11,6 +11,7 @@ from webcompy.cli._wheel_builder import (
     _write_metadata,
     _write_record,
     _write_wheel,
+    get_wheel_filename,
     make_bundled_wheel,
     make_webcompy_app_package,
     make_wheel,
@@ -164,6 +165,46 @@ class TestNormalizeName:
         assert _normalize_name("MyApp") == "myapp"
 
 
+class TestGetWheelFilename:
+    def test_simple_name(self):
+        assert get_wheel_filename("myapp", "1.0.0") == "myapp-1.0.0-py3-none-any.whl"
+
+    def test_underscore_name(self):
+        assert get_wheel_filename("my_app", "1.0.0") == "my-app-1.0.0-py3-none-any.whl"
+
+    def test_mixed_case_name(self):
+        assert get_wheel_filename("MyApp", "2.3.4") == "myapp-2.3.4-py3-none-any.whl"
+
+    def test_dotted_name(self):
+        assert get_wheel_filename("my.app", "1.0.0") == "my-app-1.0.0-py3-none-any.whl"
+
+    def test_matches_make_wheel_output(self, tmp_path):
+        pkg = tmp_path / "test_pkg"
+        pkg.mkdir()
+        (pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+        result = make_wheel("test_pkg", pkg, dest, "1.2.3")
+        assert result.name == get_wheel_filename("test_pkg", "1.2.3")
+
+    def test_matches_make_bundled_wheel_output(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "my_app"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+        result = make_bundled_wheel(
+            "my_app",
+            [("webcompy", webcompy_pkg), ("my_app", app_pkg)],
+            dest,
+            "1.0.0",
+        )
+        assert result.name == get_wheel_filename("my_app", "1.0.0")
+
+
 class TestMakeWheel:
     def test_creates_wheel_file(self, tmp_path):
         pkg = tmp_path / "myapp"
@@ -285,6 +326,28 @@ class TestMakeBundledWheel:
             lines = top_level.strip().split("\n")
             assert "webcompy" in lines
             assert "app" in lines
+
+    def test_bundled_wheel_underscore_name(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "my_app"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+        result = make_bundled_wheel(
+            "my_app",
+            [("webcompy", webcompy_pkg), ("my_app", app_pkg)],
+            dest,
+            "2.0.0",
+        )
+        assert result.name == get_wheel_filename("my_app", "2.0.0")
+        with zipfile.ZipFile(result) as zf:
+            top_level = zf.read("my-app-2.0.0.dist-info/top_level.txt").decode()
+            lines = top_level.strip().split("\n")
+            assert "webcompy" in lines
+            assert "my_app" in lines
 
 
 class TestAssetsToPackageData:
