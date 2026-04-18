@@ -35,14 +35,12 @@ def test_nested_repeat_in_switch_switch_back_to_list(page_on):
 
 def test_nested_repeat_in_switch_add_item(page_on):
     page = page_on("/nested-dynamic")
-    page.locator("[data-testid='new-item-input']").fill("Delta")
     page.locator("[data-testid='add-item-btn']").click()
     expect(page.locator("[data-testid='list-item']")).to_have_count(4)
 
 
 def test_nested_repeat_in_switch_add_then_switch(page_on):
     page = page_on("/nested-dynamic")
-    page.locator("[data-testid='new-item-input']").fill("Delta")
     page.locator("[data-testid='add-item-btn']").click()
     expect(page.locator("[data-testid='list-item']")).to_have_count(4)
 

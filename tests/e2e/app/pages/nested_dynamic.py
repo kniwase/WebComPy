@@ -1,6 +1,6 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html, repeat, switch
-from webcompy.reactive import Reactive, ReactiveList
+from webcompy.reactive import Reactive, ReactiveList, computed
 
 
 @define_component
@@ -9,7 +9,10 @@ def NestedDynamicPage(context: ComponentContext[None]):
 
     view_mode = Reactive("list")
     items = ReactiveList(["Alpha", "Beta", "Gamma"])
-    new_item = Reactive("")
+    counter = Reactive(0)
+
+    is_list = computed(lambda: view_mode.value == "list")
+    is_grid = computed(lambda: view_mode.value == "grid")
 
     def set_list(_):
         view_mode.value = "list"
@@ -18,9 +21,8 @@ def NestedDynamicPage(context: ComponentContext[None]):
         view_mode.value = "grid"
 
     def add_item(_):
-        if new_item.value:
-            items.append(new_item.value)
-            new_item.value = ""
+        counter.value += 1
+        items.append(f"Item-{counter.value}")
 
     def remove_first(_):
         if len(items.value) > 0:
@@ -36,7 +38,6 @@ def NestedDynamicPage(context: ComponentContext[None]):
         ),
         html.DIV(
             {"data-testid": "add-controls"},
-            html.INPUT({"data-testid": "new-item-input", "value": new_item}),
             html.BUTTON({"data-testid": "add-item-btn", "@click": add_item}, "Add"),
             html.BUTTON({"data-testid": "remove-first-btn", "@click": remove_first}, "Remove First"),
         ),
@@ -44,7 +45,7 @@ def NestedDynamicPage(context: ComponentContext[None]):
             {"data-testid": "nested-container"},
             switch(
                 {
-                    "case": Reactive(lambda: view_mode.value == "list"),
+                    "case": is_list,
                     "generator": lambda: html.UL(
                         {"data-testid": "list-view"},
                         repeat(
@@ -57,7 +58,7 @@ def NestedDynamicPage(context: ComponentContext[None]):
                     ),
                 },
                 {
-                    "case": Reactive(lambda: view_mode.value == "grid"),
+                    "case": is_grid,
                     "generator": lambda: html.DIV(
                         {"data-testid": "grid-view"},
                         repeat(
