@@ -11,7 +11,7 @@ WebComPy provides `useAsyncResult` for structured reactive async state with load
 ## Requirements
 
 ### Requirement: Async operations shall integrate with the reactive system
-Developers SHALL be able to create a reactive value that starts unresolved and automatically updates when an async operation completes, triggering UI updates like any other reactive change.
+Developers SHALL be able to create a reactive async state container that starts unresolved and automatically updates when an async operation completes, triggering UI updates like any other reactive change. The `AsyncResult` class provides a structured state machine (`AsyncState.PENDING`, `LOADING`, `SUCCESS`, `ERROR`) with typed predicates for declarative UI rendering. The `useAsyncResult` composable integrates `AsyncResult` with the component lifecycle for automatic execution and cleanup.
 
 #### Scenario: Loading data from an API on component mount with useAsyncResult
 - **WHEN** a developer calls `useAsyncResult(fetch_func)` inside a component setup
