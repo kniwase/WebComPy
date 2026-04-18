@@ -5,7 +5,6 @@ from functools import partial
 
 from webcompy.cli._argparser import get_params
 from webcompy.cli._html import generate_html
-from webcompy.cli._pyscript_wheel import make_webcompy_app_package
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     generate_app_version,
@@ -13,6 +12,7 @@ from webcompy.cli._utils import (
     get_config,
     get_webcompy_packge_dir,
 )
+from webcompy.cli._wheel_builder import make_webcompy_app_package
 
 
 def generate_static_site():
@@ -53,6 +53,7 @@ def generate_static_site():
         get_webcompy_packge_dir(),
         config.app_package_path,
         app_version,
+        config.assets,
     )
     for p in scripts_dir.iterdir():
         print(p)

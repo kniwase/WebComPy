@@ -7,12 +7,11 @@ from typing import (
     Any,
     ClassVar,
     Generic,
+    ParamSpec,
     TypeVar,
     cast,
     final,
 )
-
-from typing_extensions import ParamSpec
 
 V = TypeVar("V")
 A = ParamSpec("A")
