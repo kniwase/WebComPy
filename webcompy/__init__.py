@@ -12,6 +12,7 @@ from . import (
 )
 from ._browser import browser
 from ._version import __version__
+from .assets import AssetNotFoundError, load_asset
 
 if utils.ENVIRONMENT == "other":
     from . import cli
@@ -20,6 +21,7 @@ else:
 
 
 __all__ = [
+    "AssetNotFoundError",
     "__version__",
     "aio",
     "ajax",
@@ -29,6 +31,7 @@ __all__ = [
     "components",
     "elements",
     "exception",
+    "load_asset",
     "logging",
     "router",
     "signal",

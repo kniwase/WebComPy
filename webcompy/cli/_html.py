@@ -4,9 +4,9 @@ import html as html_module
 import json
 from typing import TypeAlias
 
-from webcompy._version import __version__ as webcompy_version
 from webcompy.app._app import WebComPyApp
 from webcompy.cli._config import WebComPyConfig
+from webcompy.cli._wheel_builder import get_wheel_filename
 from webcompy.components._component import Component
 from webcompy.elements.typealias import ElementChildren
 from webcompy.elements.types import Element, RepeatElement
@@ -131,6 +131,7 @@ def generate_html(
     dev_mode: bool,
     prerender: bool,
     app_version: str,
+    app_package_name: str,
     app: WebComPyApp,
 ):
     app_root = (
@@ -156,9 +157,7 @@ def generate_html(
 
     py_packages = [
         *config.dependencies,
-        "typing_extensions",
-        f"{config.base}_webcompy-app-package/webcompy-{webcompy_version}-py3-none-any.whl",
-        f"{config.base}_webcompy-app-package/app-{app_version}-py3-none-any.whl",
+        f"{config.base}_webcompy-app-package/{get_wheel_filename(app_package_name, app_version)}",
     ]
     py_config = html_module.escape(
         json.dumps({"packages": py_packages, "experimental_create_proxy": "auto"}),

@@ -20,7 +20,6 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "typing_extensions",
     "starlette",
     "sse-starlette",
     "uvicorn",
@@ -107,8 +106,6 @@ dev = [
     "pytest-cov>=7.1.0",
     "pytest-playwright>=0.7.2",
     "ruff>=0.15.10",
-    "setuptools>=82.0.1",
-    "wheel",
 ]
 docs = [
     # Pyodide 0.28.0 ships matplotlib 3.10.3; >=3.9.0,<4 ensures compatibility with numpy==2.2.5

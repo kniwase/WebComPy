@@ -1,14 +1,8 @@
 from __future__ import annotations
 
-import os
 import pathlib
-import sys
-from collections.abc import Callable
 from datetime import datetime
 from importlib import import_module
-from typing import TypeVar
-
-from typing_extensions import ParamSpec
 
 from webcompy.app._app import WebComPyApp
 from webcompy.cli._config import WebComPyConfig
@@ -70,27 +64,6 @@ def get_webcompy_packge_dir(path: pathlib.Path | None = None) -> pathlib.Path:
         return path.absolute()
     else:
         return get_webcompy_packge_dir(path.parent)
-
-
-P = ParamSpec("P")
-T = TypeVar("T")
-
-
-def external_cli_tool_wrapper(func: Callable[P, T]) -> Callable[P, T]:
-    def inner(*args: P.args, **kwargs: P.kwargs):
-        cwd_ori = pathlib.Path.cwd()
-        argv_ori = tuple(sys.argv[1:])
-        for _ in range(1, len(sys.argv)):
-            sys.argv.pop(1)
-        ret = func(*args, **kwargs)
-        for _ in range(1, len(sys.argv)):
-            sys.argv.pop(1)
-        for arg in argv_ori:
-            sys.argv.append(arg)
-        os.chdir(cwd_ori)
-        return ret
-
-    return inner
 
 
 def generate_app_version():

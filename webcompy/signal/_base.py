@@ -3,9 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, Generic, TypeVar, cast, final
-
-from typing_extensions import ParamSpec
+from typing import Any, Generic, ParamSpec, TypeVar, cast, final
 
 from webcompy.signal._graph import (
     SignalNode,

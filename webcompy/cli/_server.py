@@ -21,13 +21,13 @@ from webcompy.app._app import WebComPyApp
 from webcompy.cli._argparser import get_params
 from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._html import generate_html
-from webcompy.cli._pyscript_wheel import make_webcompy_app_package
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     generate_app_version,
     get_config,
     get_webcompy_packge_dir,
 )
+from webcompy.cli._wheel_builder import make_webcompy_app_package
 
 
 def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
@@ -41,6 +41,7 @@ def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = F
             get_webcompy_packge_dir(),
             config.app_package_path,
             app_version,
+            config.assets,
         )
         app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (
@@ -79,7 +80,7 @@ def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = F
         static_file_routes.append(Route("/" + relative_path, send_file))
 
     # HTMLs
-    html_generator = partial(generate_html, config, dev_mode, True, app_version)
+    html_generator = partial(generate_html, config, dev_mode, True, app_version, config.app_package_path.name)
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + config.base.strip("/"))).sub,
         "",

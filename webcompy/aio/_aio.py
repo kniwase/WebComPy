@@ -5,9 +5,7 @@ from collections.abc import Callable, Coroutine
 from re import compile as re_compile
 from re import escape as re_escape
 from traceback import TracebackException
-from typing import Any, Generic, TypeAlias, TypeVar
-
-from typing_extensions import ParamSpec
+from typing import Any, Generic, ParamSpec, TypeAlias, TypeVar
 
 from webcompy import logging
 from webcompy._browser._modules import browser
