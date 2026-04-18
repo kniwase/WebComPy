@@ -41,15 +41,15 @@ if existing_node and prerendered and nodeName matches:
 
 ## Decisions
 
-### 1. Reuse pre-rendered `#text` nodes without content overwrite
+### 1. Reuse pre-rendered `#text` nodes with content sync
 
-**Decision**: When a pre-rendered `#text` node is found during hydration, adopt it as-is without setting `textContent`.
+**Decision**: When a pre-rendered `#text` node is found during hydration, adopt it and update its `textContent` to match `self._get_text()`.
 
-**Rationale**: The SSR output uses `_render_html()` → `_get_text()`, and the browser-side `_init_node()` computes the same `_get_text()`. The values are guaranteed to be identical at hydration time. For reactive text (`SignalBase`), the `on_after_updating` callback registered in `__init__` handles all subsequent changes via `_update_text`.
+**Rationale**: SSR output and the browser-side initial Signal value may differ (e.g., the router resolves `//:404://` to `/404.html` during SSG, but the browser-side Signal holds the actual path). Simply reusing the node without syncing would display stale SSR content. Setting `textContent` during hydration is safe because: (1) for static text, the value is identical (no-op DOM mutation), and (2) for reactive text, the `on_after_updating` callback handles all subsequent changes.
 
 **Alternatives considered**:
-- **Reusing + overwriting `textContent`**: Redundant since values match; adds unnecessary DOM mutation
-- **Reusing + diffing `textContent`**: Comparison cost is negligible but adds complexity for no benefit
+- **Reusing without content sync (Pattern A)**: Simpler but fails when SSR and browser initial values differ — demonstrated by the 404 route e2e test failure
+- **Diffing `textContent` before setting**: Adds unnecessary comparison cost; setting textContent to the same value is a no-op in DOM
 
 ### 2. Follow the same hydration pattern as `NewLine` / `ElementBase`
 
@@ -59,5 +59,4 @@ if existing_node and prerendered and nodeName matches:
 
 ## Risks / Trade-offs
 
-- **SSR/initial-value mismatch**: If someone manually mutates the DOM between SSR output and hydration, the adopted text node may have different content. → Mitigation: this applies to all element types already, and manual DOM mutation before hydration is not a supported use case.
 - **`MultiLineTextElement`**: Uses `RepeatElement` which creates `TextElement` children. The fix to `TextElement` resolves this transitively. No separate handling needed.

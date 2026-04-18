@@ -11,10 +11,11 @@ When the browser encounters an existing DOM node marked as pre-rendered with a m
 #### Scenario: Hydrating a server-rendered text node
 - **WHEN** the browser finds an existing `#text` node with `__webcompy_prerendered_node__ = True`
 - **THEN** the TextElement SHALL adopt that node rather than removing it and creating a new one
-- **AND** no visible flash or content change SHALL occur during hydration
+- **AND** the text content SHALL be updated to match the element's current value
+- **AND** no visible flash SHALL occur during hydration
 
 #### Scenario: Hydrating a reactive text node
 - **WHEN** a TextElement wraps a Signal value
 - **AND** the browser finds a pre-rendered `#text` node for it
-- **THEN** the TextElement SHALL adopt the existing node without overwriting its content
+- **THEN** the TextElement SHALL adopt the existing node and update its content to the Signal's current value
 - **AND** subsequent Signal changes SHALL update the adopted node via the existing `on_after_updating` callback

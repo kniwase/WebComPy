@@ -202,12 +202,13 @@ class TestTextElementWithBrowser:
         text_el = TextElement("hello")
         text_el._parent = parent
         text_el._node_idx = 0
-        existing_node = FakeDOMNode("#text", text_content="hello")
+        existing_node = FakeDOMNode("#text", text_content="stale")
         existing_node.__webcompy_prerendered_node__ = True
         parent_node.appendChild(existing_node)
         node = text_el._init_node()
         assert node is existing_node
         assert text_el._mounted is True
+        assert node.textContent == "hello"
         assert parent_node.childNodes.length == 1
 
     def test_hydrate_prerendered_text_node_with_signal(self, fake_browser_full):
@@ -221,12 +222,13 @@ class TestTextElementWithBrowser:
         text_el = TextElement(sig)
         text_el._parent = parent
         text_el._node_idx = 0
-        existing_node = FakeDOMNode("#text", text_content="hello")
+        existing_node = FakeDOMNode("#text", text_content="stale_from_ssr")
         existing_node.__webcompy_prerendered_node__ = True
         parent_node.appendChild(existing_node)
         node = text_el._init_node()
         assert node is existing_node
         assert text_el._mounted is True
+        assert node.textContent == "hello"
         sig.value = "world"
         assert text_el._get_node().textContent == "world"
 

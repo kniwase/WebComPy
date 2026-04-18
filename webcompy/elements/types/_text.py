@@ -64,6 +64,7 @@ class TextElement(ElementAbstract):
                     getattr(existing_node, "__webcompy_prerendered_node__", False)
                     and existing_node.nodeName.lower() == "#text"
                 ):
+                    existing_node.textContent = self._get_text()
                     node = existing_node
                     self._mounted = True
                 else:
