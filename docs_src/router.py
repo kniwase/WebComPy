@@ -3,7 +3,6 @@ from webcompy.router import Router
 from .pages.demo.fetch_sample import FetchSamplePage
 from .pages.demo.fizzbuzz import FizzbuzzPage
 from .pages.demo.helloworld import HelloWorldPage
-from .pages.demo.helloworld_classstyle import HelloWorldClassstylePage
 from .pages.demo.matplotlib_sample import MatpoltlibSamplePage
 from .pages.demo.todo import ToDoListPage
 from .pages.document.home import DocumentHomePage
@@ -14,7 +13,6 @@ router = Router(
     {"path": "/", "component": HomePage},
     {"path": "/documents", "component": DocumentHomePage},
     {"path": "/sample/helloworld", "component": HelloWorldPage},
-    {"path": "/sample/helloworld-classstyle", "component": HelloWorldClassstylePage},
     {"path": "/sample/fizzbuzz", "component": FizzbuzzPage},
     {"path": "/sample/todo", "component": ToDoListPage},
     {"path": "/sample/matplotlib", "component": MatpoltlibSamplePage},
