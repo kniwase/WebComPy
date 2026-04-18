@@ -61,7 +61,7 @@ def _sha256_b64(data: bytes) -> str:
 
 
 def _normalize_name(name: str) -> str:
-    return re.sub(r"[-_.]+", "-", name).lower()
+    return re.sub(r"[-_.]+", "_", name).lower()
 
 
 def get_wheel_filename(name: str, version: str) -> str:

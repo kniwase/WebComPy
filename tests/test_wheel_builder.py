@@ -156,10 +156,10 @@ class TestNormalizeName:
         assert _normalize_name("myapp") == "myapp"
 
     def test_underscores(self):
-        assert _normalize_name("my_app") == "my-app"
+        assert _normalize_name("my_app") == "my_app"
 
     def test_dots(self):
-        assert _normalize_name("my.app") == "my-app"
+        assert _normalize_name("my.app") == "my_app"
 
     def test_mixed_case(self):
         assert _normalize_name("MyApp") == "myapp"
@@ -170,13 +170,13 @@ class TestGetWheelFilename:
         assert get_wheel_filename("myapp", "1.0.0") == "myapp-1.0.0-py3-none-any.whl"
 
     def test_underscore_name(self):
-        assert get_wheel_filename("my_app", "1.0.0") == "my-app-1.0.0-py3-none-any.whl"
+        assert get_wheel_filename("my_app", "1.0.0") == "my_app-1.0.0-py3-none-any.whl"
 
     def test_mixed_case_name(self):
         assert get_wheel_filename("MyApp", "2.3.4") == "myapp-2.3.4-py3-none-any.whl"
 
     def test_dotted_name(self):
-        assert get_wheel_filename("my.app", "1.0.0") == "my-app-1.0.0-py3-none-any.whl"
+        assert get_wheel_filename("my.app", "1.0.0") == "my_app-1.0.0-py3-none-any.whl"
 
     def test_matches_make_wheel_output(self, tmp_path):
         pkg = tmp_path / "test_pkg"
@@ -344,7 +344,7 @@ class TestMakeBundledWheel:
         )
         assert result.name == get_wheel_filename("my_app", "2.0.0")
         with zipfile.ZipFile(result) as zf:
-            top_level = zf.read("my-app-2.0.0.dist-info/top_level.txt").decode()
+            top_level = zf.read("my_app-2.0.0.dist-info/top_level.txt").decode()
             lines = top_level.strip().split("\n")
             assert "webcompy" in lines
             assert "my_app" in lines
