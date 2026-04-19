@@ -3,8 +3,7 @@ from typing import Any, TypedDict
 
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DomNodeRef, html, repeat
-from webcompy.signal import Signal, computed
-from webcompy.signal._dict import ReactiveDict
+from webcompy.signal import ReactiveDict, Signal, computed
 
 
 class TodoData(TypedDict):

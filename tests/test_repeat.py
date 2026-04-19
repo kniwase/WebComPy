@@ -2,8 +2,7 @@ from tests.conftest import FakeDOMNode
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._text import TextElement
-from webcompy.signal import ReactiveList
-from webcompy.signal._dict import ReactiveDict
+from webcompy.signal import ReactiveDict, ReactiveList
 
 
 class FakeRootElement(Element):

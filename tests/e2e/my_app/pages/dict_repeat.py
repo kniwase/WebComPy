@@ -1,7 +1,6 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html, repeat
-from webcompy.signal import Signal
-from webcompy.signal._dict import ReactiveDict
+from webcompy.signal import ReactiveDict, Signal
 
 
 @define_component

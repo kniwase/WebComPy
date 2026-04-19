@@ -4,8 +4,7 @@ from webcompy.components import (
     on_before_rendering,
 )
 from webcompy.elements import DOMEvent, html, repeat, switch
-from webcompy.signal import Signal, computed
-from webcompy.signal._dict import ReactiveDict
+from webcompy.signal import ReactiveDict, Signal, computed
 
 
 @define_component
