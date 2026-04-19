@@ -1,4 +1,4 @@
-from webcompy.signal._list import ReactiveList
+from webcompy.signal import ReactiveList
 
 
 class TestListMutationMetadata:

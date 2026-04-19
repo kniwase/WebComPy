@@ -17,8 +17,7 @@ def FizzbuzzPage(context: ComponentContext[RouterContext]):
             {
                 "title": title,
                 "code": """
-                    from webcompy.signal import Signal, computed
-                    from webcompy.signal._dict import ReactiveDict
+                    from webcompy.signal import Signal, computed, ReactiveDict
                     from webcompy.elements import html, repeat, switch, DOMEvent
                     from webcompy.components import (
                         define_component,

@@ -21,8 +21,7 @@ def ToDoListPage(context: ComponentContext[RouterContext]):
                     from typing import Any, TypedDict
                     from webcompy.elements import html, repeat, DomNodeRef
                     from webcompy.components import define_component, ComponentContext
-                    from webcompy.signal import Signal, computed
-                    from webcompy.signal._dict import ReactiveDict
+                    from webcompy.signal import Signal, computed, ReactiveDict
 
 
                     class TodoData(TypedDict):
