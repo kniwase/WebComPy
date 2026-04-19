@@ -85,29 +85,19 @@ GenerateConfig               — SSG only
 
 **Rationale:** The selector is a runtime concern (where to mount in the browser), not a build/deploy concern. It doesn't affect SSG output. Putting it in `AppConfig` would mean passing browser-specific runtime config to the server, violating separation of concerns. The `run()` parameter is the right place.
 
-### Decision 4: `app.serve()` wraps uvicorn internally
+### Decision 4: Server entry points are module-level functions, not app methods
 
-**Choice:** `app.serve(port=8080, dev=False, **kwargs)` calls `uvicorn.run(self.asgi_app, ...)`.
+**Choice:** `create_asgi_app(app, config, dev_mode)`, `run_server(app=None)`, and `generate_static_site(app=None)` are module-level functions in `webcompy/cli`. They accept a `WebComPyApp` instance directly.
 
-**Alternative considered:** `app.serve()` only configures, user must call `uvicorn.run()` separately.
+**Alternative considered:** `app.serve()`, `app.asgi_app`, and `app.generate()` as methods on `WebComPyApp`.
 
-**Rationale:** FastAPI's pattern (`uvicorn.run(app)`) works because FastAPI apps are ASGI-compatible directly. WebComPy needs to build a Starlette app from the WebComPyApp config (wheel packaging, static files, routes). Wrapping this in `serve()` provides the best developer experience while `app.asgi_app` provides escape-hatch flexibility for advanced use cases (mounting into existing Starlette/FastAPI apps).
+**Rationale:** Making server/SSG entry points methods on `WebComPyApp` would cause import errors in the browser environment (PyScript/Emscripten) because `starlette`, `uvicorn`, `aiofiles`, and other server-only dependencies are unavailable. By keeping them as module-level functions in `webcompy/cli/`, the browser-side `WebComPyApp` import stays lightweight. The CLI module is only imported when `platform.system() != "Emscripten"`.
 
-### Decision 5: `app.asgi_app` property lazily builds the Starlette app
+### Decision 5: `AppConfig` is the user-facing configuration, `WebComPyConfig` is internal
 
-**Choice:** `app.asgi_app` is a `@cached_property` that calls `create_asgi_app(self, ...)` using `AppConfig` instead of `WebComPyConfig` and caches the result.
+**Choice:** `AppConfig` (with `app_package`, `base_url`, `dependencies`, `assets`) is the developer-facing dataclass. `WebComPyConfig` is retained internally for CLI/server/SSG compatibility but emits `DeprecationWarning`.
 
-**Alternative considered:** Build the ASGI app eagerly in `__init__`.
-
-**Rationale:** ASGI app construction involves wheel building and file I/O. This should only happen when actually needed (server startup or ASGI mounting). Lazy construction also avoids import issues in the browser environment where `uvicorn` and `starlette` are unavailable.
-
-### Decision 6: `app.generate()` as instance method
-
-**Choice:** `app.generate(dist="dist", cname="", static_files_dir="static")` or `app.generate(config=GenerateConfig(...))`.
-
-**Alternative considered:** Keep `generate_static_site()` as a free function that takes an `app`.
-
-**Rationale:** An instance method is more discoverable and follows the FastAPI pattern. It also gives the method access to `self._config` and `self._root` without parameter passing.
+**Rationale:** `AppConfig` contains only the settings that affect both browser and server (base URL, dependencies, assets). Settings like `app_package_path`, `server_port`, and `dist` are server-deployment concerns, handled by `WebComPyConfig` internally or derived from `AppConfig`. This keeps the developer API simple while maintaining backward compatibility.
 
 ### Decision 7: ComponentStore — truly per-app with import-time registration
 
@@ -211,9 +201,9 @@ GenerateConfig               — SSG only
 ## Migration Plan
 
 1. **Phase A — Non-breaking API addition**:
-   - Add `AppConfig`, `ServerConfig`, `GenerateConfig` dataclasses
-   - Add `app.run()`, `app.serve()`, `app.asgi_app`, `app.generate()`
-   - Add transparent property forwarding
+   - Add `AppConfig` dataclass
+   - Add `app.run()`, `app.config`, transparent property forwarding
+   - Add `create_asgi_app(app, config)`, `run_server(app)`, `generate_static_site(app)` module-level functions
    - Update `_html.py` to generate `app.run()` bootstrap code
    - Update project template (`bootstrap.py` → `app.py` pattern)
 

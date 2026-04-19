@@ -68,7 +68,7 @@ Each `WebComPyApp` instance SHALL have its own DI scope, Router, HeadPropsStore,
 - **AND** setting the title in one app SHALL NOT affect the other
 
 #### Scenario: Two apps in the same server process
-- **WHEN** two `WebComPyApp` instances are created and both call `app.serve()` or `app.generate()`
+- **WHEN** two `WebComPyApp` instances are created and both are used with `create_asgi_app()` or `generate_static_site()`
 - **THEN** each app SHALL produce independent output
 - **AND** each app SHALL have its own configuration, routes, and DI scope
 

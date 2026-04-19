@@ -1,14 +1,14 @@
 ## MODIFIED Requirements
 
 ### Requirement: The application entry point shall connect all subsystems
-`WebComPyApp` SHALL serve as the single entry point that wires together the root component, the router, and the reactive head management system. It SHALL own its configuration (`AppConfig`), state (`HeadPropsStore`, `ComponentStore`, DI scope), and lifecycle methods (`run`, `serve`, `generate`, `asgi_app`). Developers SHALL only need to provide a root component and optionally a router and config — the framework handles all internal wiring. `WebComPyApp` SHALL create a root `DIScope` and provide framework-internal services (Router, ComponentStore, HeadProps) into it. Module-level globals like `_root_di_scope` and `_default_component_store` SHALL NOT be used as app-scoped state.
+`WebComPyApp` SHALL serve as the single entry point that wires together the root component, the router, and the reactive head management system. It SHALL own its configuration (`AppConfig`), state (`HeadPropsStore`, `ComponentStore`, DI scope), and the browser entry point (`run`). Server-side and SSG entry points SHALL be module-level functions (`create_asgi_app`, `run_server`, `generate_static_site`) that accept a `WebComPyApp` instance, not methods on the app object. Developers SHALL only need to provide a root component and optionally a router and config — the framework handles all internal wiring. `WebComPyApp` SHALL create a root `DIScope` and provide framework-internal services (Router, ComponentStore, HeadProps) into it. Module-level globals like `_root_di_scope` and `_default_component_store` SHALL NOT be used as app-scoped state.
 
 #### Scenario: Creating a minimal application with config
 - **WHEN** a developer writes `app = WebComPyApp(root_component=MyApp, config=AppConfig(base_url="/app/"))`
 - **THEN** the reactive system, component system, and element system SHALL be wired together
 - **AND** `app.run()` SHALL produce the full UI in the browser
-- **AND** `app.serve()` SHALL start the dev server
-- **AND** `app.asgi_app` SHALL return a mountable ASGI application
+- **AND** `create_asgi_app(app)` SHALL return a mountable ASGI application
+- **AND** `generate_static_site(app)` SHALL produce static HTML
 
 #### Scenario: Creating an application with routing
 - **WHEN** a developer writes `app = WebComPyApp(root_component=MyApp, router=router, config=AppConfig(base_url="/app/"))`
@@ -52,7 +52,7 @@
 A WebComPy project SHALL follow a specific directory layout. The CLI SHALL support both the existing convention (a `webcompy_config.py` with a `WebComPyConfig` instance, and an app package with a `bootstrap.py`) and the new pattern (an app module with a `WebComPyApp` instance that owns its `AppConfig`). The new pattern does not require `webcompy_config.py`.
 
 #### Scenario: Starting the dev server with new pattern
-- **WHEN** a developer runs `app.serve(dev=True)` directly from Python
+- **WHEN** a developer calls `run_server(app)` directly from Python
 - **THEN** the server SHALL start without requiring `webcompy_config.py`
 - **AND** `AppConfig` settings SHALL be used
 
@@ -68,5 +68,5 @@ A WebComPy project SHALL follow a specific directory layout. The CLI SHALL suppo
 ## REMOVED Requirements
 
 ### Requirement: Application configuration shall be extensible
-**Reason**: Replaced by `AppConfig`, `ServerConfig`, and `GenerateConfig` dataclasses with validated fields and sensible defaults.
-**Migration**: Use `AppConfig(base_url=..., dependencies=..., assets=...)` instead of `WebComPyConfig(app_package=..., base=..., dependencies=..., assets=...)`. Deployment-specific settings use `ServerConfig` and `GenerateConfig` passed to `app.serve()` and `app.generate()` respectively.
+**Reason**: Replaced by `AppConfig` dataclass with validated fields and sensible defaults. `ServerConfig` and `GenerateConfig` are retained for internal use by `create_asgi_app` and `generate_static_site` but are not passed by the developer through `WebComPyApp` lifecycle methods.
+**Migration**: Use `AppConfig(base_url=..., dependencies=..., assets=..., app_package=...)` instead of `WebComPyConfig(app_package=..., base=..., dependencies=..., assets=...)`.

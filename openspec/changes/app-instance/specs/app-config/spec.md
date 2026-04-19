@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Application configuration shall use type-safe dataclasses
-The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` dataclasses with validated fields and sensible defaults. `AppConfig` SHALL contain settings shared between browser and server environments. `ServerConfig` SHALL contain settings for the development server. `GenerateConfig` SHALL contain settings for static site generation.
+The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` dataclasses with validated fields and sensible defaults. `AppConfig` SHALL contain settings shared between browser and server environments (including `app_package` for server-side use). `ServerConfig` and `GenerateConfig` are internal types used by CLI functions, not passed directly by developers through `WebComPyApp`.
 
 #### Scenario: Creating a minimal application configuration
 - **WHEN** a developer creates `WebComPyApp(root_component=Root)` without explicit config
@@ -12,18 +12,6 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **WHEN** a developer creates `AppConfig(base_url="/myapp/", dependencies=["pandas"])`
 - **THEN** `base_url` SHALL be normalized to `"/myapp/"` (trailing slash)
 - **AND** `dependencies` SHALL be stored as a copy of the provided list
-
-#### Scenario: Configuring dev server settings
-- **WHEN** a developer creates `ServerConfig(port=9000, dev=True, static_files_dir="public")`
-- **THEN** the dev server SHALL listen on port 9000
-- **AND** hot-reload SHALL be enabled
-- **AND** static files SHALL be served from the `public` directory
-
-#### Scenario: Configuring static site generation settings
-- **WHEN** a developer creates `GenerateConfig(dist="docs", cname="example.com", static_files_dir="public")`
-- **THEN** generated files SHALL be written to the `docs` directory
-- **AND** a `CNAME` file with `example.com` SHALL be created in the output
-- **AND** static files SHALL be copied from the `public` directory
 
 #### Scenario: Passing configuration to WebComPyApp
 - **WHEN** a developer creates `WebComPyApp(root_component=Root, config=AppConfig(base_url="/app/"))`

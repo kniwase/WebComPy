@@ -22,59 +22,39 @@ In the browser environment, `app.run(selector)` SHALL mount and render the appli
 - **WHEN** a developer calls `app.run("#nonexistent")` and no element matches
 - **THEN** a `WebComPyException` SHALL be raised indicating the mount point was not found
 
-### Requirement: The application shall provide a development server entry point via app.serve()
-In the server environment, `app.serve(config)` SHALL start a Starlette+uvicorn development server that serves the application with hot-reload support.
+### Requirement: The server entry point shall be a module-level function
+Server-side entry points SHALL be module-level functions (`create_asgi_app`, `run_server`) that accept a `WebComPyApp` instance, not methods on the app object. This avoids importing server-only dependencies (starlette, uvicorn) in the browser environment.
 
-#### Scenario: Starting a dev server with defaults
-- **WHEN** a developer calls `app.serve(dev=True)` on the server
+#### Scenario: Creating an ASGI app from a WebComPyApp
+- **WHEN** a developer calls `create_asgi_app(app, config, dev_mode)` on the server
+- **THEN** a Starlette ASGI application SHALL be returned
+- **AND** the ASGI app SHALL serve all routes, static files, and app packages
+
+#### Scenario: Starting a dev server with run_server
+- **WHEN** a developer calls `run_server(app)` on the server
 - **THEN** a uvicorn server SHALL start on the configured port (default 8080)
 - **AND** the application SHALL be accessible at the configured base URL
-- **AND** hot-reload SHALL be enabled via SSE
+- **AND** hot-reload SHALL be enabled via SSE when run in dev mode
 
-#### Scenario: Starting a server with custom config
-- **WHEN** a developer calls `app.serve(config=ServerConfig(port=9000, dev=True))`
-- **THEN** the server SHALL start on port 9000
-- **AND** all application routes SHALL be served
+#### Scenario: Starting a dev server via CLI without webcompy_config.py
+- **WHEN** a developer runs `python -m webcompy start --dev` and the app module exposes `app = WebComPyApp(..., config=AppConfig(...))`
+- **THEN** the CLI SHALL discover the app instance and use `run_server(app)`
+- **AND** `webcompy_config.py` SHALL not be required
 
-#### Scenario: Calling serve() in the browser environment
-- **WHEN** a developer calls `app.serve()` in the browser (Emscripten) environment
-- **THEN** a `WebComPyException` SHALL be raised indicating that `serve()` is not available in the browser
+### Requirement: The SSG entry point shall be a module-level function
+Static site generation SHALL use a module-level function (`generate_static_site`) that accepts a `WebComPyApp` instance, not a method on the app object.
 
-### Requirement: The application shall expose an ASGI application via app.asgi_app
-`app.asgi_app` SHALL return a Starlette ASGI application that can be mounted into other ASGI frameworks or passed directly to ASGI servers.
-
-#### Scenario: Mounting a WebComPy app into an existing Starlette app
-- **WHEN** a developer writes `starlette_app = Starlette(routes=[Mount("/app", app=my_webcompy_app.asgi_app)])`
-- **THEN** the WebComPy application SHALL be served under the `/app` path
-- **AND** all routes, static files, and app packages SHALL be accessible
-
-#### Scenario: Passing asgi_app to uvicorn directly
-- **WHEN** a developer writes `uvicorn.run(my_app.asgi_app, host="0.0.0.0", port=8080)`
-- **THEN** the server SHALL start and serve the application
-
-#### Scenario: Lazy construction of ASGI app
-- **WHEN** a developer accesses `app.asgi_app` multiple times
-- **THEN** the ASGI application SHALL be constructed on first access and cached
-- **AND** subsequent accesses SHALL return the same ASGI application instance
-
-### Requirement: The application shall provide a static site generation entry point via app.generate()
-In the server environment, `app.generate(config)` SHALL produce a complete static site in the configured output directory.
-
-#### Scenario: Generating a static site with defaults
-- **WHEN** a developer calls `app.generate()` on the server
+#### Scenario: Generating a static site from a WebComPyApp
+- **WHEN** a developer calls `generate_static_site(app)` on the server
 - **THEN** a `dist/` directory SHALL be created with pre-rendered HTML for each route
 - **AND** a bundled Python wheel SHALL be included
 - **AND** static files SHALL be copied
 - **AND** a `.nojekyll` file SHALL be created
 
-#### Scenario: Generating with custom config
-- **WHEN** a developer calls `app.generate(config=GenerateConfig(dist="docs", cname="example.com"))`
-- **THEN** files SHALL be written to the `docs` directory
-- **AND** a `CNAME` file SHALL be created with `example.com`
-
-#### Scenario: Calling generate() in the browser environment
-- **WHEN** a developer calls `app.generate()` in the browser (Emscripten) environment
-- **THEN** a `WebComPyException` SHALL be raised indicating that `generate()` is not available in the browser
+#### Scenario: Generating via CLI without webcompy_config.py
+- **WHEN** a developer runs `python -m webcompy generate` and the app module exposes a `WebComPyApp` instance
+- **THEN** the CLI SHALL discover the app instance and use `generate_static_site(app)`
+- **AND** `webcompy_config.py` SHALL not be required
 
 ### Requirement: WebComPyApp shall forward AppDocumentRoot properties
 `WebComPyApp` SHALL provide transparent access to frequently used `AppDocumentRoot` properties without requiring `__component__` access.

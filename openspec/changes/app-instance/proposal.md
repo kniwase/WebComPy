@@ -19,40 +19,39 @@ Adopting a FastAPI-style application instance — where the app object owns its 
 
 ## What Changes
 
-- **`WebComPyApp` becomes the central application object** with lifecycle methods (`run`, `serve`, `generate`) instead of being a thin wrapper accessed via `__component__`
+- **`WebComPyApp` becomes the central application object** with the browser entry point (`run`) and transparent property forwarding, instead of being a thin wrapper accessed via `__component__`
 - **`app.run(selector)`**: Browser entry point — mounts and renders the app into the specified DOM selector (default `#webcompy-app`), replacing `app.__component__.render()`
-- **`app.serve(config)`**: Server entry point — starts the dev server (replaces `python -m webcompy start` as the sole invocation method)
-- **`app.asgi_app`**: ASGI application property — returns a Starlette app that can be mounted into other ASGI frameworks (replaces `_asgi_app.py` module-level pattern)
-- **`app.generate(config)`**: SSG entry point — generates static site output (replaces `python -m webcompy generate` as the sole invocation method)
-- **Type-safe configuration objects**: `AppConfig` (browser+server), `ServerConfig` (dev server), `GenerateConfig` (SSG) replace `WebComPyConfig`, passed into `WebComPyApp.__init__` or lifecycle methods
+- **`create_asgi_app(app)`**: Module-level function that returns a Starlette ASGI app for serving the application
+- **`run_server(app=None)`**: Module-level function that starts the dev server, accepting an optional `WebComPyApp` instance
+- **`generate_static_site(app=None)`**: Module-level function for SSG, accepting an optional `WebComPyApp` instance
+- **Type-safe configuration object**: `AppConfig` (with `app_package`, `base_url`, `dependencies`, `assets`) replaces `WebComPyConfig` for browser+server shared settings
 - **Transparent property forwarding**: `app.routes`, `app.router_mode`, `app.set_path()`, `app.head`, `app.style`, `app.set_title()`, `app.set_meta()`, etc. — replace `app.__component__.*` access pattern
 - **`RouterView._instance` singleton removed**: Enables multiple app instances with independent RouterViews
 - **`ComponentStore` becomes truly per-app**: Replace `_default_component_store` module-level bridge with per-app `ComponentStore` owned by `WebComPyApp`, solving the import-time registration problem
-- **`_root_di_scope` module global removed**: Each app's DI scope is self-contained; no module-level global is needed since `app.run()`, `app.serve()`, and `app.generate()` set the scope explicitly
+- **`_root_di_scope` module global removed**: Each app's DI scope is self-contained; no module-level global is needed since server entry points use `app.di_scope` context manager
 - **`_defer_*` module globals become per-app**: `_defer_after_rendering_depth` and `_defered_after_rendering_callbacks` move to the `WebComPyApp` instance
-- **CLI backward compatibility**: `python -m webcompy start` and `python -m webcompy generate` continue to work by discovering app instance from bootstrap module (with deprecation warnings), while also supporting direct `app.serve()` / `app.generate()` invocation
+- **CLI backward compatibility**: `python -m webcompy start` and `python -m webcompy generate` continue to work by discovering app instance from bootstrap module (with deprecation warnings), while also supporting direct `run_server(app)` / `generate_static_site(app)` invocation
 - **`webcompy_config.py` deprecated**: Settings migrate to `AppConfig` passed to `WebComPyApp`; old `WebComPyConfig` continues to work with `DeprecationWarning`
 
 ## Capabilities
 
 ### New Capabilities
-- `app-config`: Type-safe configuration objects (AppConfig, ServerConfig, GenerateConfig) for application and deployment settings
-- `app-lifecycle`: Application lifecycle methods (run, serve, asgi_app, generate) for browser, server, and SSG entry points
+- `app-config`: Type-safe configuration object (`AppConfig`) for application settings shared between browser and server
+- `app-lifecycle`: Browser entry point (`app.run()`), server entry points (`create_asgi_app`, `run_server`, `generate_static_site`) as module-level functions that accept a `WebComPyApp`
 
 ### Modified Capabilities
-- `app`: WebComPyApp gains transparent property forwarding, lifecycle methods, and config; `__component__` access deprecated; app is fully isolated and multi-app-capable
-- `cli`: CLI commands support direct app instance invocation in addition to existing config discovery; `WebComPyConfig` deprecated in favor of `AppConfig`
+- `app`: WebComPyApp gains transparent property forwarding, `run()` method, and config; `__component__` access deprecated; app is fully isolated and multi-app-capable
+- `cli`: CLI functions accept optional `WebComPyApp` argument; `WebComPyConfig` deprecated in favor of `AppConfig`
 - `architecture`: Remaining singletons removed (`RouterView._instance`, `_default_component_store` bridge, `_root_di_scope` global); app instance is the scope boundary for all shared state
 - `components`: `ComponentStore` becomes truly per-app (no shared default); `_defer_*` globals move to app scope
 
 ## Impact
 
-- **`webcompy/app/_app.py`**: Major expansion — lifecycle methods, transparent properties, config acceptance, per-app ComponentStore, per-app `_defer_*` state
+- **`webcompy/app/_app.py`**: Expansion — `run()` method, transparent properties, config acceptance, per-app ComponentStore, per-app `_defer_*` state
 - **`webcompy/app/_root_component.py`**: Selector-based mounting, remove `_set_root_di_scope` call, use app-owned state
-- **`webcompy/app/_config.py`** (new): AppConfig, ServerConfig, GenerateConfig dataclasses
-- **`webcompy/cli/_server.py`**: Refactor to use `app.serve()` / `app.asgi_app`
-- **`webcompy/cli/_asgi_app.py`**: Deprecate in favor of `app.asgi_app`
-- **`webcompy/cli/_generate.py`**: Refactor to use `app.generate()`
+- **`webcompy/app/_config.py`** (new): AppConfig dataclass
+- **`webcompy/cli/_server.py`**: `create_asgi_app` and `run_server` accept optional `WebComPyApp`
+- **`webcompy/cli/_generate.py`**: `generate_static_site` accepts optional `WebComPyApp`
 - **`webcompy/cli/_config.py`**: Deprecate `WebComPyConfig` in favor of `AppConfig`
 - **`webcompy/cli/_utils.py`**: Update `get_app()` to support new patterns
 - **`webcompy/cli/_html.py`**: Update generated PyScript bootstrap to use `app.run()`
