@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, TypedDict
+from typing import TypedDict
 
 from webcompy.components import ComponentGenerator
 from webcompy.di import inject
@@ -20,18 +20,7 @@ class RouterPage(RouterPageRequired, total=False):
 
 
 class RouterView(Element):
-    # TODO: Remove _instance singleton enforcement after App Instance migration
-    # (feat/app-instance). Router is already DI-provided; this ClassVar
-    # constraint should become unnecessary when multiple app instances are
-    # supported.
-    _instance: ClassVar[RouterView | None] = None
-
     def __init__(self) -> None:
-        if RouterView._instance:
-            raise RuntimeError("Only one instance of 'RouterView' can exist.")
-        else:
-            RouterView._instance = self
-
         try:
             router = inject(_ROUTER_KEY)
         except InjectionError:

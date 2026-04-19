@@ -6,18 +6,8 @@ from typing import Any
 from webcompy.di._exceptions import InjectionError
 
 _active_di_scope: ContextVar[DIScope] = ContextVar("_active_di_scope")
-_root_di_scope: DIScope | None = None
 
 _MISSING: Any = object()
-
-
-def _set_root_di_scope(scope: DIScope) -> None:
-    global _root_di_scope
-    _root_di_scope = scope
-
-
-def _get_root_di_scope() -> DIScope | None:
-    return _root_di_scope
 
 
 class DIScope:

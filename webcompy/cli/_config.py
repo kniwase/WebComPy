@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 
@@ -24,6 +25,11 @@ class WebComPyConfig:
         cname: str = "",
         assets: dict[str, str] | None = None,
     ) -> None:
+        warnings.warn(
+            "WebComPyConfig is deprecated. Use AppConfig instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if isinstance(app_package, Path):
             self.app_package_path = app_package.absolute()
         else:

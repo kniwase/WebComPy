@@ -1,23 +1,25 @@
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict
 from uuid import uuid4
 
 from webcompy._browser._modules import browser
-from webcompy.components._component import Component, HeadPropsStore
+from webcompy.components._component import Component, HeadPropsStore, _active_app_context
 from webcompy.components._generator import (
     ComponentGenerator,
-    _default_component_store,
     define_component,
 )
-from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY, _ROUTER_KEY
-from webcompy.di._scope import DIScope, _active_di_scope, _set_root_di_scope
+from webcompy.di._keys import _HEAD_PROPS_KEY, _ROUTER_KEY
+from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import html
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
 from webcompy.signal import Computed
+
+if TYPE_CHECKING:
+    from webcompy.app._app import WebComPyApp
 
 
 class Head(TypedDict, total=False):
@@ -53,17 +55,24 @@ class AppDocumentRoot(Component):
     _scripts_head: list[tuple[dict[str, str], str | None]]
     __loading: bool
 
-    def __init__(self, root_component: ComponentGenerator[None], router: Router | None, di_scope: DIScope) -> None:
+    def __init__(
+        self,
+        root_component: ComponentGenerator[None],
+        router: Router | None,
+        di_scope: DIScope,
+        selector: str | None = None,
+        app: WebComPyApp | None = None,
+    ) -> None:
         self._instance_id = uuid4()
         self.__loading = True
         self._router = router
         self._di_scope = di_scope
+        self._selector = selector
+        self._app = app
 
         head_props = HeadPropsStore()
         self._head_props = head_props
         di_scope.provide(_HEAD_PROPS_KEY, head_props)
-        di_scope.provide(_COMPONENT_STORE_KEY, _default_component_store)
-        _set_root_di_scope(di_scope)
         if self._router:
             di_scope.provide(_ROUTER_KEY, self._router)
             di_scope.provide(RouterKey, self._router)
@@ -80,8 +89,8 @@ class AppDocumentRoot(Component):
         self._scripts = []
         self._scripts_head = []
 
-        _active_di_scope.set(di_scope)
-        super().__init__(_app_root_setup, None, {"root": lambda: root_component(None)})
+        with di_scope:
+            super().__init__(_app_root_setup, None, {"root": lambda: root_component(None)})
 
     @property
     def render(self):
@@ -89,6 +98,7 @@ class AppDocumentRoot(Component):
 
     def _render(self):
         token = _active_di_scope.set(self._di_scope)
+        app_token = _active_app_context.set(self._app) if self._app else None
         try:
             self._property["on_before_rendering"]()
             for child in self._children:
@@ -96,15 +106,27 @@ class AppDocumentRoot(Component):
             self._property["on_after_rendering"]()
             if browser and self.__loading:
                 self.__loading = False
-                browser.document.getElementById("webcompy-loading").remove()
+                selector = self._selector or "#webcompy-app"
+                loading_el = browser.document.querySelector(
+                    f"{selector} > #webcompy-loading"
+                ) or browser.document.getElementById("webcompy-loading")
+                if loading_el:
+                    loading_el.remove()
         finally:
+            if app_token is not None:
+                _active_app_context.reset(app_token)
             _active_di_scope.reset(token)
 
     def _init_node(self) -> DOMNode:
         if browser:
-            node = browser.document.getElementById("webcompy-app")
+            selector = self._selector or "#webcompy-app"
+            node = browser.document.querySelector(selector)
+            if node is None:
+                from webcompy.exception import WebComPyException as _WCE
+
+                raise _WCE(f"Mount point '{selector}' not found in document.")
             for name in tuple(node.getAttributeNames()):
-                if name != "id":
+                if name != "id" and not name.startswith("webcompy"):
                     node.removeAttribute(name)
             node.__webcompy_node__ = True
             self._mark_as_prerendered(node)
@@ -142,11 +164,13 @@ class AppDocumentRoot(Component):
 
     @property
     def style(self):
-        from webcompy.components._generator import _default_component_store
-        from webcompy.di import inject
-        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        if self._app is not None:
+            store = self._app._component_store
+        else:
+            from webcompy.di import inject
+            from webcompy.di._keys import _COMPONENT_STORE_KEY
 
-        store = inject(_COMPONENT_STORE_KEY, default=_default_component_store)
+            store = inject(_COMPONENT_STORE_KEY)
         return " ".join(style for component in store.components.values() if (style := component.scoped_style))
 
     def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str:

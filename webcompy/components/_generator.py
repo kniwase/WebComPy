@@ -41,17 +41,18 @@ class ComponentStore:
         return self.__components
 
 
-_default_component_store = ComponentStore()
-
-
 PropsType = TypeVar("PropsType")
 FuncComponentDef: TypeAlias = Callable[[ComponentContext[PropsType]], ElementChildren]
+
+
+_unregistered_generators: list[ComponentGenerator[Any]] = []
 
 
 class ComponentGenerator(Generic[PropsType]):
     __name: str
     __id: str
     __style: dict[str, dict[str, str]]
+    __registered: bool
 
     def __init__(
         self,
@@ -62,11 +63,22 @@ class ComponentGenerator(Generic[PropsType]):
         self.__component_def = component_def
         self.__name: str = name
         self.__id = generate_id(name)
+        self.__registered = False
+        if not self._try_register():
+            _unregistered_generators.append(self)
+
+    def _try_register(self) -> bool:
+        if self.__registered:
+            return True
         from webcompy.di import inject
         from webcompy.di._keys import _COMPONENT_STORE_KEY
 
-        store = inject(_COMPONENT_STORE_KEY, default=_default_component_store)
-        store.add_component(self.__name, self)
+        store = inject(_COMPONENT_STORE_KEY, default=None)
+        if store is not None:
+            store.add_component(self.__name, self)
+            self.__registered = True
+            return True
+        return False
 
     def __call__(
         self,
@@ -114,3 +126,12 @@ def define_component(
 ) -> ComponentGenerator[PropsType]:
     setup.__webcompy_component_definition__ = True
     return ComponentGenerator(setup.__name__, setup)
+
+
+def _register_deferred_components() -> None:
+    global _unregistered_generators
+    remaining: list[ComponentGenerator[Any]] = []
+    for gen in _unregistered_generators:
+        if not gen._try_register():
+            remaining.append(gen)
+    _unregistered_generators = remaining

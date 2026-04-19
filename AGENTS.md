@@ -23,7 +23,8 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
   - `elements/` — Virtual DOM / HTML element system
   - `reactive/` — Reactive state management (Reactive, Computed, ReactiveList, ReactiveDict)
   - `router/` — Client-side routing (history/hash modes)
-  - `app/` — Core application class
+  - `app/` — Core application class (`WebComPyApp`, `AppConfig`, `ServerConfig`, `GenerateConfig`)
+  - `di/` — Dependency injection system (provide/inject, DIScope, InjectKey)
   - `cli/` — CLI tools (start, generate, init)
   - `ajax/` — HTTP client (browser fetch)
   - `aio/` — Async utilities (AsyncResult, AsyncWrapper)
@@ -65,6 +66,19 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - No comments in code unless explicitly requested
 - Component classes use decorators: `@component_template`, `@on_before_rendering`
 - Reactive values are defined via `Reactive`, `Computed`, `ReactiveList`, `ReactiveDict`
+
+## App Instance API
+
+- `WebComPyApp` is the central application object:
+  - `app.run(selector="#webcompy-app")` — Browser entry point (raises if not in Emscripten)
+  - `app.di_scope` — DI scope context manager for server-side rendering
+- Server entry points use `create_asgi_app(app, config, dev_mode)` and `run_server(app=None)` from `webcompy.cli`
+- SSG uses `generate_static_site(app=None)` from `webcompy.cli`
+- Configuration: `AppConfig` (base_url, dependencies, assets, app_package)
+- `WebComPyConfig` is deprecated — use `AppConfig` instead
+- `app.__component__` is deprecated — use forwarded properties: `app.routes`, `app.router_mode`, `app.set_path()`, `app.head`, `app.style`, `app.scripts`, `app.set_title()`, etc.
+- Per-app state: Each `WebComPyApp` owns its own `ComponentStore` and `_defer_*` rendering state
+- DI scope is managed via `app.di_scope` context manager — no global `_root_di_scope`
 
 ## Important Notes
 

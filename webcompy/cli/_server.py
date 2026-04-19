@@ -24,13 +24,21 @@ from webcompy.cli._html import generate_html
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     generate_app_version,
+    get_app,
     get_config,
     get_webcompy_packge_dir,
 )
 from webcompy.cli._wheel_builder import make_webcompy_app_package
 
 
-def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = False) -> ASGIApp:
+def create_asgi_app(
+    app: WebComPyApp,
+    config: WebComPyConfig | None = None,
+    dev_mode: bool = False,
+) -> ASGIApp:
+    if config is None:
+        config = _build_config_from_app(app)
+
     app_version = generate_app_version()
 
     # App Packages
@@ -86,33 +94,26 @@ def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = F
         "",
     )
 
-    if app.__component__.router_mode == "history" and app.__component__.routes:
+    if app.router_mode == "history" and app.routes:
 
         async def send_html(request: Request):  # type: ignore
-            from webcompy.di._scope import _active_di_scope
-
-            token = _active_di_scope.set(app._di_scope)
-            try:
+            with app.di_scope:
                 path: str = request.path_params.get("path", "")  # type: ignore
                 requested_path = base_url_stripper(path).strip("/")
                 accept_types: list[str] = request.headers.get("accept", "").split(",")
-                routes = r if (r := app.__component__.routes) else []
+                routes = r if (r := app.routes) else []
                 is_matched = truth(tuple(filter(lambda r: r[1](requested_path), routes)))
                 if is_matched or "text/html" in accept_types:
-                    app.__component__.set_path(requested_path)
+                    app.set_path(requested_path)
                     return HTMLResponse(html_generator(app))
                 else:
                     raise HTTPException(404)
-            finally:
-                _active_di_scope.reset(token)
 
         html_route = Route("/{path:path}", send_html)
     else:
-        from webcompy.di._scope import _active_di_scope
-
-        _active_di_scope.set(app._di_scope)
-        app.__component__.set_path("/")
-        html = html_generator(app)
+        with app.di_scope:
+            app.set_path("/")
+            html = html_generator(app)
 
         async def send_html(_: Request):  # type: ignore
             return HTMLResponse(html)
@@ -145,12 +146,24 @@ def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = F
     )
 
 
-def run_server():
-    _, args = get_params()
-    config = get_config()
-    uvicorn.run(
-        "webcompy.cli._asgi_app:app",
-        host="0.0.0.0",
-        port=port if (port := args["port"]) else config.server_port,
-        reload=args["dev"],
+def _build_config_from_app(app: WebComPyApp) -> WebComPyConfig:
+    app_config = app.config
+    return WebComPyConfig(
+        app_package=app_config.app_package_path,
+        base=app_config.base_url,
+        dependencies=app_config.dependencies,
+        assets=app_config.assets,
     )
+
+
+def run_server(app: WebComPyApp | None = None):
+    _, args = get_params()
+    if app is None:
+        config = get_config()
+        app = get_app(config)
+    else:
+        config = _build_config_from_app(app)
+    port = args.get("port") or config.server_port
+    dev = args.get("dev", False)
+    asgi = create_asgi_app(app, config, dev)
+    uvicorn.run(asgi, host="0.0.0.0", port=port, reload=dev)

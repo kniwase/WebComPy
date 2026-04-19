@@ -3,7 +3,9 @@ import pathlib
 import shutil
 from functools import partial
 
+from webcompy.app._app import WebComPyApp
 from webcompy.cli._argparser import get_params
+from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._html import generate_html
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
@@ -15,15 +17,16 @@ from webcompy.cli._utils import (
 from webcompy.cli._wheel_builder import make_webcompy_app_package
 
 
-def generate_static_site():
-    from webcompy.di._scope import _active_di_scope
+def generate_static_site(app: WebComPyApp | None = None):
+    if app is None:
+        config = get_config()
+        app = get_app(config)
+    else:
+        config = _build_config_from_app(app)
 
-    config = get_config()
-    app = get_app(config)
     _, args = get_params()
-    _active_di_scope.set(app._di_scope)
-    config = get_config()
-    dist = config.dist if args.get("dist") is None else args["dist"]
+    with app.di_scope:
+        dist = config.dist if args.get("dist") is None else args["dist"]
     app_version = generate_app_version()
 
     dist_dir = pathlib.Path(dist).absolute()
@@ -62,27 +65,37 @@ def generate_static_site():
         print(p)
 
     html_generator = partial(generate_html, config, False, True, app_version, config.app_package_path.name)
-    if app.__component__.router_mode == "history" and app.__component__.routes:
-        for p, _, _, _, page in app.__component__.routes:
+    if app.router_mode == "history" and app.routes:
+        for p, _, _, _, page in app.routes:
             paths = {p.format(**params) for params in path_params} if (path_params := page.get("path_params")) else {p}
             for path in paths:
                 if not (path_dir := dist_dir / path).exists():
                     os.makedirs(path_dir)
-                app.__component__.set_path(path)
+                app.set_path(path)
                 html = html_generator(app)
                 html_path = path_dir / "index.html"
                 html_path.open("w", encoding="utf8").write(html)
                 print(html_path)
-        app.__component__.set_path("//:404://")
+        app.set_path("//:404://")
         html = html_generator(app)
         html_path = dist_dir / "404.html"
         html_path.open("w", encoding="utf8").write(html)
         print(html_path)
     else:
-        app.__component__.set_path("/")
+        app.set_path("/")
         html = html_generator(app)
         html_path = dist_dir / "index.html"
         html_path.open("w", encoding="utf8").write(html)
         print(html_path)
 
     print("done")
+
+
+def _build_config_from_app(app: WebComPyApp) -> WebComPyConfig:
+    app_config = app.config
+    return WebComPyConfig(
+        app_package=app_config.app_package_path,
+        base=app_config.base_url,
+        dependencies=app_config.dependencies,
+        assets=app_config.assets,
+    )
