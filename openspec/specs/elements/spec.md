@@ -6,7 +6,7 @@ The element system is how WebComPy represents and manipulates the user interface
 
 The system does not use virtual DOM diffing. Instead, it takes a direct approach: when a reactive value changes, the specific DOM node that depends on that value is updated in place. For dynamic content (conditional rendering and list rendering), the entire subtree is regenerated when the controlling value changes. This trades fine-grained efficiency for implementation simplicity.
 
-**What WebComPy does not yet provide:** WebComPy's `repeat` now supports key-based reconciliation and dict-based rendering for efficient DOM updates. However, conditional branches (`switch`) still completely replace their subtree rather than patching it, and `TextElement` does not hydrate pre-rendered text nodes in SSR output.
+**What WebComPy does not yet provide:** WebComPy's `repeat` now supports key-based reconciliation and dict-based rendering for efficient DOM updates. However, conditional branches (`switch`) still completely replace their subtree rather than patching it.
 
 ## Requirements
 
@@ -90,12 +90,24 @@ When `key` is provided (overloads 2, 4, 5) or dict mode is used (overloads 1, 2)
 - **AND** dict keys SHALL be used as reconciliation identifiers for efficient DOM updates
 
 ### Requirement: Pre-rendered DOM nodes shall be reused during hydration
-When the browser encounters an existing DOM node marked as pre-rendered with a matching tag name, the element SHALL reuse that node instead of creating a new one, enabling efficient hydration of server-rendered content.
+When the browser encounters an existing DOM node marked as pre-rendered with a matching tag name, the element SHALL reuse that node instead of creating a new one, enabling efficient hydration of server-rendered content. This requirement applies to all node types including `#text` nodes.
 
 #### Scenario: Hydrating a server-rendered page
 - **WHEN** the browser finds an existing DOM node with `__webcompy_prerendered_node__ = True` and a matching tag name
 - **THEN** the element SHALL adopt that node rather than creating a new one
 - **AND** attributes SHALL be updated to match the element's current state
+
+#### Scenario: Hydrating a server-rendered text node
+- **WHEN** the browser finds an existing `#text` node with `__webcompy_prerendered_node__ = True`
+- **THEN** the TextElement SHALL adopt that node rather than removing it and creating a new one
+- **AND** the text content SHALL be updated to match the element's current value
+- **AND** no visible flash SHALL occur during hydration
+
+#### Scenario: Hydrating a reactive text node
+- **WHEN** a TextElement wraps a Signal value
+- **AND** the browser finds a pre-rendered `#text` node for it
+- **THEN** the TextElement SHALL adopt the existing node and update its content to the Signal's current value
+- **AND** subsequent Signal changes SHALL update the adopted node via the existing `on_after_updating` callback
 
 ### Requirement: Event handlers shall propagate user interactions to Python
 Developers SHALL be able to attach event handlers to elements using `@event_name` attribute syntax. In the browser, these handlers SHALL be properly proxied for PyScript interop and cleaned up when the element is removed.

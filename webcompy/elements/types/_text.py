@@ -57,14 +57,20 @@ class TextElement(ElementAbstract):
 
     def _init_node(self) -> DOMNode:
         if browser:
+            node: DOMNode | None = None
             existing_node = self._get_existing_node()
-            if (
-                existing_node
-                and getattr(existing_node, "__webcompy_prerendered_node__", False)
-                and existing_node.nodeName.lower() == "#text"
-            ):
-                existing_node.remove()
-            node = browser.document.createTextNode(self._get_text())
+            if existing_node:
+                if (
+                    getattr(existing_node, "__webcompy_prerendered_node__", False)
+                    and existing_node.nodeName.lower() == "#text"
+                ):
+                    existing_node.textContent = self._get_text()
+                    node = existing_node
+                    self._mounted = True
+                else:
+                    existing_node.remove()
+            if not node:
+                node = cast("DOMNode", browser.document.createTextNode(self._get_text()))
             node.__webcompy_node__ = True
             return node
         else:
