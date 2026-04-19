@@ -44,7 +44,8 @@ class HeadPropsStore:
 
     @computed_property
     def title(self):
-        return tuple(self.titles.values())[-1]
+        values = tuple(self.titles.values())
+        return values[-1] if values else None
 
     @computed_property
     def head_meta(self):
