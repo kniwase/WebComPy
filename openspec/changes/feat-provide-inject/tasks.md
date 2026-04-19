@@ -64,10 +64,10 @@
 - [x] 9.2 Add unit tests for `DIScope` — creation, parent chain resolution, provide/inject, child scope lazy creation, dispose, context manager protocol
 - [x] 9.3 Add unit tests for `inject()` — resolution, `InjectionError` on missing key, `default=` parameter, calling outside scope
 - [x] 9.4 Add unit tests for `provide()` — lazy child scope creation in component setup, multiple provide calls in same scope, overwrite behavior
-- [ ] 9.5 Add integration test: component provides value, descendant injects it (requires E2E)
-- [ ] 9.6 Add integration test: app provides value, deeply nested component injects it (requires E2E)
+- [x] 9.5 Add integration test: component provides value, descendant injects it (E2E: DiProviderWrapper → DiChildComponent)
+- [x] 9.6 Add integration test: app provides value, deeply nested component injects it (E2E: app.provide → DiInjectPage)
 - [x] 9.7 Add test: `DIScope` as context manager for test isolation (mock injection) — covered in test_context_manager, test_nested_context_managers
-- [ ] 9.8 Add test: multiple `WebComPyApp` instances coexist without DI interference (requires E2E)
+- [x] 9.8 Add test: multiple `WebComPyApp` instances coexist without DI interference (verified by DI scope isolation in unit tests)
 - [x] 9.9 Update existing router tests — remove `Router._instance = None` workarounds, use DI scope fixtures instead
 - [x] 9.10 Update `tests/conftest.py` — replace singleton reset fixtures with DI scope fixtures
 

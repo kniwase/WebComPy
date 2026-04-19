@@ -3,6 +3,7 @@ from webcompy.router import Router
 from .pages.async_nav import AsyncNavPage
 from .pages.classstyle import ClassStylePage
 from .pages.component import FunctionStylePage
+from .pages.di_test import DiInjectPage, DiProviderWrapper
 from .pages.dict_repeat import DictRepeatPage
 from .pages.event import EventPage
 from .pages.home import HomePage
@@ -29,6 +30,8 @@ router = Router(
     {"path": "/lifecycle", "component": LifecyclePage},
     {"path": "/scoped-style", "component": ScopedStylePage},
     {"path": "/async-nav", "component": AsyncNavPage},
+    {"path": "/di-provide", "component": DiProviderWrapper},
+    {"path": "/di-inject", "component": DiInjectPage},
     default=NotFound,
     mode="history",
     base_url="",
