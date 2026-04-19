@@ -8,7 +8,7 @@ WebComPy uses function-style components defined with `@define_component`. A setu
 
 Components also provide scoped CSS to prevent styles from leaking between unrelated parts of the UI, and document head management so that each page component can declare its own title and meta tags.
 
-**What WebComPy does not yet provide:** Other frameworks offer dependency injection (Vue's provide/inject, React's Context API) to share state across the component tree without passing props through every intermediate layer. WebComPy currently requires all shared state to be passed via props or accessed through global singletons. Component IDs are generated via MD5 hash, which is not collision-proof for very large applications.
+**What WebComPy does not yet provide:** Component IDs are generated via MD5 hash, which is not collision-proof for very large applications.
 
 ## Requirements
 
@@ -85,17 +85,61 @@ When a component's `on_after_rendering` hook is triggered as a side effect of a 
 - **THEN** `on_after_rendering` SHALL fire after the component is fully rendered
 - **AND** the behavior SHALL be consistent with the deferred behavior during navigation
 
+### Requirement: Component setup shall integrate with DI scope
+`Component.__setup` SHALL inherit the active DI scope from the ContextVar. When `provide()` is called during setup, a child DI scope SHALL be lazily created and set as the active scope for the remainder of the setup function.
+
+#### Scenario: Component provides a value during setup
+- **WHEN** a component setup function calls `provide(ThemeKey, dark_theme)`
+- **THEN** a child DI scope SHALL be created for this component
+- **AND** `ThemeKey` SHALL be available to descendant components via `inject(ThemeKey)`
+
+#### Scenario: Component injects a value during setup
+- **WHEN** a component setup function calls `inject(RouterKey)` and an ancestor scope provides `RouterKey`
+- **THEN** the component SHALL receive the provided value
+
+#### Scenario: Component setup restores DI scope on exit
+- **WHEN** a component setup function completes or raises
+- **THEN** the `_active_di_scope` ContextVar SHALL be reset to its value before the setup started
+
+### Requirement: Component destruction shall dispose DI scope
+When a component is destroyed and it has a child DI scope, that scope SHALL be disposed.
+
+#### Scenario: Destroying a component with a DI scope
+- **WHEN** a component that called `provide()` during setup is destroyed
+- **THEN** its child DI scope SHALL be disposed
+- **AND** descendant components' scopes SHALL also be disposed (recursive)
+
+#### Scenario: Destroying a component without a DI scope
+- **WHEN** a component that did not call `provide()` during setup is destroyed
+- **THEN** no DI scope disposal SHALL occur (no child scope was created)
+
+### Requirement: Context shall provide a provide method
+`Context.provide(key, value)` SHALL be available as a convenience method that delegates to the module-level `provide()` function via `_active_di_scope`.
+
+#### Scenario: Using context.provide in a component
+- **WHEN** a developer calls `context.provide(ThemeKey, theme)` inside a component setup
+- **THEN** the behavior SHALL be identical to calling `provide(ThemeKey, theme)` directly
+
 ### Requirement: Components shall manage document head properties
-Each component instance SHALL be able to set the document title and meta tags. When multiple components set the title, the most recently rendered one SHALL take precedence. When a component is destroyed, its head entries SHALL be removed.
+Each component instance SHALL be able to set the document title and meta tags. When multiple components set the title, the most recently rendered one SHALL take precedence. When a component is destroyed, its head entries SHALL be removed. Head props SHALL be accessed via DI injection instead of a class variable.
 
 #### Scenario: Setting the page title from a component
 - **WHEN** a component calls `context.set_title("My Page")`
 - **THEN** the document title SHALL update to "My Page"
 - **AND** when the component is destroyed, its title entry SHALL be removed
 
+#### Scenario: Accessing head props via DI
+- **WHEN** a component or framework module accesses head props
+- **THEN** it SHALL resolve the head props object via `inject(_HEAD_PROPS_KEY)`
+- **AND** `Component._head_props` class variable SHALL be removed
+
 ### Requirement: Component registration shall enforce unique names
-The framework SHALL maintain a global registry of component generators by name. If two components are registered with the same name, an error SHALL be raised.
+The framework SHALL maintain a registry of component generators by name. If two components are registered with the same name, an error SHALL be raised. The registry (ComponentStore) SHALL be accessed via DI instead of a global singleton.
 
 #### Scenario: Registering duplicate component names
 - **WHEN** a developer defines two components with the same name
 - **THEN** `WebComPyComponentException` SHALL be raised with a message about the duplicate
+
+#### Scenario: Accessing ComponentStore via DI
+- **WHEN** framework code needs the ComponentStore
+- **THEN** it SHALL resolve it via `inject(_COMPONENT_STORE_KEY)` instead of the global singleton
