@@ -16,9 +16,12 @@ from webcompy.cli._wheel_builder import make_webcompy_app_package
 
 
 def generate_static_site():
+    from webcompy.di._scope import _active_di_scope
+
     config = get_config()
     app = get_app(config)
     _, args = get_params()
+    _active_di_scope.set(app._di_scope)
     config = get_config()
     dist = config.dist if args.get("dist") is None else args["dist"]
     app_version = generate_app_version()

@@ -89,6 +89,9 @@ def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = F
     if app.__component__.router_mode == "history" and app.__component__.routes:
 
         async def send_html(request: Request):  # type: ignore
+            from webcompy.di._scope import _active_di_scope
+
+            _active_di_scope.set(app._di_scope)
             # get requested path
             path: str = request.path_params.get("path", "")  # type: ignore
             requested_path = base_url_stripper(path).strip("/")
@@ -106,6 +109,9 @@ def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = F
 
         html_route = Route("/{path:path}", send_html)
     else:
+        from webcompy.di._scope import _active_di_scope
+
+        _active_di_scope.set(app._di_scope)
         app.__component__.set_path("/")
         html = html_generator(app)
 

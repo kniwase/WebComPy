@@ -95,12 +95,10 @@ class Component(ElementBase):
         scope_token = _active_effect_scope.set(scope)
 
         parent_di_scope = _active_di_scope.get(None)
-        di_token = None
         pending_token = None
         existing_children_count = 0
 
         if parent_di_scope is not None:
-            di_token = _active_di_scope.set(parent_di_scope)
             pending_token = _pending_di_parent.set(parent_di_scope)
             existing_children_count = len(parent_di_scope._children)
 
@@ -111,8 +109,6 @@ class Component(ElementBase):
             _active_effect_scope.reset(scope_token)
             if pending_token is not None:
                 _pending_di_parent.reset(pending_token)
-            if di_token is not None:
-                _active_di_scope.reset(di_token)
 
         child_di_scope: DIScope | None = None
         if parent_di_scope is not None and len(parent_di_scope._children) > existing_children_count:
