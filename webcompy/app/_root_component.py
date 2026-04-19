@@ -11,7 +11,7 @@ from webcompy.components._generator import (
     define_component,
 )
 from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY, _ROUTER_KEY
-from webcompy.di._scope import DIScope, _active_di_scope
+from webcompy.di._scope import DIScope, _active_di_scope, _set_root_di_scope
 from webcompy.elements import html
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException
@@ -28,7 +28,7 @@ class Head(TypedDict, total=False):
 
 
 class HeadSignal(TypedDict):
-    title: Computed[str]
+    title: Computed[str | None]
     meta: Computed[dict[str, dict[str, str]]]
     link: list[dict[str, str]]
     script: list[tuple[dict[str, str], str | None]]
@@ -63,13 +63,15 @@ class AppDocumentRoot(Component):
         self._head_props = head_props
         di_scope.provide(_HEAD_PROPS_KEY, head_props)
         di_scope.provide(_COMPONENT_STORE_KEY, _default_component_store)
+        _set_root_di_scope(di_scope)
         if self._router:
             di_scope.provide(_ROUTER_KEY, self._router)
             di_scope.provide(RouterKey, self._router)
         if browser:
 
-            def updte_title(title: str):
-                browser.document.title = title  # type: ignore
+            def updte_title(title: str | None):
+                if title is not None:
+                    browser.document.title = title  # type: ignore
 
             head_props.title.on_after_updating(updte_title)
 
@@ -86,13 +88,17 @@ class AppDocumentRoot(Component):
         return self._render
 
     def _render(self):
-        self._property["on_before_rendering"]()
-        for child in self._children:
-            child._render()
-        self._property["on_after_rendering"]()
-        if browser and self.__loading:
-            self.__loading = False
-            browser.document.getElementById("webcompy-loading").remove()
+        token = _active_di_scope.set(self._di_scope)
+        try:
+            self._property["on_before_rendering"]()
+            for child in self._children:
+                child._render()
+            self._property["on_after_rendering"]()
+            if browser and self.__loading:
+                self.__loading = False
+                browser.document.getElementById("webcompy-loading").remove()
+        finally:
+            _active_di_scope.reset(token)
 
     def _init_node(self) -> DOMNode:
         if browser:
