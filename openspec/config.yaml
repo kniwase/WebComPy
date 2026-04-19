@@ -22,14 +22,13 @@ context: |
   - TextElement does not hydrate pre-rendered text nodes (always creates new text node)
 
   ### Router
-  - Multiple global singletons (Router, RouterView) make testing require explicit cleanup
+  - RouterView singleton removed (per-app via DI), but Router singleton remains for now
   - Location popstate proxy must be manually destroy()ed
 
   ### General
-  - Multiple global singletons (Router, RouterView, ComponentStore, Component._head_props)
   - Browser detection is binary (Emscripten vs other) — no partial API availability checks
-  - No provide/inject (DI) system (noted in README ToDo)
   - No plugin system (noted in README ToDo)
+  - Module-level fallbacks (_app_di_scope, _app_instance) hold only one app reference in browser environment, limiting true multi-app isolation
 
 # Per-artifact rules (optional)
 rules:
