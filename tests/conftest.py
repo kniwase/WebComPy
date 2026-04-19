@@ -263,22 +263,12 @@ def fake_document(fake_browser):
 
 
 @pytest.fixture(autouse=True)
-def reset_router_singleton():
-    from webcompy.router._router import Router
+def reset_di_scope():
+    from webcompy.di._scope import _active_di_scope
 
-    if Router._instance is not None:
-        Router._instance._location.destroy()
-    Router._instance = None
+    token = _active_di_scope.set(None) if _active_di_scope.get(None) is not None else None
     yield
-    if Router._instance is not None:
-        Router._instance._location.destroy()
-    Router._instance = None
-
-
-@pytest.fixture(autouse=True)
-def reset_router_link():
-    from webcompy.router._link import TypedRouterLink
-
-    TypedRouterLink._router = None
-    yield
-    TypedRouterLink._router = None
+    if token is not None:
+        _active_di_scope.reset(token)
+    else:
+        _active_di_scope.set(None)

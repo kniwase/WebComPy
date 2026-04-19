@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from typing import Any
+
 from webcompy.app._root_component import AppDocumentRoot
 from webcompy.components import ComponentGenerator
+from webcompy.di._scope import DIScope
 from webcompy.router import Router
 
 
 class WebComPyApp:
     _root: AppDocumentRoot
+    _di_scope: DIScope
 
     def __init__(
         self,
@@ -14,7 +18,15 @@ class WebComPyApp:
         root_component: ComponentGenerator[None],
         router: Router | None = None,
     ) -> None:
-        self._root = AppDocumentRoot(root_component, router)
+        self._di_scope = DIScope()
+        self._root = AppDocumentRoot(root_component, router, self._di_scope)
+
+    @property
+    def di_scope(self) -> DIScope:
+        return self._di_scope
+
+    def provide(self, key: object, value: Any) -> None:
+        self._di_scope.provide(key, value)
 
     @property
     def __component__(self):

@@ -89,23 +89,28 @@ def create_asgi_app(app: WebComPyApp, config: WebComPyConfig, dev_mode: bool = F
     if app.__component__.router_mode == "history" and app.__component__.routes:
 
         async def send_html(request: Request):  # type: ignore
-            # get requested path
-            path: str = request.path_params.get("path", "")  # type: ignore
-            requested_path = base_url_stripper(path).strip("/")
-            # get accept types
-            accept_types: list[str] = request.headers.get("accept", "").split(",")
-            # search requested page
-            routes = r if (r := app.__component__.routes) else []
-            is_matched = truth(tuple(filter(lambda r: r[1](requested_path), routes)))
-            # response html
-            if is_matched or "text/html" in accept_types:
-                app.__component__.set_path(requested_path)
-                return HTMLResponse(html_generator(app))
-            else:
-                raise HTTPException(404)
+            from webcompy.di._scope import _active_di_scope
+
+            token = _active_di_scope.set(app._di_scope)
+            try:
+                path: str = request.path_params.get("path", "")  # type: ignore
+                requested_path = base_url_stripper(path).strip("/")
+                accept_types: list[str] = request.headers.get("accept", "").split(",")
+                routes = r if (r := app.__component__.routes) else []
+                is_matched = truth(tuple(filter(lambda r: r[1](requested_path), routes)))
+                if is_matched or "text/html" in accept_types:
+                    app.__component__.set_path(requested_path)
+                    return HTMLResponse(html_generator(app))
+                else:
+                    raise HTTPException(404)
+            finally:
+                _active_di_scope.reset(token)
 
         html_route = Route("/{path:path}", send_html)
     else:
+        from webcompy.di._scope import _active_di_scope
+
+        _active_di_scope.set(app._di_scope)
         app.__component__.set_path("/")
         html = html_generator(app)
 

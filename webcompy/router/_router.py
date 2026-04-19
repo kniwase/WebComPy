@@ -8,12 +8,11 @@ from re import compile as re_compile
 from re import escape as re_escape
 from typing import (
     Any,
-    ClassVar,
     Literal,
     TypeAlias,
 )
 
-from webcompy.components import ComponentGenerator, WebComPyComponentException
+from webcompy.components import ComponentGenerator
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._switch import NodeGenerator
 from webcompy.router._change_event_handler import Location
@@ -34,8 +33,6 @@ _get_path_params = re_compile(r"{([^\{\}/]+)}").findall
 
 
 class Router:
-    _instance: ClassVar[Router | None] = None
-
     _location: Location
     __mode__: Literal["hash", "history"]
     __routes__: list[RouteType]
@@ -47,10 +44,6 @@ class Router:
         mode: Literal["hash", "history"] = "hash",
         base_url: str = "",
     ) -> None:
-        if Router._instance:
-            raise WebComPyComponentException("Only one instance of 'Router' can exist.")
-        else:
-            Router._instance = self
         self.__mode__ = mode
         self.__base_url__ = base_url.strip().strip("/")
         self._base_url_stripper = partial(re_compile("^" + re_escape("/" + self.__base_url__)).sub, "")

@@ -1,26 +1,8 @@
 from unittest.mock import MagicMock
 
-from webcompy.components import ComponentGenerator, WebComPyComponentException
+from webcompy.components import ComponentGenerator
 from webcompy.router._pages import RouterPage
 from webcompy.router._router import Router
-
-
-class TestRouterSingleton:
-    def test_only_one_instance_allowed(self):
-        page = RouterPage(path="/", component=MagicMock(spec=ComponentGenerator))
-        _r1 = Router(page, mode="hash")
-        try:
-            Router(page, mode="hash")
-            raise AssertionError("Should have raised")
-        except WebComPyComponentException:
-            pass
-
-    def test_second_instance_after_reset(self):
-        page = RouterPage(path="/", component=MagicMock(spec=ComponentGenerator))
-        r1 = Router(page, mode="hash")
-        Router._instance = None
-        r2 = Router(page, mode="history")
-        assert r2 is not r1
 
 
 class TestRouterInit:

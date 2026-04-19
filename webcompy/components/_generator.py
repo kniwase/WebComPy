@@ -25,7 +25,6 @@ def _instantiate(cls: type[T]) -> T:
     return cls()
 
 
-@_instantiate
 class ComponentStore:
     __components: dict[str, ComponentGenerator[Any]]
 
@@ -40,6 +39,9 @@ class ComponentStore:
     @property
     def components(self) -> dict[str, ComponentGenerator[Any]]:
         return self.__components
+
+
+_default_component_store = ComponentStore()
 
 
 PropsType = TypeVar("PropsType")
@@ -60,7 +62,11 @@ class ComponentGenerator(Generic[PropsType]):
         self.__component_def = component_def
         self.__name: str = name
         self.__id = generate_id(name)
-        ComponentStore.add_component(self.__name, self)
+        from webcompy.di import inject
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+
+        store = inject(_COMPONENT_STORE_KEY, default=_default_component_store)
+        store.add_component(self.__name, self)
 
     def __call__(
         self,

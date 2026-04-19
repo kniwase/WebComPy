@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, ClassVar, TypeAlias, TypeGuard
+from typing import Any, TypeAlias, TypeGuard
 from uuid import UUID, uuid4
 
 from webcompy._browser._modules import browser
 from webcompy.components._hooks import _active_component_context
 from webcompy.components._libs import ComponentProperty, Context, generate_id
+from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
@@ -43,7 +44,8 @@ class HeadPropsStore:
 
     @computed_property
     def title(self):
-        return tuple(self.titles.values())[-1]
+        values = tuple(self.titles.values())
+        return values[-1] if values else None
 
     @computed_property
     def head_meta(self):
@@ -51,8 +53,6 @@ class HeadPropsStore:
 
 
 class Component(ElementBase):
-    _head_props: ClassVar = HeadPropsStore()
-
     def __init__(
         self,
         component_def: FuncComponentDef,
@@ -64,6 +64,7 @@ class Component(ElementBase):
         self._event_handlers = {}
         self._ref = None
         self._children = []
+        self._head_props: HeadPropsStore | None = None
         super().__init__()
         self.__init_component(self.__setup(component_def, props, slots))
 
@@ -74,30 +75,52 @@ class Component(ElementBase):
         slots: dict[str, Callable[[], ElementChildren]],
     ) -> ComponentProperty:
         from webcompy.components._hooks import _active_effect_scope
+        from webcompy.di import _pending_di_parent, inject
+        from webcompy.di._keys import _HEAD_PROPS_KEY
         from webcompy.signal._effect import create_effect_scope
 
         component_name = component_def.__name__
+        head_props = inject(_HEAD_PROPS_KEY)
+        self._head_props = head_props
         context = Context(
             props,
             slots,
             component_name,
-            lambda: Component._head_props.title.value,
-            lambda: Component._head_props.head_meta.value,
+            lambda: head_props.title.value,
+            lambda: head_props.head_meta.value,
             self._set_title,
             self._set_meta,
         )
         token = _active_component_context.set(context)
         scope = create_effect_scope()
         scope_token = _active_effect_scope.set(scope)
+
+        parent_di_scope = _active_di_scope.get(None)
+        pending_token = None
+        existing_children_count = 0
+
+        if parent_di_scope is not None:
+            pending_token = _pending_di_parent.set(parent_di_scope)
+            existing_children_count = len(parent_di_scope._children)
+
         try:
             template = component_def(context)
         finally:
             _active_component_context.reset(token)
             _active_effect_scope.reset(scope_token)
+            if pending_token is not None:
+                _pending_di_parent.reset(pending_token)
+
+        child_di_scope: DIScope | None = None
+        if parent_di_scope is not None and len(parent_di_scope._children) > existing_children_count:
+            child_di_scope = parent_di_scope._children[-1]
+
         hooks = context.__get_lifecyclehooks__()
         original_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
 
         def on_before_destroy_with_scope_cleanup():
+            if child_di_scope is not None:
+                child_di_scope.dispose()
             scope.dispose()
             original_on_before_destroy()
 
@@ -136,10 +159,11 @@ class Component(ElementBase):
             after_rendering()
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
-        if self._instance_id in Component._head_props.titles:
-            del Component._head_props.titles[self._instance_id]
-        if self._instance_id in Component._head_props.head_metas:
-            del Component._head_props.head_metas[self._instance_id]
+        if self._head_props is not None:
+            if self._instance_id in self._head_props.titles:
+                del self._head_props.titles[self._instance_id]
+            if self._instance_id in self._head_props.head_metas:
+                del self._head_props.head_metas[self._instance_id]
         self._property["on_before_destroy"]()
         super()._remove_element(recursive, remove_node)
 
@@ -150,9 +174,11 @@ class Component(ElementBase):
         return (*self._parent._get_belonging_components(), self)
 
     def _set_title(self, title: str):
-        Component._head_props.titles[self._instance_id] = title
+        if self._head_props is not None:
+            self._head_props.titles[self._instance_id] = title
 
     def _set_meta(self, key: str, attributes: dict[str, str]):
-        meta = Component._head_props.head_metas.get(self._instance_id, {})
-        meta[key] = attributes
-        Component._head_props.head_metas[self._instance_id] = meta
+        if self._head_props is not None:
+            meta = self._head_props.head_metas.get(self._instance_id, {})
+            meta[key] = attributes
+            self._head_props.head_metas[self._instance_id] = meta

@@ -104,6 +104,11 @@ class Context(Generic[PropsType]):
     def set_meta(self, key: str, attributes: dict[str, str]) -> None:
         self.__meta_setter(key, attributes)
 
+    def provide(self, key: object, value: Any) -> None:
+        from webcompy.di import provide as _provide
+
+        _provide(key, value)
+
     def __get_lifecyclehooks__(self) -> _Lifecyclehooks:
         hooks: _Lifecyclehooks = {}
         if self.__on_before_rendering:
@@ -138,6 +143,8 @@ class ComponentContext(Protocol[PropsType]):
     def set_title(self, title: str) -> None: ...
 
     def set_meta(self, key: str, attributes: dict[str, str]) -> None: ...
+
+    def provide(self, key: object, value: Any) -> None: ...
 
 
 @final

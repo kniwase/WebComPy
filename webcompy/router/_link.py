@@ -4,7 +4,6 @@ import logging
 import urllib.parse
 from typing import (
     Any,
-    ClassVar,
     Generic,
     TypeAlias,
     TypeVar,
@@ -12,6 +11,9 @@ from typing import (
 )
 
 from webcompy._browser._modules import browser
+from webcompy.di import inject
+from webcompy.di._exceptions import InjectionError
+from webcompy.di._keys import _ROUTER_KEY
 from webcompy.elements._dom_objs import DOMEvent
 from webcompy.elements.typealias._element_property import (
     AttrValue,
@@ -19,7 +21,6 @@ from webcompy.elements.typealias._element_property import (
 )
 from webcompy.elements.types._element import Element
 from webcompy.router._pages import WebComPyRouterException
-from webcompy.router._router import Router
 from webcompy.signal import SignalBase, computed_property
 from webcompy.utils._serialize import is_json_seriarizable
 
@@ -29,9 +30,6 @@ PathParamsType = TypeVar("PathParamsType")
 
 
 class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Element):
-    _router: ClassVar[Router | None] = None
-    _base_url: ClassVar[str]
-
     _query: SignalBase[dict[str, str]] | None
     _params: SignalBase[dict[str, Any]] | None
     _path_params: SignalBase[dict[str, str]] | None
@@ -46,14 +44,17 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         path_params: SignalBase[PathParamsType] | None = None,
         attrs: dict[str, AttrValue] | None = None,
     ) -> None:
-        if TypedRouterLink._router is None:
-            raise WebComPyRouterException("'Router' instance is not declarated.")
+        try:
+            router = inject(_ROUTER_KEY)
+        except InjectionError:
+            raise WebComPyRouterException("'Router' instance is not provided via DI.") from None
         self._given_attrs = attrs
         self._to = to
         self._query = cast("SignalBase[dict[str, str]]", query) if query is not None else None
         self._params = cast("SignalBase[dict[str, Any]]", params) if params is not None else None
         self._path_params = cast("SignalBase[dict[str, str]]", path_params) if path_params is not None else None
         self._text = text
+        self._router = router
         super().__init__(
             "a",
             attrs=self._generate_attrs(),
@@ -62,10 +63,6 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         )
         if isinstance(self._to, SignalBase):
             self._add_callback_node(self._to.on_after_updating(self._refresh))
-
-    @staticmethod
-    def __set_router__(router: Router | None):
-        TypedRouterLink._router = router
 
     def _refresh(self, *_: Any):
         self._attrs = self._generate_attrs()
@@ -78,8 +75,6 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
 
     def _on_click(self, ev: DOMEvent) -> None:
         ev.preventDefault()
-        if not TypedRouterLink._router:
-            raise WebComPyRouterException("'Router' instance is not declarated.")
         if self._query is not None:
             if not isinstance(self._query, SignalBase) or not isinstance(self._query.value, dict):  # type: ignore
                 raise WebComPyRouterException("Argument 'query' of RouterLink must be Signal Object of Dict.")
@@ -96,9 +91,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
             return
         href: str = ev.currentTarget.getAttribute("href")
         current_path = (
-            browser.window.location.pathname
-            if TypedRouterLink._router.__mode__ == "history"
-            else browser.window.location.hash
+            browser.window.location.pathname if self._router.__mode__ == "history" else browser.window.location.hash
         )
         if current_path != href:
             if self._params is None:
@@ -112,7 +105,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                     state = None
                     logging.warn("Argument 'params' of RouterLink should be a Signal Object of json-serializable dict.")
             browser.window.history.pushState(state, None, href)
-            TypedRouterLink._router.__set_path__(href, params)
+            self._router.__set_path__(href, params)
 
     def _generate_attrs(self) -> dict[str, AttrValue]:
         attrs = self._given_attrs if self._given_attrs else {}
@@ -131,13 +124,10 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         to = f"/{path_encoded}/" if path_encoded else "/"
         query_encoded = urllib.parse.urlencode(self._query.value if self._query else {})
         query = "?" + query_encoded if query_encoded else ""
-        if TypedRouterLink._router:
-            if TypedRouterLink._router.__mode__ == "hash":
-                return "#" + to + query
-            elif TypedRouterLink._router.__base_url__:
-                return "/" + TypedRouterLink._router.__base_url__ + to + query
-            else:
-                return to + query
+        if self._router.__mode__ == "hash":
+            return "#" + to + query
+        elif self._router.__base_url__:
+            return "/" + self._router.__base_url__ + to + query
         else:
             return to + query
 
