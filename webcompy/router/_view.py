@@ -8,7 +8,6 @@ from webcompy.di._exceptions import InjectionError
 from webcompy.di._keys import _ROUTER_KEY
 from webcompy.elements.types import Element, SwitchElement
 from webcompy.router._context import RouterContext
-from webcompy.router._router import Router
 
 
 class RouterPageRequired(TypedDict):
@@ -21,6 +20,10 @@ class RouterPage(RouterPageRequired, total=False):
 
 
 class RouterView(Element):
+    # TODO: Remove _instance singleton enforcement after App Instance migration
+    # (feat/app-instance). Router is already DI-provided; this ClassVar
+    # constraint should become unnecessary when multiple app instances are
+    # supported.
     _instance: ClassVar[RouterView | None] = None
 
     def __init__(self) -> None:
@@ -39,7 +42,3 @@ class RouterView(Element):
             attrs={"webcompy-routerview": True},
             children=[SwitchElement(router.__cases__, router.__default__)],
         )
-
-    @staticmethod
-    def __set_router__(router: Router | None):
-        pass

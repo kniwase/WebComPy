@@ -169,6 +169,29 @@ class TestDIScope:
         except RuntimeError:
             pass
 
+    def test_disposed_scope_delegates_to_parent(self):
+        parent = DIScope()
+        key = InjectKey[str]("test-key")
+        parent.provide(key, "from-parent")
+        child = parent.create_child()
+        child.provide(InjectKey[str]("child-only"), "child-val")
+        child.dispose()
+        assert child.inject(key) == "from-parent"
+        try:
+            child.inject(InjectKey[str]("child-only"))
+            raise AssertionError("Should have raised InjectionError")
+        except InjectionError:
+            pass
+
+    def test_disposed_scope_with_default_delegates_to_parent(self):
+        parent = DIScope()
+        key = InjectKey[str]("test-key")
+        parent.provide(key, "from-parent")
+        child = parent.create_child()
+        child.dispose()
+        assert child.inject(key, default="fallback") == "from-parent"
+        assert child.inject(InjectKey[str]("no-key"), default="fallback") == "fallback"
+
 
 class TestModuleLevelFunctions:
     def test_provide_and_inject(self):

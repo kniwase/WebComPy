@@ -21,7 +21,6 @@ from webcompy.elements.typealias._element_property import (
 )
 from webcompy.elements.types._element import Element
 from webcompy.router._pages import WebComPyRouterException
-from webcompy.router._router import Router
 from webcompy.signal import SignalBase, computed_property
 from webcompy.utils._serialize import is_json_seriarizable
 
@@ -64,10 +63,6 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         )
         if isinstance(self._to, SignalBase):
             self._add_callback_node(self._to.on_after_updating(self._refresh))
-
-    @staticmethod
-    def __set_router__(router: Router | None):
-        pass
 
     def _refresh(self, *_: Any):
         self._attrs = self._generate_attrs()
