@@ -3,6 +3,7 @@ from . import (
     ajax,
     app,
     components,
+    di,
     elements,
     exception,
     logging,
@@ -13,6 +14,7 @@ from . import (
 from ._browser import browser
 from ._version import __version__
 from .assets import AssetNotFoundError, load_asset
+from .di import DIScope, InjectionError, InjectKey, inject, provide
 
 if utils.ENVIRONMENT == "other":
     from . import cli
@@ -22,6 +24,9 @@ else:
 
 __all__ = [
     "AssetNotFoundError",
+    "DIScope",
+    "InjectKey",
+    "InjectionError",
     "__version__",
     "aio",
     "ajax",
@@ -29,10 +34,13 @@ __all__ = [
     "browser",
     "cli",
     "components",
+    "di",
     "elements",
     "exception",
+    "inject",
     "load_asset",
     "logging",
+    "provide",
     "router",
     "signal",
     "utils",

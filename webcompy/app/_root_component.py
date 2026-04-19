@@ -4,14 +4,14 @@ from typing import TypedDict
 from uuid import uuid4
 
 from webcompy._browser._modules import browser
-from webcompy.components._component import Component
+from webcompy.components._component import Component, HeadPropsStore
 from webcompy.components._generator import ComponentGenerator, ComponentStore, define_component
+from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY, _ROUTER_KEY
+from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import html
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException
-from webcompy.router._link import TypedRouterLink
 from webcompy.router._router import Router
-from webcompy.router._view import RouterView
 from webcompy.signal import Computed
 
 
@@ -43,28 +43,38 @@ def AppRootComponent(context):
 
 class AppDocumentRoot(Component):
     _router: Router | None
+    _di_scope: DIScope
     _links: list[dict[str, str]]
     _scripts: list[tuple[dict[str, str], str | None]]
     _scripts_head: list[tuple[dict[str, str], str | None]]
     __loading: bool
 
-    def __init__(self, root_component: ComponentGenerator[None], router: Router | None) -> None:
+    def __init__(
+        self,
+        root_component: ComponentGenerator[None],
+        router: Router | None,
+        di_scope: DIScope,
+    ) -> None:
         self._instance_id = uuid4()
         self.__loading = True
         self._router = router
+        self._di_scope = di_scope
+        self.__head_props = HeadPropsStore()
         self._set_title("")
         self._links = []
         self._scripts = []
         self._scripts_head = []
-        if self._router:
-            RouterView.__set_router__(self._router)
-            TypedRouterLink.__set_router__(self._router)
+
+        di_scope.provide(_HEAD_PROPS_KEY, self.__head_props)
+        di_scope.provide(_COMPONENT_STORE_KEY, ComponentStore)
+        if router is not None:
+            di_scope.provide(_ROUTER_KEY, router)
         if browser:
 
             def updte_title(title: str):
                 browser.document.title = title  # type: ignore
 
-            Component._head_props.title.on_after_updating(updte_title)
+            self.__head_props.title.on_after_updating(updte_title)
 
         super().__init__(_app_root_setup, None, {"root": lambda: root_component(None)})
 
@@ -73,13 +83,17 @@ class AppDocumentRoot(Component):
         return self._render
 
     def _render(self):
-        self._property["on_before_rendering"]()
-        for child in self._children:
-            child._render()
-        self._property["on_after_rendering"]()
-        if browser and self.__loading:
-            self.__loading = False
-            browser.document.getElementById("webcompy-loading").remove()
+        di_token = _active_di_scope.set(self._di_scope)
+        try:
+            self._property["on_before_rendering"]()
+            for child in self._children:
+                child._render()
+            self._property["on_after_rendering"]()
+            if browser and self.__loading:
+                self.__loading = False
+                browser.document.getElementById("webcompy-loading").remove()
+        finally:
+            _active_di_scope.reset(di_token)
 
     def _init_node(self) -> DOMNode:
         if browser:
@@ -123,7 +137,16 @@ class AppDocumentRoot(Component):
 
     @property
     def style(self):
-        return " ".join(style for component in ComponentStore.components.values() if (style := component.scoped_style))
+        from webcompy.di._exceptions import InjectionError
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+
+        try:
+            store = self._di_scope.inject(_COMPONENT_STORE_KEY)
+        except InjectionError:
+            from webcompy.components._generator import _get_default_component_store
+
+            store = _get_default_component_store()
+        return " ".join(style for component in store.components.values() if (style := component.scoped_style))
 
     def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str:
         hidden = self._attrs.get("hidden")
@@ -176,8 +199,8 @@ class AppDocumentRoot(Component):
     @property
     def head(self) -> HeadSignal:
         return {
-            "title": Component._head_props.title,
-            "meta": Component._head_props.head_meta,
+            "title": self.__head_props.title,
+            "meta": self.__head_props.head_meta,
             "link": self._links,
             "script": self._scripts_head,
         }

@@ -7,6 +7,8 @@ from uuid import UUID, uuid4
 from webcompy._browser._modules import browser
 from webcompy.components._hooks import _active_component_context
 from webcompy.components._libs import ComponentProperty, Context, generate_id
+from webcompy.di._keys import _HEAD_PROPS_KEY
+from webcompy.di._scope import DIScope
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
@@ -51,7 +53,7 @@ class HeadPropsStore:
 
 
 class Component(ElementBase):
-    _head_props: ClassVar = HeadPropsStore()
+    _default_head_props: ClassVar = HeadPropsStore()
 
     def __init__(
         self,
@@ -73,32 +75,53 @@ class Component(ElementBase):
         props: Any,
         slots: dict[str, Callable[[], ElementChildren]],
     ) -> ComponentProperty:
-        from webcompy.components._hooks import _active_effect_scope
+        from webcompy.components._hooks import _active_di_scope, _active_effect_scope
         from webcompy.signal._effect import create_effect_scope
 
         component_name = component_def.__name__
+        di_scope = _active_di_scope.get()
+        head_props = (
+            di_scope.inject(_HEAD_PROPS_KEY, Component._default_head_props)
+            if di_scope
+            else Component._default_head_props
+        )
+        self.__head_props = head_props
+        self.__child_di_scope: DIScope | None = None
+
+        def _ensure_child_di_scope():
+            if self.__child_di_scope is None:
+                parent = di_scope or DIScope()
+                self.__child_di_scope = parent.create_child()
+            return self.__child_di_scope
+
         context = Context(
             props,
             slots,
             component_name,
-            lambda: Component._head_props.title.value,
-            lambda: Component._head_props.head_meta.value,
+            lambda: head_props.title.value,
+            lambda: head_props.head_meta.value,
             self._set_title,
             self._set_meta,
+            _ensure_child_di_scope,
         )
+
         token = _active_component_context.set(context)
         scope = create_effect_scope()
         scope_token = _active_effect_scope.set(scope)
+        di_token = _active_di_scope.set(di_scope)
         try:
             template = component_def(context)
         finally:
             _active_component_context.reset(token)
             _active_effect_scope.reset(scope_token)
+            _active_di_scope.reset(di_token)
         hooks = context.__get_lifecyclehooks__()
         original_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
 
         def on_before_destroy_with_scope_cleanup():
             scope.dispose()
+            if self.__child_di_scope is not None:
+                self.__child_di_scope.dispose()
             original_on_before_destroy()
 
         return {
@@ -136,10 +159,10 @@ class Component(ElementBase):
             after_rendering()
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
-        if self._instance_id in Component._head_props.titles:
-            del Component._head_props.titles[self._instance_id]
-        if self._instance_id in Component._head_props.head_metas:
-            del Component._head_props.head_metas[self._instance_id]
+        if self._instance_id in self.__head_props.titles:
+            del self.__head_props.titles[self._instance_id]
+        if self._instance_id in self.__head_props.head_metas:
+            del self.__head_props.head_metas[self._instance_id]
         self._property["on_before_destroy"]()
         super()._remove_element(recursive, remove_node)
 
@@ -150,9 +173,9 @@ class Component(ElementBase):
         return (*self._parent._get_belonging_components(), self)
 
     def _set_title(self, title: str):
-        Component._head_props.titles[self._instance_id] = title
+        self.__head_props.titles[self._instance_id] = title
 
     def _set_meta(self, key: str, attributes: dict[str, str]):
-        meta = Component._head_props.head_metas.get(self._instance_id, {})
+        meta = self.__head_props.head_metas.get(self._instance_id, {})
         meta[key] = attributes
-        Component._head_props.head_metas[self._instance_id] = meta
+        self.__head_props.head_metas[self._instance_id] = meta
