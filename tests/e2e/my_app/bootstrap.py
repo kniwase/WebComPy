@@ -1,10 +1,8 @@
 from webcompy.app import WebComPyApp
-from webcompy.di import InjectKey
 
+from .keys import AppThemeKey
 from .layout import Root
 from .router import router
-
-AppThemeKey = InjectKey[str]("e2e-app-theme")
 
 app = WebComPyApp(
     root_component=Root,

@@ -2,8 +2,9 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.di import InjectKey, inject, provide
 from webcompy.elements import html
 
+from ..keys import AppThemeKey
+
 ThemeKey = InjectKey[str]("e2e-theme")
-AppThemeKey = InjectKey[str]("e2e-app-theme")
 
 
 @define_component
