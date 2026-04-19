@@ -21,33 +21,27 @@ _combinator_pattern: Final = re_compile(r"\s*,\s*|\s*>\s*|\s*\+\s*|\s*~[^=]\s*|\
 T = TypeVar("T")
 
 
-class _ComponentStoreImpl:
-    __components: dict[str, Any]
+def _instantiate(cls: type[T]) -> T:
+    return cls()
+
+
+class ComponentStore:
+    __components: dict[str, ComponentGenerator[Any]]
 
     def __init__(self) -> None:
         self.__components = {}
 
-    def add_component(self, name: str, component_generator: Any):
+    def add_component(self, name: str, component_generator: ComponentGenerator[Any]):
         if name in self.__components:
             raise WebComPyComponentException(f"Duplicated Component Name: '{name}'")
         self.__components[name] = component_generator
 
     @property
-    def components(self) -> dict[str, Any]:
+    def components(self) -> dict[str, ComponentGenerator[Any]]:
         return self.__components
 
 
-_default_component_store: _ComponentStoreImpl | None = None
-
-
-def _get_default_component_store() -> _ComponentStoreImpl:
-    global _default_component_store
-    if _default_component_store is None:
-        _default_component_store = _ComponentStoreImpl()
-    return _default_component_store
-
-
-ComponentStore: _ComponentStoreImpl = _get_default_component_store()
+_default_component_store = ComponentStore()
 
 
 PropsType = TypeVar("PropsType")
@@ -68,17 +62,10 @@ class ComponentGenerator(Generic[PropsType]):
         self.__component_def = component_def
         self.__name: str = name
         self.__id = generate_id(name)
+        from webcompy.di import inject
         from webcompy.di._keys import _COMPONENT_STORE_KEY
-        from webcompy.di._scope import _active_di_scope
 
-        scope = _active_di_scope.get(None)
-        if scope is not None:
-            try:
-                store = scope.inject(_COMPONENT_STORE_KEY)
-            except Exception:
-                store = _get_default_component_store()
-        else:
-            store = _get_default_component_store()
+        store = inject(_COMPONENT_STORE_KEY, default=_default_component_store)
         store.add_component(self.__name, self)
 
     def __call__(

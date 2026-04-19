@@ -54,7 +54,6 @@ class Context(Generic[PropsType]):
         meta_getter: Callable[[], dict[str, dict[str, str]]],
         title_setter: Callable[[str], None],
         meta_setter: Callable[[str, dict[str, str]], None],
-        ensure_child_di_scope: Callable[[], Any] | None = None,
     ) -> None:
         self.__props = props
         self.__slots = slots
@@ -66,7 +65,6 @@ class Context(Generic[PropsType]):
         self.__meta_getter = meta_getter
         self.__title_setter = title_setter
         self.__meta_setter = meta_setter
-        self._ensure_child_di_scope = ensure_child_di_scope
 
     @property
     def props(self) -> PropsType:
@@ -106,10 +104,10 @@ class Context(Generic[PropsType]):
     def set_meta(self, key: str, attributes: dict[str, str]) -> None:
         self.__meta_setter(key, attributes)
 
-    def provide(self, key: Any, value: Any) -> None:
-        from webcompy.di._provide_inject import provide
+    def provide(self, key: object, value: Any) -> None:
+        from webcompy.di import provide as _provide
 
-        provide(key, value)
+        _provide(key, value)
 
     def __get_lifecyclehooks__(self) -> _Lifecyclehooks:
         hooks: _Lifecyclehooks = {}
@@ -145,6 +143,8 @@ class ComponentContext(Protocol[PropsType]):
     def set_title(self, title: str) -> None: ...
 
     def set_meta(self, key: str, attributes: dict[str, str]) -> None: ...
+
+    def provide(self, key: object, value: Any) -> None: ...
 
 
 @final

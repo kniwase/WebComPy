@@ -266,6 +266,9 @@ def fake_document(fake_browser):
 def reset_di_scope():
     from webcompy.di._scope import _active_di_scope
 
-    token = _active_di_scope.set(None)
+    token = _active_di_scope.set(None) if _active_di_scope.get(None) is not None else None
     yield
-    _active_di_scope.reset(token)
+    if token is not None:
+        _active_di_scope.reset(token)
+    else:
+        _active_di_scope.set(None)

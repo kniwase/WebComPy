@@ -11,8 +11,9 @@ from typing import (
 )
 
 from webcompy._browser._modules import browser
+from webcompy.di import inject
+from webcompy.di._exceptions import InjectionError
 from webcompy.di._keys import _ROUTER_KEY
-from webcompy.di._scope import _active_di_scope
 from webcompy.elements._dom_objs import DOMEvent
 from webcompy.elements.typealias._element_property import (
     AttrValue,
@@ -29,22 +30,7 @@ QueryParamsType = TypeVar("QueryParamsType")
 PathParamsType = TypeVar("PathParamsType")
 
 
-def _get_router() -> Router:
-    scope = _active_di_scope.get(None)
-    if scope is None:
-        raise WebComPyRouterException("'Router' instance is not provided in DI scope.")
-    try:
-        router = scope.inject(_ROUTER_KEY)
-    except Exception as err:
-        raise WebComPyRouterException("'Router' instance is not provided in DI scope.") from err
-    if not isinstance(router, Router):
-        raise WebComPyRouterException("'Router' instance is not provided in DI scope.")
-    return router
-
-
 class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Element):
-    _router_instance: Router
-
     _query: SignalBase[dict[str, str]] | None
     _params: SignalBase[dict[str, Any]] | None
     _path_params: SignalBase[dict[str, str]] | None
@@ -59,13 +45,17 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         path_params: SignalBase[PathParamsType] | None = None,
         attrs: dict[str, AttrValue] | None = None,
     ) -> None:
-        self._router_instance = _get_router()
+        try:
+            router = inject(_ROUTER_KEY)
+        except InjectionError:
+            raise WebComPyRouterException("'Router' instance is not provided via DI.") from None
         self._given_attrs = attrs
         self._to = to
         self._query = cast("SignalBase[dict[str, str]]", query) if query is not None else None
         self._params = cast("SignalBase[dict[str, Any]]", params) if params is not None else None
         self._path_params = cast("SignalBase[dict[str, str]]", path_params) if path_params is not None else None
         self._text = text
+        self._router = router
         super().__init__(
             "a",
             attrs=self._generate_attrs(),
@@ -74,6 +64,10 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         )
         if isinstance(self._to, SignalBase):
             self._add_callback_node(self._to.on_after_updating(self._refresh))
+
+    @staticmethod
+    def __set_router__(router: Router | None):
+        pass
 
     def _refresh(self, *_: Any):
         self._attrs = self._generate_attrs()
@@ -102,9 +96,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
             return
         href: str = ev.currentTarget.getAttribute("href")
         current_path = (
-            browser.window.location.pathname
-            if self._router_instance.__mode__ == "history"
-            else browser.window.location.hash
+            browser.window.location.pathname if self._router.__mode__ == "history" else browser.window.location.hash
         )
         if current_path != href:
             if self._params is None:
@@ -118,7 +110,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                     state = None
                     logging.warn("Argument 'params' of RouterLink should be a Signal Object of json-serializable dict.")
             browser.window.history.pushState(state, None, href)
-            self._router_instance.__set_path__(href, params)
+            self._router.__set_path__(href, params)
 
     def _generate_attrs(self) -> dict[str, AttrValue]:
         attrs = self._given_attrs if self._given_attrs else {}
@@ -137,13 +129,10 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         to = f"/{path_encoded}/" if path_encoded else "/"
         query_encoded = urllib.parse.urlencode(self._query.value if self._query else {})
         query = "?" + query_encoded if query_encoded else ""
-        if self._router_instance:
-            if self._router_instance.__mode__ == "hash":
-                return "#" + to + query
-            elif self._router_instance.__base_url__:
-                return "/" + self._router_instance.__base_url__ + to + query
-            else:
-                return to + query
+        if self._router.__mode__ == "hash":
+            return "#" + to + query
+        elif self._router.__base_url__:
+            return "/" + self._router.__base_url__ + to + query
         else:
             return to + query
 
