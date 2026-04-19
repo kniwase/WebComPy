@@ -38,47 +38,52 @@
 - [ ] 5.3 Ensure `app.generate()` uses `AppConfig` from the app instance for base_url, dependencies, and assets
 - [ ] 5.4 Add integration tests for `app.generate()`
 
-## 6. Singleton Removal — Router and RouterView
+## 6. Singleton Removal — RouterView
 
-- [ ] 6.1 Remove `Router._instance` ClassVar and singleton enforcement from `Router.__init__`
-- [ ] 6.2 Remove `RouterView._instance` ClassVar and singleton enforcement from `RouterView.__init__`
-- [ ] 6.3 Add `__set_router__()` deprecation warnings on `RouterView` and `TypedRouterLink`
-- [ ] 6.4 Pass `Router` reference to `RouterView.__init__` and `TypedRouterLink.__init__` via `_active_app_context` ContextVar or constructor parameter (bridge until DI)
-- [ ] 6.5 Remove `reset_router_singleton` and `reset_router_link` fixtures from `tests/conftest.py`
-- [ ] 6.6 Remove `Router._instance = None` workarounds from `tests/test_router_advanced.py`
-- [ ] 6.7 Add unit tests for multiple Router/RouterView instances coexisting
+- [ ] 6.1 Remove `RouterView._instance` ClassVar and singleton enforcement from `RouterView.__init__`
+- [ ] 6.2 Add unit tests for multiple RouterView instances coexisting
+- [ ] 6.3 Remove TODO comment about App Instance migration in `RouterView`
 
-## 7. Per-App State — HeadPropsStore and ComponentStore
+## 7. Per-App State — ComponentStore and _defer_*
 
-- [ ] 7.1 Move `HeadPropsStore` from `Component._head_props` ClassVar to `WebComPyApp` instance attribute
-- [ ] 7.2 Add `_active_app_context` ContextVar to propagate app reference through the component tree
-- [ ] 7.3 Update `Component._set_title()` and `Component._set_meta()` to use app-scoped HeadPropsStore via context
-- [ ] 7.4 Update `Component._remove_element()` cleanup to use app-scoped HeadPropsStore
-- [ ] 7.5 Remove `@_instantiate` decorator from `ComponentStore`; make it a regular class
-- [ ] 7.6 Add module-level `_default_component_store` for backward compat during `ComponentGenerator.__init__` auto-registration
-- [ ] 7.7 Add `ComponentStore` instance to `WebComPyApp`; update `AppDocumentRoot.style` to use app-specific store
-- [ ] 7.8 Move `_defer_after_rendering_depth` and `_deferred_after_rendering_callbacks` to app scope
-- [ ] 7.9 Update `start_defer_after_rendering()` and `end_defer_after_rendering()` to use app context
-- [ ] 7.10 Add unit tests for per-app HeadPropsStore and ComponentStore isolation
+- [ ] 7.1 Remove `_default_component_store` module global from `webcompy/components/_generator.py`
+- [ ] 7.2 Update `ComponentGenerator.__init__` to use `inject(_COMPONENT_STORE_KEY, default=None)` — if scope exists, register immediately; if not, defer registration
+- [ ] 7.3 Create per-app `ComponentStore` in `WebComPyApp.__init__` and provide into `app._di_scope`
+- [ ] 7.4 Update `AppDocumentRoot.__init__` to provide the app-specific `ComponentStore` instead of `_default_component_store`
+- [ ] 7.5 Update `AppDocumentRoot.style` to use `inject(_COMPONENT_STORE_KEY)` without default fallback
+- [ ] 7.6 Move `_defer_after_rendering_depth` and `_deferred_after_rendering_callbacks` to `WebComPyApp` as instance attributes
+- [ ] 7.7 Add `_active_app_context: ContextVar[WebComPyApp | None]` and update `start_defer_after_rendering()` and `end_defer_after_rendering()` to use it
+- [ ] 7.8 Update `SwitchElement._refresh()` and other callers to use `_active_app_context`
+- [ ] 7.9 Update `AppDocumentRoot._render()` to set `_active_app_context` before rendering and reset after
+- [ ] 7.10 Add unit tests for per-app ComponentStore isolation and _defer_* per-app state
 
-## 8. CLI Backward Compatibility
+## 8. Remove _root_di_scope Global
 
-- [ ] 8.1 Add `DeprecationWarning` to `WebComPyConfig.__init__`
-- [ ] 8.2 Update CLI argparser to accept `--app` option specifying import path (e.g., `my_app.app:app`)
-- [ ] 8.3 Update `get_app()` in `_utils.py` to support both legacy `bootstrap.py` and new `app.run()`-compatible patterns
-- [ ] 8.4 Update `_asgi_app.py` to support both `WebComPyConfig` and direct `WebComPyApp.asgi_app` patterns (with deprecation warning for old path)
-- [ ] 8.5 Add deprecation warning tests
+- [ ] 8.1 Remove `_root_di_scope`, `_set_root_di_scope`, `_get_root_di_scope` from `webcompy/di/_scope.py`
+- [ ] 8.2 Remove `_root_di_scope` fallback from `provide()` and `inject()` in `webcompy/di/__init__.py`
+- [ ] 8.3 Remove `_set_root_di_scope(di_scope)` call from `AppDocumentRoot.__init__`
+- [ ] 8.4 Remove `_active_di_scope.set(app._di_scope)` from `_server.py` and `_generate.py` (lifecycle methods will manage scope internally)
+- [ ] 8.5 Verify E2E tests pass without `_root_di_scope` fallback (especially browser context tests)
+- [ ] 8.6 Update `tests/conftest.py` — remove `reset_di_scope` fixture if no longer needed
 
-## 9. Template and Documentation Updates
+## 9. CLI Backward Compatibility
 
-- [ ] 9.1 Update `webcompy/cli/template_data/app/bootstrap.py` to use `AppConfig` and `app.run()` pattern
-- [ ] 9.2 Update `webcompy/cli/template_data/webcompy_config.py` template to use `AppConfig` (with deprecation notice)
-- [ ] 9.3 Update `AGENTS.md` with new app instance API
-- [ ] 9.4 Update existing E2E test bootstrap files to use new pattern if applicable
+- [ ] 9.1 Add `DeprecationWarning` to `WebComPyConfig.__init__`
+- [ ] 9.2 Update CLI argparser to accept `--app` option specifying import path (e.g., `my_app.app:app`)
+- [ ] 9.3 Update `get_app()` in `_utils.py` to support both legacy `bootstrap.py` and new `app.run()`-compatible patterns
+- [ ] 9.4 Update `_asgi_app.py` to support both `WebComPyConfig` and direct `WebComPyApp.asgi_app` patterns (with deprecation warning for old path)
+- [ ] 9.5 Add deprecation warning tests
 
-## 10. Final Verification
+## 10. Template and Documentation Updates
 
-- [ ] 10.1 Run full test suite (`uv run python -m pytest tests/ --tb=short`)
-- [ ] 10.2 Run lint (`uv run ruff check .`) and format (`uv run ruff format .`)
-- [ ] 10.3 Run type check (`uv run pyright`)
-- [ ] 10.4 Verify E2E tests pass with new app.run() bootstrap pattern
+- [ ] 10.1 Update `webcompy/cli/template_data/app/bootstrap.py` to use `AppConfig` and `app.run()` pattern
+- [ ] 10.2 Update `webcompy/cli/template_data/webcompy_config.py` template to use `AppConfig` (with deprecation notice)
+- [ ] 10.3 Update `AGENTS.md` with new app instance API
+- [ ] 10.4 Update existing E2E test bootstrap files to use new pattern if applicable
+
+## 11. Final Verification
+
+- [ ] 11.1 Run full test suite (`uv run python -m pytest tests/ --tb=short`)
+- [ ] 11.2 Run lint (`uv run ruff check .`) and format (`uv run ruff format .`)
+- [ ] 11.3 Run type check (`uv run pyright`)
+- [ ] 11.4 Verify E2E tests pass with new app.run() bootstrap pattern
