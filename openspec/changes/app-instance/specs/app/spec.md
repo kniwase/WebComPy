@@ -40,6 +40,19 @@ When the application finishes its first render, the `#webcompy-loading` element 
 - **THEN** a loading spinner SHALL be visible while PyScript initializes
 - **AND** once the app renders, the spinner SHALL disappear
 
+### Requirement: Browser-side DI scope and app context shall persist after initial render
+In the browser (PyScript) environment, the `_active_di_scope` and `_active_app_context` `ContextVar` bindings set during rendering SHALL NOT be reset after the initial render completes. This ensures that Signal callbacks and event handlers triggered from JS (which do not carry `ContextVar` bindings) can still resolve DI values and access the app instance. In the server/SSG environment, these `ContextVar` bindings SHALL be properly reset after rendering to maintain scope hygiene.
+
+#### Scenario: Signal callback resolves DI after initial render
+- **WHEN** a user clicks a `RouterLink` in the browser after `app.run()` has completed
+- **THEN** the `SwitchElement._refresh` callback SHALL be able to call `inject(_HEAD_PROPS_KEY)` successfully
+- **AND** the new page component SHALL be created with valid DI values
+
+#### Scenario: Module-level DI fallback for PyScript callbacks
+- **WHEN** a PyScript JS→Python callback fires and `_active_di_scope` `ContextVar` is unset
+- **THEN** `inject()` and `provide()` SHALL fall back to the module-level `_app_di_scope` reference
+- **AND** DI resolution SHALL succeed using the app's DI scope
+
 ### Requirement: The application shall manage the document head reactively
 When components set the document title or meta tags, those changes SHALL be reflected in the browser's document head. When a component is destroyed, its head entries SHALL be removed, and the most recently set title SHALL take effect. Head props SHALL be accessed via DI injection using `_HEAD_PROPS_KEY`, and each app SHALL have its own `HeadPropsStore` in its DI scope.
 
@@ -58,7 +71,7 @@ All registered components' scoped CSS SHALL be collected and injected into the d
 - **AND** each style SHALL only affect elements within its respective component
 
 ### Requirement: Multiple WebComPy applications shall coexist without interference
-Each `WebComPyApp` instance SHALL have its own DI scope, Router, HeadPropsStore, ComponentStore, and deferred rendering state. Module-level global singletons (`_root_di_scope`, `_default_component_store`, `RouterView._instance`) SHALL NOT be used for app-scoped state. The `_defer_after_rendering_depth` and `_deferred_after_rendering_callbacks` state SHALL be owned by the app instance, not by module globals.
+Each `WebComPyApp` instance SHALL have its own DI scope, Router, HeadPropsStore, ComponentStore, and deferred rendering state. Module-level global singletons (`_root_di_scope`, `_default_component_store`, `RouterView._instance`) SHALL NOT be used as the *primary* mechanism for app-scoped state. The `_defer_after_rendering_depth` and `_deferred_after_rendering_callbacks` state SHALL be owned by the app instance, not by module globals. In the browser, module-level fallback references (`_app_di_scope`, `_app_instance`) exist because `ContextVar` bindings are not preserved across PyScript JS→Python callbacks; these fallbacks hold only the most recently created app's scope. In the server/SSG environment, full multi-app isolation is guaranteed through `ContextVar` bindings.
 
 #### Scenario: Two apps on the same page
 - **WHEN** two `WebComPyApp` instances are created with different root components and both call `app.run()`
@@ -66,6 +79,7 @@ Each `WebComPyApp` instance SHALL have its own DI scope, Router, HeadPropsStore,
 - **AND** each app SHALL have its own Router, ComponentStore, HeadPropsStore, and DI scope
 - **AND** components in one app SHALL NOT see DI values from the other
 - **AND** setting the title in one app SHALL NOT affect the other
+- **AND** in the browser environment, if a Signal callback in one app loses its `ContextVar` binding, it MAY resolve DI values from the other app's scope (a known limitation of the module-level fallback mechanism)
 
 #### Scenario: Two apps in the same server process
 - **WHEN** two `WebComPyApp` instances are created and both are used with `create_asgi_app()` or `generate_static_site()`
@@ -73,7 +87,7 @@ Each `WebComPyApp` instance SHALL have its own DI scope, Router, HeadPropsStore,
 - **AND** each app SHALL have its own configuration, routes, and DI scope
 
 ### Requirement: Static site generation shall produce complete HTML pages
-The CLI SHALL render the application to HTML strings for each route, including PyScript bootstrapping code, dependency packages, and the loading screen. The generated bootstrap code SHALL use `app.run()` instead of the deprecated `app.__component__.render()` pattern.
+The CLI SHALL render the application to HTML strings for each route, including PyScript bootstrapping code, dependency packages, and the loading screen. The generated bootstrap code SHALL use `app.run()` instead of the deprecated `app.__component__.render()` pattern. The SSG process SHALL enter the app's DI scope for the entire duration of HTML generation to ensure `inject()` calls succeed.
 
 #### Scenario: Generating a static site
 - **WHEN** the generate command is run

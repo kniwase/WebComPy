@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Application configuration shall use type-safe dataclasses
-The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` dataclasses with validated fields and sensible defaults. `AppConfig` SHALL contain settings shared between browser and server environments (including `app_package` for server-side use). `ServerConfig` and `GenerateConfig` are internal types used by CLI functions, not passed directly by developers through `WebComPyApp`.
+The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` dataclasses with validated fields and sensible defaults. `AppConfig` SHALL contain settings shared between browser and server environments (including `app_package` for server-side use). `ServerConfig` and `GenerateConfig` are internal types used by CLI functions, not passed directly by developers through `WebComPyApp`. Internally, the CLI converts `AppConfig` to `WebComPyConfig` for compatibility with existing HTML generation and wheel-building code; this is an implementation detail not exposed to developers.
 
 #### Scenario: Creating a minimal application configuration
 - **WHEN** a developer creates `WebComPyApp(root_component=Root)` without explicit config
-- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=[]`, `assets=None`)
+- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=[]`, `assets=None`, `app_package="."`)
 - **AND** the app SHALL function correctly with these defaults
 
 #### Scenario: Configuring base URL and dependencies

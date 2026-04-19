@@ -28,13 +28,13 @@
 - [x] 4.1 Refactor `create_asgi_app()` to accept `WebComPyApp` as primary argument (config auto-built from `AppConfig` when not provided)
 - [x] 4.2 Update `run_server()` to accept optional `WebComPyApp` argument
 - [x] 4.3 Replace `_active_di_scope.set()` calls with `app.di_scope` context manager in `_server.py`
-- [ ] 4.4 Verify E2E tests pass with updated server entry points
+- [x] 4.4 Verify E2E tests pass with updated server entry points
 
 ## 5. SSG Entry Point — generate_static_site
 
 - [x] 5.1 Update `generate_static_site()` to accept optional `WebComPyApp` argument
 - [x] 5.2 Replace `_active_di_scope.set()` calls with `app.di_scope` context manager in `_generate.py`
-- [ ] 5.3 Verify E2E tests pass with updated SSG entry points
+- [x] 5.3 Verify E2E tests pass with updated SSG entry points
 
 ## 6. Singleton Removal — RouterView
 
@@ -61,7 +61,7 @@
 - [x] 8.2 Remove `_root_di_scope` fallback from `provide()` and `inject()` in `webcompy/di/__init__.py`
 - [x] 8.3 Remove `_set_root_di_scope(di_scope)` call from `AppDocumentRoot.__init__`
 - [x] 8.4 Remove `_active_di_scope.set(app._di_scope)` from `_server.py` and `_generate.py` (lifecycle methods will manage scope internally)
-- [ ] 8.5 Verify E2E tests pass without `_root_di_scope` fallback (especially browser context tests)
+- [x] 8.5 Verify E2E tests pass without `_root_di_scope` fallback (especially browser context tests)
 - [x] 8.6 Update `tests/conftest.py` — remove `reset_di_scope` fixture if no longer needed
 
 ## 9. CLI Backward Compatibility
@@ -84,4 +84,4 @@
 - [x] 11.1 Run full test suite (`uv run python -m pytest tests/ --tb=short`)
 - [x] 11.2 Run lint (`uv run ruff check .`) and format (`uv run ruff format .`)
 - [x] 11.3 Run type check (`uv run pyright`)
-- [ ] 11.4 Verify E2E tests pass with new app.run() bootstrap pattern
+- [x] 11.4 Verify E2E tests pass with new app.run() bootstrap pattern

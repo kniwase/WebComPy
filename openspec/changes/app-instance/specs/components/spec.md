@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Component registration shall enforce unique names with per-app stores
-The framework SHALL maintain a per-app registry of component generators by name. If two components are registered with the same name within the same app, an error SHALL be raised. Each `WebComPyApp` SHALL own its own `ComponentStore` instance, provided into the app's DI scope. `ComponentGenerator` SHALL register into the active app's store via DI when a scope is available. When no DI scope exists (import time), registration SHALL be deferred until an app scope becomes active. No module-level `_default_component_store` global SHALL exist.
+The framework SHALL maintain a per-app registry of component generators by name. If two components are registered with the same name within the same app, an error SHALL be raised. Each `WebComPyApp` SHALL own its own `ComponentStore` instance, provided into the app's DI scope. `ComponentGenerator` SHALL register into the active app's store via DI when a scope is available. When no DI scope exists (import time), registration SHALL be deferred until an app scope becomes active. No module-level `_default_component_store` global SHALL exist. Note: `ComponentGenerator.__registered` is a one-time flag; import-time components will only register into the first app's store. Subsequent apps will not inherit components defined before either app existed, unless a different registration mechanism is used or components are re-imported.
 
 #### Scenario: Registering duplicate component names within the same app
 - **WHEN** a developer defines two components with the same name in the same application
@@ -16,6 +16,7 @@ The framework SHALL maintain a per-app registry of component generators by name.
 - **WHEN** a `@define_component` decorated function is defined at module level (before any app exists)
 - **THEN** the `ComponentGenerator` SHALL store its registration info locally
 - **AND** when an app is created and its DI scope becomes active, the component SHALL be registered into that app's store
+- **AND** once registered, the `ComponentGenerator.__registered` flag prevents re-registration into a second app's store; only the first app created receives import-time components
 
 ### Requirement: Components shall manage document head properties
 Each component instance SHALL be able to set the document title and meta tags through the app-scoped `HeadPropsStore` accessed via DI. When multiple components set the title, the most recently rendered one SHALL take precedence. When a component is destroyed, its head entries SHALL be removed from the app-scoped store.

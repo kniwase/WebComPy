@@ -28,7 +28,8 @@ Adopting a FastAPI-style application instance — where the app object owns its 
 - **Transparent property forwarding**: `app.routes`, `app.router_mode`, `app.set_path()`, `app.head`, `app.style`, `app.set_title()`, `app.set_meta()`, etc. — replace `app.__component__.*` access pattern
 - **`RouterView._instance` singleton removed**: Enables multiple app instances with independent RouterViews
 - **`ComponentStore` becomes truly per-app**: Replace `_default_component_store` module-level bridge with per-app `ComponentStore` owned by `WebComPyApp`, solving the import-time registration problem
-- **`_root_di_scope` module global removed**: Each app's DI scope is self-contained; no module-level global is needed since server entry points use `app.di_scope` context manager
+- **`_root_di_scope` module global removed**: Each app's DI scope is self-contained; no module-level global is the *primary* mechanism. A module-level fallback (`_app_di_scope`) remains for browser environments where `ContextVar` bindings are lost across PyScript JS→Python callbacks
+- **Browser-side ContextVar persistence**: In the browser, `_active_di_scope` and `_active_app_context` are NOT reset after rendering to ensure Signal callbacks can resolve DI values. Module-level fallbacks (`_app_di_scope`, `_app_instance`) provide safety-net resolution when ContextVars are unset
 - **`_defer_*` module globals become per-app**: `_defer_after_rendering_depth` and `_defered_after_rendering_callbacks` move to the `WebComPyApp` instance
 - **CLI backward compatibility**: `python -m webcompy start` and `python -m webcompy generate` continue to work by discovering app instance from bootstrap module (with deprecation warnings), while also supporting direct `run_server(app)` / `generate_static_site(app)` invocation
 - **`webcompy_config.py` deprecated**: Settings migrate to `AppConfig` passed to `WebComPyApp`; old `WebComPyConfig` continues to work with `DeprecationWarning`
@@ -40,10 +41,10 @@ Adopting a FastAPI-style application instance — where the app object owns its 
 - `app-lifecycle`: Browser entry point (`app.run()`), server entry points (`create_asgi_app`, `run_server`, `generate_static_site`) as module-level functions that accept a `WebComPyApp`
 
 ### Modified Capabilities
-- `app`: WebComPyApp gains transparent property forwarding, `run()` method, and config; `__component__` access deprecated; app is fully isolated and multi-app-capable
-- `cli`: CLI functions accept optional `WebComPyApp` argument; `WebComPyConfig` deprecated in favor of `AppConfig`
-- `architecture`: Remaining singletons removed (`RouterView._instance`, `_default_component_store` bridge, `_root_di_scope` global); app instance is the scope boundary for all shared state
-- `components`: `ComponentStore` becomes truly per-app (no shared default); `_defer_*` globals move to app scope
+- `app`: WebComPyApp gains transparent property forwarding, `run()` method, and config; `__component__` access deprecated; app is fully isolated and multi-app-capable (with browser-side limitation: module-level fallbacks hold only one app's scope)
+- `cli`: CLI functions accept optional `WebComPyApp` argument; `WebComPyConfig` deprecated in favor of `AppConfig`; internally `AppConfig` is converted to `WebComPyConfig` for existing HTML generation code
+- `architecture`: Remaining singletons removed (`RouterView._instance`, `_default_component_store` bridge, `_root_di_scope` global); app instance is the scope boundary for all shared state; module-level fallbacks (`_app_di_scope`, `_app_instance`) exist for browser-side ContextVar preservation
+- `components`: `ComponentStore` becomes truly per-app (no shared default); `_defer_*` globals move to app scope accessed via `_active_app_context` ContextVar with `_app_instance` fallback
 
 ## Impact
 
@@ -58,9 +59,9 @@ Adopting a FastAPI-style application instance — where the app object owns its 
 - **`webcompy/cli/template_data/`**: Update project template
 - **`webcompy/router/_view.py`**: Remove `_instance` singleton constraint
 - **`webcompy/components/_generator.py`**: `ComponentStore` becomes truly per-app (remove `_default_component_store` global bridge)
-- **`webcompy/components/_component.py`**: `_defer_*` globals move to app scope
-- **`webcompy/di/_scope.py`**: Remove `_root_di_scope` module global and `_set_root_di_scope` / `_get_root_di_scope` functions
-- **`webcompy/di/__init__.py`**: Update `provide()` / `inject()` fallback logic (remove `_root_di_scope`)
+- **`webcompy/components/_component.py`**: `_defer_*` globals move to app scope; add `_app_instance` fallback with `_set_app_instance` / `_get_app_instance` for browser ContextVar preservation
+- **`webcompy/di/_scope.py`**: Remove `_root_di_scope` module global and `_set_root_di_scope` / `_get_root_di_scope` functions; add `_app_di_scope` fallback with `_set_app_di_scope` / `_get_app_di_scope`
+- **`webcompy/di/__init__.py`**: Update `provide()` / `inject()` fallback logic (remove `_root_di_scope`, add `_app_di_scope` fallback for browser ContextVar preservation)
 - **`tests/conftest.py`**: Remove `reset_di_scope` fixture (no longer needed once `_root_di_scope` is gone)
 - **`tests/e2e/`**: Update bootstrap files to use `app.run()` pattern
 
@@ -68,8 +69,8 @@ Adopting a FastAPI-style application instance — where the app object owns its 
 
 - `RouterView._instance` singleton — removed, enabling multiple apps
 - `_default_component_store` global bridge — replaced with per-app ComponentStore
-- `_root_di_scope` module global — removed, each app manages its own scope
-- `_defer_*` module globals — moved to app instance scope
+- `_root_di_scope` module global — removed, each app manages its own scope; module-level `_app_di_scope` fallback added for browser ContextVar preservation
+- `_defer_*` module globals — moved to app instance scope; module-level `_app_instance` fallback added for browser ContextVar preservation
 - Location popstate proxy must be manually destroy()ed — related to Router scope isolation
 
 ## Non-goals
