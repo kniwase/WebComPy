@@ -203,6 +203,7 @@ def server_url(serving_mode, prod_server, static_server):
 def app_page(page: Page, server_url):
     page.goto(server_url)
     page.wait_for_selector("#webcompy-loading", state="hidden", timeout=PYSCRIPT_INIT_TIMEOUT)
+    page.wait_for_selector("#webcompy-app:not([hidden])", timeout=PYSCRIPT_INIT_TIMEOUT)
     return page
 
 
@@ -211,6 +212,7 @@ def page_on(page: Page, server_url) -> Callable[[str], Page]:
     def _navigate(path: str) -> Page:
         page.goto(f"{server_url}{path.lstrip('/')}")
         page.wait_for_selector("#webcompy-loading", state="hidden", timeout=PYSCRIPT_INIT_TIMEOUT)
+        page.wait_for_selector("#webcompy-app:not([hidden])", timeout=PYSCRIPT_INIT_TIMEOUT)
         return page
 
     return _navigate

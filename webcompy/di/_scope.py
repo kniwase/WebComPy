@@ -7,7 +7,18 @@ from webcompy.di._exceptions import InjectionError
 
 _active_di_scope: ContextVar[DIScope] = ContextVar("_active_di_scope")
 
+_app_di_scope: DIScope | None = None
+
 _MISSING: Any = object()
+
+
+def _set_app_di_scope(scope: DIScope | None) -> None:
+    global _app_di_scope
+    _app_di_scope = scope
+
+
+def _get_app_di_scope() -> DIScope | None:
+    return _app_di_scope
 
 
 class DIScope:

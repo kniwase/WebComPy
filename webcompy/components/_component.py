@@ -16,9 +16,20 @@ from webcompy.signal import ReactiveDict, computed_property
 
 _active_app_context: ContextVar[Any] = ContextVar("_active_app_context", default=None)
 
+_app_instance: Any = None
+
+
+def _set_app_instance(app: Any | None) -> None:
+    global _app_instance
+    _app_instance = app
+
+
+def _get_app_instance() -> Any:
+    return _app_instance
+
 
 def start_defer_after_rendering() -> None:
-    app = _active_app_context.get()
+    app = _active_app_context.get() or _get_app_instance()
     if app is not None:
         app._defer_depth += 1
     else:
@@ -26,7 +37,7 @@ def start_defer_after_rendering() -> None:
 
 
 def end_defer_after_rendering() -> list[Callable[[], None]]:
-    app = _active_app_context.get()
+    app = _active_app_context.get() or _get_app_instance()
     if app is not None:
         app._defer_depth -= 1
         callbacks = app._deferred_callbacks[:]

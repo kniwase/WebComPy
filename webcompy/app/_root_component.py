@@ -113,9 +113,10 @@ class AppDocumentRoot(Component):
                 if loading_el:
                     loading_el.remove()
         finally:
-            if app_token is not None:
-                _active_app_context.reset(app_token)
-            _active_di_scope.reset(token)
+            if not browser:
+                if app_token is not None:
+                    _active_app_context.reset(app_token)
+                _active_di_scope.reset(token)
 
     def _init_node(self) -> DOMNode:
         if browser:

@@ -6,9 +6,10 @@ from typing import Any
 from webcompy.app._config import AppConfig
 from webcompy.app._root_component import AppDocumentRoot
 from webcompy.components import ComponentGenerator
+from webcompy.components._component import _set_app_instance
 from webcompy.components._generator import ComponentStore
 from webcompy.di._keys import _COMPONENT_STORE_KEY
-from webcompy.di._scope import DIScope
+from webcompy.di._scope import DIScope, _set_app_di_scope
 from webcompy.exception import WebComPyException
 from webcompy.router import Router
 from webcompy.utils import ENVIRONMENT
@@ -33,10 +34,18 @@ class WebComPyApp:
         self._di_scope.provide(_COMPONENT_STORE_KEY, self._component_store)
         self._defer_depth: int = 0
         self._deferred_callbacks: list = []
-        with self._di_scope:
+        if ENVIRONMENT == "pyscript":
+            self._di_scope.__enter__()
+            _set_app_di_scope(self._di_scope)
+            _set_app_instance(self)
             from webcompy.components._generator import _register_deferred_components
 
             _register_deferred_components()
+        else:
+            with self._di_scope:
+                from webcompy.components._generator import _register_deferred_components
+
+                _register_deferred_components()
         self._root = AppDocumentRoot(root_component, router, self._di_scope, app=self)
 
     @property
@@ -107,7 +116,7 @@ class WebComPyApp:
         return self._root.update_head
 
     def run(self, selector: str = "#webcompy-app") -> None:
-        if ENVIRONMENT != "browser":
+        if ENVIRONMENT != "pyscript":
             raise WebComPyException("app.run() can only be called in a browser environment.")
         self._root._selector = selector
         self._root.render()
