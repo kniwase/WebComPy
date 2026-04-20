@@ -1,5 +1,6 @@
-from webcompy.app import WebComPyApp
 from webcompy_config import app_config
+
+from webcompy.app import WebComPyApp
 
 from .components.root import Root
 from .router import router

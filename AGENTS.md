@@ -35,9 +35,9 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 ## Build & Run Commands
 
 - Install dependencies: `uv sync` (use `uv sync --dev --no-group docs` for lightweight setup without matplotlib/numpy)
-- Dev server: `uv run python -m webcompy start --dev` (default port: 8080)
-- Dev server (with Playwright MCP): Requires Node.js/npx. (1) Run `uv run python -m webcompy start --dev`, (2) use Playwright MCP tools to navigate to `http://localhost:8080/`. If the server fails to start, check `webcompy_config.py` for port conflicts.
-- Static site generation: `uv run python -m webcompy generate`
+- Dev server: `uv run python -m webcompy start --dev --app docs_src.bootstrap:app` (default port: 8080)
+- Dev server (with Playwright MCP): Requires Node.js/npx. (1) Run `uv run python -m webcompy start --dev --app docs_src.bootstrap:app`, (2) use Playwright MCP tools to navigate to `http://localhost:8080/`. If the server fails to start, check `docs_src/webcompy_server_config.py` for port conflicts.
+- Static site generation: `uv run python -m webcompy generate --app docs_src.bootstrap:app`
 - Project scaffolding: `uv run python -m webcompy init`
 - Build package: `uv build`
 
@@ -72,10 +72,9 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - `WebComPyApp` is the central application object:
   - `app.run(selector="#webcompy-app")` — Browser entry point (raises if not in Emscripten)
   - `app.di_scope` — DI scope context manager for server-side rendering
-- Server entry points use `create_asgi_app(app, config, dev_mode)` and `run_server(app=None)` from `webcompy.cli`
-- SSG uses `generate_static_site(app=None)` from `webcompy.cli`
+- Server entry points use `create_asgi_app(app, server_config=None)` and `run_server(app=None)` from `webcompy.cli`
+- SSG uses `generate_static_site(app=None, generate_config=None)` from `webcompy.cli`
 - Configuration: `AppConfig` (base_url, dependencies, assets, app_package)
-- `WebComPyConfig` is deprecated — use `AppConfig` instead
 - `app.__component__` is deprecated — use forwarded properties: `app.routes`, `app.router_mode`, `app.set_path()`, `app.head`, `app.style`, `app.scripts`, `app.set_title()`, etc.
 - Per-app state: Each `WebComPyApp` owns its own `ComponentStore` and `_defer_*` rendering state
 - DI scope is managed via `app.di_scope` context manager — no global `_root_di_scope`
@@ -140,6 +139,8 @@ WebComPy uses OpenSpec for spec-driven development. Specs define **what the fram
 | `elements` | DOM element creation, reactive updates, conditional/list rendering |
 | `router` | Client-side routing, hash/history modes, path params |
 | `app` | Application bootstrapping, hydration, head management |
+| `app-config` | AppConfig, ServerConfig, GenerateConfig dataclasses |
+| `project-config` | Two-file project configuration (webcompy_config.py, webcompy_server_config.py) |
 | `cli` | Dev server, SSG, project scaffolding, configuration |
 | `browser-api` | Browser environment detection and API abstraction |
 | `async` | Async operations, HTTP client integration |

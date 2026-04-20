@@ -89,10 +89,10 @@ Each `WebComPyApp` instance SHALL have its own DI scope. Global singletons SHALL
 - **AND** components in one app SHALL NOT see DI values from the other
 
 ### Requirement: The project structure shall be discoverable by convention
-A WebComPy project SHALL follow a specific directory layout. The CLI SHALL discover the app instance using `webcompy_config.py` (which contains `app_import_path` and `app_config`) or the `--app` CLI flag. The `webcompy_server_config.py` file is optional and contains server/SSG-only settings (`server_config`, `generate_config`).
+A WebComPy project SHALL follow a specific directory layout. The CLI SHALL discover the app instance using `webcompy_config.py` (which contains `app_import_path` and `app_config`) or the `--app` CLI flag. Configuration files can be placed at the project root or inside the app package directory. When `--app` is provided, the CLI derives the package from the import path and searches for `webcompy_server_config.py` in that package first, then falls back to the project root. The `webcompy_server_config.py` file is optional and contains server/SSG-only settings (`server_config`, `generate_config`).
 
 #### Scenario: Starting the dev server with app_import_path
-- **WHEN** a developer runs `python -m webcompy start` and `webcompy_config.py` defines `app_import_path = "my_app.bootstrap:app"`
+- **WHEN** a developer runs `python -m webcompy start` and `webcompy_config.py` at the project root defines `app_import_path = "my_app.bootstrap:app"`
 - **THEN** the CLI SHALL discover the app instance
 - **AND** `AppConfig` from `app.config` SHALL be used
 - **AND** `ServerConfig` from `webcompy_server_config.py` SHALL be used if present
@@ -101,12 +101,18 @@ A WebComPy project SHALL follow a specific directory layout. The CLI SHALL disco
 - **WHEN** a developer runs `python -m webcompy start --app my_app.bootstrap:app`
 - **THEN** the CLI SHALL import `my_app.bootstrap:app`
 - **AND** `webcompy_config.py` SHALL NOT be required
-- **AND** `webcompy_server_config.py` SHALL still be read if present
+- **AND** `webcompy_server_config.py` SHALL be searched first as `my_app.webcompy_server_config`, then as root-level `webcompy_server_config`
 
-#### Scenario: Minimal project structure
-- **WHEN** a project contains `webcompy_config.py` with `app_import_path` and `my_app/bootstrap.py`
+#### Scenario: Minimal project structure with root-level config
+- **WHEN** a project contains `webcompy_config.py` at the project root with `app_import_path` and `my_app/bootstrap.py`
 - **THEN** the CLI SHALL be able to start the dev server and generate static output
 - **AND** no `webcompy_server_config.py` is required (defaults are used)
+
+#### Scenario: Project structure with package-level config
+- **WHEN** a project contains `my_app/webcompy_config.py` and `my_app/webcompy_server_config.py`
+- **AND** the developer runs `python -m webcompy start --app my_app.bootstrap:app`
+- **THEN** the CLI SHALL discover the app via the `--app` flag
+- **AND** `webcompy_server_config.py` SHALL be read from `my_app.webcompy_server_config`
 
 ### Requirement: The CLI shall provide three distinct workflows
 The framework SHALL provide three commands serving different phases of the development lifecycle: `start` for live development with hot-reload, `generate` for production static site generation, and `init` for project scaffolding.

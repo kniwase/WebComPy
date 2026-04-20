@@ -49,12 +49,12 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **AND** no assets SHALL be included in the bundled wheel
 
 ### Requirement: ServerConfig and GenerateConfig shall be internal
-`ServerConfig` and `GenerateConfig` SHALL be internal dataclasses used by CLI functions. They SHALL NOT be exported in `webcompy.__all__` or `webcompy.app.__all__`. Developers define them in `webcompy_server_config.py`, which the CLI reads directly.
+`ServerConfig` and `GenerateConfig` SHALL be internal dataclasses used by CLI functions. They SHALL NOT be exported in `webcompy.__all__` or `webcompy.app.__all__`. Developers define them in `webcompy_server_config.py`, which the CLI reads from the app package or the project root.
 
 #### Scenario: ServerConfig defaults
-- **WHEN** no `webcompy_server_config.py` exists or it does not define `server_config`
+- **WHEN** no `webcompy_server_config.py` exists (in the app package or at the project root) or it does not define `server_config`
 - **THEN** `ServerConfig()` defaults SHALL be used (`port=8080`, `dev=False`, `static_files_dir="static"`)
 
 #### Scenario: GenerateConfig defaults
-- **WHEN** no `webcompy_server_config.py` exists or it does not define `generate_config`
+- **WHEN** no `webcompy_server_config.py` exists (in the app package or at the project root) or it does not define `generate_config`
 - **THEN** `GenerateConfig()` defaults SHALL be used (`dist="dist"`, `cname=""`, `static_files_dir="static"`)

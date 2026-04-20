@@ -48,7 +48,7 @@ Server-side entry points SHALL be module-level functions (`create_asgi_app`, `ru
 - **AND** CLI flags SHALL override config file values
 
 #### Scenario: Starting a dev server via CLI with app_import_path
-- **WHEN** a developer runs `python -m webcompy start` and `webcompy_config.py` defines `app_import_path`
+- **WHEN** a developer runs `python -m webcompy start` and `webcompy_config.py` at the project root defines `app_import_path`
 - **THEN** the CLI SHALL discover the app instance via `app_import_path`
 - **AND** `webcompy_config.py` SHALL be used for `AppConfig`
 - **AND** `webcompy_server_config.py` SHALL be used for `ServerConfig` if present
@@ -57,7 +57,7 @@ Server-side entry points SHALL be module-level functions (`create_asgi_app`, `ru
 - **WHEN** a developer runs `python -m webcompy start --app my_app.bootstrap:app`
 - **THEN** the CLI SHALL import `my_app.bootstrap` and use the `app` attribute
 - **AND** `webcompy_config.py` SHALL NOT be required
-- **AND** `webcompy_server_config.py` SHALL still be read if present
+- **AND** `webcompy_server_config.py` SHALL be searched first in the app package (`my_app.webcompy_server_config`), then at the project root
 
 ### Requirement: The SSG entry point shall be a module-level function
 Static site generation SHALL use a module-level function (`generate_static_site`) that accepts a `WebComPyApp` instance and an optional `GenerateConfig`. The SSG process SHALL enter the app's DI scope for the entire generation pipeline (from dist configuration through HTML rendering) to ensure all `inject()` calls during route rendering and head management succeed.
@@ -76,8 +76,8 @@ Static site generation SHALL use a module-level function (`generate_static_site`
 
 #### Scenario: Generating via CLI with config files
 - **WHEN** a developer runs `python -m webcompy generate`
-- **THEN** the CLI SHALL discover the app instance via `webcompy_config.py` or `--app`
-- **AND** `generate_config` SHALL be read from `webcompy_server_config.py` if present
+- **THEN** the CLI SHALL discover the app instance via `webcompy_config.py` at the project root or `--app`
+- **AND** `generate_config` SHALL be read from `webcompy_server_config.py` (searched in the app package first when `--app` is used, then at the project root)
 
 ### Requirement: WebComPyApp shall forward AppDocumentRoot properties
 `WebComPyApp` SHALL provide transparent access to frequently used `AppDocumentRoot` properties. The following properties and methods SHALL be forwarded: `routes`, `router_mode`, `set_path`, `head`, `style`, `scripts`, `set_title`, `set_meta`, `append_link`, `append_script`, `set_head`, `update_head`.

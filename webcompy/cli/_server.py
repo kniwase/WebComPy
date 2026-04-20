@@ -144,8 +144,8 @@ def run_server(app: WebComPyApp | None = None):
     _, args = get_params()
     if app is None:
         app_import_path = args.get("app")
-        app = discover_app(app_import_path)
-        server_config = get_server_config()
+        app, package = discover_app(app_import_path)
+        server_config = get_server_config(package)
     else:
         server_config = ServerConfig()
 

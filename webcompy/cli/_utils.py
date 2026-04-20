@@ -34,9 +34,24 @@ def get_app_from_import_path(import_path: str) -> WebComPyApp:
     return app
 
 
-def discover_app(app_import_path: str | None = None) -> WebComPyApp:
+def _extract_package(import_path: str) -> str | None:
+    if ":" not in import_path:
+        raise WebComPyCliException(
+            f"Invalid app import path '{import_path}'. Expected format: 'module.path:variable_name'",
+        )
+    module_path = import_path.rsplit(":", 1)[0]
+    parts = module_path.rsplit(".", 1)
+    if len(parts) == 1:
+        return None
+    return parts[0]
+
+
+def discover_app(
+    app_import_path: str | None = None,
+) -> tuple[WebComPyApp, str | None]:
     if app_import_path:
-        return get_app_from_import_path(app_import_path)
+        package = _extract_package(app_import_path)
+        return get_app_from_import_path(app_import_path), package
     try:
         webcompy_config = import_module("webcompy_config")
     except ModuleNotFoundError:
@@ -49,37 +64,49 @@ def discover_app(app_import_path: str | None = None) -> WebComPyApp:
         raise WebComPyCliException(
             "No 'app_import_path' in 'webcompy_config.py'",
         )
-    return get_app_from_import_path(app_import_path_value)
+    package = _extract_package(app_import_path_value)
+    return get_app_from_import_path(app_import_path_value), package
 
 
-def get_server_config() -> ServerConfig:
+def _import_config_module(module_name: str):
     try:
-        server_config_module = import_module("webcompy_server_config")
+        return import_module(module_name)
     except ModuleNotFoundError:
-        return ServerConfig()
-    server_config = getattr(server_config_module, "server_config", None)
-    if server_config is None:
-        return ServerConfig()
-    if not isinstance(server_config, ServerConfig):
-        raise WebComPyCliException(
-            "'server_config' in 'webcompy_server_config.py' is not a ServerConfig instance",
-        )
-    return server_config
+        return None
 
 
-def get_generate_config() -> GenerateConfig:
-    try:
-        server_config_module = import_module("webcompy_server_config")
-    except ModuleNotFoundError:
-        return GenerateConfig()
-    generate_config = getattr(server_config_module, "generate_config", None)
-    if generate_config is None:
-        return GenerateConfig()
-    if not isinstance(generate_config, GenerateConfig):
-        raise WebComPyCliException(
-            "'generate_config' in 'webcompy_server_config.py' is not a GenerateConfig instance",
-        )
-    return generate_config
+def get_server_config(package: str | None = None) -> ServerConfig:
+    for prefix in ([package] if package else []) + [None]:
+        module_name = f"{prefix}.webcompy_server_config" if prefix else "webcompy_server_config"
+        module = _import_config_module(module_name)
+        if module is None:
+            continue
+        server_config = getattr(module, "server_config", None)
+        if server_config is None:
+            continue
+        if not isinstance(server_config, ServerConfig):
+            raise WebComPyCliException(
+                f"'server_config' in '{module_name}' is not a ServerConfig instance",
+            )
+        return server_config
+    return ServerConfig()
+
+
+def get_generate_config(package: str | None = None) -> GenerateConfig:
+    for prefix in ([package] if package else []) + [None]:
+        module_name = f"{prefix}.webcompy_server_config" if prefix else "webcompy_server_config"
+        module = _import_config_module(module_name)
+        if module is None:
+            continue
+        generate_config = getattr(module, "generate_config", None)
+        if generate_config is None:
+            continue
+        if not isinstance(generate_config, GenerateConfig):
+            raise WebComPyCliException(
+                f"'generate_config' in '{module_name}' is not a GenerateConfig instance",
+            )
+        return generate_config
+    return GenerateConfig()
 
 
 def get_webcompy_packge_dir(path: pathlib.Path | None = None) -> pathlib.Path:

@@ -19,11 +19,12 @@ from webcompy.cli._wheel_builder import make_webcompy_app_package
 
 def generate_static_site(app: WebComPyApp | None = None, generate_config: GenerateConfig | None = None):
     _, args = get_params()
+    package = None
     if app is None:
         app_import_path = args.get("app")
-        app = discover_app(app_import_path)
+        app, package = discover_app(app_import_path)
     if generate_config is None:
-        generate_config = get_generate_config()
+        generate_config = get_generate_config(package)
 
     with app.di_scope:
         dist = generate_config.dist if args.get("dist") is None else args["dist"]

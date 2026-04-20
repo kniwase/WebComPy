@@ -76,22 +76,23 @@ Running `python -m webcompy init` SHALL create the necessary project structure i
 - **AND** `webcompy_server_config.py` SHALL be created with `server_config` and `generate_config`
 
 ### Requirement: Application configuration shall be discovered via two-file pattern
-The CLI SHALL discover the app instance using `webcompy_config.py` (which contains `app_import_path` and `app_config`) or the `--app` CLI flag. The `webcompy_server_config.py` file is optional and contains server/SSG-only settings (`server_config`, `generate_config`). The `discover_app` function SHALL be the public API for programmatic app discovery, exported from `webcompy.cli`. It replaces the removed `get_app(config)` function.
+The CLI SHALL discover the app instance using `webcompy_config.py` (which contains `app_import_path` and `app_config`) or the `--app` CLI flag. Configuration files can be placed at the project root or inside the app package directory. When `--app` is provided, the CLI derives the package from the import path and searches for `webcompy_server_config.py` in that package first, then falls back to the project root. The `webcompy_server_config.py` file is optional and contains server/SSG-only settings (`server_config`, `generate_config`). The `discover_app` function SHALL be the public API for programmatic app discovery, exported from `webcompy.cli`. It SHALL return a tuple of `(WebComPyApp, str | None)` where the second element is the derived package name.
 
 #### Scenario: Discovery via --app flag
 - **WHEN** a developer runs `python -m webcompy start --app my_app.bootstrap:app`
 - **THEN** the CLI SHALL import `my_app.bootstrap` and use the `app` attribute
+- **AND** the CLI SHALL derive the package as `"my_app"`
 - **AND** `webcompy_config.py` SHALL NOT be required
-- **AND** `webcompy_server_config.py` SHALL still be read if present
+- **AND** `webcompy_server_config.py` SHALL be searched first as `my_app.webcompy_server_config`, then as root-level `webcompy_server_config`
 
-#### Scenario: Discovery via webcompy_config.py
+#### Scenario: Discovery via root-level webcompy_config.py
 - **WHEN** a developer runs `python -m webcompy start` without `--app`
-- **AND** `webcompy_config.py` exists with `app_import_path = "my_app.bootstrap:app"`
+- **AND** `webcompy_config.py` exists at the project root with `app_import_path = "my_app.bootstrap:app"`
 - **THEN** the CLI SHALL import `my_app.bootstrap` and get the `app` attribute
 
 #### Scenario: No app_import_path and no --app flag
 - **WHEN** a developer runs `python -m webcompy start` without `--app`
-- **AND** no `webcompy_config.py` exists or it has no `app_import_path`
+- **AND** no `webcompy_config.py` exists at the project root or it has no `app_import_path`
 - **THEN** a clear error SHALL be raised indicating that either `--app` or `webcompy_config.py` with `app_import_path` is required
 
 ### Requirement: Generated HTML shall include PyScript bootstrapping
