@@ -23,8 +23,10 @@ from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._html import generate_html
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
+    build_config_from_app,
     generate_app_version,
     get_app,
+    get_app_from_import_path,
     get_config,
     get_webcompy_packge_dir,
 )
@@ -37,7 +39,7 @@ def create_asgi_app(
     dev_mode: bool = False,
 ) -> ASGIApp:
     if config is None:
-        config = _build_config_from_app(app)
+        config = build_config_from_app(app)
 
     app_version = generate_app_version()
 
@@ -146,23 +148,18 @@ def create_asgi_app(
     )
 
 
-def _build_config_from_app(app: WebComPyApp) -> WebComPyConfig:
-    app_config = app.config
-    return WebComPyConfig(
-        app_package=app_config.app_package_path,
-        base=app_config.base_url,
-        dependencies=app_config.dependencies,
-        assets=app_config.assets,
-    )
-
-
 def run_server(app: WebComPyApp | None = None):
     _, args = get_params()
     if app is None:
-        config = get_config()
-        app = get_app(config)
+        app_import_path = args.get("app")
+        if app_import_path:
+            app = get_app_from_import_path(app_import_path)
+            config = build_config_from_app(app)
+        else:
+            config = get_config()
+            app = get_app(config)
     else:
-        config = _build_config_from_app(app)
+        config = build_config_from_app(app)
     port = args.get("port") or config.server_port
     dev = args.get("dev", False)
     asgi = create_asgi_app(app, config, dev)

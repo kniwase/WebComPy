@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import pathlib
+import warnings
 from datetime import datetime
 from importlib import import_module
 
@@ -80,6 +81,18 @@ def get_app_from_import_path(import_path: str) -> WebComPyApp:
             f"'{import_path}' is not a WebComPyApp instance",
         )
     return app
+
+
+def build_config_from_app(app: WebComPyApp) -> WebComPyConfig:
+    app_config = app.config
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return WebComPyConfig(
+            app_package=app_config.app_package_path,
+            base=app_config.base_url,
+            dependencies=app_config.dependencies,
+            assets=app_config.assets,
+        )
 
 
 def get_webcompy_packge_dir(path: pathlib.Path | None = None) -> pathlib.Path:
