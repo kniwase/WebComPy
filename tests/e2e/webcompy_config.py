@@ -1,10 +1,6 @@
 from pathlib import Path
 
-from webcompy.cli import WebComPyConfig
+from webcompy.app import AppConfig
 
-config = WebComPyConfig(
-    app_package=Path(__file__).parent / "my_app",
-    base="/",
-    server_port=8088,
-    dependencies=[],
-)
+app_import_path = "my_app.bootstrap:app"
+app_config = AppConfig(app_package=Path(__file__).parent / "my_app", base_url="/")

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import Any
 
 from webcompy.app._config import AppConfig
@@ -58,15 +57,6 @@ class WebComPyApp:
 
     def provide(self, key: object, value: Any) -> None:
         self._di_scope.provide(key, value)
-
-    @property
-    def __component__(self):
-        warnings.warn(
-            "app.__component__ is deprecated. Use app properties directly.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._root
 
     @property
     def routes(self):

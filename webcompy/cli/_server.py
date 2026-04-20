@@ -8,7 +8,7 @@ from re import escape as re_escape
 from tempfile import TemporaryDirectory
 
 import aiofiles
-import uvicorn  # type: ignore
+import uvicorn
 from sse_starlette.sse import EventSourceResponse
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
@@ -18,16 +18,14 @@ from starlette.routing import Route
 from starlette.types import ASGIApp
 
 from webcompy.app._app import WebComPyApp
+from webcompy.app._config import ServerConfig
 from webcompy.cli._argparser import get_params
-from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._html import generate_html
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
-    build_config_from_app,
+    discover_app,
     generate_app_version,
-    get_app,
-    get_app_from_import_path,
-    get_config,
+    get_server_config,
     get_webcompy_packge_dir,
 )
 from webcompy.cli._wheel_builder import make_webcompy_app_package
@@ -35,23 +33,21 @@ from webcompy.cli._wheel_builder import make_webcompy_app_package
 
 def create_asgi_app(
     app: WebComPyApp,
-    config: WebComPyConfig | None = None,
-    dev_mode: bool = False,
+    server_config: ServerConfig | None = None,
 ) -> ASGIApp:
-    if config is None:
-        config = build_config_from_app(app)
+    if server_config is None:
+        server_config = ServerConfig()
 
     app_version = generate_app_version()
 
-    # App Packages
     with TemporaryDirectory() as temp:
         temp_path = pathlib.Path(temp)
         make_webcompy_app_package(
             temp_path,
             get_webcompy_packge_dir(),
-            config.app_package_path,
+            app.config.app_package_path,
             app_version,
-            config.assets,
+            app.config.assets,
         )
         app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (
@@ -74,9 +70,8 @@ def create_asgi_app(
         send_app_package_file,
     )
 
-    # Static Files
     static_file_routes: list[Route] = []
-    static_files_dir = config.static_files_dir_path.absolute()
+    static_files_dir = server_config.static_files_dir_path.absolute()
     for relative_path in get_static_files(static_files_dir):
         static_file = static_files_dir / relative_path
         if (media_type := mimetypes.guess_type(str(static_file))[0]) is None:
@@ -89,10 +84,9 @@ def create_asgi_app(
 
         static_file_routes.append(Route("/" + relative_path, send_file))
 
-    # HTMLs
-    html_generator = partial(generate_html, config, dev_mode, True, app_version, config.app_package_path.name)
+    html_generator = partial(generate_html, app, server_config.dev, True, app_version, app.config.app_package_path.name)
     base_url_stripper = partial(
-        re_compile("^" + re_escape("/" + config.base.strip("/"))).sub,
+        re_compile("^" + re_escape("/" + app.config.base_url.strip("/"))).sub,
         "",
     )
 
@@ -107,7 +101,7 @@ def create_asgi_app(
                 is_matched = truth(tuple(filter(lambda r: r[1](requested_path), routes)))
                 if is_matched or "text/html" in accept_types:
                     app.set_path(requested_path)
-                    return HTMLResponse(html_generator(app))
+                    return HTMLResponse(html_generator())
                 else:
                     raise HTTPException(404)
 
@@ -115,15 +109,14 @@ def create_asgi_app(
     else:
         with app.di_scope:
             app.set_path("/")
-            html = html_generator(app)
+            html = html_generator()
 
         async def send_html(_: Request):  # type: ignore
             return HTMLResponse(html)
 
         html_route = Route("/", send_html)
 
-    # Hot Reloader
-    if dev_mode:
+    if server_config.dev:
 
         async def loop():
             while True:
@@ -137,7 +130,6 @@ def create_asgi_app(
     else:
         dev_routes: list[Route] = []
 
-    # Declare ASGI App
     return Starlette(
         routes=[
             *dev_routes,
@@ -152,15 +144,13 @@ def run_server(app: WebComPyApp | None = None):
     _, args = get_params()
     if app is None:
         app_import_path = args.get("app")
-        if app_import_path:
-            app = get_app_from_import_path(app_import_path)
-            config = build_config_from_app(app)
-        else:
-            config = get_config()
-            app = get_app(config)
+        app = discover_app(app_import_path)
+        server_config = get_server_config()
     else:
-        config = build_config_from_app(app)
-    port = args.get("port") or config.server_port
-    dev = args.get("dev", False)
-    asgi = create_asgi_app(app, config, dev)
-    uvicorn.run(asgi, host="0.0.0.0", port=port, reload=dev)
+        server_config = ServerConfig()
+
+    if args.get("dev"):
+        server_config.dev = True
+    port = args.get("port") or server_config.port
+    asgi = create_asgi_app(app, server_config)
+    uvicorn.run(asgi, host="0.0.0.0", port=port, reload=server_config.dev)
