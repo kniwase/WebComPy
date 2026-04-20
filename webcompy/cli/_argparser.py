@@ -27,6 +27,11 @@ def get_params() -> tuple[Literal["start", "generate", "init"], dict[str, Any]]:
         type=int,
         help="server port",
     )
+    parser_start.add_argument(
+        "--app",
+        type=str,
+        help="import path for app instance (e.g., my_app.bootstrap:app)",
+    )
     parser_start.set_defaults(__command_getter__=_command(subcommand_name))
 
     # generate
@@ -39,6 +44,11 @@ def get_params() -> tuple[Literal["start", "generate", "init"], dict[str, Any]]:
         "--dist",
         type=str,
         help="dist dir",
+    )
+    parser_generate.add_argument(
+        "--app",
+        type=str,
+        help="import path for app instance (e.g., my_app.bootstrap:app)",
     )
     parser_generate.set_defaults(__command_getter__=_command(subcommand_name))
 

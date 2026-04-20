@@ -1,12 +1,4 @@
-# Application Bootstrapping
-
-## Purpose
-
-Bootstrapping is the process by which a WebComPy application comes to life. It bridges the gap between the developer's component definitions and the running application in the browser: connecting the root component to the DOM, initializing the router if one exists, setting up reactive head management, and removing the loading screen once the app is ready.
-
-On the server side, bootstrapping enables static site generation — rendering the component tree to HTML strings that can be served without browser execution.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The application entry point shall connect a root component to the DOM
 `WebComPyApp` SHALL accept a root component, optional router, and optional `AppConfig`, and create an application root that renders the component. The `run(selector)` method SHALL be the browser entry point, accepting a CSS selector (default `"#webcompy-app"`). The `__component__` property SHALL emit a `DeprecationWarning` and return the internal `AppDocumentRoot`.
@@ -79,7 +71,7 @@ All registered components' scoped CSS SHALL be collected and injected into the d
 - **AND** each style SHALL only affect elements within its respective component
 
 ### Requirement: Multiple WebComPy applications shall coexist without interference
-Each `WebComPyApp` instance SHALL have its own DI scope, Router, HeadPropsStore, ComponentStore, and deferred rendering state. Module level global singletons (`_root_di_scope`, `_default_component_store`, `RouterView._instance`) SHALL NOT be used as the *primary* mechanism for app-scoped state. The `_defer_after_rendering_depth` and `_deferred_after_rendering_callbacks` state SHALL be owned by the app instance, not by module globals. In the browser, module-level fallback references (`_app_di_scope`, `_app_instance`) exist because `ContextVar` bindings are not preserved across PyScript JS→Python callbacks; these fallbacks hold only the most recently created app's scope. In the server/SSG environment, full multi-app isolation is guaranteed through `ContextVar` bindings.
+Each `WebComPyApp` instance SHALL have its own DI scope, Router, HeadPropsStore, ComponentStore, and deferred rendering state. Module-level global singletons (`_root_di_scope`, `_default_component_store`, `RouterView._instance`) SHALL NOT be used as the *primary* mechanism for app-scoped state. The `_defer_after_rendering_depth` and `_deferred_after_rendering_callbacks` state SHALL be owned by the app instance, not by module globals. In the browser, module-level fallback references (`_app_di_scope`, `_app_instance`) exist because `ContextVar` bindings are not preserved across PyScript JS→Python callbacks; these fallbacks hold only the most recently created app's scope. In the server/SSG environment, full multi-app isolation is guaranteed through `ContextVar` bindings.
 
 #### Scenario: Two apps on the same page
 - **WHEN** two `WebComPyApp` instances are created with different root components and both call `app.run()`

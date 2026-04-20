@@ -5,7 +5,7 @@ from typing import Any
 
 from webcompy.di._exceptions import InjectionError
 from webcompy.di._key import InjectKey
-from webcompy.di._scope import _MISSING, DIScope, _active_di_scope, _get_root_di_scope
+from webcompy.di._scope import _MISSING, DIScope, _active_di_scope, _get_app_di_scope
 
 _pending_di_parent: ContextVar[DIScope | None] = ContextVar("_pending_di_parent", default=None)
 
@@ -16,9 +16,9 @@ def provide(key: object, value: Any) -> None:
         if scope is None:
             raise LookupError
     except LookupError:
-        root = _get_root_di_scope()
-        if root is not None:
-            root.provide(key, value)
+        app_scope = _get_app_di_scope()
+        if app_scope is not None:
+            app_scope.provide(key, value)
             return
         raise InjectionError(key) from None
     pending_parent = _pending_di_parent.get(None)
@@ -37,11 +37,11 @@ def inject(key: object, default: Any = _MISSING) -> Any:
         if scope is None:
             raise LookupError
     except LookupError:
-        root = _get_root_di_scope()
-        if root is not None:
+        app_scope = _get_app_di_scope()
+        if app_scope is not None:
             if default is _MISSING:
-                return root.inject(key)
-            return root.inject(key, default)
+                return app_scope.inject(key)
+            return app_scope.inject(key, default)
         if default is not _MISSING:
             return default
         raise InjectionError(key) from None

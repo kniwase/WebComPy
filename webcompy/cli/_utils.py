@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import importlib
 import pathlib
+import warnings
 from datetime import datetime
 from importlib import import_module
 
@@ -39,7 +41,7 @@ def get_app(config: WebComPyConfig) -> WebComPyApp:
         ) from None
     try:
         bootstrap = import_module(config.app_package_path.name + ".bootstrap")
-    except AttributeError:
+    except ModuleNotFoundError:
         raise WebComPyCliException(
             f"No python module named 'bootstrap' in '{config.app_package_path.name}'",
         ) from None
@@ -55,6 +57,42 @@ def get_app(config: WebComPyConfig) -> WebComPyApp:
     else:
         app = app_instances[0]
     return app
+
+
+def get_app_from_import_path(import_path: str) -> WebComPyApp:
+    if ":" not in import_path:
+        raise WebComPyCliException(
+            f"Invalid app import path '{import_path}'. Expected format: 'module.path:variable_name'",
+        )
+    module_path, var_name = import_path.rsplit(":", 1)
+    try:
+        module = importlib.import_module(module_path)
+    except ModuleNotFoundError:
+        raise WebComPyCliException(
+            f"No python module named '{module_path}'",
+        ) from None
+    app = getattr(module, var_name, None)
+    if app is None:
+        raise WebComPyCliException(
+            f"No attribute '{var_name}' in module '{module_path}'",
+        )
+    if not isinstance(app, WebComPyApp):
+        raise WebComPyCliException(
+            f"'{import_path}' is not a WebComPyApp instance",
+        )
+    return app
+
+
+def build_config_from_app(app: WebComPyApp) -> WebComPyConfig:
+    app_config = app.config
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return WebComPyConfig(
+            app_package=app_config.app_package_path,
+            base=app_config.base_url,
+            dependencies=app_config.dependencies,
+            assets=app_config.assets,
+        )
 
 
 def get_webcompy_packge_dir(path: pathlib.Path | None = None) -> pathlib.Path:

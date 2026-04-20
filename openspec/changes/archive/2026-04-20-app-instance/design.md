@@ -1,0 +1,237 @@
+## Context
+
+WebComPy's `WebComPyApp` is a thin wrapper around `AppDocumentRoot`, accessed via `app.__component__`. Server-side code (dev server, SSG) calls internal methods like `app.__component__.routes`, `app.__component__.set_path()`, etc. Configuration lives in a separate `webcompy_config.py` as `WebComPyConfig`, and the CLI discovers both via `import_module` heuristics.
+
+The DI system (`feat/provide-inject`) is now merged, eliminating `Router._instance`, `Component._head_props` ClassVar, `__set_router__` methods, and the `@_instantiate` decorator on `ComponentStore`. DI-based injection is working for `Router`, `HeadPropsStore`, and `ComponentStore` (via `_default_component_store` bridge).
+
+Remaining singletons and module-level globals that prevent full multi-app isolation:
+
+- **`RouterView._instance`** — singleton enforcement still blocks multiple RouterViews
+- **`_default_component_store`** — module-level singleton shared across all apps; `ComponentGenerator.__init__` registers into it at import time
+- **`_root_di_scope`** — module global overwritten by the last `AppDocumentRoot.__init__`; breaks multi-app
+- **`_defer_after_rendering_depth` / `_deferred_after_rendering_callbacks`** — module globals, not scoped to any app
+- **`WebComPyConfig`** — disconnected from the app instance, requires `webcompy_config.py`
+- **`_html.py`** — generates `app.__component__.render()` instead of `app.run()`
+
+The DI scope hierarchy (`DIScope` parent-child tree) is established and working. `WebComPyApp` creates a root `DIScope` and provides `_ROUTER_KEY`, `_HEAD_PROPS_KEY`, and `_COMPONENT_STORE_KEY` into it. Components inherit this scope and create child scopes on `provide()`.
+
+## Goals / Non-Goals
+
+**Goals:**
+- Make `WebComPyApp` the single, central application object with clear public API (`app.run()`, transparent property forwarding)
+- Enable `app.run(selector)` for browser mounting with configurable selector (default `#webcompy-app`)
+- Enable `create_asgi_app(app)`, `run_server(app)`, and `generate_static_site(app)` as module-level functions for server-side usage, avoiding browser import errors from server-only dependencies
+- Introduce type-safe configuration objects (`AppConfig`, `ServerConfig`, `GenerateConfig`) to replace `WebComPyConfig`
+- Forward `AppDocumentRoot` properties through `WebComPyApp` to eliminate `__component__` access
+- Remove `RouterView._instance` singleton to enable multiple app instances
+- Move `ComponentStore` to truly per-app ownership (eliminate `_default_component_store` bridge)
+- Remove `_root_di_scope` module global (each app manages its own scope lifecycle; module-level `_app_di_scope` fallback added for browser ContextVar preservation)
+- Move `_defer_*` globals to per-app scope
+- Maintain backward compatibility with deprecation warnings for old APIs
+
+**Non-Goals:**
+- Implement Provide/Inject (DI) — already completed in `feat/provide-inject`
+- Fully remove deprecated APIs (reserved for a future major version)
+- Change the component definition API (`@define_component`, context, props, slots)
+- Implement fine-grained DOM patching or a virtual DOM
+
+## Decisions
+
+### Decision 1: Delegation pattern — WebComPyApp does NOT inherit Component
+
+**Choice:** WebComPyApp owns an `AppDocumentRoot` instance and delegates to it via properties/methods.
+
+**Alternative considered:** WebComPyApp inherits from Component (or a mixin of Component's functionality).
+
+**Rationale:** `Component` has browser-specific methods (`_init_node`, `_mount_node`, `_render`) that call `browser.document.*` APIs. `WebComPyApp` also has server-specific methods (`serve`, `generate`). Inheriting Component would put browser-only and server-only code on the same class, violating the dual-environment principle. Delegation keeps the concerns separated while providing a clean public API.
+
+### Decision 2: Three-tier configuration objects
+
+**Choice:** `AppConfig` (shared browser+server), `ServerConfig` (dev server only), `GenerateConfig` (SSG only).
+
+```
+AppConfig                     — browser + server
+  base_url: str = "/"
+  dependencies: list[str] = []
+  assets: dict[str, str] | None = None
+
+ServerConfig                  — dev server only
+  port: int = 8080
+  dev: bool = False
+  static_files_dir: str = "static"
+
+GenerateConfig               — SSG only
+  dist: str = "dist"
+  cname: str = ""
+  static_files_dir: str = "static"
+```
+
+**Alternative considered:** Single monolithic config class.
+
+**Rationale:** `base_url` and `dependencies` affect browser-side routing and PyScript config, so they belong in `AppConfig` (shared). `port` and `dist` are purely server-side deployment concerns. Separating them avoids passing irrelevant config to the browser and makes each object's purpose clear. All use `@dataclass` for type safety and validation via `__post_init__`.
+
+### Decision 3: `app.run(selector)` with default `#webcompy-app`
+
+**Choice:** `app.run(selector="#webcompy-app")` as the browser entry point.
+
+**Implementation:**
+- `AppDocumentRoot._init_node()` changes from hardcoded `getElementById("webcompy-app")` to using `querySelector(selector)`
+- The selector is stored on the `WebComPyApp` instance during `run()`
+- SSG/HTML generation continues to use fixed `id="webcompy-app"` for the mount element
+- `app.run()` without arguments uses the default selector, matching current behavior
+
+**Alternative considered:** Store `mount_selector` in `AppConfig`.
+
+**Rationale:** The selector is a runtime concern (where to mount in the browser), not a build/deploy concern. It doesn't affect SSG output. Putting it in `AppConfig` would mean passing browser-specific runtime config to the server, violating separation of concerns. The `run()` parameter is the right place.
+
+### Decision 4: Server entry points are module-level functions, not app methods
+
+**Choice:** `create_asgi_app(app, config, dev_mode)`, `run_server(app=None)`, and `generate_static_site(app=None)` are module-level functions in `webcompy/cli`. They accept a `WebComPyApp` instance directly.
+
+**Alternative considered:** `app.serve()`, `app.asgi_app`, and `app.generate()` as methods on `WebComPyApp`.
+
+**Rationale:** Making server/SSG entry points methods on `WebComPyApp` would cause import errors in the browser environment (PyScript/Emscripten) because `starlette`, `uvicorn`, `aiofiles`, and other server-only dependencies are unavailable. By keeping them as module-level functions in `webcompy/cli/`, the browser-side `WebComPyApp` import stays lightweight. The CLI module is only imported when `ENVIRONMENT != "pyscript"`. Internally, `AppConfig` is converted to `WebComPyConfig` for compatibility with existing HTML generation and wheel-building code; this conversion is an implementation detail not exposed to developers.
+
+### Decision 5: `AppConfig` is the user-facing configuration, `WebComPyConfig` is internal
+
+**Choice:** `AppConfig` (with `app_package`, `base_url`, `dependencies`, `assets`) is the developer-facing dataclass. `WebComPyConfig` is retained internally for CLI/server/SSG compatibility but emits `DeprecationWarning`.
+
+**Rationale:** `AppConfig` contains only the settings that affect both browser and server (base URL, dependencies, assets). Settings like `app_package_path`, `server_port`, and `dist` are server-deployment concerns, handled by `WebComPyConfig` internally or derived from `AppConfig`. This keeps the developer API simple while maintaining backward compatibility.
+
+### Decision 7: ComponentStore — truly per-app with import-time registration
+
+**Choice:** Each `WebComPyApp` creates its own `ComponentStore`. `ComponentGenerator.__init__` registers into whichever store is available via DI (`inject(_COMPONENT_STORE_KEY, default=None)`). When no DI scope exists (import time, before any app is created), registration is deferred — the component stores its info locally and registers lazily when first accessed within an app scope. The `_default_component_store` module global is removed.
+
+**Rationale:** The `_default_component_store` bridge is shared by all apps, breaking isolation. The import-time registration problem only exists during CLI-driven workflows where modules load before `WebComPyApp` is created. In the new `app.run()` / `app.serve()` pattern, the app's DI scope is set during `WebComPyApp.__init__`, which runs before component templates execute. For the CLI path (`python -m webcompy start`), the DI scope is set by `_server.py` / `_generate.py` before rendering, so deferred registration can work by triggering component registration lazily.
+
+**Implementation:**
+1. `WebComPyApp.__init__` creates a `ComponentStore()` and provides it into `app._di_scope`
+2. Remove `_default_component_store` module global from `_generator.py`
+3. `ComponentGenerator.__init__` attempts `inject(_COMPONENT_STORE_KEY, default=None)` — if a scope exists, register immediately; if not, store info locally for deferred registration
+4. `AppDocumentRoot.__init__` no longer needs to provide `_default_component_store`
+5. `AppDocumentRoot.style` uses `inject(_COMPONENT_STORE_KEY)` without fallback
+
+### Decision 8: HeadPropsStore — already per-app via DI (no change needed)
+
+**Status:** COMPLETED by `feat/provide-inject`.
+
+`AppDocumentRoot.__init__` creates a `HeadPropsStore()` and provides it into the app's DI scope via `_HEAD_PROPS_KEY`. Components access it via `inject(_HEAD_PROPS_KEY)`. Each app has its own `HeadPropsStore` in its own DI scope. No further changes are needed for multi-app isolation.
+
+### Decision 9: `_defer_*` globals — move to app instance
+
+**Choice:** `_defer_after_rendering_depth` and `_deferred_after_rendering_callbacks` become instance attributes on `WebComPyApp`. `start_defer_after_rendering()` and `end_defer_after_rendering()` receive the app reference from `_active_app_context` ContextVar.
+
+**Alternative considered:** Move to `DIScope` as provided values.
+
+**Rationale:** `_defer_*` state is transient rendering state, not a service that needs DI resolution. It's more naturally owned by the app instance. Moving it to `DIScope` would require every `start_defer_after_rendering()` call to resolve from DI, adding overhead for a simple counter/list pair. The `ContextVar` approach mirrors the established pattern for `_active_component_context` and `_active_di_scope`.
+
+**Implementation:**
+1. `WebComPyApp.__init__` initializes `self._defer_depth: int = 0` and `self._deferred_callbacks: list[Callable] = []`
+2. Add `_active_app_context: ContextVar[WebComPyApp | None]` to propagate app reference through rendering
+3. `start_defer_after_rendering()` and `end_defer_after_rendering()` receive app from `_active_app_context.get()`
+4. `SwitchElement._refresh()` uses `_active_app_context` to access the app's defer state
+5. `AppDocumentRoot._render()` sets `_active_app_context` before rendering and resets after
+
+### Decision 10: RouterView — remove singleton enforcement
+
+**Choice:** Remove `RouterView._instance` ClassVar and singleton enforcement. `RouterView` obtains its `Router` reference exclusively via DI (`inject(_ROUTER_KEY)`), which already works.
+
+**Rationale:** `RouterView.__init__` already resolves the Router via `inject(_ROUTER_KEY)`. The `_instance` check only prevents creating a second RouterView, which is unnecessary when multiple apps should be able to have their own. Removing it is the final step to enable true multi-app coexistence.
+
+**Implementation:**
+1. Remove `RouterView._instance: ClassVar[RouterView | None] = None`
+2. Remove the `if RouterView._instance: raise` / `RouterView._instance = self` block from `RouterView.__init__`
+3. Remove the `TODO` comment about App Instance migration
+
+### Decision 11: Remove `_root_di_scope` module global, add `_app_di_scope` browser fallback
+
+**Choice:** Remove `_root_di_scope`, `_set_root_di_scope()`, and `_get_root_di_scope()` from `webcompy/di/_scope.py`. Remove the fallback path in `provide()` and `inject()` that checks `_root_di_scope`. Add a new module-level `_app_di_scope` reference with `_set_app_di_scope()` / `_get_app_di_scope()` that serves as a fallback for `inject()` and `provide()` when `_active_di_scope` ContextVar is unset. Similarly, add `_app_instance` with `_set_app_instance()` / `_get_app_instance()` as a fallback for `start_defer_after_rendering()` and `end_defer_after_rendering()`.
+
+**Rationale:** `_root_di_scope` was a workaround for the browser environment where `ContextVar` values are lost in JavaScript event handlers. With `app.run()` as the explicit browser entry point, the DI scope is set at the start of app initialization. However, E2E testing revealed that PyScript/Pyodide JS→Python callbacks (e.g., click event handlers, Signal propagation) do NOT preserve Python `ContextVar` bindings. When a `RouterLink` click triggers Signal propagation and `SwitchElement._refresh()` is called, `_active_di_scope` is unset, causing `inject(_HEAD_PROPS_KEY)` to fail with `InjectionError`. The `_app_di_scope` module-level fallback resolves this by holding a reference to the most recently created app's DI scope. In the server/SSG environment, `ContextVar` bindings persist reliably within `with app.di_scope:` blocks, so the fallback is only used in the browser.
+
+**Implementation:**
+1. Remove `_root_di_scope`, `_set_root_di_scope`, `_get_root_di_scope` from `webcompy/di/_scope.py`
+2. Add `_app_di_scope`, `_set_app_di_scope`, `_get_app_di_scope` to `webcompy/di/_scope.py`
+3. Update `provide()` and `inject()` in `webcompy/di/__init__.py` to fall back to `_app_di_scope` when ContextVar is unset
+4. Remove `_set_root_di_scope(di_scope)` call from `AppDocumentRoot.__init__`
+5. Remove `_active_di_scope.set(app._di_scope)` from `_server.py` and `_generate.py` — server entry points use `with app.di_scope:` context manager
+6. `WebComPyApp.__init__` calls `_set_app_di_scope(self._di_scope)` and `_set_app_instance(self)` when `ENVIRONMENT == "pyscript"` (browser only)
+7. Add `_app_instance`, `_set_app_instance`, `_get_app_instance` to `webcompy/components/_component.py` as fallback for `start_defer_after_rendering()` / `end_defer_after_rendering()` when `_active_app_context` ContextVar is unset
+8. In the browser, `AppDocumentRoot._render()` does NOT reset `_active_di_scope` and `_active_app_context` after rendering (preserved across the render lifecycle)
+9. In the server, `AppDocumentRoot._render()` DOES reset these ContextVars (scope hygiene for multi-app)
+
+**Limitation:** `_app_di_scope` and `_app_instance` hold only one app's reference. In the browser, if two `WebComPyApp` instances exist, the last one created "wins" the fallback. Full multi-app isolation in the browser requires a different mechanism (e.g., per-callback scope wrapping) which is left as a future enhancement.
+
+**Risk:** If Python code runs outside an app context (e.g., in PyScript event handlers), `inject()` will fall back to `_app_di_scope` instead of raising `InjectionError`. This is the intended behavior for the browser. In the server, if no scope is active and no fallback exists, `inject()` raises `InjectionError` as expected.
+
+### Decision 12: `_asgi_app.py` — deprecation path
+
+**Choice:** `_asgi_app.py` continues to work but emits `DeprecationWarning`. The module-level `app` variable is replaced by calling `get_app(config).asgi_app`. New code uses `app.serve()` or `app.asgi_app` directly.
+
+### Decision 13: Transparent property forwarding
+
+**Choice:** `WebComPyApp` forwards these properties from `AppDocumentRoot`:
+
+| WebComPyApp property | Delegates to |
+|---|---|
+| `routes` | `self._root.routes` |
+| `router_mode` | `self._root.router_mode` |
+| `set_path(path)` | `self._root.set_path(path)` |
+| `head` | `self._root.head` |
+| `style` | `self._root.style` |
+| `scripts` | `self._root.scripts` |
+| `set_title(title)` | `self._root.set_title(title)` |
+| `set_meta(key, attrs)` | `self._root.set_meta(key, attrs)` |
+| `append_link(attrs)` | `self._root.append_link(attrs)` |
+| `append_script(attrs, script, in_head)` | `self._root.append_script(attrs, script, in_head)` |
+| `set_head(head)` | `self._root.set_head(head)` |
+| `update_head(head)` | `self._root.update_head(head)` |
+
+`app.__component__` emits a `DeprecationWarning` and returns `self._root`.
+
+## Risks / Trade-offs
+
+**[Resolved: Removing `_root_di_scope` breaks browser event handlers]** → PyScript event handlers lose `ContextVar` values when JS→Python callbacks fire. This was confirmed during E2E testing: `RouterLink` click handlers trigger Signal propagation, and `inject(_HEAD_PROPS_KEY)` fails with `InjectionError`. Resolution: Added module-level `_app_di_scope` and `_app_instance` fallbacks. In the browser, `AppDocumentRoot._render()` does NOT reset `_active_di_scope` and `_active_app_context` after rendering, so they persist. The fallback provides a safety net for callbacks that still lose ContextVar bindings. Limitation: the fallback holds only one app's reference, so true multi-app isolation in the browser requires a future enhancement.
+
+**[Risk: ComponentStore import-time registration without `_default_component_store`]** → During CLI-driven workflows (`python -m webcompy start`), modules are imported before `WebComPyApp` is created, so `ComponentGenerator.__init__` runs without a DI scope. Mitigation: The `default=None` approach means component definitions store their info locally. When `WebComPyApp` is created and provides a `ComponentStore`, components can be lazily registered on first resolution. The CLI import sequence ensures `_active_di_scope` is set before rendering, so deferred registration works.
+
+**[Risk: SSG and dev server test coverage is limited]** → The CLI code currently has no unit tests for dispatch, server startup, or SSG pipeline. Refactoring `serve()` and `generate()` into instance methods changes the code but doesn't add test coverage. Mitigation: Add integration tests for the new API paths before deprecating old ones.
+
+**[Risk: Breaking change for `WebComPyConfig` users]** → Any project using `webcompy_config.py` will see `DeprecationWarning` but the old pattern continues to work. Mitigation: `WebComPyConfig` is only used by the CLI, not by runtime code. The deprecation path is clear — migrate to `AppConfig`.
+
+**[Trade-off: Deprecation period length]** → `__component__`, `WebComPyConfig`, and `_asgi_app.py` will emit `DeprecationWarning` but remain functional. This keeps backward compatibility but means we carry both old and new code paths. The payoff is a smooth migration for existing projects.
+
+**[Trade-off: Module-level fallback for browser ContextVars]** → `_app_di_scope` and `_app_instance` are module-level globals that serve as fallbacks when ContextVar bindings are lost in PyScript callbacks. This trades full multi-app isolation in the browser for correctness (DI resolution works). Full isolation can be achieved in a future enhancement by wrapping every PyScript callback with scope-setting logic.
+
+## Migration Plan
+
+1. **Phase A — Non-breaking API addition**:
+   - Add `AppConfig` dataclass
+   - Add `app.run()`, `app.config`, transparent property forwarding
+   - Add `create_asgi_app(app, config)`, `run_server(app)`, `generate_static_site(app)` module-level functions
+   - Update `_html.py` to generate `app.run()` bootstrap code
+   - Update project template (`bootstrap.py` → `app.py` pattern)
+
+2. **Phase B — Singleton removal + per-app state**:
+   - Remove `RouterView._instance` singleton enforcement
+   - Move `ComponentStore` to per-app (remove `_default_component_store` bridge)
+   - Remove `_root_di_scope` module global and fallback in `provide()`/`inject()`
+   - Move `_defer_*` to per-app instance on `WebComPyApp`
+   - Add `_active_app_context` ContextVar
+
+3. **Phase C — Deprecation warnings**:
+   - `app.__component__` → DeprecationWarning
+   - `WebComPyConfig` → DeprecationWarning (point to `AppConfig`)
+   - `_asgi_app.py` → DeprecationWarning
+
+4. **Rollback**: Each phase is independently deployable. If issues arise, revert that phase's commit while keeping others.
+
+## Resolved Questions
+
+- **`AppConfig.base_url` vs `Router(base_url=...)`**: `AppConfig.base_url` is the source of truth. Currently `Router.__init__` still accepts its own `base_url` parameter; consistency is left as a future enhancement.
+- **`app_package_path` replacement**: `AppConfig.app_package` (default `"."`) provides the app package name for wheel building. On the server, it's used to derive `app_package_path`. The developer can also pass a `Path` object.
+- **Browser event handler scope re-establishment**: Confirmed via E2E testing that PyScript JS→Python callbacks do NOT preserve `ContextVar` bindings. Resolution: Added `_app_di_scope` and `_app_instance` module-level fallbacks, plus browser-side ContextVar persistence in `AppDocumentRoot._render()`. Full multi-app isolation in the browser requires a future enhancement.
+
+## Open Questions
+
+- **True multi-app isolation in the browser**: The `_app_di_scope` and `_app_instance` fallbacks hold only one app's reference. To support multiple apps in the browser, a per-callback scope-wrapping mechanism would be needed. Is this worth implementing now, or should it be deferred?

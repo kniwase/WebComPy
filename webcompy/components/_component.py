@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextvars import ContextVar
 from typing import Any, TypeAlias, TypeGuard
 from uuid import UUID, uuid4
 
@@ -13,21 +14,36 @@ from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
 from webcompy.signal import ReactiveDict, computed_property
 
-_defer_after_rendering_depth: int = 0
-_deferred_after_rendering_callbacks: list[Callable[[], None]] = []
+_active_app_context: ContextVar[Any] = ContextVar("_active_app_context", default=None)
+
+_app_instance: Any = None
+
+
+def _set_app_instance(app: Any | None) -> None:
+    global _app_instance
+    _app_instance = app
+
+
+def _get_app_instance() -> Any:
+    return _app_instance
 
 
 def start_defer_after_rendering() -> None:
-    global _defer_after_rendering_depth
-    _defer_after_rendering_depth += 1
+    app = _active_app_context.get() or _get_app_instance()
+    if app is not None:
+        app._defer_depth += 1
+    else:
+        pass
 
 
 def end_defer_after_rendering() -> list[Callable[[], None]]:
-    global _defer_after_rendering_depth, _deferred_after_rendering_callbacks
-    _defer_after_rendering_depth -= 1
-    callbacks = _deferred_after_rendering_callbacks[:]
-    _deferred_after_rendering_callbacks.clear()
-    return callbacks
+    app = _active_app_context.get() or _get_app_instance()
+    if app is not None:
+        app._defer_depth -= 1
+        callbacks = app._deferred_callbacks[:]
+        app._deferred_callbacks.clear()
+        return callbacks
+    return []
 
 
 FuncComponentDef: TypeAlias = Callable[[Context[Any]], ElementChildren]
@@ -152,9 +168,9 @@ class Component(ElementBase):
         self._property["on_before_rendering"]()
         super()._render()
         after_rendering = self._property["on_after_rendering"]
-        global _defer_after_rendering_depth, _deferred_after_rendering_callbacks
-        if _defer_after_rendering_depth > 0 and browser:
-            _deferred_after_rendering_callbacks.append(after_rendering)
+        app = _active_app_context.get()
+        if app is not None and app._defer_depth > 0 and browser:
+            app._deferred_callbacks.append(after_rendering)
         else:
             after_rendering()
 

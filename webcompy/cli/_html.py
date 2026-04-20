@@ -135,7 +135,7 @@ def generate_html(
     app: WebComPyApp,
 ):
     app_root = (
-        app.__component__
+        app._root
         if prerender
         else _HtmlElement(
             "div",
@@ -166,13 +166,13 @@ def generate_html(
     py_script = strip_multiline_text(
         f"""
         from {config.app_package_path.name}.bootstrap import app
-        app.__component__.render()
+        app.run()
         """
     )
     app_loader_html = f'<script type="py" config="{py_config}">\n{py_script}\n</script>'
 
-    scripts_head.extend(app.__component__.head["script"])
-    scripts_body.extend(app.__component__.scripts)
+    scripts_head.extend(app.head["script"])
+    scripts_body.extend(app.scripts)
     if dev_mode:
         scripts_body.append(
             (
@@ -192,9 +192,9 @@ def generate_html(
         _HtmlElement(
             "head",
             {},
-            _HtmlElement("title", {}, app.__component__.head["title"]),
+            _HtmlElement("title", {}, app.head["title"]),
             RepeatElement(
-                sequence=computed(lambda: list(app.__component__.head["meta"].value.values())),
+                sequence=computed(lambda: list(app.head["meta"].value.values())),
                 template=lambda attrs: _HtmlElement("meta", attrs),
             ),
             _HtmlElement("base", {"href": config.base}),
@@ -208,11 +208,11 @@ def generate_html(
                 " ".join(
                     (
                         "*[hidden]{display: none;}",
-                        app.__component__.style,
+                        app.style,
                     )
                 ),
             ),
-            *[_HtmlElement("link", attrs) for attrs in app.__component__.head.get("link", [])],
+            *[_HtmlElement("link", attrs) for attrs in app.head.get("link", [])],
             *_load_scripts(scripts_head),
         ),
         _HtmlElement(
