@@ -1,14 +1,13 @@
 from pathlib import Path
 
-from webcompy.cli import WebComPyConfig
+from webcompy.app import AppConfig
 
-config = WebComPyConfig(
+app_import_path = "docs_src.bootstrap:app"
+app_config = AppConfig(
     app_package=Path(__file__).parent / "docs_src",
-    dist="docs",
-    base="/",
+    base_url="/",
     dependencies=[
         "numpy",
         "matplotlib",
     ],
-    cname="webcompy.net",
 )
