@@ -30,7 +30,7 @@ then access [http://127.0.0.1:8080/](http://127.0.0.1:8080/)
 
 ## Sample Code
 ```python
-from webcompy.signal import Reactive, computed
+from webcompy.signal import Signal, computed
 from webcompy.elements import html, repeat, switch, DOMEvent
 from webcompy.router import RouterContext
 from webcompy.components import (
@@ -41,7 +41,7 @@ from webcompy.components import (
 
 
 @define_component
-def FizzbuzzList(context: ComponentContext[Reactive[int]]):
+def FizzbuzzList(context: ComponentContext[Signal[int]]):
     @computed
     def fizzbuzz():
         li: list[str] = []
@@ -151,8 +151,11 @@ def Fizzbuzz(context: ComponentContext[RouterContext]):
 See [AGENTS.md](AGENTS.md) for development setup, tooling, and coding conventions.
 
 ## ToDo
-- Add provide/inject (DI)
 - Add Plugin System
+- UI Skeleton Components (layout, navigation, and responsive scaffolding utilities)
+- RPC Support (browser-to-server remote procedure calls via PyScript)
+- Cloudflare Deployment (static site + Python Workers for RPC)
+- PWA Support (offline-capable mobile apps built entirely in Python)
 
 ## License
 This project is licensed under the MIT License, see the LICENSE.txt file for details.
