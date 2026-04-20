@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Application configuration provides type-safe, validated settings for WebComPy applications. `AppConfig` replaces the previous `WebComPyConfig` with a simpler, validated dataclass approach, while `ServerConfig` and `GenerateConfig` are internal types used by CLI functions. This separation ensures that developers only interact with the public `AppConfig`, keeping server and SSG concerns internal to the framework.
+Application configuration provides type-safe, validated settings for WebComPy applications. `AppConfig` is the sole developer-facing configuration class, containing settings shared between browser and server environments. `ServerConfig` and `GenerateConfig` are internal dataclasses used by CLI functions, not exported in the public API.
 
 ## Requirements
 
 ### Requirement: Application configuration shall use type-safe dataclasses
-The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` dataclasses with validated fields and sensible defaults. `AppConfig` SHALL contain settings shared between browser and server environments (including `app_package` for server-side use). `ServerConfig` and `GenerateConfig` are internal types used by CLI functions, not passed directly by developers through `WebComPyApp`. Internally, the CLI converts `AppConfig` to `WebComPyConfig` for compatibility with existing HTML generation and wheel-building code; this is an implementation detail not exposed to developers.
+The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` dataclasses with validated fields and sensible defaults. `AppConfig` SHALL contain settings shared between browser and server environments (including `app_package` for server-side use). `ServerConfig` and `GenerateConfig` are internal types used by CLI functions, not part of the public API surface. `AppConfig` is the sole developer-facing configuration class.
 
 #### Scenario: Creating a minimal application configuration
 - **WHEN** a developer creates `WebComPyApp(root_component=Root)` without explicit config
@@ -47,3 +47,14 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **WHEN** a developer does not provide `assets`
 - **THEN** `assets` SHALL default to `None`
 - **AND** no assets SHALL be included in the bundled wheel
+
+### Requirement: ServerConfig and GenerateConfig shall be internal
+`ServerConfig` and `GenerateConfig` SHALL be internal dataclasses used by CLI functions. They SHALL NOT be exported in `webcompy.__all__` or `webcompy.app.__all__`. Developers define them in `webcompy_server_config.py`, which the CLI reads directly.
+
+#### Scenario: ServerConfig defaults
+- **WHEN** no `webcompy_server_config.py` exists or it does not define `server_config`
+- **THEN** `ServerConfig()` defaults SHALL be used (`port=8080`, `dev=False`, `static_files_dir="static"`)
+
+#### Scenario: GenerateConfig defaults
+- **WHEN** no `webcompy_server_config.py` exists or it does not define `generate_config`
+- **THEN** `GenerateConfig()` defaults SHALL be used (`dist="dist"`, `cname=""`, `static_files_dir="static"`)

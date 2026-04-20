@@ -9,7 +9,7 @@ On the server side, bootstrapping enables static site generation — rendering t
 ## Requirements
 
 ### Requirement: The application entry point shall connect a root component to the DOM
-`WebComPyApp` SHALL accept a root component, optional router, and optional `AppConfig`, and create an application root that renders the component. The `run(selector)` method SHALL be the browser entry point, accepting a CSS selector (default `"#webcompy-app"`). The `__component__` property SHALL emit a `DeprecationWarning` and return the internal `AppDocumentRoot`.
+`WebComPyApp` SHALL accept a root component, optional router, and optional `AppConfig`, and create an application root that renders the component. The `run(selector)` method SHALL be the browser entry point, accepting a CSS selector (default `"#webcompy-app"`). Forwarded properties (`routes`, `router_mode`, `set_path`, `head`, `style`, `scripts`, `set_title`, `set_meta`, `append_link`, `append_script`, `set_head`, `update_head`) SHALL provide direct access to `AppDocumentRoot` functionality.
 
 #### Scenario: Starting an app without a router
 - **WHEN** a developer creates `WebComPyApp(root_component=MyApp)` and calls `app.run()`
@@ -25,11 +25,6 @@ On the server side, bootstrapping enables static site generation — rendering t
 - **WHEN** a developer creates `WebComPyApp(root_component=MyApp)` and calls `app.run("#my-app")`
 - **THEN** `MyApp` SHALL be rendered inside the element matching `#my-app`
 - **AND** the app SHALL function identically to using the default selector
-
-#### Scenario: Accessing the deprecated __component__ property
-- **WHEN** a developer accesses `app.__component__`
-- **THEN** a `DeprecationWarning` SHALL be emitted
-- **AND** the `AppDocumentRoot` SHALL be returned for backward compatibility
 
 ### Requirement: The application shall hydrate pre-rendered content
 When the browser finds existing DOM content inside the mount element, the application SHALL reuse those nodes rather than recreating them, enabling fast initial page loads.
@@ -95,7 +90,7 @@ Each `WebComPyApp` instance SHALL have its own DI scope, Router, HeadPropsStore,
 - **AND** each app SHALL have its own configuration, routes, and DI scope
 
 ### Requirement: Static site generation shall produce complete HTML pages
-The CLI SHALL render the application to HTML strings for each route, including PyScript bootstrapping code, dependency packages, and the loading screen. The generated bootstrap code SHALL use `app.run()` instead of the deprecated `app.__component__.render()` pattern. The SSG process SHALL enter the app's DI scope for the entire duration of HTML generation to ensure `inject()` calls succeed.
+The CLI SHALL render the application to HTML strings for each route, including PyScript bootstrapping code, dependency packages, and the loading screen. The SSG process SHALL enter the app's DI scope for the entire duration of HTML generation to ensure `inject()` calls succeed.
 
 #### Scenario: Generating a static site
 - **WHEN** the generate command is run

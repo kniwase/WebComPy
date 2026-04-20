@@ -7,19 +7,22 @@ The command-line interface bridges the gap between development and deployment. I
 ## Requirements
 
 ### Requirement: The dev server shall serve the application with hot-reload
-The development server SHALL be startable via `python -m webcompy start --dev` (existing CLI) or `run_server(app)` (new function). Both SHALL start a Starlette+uvicorn server that serves the application with SSE-based hot-reload. Dev mode is determined by the `--dev` CLI flag, not by a function parameter.
+The development server SHALL be startable via `python -m webcompy start --dev` or `run_server(app)`. Both SHALL start a Starlette+uvicorn server that serves the application with SSE-based hot-reload. Dev mode is determined by `ServerConfig.dev` or the `--dev` CLI flag (which overrides the config file value).
 
-#### Scenario: Starting dev server via CLI (backward compatible)
+#### Scenario: Starting dev server via CLI
 - **WHEN** a developer runs `python -m webcompy start --dev`
 - **THEN** the server SHALL start with hot-reload enabled
-- **AND** the behavior SHALL be identical to the current implementation
-- **AND** if `WebComPyConfig` is used, a `DeprecationWarning` SHALL be emitted
+- **AND** `ServerConfig.dev` SHALL be overridden to `True`
 
 #### Scenario: Starting dev server via run_server(app)
 - **WHEN** a developer calls `run_server(app)` with a `WebComPyApp` instance
 - **THEN** the server SHALL start with hot-reload enabled if the `--dev` CLI flag is set
-- **AND** `AppConfig` from the app instance SHALL be used instead of `WebComPyConfig`
-- **AND** no `webcompy_config.py` file SHALL be required
+- **AND** `AppConfig` from the app instance SHALL be used
+
+#### Scenario: Starting dev server with custom port
+- **WHEN** a developer runs `python -m webcompy start --port 3000`
+- **THEN** the server SHALL start on port 3000
+- **AND** the `--port` flag SHALL override `ServerConfig.port`
 
 ### Requirement: The dev server shall serve application packages
 The dev server SHALL build a single bundled Python wheel containing both the webcompy framework and the application, and serve it at the `/_webcompy-app-package/` endpoint so that PyScript can load it in the browser. The wheel filename SHALL be computed using `get_wheel_filename` from the wheel builder module and SHALL match the URL referenced in the generated HTML.
@@ -31,13 +34,13 @@ The dev server SHALL build a single bundled Python wheel containing both the web
 - **AND** the browser SHALL be able to import both `webcompy` and the application package
 
 #### Scenario: Dev server with assets
-- **WHEN** a developer configures `assets={"logo": "images/logo.png"}` in `WebComPyConfig`
+- **WHEN** a developer configures `assets={"logo": "images/logo.png"}` in `AppConfig`
 - **THEN** the bundled wheel SHALL include the matching asset files inside the package tree
 - **AND** an `_assets_registry.py` module SHALL be generated in the app package mapping `"logo"` to its package path
 - **AND** `load_asset("logo")` SHALL return the file content as `bytes`
 
 ### Requirement: The generate command shall produce deployable static files
-Static site generation SHALL be available via `python -m webcompy generate` (existing CLI) or `generate_static_site(app)` (function). Both SHALL produce a complete static site in the configured output directory. The SSG process SHALL enter the app's DI scope for the entire generation pipeline to ensure `inject()` calls during route rendering succeed.
+Static site generation SHALL be available via `python -m webcompy generate` or `generate_static_site(app, generate_config=None)`. Both SHALL produce a complete static site in the configured output directory. The SSG process SHALL enter the app's DI scope for the entire generation pipeline to ensure `inject()` calls during route rendering succeed.
 
 #### Scenario: Generating a multi-page application with history mode
 - **WHEN** routes are defined with history mode
@@ -52,38 +55,44 @@ Static site generation SHALL be available via `python -m webcompy generate` (exi
 - **THEN** a single `index.html` SHALL be generated at the dist root
 - **AND** all other assets SHALL be included as in the history mode case
 
-#### Scenario: Generating via CLI (backward compatible)
-- **WHEN** a developer runs `python -m webcompy generate`
-- **THEN** the output SHALL be identical to the current implementation
-- **AND** if `WebComPyConfig` is used, a `DeprecationWarning` SHALL be emitted
+#### Scenario: Generating with custom dist via --dist flag
+- **WHEN** a developer runs `python -m webcompy generate --dist out`
+- **THEN** static files SHALL be generated in the `out` directory
+- **AND** the `--dist` flag SHALL override `GenerateConfig.dist`
 
 #### Scenario: Generating via generate_static_site(app)
 - **WHEN** a developer calls `generate_static_site(app)` with a `WebComPyApp` instance
 - **THEN** a static site SHALL be generated in the `dist` directory
 - **AND** all routes, app packages, and static files SHALL be included
-- **AND** no `webcompy_config.py` file SHALL be required
 
 ### Requirement: The init command shall scaffold a new project
-Running `python -m webcompy init` SHALL create the necessary project structure including a bootstrap file, static directory, and configuration template.
+Running `python -m webcompy init` SHALL create the necessary project structure including a bootstrap file, static directory, and two configuration files (`webcompy_config.py` and `webcompy_server_config.py`).
 
 #### Scenario: Scaffolding a new project
 - **WHEN** a developer runs `python -m webcompy init`
 - **THEN** template files SHALL be copied to the current directory
 - **AND** a `static/` directory with `__init__.py` SHALL be created
+- **AND** `webcompy_config.py` SHALL be created with `app_import_path` and `app_config`
+- **AND** `webcompy_server_config.py` SHALL be created with `server_config` and `generate_config`
 
-### Requirement: Application configuration shall be discovered dynamically
-The CLI SHALL support two configuration discovery patterns: the existing `webcompy_config.py` / `WebComPyConfig` pattern (deprecated) and direct `WebComPyApp` instance with `AppConfig` (preferred). When using the deprecated pattern, a `DeprecationWarning` SHALL be emitted. Internally, `AppConfig` is converted to `WebComPyConfig` for compatibility with existing HTML generation and wheel-building code; this conversion is an implementation detail not exposed to developers.
+### Requirement: Application configuration shall be discovered via two-file pattern
+The CLI SHALL discover the app instance using `webcompy_config.py` (which contains `app_import_path` and `app_config`) or the `--app` CLI flag. The `webcompy_server_config.py` file is optional and contains server/SSG-only settings (`server_config`, `generate_config`). The `discover_app` function SHALL be the public API for programmatic app discovery, exported from `webcompy.cli`. It replaces the removed `get_app(config)` function.
 
-#### Scenario: Using the new AppConfig pattern
-- **WHEN** a developer creates `WebComPyApp(root_component=Root, config=AppConfig(base_url="/app/"))`
-- **THEN** the CLI SHALL use the provided `AppConfig`
-- **AND** no `webcompy_config.py` SHALL be required
+#### Scenario: Discovery via --app flag
+- **WHEN** a developer runs `python -m webcompy start --app my_app.bootstrap:app`
+- **THEN** the CLI SHALL import `my_app.bootstrap` and use the `app` attribute
+- **AND** `webcompy_config.py` SHALL NOT be required
+- **AND** `webcompy_server_config.py` SHALL still be read if present
 
-#### Scenario: Using the deprecated WebComPyConfig pattern
-- **WHEN** a developer provides `webcompy_config.py` with `WebComPyConfig`
-- **THEN** the CLI SHALL discover and use this configuration
-- **AND** a `DeprecationWarning` SHALL be emitted
-- **AND** the application SHALL still function correctly
+#### Scenario: Discovery via webcompy_config.py
+- **WHEN** a developer runs `python -m webcompy start` without `--app`
+- **AND** `webcompy_config.py` exists with `app_import_path = "my_app.bootstrap:app"`
+- **THEN** the CLI SHALL import `my_app.bootstrap` and get the `app` attribute
+
+#### Scenario: No app_import_path and no --app flag
+- **WHEN** a developer runs `python -m webcompy start` without `--app`
+- **AND** no `webcompy_config.py` exists or it has no `app_import_path`
+- **THEN** a clear error SHALL be raised indicating that either `--app` or `webcompy_config.py` with `app_import_path` is required
 
 ### Requirement: Generated HTML shall include PyScript bootstrapping
 Every generated HTML page SHALL include PyScript v2026.3.1 CSS and JS, a loading screen, the app div (either pre-rendered or hidden), and a PyScript configuration specifying all required Python packages. The configuration SHALL reference a single bundled wheel (not separate framework and application wheels) and SHALL NOT include `typing_extensions` as a dependency. The bundled wheel URL SHALL be computed using `get_wheel_filename` from the wheel builder module, using the actual app package name — not a hardcoded `"app"` prefix.
@@ -97,16 +106,25 @@ Every generated HTML page SHALL include PyScript v2026.3.1 CSS and JS, a loading
 - **AND** the PyScript packages list SHALL reference a single bundled wheel URL using `get_wheel_filename("myapp", version)`
 - **AND** `typing_extensions` SHALL NOT appear in the packages list
 
-### Requirement: WebComPyConfig shall emit DeprecationWarning
-`WebComPyConfig` SHALL emit a `DeprecationWarning` when instantiated, directing developers to use `AppConfig` instead.
+### Requirement: CLI flags shall override config file values
+CLI flags (`--dev`, `--port`, `--dist`) SHALL override values from `webcompy_server_config.py` and the defaults. When a flag is provided, it takes precedence; when not provided, the config file value or default is used.
 
-#### Scenario: Creating a WebComPyConfig instance
-- **WHEN** a developer creates `WebComPyConfig(app_package="myapp")`
-- **THEN** a `DeprecationWarning` SHALL be emitted
-- **AND** the configuration SHALL still function correctly for backward compatibility
+#### Scenario: Overriding port with --port
+- **WHEN** `webcompy_server_config.py` sets `server_config = ServerConfig(port=8080)`
+- **AND** a developer runs `python -m webcompy start --port 3000`
+- **THEN** the server SHALL start on port 3000
+
+#### Scenario: Overriding dist with --dist
+- **WHEN** `webcompy_server_config.py` sets `generate_config = GenerateConfig(dist="dist")`
+- **AND** a developer runs `python -m webcompy generate --dist out`
+- **THEN** static files SHALL be generated in the `out` directory
+
+#### Scenario: Overriding dev mode with --dev
+- **WHEN** a developer runs `python -m webcompy start --dev`
+- **THEN** hot-reload SHALL be enabled regardless of `ServerConfig.dev` value
 
 ### Requirement: Application configuration shall support assets
-`WebComPyConfig` SHALL accept an `assets` parameter that maps string keys to file paths relative to the app package directory. These assets SHALL be included in the bundled wheel and accessible at runtime via `load_asset`.
+`AppConfig` SHALL accept an `assets` parameter that maps string keys to file paths relative to the app package directory. These assets SHALL be included in the bundled wheel and accessible at runtime via `load_asset`.
 
 #### Scenario: Configuring assets for application resources
 - **WHEN** a developer specifies `assets={"logo": "images/logo.png", "config": "data/settings.json"}`
