@@ -5,7 +5,6 @@ import json
 from typing import TypeAlias
 
 from webcompy.app._app import WebComPyApp
-from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._wheel_builder import get_wheel_filename
 from webcompy.components._component import Component
 from webcompy.elements.typealias import ElementChildren
@@ -127,12 +126,11 @@ def _load_scripts(scripts: Scripts):
 
 
 def generate_html(
-    config: WebComPyConfig,
+    app: WebComPyApp,
     dev_mode: bool,
     prerender: bool,
     app_version: str,
     app_package_name: str,
-    app: WebComPyApp,
 ):
     app_root = (
         app._root
@@ -156,8 +154,8 @@ def generate_html(
     )
 
     py_packages = [
-        *config.dependencies,
-        f"{config.base}_webcompy-app-package/{get_wheel_filename(app_package_name, app_version)}",
+        *app.config.dependencies,
+        f"{app.config.base_url}_webcompy-app-package/{get_wheel_filename(app_package_name, app_version)}",
     ]
     py_config = html_module.escape(
         json.dumps({"packages": py_packages, "experimental_create_proxy": "auto"}),
@@ -165,7 +163,7 @@ def generate_html(
     )
     py_script = strip_multiline_text(
         f"""
-        from {config.app_package_path.name}.bootstrap import app
+        from {app.config.app_package_path.name}.bootstrap import app
         app.run()
         """
     )
@@ -179,7 +177,7 @@ def generate_html(
                 {"type": "text/javascript"},
                 " ".join(
                     (
-                        f"var stream = new EventSource('{config.base}_webcompy_reload');",
+                        f"var stream = new EventSource('{app.config.base_url}_webcompy_reload');",
                         "stream.addEventListener('error', (e) => window.location.reload());",
                     )
                 ),
@@ -197,7 +195,7 @@ def generate_html(
                 sequence=computed(lambda: list(app.head["meta"].value.values())),
                 template=lambda attrs: _HtmlElement("meta", attrs),
             ),
-            _HtmlElement("base", {"href": config.base}),
+            _HtmlElement("base", {"href": app.config.base_url}),
             _HtmlElement(
                 "link",
                 {"rel": "stylesheet", "href": f"{PYSCRIPT_BASE_URL}/core.css"},

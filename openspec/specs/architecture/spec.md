@@ -32,7 +32,7 @@ The `browser` object SHALL be `None` on the server and a proxy to the full brows
 - **AND** server-side code (SSG, configuration) SHALL not crash due to missing browser APIs
 
 ### Requirement: The application entry point shall connect all subsystems
-`WebComPyApp` SHALL serve as the single entry point that wires together the root component, the router, and the reactive head management system. It SHALL own its configuration (`AppConfig`), state (`HeadPropsStore`, `ComponentStore`, DI scope), and the browser entry point (`run`). Server-side and SSG entry points SHALL be module-level functions (`create_asgi_app`, `run_server`, `generate_static_site`) that accept a `WebComPyApp` instance, not methods on the app object. Developers SHALL only need to provide a root component and optionally a router and config — the framework handles all internal wiring. `WebComPyApp` SHALL create a root `DIScope` and provide framework-internal services (Router, ComponentStore, HeadProps) into it. Module-level globals like `_root_di_scope` and `_default_component_store` SHALL NOT be used as the *primary* mechanism for app-scoped state. A module-level fallback reference (`_app_di_scope`, `_app_instance`) MAY exist for environments where `ContextVar` propagation is unreliable (e.g., PyScript/Emscripten), but these fallbacks hold a reference to only one app at a time. Full multi-app isolation is therefore only guaranteed in server-side contexts where `ContextVar` bindings persist reliably. Server-side and SSG entry points SHALL enter the app's DI scope for the duration of any operation that needs DI resolution (HTML generation, route rendering, etc.).
+`WebComPyApp` SHALL serve as the single entry point that wires together the root component, the router, and the reactive head management system. It SHALL own its configuration (`AppConfig`), state (`HeadPropsStore`, `ComponentStore`, DI scope), and the browser entry point (`run`). Server-side and SSG entry points SHALL be module-level functions (`create_asgi_app`, `run_server`, `generate_static_site`) that accept a `WebComPyApp` instance and optional `ServerConfig`/`GenerateConfig` dataclasses. Developers SHALL only need to provide a root component and optionally a router and config — the framework handles all internal wiring. `WebComPyApp` SHALL create a root `DIScope` and provide framework-internal services (Router, ComponentStore, HeadProps) into it. Module-level globals like `_root_di_scope` and `_default_component_store` SHALL NOT be used as the *primary* mechanism for app-scoped state. A module-level fallback reference (`_app_di_scope`, `_app_instance`) MAY exist for environments where `ContextVar` propagation is unreliable (e.g., PyScript/Emscripten), but these fallbacks hold a reference to only one app at a time. Full multi-app isolation is therefore only guaranteed in server-side contexts where `ContextVar` bindings persist reliably. Server-side and SSG entry points SHALL enter the app's DI scope for the duration of any operation that needs DI resolution (HTML generation, route rendering, etc.). There is no conversion between `AppConfig` and any other config type.
 
 #### Scenario: Creating a minimal application with config
 - **WHEN** a developer writes `app = WebComPyApp(root_component=MyApp, config=AppConfig(base_url="/app/"))`
@@ -89,21 +89,30 @@ Each `WebComPyApp` instance SHALL have its own DI scope. Global singletons SHALL
 - **AND** components in one app SHALL NOT see DI values from the other
 
 ### Requirement: The project structure shall be discoverable by convention
-A WebComPy project SHALL follow a specific directory layout. The CLI SHALL support both the existing convention (a `webcomby_config.py` with a `WebComPyConfig` instance, and an app package with a `bootstrap.py`) and the new pattern (an app module with a `WebComPyApp` instance that owns its `AppConfig`). The new pattern does not require `webcompy_config.py`.
+A WebComPy project SHALL follow a specific directory layout. The CLI SHALL discover the app instance using `webcompy_config.py` (which contains `app_import_path` and `app_config`) or the `--app` CLI flag. Configuration files can be placed at the project root or inside the app package directory. When `--app` is provided, the CLI derives the package from the import path and searches for `webcompy_server_config.py` in that package first, then falls back to the project root. The `webcompy_server_config.py` file is optional and contains server/SSG-only settings (`server_config`, `generate_config`).
 
-#### Scenario: Starting the dev server with new pattern
-- **WHEN** a developer calls `run_server(app)` directly from Python
-- **THEN** the server SHALL start without requiring `webcompy_config.py`
-- **AND** `AppConfig` settings SHALL be used
+#### Scenario: Starting the dev server with app_import_path
+- **WHEN** a developer runs `python -m webcompy start` and `webcompy_config.py` at the project root defines `app_import_path = "my_app.bootstrap:app"`
+- **THEN** the CLI SHALL discover the app instance
+- **AND** `AppConfig` from `app.config` SHALL be used
+- **AND** `ServerConfig` from `webcompy_server_config.py` SHALL be used if present
 
-#### Scenario: Starting the dev server via CLI with new pattern
-- **WHEN** a developer runs `python -m webcompy start --dev` and the app module exposes `app = WebComPyApp(..., config=AppConfig(...))`
-- **THEN** the CLI SHALL use the `AppConfig` from the app instance
-- **AND** `webcompy_config.py` SHALL not be required
+#### Scenario: Starting the dev server with --app flag
+- **WHEN** a developer runs `python -m webcompy start --app my_app.bootstrap:app`
+- **THEN** the CLI SHALL import `my_app.bootstrap:app`
+- **AND** `webcompy_config.py` SHALL NOT be required
+- **AND** `webcompy_server_config.py` SHALL be searched first as `my_app.webcompy_server_config`, then as root-level `webcompy_server_config`
 
-#### Scenario: Starting the dev server via CLI with legacy pattern
-- **WHEN** a developer runs `python -m webcompy start --dev` and only `webcompy_config.py` exists
-- **THEN** the CLI SHALL discover `WebComPyConfig` and use it (with `DeprecationWarning`)
+#### Scenario: Minimal project structure with root-level config
+- **WHEN** a project contains `webcompy_config.py` at the project root with `app_import_path` and `my_app/bootstrap.py`
+- **THEN** the CLI SHALL be able to start the dev server and generate static output
+- **AND** no `webcompy_server_config.py` is required (defaults are used)
+
+#### Scenario: Project structure with package-level config
+- **WHEN** a project contains `my_app/webcompy_config.py` and `my_app/webcompy_server_config.py`
+- **AND** the developer runs `python -m webcompy start --app my_app.bootstrap:app`
+- **THEN** the CLI SHALL discover the app via the `--app` flag
+- **AND** `webcompy_server_config.py` SHALL be read from `my_app.webcompy_server_config`
 
 ### Requirement: The CLI shall provide three distinct workflows
 The framework SHALL provide three commands serving different phases of the development lifecycle: `start` for live development with hot-reload, `generate` for production static site generation, and `init` for project scaffolding.

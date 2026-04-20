@@ -52,7 +52,7 @@ jobs:
         with:
           cache: true
       - run: uv sync --all-groups
-      - run: uv run python -m webcompy generate
+      - run: uv run python -m webcompy generate --app docs_src.bootstrap:app
 
   test:
     runs-on: ubuntu-latest

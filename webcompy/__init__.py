@@ -13,7 +13,7 @@ from . import (
 )
 from ._browser import browser
 from ._version import __version__
-from .app._config import AppConfig, GenerateConfig, ServerConfig
+from .app._config import AppConfig
 from .assets import AssetNotFoundError, load_asset
 from .di import DIScope, InjectionError, InjectKey, inject, provide
 
@@ -27,10 +27,8 @@ __all__ = [
     "AppConfig",
     "AssetNotFoundError",
     "DIScope",
-    "GenerateConfig",
     "InjectKey",
     "InjectionError",
-    "ServerConfig",
     "__version__",
     "aio",
     "ajax",

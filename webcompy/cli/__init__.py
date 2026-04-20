@@ -1,9 +1,7 @@
-from webcompy.cli._config import WebComPyConfig
 from webcompy.cli._server import create_asgi_app
-from webcompy.cli._utils import get_app
+from webcompy.cli._utils import discover_app
 
 __all__ = [
-    "WebComPyConfig",
     "create_asgi_app",
-    "get_app",
+    "discover_app",
 ]

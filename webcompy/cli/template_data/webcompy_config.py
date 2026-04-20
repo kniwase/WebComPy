@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from webcompy.cli import WebComPyConfig
+from webcompy.app import AppConfig
 
-# NOTE: WebComPyConfig is deprecated. Use AppConfig with WebComPyApp instead.
-config = WebComPyConfig(app_package=Path(__file__).parent / "app", base="/")
+app_import_path = "app.bootstrap:app"
+app_config = AppConfig(app_package=Path(__file__).parent / "app", base_url="/")

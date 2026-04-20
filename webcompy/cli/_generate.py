@@ -4,35 +4,30 @@ import shutil
 from functools import partial
 
 from webcompy.app._app import WebComPyApp
+from webcompy.app._config import GenerateConfig
 from webcompy.cli._argparser import get_params
 from webcompy.cli._html import generate_html
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
-    build_config_from_app,
+    discover_app,
     generate_app_version,
-    get_app,
-    get_app_from_import_path,
-    get_config,
+    get_generate_config,
     get_webcompy_packge_dir,
 )
 from webcompy.cli._wheel_builder import make_webcompy_app_package
 
 
-def generate_static_site(app: WebComPyApp | None = None):
+def generate_static_site(app: WebComPyApp | None = None, generate_config: GenerateConfig | None = None):
     _, args = get_params()
+    package = None
     if app is None:
         app_import_path = args.get("app")
-        if app_import_path:
-            app = get_app_from_import_path(app_import_path)
-            config = build_config_from_app(app)
-        else:
-            config = get_config()
-            app = get_app(config)
-    else:
-        config = build_config_from_app(app)
+        app, package = discover_app(app_import_path)
+    if generate_config is None:
+        generate_config = get_generate_config(package)
 
     with app.di_scope:
-        dist = config.dist if args.get("dist") is None else args["dist"]
+        dist = generate_config.dist if args.get("dist") is None else args["dist"]
         app_version = generate_app_version()
 
         dist_dir = pathlib.Path(dist).absolute()
@@ -44,12 +39,12 @@ def generate_static_site(app: WebComPyApp | None = None):
         nojekyll_path.touch()
         print(nojekyll_path)
 
-        if config.cname:
+        if generate_config.cname:
             cname_path = dist_dir / "CNAME"
-            cname_path.open("w", encoding="utf8").write(config.cname)
+            cname_path.open("w", encoding="utf8").write(generate_config.cname)
             print(cname_path)
 
-        static_files_dir = config.static_files_dir_path.absolute()
+        static_files_dir = generate_config.static_files_dir_path.absolute()
         for relative_path in get_static_files(static_files_dir):
             src = static_files_dir / relative_path
             dst = dist_dir / relative_path
@@ -63,14 +58,14 @@ def generate_static_site(app: WebComPyApp | None = None):
         make_webcompy_app_package(
             scripts_dir,
             get_webcompy_packge_dir(),
-            config.app_package_path,
+            app.config.app_package_path,
             app_version,
-            config.assets,
+            app.config.assets,
         )
         for p in scripts_dir.iterdir():
             print(p)
 
-        html_generator = partial(generate_html, config, False, True, app_version, config.app_package_path.name)
+        html_generator = partial(generate_html, app, False, True, app_version, app.config.app_package_path.name)
         if app.router_mode == "history" and app.routes:
             for p, _, _, _, page in app.routes:
                 paths = (
@@ -80,18 +75,18 @@ def generate_static_site(app: WebComPyApp | None = None):
                     if not (path_dir := dist_dir / path).exists():
                         os.makedirs(path_dir)
                     app.set_path(path)
-                    html = html_generator(app)
+                    html = html_generator()
                     html_path = path_dir / "index.html"
                     html_path.open("w", encoding="utf8").write(html)
                     print(html_path)
             app.set_path("//:404://")
-            html = html_generator(app)
+            html = html_generator()
             html_path = dist_dir / "404.html"
             html_path.open("w", encoding="utf8").write(html)
             print(html_path)
         else:
             app.set_path("/")
-            html = html_generator(app)
+            html = html_generator()
             html_path = dist_dir / "index.html"
             html_path.open("w", encoding="utf8").write(html)
             print(html_path)
