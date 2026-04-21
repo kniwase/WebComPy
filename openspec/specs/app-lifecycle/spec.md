@@ -9,6 +9,21 @@ The application lifecycle defines how a WebComPy application starts, runs, and s
 ### Requirement: The application shall provide a browser entry point via app.run()
 In the browser (PyScript) environment, `app.run(selector)` SHALL mount and render the application into the DOM element matching the given CSS selector. The `selector` parameter SHALL default to `"#webcompy-app"` for backward compatibility. Calling `run()` in a non-PyScript (server) environment SHALL raise `WebComPyException`. In the browser, the DI scope SHALL be activated at `WebComPyApp` creation time via `__enter__()` without `__exit__()` (i.e., the scope remains active for the app's lifetime). In the server environment, the scope SHALL be entered/exited per-operation via `with app.di_scope:`.
 
+#### Scenario: Running an app with profiling enabled
+- **WHEN** a developer creates `WebComPyApp(..., profile=True)` and calls `app.run()` in the browser
+- **THEN** the application SHALL record timestamps for each startup phase (`pyscript_ready`, `init_start`, `imports_done`, `init_done`, `run_start`, `run_done`, `loading_removed`)
+- **AND** a formatted profile summary SHALL be printed to the browser console after the loading indicator is removed
+
+#### Scenario: Running an app with hydration disabled
+- **WHEN** a developer creates `WebComPyApp(..., hydrate=False)` in the browser
+- **THEN** the application SHALL recreate all DOM nodes from scratch
+- **AND** no prerendered DOM node reuse SHALL occur during initial render
+
+#### Scenario: Running an app with hydration enabled (default)
+- **WHEN** a developer creates `WebComPyApp(..., hydrate=True)` or uses the default in the browser
+- **THEN** the application SHALL attempt to reuse prerendered DOM nodes via `_hydrate_node()`
+- **AND** only unmatched nodes SHALL be created via `_init_node()`
+
 #### Scenario: Running an app with default selector
 - **WHEN** a developer calls `app.run()` in the browser
 - **THEN** the application SHALL mount into the element with `id="webcompy-app"`
