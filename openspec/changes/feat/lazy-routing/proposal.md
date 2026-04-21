@@ -90,8 +90,11 @@ class LazyComponentGenerator(ComponentGenerator):
     def _resolve(self) -> ComponentGenerator:
         if self._resolved is None:
             module_path, attr_name = self._import_path.rsplit(":", 1)
-            # Resolve using caller's package for relative imports
-            caller_package = pathlib.Path(self._caller_file).parent.name
+            # Derive the full package path from the caller's __file__.
+            # e.g. __file__ = "/app/pages/about.py" → package = "pages.about"
+            # This works for both top-level and nested packages.
+            caller_path = pathlib.Path(self._caller_file)
+            caller_package = ".".join(caller_path.parent.parts)
             module = importlib.import_module(module_path, package=caller_package)
             self._resolved = getattr(module, attr_name)
             if not isinstance(self._resolved, ComponentGenerator):

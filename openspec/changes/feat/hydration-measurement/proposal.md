@@ -96,6 +96,6 @@ The `profile` parameter must be stored in `AppConfig` so that `generate_html()` 
 
 ## Specs Affected
 
-- `app` — adds profiling capability to `WebComPyApp`
+- `app-lifecycle` — adds profiling capability to `WebComPyApp`
 - `app` — adds `profile` field to `AppConfig`
 - `cli` — generated HTML must include profiling code when enabled

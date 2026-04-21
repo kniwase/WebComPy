@@ -159,5 +159,6 @@ The Python-side overhead (component construction, Signal graph) remains unchange
 ## Specs Affected
 
 - `elements` — adds `_hydrate_node()` method to `ElementAbstract`; updates "Pre-rendered DOM nodes shall be reused during hydration" requirement
-- `app` — adds `hydrate` config option to `AppConfig`; updates "The application shall hydrate pre-rendered content" requirement; updates `WebComPyApp.__init__()` signature to accept `hydrate` parameter
+- `app` — adds `hydrate` config option to `AppConfig`; updates "The application shall hydrate pre-rendered content" requirement
+- `app-lifecycle` — updates `WebComPyApp.__init__()` signature to accept `hydrate` parameter
 - `cli` — no changes needed (SSG output format unchanged)
