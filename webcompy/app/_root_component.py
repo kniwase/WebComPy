@@ -104,6 +104,8 @@ class AppDocumentRoot(Component):
             for child in self._children:
                 child._render()
             self._property["on_after_rendering"]()
+            if self._app:
+                self._app._record_phase("run_done")
             if browser and self.__loading:
                 self.__loading = False
                 selector = self._selector or "#webcompy-app"
@@ -112,6 +114,9 @@ class AppDocumentRoot(Component):
                 ) or browser.document.getElementById("webcompy-loading")
                 if loading_el:
                     loading_el.remove()
+                if self._app:
+                    self._app._record_phase("loading_removed")
+                    self._app._emit_profile_summary()
         finally:
             if not browser:
                 if app_token is not None:

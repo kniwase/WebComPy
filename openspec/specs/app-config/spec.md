@@ -19,6 +19,7 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **THEN** `profile` SHALL be stored as `True`
 - **AND** `hydrate` SHALL be stored as `False`
 - **AND** the generated HTML SHALL include profiling bootstrap code when `profile=True`
+- **AND** `WebComPyApp.__init__()` SHALL also accept a `profile` parameter directly; when `profile` is not explicitly `True`, `config.profile` SHALL be read to determine the effective value
 
 #### Scenario: Configuring app version
 - **WHEN** a developer creates `AppConfig(version="1.0.0")`

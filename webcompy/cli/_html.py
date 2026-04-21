@@ -10,7 +10,6 @@ from webcompy.components._component import Component
 from webcompy.elements.typealias import ElementChildren
 from webcompy.elements.types import Element, RepeatElement
 from webcompy.signal._computed import computed
-from webcompy.utils import strip_multiline_text
 
 Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]
 
@@ -161,12 +160,15 @@ def generate_html(
         json.dumps({"packages": py_packages, "experimental_create_proxy": "auto"}),
         quote=True,
     )
-    py_script = strip_multiline_text(
-        f"""
-        from {app.config.app_package_path.name}.bootstrap import app
-        app.run()
-        """
-    )
+    py_script_lines: list[str] = []
+    if app.config.profile:
+        py_script_lines.append("import time")
+        py_script_lines.append("_pyscript_ready = time.perf_counter()")
+    py_script_lines.append(f"from {app.config.app_package_path.name}.bootstrap import app")
+    if app.config.profile:
+        py_script_lines.append('app._profile_data["pyscript_ready"] = _pyscript_ready')
+    py_script_lines.append("app.run()")
+    py_script = "\n".join(py_script_lines)
     app_loader_html = f'<script type="py" config="{py_config}">\n{py_script}\n</script>'
 
     scripts_head.extend(app.head["script"])

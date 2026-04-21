@@ -96,7 +96,7 @@ The CLI SHALL discover the app instance using `webcompy_config.py` (which contai
 - **THEN** a clear error SHALL be raised indicating that either `--app` or `webcompy_config.py` with `app_import_path` is required
 
 ### Requirement: Generated HTML shall include PyScript bootstrapping
-Every generated HTML page SHALL include PyScript v2026.3.1 CSS and JS, a loading screen, the app div (either pre-rendered or hidden), and a PyScript configuration specifying all required Python packages. The configuration SHALL reference a single bundled wheel (not separate framework and application wheels) and SHALL NOT include `typing_extensions` as a dependency. The bundled wheel URL SHALL be computed using `get_wheel_filename` from the wheel builder module, using the actual app package name — not a hardcoded `"app"` prefix.
+Every generated HTML page SHALL include PyScript v2026.3.1 CSS and JS, a loading screen, the app div (either pre-rendered or hidden), and a PyScript configuration specifying all required Python packages. The configuration SHALL reference a single bundled wheel (not separate framework and application wheels) and SHALL NOT include `typing_extensions` as a dependency. The bundled wheel URL SHALL be computed using `get_wheel_filename` from the wheel builder module, using the actual app package name — not a hardcoded `"app"` prefix. When `AppConfig.profile=True`, the generated `<script type="py">` tag SHALL include inline profiling code that captures `pyscript_ready` at the start of PyScript execution and passes it to the app instance before `app.run()`.
 
 #### Scenario: Inspecting generated HTML
 - **WHEN** a generated `index.html` is examined for an app package named `myapp`
@@ -106,6 +106,17 @@ Every generated HTML page SHALL include PyScript v2026.3.1 CSS and JS, a loading
 - **AND** a loading screen div with `id="webcompy-loading"`
 - **AND** the PyScript packages list SHALL reference a single bundled wheel URL using `get_wheel_filename("myapp", version)`
 - **AND** `typing_extensions` SHALL NOT appear in the packages list
+
+#### Scenario: Inspecting generated HTML with profiling enabled
+- **WHEN** `AppConfig.profile=True` and a generated `index.html` is examined
+- **THEN** the `<script type="py">` tag SHALL start with `import time` and `_pyscript_ready = time.perf_counter()`
+- **AND** after the app import, `app._profile_data["pyscript_ready"] = _pyscript_ready` SHALL be present
+- **AND** `app.run()` SHALL follow
+
+#### Scenario: Inspecting generated HTML with profiling disabled
+- **WHEN** `AppConfig.profile=False` (default) and a generated `index.html` is examined
+- **THEN** the `<script type="py">` tag SHALL contain only the standard bootstrap (`from <app>.bootstrap import app; app.run()`)
+- **AND** no profiling code SHALL appear
 
 ### Requirement: CLI flags shall override config file values
 CLI flags (`--dev`, `--port`, `--dist`) SHALL override values from `webcompy_server_config.py` and the defaults. When a flag is provided, it takes precedence; when not provided, the config file value or default is used.
