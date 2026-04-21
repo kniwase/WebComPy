@@ -22,14 +22,10 @@ jobs:
           fi
 
   lint:
-    needs: [openspec]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-        with:
-          cache: true
-      - run: uv sync
+      - uses: ./.github/actions/setup-environment
       - run: uv run ruff check .
       - run: uv run ruff format --check .
 
@@ -37,30 +33,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-        with:
-          cache: true
-      - run: uv sync
+      - uses: ./.github/actions/setup-environment
       - run: uv run pyright
 
   generate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: ./.github/actions/setup-environment
         with:
-          cache: true
-      - run: uv sync --all-groups
+          uv-sync-args: --all-groups
       - run: uv run python -m webcompy generate --app docs_src.bootstrap:app
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-        with:
-          cache: true
-      - run: uv sync
+      - uses: ./.github/actions/setup-environment
       - run: uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --cov=webcompy --cov-report=xml --cov-report=term-missing
       - uses: actions/upload-artifact@v4
         if: always()
@@ -68,30 +57,48 @@ jobs:
           name: coverage-report
           path: coverage.xml
 
-  e2e:
-    needs: [lint, test]
+  e2e-matrix:
+    if: ${{ !failure() && !cancelled() }}
+    needs: [openspec, lint, typecheck, generate, test]
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - name: bootstrap-static
+            files: tests/e2e/test_bootstrap.py tests/e2e/test_static_site.py
+          - name: components
+            files: tests/e2e/test_component.py tests/e2e/test_lifecycle.py tests/e2e/test_scoped_style.py
+          - name: reactive-lists
+            files: tests/e2e/test_reactive.py tests/e2e/test_repeat.py tests/e2e/test_keyed_repeat.py tests/e2e/test_dict_repeat.py
+          - name: dynamic-control
+            files: tests/e2e/test_nested_dynamic.py tests/e2e/test_switch.py
+          - name: router
+            files: tests/e2e/test_router.py tests/e2e/test_async_nav.py
+          - name: interaction
+            files: tests/e2e/test_event.py tests/e2e/test_di.py
+        serving_mode: [prod, static]
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: ./.github/actions/setup-environment
         with:
-          cache: true
-      - run: uv sync
-      - run: uv run playwright install chromium
-      - run: uv run python -m pytest tests/e2e/ --tb=short
+          playwright-install: "true"
+      - name: Run E2E tests
+        run: uv run python -m pytest ${{ matrix.group.files }} --tb=short --serving-mode=${{ matrix.serving_mode }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: e2e-server-log
+          name: e2e-server-log-${{ matrix.group.name }}-${{ matrix.serving_mode }}
           path: tests/e2e/.e2e-server.log
 
   review:
     if: always()
-    needs: [openspec, lint, typecheck, generate, test, e2e]
+    needs: [openspec, lint, typecheck, generate, test, e2e-matrix]
     runs-on: ubuntu-latest
     concurrency:
       group: review-${{ github.event.pull_request.number }}
       cancel-in-progress: true
+
     permissions:
       id-token: write
       contents: read
@@ -101,7 +108,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-
       - name: Run OpenCode Review
         id: opencode-review
         uses: anomalyco/opencode/github@latest
