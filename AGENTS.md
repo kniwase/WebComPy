@@ -87,6 +87,23 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - `webcompy/cli/template_data/` contains the project template for `webcompy init`
 - Playwright MCP is configured in `opencode.json` (currently pinned to `@0.0.70`; update when needed)
 
+## Agent Behavior Rules (CRITICAL)
+
+**DO NOT execute any action unless explicitly instructed by the user.** This includes, but is not limited to:
+- `git commit`, `git push`, `git rebase`, or any git mutation
+- Creating a pull request
+- Modifying git history
+- Installing or removing system packages
+- Creating, modifying, or deleting files outside of the explicitly requested scope
+
+**Always confirm before acting.** When the user describes a goal (e.g., "want to add a new feature"), this is a request to discuss, plan, or get a proposal — NOT to start implementation. Use language like:
+- "Should I proceed with X?"
+- "Do you want me to commit these changes?"
+- "Shall I create a PR now?"
+
+**Never commit or create PRs on the user's behalf without explicit instruction.**
+If in doubt, ask. Do not assume implicit consent from context or prior conversation.
+
 ## OpenSpec Workflow
 
 WebComPy uses OpenSpec for spec-driven development. Specs define **what the framework promises to users** (developer-facing behavior), not internal implementation details.
