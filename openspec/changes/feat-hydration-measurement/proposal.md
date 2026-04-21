@@ -34,11 +34,12 @@ Add a `profile` parameter to `WebComPyApp.__init__()` and `WebComPyApp.run()`. W
 Phase                       Timestamp Key          Description
 ──────────────────────────────────────────────────────────────────────
 PyScript ready              pyscript_ready          <script type="py"> starts executing
-Imports done                 imports_done            All webcompy and app modules imported
-App init done                app_init_done           WebComPyApp.__init__() completed
-App run start                app_run_start           app.run() called
-App run done                 app_run_done            app.run() completed (first render)
-Loading screen removed       loading_removed         #webcompy-loading element removed
+App init start              init_start              WebComPyApp.__init__() entry
+Imports done                imports_done            All webcompy and app modules imported
+App init done               init_done               WebComPyApp.__init__() completed
+App run start               run_start               app.run() called
+App run done                run_done                app.run() completed (first render)
+Loading screen removed      loading_removed         #webcompy-loading element removed
 ```
 
 ### Timestamp Capture Points

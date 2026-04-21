@@ -11,7 +11,7 @@ In the browser (PyScript) environment, `app.run(selector)` SHALL mount and rende
 
 #### Scenario: Running an app with profiling enabled
 - **WHEN** a developer creates `WebComPyApp(..., profile=True)` and calls `app.run()` in the browser
-- **THEN** the application SHALL record timestamps for each startup phase (`pyscript_ready`, `imports_done`, `init_done`, `run_start`, `run_done`, `loading_removed`)
+- **THEN** the application SHALL record timestamps for each startup phase (`pyscript_ready`, `init_start`, `imports_done`, `init_done`, `run_start`, `run_done`, `loading_removed`)
 - **AND** a formatted profile summary SHALL be printed to the browser console after the loading indicator is removed
 
 #### Scenario: Running an app with hydration disabled

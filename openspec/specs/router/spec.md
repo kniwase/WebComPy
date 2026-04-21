@@ -74,6 +74,9 @@ Developers SHALL be able to define routes that defer module import until the rou
 - **THEN** `LoadingShell` SHALL be rendered while the module is being imported
 - **AND** once the module is loaded, the real component SHALL replace the shell
 
+### Requirement: A default page shall be shown when no route matches
+When the current URL does not match any defined route, the router SHALL render a default component or display "Not Found".
+
 #### Scenario: Navigating to an undefined route
 - **WHEN** the URL matches no defined route and no default component is provided
 - **THEN** the text "Not Found" SHALL be displayed
