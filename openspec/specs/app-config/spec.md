@@ -11,8 +11,20 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 
 #### Scenario: Creating a minimal application configuration
 - **WHEN** a developer creates `WebComPyApp(root_component=Root)` without explicit config
-- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=[]`, `assets=None`, `app_package="."`)
+- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=[]`, `assets=None`, `app_package=".", `profile=False`, `hydrate=True`, `version=None`)
 - **AND** the app SHALL function correctly with these defaults
+
+#### Scenario: Configuring profiling and hydration
+- **WHEN** a developer creates `AppConfig(profile=True, hydrate=False)`
+- **THEN** `profile` SHALL be stored as `True`
+- **AND** `hydrate` SHALL be stored as `False`
+- **AND** the generated HTML SHALL include profiling bootstrap code when `profile=True`
+
+#### Scenario: Configuring app version
+- **WHEN** a developer creates `AppConfig(version="1.0.0")`
+- **THEN** `version` SHALL be stored as `"1.0.0"`
+- **AND** the wheel METADATA SHALL include `Version: 1.0.0`
+- **AND** the wheel URL SHALL remain stable without a version suffix
 
 #### Scenario: Configuring base URL and dependencies
 - **WHEN** a developer creates `AppConfig(base_url="/myapp/", dependencies=["pandas"])`

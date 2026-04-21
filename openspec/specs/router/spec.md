@@ -61,8 +61,18 @@ When navigating via `RouterLink`, developers SHALL be able to pass state data th
 - **THEN** that data SHALL be stored in `history.state`
 - **AND** the destination page SHALL be able to access it via `context.props.params`
 
-### Requirement: A default page shall be shown when no route matches
-When the current URL does not match any defined route, the router SHALL render a default component or display "Not Found".
+### Requirement: The router shall support lazy-loaded route components
+Developers SHALL be able to define routes that defer module import until the route is first matched, reducing initial startup time. A `lazy()` helper SHALL wrap an import path string and resolve it on demand.
+
+#### Scenario: Defining a lazy route
+- **WHEN** a developer writes `Router({"path": "/docs", "component": lazy("pages.docs:DocsPage", __file__)})`
+- **THEN** the `pages.docs` module SHALL NOT be imported at startup
+- **AND** on first navigation to `/docs`, the module SHALL be imported and `DocsPage` SHALL be rendered
+
+#### Scenario: Lazy route with loading shell
+- **WHEN** a developer writes `lazy("pages.docs:DocsPage", __file__, shell=LoadingShell)` and the module is not yet loaded
+- **THEN** `LoadingShell` SHALL be rendered while the module is being imported
+- **AND** once the module is loaded, the real component SHALL replace the shell
 
 #### Scenario: Navigating to an undefined route
 - **WHEN** the URL matches no defined route and no default component is provided

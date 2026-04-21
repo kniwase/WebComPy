@@ -6,22 +6,18 @@ The wheel builder produces PEP 427-compliant Python wheels for browser deploymen
 
 ## Requirements
 
-### Requirement: The wheel builder shall produce PEP 427-compliant wheels without setuptools
-The CLI SHALL build Python wheels by manually constructing ZIP archives containing the package source tree and a `.dist-info` directory with `METADATA`, `WHEEL`, `top_level.txt`, and `RECORD` files. The builder SHALL NOT depend on `setuptools`, `distutils`, or `wheel`.
+### Requirement: The wheel builder shall produce browser-only and application wheels separately
+The CLI SHALL build two wheels: a browser-only wheel containing the webcompy framework (excluding `cli/`) and an application wheel containing the app code and bundled pure-Python dependencies. The browser-only wheel URL SHALL be stable and cacheable.
 
-#### Scenario: Building a simple wheel
-- **WHEN** the CLI builds a wheel for a package at a given path
-- **THEN** the output SHALL be a valid PEP 427 `.whl` file
-- **AND** the wheel SHALL contain all `.py` files and `py.typed`/`.pyi` files from the package
-- **AND** the `.dist-info/METADATA` SHALL include `Metadata-Version`, `Name`, and `Version`
-- **AND** the `.dist-info/WHEEL` SHALL include `Wheel-Version: 1.0`, `Root-Is-Purelib: true`, and `Tag: py3-none-any`
-- **AND** the `.dist-info/RECORD` SHALL list every file with its `sha256` hash (URL-safe base64, no padding) and size
-- **AND** the `.dist-info/top_level.txt` SHALL list the top-level package name
+#### Scenario: Building a browser-only wheel
+- **WHEN** `make_browser_webcompy_wheel()` is called
+- **THEN** it SHALL produce a PEP 427 wheel containing `webcompy/` without `cli/`
+- **AND** `top_level.txt` SHALL list `webcompy`
 
-#### Scenario: Building a wheel with no setuptools dependency
-- **WHEN** the wheel builder module is imported
-- **THEN** it SHALL NOT import `setuptools`, `distutils`, or `wheel`
-- **AND** it SHALL only use Python standard library modules (`zipfile`, `hashlib`, `pathlib`, `os`, `re`)
+#### Scenario: Building an application wheel with bundled dependencies
+- **WHEN** `make_webcompy_app_package(..., bundled_deps=[("mydep", path)])` is called
+- **THEN** it SHALL produce a wheel containing the app package and `mydep/`
+- **AND** `top_level.txt` SHALL list both packages
 
 ### Requirement: The wheel builder shall support assets for non-Python files
 The wheel builder SHALL accept an `assets` parameter specifying a mapping of string keys to file paths (relative to the app package directory). Files referenced by these paths SHALL be included in the wheel inside the package tree. Additionally, the builder SHALL generate an `_assets_registry.py` module inside the app package that maps each key to its full package-qualified path, enabling runtime asset lookup via `importlib.resources`.

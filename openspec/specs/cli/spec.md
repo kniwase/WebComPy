@@ -25,7 +25,7 @@ The development server SHALL be startable via `python -m webcompy start --dev` o
 - **AND** the `--port` flag SHALL override `ServerConfig.port`
 
 ### Requirement: The dev server shall serve application packages
-The dev server SHALL build a single bundled Python wheel containing both the webcompy framework and the application, and serve it at the `/_webcompy-app-package/` endpoint so that PyScript can load it in the browser. The wheel filename SHALL be computed using `get_wheel_filename` from the wheel builder module and SHALL match the URL referenced in the generated HTML.
+The dev server SHALL build two separate Python wheels: a browser-only webcompy framework wheel and an application wheel containing the app code and bundled pure-Python dependencies. Both wheels SHALL be served at stable `/_webcompy-app-package/` endpoints. The framework wheel SHALL have `Cache-Control: max-age=86400, must-revalidate` and the app wheel in dev mode SHALL have `Cache-Control: no-cache`.
 
 #### Scenario: Starting the dev server
 - **WHEN** a developer runs `python -m webcompy start --dev`

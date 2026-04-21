@@ -90,12 +90,13 @@ When `key` is provided (overloads 2, 4, 5) or dict mode is used (overloads 1, 2)
 - **AND** dict keys SHALL be used as reconciliation identifiers for efficient DOM updates
 
 ### Requirement: Pre-rendered DOM nodes shall be reused during hydration
-When the browser encounters an existing DOM node marked as pre-rendered with a matching tag name, the element SHALL reuse that node instead of creating a new one, enabling efficient hydration of server-rendered content. This requirement applies to all node types including `#text` nodes.
+When the browser encounters an existing DOM node marked as pre-rendered with a matching tag name, the element SHALL reuse that node instead of creating a new one, enabling efficient hydration of server-rendered content. This requirement applies to all node types including `#text` nodes. During hydration, attribute values and text content SHALL only be written if they differ from the prerendered values to avoid redundant DOM operations.
 
 #### Scenario: Hydrating a server-rendered page
 - **WHEN** the browser finds an existing DOM node with `__webcompy_prerendered_node__ = True` and a matching tag name
 - **THEN** the element SHALL adopt that node rather than creating a new one
 - **AND** attributes SHALL be updated to match the element's current state
+- **AND** attributes whose values already match SHALL NOT be rewritten to the DOM
 
 #### Scenario: Hydrating a server-rendered text node
 - **WHEN** the browser finds an existing `#text` node with `__webcompy_prerendered_node__ = True`
