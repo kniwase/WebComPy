@@ -91,6 +91,8 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 
 WebComPy uses OpenSpec for spec-driven development. Specs define **what the framework promises to users** (developer-facing behavior), not internal implementation details.
 
+**IMPORTANT — Agent Guidance**: Do NOT advance through OpenSpec steps automatically. Before creating a proposal, applying changes, or archiving, you MUST ask the user for explicit confirmation. Use language like "Ready to create a proposal?" or "Shall I start implementation?" rather than proceeding unilaterally.
+
 ### Workflow
 
 1. **Explore** (`/opsx-explore`): Investigate problems, compare approaches, clarify requirements before committing to a change.
