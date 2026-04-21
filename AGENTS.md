@@ -56,6 +56,7 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - **Deploy Pages**: runs on push to `main`, generates docs and deploys to GitHub Pages (`.github/workflows/deploy-pages.yml`)
 - **Automated PR review**: runs on PRs via OpenCode with an OpenAI-compatible provider (`.github/workflows/opencode-review.yml`)
 - Coverage report is uploaded as a CI artifact
+- **When adding or renaming E2E test files**, you MUST update the `e2e-matrix` job in `.github/workflows/ci.yml` to include the new file in the appropriate `group.files` matrix entry. This is critical because the CI uses an explicit file list per group rather than auto-discovering all files in `tests/e2e/`.
 
 ## Code Conventions
 
