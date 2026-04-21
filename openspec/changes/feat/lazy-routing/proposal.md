@@ -90,13 +90,9 @@ class LazyComponentGenerator(ComponentGenerator):
     def _resolve(self) -> ComponentGenerator:
         if self._resolved is None:
             module_path, attr_name = self._import_path.rsplit(":", 1)
-            # Resolve relative imports using caller's package
-            caller_package = pathlib.Path(self._caller_file).parent
-            # Add caller's parent to sys.path if not already present
-            parent_str = str(caller_package)
-            if parent_str not in sys.path:
-                sys.path.insert(0, parent_str)
-            module = importlib.import_module(module_path)
+            # Resolve using caller's package for relative imports
+            caller_package = pathlib.Path(self._caller_file).parent.name
+            module = importlib.import_module(module_path, package=caller_package)
             self._resolved = getattr(module, attr_name)
             if not isinstance(self._resolved, ComponentGenerator):
                 raise WebComPyRouterException(
@@ -108,6 +104,10 @@ class LazyComponentGenerator(ComponentGenerator):
 
     def __call__(self, props, *, slots=None):
         return self._resolve()(props, slots=slots)
+
+    def __getattr__(self, name: str):
+        """Delegate all attribute access to the resolved ComponentGenerator."""
+        return getattr(self._resolve(), name)
 
     @property
     def scoped_style(self):

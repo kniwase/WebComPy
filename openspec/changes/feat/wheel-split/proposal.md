@@ -88,7 +88,7 @@ webcompy-{version}-py3-none-any.whl
 #### New Function: `make_browser_webcompy_wheel()`
 
 ```python
-_BROWSER_ONLY_EXCLUDE = {"cli", "cli"}
+_BROWSER_ONLY_EXCLUDE = {"cli"}
 
 def make_browser_webcompy_wheel(
     webcompy_package_dir: pathlib.Path,

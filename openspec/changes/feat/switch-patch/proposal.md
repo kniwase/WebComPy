@@ -186,14 +186,16 @@ def _patch_children(
     for old_idx, old_child in enumerate(old_children):
         if old_idx in matched_old_indices:
             # Node was adopted — only destroy the Python-side state
+            # Save node reference BEFORE clearing cache for event handler cleanup
+            saved_node = old_child._node_cache
+            if isinstance(old_child, ElementBase):
+                for name, handler in old_child._event_handlers_added.items():
+                    if saved_node:
+                        saved_node.removeEventListener(name, handler)
+                    handler.destroy()
             old_child._callback_nodes_clear()
             old_child.__purge_signal_members__()
             old_child._clear_node_cache(False)
-            # Remove event handlers from adopted node (new element will add its own)
-            if isinstance(old_child, ElementBase):
-                for name, handler in old_child._event_handlers_added.items():
-                    node = old_child._node_cache  # note: cache was cleared
-                    # handler cleanup happens via _remove_element pattern
         else:
             # No adoption — standard removal
             old_child._remove_element(recursive=True, remove_node=True)
