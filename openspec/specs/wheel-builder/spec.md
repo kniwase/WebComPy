@@ -6,8 +6,22 @@ The wheel builder produces PEP 427-compliant Python wheels for browser deploymen
 
 ## Requirements
 
+### Requirement: The wheel builder shall produce PEP 427-compliant wheels without setuptools
+All wheels produced by the builder SHALL be valid PEP 427 `.whl` files. The builder SHALL NOT depend on `setuptools`, `distutils`, or `wheel`. Each wheel SHALL contain a `.dist-info/` directory with `METADATA`, `WHEEL`, `top_level.txt`, and `RECORD` files. The `RECORD` file SHALL list every file with its `sha256` hash (URL-safe base64, no padding) and size. The `.dist-info/WHEEL` SHALL include `Wheel-Version: 1.0`, `Root-Is-Purelib: true`, and `Tag: py3-none-any`.
+
+#### Scenario: Building a wheel with no setuptools dependency
+- **WHEN** the wheel builder module is imported
+- **THEN** it SHALL NOT import `setuptools`, `distutils`, or `wheel`
+- **AND** it SHALL only use Python standard library modules (`zipfile`, `hashlib`, `pathlib`, `os`, `re`)
+
+#### Scenario: Wheel RECORD and METADATA compliance
+- **WHEN** the CLI builds any wheel
+- **THEN** the `.dist-info/METADATA` SHALL include `Metadata-Version`, `Name`, and `Version`
+- **AND** the `.dist-info/RECORD` SHALL list every file with its `sha256` hash and size
+- **AND** the `.dist-info/top_level.txt` SHALL list the top-level package name(s)
+
 ### Requirement: The wheel builder shall produce browser-only and application wheels separately
-The CLI SHALL build two wheels: a browser-only wheel containing the webcompy framework (excluding `cli/`) and an application wheel containing the app code and bundled pure-Python dependencies. The browser-only wheel URL SHALL be stable and cacheable.
+The CLI SHALL build two wheels: a browser-only wheel containing the webcompy framework (excluding `cli/`) and an application wheel containing the app code and bundled pure-Python dependencies. Both wheels SHALL comply with the PEP 427 requirement above. The browser-only wheel URL SHALL be stable and cacheable.
 
 #### Scenario: Building a browser-only wheel
 - **WHEN** `make_browser_webcompy_wheel()` is called

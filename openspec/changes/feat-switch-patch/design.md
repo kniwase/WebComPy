@@ -29,11 +29,11 @@ The initial implementation matches old and new nodes by tag name (`_tag_name`). 
          ┌───────────────────┼───────────────────┐
          ▼                   ▼                   ▼
    ┌──────────┐       ┌──────────┐        ┌──────────┐
-   │ Hydration │       │ Switch   │        │ (将来)   │
-   │ (SSR      │       │ Patch    │        │ Repeat   │
-   │  DOMを    │       │ (旧branch │        │ Patch)   │
-   │  再利用)   │       │  DOMを   │        │          │
-   └──────────┘       │  再利用)   │        └──────────┘
+   │ Hydration │       │ Switch   │        │ (Future) │
+   │ (Reuse    │       │ Patch    │        │ Repeat   │
+   │  SSR DOM) │       │ (Reuse   │        │ Patch)   │
+   └──────────┘       │  old branch│        └──────────┘
+                       │  DOM)    │
                        └──────────┘
 ```
 
@@ -41,21 +41,21 @@ The initial implementation matches old and new nodes by tag name (`_tag_name`). 
 
 ```
 CURRENT _refresh():
-══════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════
   1. idx = _select_generator()
   2. if idx == _rendered_idx: return
   3. for child in self._children:
-        child._remove_element(recursive=True)     ← 全破棄
-  4. self._children = _generate_children(generator)  ← 全再生成
+        child._remove_element(recursive=True)     ← full destroy
+  4. self._children = _generate_children(generator)  ← full regenerate
   5. for child in self._children:
-        child._render()                               ← 全DOM作成
+        child._render()                               ← full DOM create
   6. self._parent._re_index_children()
 
 PROPOSED _refresh():
-══════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════
   1. idx = _select_generator()
   2. if idx == _rendered_idx: return
-  3. new_children = _generate_children(generator)        ← Python再生成
+  3. new_children = _generate_children(generator)        ← Python regeneration
   4. old_children = self._children
   5. self._children = _patch_children(old_children, new_children)
      ┌──────────────────────────────────────────────┐
@@ -69,7 +69,7 @@ PROPOSED _refresh():
      └──────────────────────────────────────────────┘
   6. for child in self._children:
         if not child._mounted:
-            child._render()                           ← マッチしなかったものだけDOM作成
+            child._render()                           ← DOM create for unmatched only
   7. self._parent._re_index_children()
 ```
 
