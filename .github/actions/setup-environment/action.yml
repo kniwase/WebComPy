@@ -1,0 +1,34 @@
+name: Setup WebComPy Environment
+description: |
+  Checkout repository, set up uv, sync dependencies,
+  and optionally install Playwright browsers.
+
+inputs:
+  uv-sync-args:
+    description: Extra arguments passed to uv sync (e.g. --all-groups)
+    required: false
+    default: ""
+  playwright-install:
+    description: Whether to install Playwright Chromium
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - uses: astral-sh/setup-uv@v6
+      with:
+        cache: true
+
+    - run: uv sync ${INPUT_UV_SYNC_ARGS}
+      shell: bash
+      env:
+        INPUT_UV_SYNC_ARGS: ${{ inputs.uv-sync-args }}
+
+    - if: inputs.playwright-install == 'true'
+      run: uv run playwright install chromium
+      shell: bash

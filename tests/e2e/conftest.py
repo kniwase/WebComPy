@@ -55,6 +55,25 @@ class _QuietHandler(SimpleHTTPRequestHandler):
                 self.end_headers()
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--serving-mode",
+        action="store",
+        default=None,
+        choices=["prod", "static"],
+        help="Run E2E tests against a single serving mode (prod or static)",
+    )
+
+
+def pytest_generate_tests(metafunc):
+    if "serving_mode" in metafunc.fixturenames:
+        option = metafunc.config.getoption("--serving-mode")
+        if option is not None:
+            metafunc.parametrize("serving_mode", [option], ids=[option])
+        else:
+            metafunc.parametrize("serving_mode", ["prod", "static"], ids=["prod", "static"])
+
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "e2e: End-to-end tests requiring a browser and server")
 
@@ -185,11 +204,6 @@ def static_server(static_site):
     yield f"http://127.0.0.1:{port}/"
 
     server.shutdown()
-
-
-@pytest.fixture(params=["prod", "static"], ids=["prod", "static"])
-def serving_mode(request):
-    return request.param
 
 
 @pytest.fixture

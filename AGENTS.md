@@ -56,6 +56,7 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - **Deploy Pages**: runs on push to `main`, generates docs and deploys to GitHub Pages (`.github/workflows/deploy-pages.yml`)
 - **Automated PR review**: runs on PRs via OpenCode with an OpenAI-compatible provider (`.github/workflows/opencode-review.yml`)
 - Coverage report is uploaded as a CI artifact
+- **When adding or renaming E2E test files**, you MUST update the `e2e-matrix` job in `.github/workflows/ci.yml` to include the new file in the appropriate `group.files` matrix entry. This is critical because the CI uses an explicit file list per group rather than auto-discovering all files in `tests/e2e/`.
 
 ## Code Conventions
 
@@ -86,9 +87,28 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - `webcompy/cli/template_data/` contains the project template for `webcompy init`
 - Playwright MCP is configured in `opencode.json` (currently pinned to `@0.0.70`; update when needed)
 
+## Agent Behavior Rules (CRITICAL)
+
+**DO NOT execute any action unless explicitly instructed by the user.** This includes, but is not limited to:
+- `git commit`, `git push`, `git rebase`, or any git mutation
+- Creating a pull request
+- Modifying git history
+- Installing or removing system packages
+- Creating, modifying, or deleting files outside of the explicitly requested scope
+
+**Always confirm before acting.** When the user describes a goal (e.g., "want to add a new feature"), this is a request to discuss, plan, or get a proposal — NOT to start implementation. Use language like:
+- "Should I proceed with X?"
+- "Do you want me to commit these changes?"
+- "Shall I create a PR now?"
+
+**Never commit or create PRs on the user's behalf without explicit instruction.**
+If in doubt, ask. Do not assume implicit consent from context or prior conversation.
+
 ## OpenSpec Workflow
 
 WebComPy uses OpenSpec for spec-driven development. Specs define **what the framework promises to users** (developer-facing behavior), not internal implementation details.
+
+**IMPORTANT — Agent Guidance**: Do NOT advance through OpenSpec steps automatically. Before creating a proposal, applying changes, or archiving, you MUST ask the user for explicit confirmation. Use language like "Ready to create a proposal?" or "Shall I start implementation?" rather than proceeding unilaterally.
 
 ### Workflow
 
