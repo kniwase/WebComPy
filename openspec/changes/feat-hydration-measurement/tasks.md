@@ -1,12 +1,12 @@
 # Tasks: Hydration Performance Measurement
 
-## Task 1: Add profiling infrastructure to AppConfig and WebComPyApp
+- [x] **Task 1: Add profiling infrastructure to AppConfig and WebComPyApp**
 
 **Estimated time: ~1 hour**
 
 ### Steps
 
-1. Add `profile: bool = False` field to `AppConfig` dataclass in `webcompy/app/__init__.py`.
+1. Add `profile: bool = False` field to `AppConfig` dataclass in `webcompy/app/_config.py`.
 2. Update `WebComPyApp.__init__()` signature to accept `profile: bool = False`.
 3. Add `self._profile: bool = profile` and `self._profile_data: dict[str, float] = {}`.
 4. Implement `WebComPyApp._record_phase(self, name: str) -> None` that stores `time.perf_counter()` into `_profile_data` only when `_profile` is True.
@@ -29,7 +29,7 @@
 
 ---
 
-## Task 2: Instrument render lifecycle and HTML bootstrap
+- [x] **Task 2: Instrument render lifecycle and HTML bootstrap**
 
 **Estimated time: ~1 hour**
 
@@ -37,7 +37,7 @@
 
 1. At the start of `WebComPyApp.run()`, call `self._record_phase("run_start")`.
 2. In `AppDocumentRoot._render()` (after the recursive render completes), add `self._app._record_phase("run_done")`. Since `AppDocumentRoot` holds a reference to the app via `self._app`, call through that reference.
-3. When `#webcompy-loading` is removed in `_render()`, add `self._followed_by(self._app._record_phase("loading_removed"))`. If the removal logic is not wrapped in a deferred callback, append `self._app._emit_profile_summary()` to the existing deferred-after-render queue so it runs after the DOM update.
+3. When `#webcompy-loading` is removed in `_render()`, add `self._app._record_phase("loading_removed")`. Append `self._app._emit_profile_summary()` so it runs after the DOM update.
 4. In `webcompy/cli/_html.py`, update the generated `<script type="py">` template:
    - When `profile=True`, the script starts with:
      ```python
@@ -58,17 +58,17 @@
 
 ---
 
-## Task 3: Add unit tests for profiling functionality
+- [x] **Task 3: Add unit tests for profiling functionality**
 
 **Estimated time: ~1 hour**
 
 ### Steps
 
-1. Add tests in a new test file `tests/unit/test_profiling.py`:
+1. Add tests in a new test file `tests/test_profiling.py`:
    - `test_profile_data_none_when_disabled`: create `WebComPyApp(profile=False)` and assert `app.profile_data is None`.
    - `test_record_phase_populates_data`: create `WebComPyApp(profile=True)`, call `_record_phase("a")`, wait a tiny amount, call `_record_phase("b")`, assert both keys exist and values are monotonically increasing.
    - `test_emit_profile_summary_format`: mock `time.perf_counter` with known values, call `_emit_profile_summary`, and assert the output string matches the expected format.
-2. Add integration test in `tests/unit/test_app.py` (or existing file):
+2. Add integration test in `tests/test_profiling.py` (or existing file):
    - `test_app_init_records_phases`: create `WebComPyApp(profile=True)` and assert `init_start`, `imports_done`, `init_done` are present.
 3. Update `tests/e2e/` tests: no changes needed since profile is opt-in.
 

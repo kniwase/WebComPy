@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import platform
+import time
 from typing import Any
 
 from webcompy.app._config import AppConfig
@@ -19,6 +21,8 @@ class WebComPyApp:
     _di_scope: DIScope
     _config: AppConfig
     _component_store: ComponentStore
+    _profile: bool
+    _profile_data: dict[str, float]
 
     def __init__(
         self,
@@ -26,8 +30,14 @@ class WebComPyApp:
         root_component: ComponentGenerator[None],
         router: Router | None = None,
         config: AppConfig | None = None,
+        profile: bool = False,
     ) -> None:
+        self._profile = profile
+        self._profile_data: dict[str, float] = {}
+        self._record_phase("init_start")
         self._config = config or AppConfig()
+        if self._profile and self._config.profile != profile:
+            self._config.profile = profile
         self._di_scope = DIScope()
         self._component_store = ComponentStore()
         self._di_scope.provide(_COMPONENT_STORE_KEY, self._component_store)
@@ -45,11 +55,49 @@ class WebComPyApp:
                 from webcompy.components._generator import _register_deferred_components
 
                 _register_deferred_components()
+        self._record_phase("imports_done")
         self._root = AppDocumentRoot(root_component, router, self._di_scope, app=self)
+        self._record_phase("init_done")
 
     @property
     def config(self) -> AppConfig:
         return self._config
+
+    @property
+    def profile_data(self) -> dict[str, float] | None:
+        return self._profile_data if self._profile else None
+
+    def _record_phase(self, name: str) -> None:
+        if self._profile:
+            self._profile_data[name] = time.perf_counter()
+
+    def _emit_profile_summary(self) -> None:
+        if not self._profile:
+            return
+        data = self._profile_data
+        pairs = [
+            ("pyscript_ready", "imports_done", "pyscript_ready → imports_done"),
+            ("imports_done", "init_done", "imports_done  → init_done"),
+            ("init_done", "run_start", "init_done     → run_start"),
+            ("run_start", "run_done", "run_start     → run_done"),
+            ("run_done", "loading_removed", "run_done      → loading_off"),
+        ]
+        lines = ["[WebComPy Profile]"]
+        total = 0.0
+        for start_key, end_key, label in pairs:
+            if start_key in data and end_key in data:
+                elapsed = data[end_key] - data[start_key]
+                total += elapsed
+                lines.append(f"  {label}:  {elapsed:.3f}s")
+        lines.append("  " + "─" * 33)
+        lines.append(f"  Total:                          {total:.3f}s")
+        output = "\n".join(lines)
+        if platform.system() == "Emscripten":
+            from webcompy._browser._modules import browser as _browser
+
+            _browser.console.log(output)  # type: ignore[union-attr]
+        else:
+            print(output)
 
     @property
     def di_scope(self) -> DIScope:
@@ -108,5 +156,6 @@ class WebComPyApp:
     def run(self, selector: str = "#webcompy-app") -> None:
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("app.run() can only be called in a browser environment.")
+        self._record_phase("run_start")
         self._root._selector = selector
         self._root.render()
