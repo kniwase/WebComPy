@@ -78,20 +78,21 @@ class WebComPyApp:
         data = self._profile_data
         pairs = [
             ("pyscript_ready", "imports_done", "pyscript_ready → imports_done"),
-            ("imports_done", "init_done", "imports_done  → init_done"),
-            ("init_done", "run_start", "init_done     → run_start"),
-            ("run_start", "run_done", "run_start     → run_done"),
-            ("run_done", "loading_removed", "run_done      → loading_removed"),
+            ("imports_done", "init_done", "imports_done   → init_done"),
+            ("init_done", "run_start", "init_done      → run_start"),
+            ("run_start", "run_done", "run_start      → run_done"),
+            ("run_done", "loading_removed", "run_done       → loading_removed"),
         ]
         lines = ["[WebComPy Profile]"]
         total = 0.0
+        label_width = max(len(label) for _, _, label in pairs)
         for start_key, end_key, label in pairs:
             if start_key in data and end_key in data:
                 elapsed = data[end_key] - data[start_key]
                 total += elapsed
-                lines.append(f"  {label}:  {elapsed:.3f}s")
-        lines.append("  " + "─" * 33)
-        lines.append(f"  Total:                          {total:.3f}s")
+                lines.append(f"  {label.ljust(label_width)}: {elapsed:.3f}s")
+        lines.append("  " + "─" * (label_width + 8))
+        lines.append("  Total:".ljust(label_width + 4) + f"{total:.3f}s")
         output = "\n".join(lines)
         if platform.system() == "Emscripten":
             from webcompy._browser._modules import browser as _browser
