@@ -21,6 +21,37 @@ jobs:
             echo "$unarchived"
           fi
 
+      - name: Validate change artifacts
+        run: |
+          errors=0
+          for dir in $(find openspec/changes/ -mindepth 1 -maxdepth 1 -type d ! -name archive); do
+            name=$(basename "$dir")
+            # Check: tasks.md must exist and use checkbox format
+            if [ ! -f "$dir/tasks.md" ]; then
+              echo "::error file=$name::Change '$name' is missing tasks.md"
+              errors=$((errors + 1))
+            else
+              if ! grep -q '^\- \[' "$dir/tasks.md"; then
+                echo "::error file=$name/tasks.md::Change '$name' tasks.md does not use checkbox format (- [ ] / - [x])"
+                errors=$((errors + 1))
+              fi
+            fi
+            # Check: specs directory must exist and contain at least one .md file
+            if [ -d "$dir/specs" ]; then
+              if ! find "$dir/specs" -name "*.md" -type f | grep -q .; then
+                echo "::error file=$name/specs::Change '$name' has specs/ directory but no .md files"
+                errors=$((errors + 1))
+              fi
+            else
+              echo "::error file=$name::Change '$name' is missing specs/ directory with delta specs"
+              errors=$((errors + 1))
+            fi
+          done
+          if [ "$errors" -gt 0 ]; then
+            echo "::error::$errors artifact validation error(s) found. Fix before merging."
+            exit 1
+          fi
+
   lint:
     runs-on: ubuntu-latest
     steps:
