@@ -15,7 +15,7 @@ In the browser (PyScript) environment, `app.run(selector)` SHALL mount and rende
 - **AND** a formatted profile summary SHALL be printed to the browser console after the loading indicator is removed
 - **AND** `WebComPyApp._record_phase(name)` SHALL record `time.perf_counter()` into `_profile_data` only when `_profile` is True
 - **AND** `WebComPyApp._emit_profile_summary()` SHALL format and output the profile summary — in Emscripten via `browser.console.log()`, otherwise via `print()`
-- **AND** the summary SHALL show elapsed time between consecutive phases (`pyscript_ready → imports_done`, `imports_done → init_done`, `init_done → run_start`, `run_start → run_done`, `run_done → loading_off`) plus a total
+- **AND** the summary SHALL show elapsed time between consecutive phases (`pyscript_ready → imports_done`, `imports_done → init_done`, `init_done → run_start`, `run_start → run_done`, `run_done → loading_removed`) plus a total
 
 #### Scenario: Accessing profile data
 - **WHEN** a developer accesses `app.profile_data` on a `WebComPyApp` with `profile=True`

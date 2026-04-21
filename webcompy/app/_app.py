@@ -32,12 +32,13 @@ class WebComPyApp:
         config: AppConfig | None = None,
         profile: bool = False,
     ) -> None:
+        self._config = config or AppConfig()
+        if not profile and self._config.profile:
+            profile = True
         self._profile = profile
         self._profile_data: dict[str, float] = {}
         self._record_phase("init_start")
-        self._config = config or AppConfig()
-        if self._profile and self._config.profile != profile:
-            self._config.profile = profile
+        self._config.profile = profile
         self._di_scope = DIScope()
         self._component_store = ComponentStore()
         self._di_scope.provide(_COMPONENT_STORE_KEY, self._component_store)
@@ -80,7 +81,7 @@ class WebComPyApp:
             ("imports_done", "init_done", "imports_done  → init_done"),
             ("init_done", "run_start", "init_done     → run_start"),
             ("run_start", "run_done", "run_start     → run_done"),
-            ("run_done", "loading_removed", "run_done      → loading_off"),
+            ("run_done", "loading_removed", "run_done      → loading_removed"),
         ]
         lines = ["[WebComPy Profile]"]
         total = 0.0

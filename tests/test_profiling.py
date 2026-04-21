@@ -108,3 +108,17 @@ class TestAppInitRecordsPhases:
     def test_config_profile_synced(self):
         app = _make_app(profile=True)
         assert app.config.profile is True
+
+    def test_profile_enabled_via_config(self):
+        config = AppConfig(profile=True)
+        app = _make_app(config=config)
+        assert app._profile is True
+        assert app.profile_data is not None
+
+    def test_profile_param_overrides_config(self):
+        config = AppConfig(profile=True)
+        app = _make_app(config=config)
+        assert app._profile is True
+        app_explicit = _make_app(profile=False, config=config)
+        assert app_explicit._profile is True
+        assert app_explicit.profile_data is not None
