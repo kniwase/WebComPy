@@ -179,16 +179,6 @@ class AppDocumentRoot(Component):
             store = inject(_COMPONENT_STORE_KEY)
         return " ".join(style for component in store.components.values() if (style := component.scoped_style))
 
-    def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str:
-        hidden = self._attrs.get("hidden")
-        self._attrs["hidden"] = True
-        html = super()._render_html(newline, indent, count)
-        if hidden is None:
-            del self._attrs["hidden"]
-        else:
-            self._attrs["hidden"] = hidden
-        return html
-
     # Head controllers
     def set_title(self, title: str):
         self._set_title(title)

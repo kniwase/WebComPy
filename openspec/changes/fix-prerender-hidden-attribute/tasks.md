@@ -1,6 +1,6 @@
 # Tasks: Remove hidden attribute from prerendered app root
 
-- [ ] **Task 1: Remove hidden override in AppRootComponent._render_html()**
+- [x] **Task 1: Remove hidden override in AppRootComponent._render_html()**
 
 **Estimated time: ~0.5 hours**
 
@@ -20,7 +20,7 @@
 
 ---
 
-- [ ] **Task 2: Add unit test for prerender output without hidden**
+- [x] **Task 2: Add unit test for prerender output without hidden**
 
 **Estimated time: ~0.5 hours**
 
