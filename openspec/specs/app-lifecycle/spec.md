@@ -39,6 +39,16 @@ In the browser (PyScript) environment, `app.run(selector)` SHALL mount and rende
 - **AND** pre-rendered DOM nodes SHALL be hydrated
 - **AND** the loading indicator SHALL be removed after the first render
 
+#### Scenario: Prerendered app root is visible on page load
+- **WHEN** the CLI generates HTML with prerendering enabled
+- **THEN** the `#webcompy-app` div SHALL NOT have a `hidden` attribute
+- **AND** the pre-rendered content SHALL be visible beneath the semi-transparent loading overlay
+
+#### Scenario: Non-prerendered app root is hidden on page load
+- **WHEN** the CLI generates HTML with prerendering disabled
+- **THEN** the `#webcompy-app` div SHALL have a `hidden` attribute
+- **AND** the content SHALL remain invisible until PyScript initializes
+
 #### Scenario: Running an app with custom selector
 - **WHEN** a developer calls `app.run("#my-container")` in the browser
 - **THEN** the application SHALL mount into the element matching `#my-container`
