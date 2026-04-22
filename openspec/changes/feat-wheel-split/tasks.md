@@ -1,6 +1,6 @@
 # Tasks: Wheel Split — Browser-Only Wheel, Dependency Bundling, and Browser Cache Strategy
 
-## Task 1: Implement `make_browser_webcompy_wheel()`
+- [ ] **Task 1: Implement `make_browser_webcompy_wheel()`**
 
 **Estimated time: ~1 hour**
 
@@ -25,7 +25,7 @@
 
 ---
 
-## Task 2: Update `make_webcompy_app_package()` for `bundled_deps`
+- [ ] **Task 2: Update `make_webcompy_app_package()` for `bundled_deps`**
 
 **Estimated time: ~0.5 hours**
 
@@ -33,27 +33,6 @@
 
 1. Modify `make_webcompy_app_package()` signature to accept `bundled_deps: list[tuple[str, pathlib.Path]] | None = None`.
 2. Pass `package_dirs` to `make_bundled_wheel()` including all bundled dependency directories.
-
-```python
-def make_webcompy_app_package(
-    dest: pathlib.Path,
-    package_dir: pathlib.Path,
-    app_version: str,
-    assets: dict[str, str] | None = None,
-    bundled_deps: list[tuple[str, pathlib.Path]] | None = None,
-) -> pathlib.Path:
-    package_dirs = [(package_dir.name, package_dir)]
-    if bundled_deps:
-        package_dirs.extend(bundled_deps)
-    return make_bundled_wheel(
-        name=package_dir.name,
-        package_dirs=package_dirs,
-        dest=dest,
-        version=app_version,
-        ...
-    )
-```
-
 3. Test that `bundled_deps` packages appear in `top_level.txt`.
 
 ### Acceptance Criteria
@@ -63,7 +42,7 @@ def make_webcompy_app_package(
 
 ---
 
-## Task 3: Implement `_discover_dependency_package_dirs()`
+- [ ] **Task 3: Implement `_discover_dependency_package_dirs()`**
 
 **Estimated time: ~0.5 hours**
 
@@ -74,11 +53,7 @@ def make_webcompy_app_package(
    - Try `importlib.util.find_spec(dep)`.
    - If successful and `spec.origin` exists, treat as pure-Python and add to `bundled`.
    - If `spec.origin` is None or `find_spec` fails, treat as C-extension/built-in and add to `pyodide_builtin`.
-3. Write a unit test: `test_discover_dependencies` that:
-   - Creates a fake package in a temp directory.
-   - Adds that directory to `sys.path`.
-   - Calls `_discover_dependency_package_dirs(["fake_pkg"])`.
-   - Asserts the fake package is returned as `bundled`.
+3. Write a unit test.
 
 ### Acceptance Criteria
 
@@ -88,7 +63,7 @@ def make_webcompy_app_package(
 
 ---
 
-## Task 4: Update `create_asgi_app()` to serve two wheels with cache headers
+- [ ] **Task 4: Update `create_asgi_app()` to serve two wheels with cache headers**
 
 **Estimated time: ~1 hour**
 
@@ -101,7 +76,7 @@ def make_webcompy_app_package(
    - Framework wheel: `max-age=86400, must-revalidate`
    - App wheel: `no-cache` (dev mode)
 3. Ensure `Content-Type: application/zip` is set.
-4. Write a unit test: `test_dev_server_serves_both_wheels` that starts the server and makes requests to both wheel URLs, asserting 200 and correct headers.
+4. Write a unit test.
 
 ### Acceptance Criteria
 
@@ -111,7 +86,7 @@ def make_webcompy_app_package(
 
 ---
 
-## Task 5: Update `generate_html()` to reference two wheels
+- [ ] **Task 5: Update `generate_html()` to reference two wheels**
 
 **Estimated time: ~0.5 hours**
 
@@ -121,21 +96,7 @@ def make_webcompy_app_package(
    - Receive `bundled, pyodide_builtin` from `_discover_dependency_package_dirs()`.
    - Build `py_packages` list with two wheel URLs first, then C-extension deps.
 2. In `generate_static_site()`, copy both wheels to `dist/_webcompy-app-package/` without version suffix.
-
-```python
-def generate_html(app, dev_mode, app_version, app_package_name):
-    bundled, pyodide_builtin = _discover_dependency_package_dirs(
-        app.config.dependencies
-    )
-    py_packages = [
-        f"{app.config.base_url}_webcompy-app-package/webcompy-py3-none-any.whl",
-        f"{app.config.base_url}_webcompy-app-package/{_normalize_name(app_package_name)}-py3-none-any.whl",
-        *pyodide_builtin,
-    ]
-    ...
-```
-
-3. Write a unit test: `test_generated_html_has_two_wheels` that checks the HTML string for the two wheel URLs.
+3. Write a unit test.
 
 ### Acceptance Criteria
 
@@ -145,21 +106,14 @@ def generate_html(app, dev_mode, app_version, app_package_name):
 
 ---
 
-## Task 6: Add `version` to `AppConfig` and update version handling
+- [ ] **Task 6: Add `version` to `AppConfig` and update version handling**
 
 **Estimated time: ~0.5 hours**
 
 ### Steps
 
 1. Add `version: str | None = None` to `AppConfig`.
-2. Update `generate_app_version()` to accept an optional `version` override:
-   ```python
-   def generate_app_version(config: AppConfig) -> str:
-       if config.version:
-           return config.version
-       # fallback to timestamp-based version
-       ...
-   ```
+2. Update `generate_app_version()` to accept an optional `version` override.
 3. Use the version string for wheel METADATA but NOT for wheel URL.
 
 ### Acceptance Criteria
@@ -170,7 +124,7 @@ def generate_html(app, dev_mode, app_version, app_package_name):
 
 ---
 
-## Task 7: Update unit and e2e tests
+- [ ] **Task 7: Update unit and e2e tests**
 
 **Estimated time: ~1 hour**
 
