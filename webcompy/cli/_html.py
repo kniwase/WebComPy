@@ -93,6 +93,8 @@ class _Loadscreen(_HtmlElement):
                 "align-items": "center",
                 "justify-content": "center",
                 "position": "fixed",
+                "background": "rgba(0, 0, 0, 0.5)",
+                "z-index": "9999",
             },
             ".loader": {
                 "border": "12px solid lightgray",

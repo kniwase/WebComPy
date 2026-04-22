@@ -1,6 +1,6 @@
 # Tasks: Partial Hydration — Skip Redundant DOM Operations
 
-- [ ] **Task 1: Add content-equality check to TextElement._init_node()**
+- [x] **Task 1: Add content-equality check to TextElement._init_node()**
 
 **Estimated time: ~0.5 hours**
 
@@ -36,7 +36,7 @@
 
 ---
 
-- [ ] **Task 2: Add content-equality check to Element._init_node()**
+- [x] **Task 2: Add content-equality check to Element._init_node()**
 
 **Estimated time: ~0.5 hours**
 
@@ -72,7 +72,7 @@
 
 ---
 
-- [ ] **Task 3: Add unit tests for conditional writes**
+- [x] **Task 3: Add unit tests for conditional writes**
 
 **Estimated time: ~1 hour**
 
@@ -96,7 +96,7 @@
 
 ---
 
-- [ ] **Task 4: Make loading screen semi-transparent**
+- [x] **Task 4: Make loading screen semi-transparent**
 
 **Estimated time: ~0.5 hours**
 
@@ -130,7 +130,7 @@
 
 ---
 
-- [ ] **Task 5: Validate perf improvement with profiling**
+- [x] **Task 5: Validate perf improvement with profiling**
 
 **Estimated time: ~0.5 hours**
 

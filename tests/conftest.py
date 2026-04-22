@@ -16,6 +16,8 @@ class FakeDOMNode:
         self.__children: list[FakeDOMNode] = []
         self.__webcompy_node__ = True
         self.__webcompy_prerendered_node__ = False
+        self.textContent_write_count = 0
+        self.setAttribute_count = 0
 
     @property
     def childNodes(self):
@@ -48,6 +50,7 @@ class FakeDOMNode:
     @textContent.setter
     def textContent(self, value):
         self.__textContent = value
+        self.textContent_write_count += 1
 
     def appendChild(self, child):
         self.__childNodes.append(child)
@@ -71,6 +74,7 @@ class FakeDOMNode:
 
     def setAttribute(self, name, value):
         self.__attrs[name] = value
+        self.setAttribute_count += 1
 
     def removeAttribute(self, name):
         self.__attrs.pop(name, None)
@@ -80,6 +84,9 @@ class FakeDOMNode:
 
     def getAttribute(self, name):
         return self.__attrs.get(name)
+
+    def hasAttribute(self, name):
+        return name in self.__attrs
 
     def addEventListener(self, event, handler, *args):
         self.__event_listeners.setdefault(event, []).append(handler)

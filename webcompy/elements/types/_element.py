@@ -47,23 +47,23 @@ class ElementBase(ElementWithChildren):
                 ):
                     node = existing_node
                     self._mounted = True
-                    attr_names_to_remove = set(
-                        name
-                        for name, value in self._get_processed_attrs().items()
-                        if value is None and name in tuple(node.getAttributeNames())
-                    )
-                    attr_names_to_remove.update(
-                        name for name in tuple(node.getAttributeNames()) if name not in self._get_processed_attrs()
-                    )
-                    for name in attr_names_to_remove:
-                        node.removeAttribute(name)
+                    for name, value in self._get_processed_attrs().items():
+                        if value is not None:
+                            existing_val = node.getAttribute(name)
+                            if existing_val != value:
+                                node.setAttribute(name, value)
+                        elif node.hasAttribute(name):
+                            node.removeAttribute(name)
+                    for name in tuple(node.getAttributeNames()):
+                        if name not in self._get_processed_attrs():
+                            node.removeAttribute(name)
                 else:
                     existing_node.remove()
             if not node:
                 node = cast("DOMNode", browser.document.createElement(self._tag_name))
             node.__webcompy_node__ = True
             for name, value in self._get_processed_attrs().items():
-                if value is not None:
+                if value is not None and not self._mounted:
                     node.setAttribute(name, value)
             for name, value in self._attrs.items():
                 if isinstance(value, SignalBase):

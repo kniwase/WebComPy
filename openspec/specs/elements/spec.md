@@ -98,10 +98,21 @@ When the browser encounters an existing DOM node marked as pre-rendered with a m
 - **AND** attributes SHALL be updated to match the element's current state
 - **AND** attributes whose values already match SHALL NOT be rewritten to the DOM
 
+#### Scenario: Hydrating an element with identical attributes
+- **WHEN** a prerendered element node's attribute values match the Element's current attribute state
+- **THEN** the framework SHALL NOT call `setAttribute` for matching attributes
+- **AND** attributes with value resolved to `None` in the component state SHALL still be removed via `removeAttribute` if present on the node
+
+#### Scenario: Hydrating an element with differing attributes
+- **WHEN** a prerendered element node's attribute differs from the Element's current state
+- **THEN** the framework SHALL call `setAttribute` only for the differing attributes
+- **AND** matching attributes SHALL remain untouched
+
 #### Scenario: Hydrating a server-rendered text node
 - **WHEN** the browser finds an existing `#text` node with `__webcompy_prerendered_node__ = True`
 - **THEN** the TextElement SHALL adopt that node rather than removing it and creating a new one
-- **AND** the text content SHALL be updated to match the element's current value
+- **AND** if the node's `textContent` matches the element's current value, no DOM write SHALL occur
+- **AND** if the node's `textContent` differs, it SHALL be updated to the element's current value
 - **AND** no visible flash SHALL occur during hydration
 
 #### Scenario: Hydrating a reactive text node
