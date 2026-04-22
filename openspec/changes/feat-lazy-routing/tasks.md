@@ -1,6 +1,6 @@
 # Tasks: Lazy Routing — Deferred Module Import and Route Preloading
 
-## Task 1: Implement `LazyComponentGenerator` class
+- [ ] **Task 1: Implement `LazyComponentGenerator` class**
 
 **Estimated time: ~1 hour**
 
@@ -26,7 +26,7 @@
 
 ---
 
-## Task 2: Integrate shell rendering into Router and RouterView
+- [ ] **Task 2: Integrate shell rendering into Router and RouterView**
 
 **Estimated time: ~0.5 hours**
 
@@ -39,7 +39,7 @@
        if component._shell and not component._resolved:
            return (match, lambda: component._shell(None))
    ```
-3. Ensure `SwitchElement` handles the shell component correctly (it should render the shell as a normal component).
+3. Ensure `SwitchElement` handles the shell component correctly.
 4. After lazy component resolves, `SwitchElement._refresh()` naturally re-renders with the real component.
 
 ### Acceptance Criteria
@@ -50,7 +50,7 @@
 
 ---
 
-## Task 3: Add RouterLink hover preloading
+- [ ] **Task 3: Add RouterLink hover preloading**
 
 **Estimated time: ~0.5 hours**
 
@@ -65,7 +65,7 @@
            target._preload()
    ```
 3. Pass `on_mouseenter` to `html.A({"@mouseenter": on_mouseenter, ...})`.
-4. Ensure `_get_route_generator()` is accessible from `RouterLink` context (may need to import a utility function).
+4. Ensure `_get_route_generator()` is accessible from `RouterLink` context.
 
 ### Acceptance Criteria
 
@@ -75,7 +75,7 @@
 
 ---
 
-## Task 4: Add unit tests for lazy routing
+- [ ] **Task 4: Add unit tests for lazy routing**
 
 **Estimated time: ~1 hour**
 
@@ -83,7 +83,7 @@
 
 1. Create `tests/unit/test_lazy_routing.py`:
    - `test_lazy_component_generator_is_component_generator`: Assert `isinstance(LazyComponentGenerator(...), ComponentGenerator)`.
-   - `test_lazy_resolve_imports_module`: Create a temporary module with a `ComponentGenerator`, use `lazy()` with `__file__` set to a temp file in the same directory, call `_resolve()`, assert the returned component is the one from the module.
+   - `test_lazy_resolve_imports_module`: Create a temporary module with a `ComponentGenerator`, use `lazy()` with `__file__` set to a temp file, call `_resolve()`, assert the returned component is correct.
    - `test_shell_renders_before_resolve`: Create `LazyComponentGenerator(shell=ShellComp)`, assert `__call__()` returns a shell component instance when not yet resolved.
    - `test_shell_replaced_after_resolve`: Resolve the lazy component, mock trigger a signal change on SwitchElement, assert the real component replaces the shell.
    - `test_router_link_preload_on_hover`: Mock `_get_route_generator` to return a `LazyComponentGenerator`, simulate hover, assert `_preload()` was called.
@@ -95,21 +95,13 @@
 
 ---
 
-## Task 5: Add integration test and validate docs_src app
+- [ ] **Task 5: Add integration test and validate docs_src app**
 
 **Estimated time: ~1 hour**
 
 ### Steps
 
-1. Convert `docs_src` routes to use `lazy()` for non-home pages:
-   ```python
-   from webcompy.router import lazy
-   router = Router(
-       {"path": "/", "component": HomePage},
-       {"path": "/docs", "component": lazy("docs_src.pages.docs:DocsPage", __file__)},
-       ...
-   )
-   ```
+1. Convert `docs_src` routes to use `lazy()` for non-home pages.
 2. Start dev server and verify:
    - Home page loads correctly.
    - No errors on initial load.
@@ -126,7 +118,7 @@
 
 ---
 
-## Task 6: Update SSG compatibility tests
+- [ ] **Task 6: Update SSG compatibility tests**
 
 **Estimated time: ~0.5 hours**
 

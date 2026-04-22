@@ -1,6 +1,6 @@
 # Tasks: Full Hydration — DOM-First Component Reconstruction
 
-## Task 1: Implement `_adopt_node()` on `ElementBase` and `TextElement`
+- [ ] **Task 1: Implement `_adopt_node()` on `ElementBase` and `TextElement`**
 
 **Estimated time: ~1 hour**
 
@@ -31,7 +31,7 @@
 
 ---
 
-## Task 2: Implement `_hydrate_node()` on `ElementAbstract`
+- [ ] **Task 2: Implement `_hydrate_node()` on `ElementAbstract`**
 
 **Estimated time: ~0.5 hours**
 
@@ -58,13 +58,13 @@
 
 ---
 
-## Task 3: Add `hydrate` parameter to `AppConfig` and `WebComPyApp`
+- [ ] **Task 3: Add `hydrate` parameter to `AppConfig` and `WebComPyApp`**
 
 **Estimated time: ~0.5 hours**
 
 ### Steps
 
-1. Open `webcompy/app/__init__.py`.
+1. Open `webcompy/app/_config.py`.
 2. Add `hydrate: bool = True` to `AppConfig` dataclass.
 3. Update `WebComPyApp.__init__()` to accept `hydrate: bool = True` and store `self._hydrate`.
 4. In `WebComPyApp.__init__()`, set `self._hydrate = self.config.hydrate if config else hydrate` (or equivalent logic to prefer config value).
@@ -77,13 +77,13 @@
 
 ---
 
-## Task 4: Integrate `_hydrate_node()` into `AppDocumentRoot._render()`
+- [ ] **Task 4: Integrate `_hydrate_node()` into `AppDocumentRoot._render()`**
 
 **Estimated time: ~1 hour**
 
 ### Steps
 
-1. Open `webcompy/app/__init__.py` (or wherever `AppDocumentRoot` is defined).
+1. Open `webcompy/app/_root_component.py`.
 2. In `AppDocumentRoot._render()`, add hydration mode check before the normal render loop:
    ```python
    def _render(self):
@@ -116,7 +116,7 @@
 
 ---
 
-## Task 5: Add unit and integration tests
+- [ ] **Task 5: Add unit and integration tests**
 
 **Estimated time: ~1.5 hours**
 

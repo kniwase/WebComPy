@@ -1,6 +1,6 @@
 # Tasks: Partial Hydration — Skip Redundant DOM Operations
 
-## Task 1: Add content-equality check to TextElement._init_node()
+- [ ] **Task 1: Add content-equality check to TextElement._init_node()**
 
 **Estimated time: ~0.5 hours**
 
@@ -36,7 +36,7 @@
 
 ---
 
-## Task 2: Add content-equality check to Element._init_node()
+- [ ] **Task 2: Add content-equality check to Element._init_node()**
 
 **Estimated time: ~0.5 hours**
 
@@ -72,7 +72,7 @@
 
 ---
 
-## Task 3: Add unit tests for conditional writes
+- [ ] **Task 3: Add unit tests for conditional writes**
 
 **Estimated time: ~1 hour**
 
@@ -96,7 +96,41 @@
 
 ---
 
-## Task 4: Validate perf improvement with profiling
+- [ ] **Task 4: Make loading screen semi-transparent**
+
+**Estimated time: ~0.5 hours**
+
+### Steps
+
+1. Open `webcompy/cli/_html.py`.
+2. In `_Loadscreen._style`, add a semi-transparent dark background to the `#webcompy-loading` element (via `.container` style):
+   ```python
+   ".container": {
+       "width": "100%",
+       "height": "100%",
+       "display": "flex",
+       "flex-direction": "column",
+       "align-items": "center",
+       "justify-content": "center",
+       "position": "fixed",
+       "background": "rgba(0, 0, 0, 0.5)",
+       "z-index": "9999",
+   },
+   ```
+3. Verify that the pre-rendered content is visible beneath the loading overlay.
+4. Verify that removing the loading element (after hydration) reveals the fully interactive content.
+
+### Acceptance Criteria
+
+- The loading screen has a semi-transparent dark background (`rgba(0, 0, 0, 0.5)`).
+- Pre-rendered content is visible beneath the loading overlay.
+- The loading spinner remains clearly visible on the semi-transparent background.
+- After hydration, the loading element is removed and content is fully visible as before.
+- All existing E2E tests pass (loading screen wait logic still works).
+
+---
+
+- [ ] **Task 5: Validate perf improvement with profiling**
 
 **Estimated time: ~0.5 hours**
 
@@ -122,3 +156,4 @@
 ## Specs to Update
 
 - `openspec/specs/elements/spec.md` — append "AND attributes SHALL be preserved without rewriting when values match the prerendered state" to the hydration requirement scenario.
+- `openspec/specs/cli/spec.md` — update loading screen requirement to specify semi-transparent background.
