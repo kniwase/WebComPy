@@ -313,3 +313,100 @@ class TestReactiveAttrUpdate:
         assert node.getAttribute("class") == "initial"
         value.value = "updated"
         assert node.getAttribute("class") == "updated"
+
+
+class TestPartialHydrationTextElement:
+    def test_hydrate_skips_text_write_when_content_matches(self, fake_browser_full):
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        existing_node = FakeDOMNode("#text", text_content="hello")
+        existing_node.__webcompy_prerendered_node__ = True
+        parent_node.appendChild(existing_node)
+        text_el = TextElement("hello")
+        text_el._parent = parent
+        text_el._node_idx = 0
+        text_el._init_node()
+        assert existing_node.textContent == "hello"
+        assert existing_node.textContent_write_count == 0
+
+    def test_hydrate_writes_text_when_content_differs(self, fake_browser_full):
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        existing_node = FakeDOMNode("#text", text_content="stale")
+        existing_node.__webcompy_prerendered_node__ = True
+        parent_node.appendChild(existing_node)
+        text_el = TextElement("hello")
+        text_el._parent = parent
+        text_el._node_idx = 0
+        text_el._init_node()
+        assert existing_node.textContent == "hello"
+        assert existing_node.textContent_write_count == 1
+
+    def test_hydrate_with_signal_same_value_skips_write(self, fake_browser_full):
+        from webcompy.signal import Signal
+
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        sig = Signal("hello")
+        existing_node = FakeDOMNode("#text", text_content="hello")
+        existing_node.__webcompy_prerendered_node__ = True
+        parent_node.appendChild(existing_node)
+        text_el = TextElement(sig)
+        text_el._parent = parent
+        text_el._node_idx = 0
+        text_el._init_node()
+        assert existing_node.textContent == "hello"
+        assert existing_node.textContent_write_count == 0
+
+
+class TestPartialHydrationElement:
+    def _setup_prerendered_element(self, tag, attrs, existing_attrs=None):
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        existing_node = FakeDOMNode(tag)
+        existing_node.__webcompy_prerendered_node__ = True
+        for name, value in (existing_attrs or {}).items():
+            existing_node.setAttribute(name, value)
+        parent_node.appendChild(existing_node)
+        el = Element(tag, attrs, {}, None, None)
+        el._parent = parent
+        el._node_idx = 0
+        return el, existing_node
+
+    def test_hydrate_skips_setAttribute_when_attrs_match(self, fake_browser_full):
+        el, existing_node = self._setup_prerendered_element("span", {"class": "test"}, {"class": "test"})
+        count_before = existing_node.setAttribute_count
+        el._init_node()
+        assert existing_node.getAttribute("class") == "test"
+        assert existing_node.setAttribute_count == count_before
+
+    def test_hydrate_writes_setAttribute_when_attrs_differ(self, fake_browser_full):
+        el, existing_node = self._setup_prerendered_element("span", {"class": "new"}, {"class": "old"})
+        count_before = existing_node.setAttribute_count
+        el._init_node()
+        assert existing_node.getAttribute("class") == "new"
+        assert existing_node.setAttribute_count == count_before + 1
+
+    def test_hydrate_removes_stale_attribute_when_value_is_false(self, fake_browser_full):
+        el, existing_node = self._setup_prerendered_element("span", {"class": False}, {"class": "stale"})
+        el._init_node()
+        assert existing_node.getAttribute("class") is None
+
+    def test_hydrate_removes_extra_attributes_not_in_component(self, fake_browser_full):
+        el, existing_node = self._setup_prerendered_element("span", {}, {"data-extra": "value"})
+        el._init_node()
+        assert existing_node.getAttribute("data-extra") is None
+
+    def test_new_element_unconditionally_sets_attributes(self, fake_browser_full):
+        el = _setup_element("div", {"class": "test"})
+        node = el._init_node()
+        assert node.getAttribute("class") == "test"
+        assert node.setAttribute_count >= 1
