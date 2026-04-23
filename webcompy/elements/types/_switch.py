@@ -8,7 +8,7 @@ from webcompy._browser._modules import browser
 from webcompy.components._component import end_defer_after_rendering, start_defer_after_rendering
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
-from webcompy.elements.types._dynamic import DynamicElement
+from webcompy.elements.types._dynamic import DynamicElement, _patch_children
 from webcompy.exception import WebComPyException
 from webcompy.signal._base import SignalBase
 
@@ -65,9 +65,9 @@ class SwitchElement(DynamicElement):
         if not parent_node:
             raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
         self._rendered_idx = idx
-        for _ in range(len(self._children)):
-            self._children.pop(-1)._remove_element()
-        self._children = self._generate_children(generator)
+        new_children = self._generate_children(generator)
+        old_children = self._children
+        self._children = _patch_children(old_children, new_children)
         should_defer = browser is not None and self._signal_activated
         if should_defer:
             start_defer_after_rendering()

@@ -5,6 +5,8 @@ from abc import abstractmethod
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._base import ElementWithChildren
+from webcompy.elements.types._element import ElementBase
+from webcompy.elements.types._text import TextElement
 from webcompy.signal._graph import consumer_destroy
 
 
@@ -48,6 +50,58 @@ class DynamicElement(ElementWithChildren):
 
     @abstractmethod
     def _on_set_parent(self): ...
+
+
+def _is_patchable(old: ElementAbstract, new: ElementAbstract) -> bool:
+    if isinstance(old, TextElement) and isinstance(new, TextElement):
+        return True
+    if isinstance(old, DynamicElement) or isinstance(new, DynamicElement):
+        return False
+    if isinstance(old, ElementBase) and isinstance(new, ElementBase):
+        return old._tag_name == new._tag_name
+    return False
+
+
+def _reposition_node(element: ElementAbstract, new_index: int) -> None:
+    node = element._node_cache
+    parent = node.parentNode if node else None
+    if not parent:
+        return
+    if new_index < parent.childNodes.length:
+        target = parent.childNodes[new_index]
+        if node != target:
+            parent.insertBefore(node, target)
+    else:
+        parent.appendChild(node)
+
+
+def _patch_children(
+    old_children: list[ElementAbstract],
+    new_children: list[ElementAbstract],
+) -> list[ElementAbstract]:
+    matched_old_indices: set[int] = set()
+
+    for new_idx, new_child in enumerate(new_children):
+        for old_idx, old_child in enumerate(old_children):
+            if old_idx in matched_old_indices:
+                continue
+            if _is_patchable(old_child, new_child) and old_child._node_cache is not None:
+                matched_old_indices.add(old_idx)
+                if isinstance(new_child, TextElement) and isinstance(old_child, TextElement):
+                    new_child._adopt_node(old_child._node_cache)
+                elif isinstance(new_child, ElementBase) and isinstance(old_child, ElementBase):
+                    new_child._adopt_node(old_child._node_cache)
+                    _patch_children(old_child._children, new_child._children)
+                _reposition_node(new_child, new_idx)
+                break
+
+    for old_idx, old_child in enumerate(old_children):
+        if old_idx in matched_old_indices:
+            old_child._detach_from_node()
+        else:
+            old_child._remove_element(recursive=True, remove_node=True)
+
+    return new_children
 
 
 def _position_element_nodes(

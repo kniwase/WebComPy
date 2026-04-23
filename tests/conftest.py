@@ -67,6 +67,10 @@ class FakeDOMNode:
         new_node.__parentNode = self
         old_node.__parentNode = None
 
+    @property
+    def parentNode(self):
+        return self.__parentNode
+
     def remove(self):
         if self.__parentNode and self in self.__parentNode.__childNodes:
             self.__parentNode.__childNodes.remove(self)

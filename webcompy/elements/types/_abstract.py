@@ -106,6 +106,14 @@ class ElementAbstract(SignalReceivable):
         self.__purge_signal_members__()
         del self
 
+    def _detach_from_node(self) -> None:
+        for cb in self._callback_nodes:
+            consumer_destroy(cb)
+        self._callback_nodes.clear()
+        self._node_cache = None
+        self._mounted = None
+        self.__purge_signal_members__()
+
     @property
     def _node_count(self) -> int:
         return 1
