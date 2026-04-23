@@ -133,6 +133,15 @@ Each component instance SHALL be able to set the document title and meta tags th
 - **THEN** each app SHALL have its own `HeadPropsStore` provided via DI
 - **AND** title and meta settings in one app SHALL NOT affect the other
 
+### Requirement: Component._detach_from_node() shall dispose DI scope and EffectScope when node is adopted
+When a `Component` is the root of an old branch subtree being patched, `Component._detach_from_node()` SHALL call `super()._detach_from_node()` followed by `on_before_destroy` to dispose the `EffectScope` and DI child scope. This ensures proper lifecycle cleanup even when the DOM node is adopted by a new `Component` rather than removed from the DOM.
+
+#### Scenario: Detaching a component whose node is adopted during patching
+- **WHEN** a `Component`'s DOM node is adopted by a new `Component` during `_patch_children()`
+- **THEN** `_detach_from_node()` SHALL call `super()._detach_from_node()` to release Python-side resources
+- **AND** `on_before_destroy` SHALL be invoked to dispose the `EffectScope` and DI child scope
+- **AND** the DOM node SHALL NOT be removed from the document
+
 ### Requirement: Component registration shall enforce unique names with per-app stores
 The framework SHALL maintain a per-app registry of component generators by name. If two components are registered with the same name within the same app, an error SHALL be raised. Each `WebComPyApp` SHALL own its own `ComponentStore` instance, provided into the app's DI scope. `ComponentGenerator` SHALL register into the active app's store via DI when a scope is available. When no DI scope exists (import time), registration SHALL be deferred until an app scope becomes active. No module-level `_default_component_store` global SHALL exist. Note: `ComponentGenerator.__registered` is a one-time flag; import-time components will only register into the first app's store. Subsequent apps will not inherit components defined before either app existed, unless a different registration mechanism is used or components are re-imported.
 
