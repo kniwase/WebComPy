@@ -183,6 +183,15 @@ class Component(ElementBase):
         self._property["on_before_destroy"]()
         super()._remove_element(recursive, remove_node)
 
+    def _detach_from_node(self) -> None:
+        if self._head_props is not None:
+            if self._instance_id in self._head_props.titles:
+                del self._head_props.titles[self._instance_id]
+            if self._instance_id in self._head_props.head_metas:
+                del self._head_props.head_metas[self._instance_id]
+        self._property["on_before_destroy"]()
+        super()._detach_from_node()
+
     def _get_belonging_component(self):
         return self._property["component_id"]
 

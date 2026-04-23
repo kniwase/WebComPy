@@ -17,6 +17,7 @@ from webcompy.elements.types._base import ElementWithChildren
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.exception import WebComPyException
 from webcompy.signal._base import SignalBase
+from webcompy.signal._graph import consumer_destroy
 
 
 def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent], Any]:
@@ -129,6 +130,23 @@ class ElementBase(ElementWithChildren):
         for child in children:
             if child is not None:
                 self._append_child(child)
+
+    def _detach_from_node(self) -> None:
+        node = self._node_cache
+        if node:
+            for name, handler in self._event_handlers_added.items():
+                node.removeEventListener(name, handler)
+                if browser:
+                    handler.destroy()
+            self._event_handlers_added.clear()
+        for cb in self._callback_nodes:
+            consumer_destroy(cb)
+        self._callback_nodes.clear()
+        if self._ref:
+            self._ref.__reset_node__()
+        self._node_cache = None
+        self._mounted = None
+        self.__purge_signal_members__()
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         node = self._get_node()

@@ -1,6 +1,6 @@
 # Tasks: Switch Patch — DOM Node Reuse on Structural Changes
 
-- [ ] **Task 1: Add `_adopt_node()` to `ElementBase` and `TextElement`**
+- [x] **Task 1: Add `_adopt_node()` to `ElementBase` and `TextElement`**
 
 **Estimated time: ~1.5 hours**
 
@@ -32,7 +32,7 @@
 
 ---
 
-- [ ] **Task 2: Add `_detach_from_node()` to `ElementBase` and `Component`**
+- [x] **Task 2: Add `_detach_from_node()` to `ElementBase` and `Component`**
 
 **Estimated time: ~1.5 hours**
 
@@ -61,7 +61,7 @@
 
 ---
 
-- [ ] **Task 3: Implement `_patch_children()` and `_is_patchable()`**
+- [x] **Task 3: Implement `_patch_children()` and `_is_patchable()`**
 
 **Estimated time: ~2 hours**
 
@@ -91,7 +91,7 @@
 
 ---
 
-- [ ] **Task 4: Integrate into `SwitchElement._refresh()`**
+- [x] **Task 4: Integrate into `SwitchElement._refresh()`**
 
 **Estimated time: ~1 hour**
 
@@ -113,7 +113,7 @@
 
 ---
 
-- [ ] **Task 5: Evaluate Component patching and decide on rollback**
+- [x] **Task 5: Evaluate Component patching and decide on rollback**
 
 **Estimated time: ~1 hour**
 

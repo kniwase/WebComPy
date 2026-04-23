@@ -6,7 +6,7 @@ The element system is how WebComPy represents and manipulates the user interface
 
 The system does not use virtual DOM diffing. Instead, it takes a direct approach: when a reactive value changes, the specific DOM node that depends on that value is updated in place. For dynamic content (conditional rendering and list rendering), the entire subtree is regenerated when the controlling value changes. This trades fine-grained efficiency for implementation simplicity.
 
-**What WebComPy does not yet provide:** WebComPy's `repeat` now supports key-based reconciliation and dict-based rendering for efficient DOM updates. However, conditional branches (`switch`) still completely replace their subtree rather than patching it.
+**What WebComPy does not yet provide:** WebComPy's `repeat` now supports key-based reconciliation and dict-based rendering for efficient DOM updates. Conditional branches (`switch`) reuse DOM nodes when branches share structure via patching, but complete subtree replacement still occurs when branch structures differ entirely.
 
 ## Requirements
 
@@ -152,6 +152,47 @@ When full hydration is enabled, elements SHALL use `_hydrate_node()` instead of 
 - **WHEN** `_adopt_node(node)` is called on an existing `#text` node with different content
 - **THEN** `textContent` SHALL be updated to the element's current value
 - **AND** `_node_cache` and `_mounted=True` SHALL be set
+
+### Requirement: ElementBase._detach_from_node() shall release Python-side resources
+`ElementBase._detach_from_node()` SHALL release Python-side resources (event handler proxies via `destroy()`, Signal callbacks, DomNodeRef) without removing the DOM node. It SHALL be called when an old element's DOM node is adopted by a new element.
+
+#### Scenario: Detaching from an adopted DOM node
+- **WHEN** an old element's DOM node is adopted by a new element during patching
+- **THEN** `_detach_from_node()` SHALL destroy event handler proxies, remove Signal callbacks, and clear DomNodeRef
+- **AND** the DOM node itself SHALL NOT be removed from the document
+
+### Requirement: _patch_children() and _is_patchable() shall support node reuse across conditional branches
+`_patch_children(old_children, new_children)` SHALL recursively compare old and new element lists by tag name, adopting matching DOM nodes and cleaning up unmatched old elements. Matched old elements are detached via `_detach_from_node()`; unmatched old elements are removed via `_remove_element()`.
+
+`_is_patchable(old, new)` SHALL return `True` when two elements share the same tag name (for `ElementBase`) or are both `TextElement` instances. `DynamicElement` pairs are never patchable. `Component` pairs are patchable when their root tag names match.
+
+#### Scenario: Patching children with matching tag names
+- **WHEN** `_patch_children()` compares old and new children with matching tag names
+- **THEN** matching old elements SHALL be detached via `_detach_from_node()` and their nodes adopted by new elements
+- **AND** only unadopted new children SHALL call `_render()`
+
+#### Scenario: Patching children with unmatched elements
+- **WHEN** `_patch_children()` finds old elements with no matching new element
+- **THEN** unmatched old elements SHALL be removed via `_remove_element()`
+
+#### Scenario: Checking patchability of two elements
+- **WHEN** `_is_patchable(old, new)` is called on two `ElementBase` instances with the same tag name
+- **THEN** it SHALL return `True`
+- **WHEN** `_is_patchable(old, new)` is called on a `DynamicElement` pair
+- **THEN** it SHALL return `False`
+
+### Requirement: Conditional rendering shall reuse DOM nodes when branches share structure
+When a conditional branch changes, `SwitchElement._refresh()` SHALL use `_patch_children()` to compare old and new children, adopting matching DOM nodes instead of destroying and recreating all children. All children SHALL call `_render()` to ensure lifecycle hooks fire correctly on patched components and unmounted descendants are rendered. The deferred rendering mechanism (`start_defer_after_rendering` / `end_defer_after_rendering`) SHALL be preserved.
+
+#### Scenario: Switching between branches with shared structure
+- **WHEN** a `SwitchElement` condition changes from one branch to another
+- **AND** the old and new branches share tag names at the same positions
+- **THEN** matching DOM nodes SHALL be adopted rather than destroyed and recreated
+- **AND** the deferred rendering mechanism SHALL be preserved
+
+#### Scenario: Switching between branches with different structure
+- **WHEN** a `SwitchElement` condition changes to a branch with entirely different structure
+- **THEN** old elements SHALL be removed via `_remove_element()` and new elements SHALL be created via `_render()`
 
 ### Requirement: Event handlers shall propagate user interactions to Python
 Developers SHALL be able to attach event handlers to elements using `@event_name` attribute syntax. In the browser, these handlers SHALL be properly proxied for PyScript interop and cleaned up when the element is removed.
