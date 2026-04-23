@@ -82,18 +82,37 @@ def _patch_children(
     matched_old_indices: set[int] = set()
 
     for new_idx, new_child in enumerate(new_children):
-        for old_idx, old_child in enumerate(old_children):
-            if old_idx in matched_old_indices:
-                continue
-            if _is_patchable(old_child, new_child) and old_child._node_cache is not None:
-                matched_old_indices.add(old_idx)
-                if isinstance(new_child, TextElement) and isinstance(old_child, TextElement):
-                    new_child._adopt_node(old_child._node_cache)
-                elif isinstance(new_child, ElementBase) and isinstance(old_child, ElementBase):
-                    new_child._adopt_node(old_child._node_cache)
-                    _patch_children(old_child._children, new_child._children)
-                _reposition_node(new_child, new_idx)
-                break
+        if (
+            new_idx < len(old_children)
+            and new_idx not in matched_old_indices
+            and _is_patchable(old_children[new_idx], new_child)
+            and old_children[new_idx]._node_cache is not None
+        ):
+            matched_old_indices.add(new_idx)
+            old_child = old_children[new_idx]
+            old_node = old_child._node_cache
+            assert old_node is not None
+            if isinstance(new_child, TextElement) and isinstance(old_child, TextElement):
+                new_child._adopt_node(old_node)
+            elif isinstance(new_child, ElementBase) and isinstance(old_child, ElementBase):
+                new_child._adopt_node(old_node)
+                _patch_children(old_child._children, new_child._children)
+            _reposition_node(new_child, new_idx)
+        else:
+            for old_idx, old_child in enumerate(old_children):
+                if old_idx in matched_old_indices:
+                    continue
+                if _is_patchable(old_child, new_child) and old_child._node_cache is not None:
+                    matched_old_indices.add(old_idx)
+                    old_node = old_child._node_cache
+                    assert old_node is not None
+                    if isinstance(new_child, TextElement) and isinstance(old_child, TextElement):
+                        new_child._adopt_node(old_node)
+                    elif isinstance(new_child, ElementBase) and isinstance(old_child, ElementBase):
+                        new_child._adopt_node(old_node)
+                        _patch_children(old_child._children, new_child._children)
+                    _reposition_node(new_child, new_idx)
+                    break
 
     for old_idx, old_child in enumerate(old_children):
         if old_idx in matched_old_indices:

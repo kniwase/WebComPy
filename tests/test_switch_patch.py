@@ -4,7 +4,7 @@ import pytest
 
 from tests.conftest import FakeBrowserModule, FakeDOMNode
 from webcompy.elements.types._dynamic import _is_patchable, _patch_children, _reposition_node
-from webcompy.elements.types._element import Element, ElementBase
+from webcompy.elements.types._element import Element
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._switch import SwitchElement
 from webcompy.elements.types._text import TextElement
@@ -311,6 +311,34 @@ class TestPatchChildren:
         assert new1._mounted is None
         assert new2._mounted is None
 
+    def test_patch_prefers_same_position_match(self, fake_browser_full):
+        old1 = self._make_element("div")
+        old1_node = old1._node_cache
+        old2 = self._make_element("div")
+        old2_node = old2._node_cache
+
+        new1 = self._add_parent_to(Element("div", {}, {}, None, None))
+        new2 = self._add_parent_to(Element("div", {}, {}, None, None))
+
+        _patch_children([old1, old2], [new1, new2])
+
+        assert new1._node_cache is old1_node
+        assert new2._node_cache is old2_node
+
+    def test_patch_falls_back_to_scan_when_same_position_not_patchable(self, fake_browser_full):
+        old1 = self._make_element("span")
+        old1_node = old1._node_cache
+        old2 = self._make_element("div")
+        old2_node = old2._node_cache
+
+        new1 = self._add_parent_to(Element("div", {}, {}, None, None))
+        new2 = self._add_parent_to(Element("span", {}, {}, None, None))
+
+        _patch_children([old1, old2], [new1, new2])
+
+        assert new1._node_cache is old2_node
+        assert new2._node_cache is old1_node
+
 
 class TestRepositionNode:
     def test_reposition_appends_when_index_exceeds_length(self, fake_browser_full):
@@ -424,18 +452,66 @@ class TestSwitchElementRefreshPatching:
 
 
 class TestComponentPatchingDecision:
-    def test_is_patchable_allows_component_same_tag(self, fake_browser_full):
-        from webcompy.components._component import Component
+    def test_is_patchable_allows_same_tag_components(self, fake_browser_full):
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore, define_component
+        from webcompy.di import _pending_di_parent
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.elements import html
 
-        assert issubclass(Component, ElementBase)
-        el = Element("div", {}, {}, None, None)
-        assert _is_patchable(el, el) is True
-        assert el._tag_name == el._tag_name
+        @define_component
+        def CmpA(context):
+            return html.DIV({}, "a")
 
-    def test_rollback_path_available(self, fake_browser_full):
-        from webcompy.components._component import Component
+        @define_component
+        def CmpB(context):
+            return html.DIV({}, "b")
 
-        assert issubclass(Component, ElementBase)
-        el_div = Element("div", {}, {}, None, None)
-        el_span = Element("span", {}, {}, None, None)
-        assert _is_patchable(el_div, el_span) is False
+        store = ComponentStore()
+        head_props = HeadPropsStore()
+        scope = DIScope()
+        scope.provide(_COMPONENT_STORE_KEY, store)
+        scope.provide(_HEAD_PROPS_KEY, head_props)
+        di_token = _active_di_scope.set(scope)
+        pending_token = _pending_di_parent.set(scope)
+        try:
+            c1 = CmpA(None)
+            c2 = CmpB(None)
+            assert _is_patchable(c1, c2) is True
+        finally:
+            _active_di_scope.reset(di_token)
+            _pending_di_parent.reset(pending_token)
+            scope.dispose()
+
+    def test_is_patchable_rejects_different_tag_components(self, fake_browser_full):
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore, define_component
+        from webcompy.di import _pending_di_parent
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.elements import html
+
+        @define_component
+        def CmpDiv(context):
+            return html.DIV({}, "div")
+
+        @define_component
+        def CmpSpan(context):
+            return html.SPAN({}, "span")
+
+        store = ComponentStore()
+        head_props = HeadPropsStore()
+        scope = DIScope()
+        scope.provide(_COMPONENT_STORE_KEY, store)
+        scope.provide(_HEAD_PROPS_KEY, head_props)
+        di_token = _active_di_scope.set(scope)
+        pending_token = _pending_di_parent.set(scope)
+        try:
+            c_div = CmpDiv(None)
+            c_span = CmpSpan(None)
+            assert _is_patchable(c_div, c_span) is False
+        finally:
+            _active_di_scope.reset(di_token)
+            _pending_di_parent.reset(pending_token)
+            scope.dispose()
