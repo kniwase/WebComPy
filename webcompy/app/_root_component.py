@@ -107,12 +107,8 @@ class AppDocumentRoot(Component):
                 self.__hydrated = True
                 for child in self._children:
                     child._hydrate_node()
-                for child in self._children:
-                    if not child._mounted:
-                        child._render()
-            else:
-                for child in self._children:
-                    child._render()
+            for child in self._children:
+                child._render()
             self._property["on_after_rendering"]()
             if self._app:
                 self._app._record_phase("run_done")

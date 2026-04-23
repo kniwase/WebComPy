@@ -246,10 +246,10 @@ class TestWebComPyAppHydrate:
         from webcompy.elements import html
 
         @define_component
-        def DummyRoot(context):
+        def HydrateRoot1(context):
             return html.DIV({}, "hello")
 
-        app = WebComPyApp(root_component=DummyRoot)
+        app = WebComPyApp(root_component=HydrateRoot1)
         assert app._hydrate is True
 
     def test_app_hydrate_explicit_false(self):
@@ -258,10 +258,10 @@ class TestWebComPyAppHydrate:
         from webcompy.elements import html
 
         @define_component
-        def DummyRoot(context):
+        def HydrateRoot2(context):
             return html.DIV({}, "hello")
 
-        app = WebComPyApp(root_component=DummyRoot, hydrate=False)
+        app = WebComPyApp(root_component=HydrateRoot2, hydrate=False)
         assert app._hydrate is False
 
     def test_app_hydrate_from_config(self):
@@ -270,11 +270,11 @@ class TestWebComPyAppHydrate:
         from webcompy.elements import html
 
         @define_component
-        def DummyRoot(context):
+        def HydrateRoot3(context):
             return html.DIV({}, "hello")
 
         config = AppConfig(hydrate=False)
-        app = WebComPyApp(root_component=DummyRoot, config=config)
+        app = WebComPyApp(root_component=HydrateRoot3, config=config)
         assert app._hydrate is False
 
     def test_app_hydrate_parameter_overrides_config(self):
@@ -283,9 +283,9 @@ class TestWebComPyAppHydrate:
         from webcompy.elements import html
 
         @define_component
-        def DummyRoot(context):
+        def HydrateRoot4(context):
             return html.DIV({}, "hello")
 
         config = AppConfig(hydrate=True)
-        app = WebComPyApp(root_component=DummyRoot, hydrate=False, config=config)
+        app = WebComPyApp(root_component=HydrateRoot4, hydrate=False, config=config)
         assert app._hydrate is False
