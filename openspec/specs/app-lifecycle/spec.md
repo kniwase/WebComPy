@@ -33,6 +33,15 @@ In the browser (PyScript) environment, `app.run(selector)` SHALL mount and rende
 - **THEN** the application SHALL attempt to reuse prerendered DOM nodes via `_hydrate_node()`
 - **AND** only unmatched nodes SHALL be created via `_init_node()`
 
+#### Scenario: Rendering children with hydration and matching prerendered nodes
+- **WHEN** `AppDocumentRoot._render()` is called with `_hydrate=True` and prerendered nodes exist
+- **THEN** each child SHALL use `_hydrate_node()` to adopt or create nodes
+- **AND** children with matching prerendered nodes SHALL be adopted
+
+#### Scenario: Rendering children with hydration but no prerendered nodes
+- **WHEN** `AppDocumentRoot._render()` is called with `_hydrate=True` but no prerendered nodes exist for some children
+- **THEN** unmatched children SHALL fall back to normal `_render()` for DOM creation and mounting
+
 #### Scenario: Running an app with default selector
 - **WHEN** a developer calls `app.run()` in the browser
 - **THEN** the application SHALL mount into the element with `id="webcompy-app"`

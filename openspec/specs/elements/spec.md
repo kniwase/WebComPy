@@ -89,8 +89,17 @@ When `key` is provided (overloads 2, 4, 5) or dict mode is used (overloads 1, 2)
 - **THEN** one `<li>` SHALL be rendered for each key-value pair in `my_dict`
 - **AND** dict keys SHALL be used as reconciliation identifiers for efficient DOM updates
 
-### Requirement: Pre-rendered DOM nodes shall be reused during hydration
-When the browser encounters an existing DOM node marked as pre-rendered with a matching tag name, the element SHALL reuse that node instead of creating a new one, enabling efficient hydration of server-rendered content. This requirement applies to all node types including `#text` nodes. During hydration, attribute values and text content SHALL only be written if they differ from the prerendered values to avoid redundant DOM operations.
+### Requirement: Pre-rendered DOM nodes shall be reused during hydration via adopt-and-hydrate
+When full hydration is enabled, elements SHALL use `_hydrate_node()` instead of `_init_node()` for prerendered nodes. `_hydrate_node()` SHALL check for an existing prerendered node and delegate to `_adopt_node()` if found, or fall back to `_init_node()` if not. This enables efficient hydration of server-rendered content. This requirement applies to all node types including `#text` nodes. During hydration, attribute values and text content SHALL only be written if they differ from the prerendered values to avoid redundant DOM operations.
+
+#### Scenario: Hydrating an existing prerendered element
+- **WHEN** `_hydrate_node()` is called and a prerendered node with matching tag exists
+- **THEN** `_adopt_node(node)` SHALL be called to adopt the existing DOM node
+- **AND** the framework SHALL NOT call `_mount_node()` since the node is already in the DOM
+
+#### Scenario: No prerendered node available during hydration
+- **WHEN** `_hydrate_node()` is called and no prerendered node exists
+- **THEN** the element SHALL fall back to `_init_node()` for normal DOM creation and mounting
 
 #### Scenario: Hydrating a server-rendered page
 - **WHEN** the browser finds an existing DOM node with `__webcompy_prerendered_node__ = True` and a matching tag name
@@ -120,6 +129,29 @@ When the browser encounters an existing DOM node marked as pre-rendered with a m
 - **AND** the browser finds a pre-rendered `#text` node for it
 - **THEN** the TextElement SHALL adopt the existing node and update its content to the Signal's current value
 - **AND** subsequent Signal changes SHALL update the adopted node via the existing `on_after_updating` callback
+
+### Requirement: ElementBase._adopt_node() shall adopt an existing DOM node
+`ElementBase._adopt_node(node)` SHALL adopt an existing DOM node by setting `_node_cache` and `_mounted=True`, setting `node.__webcompy_node__ = True`, removing stale attributes (present on node but not in current attrs), setting matching attributes with equality check, registering Signal callbacks for reactive attributes, attaching event handlers, and initializing `DomNodeRef` if present. It SHALL NOT call `_mount_node()`.
+
+#### Scenario: Adopting a prerendered div element
+- **WHEN** `_adopt_node(node)` is called on an existing `<div>` DOM node
+- **THEN** the element SHALL set `_node_cache` and `_mounted=True`
+- **AND** stale attributes SHALL be removed and matching attributes SHALL be set
+- **AND** Signal callbacks and event handlers SHALL be registered
+- **AND** `_mount_node()` SHALL NOT be called
+
+### Requirement: TextElement._adopt_node() shall adopt an existing text node
+`TextElement._adopt_node(node)` SHALL adopt an existing text node by setting `_node_cache` and `_mounted=True`, and conditionally updating `textContent` if it differs.
+
+#### Scenario: Adopting a prerendered text node with matching content
+- **WHEN** `_adopt_node(node)` is called on an existing `#text` node with matching content
+- **THEN** the text node SHALL be adopted without updating `textContent`
+- **AND** `_node_cache` and `_mounted=True` SHALL be set
+
+#### Scenario: Adopting a prerendered text node with differing content
+- **WHEN** `_adopt_node(node)` is called on an existing `#text` node with different content
+- **THEN** `textContent` SHALL be updated to the element's current value
+- **AND** `_node_cache` and `_mounted=True` SHALL be set
 
 ### Requirement: Event handlers shall propagate user interactions to Python
 Developers SHALL be able to attach event handlers to elements using `@event_name` attribute syntax. In the browser, these handlers SHALL be properly proxied for PyScript interop and cleaned up when the element is removed.
