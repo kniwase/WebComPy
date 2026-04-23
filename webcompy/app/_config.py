@@ -11,6 +11,7 @@ class AppConfig:
     dependencies: list[str] = field(default_factory=list)
     assets: dict[str, str] | None = None
     profile: bool = False
+    hydrate: bool = True
 
     def __post_init__(self):
         stripped = self.base_url.strip("/")

@@ -40,6 +40,15 @@ class ElementWithChildren(ElementAbstract):
             for _ in range(node.childNodes.length - self._children_length):
                 node.childNodes[-1].remove()
 
+    def _hydrate_node(self):
+        result = super()._hydrate_node()
+        for child in self._children:
+            child._hydrate_node()
+        if (node := self._get_node()) is not None:
+            for _ in range(node.childNodes.length - self._children_length):
+                node.childNodes[-1].remove()
+        return result
+
     def _get_processed_attrs(self):
         attrs = {name: self._proc_attr(value) for name, value in self._attrs.items()}
         if "webcompy-component" not in self._attrs and self._get_belonging_component():

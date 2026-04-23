@@ -21,6 +21,14 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **AND** the generated HTML SHALL include profiling bootstrap code when `profile=True`
 - **AND** `WebComPyApp.__init__()` SHALL also accept a `profile` parameter directly; when `profile` is not explicitly `True`, `config.profile` SHALL be read to determine the effective value
 
+#### Scenario: Hydrate parameter on WebComPyApp overrides AppConfig
+- **WHEN** a developer creates `WebComPyApp(..., hydrate=False, config=AppConfig(hydrate=True))`
+- **THEN** the explicit `hydrate=False` parameter SHALL take precedence over `config.hydrate`
+
+#### Scenario: Hydrate defaults from AppConfig
+- **WHEN** a developer creates `WebComPyApp(..., config=AppConfig(hydrate=True))` without an explicit `hydrate` parameter
+- **THEN** `config.hydrate` SHALL be used as the effective value
+
 #### Scenario: Configuring app version
 - **WHEN** a developer creates `AppConfig(version="1.0.0")`
 - **THEN** `version` SHALL be stored as `"1.0.0"`

@@ -13,23 +13,35 @@ class NewLine(ElementAbstract):
     def __init__(self) -> None:
         super().__init__()
 
+    def _adopt_node(self, node: DOMNode) -> None:
+        self._node_cache = node
+        self._mounted = True
+        node.__webcompy_node__ = True
+
+    def _node_matches_existing(self, existing: DOMNode) -> bool:
+        return existing.nodeName.lower() == "br"
+
     def _init_node(self) -> DOMNode:
         if browser:
-            node: DOMNode | None = None
             existing_node = self._get_existing_node()
             if existing_node:
                 if (
                     getattr(existing_node, "__webcompy_prerendered_node__", False)
                     and existing_node.nodeName.lower() == "br"
                 ):
-                    node = existing_node
-                    self._mounted = True
+                    self._adopt_node(existing_node)
+                    return existing_node
                 else:
                     existing_node.remove()
-            if not node:
-                node = cast("DOMNode", browser.document.createElement("br"))
-            node.__webcompy_node__ = True
+            node = self._create_node()
+            self._init_new_node(node)
             return node
+        else:
+            raise WebComPyException("Not in Browser environment.")
+
+    def _create_node(self) -> DOMNode:
+        if browser:
+            return cast("DOMNode", browser.document.createElement("br"))
         else:
             raise WebComPyException("Not in Browser environment.")
 
@@ -47,6 +59,17 @@ class TextElement(ElementAbstract):
         if isinstance(self._text, SignalBase):
             self._add_callback_node(self._text.on_after_updating(self._update_text))
 
+    def _adopt_node(self, node: DOMNode) -> None:
+        self._node_cache = node
+        self._mounted = True
+        node.__webcompy_node__ = True
+        current_text = self._get_text()
+        if node.textContent != current_text:
+            node.textContent = current_text
+
+    def _node_matches_existing(self, existing: DOMNode) -> bool:
+        return existing.nodeName.lower() == "#text"
+
     def _get_text(self) -> str:
         if isinstance(self._text, SignalBase):
             value = self._text.value
@@ -57,24 +80,25 @@ class TextElement(ElementAbstract):
 
     def _init_node(self) -> DOMNode:
         if browser:
-            node: DOMNode | None = None
             existing_node = self._get_existing_node()
             if existing_node:
                 if (
                     getattr(existing_node, "__webcompy_prerendered_node__", False)
                     and existing_node.nodeName.lower() == "#text"
                 ):
-                    current_text = self._get_text()
-                    if existing_node.textContent != current_text:
-                        existing_node.textContent = current_text
-                    node = existing_node
-                    self._mounted = True
+                    self._adopt_node(existing_node)
+                    return existing_node
                 else:
                     existing_node.remove()
-            if not node:
-                node = cast("DOMNode", browser.document.createTextNode(self._get_text()))
-            node.__webcompy_node__ = True
+            node = self._create_node()
+            self._init_new_node(node)
             return node
+        else:
+            raise WebComPyException("Not in Browser environment.")
+
+    def _create_node(self) -> DOMNode:
+        if browser:
+            return cast("DOMNode", browser.document.createTextNode(self._get_text()))
         else:
             raise WebComPyException("Not in Browser environment.")
 

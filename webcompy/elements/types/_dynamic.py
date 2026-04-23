@@ -27,6 +27,13 @@ class DynamicElement(ElementWithChildren):
             for child in self._children:
                 child._remove_element(True, True)
 
+    def _hydrate_node(self) -> None:
+        for child in self._children:
+            child._hydrate_node()
+        for child in self._children:
+            if not child._mounted:
+                child._render()
+
     def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str:
         return ("\n" if newline else "").join(child._render_html(newline, indent, count) for child in self._children)
 
