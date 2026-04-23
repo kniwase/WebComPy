@@ -67,36 +67,23 @@ class _Loadscreen(_HtmlElement):
             ),
             _HtmlElement(
                 "div",
-                {"class": "container"},
-                _HtmlElement(
-                    "div",
-                    {"class": "loader"},
-                ),
+                {"class": "wc-loader"},
             ),
         )
 
     @property
     def _style(self):
         return {
-            "body": {
-                "margin": "0",
-                "padding": "0",
-                "box-sizing": "border-box",
-                "width": "100vw",
-                "height": "100vh",
-            },
-            ".container": {
-                "width": "100%",
-                "height": "100%",
+            "#webcompy-loading": {
+                "position": "fixed",
+                "inset": "0",
                 "display": "flex",
-                "flex-direction": "column",
                 "align-items": "center",
                 "justify-content": "center",
-                "position": "fixed",
                 "background": "rgba(0, 0, 0, 0.5)",
                 "z-index": "9999",
             },
-            ".loader": {
+            ".wc-loader": {
                 "border": "12px solid lightgray",
                 "border-radius": "50%",
                 "border-top": "12px solid skyblue",
