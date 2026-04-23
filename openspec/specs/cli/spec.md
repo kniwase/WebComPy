@@ -105,6 +105,8 @@ Every generated HTML page SHALL include PyScript v2026.3.1 CSS and JS, a loading
 - **AND** a `<style>` tag with scoped component CSS
 - **AND** a loading screen div with `id="webcompy-loading"`
 - **AND** the loading screen overlay SHALL use a semi-transparent dark background (e.g., `rgba(0, 0, 0, 0.5)`) so that pre-rendered content remains visible beneath during hydration
+- **AND** when prerendering is enabled, the `#webcompy-app` div SHALL NOT have a `hidden` attribute
+- **AND** when prerendering is disabled, the `#webcompy-app` div SHALL have a `hidden` attribute
 - **AND** the PyScript packages list SHALL reference a single bundled wheel URL using `get_wheel_filename("myapp", version)`
 - **AND** `typing_extensions` SHALL NOT appear in the packages list
 
