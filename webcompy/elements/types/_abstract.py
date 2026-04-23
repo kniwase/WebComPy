@@ -62,6 +62,12 @@ class ElementAbstract(SignalReceivable):
     @abstractmethod
     def _init_node(self) -> DOMNode: ...
 
+    @abstractmethod
+    def _create_node(self) -> DOMNode: ...
+
+    def _init_new_node(self, node: DOMNode) -> None:
+        node.__webcompy_node__ = True
+
     def _hydrate_node(self) -> DOMNode | None:
         existing = self._get_existing_node()
         if (
@@ -74,7 +80,9 @@ class ElementAbstract(SignalReceivable):
         else:
             if existing:
                 existing.remove()
-            return self._init_node()
+            node = self._create_node()
+            self._init_new_node(node)
+            return node
 
     def _node_matches_existing(self, existing: DOMNode) -> bool:
         return True
