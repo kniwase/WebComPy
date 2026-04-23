@@ -13,6 +13,14 @@ class NewLine(ElementAbstract):
     def __init__(self) -> None:
         super().__init__()
 
+    def _adopt_node(self, node: DOMNode) -> None:
+        self._node_cache = node
+        self._mounted = True
+        node.__webcompy_node__ = True
+
+    def _node_matches_existing(self, existing: DOMNode) -> bool:
+        return existing.nodeName.lower() == "br"
+
     def _init_node(self) -> DOMNode:
         if browser:
             node: DOMNode | None = None
@@ -46,6 +54,17 @@ class TextElement(ElementAbstract):
         super().__init__()
         if isinstance(self._text, SignalBase):
             self._add_callback_node(self._text.on_after_updating(self._update_text))
+
+    def _adopt_node(self, node: DOMNode) -> None:
+        self._node_cache = node
+        self._mounted = True
+        node.__webcompy_node__ = True
+        current_text = self._get_text()
+        if node.textContent != current_text:
+            node.textContent = current_text
+
+    def _node_matches_existing(self, existing: DOMNode) -> bool:
+        return existing.nodeName.lower() == "#text"
 
     def _get_text(self) -> str:
         if isinstance(self._text, SignalBase):

@@ -54,6 +54,7 @@ class AppDocumentRoot(Component):
     _scripts: list[tuple[dict[str, str], str | None]]
     _scripts_head: list[tuple[dict[str, str], str | None]]
     __loading: bool
+    __hydrated: bool
 
     def __init__(
         self,
@@ -65,6 +66,7 @@ class AppDocumentRoot(Component):
     ) -> None:
         self._instance_id = uuid4()
         self.__loading = True
+        self.__hydrated = False
         self._router = router
         self._di_scope = di_scope
         self._selector = selector
@@ -101,8 +103,16 @@ class AppDocumentRoot(Component):
         app_token = _active_app_context.set(self._app) if self._app else None
         try:
             self._property["on_before_rendering"]()
-            for child in self._children:
-                child._render()
+            if self._app and self._app._hydrate and not self.__hydrated:
+                self.__hydrated = True
+                for child in self._children:
+                    child._hydrate_node()
+                for child in self._children:
+                    if not child._mounted:
+                        child._render()
+            else:
+                for child in self._children:
+                    child._render()
             self._property["on_after_rendering"]()
             if self._app:
                 self._app._record_phase("run_done")

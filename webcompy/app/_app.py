@@ -31,12 +31,15 @@ class WebComPyApp:
         router: Router | None = None,
         config: AppConfig | None = None,
         profile: bool = False,
+        hydrate: bool | None = None,
     ) -> None:
         self._config = config or AppConfig()
         if not profile and self._config.profile:
             profile = True
         self._profile = profile
         self._profile_data: dict[str, float] = {}
+        self._hydrate = hydrate if hydrate is not None else self._config.hydrate
+        self._config.hydrate = self._hydrate
         self._record_phase("init_start")
         self._config.profile = profile
         self._di_scope = DIScope()

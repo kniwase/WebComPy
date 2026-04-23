@@ -32,9 +32,44 @@ def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent]
         return event_handler
 
 
+_WEBCOMPY_INTERNAL_ATTRS = {"id", "webcompy-component"}
+for _i in range(100):
+    _WEBCOMPY_INTERNAL_ATTRS.add(f"webcompy-cid-{_i}")
+_WEBCOMPY_INTERNAL_ATTRS = frozenset(_WEBCOMPY_INTERNAL_ATTRS)
+
+
 class ElementBase(ElementWithChildren):
     _ref: DomNodeRef | None
     _event_handlers_added: dict[str, Any]
+
+    def _adopt_node(self, node: DOMNode) -> None:
+        self._node_cache = node
+        self._mounted = True
+        node.__webcompy_node__ = True
+        current_attrs = self._get_processed_attrs()
+        existing_attr_names = set(node.getAttributeNames())
+        for name in existing_attr_names - set(current_attrs.keys()) - _WEBCOMPY_INTERNAL_ATTRS:
+            node.removeAttribute(name)
+        for name, value in current_attrs.items():
+            if value is not None:
+                existing = node.getAttribute(name)
+                if existing != value:
+                    node.setAttribute(name, value)
+            elif node.hasAttribute(name):
+                node.removeAttribute(name)
+        for name, value in self._attrs.items():
+            if isinstance(value, SignalBase):
+                self._add_callback_node(value.on_after_updating(self._generate_attr_updater(name)))
+        self._event_handlers_added = {}
+        for name, func in self._event_handlers.items():
+            event_handler = _generate_event_handler(func)
+            node.addEventListener(name, event_handler, False)
+            self._event_handlers_added[name] = event_handler
+        if self._ref:
+            self._ref.__init_node__(node)
+
+    def _node_matches_existing(self, existing: DOMNode) -> bool:
+        return existing.nodeName.lower() == self._tag_name
 
     def _init_node(self) -> DOMNode:
         if browser:

@@ -1,6 +1,6 @@
 # Tasks: Full Hydration — DOM-First Component Reconstruction
 
-- [ ] **Task 1: Implement `_adopt_node()` on `ElementBase` and `TextElement`**
+- [x] **Task 1: Implement `_adopt_node()` on `ElementBase` and `TextElement`**
 
 **Estimated time: ~1 hour**
 
@@ -31,7 +31,7 @@
 
 ---
 
-- [ ] **Task 2: Implement `_hydrate_node()` on `ElementAbstract`**
+- [x] **Task 2: Implement `_hydrate_node()` on `ElementAbstract`**
 
 **Estimated time: ~0.5 hours**
 
@@ -58,7 +58,7 @@
 
 ---
 
-- [ ] **Task 3: Add `hydrate` parameter to `AppConfig` and `WebComPyApp`**
+- [x] **Task 3: Add `hydrate` parameter to `AppConfig` and `WebComPyApp`**
 
 **Estimated time: ~0.5 hours**
 
@@ -77,7 +77,7 @@
 
 ---
 
-- [ ] **Task 4: Integrate `_hydrate_node()` into `AppDocumentRoot._render()`**
+- [x] **Task 4: Integrate `_hydrate_node()` into `AppDocumentRoot._render()`**
 
 **Estimated time: ~1 hour**
 
@@ -116,7 +116,7 @@
 
 ---
 
-- [ ] **Task 5: Add unit and integration tests**
+- [x] **Task 5: Add unit and integration tests**
 
 **Estimated time: ~1.5 hours**
 

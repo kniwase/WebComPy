@@ -62,6 +62,28 @@ class ElementAbstract(SignalReceivable):
     @abstractmethod
     def _init_node(self) -> DOMNode: ...
 
+    def _hydrate_node(self) -> DOMNode | None:
+        existing = self._get_existing_node()
+        if (
+            existing
+            and getattr(existing, "__webcompy_prerendered_node__", False)
+            and self._node_matches_existing(existing)
+        ):
+            self._adopt_node(existing)
+            return existing
+        else:
+            if existing:
+                existing.remove()
+            return self._init_node()
+
+    def _node_matches_existing(self, existing: DOMNode) -> bool:
+        return True
+
+    def _adopt_node(self, node: DOMNode) -> None:
+        self._node_cache = node
+        self._mounted = True
+        node.__webcompy_node__ = True
+
     def _add_callback_node(self, callback_node: CallbackConsumerNode):
         self._callback_nodes.append(callback_node)
 
