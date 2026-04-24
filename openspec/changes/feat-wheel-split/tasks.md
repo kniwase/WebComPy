@@ -92,6 +92,7 @@
 - `classify_dependencies(["flask"], lock)` classifies `flask` as `bundled` (if not in lock) and resolves transitive deps.
 - C extension not in lock produces an error message.
 - `_is_pure_python_package()` returns `False` for `numpy`, `True` for `httpx`.
+- When Pyodide lock is unavailable (fallback mode), `_is_pure_python_package()` is still used to detect C extensions locally, and C-extension packages produce warnings rather than errors.
 
 ---
 
@@ -131,6 +132,7 @@
 6. Implement `save_lockfile(lockfile: Lockfile, path: pathlib.Path)`:
    - Serialize to JSON with sorted keys and indentation.
 7. Implement `generate_lockfile(dependencies, pyscript_version, pyodide_version=None)`:
+   - If `pyodide_version` is `None`, call `get_pyodide_version(pyscript_version)` to derive it.
    - Fetch Pyodide lock (or use cached).
    - Classify dependencies using `classify_dependencies()`.
    - Build `Lockfile` from classification results.

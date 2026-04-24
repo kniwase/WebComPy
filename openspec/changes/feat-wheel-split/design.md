@@ -10,7 +10,7 @@ The current single bundled wheel (framework + app) is split into:
 This allows the framework wheel to be cached independently across app updates.
 
 ### D2: Browser-only wheel excludes `cli/` directory
-The `webcompy/cli/` subtree contains server-only tools (server, generate, init, wheel builder, argparser). It is never used in the browser but adds ~size to the bundled wheel. The new `make_browser_webcompy_wheel()` excludes this directory.
+The `webcompy/cli/` subtree (including `webcompy/cli/template_data/`) contains server-only tools (server, generate, init, wheel builder, argparser). It is never used in the browser but adds ~size to the bundled wheel. The new `make_browser_webcompy_wheel()` excludes this directory by filtering out any path whose relative parts contain `"cli"`. Since `template_data` is under `cli/`, it is automatically excluded.
 
 ### D3: Dependency classification uses Pyodide lock as primary source
 Dependencies listed in `AppConfig.dependencies` are classified by consulting `pyodide-lock.json` first:
@@ -19,12 +19,14 @@ Dependencies listed in `AppConfig.dependencies` are classified by consulting `py
    - Pure Python (no `.so`/`.pyd` files) → `bundled` (included in app wheel)
    - C extension → `error` (not usable in browser, user is notified)
 
-This avoids the `importlib.util.find_spec()` heuristic alone, which misclassifies `numpy` as pure Python. The Pyodide lock file is fetched from `https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json` and cached locally at `~/.cache/webcompy/pyodide-lock-{version}.json`.
+This avoids the `importlib.util.find_spec()` heuristic alone, which misclassifies `numpy` as pure Python. The Pyodide lock file is fetched from `https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json` and cached locally. The cache directory follows XDG conventions: `$XDG_CACHE_HOME/webcompy/` (defaulting to `~/.cache/webcompy/`).
 
-The Pyodide version is derived from the PyScript version via a mapping:
+The Pyodide version is derived from the PyScript version via a hardcoded mapping:
 ```
 PYSCRIPT_TO_PYODIDE = {"2026.3.1": "0.29.3"}
 ```
+
+**Tradeoff**: This mapping requires manual updates on every PyScript/Pyodide version bump. Unknown PyScript versions raise `ValueError`, prompting the developer to update the mapping. This is acceptable because WebComPy pins the PyScript version (`PYSCRIPT_VERSION = "2026.3.1"`) and updates are infrequent and deliberate.
 
 ### D4: Transitive dependency resolution via importlib.metadata
 Packages not in the Pyodide CDN need their transitive dependencies resolved. `importlib.metadata` is used to walk `Requires-Dist` metadata recursively. Each transitive dependency is then classified using the same logic (Pyodide lock → local .so check).
@@ -185,7 +187,8 @@ def make_webcompy_app_package(
     },
     "click": {
       "version": "8.2.1",
-      "source": "transitive",
+      "source": "transitive",  // "explicit" = user-specified, "transitive" = auto-resolved
+      "is_pure_python": true   // informational; records classification result, not used during resolution,
       "is_pure_python": true
     }
   }
@@ -252,7 +255,7 @@ def generate_html(app, dev_mode, prerender, app_version, app_package_name,
 PYODIDE_LOCK_URL_TEMPLATE = (
     "https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json"
 )
-CACHE_DIR = pathlib.Path.home() / ".cache" / "webcompy"
+CACHE_DIR = pathlib.Path(os.environ.get("XDG_CACHE_HOME", pathlib.Path.home() / ".cache")) / "webcompy"
 
 PYSCRIPT_TO_PYODIDE = {
     "2026.3.1": "0.29.3",
@@ -309,6 +312,8 @@ def validate_lockfile(lockfile, dependencies) -> list[str]: ...
 | Framework | `max-age=86400, must-revalidate` | ETag by hosting | Changes infrequently |
 | App (dev) | `no-cache` | N/A | Changes frequently during development |
 | App (SSG) | N/A | ETag by hosting | Changes only on deploy |
+
+**Note on SSG hosting**: The "ETag by hosting" column assumes the hosting provider (GitHub Pages, Cloudflare Pages, etc.) supports ETag/Last-Modified headers. Some static hosting providers do not set cache headers. For those, the stable URL design means the browser will at worst re-download the wheel on each visit (same as the current timestamp-based approach), but never fail with a 404.
 
 ## Version Handling
 

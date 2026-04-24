@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: The lock file shall record dependency classification for reproducible builds
-`webcompy-lock.json` SHALL be a JSON file placed in the project root (next to `webcompy_config.py`) that records Pyodide CDN package versions, bundled package versions and sources, and the Pyodide/PyScript versions used. The lock file SHALL be version-controlled (like `uv.lock` or `poetry.lock`).
+`webcompy-lock.json` SHALL be a JSON file placed in the project root (next to `webcompy_config.py`) that records Pyodide CDN package versions, bundled package versions and sources, and the Pyodide/PyScript versions used. The lock file SHALL be version-controlled (like `uv.lock` or `poetry.lock`). The `bundled_packages` entries include an `is_pure_python` field that is informational — it records the classification result for human readability and debugging, but is not used during the resolution flow. Additional keys (e.g., `standalone_assets`) may be added by other changes.
 
 #### Scenario: Lock file schema
 - **WHEN** a lock file is generated

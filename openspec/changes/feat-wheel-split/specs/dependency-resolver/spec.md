@@ -52,7 +52,10 @@ The Pyodide lock file SHALL be fetched from `https://cdn.jsdelivr.net/pyodide/v{
 
 #### Scenario: Network failure with no cache
 - **WHEN** the CDN is unreachable and no cache exists
-- **THEN** dependencies SHALL be classified using local heuristics only (fallback to `py-config.packages` for all dependencies)
+- **THEN** all dependencies SHALL fall back to `py-config.packages` as plain package names
+- **AND** `.so`/`.pyd` detection SHALL still be performed locally for locally-installed packages
+- **AND** C-extension packages not found locally SHALL produce a warning (not an error, since Pyodide may provide them)
+- **AND** pure-Python packages not found locally SHALL also be listed in `py-config.packages`, trusting Pyodide/micropip to resolve them
 
 ### Requirement: The PyScript version shall map to a Pyodide version
 The PyScript version used in generated HTML (`PYSCRIPT_VERSION`) SHALL map to a specific Pyodide version for lock file resolution.

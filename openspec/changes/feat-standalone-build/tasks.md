@@ -20,9 +20,9 @@
 
 ---
 
-- [ ] **Task 2: Implement asset download and caching**
+- [ ] **Task 2: Implement asset download logic**
 
-**Estimated time: ~2 hours**
+**Estimated time: ~1 hour**
 
 ### Steps
 
@@ -33,20 +33,41 @@
    - Download each PyScript asset from CDN.
    - Download each Pyodide runtime asset from CDN.
    - Download each Pyodide package wheel from CDN (using lock file's `pyodide_packages` entries).
-   - Cache downloads in `~/.cache/webcompy/assets/`.
-   - Verify SHA256 hashes.
    - Copy to `dest_dir/_webcompy-assets/`.
 5. Write unit tests with mocked HTTP.
 
 ### Acceptance Criteria
 
 - All specified assets are downloaded to the target directory.
-- Cached assets are reused without network requests.
-- SHA256 hash mismatches cause errors.
+- Non-existent assets cause clear error messages.
 
 ---
 
-- [ ] **Task 3: Update `generate_html()` for standalone mode**
+- [ ] **Task 3: Implement asset caching and verification**
+
+**Estimated time: ~1 hour**
+
+### Steps
+
+1. Implement `cache_dir()` returning `~/.cache/webcompy/assets/` (XDG-aware).
+2. Implement `download_with_cache(url, cache_key, dest_dir)`:
+   - Check cache directory first. If cached, copy and return.
+   - Otherwise, download from CDN, save to cache, and copy to `dest_dir`.
+   - Cache key includes version to avoid stale assets.
+3. Implement SHA256 hash verification against `pyodide-lock.json` hashes.
+   - For Pyodide packages, use the `sha256` field from the lock.
+   - For runtime assets, verify against known hashes or skip if unavailable.
+4. Write unit tests.
+
+### Acceptance Criteria
+
+- Cached assets are reused without network requests.
+- SHA256 hash mismatches cause errors.
+- Cache follows XDG conventions.
+
+---
+
+- [ ] **Task 4: Update `generate_html()` for standalone mode**
 
 **Estimated time: ~1 hour**
 
@@ -68,7 +89,7 @@
 
 ---
 
-- [ ] **Task 4: Update `generate_static_site()` and `create_asgi_app()` for standalone**
+- [ ] **Task 5: Update `generate_static_site()` and `create_asgi_app()` for standalone**
 
 **Estimated time: ~1.5 hours**
 
@@ -83,12 +104,12 @@
 
 ### Acceptance Criteria
 
-- `webcompy generate --standalone` produces all assets in `dist/_webcompy-assets/`.
+- `webcompy generate --standalone` produces all assets in `dist/_webcomby-assets/`.
 - Dev server with `standalone=True` serves assets from `/_webcompy-assets/`.
 
 ---
 
-- [ ] **Task 5: Update lock file schema for standalone assets**
+- [ ] **Task 6: Update lock file schema for standalone assets**
 
 **Estimated time: ~0.5 hours**
 
@@ -106,18 +127,20 @@
 
 ---
 
-- [ ] **Task 6: E2E test for standalone mode**
+- [ ] **Task 7: E2E test for standalone mode**
 
 **Estimated time: ~1 hour**
 
 ### Steps
 
 1. Create E2E test that starts dev server in standalone mode.
-2. Verify all assets are served locally.
+2. Verify all asset URLs in generated HTML are local (starting with `/_webcompy-assets/`).
 3. Verify PyScript config references local URLs.
 4. Verify the application boots correctly in the browser.
+5. Intercept network requests and assert no external CDN requests are made (use Playwright's route interception to verify all requests go to localhost).
 
 ### Acceptance Criteria
 
 - Standalone mode E2E test passes.
-- No external CDN requests are made.
+- All asset URLs in rendered HTML are local paths.
+- Network request interception confirms no external CDN calls during page load.
