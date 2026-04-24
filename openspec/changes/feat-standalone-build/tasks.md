@@ -104,7 +104,7 @@
 
 ### Acceptance Criteria
 
-- `webcompy generate --standalone` produces all assets in `dist/_webcomby-assets/`.
+- `webcompy generate --standalone` produces all assets in `dist/_webcompy-assets/`.
 - Dev server with `standalone=True` serves assets from `/_webcompy-assets/`.
 
 ---

@@ -187,8 +187,7 @@ def make_webcompy_app_package(
     },
     "click": {
       "version": "8.2.1",
-      "source": "transitive",  // "explicit" = user-specified, "transitive" = auto-resolved
-      "is_pure_python": true   // informational; records classification result, not used during resolution,
+      "source": "transitive",
       "is_pure_python": true
     }
   }
