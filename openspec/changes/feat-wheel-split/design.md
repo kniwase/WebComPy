@@ -1,77 +1,125 @@
-# Design: Wheel Split — Browser-Only Wheel, Dependency Bundling, and Browser Cache Strategy
+# Design: Wheel Split — Browser-Only Wheel, Dependency Resolution, Lock File, and Browser Cache Strategy
 
 ## Design Decisions
 
 ### D1: Two separate wheels instead of one bundled wheel
 The current single bundled wheel (framework + app) is split into:
 - **WebComPy framework wheel** (browser-only, excludes `cli/`)
-- **Application wheel** (app code + bundled pure-Python dependencies)
+- **Application wheel** (app code + bundled pure-Python dependencies not in Pyodide CDN)
 
 This allows the framework wheel to be cached independently across app updates.
 
 ### D2: Browser-only wheel excludes `cli/` directory
-The `webcompy/cli/` subtree contains server-only tools (server, generate, init, wheel builder, argparser). It is never used in the browser but adds ~XXKB to the bundled wheel. The new `make_browser_webcompy_wheel()` excludes this directory.
+The `webcompy/cli/` subtree contains server-only tools (server, generate, init, wheel builder, argparser). It is never used in the browser but adds ~size to the bundled wheel. The new `make_browser_webcompy_wheel()` excludes this directory.
 
-### D3: Pure-Python dependencies are bundled into the app wheel
-Instead of listing each pure-Python dependency in `py-config.packages` (triggering separate `micropip.install()` calls), their source files are included directly in the app wheel. Only C-extension packages (numpy, matplotlib, etc.) remain in `py-config.packages` as Pyodide built-ins.
+### D3: Dependency classification uses Pyodide lock as primary source
+Dependencies listed in `AppConfig.dependencies` are classified by consulting `pyodide-lock.json` first:
+1. **In Pyodide lock** → `pyodide_cdn` (listed by name in `py-config.packages`, Pyodide CDN provides the wheel)
+2. **Not in Pyodide lock** → resolved locally:
+   - Pure Python (no `.so`/`.pyd` files) → `bundled` (included in app wheel)
+   - C extension → `error` (not usable in browser, user is notified)
 
-### D4: Stable wheel URLs enable HTTP caching
-Wheel filenames no longer include the timestamp-based version string. Instead, they use fixed URLs:
-- `/_webcompy-app-package/webcompy-py3-none-any.whl`
-- `/_webcompy-app-package/{app_name}-py3-none-any.whl`
+This avoids the `importlib.util.find_spec()` heuristic alone, which misclassifies `numpy` as pure Python. The Pyodide lock file is fetched from `https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json` and cached locally at `~/.cache/webcompy/pyodide-lock-{version}.json`.
 
-The browser caches these using `ETag`/`Last-Modified` headers (dev server sets them automatically; GitHub Pages sets them for static files).
+The Pyodide version is derived from the PyScript version via a mapping:
+```
+PYSCRIPT_TO_PYODIDE = {"2026.3.1": "0.29.3"}
+```
 
-### D5: Dev server uses `no-cache` for app wheel, `must-revalidate` for framework wheel
-- **Framework wheel** (`webcompy-*.whl`): `Cache-Control: max-age=86400, must-revalidate` — cache for 1 day, revalidate on next request.
-- **App wheel (dev mode)**: `Cache-Control: no-cache` — always revalidate (app code changes frequently in dev).
-- **App wheel (SSG/production)**: `Cache-Control: max-age=604800, immutable` — cache for 1 week (app version only changes on deploy).
+### D4: Transitive dependency resolution via importlib.metadata
+Packages not in the Pyodide CDN need their transitive dependencies resolved. `importlib.metadata` is used to walk `Requires-Dist` metadata recursively. Each transitive dependency is then classified using the same logic (Pyodide lock → local .so check).
 
-### D6: `AppConfig` version field is optional and used for wheel METADATA only
-The `version` field in `AppConfig` is an optional string. If unset, the existing `generate_app_version()` timestamp-based version is used as a fallback for wheel METADATA, but the wheel **URL path** remains stable.
+The `source` field in the lock file distinguishes user-specified (`explicit`) from auto-resolved (`transitive`) dependencies, enabling clean updates when the user removes a dependency.
+
+### D5: `webcompy-lock.json` ensures reproducibility and offline capability
+A lock file at the project root (next to `webcompy_config.py`) records:
+- Pyodide version and package versions from CDN
+- Bundled package names, versions, and sources (explicit/transitive)
+- Whether each bundled package is pure Python
+
+The lock file is version-controlled (like `uv.lock` or `poetry.lock`). It is auto-generated on `webcompy start` and `webcompy generate` if missing or stale, and can be explicitly generated/updated via `webcompy lock`.
+
+### D6: Stable wheel URLs enable HTTP caching
+Wheel URLs no longer include version suffixes:
+- Framework: `/_webcompy-app-package/webcompy-py3-none-any.whl`
+- Application: `/_webcompy-app-package/{app_name}-py3-none-any.whl`
+
+Cache headers:
+| Wheel | Dev Server | Production (SSG) | Rationale |
+|-------|-----------|-------------------|-----------|
+| Framework | `max-age=86400, must-revalidate` | ETag by hosting | Changes infrequently |
+| App (dev) | `no-cache` | N/A | Changes frequently |
+| App (SSG) | N/A | ETag by hosting | Changes on deploy |
+
+### D7: `AppConfig.version` is optional, for METADATA only
+The `version` field in `AppConfig` is an optional string. If unset, `generate_app_version()` provides a timestamp-based fallback. The version is used in wheel METADATA only, not in URLs.
+
+### D8: Standalone build mode is a future extension
+The current design supports a single-server mode where PyScript/Pyodide assets are loaded from CDN. A future `standalone` mode will serve all assets from the same origin, enabling PWA/offline support. The lock file schema includes a `standalone_assets` placeholder for this.
 
 ## Architecture
 
-### Build Pipeline (Current vs. Proposed)
+### Build Pipeline
 
 ```
-CURRENT (make_webcompy_app_package — single wheel):
-═══════════════════════════════════════════════════════════
-  webcompy/                          ─┬─
-  ├── app/                            │
-  ├── elements/                       │  bundled into one wheel
-  ├── cli/                            │  (including server-only code)
-  ├── ...                             │
-  app_package/                       ─┼─
-  ├── __init__.py                     │
-  └── ...                            ─┘
+CURRENT:
+════════════════════════════════════════════════════════════════════
+  webcompy/ + app_package/ ──→ single wheel ──→ served at timestamp URL
 
-PROPOSED (two wheels):
-═══════════════════════════════════════════════════════════
-  Wheel A: webcompy-{ver}-py3-none-any.whl
-  webcompy/                              ─┬─ browser-only
-  ├── app/                                │  (excludes cli/)
-  ├── elements/                           │
-  ├── router/                             │
-  └── ...                                ─┘
+PROPOSED:
+════════════════════════════════════════════════════════════════════
+  webcompy/ (excl. cli/)  ──→ framework wheel ──→ stable URL
+  app_package/ + bundled/  ──→ app wheel       ──→ stable URL
+  Pyodide CDN packages    ──→ py-config.packages (by name)
 
-  Wheel B: {app_name}-{ver}-py3-none-any.whl
-  {app_name}/                            ─┬─
-  ├── __init__.py                         │ app + bundled deps
-  └── ...                                ─┘
-  {dep1}/                                 ─┬─ pure-Python deps
-  └── ...                                ─┘
+  webcompy-lock.json  ──→ classification cache ──→ reproducible builds
 ```
 
-### PyScript Config (Current vs. Proposed)
+### Dependency Classification Flow
+
+```
+AppConfig.dependencies = ["flask", "numpy"]
+        │
+        ▼
+  ┌─ webcompy-lock.json exists? ─┐
+  │                               │
+  YES                             NO
+  │                               │
+  ▼                               ▼
+  Validate against             Fetch pyodide-lock.json
+  current dependencies          from CDN (with cache)
+  │                               │
+  ├─ valid ──→ use lock          ▼
+  │                          Classify each dependency:
+  └─ stale ──→ regenerate    ┌────────────────────────────┐
+                             │                            │
+                        In Pyodide lock?                 Not in lock
+                             │                            │
+                        pyodide_cdn                importlib.util.find_spec()
+                        (micropip installs         │                │
+                         from CDN)            .so/.pyd found    Pure Python
+                                                │                │
+                                             ERROR             bundled
+                                            (notify user)     (app wheel)
+                                                    │
+                                              Resolve transitive deps
+                                              via importlib.metadata
+                                              (classify each the same way)
+
+                                            ┌─── In Pyodide lock ──→ pyodide_cdn
+                                            ├─── Pure Python ──────→ bundled (transitive)
+                                            └─── C extension ──────→ ERROR
+```
+
+### PyScript Config (Current vs Proposed)
 
 ```json
 // CURRENT
 {
   "packages": [
-    "/_webcompy-app-package/myapp-25.107.43200-py3-none-any.whl",
     "numpy",
-    "matplotlib"
+    "matplotlib",
+    "/_webcompy-app-package/myapp-25.107.43200-py3-none-any.whl"
   ]
 }
 
@@ -96,16 +144,7 @@ def make_browser_webcompy_wheel(
     dest: pathlib.Path,
     version: str,
 ) -> pathlib.Path:
-    """Build a webcompy wheel excluding CLI-only modules."""
-    # Collect files, excluding webcompy/cli/ and webcompy/cli/template_data/
-    files_to_include = []
-    for root, dirs, files in os.walk(webcompy_package_dir):
-        rel = root.relative_to(webcompy_package_dir)
-        if any(part in _BROWSER_ONLY_EXCLUDE for part in rel.parts):
-            continue
-        for f in files:
-            ...
-    return _make_wheel(name="webcompy", version=version, ...)
+    pass
 ```
 
 ### `make_webcompy_app_package()` update
@@ -118,131 +157,193 @@ def make_webcompy_app_package(
     assets: dict[str, str] | None = None,
     bundled_deps: list[tuple[str, pathlib.Path]] | None = None,
 ) -> pathlib.Path:
-    package_dirs = [(package_dir.name, package_dir)]
-    if bundled_deps:
-        package_dirs.extend(bundled_deps)
-    return _make_wheel(
-        name=package_dir.name,
-        package_dirs=package_dirs,
-        dest=dest,
-        version=app_version,
-        ...
-    )
+    pass
 ```
 
-### `_discover_dependency_package_dirs()`
+### `webcompy-lock.json` Schema
 
-```python
-def _discover_dependency_package_dirs(
-    dependencies: list[str],
-) -> tuple[list[tuple[str, pathlib.Path]], list[str]]:
-    bundled = []
-    pyodide_builtin = []
-    for dep in dependencies:
-        try:
-            spec = importlib.util.find_spec(dep)
-            if spec and spec.origin:
-                pkg_dir = pathlib.Path(spec.origin).parent
-                bundled.append((dep, pkg_dir))
-            else:
-                pyodide_builtin.append(dep)
-        except (ModuleNotFoundError, ValueError):
-            pyodide_builtin.append(dep)
-    return bundled, pyodide_builtin
+```jsonc
+{
+  "version": 1,
+  "pyodide_version": "0.29.3",
+  "pyscript_version": "2026.3.1",
+  "pyodide_packages": {
+    "numpy": {
+      "version": "2.2.5",
+      "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl"
+    },
+    "httpx": {
+      "version": "0.28.1",
+      "file_name": "httpx-0.28.1-py3-none-any.whl"
+    }
+  },
+  "bundled_packages": {
+    "flask": {
+      "version": "3.1.0",
+      "source": "explicit",
+      "is_pure_python": true
+    },
+    "click": {
+      "version": "8.2.1",
+      "source": "transitive",
+      "is_pure_python": true
+    }
+  }
+}
 ```
 
 ### Dev Server Route Updates
 
-`create_asgi_app()` must build and serve both wheels:
-
 ```python
-def create_asgi_app(app=None, server_config=None):
-    # ...
-    webcompy_wheel = make_browser_webcompy_wheel(
-        get_webcompy_package_dir(), temp_path, webcompy_version
-    )
+def create_asgi_app(app, server_config=None):
+    lockfile = resolve_lockfile(app.config)
+    classified = classify_from_lockfile(lockfile)
+
+    webcompy_wheel = make_browser_webcompy_wheel(...)
     app_wheel = make_webcompy_app_package(
-        temp_path, package_dir, app_version, assets, bundled_deps
+        ...,
+        bundled_deps=[(name, path) for name, (ver, path) in classified.bundled.items()],
     )
-    
+
     app_package_files = {
-        "webcompy-py3-none-any.whl": (webcompy_wheel, "application/zip"),
-        f"{_normalize_name(app_name)}-py3-none-any.whl": (app_wheel, "application/zip"),
+        "webcompy-py3-none-any.whl": (webcompy_wheel_bytes, "application/zip"),
+        f"{_normalize_name(app_name)}-py3-none-any.whl": (app_wheel_bytes, "application/zip"),
     }
-    
-    @app.route("/_webcompy-app-package/{filename}")
-    async def serve_wheel(request):
-        ...
+
+    # Cache headers per wheel type
 ```
 
-### SSG Route Updates
-
-`generate_static_site()` must produce both wheels in the output:
+### SSG Updates
 
 ```python
-def generate_static_site(app=None, generate_config=None):
-    ...
+def generate_static_site(app, generate_config=None):
+    lockfile = resolve_lockfile(app.config)
+    classified = classify_from_lockfile(lockfile)
+
     webcompy_wheel = make_browser_webcompy_wheel(...)
     app_wheel = make_webcompy_app_package(...)
-    
+
     dist = pathlib.Path(generate_config.dist)
     pkg_dir = dist / "_webcompy-app-package"
-    shutil.copy(webcompy_wheel, pkg_dir / "webcompy-py3-none-any.whl")
-    shutil.copy(app_wheel, pkg_dir / f"{_normalize_name(app_name)}-py3-none-any.whl")
+    shutil.copy2(webcompy_wheel, pkg_dir / "webcompy-py3-none-any.whl")
+    shutil.copy2(app_wheel, pkg_dir / f"{_normalize_name(app_name)}-py3-none-any.whl")
 ```
 
 ### HTML Generation Updates
 
 ```python
-def generate_html(app, dev_mode, app_version, app_package_name):
-    bundled, pyodide_builtin = _discover_dependency_package_dirs(
-        app.config.dependencies
-    )
-    py_packages = [
+def generate_html(app, dev_mode, prerender, app_version, app_package_name,
+                  pyodide_package_names=None):
+    wheel_urls = [
         f"{app.config.base_url}_webcompy-app-package/webcompy-py3-none-any.whl",
         f"{app.config.base_url}_webcompy-app-package/{_normalize_name(app_package_name)}-py3-none-any.whl",
-        *[dep for dep in pyodide_builtin],  # C-extension deps only
     ]
-    ...
+    py_packages = [
+        *wheel_urls,
+        *(pyodide_package_names or []),
+    ]
+```
+
+## Dependency Resolution Implementation
+
+### `_pyodide_lock.py`
+
+```python
+PYODIDE_LOCK_URL_TEMPLATE = (
+    "https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json"
+)
+CACHE_DIR = pathlib.Path.home() / ".cache" / "webcompy"
+
+PYSCRIPT_TO_PYODIDE = {
+    "2026.3.1": "0.29.3",
+}
+
+def fetch_pyodide_lock(pyodide_version: str) -> dict: ...
+def get_pyodide_version(pyscript_version: str) -> str: ...
+```
+
+### `_dependency_resolver.py`
+
+```python
+@dataclass
+class ClassifiedDependency:
+    name: str
+    version: str
+    source: Literal["pyodide_cdn", "explicit", "transitive"]
+    is_pure_python: bool
+    pkg_dir: pathlib.Path | None
+
+def classify_dependencies(
+    dependencies: list[str],
+    pyodide_lock: dict,
+) -> tuple[list[ClassifiedDependency], list[str]]: ...
+
+def _resolve_transitive_deps(package_name: str) -> list[str]: ...
+def _is_pure_python_package(pkg_dir: pathlib.Path) -> bool: ...
+def _find_package_dir(package_name: str) -> pathlib.Path | None: ...
+```
+
+### `_lockfile.py`
+
+```python
+LOCKFILE_VERSION = 1
+LOCKFILE_NAME = "webcompy-lock.json"
+
+@dataclass
+class Lockfile:
+    pyodide_version: str
+    pyscript_version: str
+    pyodide_packages: dict[str, PyodidePackageEntry]
+    bundled_packages: dict[str, BundledPackageEntry]
+
+def load_lockfile(path: pathlib.Path) -> Lockfile | None: ...
+def save_lockfile(lockfile: Lockfile, path: pathlib.Path) -> None: ...
+def generate_lockfile(dependencies, pyscript_version, pyodide_version=None) -> tuple[Lockfile, list[str]]: ...
+def validate_lockfile(lockfile, dependencies) -> list[str]: ...
 ```
 
 ## Browser Cache Headers
 
 | Wheel | Dev Server Cache-Control | SSG/Production | Rationale |
 |-------|-------------------------|---------------|-----------|
-| Framework | `max-age=86400, must-revalidate` | `max-age=31536000, immutable` (via GitHub Pages ETag) | Framework changes infrequently |
-| App (dev) | `no-cache` | N/A | App code changes frequently during development |
-| App (SSG) | N/A | `max-age=604800, immutable` | App version changes only on deploy |
+| Framework | `max-age=86400, must-revalidate` | ETag by hosting | Changes infrequently |
+| App (dev) | `no-cache` | N/A | Changes frequently during development |
+| App (SSG) | N/A | ETag by hosting | Changes only on deploy |
 
 ## Version Handling
 
 - `AppConfig.version: str | None = None` (optional)
-- If `version` is set, it becomes part of the wheel's METADATA (`Name: ...`, `Version: {version}`).
-- The wheel **URL** is always stable: `...-py3-none-any.whl`.
-- `generate_app_version()` continues to return a timestamp-based string, but it is only used as the METADATA version (fallback when `AppConfig.version` is None).
-- **Cache busting:** If a full cache bust is needed (e.g., after a major framework update), the dev can append `?v={version}` to the wheel URL in the generated HTML. This is not automated but documented.
+- If `version` is set, it becomes the wheel METADATA version
+- The wheel URL is always stable (no version suffix)
+- `generate_app_version()` is the fallback when `version` is `None`
+- Version is used only in METADATA and for lock file records
 
-## Rollback Path
+## Hot Reload Fix (Incidental)
 
-If the two-wheel approach introduces issues:
-1. Set `SINGLE_WHEEL_MODE = True` in a config flag to revert to the old single-wheel bundling.
-2. The `generate_html()` function can fall back to a single wheel URL if needed.
+The current dev server builds the wheel once at startup and caches HTML in hash mode. With stable URLs, the wheel filename no longer changes between restarts, fixing the stale-URL bug in hash mode. The app wheel content changes on restart, and `Cache-Control: no-cache` ensures the browser revalidates.
 
-## Metrics Expected
+## Standalone Mode (Future Extension)
 
-| Metric | Before | After | Notes |
-|--------|--------|-------|-------|
-| Wheel download (first visit) | ~220KB + app | ~180KB + app + deps | CLI code removed from framework wheel |
-| Wheel download (repeat visit) | ~220KB + app (timestamp defeats cache) | ~0KB (framework cached) + ~app (if changed) | Stable URLs enable browser cache |
-| `micropip.install()` calls | N deps + 1 wheel | ~C-extension deps only | Pure-Python deps bundled in app wheel |
-| Total startup network time | High (no cache) | Low (framework cached) | Significant on repeat visits |
+The lock file schema includes `standalone_assets` as a placeholder. A future `feat-standalone-build` change will:
+- Download PyScript/Pyodide assets at build time
+- Serve all assets from the same origin
+- Add `GenerateConfig.standalone` flag
+- Enable PWA/ServiceWorker configuration
 
-## Dependencies
-
-- **Informed by:** `feat/hydration-measurement` — profiling validates download/install time savings.
+This is out of scope for the current change but the schema is designed to accommodate it.
 
 ## Specs to Update
 
-- `openspec/specs/wheel-builder/spec.md` — add `make_browser_webcompy_wheel()` and `bundled_deps` requirements.
-- `openspec/specs/cli/spec.md` — update "The dev server shall serve application packages" requirement to mention two wheels and cache headers; update "Generated HTML shall include PyScript bootstrapping" requirement to mention two wheel URLs.
-- `openspec/specs/app-config/spec.md` — add `AppConfig.version` field.
+- `openspec/specs/app-config/spec.md` — add `version` field requirement (already in delta)
+- `openspec/specs/cli/spec.md` — update for two-wheel serving, lock file CLI, cache headers
+- `openspec/specs/wheel-builder/spec.md` — add `make_browser_webcompy_wheel()`, `bundled_deps`
+- `openspec/specs/lockfile/spec.md` — new spec for lock file
+- `openspec/specs/dependency-resolver/spec.md` — new spec for dependency classification
+
+## Non-goals
+
+- Standalone/PWA build mode (future `feat-standalone-build`)
+- Service Worker caching strategy (future)
+- CDN hosting of wheels (same-origin only)
+- C extension package bundling (Pyodide provides these)
+- `py-config` format changes beyond `packages` list
