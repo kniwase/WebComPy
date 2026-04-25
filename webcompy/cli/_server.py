@@ -21,7 +21,13 @@ from webcompy.app._app import WebComPyApp
 from webcompy.app._config import ServerConfig
 from webcompy.cli._argparser import get_params
 from webcompy.cli._html import PYSCRIPT_VERSION, generate_html
-from webcompy.cli._lockfile import LOCKFILE_NAME, get_bundled_deps, get_pyodide_package_names, resolve_lockfile
+from webcompy.cli._lockfile import (
+    LOCKFILE_NAME,
+    get_bundled_deps,
+    get_pyodide_package_names,
+    resolve_lockfile,
+    validate_local_environment,
+)
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     discover_app,
@@ -48,6 +54,20 @@ def create_asgi_app(
         print(f"Warning: {warning}", flush=True)
     for err in lockfile_errors:
         print(f"Error: {err}", flush=True)
+
+    if lockfile is not None:
+        env_errors, env_warnings = validate_local_environment(lockfile)
+        for warning in env_warnings:
+            print(f"Warning: {warning}", flush=True)
+        for err in env_errors:
+            print(f"Error: {err}", flush=True)
+        lockfile_errors.extend(env_errors)
+
+    if lockfile_errors:
+        import sys
+
+        print("Build failed due to lock file errors. Fix the above issues and try again.", file=sys.stderr)
+        sys.exit(1)
 
     bundled_deps = get_bundled_deps(lockfile)
     pyodide_package_names = get_pyodide_package_names(lockfile)

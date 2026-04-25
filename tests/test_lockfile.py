@@ -9,6 +9,7 @@ from webcompy.cli._lockfile import (
     get_pyodide_package_names,
     load_lockfile,
     save_lockfile,
+    validate_local_environment,
     validate_lockfile,
 )
 
@@ -217,3 +218,140 @@ class TestGetPyodidePackageNames:
     def test_none_lockfile_returns_empty(self):
         result = get_pyodide_package_names(None)
         assert result == []
+
+
+class TestValidateLocalEnvironment:
+    def test_matching_versions_no_errors(self):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            pyodide_packages={},
+            bundled_packages={
+                "webcompy": BundledPackageEntry(
+                    version=_get_actual_version("webcompy"),
+                    source="explicit",
+                    is_pure_python=True,
+                ),
+            },
+        )
+        errors, warnings = validate_local_environment(lockfile)
+        assert len(errors) == 0
+        assert len(warnings) == 0
+
+    def test_missing_package_produces_error(self):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            pyodide_packages={},
+            bundled_packages={
+                "nonexistent_package_xyz_12345": BundledPackageEntry(
+                    version="1.0.0",
+                    source="explicit",
+                    is_pure_python=True,
+                ),
+            },
+        )
+        errors, _warnings = validate_local_environment(lockfile)
+        assert len(errors) == 1
+        assert "nonexistent_package_xyz_12345" in errors[0]
+        assert "1.0.0" in errors[0]
+        assert "pip install" in errors[0]
+
+    def test_version_mismatch_produces_error(self):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            pyodide_packages={},
+            bundled_packages={
+                "webcompy": BundledPackageEntry(
+                    version="0.0.0-fake",
+                    source="explicit",
+                    is_pure_python=True,
+                ),
+            },
+        )
+        errors, _warnings = validate_local_environment(lockfile)
+        assert len(errors) == 1
+        assert "version mismatch" in errors[0]
+        assert "0.0.0-fake" in errors[0]
+        assert "pip install" in errors[0]
+
+    def test_wasm_pyodide_package_skipped(self):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            pyodide_packages={
+                "numpy": PyodidePackageEntry(
+                    version="99.99.99",
+                    file_name="numpy-wasm32.whl",
+                    is_wasm=True,
+                ),
+            },
+            bundled_packages={},
+        )
+        errors, warnings = validate_local_environment(lockfile)
+        assert len(errors) == 0
+        assert len(warnings) == 0
+
+    def test_non_wasm_pyodide_package_version_mismatch_produces_warning(self):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            pyodide_packages={
+                "webcompy": PyodidePackageEntry(
+                    version="0.0.0-fake",
+                    file_name="webcompy-py3-none-any.whl",
+                    is_wasm=False,
+                ),
+            },
+            bundled_packages={},
+        )
+        errors, warnings = validate_local_environment(lockfile)
+        assert len(errors) == 0
+        assert len(warnings) == 1
+        assert "version mismatch" in warnings[0]
+
+    def test_non_pure_python_bundled_package_skipped_for_version_check(self):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            pyodide_packages={},
+            bundled_packages={
+                "some_c_ext": BundledPackageEntry(
+                    version="1.0.0",
+                    source="explicit",
+                    is_pure_python=False,
+                ),
+            },
+        )
+        errors, warnings = validate_local_environment(lockfile)
+        assert len(errors) == 0
+        assert len(warnings) == 0
+
+    def test_multiple_issues_reported(self):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            pyodide_packages={},
+            bundled_packages={
+                "nonexistent_xyz": BundledPackageEntry(
+                    version="1.0.0",
+                    source="explicit",
+                    is_pure_python=True,
+                ),
+                "webcompy": BundledPackageEntry(
+                    version="0.0.0-fake",
+                    source="explicit",
+                    is_pure_python=True,
+                ),
+            },
+        )
+        errors, _warnings = validate_local_environment(lockfile)
+        assert len(errors) == 2
+
+
+def _get_actual_version(package_name: str) -> str:
+    from webcompy.cli._dependency_resolver import _get_package_version
+
+    v = _get_package_version(package_name)
+    return v or "0.0.0"

@@ -168,6 +168,46 @@ def validate_lockfile(
     return issues
 
 
+def validate_local_environment(
+    lockfile: Lockfile,
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    from webcompy.cli._dependency_resolver import _find_package_dir, _get_package_version
+
+    for name, entry in lockfile.bundled_packages.items():
+        if not entry.is_pure_python:
+            continue
+        pkg_dir = _find_package_dir(name)
+        if pkg_dir is None:
+            errors.append(
+                f"Package '{name}' (version {entry.version}) listed in lock file "
+                f"is not installed locally. Install it with: pip install {name}=={entry.version}"
+            )
+            continue
+        local_version = _get_package_version(name)
+        if local_version is not None and local_version != entry.version:
+            errors.append(
+                f"Package '{name}' version mismatch: lock file has {entry.version}, "
+                f"local has {local_version}. "
+                f"Install the correct version with: pip install {name}=={entry.version}"
+            )
+
+    for name, entry in lockfile.pyodide_packages.items():
+        if entry.is_wasm:
+            continue
+        local_version = _get_package_version(name)
+        if local_version is not None and local_version != entry.version:
+            warnings.append(
+                f"Package '{name}' version mismatch: lock file has {entry.version}, "
+                f"local has {local_version}. "
+                f"The local version will be used for SSR/SSG, "
+                f"while the Pyodide CDN version will be used in the browser."
+            )
+
+    return errors, warnings
+
+
 def get_bundled_deps(
     lockfile: Lockfile | None,
 ) -> list[tuple[str, pathlib.Path]]:
