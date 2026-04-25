@@ -166,7 +166,7 @@
 ### Acceptance Criteria
 
 - `make_webcompy_app_package()` produces a wheel containing `webcompy/app/`, `webcompy/elements/`, etc.
-- The wheel does NOT contain `webcomby/cli/` or any files under `webcompy/cli/`.
+- The wheel does NOT contain `webcompy/cli/` or any files under `webcompy/cli/`.
 - `top_level.txt` lists `webcompy` and the app name (no `webcompy.cli`).
 - `make_webcompy_app_package(..., bundled_deps=[("click", path)])` produces a wheel containing the `click/` directory.
 - `top_level.txt` lists `webcompy`, the app name, and `click`.

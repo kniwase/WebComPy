@@ -2,11 +2,10 @@
 
 **NOTE: Tasks are preliminary and will be revised based on implementation experience from prerequisite changes (`feat-deps-local-serving`, `feat-wasm-local-serving`, `feat-pyscript-local-serving`). Do not begin implementation until prerequisites are complete.**
 
-- [ ] **Task 1: Add `standalone` flag to `ServerConfig` and `GenerateConfig`**
-  - Add `standalone: bool = False` to both `ServerConfig` and `GenerateConfig`.
-  - Add `--standalone` CLI flag to `webcompy start` and `webcompy generate`.
-  - When `standalone=True`, set `deps_serving="local-cdn"`, `wasm_serving="local"`, and enable runtime local serving.
-  - Individual config options take precedence over `standalone` defaults.
+- [ ] **Task 1: Add `standalone` flag to `AppConfig`**
+  - Add `standalone: bool = False` to `AppConfig`.
+  - Add `--standalone` CLI flag to `webcompy start` and `webcompy generate`. When set, it populates equivalent `AppConfig` settings and triggers all local-serving downloads.
+  - When `standalone=True`, the default values of `deps_serving`, `wasm_serving`, and runtime serving are all set to their local modes. Individual config options already set on `AppConfig` take precedence over this default.
   - Write unit tests.
 
 - [ ] **Task 2: Orchestrate asset downloads**

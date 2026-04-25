@@ -2,10 +2,9 @@
 
 ## ADDED Requirements
 
-### Requirement: GenerateConfig and ServerConfig shall include a standalone flag
-`GenerateConfig` and `ServerConfig` SHALL include `standalone: bool = False`. When `True`, all PyScript and Pyodide assets are served from the same origin instead of external CDN.
+### Requirement: GenerateConfig and ServerConfig shall include runtime_serving field
+`GenerateConfig` and `ServerConfig` SHALL include a `runtime_serving: Literal["cdn", "local"] = "cdn"` field. When `"local"`, PyScript and Pyodide runtime assets are downloaded at build time and served from the same origin instead of external CDN.
 
-#### Scenario: Enabling standalone mode
-- **WHEN** a developer creates `GenerateConfig(standalone=True)` or `ServerConfig(standalone=True)`
-- **THEN** the `standalone` flag SHALL be stored as `True`
-- **AND** the CLI SHALL download and serve all assets locally
+#### Scenario: Enabling runtime local serving in config
+- **WHEN** a developer creates `GenerateConfig(runtime_serving="local")` or `ServerConfig(runtime_serving="local")`
+- **THEN** all runtime assets SHALL be downloaded and served locally

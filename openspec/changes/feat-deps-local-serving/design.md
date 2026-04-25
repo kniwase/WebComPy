@@ -33,14 +33,14 @@ This change initially implements bundled mode only.
 
 ```
 DEFAULT (feat-dependency-bundling):
-  純Py ──────── バンドル(ローカルインストール前提)
-  推移依存 ──── importlib.metadata + Pyodide lock depends(補助)
-  制約: ローカル未インストールの推移依存は解決不可
+  Pure-Py ──────── Bundled (local install required)
+  Transitive deps ──── importlib.metadata + Pyodide lock depends (auxiliary)
+  Limitation: Transitive deps not installed locally cannot be resolved
 
 LOCAL-CDN (feat-deps-local-serving):
-  純Py ──────── Pyodide CDNからDL → バンドルに抽出
-  推移依存 ──── Pyodide lock depends(主) + importlib.metadata(フォールバック)
-  利点: ビルド環境非依存、完全な推移依存解決
+  Pure-Py ──────── Downloaded from Pyodide CDN → Extracted into bundle
+  Transitive deps ──── Pyodide lock depends (primary) + importlib.metadata (fallback)
+  Benefit: Build-environment independent, complete transitive resolution
 ```
 
 ## Specs Affected

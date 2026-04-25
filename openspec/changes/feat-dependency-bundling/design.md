@@ -117,39 +117,7 @@ AppConfig.dependencies = ["flask", "numpy"]
 
                                                ┌─── is_wasm in lock ──→ pyodide_cdn (CDN)
                                                ├─── is_pure_python ──→ bundled (transitive)
-                                               └─── C extension ──────→ ERROR
-```
-AppConfig.dependencies = ["flask", "numpy"]
-        │
-        ▼
-  ┌─ webcompy-lock.json exists? ─┐
-  │                               │
-  YES                             NO
-  │                               │
-  ▼                               ▼
-  Validate against             Fetch pyodide-lock.json
-  current dependencies          from CDN (with cache)
-  │                               │
-  ├─ valid ──→ use lock          ▼
-  │                          Classify each dependency:
-  └─ stale ──→ regenerate    ┌────────────────────────────┐
-                             │                            │
-                        In Pyodide lock?                 Not in lock
-                             │                            │
-                        pyodide_cdn                importlib.util.find_spec()
-                        (micropip installs         │                │
-                         from CDN)            .so/.pyd found    Pure Python
-                                                │                │
-                                             ERROR             bundled
-                                            (notify user)     (app wheel)
-                                                    │
-                                              Resolve transitive deps
-                                              via importlib.metadata
-                                              (classify each the same way)
-
-                                            ┌─── In Pyodide lock ──→ pyodide_cdn
-                                            ├─── Pure Python ──────→ bundled (transitive)
-                                            └─── C extension ──────→ ERROR
+                                                └─── C extension ──────→ ERROR
 ```
 
 ### PyScript Config (Current vs Proposed)

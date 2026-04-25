@@ -30,15 +30,15 @@ Download pure-Python dependency wheels from the Pyodide CDN at build time and se
 
 ```
 Level 1: feat-dependency-bundling (prerequisite)
-  純Py ──────── バンドル(ローカルインストール前提)
+  Pure-Py ──────── Bundled (local install required)
   WASM ──────── CDN
   PyScript ────── CDN
 
 Level 3: feat-deps-local-serving (this change)
-  純Py ──────── 同一オリジン配信(Pydide CDNからDL)
-                  バンドル OR 個別ホイール選択可能
-  WASM ──────── CDN (変更なし)
-  PyScript ────── CDN (変更なし)
+  Pure-Py ──────── Same-origin delivery (downloaded from Pyodide CDN)
+                   Bundled or detached wheels
+  WASM ──────── CDN (unchanged)
+  PyScript ────── CDN (unchanged)
 ```
 
 ## Design

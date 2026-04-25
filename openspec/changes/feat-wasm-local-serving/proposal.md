@@ -32,14 +32,14 @@ None (new capability).
 
 ```
 Level 1: feat-dependency-bundling (prerequisite)
-  WASM ────── CDN (packages名で読み込み)
-  純Py ────── バンドル(ローカルインストール前提)
+  WASM ────── CDN (loaded by package name)
+  Pure-Py ────── Bundled (local install required)
   PyScript ── CDN
 
 Level 4: feat-wasm-local-serving (this change)
-  WASM ────── 同一オリジン配信(Pydide CDNからDL)
-  純Py ────── (feat-deps-local-servingに依存)
-  PyScript ── CDN (変更なし)
+  WASM ────── Same-origin serving (downloaded from Pyodide CDN)
+  Pure-Py ────── (depends on feat-deps-local-serving)
+  PyScript ── CDN (unchanged)
 ```
 
 ## Design

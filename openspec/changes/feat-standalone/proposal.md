@@ -33,21 +33,20 @@ None (new capability).
 ```
 Level 1: feat-dependency-bundling (prerequisite)
   WASM ─────── CDN
-  純Py ─────── バンドル(ローカルインストール前提)
+  Pure-Py ─────── Bundled (local install required)
   PyScript ─── CDN
 
 Level 3: feat-deps-local-serving
-  純Py ─────── Pyodide CDNからDL → バンドル
+  Pure-Py ─────── Downloaded from Pyodide CDN → bundled
 
 Level 4: feat-wasm-local-serving
-  WASM ─────── Pyodide CDNからDL → 同一オリジン配信
+  WASM ─────── Downloaded from Pyodide CDN → same-origin serving
 
 Level 5: feat-pyscript-local-serving
-  PyScript ─── CDNからDL → 同一オリジン配信
+  PyScript/Pyodide ─ Downloaded from CDN → same-origin serving
 
 Level 6: feat-standalone (this change)
-  全てを同一オリジン配信 → 完全オフライン動作 ★
-  standalone=True = deps_local=True + wasm_local=True + runtime_local=True
+  Everything served from same origin → complete offline operation ★
 ```
 
 ## Design
