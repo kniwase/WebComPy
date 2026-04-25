@@ -31,6 +31,13 @@ Dependency classification SHALL first consult the Pyodide lock file (`pyodide-lo
 - **THEN** an error SHALL be reported indicating the package is a C extension not available in Pyodide
 - **AND** the build SHALL fail with a descriptive message
 
+#### Scenario: Fallback classification when Pyodide lock is unavailable
+- **WHEN** the Pyodide lock cannot be fetched (network failure, no cache)
+- **AND** a dependency is not found locally
+- **THEN** the dependency SHALL be classified with `source="fallback_cdn"`
+- **AND** `fallback_cdn` packages SHALL appear in `py-config.packages` for micropip to resolve
+- **AND** a warning SHALL be reported indicating the package could not be verified
+
 ### Requirement: Transitive dependencies shall be resolved recursively
 Transitive dependencies SHALL be resolved for all packages. For packages not in the Pyodide CDN, `importlib.metadata` is used to walk locally-installed package metadata. For pure-Python packages in the Pyodide CDN, the Pyodide lock `depends` field is used as a hint to discover transitive dependencies within the CDN, falling back to local `importlib.metadata` for dependencies not in the lock.
 
