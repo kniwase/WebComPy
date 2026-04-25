@@ -133,6 +133,10 @@ jobs:
 
             5. Refer to the results of the CI checks (lint, typecheck, generate, test, e2e) that ran before this review.
 
+            6. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs. Pay special attention to the Acceptance Criteria in tasks.md. If any requirement or acceptance criterion is not met, request changes and explain which spec/criterion is violated.
+
+            7. You MUST output `REVIEW_RESULT: changes_requested` if there are ANY issues or suggestions — no matter how minor. Only output `REVIEW_RESULT: approved` when there are ZERO issues to raise. This includes cosmetic issues, nits, naming conventions, missing tests, unclear variable names, etc. When in doubt, request changes.
+
             At the end of your review, include EXACTLY ONE of these lines:
             REVIEW_RESULT: approved
             or
