@@ -4,7 +4,7 @@ import json
 import pathlib
 from dataclasses import dataclass, field
 
-from webcompy.cli._pyodide_lock import fetch_pyodide_lock, get_pyodide_version
+from webcompy.cli._pyodide_lock import PyodideLockFetchError, fetch_pyodide_lock, get_pyodide_version
 
 LOCKFILE_VERSION = 1
 LOCKFILE_NAME = "webcompy-lock.json"
@@ -130,18 +130,18 @@ def generate_lockfile(
 
     for dep in classified:
         if dep.is_cdn_package and not dep.is_bundled:
-            file_name = ""
-            if pyodide_lock is not None:
-                pkg_info = pyodide_lock.get("packages", {}).get(dep.name, {})
-                file_name = pkg_info.get("file_name", "")
+            pkg_info = pyodide_lock.get("packages", {}).get(dep.name, {})
+            file_name = pkg_info.get("file_name", "")
             pyodide_packages[dep.name] = PyodidePackageEntry(
                 version=dep.version,
                 file_name=file_name,
                 is_wasm=dep.is_wasm,
-                source="transitive" if dep.source == "transitive" else "explicit",
+                source="transitive"
+                if dep.source in ("transitive", "pyodide_cdn") and dep.name not in dependencies
+                else "explicit",
             )
         else:
-            if dep.source in ("pyodide_cdn", "fallback_cdn"):
+            if dep.source == "pyodide_cdn":
                 lock_source = "explicit"
             elif dep.source in ("explicit", "transitive"):
                 lock_source = dep.source
@@ -253,16 +253,6 @@ def get_bundled_deps(
         pkg_dir = _find_package_dir(name)
         if pkg_dir is not None:
             result.append((name, pkg_dir))
-    for name, entry in lockfile.pyodide_packages.items():
-        if entry.is_wasm:
-            continue
-        norm = name.replace("-", "_")
-        if norm in seen:
-            continue
-        seen.add(norm)
-        pkg_dir = _find_package_dir(name)
-        if pkg_dir is not None:
-            result.append((name, pkg_dir))
     return result
 
 
@@ -274,9 +264,6 @@ def get_pyodide_package_names(
     result: list[str] = []
     for name, entry in lockfile.pyodide_packages.items():
         if entry.is_wasm:
-            result.append(name)
-    for name, entry in lockfile.bundled_packages.items():
-        if entry.source == "fallback_cdn":
             result.append(name)
     return result
 
@@ -291,6 +278,11 @@ def resolve_lockfile(
         issues = validate_lockfile(existing, dependencies)
         if not issues:
             return existing, [], []
-    lockfile, errors, warnings = generate_lockfile(dependencies, pyscript_version)
+    try:
+        lockfile, errors, warnings = generate_lockfile(dependencies, pyscript_version)
+    except PyodideLockFetchError as e:
+        if existing is not None:
+            return existing, [str(e)], []
+        return None, [str(e)], []
     save_lockfile(lockfile, lockfile_path)
     return lockfile, errors, warnings

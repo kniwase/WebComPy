@@ -187,20 +187,23 @@ class TestGetBundledDeps:
         assert "webcompy" in names
         assert "numpy" not in names
 
-    def test_includes_pure_python_pyodide_packages(self):
+    def test_pyodide_packages_pure_python_not_included_in_bundled_deps(self):
         lockfile = Lockfile(
             pyodide_version="0.29.3",
             pyscript_version="2026.3.1",
             pyodide_packages={
-                "httpx": PyodidePackageEntry(
-                    version="0.28.1", file_name="httpx-0.28.1-py3-none-any.whl", is_wasm=False
+                "cycler": PyodidePackageEntry(
+                    version="0.12.1", file_name="cycler-0.12.1-py3-none-any.whl", is_wasm=False
                 ),
             },
-            bundled_packages={},
+            bundled_packages={
+                "webcompy": BundledPackageEntry(version="0.1.0", source="explicit", is_pure_python=True),
+            },
         )
         result = get_bundled_deps(lockfile)
         names = [name for name, _ in result]
-        assert "httpx" in names
+        assert "webcompy" in names
+        assert "cycler" not in names
 
     def test_none_lockfile_returns_empty(self):
         result = get_bundled_deps(None)
@@ -208,7 +211,7 @@ class TestGetBundledDeps:
 
 
 class TestGetPyodidePackageNames:
-    def test_returns_wasm_and_fallback_cdn_names_only(self):
+    def test_returns_wasm_names_only(self):
         lockfile = Lockfile(
             pyodide_version="0.29.3",
             pyscript_version="2026.3.1",
@@ -218,14 +221,12 @@ class TestGetPyodidePackageNames:
             },
             bundled_packages={
                 "flask": BundledPackageEntry(version="3.1.0", source="explicit", is_pure_python=True),
-                "missing_pkg": BundledPackageEntry(version="0.0.0", source="fallback_cdn", is_pure_python=True),
             },
         )
         result = get_pyodide_package_names(lockfile)
         assert "numpy" in result
         assert "httpx" not in result
         assert "flask" not in result
-        assert "missing_pkg" in result
 
     def test_none_lockfile_returns_empty(self):
         result = get_pyodide_package_names(None)

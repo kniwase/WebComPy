@@ -2,6 +2,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 from webcompy.cli._pyodide_lock import (
+    PyodideLockFetchError,
     fetch_pyodide_lock,
     get_pyodide_version,
 )
@@ -52,15 +53,17 @@ class TestFetchPyodideLock:
         cached_path = tmp_path / "pyodide-lock-0.29.3.json"
         assert cached_path.exists()
 
-    def test_network_failure_no_cache_returns_none(self, tmp_path, monkeypatch):
+    def test_network_failure_no_cache_raises(self, tmp_path, monkeypatch):
         monkeypatch.setattr("webcompy.cli._pyodide_lock.CACHE_DIR", tmp_path)
 
         import urllib.error
 
         with patch("webcompy.cli._pyodide_lock.urllib.request.urlopen", side_effect=urllib.error.URLError("fail")):
-            result = fetch_pyodide_lock("0.99.0")
-
-        assert result is None
+            try:
+                fetch_pyodide_lock("0.99.0")
+                raise AssertionError("Should have raised PyodideLockFetchError")
+            except PyodideLockFetchError as e:
+                assert "0.99.0" in str(e)
 
     def test_network_failure_with_cache_returns_cached(self, tmp_path, monkeypatch):
         monkeypatch.setattr("webcompy.cli._pyodide_lock.CACHE_DIR", tmp_path)

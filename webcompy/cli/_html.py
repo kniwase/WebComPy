@@ -143,16 +143,10 @@ def generate_html(
     )
 
     app_wheel_url = f"{app.config.base_url}_webcompy-app-package/{get_stable_wheel_filename(app_package_name)}"
-    if pyodide_package_names is not None:
-        py_packages = [
-            app_wheel_url,
-            *pyodide_package_names,
-        ]
-    else:
-        py_packages = [
-            *app.config.dependencies,
-            app_wheel_url,
-        ]
+    py_packages = [
+        app_wheel_url,
+        *(pyodide_package_names or []),
+    ]
     py_config = html_module.escape(
         json.dumps({"packages": py_packages, "experimental_create_proxy": "auto"}),
         quote=True,

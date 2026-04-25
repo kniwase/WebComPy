@@ -22,31 +22,12 @@
 
 #### Scenario: Pyodide CDN pure-Python package entry
 - **WHEN** a dependency is classified as `pyodide_cdn` and is a pure-Python package (not WASM)
-- **THEN** the lock file SHALL record it in `bundled_packages` with `version` (from the Pyodide lock), `source` (`"explicit"` or `"transitive"`), and `is_pure_python=true`
-- **AND** the package SHALL NOT appear in `pyodide_packages` (it is bundled locally, not served from CDN)
+- **THEN** the lock file SHALL record it in `pyodide_packages` with `version` (from the Pyodide lock), `file_name` from the Pyodide lock, `is_wasm=false`, and `source` (`"explicit"` or `"transitive"`)
 - **AND** the package SHALL NOT appear in `py-config.packages`
-
-#### Scenario: WASM package
-- **WHEN** a Pyodide CDN package has a `file_name` containing `pyodide` or `wasm32`
-- **THEN** `is_wasm` SHALL be `true`
-- **AND** the package MUST be loaded from the Pyodide CDN (it cannot be bundled as pure Python)
-
-#### Scenario: Pure Python package in Pyodide CDN
-- **WHEN** a Pyodide CDN package has a `file_name` matching `*py3-none-any.whl`
-- **THEN** `is_wasm` SHALL be `false`
-- **AND** the package SHALL be bundled and served from the WebComPy server
-- **AND** the package SHALL NOT appear in `py-config.packages`
-
-#### Scenario: Fallback CDN package (Pyodide lock unavailable)
-- **WHEN** the Pyodide lock cannot be fetched and a dependency is not found locally
-- **THEN** the package SHALL be recorded in `bundled_packages` with `source="fallback_cdn"`
-- **AND** `is_pure_python` SHALL be `true` (assuming pure-Python when local inspection is not possible)
-- **AND** the package SHALL appear in `py-config.packages` for micropip resolution
 
 #### Scenario: Bundled package entry
-- **WHEN** a dependency is classified as `bundled` or as a pure-Python `pyodide_cdn` package
-- **THEN** the lock file SHALL record it in `bundled_packages` with `version`, `source` (`"explicit"`, `"transitive"`, or `"fallback_cdn"`), and `is_pure_python` (boolean)
-- **AND** for pure-Python Pyodide CDN packages, the version SHALL come from the Pyodide lock
+- **WHEN** a dependency is classified as `bundled`
+- **THEN** the lock file SHALL record it in `bundled_packages` with `version`, `source` (`"explicit"` or `"transitive"`), and `is_pure_python` (boolean)
 
 ### Requirement: The lock file shall be validated against current dependencies
 When loading an existing lock file, the CLI SHALL validate that `AppConfig.dependencies` matches the `explicit` entries in `bundled_packages` plus all entries in `pyodide_packages`. If dependencies have changed, the lock file SHALL be regenerated. Additionally, the CLI SHALL validate that the local environment provides the packages recorded in the lock file with matching versions and correct purity classification.

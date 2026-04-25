@@ -121,7 +121,7 @@ class TestClassifyDependencies:
         assert numpy_dep.source == "pyodide_cdn"
         assert numpy_dep.is_pure_python is False
 
-    def test_pure_python_in_pyodide_lock_classified_for_bundling(self):
+    def test_pure_python_in_pyodide_lock_classified_as_cdn(self):
         lock = {
             "packages": {
                 "httpx": {
@@ -136,6 +136,8 @@ class TestClassifyDependencies:
         assert httpx_dep.is_wasm is False
         assert httpx_dep.source == "pyodide_cdn"
         assert httpx_dep.is_pure_python is True
+        assert httpx_dep.is_bundled is False
+        assert httpx_dep.is_cdn_package is True
 
     def test_local_pure_python_classified_as_bundled(self):
         lock = {"packages": {}}
@@ -150,12 +152,6 @@ class TestClassifyDependencies:
         _classified, errors, _warnings = classify_dependencies(["nonexistent_package_xyz_12345"], lock)
         assert len(errors) > 0
         assert any("nonexistent_package_xyz_12345" in e for e in errors)
-
-    def test_none_lock_uses_local_fallback(self):
-        classified, _errors, _warnings = classify_dependencies(["webcompy"], None)
-        wc_dep = next(d for d in classified if d.name == "webcompy")
-        assert wc_dep.source == "explicit"
-        assert wc_dep.is_pure_python is True
 
     def test_wasm_transitive_deps_resolved(self):
         lock = {
@@ -172,9 +168,25 @@ class TestClassifyDependencies:
         numpy_dep = next(d for d in classified if d.name == "numpy")
         assert numpy_dep.is_wasm is True
 
-    def test_none_lock_fallback_cdn_for_missing_package(self):
-        classified, _errors, warnings = classify_dependencies(["nonexistent_xyz"], None)
-        fallback = [d for d in classified if d.name == "nonexistent_xyz" and d.source == "fallback_cdn"]
-        assert len(fallback) == 1
-        assert fallback[0].is_cdn_package is True
-        assert any("not found locally" in w for w in warnings)
+    def test_transitive_pure_python_in_pyodide_lock_classified_as_cdn(self):
+        lock = {
+            "packages": {
+                "numpy": {
+                    "version": "2.2.5",
+                    "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
+                    "depends": ["packaging"],
+                },
+                "packaging": {
+                    "version": "24.2",
+                    "file_name": "packaging-24.2-py3-none-any.whl",
+                    "depends": [],
+                },
+            }
+        }
+        classified, errors, _warnings = classify_dependencies(["numpy"], lock)
+        assert len(errors) == 0
+        packaging_dep = next(d for d in classified if d.name == "packaging")
+        assert packaging_dep.source == "pyodide_cdn"
+        assert packaging_dep.is_bundled is False
+        assert packaging_dep.is_cdn_package is True
+        assert packaging_dep.is_pure_python is True
