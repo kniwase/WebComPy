@@ -20,7 +20,8 @@ from starlette.types import ASGIApp
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import ServerConfig
 from webcompy.cli._argparser import get_params
-from webcompy.cli._html import generate_html
+from webcompy.cli._html import PYSCRIPT_VERSION, generate_html
+from webcompy.cli._lockfile import LOCKFILE_NAME, get_bundled_deps, get_pyodide_package_names, resolve_lockfile
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     discover_app,
@@ -28,7 +29,7 @@ from webcompy.cli._utils import (
     get_server_config,
     get_webcompy_packge_dir,
 )
-from webcompy.cli._wheel_builder import make_webcompy_app_package
+from webcompy.cli._wheel_builder import get_stable_wheel_filename, make_webcompy_app_package
 
 
 def create_asgi_app(
@@ -38,7 +39,19 @@ def create_asgi_app(
     if server_config is None:
         server_config = ServerConfig()
 
-    app_version = generate_app_version()
+    lockfile, lockfile_errors = resolve_lockfile(
+        app.config.dependencies,
+        PYSCRIPT_VERSION,
+        app.config.app_package_path / LOCKFILE_NAME,
+    )
+    if lockfile_errors:
+        for err in lockfile_errors:
+            print(f"Warning: {err}", flush=True)
+
+    bundled_deps = get_bundled_deps(lockfile)
+    pyodide_package_names = get_pyodide_package_names(lockfile)
+
+    app_version = generate_app_version(app.config.version)
 
     with TemporaryDirectory() as temp:
         temp_path = pathlib.Path(temp)
@@ -48,6 +61,7 @@ def create_asgi_app(
             app.config.app_package_path,
             app_version,
             app.config.assets,
+            bundled_deps=bundled_deps or None,
         )
         app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (
@@ -61,7 +75,11 @@ def create_asgi_app(
         filename: str = request.path_params.get("filename", "")  # type: ignore
         if filename in app_package_files:
             content, media_type = app_package_files[filename]
-            return Response(content, media_type=media_type)
+            headers: dict[str, str] = {}
+            stable_wheel = get_stable_wheel_filename(app.config.app_package_path.name)
+            if server_config.dev and filename == stable_wheel:
+                headers["Cache-Control"] = "no-cache"
+            return Response(content, media_type=media_type, headers=headers)
         else:
             raise HTTPException(404)
 
@@ -84,7 +102,15 @@ def create_asgi_app(
 
         static_file_routes.append(Route("/" + relative_path, send_file))
 
-    html_generator = partial(generate_html, app, server_config.dev, True, app_version, app.config.app_package_path.name)
+    html_generator = partial(
+        generate_html,
+        app,
+        server_config.dev,
+        True,
+        app_version,
+        app.config.app_package_path.name,
+        pyodide_package_names=pyodide_package_names or None,
+    )
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + app.config.base_url.strip("/"))).sub,
         "",

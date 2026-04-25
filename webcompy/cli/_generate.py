@@ -6,7 +6,8 @@ from functools import partial
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import GenerateConfig
 from webcompy.cli._argparser import get_params
-from webcompy.cli._html import generate_html
+from webcompy.cli._html import PYSCRIPT_VERSION, generate_html
+from webcompy.cli._lockfile import LOCKFILE_NAME, get_bundled_deps, get_pyodide_package_names, resolve_lockfile
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     discover_app,
@@ -27,8 +28,20 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
         generate_config = get_generate_config(package)
 
     with app.di_scope:
+        lockfile, lockfile_errors = resolve_lockfile(
+            app.config.dependencies,
+            PYSCRIPT_VERSION,
+            app.config.app_package_path / LOCKFILE_NAME,
+        )
+        if lockfile_errors:
+            for err in lockfile_errors:
+                print(f"Warning: {err}", flush=True)
+
+        bundled_deps = get_bundled_deps(lockfile)
+        pyodide_package_names = get_pyodide_package_names(lockfile)
+
         dist = generate_config.dist if args.get("dist") is None else args["dist"]
-        app_version = generate_app_version()
+        app_version = generate_app_version(app.config.version)
 
         dist_dir = pathlib.Path(dist).absolute()
         if dist_dir.exists():
@@ -61,11 +74,20 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             app.config.app_package_path,
             app_version,
             app.config.assets,
+            bundled_deps=bundled_deps or None,
         )
         for p in scripts_dir.iterdir():
             print(p)
 
-        html_generator = partial(generate_html, app, False, True, app_version, app.config.app_package_path.name)
+        html_generator = partial(
+            generate_html,
+            app,
+            False,
+            True,
+            app_version,
+            app.config.app_package_path.name,
+            pyodide_package_names=pyodide_package_names or None,
+        )
         if app.router_mode == "history" and app.routes:
             for p, _, _, _, page in app.routes:
                 paths = (

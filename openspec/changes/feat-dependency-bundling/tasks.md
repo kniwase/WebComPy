@@ -1,6 +1,6 @@
 # Tasks: Dependency Bundling — Dependency Resolution, Lock File, Stable URLs, and Browser Cache Strategy
 
-- [ ] **Task 1: Implement dependency classification logic**
+- [x] **Task 1: Implement dependency classification logic**
 
 **Estimated time: ~1.5 hours**
 
@@ -50,7 +50,7 @@
 
 ---
 
-- [ ] **Task 2: Implement Pyodide lock fetch and cache**
+- [x] **Task 2: Implement Pyodide lock fetch and cache**
 
 **Estimated time: ~1 hour**
 
@@ -78,7 +78,7 @@
 
 ---
 
-- [ ] **Task 3: Implement `webcompy-lock.json` read/write logic**
+- [x] **Task 3: Implement `webcompy-lock.json` read/write logic**
 
 **Estimated time: ~1.5 hours**
 
@@ -105,7 +105,7 @@
 
 ---
 
-- [ ] **Task 4: Add `webcompy lock` CLI command**
+- [x] **Task 4: Add `webcompy lock` CLI command**
 
 **Estimated time: ~0.5 hours**
 
@@ -125,7 +125,7 @@
 
 ---
 
-- [ ] **Task 5: Integrate lock file into start/generate commands**
+- [x] **Task 5: Integrate lock file into start/generate commands**
 
 **Estimated time: ~0.5 hours**
 
@@ -147,7 +147,7 @@
 
 ---
 
-- [ ] **Task 6: Update `make_webcompy_app_package()` for cli exclusion and bundled deps**
+- [x] **Task 6: Update `make_webcompy_app_package()` for cli exclusion and bundled deps**
 
 **Estimated time: ~1 hour**
 
@@ -175,7 +175,7 @@
 
 ---
 
-- [ ] **Task 7: Update `generate_html()` for single-wheel and WASM-only packages**
+- [x] **Task 7: Update `generate_html()` for single-wheel and WASM-only packages**
 
 **Estimated time: ~0.5 hours**
 
@@ -200,7 +200,7 @@
 
 ---
 
-- [ ] **Task 8: Update server and SSG for single-wheel serving**
+- [x] **Task 8: Update server and SSG for single-wheel serving**
 
 **Estimated time: ~0.5 hours**
 
@@ -227,7 +227,7 @@
 
 ---
 
-- [ ] **Task 9: Add `AppConfig.version` and stable URL support**
+- [x] **Task 9: Add `AppConfig.version` and stable URL support**
 
 **Estimated time: ~0.5 hours**
 
@@ -248,7 +248,7 @@
 
 ---
 
-- [ ] **Task 10: Update unit and E2E tests**
+- [x] **Task 10: Update unit and E2E tests**
 
 **Estimated time: ~1.5 hours**
 

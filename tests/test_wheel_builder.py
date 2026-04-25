@@ -5,12 +5,14 @@ from webcompy.cli._wheel_builder import (
     _assets_to_package_data,
     _collect_package_files,
     _discover_packages,
+    _filter_excluded_subpackages,
     _generate_assets_registry,
     _normalize_name,
     _sha256_b64,
     _write_metadata,
     _write_record,
     _write_wheel,
+    get_stable_wheel_filename,
     get_wheel_filename,
     make_bundled_wheel,
     make_webcompy_app_package,
@@ -441,3 +443,202 @@ class TestMakeWebcompyAppPackageWithAssets:
         with zipfile.ZipFile(result) as zf:
             names = zf.namelist()
             assert "myapp/_assets_registry.py" not in names
+
+
+class TestFilterExcludedSubpackages:
+    def test_excludes_specified_subpackages(self):
+        packages = ["webcompy", "webcompy.cli", "webcompy.cli._server", "webcompy.app", "webcompy.elements"]
+        result = _filter_excluded_subpackages(packages, "webcompy", {"cli"})
+        assert "webcompy" in result
+        assert "webcompy.cli" not in result
+        assert "webcompy.cli._server" not in result
+        assert "webcompy.app" in result
+        assert "webcompy.elements" in result
+
+    def test_no_exclude_returns_all(self):
+        packages = ["webcompy", "webcompy.cli", "webcompy.app"]
+        result = _filter_excluded_subpackages(packages, "webcompy", set())
+        assert result == packages
+
+    def test_different_top_level(self):
+        packages = ["myapp", "myapp.cli", "myapp.views"]
+        result = _filter_excluded_subpackages(packages, "myapp", {"cli"})
+        assert "myapp" in result
+        assert "myapp.cli" not in result
+        assert "myapp.views" in result
+
+
+class TestGetStableWheelFilename:
+    def test_simple_name(self):
+        assert get_stable_wheel_filename("myapp") == "myapp-py3-none-any.whl"
+
+    def test_underscore_name(self):
+        assert get_stable_wheel_filename("my_app") == "my_app-py3-none-any.whl"
+
+    def test_mixed_case_name(self):
+        assert get_stable_wheel_filename("MyApp") == "myapp-py3-none-any.whl"
+
+    def test_no_version_in_filename(self):
+        result = get_stable_wheel_filename("myapp")
+        assert "-1.0.0-" not in result
+        assert result == "myapp-py3-none-any.whl"
+
+
+class TestMakeWebcompyAppPackageExcludesCli:
+    def test_excludes_cli_directory(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        cli_dir = webcompy_pkg / "cli"
+        cli_dir.mkdir()
+        (cli_dir / "__init__.py").write_text("")
+        (cli_dir / "_server.py").write_text("# server")
+        app_dir = webcompy_pkg / "app"
+        app_dir.mkdir()
+        (app_dir / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+        )
+        with zipfile.ZipFile(result) as zf:
+            names = zf.namelist()
+            assert "webcompy/__init__.py" in names
+            assert "webcompy/app/__init__.py" in names
+            cli_files = [n for n in names if n.startswith("webcompy/cli/")]
+            assert len(cli_files) == 0
+            assert "webcompy/cli/__init__.py" not in names
+            assert "webcompy/cli/_server.py" not in names
+
+    def test_stable_filename(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+        )
+        assert result.name == "myapp-py3-none-any.whl"
+
+    def test_top_level_excludes_cli(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        cli_dir = webcompy_pkg / "cli"
+        cli_dir.mkdir()
+        (cli_dir / "__init__.py").write_text("")
+        app_dir = webcompy_pkg / "app"
+        app_dir.mkdir()
+        (app_dir / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+        )
+        with zipfile.ZipFile(result) as zf:
+            dist_info = next(n for n in zf.namelist() if n.endswith("/top_level.txt"))
+            top_level = zf.read(dist_info).decode()
+            lines = top_level.strip().split("\n")
+            assert "webcompy" in lines
+            assert "myapp" in lines
+
+
+class TestMakeWebcompyAppPackageBundledDeps:
+    def test_bundled_deps_included(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        click_pkg = tmp_path / "click"
+        click_pkg.mkdir()
+        (click_pkg / "__init__.py").write_text("# click")
+        (click_pkg / "core.py").write_text("# core")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+            bundled_deps=[("click", click_pkg)],
+        )
+        with zipfile.ZipFile(result) as zf:
+            names = zf.namelist()
+            assert "click/__init__.py" in names
+            assert "click/core.py" in names
+
+    def test_bundled_deps_in_top_level(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        click_pkg = tmp_path / "click"
+        click_pkg.mkdir()
+        (click_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+            bundled_deps=[("click", click_pkg)],
+        )
+        with zipfile.ZipFile(result) as zf:
+            dist_info = next(n for n in zf.namelist() if n.endswith("/top_level.txt"))
+            top_level = zf.read(dist_info).decode()
+            lines = top_level.strip().split("\n")
+            assert "webcompy" in lines
+            assert "myapp" in lines
+            assert "click" in lines
+
+    def test_no_bundled_deps(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+        )
+        with zipfile.ZipFile(result) as zf:
+            dist_info = next(n for n in zf.namelist() if n.endswith("/top_level.txt"))
+            top_level = zf.read(dist_info).decode()
+            lines = top_level.strip().split("\n")
+            assert "webcompy" in lines
+            assert "myapp" in lines
