@@ -78,8 +78,8 @@ PYSRIPT LOCAL SERVING (this change):
 
 ### Implementation Sketch
 
-- `GenerateConfig` and `ServerConfig` gain a `standalone: bool = False` field.
-- When `standalone=True`:
+- `GenerateConfig` and `ServerConfig` gain a `local-serving: bool = False` field.
+- When `runtime_serving="local"`:
   1. PyScript `core.js`, `core.css` are downloaded at build time and served locally.
   2. Pyodide `pyodide.mjs`, `pyodide.asm.wasm`, `pyodide.asm.js`, `python_stdlib.zip` are downloaded and served locally.
   3. `pyodide-lock.json` is served locally (so micropip resolves against it).
@@ -88,7 +88,7 @@ PYSRIPT LOCAL SERVING (this change):
 
 ### Download Strategy
 
-At build time, `webcompy generate --standalone` (or equivalent) downloads all required runtime assets from CDN and places them in `dist/_webcompy-assets/`:
+At build time, `webcompy generate --runtime-serving` (or equivalent) downloads all required runtime assets from CDN and places them in `dist/_webcompy-assets/`:
 
 ```
 dist/
@@ -119,6 +119,6 @@ These are explicitly out of scope for this change but this change is a prerequis
 
 ## Specs Affected
 
-- `cli` — add `standalone` flag, runtime asset download logic
-- `app-config` — add `standalone` to `GenerateConfig` and `ServerConfig`
-- `lockfile` — add `standalone_assets` lock file section
+- `cli` — add "runtime_serving" flag, runtime asset download logic
+- `app-config` — add "runtime_serving" to `GenerateConfig` and `ServerConfig`
+- `lockfile` — add `runtime_assets` lock file section

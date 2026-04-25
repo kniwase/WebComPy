@@ -58,7 +58,7 @@ The specs, design, and tasks in this change are **preliminary** and will be revi
 BUNDLED MODE (default, feat-dependency-bundling):
   ╔═════════════════════════════════════╗
   ║  myapp-py3-none-any.whl            ║
-  ║  ├── webcompy/ (cli除外)           ║
+  ║  ├── webcompy/ (excl. cli)           ║
   ║  ├── myapp/                        ║
   ║  ├── flask/                        ║
   ║  └── httpx/                        ║

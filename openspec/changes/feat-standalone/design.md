@@ -36,7 +36,7 @@ Complete offline build output:
   │   └── packages/
   │       └── numpy-2.2.5-...wasm32.whl              (WASM)
   ├── _webcompy-app-package/
-  │   └── myapp-py3-none-any.whl                     (webcompy + app + 純Py)
+  │   └── myapp-py3-none-any.whl                     (webcompy + app + pure-Py)
   └── index.html (all local URLs, zero external requests)
 ```
 
