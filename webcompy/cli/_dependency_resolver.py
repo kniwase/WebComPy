@@ -201,7 +201,7 @@ def _resolve_all_transitives(
                     classified_dep = ClassifiedDependency(
                         name=trans_name,
                         version=version,
-                        source="transitive",
+                        source="pyodide_cdn",
                         is_pure_python=False,
                         is_wasm=True,
                         pkg_dir=None,

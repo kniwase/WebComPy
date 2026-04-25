@@ -402,6 +402,158 @@ class TestValidateLocalEnvironment:
         assert "nonexistent_package_xyz_12345" in warnings[0]
 
 
+class TestGenerateLockfile:
+    def _mock_pyodide_lock(self, packages=None):
+        lock = {"packages": packages or {}}
+        return lock
+
+    def test_wasm_package_routed_to_pyodide_packages(self, monkeypatch, tmp_path):
+        from webcompy.cli._lockfile import generate_lockfile
+
+        lock = self._mock_pyodide_lock(
+            {
+                "numpy": {
+                    "version": "2.2.5",
+                    "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
+                    "depends": [],
+                },
+            }
+        )
+        monkeypatch.setattr("webcompy.cli._lockfile.fetch_pyodide_lock", lambda v: lock)
+        monkeypatch.setattr("webcompy.cli._lockfile.get_pyodide_version", lambda v: "0.29.3")
+
+        lockfile, errors, _warnings = generate_lockfile(["numpy"], "2026.3.1")
+
+        assert len(errors) == 0
+        assert "numpy" in lockfile.pyodide_packages
+        assert lockfile.pyodide_packages["numpy"].is_wasm is True
+        assert "numpy" not in lockfile.bundled_packages
+
+    def test_pure_python_pyodide_cdn_routed_to_pyodide_packages(self, monkeypatch, tmp_path):
+        from webcompy.cli._lockfile import generate_lockfile
+
+        lock = self._mock_pyodide_lock(
+            {
+                "httpx": {
+                    "version": "0.28.1",
+                    "file_name": "httpx-0.28.1-py3-none-any.whl",
+                    "depends": [],
+                },
+            }
+        )
+        monkeypatch.setattr("webcompy.cli._lockfile.fetch_pyodide_lock", lambda v: lock)
+        monkeypatch.setattr("webcompy.cli._lockfile.get_pyodide_version", lambda v: "0.29.3")
+
+        lockfile, errors, _warnings = generate_lockfile(["httpx"], "2026.3.1")
+
+        assert len(errors) == 0
+        assert "httpx" in lockfile.pyodide_packages
+        assert lockfile.pyodide_packages["httpx"].is_wasm is False
+        assert "httpx" not in lockfile.bundled_packages
+
+    def test_local_pure_python_routed_to_bundled_packages(self, monkeypatch, tmp_path):
+        from webcompy.cli._lockfile import generate_lockfile
+
+        lock = self._mock_pyodide_lock({})
+        monkeypatch.setattr("webcompy.cli._lockfile.fetch_pyodide_lock", lambda v: lock)
+        monkeypatch.setattr("webcompy.cli._lockfile.get_pyodide_version", lambda v: "0.29.3")
+
+        lockfile, errors, _warnings = generate_lockfile(["webcompy"], "2026.3.1")
+
+        assert len(errors) == 0
+        assert "webcompy" in lockfile.bundled_packages
+        assert lockfile.bundled_packages["webcompy"].source == "explicit"
+        assert lockfile.bundled_packages["webcompy"].is_pure_python is True
+        assert "webcompy" not in lockfile.pyodide_packages
+
+    def test_transitive_wasm_routed_to_pyodide_packages(self, monkeypatch, tmp_path):
+        from webcompy.cli._lockfile import generate_lockfile
+
+        lock = self._mock_pyodide_lock(
+            {
+                "numpy": {
+                    "version": "2.2.5",
+                    "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
+                    "depends": [],
+                },
+                "scipy": {
+                    "version": "1.14.1",
+                    "file_name": "scipy-1.14.1-cp313-cp313-pyodide_2025_0_wasm32.whl",
+                    "depends": ["numpy"],
+                },
+            }
+        )
+        monkeypatch.setattr("webcompy.cli._lockfile.fetch_pyodide_lock", lambda v: lock)
+        monkeypatch.setattr("webcompy.cli._lockfile.get_pyodide_version", lambda v: "0.29.3")
+
+        lockfile, errors, _warnings = generate_lockfile(["scipy"], "2026.3.1")
+
+        assert len(errors) == 0
+        assert "scipy" in lockfile.pyodide_packages
+        assert lockfile.pyodide_packages["scipy"].source == "explicit"
+        assert "numpy" in lockfile.pyodide_packages
+        assert lockfile.pyodide_packages["numpy"].source == "transitive"
+
+    def test_transitive_pure_python_pyodide_cdn_routed_to_pyodide_packages(self, monkeypatch, tmp_path):
+        from webcompy.cli._lockfile import generate_lockfile
+
+        lock = self._mock_pyodide_lock(
+            {
+                "numpy": {
+                    "version": "2.2.5",
+                    "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
+                    "depends": ["packaging"],
+                },
+                "packaging": {
+                    "version": "24.2",
+                    "file_name": "packaging-24.2-py3-none-any.whl",
+                    "depends": [],
+                },
+            }
+        )
+        monkeypatch.setattr("webcompy.cli._lockfile.fetch_pyodide_lock", lambda v: lock)
+        monkeypatch.setattr("webcompy.cli._lockfile.get_pyodide_version", lambda v: "0.29.3")
+
+        lockfile, errors, _warnings = generate_lockfile(["numpy"], "2026.3.1")
+
+        assert len(errors) == 0
+        assert "packaging" in lockfile.pyodide_packages
+        assert lockfile.pyodide_packages["packaging"].is_wasm is False
+        assert lockfile.pyodide_packages["packaging"].source == "transitive"
+        assert "packaging" not in lockfile.bundled_packages
+
+    def test_mixed_dependencies_routing(self, monkeypatch, tmp_path):
+        from webcompy.cli._lockfile import generate_lockfile
+
+        lock = self._mock_pyodide_lock(
+            {
+                "numpy": {
+                    "version": "2.2.5",
+                    "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
+                    "depends": [],
+                },
+                "httpx": {
+                    "version": "0.28.1",
+                    "file_name": "httpx-0.28.1-py3-none-any.whl",
+                    "depends": [],
+                },
+            }
+        )
+        monkeypatch.setattr("webcompy.cli._lockfile.fetch_pyodide_lock", lambda v: lock)
+        monkeypatch.setattr("webcompy.cli._lockfile.get_pyodide_version", lambda v: "0.29.3")
+
+        lockfile, errors, _warnings = generate_lockfile(["numpy", "httpx", "webcompy"], "2026.3.1")
+
+        assert len(errors) == 0
+        assert "numpy" in lockfile.pyodide_packages
+        assert lockfile.pyodide_packages["numpy"].is_wasm is True
+        assert "httpx" in lockfile.pyodide_packages
+        assert lockfile.pyodide_packages["httpx"].is_wasm is False
+        assert "webcompy" in lockfile.bundled_packages
+        assert lockfile.bundled_packages["webcompy"].source == "explicit"
+        assert "webcompy" not in lockfile.pyodide_packages
+
+
 def _get_actual_version(package_name: str) -> str:
     from webcompy.cli._dependency_resolver import _get_package_version
 

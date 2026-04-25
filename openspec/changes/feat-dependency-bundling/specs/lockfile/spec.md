@@ -30,7 +30,7 @@
 - **THEN** the lock file SHALL record it in `bundled_packages` with `version`, `source` (`"explicit"` or `"transitive"`), and `is_pure_python` (boolean)
 
 ### Requirement: The lock file shall be validated against current dependencies
-When loading an existing lock file, the CLI SHALL validate that `AppConfig.dependencies` matches the `explicit` entries in `bundled_packages` plus all entries in `pyodide_packages`. If dependencies have changed, the lock file SHALL be regenerated. Additionally, the CLI SHALL validate that the local environment provides the packages recorded in the lock file with matching versions and correct purity classification.
+When loading an existing lock file, the CLI SHALL validate that `AppConfig.dependencies` matches the union of `explicit` entries in `bundled_packages` and `explicit` entries in `pyodide_packages`. If dependencies have changed, the lock file SHALL be regenerated. Additionally, the CLI SHALL validate that the local environment provides the packages recorded in the lock file with matching versions and correct purity classification.
 
 #### Scenario: Lock file matches dependencies
 - **WHEN** the lock file's explicit dependencies match `AppConfig.dependencies`
