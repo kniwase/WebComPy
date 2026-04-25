@@ -1,4 +1,6 @@
-from webcompy.app import AppConfig, WebComPyApp
+from webcompy_config import app_config
+
+from webcompy.app import WebComPyApp
 
 from .keys import AppThemeKey
 from .layout import Root
@@ -7,7 +9,7 @@ from .router import router
 app = WebComPyApp(
     root_component=Root,
     router=router,
-    config=AppConfig(app_package=__package__),
+    config=app_config,
 )
 app.provide(AppThemeKey, "app-dark-theme")
 app.set_head(

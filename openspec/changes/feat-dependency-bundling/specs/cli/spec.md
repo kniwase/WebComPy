@@ -43,7 +43,7 @@ Dependencies listed in `AppConfig.dependencies` SHALL be classified using Pyodid
 - **AND** `click` SHALL be marked as `source="transitive"` in the lock file
 
 #### Scenario: C extension not available in Pyodide
-- **WHEN** `AppConfig.dependencies=["some_c_ext"]` and `some_c_ext` is not in the Pyodide CDN and contains `.so` files
+- **WHEN** `AppConfig.dependencies=["some_c_ext"]` and `some_c_ext` is not in the Pyodide CDN and contains `.so`, `.pyd`, or `.dylib` files
 - **THEN** an error SHALL be reported indicating the package is a C extension not available in Pyodide
 
 #### Scenario: Packages in Pyodide CDN

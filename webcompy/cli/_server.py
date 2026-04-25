@@ -130,7 +130,7 @@ def create_asgi_app(
         True,
         app_version,
         app.config.app_package_path.name,
-        pyodide_package_names=pyodide_package_names or None,
+        pyodide_package_names=pyodide_package_names,
     )
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + app.config.base_url.strip("/"))).sub,

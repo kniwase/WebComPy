@@ -78,6 +78,8 @@ jobs:
             files: tests/e2e/test_router.py tests/e2e/test_async_nav.py
           - name: interaction
             files: tests/e2e/test_event.py tests/e2e/test_di.py
+          - name: bundled-deps
+            files: tests/e2e/test_bundled_deps.py tests/e2e/test_bundled_deps_browser.py
         serving_mode: [prod, static]
     steps:
       - uses: actions/checkout@v4

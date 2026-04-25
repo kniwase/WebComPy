@@ -107,7 +107,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             True,
             app_version,
             app.config.app_package_path.name,
-            pyodide_package_names=pyodide_package_names or None,
+            pyodide_package_names=pyodide_package_names,
         )
         if app.router_mode == "history" and app.routes:
             for p, _, _, _, page in app.routes:

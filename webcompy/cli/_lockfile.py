@@ -40,13 +40,17 @@ class BundledPackageEntry:
     version: str
     source: str
     is_pure_python: bool
+    from_pyodide_cdn: bool = False
 
     def to_dict(self) -> dict:
-        return {
+        d: dict = {
             "version": self.version,
             "source": self.source,
             "is_pure_python": self.is_pure_python,
         }
+        if self.from_pyodide_cdn:
+            d["from_pyodide_cdn"] = True
+        return d
 
     @classmethod
     def from_dict(cls, data: dict) -> BundledPackageEntry:
@@ -54,6 +58,7 @@ class BundledPackageEntry:
             version=data["version"],
             source=data["source"],
             is_pure_python=data["is_pure_python"],
+            from_pyodide_cdn=data.get("from_pyodide_cdn", False),
         )
 
 
@@ -133,13 +138,20 @@ def generate_lockfile(
                 version=dep.version,
                 file_name=file_name,
                 is_wasm=dep.is_wasm,
-                source=dep.source if dep.source in ("explicit", "transitive") else "explicit",
+                source="transitive" if dep.source == "transitive" else "explicit",
             )
         else:
+            if dep.source in ("pyodide_cdn", "fallback_cdn"):
+                lock_source = "explicit"
+            elif dep.source in ("explicit", "transitive"):
+                lock_source = dep.source
+            else:
+                lock_source = "transitive"
             bundled_packages[dep.name] = BundledPackageEntry(
                 version=dep.version,
-                source=dep.source if dep.source in ("explicit", "transitive") else "transitive",
+                source=lock_source,
                 is_pure_python=dep.is_pure_python,
+                from_pyodide_cdn=dep.source == "pyodide_cdn",
             )
 
     lockfile = Lockfile(
@@ -180,18 +192,32 @@ def validate_local_environment(
             continue
         pkg_dir = _find_package_dir(name)
         if pkg_dir is None:
-            errors.append(
-                f"Package '{name}' (version {entry.version}) listed in lock file "
-                f"is not installed locally. Install it with: pip install {name}=={entry.version}"
-            )
+            if entry.from_pyodide_cdn:
+                warnings.append(
+                    f"Package '{name}' (version {entry.version} from Pyodide CDN) "
+                    f"is not installed locally. SSR/SSG may fail if this package is imported server-side."
+                )
+            else:
+                errors.append(
+                    f"Package '{name}' (version {entry.version}) listed in lock file "
+                    f"is not installed locally. Install it with: pip install {name}=={entry.version}"
+                )
             continue
         local_version = _get_package_version(name)
         if local_version is not None and local_version != entry.version:
-            errors.append(
-                f"Package '{name}' version mismatch: lock file has {entry.version}, "
-                f"local has {local_version}. "
-                f"Install the correct version with: pip install {name}=={entry.version}"
-            )
+            if entry.from_pyodide_cdn:
+                warnings.append(
+                    f"Package '{name}' version mismatch: lock file has {entry.version} (Pyodide CDN), "
+                    f"local has {local_version}. "
+                    f"The local version will be used for SSR/SSG, "
+                    f"while the Pyodide CDN version will be used in the browser."
+                )
+            else:
+                errors.append(
+                    f"Package '{name}' version mismatch: lock file has {entry.version}, "
+                    f"local has {local_version}. "
+                    f"Install the correct version with: pip install {name}=={entry.version}"
+                )
 
     for name, entry in lockfile.pyodide_packages.items():
         if entry.is_wasm:

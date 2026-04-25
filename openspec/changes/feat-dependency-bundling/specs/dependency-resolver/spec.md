@@ -21,13 +21,13 @@ Dependency classification SHALL first consult the Pyodide lock file (`pyodide-lo
 
 #### Scenario: Pure-Python package not in Pyodide CDN
 - **WHEN** a dependency `flask` is not found in the Pyodide lock
-- **AND** `flask`'s installed package directory contains no `.so` or `.pyd` files
+- **AND** `flask`'s installed package directory contains no `.so`, `.pyd`, or `.dylib` files
 - **THEN** `flask` SHALL be classified as `bundled` with `source="explicit"`
 - **AND** `flask` SHALL be bundled into the app wheel
 
 #### Scenario: C extension package not in Pyodide CDN
 - **WHEN** a dependency `some_c_ext` is not found in the Pyodide lock
-- **AND** `some_c_ext`'s installed package directory contains `.so` or `.pyd` files
+- **AND** `some_c_ext`'s installed package directory contains `.so`, `.pyd`, or `.dylib` files
 - **THEN** an error SHALL be reported indicating the package is a C extension not available in Pyodide
 - **AND** the build SHALL fail with a descriptive message
 
@@ -125,7 +125,7 @@ The Pyodide lock file SHALL be fetched from `https://cdn.jsdelivr.net/pyodide/v{
 #### Scenario: Network failure with no cache
 - **WHEN** the CDN is unreachable and no cache exists
 - **THEN** all dependencies SHALL fall back to `py-config.packages` as plain package names
-- **AND** `.so`/`.pyd` detection SHALL still be performed locally for locally-installed packages
+- **AND** `.so`/`.pyd`/`.dylib` detection SHALL still be performed locally for locally-installed packages
 - **AND** C-extension packages not found locally SHALL produce a warning (not an error, since Pyodide may provide them)
 - **AND** pure-Python packages not found locally SHALL also be listed in `py-config.packages`, trusting Pyodide/micropip to resolve them
 

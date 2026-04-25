@@ -46,12 +46,24 @@ class TestBundledPackageEntry:
         d = entry.to_dict()
         assert d["version"] == "3.1.0"
         assert d["source"] == "explicit"
+        assert "from_pyodide_cdn" not in d
+
+    def test_to_dict_with_from_pyodide_cdn(self):
+        entry = BundledPackageEntry(version="0.14.0", source="explicit", is_pure_python=True, from_pyodide_cdn=True)
+        d = entry.to_dict()
+        assert d["from_pyodide_cdn"] is True
 
     def test_from_dict(self):
         data = {"version": "3.1.0", "source": "transitive", "is_pure_python": True}
         entry = BundledPackageEntry.from_dict(data)
         assert entry.version == "3.1.0"
         assert entry.source == "transitive"
+        assert entry.from_pyodide_cdn is False
+
+    def test_from_dict_with_from_pyodide_cdn(self):
+        data = {"version": "0.14.0", "source": "explicit", "is_pure_python": True, "from_pyodide_cdn": True}
+        entry = BundledPackageEntry.from_dict(data)
+        assert entry.from_pyodide_cdn is True
 
 
 class TestLockfile:
@@ -348,6 +360,45 @@ class TestValidateLocalEnvironment:
         )
         errors, _warnings = validate_local_environment(lockfile)
         assert len(errors) == 2
+
+    def test_pyodide_cdn_bundled_package_version_mismatch_produces_warning(self):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            pyodide_packages={},
+            bundled_packages={
+                "webcompy": BundledPackageEntry(
+                    version="0.0.0-fake",
+                    source="explicit",
+                    is_pure_python=True,
+                    from_pyodide_cdn=True,
+                ),
+            },
+        )
+        errors, warnings = validate_local_environment(lockfile)
+        assert len(errors) == 0
+        assert len(warnings) == 1
+        assert "version mismatch" in warnings[0]
+        assert "Pyodide CDN" in warnings[0]
+
+    def test_pyodide_cdn_bundled_package_missing_produces_warning(self):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            pyodide_packages={},
+            bundled_packages={
+                "nonexistent_package_xyz_12345": BundledPackageEntry(
+                    version="1.0.0",
+                    source="explicit",
+                    is_pure_python=True,
+                    from_pyodide_cdn=True,
+                ),
+            },
+        )
+        errors, warnings = validate_local_environment(lockfile)
+        assert len(errors) == 0
+        assert len(warnings) == 1
+        assert "nonexistent_package_xyz_12345" in warnings[0]
 
 
 def _get_actual_version(package_name: str) -> str:
