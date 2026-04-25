@@ -11,14 +11,18 @@ from typing import Literal
 class ClassifiedDependency:
     name: str
     version: str
-    source: Literal["pyodide_cdn", "explicit", "transitive"]
+    source: Literal["pyodide_cdn", "fallback_cdn", "explicit", "transitive"]
     is_pure_python: bool
     is_wasm: bool
     pkg_dir: pathlib.Path | None
 
     @property
     def is_bundled(self) -> bool:
-        return self.is_pure_python
+        return self.is_pure_python and self.source != "fallback_cdn"
+
+    @property
+    def is_cdn_package(self) -> bool:
+        return self.source in ("pyodide_cdn", "fallback_cdn")
 
 
 def _is_pure_python_package(pkg_dir: pathlib.Path) -> bool:
@@ -136,12 +140,17 @@ def _is_wasm_in_pyodide_lock(pkg_name: str, pyodide_lock: dict) -> bool:
     return "pyodide" in file_name or "wasm32" in file_name
 
 
+def _is_in_pyodide_lock(pkg_name: str, pyodide_lock: dict) -> bool:
+    return pkg_name in pyodide_lock.get("packages", {})
+
+
 def classify_dependencies(
     dependencies: list[str],
     pyodide_lock: dict | None,
-) -> tuple[list[ClassifiedDependency], list[str]]:
+) -> tuple[list[ClassifiedDependency], list[str], list[str]]:
     classified: list[ClassifiedDependency] = []
     errors: list[str] = []
+    warnings: list[str] = []
     seen: dict[str, ClassifiedDependency] = {}
 
     lock_unavailable = pyodide_lock is None
@@ -183,10 +192,32 @@ def classify_dependencies(
             pkg_dir = _find_package_dir(dep_name)
             if pkg_dir is None:
                 if lock_unavailable:
-                    errors.append(
-                        f"Package '{dep_name}' not found locally and Pyodide lock is unavailable. "
-                        f"Install it locally or add it to AppConfig.dependencies."
-                    )
+                    if _is_in_pyodide_lock(dep_name, pyodide_lock):
+                        classified_dep = ClassifiedDependency(
+                            name=dep_name,
+                            version="0.0.0",
+                            source="fallback_cdn",
+                            is_pure_python=True,
+                            is_wasm=False,
+                            pkg_dir=None,
+                        )
+                        classified.append(classified_dep)
+                        seen[norm_name] = classified_dep
+                    else:
+                        classified_dep = ClassifiedDependency(
+                            name=dep_name,
+                            version="0.0.0",
+                            source="fallback_cdn",
+                            is_pure_python=True,
+                            is_wasm=False,
+                            pkg_dir=None,
+                        )
+                        classified.append(classified_dep)
+                        seen[norm_name] = classified_dep
+                        warnings.append(
+                            f"Package '{dep_name}' not found locally or in Pyodide CDN. "
+                            f"It will be passed to micropip but may fail to install."
+                        )
                 else:
                     errors.append(
                         f"Package '{dep_name}' not found locally and not in Pyodide CDN. "
@@ -195,10 +226,20 @@ def classify_dependencies(
                 continue
             if not _is_pure_python_package(pkg_dir):
                 if lock_unavailable:
-                    errors.append(
-                        f"Package '{dep_name}' is a C extension not available in Pyodide. "
-                        f"Consider using a pure-Python alternative."
+                    warnings.append(
+                        f"Package '{dep_name}' is a C extension. "
+                        f"It will be passed to Pyodide CDN but may not work in the browser."
                     )
+                    classified_dep = ClassifiedDependency(
+                        name=dep_name,
+                        version=_get_package_version(dep_name) or "0.0.0",
+                        source="fallback_cdn",
+                        is_pure_python=False,
+                        is_wasm=False,
+                        pkg_dir=None,
+                    )
+                    classified.append(classified_dep)
+                    seen[norm_name] = classified_dep
                 else:
                     errors.append(
                         f"Package '{dep_name}' is a C extension and is not available in Pyodide. "
@@ -217,9 +258,9 @@ def classify_dependencies(
             classified.append(classified_dep)
             seen[norm_name] = classified_dep
 
-    _resolve_all_transitives(classified, seen, pyodide_lock, errors, lock_unavailable)
+    _resolve_all_transitives(classified, seen, pyodide_lock, errors, warnings, lock_unavailable)
 
-    return classified, errors
+    return classified, errors, warnings
 
 
 def _resolve_all_transitives(
@@ -227,6 +268,7 @@ def _resolve_all_transitives(
     seen: dict[str, ClassifiedDependency],
     pyodide_lock: dict,
     errors: list[str],
+    warnings: list[str],
     lock_unavailable: bool,
 ) -> None:
     all_deps_to_process = list(classified)
@@ -294,10 +336,21 @@ def _resolve_all_transitives(
                 pkg_dir = _find_package_dir(trans_name)
                 if pkg_dir is None:
                     if lock_unavailable:
-                        errors.append(
-                            f"Transitive dependency '{trans_name}' not found locally and Pyodide lock is unavailable. "
-                            f"Install it locally or add it to AppConfig.dependencies."
+                        classified_dep = ClassifiedDependency(
+                            name=trans_name,
+                            version="0.0.0",
+                            source="fallback_cdn",
+                            is_pure_python=True,
+                            is_wasm=False,
+                            pkg_dir=None,
                         )
+                        classified.append(classified_dep)
+                        seen[trans_norm] = classified_dep
+                        if not _is_in_pyodide_lock(trans_name, pyodide_lock):
+                            warnings.append(
+                                f"Transitive dependency '{trans_name}' not found locally or in Pyodide CDN. "
+                                f"It will be passed to micropip but may fail to install."
+                            )
                     else:
                         errors.append(
                             f"Transitive dependency '{trans_name}' not found locally and not in Pyodide CDN. "
@@ -306,9 +359,20 @@ def _resolve_all_transitives(
                     continue
                 if not _is_pure_python_package(pkg_dir):
                     if lock_unavailable:
-                        errors.append(
-                            f"Transitive dependency '{trans_name}' is a C extension not available in Pyodide."
+                        warnings.append(
+                            f"Transitive dependency '{trans_name}' is a C extension. "
+                            f"It will be passed to Pyodide CDN but may not work in the browser."
                         )
+                        classified_dep = ClassifiedDependency(
+                            name=trans_name,
+                            version=_get_package_version(trans_name) or "0.0.0",
+                            source="fallback_cdn",
+                            is_pure_python=False,
+                            is_wasm=False,
+                            pkg_dir=None,
+                        )
+                        classified.append(classified_dep)
+                        seen[trans_norm] = classified_dep
                     else:
                         errors.append(
                             f"Transitive dependency '{trans_name}' is a C extension and is not available in Pyodide."

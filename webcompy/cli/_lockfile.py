@@ -15,12 +15,14 @@ class PyodidePackageEntry:
     version: str
     file_name: str
     is_wasm: bool
+    source: str = "explicit"
 
     def to_dict(self) -> dict:
         return {
             "version": self.version,
             "file_name": self.file_name,
             "is_wasm": self.is_wasm,
+            "source": self.source,
         }
 
     @classmethod
@@ -29,6 +31,7 @@ class PyodidePackageEntry:
             version=data["version"],
             file_name=data["file_name"],
             is_wasm=data["is_wasm"],
+            source=data.get("source", "explicit"),
         )
 
 
@@ -68,6 +71,7 @@ class Lockfile:
             "pyscript_version": self.pyscript_version,
             "pyodide_packages": {name: entry.to_dict() for name, entry in self.pyodide_packages.items()},
             "bundled_packages": {name: entry.to_dict() for name, entry in self.bundled_packages.items()},
+            "standalone_assets": {},
         }
 
 
@@ -106,7 +110,7 @@ def generate_lockfile(
     dependencies: list[str],
     pyscript_version: str,
     pyodide_version: str | None = None,
-) -> tuple[Lockfile, list[str]]:
+) -> tuple[Lockfile, list[str], list[str]]:
     if pyodide_version is None:
         pyodide_version = get_pyodide_version(pyscript_version)
 
@@ -114,13 +118,13 @@ def generate_lockfile(
 
     from webcompy.cli._dependency_resolver import classify_dependencies
 
-    classified, errors = classify_dependencies(dependencies, pyodide_lock)
+    classified, errors, warnings = classify_dependencies(dependencies, pyodide_lock)
 
     pyodide_packages: dict[str, PyodidePackageEntry] = {}
     bundled_packages: dict[str, BundledPackageEntry] = {}
 
     for dep in classified:
-        if dep.is_wasm:
+        if dep.is_cdn_package and not dep.is_bundled:
             file_name = ""
             if pyodide_lock is not None:
                 pkg_info = pyodide_lock.get("packages", {}).get(dep.name, {})
@@ -128,7 +132,8 @@ def generate_lockfile(
             pyodide_packages[dep.name] = PyodidePackageEntry(
                 version=dep.version,
                 file_name=file_name,
-                is_wasm=True,
+                is_wasm=dep.is_wasm,
+                source=dep.source if dep.source in ("explicit", "transitive") else "explicit",
             )
         else:
             bundled_packages[dep.name] = BundledPackageEntry(
@@ -144,7 +149,7 @@ def generate_lockfile(
         bundled_packages=bundled_packages,
     )
 
-    return lockfile, errors
+    return lockfile, errors, warnings
 
 
 def validate_lockfile(
@@ -153,16 +158,13 @@ def validate_lockfile(
 ) -> list[str]:
     issues: list[str] = []
     explicit_in_lock = {name for name, entry in lockfile.bundled_packages.items() if entry.source == "explicit"}
-    pyodide_names = set(lockfile.pyodide_packages.keys())
-    all_explicit_in_lock = explicit_in_lock | pyodide_names
+    explicit_pyodide = {name for name, entry in lockfile.pyodide_packages.items() if entry.source == "explicit"}
+    all_explicit_in_lock = explicit_in_lock | explicit_pyodide
     dep_set = {d.replace("-", "_") for d in dependencies}
     lock_set = {n.replace("-", "_") for n in all_explicit_in_lock}
     missing = dep_set - lock_set
     if missing:
         issues.append(f"Dependencies missing from lock file: {', '.join(sorted(missing))}")
-    extra = lock_set - dep_set
-    if extra:
-        issues.append(f"Extra dependencies in lock file: {', '.join(sorted(extra))}")
     return issues
 
 
@@ -203,19 +205,26 @@ def get_pyodide_package_names(
 ) -> list[str]:
     if lockfile is None:
         return []
-    return [name for name, entry in lockfile.pyodide_packages.items() if entry.is_wasm]
+    result: list[str] = []
+    for name, entry in lockfile.pyodide_packages.items():
+        if entry.is_wasm:
+            result.append(name)
+    for name, entry in lockfile.bundled_packages.items():
+        if entry.source == "fallback_cdn":
+            result.append(name)
+    return result
 
 
 def resolve_lockfile(
     dependencies: list[str],
     pyscript_version: str,
     lockfile_path: pathlib.Path,
-) -> tuple[Lockfile | None, list[str]]:
+) -> tuple[Lockfile | None, list[str], list[str]]:
     existing = load_lockfile(lockfile_path)
     if existing is not None:
         issues = validate_lockfile(existing, dependencies)
         if not issues:
-            return existing, []
-    lockfile, errors = generate_lockfile(dependencies, pyscript_version)
+            return existing, [], []
+    lockfile, errors, warnings = generate_lockfile(dependencies, pyscript_version)
     save_lockfile(lockfile, lockfile_path)
-    return lockfile, errors
+    return lockfile, errors, warnings

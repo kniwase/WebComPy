@@ -28,14 +28,15 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
         generate_config = get_generate_config(package)
 
     with app.di_scope:
-        lockfile, lockfile_errors = resolve_lockfile(
+        lockfile, lockfile_errors, lockfile_warnings = resolve_lockfile(
             app.config.dependencies,
             PYSCRIPT_VERSION,
             app.config.app_package_path / LOCKFILE_NAME,
         )
-        if lockfile_errors:
-            for err in lockfile_errors:
-                print(f"Warning: {err}", flush=True)
+        for warning in lockfile_warnings:
+            print(f"Warning: {warning}", flush=True)
+        for err in lockfile_errors:
+            print(f"Error: {err}", flush=True)
 
         bundled_deps = get_bundled_deps(lockfile)
         pyodide_package_names = get_pyodide_package_names(lockfile)

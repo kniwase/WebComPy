@@ -16,17 +16,27 @@ from webcompy.cli._lockfile import (
 class TestPyodidePackageEntry:
     def test_to_dict(self):
         entry = PyodidePackageEntry(
-            version="2.2.5", file_name="numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl", is_wasm=True
+            version="2.2.5",
+            file_name="numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
+            is_wasm=True,
+            source="explicit",
         )
         d = entry.to_dict()
         assert d["version"] == "2.2.5"
         assert d["is_wasm"] is True
+        assert d["source"] == "explicit"
 
     def test_from_dict(self):
-        data = {"version": "2.2.5", "file_name": "numpy.whl", "is_wasm": True}
+        data = {"version": "2.2.5", "file_name": "numpy.whl", "is_wasm": True, "source": "explicit"}
         entry = PyodidePackageEntry.from_dict(data)
         assert entry.version == "2.2.5"
         assert entry.is_wasm is True
+        assert entry.source == "explicit"
+
+    def test_from_dict_implicit_source(self):
+        data = {"version": "2.2.5", "file_name": "numpy.whl", "is_wasm": True}
+        entry = PyodidePackageEntry.from_dict(data)
+        assert entry.source == "explicit"
 
 
 class TestBundledPackageEntry:
@@ -60,6 +70,7 @@ class TestLockfile:
         assert d["pyodide_version"] == "0.29.3"
         assert "numpy" in d["pyodide_packages"]
         assert "flask" in d["bundled_packages"]
+        assert "standalone_assets" in d
 
 
 class TestSaveLoadLockfile:
@@ -130,17 +141,20 @@ class TestValidateLockfile:
         issues = validate_lockfile(lockfile, ["flask", "requests"])
         assert len(issues) > 0
 
-    def test_extra_dependency(self):
+    def test_transitive_pyodide_packages_not_flagged_as_extra(self):
         lockfile = Lockfile(
             pyodide_version="0.29.3",
             pyscript_version="2026.3.1",
             pyodide_packages={
-                "numpy": PyodidePackageEntry(version="2.2.5", file_name="numpy.whl", is_wasm=True),
+                "numpy": PyodidePackageEntry(version="2.2.5", file_name="numpy.whl", is_wasm=True, source="explicit"),
+                "scipy": PyodidePackageEntry(
+                    version="1.14.1", file_name="scipy.whl", is_wasm=True, source="transitive"
+                ),
             },
             bundled_packages={},
         )
-        issues = validate_lockfile(lockfile, [])
-        assert len(issues) > 0
+        issues = validate_lockfile(lockfile, ["numpy"])
+        assert len(issues) == 0
 
 
 class TestGetBundledDeps:
@@ -181,19 +195,24 @@ class TestGetBundledDeps:
 
 
 class TestGetPyodidePackageNames:
-    def test_returns_only_wasm_names(self):
+    def test_returns_wasm_and_fallback_cdn_names_only(self):
         lockfile = Lockfile(
             pyodide_version="0.29.3",
             pyscript_version="2026.3.1",
             pyodide_packages={
-                "numpy": PyodidePackageEntry(version="2.2.5", file_name="numpy.whl", is_wasm=True),
-                "httpx": PyodidePackageEntry(version="0.28.1", file_name="httpx.whl", is_wasm=False),
+                "numpy": PyodidePackageEntry(version="2.2.5", file_name="numpy.whl", is_wasm=True, source="explicit"),
+                "httpx": PyodidePackageEntry(version="0.28.1", file_name="httpx.whl", is_wasm=False, source="explicit"),
             },
-            bundled_packages={},
+            bundled_packages={
+                "flask": BundledPackageEntry(version="3.1.0", source="explicit", is_pure_python=True),
+                "missing_pkg": BundledPackageEntry(version="0.0.0", source="fallback_cdn", is_pure_python=True),
+            },
         )
         result = get_pyodide_package_names(lockfile)
         assert "numpy" in result
         assert "httpx" not in result
+        assert "flask" not in result
+        assert "missing_pkg" in result
 
     def test_none_lockfile_returns_empty(self):
         result = get_pyodide_package_names(None)

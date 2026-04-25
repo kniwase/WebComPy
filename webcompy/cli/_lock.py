@@ -10,10 +10,12 @@ from webcompy.cli._utils import discover_app
 def lock_command() -> None:
     app, _package = discover_app()
     lockfile_path = app.config.app_package_path / LOCKFILE_NAME
-    lockfile, errors = generate_lockfile(
+    lockfile, errors, warnings = generate_lockfile(
         app.config.dependencies,
         PYSCRIPT_VERSION,
     )
+    for warning in warnings:
+        print(f"Warning: {warning}", file=sys.stderr)
     if errors:
         for err in errors:
             print(err, file=sys.stderr)

@@ -114,7 +114,7 @@ class TestClassifyDependencies:
                 },
             }
         }
-        classified, errors = classify_dependencies(["numpy"], lock)
+        classified, errors, _warnings = classify_dependencies(["numpy"], lock)
         assert len(errors) == 0
         numpy_dep = next(d for d in classified if d.name == "numpy")
         assert numpy_dep.is_wasm is True
@@ -131,7 +131,7 @@ class TestClassifyDependencies:
                 },
             }
         }
-        classified, _errors = classify_dependencies(["httpx"], lock)
+        classified, _errors, _warnings = classify_dependencies(["httpx"], lock)
         httpx_dep = next(d for d in classified if d.name == "httpx")
         assert httpx_dep.is_wasm is False
         assert httpx_dep.source == "pyodide_cdn"
@@ -139,7 +139,7 @@ class TestClassifyDependencies:
 
     def test_local_pure_python_classified_as_bundled(self):
         lock = {"packages": {}}
-        classified, _errors = classify_dependencies(["webcompy"], lock)
+        classified, _errors, _warnings = classify_dependencies(["webcompy"], lock)
         wc_dep = next(d for d in classified if d.name == "webcompy")
         assert wc_dep.source == "explicit"
         assert wc_dep.is_pure_python is True
@@ -147,12 +147,12 @@ class TestClassifyDependencies:
 
     def test_missing_package_produces_error(self):
         lock = {"packages": {}}
-        _classified, errors = classify_dependencies(["nonexistent_package_xyz_12345"], lock)
+        _classified, errors, _warnings = classify_dependencies(["nonexistent_package_xyz_12345"], lock)
         assert len(errors) > 0
         assert any("nonexistent_package_xyz_12345" in e for e in errors)
 
     def test_none_lock_uses_local_fallback(self):
-        classified, _errors = classify_dependencies(["webcompy"], None)
+        classified, _errors, _warnings = classify_dependencies(["webcompy"], None)
         wc_dep = next(d for d in classified if d.name == "webcompy")
         assert wc_dep.source == "explicit"
         assert wc_dep.is_pure_python is True
@@ -167,7 +167,14 @@ class TestClassifyDependencies:
                 },
             }
         }
-        classified, errors = classify_dependencies(["numpy"], lock)
+        classified, errors, _warnings = classify_dependencies(["numpy"], lock)
         assert len(errors) == 0
         numpy_dep = next(d for d in classified if d.name == "numpy")
         assert numpy_dep.is_wasm is True
+
+    def test_none_lock_fallback_cdn_for_missing_package(self):
+        classified, _errors, warnings = classify_dependencies(["nonexistent_xyz"], None)
+        fallback = [d for d in classified if d.name == "nonexistent_xyz" and d.source == "fallback_cdn"]
+        assert len(fallback) == 1
+        assert fallback[0].is_cdn_package is True
+        assert any("not found locally" in w for w in warnings)
