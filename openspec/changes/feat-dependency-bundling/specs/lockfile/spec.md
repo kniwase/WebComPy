@@ -35,7 +35,7 @@
 - **THEN** the lock file SHALL record it in `bundled_packages` with `version` (from local `importlib.metadata`), `source` (`"explicit"` or `"transitive"`), and `is_pure_python` (boolean)
 
 ### Requirement: The lock file shall be validated against current dependencies
-When loading an existing lock file, the CLI SHALL validate that `AppConfig.dependencies` matches the `explicit` entries in `bundled_packages` plus all entries in `pyodide_packages`. If dependencies have changed, the lock file SHALL be regenerated.
+When loading an existing lock file, the CLI SHALL validate that `AppConfig.dependencies` matches the `explicit` entries in `bundled_packages` plus all entries in `pyodide_packages`. If dependencies have changed, the lock file SHALL be regenerated. Additionally, the CLI SHALL validate that the local environment provides the packages recorded in the lock file with matching versions and correct purity classification.
 
 #### Scenario: Lock file matches dependencies
 - **WHEN** the lock file's explicit dependencies match `AppConfig.dependencies`
@@ -44,6 +44,26 @@ When loading an existing lock file, the CLI SHALL validate that `AppConfig.depen
 #### Scenario: Lock file is stale
 - **WHEN** `AppConfig.dependencies` has been modified since the lock file was generated
 - **THEN** the lock file SHALL be regenerated automatically
+
+#### Scenario: Bundled package missing from local environment
+- **WHEN** a package listed in `bundled_packages` is not found in the local Python environment via `importlib.util.find_spec()`
+- **THEN** an error SHALL be reported with the package name, the lock file version, and a suggestion to install it (e.g., `pip install <package>==<version>`)
+- **AND** the build SHALL fail
+
+#### Scenario: Bundled package version mismatch
+- **WHEN** a package listed in `bundled_packages` with version `X.Y.Z` exists in the local environment but `importlib.metadata.version()` reports a different version
+- **THEN** an error SHALL be reported indicating the version mismatch (lock file version vs. local version)
+- **AND** the error SHALL suggest installing the lock file version (e.g., `pip install <package>==X.Y.Z`)
+- **AND** the build SHALL fail
+
+#### Scenario: Non-WASM Pyodide CDN package version mismatch
+- **WHEN** a package listed in `pyodide_packages` with `is_wasm=False` exists in the local environment but `importlib.metadata.version()` reports a different version than the lock file
+- **THEN** a warning SHALL be reported indicating the version mismatch
+- **AND** the build SHALL continue (the local version will be used for SSR while the Pyodide CDN version is used in the browser)
+
+#### Scenario: WASM-only Pyodide CDN package not locally installed
+- **WHEN** a package listed in `pyodide_packages` with `is_wasm=True` is not found in the local environment
+- **THEN** no error or warning SHALL be reported (WASM packages are loaded from the Pyodide CDN in the browser and are not needed for SSR if the app does not import them server-side)
 
 ### Requirement: The lock file shall be version-controlled for reproducibility
 The lock file SHALL be committed to version control (e.g., git) to ensure reproducible builds across environments. Like `uv.lock` or `poetry.lock`, it records the exact dependency classifications and versions used. Developers SHOULD NOT add `webcompy-lock.json` to `.gitignore`.

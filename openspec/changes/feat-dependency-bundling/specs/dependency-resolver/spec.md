@@ -76,6 +76,34 @@ Transitive dependencies SHALL be resolved for all packages. For packages not in 
 - **WHEN** a transitive dependency is a C extension not in the Pyodide CDN
 - **THEN** an error SHALL be reported
 
+### Requirement: Locally bundled packages shall be verified at build time
+When resolving a lock file for bundling (via `get_bundled_deps()` or equivalent), the resolver SHALL verify that each package expected to be bundled is actually present in the local Python environment. This ensures SSR/SSG consistency: the version used by the CPython server for pre-rendering MUST match the version bundled into the browser wheel.
+
+#### Scenario: Package found locally and version matches lock file
+- **WHEN** a bundled package with lock file version `2.1.5` is found in the local environment via `importlib.util.find_spec()`
+- **AND** `importlib.metadata.version()` reports version `2.1.5`
+- **THEN** the package directory SHALL be included in the bundled deps list
+
+#### Scenario: Package not found locally
+- **WHEN** a bundled package is not found in the local environment via `importlib.util.find_spec()`
+- **THEN** the resolver SHALL report an error with the package name and lock file version
+- **AND** the error message SHALL include an installation command (e.g., `pip install <package>==<version>`)
+- **AND** the build SHALL fail
+
+#### Scenario: Package found locally but version differs from lock file
+- **WHEN** a bundled package with lock file version `2.1.5` is found in the local environment
+- **AND** `importlib.metadata.version()` reports a different version (e.g., `3.0.2`)
+- **THEN** the resolver SHALL report an error indicating the version mismatch
+- **AND** the error message SHALL include the expected (lock file) version and the actual (local) version
+- **AND** the error message SHALL suggest installing the lock file version (e.g., `pip install <package>==2.1.5`)
+- **AND** the build SHALL fail
+
+#### Scenario: Non-WASM Pyodide CDN package version mismatch
+- **WHEN** a non-WASM Pyodide CDN package (bundled from the Pyodide CDN) has a local version that differs from the lock file
+- **THEN** a warning SHALL be reported (not an error) indicating the version mismatch
+- **AND** the local version SHALL be used for bundling and SSR
+- **AND** the build SHALL continue
+
 ### Requirement: The Pyodide lock shall be fetched from CDN with local caching
 The Pyodide lock file SHALL be fetched from `https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json` and cached locally at `~/.cache/webcompy/pyodide-lock-{version}.json`. The Pyodide version SHALL be derived from the PyScript version via a mapping table.
 
