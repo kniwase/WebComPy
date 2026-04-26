@@ -6,49 +6,88 @@
 
 The simplest and most universal format for pinned dependencies is `requirements.txt` with `package==version` lines. This format is consumable by `pip install -r`, `uv pip install -r`, and many CI systems.
 
-Only packages that require local installation are included:
-- `bundled_packages` (all entries)
-- `pyodide_packages` with `is_wasm=False` (non-WASM Pyodide CDN packages that are bundled locally)
+Packages that require local installation are included:
+- `bundled_packages` (all entries) — must be installed locally for SSR/SSG
+- `pyodide_packages` with `is_wasm=False` (non-WASM Pyodide CDN packages) — required locally for SSR/SSG rendering, even though the browser loads them from the Pyodide CDN
 
-WASM-only `pyodide_packages` are excluded because they are not needed in the local environment — they are loaded from the Pyodide CDN at browser runtime and are typically C extensions compiled for WASM.
+WASM-only `pyodide_packages` are excluded because they are not needed in the local environment — they are loaded from the Pyodide CDN at browser runtime and are typically C extensions compiled for WASM. WebComPy is an SSR/SSG-only framework, so all non-WASM packages must be locally available for server-side rendering.
 
-### D2: Import reads `requirements.txt` and `pyproject.toml` only
+### D2: Sync reads `requirements.txt` and `pyproject.toml` via auto-discovery
 
-Two import sources are supported:
+Two sync sources are supported, discovered automatically via project root detection:
 
-1. **`requirements.txt`**: Parse lines matching `package==version` or `package>=version` patterns. Only `==` pinned versions are used for locking; other specifiers are reported as warnings.
+1. **`requirements.txt`**: Parse lines matching `package==version` or `package>=version` patterns. Only `==` pinned versions are used for comparison; other specifiers are reported as informational.
 
-2. **`pyproject.toml`**: Read `[project.dependencies]` (PEP 621 format). Entries like `markupsafe>=2.0` or `markupsafe==2.1.5` are parsed. Only `==` pinned versions contribute to lock file sync; version ranges are reported as informational.
+2. **`pyproject.toml`**: Read dependency entries based on `LockfileSyncConfig.sync_group`:
+   - When `sync_group` is `None`: read `[project.dependencies]` (PEP 621 format)
+   - When `sync_group` is set (e.g., `"browser"`): read `[project.optional-dependencies.browser]`
+
+   Only `==` pinned versions contribute to comparison; version ranges are reported as informational with suggestions to pin.
 
 Other formats (`Pipfile`, `poetry.lock`, `uv.lock`) are out of scope. `poetry.lock` and `uv.lock` are lock files in their own right — synchronizing between them and `webcompy-lock.json` introduces complex version resolution that is better handled by running `webcompy lock` after `poetry install` or `uv sync`.
 
 ### D3: Sync is compare-and-report, not auto-modify
 
-`--sync-from` compares the detected versions with the lock file entries and:
+`--sync` compares the detected versions with the lock file entries and:
 - Reports matching versions (informational)
 - Reports mismatches (warnings with suggested fixes)
 - Reports packages in external config but not in lock file (informational — may be non-browser dependencies)
 - Reports packages in lock file but not in external config (informational — transitive deps)
 
 It does NOT modify the lock file. The correct workflow is:
-1. Run `webcompy lock --sync-from requirements.txt` to see what differs
+1. Run `webcompy lock --sync` to see what differs
 2. Install or update packages as needed
 3. Run `webcompy lock` to regenerate the lock file
 
 This avoids the complexity of partial lock file updates and keeps the lock file as the single source of truth for WebComPy builds.
 
-### D4: `--install` is a convenience shorthand
+### D4: `--install` uses uv-first pip invocation
 
-`webcompy lock --install` combines export + pip install:
-1. Generate `requirements.txt` to a temporary file
-2. Run `pip install -r {tempfile}` using `subprocess`
-3. Report results
+`webcompy lock --install` combines export + install:
+1. Generate `requirements.txt` using `export_requirements()`
+2. Install packages using the first available tool:
+   - `uv pip install -r {path}` if `uv` is available (checked via `shutil.which("uv")`)
+   - `sys.executable -m pip install -r {path}` as fallback
+3. Propagate the install command's exit code
 
-This avoids requiring the developer to manually run `--export-requirements` then `pip install`. The command uses `pip` (always available since the user runs Python), and falls back to `uv pip` if `pip` is not found (edge case in uv-managed environments).
+This prioritizes `uv` because WebComPy itself uses `uv` for package management, and `uv pip` is significantly faster than `pip`. The fallback to `sys.executable -m pip` ensures compatibility in environments where only `pip` is available.
 
-### D5: Exported file path is configurable
+### D5: Project root auto-discovery replaces explicit `--path`
 
-Both `--export-requirements` and `--install` accept an optional path for the generated `requirements.txt`. Default is `requirements.txt` in the current working directory (same level as `webcompy_config.py`).
+All lock file sync commands use auto-discovery to locate `requirements.txt` and `pyproject.toml`. The `--path` flag is eliminated in favor of:
+
+1. **Explicit configuration**: `LockfileSyncConfig.requirements_path` in `webcompy_server_config.py` (optional, app_package-relative path)
+2. **Auto-discovery**: When no explicit path is configured, walk up from `app_package_path` until a directory containing `pyproject.toml` is found — that directory is the project root. The search stops at `pyproject.toml` (which marks the project boundary) and does not traverse beyond it.
+3. **Error on failure**: If `pyproject.toml` is not found anywhere above `app_package_path`, report an error instructing the developer to set `LockfileSyncConfig.requirements_path` explicitly.
+
+When a path is discovered for the first time, it is written to `LockfileSyncConfig.requirements_path` in `webcompy_server_config.py` so subsequent invocations skip the discovery step.
+
+### D6: `LockfileSyncConfig` in `webcompy_server_config.py`
+
+A new dataclass `LockfileSyncConfig` stores lock file sync settings alongside `ServerConfig` and `GenerateConfig`:
+
+```python
+@dataclass
+class LockfileSyncConfig:
+    requirements_path: str | None = None    # app_package-relative path or None (auto-discover)
+    sync_group: str | None = None           # pyproject.toml [project.optional-dependencies] key
+```
+
+This follows the existing pattern where `webcompy_server_config.py` contains server/CLI-only settings that are not needed in the browser environment.
+
+### D7: `sync_group` for multi-environment pyproject.toml projects
+
+When a `pyproject.toml` contains multiple optional dependency groups (e.g., `dev`, `browser`, `docs`), `sync_group` specifies which group represents the WebComPy browser dependencies:
+
+```toml
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+browser = ["numpy", "matplotlib"]
+```
+
+With `lockfile_sync_config = LockfileSyncConfig(sync_group="browser")`, `--sync` compares only `[project.optional-dependencies.browser]` against the lock file, avoiding noise from dev-only or docs-only dependencies.
+
+When `sync_group` is `None`, `[project.dependencies]` is used (the default, suitable for projects where all dependencies are browser-relevant).
 
 ## Architecture
 
@@ -56,14 +95,37 @@ Both `--export-requirements` and `--install` accept an optional path for the gen
 
 ```
 webcompy lock
-├── (no flags)              → generate/update lock file (existing behavior)
-├── --export-requirements   → generate requirements.txt from lock file
-│   [--path FILE]             default: ./requirements.txt
-├── --sync-from SOURCE      → compare external config with lock file
-│                              SOURCE: requirements.txt | pyproject.toml
-├── --install               → export + pip install
-│   [--path FILE]             default: ./requirements.txt
-└── (sub-commands are mutually exclusive)
+├── (no flags)       → generate/update lock file (existing behavior)
+├── --export         → generate requirements.txt from lock file via auto-discovery
+├── --sync           → compare external config with lock file via auto-discovery
+├── --install        → export + uv/pip install
+└── (flags are mutually exclusive)
+```
+
+### Auto-Discovery Algorithm
+
+```
+START: app_package_path (where webcompy-lock.json lives)
+
+Step 1: Check LockfileSyncConfig.requirements_path
+  → If set: use it (resolve relative to app_package_path), DONE
+
+Step 2: Walk up from app_package_path looking for pyproject.toml
+  for dir in app_package_path.parents:
+      if (dir / "pyproject.toml").exists():
+          project_root = dir
+          break
+  else:
+      → ERROR: "pyproject.toml not found above app package.
+         Set LockfileSyncConfig.requirements_path in webcompy_server_config.py."
+
+Step 3: Locate sync sources in project_root
+  requirements_txt = project_root / "requirements.txt"  (may not exist yet)
+  pyproject_toml   = project_root / "pyproject.toml"   (exists by definition)
+
+Step 4: Record discovered path
+  → Write LockfileSyncConfig.requirements_path to webcompy_server_config.py
+    (relative path from app_package_path to project_root / "requirements.txt")
 ```
 
 ### Export Logic
@@ -85,43 +147,92 @@ webcompy-lock.json
          jinja2==3.1.6
 ```
 
-### Import Logic
+### Sync Logic
 
 ```
-requirements.txt
+Auto-discovered sources:
+  requirements.txt (if exists)
+  pyproject.toml   (always exists after discovery)
+
+requirements.txt comparison:
     charset-normalizer==3.4.0
     requests==2.32.4
-    numpy==2.2.5           ← won't match (WASM, excluded from local)
-    some-tool==1.0.0       ← not in lock file (informational)
-    │
-    ├── Compare with lock file versions
+    numpy==2.2.5           ← WASM, not in local install set
+    some-tool==1.0.0       ← not in lock file
     │
     └── Report:
          ✓ charset-normalizer: 3.4.0 (matches)
          ⚠ requests: lock=2.32.4, requirements.txt=2.31.0 (mismatch)
          ℹ numpy: WASM package, not applicable for local install
          ℹ some-tool: not in lock file (non-browser dependency?)
-```
 
-### Import from pyproject.toml
-
-```
-[project]
-dependencies = [
-    "markupsafe==2.1.5",
-    "requests>=2.31",
-]
-    │
-    ├── Compare with lock file versions
+pyproject.toml comparison (sync_group=None):
+    [project]
+    dependencies = [
+        "markupsafe==2.1.5",
+        "requests>=2.31",
+    ]
     │
     └── Report:
          ✓ markupsafe: 2.1.5 (matches)
-         ⚠ requests: pinned version required for sync, got ">=2.31"
-                    lock file has 2.32.4
-                    Suggest: pip install requests==2.32.4
+         ℹ requests: not pinned (">=2.31"), lock file has 2.32.4
+           Suggest: pin to requests==2.32.4
+
+pyproject.toml comparison (sync_group="browser"):
+    [project.optional-dependencies]
+    browser = [
+        "numpy",
+        "matplotlib",
+    ]
+    │
+    └── Report:
+         ℹ numpy: not pinned (bare name), lock file has 2.2.5 (WASM, N/A for local install)
+         ℹ matplotlib: not pinned (bare name), lock file has 3.8.4 (WASM, N/A for local install)
+```
+
+### Install Logic
+
+```
+webcompy lock --install
+    │
+    ├── 1. Auto-discover requirements_path (same as --export)
+    ├── 2. Export lockfile → requirements.txt
+    ├── 3. Install:
+    │     if shutil.which("uv"):
+    │         subprocess.run(["uv", "pip", "install", "-r", path])
+    │     else:
+    │         subprocess.run([sys.executable, "-m", "pip", "install", "-r", path])
+    └── 4. Propagate exit code
 ```
 
 ## Implementation
+
+### `_lockfile_sync.py` (New Module)
+
+```python
+def discover_project_root(app_package_path: pathlib.Path) -> pathlib.Path: ...
+def discover_requirements_path(
+    app_package_path: pathlib.Path,
+    lockfile_sync_config: LockfileSyncConfig | None,
+) -> pathlib.Path: ...
+def export_requirements(
+    lockfile: Lockfile,
+    path: pathlib.Path,
+) -> None: ...
+def sync_from_requirements_txt(
+    lockfile: Lockfile,
+    path: pathlib.Path,
+) -> list[str]: ...
+def sync_from_pyproject_toml(
+    lockfile: Lockfile,
+    path: pathlib.Path,
+    sync_group: str | None,
+) -> list[str]: ...
+def install_requirements(
+    lockfile: Lockfile,
+    path: pathlib.Path,
+) -> None: ...
+```
 
 ### `_lock.py` Extensions
 
@@ -129,39 +240,25 @@ dependencies = [
 def lock_command() -> None:
     # Existing: no flags → generate/update lock file
     # New:
-    # --export-requirements [--path FILE] → export_requirements()
-    # --sync-from SOURCE → sync_from()
-    # --install [--path FILE] → install_requirements()
+    # --export  → export_requirements() via auto-discovery
+    # --sync    → sync_from_*() via auto-discovery
+    # --install → install_requirements() via auto-discovery
 ```
 
-### `_lockfile_sync.py` (New Module)
+### `webcompy/app/_config.py` Extensions
 
 ```python
-def export_requirements(
-    lockfile: Lockfile,
-    path: pathlib.Path,
-) -> None: ...
-
-def sync_from_requirements_txt(
-    lockfile: Lockfile,
-    path: pathlib.Path,
-) -> list[str]: ...  # returns report lines
-
-def sync_from_pyproject_toml(
-    lockfile: Lockfile,
-    path: pathlib.Path,
-) -> list[str]: ...  # returns report lines
-
-def install_requirements(
-    lockfile: Lockfile,
-    path: pathlib.Path | None = None,
-) -> None: ...
+@dataclass
+class LockfileSyncConfig:
+    requirements_path: str | None = None
+    sync_group: str | None = None
 ```
 
 ## Specs to Update
 
-- `openspec/specs/lockfile/spec.md` — add export/import/sync requirements
+- `openspec/specs/lockfile/spec.md` — add export/sync/install requirements
 - `openspec/specs/cli/spec.md` — add CLI flags for `webcompy lock`
+- `openspec/specs/project-config/spec.md` — add LockfileSyncConfig and project setup examples
 
 ## Non-goals (restated)
 
@@ -169,3 +266,4 @@ def install_requirements(
 - Synchronizing with `poetry.lock` or `uv.lock`
 - Modifying `requirements.txt` or `pyproject.toml` in place
 - Removing dependency on local package installation
+- Project root discovery beyond pyproject.toml (no `.git`-based or marker-file heuristics)

@@ -73,6 +73,50 @@ CLI flags (`--dev`, `--port`, `--dist`) SHALL override values from `webcompy_ser
 - **AND** `webcompy_server_config.py` sets `server_config = ServerConfig(port=8080)`
 - **THEN** the server SHALL start on port 8080
 
+### Requirement: LockfileSyncConfig shall configure lock file sync behavior
+`webcompy_server_config.py` SHALL support an optional `lockfile_sync_config` attribute of type `LockfileSyncConfig`. This dataclass configures how `webcompy lock --export`, `--sync`, and `--install` discover and interact with project dependency files.
+
+#### Scenario: Creating a LockfileSyncConfig with explicit requirements_path
+- **WHEN** a developer creates `webcompy_server_config.py` with `lockfile_sync_config = LockfileSyncConfig(requirements_path="../requirements.txt")`
+- **THEN** `webcompy lock --export` SHALL use the specified path instead of auto-discovery
+- **AND** the path SHALL be resolved relative to `app_package_path`
+
+#### Scenario: Creating a LockfileSyncConfig with sync_group
+- **WHEN** a developer creates `webcompy_server_config.py` with `lockfile_sync_config = LockfileSyncConfig(sync_group="browser")`
+- **THEN** `webcompy lock --sync` SHALL compare `[project.optional-dependencies.browser]` from `pyproject.toml` instead of `[project.dependencies]`
+
+#### Scenario: Omitting LockfileSyncConfig
+- **WHEN** a developer does not include `lockfile_sync_config` in `webcompy_server_config.py`
+- **THEN** lock file sync commands SHALL use auto-discovery (walk up from `app_package_path` to find `pyproject.toml`)
+- **AND** `--sync` SHALL compare `[project.dependencies]` by default
+
+#### Scenario: Recording auto-discovered path
+- **WHEN** a developer runs `webcompy lock --export` for the first time
+- **AND** `LockfileSyncConfig.requirements_path` is not set
+- **AND** auto-discovery finds the project root
+- **THEN** `LockfileSyncConfig.requirements_path` SHALL be written to `webcompy_server_config.py` with the discovered relative path
+
+### Requirement: Project setup examples shall cover common package managers
+The WebComPy documentation SHALL provide setup examples for projects using `uv` (recommended) and `poetry` as their package manager, showing how to configure `LockfileSyncConfig` and `pyproject.toml` for each workflow.
+
+#### Scenario: Setting up a WebComPy project with uv
+- **WHEN** a developer uses `uv` for dependency management
+- **THEN** the documentation SHALL show how to:
+  1. Create a `pyproject.toml` with browser dependencies in `[project.dependencies]` or `[project.optional-dependencies.browser]`
+  2. Set `LockfileSyncConfig(sync_group="browser")` in `webcompy_server_config.py` if using optional dependencies
+  3. Run `webcompy lock` to generate the lock file
+  4. Run `webcompy lock --install` to install matching versions locally
+  5. Use `uv pip install -r requirements.txt` as an alternative after `webcompy lock --export`
+
+#### Scenario: Setting up a WebComPy project with poetry
+- **WHEN** a developer uses `poetry` for dependency management
+- **THEN** the documentation SHALL show how to:
+  1. Create a `pyproject.toml` with `[tool.poetry.dependencies]` or `[project.optional-dependencies.browser]`
+  2. Set `LockfileSyncConfig(sync_group="browser")` if using optional dependencies
+  3. Run `webcompy lock` to generate the lock file
+  4. Run `webcompy lock --sync` to compare poetry-managed versions with the lock file
+  5. Note that `webcompy lock --install` uses `uv pip` or `pip`, not `poetry install`
+
 ### Requirement: Project scaffolding shall generate two config files
 `python -m webcompy init` SHALL generate both `webcompy_config.py` (with `app_import_path` and `app_config`) and `webcompy_server_config.py` (with `server_config` and `generate_config`) at the project root.
 
@@ -82,3 +126,4 @@ CLI flags (`--dev`, `--port`, `--dist`) SHALL override values from `webcompy_ser
 - **AND** `webcompy_server_config.py` SHALL be created at the project root with `server_config` and `generate_config`
 - **AND** `bootstrap.py` SHALL import `app_config` from `webcompy_config`
 - **AND** the project SHALL be immediately runnable via `python -m webcompy start`
+- **AND** `lockfile_sync_config` SHALL NOT be included in the generated `webcompy_server_config.py` (it is optional and auto-discovery handles the default case)
