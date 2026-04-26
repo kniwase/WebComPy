@@ -44,27 +44,24 @@ Dependency classification SHALL consult the Pyodide lock file (`pyodide-lock.jso
 ### Requirement: Transitive dependencies shall be resolved via Pyodide lock depends chain
 Transitive dependencies SHALL be resolved using the Pyodide lock `depends` field. This scoping ensures that only dependencies relevant to the browser runtime are included, and prevents dev/build-only packages from leaking into the lock file. For packages not in the Pyodide lock but found locally, the local `importlib.metadata` is used only for version detection and purity classification — NOT for walking the dependency graph.
 
-#### Scenario: Transitive pure-Python dependency resolution (local package)
+#### Scenario: Transitive dependencies of a non-CDN package are not auto-discovered
 - **WHEN** `flask` is in `AppConfig.dependencies` and not in the Pyodide CDN
 - **AND** `flask` depends on `click`, `itsdangerous`, and `jinja2`
-- **AND** `click` and `itsdangerous` are not in the Pyodide CDN and are pure-Python
-- **AND** `jinja2` is in the Pyodide CDN and is a pure-Python package
-- **AND** all packages are installed locally
-- **THEN** `click` and `itsdangerous` SHALL be classified as `bundled` with `source="transitive"`
-- **AND** `jinja2` SHALL be classified as `pyodide_cdn` with `is_wasm=False`
-- **AND** `jinja2` SHALL NOT be bundled into the app wheel
-- **AND** `jinja2` SHALL NOT appear in `py-config.packages`
+- **THEN** `flask` SHALL be classified as `bundled` with `source="explicit"`
+- **AND** `click`, `itsdangerous`, and `jinja2` SHALL NOT be auto-discovered as transitive dependencies
+- **AND** developers MUST explicitly list `click`, `itsdangerous`, and `jinja2` in `AppConfig.dependencies` if they are needed
+- **AND** packages explicitly listed in `AppConfig.dependencies` and found in the Pyodide CDN (e.g., `jinja2`) SHALL be classified as `pyodide_cdn`
+- **AND** packages explicitly listed and not in the Pyodide CDN (e.g., `click`, `itsdangerous`) SHALL be classified as `bundled` with `source="explicit"`
 
-#### Scenario: Transitive dependency resolution for Pyodide CDN pure-Python packages
+#### Scenario: Transitive dependency resolution for Pyodide CDN packages
 - **WHEN** `httpx` is in `AppConfig.dependencies` and is a pure-Python package in the Pyodide CDN
-- **AND** `httpx` depends on `httpcore`, `sniffio`, and `h2`
-- **AND** `httpcore` and `h2` are also pure-Python packages in the Pyodide CDN
-- **AND** `sniffio` is not in the Pyodide CDN but is installed locally as pure-Python
 - **AND** the Pyodide lock `depends` field for `httpx` lists `httpcore` and `h2`
+- **AND** `httpcore` and `h2` are also packages in the Pyodide CDN
 - **THEN** `httpx` SHALL be classified as `pyodide_cdn` with `is_wasm=False` and source `"explicit"`
 - **AND** `httpcore` and `h2` SHALL be resolved via the Pyodide lock `depends` field
 - **AND** `httpcore` and `h2` SHALL be classified as `pyodide_cdn` with `is_wasm=False` and source `"transitive"`
-- **AND** `sniffio` SHALL be classified as `bundled` with `source="transitive"`
+- **AND** a transitive dependency NOT listed in the Pyodide lock `depends` field SHALL NOT be auto-discovered
+- **AND** developers MUST explicitly list such dependencies in `AppConfig.dependencies`
 - **AND** only WASM packages SHALL appear in `py-config.packages`
 
 #### Scenario: Transitive dependency not installed locally and not in Pyodide lock
