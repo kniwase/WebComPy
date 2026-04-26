@@ -98,7 +98,7 @@ The CLI SHALL discover the app instance using `webcompy_config.py` (which contai
 - **THEN** a clear error SHALL be raised indicating that either `--app` or `webcompy_config.py` with `app_import_path` is required
 
 ### Requirement: Generated HTML shall include PyScript bootstrapping
-Every generated HTML page SHALL include PyScript v2026.3.1 CSS and JS, a loading screen, the app div (either pre-rendered or hidden), and a PyScript configuration specifying all required Python packages. The configuration SHALL reference a single bundled wheel (not separate framework and application wheels) and SHALL NOT include `typing_extensions` as a dependency. The bundled wheel URL SHALL be computed using `get_wheel_filename` from the wheel builder module, using the actual app package name — not a hardcoded `"app"` prefix. When `AppConfig.profile=True`, the generated `<script type="py">` tag SHALL include inline profiling code that captures `pyscript_ready` at the start of PyScript execution and passes it to the app instance before `app.run()`.
+Every generated HTML page SHALL include PyScript v2026.3.1 CSS and JS, a loading screen, the app div (either pre-rendered or hidden), and a PyScript configuration specifying all required Python packages. The configuration SHALL reference a single bundled wheel (not separate framework and application wheels) and SHALL NOT include `typing_extensions` as a dependency. The bundled wheel URL SHALL use the content-hashed filename returned by `make_webcompy_app_package()`. When `AppConfig.profile=True`, the generated `<script type="py">` tag SHALL include inline profiling code that captures `pyscript_ready` at the start of PyScript execution and passes it to the app instance before `app.run()`.
 
 #### Scenario: Inspecting generated HTML
 - **WHEN** a generated `index.html` is examined for an app package named `myapp`
@@ -109,7 +109,7 @@ Every generated HTML page SHALL include PyScript v2026.3.1 CSS and JS, a loading
 - **AND** the loading screen overlay SHALL use a semi-transparent dark background (e.g., `rgba(0, 0, 0, 0.5)`) so that pre-rendered content remains visible beneath during hydration
 - **AND** when prerendering is enabled, the `#webcompy-app` div SHALL NOT have a `hidden` attribute
 - **AND** when prerendering is disabled, the `#webcompy-app` div SHALL have a `hidden` attribute
-- **AND** the PyScript packages list SHALL reference a single bundled wheel URL using `get_wheel_filename("myapp", version)`
+- **AND** the PyScript packages list SHALL reference a single bundled wheel URL using the content-hashed filename from `make_webcompy_app_package()`
 - **AND** `typing_extensions` SHALL NOT appear in the packages list
 
 #### Scenario: Inspecting generated HTML with profiling enabled

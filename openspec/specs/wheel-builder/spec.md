@@ -21,19 +21,19 @@ All wheels produced by the builder SHALL be valid PEP 427 `.whl` files. The buil
 - **AND** the `.dist-info/top_level.txt` SHALL list the top-level package name(s)
 
 ### Requirement: The app wheel shall bundle webcompy (excluding cli) and bundled dependencies
-`make_webcompy_app_package()` SHALL produce a single PEP 427 wheel containing the webcompy framework source (excluding `webcompy/cli/`), the application package, and any bundled pure-Python dependencies (i.e., packages not available from the Pyodide CDN). The wheel SHALL be named `{app_name}-py3-none-any.whl` (no version suffix in filename). `make_browser_webcompy_wheel()` SHALL NOT exist — webcompy is bundled inside the app wheel.
+`make_webcompy_app_package()` SHALL produce a single PEP 427 wheel containing the webcompy framework source (excluding `webcompy/cli/`), the application package, and any bundled pure-Python dependencies (i.e., packages not available from the Pyodide CDN). The wheel filename SHALL include a content-derived hash for cache busting (see Content-hash wheel filename requirement). `make_browser_webcompy_wheel()` SHALL NOT exist — webcompy is bundled inside the app wheel.
 
 #### Scenario: Building an app wheel with webcompy bundled
 - **WHEN** `make_webcompy_app_package()` is called
 - **THEN** the resulting wheel SHALL contain `webcompy/app/`, `webcompy/elements/`, `webcompy/reactive/`, etc.
 - **AND** the wheel SHALL NOT contain `webcompy/cli/` or any files under `webcompy/cli/`
 - **AND** `top_level.txt` SHALL list `webcompy` and the app name
-- **AND** the wheel filename SHALL be `{app_name}-py3-none-any.whl` (without version)
+- **AND** the wheel filename SHALL follow the content-hash pattern `{app_name}-0+sha.{hash8}-py3-none-any.whl`
 
 #### Scenario: Building an app wheel without bundled dependencies
 - **WHEN** `make_webcompy_app_package(..., bundled_deps=None)` is called
 - **THEN** the resulting wheel SHALL contain webcompy (excl. cli) and the app package only
-- **AND** the wheel filename SHALL be `{app_name}-py3-none-any.whl`
+- **AND** the wheel filename SHALL follow the content-hash pattern
 
 ### Requirement: The wheel builder shall support bundled dependencies in the app wheel
 `make_webcompy_app_package()` SHALL accept an optional `bundled_deps` parameter of type `list[tuple[str, pathlib.Path]]`. When provided, each tuple represents a package name and its installed directory path. These directories SHALL be included in the app wheel alongside the app package, and their top-level names SHALL appear in `top_level.txt`.
@@ -43,13 +43,24 @@ All wheels produced by the builder SHALL be valid PEP 427 `.whl` files. The buil
 - **THEN** the resulting wheel SHALL contain webcompy, the app package, and `click/` directory
 - **AND** `top_level.txt` SHALL list `webcompy`, the app name, and `click`
 
-### Requirement: Wheel URLs shall use stable filenames without version suffixes
-The wheel filename served to browsers SHALL NOT include a version string. The app wheel SHALL be named `{app_name}-py3-none-any.whl`. The version SHALL appear only in the wheel's METADATA, not in the URL.
+### Requirement: App wheel filenames shall include a content-hash for cache busting
+The app wheel filename SHALL embed a SHA-256 hash derived from the wheel file contents, enabling automatic cache busting when the application code changes. The filename SHALL follow the PEP 440 local version identifier pattern: `{normalized_name}-0+sha.{hash8}-py3-none-any.whl`, where `{hash8}` is the first 8 hex characters of the SHA-256 digest of the wheel bytes. This ensures that any change to the bundled code produces a different filename, invalidating browser and CDN caches without requiring manual version bumps.
 
-#### Scenario: App wheel filename
-- **WHEN** an app wheel is built for an app named `myapp`
-- **THEN** the served filename SHALL be `myapp-py3-none-any.whl`
-- **AND** the METADATA SHALL contain `Version: {version}`
+#### Scenario: Content-hash in app wheel filename
+- **WHEN** `make_webcompy_app_package()` builds an app wheel for an app named `myapp`
+- **THEN** the wheel filename SHALL match the pattern `myapp-0+sha.{hash8}-py3-none-any.whl`
+- **AND** the filename SHALL be PEP 427-compliant (5 dash-separated parts before `.whl`)
+- **AND** the METADATA SHALL contain `Version: 0+sha.{hash8}`
+
+#### Scenario: Content hash changes when code changes
+- **WHEN** the same app is built twice with different source code
+- **THEN** the two wheel filenames SHALL differ in the `{hash8}` component
+- **AND** the same source code built repeatedly SHALL produce the same `{hash8}`
+
+#### Scenario: Content-hash filename propagated to HTML
+- **WHEN** the dev server or static generator produces HTML
+- **THEN** the `py-config.packages` URL SHALL reference the content-hashed wheel filename
+- **AND** no consumer SHALL compute the wheel filename independently — it SHALL use the filename returned by `make_webcompy_app_package()`
 
 ### Requirement: The wheel builder shall support assets for non-Python files
 The wheel builder SHALL accept an `assets` parameter specifying a mapping of string keys to file paths (relative to the app package directory). Files referenced by these paths SHALL be included in the wheel inside the package tree. Additionally, the builder SHALL generate an `_assets_registry.py` module inside the app package that maps each key to its full package-qualified path, enabling runtime asset lookup via `importlib.resources`.
@@ -79,7 +90,7 @@ The wheel builder SHALL be able to bundle multiple top-level packages (e.g., the
 - **AND** `import myapp` SHALL work after the wheel is installed
 - **AND** only a single `.whl` file SHALL be produced
 
-#### Scenario: Bundled wheel naming
+#### Scenario: Bundled wheel naming (non-app wheels)
 - **WHEN** the CLI builds a bundled wheel for an app package named `docs_src` with version `25.107.43200`
 - **THEN** the wheel file name SHALL be `docs_src-25.107.43200-py3-none-any.whl`
 - **AND** `get_wheel_filename("docs_src", "25.107.43200")` SHALL return `"docs_src-25.107.43200-py3-none-any.whl"`
@@ -87,5 +98,6 @@ The wheel builder SHALL be able to bundle multiple top-level packages (e.g., the
 
 #### Scenario: Wheel filename consistency across all consumers
 - **WHEN** the HTML template, dev server, and static generator each need the wheel filename
-- **THEN** they SHALL all call `get_wheel_filename(name, version)` from the wheel builder module
+- **THEN** the app wheel filename SHALL come from the return value of `make_webcompy_app_package()`
+- **AND** non-app wheels SHALL use `get_wheel_filename(name, version)` from the wheel builder module
 - **AND** no consumer SHALL hardcode the wheel filename pattern
