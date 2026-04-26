@@ -14,13 +14,43 @@ jobs:
           node-version: 20
       - run: npx @fission-ai/openspec@latest validate --specs
       - run: npx @fission-ai/openspec@latest validate --changes
-      - name: Check that all changes are archived
+
+  openspec-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Detect completed but unarchived changes
         run: |
-          unarchived=$(find openspec/changes/ -mindepth 1 -maxdepth 1 -type d ! -name archive)
-          if [ -n "$unarchived" ]; then
-            echo "::warning::Unarchived changes found. Run /opsx-archive before merging to main."
-            echo "$unarchived"
+          changes_json=$(npx @fission-ai/openspec@latest list --json 2>/dev/null)
+          complete_names=$(echo "$changes_json" | jq -r '.changes[] | select(.status == "complete") | .name')
+          if [ -n "$complete_names" ]; then
+            echo "::error::Completed changes must be archived before merging to main. Run /opsx-archive for:"
+            echo "$complete_names" | while read -r name; do
+              echo "::error::  - $name (all tasks complete, not yet archived)"
+            done
+            exit 1
           fi
+          in_progress_names=$(echo "$changes_json" | jq -r '.changes[] | select(.status == "in-progress") | .name')
+          if [ -n "$in_progress_names" ]; then
+            echo "::notice::In-progress changes found. These are expected on feature branches and do not need archiving until implementation is complete:"
+            echo "$in_progress_names" | while read -r name; do
+              echo "::notice::  - $name"
+            done
+          fi
+      - name: Validate change naming conventions
+        run: |
+          valid_prefix="^(feat|fix|refactor|docs|chore|test|perf)-"
+          for dir in openspec/changes/*/; do
+            name=$(basename "$dir")
+            [ "$name" = "archive" ] && continue
+            if ! echo "$name" | grep -qE "$valid_prefix"; then
+              echo "::error::Change '$name' does not follow naming convention (<type>-<description>). Expected prefix: feat-, fix-, refactor-, docs-, chore-, test-, perf-"
+              exit 1
+            fi
+          done
 
   lint:
     runs-on: ubuntu-latest
@@ -60,7 +90,7 @@ jobs:
 
   e2e-matrix:
     if: ${{ !failure() && !cancelled() }}
-    needs: [openspec, lint, typecheck, generate, test]
+    needs: [lint, typecheck, generate, test]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -96,7 +126,7 @@ jobs:
 
   review:
     if: always()
-    needs: [openspec, lint, typecheck, generate, test, e2e-matrix]
+    needs: [openspec, openspec-check, lint, typecheck, generate, test, e2e-matrix]
     runs-on: ubuntu-latest
     concurrency:
       group: review-${{ github.event.pull_request.number }}
