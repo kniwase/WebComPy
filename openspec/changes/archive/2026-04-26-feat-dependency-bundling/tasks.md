@@ -21,7 +21,7 @@
 5. Implement `classify_dependencies(dependencies: list[str], pyodide_lock: dict) -> tuple[list[ClassifiedDependency], list[str]]`:
    - For each direct dependency:
      - If in `pyodide_lock["packages"]` and `is_wasm`: classify as `pyodide_cdn`.
-     - If in `pyodide_lock["packages"]` and not `is_wasm` (pure Python): classify as `bundled` (will be bundled locally).
+      - If in `pyodide_lock["packages"]` and not `is_wasm` (pure Python): classify as `pyodide_cdn` with `is_wasm=False` (served from CDN, not bundled).
      - If not in lock: find local package dir, check `.so`/`.pyd`.
        - Pure Python: classify as `bundled` with `source="explicit"`.
        - C extension: add to errors list.
@@ -31,7 +31,7 @@
      - For transitive deps not in the Pyodide lock, fall back to `importlib.metadata` resolution.
    - Classify each transitive dep:
      - In Pyodide lock, WASM: classify as `pyodide_cdn`, `is_wasm=True`, `source="transitive"`.
-     - In Pyodide lock, pure Python: classify as `pyodide_cdn`, `is_wasm=False`, `source="transitive"` → will be bundled.
+      - In Pyodide lock, pure Python: classify as `pyodide_cdn`, `is_wasm=False`, `source="transitive"` → served from CDN, not bundled.
      - Not in lock, pure Python locally: classify as `bundled` with `source="transitive"`.
      - Not in lock, C extension: add to errors.
 6. Write comprehensive unit tests.
@@ -39,7 +39,7 @@
 ### Acceptance Criteria
 
 - `classify_dependencies(["numpy"], lock)` classifies `numpy` as `pyodide_cdn` (WASM).
-- `classify_dependencies(["httpx"], lock)` classifies `httpx` as `pyodide_cdn` with `is_wasm=False` (pure Python, bundled locally).
+- `classify_dependencies(["httpx"], lock)` classifies `httpx` as `pyodide_cdn` with `is_wasm=False` (pure Python, served from CDN).
 - `classify_dependencies(["httpx"], lock)` resolves `httpx`'s transitive dependencies via Pyodide lock `depends` field and local `importlib.metadata`.
 - `classify_dependencies(["flask"], lock)` classifies `flask` as `bundled` (if not in lock) and resolves transitive deps.
 - Transitive dependency not installed locally and not in Pyodide lock produces an error with instructions to install or add to dependencies.
@@ -97,8 +97,8 @@
 ### Acceptance Criteria
 
 - `generate_lockfile(["flask", "numpy"], "2026.3.1")` produces a `Lockfile` with `numpy` in `pyodide_packages` (WASM) and `flask` in `bundled_packages`.
-- Pure-Python Pyodide packages (e.g., `httpx`) are placed in `bundled_packages`, not `pyodide_packages`.
-- `get_bundled_deps()` returns pure-Python Pyodide packages for bundling.
+- Pure-Python Pyodide packages (e.g., `httpx`) are placed in `pyodide_packages` with `is_wasm=False`, not in `bundled_packages`.
+- `get_bundled_deps()` returns only bundled pure-Python packages (not Pyodide CDN packages).
 - `get_pyodide_package_names()` returns only WASM package names.
 - `save_lockfile()` + `load_lockfile()` roundtrips correctly.
 - `validate_lockfile()` detects missing dependencies correctly.

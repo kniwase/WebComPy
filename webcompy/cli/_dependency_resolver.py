@@ -194,6 +194,8 @@ def _resolve_all_transitives(
             visited_for_transitive.add(trans_norm)
 
             pkg_info = pyodide_lock.get("packages", {}).get(trans_name)
+            if pkg_info is None:
+                continue
             is_wasm = _is_wasm_in_pyodide_lock(trans_name, pyodide_lock)
             version = pkg_info.get("version", "0.0.0")
             if is_wasm:
