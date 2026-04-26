@@ -75,7 +75,7 @@ def record_requirements_path(
             if candidate.exists():
                 return candidate
         for dir_path in app_package_path.parents:
-            candidate = dir_path / "webcomby_server_config.py"
+            candidate = dir_path / "webcompy_server_config.py"
             if candidate.exists():
                 return candidate
             candidate = dir_path / "webcompy_server_config.py"

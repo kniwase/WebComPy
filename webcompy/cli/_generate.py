@@ -34,7 +34,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
     if generate_config is None:
         generate_config = get_generate_config(package)
 
-    resolve_dependencies(app)
+    resolve_dependencies(app, lockfile_sync_config=generate_config.lockfile_sync_config)
     assert app.config.dependencies is not None
 
     with app.di_scope:

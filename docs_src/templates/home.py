@@ -129,7 +129,7 @@ def Home(_: ComponentContext[None]):
                 " in ",
                 html.CODE({}, "pyproject.toml"),
                 " (same as the uv setup above).",
-                html.BR({}),
+                html.BR(),
                 "Then configure ",
                 html.CODE({}, "webcompy_config.py"),
                 " and ",

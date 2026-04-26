@@ -29,6 +29,7 @@ class ServerConfig:
     port: int = 8080
     dev: bool = False
     static_files_dir: str = "static"
+    lockfile_sync_config: LockfileSyncConfig | None = None
 
     @property
     def static_files_dir_path(self) -> Path:
@@ -40,6 +41,7 @@ class GenerateConfig:
     dist: str = "dist"
     cname: str = ""
     static_files_dir: str = "static"
+    lockfile_sync_config: LockfileSyncConfig | None = None
 
     @property
     def static_files_dir_path(self) -> Path:
