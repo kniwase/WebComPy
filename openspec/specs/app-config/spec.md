@@ -37,8 +37,8 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 #### Scenario: Configuring app version
 - **WHEN** a developer creates `AppConfig(version="1.0.0")`
 - **THEN** `version` SHALL be stored as `"1.0.0"`
-- **AND** the wheel METADATA SHALL include `Version: 1.0.0`
-- **AND** the wheel URL SHALL remain stable without a version suffix
+- **AND** the wheel METADATA SHALL include `Version: 0+sha.{hash8}` (content-derived hash overrides the configured version for PEP 427 compliance)
+- **AND** the wheel URL SHALL change when application code changes (content-hash cache busting)
 
 #### Scenario: Passing configuration to WebComPyApp
 - **WHEN** a developer creates `WebComPyApp(root_component=Root, config=AppConfig(base_url="/app/"))`

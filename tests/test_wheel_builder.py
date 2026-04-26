@@ -537,8 +537,15 @@ class TestContentHashWheel:
 
         result = make_webcompy_app_package(dest, webcompy_pkg, app_pkg, "1.0.0")
 
-        expected_hash = hashlib.sha256(result.read_bytes()).hexdigest()[:8]
-        assert f"+sha.{expected_hash}" in result.name
+        with zipfile.ZipFile(result, "r") as zf:
+            metadata_files = [n for n in zf.namelist() if n.endswith("/METADATA")]
+            assert len(metadata_files) == 1
+            metadata_content = zf.read(metadata_files[0]).decode("utf-8")
+            assert "Version: 0+sha." in metadata_content
+
+            dist_info_dirs = set(n.split("/")[0] for n in zf.namelist() if ".dist-info/" in n)
+            assert len(dist_info_dirs) == 1
+            assert dist_info_dirs.pop().startswith("myapp-0+sha.")
 
 
 class TestMakeWebcompyAppPackageExcludesCli:

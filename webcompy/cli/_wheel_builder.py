@@ -80,11 +80,37 @@ def get_wheel_filename(name: str, version: str) -> str:
     return f"{_normalize_name(name)}-{version}-py3-none-any.whl"
 
 
-def _content_hash_wheel(wheel_path: pathlib.Path, name: str) -> pathlib.Path:
+def _content_hash_wheel(wheel_path: pathlib.Path, name: str, app_version: str) -> pathlib.Path:
     digest = hashlib.sha256(wheel_path.read_bytes()).hexdigest()[:8]
-    new_filename = f"{_normalize_name(name)}-0+sha.{digest}-py3-none-any.whl"
+    hash_version = f"0+sha.{digest}"
+    dist_name = _normalize_name(name)
+    old_dist_info = f"{dist_name}-{app_version}.dist-info"
+    new_dist_info = f"{dist_name}-{hash_version}.dist-info"
+    new_filename = f"{_normalize_name(name)}-{hash_version}-py3-none-any.whl"
+
+    with zipfile.ZipFile(wheel_path, "r") as zf_in:
+        entries = []
+        for info in zf_in.infolist():
+            if info.filename == f"{old_dist_info}/RECORD":
+                continue
+            data = zf_in.read(info.filename)
+            arc_path = info.filename
+            if arc_path.startswith(old_dist_info + "/"):
+                arc_path = new_dist_info + "/" + arc_path[len(old_dist_info) + 1 :]
+            if arc_path == f"{new_dist_info}/METADATA":
+                data = _write_metadata(name, hash_version).encode("utf-8")
+            entries.append((arc_path, data))
+
+    os.remove(wheel_path)
     new_path = wheel_path.parent / new_filename
-    wheel_path.rename(new_path)
+    with zipfile.ZipFile(new_path, "w", zipfile.ZIP_DEFLATED) as zf_out:
+        record_entries = []
+        for arc_path, data in entries:
+            zf_out.writestr(arc_path, data)
+            record_entries.append((arc_path, _sha256_b64(data), len(data)))
+        record_content = _write_record(record_entries, new_dist_info)
+        zf_out.writestr(f"{new_dist_info}/RECORD", record_content)
+
     return new_path
 
 
@@ -342,4 +368,4 @@ def make_webcompy_app_package(
         record_content = _write_record(record_entries, dist_info)
         zf.writestr(f"{dist_info}/RECORD", record_content)
 
-    return _content_hash_wheel(wheel_path, app_name)
+    return _content_hash_wheel(wheel_path, app_name, app_version)
