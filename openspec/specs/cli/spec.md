@@ -24,13 +24,14 @@ The development server SHALL be startable via `python -m webcompy start --dev` o
 - **THEN** the server SHALL start on port 3000
 - **AND** the `--port` flag SHALL override `ServerConfig.port`
 
-### Requirement: The dev server shall serve application packages
-The dev server SHALL build two separate Python wheels: a browser-only webcompy framework wheel and an application wheel containing the app code and bundled pure-Python dependencies. Both wheels SHALL be served at stable `/_webcompy-app-package/` endpoints. The framework wheel SHALL have `Cache-Control: max-age=86400, must-revalidate` and the app wheel in dev mode SHALL have `Cache-Control: no-cache`.
+### Requirement: The dev server shall serve a single bundled wheel
+The dev server SHALL build a single Python wheel containing the webcompy framework (excluding `webcompy/cli/`), application code, and all bundled pure-Python dependencies (i.e., packages not available from the Pyodide CDN). Pure-Python packages available in the Pyodide CDN SHALL NOT be bundled — they are served from the CDN by the browser. The wheel SHALL be served at a stable `/_webcompy-app-package/` endpoint. The app wheel in dev mode SHALL have `Cache-Control: no-cache`. Only WASM packages SHALL be loaded from the Pyodide CDN by name via `py-config.packages`.
 
 #### Scenario: Starting the dev server
 - **WHEN** a developer runs `python -m webcompy start --dev`
-- **THEN** the server SHALL build a single bundled wheel containing both webcompy and the application code
+- **THEN** the server SHALL build a single wheel containing webcompy (excl. cli), app code, and bundled pure-Python dependencies (those not in Pyodide CDN)
 - **AND** serve it at `/_webcompy-app-package/{filename}` where `{filename}` matches the wheel URL in the generated HTML
+- **AND** only WASM Pyodide CDN packages SHALL appear in `py-config.packages`
 - **AND** the browser SHALL be able to import both `webcompy` and the application package
 
 #### Scenario: Dev server with assets
@@ -40,13 +41,14 @@ The dev server SHALL build two separate Python wheels: a browser-only webcompy f
 - **AND** `load_asset("logo")` SHALL return the file content as `bytes`
 
 ### Requirement: The generate command shall produce deployable static files
-Static site generation SHALL be available via `python -m webcompy generate` or `generate_static_site(app, generate_config=None)`. Both SHALL produce a complete static site in the configured output directory. The SSG process SHALL enter the app's DI scope for the entire generation pipeline to ensure `inject()` calls during route rendering succeed.
+Static site generation SHALL be available via `python -m webcompy generate` or `generate_static_site(app, generate_config=None)`. Both SHALL produce a complete static site in the configured output directory. The SSG process SHALL enter the app's DI scope for the entire generation pipeline to ensure `inject()` calls during route rendering succeed. A single bundled wheel SHALL be placed in `dist/_webcompy-app-package/`.
 
 #### Scenario: Generating a multi-page application with history mode
 - **WHEN** routes are defined with history mode
 - **THEN** an `index.html` SHALL be generated for each route path
 - **AND** a `404.html` SHALL be generated for unmatched paths
 - **AND** a single bundled wheel SHALL be placed in `dist/_webcompy-app-package/`
+- **AND** the generated HTML SHALL reference the single wheel URL plus WASM-only Pyodide CDN package names
 - **AND** static files SHALL be copied from the configured directory
 - **AND** a `.nojekyll` file SHALL be created for GitHub Pages compatibility
 
@@ -166,3 +168,51 @@ The `webcompy.assets` module SHALL provide a `load_asset(key: str) -> bytes` fun
 #### Scenario: No assets registry module
 - **WHEN** `load_asset` is called but the `app._assets_registry` module cannot be imported
 - **THEN** `AssetNotFoundError` SHALL be raised
+
+### Requirement: Dependencies shall be classified via lock file resolution
+Dependencies listed in `AppConfig.dependencies` SHALL be classified using Pyodide lock data and local package inspection. WASM packages available in the Pyodide CDN SHALL be loaded from the CDN by name via `py-config.packages`. Pure-Python packages available in the Pyodide CDN SHALL NOT be bundled and SHALL NOT appear in `py-config.packages`. Pure-Python packages not in the Pyodide CDN SHALL be bundled into the app wheel. C-extension packages not in the Pyodide CDN SHALL cause an error.
+
+#### Scenario: Bundling pure-Python dependencies not in Pyodide CDN
+- **WHEN** `AppConfig.dependencies=["flask"]` and `flask` is pure-Python and not in the Pyodide CDN
+- **AND** `flask`'s transitive dependency `click` is also pure-Python and not in the Pyodide CDN
+- **THEN** `flask` and `click` SHALL be bundled into the app wheel
+
+#### Scenario: Packages in Pyodide CDN (WASM)
+- **WHEN** `AppConfig.dependencies=["numpy"]` and `numpy` is a WASM package in the Pyodide CDN
+- **THEN** `numpy` SHALL appear in `py-config.packages` as a plain package name
+- **AND** `numpy` SHALL NOT be bundled into the app wheel
+
+#### Scenario: Pure Python package in Pyodide CDN
+- **WHEN** `AppConfig.dependencies=["httpx"]` and `httpx` is a pure-Python package in the Pyodide CDN
+- **THEN** `httpx` SHALL NOT be bundled into the app wheel
+- **AND** `httpx` SHALL NOT appear in `py-config.packages`
+
+#### Scenario: C extension not available in Pyodide
+- **WHEN** `AppConfig.dependencies=["some_c_ext"]` and `some_c_ext` is not in the Pyodide CDN and contains native extension files
+- **THEN** an error SHALL be reported indicating the package is a C extension not available in Pyodide
+
+### Requirement: The `webcompy lock` command shall generate or update the lock file
+Running `webcompy lock` SHALL generate or update `webcompy-lock.json` in the app package directory. The lock file records Pyodide CDN package versions, bundled package versions and sources, and the Pyodide/PyScript versions used for classification.
+
+#### Scenario: Generating a lock file
+- **WHEN** a developer runs `webcompy lock` in a project with `AppConfig.dependencies=["flask", "numpy"]`
+- **THEN** `webcompy-lock.json` SHALL be created in the app package directory
+
+#### Scenario: Lock file already exists and dependencies unchanged
+- **WHEN** `webcompy-lock.json` exists and `AppConfig.dependencies` matches
+- **THEN** the existing lock file SHALL be validated and reused without network requests
+
+#### Scenario: Lock file is stale
+- **WHEN** `webcompy-lock.json` exists but `AppConfig.dependencies` has changed
+- **THEN** the lock file SHALL be regenerated
+
+### Requirement: The lock file shall be auto-generated on start and generate
+The `webcompy start` and `webcompy generate` commands SHALL auto-generate `webcompy-lock.json` if it does not exist or is stale.
+
+#### Scenario: Starting dev server without lock file
+- **WHEN** a developer runs `python -m webcompy start --dev` without a `webcompy-lock.json`
+- **THEN** the lock file SHALL be automatically generated before building wheels
+
+#### Scenario: Generating static site with stale lock file
+- **WHEN** a developer runs `python -m webcompy generate` and the lock file is stale
+- **THEN** the lock file SHALL be regenerated before building wheels

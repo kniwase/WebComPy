@@ -10,7 +10,7 @@ Application configuration provides type-safe, validated settings for WebComPy ap
 The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` dataclasses with validated fields and sensible defaults. `AppConfig` SHALL contain settings shared between browser and server environments (including `app_package` for server-side use). `ServerConfig` and `GenerateConfig` are internal types used by CLI functions, not part of the public API surface. `AppConfig` is the sole developer-facing configuration class.
 
 #### Scenario: Creating a minimal application configuration
-- **WHEN** a developer creates `WebComPyApp(root_component=Root)` without explicit config
+- **WHEN** a developer creates `AppConfig()` without explicit config
 - **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=[]`, `assets=None`, `app_package="."`, `profile=False`, `hydrate=True`, `version=None`)
 - **AND** the app SHALL function correctly with these defaults
 
@@ -40,6 +40,12 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **THEN** `base_url` SHALL be normalized to `"/myapp/"` (trailing slash)
 - **AND** `dependencies` SHALL be stored as a copy of the provided list
 
+#### Scenario: Configuring app version
+- **WHEN** a developer creates `AppConfig(version="1.0.0")`
+- **THEN** `version` SHALL be stored as `"1.0.0"`
+- **AND** the wheel METADATA SHALL include `Version: 1.0.0`
+- **AND** the wheel URL SHALL remain stable without a version suffix
+
 #### Scenario: Passing configuration to WebComPyApp
 - **WHEN** a developer creates `WebComPyApp(root_component=Root, config=AppConfig(base_url="/app/"))`
 - **THEN** the app SHALL use the provided configuration
@@ -68,6 +74,19 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **WHEN** a developer does not provide `assets`
 - **THEN** `assets` SHALL default to `None`
 - **AND** no assets SHALL be included in the bundled wheel
+
+### Requirement: Only WASM packages shall be loaded from the Pyodide CDN; pure-Python CDN packages are not bundled
+Pure-Python packages available in the Pyodide CDN SHALL NOT be bundled into the app wheel. They are already available from the Pyodide CDN and will be loaded by the browser from there. Only WASM packages (which cannot be bundled as pure Python) SHALL appear in `py-config.packages` for Pyodide CDN loading. There is no configuration option to change this behavior.
+
+#### Scenario: Pure-Python package available in Pyodide CDN
+- **WHEN** a dependency (e.g., `httpx`) is a pure-Python package available in the Pyodide CDN
+- **THEN** it SHALL NOT be bundled into the app wheel
+- **AND** it SHALL NOT appear in `py-config.packages`
+
+#### Scenario: WASM-only dependency
+- **WHEN** a dependency (e.g., `numpy`) is a WASM package in Pyodide
+- **THEN** the dependency SHALL be loaded from the Pyodide CDN because it cannot be bundled as pure Python
+- **AND** it SHALL appear in `py-config.packages` as a plain package name
 
 ### Requirement: ServerConfig and GenerateConfig shall be internal
 `ServerConfig` and `GenerateConfig` SHALL be internal dataclasses used by CLI functions. They SHALL NOT be exported in `webcompy.__all__` or `webcompy.app.__all__`. Developers define them in `webcompy_server_config.py`, which the CLI reads from the app package or the project root.
