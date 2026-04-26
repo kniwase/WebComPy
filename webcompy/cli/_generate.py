@@ -14,6 +14,7 @@ from webcompy.cli._lockfile import (
     resolve_lockfile,
     validate_local_environment,
 )
+from webcompy.cli._lockfile_sync import resolve_dependencies
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     discover_app,
@@ -32,6 +33,9 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
         app, package = discover_app(app_import_path)
     if generate_config is None:
         generate_config = get_generate_config(package)
+
+    resolve_dependencies(app, lockfile_sync_config=generate_config.lockfile_sync_config)
+    assert app.config.dependencies is not None
 
     with app.di_scope:
         lockfile, lockfile_errors, lockfile_warnings = resolve_lockfile(

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -8,7 +8,8 @@ from pathlib import Path
 class AppConfig:
     app_package: Path | str = "."
     base_url: str = "/"
-    dependencies: list[str] = field(default_factory=list)
+    dependencies: list[str] | None = None
+    dependencies_from: str | None = None
     assets: dict[str, str] | None = None
     version: str | None = None
     profile: bool = False
@@ -28,6 +29,7 @@ class ServerConfig:
     port: int = 8080
     dev: bool = False
     static_files_dir: str = "static"
+    lockfile_sync_config: LockfileSyncConfig | None = None
 
     @property
     def static_files_dir_path(self) -> Path:
@@ -39,7 +41,14 @@ class GenerateConfig:
     dist: str = "dist"
     cname: str = ""
     static_files_dir: str = "static"
+    lockfile_sync_config: LockfileSyncConfig | None = None
 
     @property
     def static_files_dir_path(self) -> Path:
         return Path(self.static_files_dir).absolute()
+
+
+@dataclass
+class LockfileSyncConfig:
+    requirements_path: str | None = None
+    sync_group: str | None = None

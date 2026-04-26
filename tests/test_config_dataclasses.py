@@ -7,7 +7,7 @@ class TestAppConfig:
     def test_defaults(self):
         config = AppConfig()
         assert config.base_url == "/"
-        assert config.dependencies == []
+        assert config.dependencies is None
         assert config.assets is None
         assert config.version is None
         assert config.app_package_path is not None

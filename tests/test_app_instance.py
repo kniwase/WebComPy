@@ -21,7 +21,7 @@ class TestWebComPyAppConfig:
     def test_default_config(self):
         app = _make_app()
         assert app.config.base_url == "/"
-        assert app.config.dependencies == []
+        assert app.config.dependencies is None
         assert app.config.assets is None
 
     def test_custom_config(self):

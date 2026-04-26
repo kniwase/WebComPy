@@ -28,6 +28,7 @@ from webcompy.cli._lockfile import (
     resolve_lockfile,
     validate_local_environment,
 )
+from webcompy.cli._lockfile_sync import resolve_dependencies
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     discover_app,
@@ -44,6 +45,9 @@ def create_asgi_app(
 ) -> ASGIApp:
     if server_config is None:
         server_config = ServerConfig()
+
+    resolve_dependencies(app, lockfile_sync_config=server_config.lockfile_sync_config)
+    assert app.config.dependencies is not None
 
     lockfile, lockfile_errors, lockfile_warnings = resolve_lockfile(
         app.config.dependencies,

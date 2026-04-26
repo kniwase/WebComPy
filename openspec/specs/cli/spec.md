@@ -172,6 +172,8 @@ The `webcompy.assets` module SHALL provide a `load_asset(key: str) -> bytes` fun
 ### Requirement: Dependencies shall be classified via lock file resolution
 Dependencies listed in `AppConfig.dependencies` SHALL be classified using Pyodide lock data and local package inspection. WASM packages available in the Pyodide CDN SHALL be loaded from the CDN by name via `py-config.packages`. Pure-Python packages available in the Pyodide CDN SHALL NOT be bundled and SHALL NOT appear in `py-config.packages`. Pure-Python packages not in the Pyodide CDN SHALL be bundled into the app wheel. C-extension packages not in the Pyodide CDN SHALL cause an error.
 
+When `AppConfig.dependencies` is `None`, the CLI SHALL auto-populate it from `pyproject.toml` before lock file generation. The resolution uses `AppConfig.dependencies_from` to determine which section of `pyproject.toml` to read. Version specifiers in `pyproject.toml` entries (e.g., `"flask>=3.0"`, `"numpy==2.2.5"`) SHALL be stripped before classification — only package names are used in `AppConfig.dependencies`; version pinning is handled by the lock file.
+
 #### Scenario: Bundling pure-Python dependencies not in Pyodide CDN
 - **WHEN** `AppConfig.dependencies=["flask", "click"]` and both are pure-Python and not in the Pyodide CDN
 - **THEN** `flask` and `click` SHALL be bundled into the app wheel
@@ -190,6 +192,20 @@ Dependencies listed in `AppConfig.dependencies` SHALL be classified using Pyodid
 #### Scenario: C extension not available in Pyodide
 - **WHEN** `AppConfig.dependencies=["some_c_ext"]` and `some_c_ext` is not in the Pyodide CDN and contains native extension files
 - **THEN** an error SHALL be reported indicating the package is a C extension not available in Pyodide
+
+#### Scenario: Auto-populated dependencies from pyproject.toml
+- **WHEN** `AppConfig(dependencies=None, dependencies_from="browser")` and `pyproject.toml` has `[project.optional-dependencies] browser = ["numpy", "matplotlib"]`
+- **THEN** dependencies SHALL be resolved to `["numpy", "matplotlib"]` before lock file generation
+- **AND** the lock file SHALL be generated as if `dependencies=["numpy", "matplotlib"]` were explicitly set
+
+#### Scenario: Version specifiers are stripped
+- **WHEN** `pyproject.toml` has `dependencies = ["flask>=3.0", "click==8.1.7"]`
+- **THEN** `AppConfig.dependencies` SHALL be set to `["flask", "click"]` (no version specifiers)
+
+#### Scenario: Explicit dependencies bypass auto-population
+- **WHEN** `AppConfig(dependencies=["numpy"])` (explicit list, not None)
+- **THEN** no `pyproject.toml` reading SHALL occur
+- **AND** `["numpy"]` SHALL be used as-is
 
 ### Requirement: The `webcompy lock` command shall generate or update the lock file
 Running `webcompy lock` SHALL generate or update `webcompy-lock.json` in the app package directory. The lock file records Pyodide CDN package versions, bundled package versions and sources, and the Pyodide/PyScript versions used for classification.
@@ -216,3 +232,54 @@ The `webcompy start` and `webcompy generate` commands SHALL auto-generate `webco
 #### Scenario: Generating static site with stale lock file
 - **WHEN** a developer runs `python -m webcompy generate` and the lock file is stale
 - **THEN** the lock file SHALL be regenerated before building wheels
+
+### Requirement: The `webcompy lock` command shall support dependency export, sync, and install operations
+The `webcompy lock` command SHALL support three additional operations beyond default lock file generation: `--export`, `--sync`, and `--install`. These operations enable synchronization between the WebComPy lock file and external Python package management tools. All three operations use auto-discovery to locate `requirements.txt` and `pyproject.toml` at the project root.
+
+#### Scenario: Running `webcompy lock --export`
+- **WHEN** a developer runs `webcompy lock --export`
+- **THEN** a `requirements.txt` file SHALL be generated at the auto-discovered project root containing pinned versions for all locally-required packages from the lock file
+- **AND** the lock file SHALL NOT be regenerated
+
+#### Scenario: Running `webcompy lock --sync`
+- **WHEN** a developer runs `webcompy lock --sync`
+- **THEN** the command SHALL auto-discover `requirements.txt` and `pyproject.toml` at the project root
+- **AND** compare the pinned versions against the lock file
+- **AND** report matching versions, mismatches, and extra entries
+- **AND** SHALL NOT modify the lock file
+
+#### Scenario: Running `webcompy lock --install`
+- **WHEN** a developer runs `webcompy lock --install`
+- **THEN** a `requirements.txt` file SHALL be generated from the lock file via auto-discovery
+- **AND** `uv pip install -r {path}` SHALL be executed if `uv` is available, otherwise `sys.executable -m pip install -r {path}`
+- **AND** the exit code of the install command SHALL be the exit code of the `webcompy lock --install` command
+
+#### Scenario: Combining mutually exclusive flags
+- **WHEN** a developer runs `webcompy lock` with both `--export` and `--install`
+- **THEN** an error SHALL be reported indicating that the operations are mutually exclusive
+
+#### Scenario: Running `webcompy lock --export` without a lock file
+- **WHEN** a developer runs `webcompy lock --export` without an existing `webcompy-lock.json`
+- **THEN** an error SHALL be reported indicating that the lock file must be generated first by running `webcompy lock`
+
+#### Scenario: Running `webcompy lock --sync` with sync_group configuration
+- **WHEN** a developer has `LockfileSyncConfig(sync_group="browser")` in `webcompy_server_config.py`
+- **AND** runs `webcompy lock --sync`
+- **THEN** the command SHALL compare `[project.optional-dependencies.browser]` from `pyproject.toml` against the lock file
+
+#### Scenario: Default `webcompy lock` unchanged
+- **WHEN** a developer runs `webcompy lock` without any flags
+- **THEN** the lock file SHALL be generated or updated (existing behavior preserved)
+
+#### Scenario: Auto-populating dependencies from pyproject.toml
+- **WHEN** a developer runs `webcompy lock` (or `webcompy start`, `webcompy generate`)
+- **AND** `AppConfig.dependencies` is `None`
+- **AND** `AppConfig.dependencies_from` is `"browser"`
+- **THEN** the CLI SHALL read `[project.optional-dependencies.browser]` from `pyproject.toml`
+- **AND** populate `app.config.dependencies` with the package names (stripping version specifiers)
+- **AND** proceed with lock file generation using the populated dependencies
+
+#### Scenario: Auto-populating dependencies when pyproject.toml is absent
+- **WHEN** a developer runs `webcompy lock` with `AppConfig(dependencies=None)`
+- **AND** no `pyproject.toml` is found above `app_package_path`
+- **THEN** an error SHALL be reported instructing the developer to set `AppConfig.dependencies` explicitly
