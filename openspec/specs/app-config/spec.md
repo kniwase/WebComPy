@@ -29,12 +29,6 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **WHEN** a developer creates `WebComPyApp(..., config=AppConfig(hydrate=True))` without an explicit `hydrate` parameter
 - **THEN** `config.hydrate` SHALL be used as the effective value
 
-#### Scenario: Configuring app version
-- **WHEN** a developer creates `AppConfig(version="1.0.0")`
-- **THEN** `version` SHALL be stored as `"1.0.0"`
-- **AND** the wheel METADATA SHALL include `Version: 1.0.0`
-- **AND** the wheel URL SHALL remain stable without a version suffix
-
 #### Scenario: Configuring base URL and dependencies
 - **WHEN** a developer creates `AppConfig(base_url="/myapp/", dependencies=["pandas"])`
 - **THEN** `base_url` SHALL be normalized to `"/myapp/"` (trailing slash)

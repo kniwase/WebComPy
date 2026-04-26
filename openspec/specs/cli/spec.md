@@ -173,9 +173,9 @@ The `webcompy.assets` module SHALL provide a `load_asset(key: str) -> bytes` fun
 Dependencies listed in `AppConfig.dependencies` SHALL be classified using Pyodide lock data and local package inspection. WASM packages available in the Pyodide CDN SHALL be loaded from the CDN by name via `py-config.packages`. Pure-Python packages available in the Pyodide CDN SHALL NOT be bundled and SHALL NOT appear in `py-config.packages`. Pure-Python packages not in the Pyodide CDN SHALL be bundled into the app wheel. C-extension packages not in the Pyodide CDN SHALL cause an error.
 
 #### Scenario: Bundling pure-Python dependencies not in Pyodide CDN
-- **WHEN** `AppConfig.dependencies=["flask"]` and `flask` is pure-Python and not in the Pyodide CDN
-- **AND** `flask`'s transitive dependency `click` is also pure-Python and not in the Pyodide CDN
+- **WHEN** `AppConfig.dependencies=["flask", "click"]` and both are pure-Python and not in the Pyodide CDN
 - **THEN** `flask` and `click` SHALL be bundled into the app wheel
+- **AND** transitive dependencies of non-CDN packages are NOT auto-discovered; they MUST be explicitly listed in `AppConfig.dependencies`
 
 #### Scenario: Packages in Pyodide CDN (WASM)
 - **WHEN** `AppConfig.dependencies=["numpy"]` and `numpy` is a WASM package in the Pyodide CDN
