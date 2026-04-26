@@ -78,9 +78,6 @@ def record_requirements_path(
             candidate = dir_path / "webcompy_server_config.py"
             if candidate.exists():
                 return candidate
-            candidate = dir_path / "webcompy_server_config.py"
-            if candidate.exists():
-                return candidate
         return None
 
     config_path = _find_config_module()
