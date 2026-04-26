@@ -81,7 +81,7 @@ def get_wheel_filename(name: str, version: str) -> str:
 
 
 def get_stable_wheel_filename(name: str) -> str:
-    return f"{_normalize_name(name)}-py3-none-any.whl"
+    return f"{_normalize_name(name)}-0-py3-none-any.whl"
 
 
 def _write_metadata(name: str, version: str) -> str:

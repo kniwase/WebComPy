@@ -14,7 +14,7 @@ def BundledDepsPage(context: ComponentContext[None]):
         try:
             import aiofiles
 
-            aiofiles_status.value = f"ok:{aiofiles.__version__}"
+            aiofiles_status.value = f"ok:{getattr(aiofiles, '__version__', 'unknown')}"
         except Exception as e:
             aiofiles_status.value = f"error:{e}"
 
@@ -22,7 +22,7 @@ def BundledDepsPage(context: ComponentContext[None]):
         try:
             import h11
 
-            h11_status.value = f"ok:{h11.__version__}"
+            h11_status.value = f"ok:{getattr(h11, '__version__', 'unknown')}"
         except Exception as e:
             h11_status.value = f"error:{e}"
 

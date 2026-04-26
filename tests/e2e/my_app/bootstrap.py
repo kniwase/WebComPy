@@ -1,6 +1,6 @@
-from webcompy_config import app_config
+from pathlib import Path
 
-from webcompy.app import WebComPyApp
+from webcompy.app import AppConfig, WebComPyApp
 
 from .keys import AppThemeKey
 from .layout import Root
@@ -9,7 +9,11 @@ from .router import router
 app = WebComPyApp(
     root_component=Root,
     router=router,
-    config=app_config,
+    config=AppConfig(
+        app_package=Path(__file__).parent,
+        base_url="/",
+        dependencies=["aiofiles"],
+    ),
 )
 app.provide(AppThemeKey, "app-dark-theme")
 app.set_head(

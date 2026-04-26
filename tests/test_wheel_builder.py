@@ -470,18 +470,18 @@ class TestFilterExcludedSubpackages:
 
 class TestGetStableWheelFilename:
     def test_simple_name(self):
-        assert get_stable_wheel_filename("myapp") == "myapp-py3-none-any.whl"
+        assert get_stable_wheel_filename("myapp") == "myapp-0-py3-none-any.whl"
 
     def test_underscore_name(self):
-        assert get_stable_wheel_filename("my_app") == "my_app-py3-none-any.whl"
+        assert get_stable_wheel_filename("my_app") == "my_app-0-py3-none-any.whl"
 
     def test_mixed_case_name(self):
-        assert get_stable_wheel_filename("MyApp") == "myapp-py3-none-any.whl"
+        assert get_stable_wheel_filename("MyApp") == "myapp-0-py3-none-any.whl"
 
     def test_no_version_in_filename(self):
         result = get_stable_wheel_filename("myapp")
         assert "-1.0.0-" not in result
-        assert result == "myapp-py3-none-any.whl"
+        assert result == "myapp-0-py3-none-any.whl"
 
 
 class TestMakeWebcompyAppPackageExcludesCli:
@@ -533,7 +533,7 @@ class TestMakeWebcompyAppPackageExcludesCli:
             app_pkg,
             "1.0.0",
         )
-        assert result.name == "myapp-py3-none-any.whl"
+        assert result.name == "myapp-0-py3-none-any.whl"
 
     def test_top_level_excludes_cli(self, tmp_path):
         webcompy_pkg = tmp_path / "webcompy"

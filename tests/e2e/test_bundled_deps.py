@@ -73,7 +73,7 @@ class TestBundledDepsWheel:
 
     def test_stable_filename_in_wheel(self, static_site):
         _, wheel_file, app_name = static_site
-        expected = get_stable_wheel_filename(app_name)
+        expected = f"{app_name.replace('-', '_')}-0-py3-none-any.whl"
         assert wheel_file.name == expected
 
 
