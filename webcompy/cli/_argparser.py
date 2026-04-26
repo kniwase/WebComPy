@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from typing import Any, Literal
 
 
-def get_params() -> tuple[Literal["start", "generate", "init"], dict[str, Any]]:
+def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str, Any]]:
     def _command(subcommand_name: str):
         return lambda: subcommand_name
 
@@ -59,6 +59,19 @@ def get_params() -> tuple[Literal["start", "generate", "init"], dict[str, Any]]:
         help="Creates new project on current dir.",
     )
     parser_init.set_defaults(__command_getter__=_command(subcommand_name))
+
+    # lock
+    subcommand_name = "lock"
+    parser_lock = subparsers.add_parser(
+        subcommand_name,
+        help="Generates or updates webcompy-lock.json.",
+    )
+    parser_lock.add_argument(
+        "--app",
+        type=str,
+        help="import path for app instance (e.g., my_app.bootstrap:app)",
+    )
+    parser_lock.set_defaults(__command_getter__=_command(subcommand_name))
 
     # parse
     args = parser.parse_args()

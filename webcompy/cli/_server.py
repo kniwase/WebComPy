@@ -20,7 +20,14 @@ from starlette.types import ASGIApp
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import ServerConfig
 from webcompy.cli._argparser import get_params
-from webcompy.cli._html import generate_html
+from webcompy.cli._html import PYSCRIPT_VERSION, generate_html
+from webcompy.cli._lockfile import (
+    LOCKFILE_NAME,
+    get_bundled_deps,
+    get_pyodide_package_names,
+    resolve_lockfile,
+    validate_local_environment,
+)
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     discover_app,
@@ -38,17 +45,46 @@ def create_asgi_app(
     if server_config is None:
         server_config = ServerConfig()
 
-    app_version = generate_app_version()
+    lockfile, lockfile_errors, lockfile_warnings = resolve_lockfile(
+        app.config.dependencies,
+        PYSCRIPT_VERSION,
+        app.config.app_package_path / LOCKFILE_NAME,
+    )
+    for warning in lockfile_warnings:
+        print(f"Warning: {warning}", flush=True)
+    for err in lockfile_errors:
+        print(f"Error: {err}", flush=True)
+
+    if lockfile is not None:
+        env_errors, env_warnings = validate_local_environment(lockfile)
+        for warning in env_warnings:
+            print(f"Warning: {warning}", flush=True)
+        for err in env_errors:
+            print(f"Error: {err}", flush=True)
+        lockfile_errors.extend(env_errors)
+
+    if lockfile_errors:
+        import sys
+
+        print("Build failed due to lock file errors. Fix the above issues and try again.", file=sys.stderr)
+        sys.exit(1)
+
+    bundled_deps = get_bundled_deps(lockfile)
+    pyodide_package_names = get_pyodide_package_names(lockfile)
+
+    app_version = generate_app_version(app.config.version)
 
     with TemporaryDirectory() as temp:
         temp_path = pathlib.Path(temp)
-        make_webcompy_app_package(
+        wheel_path = make_webcompy_app_package(
             temp_path,
             get_webcompy_packge_dir(),
             app.config.app_package_path,
             app_version,
             app.config.assets,
+            bundled_deps=bundled_deps or None,
         )
+        wheel_filename = wheel_path.name
         app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (
                 p.open("rb").read(),
@@ -61,7 +97,10 @@ def create_asgi_app(
         filename: str = request.path_params.get("filename", "")  # type: ignore
         if filename in app_package_files:
             content, media_type = app_package_files[filename]
-            return Response(content, media_type=media_type)
+            headers: dict[str, str] = {}
+            if server_config.dev and filename == wheel_filename:
+                headers["Cache-Control"] = "no-cache"
+            return Response(content, media_type=media_type, headers=headers)
         else:
             raise HTTPException(404)
 
@@ -84,7 +123,15 @@ def create_asgi_app(
 
         static_file_routes.append(Route("/" + relative_path, send_file))
 
-    html_generator = partial(generate_html, app, server_config.dev, True, app_version, app.config.app_package_path.name)
+    html_generator = partial(
+        generate_html,
+        app,
+        server_config.dev,
+        True,
+        app_version,
+        wheel_filename,
+        pyodide_package_names=pyodide_package_names,
+    )
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + app.config.base_url.strip("/"))).sub,
         "",

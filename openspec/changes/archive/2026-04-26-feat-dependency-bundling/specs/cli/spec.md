@@ -3,11 +3,11 @@
 ## MODIFIED Requirements
 
 ### Requirement: The dev server and SSG shall produce a single bundled wheel
-The dev server and SSG SHALL build a single Python wheel containing the webcompy framework (excluding `webcompy/cli/`), application code, and all bundled pure-Python dependencies. Pure-Python packages available in the Pyodide CDN SHALL also be bundled and served from the WebComPy server. Only WASM packages SHALL be loaded from the Pyodide CDN. The generated HTML PyScript config SHALL reference the single wheel URL plus Pyodide CDN package names for WASM packages only.
+The dev server and SSG SHALL build a single Python wheel containing the webcompy framework (excluding `webcompy/cli/`), application code, and all bundled pure-Python dependencies (i.e., packages not available from the Pyodide CDN). Pure-Python packages available in the Pyodide CDN SHALL NOT be bundled — they are served from the CDN by the browser. Only WASM packages SHALL be loaded from the Pyodide CDN by name via `py-config.packages`. The generated HTML PyScript config SHALL reference the single wheel URL plus Pyodide CDN package names for WASM packages only.
 
 #### Scenario: Starting the dev server
 - **WHEN** a developer runs `python -m webcompy start --dev`
-- **THEN** the server SHALL build a single wheel containing webcompy (excl. cli), app code, and all pure-Python dependencies
+- **THEN** the server SHALL build a single wheel containing webcompy (excl. cli), app code, and bundled pure-Python dependencies (those not in Pyodide CDN)
 - **AND** only WASM Pyodide CDN packages SHALL appear in `py-config.packages`
 
 #### Scenario: Generating a static site
@@ -33,7 +33,7 @@ The wheel URL SHALL NOT include a version suffix. The wheel SHALL be served at `
 - **AND** no version suffix SHALL appear in the URL
 
 ### Requirement: Dependencies shall be classified via lock file resolution
-Dependencies listed in `AppConfig.dependencies` SHALL be classified using Pyodide lock data and local package inspection. Packages available in the Pyodide CDN SHALL be listed in `py-config.packages` by name. Pure-Python packages not in the Pyodide CDN SHALL be bundled into the app wheel. C-extension packages not in the Pyodide CDN SHALL cause an error.
+Dependencies listed in `AppConfig.dependencies` SHALL be classified using Pyodide lock data and local package inspection. WASM packages available in the Pyodide CDN SHALL be loaded from the CDN by name via `py-config.packages`. Pure-Python packages available in the Pyodide CDN SHALL NOT be bundled and SHALL NOT appear in `py-config.packages`. Pure-Python packages not in the Pyodide CDN SHALL be bundled into the app wheel. C-extension packages not in the Pyodide CDN SHALL cause an error.
 
 #### Scenario: Bundling pure-Python dependencies not in Pyodide CDN
 - **WHEN** `AppConfig.dependencies=["flask"]` and `flask` is pure-Python and not in the Pyodide CDN
@@ -43,10 +43,10 @@ Dependencies listed in `AppConfig.dependencies` SHALL be classified using Pyodid
 - **AND** `click` SHALL be marked as `source="transitive"` in the lock file
 
 #### Scenario: C extension not available in Pyodide
-- **WHEN** `AppConfig.dependencies=["some_c_ext"]` and `some_c_ext` is not in the Pyodide CDN and contains `.so` files
+- **WHEN** `AppConfig.dependencies=["some_c_ext"]` and `some_c_ext` is not in the Pyodide CDN and contains `.so`, `.pyd`, or `.dylib` files
 - **THEN** an error SHALL be reported indicating the package is a C extension not available in Pyodide
 
-#### Scenario: Packages in Pyodide CDN
+#### Scenario: Packages in Pyodide CDN (WASM)
 - **WHEN** `AppConfig.dependencies=["numpy"]` and `numpy` is in the Pyodide CDN
 - **AND** `numpy` is a WASM package
 - **THEN** `numpy` SHALL appear in `py-config.packages` as a plain package name
@@ -54,15 +54,15 @@ Dependencies listed in `AppConfig.dependencies` SHALL be classified using Pyodid
 
 #### Scenario: Pure Python package in Pyodide CDN
 - **WHEN** `AppConfig.dependencies=["httpx"]` and `httpx` is a pure-Python package in the Pyodide CDN
-- **THEN** `httpx` SHALL be bundled into the app wheel and served from the WebComPy server
+- **THEN** `httpx` SHALL NOT be bundled into the app wheel
 - **AND** `httpx` SHALL NOT appear in `py-config.packages`
 
 ### Requirement: The `webcompy lock` command shall generate or update the lock file
-Running `webcompy lock` SHALL generate or update `webcompy-lock.json` in the project root. The lock file records Pyodide CDN package versions, bundled package versions and sources, and the Pyodide/PyScript versions used for classification.
+Running `webcompy lock` SHALL generate or update `webcompy-lock.json` in the app package directory. The lock file records Pyodide CDN package versions, bundled package versions and sources, and the Pyodide/PyScript versions used for classification.
 
 #### Scenario: Generating a lock file
 - **WHEN** a developer runs `webcompy lock` in a project with `AppConfig.dependencies=["flask", "numpy"]`
-- **THEN** `webcompy-lock.json` SHALL be created in the project root
+- **THEN** `webcompy-lock.json` SHALL be created in the app package directory
 - **AND** it SHALL contain `pyodide_packages` with `numpy` and its CDN version
 - **AND** it SHALL contain `bundled_packages` with `flask`, `click` (transitive), and their local versions
 

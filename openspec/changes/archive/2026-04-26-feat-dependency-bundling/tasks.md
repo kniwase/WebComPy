@@ -1,6 +1,6 @@
 # Tasks: Dependency Bundling — Dependency Resolution, Lock File, Stable URLs, and Browser Cache Strategy
 
-- [ ] **Task 1: Implement dependency classification logic**
+- [x] **Task 1: Implement dependency classification logic**
 
 **Estimated time: ~1.5 hours**
 
@@ -21,7 +21,7 @@
 5. Implement `classify_dependencies(dependencies: list[str], pyodide_lock: dict) -> tuple[list[ClassifiedDependency], list[str]]`:
    - For each direct dependency:
      - If in `pyodide_lock["packages"]` and `is_wasm`: classify as `pyodide_cdn`.
-     - If in `pyodide_lock["packages"]` and not `is_wasm` (pure Python): classify as `bundled` (will be bundled locally).
+      - If in `pyodide_lock["packages"]` and not `is_wasm` (pure Python): classify as `pyodide_cdn` with `is_wasm=False` (served from CDN, not bundled).
      - If not in lock: find local package dir, check `.so`/`.pyd`.
        - Pure Python: classify as `bundled` with `source="explicit"`.
        - C extension: add to errors list.
@@ -31,7 +31,7 @@
      - For transitive deps not in the Pyodide lock, fall back to `importlib.metadata` resolution.
    - Classify each transitive dep:
      - In Pyodide lock, WASM: classify as `pyodide_cdn`, `is_wasm=True`, `source="transitive"`.
-     - In Pyodide lock, pure Python: classify as `pyodide_cdn`, `is_wasm=False`, `source="transitive"` → will be bundled.
+      - In Pyodide lock, pure Python: classify as `pyodide_cdn`, `is_wasm=False`, `source="transitive"` → served from CDN, not bundled.
      - Not in lock, pure Python locally: classify as `bundled` with `source="transitive"`.
      - Not in lock, C extension: add to errors.
 6. Write comprehensive unit tests.
@@ -39,7 +39,7 @@
 ### Acceptance Criteria
 
 - `classify_dependencies(["numpy"], lock)` classifies `numpy` as `pyodide_cdn` (WASM).
-- `classify_dependencies(["httpx"], lock)` classifies `httpx` as `pyodide_cdn` with `is_wasm=False` (pure Python, bundled locally).
+- `classify_dependencies(["httpx"], lock)` classifies `httpx` as `pyodide_cdn` with `is_wasm=False` (pure Python, served from CDN).
 - `classify_dependencies(["httpx"], lock)` resolves `httpx`'s transitive dependencies via Pyodide lock `depends` field and local `importlib.metadata`.
 - `classify_dependencies(["flask"], lock)` classifies `flask` as `bundled` (if not in lock) and resolves transitive deps.
 - Transitive dependency not installed locally and not in Pyodide lock produces an error with instructions to install or add to dependencies.
@@ -50,7 +50,7 @@
 
 ---
 
-- [ ] **Task 2: Implement Pyodide lock fetch and cache**
+- [x] **Task 2: Implement Pyodide lock fetch and cache**
 
 **Estimated time: ~1 hour**
 
@@ -78,7 +78,7 @@
 
 ---
 
-- [ ] **Task 3: Implement `webcompy-lock.json` read/write logic**
+- [x] **Task 3: Implement `webcompy-lock.json` read/write logic**
 
 **Estimated time: ~1.5 hours**
 
@@ -97,15 +97,15 @@
 ### Acceptance Criteria
 
 - `generate_lockfile(["flask", "numpy"], "2026.3.1")` produces a `Lockfile` with `numpy` in `pyodide_packages` (WASM) and `flask` in `bundled_packages`.
-- Pure-Python Pyodide packages (e.g., `httpx`) are placed in `bundled_packages`, not `pyodide_packages`.
-- `get_bundled_deps()` returns pure-Python Pyodide packages for bundling.
+- Pure-Python Pyodide packages (e.g., `httpx`) are placed in `pyodide_packages` with `is_wasm=False`, not in `bundled_packages`.
+- `get_bundled_deps()` returns only bundled pure-Python packages (not Pyodide CDN packages).
 - `get_pyodide_package_names()` returns only WASM package names.
 - `save_lockfile()` + `load_lockfile()` roundtrips correctly.
 - `validate_lockfile()` detects missing dependencies correctly.
 
 ---
 
-- [ ] **Task 4: Add `webcompy lock` CLI command**
+- [x] **Task 4: Add `webcompy lock` CLI command**
 
 **Estimated time: ~0.5 hours**
 
@@ -125,7 +125,7 @@
 
 ---
 
-- [ ] **Task 5: Integrate lock file into start/generate commands**
+- [x] **Task 5: Integrate lock file into start/generate commands**
 
 **Estimated time: ~0.5 hours**
 
@@ -147,7 +147,7 @@
 
 ---
 
-- [ ] **Task 6: Update `make_webcompy_app_package()` for cli exclusion and bundled deps**
+- [x] **Task 6: Update `make_webcompy_app_package()` for cli exclusion and bundled deps**
 
 **Estimated time: ~1 hour**
 
@@ -175,7 +175,7 @@
 
 ---
 
-- [ ] **Task 7: Update `generate_html()` for single-wheel and WASM-only packages**
+- [x] **Task 7: Update `generate_html()` for single-wheel and WASM-only packages**
 
 **Estimated time: ~0.5 hours**
 
@@ -200,7 +200,7 @@
 
 ---
 
-- [ ] **Task 8: Update server and SSG for single-wheel serving**
+- [x] **Task 8: Update server and SSG for single-wheel serving**
 
 **Estimated time: ~0.5 hours**
 
@@ -227,7 +227,7 @@
 
 ---
 
-- [ ] **Task 9: Add `AppConfig.version` and stable URL support**
+- [x] **Task 9: Add `AppConfig.version` and stable URL support**
 
 **Estimated time: ~0.5 hours**
 
@@ -248,7 +248,7 @@
 
 ---
 
-- [ ] **Task 10: Update unit and E2E tests**
+- [x] **Task 10: Update unit and E2E tests**
 
 **Estimated time: ~1.5 hours**
 

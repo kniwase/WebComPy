@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "pyodide_version": "0.29.3",
+  "pyscript_version": "2026.3.1",
+  "pyodide_packages": {},
+  "bundled_packages": {
+    "aiofiles": {
+      "version": "25.1.0",
+      "source": "explicit",
+      "is_pure_python": true
+    }
+  },
+  "standalone_assets": {}
+}

@@ -1,6 +1,7 @@
 from webcompy.router import Router
 
 from .pages.async_nav import AsyncNavPage
+from .pages.bundled_deps import BundledDepsPage
 from .pages.classstyle import ClassStylePage
 from .pages.component import FunctionStylePage
 from .pages.di_test import DiInjectPage, DiProviderWrapper
@@ -30,6 +31,7 @@ router = Router(
     {"path": "/lifecycle", "component": LifecyclePage},
     {"path": "/scoped-style", "component": ScopedStylePage},
     {"path": "/async-nav", "component": AsyncNavPage},
+    {"path": "/bundled-deps", "component": BundledDepsPage},
     {"path": "/di-provide", "component": DiProviderWrapper},
     {"path": "/di-inject", "component": DiInjectPage},
     default=NotFound,

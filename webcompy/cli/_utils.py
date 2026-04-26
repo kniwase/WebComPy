@@ -118,7 +118,9 @@ def get_webcompy_packge_dir(path: pathlib.Path | None = None) -> pathlib.Path:
         return get_webcompy_packge_dir(path.parent)
 
 
-def generate_app_version():
+def generate_app_version(app_version: str | None = None) -> str:
+    if app_version is not None:
+        return app_version
     now = datetime.now()
     return "{}.{}.{}".format(
         now.strftime("%y"),

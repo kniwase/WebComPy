@@ -9,6 +9,7 @@ class TestAppConfig:
         assert config.base_url == "/"
         assert config.dependencies == []
         assert config.assets is None
+        assert config.version is None
         assert config.app_package_path is not None
 
     def test_base_url_normalization_trailing_slash(self):
@@ -47,6 +48,14 @@ class TestAppConfig:
     def test_app_package_path_from_path(self):
         config = AppConfig(app_package=Path("/tmp/myapp"))
         assert config.app_package_path == Path("/tmp/myapp")
+
+    def test_version_field(self):
+        config = AppConfig(version="1.0.0")
+        assert config.version == "1.0.0"
+
+    def test_version_defaults_to_none(self):
+        config = AppConfig()
+        assert config.version is None
 
 
 class TestServerConfig:

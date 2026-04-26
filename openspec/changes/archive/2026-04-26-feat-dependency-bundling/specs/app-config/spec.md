@@ -15,12 +15,12 @@
 - **THEN** a timestamp-based fallback SHALL be used for wheel METADATA version
 - **AND** the wheel URL SHALL remain stable without a version suffix
 
-### Requirement: Pure-Python packages shall always be served locally from the WebComPy server
-Pure-Python packages SHALL always be bundled into the app wheel and served from the WebComPy server, regardless of whether they are available in the Pyodide CDN. Only WASM packages (which cannot be bundled) SHALL be loaded from the Pyodide CDN. There is no configuration option to change this behavior.
+### Requirement: Only WASM packages shall be loaded from the Pyodide CDN; pure-Python CDN packages are served from CDN without bundling
+Pure-Python packages available in the Pyodide CDN SHALL NOT be bundled into the app wheel. They are already available from the Pyodide CDN and will be loaded by the browser from there. Only WASM packages (which cannot be bundled as pure Python) SHALL appear in `py-config.packages` for Pyodide CDN loading. There is no configuration option to change this behavior.
 
 #### Scenario: Pure-Python package available in Pyodide CDN
 - **WHEN** a dependency (e.g., `httpx`) is a pure-Python package available in the Pyodide CDN
-- **THEN** it SHALL be bundled into the app wheel and served from the WebComPy server
+- **THEN** it SHALL NOT be bundled into the app wheel
 - **AND** it SHALL NOT appear in `py-config.packages`
 
 #### Scenario: WASM-only dependency

@@ -10,6 +10,7 @@ class AppConfig:
     base_url: str = "/"
     dependencies: list[str] = field(default_factory=list)
     assets: dict[str, str] | None = None
+    version: str | None = None
     profile: bool = False
     hydrate: bool = True
 

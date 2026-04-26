@@ -7,6 +7,18 @@ import pathlib
 import re
 import zipfile
 
+_BROWSER_ONLY_EXCLUDE = {"cli"}
+
+
+def _filter_excluded_subpackages(
+    packages: list[str],
+    top_level_name: str,
+    exclude: set[str],
+) -> list[str]:
+    if not exclude:
+        return packages
+    return [pkg for pkg in packages if not (pkg.startswith(f"{top_level_name}.") and pkg.split(".")[1] in exclude)]
+
 
 def _discover_packages(package_dir: pathlib.Path) -> list[str]:
     packages: list[str] = []
@@ -66,6 +78,40 @@ def _normalize_name(name: str) -> str:
 
 def get_wheel_filename(name: str, version: str) -> str:
     return f"{_normalize_name(name)}-{version}-py3-none-any.whl"
+
+
+def _content_hash_wheel(wheel_path: pathlib.Path, name: str, app_version: str) -> pathlib.Path:
+    digest = hashlib.sha256(wheel_path.read_bytes()).hexdigest()[:8]
+    hash_version = f"0+sha.{digest}"
+    dist_name = _normalize_name(name)
+    old_dist_info = f"{dist_name}-{app_version}.dist-info"
+    new_dist_info = f"{dist_name}-{hash_version}.dist-info"
+    new_filename = f"{_normalize_name(name)}-{hash_version}-py3-none-any.whl"
+
+    with zipfile.ZipFile(wheel_path, "r") as zf_in:
+        entries = []
+        for info in zf_in.infolist():
+            if info.filename == f"{old_dist_info}/RECORD":
+                continue
+            data = zf_in.read(info.filename)
+            arc_path = info.filename
+            if arc_path.startswith(old_dist_info + "/"):
+                arc_path = new_dist_info + "/" + arc_path[len(old_dist_info) + 1 :]
+            if arc_path == f"{new_dist_info}/METADATA":
+                data = _write_metadata(name, hash_version).encode("utf-8")
+            entries.append((arc_path, data))
+
+    os.remove(wheel_path)
+    new_path = wheel_path.parent / new_filename
+    with zipfile.ZipFile(new_path, "w", zipfile.ZIP_DEFLATED) as zf_out:
+        record_entries = []
+        for arc_path, data in entries:
+            zf_out.writestr(arc_path, data)
+            record_entries.append((arc_path, _sha256_b64(data), len(data)))
+        record_content = _write_record(record_entries, new_dist_info)
+        zf_out.writestr(f"{new_dist_info}/RECORD", record_content)
+
+    return new_path
 
 
 def _write_metadata(name: str, version: str) -> str:
@@ -241,6 +287,7 @@ def make_webcompy_app_package(
     package_dir: pathlib.Path,
     app_version: str,
     assets: dict[str, str] | None = None,
+    bundled_deps: list[tuple[str, pathlib.Path]] | None = None,
 ) -> pathlib.Path:
     app_name = package_dir.name
     package_data: dict[str, list[str]] | None = None
@@ -252,14 +299,73 @@ def make_webcompy_app_package(
         registry_arc_path = f"{app_name}/_assets_registry.py"
         extra_files = [(registry_arc_path, registry_content.encode("utf-8"))]
 
-    return make_bundled_wheel(
-        name=app_name,
-        package_dirs=[
-            ("webcompy", webcompy_package_dir),
-            (app_name, package_dir),
-        ],
-        dest=dest,
-        version=app_version,
-        package_data=package_data,
-        extra_files=extra_files,
-    )
+    package_dirs: list[tuple[str, pathlib.Path]] = [
+        ("webcompy", webcompy_package_dir),
+        (app_name, package_dir),
+    ]
+    if bundled_deps:
+        package_dirs.extend(bundled_deps)
+
+    dist_name = _normalize_name(app_name)
+    dist_info = f"{dist_name}-{app_version}.dist-info"
+    top_levels: set[str] = set()
+    record_entries: list[tuple[str, str, int]] = []
+    tmp_filename = f"{_normalize_name(app_name)}-0-py3-none-any.whl"
+    wheel_path = dest / tmp_filename
+    if wheel_path.exists():
+        os.remove(wheel_path)
+
+    all_files: list[tuple[pathlib.Path, str]] = []
+    seen: set[str] = set()
+
+    for pkg_name, pkg_dir in package_dirs:
+        packages = _discover_packages(pkg_dir)
+        if pkg_name == "webcompy":
+            packages = _filter_excluded_subpackages(packages, "webcompy", _BROWSER_ONLY_EXCLUDE)
+        files = _collect_package_files(pkg_dir, packages, package_data if pkg_name == app_name else None)
+        for filepath, arc_path in files:
+            if pkg_name == "webcompy":
+                parts = pathlib.Path(arc_path).parts
+                if len(parts) > 1 and parts[1] in _BROWSER_ONLY_EXCLUDE:
+                    continue
+            if arc_path not in seen:
+                seen.add(arc_path)
+                all_files.append((filepath, arc_path))
+        for pkg in packages:
+            top_levels.add(pkg.split(".")[0])
+
+    metadata_content = _write_metadata(app_name, app_version)
+    metadata_path = f"{dist_info}/METADATA"
+    wheel_content = _write_wheel()
+    wheel_meta_path = f"{dist_info}/WHEEL"
+    top_level_content = "\n".join(sorted(top_levels)) + "\n"
+    top_level_path = f"{dist_info}/top_level.txt"
+
+    with zipfile.ZipFile(wheel_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for filepath, arc_path in all_files:
+            data = filepath.read_bytes()
+            zf.writestr(arc_path, data)
+            record_entries.append((arc_path, _sha256_b64(data), len(data)))
+
+        if extra_files:
+            for arc_path, content in extra_files:
+                zf.writestr(arc_path, content)
+                record_entries.append((arc_path, _sha256_b64(content), len(content)))
+
+        zf.writestr(metadata_path, metadata_content)
+        record_entries.append(
+            (metadata_path, _sha256_b64(metadata_content.encode("utf-8")), len(metadata_content.encode("utf-8")))
+        )
+        zf.writestr(wheel_meta_path, wheel_content)
+        record_entries.append(
+            (wheel_meta_path, _sha256_b64(wheel_content.encode("utf-8")), len(wheel_content.encode("utf-8")))
+        )
+        zf.writestr(top_level_path, top_level_content)
+        record_entries.append(
+            (top_level_path, _sha256_b64(top_level_content.encode("utf-8")), len(top_level_content.encode("utf-8")))
+        )
+
+        record_content = _write_record(record_entries, dist_info)
+        zf.writestr(f"{dist_info}/RECORD", record_content)
+
+    return _content_hash_wheel(wheel_path, app_name, app_version)
