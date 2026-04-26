@@ -6,7 +6,7 @@ from datetime import datetime
 from importlib import import_module
 
 from webcompy.app._app import WebComPyApp
-from webcompy.app._config import GenerateConfig, ServerConfig
+from webcompy.app._config import GenerateConfig, LockfileSyncConfig, ServerConfig
 from webcompy.cli._exception import WebComPyCliException
 
 
@@ -107,6 +107,23 @@ def get_generate_config(package: str | None = None) -> GenerateConfig:
             )
         return generate_config
     return GenerateConfig()
+
+
+def get_lockfile_sync_config(package: str | None = None) -> LockfileSyncConfig:
+    for prefix in ([package] if package else []) + [None]:
+        module_name = f"{prefix}.webcompy_server_config" if prefix else "webcompy_server_config"
+        module = _import_config_module(module_name)
+        if module is None:
+            continue
+        lockfile_sync_config = getattr(module, "lockfile_sync_config", None)
+        if lockfile_sync_config is None:
+            continue
+        if not isinstance(lockfile_sync_config, LockfileSyncConfig):
+            raise WebComPyCliException(
+                f"'lockfile_sync_config' in '{module_name}' is not a LockfileSyncConfig instance",
+            )
+        return lockfile_sync_config
+    return LockfileSyncConfig()
 
 
 def get_webcompy_packge_dir(path: pathlib.Path | None = None) -> pathlib.Path:

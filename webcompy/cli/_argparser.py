@@ -71,6 +71,22 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         type=str,
         help="import path for app instance (e.g., my_app.bootstrap:app)",
     )
+    lock_flags = parser_lock.add_mutually_exclusive_group()
+    lock_flags.add_argument(
+        "--export",
+        action="store_true",
+        help="Export lock file dependencies to requirements.txt",
+    )
+    lock_flags.add_argument(
+        "--sync",
+        action="store_true",
+        help="Compare lock file with requirements.txt/pyproject.toml",
+    )
+    lock_flags.add_argument(
+        "--install",
+        action="store_true",
+        help="Export and install lock file dependencies",
+    )
     parser_lock.set_defaults(__command_getter__=_command(subcommand_name))
 
     # parse
