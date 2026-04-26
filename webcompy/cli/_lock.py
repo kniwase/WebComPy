@@ -30,7 +30,6 @@ def lock_command() -> None:
 
     if export_flag or sync_flag or install_flag:
         lockfile_path = app.config.app_package_path / LOCKFILE_NAME
-        lockfile_sync_config = get_lockfile_sync_config(package)
 
         from webcompy.cli._lockfile import load_lockfile
 

@@ -70,7 +70,6 @@ def record_requirements_path(
             return config_module_path
         for candidate in [
             app_package_path / "webcompy_server_config.py",
-            app_package_path.parent / "webcompy_server_config.py",
         ]:
             if candidate.exists():
                 return candidate
