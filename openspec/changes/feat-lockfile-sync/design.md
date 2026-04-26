@@ -249,6 +249,12 @@ def lock_command() -> None:
 
 ```python
 @dataclass
+class AppConfig:
+    # ... existing fields ...
+    dependencies: list[str] | None = None       # None = auto-populate from pyproject.toml
+    dependencies_from: str | None = None       # pyproject.toml group key (None = [project.dependencies])
+
+@dataclass
 class LockfileSyncConfig:
     requirements_path: str | None = None
     sync_group: str | None = None
@@ -260,6 +266,86 @@ class LockfileSyncConfig:
 - `openspec/specs/cli/spec.md` — add CLI flags for `webcompy lock`
 - `openspec/specs/project-config/spec.md` — add LockfileSyncConfig and project setup examples
 
+### D8: `AppConfig.dependencies` defaults to `None`, auto-populated from `pyproject.toml`
+
+`AppConfig.dependencies` changes from `list[str]` (default `[]`) to `list[str] | None` (default `None`). When `None`, the CLI resolves dependencies from `pyproject.toml` using the same `sync_group` key as `LockfileSyncConfig`:
+
+```
+AppConfig(dependencies=None, dependencies_from="browser")
+                    ↓
+discover_project_root(app_package_path)
+    → find pyproject.toml
+    → read [project.optional-dependencies.browser]
+    → ["numpy", "matplotlib"]
+                    ↓
+app.config.dependencies = ["numpy", "matplotlib"]  (populated)
+```
+
+When `dependencies` is explicitly set (e.g., `dependencies=["numpy", "matplotlib"]`), it takes precedence and no auto-discovery occurs. This preserves backward compatibility — existing `webcompy_config.py` files with explicit `dependencies` lists continue to work unchanged.
+
+The `dependencies_from` field in `AppConfig` specifies the `sync_group` key to read from `pyproject.toml`:
+- `dependencies_from=None` (default): read `[project.dependencies]`
+- `dependencies_from="browser"`: read `[project.optional-dependencies.browser]`
+
+This eliminates the manual duplication where developers currently write the same dependency list in both `AppConfig.dependencies` and `pyproject.toml`.
+
+The resolution happens in `discover_app()` (or a new function called from it), which already has access to `app_package_path` for project root discovery.
+
+### D9: `dependencies_from` and `sync_group` should match
+
+When both `AppConfig.dependencies_from` and `LockfileSyncConfig.sync_group` are set, they SHOULD match. If they differ, a warning is emitted:
+
+```
+⚠ AppConfig.dependencies_from="browser" differs from LockfileSyncConfig.sync_group="deps"
+  This may cause inconsistencies between lock file generation and sync comparison.
+```
+
+When `dependencies_from` is set and `sync_group` is not (defaults to `None`), or vice versa, no warning is emitted — the developer may intentionally use different groups for different purposes.
+
+## Architecture (updated)
+
+### `webcompy/app/_config.py` Extensions
+
+```python
+@dataclass
+class AppConfig:
+    app_package: Path | str = "."
+    base_url: str = "/"
+    dependencies: list[str] | None = None       # None = auto-populate from pyproject.toml
+    dependencies_from: str | None = None       # pyproject.toml group key (None = [project.dependencies])
+    assets: dict[str, str] | None = None
+    version: str | None = None
+    profile: bool = False
+    hydrate: bool = True
+```
+
+### Dependency Resolution Flow
+
+```
+discover_app() or resolve_dependencies()
+    │
+    ├── app.config.dependencies is not None?
+    │   → Use as-is (backward compatible)
+    │
+    ├── app.config.dependencies is None?
+    │   ├── dependencies_from is None?
+    │   │   → Read [project.dependencies] from pyproject.toml
+    │   ├── dependencies_from is "browser"?
+    │   │   → Read [project.optional-dependencies.browser] from pyproject.toml
+    │   └── Result → app.config.dependencies = [...]
+    │
+    └── pyproject.toml not found and dependencies is None?
+        → Error: "Could not resolve dependencies from pyproject.toml.
+           Either set AppConfig.dependencies explicitly or ensure pyproject.toml exists."
+```
+
+## Specs to Update
+
+- `openspec/specs/app-config/spec.md` — add `dependencies` default change and `dependencies_from` requirement
+- `openspec/specs/lockfile/spec.md` — add export/sync/install requirements
+- `openspec/specs/cli/spec.md` — add CLI flags for `webcompy lock` and dependency resolution
+- `openspec/specs/project-config/spec.md` — add LockfileSyncConfig and project setup examples
+
 ## Non-goals (restated)
 
 - Automatic package downloading from PyPI
@@ -267,3 +353,4 @@ class LockfileSyncConfig:
 - Modifying `requirements.txt` or `pyproject.toml` in place
 - Removing dependency on local package installation
 - Project root discovery beyond pyproject.toml (no `.git`-based or marker-file heuristics)
+- AST-based import scanning (unreliable for dynamic imports, conditional imports, etc.)

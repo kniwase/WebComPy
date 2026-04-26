@@ -39,3 +39,16 @@ The `webcompy lock` command SHALL support three additional operations beyond def
 #### Scenario: Default `webcompy lock` unchanged
 - **WHEN** a developer runs `webcompy lock` without any flags
 - **THEN** the lock file SHALL be generated or updated (existing behavior preserved)
+
+#### Scenario: Auto-populating dependencies from pyproject.toml
+- **WHEN** a developer runs `webcompy lock` (or `webcompy start`, `webcompy generate`)
+- **AND** `AppConfig.dependencies` is `None`
+- **AND** `AppConfig.dependencies_from` is `"browser"`
+- **THEN** the CLI SHALL read `[project.optional-dependencies.browser]` from `pyproject.toml`
+- **AND** populate `app.config.dependencies` with the package names (stripping version specifiers)
+- **AND** proceed with lock file generation using the populated dependencies
+
+#### Scenario: Auto-populating dependencies when pyproject.toml is absent
+- **WHEN** a developer runs `webcompy lock` with `AppConfig(dependencies=None)`
+- **AND** no `pyproject.toml` is found above `app_package_path`
+- **THEN** an error SHALL be reported instructing the developer to set `AppConfig.dependencies` explicitly

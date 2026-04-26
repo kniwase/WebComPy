@@ -2,7 +2,7 @@
 
 ## Context
 
-This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, and `--install`. They rely on auto-discovery of the project root (via `pyproject.toml`), a new `LockfileSyncConfig` dataclass in `webcompy_server_config.py`, and a new module `webcompy/cli/_lockfile_sync.py`.
+This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, and `--install`. It also changes `AppConfig.dependencies` from `list[str]` (default `[]`) to `list[str] | None` (default `None`) with auto-population from `pyproject.toml`. The change relies on auto-discovery of the project root (via `pyproject.toml`), a new `LockfileSyncConfig` dataclass in `webcompy_server_config.py`, and a new module `webcompy/cli/_lockfile_sync.py`.
 
 ### Key files to reference during implementation
 
@@ -11,8 +11,9 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 - `webcompy/cli/_argparser.py` — `get_params()` with sub-commands (lock sub-parser at line 63)
 - `webcompy/cli/_utils.py` — `discover_app()`, `get_server_config()`, `get_generate_config()` (pattern for config discovery)
 - `webcompy/cli/_exception.py` — `WebComPyCliException`
-- `webcompy/app/_config.py` — `AppConfig`, `ServerConfig`, `GenerateConfig` dataclasses (add `LockfileSyncConfig` here)
+- `webcompy/app/_config.py` — `AppConfig`, `ServerConfig`, `GenerateConfig` dataclasses (add `LockfileSyncConfig` here, change `AppConfig.dependencies`)
 - `webcompy/cli/template_data/webcompy_server_config.py` — template for `webcompy init` (DO NOT add `lockfile_sync_config` to this template — it's optional/auto-discovered)
+- `webcompy/cli/template_data/webcompy_config.py` — template for `webcompy init` (update `dependencies` default to `None`)
 - `openspec/changes/feat-lockfile-sync/design.md` — full design document
 
 ### Key design decisions
@@ -26,23 +27,43 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 7. **`uv pip` is preferred over `pip`** — checked via `shutil.which("uv")`
 8. **WASM packages are excluded from export** — only `bundled_packages` and non-WASM `pyodide_packages` are included (WebComPy is SSR/SSG-only, so non-WASM packages need local installation)
 9. **`sync_group`** selects `[project.optional-dependencies.{sync_group}]` from `pyproject.toml`; when `None`, uses `[project.dependencies]`
+10. **`AppConfig.dependencies` defaults to `None`** — when `None`, auto-populate from `pyproject.toml` using `dependencies_from`; explicit lists bypass auto-population (backward compatible)
+11. **Version specifiers are stripped** from `pyproject.toml` entries when populating `AppConfig.dependencies` — version pinning is handled by `webcompy-lock.json`
 
 ---
 
-- [ ] **Task 1: Add `LockfileSyncConfig` dataclass and project root discovery**
+- [ ] **Task 1: Add `LockfileSyncConfig`, change `AppConfig.dependencies`, and add project root discovery**
 
-**Estimated time: ~1.5 hours**
+**Estimated time: ~2 hours**
 
 ### Steps
 
-1. Add `LockfileSyncConfig` to `webcompy/app/_config.py`:
-   ```python
-   @dataclass
-   class LockfileSyncConfig:
-       requirements_path: str | None = None
-       sync_group: str | None = None
-   ```
-   Place it after `GenerateConfig`. Import it in `webcompy/app/__init__.py` if needed for public API.
+1. Modify `webcompy/app/_config.py`:
+
+   a. Change `AppConfig.dependencies` from `list[str] = field(default_factory=list)` to `list[str] | None = None`.
+
+   b. Add `dependencies_from: str | None = None` field to `AppConfig`:
+      ```python
+      @dataclass
+      class AppConfig:
+          app_package: Path | str = "."
+          base_url: str = "/"
+          dependencies: list[str] | None = None       # None = auto-populate from pyproject.toml
+          dependencies_from: str | None = None        # pyproject.toml group key, None = [project.dependencies]
+          assets: dict[str, str] | None = None
+          version: str | None = None
+          profile: bool = False
+          hydrate: bool = True
+      ```
+
+   c. Add `LockfileSyncConfig` dataclass:
+      ```python
+      @dataclass
+      class LockfileSyncConfig:
+          requirements_path: str | None = None
+          sync_group: str | None = None
+      ```
+      Place it after `GenerateConfig`.
 
 2. Create `webcompy/cli/_lockfile_sync.py` with the following functions:
 
@@ -401,3 +422,76 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 - Type check passes (`pyright`).
 - Documentation page covers `uv` and `poetry` setup examples with copy-paste configuration.
 - Documentation page explains auto-discovery and `LockfileSyncConfig`.
+
+---
+
+- [ ] **Task 7: Implement `AppConfig.dependencies` auto-population from `pyproject.toml`**
+
+**Estimated time: ~1.5 hours**
+
+### Steps
+
+1. Add `resolve_dependencies(app: WebComPyApp) -> None` function to `webcompy/cli/_lockfile_sync.py`:
+
+   a. If `app.config.dependencies is not None`, return immediately (explicit list takes precedence, backward compatible).
+
+   b. Call `discover_project_root(app.config.app_package_path)` to find `pyproject.toml`. If not found, raise `WebComPyCliException`: `"Could not find pyproject.toml above {app_package_path}. Set AppConfig.dependencies explicitly or ensure pyproject.toml exists."`
+
+   c. Parse `pyproject.toml` using `tomllib`:
+      - If `app.config.dependencies_from` is `None`: Read `[project][dependencies]` list.
+      - If `app.config.dependencies_from` is set (e.g., `"browser"`): Read `[project.optional-dependencies][{dependencies_from}]` list.
+      - If the specified section or key doesn't exist, raise `WebComPyCliException` with a clear message.
+
+   d. For each dependency string, strip version specifiers to extract package names only:
+      - Regex: `^([a-zA-Z0-9_.-]+)` — capture the package name (everything before version specifier characters like `==`, `>=`, `<=`, `~=`, `!=`, `;`, whitespace, or end of string).
+      - Example: `"flask>=3.0"` → `"flask"`, `"numpy==2.2.5"` → `"numpy"`, `"click"` → `"click"`.
+   
+   e. Set `app.config.dependencies = [extracted_names]`.
+
+   f. If `dependencies_from` and `sync_group` (from `LockfileSyncConfig`) are both set and differ, print a warning: `⚠ AppConfig.dependencies_from="{dependencies_from}" differs from LockfileSyncConfig.sync_group="{sync_group}"`. This is only a warning, not an error — the user may intentionally use different groups.
+
+2. Call `resolve_dependencies(app)` in all CLI command paths that use `app.config.dependencies`:
+   - `webcompy/cli/_lock.py` — at the beginning of `lock_command()`, before `resolve_lockfile()`.
+   - `webcompy/cli/_server.py` — at the beginning of `create_asgi_app()`, before `resolve_lockfile()`.
+   - `webcompy/cli/_generate.py` — at the beginning of `generate_static_site()`, before `resolve_lockfile()`.
+   
+   Note: `resolve_dependencies()` must be called regardless of whether `--export`, `--sync`, or `--install` flags are used, because all paths need `app.config.dependencies` to be populated.
+
+3. Update existing call sites that currently expect `dependencies: list[str]` to handle `list[str] | None`:
+   - `webcompy/cli/_lockfile.py` — `generate_lockfile()` and `resolve_lockfile()` accept `dependencies: list[str]`. After `resolve_dependencies()`, `app.config.dependencies` is guaranteed to be `list[str]` (either the original explicit list, or the auto-populated list). Use `assert` or type narrowing to satisfy type checkers.
+   - `webcompy/cli/_dependency_resolver.py` — `classify_dependencies()` accepts `dependencies: list[str]`. No change needed since `app.config.dependencies` will always be `list[str]` after resolution.
+
+4. Update `webcompy/cli/template_data/webcompy_config.py` to use `dependencies=None`:
+   ```python
+   app_config = AppConfig(app_package=Path(__file__).parent / "app", base_url="/")
+   ```
+   Remove the explicit `dependencies=[]` if it was there (it's now `None` by default).
+
+5. Update `docs_src/webcompy_config.py` to use `dependencies_from="browser"` or `dependencies=None` as appropriate for the docs site. The docs site depends on `numpy` and `matplotlib`, which are listed in `docs_src/webcompy-lock.json`. Since there is no `pyproject.toml` in `docs_src/`, keep the explicit list: `dependencies=["numpy", "matplotlib"]`.
+
+6. Fix existing tests that broke due to the `dependencies` default change:
+   - `tests/test_config_dataclasses.py`: Update the test that checks `config.dependencies == []` to check `config.dependencies is None`.
+   - `tests/test_app_instance.py`: Update the test that checks `app.config.dependencies == []` to check `app.config.dependencies is None`.
+   - Any test that creates `AppConfig()` expecting `dependencies=[]` must now use `AppConfig(dependencies=[])` if they need an empty list, or rely on `None`.
+   - Tests that create `AppConfig(dependencies=["numpy"])` are unaffected (explicit list).
+
+7. Add unit tests for `resolve_dependencies()`:
+
+   a. Test: `dependencies=None, dependencies_from=None` → reads `[project.dependencies]` from `pyproject.toml`.
+   b. Test: `dependencies=None, dependencies_from="browser"` → reads `[project.optional-dependencies.browser]`.
+   c. Test: `dependencies=["numpy"]` (explicit) → no `pyproject.toml` reading, uses explicit list.
+   d. Test: `dependencies=None` but no `pyproject.toml` → raises `WebComPyCliException`.
+   e. Test: `dependencies_from="nonexistent"` but key doesn't exist in `[project.optional-dependencies]` → raises `WebComPyCliException`.
+   f. Test: Version specifiers are stripped (`"flask>=3.0"` → `"flask"`, `"numpy==2.2.5"` → `"numpy"`).
+   g. Test: `dependencies_from="browser"` differs from `sync_group="deps"` → warning printed.
+
+### Acceptance Criteria
+
+- `AppConfig.dependencies` defaults to `None`.
+- When `None` and `dependencies_from` is set, dependencies are auto-populated from `pyproject.toml`.
+- When `None` and `dependencies_from` is `None`, dependencies are auto-populated from `[project.dependencies]`.
+- Explicit `dependencies` list (non-None) bypasses `pyproject.toml` reading entirely.
+- Version specifiers are stripped from `pyproject.toml` entries.
+- Mismatch between `dependencies_from` and `sync_group` produces a warning.
+- All existing tests pass after updating default expectations.
+- Template and docs source configs are updated appropriately.

@@ -1,5 +1,26 @@
 # Lock File — Delta: feat-lockfile-sync
 
+## MODIFIED Requirements
+
+### Requirement: Dependencies shall be classified via lock file resolution
+(Modifies existing requirement in `openspec/specs/cli/spec.md`)
+
+When `AppConfig.dependencies` is `None`, the CLI SHALL auto-populate it from `pyproject.toml` before lock file generation. The resolution uses `AppConfig.dependencies_from` to determine which section of `pyproject.toml` to read. Version specifiers in `pyproject.toml` entries (e.g., `"flask>=3.0"`, `"numpy==2.2.5"`) SHALL be stripped before classification — only package names are used in `AppConfig.dependencies`; version pinning is handled by the lock file.
+
+#### Scenario: Auto-populated dependencies from pyproject.toml
+- **WHEN** `AppConfig(dependencies=None, dependencies_from="browser")` and `pyproject.toml` has `[project.optional-dependencies] browser = ["numpy", "matplotlib"]`
+- **THEN** dependencies SHALL be resolved to `["numpy", "matplotlib"]` before lock file generation
+- **AND** the lock file SHALL be generated as if `dependencies=["numpy", "matplotlib"]` were explicitly set
+
+#### Scenario: Version specifiers are stripped
+- **WHEN** `pyproject.toml` has `dependencies = ["flask>=3.0", "click==8.1.7"]`
+- **THEN** `AppConfig.dependencies` SHALL be set to `["flask", "click"]` (no version specifiers)
+
+#### Scenario: Explicit dependencies bypass auto-population
+- **WHEN** `AppConfig(dependencies=["numpy"])` (explicit list, not None)
+- **THEN** no `pyproject.toml` reading SHALL occur
+- **AND** `["numpy"]` SHALL be used as-is
+
 ## ADDED Requirements
 
 ### Requirement: The lock file shall support exporting dependency versions to requirements.txt

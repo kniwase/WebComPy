@@ -127,3 +127,23 @@ The WebComPy documentation SHALL provide setup examples for projects using `uv` 
 - **AND** `bootstrap.py` SHALL import `app_config` from `webcompy_config`
 - **AND** the project SHALL be immediately runnable via `python -m webcompy start`
 - **AND** `lockfile_sync_config` SHALL NOT be included in the generated `webcompy_server_config.py` (it is optional and auto-discovery handles the default case)
+
+### Requirement: AppConfig dependencies shall default to None and support auto-population from pyproject.toml
+`AppConfig.dependencies` SHALL default to `None`. When `None`, the CLI SHALL auto-populate it from `pyproject.toml` using the group specified by `AppConfig.dependencies_from`. When set to an explicit list, it SHALL be used as-is. Version specifiers in `pyproject.toml` entries SHALL be stripped — only package names are used.
+
+#### Scenario: Configuring dependencies with dependencies_from
+- **WHEN** a developer creates `AppConfig(dependencies=None, dependencies_from="browser")`
+- **AND** `pyproject.toml` has `[project.optional-dependencies] browser = ["numpy", "matplotlib"]`
+- **THEN** the CLI SHALL resolve `dependencies` to `["numpy", "matplotlib"]` before lock file generation
+
+#### Scenario: Configuring dependencies explicitly (backward compatible)
+- **WHEN** a developer creates `AppConfig(dependencies=["numpy", "matplotlib"])`
+- **THEN** the CLI SHALL use the explicit list without reading `pyproject.toml`
+
+#### Scenario: Default dependencies_from reads project.dependencies
+- **WHEN** a developer creates `AppConfig(dependencies=None)` without `dependencies_from`
+- **THEN** the CLI SHALL read `[project.dependencies]` from `pyproject.toml`
+
+#### Scenario: dependencies_from and sync_group mismatch
+- **WHEN** `AppConfig(dependencies_from="browser")` and `LockfileSyncConfig(sync_group="deps")` differ
+- **THEN** a warning SHALL be emitted indicating potential inconsistency

@@ -69,6 +69,57 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **THEN** `assets` SHALL default to `None`
 - **AND** no assets SHALL be included in the bundled wheel
 
+### Requirement: AppConfig dependencies shall default to None and support auto-population from pyproject.toml
+`AppConfig.dependencies` SHALL accept `None` as a default value (instead of `[]`). When `dependencies` is `None`, the CLI SHALL auto-populate it from `pyproject.toml` using the group specified by `dependencies_from`. When `dependencies` is explicitly set to a list, it SHALL be used as-is without reading `pyproject.toml`. This eliminates the need for developers to manually duplicate dependency lists in both `AppConfig` and `pyproject.toml`.
+
+#### Scenario: Auto-populating dependencies from pyproject.toml optional-dependencies
+- **WHEN** a developer creates `AppConfig(dependencies=None, dependencies_from="browser")`
+- **AND** `pyproject.toml` contains `[project.optional-dependencies] browser = ["numpy", "matplotlib"]`
+- **THEN** the CLI SHALL set `app.config.dependencies` to `["numpy", "matplotlib"]`
+- **AND** the lock file SHALL be generated as if the developer had written `AppConfig(dependencies=["numpy", "matplotlib"])`
+
+#### Scenario: Auto-populating dependencies from pyproject.toml project.dependencies
+- **WHEN** a developer creates `AppConfig(dependencies=None, dependencies_from=None)`
+- **AND** `pyproject.toml` contains `[project] dependencies = ["flask", "click"]`
+- **THEN** the CLI SHALL set `app.config.dependencies` to `["flask", "click"]`
+
+#### Scenario: Explicit dependencies take precedence
+- **WHEN** a developer creates `AppConfig(dependencies=["numpy"])`
+- **THEN** the CLI SHALL use `["numpy"]` as-is
+- **AND** no `pyproject.toml` dependency reading SHALL occur
+
+#### Scenario: Empty explicit dependencies list
+- **WHEN** a developer creates `AppConfig(dependencies=[])`
+- **THEN** the CLI SHALL use `[]` (no dependencies)
+- **AND** no `pyproject.toml` dependency reading SHALL occur
+
+#### Scenario: Pyproject.toml not found with None dependencies
+- **WHEN** a developer creates `AppConfig(dependencies=None)`
+- **AND** no `pyproject.toml` is found above `app_package_path`
+- **THEN** an error SHALL be reported instructing the developer to either set `AppConfig.dependencies` explicitly or ensure `pyproject.toml` exists
+
+#### Scenario: Optional-dependencies group not found
+- **WHEN** a developer creates `AppConfig(dependencies=None, dependencies_from="browser")`
+- **AND** `pyproject.toml` exists but `[project.optional-dependencies]` has no `"browser"` key
+- **THEN** an error SHALL be reported indicating that the `"browser"` group was not found in `pyproject.toml`
+
+#### Scenario: Dependency version specifiers are stripped
+- **WHEN** `pyproject.toml` contains `dependencies = ["flask==3.1.0", "click>=8.0"]`
+- **AND** a developer creates `AppConfig(dependencies=None, dependencies_from=None)`
+- **THEN** the CLI SHALL extract package names as `["flask", "click"]`
+- **AND** version specifiers SHALL be stripped (version pinning is handled by `webcompy-lock.json`)
+
+### Requirement: AppConfig dependencies_from shall default to None and read project.dependencies
+`AppConfig.dependencies_from` SHALL default to `None`. When `None`, `[project.dependencies]` from `pyproject.toml` is used. When set to a string value (e.g., `"browser"`), `[project.optional-dependencies.{value}]` is used.
+
+#### Scenario: Default dependencies_from reads project.dependencies
+- **WHEN** `AppConfig(dependencies=None)` is created without `dependencies_from`
+- **THEN** `[project.dependencies]` from `pyproject.toml` SHALL be read
+
+#### Scenario: dependencies_from mismatch warning
+- **WHEN** `AppConfig.dependencies_from="browser"` differs from `LockfileSyncConfig.sync_group`
+- **THEN** a warning SHALL be emitted indicating the mismatch and potential inconsistency
+
 ### Requirement: Only WASM packages shall be loaded from the Pyodide CDN; pure-Python CDN packages are not bundled
 Pure-Python packages available in the Pyodide CDN SHALL NOT be bundled into the app wheel. They are already available from the Pyodide CDN and will be loaded by the browser from there. Only WASM packages (which cannot be bundled as pure Python) SHALL appear in `py-config.packages` for Pyodide CDN loading. There is no configuration option to change this behavior.
 
