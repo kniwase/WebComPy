@@ -495,3 +495,115 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 - Mismatch between `dependencies_from` and `sync_group` produces a warning.
 - All existing tests pass after updating default expectations.
 - Template and docs source configs are updated appropriately.
+
+---
+
+- [ ] **Task 8: Configure docs_src as a uv-managed project with dependencies_from**
+
+**Estimated time: ~1 hour**
+
+### Context
+
+Currently, `docs_src/webcompy_config.py` has `dependencies=["numpy", "matplotlib"]` (explicit list). The root `pyproject.toml` has these in `[dependency-groups] docs`. The goal is to convert `docs_src/` to a self-contained uv project with its own `pyproject.toml`, so that `dependencies_from` can resolve browser dependencies without manual duplication.
+
+### Current State
+
+```
+WebComPy/
+├── pyproject.toml              ← root project (webcompy framework)
+│   [dependency-groups]
+│   docs = ["numpy==2.2.5", "matplotlib>=3.9.0,<4"]
+│
+├── docs_src/
+│   ├── webcompy_config.py      ← dependencies=["numpy", "matplotlib"] (manual)
+│   ├── webcompy-lock.json      ← auto-generated
+│   └── (no pyproject.toml)
+```
+
+### Target State
+
+```
+WebComPy/
+├── pyproject.toml              ← root project (unchanged)
+│   [dependency-groups]
+│   docs = ["numpy==2.2.5", "matplotlib>=3.9.0,<4"]  ← still useful for uv sync at root
+│
+├── docs_src/
+│   ├── pyproject.toml          ← NEW: uv project for docs_src
+│   │   [project]
+│   │   name = "webcompy-docs"
+│   │   version = "0.0.0"
+│   │   dependencies = []        ← browser deps are in optional-dependencies
+│   │   [project.optional-dependencies]
+│   │   browser = ["numpy", "matplotlib"]
+│   │
+│   ├── webcompy_config.py      ← dependencies=None, dependencies_from="browser"
+│   ├── webcompy_server_config.py ← lockfile_sync_config=LockfileSyncConfig(sync_group="browser")
+│   ├── webcompy-lock.json      ← auto-regenerated after config change
+│   └── (no uv.lock needed — lock is in webcompy-lock.json)
+```
+
+### Steps
+
+1. Create `docs_src/pyproject.toml`:
+   ```toml
+   [project]
+   name = "webcompy-docs"
+   version = "0.0.0"
+   requires-python = ">=3.12"
+   dependencies = []
+
+   [project.optional-dependencies]
+   browser = ["numpy", "matplotlib"]
+   ```
+   Note: `version = "0.0.0"` is a placeholder — this project exists only for dependency metadata, not for publishing. The version specifiers in `browser` are intentionally unpinned because `webcompy-lock.json` handles pinning.
+
+2. Update `docs_src/webcompy_config.py`:
+   ```python
+   from pathlib import Path
+   from webcompy.app import AppConfig
+
+   app_import_path = "docs_src.bootstrap:app"
+   app_config = AppConfig(
+       app_package=Path(__file__).parent,
+       base_url="/",
+       dependencies=None,
+       dependencies_from="browser",
+   )
+   ```
+
+3. Update `docs_src/webcompy_server_config.py`:
+   ```python
+   from webcompy.app._config import GenerateConfig, LockfileSyncConfig, ServerConfig
+
+   server_config = ServerConfig(port=8080, dev=False)
+   generate_config = GenerateConfig(dist="docs", cname="webcompy.net")
+   lockfile_sync_config = LockfileSyncConfig(sync_group="browser")
+   ```
+
+4. Regenerate `docs_src/webcompy-lock.json` by running `uv run python -m webcompy lock --app docs_src.bootstrap:app` and verify it matches expectations.
+
+5. Verify that `webcompy start --dev --app docs_src.bootstrap:app` still works correctly (SSR renders pages, browser hydration works).
+
+6. Run the full test suite: `uv run python -m pytest tests/ --tb=short`.
+
+7. Run lint and typecheck: `uv run ruff check .` and `uv run pyright`.
+
+8. Update `docs_src/webcompy-lock.json` if it has changed (commit the updated lockfile).
+
+### Important Notes
+
+- The root `pyproject.toml` `[dependency-groups] docs` entry should remain unchanged — it's still useful for `uv sync --group docs` at the project root level.
+- The new `docs_src/pyproject.toml` is a minimal project file that exists only to provide `[project.optional-dependencies.browser]` for `dependencies_from` resolution.
+- Do NOT add `docs_src/pyproject.toml` to `.gitignore` — it should be version-controlled.
+- Do NOT create a `docs_src/uv.lock` file — the lock is managed by `webcompy-lock.json`.
+
+### Acceptance Criteria
+
+- `docs_src/pyproject.toml` exists with `[project.optional-dependencies] browser = ["numpy", "matplotlib"]`.
+- `docs_src/webcompy_config.py` uses `dependencies=None, dependencies_from="browser"`.
+- `docs_src/webcompy_server_config.py` has `lockfile_sync_config = LockfileSyncConfig(sync_group="browser")`.
+- `docs_src/webcompy-lock.json` is regenerated and correct.
+- `webcompy start --dev --app docs_src.bootstrap:app` works.
+- All existing tests pass.
+- Lint and typecheck pass.
