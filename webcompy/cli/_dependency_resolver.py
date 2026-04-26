@@ -194,52 +194,26 @@ def _resolve_all_transitives(
             visited_for_transitive.add(trans_norm)
 
             pkg_info = pyodide_lock.get("packages", {}).get(trans_name)
-            if pkg_info is not None:
-                is_wasm = _is_wasm_in_pyodide_lock(trans_name, pyodide_lock)
-                version = pkg_info.get("version", "0.0.0")
-                if is_wasm:
-                    classified_dep = ClassifiedDependency(
-                        name=trans_name,
-                        version=version,
-                        source="pyodide_cdn",
-                        is_pure_python=False,
-                        is_wasm=True,
-                        pkg_dir=None,
-                    )
-                    classified.append(classified_dep)
-                    seen[trans_norm] = classified_dep
-                    all_deps_to_process.append(classified_dep)
-                else:
-                    pkg_dir = _find_package_dir(trans_name)
-                    classified_dep = ClassifiedDependency(
-                        name=trans_name,
-                        version=version,
-                        source="pyodide_cdn",
-                        is_pure_python=True,
-                        is_wasm=False,
-                        pkg_dir=pkg_dir,
-                    )
-                    classified.append(classified_dep)
-                    seen[trans_norm] = classified_dep
-                    all_deps_to_process.append(classified_dep)
-            else:
-                pkg_dir = _find_package_dir(trans_name)
-                if pkg_dir is None:
-                    errors.append(
-                        f"Transitive dependency '{trans_name}' not found locally and not in Pyodide CDN. "
-                        f"Install it locally or add it to AppConfig.dependencies."
-                    )
-                    continue
-                if not _is_pure_python_package(pkg_dir):
-                    errors.append(
-                        f"Transitive dependency '{trans_name}' is a C extension and is not available in Pyodide."
-                    )
-                    continue
-                version = _get_package_version(trans_name) or "0.0.0"
+            is_wasm = _is_wasm_in_pyodide_lock(trans_name, pyodide_lock)
+            version = pkg_info.get("version", "0.0.0")
+            if is_wasm:
                 classified_dep = ClassifiedDependency(
                     name=trans_name,
                     version=version,
-                    source="transitive",
+                    source="pyodide_cdn",
+                    is_pure_python=False,
+                    is_wasm=True,
+                    pkg_dir=None,
+                )
+                classified.append(classified_dep)
+                seen[trans_norm] = classified_dep
+                all_deps_to_process.append(classified_dep)
+            else:
+                pkg_dir = _find_package_dir(trans_name)
+                classified_dep = ClassifiedDependency(
+                    name=trans_name,
+                    version=version,
+                    source="pyodide_cdn",
                     is_pure_python=True,
                     is_wasm=False,
                     pkg_dir=pkg_dir,

@@ -55,6 +55,12 @@ When loading an existing lock file, the CLI SHALL validate that `AppConfig.depen
 - **AND** the error SHALL suggest installing the lock file version (e.g., `pip install <package>==X.Y.Z`)
 - **AND** the build SHALL fail
 
+#### Scenario: Bundled package version unknown locally
+- **WHEN** a pure-Python package listed in `bundled_packages` is found locally via `importlib.util.find_spec()`, but `importlib.metadata.version()` returns `None` (version cannot be determined)
+- **THEN** an error SHALL be reported indicating the version could not be determined locally
+- **AND** the error SHALL include the lock file version requirement
+- **AND** the build SHALL fail
+
 #### Scenario: Non-WASM Pyodide CDN package version mismatch
 - **WHEN** a non-WASM Pyodide CDN package listed in `pyodide_packages` has a version in the lock file that differs from the locally installed version
 - **THEN** a warning SHALL be reported indicating the version mismatch

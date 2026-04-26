@@ -187,12 +187,19 @@ def validate_local_environment(
             )
             continue
         local_version = _get_package_version(name)
-        if local_version is not None and local_version != entry.version:
-            errors.append(
-                f"Package '{name}' version mismatch: lock file has {entry.version}, "
-                f"local has {local_version}. "
-                f"Install the correct version with: pip install {name}=={entry.version}"
-            )
+        if local_version is None or local_version != entry.version:
+            if local_version is None:
+                errors.append(
+                    f"Package '{name}' version could not be determined locally, "
+                    f"but lock file requires {entry.version}. "
+                    f"Ensure the package is properly installed with: pip install {name}=={entry.version}"
+                )
+            else:
+                errors.append(
+                    f"Package '{name}' version mismatch: lock file has {entry.version}, "
+                    f"local has {local_version}. "
+                    f"Install the correct version with: pip install {name}=={entry.version}"
+                )
 
     for name, entry in lockfile.pyodide_packages.items():
         if entry.is_wasm:

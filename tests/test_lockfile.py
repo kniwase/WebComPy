@@ -350,6 +350,27 @@ class TestValidateLocalEnvironment:
         errors, _warnings = validate_local_environment(lockfile)
         assert len(errors) == 2
 
+    def test_unknown_local_version_produces_error(self, monkeypatch):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            pyodide_packages={},
+            bundled_packages={
+                "webcompy": BundledPackageEntry(
+                    version="0.0.0-fake",
+                    source="explicit",
+                    is_pure_python=True,
+                ),
+            },
+        )
+        monkeypatch.setattr(
+            "webcompy.cli._dependency_resolver._get_package_version",
+            lambda n: None if n == "webcompy" else _get_actual_version(n),
+        )
+        errors, _warnings = validate_local_environment(lockfile)
+        assert len(errors) == 1
+        assert "version could not be determined" in errors[0]
+
 
 class TestGenerateLockfile:
     def _mock_pyodide_lock(self, packages=None):
