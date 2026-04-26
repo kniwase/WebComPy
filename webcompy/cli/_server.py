@@ -35,7 +35,7 @@ from webcompy.cli._utils import (
     get_server_config,
     get_webcompy_packge_dir,
 )
-from webcompy.cli._wheel_builder import get_stable_wheel_filename, make_webcompy_app_package
+from webcompy.cli._wheel_builder import make_webcompy_app_package
 
 
 def create_asgi_app(
@@ -76,7 +76,7 @@ def create_asgi_app(
 
     with TemporaryDirectory() as temp:
         temp_path = pathlib.Path(temp)
-        make_webcompy_app_package(
+        wheel_path = make_webcompy_app_package(
             temp_path,
             get_webcompy_packge_dir(),
             app.config.app_package_path,
@@ -84,6 +84,7 @@ def create_asgi_app(
             app.config.assets,
             bundled_deps=bundled_deps or None,
         )
+        wheel_filename = wheel_path.name
         app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (
                 p.open("rb").read(),
@@ -97,8 +98,7 @@ def create_asgi_app(
         if filename in app_package_files:
             content, media_type = app_package_files[filename]
             headers: dict[str, str] = {}
-            stable_wheel = get_stable_wheel_filename(app.config.app_package_path.name)
-            if server_config.dev and filename == stable_wheel:
+            if server_config.dev and filename == wheel_filename:
                 headers["Cache-Control"] = "no-cache"
             return Response(content, media_type=media_type, headers=headers)
         else:
@@ -129,7 +129,7 @@ def create_asgi_app(
         server_config.dev,
         True,
         app_version,
-        app.config.app_package_path.name,
+        wheel_filename,
         pyodide_package_names=pyodide_package_names,
     )
     base_url_stripper = partial(

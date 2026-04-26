@@ -1,4 +1,5 @@
 import hashlib
+import re
 import zipfile
 
 from webcompy.cli._wheel_builder import (
@@ -12,7 +13,6 @@ from webcompy.cli._wheel_builder import (
     _write_metadata,
     _write_record,
     _write_wheel,
-    get_stable_wheel_filename,
     get_wheel_filename,
     make_bundled_wheel,
     make_webcompy_app_package,
@@ -468,20 +468,77 @@ class TestFilterExcludedSubpackages:
         assert "myapp.views" in result
 
 
-class TestGetStableWheelFilename:
-    def test_simple_name(self):
-        assert get_stable_wheel_filename("myapp") == "myapp-0-py3-none-any.whl"
+class TestContentHashWheel:
+    def test_filename_contains_sha_hash(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+        )
+        assert re.match(r"myapp-0\+sha\.[0-9a-f]{8}-py3-none-any\.whl", result.name), (
+            f"Filename {result.name!r} does not match content-hash pattern"
+        )
 
-    def test_underscore_name(self):
-        assert get_stable_wheel_filename("my_app") == "my_app-0-py3-none-any.whl"
+    def test_hash_changes_with_content(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+        app1 = tmp_path / "app_v1"
+        app1.mkdir()
+        (app1 / "__init__.py").write_text("v1")
+        result1 = make_webcompy_app_package(dest, webcompy_pkg, app1, "1.0.0")
 
-    def test_mixed_case_name(self):
-        assert get_stable_wheel_filename("MyApp") == "myapp-0-py3-none-any.whl"
+        dest2 = tmp_path / "dist2"
+        dest2.mkdir()
+        app2 = tmp_path / "app_v2"
+        app2.mkdir()
+        (app2 / "__init__.py").write_text("v2")
+        result2 = make_webcompy_app_package(dest2, webcompy_pkg, app2, "1.0.0")
 
-    def test_no_version_in_filename(self):
-        result = get_stable_wheel_filename("myapp")
-        assert "-1.0.0-" not in result
-        assert result == "myapp-0-py3-none-any.whl"
+        assert result1.name != result2.name
+
+    def test_hash_is_deterministic(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("hello")
+
+        hashes = set()
+        for i in range(3):
+            d = tmp_path / f"dist_{i}"
+            d.mkdir()
+            result = make_webcompy_app_package(d, webcompy_pkg, app_pkg, "1.0.0")
+            hashes.add(result.name)
+
+        assert len(hashes) == 1
+
+    def test_hash_derived_from_wheel_bytes(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("hello")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+
+        result = make_webcompy_app_package(dest, webcompy_pkg, app_pkg, "1.0.0")
+
+        expected_hash = hashlib.sha256(result.read_bytes()).hexdigest()[:8]
+        assert f"+sha.{expected_hash}" in result.name
 
 
 class TestMakeWebcompyAppPackageExcludesCli:
@@ -517,7 +574,7 @@ class TestMakeWebcompyAppPackageExcludesCli:
             assert "webcompy/cli/__init__.py" not in names
             assert "webcompy/cli/_server.py" not in names
 
-    def test_stable_filename(self, tmp_path):
+    def test_content_hash_filename(self, tmp_path):
         webcompy_pkg = tmp_path / "webcompy"
         webcompy_pkg.mkdir()
         (webcompy_pkg / "__init__.py").write_text("")
@@ -533,7 +590,7 @@ class TestMakeWebcompyAppPackageExcludesCli:
             app_pkg,
             "1.0.0",
         )
-        assert result.name == "myapp-0-py3-none-any.whl"
+        assert re.match(r"myapp-0\+sha\.[0-9a-f]{8}-py3-none-any\.whl", result.name)
 
     def test_top_level_excludes_cli(self, tmp_path):
         webcompy_pkg = tmp_path / "webcompy"

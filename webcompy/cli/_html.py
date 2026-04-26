@@ -5,7 +5,6 @@ import json
 from typing import TypeAlias
 
 from webcompy.app._app import WebComPyApp
-from webcompy.cli._wheel_builder import get_stable_wheel_filename
 from webcompy.components._component import Component
 from webcompy.elements.typealias import ElementChildren
 from webcompy.elements.types import Element, RepeatElement
@@ -118,7 +117,7 @@ def generate_html(
     dev_mode: bool,
     prerender: bool,
     app_version: str,
-    app_package_name: str,
+    wheel_filename: str,
     pyodide_package_names: list[str] | None = None,
 ):
     app_root = (
@@ -142,7 +141,7 @@ def generate_html(
         )
     )
 
-    app_wheel_url = f"{app.config.base_url}_webcompy-app-package/{get_stable_wheel_filename(app_package_name)}"
+    app_wheel_url = f"{app.config.base_url}_webcompy-app-package/{wheel_filename}"
     py_packages = [
         app_wheel_url,
         *(pyodide_package_names or []),

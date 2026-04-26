@@ -80,8 +80,12 @@ def get_wheel_filename(name: str, version: str) -> str:
     return f"{_normalize_name(name)}-{version}-py3-none-any.whl"
 
 
-def get_stable_wheel_filename(name: str) -> str:
-    return f"{_normalize_name(name)}-0-py3-none-any.whl"
+def _content_hash_wheel(wheel_path: pathlib.Path, name: str) -> pathlib.Path:
+    digest = hashlib.sha256(wheel_path.read_bytes()).hexdigest()[:8]
+    new_filename = f"{_normalize_name(name)}-0+sha.{digest}-py3-none-any.whl"
+    new_path = wheel_path.parent / new_filename
+    wheel_path.rename(new_path)
+    return new_path
 
 
 def _write_metadata(name: str, version: str) -> str:
@@ -280,8 +284,8 @@ def make_webcompy_app_package(
     dist_info = f"{dist_name}-{app_version}.dist-info"
     top_levels: set[str] = set()
     record_entries: list[tuple[str, str, int]] = []
-    wheel_filename = get_stable_wheel_filename(app_name)
-    wheel_path = dest / wheel_filename
+    tmp_filename = f"{_normalize_name(app_name)}-0-py3-none-any.whl"
+    wheel_path = dest / tmp_filename
     if wheel_path.exists():
         os.remove(wheel_path)
 
@@ -338,4 +342,4 @@ def make_webcompy_app_package(
         record_content = _write_record(record_entries, dist_info)
         zf.writestr(f"{dist_info}/RECORD", record_content)
 
-    return wheel_path
+    return _content_hash_wheel(wheel_path, app_name)

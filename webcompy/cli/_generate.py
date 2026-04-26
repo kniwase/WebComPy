@@ -89,7 +89,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
         scripts_dir = dist_dir / "_webcompy-app-package"
         os.mkdir(scripts_dir)
-        make_webcompy_app_package(
+        wheel_path = make_webcompy_app_package(
             scripts_dir,
             get_webcompy_packge_dir(),
             app.config.app_package_path,
@@ -97,6 +97,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             app.config.assets,
             bundled_deps=bundled_deps or None,
         )
+        wheel_filename = wheel_path.name
         for p in scripts_dir.iterdir():
             print(p)
 
@@ -106,7 +107,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             False,
             True,
             app_version,
-            app.config.app_package_path.name,
+            wheel_filename,
             pyodide_package_names=pyodide_package_names,
         )
         if app.router_mode == "history" and app.routes:

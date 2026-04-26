@@ -1,13 +1,15 @@
 import json
 import pathlib
+import re
 import zipfile
 
 import pytest
 
 from webcompy.cli._lockfile import LOCKFILE_NAME, load_lockfile
-from webcompy.cli._wheel_builder import get_stable_wheel_filename
 
 E2E_DIR = pathlib.Path(__file__).parent
+
+_WHEEL_FILENAME_RE = re.compile(r"\w+-0\+sha\.[0-9a-f]{8}-py3-none-any\.whl")
 
 
 @pytest.mark.e2e
@@ -71,19 +73,20 @@ class TestBundledDepsWheel:
             assert "webcompy" in top_levels
             assert "aiofiles" in top_levels, f"aiofiles not in top_level.txt: {top_levels}"
 
-    def test_stable_filename_in_wheel(self, static_site):
-        _, wheel_file, app_name = static_site
-        expected = f"{app_name.replace('-', '_')}-0-py3-none-any.whl"
-        assert wheel_file.name == expected
+    def test_wheel_filename_has_content_hash(self, static_site):
+        _, wheel_file, _ = static_site
+        assert _WHEEL_FILENAME_RE.match(wheel_file.name), (
+            f"Wheel filename {wheel_file.name!r} does not match content-hash pattern"
+        )
 
 
 @pytest.mark.e2e
 class TestBundledDepsHTML:
     def test_html_contains_wheel_url(self, static_site):
-        dist_dir, _, app_name = static_site
+        dist_dir, wheel_file, _ = static_site
         html_path = dist_dir / "index.html"
         html_content = html_path.read_text(encoding="utf-8")
-        expected_url = f"_webcompy-app-package/{get_stable_wheel_filename(app_name)}"
+        expected_url = f"_webcompy-app-package/{wheel_file.name}"
         assert expected_url in html_content
 
     def test_html_does_not_list_bundled_deps_in_packages(self, static_site):
