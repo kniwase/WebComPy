@@ -348,7 +348,7 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 
 ---
 
-- [x] **Task 6: Update unit tests, add documentation page, and verify**
+- [x] **Task 6: Update unit tests, update home page setup guide, and verify**
 
 **Estimated time: ~1.5 hours**
 
@@ -359,60 +359,25 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 3. Run type check: `uv run pyright`.
 4. Fix any issues found by lint/typecheck/test.
 
-5. Add a documentation page at `docs_src/pages/document/lockfile_sync.py` following the existing pattern in `docs_src/pages/document/`. The page shall contain:
+5. Update the site home page at `docs_src/templates/home.py` to rewrite the "Get started" section with uv/poetry-based setup flows instead of the original plain `pip install` approach. The updated sections shall contain:
 
-   **Section: Project Setup with uv (Recommended)**
+    **Section: Get started with uv (Recommended)**
 
-   Example `pyproject.toml` with browser dependencies in `[project.optional-dependencies.browser]`:
-   ```toml
-   [project]
-   name = "my-app"
-   version = "0.1.0"
-   dependencies = []
+    - Commands: `uv init` → `uv add webcompy` → `uv run python -m webcompy init`
+    - Example `pyproject.toml` `[project.optional-dependencies] browser = ["numpy", "matplotlib"]`
+    - Example `webcompy_config.py` with `dependencies=None, dependencies_from="browser"` and `webcompy_server_config.py` with `LockfileSyncConfig(sync_group="browser")`
+    - Generate lock file and start dev server: `webcompy lock` → `webcompy start --dev`
 
-   [project.optional-dependencies]
-   browser = ["numpy", "matplotlib"]
-   ```
+    **Section: Get started with Poetry**
 
-   Example `webcompy_server_config.py`:
-   ```python
-   from webcompy.app._config import GenerateConfig, LockfileSyncConfig, ServerConfig
+    - Commands: `poetry new` → `poetry add webcompy` → `poetry run python -m webcompy init`
+    - Same `pyproject.toml` `[project.optional-dependencies]` configuration as uv
+    - Note that `webcompy lock --install` uses `uv pip` or `pip`, not `poetry install`. Use `webcompy lock --sync` to compare versions.
+    - Generate lock file and start dev server: `webcompy lock` → `webcompy start --dev`
 
-   server_config = ServerConfig(port=8080, dev=False)
-   generate_config = GenerateConfig(dist="dist")
-   lockfile_sync_config = LockfileSyncConfig(sync_group="browser")
-   ```
+    **Section: Lock File Commands**
 
-   Workflow:
-   1. `webcompy lock` — generate lock file
-   2. `webcompy lock --install` — install matching versions locally
-   3. `webcompy lock --sync` — check for version drift
-
-   **Section: Project Setup with Poetry**
-
-   Example `pyproject.toml` with `[tool.poetry.dependencies]` and `[project.optional-dependencies.browser]`:
-   ```toml
-   [tool.poetry]
-   name = "my-app"
-   version = "0.1.0"
-
-   [tool.poetry.dependencies]
-   python = "^3.12"
-
-   [project.optional-dependencies]
-   browser = ["numpy", "matplotlib"]
-   ```
-
-   Note that `webcompy lock --install` uses `uv pip` or `pip`, not `poetry install`. Use `webcompy lock --sync` to compare versions, then `poetry add` or `poetry install` as needed.
-
-   **Section: Auto-Discovery**
-
-   Explanation of how `webcompy lock --export/--sync/--install` discovers the project root by walking up from the app package directory until `pyproject.toml` is found. If no `pyproject.toml` is found, the user must set `LockfileSyncConfig.requirements_path` explicitly.
-
-   **Section: LockfileSyncConfig Reference**
-
-   - `requirements_path: str | None = None` — explicit path to `requirements.txt` (app_package-relative). When `None`, auto-discovery is used.
-   - `sync_group: str | None = None` — name of the `[project.optional-dependencies]` key to use for `--sync`. When `None`, `[project.dependencies]` is used.
+    - Reference table with `webcompy lock`, `--export`, `--sync`, `--install` commands and their descriptions
 
 ### Acceptance Criteria
 
