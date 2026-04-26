@@ -32,7 +32,7 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 
 ---
 
-- [ ] **Task 1: Add `LockfileSyncConfig`, change `AppConfig.dependencies`, and add project root discovery**
+- [x] **Task 1: Add `LockfileSyncConfig`, change `AppConfig.dependencies`, and add project root discovery**
 
 **Estimated time: ~2 hours**
 
@@ -119,7 +119,7 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 
 ---
 
-- [ ] **Task 2: Implement `export_requirements()` and path recording**
+- [x] **Task 2: Implement `export_requirements()` and path recording**
 
 **Estimated time: ~1 hour**
 
@@ -169,7 +169,7 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 
 ---
 
-- [ ] **Task 3: Implement `sync_from_requirements_txt()` and `sync_from_pyproject_toml()`**
+- [x] **Task 3: Implement `sync_from_requirements_txt()` and `sync_from_pyproject_toml()`**
 
 **Estimated time: ~1.5 hours**
 
@@ -248,7 +248,7 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 
 ---
 
-- [ ] **Task 4: Implement `install_requirements()`**
+- [x] **Task 4: Implement `install_requirements()`**
 
 **Estimated time: ~0.5 hours**
 
@@ -280,7 +280,7 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 
 ---
 
-- [ ] **Task 5: Extend `webcompy lock` CLI with `--export`, `--sync`, and `--install` flags**
+- [x] **Task 5: Extend `webcompy lock` CLI with `--export`, `--sync`, and `--install` flags**
 
 **Estimated time: ~1 hour**
 
@@ -348,7 +348,7 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 
 ---
 
-- [ ] **Task 6: Update unit tests, add documentation page, and verify**
+- [x] **Task 6: Update unit tests, add documentation page, and verify**
 
 **Estimated time: ~1.5 hours**
 
@@ -425,7 +425,7 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 
 ---
 
-- [ ] **Task 7: Implement `AppConfig.dependencies` auto-population from `pyproject.toml`**
+- [x] **Task 7: Implement `AppConfig.dependencies` auto-population from `pyproject.toml`**
 
 **Estimated time: ~1.5 hours**
 
@@ -498,7 +498,7 @@ This change adds three sub-commands to `webcompy lock`: `--export`, `--sync`, an
 
 ---
 
-- [ ] **Task 8: Configure docs_src as a uv-managed project with dependencies_from**
+- [x] **Task 8: Configure docs_src as a uv-managed project with dependencies_from**
 
 **Estimated time: ~1 hour**
 
