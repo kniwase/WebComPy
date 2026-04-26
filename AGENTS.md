@@ -124,7 +124,7 @@ WebComPy uses OpenSpec for spec-driven development. Specs define **what the fram
 - When a change is archived via `/opsx-archive`, the completed artifacts are moved to `openspec/changes/archive/<name>/` and the main specs (`openspec/specs/`) are updated with the finalized requirements.
 - `openspec/changes/` and `openspec/changes/archive/` directories are tracked in git (via `.gitkeep`). Never gitignore them.
 - Do NOT merge incomplete change artifacts to `main`. Only archived changes and updated specs belong on `main`.
-- CI enforces this: the `openspec` job fails if any unarchived change directories exist under `openspec/changes/` (excluding `archive/`).
+- CI enforces this: the `openspec-check` job fails if any completed (all tasks done) but unarchived changes exist. In-progress changes are allowed on feature branches. CI also validates change naming conventions.
 
 ### Spec Writing Guidelines
 
@@ -143,7 +143,7 @@ WebComPy uses OpenSpec for spec-driven development. Specs define **what the fram
 
 ### Change Conventions
 
-- Change names MUST use the format `<type>/<short-description>` matching the branch prefix convention (e.g., `feat/list-reconciliation`, `fix/evnet-typo`, `refactor/singleton-removal`).
+- Change names MUST use the format `<type>-<short-description>` (e.g., `feat-list-reconciliation`, `fix-evnet-typo`, `refactor-singleton-removal`). Use a hyphen separator (not `/`, which is a filesystem path separator).
 - Proposals MUST include a "Known Issues Addressed" section when the change relates to any issue listed in `openspec/config.yaml` context.
 - Proposals MUST include a "Non-goals" section.
 - Tasks MUST be broken into chunks of max 2 hours.
