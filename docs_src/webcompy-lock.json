@@ -15,6 +15,12 @@
       "is_wasm": true,
       "source": "explicit"
     },
+    "fonttools": {
+      "version": "4.56.0",
+      "file_name": "fonttools-4.56.0-py3-none-any.whl",
+      "is_wasm": false,
+      "source": "transitive"
+    },
     "packaging": {
       "version": "24.2",
       "file_name": "packaging-24.2-py3-none-any.whl",
@@ -27,9 +33,9 @@
       "is_wasm": false,
       "source": "transitive"
     },
-    "fonttools": {
-      "version": "4.56.0",
-      "file_name": "fonttools-4.56.0-py3-none-any.whl",
+    "cycler": {
+      "version": "0.12.1",
+      "file_name": "cycler-0.12.1-py3-none-any.whl",
       "is_wasm": false,
       "source": "transitive"
     },
@@ -39,41 +45,37 @@
       "is_wasm": false,
       "source": "transitive"
     },
-    "python-dateutil": {
-      "version": "2.9.0.post0",
-      "file_name": "python_dateutil-2.9.0.post0-py2.py3-none-any.whl",
-      "is_wasm": false,
-      "source": "transitive"
-    },
     "pytz": {
       "version": "2025.2",
       "file_name": "pytz-2025.2-py2.py3-none-any.whl",
       "is_wasm": false,
       "source": "transitive"
     },
-    "cycler": {
-      "version": "0.12.1",
-      "file_name": "cycler-0.12.1-py3-none-any.whl",
+    "python-dateutil": {
+      "version": "2.9.0.post0",
+      "file_name": "python_dateutil-2.9.0.post0-py2.py3-none-any.whl",
       "is_wasm": false,
       "source": "transitive"
-    }
-  },
-  "bundled_packages": {
-    "contourpy": {
-      "version": "1.3.1",
-      "source": "transitive",
-      "is_pure_python": false
     },
     "kiwisolver": {
       "version": "1.4.8",
-      "source": "transitive",
-      "is_pure_python": false
+      "file_name": "kiwisolver-1.4.8-cp313-cp313-pyodide_2025_0_wasm32.whl",
+      "is_wasm": true,
+      "source": "transitive"
+    },
+    "contourpy": {
+      "version": "1.3.1",
+      "file_name": "contourpy-1.3.1-cp313-cp313-pyodide_2025_0_wasm32.whl",
+      "is_wasm": true,
+      "source": "transitive"
     },
     "pillow": {
       "version": "11.3.0",
-      "source": "transitive",
-      "is_pure_python": false
+      "file_name": "pillow-11.3.0-cp313-cp313-pyodide_2025_0_wasm32.whl",
+      "is_wasm": true,
+      "source": "transitive"
     }
   },
+  "bundled_packages": {},
   "standalone_assets": {}
 }

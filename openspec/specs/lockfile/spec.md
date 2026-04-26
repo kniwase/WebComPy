@@ -49,14 +49,14 @@ When loading an existing lock file, the CLI SHALL validate that `AppConfig.depen
 - **THEN** an error SHALL be reported with the package name, the lock file version, and a suggestion to install it (e.g., `pip install <package>==<version>`)
 - **AND** the build SHALL fail
 
-#### Scenario: Bundled package version mismatch (locally-installed package)
-- **WHEN** a locally-installed package listed in `bundled_packages` with `source` of `"explicit"` or `"transitive"` has version `X.Y.Z` in the lock file, but `importlib.metadata.version()` reports a different version
+#### Scenario: Bundled package version mismatch
+- **WHEN** a pure-Python package listed in `bundled_packages` has version `X.Y.Z` in the lock file, but `importlib.metadata.version()` reports a different version
 - **THEN** an error SHALL be reported indicating the version mismatch (lock file version vs. local version)
 - **AND** the error SHALL suggest installing the lock file version (e.g., `pip install <package>==X.Y.Z`)
 - **AND** the build SHALL fail
 
-#### Scenario: Bundled package version mismatch (Pyodide CDN pure-Python package)
-- **WHEN** a pure-Python package from the Pyodide CDN listed in `bundled_packages` has a version in the lock file that differs from the locally installed version
+#### Scenario: Non-WASM Pyodide CDN package version mismatch
+- **WHEN** a non-WASM Pyodide CDN package listed in `pyodide_packages` has a version in the lock file that differs from the locally installed version
 - **THEN** a warning SHALL be reported indicating the version mismatch
 - **AND** the build SHALL continue (the local version will be used for SSR while the Pyodide CDN version is recorded in the lock file)
 - **AND** the warning SHALL note that the local version will be used for SSR/SSG
