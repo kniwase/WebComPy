@@ -1,6 +1,6 @@
 # Tasks: Lazy Routing — Deferred Module Import and Route Preloading
 
-- [ ] **Task 0: Rename ComponentGenerator private attributes**
+- [x] **Task 0: Rename ComponentGenerator private attributes**
 
 **Estimated time: ~0.5 hours**
 
