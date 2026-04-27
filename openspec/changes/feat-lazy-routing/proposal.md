@@ -290,12 +290,16 @@ class Router:
     def _get_component_for_path(self, path: str) -> ComponentGenerator | None:
         """Return the ComponentGenerator for the given path, or None if no match."""
         clean_path = path.strip("/")
+        if self.__mode__ == "history" and self.__base_url__:
+            clean_path = self._base_url_stripper(clean_path)
         for route in self.__routes__:
             _, matcher, _, component, _ = route
             if matcher(clean_path):
                 return component
         return None
 ```
+
+The caller is responsible for stripping query params and hash fragments before passing the path. The method itself handles `base_url` stripping (for history mode) and leading/trailing slash normalization.
 
 `RouterLink` adds a `mouseenter` event handler through the `events` dict (which translates to `addEventListener` in the browser), NOT through `attrs` (which sets DOM attribute strings):
 

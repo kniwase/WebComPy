@@ -59,7 +59,10 @@ The `DynamicElement` subclass contract:
 
 **SSG output change**: `<div webcompy-routerview>...content...</div>` → `...content...`. Safe because `webcompy-routerview` is unused.
 
-### D10: RouterLink mouseenter goes through events dict, not attrs
+### D10: `__getattr__` fallback is safe — no infinite recursion risk
+`LazyComponentGenerator` uses `__getattr__` to delegate attribute access to the resolved generator. Python only calls `__getattr__` when normal attribute lookup fails (all instance-level and class-level attributes have been checked). Since `LazyComponentGenerator` directly defines `_resolve`, `_resolved`, `_preload`, `_import_path`, `_caller_file`, and all copied `ComponentGenerator` attributes (`_name`, `_id`, `_style`, `_registered`, `_component_def`), these attributes are found via normal lookup and never trigger `__getattr__`. Only truly unknown attributes (e.g., custom attributes set on the resolved generator by the developer) fall through to `__getattr__` → `self._resolve()` → delegation.
+
+### D11: RouterLink mouseenter goes through events dict, not attrs
 WebComPy's `Element` class separates `attrs` (DOM attribute strings set via `setAttribute`) from `events` (event handlers registered via `addEventListener`). The `mouseenter` handler MUST go through the `events` dict (the `addEventListener` path), NOT through `attrs`. Setting `@mouseenter` as an attribute string would not work — DOM event handlers require `addEventListener`, not inline attributes.
 
 ## Architecture
@@ -254,12 +257,16 @@ class Router:
     def _get_component_for_path(self, path: str) -> ComponentGenerator | None:
         """Return the ComponentGenerator for the given path, or None if no match."""
         clean_path = path.strip("/")
+        if self.__mode__ == "history" and self.__base_url__:
+            clean_path = self._base_url_stripper(clean_path)
         for route in self.__routes__:
             _, matcher, _, component, _ = route
             if matcher(clean_path):
                 return component
         return None
 ```
+
+The caller is responsible for stripping query params and hash fragments before passing the path. The method itself handles `base_url` stripping (for history mode) and leading/trailing slash normalization.
 
 ## Risk: `importlib` in Pyodide
 

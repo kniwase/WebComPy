@@ -138,9 +138,10 @@ SSG pipeline: `app.set_path(path)` → signal propagation → `SwitchElement._re
 ### Steps
 
 1. Open `webcompy/router/_view.py`.
-2. Change `RouterView` base class from `Element` to `DynamicElement`.
-3. Remove the duplicate `RouterPage` TypedDict from `_view.py` (it duplicates the one in `_pages.py` and is not used by `Router.__init__`).
-4. Rewrite `RouterView.__init__()`:
+2. Add import: `from webcompy._browser._modules import browser`.
+3. Change `RouterView` base class from `Element` to `DynamicElement`.
+4. Remove the duplicate `RouterPage` TypedDict from `_view.py` (it defines a `children` field for nested routing, duplicates `_pages.py`'s definition, and is not used by `Router.__init__` — it is dead code with no active change planning nested routing).
+5. Rewrite `RouterView.__init__()`:
    ```python
    class RouterView(DynamicElement):
        def __init__(self) -> None:
@@ -152,7 +153,7 @@ SSG pipeline: `app.set_path(path)` → signal propagation → `SwitchElement._re
            self._switch = SwitchElement(router.__cases__, router.__default__)
            super().__init__()
    ```
-5. Implement `RouterView._on_set_parent()`:
+6. Implement `RouterView._on_set_parent()`:
    ```python
    def _on_set_parent(self):
        self._children = [self._switch]
@@ -167,9 +168,11 @@ SSG pipeline: `app.set_path(path)` → signal propagation → `SwitchElement._re
                    self._router.preload_lazy_routes()
                browser.window.setTimeout(_schedule_preload, 0)
    ```
-6. Open `webcompy/router/_router.py`.
-7. Add `preload: bool = True` parameter to `Router.__init__()`, store as `self._preload`.
-8. Implement `Router.preload_lazy_routes(self) -> None`:
+7. Update imports in `_view.py`: replace `Element` import with `DynamicElement`.
+8. Remove `ComponentGenerator` and `RouterContext` imports from `_view.py` (no longer needed after removing the duplicate TypedDict).
+9. Open `webcompy/router/_router.py`.
+10. Add `preload: bool = True` parameter to `Router.__init__()`, store as `self._preload`.
+11. Implement `Router.preload_lazy_routes(self) -> None`:
    - Iterate over `self.__routes__` (each is a `RouteType` tuple).
    - For each `route`, get `component = route[3]`.
    - Check `isinstance(component, LazyComponentGenerator) and component._resolved is None`.
@@ -178,14 +181,12 @@ SSG pipeline: `app.set_path(path)` → signal propagation → `SwitchElement._re
    - If non-browser (`browser is None`):
      - Call `component._preload()` immediately.
    - Guard: if `self._preload is False`, return early without preloading.
-9. Implement `Router._get_component_for_path(self, path: str) -> ComponentGenerator | None`:
+12. Implement `Router._get_component_for_path(self, path: str) -> ComponentGenerator | None`:
    - Strip leading/trailing slashes and base_url from `path`.
    - Iterate over `self.__routes__`, call each route's matcher function (`route[1]`) on `clean_path`.
    - Return `route[3]` (the `ComponentGenerator`) for the first match.
    - Return `None` if no match.
-10. Update imports in `_view.py`: replace `Element` import with `DynamicElement`.
-11. Remove `ComponentGenerator` and `RouterContext` imports from `_view.py` (no longer needed after removing the duplicate TypedDict).
-12. Run lint, typecheck, and tests.
+13. Run lint, typecheck, and tests.
 
 ### Acceptance Criteria
 
