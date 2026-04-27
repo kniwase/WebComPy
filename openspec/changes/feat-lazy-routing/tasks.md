@@ -112,7 +112,7 @@ After resolution, all internal attributes (`_name`, `_id`, `_style`, `_registere
 
 ---
 
-- [ ] **Task 2: Refactor RouterView to DynamicElement and add auto-preload**
+- [x] **Task 2: Refactor RouterView to DynamicElement and add auto-preload**
 
 **Estimated time: ~1.5 hours**
 

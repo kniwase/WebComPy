@@ -43,6 +43,7 @@ class Router:
         default: ComponentGenerator[TypedRouterContext[Any, Any, Any]] | None = None,
         mode: Literal["hash", "history"] = "hash",
         base_url: str = "",
+        preload: bool = True,
     ) -> None:
         self.__mode__ = mode
         self.__base_url__ = base_url.strip().strip("/")
@@ -50,6 +51,7 @@ class Router:
         self._location = Location(self.__mode__, self.__base_url__)
         self.__routes__ = self._generate_routes(pages)
         self._default = default
+        self._preload = preload
 
     @computed_property
     def __cases__(self):
@@ -145,3 +147,31 @@ class Router:
 
     def __set_path__(self, path: str, state: dict[str, Any] | None):
         self._location.__set_path__(path, state)
+
+    def preload_lazy_routes(self) -> None:
+        if not self._preload:
+            return
+        from webcompy._browser._modules import browser
+        from webcompy.router._lazy import LazyComponentGenerator
+
+        for route in self.__routes__:
+            component = route[3]
+            if isinstance(component, LazyComponentGenerator) and component._resolved is None:
+                if browser:
+
+                    def _do_preload(c=component):
+                        c._preload()
+
+                    browser.window.setTimeout(_do_preload, 0)
+                else:
+                    component._preload()
+
+    def _get_component_for_path(self, path: str) -> ComponentGenerator[RouterContext] | None:
+        clean_path = path.strip("/")
+        if self.__mode__ == "history" and self.__base_url__:
+            clean_path = self._base_url_stripper(clean_path)
+        for route in self.__routes__:
+            _, matcher, _, component, _ = route
+            if matcher(clean_path):
+                return component
+        return None
