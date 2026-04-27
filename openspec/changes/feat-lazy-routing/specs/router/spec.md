@@ -46,10 +46,8 @@ When `Router` is created with `preload=True` (the default), the router SHALL aut
 - **THEN** all unresolved lazy routes SHALL be resolved immediately (no `setTimeout`)
 - **AND** all page components SHALL be available for SSG rendering
 
-## ADDED Requirements
-
 ### Requirement: RouterLink shall preload lazy routes on hover
-`RouterLink` SHALL add a `mouseenter` event handler that preloads the target route's `LazyComponentGenerator` when hovered, enabling speculative module import before the user clicks. `Router` SHALL provide a `_get_component_for_path()` method that returns the `ComponentGenerator` for a given path for use by `RouterLink`.
+`RouterLink` SHALL add a `mouseenter` event handler (via the `events` parameter, which uses `addEventListener`) that preloads the target route's `LazyComponentGenerator` when hovered. `Router` SHALL provide a `_get_component_for_path()` method that returns the `ComponentGenerator` for a given path.
 
 #### Scenario: Hovering over a RouterLink with a lazy route
 - **WHEN** a user hovers over a `RouterLink` whose target component is a `LazyComponentGenerator`
@@ -60,6 +58,22 @@ When `Router` is created with `preload=True` (the default), the router SHALL aut
 #### Scenario: Hovering over a RouterLink with an eager route
 - **WHEN** a user hovers over a `RouterLink` whose target component is a regular `ComponentGenerator`
 - **THEN** no additional action SHALL be taken
+
+### Requirement: RouterView shall be a DynamicElement (not an Element)
+`RouterView` SHALL extend `DynamicElement` instead of `Element`. This removes the unnecessary `<div webcompy-routerview>` wrapper from the DOM and provides the `_on_set_parent()` lifecycle hook for scheduling auto-preload. The `webcompy-routerview` attribute SHALL be removed as it has no consumers.
+
+#### Scenario: RouterView does not produce a DOM node
+- **WHEN** a `RouterView` is rendered in the browser
+- **THEN** it SHALL NOT create a `<div>` element
+- **AND** the `SwitchElement` child SHALL be positioned directly in the parent node
+- **AND** `RouterView._on_set_parent()` SHALL initialize children and schedule lazy route preloading
+
+#### Scenario: RouterView SSG output
+- **WHEN** `generate_html()` produces output containing a `RouterView`
+- **THEN** the output SHALL NOT contain a `<div webcompy-routerview>` wrapper
+- **AND** the route content SHALL be rendered directly without an extra `<div>`
+
+## ADDED Requirements
 
 ### Requirement: ComponentGenerator private attributes shall use single-underscore naming
 `ComponentGenerator` SHALL use single-underscore private attributes (`_name`, `_id`, `_style`, `_registered`, `_component_def`) instead of name-mangled attributes (`__name`, `__id`, etc.). `ComponentStore` SHALL use `_components` instead of `__components`. This enables `LazyComponentGenerator` (a subclass) to access and delegate to these attributes properly. This is a behavior-preserving refactor with no public API change.

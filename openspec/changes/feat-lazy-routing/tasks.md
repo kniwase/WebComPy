@@ -112,26 +112,64 @@ After resolution, all internal attributes (`_name`, `_id`, `_style`, `_registere
 
 ---
 
-- [ ] **Task 2: Add auto-preload to Router and RouterView**
+- [ ] **Task 2: Refactor RouterView to DynamicElement and add auto-preload**
 
 **Estimated time: ~1.5 hours**
 
 ### Context
 
-`RouterView` is a regular `Element` (not `DynamicElement`), so it does NOT have `_on_set_parent()`. The auto-preload must be triggered differently. The key insight: in the browser, `SwitchElement._on_set_parent()` is called when `RouterView` initializes its children. For SSG, `app.set_path()` triggers route resolution via signal propagation. Auto-preload should be triggered:
+`RouterView` currently extends `Element` and renders as `<div webcompy-routerview>` wrapping a `SwitchElement`. This wrapper div is conceptually wrong — `RouterView` manages dynamic children, which is what `DynamicElement` does. The `webcompy-routerview` attribute is not referenced anywhere in CSS, JS, or tests.
 
-- **Browser**: After initial render. The best hook point is `AppDocumentRoot._render()` (line 101 of `_root_component.py`), which already has a `run_done` phase recording. Alternatively, `Router` can expose `preload_lazy_routes()` and `RouterView.__init__()` can schedule it.
-- **SSG**: Before HTML generation, during route iteration. All routes are resolved by `set_path()` + `preload_lazy_routes()` in non-browser mode.
+By making `RouterView` a `DynamicElement`, it gets `_on_set_parent()` which is the natural lifecycle hook for:
+1. Initializing children (the `SwitchElement`)
+2. Scheduling auto-preload of lazy routes
 
-`Router.__routes__` is a `list[RouteType]` where `RouteType` = `tuple[str, Callable, list[str], ComponentGenerator, RouterPage]`. `route[3]` is the `ComponentGenerator`.
+`DynamicElement` contract:
+- No `_tag_name`, no `_attrs`, no `_event_handlers` — no DOM node ownership.
+- `_on_set_parent()` initializes `_children` and schedules preload.
+- `_render_html()` concatenates children's HTML without a wrapper tag.
+- `_position_element_nodes()` skips `DynamicElement` and positions its children directly in the parent node.
+- `_is_patchable` returns `False` for `DynamicElement` — not a concern since `RouterView` has exactly one child.
 
-`Router.__init__` currently has `*pages, default, mode, base_url` parameters. The `preload` parameter must be added after `base_url`.
+`DynamicElement._parent` setter (in `_dynamic.py:47-49`) calls `self._on_set_parent()`. This is called when the parent component adds `RouterView` to its children, which happens during component initialization.
+
+SSG pipeline: `app.set_path(path)` → signal propagation → `SwitchElement._refresh()` → `LazyComponentGenerator.__call__()` → `_resolve()`. Then `preload_lazy_routes()` resolves remaining routes immediately. Then `generate_html()` accesses `app.style` which iterates all components' `scoped_style`.
 
 ### Steps
 
-1. Open `webcompy/router/_router.py`.
-2. Add `preload: bool = True` parameter to `Router.__init__()`, store as `self._preload`.
-3. Implement `Router.preload_lazy_routes(self) -> None`:
+1. Open `webcompy/router/_view.py`.
+2. Change `RouterView` base class from `Element` to `DynamicElement`.
+3. Remove the duplicate `RouterPage` TypedDict from `_view.py` (it duplicates the one in `_pages.py` and is not used by `Router.__init__`).
+4. Rewrite `RouterView.__init__()`:
+   ```python
+   class RouterView(DynamicElement):
+       def __init__(self) -> None:
+           try:
+               router = inject(_ROUTER_KEY)
+           except InjectionError:
+               raise RuntimeError("'Router' instance is not provided via DI.") from None
+           self._router = router
+           self._switch = SwitchElement(router.__cases__, router.__default__)
+           super().__init__()
+   ```
+5. Implement `RouterView._on_set_parent()`:
+   ```python
+   def _on_set_parent(self):
+       self._children = [self._switch]
+       self._switch._parent = self
+       if not browser:
+           self._switch._on_set_parent()
+           if self._router._preload:
+               self._router.preload_lazy_routes()
+       else:
+           if self._router._preload:
+               def _schedule_preload():
+                   self._router.preload_lazy_routes()
+               browser.window.setTimeout(_schedule_preload, 0)
+   ```
+6. Open `webcompy/router/_router.py`.
+7. Add `preload: bool = True` parameter to `Router.__init__()`, store as `self._preload`.
+8. Implement `Router.preload_lazy_routes(self) -> None`:
    - Iterate over `self.__routes__` (each is a `RouteType` tuple).
    - For each `route`, get `component = route[3]`.
    - Check `isinstance(component, LazyComponentGenerator) and component._resolved is None`.
@@ -140,48 +178,44 @@ After resolution, all internal attributes (`_name`, `_id`, `_style`, `_registere
    - If non-browser (`browser is None`):
      - Call `component._preload()` immediately.
    - Guard: if `self._preload is False`, return early without preloading.
-4. Implement `Router._get_component_for_path(self, path: str) -> ComponentGenerator | None`:
+9. Implement `Router._get_component_for_path(self, path: str) -> ComponentGenerator | None`:
    - Strip leading/trailing slashes and base_url from `path`.
    - Iterate over `self.__routes__`, call each route's matcher function (`route[1]`) on `clean_path`.
    - Return `route[3]` (the `ComponentGenerator`) for the first match.
    - Return `None` if no match.
-5. Open `webcompy/router/_view.py`.
-6. In `RouterView.__init__()`, after `super().__init__()` call, schedule preload:
-   ```python
-   self._router_ref = router  # Store reference for preload
-   if router._preload:
-       from webcompy._browser._modules import browser
-       if browser:
-           browser.window.setTimeout(router.preload_lazy_routes, 0)
-       else:
-           router.preload_lazy_routes()
-   ```
-   Note: `RouterView.__init__` already injects `router` and passes it to `SwitchElement`. We need to also schedule preload after initialization.
-7. Run lint, typecheck, and tests.
+10. Update imports in `_view.py`: replace `Element` import with `DynamicElement`.
+11. Remove `ComponentGenerator` and `RouterContext` imports from `_view.py` (no longer needed after removing the duplicate TypedDict).
+12. Run lint, typecheck, and tests.
 
 ### Acceptance Criteria
 
-- `Router(preload=True)` (default) auto-preloads all lazy routes after initialization.
-- `Router(preload=False)` skips auto-preload (`preload_lazy_routes()` returns early).
+- `RouterView` is a `DynamicElement` subclass, not `Element`.
+- `RouterView` does NOT produce a DOM node (no `<div webcompy-routerview>` wrapper).
+- `RouterView._on_set_parent()` initializes children and schedules preload.
+- `Router(preload=True)` (default) auto-preloads all lazy routes after initial render.
+- `Router(preload=False)` skips auto-preload.
 - `Router.preload_lazy_routes()` resolves unresolved `LazyComponentGenerator` instances.
 - In browser, preloading uses `setTimeout(0)`.
 - In SSG (non-browser), preloading happens immediately.
 - `Router._get_component_for_path()` returns the correct `ComponentGenerator` for a matched path, `None` for unmatched.
-- Path matching in `_get_component_for_path` handles base_url correctly when `mode="history"`.
+- Existing E2E tests pass (the removed `<div>` should not break any selectors).
+- SSG output is correct (no missing content due to removed wrapper div).
+- The unused duplicate `RouterPage` TypedDict in `_view.py` is removed.
 
 ### Key File Paths
 
+- `webcompy/router/_view.py` — refactor `RouterView` from `Element` to `DynamicElement`
 - `webcompy/router/_router.py` — add `preload` param, `preload_lazy_routes()`, `_get_component_for_path()`
-- `webcompy/router/_view.py` — schedule preload in `__init__`
 - `webcompy/router/_lazy.py` — `LazyComponentGenerator` (import for `isinstance` check)
-- `webcompy/_browser/_modules.py` — `browser` (import for environment detection)
+- `webcompy/elements/types/_dynamic.py` — `DynamicElement` base class
+- `webcompy/elements/types/_switch.py` — `SwitchElement` (child of RouterView)
 
 ### Important Notes
 
 - `_get_component_for_path()` must handle `base_url` stripping for `mode="history"` the same way `_get_elements_generator()` does.
 - `setTimeout` closures must capture the correct component reference — use default argument binding (`def _do(c=component): c._preload()`).
-- The `preload_lazy_routes()` call in `RouterView.__init__` must happen AFTER `super().__init__()` so that `SwitchElement` is properly initialized with the `__cases__` signal.
-- SSG calls `app.set_path()` for each route before `generate_html()`. Combined with `preload_lazy_routes()` (which resolves all lazy routes immediately in non-browser mode), all `scoped_style` values will be available when `app.style` is accessed during HTML generation.
+- The `_view.py` duplicate `RouterPage` TypedDict (lines 13-19) is not the one used by `Router.__init__` (that one is in `_pages.py`). It can be safely removed.
+- SSG calls `app.set_path()` for each route before `generate_html()`. Combined with `preload_lazy_routes()` (immediate in non-browser), all `scoped_style` values will be available when `app.style` is accessed during HTML generation.
 
 ---
 
@@ -191,7 +225,7 @@ After resolution, all internal attributes (`_name`, `_id`, `_style`, `_registere
 
 ### Context
 
-`TypedRouterLink` extends `Element`, which accepts `events` (dict of `{event_name: handler}`) that translates to `addEventListener` calls in the browser. Currently, `RouterLink.__init__` passes `events={"click": self._on_click}`. The mouseenter handler must also go through this `events` dict, NOT through `attrs` (attrs set DOM attribute strings, not event handlers).
+`TypedRouterLink` extends `Element`, which accepts `events` (dict of `{event_name: handler}`) that translates to `addEventListener` calls in the browser. Currently, `RouterLink.__init__` passes `events={"click": self._on_click}`. The mouseenter handler must also go through this `events` dict, NOT through `attrs` (attrs set DOM attribute strings via `setAttribute`, which does not work for event handlers).
 
 `self._to` can be either `str` or `SignalBase[str]`. The path value must be extracted before calling `_get_component_for_path()`. Query and hash portions of the path must be stripped before matching.
 
@@ -204,9 +238,7 @@ After resolution, all internal attributes (`_name`, `_id`, `_style`, `_registere
    ```python
    def _on_mouseenter(self, _ev=None):
        to_path = self._to.value if isinstance(self._to, SignalBase) else self._to
-       # Strip query/hash, extract path only
        path = to_path.split("?")[0].split("#")[0]
-       # Strip base_url for history mode
        if self._router.__mode__ == "history" and self._router.__base_url__:
            path = self._router._base_url_stripper(path)
        target = self._router._get_component_for_path(path)
@@ -215,7 +247,8 @@ After resolution, all internal attributes (`_name`, `_id`, `_style`, `_registere
    ```
 3. Update `super().__init__()` call in `TypedRouterLink.__init__()`:
    - Change `events={"click": self._on_click}` to `events={"click": self._on_click, "mouseenter": self._on_mouseenter}`.
-4. Also update `self._event_handlers = {"click": self._on_click}` in `_refresh()` to include mouseenter.
+4. Update `self._event_handlers` in `_refresh()` (line 69):
+   - Change `{"click": self._on_click}` to `{"click": self._on_click, "mouseenter": self._on_mouseenter}`.
 5. Import `LazyComponentGenerator` from `webcompy.router._lazy` for `isinstance` check.
 6. Run lint, typecheck, and tests.
 
@@ -235,9 +268,10 @@ After resolution, all internal attributes (`_name`, `_id`, `_style`, `_registere
 
 ### Important Notes
 
-- Do NOT add `@mouseenter` to `_generate_attrs()` — attrs are DOM attribute strings. Event handlers must go through the `events` parameter which uses `addEventListener`.
-- The `mouseenter` handler must handle the case where `_get_component_for_path()` returns `None` (no route match) — this is safe because the `isinstance(target, LazyComponentGenerator)` check returns `False` for `None`.
+- Do NOT add `@mouseenter` to `_generate_attrs()` — attrs are DOM attribute strings set via `setAttribute`. Event handlers must go through the `events` parameter which uses `addEventListener`.
+- The `mouseenter` handler must handle the case where `_get_component_for_path()` returns `None` (no route match) — the `isinstance(target, LazyComponentGenerator)` check returns `False` for `None`.
 - In SSR/SSG (`browser is None`), `Element.__init__` still registers event handlers in `_event_handlers` dict, but they are never attached to DOM nodes. The `_on_mouseenter` method itself is harmless.
+- No `mouseleave` handler is needed — preloading is a one-way operation with no visual side effects.
 
 ---
 
@@ -270,20 +304,22 @@ Testing `LazyComponentGenerator._resolve()` requires creating a module with a `C
 6. Test `scoped_style` delegation:
    - `test_lazy_scoped_style_getter`: Access `scoped_style` on unresolved generator → triggers resolve.
    - `test_lazy_scoped_style_setter`: Set `scoped_style` on lazy generator → delegates to resolved.
-7. Test `Router.preload_lazy_routes()`:
+7. Test `RouterView` as `DynamicElement`:
+   - `test_router_view_is_dynamic_element`: Assert `isinstance(RouterView(), DynamicElement)`.
+   - `test_router_view_has_no_dom_node`: Verify RouterView does not create a DOM element node.
+8. Test `Router.preload_lazy_routes()`:
    - `test_router_preload_lazy_routes_browser`: Mock `browser.window.setTimeout`, verify it's called for each unresolved lazy route.
    - `test_router_preload_lazy_routes_ssg`: Without browser, verify `_preload()` is called immediately.
    - `test_router_preload_disabled`: `Router(preload=False)`, verify no preloading occurs.
-8. Test `Router._get_component_for_path()`:
+9. Test `Router._get_component_for_path()`:
    - `test_get_component_for_path_match`: Verify correct component returned for a known path.
    - `test_get_component_for_path_no_match`: Verify `None` for an unknown path.
-9. Run `uv run python -m pytest tests/test_lazy_routing.py --tb=short`.
+10. Run `uv run python -m pytest tests/test_lazy_routing.py --tb=short`.
 
 ### Acceptance Criteria
 
 - All tests pass.
-- Tests cover: lazy creation, validation, resolution, caching, delegation, preloading, Router integration.
-- Tests do not require a running server or browser.
+- Tests cover: lazy creation, validation, resolution, caching, delegation, preloading, RouterView refactor, Router integration.
 
 ---
 
@@ -293,7 +329,7 @@ Testing `LazyComponentGenerator._resolve()` requires creating a module with a `C
 
 ### Context
 
-`docs_src/router.py` currently imports all page modules eagerly and passes `ComponentGenerator` objects directly to `Router()`. The home page (`HomePage`) should remain eager because it's the initial page. All other routes should use `lazy()` with absolute module paths.
+`docs_src/router.py` currently imports all page modules eagerly and passes `ComponentGenerator` objects directly to `Router()`. After Task 2, `RouterView` no longer produces a `<div webcompy-routerview>` wrapper. E2E tests should be verified to not depend on this DOM structure.
 
 The `docs_src` package structure:
 - `docs_src/pages/home.py` → `HomePage`
@@ -342,7 +378,7 @@ The `docs_src` package structure:
 - Home page loads without errors.
 - Navigation to all lazy routes works correctly.
 - No console errors.
-- Existing E2E tests pass.
+- Existing E2E tests pass (including after RouterView wrapper div removal).
 
 ### Key File Paths
 
@@ -357,9 +393,7 @@ The `docs_src` package structure:
 
 ### Context
 
-SSG generates HTML by calling `app.set_path(path)` for each route, then `generate_html()` to produce the output. `generate_html()` accesses `app.style` which iterates `ComponentStore.components.values()` and reads each component's `scoped_style`. For lazy routes, `preload_lazy_routes()` in non-browser mode resolves all lazy routes immediately, ensuring:
-1. All `ComponentGenerator` instances are registered in `ComponentStore`.
-2. All `scoped_style` values are accessible.
+SSG generates HTML by calling `app.set_path(path)` for each route, then `generate_html()` to produce the output. `generate_html()` accesses `app.style` which iterates `ComponentStore.components.values()` and reads each component's `scoped_style`. After the RouterView refactor, the SSG output no longer contains a `<div webcompy-routerview>` wrapper — the route content is rendered directly.
 
 The SSG pipeline sequence is:
 1. `app.set_path(path)` → triggers `SwitchElement._refresh()` → `LazyComponentGenerator.__call__()` → `_resolve()`.
@@ -372,12 +406,14 @@ The SSG pipeline sequence is:
 2. Check that `dist/` is created with all route directories.
 3. For each route, verify the HTML output contains the expected component content (not blank/empty).
 4. Verify the `<style>` tag in generated HTML contains CSS from all components (including lazy ones).
-5. Run the E2E static site test: `uv run python -m pytest tests/e2e/test_static_site.py --tb=short`.
+5. Verify no `<div webcompy-routerview>` in generated HTML (removed by RouterView refactor).
+6. Run the E2E static site test: `uv run python -m pytest tests/e2e/test_static_site.py --tb=short`.
 
 ### Acceptance Criteria
 
 - SSG output is correct for all routes (no blank pages or missing components).
 - `<style>` tag contains scoped CSS from all lazy route components.
+- No `<div webcompy-routerview>` in generated HTML.
 - Static site E2E test passes.
 
 ---
@@ -394,5 +430,5 @@ The SSG pipeline sequence is:
 
 ## Specs to Update
 
-- `openspec/specs/router/spec.md` — add `lazy()` function, `LazyComponentGenerator`, auto-preload, `RouterLink` hover preloading, `Router.preload` parameter, `ComponentGenerator` attribute rename
+- `openspec/specs/router/spec.md` — add `lazy()` function, `LazyComponentGenerator`, `RouterView` as `DynamicElement`, auto-preload, `RouterLink` hover preloading, `Router.preload` parameter, `ComponentGenerator` attribute rename
 - `openspec/specs/components/spec.md` — add `ComponentGenerator` attribute rename requirement

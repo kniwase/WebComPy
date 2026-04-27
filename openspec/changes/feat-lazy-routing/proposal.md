@@ -2,7 +2,7 @@
 
 ## Summary
 
-Add lazy route import capability to the Router so that page component modules are imported only when their route is first matched, reducing the initial Python import burden at startup. This is implemented via a new `lazy()` helper function that wraps an absolute module path string into a `LazyComponentGenerator` (a `ComponentGenerator` subclass). After the initial page renders, the Router automatically preloads remaining lazy routes so that subsequent navigation is instant. Additionally, `RouterLink` preloading on hover (mouseenter) speculatively imports the target route's module before the user clicks.
+Add lazy route import capability to the Router so that page component modules are imported only when their route is first matched, reducing the initial Python import burden at startup. This is implemented via a new `lazy()` helper function that wraps an absolute module path string into a `LazyComponentGenerator` (a `ComponentGenerator` subclass). After the initial page renders, the Router automatically preloads remaining lazy routes so that subsequent navigation is instant. Additionally, `RouterLink` preloading on hover (mouseenter) speculatively imports the target route's module before the user clicks. As part of this change, `RouterView` is refactored from `Element` to `DynamicElement`, aligning it with its conceptual role as a dynamic child container and enabling `_on_set_parent()` lifecycle for preload scheduling.
 
 ## Motivation
 
@@ -114,17 +114,13 @@ class LazyComponentGenerator(ComponentGenerator):
     _resolved: ComponentGenerator | None
 
     def __init__(self, import_path: str, caller_file: str) -> None:
-        # Parse import_path for the component name (used before resolution)
         self._import_path = import_path
         self._caller_file = caller_file
         self._resolved = None
-        # Initialize minimal ComponentGenerator fields without calling super().__init__()
-        # We cannot call super().__init__() because it requires a component definition function
-        # which we don't have yet (it will be resolved lazily).
-        self._name = import_path.rsplit(":", 1)[-1]  # Use attribute name as display name
+        self._name = import_path.rsplit(":", 1)[-1]
         self._id = generate_id(self._name)
         self._style = {}
-        self._component_def = None  # Will be set on resolution
+        self._component_def = None
         self._registered = False
 
     def _resolve(self) -> ComponentGenerator:
@@ -137,7 +133,6 @@ class LazyComponentGenerator(ComponentGenerator):
                     f"'{self._import_path}' is not a ComponentGenerator"
                 )
             self._resolved = resolved
-            # Delegate all attributes to the resolved generator
             self._component_def = resolved._component_def
             self._name = resolved._name
             self._id = resolved._id
@@ -165,12 +160,6 @@ class LazyComponentGenerator(ComponentGenerator):
     def scoped_style(self, value):
         self._resolve().scoped_style = value
 ```
-
-**Key design decisions:**
-
-- `super().__init__()` is not called because it requires a `component_def` function that doesn't exist yet. Instead, minimal fields are initialized manually.
-- After `_resolve()`, all internal attributes are replaced with the resolved generator's values. This ensures `scoped_style`, `_try_register()`, and `ComponentStore` iteration all work correctly.
-- `_try_register()` is called on the resolved generator, not on `self`, because the resolved generator is the real `ComponentGenerator` with the actual component definition.
 
 #### Eager vs. Lazy Behavior Comparison
 
@@ -203,7 +192,33 @@ class LazyComponentGenerator(ComponentGenerator):
 └───────────────────────────────────────────────────────────────┘
 ```
 
-### Part 2: Auto-Preload After Initial Render
+### Part 2: RouterView Refactor from Element to DynamicElement
+
+Currently, `RouterView` extends `Element` and renders as a `<div webcompy-routerview>` wrapper around a `SwitchElement`. This is conceptually wrong — `RouterView`'s purpose is to manage dynamic children (the matched route component), which is exactly what a `DynamicElement` does. The wrapper div serves no purpose: the `webcompy-routerview` attribute is not referenced by any CSS, JavaScript, or test code.
+
+Refactoring `RouterView` to `DynamicElement`:
+
+- Removes the unnecessary wrapper `<div>` from the DOM (one fewer DOM node per page).
+- Gives `RouterView` access to `_on_set_parent()`, which is the natural lifecycle hook for scheduling auto-preload after the initial render.
+- Aligns with the existing `SwitchElement` and `RepeatElement` pattern — both are `DynamicElement` subclasses that manage dynamic children without owning a DOM node.
+
+```
+Before (RouterView extends Element):
+  Parent Component
+  └─ <div webcompy-routerview>   ← unnecessary wrapper
+     └─ SwitchElement
+        └─ matched page component
+
+After (RouterView extends DynamicElement):
+  Parent Component
+  └─ RouterView                   ← no DOM node, manages children directly
+     └─ SwitchElement
+        └─ matched page component
+```
+
+`DynamicElement._render_html()` produces the concatenation of children's HTML without a wrapper tag, so SSG output changes from `<div webcompy-routerview>...content...</div>` to just `...content...`. Since `webcompy-routerview` is not used anywhere, this is a safe change.
+
+### Part 3: Auto-Preload After Initial Render
 
 After the initial page renders, the Router automatically imports all remaining lazy routes so that subsequent navigation is instant. This eliminates the user-facing cost of lazy imports while preserving the startup performance benefit.
 
@@ -215,27 +230,17 @@ class Router:
         """Preload all unresolved lazy routes."""
         from webcompy._browser._modules import browser
         for route in self.__routes__:
-            component = route[3]  # RouteType[3] = ComponentGenerator
+            component = route[3]
             if isinstance(component, LazyComponentGenerator) and component._resolved is None:
                 if browser:
-                    # Browser: schedule after current render
                     def _do_preload(c=component):
                         c._preload()
                     browser.window.setTimeout(_do_preload, 0)
                 else:
-                    # SSG: resolve immediately (all pages must render)
                     component._preload()
 ```
 
-`RouterView._on_set_parent()` calls `router.preload_lazy_routes()` after the initial render, giving the browser time to paint the first page before importing remaining modules.
-
-```python
-class RouterView(Element):
-    def _on_set_parent(self):
-        # ... existing rendering logic ...
-        # Schedule preload of remaining lazy routes
-        self._router.preload_lazy_routes()
-```
+`RouterView._on_set_parent()` schedules `router.preload_lazy_routes()` after its children are set up. In the browser, the preloading uses `setTimeout(0)` to avoid blocking the initial render. In non-browser (SSG) environments, it resolves immediately.
 
 #### Auto-Preload Timeline
 
@@ -244,7 +249,8 @@ class RouterView(Element):
 │  t=0ms    app.run() starts                        │
 │  t=50ms   Initial route resolved (lazy or eager)  │
 │  t=50ms   Initial page rendered                   │
-│  t=50ms   preload_lazy_routes() called            │
+│  t=50ms   RouterView._on_set_parent() called      │
+│  t=50ms   preload_lazy_routes() scheduled         │
 │  t=50ms   setTimeout(0) for each unresolved route │
 │  t=200ms  All lazy routes preloaded               │
 │                                                   │
@@ -271,7 +277,7 @@ class Router:
 - `preload=True` (default): Auto-preload all lazy routes after initial render.
 - `preload=False`: Only import lazy routes on navigation (no auto-preload).
 
-### Part 3: Route Preloading via RouterLink Hover
+### Part 4: Route Preloading via RouterLink Hover
 
 To further reduce perceived navigation latency, `RouterLink` preloads (resolves) the target route's lazy component when the user hovers over the link.
 
@@ -285,24 +291,35 @@ class Router:
         """Return the ComponentGenerator for the given path, or None if no match."""
         clean_path = path.strip("/")
         for route in self.__routes__:
-            _, matcher, _, component, _ = route  # Unpack all 5 fields
+            _, matcher, _, component, _ = route
             if matcher(clean_path):
                 return component
         return None
 ```
 
-`RouterLink` adds a `@mouseenter` handler:
+`RouterLink` adds a `mouseenter` event handler through the `events` dict (which translates to `addEventListener` in the browser), NOT through `attrs` (which sets DOM attribute strings):
 
 ```python
-def on_mouseenter(_ev=None):
-    target = self._router._get_component_for_path(to_path)
-    if isinstance(target, LazyComponentGenerator):
-        target._preload()
+class TypedRouterLink(Element):
+    def __init__(self, *, to, text, ...):
+        ...
+        super().__init__(
+            "a",
+            attrs=self._generate_attrs(),
+            events={"click": self._on_click, "mouseenter": self._on_mouseenter},
+            children=self._generate_children(),
+        )
+
+    def _on_mouseenter(self, _ev=None):
+        to_path = self._to.value if isinstance(self._to, SignalBase) else self._to
+        target = self._router._get_component_for_path(to_path)
+        if isinstance(target, LazyComponentGenerator):
+            target._preload()
 ```
 
 This complements auto-preload: if the user hovers before auto-preload completes, the target route is imported immediately.
 
-### Part 4: SSG Compatibility
+### Part 5: SSG Compatibility
 
 For static site generation, all lazy routes must be eagerly resolved so that `AppDocumentRoot._render_html()` can produce correct HTML output. This works naturally:
 
@@ -310,8 +327,9 @@ For static site generation, all lazy routes must be eagerly resolved so that `Ap
 2. `SwitchElement._refresh()` is triggered via signal.
 3. `LazyComponentGenerator.__call__()` calls `_resolve()`, which synchronously imports the module.
 4. Additionally, `Router.preload_lazy_routes()` resolves all remaining lazy routes immediately in non-browser environments (no `setTimeout`), ensuring all pages render correctly.
+5. `app.style` (accessed during `generate_html()`) iterates `ComponentStore.components.values()` and reads `scoped_style` — all resolved by this point.
 
-### Part 5: ComponentGenerator Attribute Rename
+### Part 6: ComponentGenerator Attribute Rename
 
 `ComponentGenerator`'s name-mangled private attributes are renamed to single-underscore variants to allow `LazyComponentGenerator` to access and delegate to them:
 
@@ -353,5 +371,5 @@ Recommended pattern: Keep the initial/home route eager (it's needed at startup a
 
 ## Specs Affected
 
-- `router` — adds `lazy()` function; adds `LazyComponentGenerator`; adds route auto-preloading after initial render; adds `RouterLink` hover preloading; adds `preload` parameter to `Router`
+- `router` — adds `lazy()` function; adds `LazyComponentGenerator`; refactors `RouterView` from `Element` to `DynamicElement`; adds route auto-preloading after initial render; adds `RouterLink` hover preloading; adds `preload` parameter to `Router`
 - `components` — no changes needed (`LazyComponentGenerator` is a `ComponentGenerator` subclass, compatible with existing APIs)

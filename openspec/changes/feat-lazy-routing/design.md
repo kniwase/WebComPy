@@ -37,6 +37,31 @@ Auto-preload starts after the initial render via `setTimeout(0)`. If a user hove
 ### D8: SSG eagerly resolves lazy routes
 In non-browser environments, `Router.preload_lazy_routes()` calls `_preload()` immediately (no `setTimeout`). Combined with `LazyComponentGenerator.__call__()` calling `_resolve()` on navigation, this ensures all lazy routes are fully resolved during SSG rendering.
 
+### D9: RouterView refactored from Element to DynamicElement
+Currently, `RouterView` extends `Element` and renders as a `<div webcompy-routerview>` wrapper around `SwitchElement`. This is conceptually incorrect — `RouterView`'s purpose is to manage dynamic children (the matched route component), which is exactly the `DynamicElement` pattern. The wrapper `<div>` serves no purpose:
+
+- The `webcompy-routerview` attribute is never referenced by CSS, JavaScript, or test code.
+- `SwitchElement` (the only child) is already a `DynamicElement` that manages its own DOM operations.
+- `RouterView` adds no DOM behavior beyond delegating to `SwitchElement`.
+
+Refactoring to `DynamicElement` provides:
+
+1. **Conceptual alignment**: `RouterView` manages dynamic children — that is what `DynamicElement` is for. Follows the same pattern as `SwitchElement` and `RepeatElement`.
+2. **`_on_set_parent()` lifecycle**: The natural hook for scheduling auto-preload after children are initialized, replacing the workaround of scheduling from `__init__`.
+3. **DOM simplification**: Removes one unnecessary wrapper `<div>` per page.
+
+The `DynamicElement` subclass contract:
+- No `_tag_name`, no `_attrs`, no `_event_handlers` — no DOM node ownership.
+- `_on_set_parent()` implementation initializes `_children` and schedules preload.
+- `_render_html()` concatenates children's HTML without a wrapper tag.
+- `_is_patchable` returns `False` for `DynamicElement` ↔ any — not a concern since `RouterView` has exactly one child (`SwitchElement`) that is never patched in place.
+- DOM positioning: `_position_element_nodes()` skips `DynamicElement` and positions its children directly in the parent node.
+
+**SSG output change**: `<div webcompy-routerview>...content...</div>` → `...content...`. Safe because `webcompy-routerview` is unused.
+
+### D10: RouterLink mouseenter goes through events dict, not attrs
+WebComPy's `Element` class separates `attrs` (DOM attribute strings set via `setAttribute`) from `events` (event handlers registered via `addEventListener`). The `mouseenter` handler MUST go through the `events` dict (the `addEventListener` path), NOT through `attrs`. Setting `@mouseenter` as an attribute string would not work — DOM event handlers require `addEventListener`, not inline attributes.
+
 ## Architecture
 
 ### Lazy Component Resolution Flow
@@ -51,7 +76,7 @@ Startup (no lazy import):
   → No import
 
 First navigation to /docs:
-════════════════════════════
+═════════════════════════════
   Router.match("/docs")
   → Returns LazyComponentGenerator
   → SwitchElement selects it
@@ -68,14 +93,16 @@ First navigation to /docs:
 Auto-preload after initial render:
 ═════════════════════════════════
   RouterView._on_set_parent()
+  → Initialize _children with SwitchElement
+  → Schedule preload (setTimeout in browser, immediate in SSG)
   → self._router.preload_lazy_routes()
   → For each unresolved LazyComponentGenerator:
      Browser: browser.window.setTimeout(component._preload(), 0)
      SSG: component._preload()  (immediate)
 
 RouterLink hover preloading:
-═══════════════════════════════
-  mouseenter
+════════════════════════════════
+  mouseenter event (via addEventListener)
   → router._get_component_for_path("/docs")
   → isinstance(LazyComponentGenerator)
   → _preload()
@@ -95,7 +122,6 @@ class LazyComponentGenerator(ComponentGenerator):
         self._import_path = import_path
         self._caller_file = caller_file
         self._resolved = None
-        # Minimal ComponentGenerator fields (no super().__init__())
         attr_name = import_path.rsplit(":", 1)[-1]
         self._name = attr_name
         self._id = generate_id(attr_name)
@@ -113,7 +139,6 @@ class LazyComponentGenerator(ComponentGenerator):
                     f"'{self._import_path}' is not a ComponentGenerator"
                 )
             self._resolved = resolved
-            # Delegate all attributes to the resolved generator
             self._component_def = resolved._component_def
             self._name = resolved._name
             self._id = resolved._id
@@ -142,6 +167,36 @@ class LazyComponentGenerator(ComponentGenerator):
         self._resolve().scoped_style = value
 ```
 
+### `RouterView` as DynamicElement
+
+```python
+class RouterView(DynamicElement):
+    def __init__(self) -> None:
+        try:
+            router = inject(_ROUTER_KEY)
+        except InjectionError:
+            raise RuntimeError("'Router' instance is not provided via DI.") from None
+        self._router = router
+        self._switch = SwitchElement(router.__cases__, router.__default__)
+        super().__init__()
+
+    def _on_set_parent(self):
+        self._children = [self._switch]
+        self._switch._parent = self
+
+        if not browser:
+            # SSG: resolve SwitchElement and preload immediately
+            self._switch._on_set_parent()
+            if self._router._preload:
+                self._router.preload_lazy_routes()
+        else:
+            # Browser: schedule preload after initial render
+            if self._router._preload:
+                def _schedule_preload():
+                    self._router.preload_lazy_routes()
+                browser.window.setTimeout(_schedule_preload, 0)
+```
+
 ### Auto-Preload Integration
 
 ```python
@@ -162,11 +217,6 @@ class Router:
                     browser.window.setTimeout(_do_preload, 0)
                 else:
                     component._preload()
-
-class RouterView(Element):
-    def _on_set_parent(self):
-        ...
-        self._router.preload_lazy_routes()
 ```
 
 ### RouterLink Preloading
@@ -175,8 +225,12 @@ class RouterView(Element):
 class TypedRouterLink(Element):
     def __init__(self, *, to, text, ...):
         ...
-        self._router = inject(_ROUTER_KEY)
-        ...
+        super().__init__(
+            "a",
+            attrs=self._generate_attrs(),
+            events={"click": self._on_click, "mouseenter": self._on_mouseenter},
+            children=self._generate_children(),
+        )
 
     def _on_mouseenter(self, _ev=None):
         to_path = self._to.value if isinstance(self._to, SignalBase) else self._to
@@ -184,15 +238,14 @@ class TypedRouterLink(Element):
         if isinstance(target, LazyComponentGenerator):
             target._preload()
 
-    def _generate_attrs(self):
-        attrs = self._given_attrs if self._given_attrs else {}
-        return {
-            **attrs,
-            "href": self._href,
-            "webcompy-routerlink": True,
-            "@mouseenter": self._on_mouseenter,  # NEW
-        }
+    def _refresh(self, *_: Any):
+        self._attrs = self._generate_attrs()
+        self._event_handlers = {"click": self._on_click, "mouseenter": self._on_mouseenter}
+        self._init_children(self._generate_children())
+        self._render()
 ```
+
+Note: `mouseleave` is not needed — there is no visual change to the link on hover, and preloading is harmless even if the user moves away.
 
 ### Router._get_component_for_path
 
@@ -210,9 +263,19 @@ class Router:
 
 ## Risk: `importlib` in Pyodide
 
-Pyodide uses Emscripten's virtual filesystem where `importlib.import_module()` works identically to CPython for modules that are already in the wheel (installed by micropip). Since WebComPy's wheel builder includes all `.py` files from the app package, `importlib.import_module("myapp.pages.docs")` will succeed as long as `myapp/pages/docs.py` exists in the wheel.
+Pyodide uses Emscripten's virtual filesystem where `importlib.import_module()` works identically to CPython for modules that are already in the wheel (installed by micropip). Since WebComPy's wheel builder includes all `.py` files from the app package (filesystem-based discovery, not import-graph-based), `importlib.import_module("myapp.pages.docs")` will succeed as long as `myapp/pages/docs.py` exists in the wheel.
 
 The `caller_file` parameter is used for validation only — the absolute module path in `import_path` is used directly with `importlib.import_module()`, which resolves it against `sys.path`.
+
+## Risk: RouterView DOM structure change
+
+Refactoring `RouterView` from `Element` to `DynamicElement` removes the wrapper `<div webcompy-routerview>` from the DOM. This could affect:
+
+1. **User CSS** targeting `[webcompy-routerview]` or `.routerview` selectors — Codebase search found zero references to this attribute outside its definition.
+2. **E2E tests** targeting the router view div — Existing E2E tests use `webcompy-app` or component-specific selectors, not the router view div.
+3. **SSG output** — The generated HTML will have one fewer wrapper div. This is a cosmetic change that does not affect content.
+
+All identified risks are minimal. The `webcompy-routerview` attribute has no consumers.
 
 ## Rollback Path
 
@@ -220,11 +283,17 @@ If lazy routing introduces import resolution issues:
 1. Keep eager imports for all routes (migration path: replace `lazy(...)` with direct `from x import y`).
 2. `LazyComponentGenerator` remains usable, but routes can be made eager at user discretion.
 
+If the RouterView refactor causes issues:
+1. Revert `RouterView` to `Element` and move preload scheduling back to `__init__` with `setTimeout(0)`.
+2. The lazy routing functionality does not depend on `RouterView` being `DynamicElement` — it is a separate improvement.
+
 ## Performance Impact
 
 For `docs_src` (6+ page modules):
 - **Before:** All 6+ modules imported at startup.
 - **After (with lazy):** Only the home module imported at startup; others deferred. On a single-page visit, startup import time is reduced by ~80% (5/6 of modules deferred). Auto-preload imports remaining modules after the initial render, so subsequent navigation is instant.
+
+DOM reduction: one fewer `<div>` wrapper per page render (RouterView refactor).
 
 ## Dependencies
 
@@ -250,5 +319,5 @@ No external code accesses these via the mangled form. This is a safe, behavior-p
 
 ## Specs to Update
 
-- `openspec/specs/router/spec.md` — add `lazy()` function, `LazyComponentGenerator`, auto-preload, `RouterLink` hover preloading, `Router.preload` parameter
+- `openspec/specs/router/spec.md` — add `lazy()` function, `LazyComponentGenerator`, `RouterView` as `DynamicElement`, auto-preload, `RouterLink` hover preloading, `Router.preload` parameter
 - `openspec/specs/components/spec.md` — no changes needed (`LazyComponentGenerator` is a `ComponentGenerator` subclass)
