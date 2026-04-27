@@ -220,7 +220,7 @@ SSG pipeline: `app.set_path(path)` → signal propagation → `SwitchElement._re
 
 ---
 
-- [ ] **Task 3: Add RouterLink hover preloading**
+- [x] **Task 3: Add RouterLink hover preloading**
 
 **Estimated time: ~1 hour**
 
