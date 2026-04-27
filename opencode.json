@@ -46,7 +46,7 @@
   "mcp": {
     "playwright": {
       "type": "local",
-      "command": ["npx", "@playwright/mcp@0.0.70", "--isolated", "--console-level=debug"],
+      "command": ["npx", "@playwright/mcp@0.0.70", "--isolated", "--console-level=debug", "--browser", "chromium", "--headless"],
       "enabled": true
     }
   },

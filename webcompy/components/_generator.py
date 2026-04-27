@@ -26,19 +26,19 @@ def _instantiate(cls: type[T]) -> T:
 
 
 class ComponentStore:
-    __components: dict[str, ComponentGenerator[Any]]
+    _components: dict[str, ComponentGenerator[Any]]
 
     def __init__(self) -> None:
-        self.__components = {}
+        self._components = {}
 
     def add_component(self, name: str, component_generator: ComponentGenerator[Any]):
-        if name in self.__components:
+        if name in self._components:
             raise WebComPyComponentException(f"Duplicated Component Name: '{name}'")
-        self.__components[name] = component_generator
+        self._components[name] = component_generator
 
     @property
     def components(self) -> dict[str, ComponentGenerator[Any]]:
-        return self.__components
+        return self._components
 
 
 PropsType = TypeVar("PropsType")
@@ -49,34 +49,34 @@ _unregistered_generators: list[ComponentGenerator[Any]] = []
 
 
 class ComponentGenerator(Generic[PropsType]):
-    __name: str
-    __id: str
-    __style: dict[str, dict[str, str]]
-    __registered: bool
+    _name: str
+    _id: str
+    _style: dict[str, dict[str, str]]
+    _registered: bool
 
     def __init__(
         self,
         name: str,
         component_def: FuncComponentDef[PropsType],
     ) -> None:
-        self.__style = {}
-        self.__component_def = component_def
-        self.__name: str = name
-        self.__id = generate_id(name)
-        self.__registered = False
+        self._style = {}
+        self._component_def = component_def
+        self._name: str = name
+        self._id = generate_id(name)
+        self._registered = False
         if not self._try_register():
             _unregistered_generators.append(self)
 
     def _try_register(self) -> bool:
-        if self.__registered:
+        if self._registered:
             return True
         from webcompy.di import inject
         from webcompy.di._keys import _COMPONENT_STORE_KEY
 
         store = inject(_COMPONENT_STORE_KEY, default=None)
         if store is not None:
-            store.add_component(self.__name, self)
-            self.__registered = True
+            store.add_component(self._name, self)
+            self._registered = True
             return True
         return False
 
@@ -86,11 +86,11 @@ class ComponentGenerator(Generic[PropsType]):
         *,
         slots: dict[str, NodeGenerator] | None = None,
     ):
-        return Component(self.__component_def, props, {**slots} if slots else {})
+        return Component(self._component_def, props, {**slots} if slots else {})
 
     @property
     def scoped_style(self) -> str:
-        style = self.__style
+        style = self._style
         return " ".join(
             f"{selector} {{ " + " ".join(f"{name}: {value};" for name, value in props.items()) + " }"
             for selector, props in style.items()
@@ -98,8 +98,8 @@ class ComponentGenerator(Generic[PropsType]):
 
     @scoped_style.setter
     def scoped_style(self, style: dict[str, dict[str, str]]):
-        cid = self.__id
-        self.__style = dict(
+        cid = self._id
+        self._style = dict(
             zip(
                 (
                     "".join(

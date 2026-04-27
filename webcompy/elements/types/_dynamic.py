@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 
+from webcompy._browser._modules import browser
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._base import ElementWithChildren
@@ -19,6 +20,14 @@ class DynamicElement(ElementWithChildren):
 
     def _get_node(self) -> DOMNode:
         return self._parent._get_node()
+
+    def _render(self):
+        if browser:
+            parent_node = self._parent._get_node()
+            _position_element_nodes(self, parent_node, self._node_idx)
+        else:
+            for child in self._children:
+                child._render()
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         for callback_node in self._callback_nodes:

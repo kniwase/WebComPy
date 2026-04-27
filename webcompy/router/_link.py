@@ -20,6 +20,7 @@ from webcompy.elements.typealias._element_property import (
     ElementChildren,
 )
 from webcompy.elements.types._element import Element
+from webcompy.router._lazy import LazyComponentGenerator
 from webcompy.router._pages import WebComPyRouterException
 from webcompy.signal import SignalBase, computed_property
 from webcompy.utils._serialize import is_json_seriarizable
@@ -58,7 +59,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         super().__init__(
             "a",
             attrs=self._generate_attrs(),
-            events={"click": self._on_click},
+            events={"click": self._on_click, "mouseenter": self._on_mouseenter},
             children=self._generate_children(),
         )
         if isinstance(self._to, SignalBase):
@@ -66,7 +67,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
 
     def _refresh(self, *_: Any):
         self._attrs = self._generate_attrs()
-        self._event_handlers = {"click": self._on_click}
+        self._event_handlers = {"click": self._on_click, "mouseenter": self._on_mouseenter}
         self._init_children(self._generate_children())
         self._render()
 
@@ -106,6 +107,13 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                     logging.warn("Argument 'params' of RouterLink should be a Signal Object of json-serializable dict.")
             browser.window.history.pushState(state, None, href)
             self._router.__set_path__(href, params)
+
+    def _on_mouseenter(self, _ev=None):
+        to_path = self._to.value if isinstance(self._to, SignalBase) else self._to
+        path = to_path.split("?")[0].split("#")[0]
+        target = self._router._get_component_for_path(path)
+        if isinstance(target, LazyComponentGenerator):
+            target._preload()
 
     def _generate_attrs(self) -> dict[str, AttrValue]:
         attrs = self._given_attrs if self._given_attrs else {}

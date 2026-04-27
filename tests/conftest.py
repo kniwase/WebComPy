@@ -275,11 +275,16 @@ def fake_document(fake_browser):
 
 @pytest.fixture(autouse=True)
 def reset_di_scope():
+    from webcompy.components._generator import _unregistered_generators
     from webcompy.di._scope import _active_di_scope
 
+    saved = _unregistered_generators[:]
     token = _active_di_scope.set(None) if _active_di_scope.get(None) is not None else None
+    _unregistered_generators.clear()
     yield
     if token is not None:
         _active_di_scope.reset(token)
     else:
         _active_di_scope.set(None)
+    _unregistered_generators.clear()
+    _unregistered_generators.extend(saved)
