@@ -66,6 +66,10 @@ def lazy(import_path: str, caller_file: str) -> ComponentGenerator:
         raise WebComPyRouterException(
             f"lazy() import_path must have non-empty module and attribute, got: {import_path!r}"
         )
+    if module_path.startswith("."):
+        raise WebComPyRouterException(
+            f"lazy() import_path does not support relative module paths, got: {import_path!r}"
+        )
     if not caller_file:
         raise WebComPyRouterException("lazy() caller_file must not be empty")
     return LazyComponentGenerator(import_path, caller_file)

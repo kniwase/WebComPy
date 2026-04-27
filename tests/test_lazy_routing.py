@@ -60,6 +60,14 @@ class TestLazyValidation:
         else:
             raise AssertionError("Expected WebComPyRouterException")
 
+    def test_relative_module_path_raises(self):
+        try:
+            lazy(".pages.docs:DocsPage", __file__)
+        except WebComPyRouterException as e:
+            assert "relative module paths" in str(e)
+        else:
+            raise AssertionError("Expected WebComPyRouterException")
+
     def test_returns_component_generator(self):
         result = lazy("module:Attr", __file__)
         assert isinstance(result, ComponentGenerator)

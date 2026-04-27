@@ -23,12 +23,5 @@ class RouterView(DynamicElement):
         self._switch._parent = self
         if not browser:
             self._switch._on_set_parent()
-            if self._router._preload:
-                self._router.preload_lazy_routes()
-        else:
-            if self._router._preload:
-
-                def _schedule_preload():
-                    self._router.preload_lazy_routes()
-
-                browser.window.setTimeout(_schedule_preload, 0)
+        if self._router._preload:
+            self._router.preload_lazy_routes()
