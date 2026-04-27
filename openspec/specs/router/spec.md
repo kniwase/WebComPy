@@ -6,7 +6,7 @@ A front-end router solves a fundamental problem in single-page applications: syn
 
 WebComPy provides two routing modes — hash mode for simple deployments (like static hosting services) and history mode for clean URLs (requiring server-side support). The router integrates with the reactive system so that URL changes automatically propagate to the UI: when a route changes, the page component updates without any manual wiring.
 
-**What WebComPy does not yet provide:** Other frameworks support nested routes, route guards (before/after navigation hooks), and lazy-loaded route components. The `Location` object's `popstate` proxy requires manual `destroy()` calls for cleanup.
+**What WebComPy does not yet provide:** Other frameworks support nested routes and route guards (before/after navigation hooks). The `Location` object's `popstate` proxy requires manual `destroy()` calls for cleanup.
 
 ## Requirements
 
@@ -62,17 +62,75 @@ When navigating via `RouterLink`, developers SHALL be able to pass state data th
 - **AND** the destination page SHALL be able to access it via `context.props.params`
 
 ### Requirement: The router shall support lazy-loaded route components
-Developers SHALL be able to define routes that defer module import until the route is first matched, reducing initial startup time. A `lazy()` helper SHALL wrap an import path string and resolve it on demand.
+Developers SHALL be able to define routes that defer module import until the route is first matched, reducing initial startup time. A `lazy()` helper SHALL accept an absolute module path string (e.g., `"myapp.pages.docs:DocsPage"`) and a `caller_file` parameter, returning a `LazyComponentGenerator` (subclass of `ComponentGenerator`) that defers `importlib.import_module()` until first use.
+
+`LazyComponentGenerator._resolve()` SHALL perform the actual import and cache the result. `_preload()` SHALL resolve without rendering, enabling speculative loading.
+
+The `import_path` parameter in `lazy()` SHALL use an absolute dotted module path. Relative paths (starting with `.`) SHALL NOT be supported.
+
+`lazy()` SHALL validate the `import_path` format at call time, raising `WebComPyRouterException` if the format is invalid (missing `:` separator, empty module path, or empty attribute name). Module existence and attribute type validation SHALL occur at `_resolve()` time (when the module is actually imported).
 
 #### Scenario: Defining a lazy route
-- **WHEN** a developer writes `Router({"path": "/docs", "component": lazy("pages.docs:DocsPage", __file__)})`
-- **THEN** the `pages.docs` module SHALL NOT be imported at startup
+- **WHEN** a developer writes `Router({"path": "/docs", "component": lazy("myapp.pages.docs:DocsPage", __file__)})`
+- **THEN** the `myapp.pages.docs` module SHALL NOT be imported at startup
 - **AND** on first navigation to `/docs`, the module SHALL be imported and `DocsPage` SHALL be rendered
 
-#### Scenario: Lazy route with loading shell
-- **WHEN** a developer writes `lazy("pages.docs:DocsPage", __file__, shell=LoadingShell)` and the module is not yet loaded
-- **THEN** `LoadingShell` SHALL be rendered while the module is being imported
-- **AND** once the module is loaded, the real component SHALL replace the shell
+#### Scenario: Invalid import_path format
+- **WHEN** a developer writes `lazy("DocsPage", __file__)` (missing module path)
+- **THEN** `WebComPyRouterException` SHALL be raised at call time with a descriptive error message
+
+#### Scenario: Lazy route resolves to non-ComponentGenerator
+- **WHEN** `lazy("myapp.pages.docs:some_function", __file__)` resolves to a non-`ComponentGenerator` attribute
+- **THEN** `WebComPyRouterException` SHALL be raised at resolution time indicating the attribute is not a `ComponentGenerator`
+
+#### Scenario: Preloading a lazy route without rendering
+- **WHEN** `_preload()` is called on a `LazyComponentGenerator`
+- **THEN** the module SHALL be imported and cached without triggering a render
+
+### Requirement: The router shall auto-preload lazy routes after initial render
+When `Router` is created with `preload=True` (the default), the router SHALL automatically preload (resolve) all unresolved lazy routes after the initial page render. In the browser, preloading SHALL be scheduled via `setTimeout(0)` to avoid blocking the initial render. In non-browser (SSG) environments, preloading SHALL happen immediately.
+
+#### Scenario: Auto-preloading lazy routes in the browser
+- **WHEN** a developer creates `Router({"path": "/", "component": HomePage}, {"path": "/docs", "component": lazy("myapp.pages.docs:DocsPage", __file__)}, preload=True)`
+- **THEN** after the home page renders, `setTimeout(0)` SHALL be used to import the `myapp.pages.docs` module
+- **AND** subsequent navigation to `/docs` SHALL be instant (module already loaded)
+
+#### Scenario: Auto-preloading disabled
+- **WHEN** a developer creates `Router(..., preload=False)`
+- **THEN** lazy routes SHALL NOT be auto-preloaded after the initial render
+- **AND** lazy routes SHALL only be imported on first navigation
+
+#### Scenario: Auto-preloading in SSG
+- **WHEN** `Router.preload_lazy_routes()` is called in a non-browser environment
+- **THEN** all unresolved lazy routes SHALL be resolved immediately (no `setTimeout`)
+- **AND** all page components SHALL be available for SSG rendering
+
+### Requirement: RouterLink shall preload lazy routes on hover
+`RouterLink` SHALL add a `mouseenter` event handler (via the `events` parameter, which uses `addEventListener`) that preloads the target route's `LazyComponentGenerator` when hovered. `Router` SHALL provide a `_get_component_for_path()` method that returns the `ComponentGenerator` for a given path.
+
+#### Scenario: Hovering over a RouterLink with a lazy route
+- **WHEN** a user hovers over a `RouterLink` whose target component is a `LazyComponentGenerator`
+- **THEN** `_preload()` SHALL be called on the `LazyComponentGenerator`
+- **AND** the module SHALL begin importing in the background
+- **AND** navigation to that route SHALL use the cached import if it has completed
+
+#### Scenario: Hovering over a RouterLink with an eager route
+- **WHEN** a user hovers over a `RouterLink` whose target component is a regular `ComponentGenerator`
+- **THEN** no additional action SHALL be taken
+
+### Requirement: RouterView shall be a DynamicElement (not an Element)
+`RouterView` SHALL extend `DynamicElement` instead of `Element`. This removes the unnecessary `<div webcompy-routerview>` wrapper from the DOM and provides the `_on_set_parent()` lifecycle hook for scheduling auto-preload. The `webcompy-routerview` attribute SHALL be removed as it has no consumers.
+
+#### Scenario: RouterView does not produce a DOM node
+- **WHEN** a `RouterView` is rendered in the browser
+- **THEN** it SHALL NOT create a `<div>` element
+- **AND** the `SwitchElement` child SHALL be positioned directly in the parent node
+- **AND** `RouterView._on_set_parent()` SHALL initialize children and schedule lazy route preloading
+
+#### Scenario: RouterView SSG output
+- **WHEN** `generate_html()` produces output containing a `RouterView`
+- **THEN** the output SHALL NOT contain a `<div webcompy-routerview>` wrapper
+- **AND** the route content SHALL be rendered directly without an extra `<div>`
 
 ### Requirement: A default page shall be shown when no route matches
 When the current URL does not match any defined route, the router SHALL render a default component or display "Not Found".
@@ -84,3 +142,10 @@ When the current URL does not match any defined route, the router SHALL render a
 #### Scenario: Navigating to an undefined route with a default component
 - **WHEN** the URL matches no defined route and a default component is provided
 - **THEN** the default component SHALL be rendered with the current path and query information
+
+### Requirement: ComponentGenerator private attributes shall use single-underscore naming
+`ComponentGenerator` SHALL use single-underscore private attributes (`_name`, `_id`, `_style`, `_registered`, `_component_def`) instead of name-mangled attributes (`__name`, `__id`, etc.). `ComponentStore` SHALL use `_components` instead of `__components`. This enables `LazyComponentGenerator` (a subclass) to access and delegate to these attributes properly. This is a behavior-preserving refactor with no public API change.
+
+#### Scenario: Subclass accessing ComponentGenerator attributes
+- **WHEN** `LazyComponentGenerator` subclasses `ComponentGenerator`
+- **THEN** it SHALL be able to read and write `_name`, `_id`, `_style`, `_registered`, `_component_def` on the parent class
