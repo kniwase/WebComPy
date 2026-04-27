@@ -1,22 +1,19 @@
-from webcompy.router import Router
+from webcompy.router import Router, lazy
 
-from .pages.demo.fetch_sample import FetchSamplePage
-from .pages.demo.fizzbuzz import FizzbuzzPage
-from .pages.demo.helloworld import HelloWorldPage
-from .pages.demo.matplotlib_sample import MatpoltlibSamplePage
-from .pages.demo.todo import ToDoListPage
-from .pages.document.home import DocumentHomePage
 from .pages.home import HomePage
 from .pages.not_found import NotFound
 
 router = Router(
     {"path": "/", "component": HomePage},
-    {"path": "/documents", "component": DocumentHomePage},
-    {"path": "/sample/helloworld", "component": HelloWorldPage},
-    {"path": "/sample/fizzbuzz", "component": FizzbuzzPage},
-    {"path": "/sample/todo", "component": ToDoListPage},
-    {"path": "/sample/matplotlib", "component": MatpoltlibSamplePage},
-    {"path": "/sample/fetch", "component": FetchSamplePage},
+    {"path": "/documents", "component": lazy("docs_src.pages.document.home:DocumentHomePage", __file__)},
+    {"path": "/sample/helloworld", "component": lazy("docs_src.pages.demo.helloworld:HelloWorldPage", __file__)},
+    {"path": "/sample/fizzbuzz", "component": lazy("docs_src.pages.demo.fizzbuzz:FizzbuzzPage", __file__)},
+    {"path": "/sample/todo", "component": lazy("docs_src.pages.demo.todo:ToDoListPage", __file__)},
+    {
+        "path": "/sample/matplotlib",
+        "component": lazy("docs_src.pages.demo.matplotlib_sample:MatpoltlibSamplePage", __file__),
+    },
+    {"path": "/sample/fetch", "component": lazy("docs_src.pages.demo.fetch_sample:FetchSamplePage", __file__)},
     default=NotFound,
     mode="history",
     base_url="",

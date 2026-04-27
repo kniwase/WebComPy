@@ -324,7 +324,7 @@ Testing `LazyComponentGenerator._resolve()` requires creating a module with a `C
 
 ---
 
-- [ ] **Task 5: Convert docs_src routes to use lazy routing**
+- [x] **Task 5: Convert docs_src routes to use lazy routing**
 
 **Estimated time: ~1 hour**
 
@@ -388,7 +388,7 @@ The `docs_src` package structure:
 
 ---
 
-- [ ] **Task 6: Add SSG compatibility validation**
+- [x] **Task 6: Add SSG compatibility validation**
 
 **Estimated time: ~0.5 hours**
 
