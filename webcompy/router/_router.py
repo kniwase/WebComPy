@@ -167,9 +167,10 @@ class Router:
                     component._preload()
 
     def _get_component_for_path(self, path: str) -> ComponentGenerator[RouterContext] | None:
-        clean_path = path.strip("/")
+        clean_path = path
         if self.__mode__ == "history" and self.__base_url__:
             clean_path = self._base_url_stripper(clean_path)
+        clean_path = clean_path.strip("/")
         for route in self.__routes__:
             _, matcher, _, component, _ = route
             if matcher(clean_path):

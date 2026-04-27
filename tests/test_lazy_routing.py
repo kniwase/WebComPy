@@ -369,3 +369,113 @@ class TestLazyPreloadMethod:
             assert gen._resolved is comp
         finally:
             scope.__exit__(None, None, None)
+
+
+class TestRouterLinkMouseenter:
+    def test_mouseenter_preloads_lazy_route(self):
+        from webcompy.di._keys import _ROUTER_KEY
+        from webcompy.router._link import RouterLink
+
+        scope = DIScope()
+        store = ComponentStore()
+        scope.provide(_COMPONENT_STORE_KEY, store)
+        head_props = HeadPropsStore()
+        scope.provide(_HEAD_PROPS_KEY, head_props)
+
+        comp = _make_test_component("HoverComp")
+        fake_module = types.ModuleType("hover_module")
+        fake_module.HoverComp = comp
+        sys.modules["hover_module"] = fake_module
+
+        lazy_gen = LazyComponentGenerator("hover_module:HoverComp", __file__)
+
+        router = Router(
+            {"path": "/target", "component": lazy_gen},
+            preload=False,
+        )
+        scope.provide(_ROUTER_KEY, router)
+        scope.__enter__()
+
+        try:
+            assert lazy_gen._resolved is None
+            link = RouterLink(to="/target", text=["Go"])
+            link._on_mouseenter()
+            assert lazy_gen._resolved is comp
+        finally:
+            scope.__exit__(None, None, None)
+
+    def test_mouseenter_noop_for_eager_route(self):
+        from webcompy.di._keys import _ROUTER_KEY
+        from webcompy.router._link import RouterLink
+
+        scope = DIScope()
+        store = ComponentStore()
+        scope.provide(_COMPONENT_STORE_KEY, store)
+        head_props = HeadPropsStore()
+        scope.provide(_HEAD_PROPS_KEY, head_props)
+
+        comp = _make_test_component("EagerComp")
+        router = Router(
+            {"path": "/eager", "component": comp},
+            preload=False,
+        )
+        scope.provide(_ROUTER_KEY, router)
+        scope.__enter__()
+
+        try:
+            link = RouterLink(to="/eager", text=["Go"])
+            result = link._on_mouseenter()
+            assert result is None
+        finally:
+            scope.__exit__(None, None, None)
+
+    def test_mouseenter_strips_query_and_hash(self):
+        from webcompy.di._keys import _ROUTER_KEY
+        from webcompy.router._link import RouterLink
+
+        scope = DIScope()
+        store = ComponentStore()
+        scope.provide(_COMPONENT_STORE_KEY, store)
+        head_props = HeadPropsStore()
+        scope.provide(_HEAD_PROPS_KEY, head_props)
+
+        comp = _make_test_component("QueryComp")
+        fake_module = types.ModuleType("query_module")
+        fake_module.QueryComp = comp
+        sys.modules["query_module"] = fake_module
+
+        lazy_gen = LazyComponentGenerator("query_module:QueryComp", __file__)
+
+        router = Router(
+            {"path": "/page", "component": lazy_gen},
+            preload=False,
+        )
+        scope.provide(_ROUTER_KEY, router)
+        scope.__enter__()
+
+        try:
+            link = RouterLink(to="/page?x=1#sec", text=["Go"])
+            link._on_mouseenter()
+            assert lazy_gen._resolved is comp
+        finally:
+            scope.__exit__(None, None, None)
+
+    def test_get_component_for_path_with_base_url(self):
+        scope = DIScope()
+        store = ComponentStore()
+        scope.provide(_COMPONENT_STORE_KEY, store)
+
+        comp = _make_test_component("BaseComp")
+        fake_module = types.ModuleType("base_module")
+        fake_module.BaseComp = comp
+        sys.modules["base_module"] = fake_module
+
+        lazy_gen = LazyComponentGenerator("base_module:BaseComp", __file__)
+
+        router = Router(
+            {"path": "/page", "component": lazy_gen},
+            mode="history",
+            base_url="myapp",
+            preload=False,
+        )
+        assert router._get_component_for_path("/myapp/page") is lazy_gen

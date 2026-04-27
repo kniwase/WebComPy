@@ -111,8 +111,6 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
     def _on_mouseenter(self, _ev=None):
         to_path = self._to.value if isinstance(self._to, SignalBase) else self._to
         path = to_path.split("?")[0].split("#")[0]
-        if self._router.__mode__ == "history" and self._router.__base_url__:
-            path = self._router._base_url_stripper(path)
         target = self._router._get_component_for_path(path)
         if isinstance(target, LazyComponentGenerator):
             target._preload()
