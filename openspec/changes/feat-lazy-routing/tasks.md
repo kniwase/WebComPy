@@ -35,7 +35,7 @@
 
 ---
 
-- [ ] **Task 1: Implement `LazyComponentGenerator` class and `lazy()` function**
+- [x] **Task 1: Implement `LazyComponentGenerator` class and `lazy()` function**
 
 **Estimated time: ~2.5 hours**
 
