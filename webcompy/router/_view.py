@@ -21,6 +21,7 @@ class RouterView(DynamicElement):
     def _on_set_parent(self):
         self._children = [self._switch]
         self._switch._parent = self
+        self._re_index_children()
         if not browser:
             self._switch._on_set_parent()
         if self._router._preload:
