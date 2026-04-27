@@ -276,7 +276,7 @@ SSG pipeline: `app.set_path(path)` → signal propagation → `SwitchElement._re
 
 ---
 
-- [ ] **Task 4: Add unit tests for lazy routing**
+- [x] **Task 4: Add unit tests for lazy routing**
 
 **Estimated time: ~1.5 hours**
 
