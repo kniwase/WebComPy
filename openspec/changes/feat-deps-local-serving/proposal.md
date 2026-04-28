@@ -2,120 +2,124 @@
 
 ## Summary
 
-Download pure-Python dependency wheels from the Pyodide CDN at build time and serve them from the same origin as the WebComPy application. This eliminates the need for build-environment installation of pure-Python packages and enables complete transitive dependency resolution using the Pyodide lock.
+Add a `serve_all_deps` configuration option that controls how pure-Python packages available in the Pyodide CDN are delivered to the browser. When `True` (default), all such packages are downloaded from the Pyodide CDN at build time and bundled into the app wheel, served from the same origin. When `False`, they are loaded from the Pyodide CDN by name via `py-config.packages`. This change also fixes the existing bug where pure-Python Pyodide CDN packages are neither bundled nor loaded from the CDN, making them unavailable in the browser.
 
 ## Motivation
 
-1. **Build environment independence**: In `feat-dependency-bundling`, pure-Python packages must be installed locally (`pip install httpx`) for bundling. This change allows downloading wheels from the Pyodide CDN instead, removing the local-installation requirement.
+1. **Same-origin serving**: Bundling pure-Python packages into the app wheel enables same-origin delivery, which is a prerequisite for offline PWA support and ServiceWorker caching. Even without full offline support, same-origin delivery eliminates external CDN requests during app initialization.
 
-2. **Complete transitive resolution**: The Pyodide lock's `depends` field and wheel metadata enable resolving the full dependency tree without local installation, fixing the limitation where missing transitive dependencies cause build errors.
+2. **Complete transitive resolution without local installation**: When `serve_all_deps=True`, the Pyodide CDN provides wheel files and dependency metadata, enabling full transitive dependency resolution without requiring packages to be installed locally. This eliminates the build-environment limitation of `feat-dependency-bundling`.
 
-3. **Reproducibility**: Downloading specific Pyodide-validated wheel versions ensures the exact same packages work in the browser as tested by Pyodide.
+3. **Bug fix**: Pure-Python packages available in the Pyodide CDN (e.g., `httpx`) are currently classified as `pyodide_cdn` but never bundled into the app wheel and never added to `py-config.packages`. This means they are completely unavailable in the browser. This change fixes this by either bundling them (`serve_all_deps=True`) or loading them from the CDN (`serve_all_deps=False`).
+
+4. **Reproducibility**: Downloading specific Pyodide-validated wheel versions ensures the exact same packages work in the browser as tested by Pyodide.
 
 ## Known Issues Addressed
 
-- Fixes the limitation where pure-Python packages must be installed locally before building.
+- Fixes the bug where pure-Python Pyodide CDN packages are neither bundled nor loaded from the CDN, making them unavailable in the browser.
+- Fixes the limitation where pure-Python packages must be installed locally before building (when `serve_all_deps=True`).
 
 ## Non-goals
 
 - This does not change WASM package handling (that is `feat-wasm-local-serving`).
-- This does not implement split/detached wheel mode (that is `feat-split-mode`).
 - This does not download the PyScript/Pyodide runtime (that is `feat-pyscript-local-serving`).
+- This does not implement split/detached wheel mode (that is `feat-split-mode`).
+- This does not implement ServiceWorker or PWA manifest generation.
+- This does not guarantee transitive dependency resolution for packages not in the Pyodide CDN and not installed locally (best-effort only).
 
 ## Dependencies
 
 - **Requires** `feat-dependency-bundling` — the lock file and dependency classification are prerequisites.
 
-## Layered Architecture
-
-```
-Level 1: feat-dependency-bundling (prerequisite)
-  Pure-Py ──────── Bundled (local install required)
-  WASM ──────── CDN
-  PyScript ────── CDN
-
-Level 3: feat-deps-local-serving (this change)
-  Pure-Py ──────── Same-origin delivery (downloaded from Pyodide CDN)
-                   Bundled or detached wheels
-  WASM ──────── CDN (unchanged)
-  PyScript ────── CDN (unchanged)
-```
-
 ## Design
 
-### Two Delivery Modes for Pure-Python Packages
-
-When pure-Python packages are downloaded from the Pyodide CDN, they can be delivered in two ways:
-
-**Option A: Bundled (default)** — Downloaded wheels are extracted and bundled into the single app wheel, just like locally-installed packages. No change to `packages` in HTML.
-
-**Option B: Separate wheels (requires `feat-split-mode`)** — Downloaded wheels are served as separate files. Requires the split-mode mechanism for multiple wheels.
-
-This change initially implements Option A only, since Option B depends on `feat-split-mode`.
-
-### Transitive Resolution via Pyodide Lock
-
-The `depends` field in `pyodide-lock.json` entries lists immediate dependencies. For pure-Python packages in the Pyodide CDN, transitive dependencies are resolved by recursively walking the `depends` field:
-
-```
-AppConfig.dependencies = ["httpx"]
-    │
-    ▼
-httpx (pyodide_cdn, is_wasm=False)
-  depends: ["httpcore", "sniffio", "h2"]
-    │
-    ├── httpcore (pyodide_cdn, is_wasm=False)
-    │     depends: ["hpack"]
-    │       └── hpack (pyodide_cdn, is_wasm=False) → bundle
-    ├── sniffio (not in Pyodide lock) → download or error
-    └── h2 (pyodide_cdn, is_wasm=False)
-          depends: ["hpack", "hyperframe"]
-            ├── hpack → already resolved
-            └── hyperframe (pyodide_cdn, is_wasm=False) → bundle
-
-Result: httpx, httpcore, h2, hpack, hyperframe → bundled
-        sniffio → error (not in Pyodide lock, not installed locally)
-```
-
-### Configuration
+### `AppConfig.serve_all_deps` Controls Delivery Mode
 
 ```python
 @dataclass
 class AppConfig:
-    ...
-    deps_serving: Literal["bundled", "local-cdn"] = "bundled"
+    serve_all_deps: bool = True
 ```
 
-When `deps_serving="local-cdn"`:
-- Pure-Python packages are downloaded from the Pyodide CDN and extracted into the app wheel.
-- Transitive dependencies are resolved via the Pyodide lock `depends` field.
-- Missing dependencies (not in lock, not installed locally) cause a build error.
+When `serve_all_deps=True` (default):
+- Pure-Python packages in the Pyodide CDN are downloaded from the CDN and bundled into the app wheel
+- Pure-Python packages NOT in the Pyodide CDN are bundled from local installation
+- Only WASM packages are loaded from the Pyodide CDN by name
 
-### Lock File Changes
+When `serve_all_deps=False`:
+- Pure-Python packages in the Pyodide CDN are loaded from the CDN by name via `py-config.packages`
+- Pure-Python packages NOT in the Pyodide CDN are bundled from local installation
+- WASM packages are loaded from the Pyodide CDN by name
 
-The lock file gains a `deps_serving` field and downloads section:
+### Transitive Resolution via Pyodide Lock
+
+The `depends` field in `pyodide-lock.json` entries lists immediate dependencies. Transitive dependencies are resolved by recursively walking the `depends` field:
+
+```
+AppConfig.dependencies = ["httpx"]
+    |
+    v
+httpx (in_pyodide_cdn=True, is_wasm=False)
+  depends: ["httpcore", "sniffio", "h2"]
+    |
+    +-- httpcore (in_pyodide_cdn=True) -> resolved
+    +-- sniffio (not in Pyodide lock) -> local fallback or error
+    +-- h2 (in_pyodide_cdn=True)
+          depends: ["hpack", "hyperframe"]
+            +-- hpack (in_pyodide_cdn=True) -> resolved
+            +-- hyperframe (in_pyodide_cdn=True) -> resolved
+
+Result: httpx, httpcore, h2, hpack, hyperframe -> CDN-downloaded (serve_all_deps=True) or CDN-loaded (False)
+        sniffio -> must be installed locally or added to dependencies explicitly
+```
+
+For packages not in the Pyodide CDN, local `importlib.metadata` is used as a best-effort fallback for discovering transitive dependencies. If resolution fails, a warning is reported and the developer must list the dependency explicitly.
+
+### Lock File v2
+
+The lock file schema is redesigned to cleanly separate WASM and pure-Python packages:
 
 ```jsonc
 {
-  "version": 1,
+  "version": 2,
   "pyodide_version": "0.29.3",
   "pyscript_version": "2026.3.1",
-  "deps_serving": "local-cdn",
-  "pyodide_packages": { ... },
-  "bundled_packages": { ... },
-  "downloaded_packages": {
-    "httpx": {
-      "url": "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/httpx-0.28.1-py3-none-any.whl",
-      "sha256": "...",
+  "wasm_packages": {
+    "numpy": {
+      "version": "2.2.5",
+      "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
       "source": "explicit"
+    }
+  },
+  "pure_python_packages": {
+    "httpx": {
+      "version": "0.28.1",
+      "source": "explicit",
+      "in_pyodide_cdn": true,
+      "pyodide_file_name": "httpx-0.28.1-py3-none-any.whl",
+      "pyodide_sha256": "3123bf6c7e7623667b39d31f8b2bf4eac925b49ea79dfdf520560db2e1cf87a9"
+    },
+    "flask": {
+      "version": "3.1.0",
+      "source": "explicit",
+      "in_pyodide_cdn": false
     }
   }
 }
 ```
 
+Version 1 lock files are not backwards-compatible and will be regenerated on next build.
+
+### CLI Flag
+
+```bash
+python -m webcompy start --serve-all-deps     # True (default)
+python -m webcompy start --no-serve-all-deps  # False
+```
+
 ## Specs Affected
 
-- `app-config` — add `deps_serving` field
-- `cli` — download logic, wheel extraction
-- `lockfile` — add `downloaded_packages` section
-- `dependency-resolver` — add Pyodide lock-based transitive resolution
+- `app-config` — add `serve_all_deps` field, update pure-Python CDN package requirements
+- `cli` — download logic, wheel extraction, HTML generation updates, `--serve-all-deps` flag
+- `lockfile` — v2 schema with `wasm_packages` and `pure_python_packages`
+- `dependency-resolver` — simplified `ClassifiedDependency`, Pyodide CDN metadata propagation
