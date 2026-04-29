@@ -73,6 +73,12 @@ Transitive dependencies SHALL be resolved using the Pyodide lock `depends` field
 - **THEN** a warning SHALL be reported (not an error)
 - **AND** the build SHALL continue (the package will be downloaded from CDN)
 
+#### Scenario: CDN-available package missing locally with serve_all_deps=False
+- **WHEN** a pure-Python package with `in_pyodide_cdn=True` is not installed locally
+- **AND** `serve_all_deps=False`
+- **THEN** a warning SHALL be reported (not an error)
+- **AND** the build SHALL continue (the package will be loaded from CDN in the browser)
+
 #### Scenario: Local-only package missing locally
 - **WHEN** a pure-Python package with `in_pyodide_cdn=False` is not installed locally
 - **THEN** an error SHALL be reported regardless of `serve_all_deps`

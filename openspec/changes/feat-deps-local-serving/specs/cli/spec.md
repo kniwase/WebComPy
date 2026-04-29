@@ -47,6 +47,29 @@ When `serve_all_deps=False`, pure-Python packages available in the Pyodide CDN S
 
 ## MODIFIED Requirements
 
+### Requirement: Dependency classification behavior SHALL depend on serve_all_deps
+The behavior of pure-Python packages available in the Pyodide CDN SHALL depend on `AppConfig.serve_all_deps`. When `serve_all_deps=True`, CDN-available pure-Python packages SHALL be downloaded and bundled into the app wheel (replacing the prior behavior where they were neither bundled nor referenced in `py-config.packages`). When `serve_all_deps=False`, CDN-available pure-Python packages SHALL be loaded from the CDN by name via `py-config.packages`.
+
+#### Scenario: serve_all_deps=True (default)
+- **WHEN** `serve_all_deps=True` and a pure-Python package is in the Pyodide CDN
+- **THEN** it SHALL be downloaded and bundled into the app wheel
+- **AND** it SHALL NOT appear in `py-config.packages`
+
+#### Scenario: serve_all_deps=False
+- **WHEN** `serve_all_deps=False` and a pure-Python package is in the Pyodide CDN
+- **THEN** it SHALL be loaded from the CDN by name via `py-config.packages`
+- **AND** it SHALL NOT be bundled into the app wheel
+
+#### Scenario: Pure-Python package not in Pyodide CDN (regardless of serve_all_deps)
+- **WHEN** a pure-Python dependency is not in the Pyodide CDN
+- **THEN** it SHALL be bundled from local installation into the app wheel
+- **AND** it SHALL NOT appear in `py-config.packages`
+
+#### Scenario: WASM package (regardless of serve_all_deps)
+- **WHEN** a dependency is a WASM package in the Pyodide CDN
+- **THEN** it SHALL be loaded from the CDN by name via `py-config.packages`
+- **AND** it SHALL NOT be bundled
+
 ### Requirement: The dev server shall serve the application with hot-reload (updated)
 The dev server SHALL build a single Python wheel containing the webcompy framework (excluding `webcompy/cli/`), application code, and appropriate pure-Python dependencies based on `serve_all_deps`. When `serve_all_deps=True`, ALL pure-Python dependencies are bundled. When `serve_all_deps=False`, only pure-Python dependencies NOT available from the Pyodide CDN are bundled; CDN-available ones are loaded by name.
 

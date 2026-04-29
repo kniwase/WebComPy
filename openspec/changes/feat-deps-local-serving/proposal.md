@@ -60,17 +60,16 @@ AppConfig.dependencies = ["httpx"]
     |
     v
 httpx (in_pyodide_cdn=True, is_wasm=False)
-  depends: ["httpcore", "sniffio", "h2"]
+  depends: ["httpcore", "certifi", "h2"]
     |
     +-- httpcore (in_pyodide_cdn=True) -> resolved
-    +-- sniffio (not in Pyodide lock) -> local fallback or error
-    +-- h2 (in_pyodide_cdn=True)
+    +-- certifi (in_pyodide_cdn=True) -> resolved
+    +-- h2 (in_pyodide_cdn=True, hypothetical; actual availability depends on Pyodide version)
           depends: ["hpack", "hyperframe"]
             +-- hpack (in_pyodide_cdn=True) -> resolved
             +-- hyperframe (in_pyodide_cdn=True) -> resolved
 
-Result: httpx, httpcore, h2, hpack, hyperframe -> CDN-downloaded (serve_all_deps=True) or CDN-loaded (False)
-        sniffio -> must be installed locally or added to dependencies explicitly
+Result: httpx, httpcore, certifi, h2, hpack, hyperframe -> CDN-downloaded (serve_all_deps=True) or CDN-loaded (False)
 ```
 
 For packages not in the Pyodide CDN, local `importlib.metadata` is used as a best-effort fallback for discovering transitive dependencies. If resolution fails, a warning is reported and the developer must list the dependency explicitly.
@@ -104,7 +103,8 @@ The lock file schema is redesigned to cleanly separate WASM and pure-Python pack
       "source": "explicit",
       "in_pyodide_cdn": false
     }
-  }
+  },
+  "standalone_assets": {}
 }
 ```
 

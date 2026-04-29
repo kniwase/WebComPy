@@ -99,7 +99,7 @@
 - `flask` entry has `in_pyodide_cdn=False`, no CDN fields.
 - Loading a v1 lock file returns `None` (triggers regeneration).
 - `save_lockfile()` + `load_lockfile()` roundtrips correctly.
-- `get_bundled_deps(serve_all_deps=True)` returns all pure-Python packages.
+- `get_bundled_deps(serve_all_deps=True)` returns only local-only pure-Python packages (CDN packages are handled via download pipeline).
 - `get_bundled_deps(serve_all_deps=False)` returns only local-only pure-Python packages.
 - `get_cdn_pure_python_package_names()` returns only CDN-available names.
 - `validate_local_environment()` reports warning (not error) for missing CDN-available packages when `serve_all_deps=True`.
@@ -193,14 +193,15 @@
 
 1. Update `tests/test_dependency_resolver.py` for new `ClassifiedDependency` fields and `classify_dependencies()` behavior.
 2. Update `tests/test_lockfile.py` for v2 schema, new entry types, and `load_lockfile()` v1 rejection.
-3. Update `tests/test_pyodide_lock.py` if needed.
-4. Update `tests/test_wheel_builder.py` for `bundled_deps` with CDN-downloaded package directories.
-5. Add new test file `tests/test_pyodide_downloader.py` for download, cache, and extraction logic.
-6. Update E2E tests to verify:
+3. Update `tests/test_lockfile_sync.py` for v2 schema field names (`wasm_packages`/`pure_python_packages`).
+4. Update `tests/test_pyodide_lock.py` if needed.
+5. Update `tests/test_wheel_builder.py` for `bundled_deps` with CDN-downloaded package directories.
+6. Add new test file `tests/test_pyodide_downloader.py` for download, cache, and extraction logic.
+7. Update E2E tests to verify:
    - `serve_all_deps=True`: app wheel contains CDN packages, HTML has no CDN pure-Python names.
    - `serve_all_deps=False`: HTML includes CDN pure-Python names in `py-config.packages`.
-7. Add `e2e-matrix` entry in `.github/workflows/ci.yml` if new E2E test files are created.
-8. Run full test suite and fix failures.
+8. Add `e2e-matrix` entry in `.github/workflows/ci.yml` if new E2E test files are created.
+9. Run full test suite and fix failures.
 
 ### Acceptance Criteria
 

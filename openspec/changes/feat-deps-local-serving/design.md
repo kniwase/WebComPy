@@ -25,6 +25,8 @@ Each `pure_python_packages` entry includes `in_pyodide_cdn` (bool) and, when Tru
 ### D4: Pyodide CDN wheel download with SHA256 verification and caching
 Downloaded wheels are cached at `~/.cache/webcompy/pyodide-packages/{pyodide_version}/{file_name}`. The download URL is constructed from the Pyodide CDN base URL plus `file_name`: `https://cdn.jsdelivr.net/pyodide/v{pyodide_version}/full/{file_name}`. Each download is verified against the SHA256 hash from `pyodide-lock.json` to ensure integrity.
 
+WASM vs. pure-Python detection uses the `package_type` field from `pyodide-lock.json` when available (e.g., `"package_type": "shared_library"` indicates WASM), falling back to filename heuristics (`"pyodide" in file_name or "wasm32" in file_name`) for lock files that lack this field.
+
 ### D5: Downloaded wheels are extracted and passed to `make_webcompy_app_package()`
 When `serve_all_deps=True`, CDN-available pure-Python packages are downloaded, verified, extracted to a temporary directory, and added to `bundled_deps` in `make_webcompy_app_package()`. This reuses the existing bundle pipeline — no changes to the wheel builder are needed.
 
@@ -75,10 +77,10 @@ AppConfig.dependencies = ["flask", "numpy", "httpx"]
   Resolve transitive dependencies:
   ┌───────────────────────────────────┐
   │ httpx depends -> httpcore, h2,   │
-  │   sniffio (via Pyodide lock)      │
+  │   certifi (via Pyodide lock)       │
   │ httpcore: in_pyodide_cdn=True    │ -> pure_python_packages
   │ h2: in_pyodide_cdn=True          │ -> pure_python_packages
-  │ sniffio: NOT in Pyodide lock      │ -> warning, must be explicit
+  │ certifi: in_pyodide_cdn=True     │ -> pure_python_packages
   │                                   │
   │ flask: NOT in Pyodide lock,      │
   │   try importlib.metadata fallback │
@@ -153,7 +155,8 @@ The `is_bundled` and `is_cdn_package` properties are removed. Build-time code de
       "source": "transitive",
       "in_pyodide_cdn": false
     }
-  }
+  },
+  "standalone_assets": {}
 }
 ```
 

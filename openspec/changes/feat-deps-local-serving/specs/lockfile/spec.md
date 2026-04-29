@@ -58,12 +58,20 @@ The lock file SHALL use schema version 2, which replaces `pyodide_packages` with
 - **WHEN** a lock file contains `pure_python_packages` with `httpx (in_pyodide_cdn=true)` and `flask (in_pyodide_cdn=false)`
 - **THEN** `get_cdn_pure_python_package_names()` SHALL return `["httpx"]`
 
+### Requirement: export_requirements shall include all packages from v2 lock file
+`export_requirements()` SHALL write a `requirements.txt` containing pinned versions for all packages in `pure_python_packages` and `wasm_packages`. The v2 schema no longer uses an `is_wasm` flag; all packages are included because the developer may need them locally for SSR/SSG. This replaces the v1 behavior where WASM-only `pyodide_packages` were excluded.
+
+#### Scenario: Exporting all packages from v2 lock file
+- **WHEN** a developer runs `webcompy lock --export`
+- **AND** the v2 lock file contains `wasm_packages` with `numpy` and `pure_python_packages` with `httpx` and `flask`
+- **THEN** `requirements.txt` SHALL contain `numpy==<version>`, `httpx==<version>`, and `flask==<version>`
+
 ### Requirement: get_bundled_deps shall consider serve_all_deps
-`get_bundled_deps(lockfile, serve_all_deps=True)` SHALL return all pure-Python packages when `serve_all_deps=True`, and only local-only pure-Python packages when `serve_all_deps=False`.
+`get_bundled_deps(lockfile, serve_all_deps=True)` SHALL return pure-Python packages to be bundled from local installation. CDN-available packages are handled separately via the download pipeline and are NEVER returned by `get_bundled_deps()`.
 
 #### Scenario: get_bundled_deps with serve_all_deps=True
 - **WHEN** `serve_all_deps=True`
-- **THEN** `get_bundled_deps()` SHALL return all `pure_python_packages` entries that have local `pkg_dir` available
+- **THEN** `get_bundled_deps()` SHALL return only `pure_python_packages` entries with `in_pyodide_cdn=False` that have local `pkg_dir` available
 - **AND** CDN packages to be downloaded are handled separately via the download pipeline
 
 #### Scenario: get_bundled_deps with serve_all_deps=False
