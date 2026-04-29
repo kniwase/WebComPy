@@ -6,79 +6,65 @@ The dependency resolver classifies application dependencies for browser deployme
 
 ## Requirements
 
-### Requirement: Dependencies shall be classified using Pyodide lock data as primary source
-Dependency classification SHALL consult the Pyodide lock file (`pyodide-lock.json`) to determine if a package is available from the Pyodide CDN. WASM packages in the Pyodide lock SHALL be loaded from the CDN by name via `py-config.packages`. Pure-Python packages in the Pyodide lock SHALL be served from the Pyodide CDN (they are already available and do not need bundling). Packages not in the Pyodide lock SHALL be resolved locally and classified as bundled (pure-Python) or error (C extension). The Pyodide lock is required for dependency resolution; if it cannot be fetched and no cached version exists, the build SHALL fail with a descriptive error.
+### Requirement: Dependencies shall be classified using Pyodide lock data with delivery-mode awareness
+Dependency classification SHALL consult the Pyodide lock file to determine if a package is available from the Pyodide CDN. The delivery mechanism is determined at build time by `AppConfig.serve_all_deps`, not at classification time. `ClassifiedDependency` SHALL separate the concerns of package availability (`in_pyodide_cdn`) from package type (`is_wasm`).
 
-#### Scenario: WASM package available in Pyodide CDN
-- **WHEN** a dependency `numpy` is listed in `AppConfig.dependencies`
-- **AND** `numpy` is found in the Pyodide lock and is a WASM package
-- **THEN** `numpy` SHALL be classified as `pyodide_cdn` with `is_wasm=True`
-- **AND** `numpy` SHALL appear in `py-config.packages` as a plain package name
-- **AND** `numpy` SHALL NOT be bundled into the app wheel
+#### Scenario: Pure-Python package in Pyodide CDN with serve_all_deps=True
+- **WHEN** a dependency `httpx` is found in the Pyodide lock and is not a WASM package
+- **THEN** `httpx` SHALL be classified with `is_wasm=False`, `is_pure_python=True`, `in_pyodide_cdn=True`
+- **AND** `httpx` SHALL have `pyodide_file_name` and `pyodide_sha256` populated
+- **WHEN** `serve_all_deps=True`
+- **THEN** `httpx` SHALL be downloaded from the Pyodide CDN and bundled into the app wheel
 
-#### Scenario: Pure-Python package available in Pyodide CDN
-- **WHEN** a dependency `httpx` is listed in `AppConfig.dependencies`
-- **AND** `httpx` is found in the Pyodide lock and is a pure-Python package
-- **THEN** `httpx` SHALL be classified as `pyodide_cdn` with `is_wasm=False`
-- **AND** `httpx` SHALL NOT be bundled into the app wheel
-- **AND** `httpx` SHALL NOT appear in `py-config.packages`
+#### Scenario: Pure-Python package in Pyodide CDN with serve_all_deps=False
+- **WHEN** a dependency `httpx` is found in the Pyodide lock and is not a WASM package
+- **AND** `serve_all_deps=False`
+- **THEN** `httpx` SHALL NOT be bundled into the app wheel
+- **AND** `httpx` SHALL appear in `py-config.packages` as a plain package name
 
 #### Scenario: Pure-Python package not in Pyodide CDN
 - **WHEN** a dependency `flask` is not found in the Pyodide lock
 - **AND** `flask`'s installed package directory contains no `.so`, `.pyd`, or `.dylib` files
-- **THEN** `flask` SHALL be classified as `bundled` with `source="explicit"`
-- **AND** `flask` SHALL be bundled into the app wheel
+- **THEN** `flask` SHALL be classified with `is_pure_python=True`, `in_pyodide_cdn=False`
+- **AND** `flask` SHALL be bundled into the app wheel (regardless of `serve_all_deps`)
 
-#### Scenario: C extension package not in Pyodide CDN
-- **WHEN** a dependency `some_c_ext` is not found in the Pyodide lock
-- **AND** `some_c_ext`'s installed package directory contains `.so`, `.pyd`, or `.dylib` files
-- **THEN** an error SHALL be reported indicating the package is a C extension not available in Pyodide
-- **AND** the build SHALL fail with a descriptive message
+#### Scenario: WASM package (regardless of serve_all_deps)
+- **WHEN** a dependency `numpy` is found in the Pyodide lock and is a WASM package
+- **THEN** `numpy` SHALL be classified with `is_wasm=True`, `in_pyodide_cdn=True`
+- **AND** `numpy` SHALL always appear in `py-config.packages` as a plain package name
 
-#### Scenario: Pyodide lock fetch failure
-- **WHEN** the Pyodide lock cannot be fetched (network failure, no cache)
-- **AND** no cached version exists
-- **THEN** the build SHALL fail with a descriptive error
-- **AND** the error message SHALL indicate that network access is required or suggest running `webcompy lock` in an environment with internet access
+### Requirement: ClassifiedDependency shall separate availability from delivery
+`ClassifiedDependency` SHALL have the following fields:
+- `name: str`
+- `version: str`
+- `source: Literal["explicit", "transitive"]` — whether the developer listed it or it was auto-discovered
+- `is_wasm: bool` — whether the package is a WASM package (must come from CDN)
+- `is_pure_python: bool` — whether the package is pure-Python
+- `in_pyodide_cdn: bool` — whether the package exists in the Pyodide CDN
+- `pyodide_file_name: str | None` — the `.whl` file name from the Pyodide lock (when `in_pyodide_cdn=True`)
+- `pyodide_sha256: str | None` — the SHA256 hash from the Pyodide lock (when `in_pyodide_cdn=True`)
+- `pkg_dir: pathlib.Path | None` — the local package directory path (when installed locally)
 
-### Requirement: Transitive dependencies shall be resolved via Pyodide lock depends chain
-Transitive dependencies SHALL be resolved using the Pyodide lock `depends` field. This scoping ensures that only dependencies relevant to the browser runtime are included, and prevents dev/build-only packages from leaking into the lock file. For packages not in the Pyodide lock but found locally, the local `importlib.metadata` is used only for version detection and purity classification — NOT for walking the dependency graph.
+The previous `source` values `"pyodide_cdn"` and `"fallback_cdn"` are removed. The previous `is_bundled` and `is_cdn_package` properties are removed.
 
-#### Scenario: Transitive dependencies of a non-CDN package are not auto-discovered
-- **WHEN** `flask` is in `AppConfig.dependencies` and not in the Pyodide CDN
-- **AND** `flask` depends on `click`, `itsdangerous`, and `jinja2`
-- **THEN** `flask` SHALL be classified as `bundled` with `source="explicit"`
-- **AND** `click`, `itsdangerous`, and `jinja2` SHALL NOT be auto-discovered as transitive dependencies
-- **AND** developers MUST explicitly list `click`, `itsdangerous`, and `jinja2` in `AppConfig.dependencies` if they are needed
-- **AND** packages explicitly listed in `AppConfig.dependencies` and found in the Pyodide CDN (e.g., `jinja2`) SHALL be classified as `pyodide_cdn`
-- **AND** packages explicitly listed and not in the Pyodide CDN (e.g., `click`, `itsdangerous`) SHALL be classified as `bundled` with `source="explicit"`
+### Requirement: Transitive dependencies shall be resolved via Pyodide lock with local metadata fallback
+Transitive dependencies SHALL be resolved using the Pyodide lock `depends` field as the primary source and local `importlib.metadata` as a best-effort fallback for packages not in the lock. This enables more complete dependency discovery when `serve_all_deps=True`.
 
-#### Scenario: Transitive dependency resolution for Pyodide CDN packages
-- **WHEN** `httpx` is in `AppConfig.dependencies` and is a pure-Python package in the Pyodide CDN
-- **AND** the Pyodide lock `depends` field for `httpx` lists `httpcore` and `h2`
-- **AND** `httpcore` and `h2` are also packages in the Pyodide CDN
-- **THEN** `httpx` SHALL be classified as `pyodide_cdn` with `is_wasm=False` and source `"explicit"`
-- **AND** `httpcore` and `h2` SHALL be resolved via the Pyodide lock `depends` field
-- **AND** `httpcore` and `h2` SHALL be classified as `pyodide_cdn` with `is_wasm=False` and source `"transitive"`
-- **AND** a transitive dependency NOT listed in the Pyodide lock `depends` field SHALL NOT be auto-discovered
-- **AND** developers MUST explicitly list such dependencies in `AppConfig.dependencies`
-- **AND** only WASM packages SHALL appear in `py-config.packages`
+#### Scenario: Transitive dependency in Pyodide lock
+- **WHEN** `httpx` depends on `httpcore` and `h2`, both in the Pyodide lock
+- **THEN** `httpcore` and `h2` SHALL be discovered by recursively walking the `depends` field
+- **AND** they SHALL be classified with `in_pyodide_cdn=True` and appropriate CDN metadata
 
-#### Scenario: Transitive dependency not installed locally and not in Pyodide lock
+#### Scenario: Transitive dependency not in Pyodide lock but installed locally
+- **WHEN** `flask` depends on `click` and `click` is not in the Pyodide lock
+- **AND** `click` is installed locally
+- **THEN** `click` SHALL be discovered via `importlib.metadata.requires()` fallback
+- **AND** `click` SHALL be classified with `in_pyodide_cdn=False`
+
+#### Scenario: Transitive dependency not in lock and not installed locally
 - **WHEN** a transitive dependency is not found in the Pyodide lock and not installed locally
-- **THEN** the build SHALL report an error indicating the missing dependency
-- **AND** the developer SHALL be instructed to install it locally or add it to `AppConfig.dependencies`
-
-#### Scenario: Transitive WASM dependency of a Pyodide CDN pure-Python package
-- **WHEN** `httpx` is in `AppConfig.dependencies` and is a pure-Python package in the Pyodide CDN
-- **AND** `httpx` depends on `httpcore` which is a WASM package in the Pyodide CDN
-- **THEN** `httpcore` SHALL be classified as `pyodide_cdn` with `is_wasm=True`
-- **AND** `httpcore` SHALL appear in `py-config.packages` as a plain package name
-- **AND** `httpcore` SHALL NOT be bundled into the app wheel
-
-#### Scenario: Transitive C extension dependency
-- **WHEN** a transitive dependency is a C extension not in the Pyodide CDN
-- **THEN** an error SHALL be reported
+- **THEN** a warning SHALL be reported (not an error)
+- **AND** the developer SHALL be instructed to add the dependency to `AppConfig.dependencies`
 
 ### Requirement: Locally bundled packages shall be verified at build time
 When resolving a lock file for bundling (via `get_bundled_deps()` or equivalent), the resolver SHALL verify that each package expected to be bundled is actually present in the local Python environment. This ensures SSR/SSG consistency: the version used by the CPython server for pre-rendering MUST match the version bundled into the browser wheel.
@@ -88,8 +74,8 @@ When resolving a lock file for bundling (via `get_bundled_deps()` or equivalent)
 - **AND** `importlib.metadata.version()` reports version `2.1.5`
 - **THEN** the package directory SHALL be included in the bundled deps list
 
-#### Scenario: Package not found locally
-- **WHEN** a bundled package is not found in the local environment via `importlib.util.find_spec()`
+#### Scenario: Local-only package not found locally
+- **WHEN** a local-only package (`in_pyodide_cdn=False`) expected to be bundled is not found in the local environment via `importlib.util.find_spec()`
 - **THEN** the resolver SHALL report an error with the package name and lock file version
 - **AND** the error message SHALL include an installation command (e.g., `pip install <package>==<version>`)
 - **AND** the build SHALL fail
@@ -103,10 +89,30 @@ When resolving a lock file for bundling (via `get_bundled_deps()` or equivalent)
 - **AND** the build SHALL fail
 
 #### Scenario: Non-WASM Pyodide CDN package version mismatch
-- **WHEN** a non-WASM Pyodide CDN package (served from the Pyodide CDN) has a local version that differs from the lock file
+- **WHEN** a non-WASM Pyodide CDN package (`in_pyodide_cdn=True`, `is_wasm=False`) has a local version that differs from the lock file
 - **THEN** a warning SHALL be reported (not an error) indicating the version mismatch
 - **AND** the local version SHALL be used for SSR/SSG
 - **AND** the build SHALL continue
+
+### Requirement: Local environment validation SHALL consider serve_all_deps and CDN availability
+`validate_local_environment()` SHALL differentiate between CDN-available and local-only packages, and adjust error severity based on `serve_all_deps`.
+
+#### Scenario: CDN-available package missing locally with serve_all_deps=True
+- **WHEN** a pure-Python package with `in_pyodide_cdn=True` is not installed locally
+- **AND** `serve_all_deps=True`
+- **THEN** a warning SHALL be reported (not an error)
+- **AND** the build SHALL continue (the package will be downloaded from CDN)
+
+#### Scenario: CDN-available package missing locally with serve_all_deps=False
+- **WHEN** a pure-Python package with `in_pyodide_cdn=True` is not installed locally
+- **AND** `serve_all_deps=False`
+- **THEN** a warning SHALL be reported (not an error)
+- **AND** the build SHALL continue (the package will be loaded from CDN in the browser)
+
+#### Scenario: Local-only package missing locally
+- **WHEN** a pure-Python package with `in_pyodide_cdn=False` is not installed locally
+- **THEN** an error SHALL be reported regardless of `serve_all_deps`
+- **AND** the build SHALL fail
 
 ### Requirement: The Pyodide lock shall be fetched from CDN with local caching
 The Pyodide lock file SHALL be fetched from `https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json` and cached locally at `~/.cache/webcompy/pyodide-lock-{version}.json`. The Pyodide version SHALL be derived from the PyScript version via a mapping table. If the fetch fails and no cache exists, a `PyodideLockFetchError` SHALL be raised.

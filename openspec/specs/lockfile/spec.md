@@ -6,35 +6,60 @@ The lock file (`webcompy-lock.json`) ensures reproducible builds by recording th
 
 ## Requirements
 
-### Requirement: The lock file shall record dependency classification for reproducible builds
-`webcompy-lock.json` SHALL be a JSON file placed in the app package directory (next to `webcompy_config.py`) that records Pyodide CDN package versions, bundled package versions and sources, and the Pyodide/PyScript versions used. The lock file SHALL be version-controlled (like `uv.lock` or `poetry.lock`). The `bundled_packages` entries include an `is_pure_python` field that is informational — it records the classification result for human readability and debugging, but is not used during the resolution flow. Additional keys (e.g., `standalone_assets`) may be added by other changes.
+### Requirement: The lock file shall use v2 schema with wasm_packages and pure_python_packages
+The lock file SHALL use schema version 2, which replaces `pyodide_packages` with `wasm_packages` and `bundled_packages` with `pure_python_packages`. Version 1 lock files SHALL be treated as invalid (returning `None` from `load_lockfile()`), triggering full regeneration. `webcompy-lock.json` SHALL be a JSON file placed in the app package directory (next to `webcompy_config.py`) that records WASM package versions, pure-Python package versions and CDN metadata, and the Pyodide/PyScript versions used. The lock file SHALL be version-controlled (like `uv.lock` or `poetry.lock`). CDN-available pure-Python package entries include `in_pyodide_cdn`, `pyodide_file_name`, and `pyodide_sha256` fields. Additional keys (e.g., `standalone_assets`) may be added by other changes.
 
 #### Scenario: Lock file generated on first run
 - **WHEN** a developer runs `webcompy start` or `webcompy generate` without an existing lock file
 - **THEN** the lock file SHALL be automatically generated and saved
 - **AND** the developer SHOULD commit the lock file to version control
 
-#### Scenario: Lock file schema
+#### Scenario: v2 lock file schema
 - **WHEN** a lock file is generated
-- **THEN** it SHALL contain `version` (integer), `pyodide_version` (string), `pyscript_version` (string), `pyodide_packages` (object mapping package names to version, file_name, is_wasm, and source), and `bundled_packages` (object mapping package names to version, source, and is_pure_python)
-- **AND** `version` SHALL be `1`
+- **THEN** it SHALL contain `version: 2`, `pyodide_version`, `pyscript_version`, `wasm_packages`, and `pure_python_packages`
 
-#### Scenario: Pyodide CDN WASM package entry
-- **WHEN** a dependency is classified as `pyodide_cdn` and is a WASM package
-- **THEN** the lock file SHALL record it in `pyodide_packages` with `version`, `file_name` from the Pyodide lock, `is_wasm=true`, and `source` (`"explicit"` or `"transitive"`)
-- **AND** the package SHALL appear in `py-config.packages` for Pyodide CDN loading
+#### Scenario: v1 lock file rejection
+- **WHEN** `load_lockfile()` encounters a lock file with `version: 1`
+- **THEN** it SHALL return `None`
+- **AND** the build system SHALL regenerate the lock file
 
-#### Scenario: Pyodide CDN pure-Python package entry
-- **WHEN** a dependency is classified as `pyodide_cdn` and is a pure-Python package (not WASM)
-- **THEN** the lock file SHALL record it in `pyodide_packages` with `version` (from the Pyodide lock), `file_name` from the Pyodide lock, `is_wasm=false`, and `source` (`"explicit"` or `"transitive"`)
-- **AND** the package SHALL NOT appear in `py-config.packages`
+### Requirement: wasm_packages shall contain only WASM packages
+`wasm_packages` SHALL contain only WASM packages that must be loaded from the Pyodide CDN by name via `py-config.packages`. Pure-Python packages available in the Pyodide CDN SHALL NOT appear in `wasm_packages`.
 
-#### Scenario: Bundled package entry
-- **WHEN** a dependency is classified as `bundled`
-- **THEN** the lock file SHALL record it in `bundled_packages` with `version`, `source` (`"explicit"` or `"transitive"`), and `is_pure_python` (boolean)
+#### Scenario: WASM package entry in v2 lock file
+- **WHEN** a dependency `numpy` is a WASM package
+- **THEN** it SHALL be recorded in `wasm_packages` with `version`, `file_name`, and `source`
+
+#### Scenario: Pure-Python CDN package not in wasm_packages
+- **WHEN** a dependency `httpx` is a pure-Python package in the Pyodide CDN
+- **THEN** it SHALL NOT appear in `wasm_packages`
+- **AND** it SHALL appear in `pure_python_packages`
+
+### Requirement: pure_python_packages shall contain all pure-Python packages with CDN metadata
+`pure_python_packages` SHALL contain all pure-Python dependencies regardless of CDN availability. Entries for CDN-available packages SHALL include `in_pyodide_cdn: true` with `pyodide_file_name` and `pyodide_sha256` for download. Entries for local-only packages SHALL have `in_pyodide_cdn: false`.
+
+#### Scenario: CDN-available pure-Python package entry
+- **WHEN** a pure-Python package `httpx` is available in the Pyodide CDN
+- **THEN** the entry SHALL include `in_pyodide_cdn: true`, `pyodide_file_name: "httpx-0.28.1-py3-none-any.whl"`, and `pyodide_sha256`
+- **AND** `serve_all_deps=True` SHALL cause this package to be downloaded at build time
+
+#### Scenario: Local-only pure-Python package entry
+- **WHEN** a pure-Python package `flask` is NOT available in the Pyodide CDN
+- **THEN** the entry SHALL include `in_pyodide_cdn: false`
+- **AND** it SHALL NOT have `pyodide_file_name` or `pyodide_sha256`
+- **AND** this package SHALL always be bundled from local installation
+
+#### Scenario: Pure-Python CDN package is bundled when serve_all_deps=True
+- **WHEN** `serve_all_deps=True` and a pure-Python package has `in_pyodide_cdn: true`
+- **THEN** the build system SHALL download the wheel, verify SHA256, extract, and bundle it
+
+#### Scenario: Pure-Python CDN package is loaded from CDN when serve_all_deps=False
+- **WHEN** `serve_all_deps=False` and a pure-Python package has `in_pyodide_cdn: true`
+- **THEN** the package name SHALL be included in `py-config.packages` for CDN loading
+- **AND** the package SHALL NOT be bundled
 
 ### Requirement: The lock file shall be validated against current dependencies
-When loading an existing lock file, the CLI SHALL validate that `AppConfig.dependencies` matches the union of `explicit` entries in `bundled_packages` and `explicit` entries in `pyodide_packages`. If dependencies have changed, the lock file SHALL be regenerated. Additionally, the CLI SHALL validate that the local environment provides the packages recorded in the lock file with matching versions and correct purity classification.
+When loading an existing lock file, the CLI SHALL validate that `AppConfig.dependencies` matches the union of `explicit` entries in `pure_python_packages` and `explicit` entries in `wasm_packages`. If dependencies have changed, the lock file SHALL be regenerated. Additionally, the CLI SHALL validate that the local environment provides the packages recorded in the lock file with matching versions.
 
 #### Scenario: Lock file matches dependencies
 - **WHEN** the lock file's explicit dependencies match `AppConfig.dependencies`
@@ -44,32 +69,45 @@ When loading an existing lock file, the CLI SHALL validate that `AppConfig.depen
 - **WHEN** `AppConfig.dependencies` has been modified since the lock file was generated
 - **THEN** the lock file SHALL be regenerated automatically
 
-#### Scenario: Bundled package missing from local environment
-- **WHEN** a package listed in `bundled_packages` is not found in the local Python environment via `importlib.util.find_spec()`
+#### Scenario: Pure-Python package missing from local environment
+- **WHEN** a package listed in `pure_python_packages` with `in_pyodide_cdn=false` is not found in the local Python environment via `importlib.util.find_spec()`
 - **THEN** an error SHALL be reported with the package name, the lock file version, and a suggestion to install it (e.g., `pip install <package>==<version>`)
 - **AND** the build SHALL fail
 
-#### Scenario: Bundled package version mismatch
-- **WHEN** a pure-Python package listed in `bundled_packages` has version `X.Y.Z` in the lock file, but `importlib.metadata.version()` reports a different version
+#### Scenario: CDN-available pure-Python package missing locally with serve_all_deps=True
+- **WHEN** a package listed in `pure_python_packages` with `in_pyodide_cdn=true` is not found in the local environment
+- **AND** `serve_all_deps=True`
+- **THEN** a warning SHALL be reported indicating the package will be downloaded from the Pyodide CDN
+- **AND** the build SHALL continue
+
+#### Scenario: Pure-Python package version mismatch
+- **WHEN** a pure-Python package listed in `pure_python_packages` has version `X.Y.Z` in the lock file, but `importlib.metadata.version()` reports a different version
 - **THEN** an error SHALL be reported indicating the version mismatch (lock file version vs. local version)
 - **AND** the error SHALL suggest installing the lock file version (e.g., `pip install <package>==X.Y.Z`)
 - **AND** the build SHALL fail
 
-#### Scenario: Bundled package version unknown locally
-- **WHEN** a pure-Python package listed in `bundled_packages` is found locally via `importlib.util.find_spec()`, but `importlib.metadata.version()` returns `None` (version cannot be determined)
+#### Scenario: Pure-Python package version unknown locally
+- **WHEN** a pure-Python package listed in `pure_python_packages` is found locally via `importlib.util.find_spec()`, but `importlib.metadata.version()` returns `None` (version cannot be determined)
 - **THEN** an error SHALL be reported indicating the version could not be determined locally
 - **AND** the error SHALL include the lock file version requirement
 - **AND** the build SHALL fail
 
-#### Scenario: Non-WASM Pyodide CDN package version mismatch
-- **WHEN** a non-WASM Pyodide CDN package listed in `pyodide_packages` has a version in the lock file that differs from the locally installed version
+#### Scenario: CDN-available pure-Python package version mismatch
+- **WHEN** a pure-Python package listed in `pure_python_packages` with `in_pyodide_cdn=true` has a version in the lock file that differs from the locally installed version
 - **THEN** a warning SHALL be reported indicating the version mismatch
-- **AND** the build SHALL continue (the local version will be used for SSR while the Pyodide CDN version is recorded in the lock file)
+- **AND** the build SHALL continue (the local version will be used for SSR while the CDN version is recorded in the lock file)
 - **AND** the warning SHALL note that the local version will be used for SSR/SSG
 
-#### Scenario: WASM-only Pyodide CDN package not locally installed
-- **WHEN** a package listed in `pyodide_packages` with `is_wasm=True` is not found in the local environment
-- **THEN** no error or warning SHALL be reported (WASM packages are loaded from the Pyodide CDN in the browser and are not needed for SSR if the app does not import them server-side)
+#### Scenario: WASM package not locally installed
+- **WHEN** a package listed in `wasm_packages` is not found in the local environment
+- **THEN** a warning SHALL be reported indicating the package is needed locally for SSR/SSG
+- **AND** the build SHALL continue
+
+#### Scenario: WASM package version mismatch
+- **WHEN** a WASM package listed in `wasm_packages` has a version in the lock file that differs from the locally installed version
+- **THEN** a warning SHALL be reported indicating the version mismatch
+- **AND** the build SHALL continue (the local version will be used for SSR/SSG)
+- **AND** the warning SHALL note that the local version will be used for SSR/SSG
 
 ### Requirement: The lock file shall be version-controlled for reproducibility
 The lock file SHALL be committed to version control (e.g., git) to ensure reproducible builds across environments. Like `uv.lock` or `poetry.lock`, it records the exact dependency classifications and versions used. Developers SHOULD NOT add `webcompy-lock.json` to `.gitignore`.
@@ -91,16 +129,20 @@ The lock file SHALL be stored at `app_package_path / "webcompy-lock.json"`, whic
 - **WHEN** the app package is at `/project/myapp/` with `webcompy_config.py` at `/project/myapp/webcompy_config.py`
 - **THEN** the lock file path SHALL be `/project/myapp/webcompy-lock.json`
 
-### Requirement: The lock file shall support exporting dependency versions to requirements.txt
-`webcompy lock --export` SHALL generate a `requirements.txt` file containing pinned version entries for all packages that require local installation. Only packages in `bundled_packages` and non-WASM `pyodide_packages` SHALL be included. WASM-only `pyodide_packages` SHALL be excluded because they are loaded from the Pyodide CDN and not needed locally. WebComPy is an SSR/SSG framework — all non-WASM packages are required locally for server-side rendering.
+### Requirement: The lock file shall support querying CDN-available pure-Python package names
+`get_cdn_pure_python_package_names(lockfile)` SHALL return the names of pure-Python packages with `in_pyodide_cdn=True`. This is used when `serve_all_deps=False` to generate the `py-config.packages` list.
 
-#### Scenario: Exporting requirements from lock file
+#### Scenario: Querying CDN pure-Python names
+- **WHEN** a lock file contains `pure_python_packages` with `httpx (in_pyodide_cdn=true)` and `flask (in_pyodide_cdn=false)`
+- **THEN** `get_cdn_pure_python_package_names()` SHALL return `["httpx"]`
+
+### Requirement: export_requirements shall include all packages from v2 lock file
+`export_requirements()` SHALL write a `requirements.txt` containing pinned versions for all packages in `pure_python_packages` and `wasm_packages`. The v2 schema no longer uses an `is_wasm` flag; all packages are included because the developer may need them locally for SSR/SSG. This replaces the v1 behavior where WASM-only `pyodide_packages` were excluded.
+
+#### Scenario: Exporting all packages from v2 lock file
 - **WHEN** a developer runs `webcompy lock --export`
-- **AND** the lock file contains `bundled_packages` with `markupsafe` version `2.1.5` and `click` version `8.1.7`
-- **AND** the lock file contains `pyodide_packages` with `numpy` (`is_wasm=True`) and `jinja2` (`is_wasm=False`, version `3.1.6`)
-- **THEN** a `requirements.txt` file SHALL be generated at the auto-discovered project root
-- **AND** it SHALL contain `markupsafe==2.1.5`, `click==8.1.7`, and `jinja2==3.1.6`
-- **AND** it SHALL NOT contain `numpy` (WASM packages are excluded)
+- **AND** the v2 lock file contains `wasm_packages` with `numpy` and `pure_python_packages` with `httpx` and `flask`
+- **THEN** `requirements.txt` SHALL contain `numpy==<version>`, `httpx==<version>`, and `flask==<version>`
 
 #### Scenario: Exporting requirements when project root is auto-discovered
 - **WHEN** a developer runs `webcompy lock --export`
@@ -122,6 +164,18 @@ The lock file SHALL be stored at `app_package_path / "webcompy-lock.json"`, whic
 #### Scenario: Exporting requirements with no lock file
 - **WHEN** a developer runs `webcompy lock --export` without an existing lock file
 - **THEN** an error SHALL be reported indicating that the lock file must be generated first by running `webcompy lock`
+
+### Requirement: get_bundled_deps shall consider serve_all_deps
+`get_bundled_deps(lockfile, serve_all_deps=True)` SHALL return pure-Python packages to be bundled from local installation. CDN-available packages are handled separately via the download pipeline and are NEVER returned by `get_bundled_deps()`.
+
+#### Scenario: get_bundled_deps with serve_all_deps=True
+- **WHEN** `serve_all_deps=True`
+- **THEN** `get_bundled_deps()` SHALL return only `pure_python_packages` entries with `in_pyodide_cdn=False` that have local `pkg_dir` available
+- **AND** CDN packages to be downloaded are handled separately via the download pipeline
+
+#### Scenario: get_bundled_deps with serve_all_deps=False
+- **WHEN** `serve_all_deps=False`
+- **THEN** `get_bundled_deps()` SHALL return only `pure_python_packages` entries with `in_pyodide_cdn=False`
 
 ### Requirement: The lock file shall support comparison with external dependency specifications
 `webcompy lock --sync` SHALL auto-discover `requirements.txt` and `pyproject.toml` at the project root and compare their dependency entries with the lock file. The command SHALL report matching versions, mismatches, and missing entries without modifying the lock file.
