@@ -63,22 +63,10 @@ class TestResolveTransitiveDepsViaPyodideLock:
     def test_direct_deps(self):
         lock = {
             "packages": {
-                "numpy": {
-                    "version": "2.2.5",
-                    "depends": [],
-                },
-                "httpx": {
-                    "version": "0.28.1",
-                    "depends": ["httpcore", "sniffio"],
-                },
-                "httpcore": {
-                    "version": "1.0.7",
-                    "depends": [],
-                },
-                "sniffio": {
-                    "version": "1.3.1",
-                    "depends": [],
-                },
+                "numpy": {"version": "2.2.5", "depends": []},
+                "httpx": {"version": "0.28.1", "depends": ["httpcore", "sniffio"]},
+                "httpcore": {"version": "1.0.7", "depends": []},
+                "sniffio": {"version": "1.3.1", "depends": []},
             }
         }
         result = _resolve_transitive_deps_via_pyodide_lock("httpx", lock)
@@ -104,13 +92,14 @@ class TestResolveTransitiveDepsViaPyodideLock:
 
 
 class TestClassifyDependencies:
-    def test_wasm_package_classified_as_cdn(self):
+    def test_wasm_package_classified_correctly(self):
         lock = {
             "packages": {
                 "numpy": {
                     "version": "2.2.5",
                     "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
                     "depends": [],
+                    "sha256": "abc123",
                 },
             }
         }
@@ -118,34 +107,42 @@ class TestClassifyDependencies:
         assert len(errors) == 0
         numpy_dep = next(d for d in classified if d.name == "numpy")
         assert numpy_dep.is_wasm is True
-        assert numpy_dep.source == "pyodide_cdn"
+        assert numpy_dep.source == "explicit"
         assert numpy_dep.is_pure_python is False
+        assert numpy_dep.in_pyodide_cdn is True
+        assert numpy_dep.pyodide_file_name == "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl"
+        assert numpy_dep.pyodide_sha256 == "abc123"
 
-    def test_pure_python_in_pyodide_lock_classified_as_cdn(self):
+    def test_pure_python_in_pyodide_cdn(self):
         lock = {
             "packages": {
                 "httpx": {
                     "version": "0.28.1",
                     "file_name": "httpx-0.28.1-py3-none-any.whl",
                     "depends": [],
+                    "sha256": "def456",
                 },
             }
         }
         classified, _errors, _warnings = classify_dependencies(["httpx"], lock)
         httpx_dep = next(d for d in classified if d.name == "httpx")
         assert httpx_dep.is_wasm is False
-        assert httpx_dep.source == "pyodide_cdn"
+        assert httpx_dep.source == "explicit"
         assert httpx_dep.is_pure_python is True
-        assert httpx_dep.is_bundled is False
-        assert httpx_dep.is_cdn_package is True
+        assert httpx_dep.in_pyodide_cdn is True
+        assert httpx_dep.pyodide_file_name == "httpx-0.28.1-py3-none-any.whl"
+        assert httpx_dep.pyodide_sha256 == "def456"
 
-    def test_local_pure_python_classified_as_bundled(self):
+    def test_local_pure_python_classified_correctly(self):
         lock = {"packages": {}}
         classified, _errors, _warnings = classify_dependencies(["webcompy"], lock)
         wc_dep = next(d for d in classified if d.name == "webcompy")
         assert wc_dep.source == "explicit"
         assert wc_dep.is_pure_python is True
         assert wc_dep.is_wasm is False
+        assert wc_dep.in_pyodide_cdn is False
+        assert wc_dep.pyodide_file_name is None
+        assert wc_dep.pyodide_sha256 is None
 
     def test_missing_package_produces_error(self):
         lock = {"packages": {}}
@@ -153,40 +150,27 @@ class TestClassifyDependencies:
         assert len(errors) > 0
         assert any("nonexistent_package_xyz_12345" in e for e in errors)
 
-    def test_wasm_transitive_deps_resolved(self):
-        lock = {
-            "packages": {
-                "numpy": {
-                    "version": "2.2.5",
-                    "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
-                    "depends": [],
-                },
-            }
-        }
-        classified, errors, _warnings = classify_dependencies(["numpy"], lock)
-        assert len(errors) == 0
-        numpy_dep = next(d for d in classified if d.name == "numpy")
-        assert numpy_dep.is_wasm is True
-
-    def test_transitive_pure_python_in_pyodide_lock_classified_as_cdn(self):
+    def test_transitive_pure_python_in_pyodide_cdn(self):
         lock = {
             "packages": {
                 "numpy": {
                     "version": "2.2.5",
                     "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
                     "depends": ["packaging"],
+                    "sha256": "abc123",
                 },
                 "packaging": {
                     "version": "24.2",
                     "file_name": "packaging-24.2-py3-none-any.whl",
                     "depends": [],
+                    "sha256": "def456",
                 },
             }
         }
         classified, errors, _warnings = classify_dependencies(["numpy"], lock)
         assert len(errors) == 0
         packaging_dep = next(d for d in classified if d.name == "packaging")
-        assert packaging_dep.source == "pyodide_cdn"
-        assert packaging_dep.is_bundled is False
-        assert packaging_dep.is_cdn_package is True
+        assert packaging_dep.source == "transitive"
         assert packaging_dep.is_pure_python is True
+        assert packaging_dep.in_pyodide_cdn is True
+        assert packaging_dep.pyodide_file_name == "packaging-24.2-py3-none-any.whl"

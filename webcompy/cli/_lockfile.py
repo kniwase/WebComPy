@@ -6,54 +6,60 @@ from dataclasses import dataclass, field
 
 from webcompy.cli._pyodide_lock import PyodideLockFetchError, fetch_pyodide_lock, get_pyodide_version
 
-LOCKFILE_VERSION = 1
+LOCKFILE_VERSION = 2
 LOCKFILE_NAME = "webcompy-lock.json"
 
 
 @dataclass
-class PyodidePackageEntry:
+class WasmPackageEntry:
     version: str
     file_name: str
-    is_wasm: bool
     source: str = "explicit"
 
     def to_dict(self) -> dict:
         return {
             "version": self.version,
             "file_name": self.file_name,
-            "is_wasm": self.is_wasm,
             "source": self.source,
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> PyodidePackageEntry:
+    def from_dict(cls, data: dict) -> WasmPackageEntry:
         return cls(
             version=data["version"],
             file_name=data["file_name"],
-            is_wasm=data["is_wasm"],
             source=data.get("source", "explicit"),
         )
 
 
 @dataclass
-class BundledPackageEntry:
+class PurePythonPackageEntry:
     version: str
     source: str
-    is_pure_python: bool
+    in_pyodide_cdn: bool
+    pyodide_file_name: str | None = None
+    pyodide_sha256: str | None = None
 
     def to_dict(self) -> dict:
-        return {
+        d: dict = {
             "version": self.version,
             "source": self.source,
-            "is_pure_python": self.is_pure_python,
+            "in_pyodide_cdn": self.in_pyodide_cdn,
         }
+        if self.in_pyodide_cdn and self.pyodide_file_name is not None:
+            d["pyodide_file_name"] = self.pyodide_file_name
+        if self.in_pyodide_cdn and self.pyodide_sha256 is not None:
+            d["pyodide_sha256"] = self.pyodide_sha256
+        return d
 
     @classmethod
-    def from_dict(cls, data: dict) -> BundledPackageEntry:
+    def from_dict(cls, data: dict) -> PurePythonPackageEntry:
         return cls(
             version=data["version"],
             source=data["source"],
-            is_pure_python=data["is_pure_python"],
+            in_pyodide_cdn=data["in_pyodide_cdn"],
+            pyodide_file_name=data.get("pyodide_file_name"),
+            pyodide_sha256=data.get("pyodide_sha256"),
         )
 
 
@@ -61,16 +67,16 @@ class BundledPackageEntry:
 class Lockfile:
     pyodide_version: str
     pyscript_version: str
-    pyodide_packages: dict[str, PyodidePackageEntry] = field(default_factory=dict)
-    bundled_packages: dict[str, BundledPackageEntry] = field(default_factory=dict)
+    wasm_packages: dict[str, WasmPackageEntry] = field(default_factory=dict)
+    pure_python_packages: dict[str, PurePythonPackageEntry] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
             "version": LOCKFILE_VERSION,
             "pyodide_version": self.pyodide_version,
             "pyscript_version": self.pyscript_version,
-            "pyodide_packages": {name: entry.to_dict() for name, entry in self.pyodide_packages.items()},
-            "bundled_packages": {name: entry.to_dict() for name, entry in self.bundled_packages.items()},
+            "wasm_packages": {name: entry.to_dict() for name, entry in self.wasm_packages.items()},
+            "pure_python_packages": {name: entry.to_dict() for name, entry in self.pure_python_packages.items()},
             "standalone_assets": {},
         }
 
@@ -84,17 +90,15 @@ def load_lockfile(path: pathlib.Path) -> Lockfile | None:
         return None
     if data.get("version") != LOCKFILE_VERSION:
         return None
-    pyodide_packages = {
-        name: PyodidePackageEntry.from_dict(entry) for name, entry in data.get("pyodide_packages", {}).items()
-    }
-    bundled_packages = {
-        name: BundledPackageEntry.from_dict(entry) for name, entry in data.get("bundled_packages", {}).items()
+    wasm_packages = {name: WasmPackageEntry.from_dict(entry) for name, entry in data.get("wasm_packages", {}).items()}
+    pure_python_packages = {
+        name: PurePythonPackageEntry.from_dict(entry) for name, entry in data.get("pure_python_packages", {}).items()
     }
     return Lockfile(
         pyodide_version=data["pyodide_version"],
         pyscript_version=data["pyscript_version"],
-        pyodide_packages=pyodide_packages,
-        bundled_packages=bundled_packages,
+        wasm_packages=wasm_packages,
+        pure_python_packages=pure_python_packages,
     )
 
 
@@ -120,34 +124,34 @@ def generate_lockfile(
 
     classified, errors, warnings = classify_dependencies(dependencies, pyodide_lock)
 
-    pyodide_packages: dict[str, PyodidePackageEntry] = {}
-    bundled_packages: dict[str, BundledPackageEntry] = {}
+    wasm_packages: dict[str, WasmPackageEntry] = {}
+    pure_python_packages: dict[str, PurePythonPackageEntry] = {}
 
     for dep in classified:
-        if dep.is_cdn_package and not dep.is_bundled:
+        lock_source = dep.source
+        if dep.is_wasm:
             pkg_info = pyodide_lock.get("packages", {}).get(dep.name, {})
             file_name = pkg_info.get("file_name", "")
-            pyodide_packages[dep.name] = PyodidePackageEntry(
+            wasm_packages[dep.name] = WasmPackageEntry(
                 version=dep.version,
                 file_name=file_name,
-                is_wasm=dep.is_wasm,
-                source="transitive"
-                if dep.source in ("transitive", "pyodide_cdn") and dep.name not in dependencies
-                else "explicit",
+                source=lock_source,
             )
-        else:
-            lock_source = dep.source if dep.source in ("explicit", "transitive") else "transitive"
-            bundled_packages[dep.name] = BundledPackageEntry(
+        elif dep.is_pure_python:
+            entry = PurePythonPackageEntry(
                 version=dep.version,
                 source=lock_source,
-                is_pure_python=dep.is_pure_python,
+                in_pyodide_cdn=dep.in_pyodide_cdn,
+                pyodide_file_name=dep.pyodide_file_name if dep.in_pyodide_cdn else None,
+                pyodide_sha256=dep.pyodide_sha256 if dep.in_pyodide_cdn else None,
             )
+            pure_python_packages[dep.name] = entry
 
     lockfile = Lockfile(
         pyodide_version=pyodide_version,
         pyscript_version=pyscript_version,
-        pyodide_packages=pyodide_packages,
-        bundled_packages=bundled_packages,
+        wasm_packages=wasm_packages,
+        pure_python_packages=pure_python_packages,
     )
 
     return lockfile, errors, warnings
@@ -158,9 +162,9 @@ def validate_lockfile(
     dependencies: list[str],
 ) -> list[str]:
     issues: list[str] = []
-    explicit_in_lock = {name for name, entry in lockfile.bundled_packages.items() if entry.source == "explicit"}
-    explicit_pyodide = {name for name, entry in lockfile.pyodide_packages.items() if entry.source == "explicit"}
-    all_explicit_in_lock = explicit_in_lock | explicit_pyodide
+    explicit_pp = {name for name, entry in lockfile.pure_python_packages.items() if entry.source == "explicit"}
+    explicit_wasm = {name for name, entry in lockfile.wasm_packages.items() if entry.source == "explicit"}
+    all_explicit_in_lock = explicit_pp | explicit_wasm
     dep_set = {d.replace("-", "_") for d in dependencies}
     lock_set = {n.replace("-", "_") for n in all_explicit_in_lock}
     missing = dep_set - lock_set
@@ -171,53 +175,57 @@ def validate_lockfile(
 
 def validate_local_environment(
     lockfile: Lockfile,
+    serve_all_deps: bool = True,
 ) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
     from webcompy.cli._dependency_resolver import _find_package_dir, _get_package_version
 
-    for name, entry in lockfile.bundled_packages.items():
-        if not entry.is_pure_python:
-            continue
-        pkg_dir = _find_package_dir(name)
-        if pkg_dir is None:
-            errors.append(
-                f"Package '{name}' (version {entry.version}) listed in lock file "
-                f"is not installed locally. Install it with: pip install {name}=={entry.version}"
-            )
-            continue
-        local_version = _get_package_version(name)
-        if local_version is None or local_version != entry.version:
-            if local_version is None:
-                errors.append(
-                    f"Package '{name}' version could not be determined locally, "
-                    f"but lock file requires {entry.version}. "
-                    f"Ensure the package is properly installed with: pip install {name}=={entry.version}"
-                )
-            else:
-                errors.append(
+    for name, entry in lockfile.pure_python_packages.items():
+        if entry.in_pyodide_cdn:
+            local_version = _get_package_version(name)
+            if local_version is not None and local_version != entry.version:
+                warnings.append(
                     f"Package '{name}' version mismatch: lock file has {entry.version}, "
                     f"local has {local_version}. "
-                    f"Install the correct version with: pip install {name}=={entry.version}"
+                    f"The local version will be used for SSR/SSG, "
+                    f"while the CDN version will be used in the browser."
                 )
-
-    for name, entry in lockfile.pyodide_packages.items():
-        if entry.is_wasm:
-            continue
-        local_version = _get_package_version(name)
-        if local_version is not None and local_version != entry.version:
-            warnings.append(
-                f"Package '{name}' version mismatch: lock file has {entry.version}, "
-                f"local has {local_version}. "
-                f"The local version will be used for SSR/SSG, "
-                f"while the Pyodide CDN version will be used in the browser."
-            )
+            elif local_version is None:
+                warnings.append(
+                    f"Package '{name}' (version {entry.version}) is available in the Pyodide CDN "
+                    f"and will be {'downloaded and bundled' if serve_all_deps else 'loaded from CDN'}. "
+                    f"It is not installed locally, which may affect SSR/SSG."
+                )
+        else:
+            pkg_dir = _find_package_dir(name)
+            if pkg_dir is None:
+                errors.append(
+                    f"Package '{name}' (version {entry.version}) listed in lock file "
+                    f"is not installed locally. Install it with: pip install {name}=={entry.version}"
+                )
+                continue
+            local_version = _get_package_version(name)
+            if local_version is None or local_version != entry.version:
+                if local_version is None:
+                    errors.append(
+                        f"Package '{name}' version could not be determined locally, "
+                        f"but lock file requires {entry.version}. "
+                        f"Ensure the package is properly installed with: pip install {name}=={entry.version}"
+                    )
+                else:
+                    errors.append(
+                        f"Package '{name}' version mismatch: lock file has {entry.version}, "
+                        f"local has {local_version}. "
+                        f"Install the correct version with: pip install {name}=={entry.version}"
+                    )
 
     return errors, warnings
 
 
 def get_bundled_deps(
     lockfile: Lockfile | None,
+    serve_all_deps: bool = True,
 ) -> list[tuple[str, pathlib.Path]]:
     if lockfile is None:
         return []
@@ -225,8 +233,8 @@ def get_bundled_deps(
 
     result: list[tuple[str, pathlib.Path]] = []
     seen: set[str] = set()
-    for name, entry in lockfile.bundled_packages.items():
-        if not entry.is_pure_python:
+    for name, entry in lockfile.pure_python_packages.items():
+        if entry.in_pyodide_cdn:
             continue
         norm = name.replace("-", "_")
         if norm in seen:
@@ -238,16 +246,20 @@ def get_bundled_deps(
     return result
 
 
-def get_pyodide_package_names(
+def get_wasm_package_names(
     lockfile: Lockfile | None,
 ) -> list[str]:
     if lockfile is None:
         return []
-    result: list[str] = []
-    for name, entry in lockfile.pyodide_packages.items():
-        if entry.is_wasm:
-            result.append(name)
-    return result
+    return list(lockfile.wasm_packages.keys())
+
+
+def get_cdn_pure_python_package_names(
+    lockfile: Lockfile | None,
+) -> list[str]:
+    if lockfile is None:
+        return []
+    return [name for name, entry in lockfile.pure_python_packages.items() if entry.in_pyodide_cdn]
 
 
 def resolve_lockfile(

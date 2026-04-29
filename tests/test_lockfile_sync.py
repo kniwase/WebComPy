@@ -5,7 +5,7 @@ import pytest
 
 from webcompy.app._config import AppConfig, LockfileSyncConfig
 from webcompy.cli._exception import WebComPyCliException
-from webcompy.cli._lockfile import BundledPackageEntry, Lockfile, PyodidePackageEntry
+from webcompy.cli._lockfile import Lockfile, PurePythonPackageEntry, WasmPackageEntry
 from webcompy.cli._lockfile_sync import (
     discover_project_root,
     discover_requirements_path,
@@ -139,23 +139,27 @@ def _make_lockfile():
     return Lockfile(
         pyodide_version="0.24.0",
         pyscript_version="2024.1.1",
-        pyodide_packages={
-            "numpy": PyodidePackageEntry(
-                version="2.2.5", file_name="numpy-2.2.5-cp312-cp312/emscripten_3_1_58_wasm32.whl", is_wasm=True
-            ),
-            "jinja2": PyodidePackageEntry(
-                version="3.1.6", file_name="Jinja2-3.1.6-cp312-cp312-emscripten_3_1_58_wasm32.whl", is_wasm=False
+        wasm_packages={
+            "numpy": WasmPackageEntry(
+                version="2.2.5", file_name="numpy-2.2.5-cp312-cp312/emscripten_3_1_58_wasm32.whl"
             ),
         },
-        bundled_packages={
-            "markupsafe": BundledPackageEntry(version="2.1.5", source="explicit", is_pure_python=True),
-            "click": BundledPackageEntry(version="8.1.7", source="explicit", is_pure_python=True),
+        pure_python_packages={
+            "jinja2": PurePythonPackageEntry(
+                version="3.1.6",
+                source="explicit",
+                in_pyodide_cdn=True,
+                pyodide_file_name="Jinja2-3.1.6-cp312-cp312-emscripten_3_1_58_wasm32.whl",
+                pyodide_sha256="abc",
+            ),
+            "markupsafe": PurePythonPackageEntry(version="2.1.5", source="explicit", in_pyodide_cdn=False),
+            "click": PurePythonPackageEntry(version="8.1.7", source="explicit", in_pyodide_cdn=False),
         },
     )
 
 
 class TestExportRequirements:
-    def test_bundled_and_non_wasm(self, tmp_path):
+    def test_all_packages(self, tmp_path):
         lockfile = _make_lockfile()
         path = tmp_path / "requirements.txt"
         export_requirements(lockfile, path)
@@ -163,7 +167,7 @@ class TestExportRequirements:
         assert "markupsafe==2.1.5" in content
         assert "click==8.1.7" in content
         assert "jinja2==3.1.6" in content
-        assert "numpy" not in content
+        assert "numpy==2.2.5" in content
 
     def test_sorted_alphabetically(self, tmp_path):
         lockfile = _make_lockfile()
@@ -263,8 +267,7 @@ class TestSyncFromRequirementsTxt:
         req_path = tmp_path / "requirements.txt"
         req_path.write_text("numpy==2.2.5\n", encoding="utf-8")
         lines = sync_from_requirements_txt(lockfile, req_path)
-        wasm_lines = [line for line in lines if "WASM" in line]
-        assert len(wasm_lines) == 1
+        assert "✓ numpy: 2.2.5 (matches)" in lines
 
     def test_no_requirements_txt(self, tmp_path):
         lockfile = _make_lockfile()

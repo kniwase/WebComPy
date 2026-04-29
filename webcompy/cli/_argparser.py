@@ -32,6 +32,20 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         type=str,
         help="import path for app instance (e.g., my_app.bootstrap:app)",
     )
+    serve_all_deps_flags = parser_start.add_mutually_exclusive_group()
+    serve_all_deps_flags.add_argument(
+        "--serve-all-deps",
+        action="store_true",
+        default=None,
+        dest="serve_all_deps",
+        help="bundle all pure-Python deps into app wheel (default)",
+    )
+    serve_all_deps_flags.add_argument(
+        "--no-serve-all-deps",
+        action="store_false",
+        dest="serve_all_deps",
+        help="load CDN-available pure-Python deps from Pyodide CDN",
+    )
     parser_start.set_defaults(__command_getter__=_command(subcommand_name))
 
     # generate
@@ -49,6 +63,20 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         "--app",
         type=str,
         help="import path for app instance (e.g., my_app.bootstrap:app)",
+    )
+    serve_all_deps_flags = parser_generate.add_mutually_exclusive_group()
+    serve_all_deps_flags.add_argument(
+        "--serve-all-deps",
+        action="store_true",
+        default=None,
+        dest="serve_all_deps",
+        help="bundle all pure-Python deps into app wheel (default)",
+    )
+    serve_all_deps_flags.add_argument(
+        "--no-serve-all-deps",
+        action="store_false",
+        dest="serve_all_deps",
+        help="load CDN-available pure-Python deps from Pyodide CDN",
     )
     parser_generate.set_defaults(__command_getter__=_command(subcommand_name))
 
