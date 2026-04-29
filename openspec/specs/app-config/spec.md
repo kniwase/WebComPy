@@ -157,7 +157,7 @@ When `serve_all_deps=True`, pure-Python packages available in the Pyodide CDN SH
 - **AND** `httpx` SHALL appear in `py-config.packages` as a plain package name
 
 ### Requirement: Only WASM packages shall be loaded from the Pyodide CDN by name; pure-Python CDN package handling depends on serve_all_deps
-Only WASM packages are always loaded from the Pyodide CDN by name via `py-config.packages`. Pure-Python packages available in the Pyodide CDN are either bundled (when `serve_all_deps=True`) or loaded from the CDN by name (when `serve_all_deps=False`).
+Only WASM packages SHALL always be loaded from the Pyodide CDN by name via `py-config.packages`. Pure-Python packages available in the Pyodide CDN SHALL be either bundled (when `serve_all_deps=True`) or loaded from the CDN by name (when `serve_all_deps=False`).
 
 #### Scenario: WASM package (regardless of serve_all_deps)
 - **WHEN** a dependency is a WASM package in the Pyodide CDN

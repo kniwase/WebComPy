@@ -45,7 +45,18 @@ Dependency classification SHALL consult the Pyodide lock file to determine if a 
 - `pyodide_sha256: str | None` — the SHA256 hash from the Pyodide lock (when `in_pyodide_cdn=True`)
 - `pkg_dir: pathlib.Path | None` — the local package directory path (when installed locally)
 
-The previous `source` values `"pyodide_cdn"` and `"fallback_cdn"` are removed. The previous `is_bundled` and `is_cdn_package` properties are removed.
+The previous `source` values `"pyodide_cdn"` and `"fallback_cdn"` SHALL NOT be used. The previous `is_bundled` and `is_cdn_package` properties SHALL NOT be present.
+
+#### Scenario: Explicit dependency with CDN availability
+- **WHEN** a developer lists `httpx` in `AppConfig.dependencies`
+- **AND** `httpx` is available in the Pyodide CDN as a pure-Python package
+- **THEN** `ClassifiedDependency` SHALL have `source="explicit"`, `in_pyodide_cdn=True`, `pyodide_file_name` and `pyodide_sha256` populated
+- **AND** `is_bundled` and `is_cdn_package` SHALL NOT be present
+
+#### Scenario: Transitive local-only dependency
+- **WHEN** `flask` is auto-discovered as a transitive dependency
+- **AND** `flask` is not available in the Pyodide CDN
+- **THEN** `ClassifiedDependency` SHALL have `source="transitive"`, `in_pyodide_cdn=False`, `pyodide_file_name=None`, `pyodide_sha256=None`
 
 ### Requirement: Transitive dependencies shall be resolved via Pyodide lock with local metadata fallback
 Transitive dependencies SHALL be resolved using the Pyodide lock `depends` field as the primary source and local `importlib.metadata` as a best-effort fallback for packages not in the lock. This enables more complete dependency discovery when `serve_all_deps=True`.
