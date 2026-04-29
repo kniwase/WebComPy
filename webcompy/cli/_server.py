@@ -106,6 +106,9 @@ def create_asgi_app(
                 extracted = extract_wheel(wheel_path, extract_dest)
                 cdn_extracted_deps.extend(extracted)
 
+    if cdn_temp_dir_obj is not None:
+        cdn_temp_dir_obj.__exit__(None, None, None)
+
     all_bundled_deps = bundled_deps + cdn_extracted_deps
 
     app_version = generate_app_version(app.config.version)

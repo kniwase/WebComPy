@@ -98,6 +98,7 @@ class TestClassifyDependencies:
                 "numpy": {
                     "version": "2.2.5",
                     "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
+                    "package_type": "shared_library",
                     "depends": [],
                     "sha256": "abc123",
                 },
@@ -121,6 +122,7 @@ class TestClassifyDependencies:
                     "file_name": "httpx-0.28.1-py3-none-any.whl",
                     "depends": [],
                     "sha256": "def456",
+                    "package_type": "package",
                 },
             }
         }
@@ -156,6 +158,7 @@ class TestClassifyDependencies:
                 "numpy": {
                     "version": "2.2.5",
                     "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
+                    "package_type": "shared_library",
                     "depends": ["packaging"],
                     "sha256": "abc123",
                 },
@@ -174,3 +177,53 @@ class TestClassifyDependencies:
         assert packaging_dep.is_pure_python is True
         assert packaging_dep.in_pyodide_cdn is True
         assert packaging_dep.pyodide_file_name == "packaging-24.2-py3-none-any.whl"
+
+    def test_wasm_detection_with_package_type_shared_library(self):
+        lock = {
+            "packages": {
+                "numpy": {
+                    "version": "2.2.5",
+                    "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
+                    "package_type": "shared_library",
+                    "depends": [],
+                    "sha256": "abc123",
+                },
+            }
+        }
+        classified, errors, _warnings = classify_dependencies(["numpy"], lock)
+        assert len(errors) == 0
+        numpy_dep = next(d for d in classified if d.name == "numpy")
+        assert numpy_dep.is_wasm is True
+
+    def test_wasm_detection_without_package_type_falls_back_to_filename(self):
+        lock = {
+            "packages": {
+                "numpy": {
+                    "version": "2.2.5",
+                    "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
+                    "depends": [],
+                    "sha256": "abc123",
+                },
+            }
+        }
+        classified, errors, _warnings = classify_dependencies(["numpy"], lock)
+        assert len(errors) == 0
+        numpy_dep = next(d for d in classified if d.name == "numpy")
+        assert numpy_dep.is_wasm is True
+
+    def test_cpython_module_detected_as_wasm(self):
+        lock = {
+            "packages": {
+                "ssl": {
+                    "version": "1.0",
+                    "file_name": "ssl-1.0-cp313-cp313-pyodide_2025_0_wasm32.whl",
+                    "package_type": "cpython_module",
+                    "depends": [],
+                    "sha256": "abc123",
+                },
+            }
+        }
+        classified, errors, _warnings = classify_dependencies(["ssl"], lock)
+        assert len(errors) == 0
+        ssl_dep = next(d for d in classified if d.name == "ssl")
+        assert ssl_dep.is_wasm is True

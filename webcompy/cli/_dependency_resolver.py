@@ -90,6 +90,9 @@ def _is_wasm_in_pyodide_lock(pkg_name: str, pyodide_lock: dict) -> bool:
     pkg_info = packages.get(pkg_name)
     if pkg_info is None:
         return False
+    package_type = pkg_info.get("package_type")
+    if package_type is not None:
+        return package_type in ("shared_library", "cpython_module")
     file_name = pkg_info.get("file_name", "")
     return "pyodide" in file_name or "wasm32" in file_name
 
