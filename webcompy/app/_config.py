@@ -14,6 +14,7 @@ class AppConfig:
     version: str | None = None
     profile: bool = False
     hydrate: bool = True
+    serve_all_deps: bool = True
 
     def __post_init__(self):
         stripped = self.base_url.strip("/")

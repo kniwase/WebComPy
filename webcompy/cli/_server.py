@@ -1,6 +1,7 @@
 import asyncio
 import mimetypes
 import pathlib
+import tempfile
 from functools import partial
 from operator import truth
 from re import compile as re_compile
@@ -24,11 +25,13 @@ from webcompy.cli._html import PYSCRIPT_VERSION, generate_html
 from webcompy.cli._lockfile import (
     LOCKFILE_NAME,
     get_bundled_deps,
-    get_pyodide_package_names,
+    get_cdn_pure_python_package_names,
+    get_wasm_package_names,
     resolve_lockfile,
     validate_local_environment,
 )
 from webcompy.cli._lockfile_sync import resolve_dependencies
+from webcompy.cli._pyodide_downloader import PyodideDownloadError, download_pyodide_wheel, extract_wheel
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     discover_app,
@@ -60,7 +63,7 @@ def create_asgi_app(
         print(f"Error: {err}", flush=True)
 
     if lockfile is not None:
-        env_errors, env_warnings = validate_local_environment(lockfile)
+        env_errors, env_warnings = validate_local_environment(lockfile, serve_all_deps=app.config.serve_all_deps)
         for warning in env_warnings:
             print(f"Warning: {warning}", flush=True)
         for err in env_errors:
@@ -73,8 +76,40 @@ def create_asgi_app(
         print("Build failed due to lock file errors. Fix the above issues and try again.", file=sys.stderr)
         sys.exit(1)
 
-    bundled_deps = get_bundled_deps(lockfile)
-    pyodide_package_names = get_pyodide_package_names(lockfile)
+    bundled_deps = get_bundled_deps(lockfile, serve_all_deps=app.config.serve_all_deps)
+    wasm_package_names = get_wasm_package_names(lockfile)
+
+    cdn_pure_python_names: list[str] = []
+    cdn_extracted_deps: list[tuple[str, pathlib.Path]] = []
+    cdn_temp_dir_obj = None
+    if not app.config.serve_all_deps:
+        cdn_pure_python_names = get_cdn_pure_python_package_names(lockfile)
+    elif lockfile is not None:
+        for name, entry in lockfile.pure_python_packages.items():
+            if entry.in_pyodide_cdn and entry.pyodide_file_name and entry.pyodide_sha256:
+                try:
+                    wheel_path = download_pyodide_wheel(
+                        entry.pyodide_file_name,
+                        lockfile.pyodide_version,
+                        entry.pyodide_sha256,
+                    )
+                except PyodideDownloadError as e:
+                    import sys
+
+                    print(f"Error: {e}", file=sys.stderr)
+                    sys.exit(1)
+                if cdn_temp_dir_obj is None:
+                    cdn_temp_dir_obj = tempfile.TemporaryDirectory()
+                    cdn_temp_dir_obj.__enter__()
+                extract_dest = pathlib.Path(cdn_temp_dir_obj.name) / name
+                extract_dest.mkdir(parents=True, exist_ok=True)
+                extracted = extract_wheel(wheel_path, extract_dest)
+                cdn_extracted_deps.extend(extracted)
+
+    if cdn_temp_dir_obj is not None:
+        cdn_temp_dir_obj.__exit__(None, None, None)
+
+    all_bundled_deps = bundled_deps + cdn_extracted_deps
 
     app_version = generate_app_version(app.config.version)
 
@@ -86,7 +121,7 @@ def create_asgi_app(
             app.config.app_package_path,
             app_version,
             app.config.assets,
-            bundled_deps=bundled_deps or None,
+            bundled_deps=all_bundled_deps or None,
         )
         wheel_filename = wheel_path.name
         app_package_files: dict[str, tuple[bytes, str]] = {
@@ -134,7 +169,7 @@ def create_asgi_app(
         True,
         app_version,
         wheel_filename,
-        pyodide_package_names=pyodide_package_names,
+        pyodide_package_names=wasm_package_names + cdn_pure_python_names,
     )
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + app.config.base_url.strip("/"))).sub,
@@ -202,6 +237,9 @@ def run_server(app: WebComPyApp | None = None):
 
     if args.get("dev"):
         server_config.dev = True
+    serve_all_deps = args.get("serve_all_deps")
+    if serve_all_deps is not None:
+        app.config.serve_all_deps = serve_all_deps
     port = args.get("port") or server_config.port
     asgi = create_asgi_app(app, server_config)
     uvicorn.run(asgi, host="0.0.0.0", port=port, reload=server_config.dev)

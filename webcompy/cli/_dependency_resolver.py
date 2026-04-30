@@ -11,18 +11,13 @@ from typing import Literal
 class ClassifiedDependency:
     name: str
     version: str
-    source: Literal["pyodide_cdn", "explicit", "transitive"]
+    source: Literal["explicit", "transitive"]
     is_pure_python: bool
     is_wasm: bool
-    pkg_dir: pathlib.Path | None
-
-    @property
-    def is_bundled(self) -> bool:
-        return self.is_pure_python and self.source not in ("pyodide_cdn",)
-
-    @property
-    def is_cdn_package(self) -> bool:
-        return self.source == "pyodide_cdn"
+    in_pyodide_cdn: bool
+    pyodide_file_name: str | None = None
+    pyodide_sha256: str | None = None
+    pkg_dir: pathlib.Path | None = None
 
 
 def _is_pure_python_package(pkg_dir: pathlib.Path) -> bool:
@@ -95,8 +90,48 @@ def _is_wasm_in_pyodide_lock(pkg_name: str, pyodide_lock: dict) -> bool:
     pkg_info = packages.get(pkg_name)
     if pkg_info is None:
         return False
+    package_type = pkg_info.get("package_type")
+    if package_type is not None:
+        return package_type in ("shared_library", "cpython_module")
     file_name = pkg_info.get("file_name", "")
     return "pyodide" in file_name or "wasm32" in file_name
+
+
+def _get_pyodide_sha256(pkg_name: str, pyodide_lock: dict) -> str | None:
+    packages = pyodide_lock.get("packages", {})
+    pkg_info = packages.get(pkg_name)
+    if pkg_info is None:
+        return None
+    return pkg_info.get("sha256")
+
+
+def _resolve_transitive_deps_local(package_name: str) -> set[str]:
+    try:
+        reqs = importlib.metadata.requires(package_name)
+    except importlib.metadata.PackageNotFoundError:
+        try:
+            reqs = importlib.metadata.requires(package_name.replace("-", "_"))
+        except importlib.metadata.PackageNotFoundError:
+            return set()
+    if reqs is None:
+        return set()
+    result: set[str] = set()
+    for req_str in reqs:
+        dep_part = req_str.split(";")[0].strip()
+        marker_part = req_str.split(";")[1].strip() if ";" in req_str else ""
+        if marker_part:
+            try:
+                from packaging.markers import Marker
+
+                if not Marker(marker_part).evaluate():
+                    continue
+            except Exception:
+                continue
+        dep_name = dep_part.split(">")[0].split("<")[0].split("=")[0].split("!")[0].split("~")[0].strip()
+        dep_name = dep_name.split("[")[0].strip()
+        if dep_name and dep_name[0].isalpha():
+            result.add(dep_name)
+    return result
 
 
 def classify_dependencies(
@@ -116,29 +151,35 @@ def classify_dependencies(
         if pkg_info is not None:
             is_wasm = _is_wasm_in_pyodide_lock(dep_name, pyodide_lock)
             version = pkg_info.get("version", "0.0.0")
+            file_name = pkg_info.get("file_name", "")
+            sha256 = _get_pyodide_sha256(dep_name, pyodide_lock)
             if is_wasm:
                 classified_dep = ClassifiedDependency(
                     name=dep_name,
                     version=version,
-                    source="pyodide_cdn",
+                    source="explicit",
                     is_pure_python=False,
                     is_wasm=True,
+                    in_pyodide_cdn=True,
+                    pyodide_file_name=file_name,
+                    pyodide_sha256=sha256,
                     pkg_dir=None,
                 )
-                classified.append(classified_dep)
-                seen[norm_name] = classified_dep
             else:
                 pkg_dir = _find_package_dir(dep_name)
                 classified_dep = ClassifiedDependency(
                     name=dep_name,
                     version=version,
-                    source="pyodide_cdn",
+                    source="explicit",
                     is_pure_python=True,
                     is_wasm=False,
+                    in_pyodide_cdn=True,
+                    pyodide_file_name=file_name,
+                    pyodide_sha256=sha256,
                     pkg_dir=pkg_dir,
                 )
-                classified.append(classified_dep)
-                seen[norm_name] = classified_dep
+            classified.append(classified_dep)
+            seen[norm_name] = classified_dep
         else:
             pkg_dir = _find_package_dir(dep_name)
             if pkg_dir is None:
@@ -160,12 +201,15 @@ def classify_dependencies(
                 source="explicit",
                 is_pure_python=True,
                 is_wasm=False,
+                in_pyodide_cdn=False,
+                pyodide_file_name=None,
+                pyodide_sha256=None,
                 pkg_dir=pkg_dir,
             )
             classified.append(classified_dep)
             seen[norm_name] = classified_dep
 
-    _resolve_all_transitives(classified, seen, pyodide_lock, errors)
+    _resolve_all_transitives(classified, seen, pyodide_lock, errors, warnings)
 
     return classified, errors, warnings
 
@@ -175,6 +219,7 @@ def _resolve_all_transitives(
     seen: dict[str, ClassifiedDependency],
     pyodide_lock: dict,
     errors: list[str],
+    warnings: list[str],
 ) -> None:
     all_deps_to_process = list(classified)
     visited_for_transitive: set[str] = {d.name.replace("-", "_") for d in classified}
@@ -185,6 +230,12 @@ def _resolve_all_transitives(
 
         transitive_names = list(_resolve_transitive_deps_via_pyodide_lock(dep_name, pyodide_lock))
 
+        if not dep.in_pyodide_cdn and dep.pkg_dir is not None:
+            local_transitives = _resolve_transitive_deps_local(dep_name)
+            for lt in local_transitives:
+                if lt not in transitive_names:
+                    transitive_names.append(lt)
+
         for trans_name in transitive_names:
             trans_norm = trans_name.replace("-", "_")
             if trans_norm in seen:
@@ -194,30 +245,59 @@ def _resolve_all_transitives(
             visited_for_transitive.add(trans_norm)
 
             pkg_info = pyodide_lock.get("packages", {}).get(trans_name)
-            if pkg_info is None:
-                continue
-            is_wasm = _is_wasm_in_pyodide_lock(trans_name, pyodide_lock)
-            version = pkg_info.get("version", "0.0.0")
-            if is_wasm:
-                classified_dep = ClassifiedDependency(
-                    name=trans_name,
-                    version=version,
-                    source="pyodide_cdn",
-                    is_pure_python=False,
-                    is_wasm=True,
-                    pkg_dir=None,
-                )
+            if pkg_info is not None:
+                is_wasm = _is_wasm_in_pyodide_lock(trans_name, pyodide_lock)
+                version = pkg_info.get("version", "0.0.0")
+                file_name = pkg_info.get("file_name", "")
+                sha256 = _get_pyodide_sha256(trans_name, pyodide_lock)
+                if is_wasm:
+                    classified_dep = ClassifiedDependency(
+                        name=trans_name,
+                        version=version,
+                        source="transitive",
+                        is_pure_python=False,
+                        is_wasm=True,
+                        in_pyodide_cdn=True,
+                        pyodide_file_name=file_name,
+                        pyodide_sha256=sha256,
+                        pkg_dir=None,
+                    )
+                else:
+                    pkg_dir = _find_package_dir(trans_name)
+                    classified_dep = ClassifiedDependency(
+                        name=trans_name,
+                        version=version,
+                        source="transitive",
+                        is_pure_python=True,
+                        is_wasm=False,
+                        in_pyodide_cdn=True,
+                        pyodide_file_name=file_name,
+                        pyodide_sha256=sha256,
+                        pkg_dir=pkg_dir,
+                    )
                 classified.append(classified_dep)
                 seen[trans_norm] = classified_dep
                 all_deps_to_process.append(classified_dep)
             else:
                 pkg_dir = _find_package_dir(trans_name)
+                if pkg_dir is None:
+                    warnings.append(
+                        f"Transitive dependency '{trans_name}' not found locally "
+                        f"and not in Pyodide CDN. Consider adding it to AppConfig.dependencies."
+                    )
+                    continue
+                if not _is_pure_python_package(pkg_dir):
+                    continue
+                version = _get_package_version(trans_name) or "0.0.0"
                 classified_dep = ClassifiedDependency(
                     name=trans_name,
                     version=version,
-                    source="pyodide_cdn",
+                    source="transitive",
                     is_pure_python=True,
                     is_wasm=False,
+                    in_pyodide_cdn=False,
+                    pyodide_file_name=None,
+                    pyodide_sha256=None,
                     pkg_dir=pkg_dir,
                 )
                 classified.append(classified_dep)

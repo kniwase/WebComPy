@@ -26,21 +26,21 @@ class TestBundledDepsLockfile:
         lockfile_path = app_dir / LOCKFILE_NAME
         lockfile = load_lockfile(lockfile_path)
         assert lockfile is not None
-        assert "aiofiles" in lockfile.bundled_packages, (
-            f"aiofiles not in bundled_packages: {list(lockfile.bundled_packages.keys())}"
+        assert "aiofiles" in lockfile.pure_python_packages, (
+            f"aiofiles not in pure_python_packages: {list(lockfile.pure_python_packages.keys())}"
         )
-        assert lockfile.bundled_packages["aiofiles"].source == "explicit"
+        assert lockfile.pure_python_packages["aiofiles"].source == "explicit"
 
     def test_lockfile_has_correct_schema(self, static_site):
         _, _, app_name = static_site
         app_dir = E2E_DIR / app_name
         lockfile_path = app_dir / LOCKFILE_NAME
         data = json.loads(lockfile_path.read_text(encoding="utf-8"))
-        assert data["version"] == 1
+        assert data["version"] == 2
         assert "pyodide_version" in data
         assert "pyscript_version" in data
-        assert "pyodide_packages" in data
-        assert "bundled_packages" in data
+        assert "wasm_packages" in data
+        assert "pure_python_packages" in data
         assert "standalone_assets" in data
 
 

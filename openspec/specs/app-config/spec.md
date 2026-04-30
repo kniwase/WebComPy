@@ -11,7 +11,7 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 
 #### Scenario: Creating a minimal application configuration
 - **WHEN** a developer creates `AppConfig()` without explicit config
-- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=None`, `assets=None`, `app_package="."`, `profile=False`, `hydrate=True`, `version=None`)
+- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=None`, `assets=None`, `app_package="."`, `profile=False`, `hydrate=True`, `version=None`, `serve_all_deps=True`)
 - **AND** the app SHALL function correctly with these defaults
 
 #### Scenario: Configuring profiling and hydration
@@ -44,6 +44,28 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **WHEN** a developer creates `WebComPyApp(root_component=Root, config=AppConfig(base_url="/app/"))`
 - **THEN** the app SHALL use the provided configuration
 - **AND** the router SHALL use `base_url="/app/"` for URL handling
+
+### Requirement: AppConfig shall include a serve_all_deps field for controlling dependency delivery
+`AppConfig` SHALL include a `serve_all_deps: bool = True` field. When `True` (default), all pure-Python packages that the WebComPy server can provide are served from the same origin — either bundled from local installation or downloaded from the Pyodide CDN and then bundled. When `False`, pure-Python packages available in the Pyodide CDN are loaded from the CDN by name via `py-config.packages`, and only packages not available from the CDN are bundled.
+
+#### Scenario: Default serve_all_deps behavior
+- **WHEN** a developer creates `AppConfig()` without `serve_all_deps`
+- **THEN** `serve_all_deps` SHALL be `True`
+- **AND** all pure-Python packages SHALL be bundled into the app wheel
+- **AND** only WASM package names SHALL appear in `py-config.packages`
+
+#### Scenario: Explicit serve_all_deps=True
+- **WHEN** a developer creates `AppConfig(serve_all_deps=True)`
+- **THEN** pure-Python packages in the Pyodide CDN SHALL be downloaded at build time and bundled into the app wheel
+- **AND** pure-Python packages NOT in the Pyodide CDN SHALL be bundled from local installation
+- **AND** only WASM package names SHALL appear in `py-config.packages`
+
+#### Scenario: Explicit serve_all_deps=False
+- **WHEN** a developer creates `AppConfig(serve_all_deps=False)`
+- **THEN** pure-Python packages in the Pyodide CDN SHALL NOT be bundled
+- **AND** their package names SHALL appear in `py-config.packages` for CDN loading
+- **AND** pure-Python packages NOT in the Pyodide CDN SHALL be bundled from local installation
+- **AND** WASM package names SHALL appear in `py-config.packages`
 
 ### Requirement: AppConfig base_url shall normalize input
 `AppConfig.base_url` SHALL accept strings with or without leading/trailing slashes and normalize them to the form `/path/` (or `/` for root).
@@ -120,18 +142,40 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **WHEN** `AppConfig.dependencies_from="browser"` differs from `LockfileSyncConfig.sync_group`
 - **THEN** a warning SHALL be emitted indicating the mismatch and potential inconsistency
 
-### Requirement: Only WASM packages shall be loaded from the Pyodide CDN; pure-Python CDN packages are not bundled
-Pure-Python packages available in the Pyodide CDN SHALL NOT be bundled into the app wheel. They are already available from the Pyodide CDN and will be loaded by the browser from there. Only WASM packages (which cannot be bundled as pure Python) SHALL appear in `py-config.packages` for Pyodide CDN loading. There is no configuration option to change this behavior.
+### Requirement: Pure-Python packages in the Pyodide CDN shall be bundled when serve_all_deps is True
+When `serve_all_deps=True`, pure-Python packages available in the Pyodide CDN SHALL be bundled into the app wheel. This replaces the previous behavior where they were neither bundled nor loaded from the CDN, making them unavailable in the browser.
 
-#### Scenario: Pure-Python package available in Pyodide CDN
-- **WHEN** a dependency (e.g., `httpx`) is a pure-Python package available in the Pyodide CDN
-- **THEN** it SHALL NOT be bundled into the app wheel
-- **AND** it SHALL NOT appear in `py-config.packages`
+#### Scenario: Pure-Python CDN package with serve_all_deps=True
+- **WHEN** `AppConfig(dependencies=["httpx"], serve_all_deps=True)` and `httpx` is a pure-Python package in the Pyodide CDN
+- **THEN** `httpx` SHALL be downloaded from the Pyodide CDN at build time
+- **AND** `httpx` SHALL be bundled into the app wheel
+- **AND** `httpx` SHALL NOT appear in `py-config.packages`
 
-#### Scenario: WASM-only dependency
-- **WHEN** a dependency (e.g., `numpy`) is a WASM package in Pyodide
-- **THEN** the dependency SHALL be loaded from the Pyodide CDN because it cannot be bundled as pure Python
-- **AND** it SHALL appear in `py-config.packages` as a plain package name
+#### Scenario: Pure-Python CDN package with serve_all_deps=False
+- **WHEN** `AppConfig(dependencies=["httpx"], serve_all_deps=False)` and `httpx` is a pure-Python package in the Pyodide CDN
+- **THEN** `httpx` SHALL NOT be bundled into the app wheel
+- **AND** `httpx` SHALL appear in `py-config.packages` as a plain package name
+
+### Requirement: Only WASM packages shall be loaded from the Pyodide CDN by name; pure-Python CDN package handling depends on serve_all_deps
+Only WASM packages SHALL always be loaded from the Pyodide CDN by name via `py-config.packages`. Pure-Python packages available in the Pyodide CDN SHALL be either bundled (when `serve_all_deps=True`) or loaded from the CDN by name (when `serve_all_deps=False`).
+
+#### Scenario: WASM package (regardless of serve_all_deps)
+- **WHEN** a dependency is a WASM package in the Pyodide CDN
+- **THEN** it SHALL always be loaded from the CDN by name via `py-config.packages`
+- **AND** it SHALL NOT be bundled
+
+### Requirement: CLI flags shall override serve_all_deps
+The `start` and `generate` CLI subcommands SHALL accept `--serve-all-deps` and `--no-serve-all-deps` flags that override `AppConfig.serve_all_deps`.
+
+#### Scenario: Overriding with --no-serve-all-deps
+- **WHEN** a developer runs `python -m webcompy start --dev --no-serve-all-deps`
+- **THEN** `serve_all_deps` SHALL be `False` for the session
+- **AND** CDN-available pure-Python packages SHALL be loaded from CDN
+
+#### Scenario: Overriding with --serve-all-deps
+- **WHEN** a developer runs `python -m webcompy generate --serve-all-deps`
+- **THEN** `serve_all_deps` SHALL be `True` for the session
+- **AND** CDN-available pure-Python packages SHALL be downloaded and bundled
 
 ### Requirement: ServerConfig and GenerateConfig shall be internal
 `ServerConfig` and `GenerateConfig` SHALL be internal dataclasses used by CLI functions. They SHALL NOT be exported in `webcompy.__all__` or `webcompy.app.__all__`. Developers define them in `webcompy_server_config.py`, which the CLI reads from the app package or the project root.

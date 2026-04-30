@@ -25,14 +25,20 @@ The development server SHALL be startable via `python -m webcompy start --dev` o
 - **AND** the `--port` flag SHALL override `ServerConfig.port`
 
 ### Requirement: The dev server shall serve a single bundled wheel
-The dev server SHALL build a single Python wheel containing the webcompy framework (excluding `webcompy/cli/`), application code, and all bundled pure-Python dependencies (i.e., packages not available from the Pyodide CDN). Pure-Python packages available in the Pyodide CDN SHALL NOT be bundled — they are served from the CDN by the browser. The wheel SHALL be served at a stable `/_webcompy-app-package/` endpoint. The app wheel in dev mode SHALL have `Cache-Control: no-cache`. Only WASM packages SHALL be loaded from the Pyodide CDN by name via `py-config.packages`.
+The dev server SHALL build a single Python wheel containing the webcompy framework (excluding `webcompy/cli/`), application code, and appropriate pure-Python dependencies based on `serve_all_deps`. When `serve_all_deps=True`, ALL pure-Python dependencies are bundled. When `serve_all_deps=False`, only pure-Python dependencies NOT available from the Pyodide CDN are bundled; CDN-available ones are loaded by name via `py-config.packages`. The wheel SHALL be served at a stable `/_webcompy-app-package/` endpoint. The app wheel in dev mode SHALL have `Cache-Control: no-cache`.
 
-#### Scenario: Starting the dev server
-- **WHEN** a developer runs `python -m webcompy start --dev`
-- **THEN** the server SHALL build a single wheel containing webcompy (excl. cli), app code, and bundled pure-Python dependencies (those not in Pyodide CDN)
-- **AND** serve it at `/_webcompy-app-package/{filename}` where `{filename}` matches the wheel URL in the generated HTML
-- **AND** only WASM Pyodide CDN packages SHALL appear in `py-config.packages`
+#### Scenario: Starting the dev server with serve_all_deps=True
+- **WHEN** a developer runs `python -m webcompy start --dev` with `serve_all_deps=True` (default)
+- **THEN** the server SHALL build a single wheel containing webcompy (excl. cli), app code, and ALL pure-Python dependencies
+- **AND** `py-config.packages` SHALL contain only the app wheel URL and WASM package names
+- **AND** CDN-downloaded pure-Python packages SHALL be included in the wheel
+- **AND** the wheel SHALL be served at `/_webcompy-app-package/{filename}` where `{filename}` matches the wheel URL in the generated HTML
 - **AND** the browser SHALL be able to import both `webcompy` and the application package
+
+#### Scenario: Starting the dev server with serve_all_deps=False
+- **WHEN** a developer runs `python -m webcompy start --dev --no-serve-all-deps`
+- **THEN** the server SHALL build a single wheel containing webcompy (excl. cli), app code, and locally-bundled dependencies only
+- **AND** `py-config.packages` SHALL contain the app wheel URL, WASM package names, AND CDN pure-Python package names
 
 #### Scenario: Dev server with assets
 - **WHEN** a developer configures `assets={"logo": "images/logo.png"}` in `AppConfig`
@@ -169,25 +175,32 @@ The `webcompy.assets` module SHALL provide a `load_asset(key: str) -> bytes` fun
 - **WHEN** `load_asset` is called but the `app._assets_registry` module cannot be imported
 - **THEN** `AssetNotFoundError` SHALL be raised
 
-### Requirement: Dependencies shall be classified via lock file resolution
-Dependencies listed in `AppConfig.dependencies` SHALL be classified using Pyodide lock data and local package inspection. WASM packages available in the Pyodide CDN SHALL be loaded from the CDN by name via `py-config.packages`. Pure-Python packages available in the Pyodide CDN SHALL NOT be bundled and SHALL NOT appear in `py-config.packages`. Pure-Python packages not in the Pyodide CDN SHALL be bundled into the app wheel. C-extension packages not in the Pyodide CDN SHALL cause an error.
+### Requirement: Dependency classification behavior SHALL depend on serve_all_deps
+The behavior of pure-Python packages available in the Pyodide CDN SHALL depend on `AppConfig.serve_all_deps`. When `serve_all_deps=True`, CDN-available pure-Python packages SHALL be downloaded and bundled into the app wheel (replacing the prior behavior where they were neither bundled nor referenced in `py-config.packages`). When `serve_all_deps=False`, CDN-available pure-Python packages SHALL be loaded from the CDN by name via `py-config.packages`.
+
+Dependencies listed in `AppConfig.dependencies` SHALL be classified using Pyodide lock data and local package inspection. WASM packages available in the Pyodide CDN SHALL be loaded from the CDN by name via `py-config.packages`. Pure-Python packages not in the Pyodide CDN SHALL be bundled into the app wheel. C-extension packages not in the Pyodide CDN SHALL cause an error.
 
 When `AppConfig.dependencies` is `None`, the CLI SHALL auto-populate it from `pyproject.toml` before lock file generation. The resolution uses `AppConfig.dependencies_from` to determine which section of `pyproject.toml` to read. Version specifiers in `pyproject.toml` entries (e.g., `"flask>=3.0"`, `"numpy==2.2.5"`) SHALL be stripped before classification — only package names are used in `AppConfig.dependencies`; version pinning is handled by the lock file.
 
-#### Scenario: Bundling pure-Python dependencies not in Pyodide CDN
-- **WHEN** `AppConfig.dependencies=["flask", "click"]` and both are pure-Python and not in the Pyodide CDN
-- **THEN** `flask` and `click` SHALL be bundled into the app wheel
-- **AND** transitive dependencies of non-CDN packages are NOT auto-discovered; they MUST be explicitly listed in `AppConfig.dependencies`
+#### Scenario: serve_all_deps=True (default)
+- **WHEN** `serve_all_deps=True` and a pure-Python package is in the Pyodide CDN
+- **THEN** it SHALL be downloaded and bundled into the app wheel
+- **AND** it SHALL NOT appear in `py-config.packages`
 
-#### Scenario: Packages in Pyodide CDN (WASM)
-- **WHEN** `AppConfig.dependencies=["numpy"]` and `numpy` is a WASM package in the Pyodide CDN
-- **THEN** `numpy` SHALL appear in `py-config.packages` as a plain package name
-- **AND** `numpy` SHALL NOT be bundled into the app wheel
+#### Scenario: serve_all_deps=False
+- **WHEN** `serve_all_deps=False` and a pure-Python package is in the Pyodide CDN
+- **THEN** it SHALL be loaded from the CDN by name via `py-config.packages`
+- **AND** it SHALL NOT be bundled into the app wheel
 
-#### Scenario: Pure Python package in Pyodide CDN
-- **WHEN** `AppConfig.dependencies=["httpx"]` and `httpx` is a pure-Python package in the Pyodide CDN
-- **THEN** `httpx` SHALL NOT be bundled into the app wheel
-- **AND** `httpx` SHALL NOT appear in `py-config.packages`
+#### Scenario: Pure-Python package not in Pyodide CDN (regardless of serve_all_deps)
+- **WHEN** a pure-Python dependency is not in the Pyodide CDN
+- **THEN** it SHALL be bundled from local installation into the app wheel
+- **AND** it SHALL NOT appear in `py-config.packages`
+
+#### Scenario: WASM package (regardless of serve_all_deps)
+- **WHEN** a dependency is a WASM package in the Pyodide CDN
+- **THEN** it SHALL be loaded from the CDN by name via `py-config.packages`
+- **AND** it SHALL NOT be bundled
 
 #### Scenario: C extension not available in Pyodide
 - **WHEN** `AppConfig.dependencies=["some_c_ext"]` and `some_c_ext` is not in the Pyodide CDN and contains native extension files
@@ -206,6 +219,49 @@ When `AppConfig.dependencies` is `None`, the CLI SHALL auto-populate it from `py
 - **WHEN** `AppConfig(dependencies=["numpy"])` (explicit list, not None)
 - **THEN** no `pyproject.toml` reading SHALL occur
 - **AND** `["numpy"]` SHALL be used as-is
+
+### Requirement: The CLI shall download pure-Python packages from Pyodide CDN when serve_all_deps is True
+When `serve_all_deps=True`, the CLI SHALL download pure-Python package wheels from the Pyodide CDN, verify their SHA256 hashes against the lock file, cache them locally, extract them, and bundle them into the app wheel.
+
+#### Scenario: Downloading and bundling CDN packages
+- **WHEN** a developer runs `python -m webcompy start --dev` with `serve_all_deps=True`
+- **AND** the lock file contains pure-Python packages with `in_pyodide_cdn=True`
+- **THEN** those packages SHALL be downloaded from the Pyodide CDN
+- **AND** their SHA256 hashes SHALL be verified against the lock file
+- **AND** the wheels SHALL be extracted and bundled into the app wheel
+- **AND** downloaded wheels SHALL be cached at `~/.cache/webcompy/pyodide-packages/{pyodide_version}/`
+
+#### Scenario: Cache hit
+- **WHEN** a previously downloaded wheel exists in the cache with a matching SHA256 hash
+- **THEN** the download SHALL be skipped
+- **AND** the cached wheel SHALL be used
+
+#### Scenario: SHA256 verification failure
+- **WHEN** a downloaded wheel's SHA256 hash does not match the expected hash from the lock file
+- **THEN** the build SHALL fail with a descriptive error
+- **AND** the invalid cached file SHALL NOT be used
+
+#### Scenario: Network failure with no cache
+- **WHEN** the Pyodide CDN is unreachable and no cached wheel exists
+- **THEN** the build SHALL fail with a descriptive error indicating network failure
+
+#### Scenario: Generating static site with serve_all_deps=True
+- **WHEN** a developer runs `python -m webcompy generate` with `serve_all_deps=True`
+- **THEN** CDN packages SHALL be downloaded, verified, extracted, and bundled into the app wheel in `dist/_webcompy-app-package/`
+
+### Requirement: The CLI shall pass CDN pure-Python package names to HTML when serve_all_deps is False
+When `serve_all_deps=False`, pure-Python packages available in the Pyodide CDN SHALL be loaded from the CDN by name. Their package names SHALL appear in `py-config.packages` alongside WASM package names.
+
+#### Scenario: Starting dev server with serve_all_deps=False
+- **WHEN** a developer runs `python -m webcompy start --dev --no-serve-all-deps`
+- **AND** the lock file contains pure-Python packages with `in_pyodide_cdn=True`
+- **THEN** those package names SHALL appear in `py-config.packages`
+- **AND** those packages SHALL NOT be bundled into the app wheel
+
+#### Scenario: Generating static site with serve_all_deps=False
+- **WHEN** a developer runs `python -m webcompy generate --no-serve-all-deps`
+- **THEN** CDN pure-Python package names SHALL appear in the generated HTML `py-config.packages`
+- **AND** the app wheel SHALL NOT contain those packages
 
 ### Requirement: The `webcompy lock` command shall generate or update the lock file
 Running `webcompy lock` SHALL generate or update `webcompy-lock.json` in the app package directory. The lock file records Pyodide CDN package versions, bundled package versions and sources, and the Pyodide/PyScript versions used for classification.
