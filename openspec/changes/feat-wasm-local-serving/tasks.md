@@ -1,7 +1,7 @@
 # Tasks: WASM Local Serving — Same-Origin WASM Package Serving
 
 - [ ] **Task 1: Add `wasm_serving` to AppConfig**
-  - Add `wasm_serving: Literal["cdn", "local"] = "cdn"` to `AppConfig`.
+  - Add `wasm_serving: Literal["cdn", "local"] | None = None` to `AppConfig` (`None` sentinel enables `standalone` orchestration to distinguish unset from explicit `"cdn"`).
   - Add `--wasm-serving` CLI flag accepting `"cdn"` or `"local"` values (e.g., `--wasm-serving local`).
   - Write unit tests.
 

@@ -44,8 +44,8 @@ When `runtime_serving="cdn"`:
 - `"runtime_serving": "cdn"` is recorded (or field is omitted)
 - `"runtime_assets"` is an empty object `{}`
 
-### D7: `--runtime-serving` CLI flag
-`webcompy start --runtime-serving` and `webcompy generate --runtime-serving` set `runtime_serving="local"`, overriding `AppConfig.runtime_serving`.
+### D7: `--runtime-serving` CLI flag (value argument)
+`--runtime-serving <mode>` (where `<mode>` is `cdn` or `local`) overrides `AppConfig.runtime_serving`. Example: `webcompy start --dev --runtime-serving local` sets `runtime_serving="local"`.
 
 ## Architecture
 

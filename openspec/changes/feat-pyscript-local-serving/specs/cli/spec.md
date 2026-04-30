@@ -66,6 +66,12 @@ The PyScript configuration SHALL include `interpreter` and `lockFileURL` fields 
 - **AND** the script tag SHALL reference `/_webcompy-assets/core.js`
 - **AND** the CSS link SHALL reference `/_webcompy-assets/core.css`
 
+#### Scenario: Inspecting generated HTML with runtime_serving="cdn" and wasm_serving="local"
+- **WHEN** `AppConfig(runtime_serving="cdn", wasm_serving="local")`
+- **THEN** `py-config` SHALL NOT include `interpreter`
+- **AND** `py-config` SHALL include `lockFileURL` pointing to the CDN `pyodide-lock.json` URL
+- **AND** the script tag and CSS link SHALL reference CDN URLs
+
 #### Scenario: Inspecting generated HTML with runtime_serving="cdn" and wasm_serving="cdn"
 - **WHEN** `AppConfig(runtime_serving="cdn", wasm_serving="cdn")` (defaults)
 - **THEN** `py-config` SHALL NOT include `interpreter`

@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: AppConfig shall include a wasm_serving field for controlling WASM package delivery
-`AppConfig` SHALL include a `wasm_serving: Literal["cdn", "local"] = "cdn"` field. When `"cdn"` (default), WASM packages are loaded from the Pyodide CDN by package name. When `"local"`, WASM package wheel files are downloaded at build time and served from the same origin.
+`AppConfig` SHALL include a `wasm_serving: Literal["cdn", "local"] | None = None` field. When `None` or `"cdn"`, WASM packages are loaded from the Pyodide CDN by package name. When `"local"`, WASM package wheel files are downloaded at build time and served from the same origin. The `None` sentinel enables `standalone` mode (in `feat-standalone`) to distinguish between "unset" (overridden to `"local"`) and "explicitly set to `"cdn"`" (preserved).
 
 #### Scenario: Default CDN mode
 - **WHEN** a developer creates `AppConfig()` without `wasm_serving`

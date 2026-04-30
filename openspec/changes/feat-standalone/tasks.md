@@ -14,8 +14,8 @@
 
 - [ ] **Task 2: Implement standalone orchestration logic**
   - When `standalone=True`, compute effective config values:
-    - If `wasm_serving` is default (`"cdn"`), override to `"local"`.
-    - If `runtime_serving` is default (`"cdn"`), override to `"local"`.
+    - If `wasm_serving` is `None` (unset), override to `"local"`. If explicitly `"cdn"`, preserve it.
+    - If `runtime_serving` is `None` (unset), override to `"local"`. If explicitly `"cdn"`, preserve it.
     - `serve_all_deps` is forced to `True` (warning if explicitly `False` with `standalone=True`).
   - Pass effective config to downstream logic (WASM download, runtime download, CDN deps download).
   - Write unit tests for orchestration behavior and edge cases.
