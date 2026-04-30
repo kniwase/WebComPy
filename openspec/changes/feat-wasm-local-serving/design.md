@@ -16,9 +16,9 @@ When WASM packages are served locally as URLs in `py-config.packages`, Pyodide u
 ```python
 @dataclass
 class AppConfig:
-    wasm_serving: Literal["cdn", "local"] = "cdn"
+    wasm_serving: Literal["cdn", "local"] | None = None
 ```
-When `wasm_serving="cdn"` (default), WASM packages are loaded from the Pyodide CDN. When `wasm_serving="local"`, WASM packages are downloaded and served from the same origin.
+When `wasm_serving` is `None` (unset), it defaults to `"cdn"`. This `None` sentinel enables the `standalone` flag to distinguish between "unset (should be overridden to `local`)" and "explicitly set to `cdn` (should be preserved)". When `wasm_serving="local"`, WASM packages are downloaded and served from the same origin.
 
 ## Architecture
 

@@ -14,4 +14,4 @@ When `standalone=True` is set, `webcompy-lock.json` SHALL include a `"standalone
 
 #### Scenario: Lock file without standalone mode
 - **WHEN** a lock file is generated without standalone mode
-- **THEN** the `standalone` field SHALL be absent or `false`
+- **THEN** the `standalone` field SHALL be `false`

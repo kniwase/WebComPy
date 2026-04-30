@@ -20,3 +20,11 @@
 
 ### Requirement: ServerConfig and GenerateConfig shall NOT include runtime serving fields
 `runtime_serving` is on `AppConfig`, not `ServerConfig` or `GenerateConfig`. The runtime serving mode is a property of the application, not of the server or SSG configuration. CLI flags (`--runtime-serving`) SHALL override `AppConfig.runtime_serving`, similar to how `--serve-all-deps` overrides `AppConfig.serve_all_deps`.
+
+#### Scenario: runtime_serving is on AppConfig, not ServerConfig
+- **WHEN** a developer creates `ServerConfig()` or `GenerateConfig()`
+- **THEN** neither dataclass SHALL have a `runtime_serving` field
+
+#### Scenario: Overriding runtime_serving via CLI flag
+- **WHEN** a developer runs `python -m webcompy start --dev --runtime-serving`
+- **THEN** `AppConfig.runtime_serving` SHALL be overridden to `"local"`

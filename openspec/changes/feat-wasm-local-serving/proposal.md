@@ -39,22 +39,22 @@ Level 1: feat-dependency-bundling (implemented)
   Pure-Py ──────── Bundled (local install required)
   PyScript ─────── CDN
 
-Level 3: feat-deps-local-serving (implemented)
+Level 2: feat-deps-local-serving (implemented)
   Pure-Py CDN ──── Downloaded from Pyodide CDN → bundled into app wheel
   WASM ─────────── CDN
   PyScript ─────── CDN
 
-Level 4: feat-wasm-local-serving (this change)
+Level 3: feat-wasm-local-serving (this change)
   WASM ─────────── Same-origin serving (downloaded from Pyodide CDN)
-  Pure-Py ──────── (unchanged from Level 3)
+  Pure-Py ──────── (unchanged from Level 2)
   PyScript ─────── CDN
   lockFileURL ──── Pyodide CDN URL (for micropip dependency resolution)
 
-Level 5: feat-pyscript-local-serving
+Level 4: feat-pyscript-local-serving
   PyScript/Pyodide ─ Same-origin serving
   lockFileURL ──── Local URL (pyodide-lock.json served locally)
 
-Level 6: feat-standalone
+Level 5: feat-standalone
   Everything served from same origin → complete offline operation
 ```
 
@@ -75,7 +75,7 @@ WASM LOCAL SERVING (wasm_serving="local"):
 
 ### Implementation Sketch
 
-- `AppConfig` gains a `wasm_serving: Literal["cdn", "local"] = "cdn"` field.
+- `AppConfig` gains a `wasm_serving: Literal["cdn", "local"] | None = None` field. When `None`, it resolves to `"cdn"` (default). `None` is used as a sentinel to distinguish "not explicitly set" from "explicitly set to cdn", which is important for `standalone=True` orchestration.
 - When `wasm_serving="local"`:
   1. Download WASM wheel files from the Pyodide CDN using `file_name` and `sha256` from `pyodide-lock.json`.
   2. Place them in `dist/_webcompy-assets/packages/` (SSG) or serve from memory (dev server).

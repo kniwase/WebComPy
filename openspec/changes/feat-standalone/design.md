@@ -11,17 +11,25 @@
 The `serve_all_deps=True` is **forced** because in a standalone build, CDN access is unavailable — pure-Python packages cannot be loaded from the Pyodide CDN by name. If `serve_all_deps=False` was explicitly set alongside `standalone=True`, a warning SHALL be emitted indicating that `standalone=True` forces `serve_all_deps=True`.
 
 ### D2: Individual local-serving configs override standalone defaults
-If `standalone=True` but an individual config is explicitly set, the explicit value takes precedence for `wasm_serving` and `runtime_serving`. However, `serve_all_deps=True` is always forced when `standalone=True` (offline operation requires all deps bundled).
+If `standalone=True` but an individual config is explicitly set (not `None`), the explicit value takes precedence for `wasm_serving` and `runtime_serving`. However, `serve_all_deps=True` is always forced when `standalone=True` (offline operation requires all deps bundled).
+
+`wasm_serving` and `runtime_serving` use `None` as a sentinel default on `AppConfig` to distinguish "not explicitly set" from "explicitly set to cdn". The CLI and `standalone` orchestration resolve `None` to an effective value:
 
 ```python
 if config.standalone:
-    if config.serve_all_deps is False:  # explicitly set by developer
+    if config.serve_all_deps is False:
         warn("standalone=True forces serve_all_deps=True")
     config.serve_all_deps = True  # forced
-    if config.wasm_serving == "cdn":  # only override if still at default
-        config.wasm_serving = "local"
-    if config.runtime_serving == "cdn":  # only override if still at default
-        config.runtime_serving = "local"
+    if config.wasm_serving is None:    # not explicitly set
+        config.wasm_serving = "local"  # standalone default
+    if config.runtime_serving is None: # not explicitly set
+        config.runtime_serving = "local"  # standalone default
+
+# After standalone resolution, resolve remaining None to "cdn"
+if config.wasm_serving is None:
+    config.wasm_serving = "cdn"
+if config.runtime_serving is None:
+    config.runtime_serving = "cdn"
 ```
 
 ### D3: Lock file records the orchestration state

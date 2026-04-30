@@ -35,26 +35,47 @@ None (new capability).
 ## Layered Architecture
 
 ```
-Level 1: feat-deps-local-serving (IMPLEMENTED)
+Level 1: feat-dependency-bundling (implemented)
   WASM ──────────── CDN (loaded by package name)
-  Pure-Py ────────── Downloaded from CDN → bundled into app wheel (serve_all_deps=True)
+  Pure-Py ────────── Bundled (local install required)
   PyScript/Pyodide ─ CDN
 
-Level 2: feat-wasm-local-serving
+Level 2: feat-deps-local-serving (implemented)
+  Pure-Py CDN ────── Downloaded from Pyodide CDN → bundled into app wheel
+  WASM ──────────── CDN
+  PyScript/Pyodide ─ CDN
+
+Level 3: feat-wasm-local-serving
   WASM ──────────── Downloaded from CDN → same-origin serving
-  Pure-Py ────────── Bundled (unchanged)
+  Pure-Py ────────── (unchanged from Level 2)
   PyScript/Pyodide ─ CDN
+  lockFileURL ────── Pyodide CDN URL
 
-Level 3: feat-pyscript-local-serving (this change)
+Level 4: feat-pyscript-local-serving (this change)
   WASM ──────────── Same-origin serving (when feat-wasm-local-serving enabled)
-  Pure-Py ────────── Bundled (unchanged)
+  Pure-Py ────────── (unchanged from Level 2)
   PyScript/Pyodide ─ Same-origin serving ★
+  lockFileURL ────── Local URL (pyodide-lock.json served locally)
   → Complete offline operation possible (with feat-wasm-local-serving)
 
-Level 4: feat-standalone
+Level 5: feat-standalone
   Everything served from same origin
   → Single config option for complete offline
 ```
+
+### Configuration
+
+```python
+@dataclass
+class AppConfig:
+    ...
+    runtime_serving: Literal["cdn", "local"] | None = None
+```
+
+`runtime_serving` uses `None` as a sentinel to distinguish "not explicitly set" from `"cdn"` (the effective default). This enables `feat-standalone` to detect whether the developer explicitly chose a value. The effective value is resolved as:
+- `None` → `"cdn"` (effective default)
+- `"cdn"` → `"cdn"` (explicitly chosen CDN)
+- `"local"` → `"local"` (explicitly chosen local)
 
 ## Design
 

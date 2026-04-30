@@ -12,5 +12,5 @@
 
 #### Scenario: Lock file with CDN WASM serving (default)
 - **WHEN** a lock file is generated with `wasm_serving="cdn"` (default)
-- **THEN** the lock file SHALL contain `"wasm_serving": "cdn"` or omit the field
+- **THEN** the lock file SHALL contain `"wasm_serving": "cdn"`
 - **AND** WASM package entries SHALL include `file_name` for reference but download verification is not required at build time

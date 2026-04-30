@@ -43,15 +43,15 @@ In runtime-local mode, `generate_html()` SHALL replace PyScript and Pyodide CDN 
 - **THEN** `py-config` SHALL NOT include `interpreter` or `lockFileURL`
 - **AND** script and CSS tags SHALL reference CDN URLs
 
-### Requirement: The CLI shall accept --runtime-serving and --no-runtime-serving flags
-The `start` and `generate` CLI subcommands SHALL accept `--runtime-serving` and `--no-runtime-serving` flags that override `AppConfig.runtime_serving`.
+### Requirement: The CLI shall accept --runtime-serving value flag
+The `start` and `generate` CLI subcommands SHALL accept `--runtime-serving <mode>` where `<mode>` is `"cdn"` or `"local"`. This overrides `AppConfig.runtime_serving`.
 
-#### Scenario: Overriding with --runtime-serving
-- **WHEN** a developer runs `python -m webcompy start --dev --runtime-serving`
+#### Scenario: Overriding with --runtime-serving local
+- **WHEN** a developer runs `python -m webcompy start --dev --runtime-serving local`
 - **THEN** `runtime_serving` SHALL be `"local"` for the session
 
-#### Scenario: Overriding with --no-runtime-serving
-- **WHEN** a developer runs `python -m webcompy generate --no-runtime-serving`
+#### Scenario: Overriding with --runtime-serving cdn
+- **WHEN** a developer runs `python -m webcompy generate --runtime-serving cdn`
 - **THEN** `runtime_serving` SHALL be `"cdn"` for the session
 
 ## MODIFIED Requirements

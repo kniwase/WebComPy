@@ -17,14 +17,18 @@
 ## MODIFIED Requirements
 
 ### Requirement: CLI flags shall override wasm_serving
-The `start` and `generate` CLI subcommands SHALL accept `--wasm-serving` (sets `wasm_serving="local"`) and `--no-wasm-serving` (sets `wasm_serving="cdn"`) flags that override `AppConfig.wasm_serving`.
+The `start` and `generate` CLI subcommands SHALL accept `--wasm-serving <mode>` (where `<mode>` is `cdn` or `local`) that overrides `AppConfig.wasm_serving`. This follows the value-argument pattern rather than the boolean toggle pattern, because `wasm_serving` has more than two meaningful values in future extensions.
 
-#### Scenario: Overriding with --wasm-serving
-- **WHEN** a developer runs `python -m webcompy start --dev --wasm-serving`
+#### Scenario: Overriding with --wasm-serving local
+- **WHEN** a developer runs `python -m webcompy start --dev --wasm-serving local`
 - **THEN** `wasm_serving` SHALL be `"local"` for the session
 - **AND** WASM packages SHALL be downloaded and served locally
 
-#### Scenario: Overriding with --no-wasm-serving
-- **WHEN** a developer runs `python -m webcompy generate --no-wasm-serving`
+#### Scenario: Overriding with --wasm-serving cdn
+- **WHEN** a developer runs `python -m webcompy generate --wasm-serving cdn`
 - **THEN** `wasm_serving` SHALL be `"cdn"` for the session
 - **AND** WASM packages SHALL be loaded from the Pyodide CDN by name
+
+#### Scenario: Default when no flag is provided
+- **WHEN** a developer runs `python -m webcompy start --dev` without `--wasm-serving`
+- **THEN** `wasm_serving` SHALL use the value from `AppConfig.wasm_serving` (default `"cdn"`)

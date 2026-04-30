@@ -31,21 +31,23 @@ None (new capability).
 ## Layered Architecture
 
 ```
-Level 1: feat-dependency-bundling (prerequisite)
-  WASM ─────── CDN
+Level 1: feat-dependency-bundling (implemented)
+  WASM ─────── CDN (loaded by package name)
   Pure-Py ─────── Bundled (local install required)
   PyScript ── CDN
 
-Level 3: feat-deps-local-serving (implemented)
-  Pure-Py ─────── Downloaded from Pyodide CDN → bundled
+Level 2: feat-deps-local-serving (implemented)
+  Pure-Py CDN ── Downloaded from Pyodide CDN → bundled into app wheel
 
-Level 4: feat-wasm-local-serving
+Level 3: feat-wasm-local-serving
   WASM ─────── Downloaded from Pyodide CDN → same-origin serving
+  lockFileURL ── Pyodide CDN URL
 
-Level 5: feat-pyscript-local-serving
+Level 4: feat-pyscript-local-serving
   PyScript/Pyodide ─ Downloaded from CDN → same-origin serving
+  lockFileURL ── Local URL
 
-Level 6: feat-standalone (this change)
+Level 5: feat-standalone (this change)
   Everything served from same origin → complete offline ★
 ```
 
@@ -58,27 +60,35 @@ Level 6: feat-standalone (this change)
 class AppConfig:
     ...
     serve_all_deps: bool = True
-    wasm_serving: Literal["cdn", "local"] = "cdn"
-    runtime_serving: Literal["cdn", "local"] = "cdn"
+    wasm_serving: Literal["cdn", "local"] | None = None
+    runtime_serving: Literal["cdn", "local"] | None = None
     standalone: bool = False
 ```
 
+`wasm_serving` and `runtime_serving` use `None` as a sentinel for "not explicitly set". At config resolution time, `None` is resolved to `"cdn"` (the default). This allows the standalone orchestration to distinguish between "still at default" (`None`) and "explicitly set to cdn" (`"cdn"`).
+
 When `standalone=True`:
 - `serve_all_deps` is forced to `True` (all pure-Python packages must be bundled).
-- `wasm_serving` defaults to `"local"` (explicit `wasm_serving="cdn"` overrides).
-- `runtime_serving` defaults to `"local"` (explicit `runtime_serving="cdn"` overrides).
+- `wasm_serving` resolves to `"local"` if still `None` (explicit `"cdn"` overrides).
+- `runtime_serving` resolves to `"local"` if still `None` (explicit `"cdn"` overrides).
 
 ### Orchestration Logic
 
 ```python
 if config.standalone:
-    if not config.serve_all_deps:
+    if config.serve_all_deps is False:
         warn("standalone=True forces serve_all_deps=True")
     config.serve_all_deps = True  # forced — offline requires all deps bundled
-    if config.wasm_serving == "cdn" and no explicit wasm_serving:
-        config.wasm_serving = "local"
-    if config.runtime_serving == "cdn" and no explicit runtime_serving:
-        config.runtime_serving = "local"
+    if config.wasm_serving is None:
+        config.wasm_serving = "local"  # standalone default
+    if config.runtime_serving is None:
+        config.runtime_serving = "local"  # standalone default
+
+# After standalone resolution, resolve remaining None defaults
+if config.wasm_serving is None:
+    config.wasm_serving = "cdn"
+if config.runtime_serving is None:
+    config.runtime_serving = "cdn"
 ```
 
 The `standalone` flag does NOT introduce new download logic. It simply sets the three existing config fields to their local-serving values. All download and serving behavior is handled by `feat-wasm-local-serving` and `feat-pyscript-local-serving`.

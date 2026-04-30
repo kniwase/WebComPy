@@ -2,7 +2,7 @@
 
 - [ ] **Task 1: Add `wasm_serving` to AppConfig**
   - Add `wasm_serving: Literal["cdn", "local"] = "cdn"` to `AppConfig`.
-  - Add `--wasm-serving` CLI flag.
+  - Add `--wasm-serving` CLI flag accepting `"cdn"` or `"local"` values (e.g., `--wasm-serving local`).
   - Write unit tests.
 
 - [ ] **Task 2: Implement WASM wheel download with caching**

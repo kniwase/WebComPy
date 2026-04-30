@@ -12,8 +12,8 @@
 
 #### Scenario: Lock file with CDN runtime serving (default)
 - **WHEN** a lock file is generated with `runtime_serving="cdn"` (default)
-- **THEN** the lock file SHALL contain `"runtime_serving": "cdn"` or omit the field
-- **AND** the `runtime_assets` section SHALL be absent or an empty object
+- **THEN** the lock file SHALL contain `"runtime_serving": "cdn"`
+- **AND** the `runtime_assets` section SHALL be an empty object `{}`
 
 ### Requirement: The lock file shall include runtime asset metadata when runtime_serving is local
 When `runtime_serving="local"`, `webcompy-lock.json` SHALL include a `runtime_assets` section recording the download URLs and SHA256 hashes of PyScript and Pyodide runtime files.

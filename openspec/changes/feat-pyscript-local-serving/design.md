@@ -3,7 +3,7 @@
 ## Design Decisions
 
 ### D1: `runtime_serving` is on AppConfig, not ServerConfig/GenerateConfig
-`runtime_serving: Literal["cdn", "local"] = "cdn"` is on `AppConfig` alongside `wasm_serving` and `serve_all_deps`. This unifies all local-serving configuration in one dataclass. `ServerConfig` and `GenerateConfig` are NOT modified by this change.
+`runtime_serving: Literal["cdn", "local"] | None = None` is on `AppConfig` alongside `wasm_serving` and `serve_all_deps`. When `None` (default), the effective value is `"cdn"`. When `standalone=True`, `None` resolves to `"local"`. Explicit `"cdn"` is preserved even when `standalone=True`. This unifies all local-serving configuration in one dataclass. `ServerConfig` and `GenerateConfig` are NOT modified by this change.
 
 ### D2: `runtime_serving="local"` downloads PyScript core + Pyodide runtime at build time
 Assets are fetched from CDN during `webcompy generate` or `webcompy start` when `runtime_serving="local"`. They are NOT part of the WebComPy package.
@@ -99,8 +99,10 @@ webcompy start --dev --runtime-serving
 @dataclass
 class AppConfig:
     ...
-    runtime_serving: Literal["cdn", "local"] = "cdn"  # NEW
+    runtime_serving: Literal["cdn", "local"] | None = None  # NEW
 ```
+
+When `runtime_serving` is `None` (default), it resolves to `"cdn"`. Using `None` as the default allows `standalone=True` to distinguish between "not explicitly set" (should be overridden to `"local"`) and "explicitly set to 'cdn'" (should be preserved).
 
 ## CLI Changes
 
@@ -116,6 +118,14 @@ When `runtime_serving="local"`, `generate_html()`:
 2. `<link rel="stylesheet" href="...">` → `/_webcompy-assets/core.css`
 3. `py-config` gains `"interpreter": "/_webcompy-assets/pyodide/pyodide.mjs"`
 4. `py-config` gains `"lockFileURL": "/_webcompy-assets/pyodide/pyodide-lock.json"`
+
+## Migration: `standalone_assets` → `runtime_assets`
+
+The current `Lockfile.to_dict()` outputs a `standalone_assets: {}` placeholder (added as a forward-compatibility field before this design). This field is superseded by `runtime_assets` in this change. During implementation:
+
+1. Rename `standalone_assets` → `runtime_assets` in `Lockfile.to_dict()`.
+2. In `load_lockfile()`, accept both `standalone_assets` and `runtime_assets` keys for backward compatibility with existing v2 lock files. If `standalone_assets` is present and `runtime_assets` is absent, treat `standalone_assets` as `runtime_assets`.
+3. The `standalone_assets` key should be considered deprecated. A future change may remove backward-compatibility handling.
 
 ## Non-goals (This Change)
 

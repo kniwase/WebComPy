@@ -7,7 +7,7 @@
 ### Steps
 
 1. Add `runtime_serving: Literal["cdn", "local"] = "cdn"` to `AppConfig` dataclass in `webcompy/app/_config.py`.
-2. Add `--runtime-serving` and `--no-runtime-serving` flags to `webcompy start` and `webcompy generate` subcommands in `_argparser.py`.
+2. Add `--runtime-serving` (value argument: `local`/`cdn`) flag to `webcompy start` and `webcompy generate` subcommands in `_argparser.py`.
 3. Update `_server.py` and `_generate.py` to pass the flag through.
 4. Write unit tests for config dataclass.
 
