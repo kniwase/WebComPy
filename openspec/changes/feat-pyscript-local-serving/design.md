@@ -52,10 +52,10 @@ When `runtime_serving="cdn"`:
 ### Build Pipeline (SSG)
 
 ```
-webcompy generate --runtime-serving
+webcompy generate --runtime-serving local
         │
         ▼
-  Load/generate webcompy-lock.json
+   Load/generate webcompy-lock.json
         │
         ▼
   Download PyScript core (core.js, core.css)

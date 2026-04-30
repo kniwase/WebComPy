@@ -155,7 +155,7 @@ No new lock file section is needed. The `wasm_serving` and `runtime_serving` fie
 - `wasm_serving: "local"`
 - `runtime_serving: "local"`
 
-A `standalone: bool` field MAY be added to the lock file for informational purposes, but it does not add new asset data.
+A `standalone: bool` field SHALL be included in the lock file for informational purposes. It does not add new asset data.
 
 ### PWA Extension (Future)
 

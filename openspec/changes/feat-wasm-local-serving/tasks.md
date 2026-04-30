@@ -13,7 +13,7 @@
 
 - [ ] **Task 3: Update lock file for `wasm_serving`**
   - Add `wasm_serving` field to `Lockfile` dataclass.
-  - Include download URLs in `pyodide_packages` entries.
+  - Include `file_name` and `sha256` fields in `wasm_packages` entries for download verification.
   - Write unit tests.
 
 - [ ] **Task 4: Update `generate_html()` for local WASM URLs**
