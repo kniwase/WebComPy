@@ -98,13 +98,13 @@
 1. Add `runtime_serving: str` field to `Lockfile` dataclass.
 2. Add `runtime_assets: dict` field to `Lockfile` dataclass.
 3. When `runtime_serving="local"`, populate `runtime_assets` with downloaded asset URLs and hashes.
-4. When `runtime_serving="cdn"`, leave `runtime_assets` as empty dict.
+4. When `runtime_serving="cdn"`, omit `runtime_assets` from the lock file output.
 5. Write unit tests.
 
 ### Acceptance Criteria
 
 - Lock file with `runtime_serving="local"` contains `runtime_serving: "local"` and `runtime_assets` with URLs and hashes.
-- Lock file without runtime-local mode has `runtime_serving: "cdn"` and empty `runtime_assets`.
+- Lock file without runtime-local mode has `runtime_serving: "cdn"` and `runtime_assets` is absent from the output.
 
 ---
 

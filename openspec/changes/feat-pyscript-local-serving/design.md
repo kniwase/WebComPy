@@ -41,8 +41,8 @@ When `runtime_serving="local"`:
 - `"runtime_assets"` section contains entries with `url` and `sha256` for each runtime file
 
 When `runtime_serving="cdn"`:
-- `"runtime_serving": "cdn"` is recorded (or field is omitted)
-- `"runtime_assets"` is an empty object `{}`
+- `"runtime_serving": "cdn"` is recorded
+- `"runtime_assets"` section is not present
 
 ### D7: `--runtime-serving` CLI flag (value argument)
 `--runtime-serving <mode>` (where `<mode>` is `cdn` or `local`) overrides `AppConfig.runtime_serving`. Example: `webcompy start --dev --runtime-serving local` sets `runtime_serving="local"`.
@@ -107,8 +107,9 @@ When `runtime_serving` is `None` (default), it resolves to `"cdn"`. Using `None`
 ## CLI Changes
 
 ```bash
-webcompy start --dev --runtime-serving
-webcompy generate --runtime-serving
+webcompy start --dev --runtime-serving <mode>
+webcompy generate --runtime-serving <mode>
+# where <mode> is "cdn" or "local"
 ```
 
 ## HTML Generation Changes
