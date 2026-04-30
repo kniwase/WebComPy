@@ -226,7 +226,6 @@ class TestClassifyDependencies:
         wc_dep = next(d for d in classified if d.name == "webcompy")
         assert wc_dep.source == "explicit"
         assert wc_dep.kind == PackageKind.LOCAL_PURE_PYTHON
-        assert wc_dep.kind == PackageKind.LOCAL_PURE_PYTHON
         assert wc_dep.pyodide_file_name is None
         assert wc_dep.pyodide_sha256 is None
 
