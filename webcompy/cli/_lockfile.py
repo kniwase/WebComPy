@@ -120,7 +120,7 @@ def generate_lockfile(
 
     pyodide_lock = fetch_pyodide_lock(pyodide_version)
 
-    from webcompy.cli._dependency_resolver import classify_dependencies
+    from webcompy.cli._dependency_resolver import PackageKind, classify_dependencies
 
     classified, errors, warnings = classify_dependencies(dependencies, pyodide_lock)
 
@@ -129,7 +129,7 @@ def generate_lockfile(
 
     for dep in classified:
         lock_source = dep.source
-        if dep.is_wasm:
+        if dep.kind == PackageKind.WASM:
             pkg_info = pyodide_lock.get("packages", {}).get(dep.name, {})
             file_name = pkg_info.get("file_name", "")
             wasm_packages[dep.name] = WasmPackageEntry(
@@ -137,13 +137,14 @@ def generate_lockfile(
                 file_name=file_name,
                 source=lock_source,
             )
-        elif dep.is_pure_python:
+        elif dep.kind in (PackageKind.CDN_PURE_PYTHON, PackageKind.LOCAL_PURE_PYTHON):
+            is_cdn = dep.kind == PackageKind.CDN_PURE_PYTHON
             entry = PurePythonPackageEntry(
                 version=dep.version,
                 source=lock_source,
-                in_pyodide_cdn=dep.in_pyodide_cdn,
-                pyodide_file_name=dep.pyodide_file_name if dep.in_pyodide_cdn else None,
-                pyodide_sha256=dep.pyodide_sha256 if dep.in_pyodide_cdn else None,
+                in_pyodide_cdn=is_cdn,
+                pyodide_file_name=dep.pyodide_file_name if is_cdn else None,
+                pyodide_sha256=dep.pyodide_sha256 if is_cdn else None,
             )
             pure_python_packages[dep.name] = entry
 
