@@ -9,16 +9,16 @@ WASM wheel files are downloaded from `https://cdn.jsdelivr.net/pyodide/v{version
 In default mode: `packages = ["numpy", "matplotlib"]` (CDN names).
 In WASM local serving mode: `packages = ["/_webcompy-assets/packages/numpy-2.2.5-...wasm32.whl", "/_webcompy-assets/packages/matplotlib-3.8.4-...wasm32.whl"]` (local URLs).
 
-### D3: `lockFileURL` may be required for local WASM serving
-When WASM packages are served locally, PyScript/micropip needs `pyodide-lock.json` to resolve dependencies between WASM packages. This requires setting `lockFileURL` in `py-config`, which is handled by `feat-pyscript-local-serving`. For `feat-wasm-local-serving` alone, `lockFileURL` may be set to the Pyodide CDN URL or a local path.
+### D3: `lockFileURL` is always set when `wasm_serving="local"`
+When WASM packages are served locally as URLs in `py-config.packages`, Pyodide uses micropip to install them. Micropip consults `pyodide-lock.json` to resolve transitive dependencies. Without `lockFileURL`, Pyodide uses its built-in lock, which may not match the Pyodide version. When `wasm_serving="local"`, `lockFileURL` SHALL be set to the Pyodide CDN URL (`https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json`). When `feat-pyscript-local-serving` is also enabled and `runtime_serving="local"`, `lockFileURL` is overridden to point to the local `pyodide-lock.json` instead.
 
 ### D4: `AppConfig.wasm_serving` controls the serving mode
 ```python
 @dataclass
 class AppConfig:
-    wasm_serving: Literal["cdn", "local"] = "cdn"
+    wasm_serving: Literal["cdn", "local"] | None = None
 ```
-When `wasm_serving="cdn"` (default), WASM packages are loaded from the Pyodide CDN. When `wasm_serving="local"`, WASM packages are downloaded and served from the same origin.
+When `wasm_serving` is `None` (unset), it defaults to `"cdn"`. This `None` sentinel enables the `standalone` flag to distinguish between "unset (should be overridden to `local`)" and "explicitly set to `cdn` (should be preserved)". When `wasm_serving="local"`, WASM packages are downloaded and served from the same origin.
 
 ## Architecture
 

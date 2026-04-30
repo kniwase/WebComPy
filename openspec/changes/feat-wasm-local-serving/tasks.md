@@ -1,8 +1,8 @@
 # Tasks: WASM Local Serving — Same-Origin WASM Package Serving
 
 - [ ] **Task 1: Add `wasm_serving` to AppConfig**
-  - Add `wasm_serving: Literal["cdn", "local"] = "cdn"` to `AppConfig`.
-  - Add `--wasm-serving` CLI flag.
+  - Add `wasm_serving: Literal["cdn", "local"] | None = None` to `AppConfig` (`None` sentinel enables `standalone` orchestration to distinguish unset from explicit `"cdn"`).
+  - Add `--wasm-serving` CLI flag accepting `"cdn"` or `"local"` values (e.g., `--wasm-serving local`).
   - Write unit tests.
 
 - [ ] **Task 2: Implement WASM wheel download with caching**
@@ -13,12 +13,14 @@
 
 - [ ] **Task 3: Update lock file for `wasm_serving`**
   - Add `wasm_serving` field to `Lockfile` dataclass.
-  - Include download URLs in `pyodide_packages` entries.
+  - Include `file_name` and `sha256` fields in `wasm_packages` entries for download verification.
   - Write unit tests.
 
 - [ ] **Task 4: Update `generate_html()` for local WASM URLs**
   - When `wasm_serving="local"`, replace CDN package names with local wheel URLs in `py-config.packages`.
-  - Include `lockFileURL` pointing to local `pyodide-lock.json` (or CDN URL).
+  - When `wasm_serving="local"` and `runtime_serving="cdn"`, set `lockFileURL` to the Pyodide CDN URL.
+  - When `wasm_serving="local"` and `runtime_serving="local"`, set `lockFileURL` to `/_webcompy-assets/pyodide/pyodide-lock.json` (handled by feat-pyscript-local-serving).
+  - When `wasm_serving="cdn"`, do not emit `lockFileURL`.
   - Write unit tests.
 
 - [ ] **Task 5: Update server and SSG for WASM local serving**
