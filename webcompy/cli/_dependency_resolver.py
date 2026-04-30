@@ -4,7 +4,14 @@ import importlib.metadata
 import importlib.util
 import pathlib
 from dataclasses import dataclass
+from enum import Enum
 from typing import Literal
+
+
+class PackageKind(Enum):
+    WASM = "wasm"
+    CDN_PURE_PYTHON = "cdn_pure_python"
+    LOCAL_PURE_PYTHON = "local_pure_python"
 
 
 @dataclass
@@ -12,9 +19,7 @@ class ClassifiedDependency:
     name: str
     version: str
     source: Literal["explicit", "transitive"]
-    is_pure_python: bool
-    is_wasm: bool
-    in_pyodide_cdn: bool
+    kind: PackageKind
     pyodide_file_name: str | None = None
     pyodide_sha256: str | None = None
     pkg_dir: pathlib.Path | None = None
@@ -26,6 +31,17 @@ def _is_pure_python_package(pkg_dir: pathlib.Path) -> bool:
             if f.endswith((".so", ".pyd", ".dylib")):
                 return False
     return True
+
+
+def _classify_from_pyodide_lock(pkg_name: str, pyodide_lock: dict) -> PackageKind | None:
+    packages = pyodide_lock.get("packages", {})
+    pkg_info = packages.get(pkg_name)
+    if pkg_info is None:
+        return None
+    file_name = pkg_info.get("file_name", "")
+    if "wasm32" in file_name:
+        return PackageKind.WASM
+    return PackageKind.CDN_PURE_PYTHON
 
 
 def _find_package_dir(package_name: str) -> pathlib.Path | None:
@@ -85,18 +101,6 @@ def _resolve_transitive_deps_via_pyodide_lock(
     return result
 
 
-def _is_wasm_in_pyodide_lock(pkg_name: str, pyodide_lock: dict) -> bool:
-    packages = pyodide_lock.get("packages", {})
-    pkg_info = packages.get(pkg_name)
-    if pkg_info is None:
-        return False
-    package_type = pkg_info.get("package_type")
-    if package_type is not None:
-        return package_type in ("shared_library", "cpython_module")
-    file_name = pkg_info.get("file_name", "")
-    return "pyodide" in file_name or "wasm32" in file_name
-
-
 def _get_pyodide_sha256(pkg_name: str, pyodide_lock: dict) -> str | None:
     packages = pyodide_lock.get("packages", {})
     pkg_info = packages.get(pkg_name)
@@ -149,31 +153,28 @@ def classify_dependencies(
             continue
         pkg_info = pyodide_lock.get("packages", {}).get(dep_name)
         if pkg_info is not None:
-            is_wasm = _is_wasm_in_pyodide_lock(dep_name, pyodide_lock)
+            kind = _classify_from_pyodide_lock(dep_name, pyodide_lock)
             version = pkg_info.get("version", "0.0.0")
             file_name = pkg_info.get("file_name", "")
             sha256 = _get_pyodide_sha256(dep_name, pyodide_lock)
-            if is_wasm:
+            if kind == PackageKind.WASM:
                 classified_dep = ClassifiedDependency(
                     name=dep_name,
                     version=version,
                     source="explicit",
-                    is_pure_python=False,
-                    is_wasm=True,
-                    in_pyodide_cdn=True,
+                    kind=PackageKind.WASM,
                     pyodide_file_name=file_name,
                     pyodide_sha256=sha256,
                     pkg_dir=None,
                 )
             else:
+                assert kind is not None
                 pkg_dir = _find_package_dir(dep_name)
                 classified_dep = ClassifiedDependency(
                     name=dep_name,
                     version=version,
                     source="explicit",
-                    is_pure_python=True,
-                    is_wasm=False,
-                    in_pyodide_cdn=True,
+                    kind=kind,
                     pyodide_file_name=file_name,
                     pyodide_sha256=sha256,
                     pkg_dir=pkg_dir,
@@ -199,9 +200,7 @@ def classify_dependencies(
                 name=dep_name,
                 version=version,
                 source="explicit",
-                is_pure_python=True,
-                is_wasm=False,
-                in_pyodide_cdn=False,
+                kind=PackageKind.LOCAL_PURE_PYTHON,
                 pyodide_file_name=None,
                 pyodide_sha256=None,
                 pkg_dir=pkg_dir,
@@ -230,7 +229,7 @@ def _resolve_all_transitives(
 
         transitive_names = list(_resolve_transitive_deps_via_pyodide_lock(dep_name, pyodide_lock))
 
-        if not dep.in_pyodide_cdn and dep.pkg_dir is not None:
+        if dep.kind == PackageKind.LOCAL_PURE_PYTHON and dep.pkg_dir is not None:
             local_transitives = _resolve_transitive_deps_local(dep_name)
             for lt in local_transitives:
                 if lt not in transitive_names:
@@ -246,31 +245,28 @@ def _resolve_all_transitives(
 
             pkg_info = pyodide_lock.get("packages", {}).get(trans_name)
             if pkg_info is not None:
-                is_wasm = _is_wasm_in_pyodide_lock(trans_name, pyodide_lock)
+                kind = _classify_from_pyodide_lock(trans_name, pyodide_lock)
                 version = pkg_info.get("version", "0.0.0")
                 file_name = pkg_info.get("file_name", "")
                 sha256 = _get_pyodide_sha256(trans_name, pyodide_lock)
-                if is_wasm:
+                if kind == PackageKind.WASM:
                     classified_dep = ClassifiedDependency(
                         name=trans_name,
                         version=version,
                         source="transitive",
-                        is_pure_python=False,
-                        is_wasm=True,
-                        in_pyodide_cdn=True,
+                        kind=PackageKind.WASM,
                         pyodide_file_name=file_name,
                         pyodide_sha256=sha256,
                         pkg_dir=None,
                     )
                 else:
+                    assert kind is not None
                     pkg_dir = _find_package_dir(trans_name)
                     classified_dep = ClassifiedDependency(
                         name=trans_name,
                         version=version,
                         source="transitive",
-                        is_pure_python=True,
-                        is_wasm=False,
-                        in_pyodide_cdn=True,
+                        kind=kind,
                         pyodide_file_name=file_name,
                         pyodide_sha256=sha256,
                         pkg_dir=pkg_dir,
@@ -293,9 +289,7 @@ def _resolve_all_transitives(
                     name=trans_name,
                     version=version,
                     source="transitive",
-                    is_pure_python=True,
-                    is_wasm=False,
-                    in_pyodide_cdn=False,
+                    kind=PackageKind.LOCAL_PURE_PYTHON,
                     pyodide_file_name=None,
                     pyodide_sha256=None,
                     pkg_dir=pkg_dir,
