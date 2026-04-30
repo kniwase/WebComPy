@@ -78,7 +78,7 @@ webcompy generate --runtime-serving local
 ### Build Pipeline (Dev Server)
 
 ```
-webcompy start --dev --runtime-serving
+webcompy start --dev --runtime-serving <mode>
         │
         ▼
   Load/generate webcompy-lock.json

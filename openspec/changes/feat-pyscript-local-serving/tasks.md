@@ -84,7 +84,7 @@
 
 ### Acceptance Criteria
 
-- `webcompy generate --runtime-serving` produces all assets in `dist/_webcompy-assets/`.
+- `webcompy generate --runtime-serving local` produces all assets in `dist/_webcompy-assets/`.
 - Dev server with `runtime_serving="local"` serves assets from `/_webcompy-assets/`.
 
 ---
