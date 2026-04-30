@@ -2,14 +2,28 @@
 
 ## ADDED Requirements
 
-### Requirement: The lock file shall include local-serving asset information
-When `runtime_serving="local"` is set, `webcompy-lock.json` SHALL include a `runtime_assets` section recording the URLs and SHA256 hashes of downloaded PyScript and Pyodide runtime files (not dependency packages — those are handled by `feat-deps-local-serving` and `feat-wasm-local-serving`).
+### Requirement: The lock file shall record the runtime serving mode
+`webcompy-lock.json` SHALL include a `runtime_serving` field indicating whether PyScript/Pyodide runtime assets are served from CDN or locally.
 
-#### Scenario: Lock file with local-serving assets
+#### Scenario: Lock file with local runtime serving
+- **WHEN** a lock file is generated with `runtime_serving="local"`
+- **THEN** the lock file SHALL contain `"runtime_serving": "local"`
+- **AND** the lock file SHALL include a `runtime_assets` section
+
+#### Scenario: Lock file with CDN runtime serving (default)
+- **WHEN** a lock file is generated with `runtime_serving="cdn"` (default)
+- **THEN** the lock file SHALL contain `"runtime_serving": "cdn"` or omit the field
+- **AND** the `runtime_assets` section SHALL be absent or an empty object
+
+### Requirement: The lock file shall include runtime asset metadata when runtime_serving is local
+When `runtime_serving="local"`, `webcompy-lock.json` SHALL include a `runtime_assets` section recording the download URLs and SHA256 hashes of PyScript and Pyodide runtime files.
+
+#### Scenario: Runtime assets section
 - **WHEN** a lock file is generated with `runtime_serving="local"`
 - **THEN** the `runtime_assets` section SHALL contain entries for `core_js`, `core_css`, `pyodide_mjs`, `pyodide_asm_wasm`, `pyodide_asm_js`, and `python_stdlib_zip`
 - **AND** each entry SHALL include the download `url` and `sha256` hash
+- **AND** the `pyodide_lock_json` entry SHALL include the download `url` and `sha256` hash
 
-#### Scenario: Lock file without local-serving assets
-- **WHEN** a lock file is generated without runtime-local mode
-- **THEN** the `runtime_assets` section SHALL be an empty object `{}`
+#### Scenario: Runtime assets absent in CDN mode
+- **WHEN** a lock file is generated with `runtime_serving="cdn"`
+- **THEN** the `runtime_assets` section SHALL NOT be present
