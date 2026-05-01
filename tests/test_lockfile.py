@@ -17,7 +17,7 @@ from webcompy.cli._lockfile import (
 
 
 class TestWasmPackageEntry:
-    def test_to_dict(self):
+    def test_to_dict_without_sha256(self):
         entry = WasmPackageEntry(
             version="2.2.5",
             file_name="numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
@@ -29,8 +29,19 @@ class TestWasmPackageEntry:
             "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
             "source": "explicit",
         }
+        assert "sha256" not in d
 
-    def test_from_dict(self):
+    def test_to_dict_with_sha256(self):
+        entry = WasmPackageEntry(
+            version="2.2.5",
+            file_name="numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
+            source="explicit",
+            sha256="abc123def456",
+        )
+        d = entry.to_dict()
+        assert d["sha256"] == "abc123def456"
+
+    def test_from_dict_without_sha256(self):
         data = {
             "version": "2.2.5",
             "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
@@ -39,11 +50,22 @@ class TestWasmPackageEntry:
         assert entry.version == "2.2.5"
         assert entry.file_name == "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl"
         assert entry.source == "explicit"
+        assert entry.sha256 is None
+
+    def test_from_dict_with_sha256(self):
+        data = {
+            "version": "2.2.5",
+            "file_name": "numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
+            "sha256": "abc123def456",
+        }
+        entry = WasmPackageEntry.from_dict(data)
+        assert entry.sha256 == "abc123def456"
 
     def test_from_dict_with_source(self):
         data = {"version": "2.2.5", "file_name": "numpy.whl", "source": "transitive"}
         entry = WasmPackageEntry.from_dict(data)
         assert entry.source == "transitive"
+        assert entry.sha256 is None
 
 
 class TestPurePythonPackageEntry:
@@ -101,8 +123,14 @@ class TestLockfileV2:
         lockfile = Lockfile(
             pyodide_version="0.29.3",
             pyscript_version="2026.3.1",
+            wasm_serving="cdn",
             wasm_packages={
-                "numpy": WasmPackageEntry(version="2.2.5", file_name="numpy.whl", source="explicit"),
+                "numpy": WasmPackageEntry(
+                    version="2.2.5",
+                    file_name="numpy.whl",
+                    sha256="abc123",
+                    source="explicit",
+                ),
             },
             pure_python_packages={
                 "httpx": PurePythonPackageEntry(
@@ -110,7 +138,7 @@ class TestLockfileV2:
                     source="explicit",
                     in_pyodide_cdn=True,
                     pyodide_file_name="httpx-0.28.1-py3-none-any.whl",
-                    pyodide_sha256="abc123",
+                    pyodide_sha256="def456",
                 ),
                 "flask": PurePythonPackageEntry(
                     version="3.1.0",
@@ -124,7 +152,9 @@ class TestLockfileV2:
         loaded = load_lockfile(path)
         assert loaded is not None
         assert loaded.pyodide_version == "0.29.3"
+        assert loaded.wasm_serving == "cdn"
         assert "numpy" in loaded.wasm_packages
+        assert loaded.wasm_packages["numpy"].sha256 == "abc123"
         assert "httpx" in loaded.pure_python_packages
         assert "flask" in loaded.pure_python_packages
 

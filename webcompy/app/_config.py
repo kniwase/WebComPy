@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 
 @dataclass
@@ -15,6 +16,7 @@ class AppConfig:
     profile: bool = False
     hydrate: bool = True
     serve_all_deps: bool = True
+    wasm_serving: Literal["cdn", "local"] | None = None
 
     def __post_init__(self):
         stripped = self.base_url.strip("/")

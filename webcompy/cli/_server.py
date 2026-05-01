@@ -31,7 +31,13 @@ from webcompy.cli._lockfile import (
     validate_local_environment,
 )
 from webcompy.cli._lockfile_sync import resolve_dependencies
-from webcompy.cli._pyodide_downloader import PyodideDownloadError, download_pyodide_wheel, extract_wheel
+from webcompy.cli._pyodide_downloader import (
+    PyodideDownloadError,
+    download_pyodide_wheel,
+    download_wasm_wheels,
+    extract_wheel,
+)
+from webcompy.cli._pyodide_lock import PYODIDE_LOCK_URL_TEMPLATE
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     discover_app,
@@ -76,8 +82,29 @@ def create_asgi_app(
         print("Build failed due to lock file errors. Fix the above issues and try again.", file=sys.stderr)
         sys.exit(1)
 
+    resolved_wasm_serving = app.config.wasm_serving or "cdn"
+
     bundled_deps = get_bundled_deps(lockfile, serve_all_deps=app.config.serve_all_deps)
     wasm_package_names = get_wasm_package_names(lockfile)
+
+    wasm_local_urls: dict[str, str] | None = None
+    lockfile_url: str | None = None
+    wasm_asset_files: dict[str, tuple[bytes, str]] = {}
+    if resolved_wasm_serving == "local" and lockfile is not None:
+        pyodide_version = lockfile.pyodide_version
+        lockfile_url = PYODIDE_LOCK_URL_TEMPLATE.format(version=pyodide_version)
+
+        downloaded_paths = download_wasm_wheels(lockfile)
+        base_url = app.config.base_url
+        wasm_local_urls = {}
+        for name, entry in lockfile.wasm_packages.items():
+            if entry.file_name:
+                local_path = f"/_webcompy-assets/packages/{entry.file_name}"
+                wasm_local_urls[name] = f"{base_url.strip('/')}{local_path}"
+                if name in downloaded_paths:
+                    wheel_data = downloaded_paths[name].read_bytes()
+                    media_type = "application/octet-stream"
+                    wasm_asset_files[entry.file_name] = (wheel_data, media_type)
 
     cdn_pure_python_names: list[str] = []
     cdn_extracted_deps: list[tuple[str, pathlib.Path]] = []
@@ -148,6 +175,19 @@ def create_asgi_app(
         send_app_package_file,
     )
 
+    wasm_asset_routes: list[Route] = []
+    if resolved_wasm_serving == "local" and wasm_asset_files:
+
+        async def send_wasm_asset(request: Request):
+            filename: str = request.path_params.get("filename", "")  # type: ignore
+            if filename in wasm_asset_files:
+                content, media_type = wasm_asset_files[filename]
+                return Response(content, media_type=media_type)
+            else:
+                raise HTTPException(404)
+
+        wasm_asset_routes.append(Route("/_webcompy-assets/packages/{filename:path}", send_wasm_asset))
+
     static_file_routes: list[Route] = []
     static_files_dir = server_config.static_files_dir_path.absolute()
     for relative_path in get_static_files(static_files_dir):
@@ -170,6 +210,8 @@ def create_asgi_app(
         app_version,
         wheel_filename,
         pyodide_package_names=wasm_package_names + cdn_pure_python_names,
+        wasm_local_urls=wasm_local_urls or None,
+        lockfile_url=lockfile_url,
     )
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + app.config.base_url.strip("/"))).sub,
@@ -216,14 +258,15 @@ def create_asgi_app(
     else:
         dev_routes: list[Route] = []
 
-    return Starlette(
-        routes=[
-            *dev_routes,
-            app_package_files_route,
-            *static_file_routes,
-            html_route,
-        ]
-    )
+    routes: list[Route] = [
+        *dev_routes,
+        app_package_files_route,
+        *wasm_asset_routes,
+        *static_file_routes,
+        html_route,
+    ]
+
+    return Starlette(routes=routes)
 
 
 def run_server(app: WebComPyApp | None = None):
@@ -240,6 +283,9 @@ def run_server(app: WebComPyApp | None = None):
     serve_all_deps = args.get("serve_all_deps")
     if serve_all_deps is not None:
         app.config.serve_all_deps = serve_all_deps
+    wasm_serving = args.get("wasm_serving")
+    if wasm_serving is not None:
+        app.config.wasm_serving = wasm_serving
     port = args.get("port") or server_config.port
     asgi = create_asgi_app(app, server_config)
     uvicorn.run(asgi, host="0.0.0.0", port=port, reload=server_config.dev)

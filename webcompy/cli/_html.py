@@ -119,6 +119,8 @@ def generate_html(
     app_version: str,
     wheel_filename: str,
     pyodide_package_names: list[str] | None = None,
+    wasm_local_urls: dict[str, str] | None = None,
+    lockfile_url: str | None = None,
 ):
     app_root = (
         app._root
@@ -142,12 +144,17 @@ def generate_html(
     )
 
     app_wheel_url = f"{app.config.base_url}_webcompy-app-package/{wheel_filename}"
-    py_packages = [
-        app_wheel_url,
-        *(pyodide_package_names or []),
-    ]
+    py_packages = [app_wheel_url]
+    for name in pyodide_package_names or []:
+        if wasm_local_urls and name in wasm_local_urls:
+            py_packages.append(wasm_local_urls[name])
+        else:
+            py_packages.append(name)
+    py_config_dict: dict = {"packages": py_packages, "experimental_create_proxy": "auto"}
+    if lockfile_url is not None:
+        py_config_dict["lockFileURL"] = lockfile_url
     py_config = html_module.escape(
-        json.dumps({"packages": py_packages, "experimental_create_proxy": "auto"}),
+        json.dumps(py_config_dict),
         quote=True,
     )
     py_script_lines: list[str] = []
