@@ -38,6 +38,7 @@ from webcompy.cli._pyodide_downloader import (
     extract_wheel,
 )
 from webcompy.cli._pyodide_lock import PYODIDE_LOCK_URL_TEMPLATE
+from webcompy.cli._runtime_downloader import RuntimeDownloadError, download_runtime_assets
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     discover_app,
@@ -63,6 +64,7 @@ def create_asgi_app(
         PYSCRIPT_VERSION,
         app.config.app_package_path / LOCKFILE_NAME,
         wasm_serving=app.config.wasm_serving or "cdn",
+        runtime_serving=app.config.runtime_serving or "cdn",
     )
     for warning in lockfile_warnings:
         print(f"Warning: {warning}", flush=True)
@@ -105,6 +107,32 @@ def create_asgi_app(
                     wheel_data = downloaded_paths[name].read_bytes()
                     media_type = "application/octet-stream"
                     wasm_asset_files[entry.file_name] = (wheel_data, media_type)
+
+    resolved_runtime_serving = app.config.runtime_serving or "cdn"
+
+    runtime_asset_files: dict[str, tuple[bytes, str]] = {}
+    if resolved_runtime_serving == "local":
+        try:
+            runtime_dir = pathlib.Path(tempfile.mkdtemp())
+            download_runtime_assets(
+                lockfile.pyodide_version if lockfile else "0.29.3",
+                PYSCRIPT_VERSION,
+                runtime_dir,
+            )
+        except RuntimeDownloadError as e:
+            import sys
+
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        for asset_path in runtime_dir.rglob("*"):
+            if asset_path.is_file():
+                rel = asset_path.relative_to(runtime_dir)
+                file_key = str(rel)
+                content = asset_path.read_bytes()
+                media_type = mimetypes.guess_type(str(asset_path))[0] or "application/octet-stream"
+                runtime_asset_files[file_key] = (content, media_type)
+        if resolved_runtime_serving == "local":
+            lockfile_url = None
 
     cdn_pure_python_names: list[str] = []
     cdn_extracted_deps: list[tuple[str, pathlib.Path]] = []
@@ -188,6 +216,19 @@ def create_asgi_app(
 
         wasm_asset_routes.append(Route("/_webcompy-assets/packages/{filename:path}", send_wasm_asset))
 
+    runtime_asset_routes: list[Route] = []
+    if resolved_runtime_serving == "local" and runtime_asset_files:
+
+        async def send_runtime_asset(request: Request):
+            filename: str = request.path_params.get("filename", "")  # type: ignore
+            if filename in runtime_asset_files:
+                content, media_type = runtime_asset_files[filename]
+                return Response(content, media_type=media_type)
+            else:
+                raise HTTPException(404)
+
+        runtime_asset_routes.append(Route("/_webcompy-assets/{filename:path}", send_runtime_asset))
+
     static_file_routes: list[Route] = []
     static_files_dir = server_config.static_files_dir_path.absolute()
     for relative_path in get_static_files(static_files_dir):
@@ -212,6 +253,7 @@ def create_asgi_app(
         pyodide_package_names=wasm_package_names + cdn_pure_python_names,
         wasm_local_urls=wasm_local_urls or None,
         lockfile_url=lockfile_url,
+        runtime_serving=resolved_runtime_serving,
     )
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + app.config.base_url.strip("/"))).sub,
@@ -262,6 +304,7 @@ def create_asgi_app(
         *dev_routes,
         app_package_files_route,
         *wasm_asset_routes,
+        *runtime_asset_routes,
         *static_file_routes,
         html_route,
     ]
@@ -286,6 +329,9 @@ def run_server(app: WebComPyApp | None = None):
     wasm_serving = args.get("wasm_serving")
     if wasm_serving is not None:
         app.config.wasm_serving = wasm_serving
+    runtime_serving = args.get("runtime_serving")
+    if runtime_serving is not None:
+        app.config.runtime_serving = runtime_serving
     port = args.get("port") or server_config.port
     asgi = create_asgi_app(app, server_config)
     uvicorn.run(asgi, host="0.0.0.0", port=port, reload=server_config.dev)

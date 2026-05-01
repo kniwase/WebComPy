@@ -121,7 +121,9 @@ def generate_html(
     pyodide_package_names: list[str] | None = None,
     wasm_local_urls: dict[str, str] | None = None,
     lockfile_url: str | None = None,
+    runtime_serving: str = "cdn",
 ):
+    base_url = app.config.base_url
     app_root = (
         app._root
         if prerender
@@ -133,17 +135,24 @@ def generate_html(
     scripts_head: Scripts = []
     scripts_body: Scripts = []
 
+    core_js_url = (
+        f"{base_url}_webcompy-assets/core.js" if runtime_serving == "local" else f"{PYSCRIPT_BASE_URL}/core.js"
+    )
+    core_css_url = (
+        f"{base_url}_webcompy-assets/core.css" if runtime_serving == "local" else f"{PYSCRIPT_BASE_URL}/core.css"
+    )
+
     scripts_head.append(
         (
             {
                 "type": "module",
-                "src": f"{PYSCRIPT_BASE_URL}/core.js",
+                "src": core_js_url,
             },
             None,
         )
     )
 
-    app_wheel_url = f"{app.config.base_url}_webcompy-app-package/{wheel_filename}"
+    app_wheel_url = f"{base_url}_webcompy-app-package/{wheel_filename}"
     py_packages = [app_wheel_url]
     for name in pyodide_package_names or []:
         if wasm_local_urls and name in wasm_local_urls:
@@ -151,7 +160,10 @@ def generate_html(
         else:
             py_packages.append(name)
     py_config_dict: dict = {"packages": py_packages, "experimental_create_proxy": "auto"}
-    if lockfile_url is not None:
+    if runtime_serving == "local":
+        py_config_dict["interpreter"] = f"{base_url}_webcompy-assets/pyodide/pyodide.mjs"
+        py_config_dict["lockFileURL"] = f"{base_url}_webcompy-assets/pyodide/pyodide-lock.json"
+    elif lockfile_url is not None:
         py_config_dict["lockFileURL"] = lockfile_url
     py_config = html_module.escape(
         json.dumps(py_config_dict),
@@ -197,7 +209,7 @@ def generate_html(
             _HtmlElement("base", {"href": app.config.base_url}),
             _HtmlElement(
                 "link",
-                {"rel": "stylesheet", "href": f"{PYSCRIPT_BASE_URL}/core.css"},
+                {"rel": "stylesheet", "href": core_css_url},
             ),
             _HtmlElement(
                 "style",

@@ -5,6 +5,7 @@ import json
 from webcompy.cli._lockfile import (
     Lockfile,
     PurePythonPackageEntry,
+    RuntimeAssetEntry,
     WasmPackageEntry,
     get_bundled_deps,
     get_cdn_pure_python_package_names,
@@ -157,6 +158,8 @@ class TestLockfileV2:
         assert loaded.wasm_packages["numpy"].sha256 == "abc123"
         assert "httpx" in loaded.pure_python_packages
         assert "flask" in loaded.pure_python_packages
+        assert loaded.runtime_serving == "cdn"
+        assert loaded.runtime_assets == {}
 
     def test_load_nonexistent_file_returns_none(self, tmp_path):
         result = load_lockfile(tmp_path / "nonexistent.json")
@@ -332,3 +335,108 @@ class TestValidateLocalEnvironment:
         errors, _warnings = validate_local_environment(lockfile, serve_all_deps=True)
         assert len(errors) > 0
         assert any("version mismatch" in e for e in errors)
+
+
+class TestRuntimeAssetEntry:
+    def test_to_dict(self):
+        entry = RuntimeAssetEntry(
+            url="https://pyscript.net/releases/2026.3.1/core.js",
+            sha256="abc123",
+        )
+        d = entry.to_dict()
+        assert d["url"] == "https://pyscript.net/releases/2026.3.1/core.js"
+        assert d["sha256"] == "abc123"
+
+    def test_from_dict(self):
+        data = {"url": "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.mjs", "sha256": "def456"}
+        entry = RuntimeAssetEntry.from_dict(data)
+        assert entry.url == "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.mjs"
+        assert entry.sha256 == "def456"
+
+
+class TestLockfileRuntimeServing:
+    def test_runtime_serving_cdn_default(self, tmp_path):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+        )
+        path = tmp_path / "lock.json"
+        save_lockfile(lockfile, path)
+        loaded = load_lockfile(path)
+        assert loaded is not None
+        assert loaded.runtime_serving == "cdn"
+        assert loaded.runtime_assets == {}
+
+    def test_runtime_serving_local_roundtrip(self, tmp_path):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            runtime_serving="local",
+            runtime_assets={
+                "core_js": RuntimeAssetEntry(
+                    url="https://pyscript.net/releases/2026.3.1/core.js",
+                    sha256="abc123",
+                ),
+                "pyodide_mjs": RuntimeAssetEntry(
+                    url="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.mjs",
+                    sha256="def456",
+                ),
+            },
+        )
+        path = tmp_path / "lock.json"
+        save_lockfile(lockfile, path)
+        loaded = load_lockfile(path)
+        assert loaded is not None
+        assert loaded.runtime_serving == "local"
+        assert "core_js" in loaded.runtime_assets
+        assert loaded.runtime_assets["core_js"].url == "https://pyscript.net/releases/2026.3.1/core.js"
+        assert loaded.runtime_assets["core_js"].sha256 == "abc123"
+
+    def test_runtime_assets_absent_in_cdn_mode_output(self, tmp_path):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            runtime_serving="cdn",
+        )
+        path = tmp_path / "lock.json"
+        save_lockfile(lockfile, path)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert "runtime_assets" not in data
+
+    def test_runtime_assets_present_in_local_mode_output(self, tmp_path):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            runtime_serving="local",
+            runtime_assets={
+                "core_js": RuntimeAssetEntry(
+                    url="https://pyscript.net/releases/2026.3.1/core.js",
+                    sha256="abc123",
+                ),
+            },
+        )
+        path = tmp_path / "lock.json"
+        save_lockfile(lockfile, path)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert "runtime_assets" in data
+        assert "core_js" in data["runtime_assets"]
+
+    def test_backward_compat_standalone_assets(self, tmp_path):
+        data = {
+            "version": 2,
+            "pyodide_version": "0.29.3",
+            "pyscript_version": "2026.3.1",
+            "wasm_serving": "cdn",
+            "runtime_serving": "local",
+            "wasm_packages": {},
+            "pure_python_packages": {},
+            "standalone_assets": {
+                "core_js": {"url": "https://pyscript.net/releases/2026.3.1/core.js", "sha256": "abc123"},
+            },
+        }
+        path = tmp_path / "lock.json"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        loaded = load_lockfile(path)
+        assert loaded is not None
+        assert loaded.runtime_serving == "local"
+        assert "core_js" in loaded.runtime_assets

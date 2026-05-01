@@ -69,22 +69,47 @@ class PurePythonPackageEntry:
 
 
 @dataclass
+class RuntimeAssetEntry:
+    url: str
+    sha256: str | None = None
+
+    def to_dict(self) -> dict:
+        d: dict = {"url": self.url}
+        if self.sha256 is not None:
+            d["sha256"] = self.sha256
+        return d
+
+    @classmethod
+    def from_dict(cls, data: dict) -> RuntimeAssetEntry:
+        return cls(
+            url=data["url"],
+            sha256=data.get("sha256"),
+        )
+
+
+@dataclass
 class Lockfile:
     pyodide_version: str
     pyscript_version: str
     wasm_packages: dict[str, WasmPackageEntry] = field(default_factory=dict)
     pure_python_packages: dict[str, PurePythonPackageEntry] = field(default_factory=dict)
     wasm_serving: str = "cdn"
+    runtime_serving: str = "cdn"
+    runtime_assets: dict[str, RuntimeAssetEntry] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
-        return {
+        d: dict = {
             "version": LOCKFILE_VERSION,
             "pyodide_version": self.pyodide_version,
             "pyscript_version": self.pyscript_version,
             "wasm_serving": self.wasm_serving,
+            "runtime_serving": self.runtime_serving,
             "wasm_packages": {name: entry.to_dict() for name, entry in self.wasm_packages.items()},
             "pure_python_packages": {name: entry.to_dict() for name, entry in self.pure_python_packages.items()},
         }
+        if self.runtime_serving == "local" and self.runtime_assets:
+            d["runtime_assets"] = {name: entry.to_dict() for name, entry in self.runtime_assets.items()}
+        return d
 
 
 def load_lockfile(path: pathlib.Path) -> Lockfile | None:
@@ -100,12 +125,18 @@ def load_lockfile(path: pathlib.Path) -> Lockfile | None:
     pure_python_packages = {
         name: PurePythonPackageEntry.from_dict(entry) for name, entry in data.get("pure_python_packages", {}).items()
     }
+    runtime_assets_data = data.get("runtime_assets") or data.get("standalone_assets")
+    runtime_assets: dict[str, RuntimeAssetEntry] = {}
+    if runtime_assets_data:
+        runtime_assets = {name: RuntimeAssetEntry.from_dict(entry) for name, entry in runtime_assets_data.items()}
     return Lockfile(
         pyodide_version=data["pyodide_version"],
         pyscript_version=data["pyscript_version"],
         wasm_packages=wasm_packages,
         pure_python_packages=pure_python_packages,
         wasm_serving=data.get("wasm_serving", "cdn"),
+        runtime_serving=data.get("runtime_serving", "cdn"),
+        runtime_assets=runtime_assets,
     )
 
 
@@ -122,6 +153,7 @@ def generate_lockfile(
     pyscript_version: str,
     pyodide_version: str | None = None,
     wasm_serving: str = "cdn",
+    runtime_serving: str = "cdn",
 ) -> tuple[Lockfile, list[str], list[str]]:
     if pyodide_version is None:
         pyodide_version = get_pyodide_version(pyscript_version)
@@ -164,6 +196,7 @@ def generate_lockfile(
         wasm_packages=wasm_packages,
         pure_python_packages=pure_python_packages,
         wasm_serving=wasm_serving,
+        runtime_serving=runtime_serving,
     )
 
     return lockfile, errors, warnings
@@ -279,6 +312,7 @@ def resolve_lockfile(
     pyscript_version: str,
     lockfile_path: pathlib.Path,
     wasm_serving: str = "cdn",
+    runtime_serving: str = "cdn",
 ) -> tuple[Lockfile | None, list[str], list[str]]:
     existing = load_lockfile(lockfile_path)
     if existing is not None:
@@ -286,7 +320,9 @@ def resolve_lockfile(
         if not issues:
             return existing, [], []
     try:
-        lockfile, errors, warnings = generate_lockfile(dependencies, pyscript_version, wasm_serving=wasm_serving)
+        lockfile, errors, warnings = generate_lockfile(
+            dependencies, pyscript_version, wasm_serving=wasm_serving, runtime_serving=runtime_serving
+        )
     except PyodideLockFetchError as e:
         if existing is not None:
             return existing, [str(e)], []

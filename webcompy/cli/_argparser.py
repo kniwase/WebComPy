@@ -52,6 +52,12 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         default=None,
         help="WASM package serving mode: 'cdn' (default) or 'local'",
     )
+    parser_start.add_argument(
+        "--runtime-serving",
+        choices=["cdn", "local"],
+        default=None,
+        help="PyScript/Pyodide runtime serving mode: 'cdn' (default) or 'local'",
+    )
     parser_start.set_defaults(__command_getter__=_command(subcommand_name))
 
     # generate
@@ -89,6 +95,12 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         choices=["cdn", "local"],
         default=None,
         help="WASM package serving mode: 'cdn' (default) or 'local'",
+    )
+    parser_generate.add_argument(
+        "--runtime-serving",
+        choices=["cdn", "local"],
+        default=None,
+        help="PyScript/Pyodide runtime serving mode: 'cdn' (default) or 'local'",
     )
     parser_generate.set_defaults(__command_getter__=_command(subcommand_name))
 

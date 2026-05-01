@@ -18,7 +18,7 @@
 
 ---
 
-- [ ] **Task 2: Implement runtime asset download with caching**
+- [x] **Task 2: Implement runtime asset download with caching**
 
 **Estimated time: ~1.5 hours**
 
@@ -45,7 +45,7 @@
 
 ---
 
-- [ ] **Task 3: Update `generate_html()` for runtime-local mode**
+- [x] **Task 3: Update `generate_html()` for runtime-local mode**
 
 **Estimated time: ~1 hour**
 
