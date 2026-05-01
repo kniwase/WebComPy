@@ -99,8 +99,7 @@ def create_asgi_app(
         wasm_local_urls = {}
         for name, entry in lockfile.wasm_packages.items():
             if entry.file_name and entry.sha256:
-                local_path = f"/_webcompy-assets/packages/{entry.file_name}"
-                wasm_local_urls[name] = f"{base_url.strip('/')}{local_path}"
+                wasm_local_urls[name] = f"{base_url}_webcompy-assets/packages/{entry.file_name}"
                 if name in downloaded_paths:
                     wheel_data = downloaded_paths[name].read_bytes()
                     media_type = "application/octet-stream"

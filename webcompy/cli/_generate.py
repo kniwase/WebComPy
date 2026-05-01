@@ -95,8 +95,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
                         print(f"Error: {e}", file=sys.stderr)
                         sys.exit(1)
-                    local_path = f"/_webcompy-assets/packages/{entry.file_name}"
-                    wasm_local_urls[name] = f"{base_url.strip('/')}{local_path}"
+                    wasm_local_urls[name] = f"{base_url}_webcompy-assets/packages/{entry.file_name}"
                     wasm_wheel_paths[entry.file_name] = wheel_path
             if wasm_local_urls:
                 lockfile_url = PYODIDE_LOCK_URL_TEMPLATE.format(version=lockfile.pyodide_version)
