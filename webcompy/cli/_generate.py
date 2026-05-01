@@ -76,11 +76,12 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
         bundled_deps = get_bundled_deps(lockfile, serve_all_deps=app.config.serve_all_deps)
         wasm_package_names = get_wasm_package_names(lockfile)
 
-        wasm_serving = app.config.wasm_serving or "cdn"
+        resolved_wasm_serving = app.config.wasm_serving or "cdn"
+        base_url = app.config.base_url
         wasm_local_urls: dict[str, str] = {}
         wasm_wheel_paths: dict[str, pathlib.Path] = {}
         lockfile_url: str | None = None
-        if wasm_serving == "local" and lockfile is not None:
+        if resolved_wasm_serving == "local" and lockfile is not None:
             for name, entry in lockfile.wasm_packages.items():
                 if entry.file_name and entry.sha256:
                     try:
@@ -94,7 +95,8 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
                         print(f"Error: {e}", file=sys.stderr)
                         sys.exit(1)
-                    wasm_local_urls[name] = f"/_webcompy-assets/packages/{entry.file_name}"
+                    local_path = f"/_webcompy-assets/packages/{entry.file_name}"
+                    wasm_local_urls[name] = f"{base_url.strip('/')}{local_path}"
                     wasm_wheel_paths[entry.file_name] = wheel_path
             if wasm_local_urls:
                 lockfile_url = PYODIDE_LOCK_URL_TEMPLATE.format(version=lockfile.pyodide_version)
