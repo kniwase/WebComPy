@@ -62,6 +62,7 @@ def create_asgi_app(
         app.config.dependencies,
         PYSCRIPT_VERSION,
         app.config.app_package_path / LOCKFILE_NAME,
+        wasm_serving=app.config.wasm_serving or "cdn",
     )
     for warning in lockfile_warnings:
         print(f"Warning: {warning}", flush=True)

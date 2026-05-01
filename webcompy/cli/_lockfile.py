@@ -278,6 +278,7 @@ def resolve_lockfile(
     dependencies: list[str],
     pyscript_version: str,
     lockfile_path: pathlib.Path,
+    wasm_serving: str = "cdn",
 ) -> tuple[Lockfile | None, list[str], list[str]]:
     existing = load_lockfile(lockfile_path)
     if existing is not None:
@@ -285,7 +286,7 @@ def resolve_lockfile(
         if not issues:
             return existing, [], []
     try:
-        lockfile, errors, warnings = generate_lockfile(dependencies, pyscript_version)
+        lockfile, errors, warnings = generate_lockfile(dependencies, pyscript_version, wasm_serving=wasm_serving)
     except PyodideLockFetchError as e:
         if existing is not None:
             return existing, [str(e)], []
