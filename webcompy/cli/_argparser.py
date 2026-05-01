@@ -46,6 +46,12 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         dest="serve_all_deps",
         help="load CDN-available pure-Python deps from Pyodide CDN",
     )
+    parser_start.add_argument(
+        "--wasm-serving",
+        choices=["cdn", "local"],
+        default=None,
+        help="WASM package serving mode: 'cdn' (default) or 'local'",
+    )
     parser_start.set_defaults(__command_getter__=_command(subcommand_name))
 
     # generate
@@ -77,6 +83,12 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         action="store_false",
         dest="serve_all_deps",
         help="load CDN-available pure-Python deps from Pyodide CDN",
+    )
+    parser_generate.add_argument(
+        "--wasm-serving",
+        choices=["cdn", "local"],
+        default=None,
+        help="WASM package serving mode: 'cdn' (default) or 'local'",
     )
     parser_generate.set_defaults(__command_getter__=_command(subcommand_name))
 

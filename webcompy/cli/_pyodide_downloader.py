@@ -6,6 +6,10 @@ import pathlib
 import urllib.error
 import urllib.request
 import zipfile
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from webcompy.cli._lockfile import Lockfile
 
 PYODIDE_CDN_URL_TEMPLATE = "https://cdn.jsdelivr.net/pyodide/v{version}/full/{file_name}"
 
@@ -64,6 +68,21 @@ def download_pyodide_wheel(
     cache_dir.mkdir(parents=True, exist_ok=True)
     cached_path.write_bytes(data)
     return cached_path
+
+
+def download_wasm_wheels(
+    lockfile: Lockfile,
+) -> dict[str, pathlib.Path]:
+    results: dict[str, pathlib.Path] = {}
+    for name, entry in lockfile.wasm_packages.items():
+        if entry.file_name and entry.sha256:
+            wheel_path = download_pyodide_wheel(
+                entry.file_name,
+                lockfile.pyodide_version,
+                entry.sha256,
+            )
+            results[name] = wheel_path
+    return results
 
 
 def extract_wheel(

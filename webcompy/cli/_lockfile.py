@@ -14,20 +14,25 @@ LOCKFILE_NAME = "webcompy-lock.json"
 class WasmPackageEntry:
     version: str
     file_name: str
+    sha256: str | None = None
     source: str = "explicit"
 
     def to_dict(self) -> dict:
-        return {
+        d: dict = {
             "version": self.version,
             "file_name": self.file_name,
             "source": self.source,
         }
+        if self.sha256 is not None:
+            d["sha256"] = self.sha256
+        return d
 
     @classmethod
     def from_dict(cls, data: dict) -> WasmPackageEntry:
         return cls(
             version=data["version"],
             file_name=data["file_name"],
+            sha256=data.get("sha256"),
             source=data.get("source", "explicit"),
         )
 
@@ -69,15 +74,16 @@ class Lockfile:
     pyscript_version: str
     wasm_packages: dict[str, WasmPackageEntry] = field(default_factory=dict)
     pure_python_packages: dict[str, PurePythonPackageEntry] = field(default_factory=dict)
+    wasm_serving: str = "cdn"
 
     def to_dict(self) -> dict:
         return {
             "version": LOCKFILE_VERSION,
             "pyodide_version": self.pyodide_version,
             "pyscript_version": self.pyscript_version,
+            "wasm_serving": self.wasm_serving,
             "wasm_packages": {name: entry.to_dict() for name, entry in self.wasm_packages.items()},
             "pure_python_packages": {name: entry.to_dict() for name, entry in self.pure_python_packages.items()},
-            "standalone_assets": {},
         }
 
 
@@ -99,6 +105,7 @@ def load_lockfile(path: pathlib.Path) -> Lockfile | None:
         pyscript_version=data["pyscript_version"],
         wasm_packages=wasm_packages,
         pure_python_packages=pure_python_packages,
+        wasm_serving=data.get("wasm_serving", "cdn"),
     )
 
 
@@ -114,6 +121,7 @@ def generate_lockfile(
     dependencies: list[str],
     pyscript_version: str,
     pyodide_version: str | None = None,
+    wasm_serving: str = "cdn",
 ) -> tuple[Lockfile, list[str], list[str]]:
     if pyodide_version is None:
         pyodide_version = get_pyodide_version(pyscript_version)
@@ -132,9 +140,11 @@ def generate_lockfile(
         if dep.kind == PackageKind.WASM:
             pkg_info = pyodide_lock.get("packages", {}).get(dep.name, {})
             file_name = pkg_info.get("file_name", "")
+            sha256 = dep.pyodide_sha256
             wasm_packages[dep.name] = WasmPackageEntry(
                 version=dep.version,
                 file_name=file_name,
+                sha256=sha256,
                 source=lock_source,
             )
         elif dep.kind in (PackageKind.CDN_PURE_PYTHON, PackageKind.LOCAL_PURE_PYTHON):
@@ -153,6 +163,7 @@ def generate_lockfile(
         pyscript_version=pyscript_version,
         wasm_packages=wasm_packages,
         pure_python_packages=pure_python_packages,
+        wasm_serving=wasm_serving,
     )
 
     return lockfile, errors, warnings
@@ -267,6 +278,7 @@ def resolve_lockfile(
     dependencies: list[str],
     pyscript_version: str,
     lockfile_path: pathlib.Path,
+    wasm_serving: str = "cdn",
 ) -> tuple[Lockfile | None, list[str], list[str]]:
     existing = load_lockfile(lockfile_path)
     if existing is not None:
@@ -274,7 +286,7 @@ def resolve_lockfile(
         if not issues:
             return existing, [], []
     try:
-        lockfile, errors, warnings = generate_lockfile(dependencies, pyscript_version)
+        lockfile, errors, warnings = generate_lockfile(dependencies, pyscript_version, wasm_serving=wasm_serving)
     except PyodideLockFetchError as e:
         if existing is not None:
             return existing, [str(e)], []

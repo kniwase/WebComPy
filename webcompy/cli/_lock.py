@@ -60,6 +60,7 @@ def lock_command() -> None:
             app.config.dependencies,
             PYSCRIPT_VERSION,
             lockfile_path,
+            wasm_serving=app.config.wasm_serving or "cdn",
         )
         for warning in warnings:
             print(f"Warning: {warning}", file=sys.stderr)

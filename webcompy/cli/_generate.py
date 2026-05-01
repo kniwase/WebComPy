@@ -18,6 +18,7 @@ from webcompy.cli._lockfile import (
 )
 from webcompy.cli._lockfile_sync import resolve_dependencies
 from webcompy.cli._pyodide_downloader import PyodideDownloadError, download_pyodide_wheel, extract_wheel
+from webcompy.cli._pyodide_lock import PYODIDE_LOCK_URL_TEMPLATE
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     discover_app,
@@ -40,6 +41,9 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
     serve_all_deps = args.get("serve_all_deps")
     if serve_all_deps is not None:
         app.config.serve_all_deps = serve_all_deps
+    wasm_serving = args.get("wasm_serving")
+    if wasm_serving is not None:
+        app.config.wasm_serving = wasm_serving
 
     resolve_dependencies(app, lockfile_sync_config=generate_config.lockfile_sync_config)
     assert app.config.dependencies is not None
@@ -49,6 +53,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             app.config.dependencies,
             PYSCRIPT_VERSION,
             app.config.app_package_path / LOCKFILE_NAME,
+            wasm_serving=app.config.wasm_serving or "cdn",
         )
         for warning in lockfile_warnings:
             print(f"Warning: {warning}", flush=True)
@@ -71,6 +76,30 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
         bundled_deps = get_bundled_deps(lockfile, serve_all_deps=app.config.serve_all_deps)
         wasm_package_names = get_wasm_package_names(lockfile)
+
+        resolved_wasm_serving = app.config.wasm_serving or "cdn"
+        base_url = app.config.base_url
+        wasm_local_urls: dict[str, str] = {}
+        wasm_wheel_paths: dict[str, pathlib.Path] = {}
+        lockfile_url: str | None = None
+        if resolved_wasm_serving == "local" and lockfile is not None:
+            for name, entry in lockfile.wasm_packages.items():
+                if entry.file_name and entry.sha256:
+                    try:
+                        wheel_path = download_pyodide_wheel(
+                            entry.file_name,
+                            lockfile.pyodide_version,
+                            entry.sha256,
+                        )
+                    except PyodideDownloadError as e:
+                        import sys
+
+                        print(f"Error: {e}", file=sys.stderr)
+                        sys.exit(1)
+                    wasm_local_urls[name] = f"{base_url}_webcompy-assets/packages/{entry.file_name}"
+                    wasm_wheel_paths[entry.file_name] = wheel_path
+            if wasm_local_urls:
+                lockfile_url = PYODIDE_LOCK_URL_TEMPLATE.format(version=lockfile.pyodide_version)
 
         cdn_pure_python_names: list[str] = []
         cdn_extracted_deps: list[tuple[str, pathlib.Path]] = []
@@ -141,6 +170,14 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
         for p in scripts_dir.iterdir():
             print(p)
 
+        if wasm_wheel_paths:
+            wasm_assets_dir = dist_dir / "_webcompy-assets" / "packages"
+            os.makedirs(wasm_assets_dir)
+            for file_name, wheel_path in wasm_wheel_paths.items():
+                dst = wasm_assets_dir / file_name
+                shutil.copy(wheel_path, dst)
+                print(dst)
+
         html_generator = partial(
             generate_html,
             app,
@@ -149,6 +186,8 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             app_version,
             wheel_filename,
             pyodide_package_names=wasm_package_names + cdn_pure_python_names,
+            wasm_local_urls=wasm_local_urls or None,
+            lockfile_url=lockfile_url,
         )
         if app.router_mode == "history" and app.routes:
             for p, _, _, _, page in app.routes:
