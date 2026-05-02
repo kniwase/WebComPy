@@ -188,6 +188,11 @@ The `start` and `generate` CLI subcommands SHALL accept `--serve-all-deps` and `
 - **WHEN** no `webcompy_server_config.py` exists (in the app package or at the project root) or it does not define `generate_config`
 - **THEN** `GenerateConfig()` defaults SHALL be used (`dist="dist"`, `cname=""`, `static_files_dir="static"`)
 
+#### Scenario: runtime_serving is not on ServerConfig or GenerateConfig
+- **WHEN** a developer creates `ServerConfig()` or `GenerateConfig()`
+- **THEN** neither dataclass SHALL have a `runtime_serving` field
+- **AND** `runtime_serving` SHALL only be available on `AppConfig`
+
 ### Requirement: AppConfig shall include a wasm_serving field for controlling WASM package delivery
 `AppConfig` SHALL include a `wasm_serving: Literal["cdn", "local"] | None = None` field. When `None` or `"cdn"`, WASM packages are loaded from the Pyodide CDN by package name. When `"local"`, WASM package wheel files are downloaded at build time and served from the same origin. The `None` sentinel enables `standalone` mode (in `feat-standalone`) to distinguish between "unset" (overridden to `"local"`) and "explicitly set to `"cdn"`" (preserved).
 
@@ -216,3 +221,28 @@ The `start` and `generate` CLI subcommands SHALL accept `--wasm-serving <mode>` 
 #### Scenario: Default when no flag is provided
 - **WHEN** a developer runs `python -m webcompy start --dev` without `--wasm-serving`
 - **THEN** `wasm_serving` SHALL use the value from `AppConfig.wasm_serving` (default `"cdn"`)
+
+### Requirement: AppConfig shall include a runtime_serving field for controlling PyScript/Pyodide runtime delivery
+`AppConfig` SHALL include a `runtime_serving: Literal["cdn", "local"] | None = None` field. When `None` (default), the effective value is `"cdn"`. The `None` sentinel enables the `standalone` flag to distinguish between "unset (should be overridden to `local`)" and "explicitly set to `cdn` (should be preserved)". When `"cdn"` (default), the PyScript runtime (`core.js`, `core.css`) and the Pyodide engine (`pyodide.mjs`, `pyodide.asm.wasm`, `python_stdlib.zip`, `pyodide-lock.json`) are loaded from their respective CDNs. When `"local"`, all runtime assets are downloaded at build time and served from the same origin.
+
+#### Scenario: Default CDN mode
+- **WHEN** a developer creates `AppConfig()` without `runtime_serving`
+- **THEN** PyScript and Pyodide runtime assets SHALL be loaded from CDN URLs
+
+#### Scenario: Local runtime serving mode
+- **WHEN** a developer creates `AppConfig(runtime_serving="local")`
+- **THEN** all PyScript and Pyodide runtime assets SHALL be downloaded at build time
+- **AND** PyScript core assets SHALL be served from `/_webcompy-assets/` and Pyodide runtime assets SHALL be served from `/_webcompy-assets/pyodide/`
+- **AND** `py-config` SHALL include `interpreter` pointing to `/_webcompy-assets/pyodide/pyodide.mjs`
+- **AND** `py-config` SHALL include `lockFileURL` pointing to `/_webcompy-assets/pyodide/pyodide-lock.json`
+
+### Requirement: CLI flags shall override runtime_serving
+The `start` and `generate` CLI subcommands SHALL accept `--runtime-serving <mode>` where `<mode>` is `"cdn"` or `"local"`. This overrides `AppConfig.runtime_serving`, similar to how `--serve-all-deps` overrides `AppConfig.serve_all_deps`.
+
+#### Scenario: Overriding with --runtime-serving local
+- **WHEN** a developer runs `python -m webcompy start --dev --runtime-serving local`
+- **THEN** `runtime_serving` SHALL be `"local"` for the session
+
+#### Scenario: Overriding with --runtime-serving cdn
+- **WHEN** a developer runs `python -m webcompy generate --runtime-serving cdn`
+- **THEN** `runtime_serving` SHALL be `"cdn"` for the session
