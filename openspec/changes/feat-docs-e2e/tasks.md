@@ -1,6 +1,8 @@
 ## 1. Test Infrastructure
 
-- [ ] 1.1 Create `tests/e2e_docs/conftest.py` with all fixtures: `docs_prod_server` (port 8081, `docs_app.bootstrap:app`), `docs_static_site` (generate to `.tmp/e2e-docs-static/dist`), `docs_static_server`, `docs_server_url`, `docs_app_page`, `docs_page_on`, `console_errors`, `assert_no_python_errors`, `pytest_generate_tests` for `--serving-mode`, and `PYSCRIPT_INIT_TIMEOUT = 300_000`
+- [ ] 1.1 Create `tests/e2e_docs/conftest.py` with server fixtures: `docs_prod_server` (port 8081, `docs_app.bootstrap:app`), `docs_static_site` (generate to `.tmp/e2e-docs-static/dist`), `docs_static_server`, `docs_server_url`, `pytest_generate_tests` for `--serving-mode`, and `PYSCRIPT_INIT_TIMEOUT = 300_000`
+- [ ] 1.2 Add navigation and page fixtures to conftest: `docs_app_page` (navigates to root, waits for PyScript init, keeps page loaded) and `docs_page_on` (returns callable that navigates to a given path and waits for init)
+- [ ] 1.3 Add assertion fixtures to conftest: `console_errors` (collects browser console error messages) and `assert_no_python_errors` (asserts no Python tracebacks after test execution)
 
 ## 2. Page Test Files
 
