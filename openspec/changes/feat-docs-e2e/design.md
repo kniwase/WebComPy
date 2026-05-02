@@ -1,6 +1,6 @@
 ## Context
 
-The documentation site (`docs_app` after rename) is WebComPy's primary showcase application with 6 pages: Home, Documents, HelloWorld, FizzBuzz, ToDo, Matplotlib, and Fetch. Currently there are no automated tests verifying that this site loads correctly in a browser. The existing E2E test suite (`tests/e2e/`) tests a minimal `my_app` with purpose-built `data-testid` attributes. The docs_app is a production site without test hooks, requiring a different element selection strategy.
+The documentation site (`docs_app` after rename) is WebComPy's primary showcase application with 7 pages: Home, Documents, HelloWorld, FizzBuzz, ToDo, Matplotlib, and Fetch. Currently there are no automated tests verifying that this site loads correctly in a browser. The existing E2E test suite (`tests/e2e/`) tests a minimal `my_app` with purpose-built `data-testid` attributes. The docs_app is a production site without test hooks, requiring a different element selection strategy.
 
 Key constraints:
 - `docs_app` uses `dependencies_from="browser"` (micropip loads numpy, matplotlib, etc. at runtime)
@@ -55,6 +55,11 @@ Since docs_app is a production site, we avoid adding test-specific attributes. I
 - Use `page.get_by_text()`, `page.get_by_role()`, `page.locator("h2")`, etc.
 - For interactive elements, use button text (e.g., `page.get_by_role("button", name="Add")`)
 - For page identification, use headings (e.g., `page.get_by_text("What is WebComPy")`)
+- For navigation links, use `page.get_by_role("link", name="...")` or RouterLink text
+
+### Decision: Navigation testing via SPA router
+
+Tests SHALL verify that client-side routing works by clicking navigation links and checking URL/content changes. Navigation tests use the `docs_app_page` fixture to avoid repeated PyScript initialization — the page stays loaded, and only the route changes.
 
 ### Decision: Extended timeout for matplotlib
 

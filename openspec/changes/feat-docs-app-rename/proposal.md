@@ -18,7 +18,6 @@ _(none)_
 
 ### Modified Capabilities
 
-- `e2e-testing`: Add requirement for docs_app E2E test infrastructure (separate from the existing my_app tests)
 - `cli`: Update documentation and config references from `docs_src` to `docs_app`
 
 ## Impact

@@ -1,13 +1,10 @@
 ## 1. Test Infrastructure
 
-- [ ] 1.1 Create `tests/e2e_docs/conftest.py` with fixtures: `docs_prod_server`, `docs_static_site`, `docs_static_server`, `docs_server_url`, `docs_app_page`, `docs_page_on`, `console_errors`, `assert_no_python_errors`, and `pytest_generate_tests` for `--serving-mode`
-- [ ] 1.2 Configure `PYSCRIPT_INIT_TIMEOUT = 300_000` for docs_app tests
-- [ ] 1.3 Set up `docs_prod_server` fixture to start `webcompy start --app docs_app.bootstrap:app --port 8081`
-- [ ] 1.4 Set up `docs_static_site` fixture to run `webcompy generate --app docs_app.bootstrap:app --dist .tmp/e2e-docs-static/dist`
+- [ ] 1.1 Create `tests/e2e_docs/conftest.py` with all fixtures: `docs_prod_server` (port 8081, `docs_app.bootstrap:app`), `docs_static_site` (generate to `.tmp/e2e-docs-static/dist`), `docs_static_server`, `docs_server_url`, `docs_app_page`, `docs_page_on`, `console_errors`, `assert_no_python_errors`, `pytest_generate_tests` for `--serving-mode`, and `PYSCRIPT_INIT_TIMEOUT = 300_000`
 
 ## 2. Page Test Files
 
-- [ ] 2.1 Create `tests/e2e_docs/test_home.py` — load `/`, verify "What is WebComPy" heading, no console errors, page title
+- [ ] 2.1 Create `tests/e2e_docs/test_home.py` — load `/`, verify "What is WebComPy" heading, no console errors, page title, SPA navigation to HelloWorld and back
 - [ ] 2.2 Create `tests/e2e_docs/test_documents.py` — load `/documents`, verify "Work In Progress" text, no console errors
 - [ ] 2.3 Create `tests/e2e_docs/test_helloworld.py` — load `/sample/helloworld`, verify "HelloWorld" heading, "Hello WebComPy!" text, no console errors
 - [ ] 2.4 Create `tests/e2e_docs/test_fizzbuzz.py` — load page, verify initial state (Count: 10, list items), test Add/Pop/Hide buttons, no console errors

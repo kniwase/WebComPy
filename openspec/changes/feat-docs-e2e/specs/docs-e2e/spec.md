@@ -82,6 +82,20 @@ The `/sample/fetch` page requires a `sample.json` static file that does not yet 
 - **WHEN** a test run includes `test_fetch.py`
 - **THEN** the test SHALL be skipped with a reason referencing the missing `sample.json` static file
 
+### Requirement: Docs E2E tests shall verify SPA navigation
+Tests SHALL verify that client-side routing works by clicking navigation links and verifying that the URL and page content change correctly. Navigation tests SHALL use the `docs_app_page` fixture (which keeps the page loaded) to avoid repeated PyScript initialization.
+
+#### Scenario: Navigating from Home to HelloWorld demo
+- **WHEN** a test on the home page clicks the "Demos" dropdown and then the "HelloWorld" link
+- **THEN** the URL SHALL change to `/sample/helloworld`
+- **AND** the "HelloWorld" heading SHALL be visible
+- **AND** no Python tracebacks SHALL appear in the browser console
+
+#### Scenario: Navigating back to Home
+- **WHEN** a test navigates to `/sample/helloworld` and then clicks the "Home" link
+- **THEN** the URL SHALL change to `/`
+- **AND** the "What is WebComPy" heading SHALL be visible
+
 ### Requirement: Docs E2E CI matrix shall cover all test groups
 The CI workflow SHALL include a separate matrix entry for docs E2E tests, split into groups for parallel execution. Each group SHALL run against both `prod` and `static` serving modes.
 
