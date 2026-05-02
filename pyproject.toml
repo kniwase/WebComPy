@@ -35,7 +35,7 @@ packages = ["webcompy"]
 [tool.hatch.build.targets.wheel.shared-data]
 
 [tool.hatch.build]
-exclude = ["docs_src", "docs", "template"]
+exclude = ["docs_app", "docs", "template"]
 
 [tool.ruff]
 target-version = "py312"
@@ -83,7 +83,7 @@ reportInvalidTypeForm = "warning"
 reportAttributeAccessIssue = "warning"
 exclude = [
     "docs/**",
-    "docs_src/**",
+    "docs_app/**",
     "tests/**",
     "webcompy/cli/template_data/**",
     "**/node_modules/**",
@@ -91,7 +91,7 @@ exclude = [
 ]
 include = [
     "webcompy",
-    "docs_src",
+    "docs_app",
     "tests",
 ]
 stubPath = "webcompy/_browser"
@@ -110,6 +110,6 @@ dev = [
 docs = [
     # Pyodide 0.28.0 ships matplotlib 3.10.3; >=3.9.0,<4 ensures compatibility with numpy==2.2.5
     "matplotlib>=3.9.0,<4",
-    # Pinned to match Pyodide 0.28.0 version (required by dev server for docs_src)
+    # Pinned to match Pyodide 0.28.0 version (required by dev server for docs_app)
     "numpy==2.2.5",
 ]

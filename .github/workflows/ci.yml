@@ -74,7 +74,7 @@ jobs:
       - uses: ./.github/actions/setup-environment
         with:
           uv-sync-args: --all-groups
-      - run: uv run python -m webcompy generate --app docs_src.bootstrap:app
+      - run: uv run python -m webcompy generate --app docs_app.bootstrap:app
 
   test:
     runs-on: ubuntu-latest

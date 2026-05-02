@@ -25,9 +25,9 @@
   },
   "agent": {
     "webcompy-docs": {
-      "description": "Generates and maintains the documentation site under docs_src/",
+      "description": "Generates and maintains the documentation site under docs_app/",
       "mode": "subagent",
-      "prompt": "You are working on the WebComPy documentation site. Only modify files in docs_src/. Never edit docs/ directly as it is generated output.",
+      "prompt": "You are working on the WebComPy documentation site. Only modify files in docs_app/. Never edit docs/ directly as it is generated output.",
       "permission": {
         "edit": "ask"
       }
@@ -52,11 +52,11 @@
   },
   "command": {
     "dev": {
-      "template": "Start the WebComPy development server. Run `uv run python -m webcompy start --dev` from the project root (default port 8080). Requires Node.js/npx for Playwright MCP. The server serves the docs_src app at http://localhost:8080/. Once the server is running, use Playwright MCP tools to navigate to the URL.",
+      "template": "Start the WebComPy development server. Run `uv run python -m webcompy start --dev` from the project root (default port 8080). Requires Node.js/npx for Playwright MCP. The server serves the docs_app app at http://localhost:8080/. Once the server is running, use Playwright MCP tools to navigate to the URL.",
       "description": "Start dev server"
     },
     "generate-docs": {
-      "template": "Generate the static documentation site from docs_src/ using `python -m webcompy generate`",
+      "template": "Generate the static documentation site from docs_app/ using `python -m webcompy generate`",
       "description": "Generate docs site"
     }
   }

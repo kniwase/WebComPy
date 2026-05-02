@@ -139,6 +139,9 @@ cython_debug/
 # E2E test server log
 .e2e-server.log
 
+# WebComPy lock files
+webcompy-lock.json
+
 # Playwright MCP
 .playwright-mcp/
 
