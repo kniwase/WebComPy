@@ -69,7 +69,7 @@
 
 ---
 
-- [ ] **Task 4: Update `generate_static_site()` and `create_asgi_app()` for runtime-local mode**
+- [x] **Task 4: Update `generate_static_site()` and `create_asgi_app()` for runtime-local mode**
 
 **Estimated time: ~1.5 hours**
 
@@ -90,7 +90,7 @@
 
 ---
 
-- [ ] **Task 5: Update lock file schema for runtime serving**
+- [x] **Task 5: Update lock file schema for runtime serving**
 
 **Estimated time: ~0.5 hours**
 
@@ -109,7 +109,7 @@
 
 ---
 
-- [ ] **Task 6: E2E test for runtime-local mode**
+- [x] **Task 6: E2E test for runtime-local mode**
 
 **Estimated time: ~1 hour**
 

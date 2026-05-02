@@ -124,18 +124,6 @@ jobs:
           name: e2e-server-log-${{ matrix.group.name }}-${{ matrix.serving_mode }}
           path: tests/e2e/.e2e-server.log
 
-  e2e-runtime-local:
-    if: ${{ !failure() && !cancelled() }}
-    needs: [lint, typecheck, generate, test]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-environment
-        with:
-          playwright-install: "true"
-      - name: Run runtime-local E2E tests
-        run: uv run python -m pytest tests/e2e/test_runtime_local.py --tb=short
-
   review:
     if: always()
     needs: [openspec, openspec-check, lint, typecheck, generate, test, e2e-matrix]

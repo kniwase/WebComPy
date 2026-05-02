@@ -12,7 +12,10 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 import pytest
 
-pytestmark = pytest.mark.e2e
+pytestmark = [
+    pytest.mark.e2e,
+    pytest.mark.skipif(os.environ.get("CI") == "true", reason="Requires external CDN access"),
+]
 
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent
 E2E_DIR = pathlib.Path(__file__).parent
