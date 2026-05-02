@@ -1,8 +1,4 @@
-## Purpose
-
-End-to-end testing of the docs_app documentation site validates that the WebComPy showcase application loads correctly, renders all pages without console errors, and interactive demos function properly. This complements the framework-level E2E tests in `tests/e2e/` by testing a real, production-like application with complex dependencies (matplotlib, micropip) and text/role-based element selection instead of `data-testid` attributes.
-
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Docs E2E tests shall run in a separate test directory
 Docs_app E2E tests SHALL reside in `tests/e2e_docs/`, separate from the framework-level E2E tests in `tests/e2e/`. The conftest SHALL provide fixtures for starting the docs_app production server, generating and serving the static site, navigating to pages, and detecting console errors. The test infrastructure SHALL use a separate port (8081) to avoid conflicts with the existing E2E suite.
