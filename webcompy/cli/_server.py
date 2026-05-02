@@ -23,13 +23,12 @@ from webcompy.cli._argparser import get_params
 from webcompy.cli._html import PYSCRIPT_VERSION, generate_html
 from webcompy.cli._lockfile import (
     LOCKFILE_NAME,
-    RuntimeAssetEntry,
     get_bundled_deps,
     get_cdn_pure_python_package_names,
     get_wasm_package_names,
     resolve_lockfile,
-    save_lockfile,
     validate_local_environment,
+    verify_and_update_runtime_assets,
 )
 from webcompy.cli._lockfile_sync import resolve_dependencies
 from webcompy.cli._pyodide_downloader import (
@@ -38,11 +37,7 @@ from webcompy.cli._pyodide_downloader import (
     download_wasm_wheels,
     extract_wheel,
 )
-from webcompy.cli._pyodide_lock import (
-    PYODIDE_LOCK_URL_TEMPLATE,
-    PYODIDE_RUNTIME_URL_TEMPLATE,
-    PYSCRIPT_RELEASE_URL_TEMPLATE,
-)
+from webcompy.cli._pyodide_lock import PYODIDE_LOCK_URL_TEMPLATE
 from webcompy.cli._runtime_downloader import RuntimeDownloadError, download_runtime_assets
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
@@ -125,36 +120,17 @@ def create_asgi_app(
                     PYSCRIPT_VERSION,
                     runtime_dir,
                 )
-                expected_hashes: dict[str, str] = {}
-                if lockfile is not None and lockfile.runtime_assets:
-                    for asset_key, entry in lockfile.runtime_assets.items():
-                        if entry.sha256 is not None:
-                            expected_hashes[asset_key] = entry.sha256
-                for rel_path, (asset_path, computed_sha256) in runtime_results.items():
-                    filename = rel_path.rsplit("/", 1)[-1]
-                    if filename in expected_hashes and computed_sha256 != expected_hashes[filename]:
-                        raise RuntimeDownloadError(
-                            f"SHA256 mismatch for runtime asset {filename}. "
-                            f"Expected: {expected_hashes[filename]}, got: {computed_sha256}."
-                        )
+                if lockfile is not None:
+                    verify_and_update_runtime_assets(
+                        runtime_results,
+                        lockfile,
+                        PYSCRIPT_VERSION,
+                        app.config.app_package_path / LOCKFILE_NAME,
+                    )
+                for rel_path, (asset_path, _sha256) in runtime_results.items():
                     content = asset_path.read_bytes()
                     media_type = mimetypes.guess_type(str(asset_path))[0] or "application/octet-stream"
                     runtime_asset_files[rel_path] = (content, media_type)
-                if lockfile is not None:
-                    lockfile.runtime_assets = {}
-                    for rel_path, (_asset_path, computed_sha256) in runtime_results.items():
-                        filename = rel_path.rsplit("/", 1)[-1]
-                        if rel_path.startswith("pyodide/"):
-                            url = PYODIDE_RUNTIME_URL_TEMPLATE.format(
-                                pyodide_version=lockfile.pyodide_version, filename=filename
-                            )
-                        else:
-                            url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(
-                                pyscript_version=PYSCRIPT_VERSION, filename=filename
-                            )
-                        lockfile.runtime_assets[filename] = RuntimeAssetEntry(url=url, sha256=computed_sha256)
-                    lockfile_path = app.config.app_package_path / LOCKFILE_NAME
-                    save_lockfile(lockfile, lockfile_path)
         except RuntimeDownloadError as e:
             import sys
 

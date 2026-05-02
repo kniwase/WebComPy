@@ -10,21 +10,16 @@ from webcompy.cli._argparser import get_params
 from webcompy.cli._html import PYSCRIPT_VERSION, generate_html
 from webcompy.cli._lockfile import (
     LOCKFILE_NAME,
-    RuntimeAssetEntry,
     get_bundled_deps,
     get_cdn_pure_python_package_names,
     get_wasm_package_names,
     resolve_lockfile,
-    save_lockfile,
     validate_local_environment,
+    verify_and_update_runtime_assets,
 )
 from webcompy.cli._lockfile_sync import resolve_dependencies
 from webcompy.cli._pyodide_downloader import PyodideDownloadError, download_pyodide_wheel, extract_wheel
-from webcompy.cli._pyodide_lock import (
-    PYODIDE_LOCK_URL_TEMPLATE,
-    PYODIDE_RUNTIME_URL_TEMPLATE,
-    PYSCRIPT_RELEASE_URL_TEMPLATE,
-)
+from webcompy.cli._pyodide_lock import PYODIDE_LOCK_URL_TEMPLATE
 from webcompy.cli._runtime_downloader import RuntimeDownloadError, download_runtime_assets
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
@@ -124,34 +119,16 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                     PYSCRIPT_VERSION,
                     runtime_dir,
                 )
-                expected_hashes: dict[str, str] = {}
-                if lockfile is not None and lockfile.runtime_assets:
-                    for asset_key, entry in lockfile.runtime_assets.items():
-                        if entry.sha256 is not None:
-                            expected_hashes[asset_key] = entry.sha256
-                for rel_path, (_asset_path, computed_sha256) in runtime_asset_results.items():
-                    filename = rel_path.rsplit("/", 1)[-1]
-                    if filename in expected_hashes and computed_sha256 != expected_hashes[filename]:
-                        raise RuntimeDownloadError(
-                            f"SHA256 mismatch for runtime asset {filename}. "
-                            f"Expected: {expected_hashes[filename]}, got: {computed_sha256}."
-                        )
                 if lockfile is not None:
-                    lockfile.runtime_assets = {}
-                    for rel_path, (_asset_path, computed_sha256) in runtime_asset_results.items():
-                        filename = rel_path.rsplit("/", 1)[-1]
-                        if rel_path.startswith("pyodide/"):
-                            url = PYODIDE_RUNTIME_URL_TEMPLATE.format(
-                                pyodide_version=lockfile.pyodide_version, filename=filename
-                            )
-                        else:
-                            url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(
-                                pyscript_version=PYSCRIPT_VERSION, filename=filename
-                            )
-                        lockfile.runtime_assets[filename] = RuntimeAssetEntry(url=url, sha256=computed_sha256)
-                    lockfile_path = app.config.app_package_path / LOCKFILE_NAME
-                    save_lockfile(lockfile, lockfile_path)
+                    verify_and_update_runtime_assets(
+                        runtime_asset_results,
+                        lockfile,
+                        PYSCRIPT_VERSION,
+                        app.config.app_package_path / LOCKFILE_NAME,
+                    )
             except RuntimeDownloadError as e:
+                if runtime_temp_dir_obj is not None:
+                    runtime_temp_dir_obj.cleanup()
                 import sys
 
                 print(f"Error: {e}", file=sys.stderr)
@@ -235,53 +212,55 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                 shutil.copy(wheel_path, dst)
                 print(dst)
 
-        if runtime_asset_results:
-            webcompy_assets_dir = dist_dir / "_webcompy-assets"
-            for rel_path, (src_path, _sha256) in runtime_asset_results.items():
-                dst = webcompy_assets_dir / rel_path
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src_path, dst)
-                print(dst)
+        try:
+            if runtime_asset_results:
+                for rel_path, (src_path, _sha256) in runtime_asset_results.items():
+                    dst = dist_dir / "_webcompy-assets" / rel_path
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src_path, dst)
+                    print(dst)
 
-        html_generator = partial(
-            generate_html,
-            app,
-            False,
-            True,
-            app_version,
-            wheel_filename,
-            pyodide_package_names=wasm_package_names + cdn_pure_python_names,
-            wasm_local_urls=wasm_local_urls or None,
-            lockfile_url=lockfile_url,
-            runtime_serving=resolved_runtime_serving,
-        )
-        if app.router_mode == "history" and app.routes:
-            for p, _, _, _, page in app.routes:
-                paths = (
-                    {p.format(**params) for params in path_params} if (path_params := page.get("path_params")) else {p}
-                )
-                for path in paths:
-                    if not (path_dir := dist_dir / path).exists():
-                        os.makedirs(path_dir)
-                    app.set_path(path)
-                    html = html_generator()
-                    html_path = path_dir / "index.html"
-                    html_path.open("w", encoding="utf8").write(html)
-                    print(html_path)
-            app.set_path("//:404://")
-            html = html_generator()
-            html_path = dist_dir / "404.html"
-            html_path.open("w", encoding="utf8").write(html)
-            print(html_path)
-        else:
-            app.set_path("/")
-            html = html_generator()
-            html_path = dist_dir / "index.html"
-            html_path.open("w", encoding="utf8").write(html)
-            print(html_path)
-
-        if runtime_temp_dir_obj is not None:
-            runtime_temp_dir_obj.cleanup()
+            html_generator = partial(
+                generate_html,
+                app,
+                False,
+                True,
+                app_version,
+                wheel_filename,
+                pyodide_package_names=wasm_package_names + cdn_pure_python_names,
+                wasm_local_urls=wasm_local_urls or None,
+                lockfile_url=lockfile_url,
+                runtime_serving=resolved_runtime_serving,
+            )
+            if app.router_mode == "history" and app.routes:
+                for p, _, _, _, page in app.routes:
+                    paths = (
+                        {p.format(**params) for params in path_params}
+                        if (path_params := page.get("path_params"))
+                        else {p}
+                    )
+                    for path in paths:
+                        if not (path_dir := dist_dir / path).exists():
+                            os.makedirs(path_dir)
+                        app.set_path(path)
+                        html = html_generator()
+                        html_path = path_dir / "index.html"
+                        html_path.open("w", encoding="utf8").write(html)
+                        print(html_path)
+                app.set_path("//:404://")
+                html = html_generator()
+                html_path = dist_dir / "404.html"
+                html_path.open("w", encoding="utf8").write(html)
+                print(html_path)
+            else:
+                app.set_path("/")
+                html = html_generator()
+                html_path = dist_dir / "index.html"
+                html_path.open("w", encoding="utf8").write(html)
+                print(html_path)
+        finally:
+            if runtime_temp_dir_obj is not None:
+                runtime_temp_dir_obj.cleanup()
 
         if cdn_temp_dir_obj is not None:
             cdn_temp_dir_obj.__exit__(None, None, None)

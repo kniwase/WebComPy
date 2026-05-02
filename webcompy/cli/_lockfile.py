@@ -321,6 +321,38 @@ def get_cdn_pure_python_package_names(
     return [name for name, entry in lockfile.pure_python_packages.items() if entry.in_pyodide_cdn]
 
 
+def verify_and_update_runtime_assets(
+    runtime_asset_results: dict[str, tuple[pathlib.Path, str]],
+    lockfile: Lockfile,
+    pyscript_version: str,
+    lockfile_path: pathlib.Path,
+) -> None:
+    from webcompy.cli._pyodide_lock import PYODIDE_RUNTIME_URL_TEMPLATE, PYSCRIPT_RELEASE_URL_TEMPLATE
+    from webcompy.cli._runtime_downloader import RuntimeDownloadError
+
+    expected_hashes: dict[str, str] = {}
+    if lockfile.runtime_assets:
+        for asset_key, entry in lockfile.runtime_assets.items():
+            if entry.sha256 is not None:
+                expected_hashes[asset_key] = entry.sha256
+    for rel_path, (_asset_path, computed_sha256) in runtime_asset_results.items():
+        filename = rel_path.rsplit("/", 1)[-1]
+        if filename in expected_hashes and computed_sha256 != expected_hashes[filename]:
+            raise RuntimeDownloadError(
+                f"SHA256 mismatch for runtime asset {filename}. "
+                f"Expected: {expected_hashes[filename]}, got: {computed_sha256}."
+            )
+    lockfile.runtime_assets = {}
+    for rel_path, (_asset_path, computed_sha256) in runtime_asset_results.items():
+        filename = rel_path.rsplit("/", 1)[-1]
+        if rel_path.startswith("pyodide/"):
+            url = PYODIDE_RUNTIME_URL_TEMPLATE.format(pyodide_version=lockfile.pyodide_version, filename=filename)
+        else:
+            url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(pyscript_version=pyscript_version, filename=filename)
+        lockfile.runtime_assets[filename] = RuntimeAssetEntry(url=url, sha256=computed_sha256)
+    save_lockfile(lockfile, lockfile_path)
+
+
 def resolve_lockfile(
     dependencies: list[str],
     pyscript_version: str,
