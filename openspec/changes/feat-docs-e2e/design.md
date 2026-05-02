@@ -61,6 +61,12 @@ Since docs_app is a production site, we avoid adding test-specific attributes. I
 
 Tests SHALL verify that client-side routing works by clicking navigation links and checking URL/content changes. Navigation tests use the `docs_app_page` fixture to avoid repeated PyScript initialization — the page stays loaded, and only the route changes.
 
+The docs_app uses Bootstrap dropdowns for the "Demos" navigation item. Playwright cannot simply click a dropdown link because the dropdown menu is hidden by default. Two approaches:
+1. Use `page.locator("[data-bs-toggle='dropdown']")` to click the dropdown toggle first, then click the menu link
+2. Use `page_on("/sample/helloworld")` to navigate directly via URL, then test back-navigation via the "Home" link
+
+The recommended approach is (1) for forward-navigation tests and (2) as a fallback if Bootstrap dropdown interaction is unreliable in CI.
+
 ### Decision: Extended timeout for matplotlib
 
 The `PYSCRIPT_INIT_TIMEOUT` for docs_app tests will be 300 seconds (5 minutes) instead of the default 120 seconds. This accounts for micropip downloading and installing numpy + matplotlib in CI.

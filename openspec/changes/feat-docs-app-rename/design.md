@@ -28,9 +28,10 @@ The new name `docs_app` follows the same convention as the E2E test app (`my_app
 **Alternative considered**: `docs/` — rejected because it conflicts with the generated docs output directory (also `docs/` per `GenerateConfig.dist="docs"`) and is less specific.
 
 **Impact**: This is a breaking rename. All import paths change from `docs_src.xxx` to `docs_app.xxx`. The following must be updated:
-- Python imports in `docs_app/` itself (relative imports stay the same, absolute imports change)
-- `docs_app/bootstrap.py` — no changes (relative imports)
 - `docs_app/router.py` — `lazy()` calls use absolute paths that change
+- `docs_app/webcompy_config.py` — `app_import_path` references `docs_src.bootstrap:app`
+- `docs_app/bootstrap.py` — uses only relative imports, no changes needed
+- `docs_app/pyproject.toml` — contains `[project.optional-dependencies] browser = ["numpy", "matplotlib"]` but no `docs_src` references, so no changes needed
 - CI workflows (`ci.yml`, `deploy-pages.yml`)
 - AGENTS.md dev server commands
 - Any other references across the codebase
@@ -51,4 +52,4 @@ The `dist` output directory remains `"docs"` (which is gitignored). Only the sou
 
 - **[Import path breakage]** → All `docs_src` absolute imports must be found and updated. A grep search will catch these, but runtime testing is essential.
 - **[CI workflow breakage]** → The `ci.yml` generate step and `deploy-pages.yml` both reference `docs_src.bootstrap:app`. Must be updated atomically.
-- **[Lock file auto-generation]** → `docs_app/webcompy-lock.json` does not exist and will be auto-generated on first `webcompy start`. This is the same behavior as before (no lock file in `docs_src/` either). `.gitignore` should cover this.
+- **[Lock file auto-generation]** → `docs_app/webcompy-lock.json` does not exist and will be auto-generated on first `webcompy start`. This is the same behavior as before (no lock file in `docs_src/` either). `webcompy-lock.json` must be added to `.gitignore` (currently missing, which caused past auto-generated lock files to be accidentally committed).
