@@ -19,6 +19,7 @@ _(none)_
 ### Modified Capabilities
 
 - `cli`: Update documentation and config references from `docs_src` to `docs_app`
+- `app-config`: Configure `static_files_dir` for docs_app server and generator
 
 ## Impact
 

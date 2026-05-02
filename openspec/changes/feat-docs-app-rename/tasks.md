@@ -14,7 +14,7 @@
 - [ ] 3.2 Update `.github/workflows/ci.yml` — all `docs_src` references to `docs_app`
 - [ ] 3.3 Update `.github/workflows/deploy-pages.yml` — all `docs_src` references to `docs_app`
 - [ ] 3.4 Update `AGENTS.md` — dev server and generate commands from `docs_src.bootstrap:app` to `docs_app.bootstrap:app`
-- [ ] 3.5 Add `webcompy-lock.json` to `.gitignore` (currently missing, causing auto-generated lock files to be tracked)
+- [ ] 3.5 Add `webcompy-lock.json` to `.gitignore` (currently missing, causing auto-generated lock files to be tracked) — _non-spec maintenance task_
 - [ ] 3.6 Search codebase for any remaining `docs_src` references and update them
 
 ## 4. Verify
