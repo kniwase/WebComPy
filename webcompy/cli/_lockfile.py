@@ -78,10 +78,7 @@ class RuntimeAssetEntry:
     sha256: str | None = None
 
     def to_dict(self) -> dict:
-        d: dict = {"url": self.url}
-        if self.sha256 is not None:
-            d["sha256"] = self.sha256
-        return d
+        return {"url": self.url, "sha256": self.sha256}
 
     @classmethod
     def from_dict(cls, data: dict) -> RuntimeAssetEntry:

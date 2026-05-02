@@ -81,6 +81,13 @@ class TestDownloadRuntimeAssets:
         assert (dest_dir / "pyodide" / "python_stdlib.zip").is_file()
         assert (dest_dir / "pyodide" / "pyodide-lock.json").is_file()
         assert len(results) == len(PYSCRIPT_CORE_ASSETS) + len(PYODIDE_RUNTIME_ASSETS)
+        assert "core.js" in results
+        assert "core.css" in results
+        assert "pyodide/pyodide.mjs" in results
+        assert "pyodide/pyodide.asm.wasm" in results
+        assert "pyodide/pyodide.asm.js" in results
+        assert "pyodide/python_stdlib.zip" in results
+        assert "pyodide/pyodide-lock.json" in results
 
     def test_returns_sha256_hashes(self, tmp_path, clean_cache):
         pyodide_version = "0.29.3"

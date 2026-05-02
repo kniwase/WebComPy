@@ -60,12 +60,13 @@ def download_runtime_assets(
     for filename in PYSCRIPT_CORE_ASSETS:
         cached_path = cache_dir / filename
         dest_path = dest_dir / filename
+        rel_path = filename
 
         if cached_path.is_file():
             dest_path.parent.mkdir(parents=True, exist_ok=True)
             dest_path.write_bytes(cached_path.read_bytes())
             sha256 = _sha256_of_file(dest_path)
-            results[filename] = (dest_path, sha256)
+            results[rel_path] = (dest_path, sha256)
             continue
 
         url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(pyscript_version=pyscript_version, filename=filename)
@@ -73,7 +74,7 @@ def download_runtime_assets(
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         dest_path.write_bytes(data)
         sha256 = hashlib.sha256(data).hexdigest()
-        results[filename] = (dest_path, sha256)
+        results[rel_path] = (dest_path, sha256)
 
     pyodide_dest_dir = dest_dir / "pyodide"
     pyodide_cache_dir = cache_dir / "pyodide"
@@ -81,12 +82,13 @@ def download_runtime_assets(
     for filename in PYODIDE_RUNTIME_ASSETS:
         cached_path = pyodide_cache_dir / filename
         dest_path = pyodide_dest_dir / filename
+        rel_path = f"pyodide/{filename}"
 
         if cached_path.is_file():
             dest_path.parent.mkdir(parents=True, exist_ok=True)
             dest_path.write_bytes(cached_path.read_bytes())
             sha256 = _sha256_of_file(dest_path)
-            results[filename] = (dest_path, sha256)
+            results[rel_path] = (dest_path, sha256)
             continue
 
         url = PYODIDE_RUNTIME_URL_TEMPLATE.format(pyodide_version=pyodide_version, filename=filename)
@@ -94,6 +96,6 @@ def download_runtime_assets(
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         dest_path.write_bytes(data)
         sha256 = hashlib.sha256(data).hexdigest()
-        results[filename] = (dest_path, sha256)
+        results[rel_path] = (dest_path, sha256)
 
     return results

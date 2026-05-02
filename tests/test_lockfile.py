@@ -347,11 +347,33 @@ class TestRuntimeAssetEntry:
         assert d["url"] == "https://pyscript.net/releases/2026.3.1/core.js"
         assert d["sha256"] == "abc123"
 
+    def test_to_dict_with_null_sha256(self):
+        entry = RuntimeAssetEntry(
+            url="https://pyscript.net/releases/2026.3.1/core.js",
+        )
+        d = entry.to_dict()
+        assert d["url"] == "https://pyscript.net/releases/2026.3.1/core.js"
+        assert d["sha256"] is None
+
+    def test_to_dict_without_sha256(self):
+        entry = RuntimeAssetEntry(
+            url="https://pyscript.net/releases/2026.3.1/core.js",
+        )
+        d = entry.to_dict()
+        assert d["url"] == "https://pyscript.net/releases/2026.3.1/core.js"
+        assert d["sha256"] is None
+
     def test_from_dict(self):
         data = {"url": "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.mjs", "sha256": "def456"}
         entry = RuntimeAssetEntry.from_dict(data)
         assert entry.url == "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.mjs"
         assert entry.sha256 == "def456"
+
+    def test_from_dict_without_sha256(self):
+        data = {"url": "https://pyscript.net/releases/2026.3.1/core.js"}
+        entry = RuntimeAssetEntry.from_dict(data)
+        assert entry.url == "https://pyscript.net/releases/2026.3.1/core.js"
+        assert entry.sha256 is None
 
 
 class TestLockfileRuntimeServing:

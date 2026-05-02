@@ -124,26 +124,31 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                     PYSCRIPT_VERSION,
                     runtime_dir,
                 )
+                expected_hashes: dict[str, str] = {}
                 if lockfile is not None and lockfile.runtime_assets:
-                    for asset_key, (_asset_path, computed_sha256) in runtime_asset_results.items():
-                        expected = lockfile.runtime_assets.get(asset_key)
-                        if expected is not None and expected.sha256 is not None and computed_sha256 != expected.sha256:
-                            raise RuntimeDownloadError(
-                                f"SHA256 mismatch for runtime asset {asset_key}. "
-                                f"Expected: {expected.sha256}, got: {computed_sha256}."
-                            )
+                    for asset_key, entry in lockfile.runtime_assets.items():
+                        if entry.sha256 is not None:
+                            expected_hashes[asset_key] = entry.sha256
+                for rel_path, (_asset_path, computed_sha256) in runtime_asset_results.items():
+                    filename = rel_path.rsplit("/", 1)[-1]
+                    if filename in expected_hashes and computed_sha256 != expected_hashes[filename]:
+                        raise RuntimeDownloadError(
+                            f"SHA256 mismatch for runtime asset {filename}. "
+                            f"Expected: {expected_hashes[filename]}, got: {computed_sha256}."
+                        )
                 if lockfile is not None:
                     lockfile.runtime_assets = {}
-                    for asset_key, (_asset_path, computed_sha256) in runtime_asset_results.items():
-                        if asset_key in ("core.js", "core.css"):
-                            url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(
-                                pyscript_version=PYSCRIPT_VERSION, filename=asset_key
+                    for rel_path, (_asset_path, computed_sha256) in runtime_asset_results.items():
+                        filename = rel_path.rsplit("/", 1)[-1]
+                        if rel_path.startswith("pyodide/"):
+                            url = PYODIDE_RUNTIME_URL_TEMPLATE.format(
+                                pyodide_version=lockfile.pyodide_version, filename=filename
                             )
                         else:
-                            url = PYODIDE_RUNTIME_URL_TEMPLATE.format(
-                                pyodide_version=lockfile.pyodide_version, filename=asset_key
+                            url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(
+                                pyscript_version=PYSCRIPT_VERSION, filename=filename
                             )
-                        lockfile.runtime_assets[asset_key] = RuntimeAssetEntry(url=url, sha256=computed_sha256)
+                        lockfile.runtime_assets[filename] = RuntimeAssetEntry(url=url, sha256=computed_sha256)
                     lockfile_path = app.config.app_package_path / LOCKFILE_NAME
                     save_lockfile(lockfile, lockfile_path)
             except RuntimeDownloadError as e:
@@ -274,6 +279,9 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             html_path = dist_dir / "index.html"
             html_path.open("w", encoding="utf8").write(html)
             print(html_path)
+
+        if runtime_temp_dir_obj is not None:
+            runtime_temp_dir_obj.cleanup()
 
         if cdn_temp_dir_obj is not None:
             cdn_temp_dir_obj.__exit__(None, None, None)

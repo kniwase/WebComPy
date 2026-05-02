@@ -20,7 +20,7 @@ When `runtime_serving="local"`, `webcompy-lock.json` SHALL include a `runtime_as
 
 #### Scenario: Runtime assets section after lock generation
 - **WHEN** a lock file is generated with `webcompy lock` and `runtime_serving="local"`
-- **THEN** the `runtime_assets` section SHALL contain entries for `core_js`, `core_css`, `pyodide_mjs`, `pyodide_asm_wasm`, `pyodide_asm_js`, `python_stdlib_zip`, and `pyodide_lock_json`
+- **THEN** the `runtime_assets` section SHALL contain entries for `core.js`, `core.css`, `pyodide.mjs`, `pyodide.asm.wasm`, `pyodide.asm.js`, `python_stdlib.zip`, and `pyodide-lock.json`
 - **AND** each entry SHALL include the download `url`
 - **AND** each entry's `sha256` SHALL be `null` (not yet computed)
 
