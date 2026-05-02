@@ -21,7 +21,7 @@ jobs:
         with:
           cache: true
       - run: uv sync --all-groups
-      - run: uv run python -m webcompy generate --app docs_src.bootstrap:app
+      - run: uv run python -m webcompy generate --app docs_app.bootstrap:app
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./docs

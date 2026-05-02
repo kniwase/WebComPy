@@ -25,7 +25,7 @@ then access [http://127.0.0.1:8080/](http://127.0.0.1:8080/)
 
 ## Documents and Demos
 - [webcompy.net](https://webcompy.net/)
-    * [Source Codes](https://github.com/kniwase/WebComPy/tree/main/docs_src/)
+    * [Source Codes](https://github.com/kniwase/WebComPy/tree/main/docs_app/)
     * [Generated Files](https://github.com/kniwase/WebComPy/tree/main/docs/)
 
 ## Sample Code
