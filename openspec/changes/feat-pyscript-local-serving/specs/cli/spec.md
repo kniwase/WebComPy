@@ -22,6 +22,32 @@ When `runtime_serving="local"`, the CLI SHALL download PyScript core assets (`co
 - **THEN** downloaded runtime assets SHALL be cached at `~/.cache/webcompy/runtime-assets/{pyscript_version}/`
 - **AND** cached assets with matching versions SHALL be reused without network requests
 
+### Requirement: Downloaded runtime assets SHALL be verified against lock file hashes
+When `runtime_serving="local"`, the CLI SHALL compute SHA256 hashes of all downloaded runtime assets. If the lock file contains `runtime_assets` with SHA256 hashes (from a previous build), the CLI SHALL verify downloaded files against those hashes. On mismatch, the CLI SHALL raise an error. After verification, the CLI SHALL update the lock file with the computed hashes.
+
+#### Scenario: First build with runtime_serving="local"
+- **WHEN** a developer runs `webcompy generate --runtime-serving local` for the first time
+- **THEN** runtime assets SHALL be downloaded and their SHA256 hashes computed
+- **AND** the lock file SHALL be updated with `runtime_assets` entries containing URLs and computed SHA256 hashes
+- **AND** no hash verification SHALL be performed (no prior hashes exist)
+
+#### Scenario: Subsequent build with runtime_serving="local"
+- **WHEN** a developer runs `webcompy generate --runtime-serving local` and the lock file contains `runtime_assets` with SHA256 hashes
+- **THEN** downloaded runtime assets SHALL be verified against the lock file hashes
+- **AND** on hash mismatch, the CLI SHALL raise an error
+- **AND** the lock file SHALL be updated with the newly computed hashes
+
+### Requirement: Temporary directories used for runtime asset downloads SHALL be cleaned up
+When `webcompy generate` or `webcompy start` creates temporary directories for runtime asset downloads, those directories SHALL be cleaned up after use.
+
+#### Scenario: Temporary directory cleanup after static site generation
+- **WHEN** `webcompy generate --runtime-serving local` completes
+- **THEN** any temporary directories created for runtime asset downloads SHALL be removed
+
+#### Scenario: Temporary directory cleanup after dev server shutdown
+- **WHEN** `webcompy start --dev --runtime-serving local` terminates
+- **THEN** any temporary directories created for runtime asset downloads SHALL be removed
+
 ### Requirement: Runtime-local HTML shall reference local runtime asset URLs and configure PyScript for local Pyodide
 In runtime-local mode, `generate_html()` SHALL replace PyScript and Pyodide CDN URLs with same-origin paths under `/_webcompy-assets/`. The PyScript `py-config` SHALL include `interpreter` and `lockFileURL` pointing to local Pyodide assets.
 

@@ -16,13 +16,23 @@
 - **AND** the `runtime_assets` section SHALL NOT be present
 
 ### Requirement: The lock file shall include runtime asset metadata when runtime_serving is local
-When `runtime_serving="local"`, `webcompy-lock.json` SHALL include a `runtime_assets` section recording the download URLs and SHA256 hashes of PyScript and Pyodide runtime files.
+When `runtime_serving="local"`, `webcompy-lock.json` SHALL include a `runtime_assets` section recording the download URLs of PyScript and Pyodide runtime files. SHA256 hashes are populated after the first build: `webcompy lock` records URLs only (with `sha256: null`), and the first `webcompy start` or `webcompy generate` computes and writes SHA256 hashes to the lock file. Subsequent builds verify downloaded files against these recorded hashes.
 
-#### Scenario: Runtime assets section
-- **WHEN** a lock file is generated with `runtime_serving="local"`
-- **THEN** the `runtime_assets` section SHALL contain entries for `core_js`, `core_css`, `pyodide_mjs`, `pyodide_asm_wasm`, `pyodide_asm_js`, and `python_stdlib_zip`
-- **AND** each entry SHALL include the download `url` and `sha256` hash
-- **AND** the `pyodide_lock_json` entry SHALL include the download `url` and `sha256` hash
+#### Scenario: Runtime assets section after lock generation
+- **WHEN** a lock file is generated with `webcompy lock` and `runtime_serving="local"`
+- **THEN** the `runtime_assets` section SHALL contain entries for `core_js`, `core_css`, `pyodide_mjs`, `pyodide_asm_wasm`, `pyodide_asm_js`, `python_stdlib_zip`, and `pyodide_lock_json`
+- **AND** each entry SHALL include the download `url`
+- **AND** each entry's `sha256` SHALL be `null` (not yet computed)
+
+#### Scenario: Runtime assets section after first build
+- **WHEN** a build (`webcompy start` or `webcompy generate`) runs with `runtime_serving="local"` and downloads runtime assets
+- **THEN** each `runtime_assets` entry SHALL be updated with the computed `sha256` hash
+- **AND** the lock file SHALL be re-saved with the computed hashes
+
+#### Scenario: SHA256 verification on subsequent builds
+- **WHEN** a build runs with `runtime_serving="local"` and the lock file already contains `runtime_assets` with `sha256` hashes
+- **THEN** each downloaded file's SHA256 SHALL be verified against the recorded hash
+- **AND** a mismatch SHALL raise a `RuntimeDownloadError`
 
 #### Scenario: Runtime assets absent in CDN mode
 - **WHEN** a lock file is generated with `runtime_serving="cdn"`

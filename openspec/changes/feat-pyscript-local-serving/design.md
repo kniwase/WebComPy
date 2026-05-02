@@ -32,8 +32,8 @@ dist/_webcompy-assets/
 
 This subdirectory layout ensures Pyodide's relative path resolution works correctly.
 
-### D5: Downloads are cached at `~/.cache/webcompy/runtime-assets/{pyodide_version}/`
-Each runtime asset is cached with its filename as key. SHA256 verification uses hashes from the downloaded `pyodide-lock.json` for Pyodide files. PyScript core assets are verified against known hashes or version-pinned cache keys.
+### D5: Downloads are cached at `~/.cache/webcompy/runtime-assets/{pyscript_version}/`
+Each runtime asset is cached with its filename as key. SHA256 hashes are computed at download time and recorded in the lock file's `runtime_assets` section. On subsequent builds, downloaded files are verified against the hashes stored in the lock file. First-build verification is skipped (no prior hashes exist). The `pyodide-lock.json` `packages` section does not contain entries for runtime files (`pyodide`, `pyodide_asm`, `python_stdlib`), so it cannot be used as a hash source for runtime asset verification.
 
 ### D6: The lock file gains `runtime_serving` field and `runtime_assets` section
 When `runtime_serving="local"`:
