@@ -108,7 +108,7 @@ class Lockfile:
             "wasm_packages": {name: entry.to_dict() for name, entry in self.wasm_packages.items()},
             "pure_python_packages": {name: entry.to_dict() for name, entry in self.pure_python_packages.items()},
         }
-        if self.runtime_serving == "local" and self.runtime_assets:
+        if self.runtime_serving == "local":
             d["runtime_assets"] = {name: entry.to_dict() for name, entry in self.runtime_assets.items()}
         return d
 

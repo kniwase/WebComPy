@@ -257,10 +257,10 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                 html_path.open("w", encoding="utf8").write(html)
                 print(html_path)
 
-            if cdn_temp_dir_obj is not None:
-                cdn_temp_dir_obj.__exit__(None, None, None)
         finally:
             if runtime_temp_dir_obj is not None:
                 runtime_temp_dir_obj.cleanup()
+            if cdn_temp_dir_obj is not None:
+                cdn_temp_dir_obj.__exit__(None, None, None)
 
         print("done")
