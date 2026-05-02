@@ -139,3 +139,137 @@ class TestGenerateHtmlWasmLocalServing:
         config = _extract_py_config(html_str)
         assert "/_webcompy-assets/packages/numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl" in config["packages"]
         assert config["lockFileURL"] == "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide-lock.json"
+
+
+def _extract_script_src(html_str: str) -> str | None:
+    match = re.search(r'<script[^>]+src="([^"]+)"', html_str)
+    return match.group(1) if match else None
+
+
+def _extract_css_href(html_str: str) -> str | None:
+    match = re.search(r'<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"', html_str)
+    if match:
+        return match.group(1)
+    match = re.search(r'<link[^>]+href="([^"]+)"[^>]+rel="stylesheet"', html_str)
+    return match.group(1) if match else None
+
+
+class TestGenerateHtmlRuntimeLocalServing:
+    def test_runtime_local_script_src(self):
+        app = _make_app()
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            runtime_serving="local",
+        )
+        script_src = _extract_script_src(html_str)
+        assert script_src == "/_webcompy-assets/core.js"
+
+    def test_runtime_local_css_href(self):
+        app = _make_app()
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            runtime_serving="local",
+        )
+        css_href = _extract_css_href(html_str)
+        assert css_href == "/_webcompy-assets/core.css"
+
+    def test_runtime_local_py_config_includes_interpreter_and_lockfile(self):
+        app = _make_app()
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            runtime_serving="local",
+        )
+        config = _extract_py_config(html_str)
+        assert config["interpreter"] == "/_webcompy-assets/pyodide/pyodide.mjs"
+        assert config["lockFileURL"] == "/_webcompy-assets/pyodide/pyodide-lock.json"
+
+    def test_runtime_cdn_no_interpreter_no_lockfile(self):
+        app = _make_app()
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            runtime_serving="cdn",
+        )
+        config = _extract_py_config(html_str)
+        assert "interpreter" not in config
+        assert "lockFileURL" not in config
+
+    def test_runtime_cdn_script_and_css_use_cdn(self):
+        app = _make_app()
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            runtime_serving="cdn",
+        )
+        script_src = _extract_script_src(html_str)
+        css_href = _extract_css_href(html_str)
+        assert "pyscript.net" in script_src
+        assert "pyscript.net" in css_href
+
+    def test_runtime_local_with_base_url(self):
+        app = _make_app(base_url="/myapp/")
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            runtime_serving="local",
+        )
+        config = _extract_py_config(html_str)
+        assert config["interpreter"] == "/myapp/_webcompy-assets/pyodide/pyodide.mjs"
+        assert config["lockFileURL"] == "/myapp/_webcompy-assets/pyodide/pyodide-lock.json"
+        script_src = _extract_script_src(html_str)
+        css_href = _extract_css_href(html_str)
+        assert script_src == "/myapp/_webcompy-assets/core.js"
+        assert css_href == "/myapp/_webcompy-assets/core.css"
+
+    def test_runtime_local_overrides_lockfile_url(self):
+        app = _make_app()
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            runtime_serving="local",
+            lockfile_url="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide-lock.json",
+        )
+        config = _extract_py_config(html_str)
+        assert config["lockFileURL"] == "/_webcompy-assets/pyodide/pyodide-lock.json"
+        assert config["interpreter"] == "/_webcompy-assets/pyodide/pyodide.mjs"
+
+    def test_runtime_cdn_wasm_local_lockfile_url(self):
+        app = _make_app()
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            runtime_serving="cdn",
+            lockfile_url="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide-lock.json",
+        )
+        config = _extract_py_config(html_str)
+        assert "interpreter" not in config
+        assert config["lockFileURL"] == "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide-lock.json"
+        script_src = _extract_script_src(html_str)
+        assert "pyscript.net" in script_src

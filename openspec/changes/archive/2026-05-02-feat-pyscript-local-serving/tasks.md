@@ -1,6 +1,6 @@
 # Tasks: PyScript Local Serving — Same-Origin Runtime Assets
 
-- [ ] **Task 1: Add `runtime_serving` to AppConfig**
+- [x] **Task 1: Add `runtime_serving` to AppConfig**
 
 **Estimated time: ~0.5 hours**
 
@@ -18,7 +18,7 @@
 
 ---
 
-- [ ] **Task 2: Implement runtime asset download with caching**
+- [x] **Task 2: Implement runtime asset download with caching**
 
 **Estimated time: ~1.5 hours**
 
@@ -27,12 +27,13 @@
 1. Create `webcompy/cli/_runtime_downloader.py`.
 2. Define `PYSCRIPT_CORE_ASSETS` list: `["core.js", "core.css"]`.
 3. Define `PYODIDE_RUNTIME_ASSETS` list: `["pyodide.mjs", "pyodide.asm.wasm", "pyodide.asm.js", "python_stdlib.zip", "pyodide-lock.json"]`.
-4. Implement `download_runtime_assets(pyodide_version: str, pyscript_version: str, dest_dir: Path) -> dict[str, Path]`:
+4. Implement `download_runtime_assets(pyodide_version: str, pyscript_version: str, dest_dir: Path) -> dict[str, tuple[Path, str]]`:
    - Download PyScript assets from `https://pyscript.net/releases/{pyscript_version}/{filename}`.
    - Download Pyodide runtime assets from `https://cdn.jsdelivr.net/pyodide/v{pyodide_version}/full/{filename}`.
    - Place PyScript assets in `dest_dir/` and Pyodide assets in `dest_dir/pyodide/`.
    - Cache at `~/.cache/webcompy/runtime-assets/{pyscript_version}/` (XDG-aware).
-   - Verify SHA256 for Pyodide assets against `pyodide-lock.json` hashes.
+   - Compute SHA256 for each downloaded file and return hashes alongside paths.
+   - Remove `_get_pyodide_runtime_hashes()` — Pyodide runtime files are not in `pyodide-lock.json` packages section, so this approach cannot work.
 5. Reuse `_pyodide_downloader.py` patterns (urllib, timeout, error handling).
 6. Write unit tests with mocked HTTP.
 
@@ -40,12 +41,12 @@
 
 - All specified assets are downloaded to the correct subdirectories.
 - Cached assets are reused without network requests.
-- SHA256 hash mismatches cause errors.
+- SHA256 hashes are computed for each file and returned alongside paths.
 - Cache follows XDG conventions.
 
 ---
 
-- [ ] **Task 3: Update `generate_html()` for runtime-local mode**
+- [x] **Task 3: Update `generate_html()` for runtime-local mode**
 
 **Estimated time: ~1 hour**
 
@@ -68,7 +69,7 @@
 
 ---
 
-- [ ] **Task 4: Update `generate_static_site()` and `create_asgi_app()` for runtime-local mode**
+- [x] **Task 4: Update `generate_static_site()` and `create_asgi_app()` for runtime-local mode**
 
 **Estimated time: ~1.5 hours**
 
@@ -89,7 +90,7 @@
 
 ---
 
-- [ ] **Task 5: Update lock file schema for runtime serving**
+- [x] **Task 5: Update lock file schema for runtime serving**
 
 **Estimated time: ~0.5 hours**
 
@@ -108,7 +109,7 @@
 
 ---
 
-- [ ] **Task 6: E2E test for runtime-local mode**
+- [x] **Task 6: E2E test for runtime-local mode**
 
 **Estimated time: ~1 hour**
 

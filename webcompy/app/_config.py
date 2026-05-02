@@ -17,6 +17,7 @@ class AppConfig:
     hydrate: bool = True
     serve_all_deps: bool = True
     wasm_serving: Literal["cdn", "local"] | None = None
+    runtime_serving: Literal["cdn", "local"] | None = None
 
     def __post_init__(self):
         stripped = self.base_url.strip("/")

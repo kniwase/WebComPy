@@ -69,6 +69,18 @@ class TestAppConfig:
         config = AppConfig(wasm_serving="local")
         assert config.wasm_serving == "local"
 
+    def test_runtime_serving_defaults_to_none(self):
+        config = AppConfig()
+        assert config.runtime_serving is None
+
+    def test_runtime_serving_cdn(self):
+        config = AppConfig(runtime_serving="cdn")
+        assert config.runtime_serving == "cdn"
+
+    def test_runtime_serving_local(self):
+        config = AppConfig(runtime_serving="local")
+        assert config.runtime_serving == "local"
+
 
 class TestServerConfig:
     def test_defaults(self):
