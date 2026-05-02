@@ -1,6 +1,6 @@
 # Tasks: PyScript Local Serving — Same-Origin Runtime Assets
 
-- [ ] **Task 1: Add `runtime_serving` to AppConfig**
+- [x] **Task 1: Add `runtime_serving` to AppConfig**
 
 **Estimated time: ~0.5 hours**
 

@@ -110,109 +110,107 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
         runtime_asset_results: dict[str, tuple[pathlib.Path, str]] = {}
         runtime_temp_dir_obj: TemporaryDirectory | None = None
-        if resolved_runtime_serving == "local":
-            try:
-                runtime_temp_dir_obj = TemporaryDirectory()
-                runtime_dir = pathlib.Path(runtime_temp_dir_obj.name)
-                runtime_asset_results = download_runtime_assets(
-                    lockfile.pyodide_version if lockfile else "0.29.3",
-                    PYSCRIPT_VERSION,
-                    runtime_dir,
-                )
-                if lockfile is not None:
-                    verify_and_update_runtime_assets(
-                        runtime_asset_results,
-                        lockfile,
+        try:
+            if resolved_runtime_serving == "local":
+                try:
+                    runtime_temp_dir_obj = TemporaryDirectory()
+                    runtime_dir = pathlib.Path(runtime_temp_dir_obj.name)
+                    runtime_asset_results = download_runtime_assets(
+                        lockfile.pyodide_version if lockfile else "0.29.3",
                         PYSCRIPT_VERSION,
-                        app.config.app_package_path / LOCKFILE_NAME,
+                        runtime_dir,
                     )
-            except RuntimeDownloadError as e:
-                if runtime_temp_dir_obj is not None:
-                    runtime_temp_dir_obj.cleanup()
-                import sys
-
-                print(f"Error: {e}", file=sys.stderr)
-                sys.exit(1)
-            lockfile_url = None
-
-        cdn_pure_python_names: list[str] = []
-        cdn_extracted_deps: list[tuple[str, pathlib.Path]] = []
-        cdn_temp_dir_obj = None
-        if not app.config.serve_all_deps:
-            cdn_pure_python_names = get_cdn_pure_python_package_names(lockfile)
-        elif lockfile is not None:
-            for name, entry in lockfile.pure_python_packages.items():
-                if entry.in_pyodide_cdn and entry.pyodide_file_name and entry.pyodide_sha256:
-                    try:
-                        wheel_path = download_pyodide_wheel(
-                            entry.pyodide_file_name,
-                            lockfile.pyodide_version,
-                            entry.pyodide_sha256,
+                    if lockfile is not None:
+                        verify_and_update_runtime_assets(
+                            runtime_asset_results,
+                            lockfile,
+                            PYSCRIPT_VERSION,
+                            app.config.app_package_path / LOCKFILE_NAME,
                         )
-                    except PyodideDownloadError as e:
-                        import sys
+                except RuntimeDownloadError as e:
+                    import sys
 
-                        print(f"Error: {e}", file=sys.stderr)
-                        sys.exit(1)
-                    if cdn_temp_dir_obj is None:
-                        cdn_temp_dir_obj = TemporaryDirectory()
-                        cdn_temp_dir_obj.__enter__()
-                    extract_dest = pathlib.Path(cdn_temp_dir_obj.name) / name
-                    extract_dest.mkdir(parents=True, exist_ok=True)
-                    extracted = extract_wheel(wheel_path, extract_dest)
-                    cdn_extracted_deps.extend(extracted)
+                    print(f"Error: {e}", file=sys.stderr)
+                    sys.exit(1)
+                lockfile_url = None
 
-        all_bundled_deps = bundled_deps + cdn_extracted_deps
+            cdn_pure_python_names: list[str] = []
+            cdn_extracted_deps: list[tuple[str, pathlib.Path]] = []
+            cdn_temp_dir_obj = None
+            if not app.config.serve_all_deps:
+                cdn_pure_python_names = get_cdn_pure_python_package_names(lockfile)
+            elif lockfile is not None:
+                for name, entry in lockfile.pure_python_packages.items():
+                    if entry.in_pyodide_cdn and entry.pyodide_file_name and entry.pyodide_sha256:
+                        try:
+                            wheel_path = download_pyodide_wheel(
+                                entry.pyodide_file_name,
+                                lockfile.pyodide_version,
+                                entry.pyodide_sha256,
+                            )
+                        except PyodideDownloadError as e:
+                            import sys
 
-        dist = generate_config.dist if args.get("dist") is None else args["dist"]
-        app_version = generate_app_version(app.config.version)
+                            print(f"Error: {e}", file=sys.stderr)
+                            sys.exit(1)
+                        if cdn_temp_dir_obj is None:
+                            cdn_temp_dir_obj = TemporaryDirectory()
+                            cdn_temp_dir_obj.__enter__()
+                        extract_dest = pathlib.Path(cdn_temp_dir_obj.name) / name
+                        extract_dest.mkdir(parents=True, exist_ok=True)
+                        extracted = extract_wheel(wheel_path, extract_dest)
+                        cdn_extracted_deps.extend(extracted)
 
-        dist_dir = pathlib.Path(dist).absolute()
-        if dist_dir.exists():
-            shutil.rmtree(dist_dir)
-        os.mkdir(dist_dir)
+            all_bundled_deps = bundled_deps + cdn_extracted_deps
 
-        nojekyll_path = dist_dir / ".nojekyll"
-        nojekyll_path.touch()
-        print(nojekyll_path)
+            dist = generate_config.dist if args.get("dist") is None else args["dist"]
+            app_version = generate_app_version(app.config.version)
 
-        if generate_config.cname:
-            cname_path = dist_dir / "CNAME"
-            cname_path.open("w", encoding="utf8").write(generate_config.cname)
-            print(cname_path)
+            dist_dir = pathlib.Path(dist).absolute()
+            if dist_dir.exists():
+                shutil.rmtree(dist_dir)
+            os.mkdir(dist_dir)
 
-        static_files_dir = generate_config.static_files_dir_path.absolute()
-        for relative_path in get_static_files(static_files_dir):
-            src = static_files_dir / relative_path
-            dst = dist_dir / relative_path
-            if not (parent := dst.parent).exists():
-                os.makedirs(parent)
-            shutil.copy(src, dst)
-            print(dst)
+            nojekyll_path = dist_dir / ".nojekyll"
+            nojekyll_path.touch()
+            print(nojekyll_path)
 
-        scripts_dir = dist_dir / "_webcompy-app-package"
-        os.mkdir(scripts_dir)
-        wheel_path = make_webcompy_app_package(
-            scripts_dir,
-            get_webcompy_packge_dir(),
-            app.config.app_package_path,
-            app_version,
-            app.config.assets,
-            bundled_deps=all_bundled_deps or None,
-        )
-        wheel_filename = wheel_path.name
-        for p in scripts_dir.iterdir():
-            print(p)
+            if generate_config.cname:
+                cname_path = dist_dir / "CNAME"
+                cname_path.open("w", encoding="utf8").write(generate_config.cname)
+                print(cname_path)
 
-        if wasm_wheel_paths:
-            wasm_assets_dir = dist_dir / "_webcompy-assets" / "packages"
-            os.makedirs(wasm_assets_dir)
-            for file_name, wheel_path in wasm_wheel_paths.items():
-                dst = wasm_assets_dir / file_name
-                shutil.copy(wheel_path, dst)
+            static_files_dir = generate_config.static_files_dir_path.absolute()
+            for relative_path in get_static_files(static_files_dir):
+                src = static_files_dir / relative_path
+                dst = dist_dir / relative_path
+                if not (parent := dst.parent).exists():
+                    os.makedirs(parent)
+                shutil.copy(src, dst)
                 print(dst)
 
-        try:
+            scripts_dir = dist_dir / "_webcompy-app-package"
+            os.mkdir(scripts_dir)
+            wheel_path = make_webcompy_app_package(
+                scripts_dir,
+                get_webcompy_packge_dir(),
+                app.config.app_package_path,
+                app_version,
+                app.config.assets,
+                bundled_deps=all_bundled_deps or None,
+            )
+            wheel_filename = wheel_path.name
+            for p in scripts_dir.iterdir():
+                print(p)
+
+            if wasm_wheel_paths:
+                wasm_assets_dir = dist_dir / "_webcompy-assets" / "packages"
+                os.makedirs(wasm_assets_dir)
+                for file_name, wheel_path in wasm_wheel_paths.items():
+                    dst = wasm_assets_dir / file_name
+                    shutil.copy(wheel_path, dst)
+                    print(dst)
+
             if runtime_asset_results:
                 for rel_path, (src_path, _sha256) in runtime_asset_results.items():
                     dst = dist_dir / "_webcompy-assets" / rel_path
@@ -258,11 +256,11 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                 html_path = dist_dir / "index.html"
                 html_path.open("w", encoding="utf8").write(html)
                 print(html_path)
+
+            if cdn_temp_dir_obj is not None:
+                cdn_temp_dir_obj.__exit__(None, None, None)
         finally:
             if runtime_temp_dir_obj is not None:
                 runtime_temp_dir_obj.cleanup()
-
-        if cdn_temp_dir_obj is not None:
-            cdn_temp_dir_obj.__exit__(None, None, None)
 
         print("done")

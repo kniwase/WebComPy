@@ -387,11 +387,11 @@ class TestLockfileRuntimeServing:
             pyscript_version="2026.3.1",
             runtime_serving="local",
             runtime_assets={
-                "core_js": RuntimeAssetEntry(
+                "core.js": RuntimeAssetEntry(
                     url="https://pyscript.net/releases/2026.3.1/core.js",
                     sha256="abc123",
                 ),
-                "pyodide_mjs": RuntimeAssetEntry(
+                "pyodide.mjs": RuntimeAssetEntry(
                     url="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.mjs",
                     sha256="def456",
                 ),
@@ -402,9 +402,9 @@ class TestLockfileRuntimeServing:
         loaded = load_lockfile(path)
         assert loaded is not None
         assert loaded.runtime_serving == "local"
-        assert "core_js" in loaded.runtime_assets
-        assert loaded.runtime_assets["core_js"].url == "https://pyscript.net/releases/2026.3.1/core.js"
-        assert loaded.runtime_assets["core_js"].sha256 == "abc123"
+        assert "core.js" in loaded.runtime_assets
+        assert loaded.runtime_assets["core.js"].url == "https://pyscript.net/releases/2026.3.1/core.js"
+        assert loaded.runtime_assets["core.js"].sha256 == "abc123"
 
     def test_runtime_assets_absent_in_cdn_mode_output(self, tmp_path):
         lockfile = Lockfile(
@@ -423,7 +423,7 @@ class TestLockfileRuntimeServing:
             pyscript_version="2026.3.1",
             runtime_serving="local",
             runtime_assets={
-                "core_js": RuntimeAssetEntry(
+                "core.js": RuntimeAssetEntry(
                     url="https://pyscript.net/releases/2026.3.1/core.js",
                     sha256="abc123",
                 ),
@@ -433,7 +433,7 @@ class TestLockfileRuntimeServing:
         save_lockfile(lockfile, path)
         data = json.loads(path.read_text(encoding="utf-8"))
         assert "runtime_assets" in data
-        assert "core_js" in data["runtime_assets"]
+        assert "core.js" in data["runtime_assets"]
 
     def test_backward_compat_standalone_assets(self, tmp_path):
         data = {
