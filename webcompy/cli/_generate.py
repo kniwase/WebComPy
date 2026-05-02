@@ -1,8 +1,8 @@
 import os
 import pathlib
 import shutil
-import tempfile
 from functools import partial
+from tempfile import TemporaryDirectory
 
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import GenerateConfig
@@ -10,15 +10,21 @@ from webcompy.cli._argparser import get_params
 from webcompy.cli._html import PYSCRIPT_VERSION, generate_html
 from webcompy.cli._lockfile import (
     LOCKFILE_NAME,
+    RuntimeAssetEntry,
     get_bundled_deps,
     get_cdn_pure_python_package_names,
     get_wasm_package_names,
     resolve_lockfile,
+    save_lockfile,
     validate_local_environment,
 )
 from webcompy.cli._lockfile_sync import resolve_dependencies
 from webcompy.cli._pyodide_downloader import PyodideDownloadError, download_pyodide_wheel, extract_wheel
-from webcompy.cli._pyodide_lock import PYODIDE_LOCK_URL_TEMPLATE
+from webcompy.cli._pyodide_lock import (
+    PYODIDE_LOCK_URL_TEMPLATE,
+    PYODIDE_RUNTIME_URL_TEMPLATE,
+    PYSCRIPT_RELEASE_URL_TEMPLATE,
+)
 from webcompy.cli._runtime_downloader import RuntimeDownloadError, download_runtime_assets
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
@@ -107,15 +113,39 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             if wasm_local_urls:
                 lockfile_url = PYODIDE_LOCK_URL_TEMPLATE.format(version=lockfile.pyodide_version)
 
-        runtime_asset_paths: dict[str, pathlib.Path] = {}
+        runtime_asset_results: dict[str, tuple[pathlib.Path, str]] = {}
+        runtime_temp_dir_obj: TemporaryDirectory | None = None
         if resolved_runtime_serving == "local":
             try:
-                runtime_dir = pathlib.Path(tempfile.mkdtemp())
-                runtime_asset_paths = download_runtime_assets(
+                runtime_temp_dir_obj = TemporaryDirectory()
+                runtime_dir = pathlib.Path(runtime_temp_dir_obj.name)
+                runtime_asset_results = download_runtime_assets(
                     lockfile.pyodide_version if lockfile else "0.29.3",
                     PYSCRIPT_VERSION,
                     runtime_dir,
                 )
+                if lockfile is not None and lockfile.runtime_assets:
+                    for asset_key, (_asset_path, computed_sha256) in runtime_asset_results.items():
+                        expected = lockfile.runtime_assets.get(asset_key)
+                        if expected is not None and expected.sha256 is not None and computed_sha256 != expected.sha256:
+                            raise RuntimeDownloadError(
+                                f"SHA256 mismatch for runtime asset {asset_key}. "
+                                f"Expected: {expected.sha256}, got: {computed_sha256}."
+                            )
+                if lockfile is not None:
+                    lockfile.runtime_assets = {}
+                    for asset_key, (_asset_path, computed_sha256) in runtime_asset_results.items():
+                        if asset_key in ("core.js", "core.css"):
+                            url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(
+                                pyscript_version=PYSCRIPT_VERSION, filename=asset_key
+                            )
+                        else:
+                            url = PYODIDE_RUNTIME_URL_TEMPLATE.format(
+                                pyodide_version=lockfile.pyodide_version, filename=asset_key
+                            )
+                        lockfile.runtime_assets[asset_key] = RuntimeAssetEntry(url=url, sha256=computed_sha256)
+                    lockfile_path = app.config.app_package_path / LOCKFILE_NAME
+                    save_lockfile(lockfile, lockfile_path)
             except RuntimeDownloadError as e:
                 import sys
 
@@ -143,7 +173,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                         print(f"Error: {e}", file=sys.stderr)
                         sys.exit(1)
                     if cdn_temp_dir_obj is None:
-                        cdn_temp_dir_obj = tempfile.TemporaryDirectory()
+                        cdn_temp_dir_obj = TemporaryDirectory()
                         cdn_temp_dir_obj.__enter__()
                     extract_dest = pathlib.Path(cdn_temp_dir_obj.name) / name
                     extract_dest.mkdir(parents=True, exist_ok=True)
@@ -200,9 +230,9 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                 shutil.copy(wheel_path, dst)
                 print(dst)
 
-        if runtime_asset_paths:
+        if runtime_asset_results:
             webcompy_assets_dir = dist_dir / "_webcompy-assets"
-            for rel_path, src_path in runtime_asset_paths.items():
+            for rel_path, (src_path, _sha256) in runtime_asset_results.items():
                 dst = webcompy_assets_dir / rel_path
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src_path, dst)

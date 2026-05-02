@@ -1,7 +1,6 @@
 import asyncio
 import mimetypes
 import pathlib
-import tempfile
 from functools import partial
 from operator import truth
 from re import compile as re_compile
@@ -24,10 +23,12 @@ from webcompy.cli._argparser import get_params
 from webcompy.cli._html import PYSCRIPT_VERSION, generate_html
 from webcompy.cli._lockfile import (
     LOCKFILE_NAME,
+    RuntimeAssetEntry,
     get_bundled_deps,
     get_cdn_pure_python_package_names,
     get_wasm_package_names,
     resolve_lockfile,
+    save_lockfile,
     validate_local_environment,
 )
 from webcompy.cli._lockfile_sync import resolve_dependencies
@@ -37,7 +38,11 @@ from webcompy.cli._pyodide_downloader import (
     download_wasm_wheels,
     extract_wheel,
 )
-from webcompy.cli._pyodide_lock import PYODIDE_LOCK_URL_TEMPLATE
+from webcompy.cli._pyodide_lock import (
+    PYODIDE_LOCK_URL_TEMPLATE,
+    PYODIDE_RUNTIME_URL_TEMPLATE,
+    PYSCRIPT_RELEASE_URL_TEMPLATE,
+)
 from webcompy.cli._runtime_downloader import RuntimeDownloadError, download_runtime_assets
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
@@ -111,28 +116,52 @@ def create_asgi_app(
     resolved_runtime_serving = app.config.runtime_serving or "cdn"
 
     runtime_asset_files: dict[str, tuple[bytes, str]] = {}
+    runtime_temp_dir_obj: TemporaryDirectory | None = None
     if resolved_runtime_serving == "local":
         try:
-            runtime_dir = pathlib.Path(tempfile.mkdtemp())
-            download_runtime_assets(
+            runtime_temp_dir_obj = TemporaryDirectory()
+            runtime_dir = pathlib.Path(runtime_temp_dir_obj.name)
+            runtime_results = download_runtime_assets(
                 lockfile.pyodide_version if lockfile else "0.29.3",
                 PYSCRIPT_VERSION,
                 runtime_dir,
             )
-        except RuntimeDownloadError as e:
-            import sys
-
-            print(f"Error: {e}", file=sys.stderr)
-            sys.exit(1)
-        for asset_path in runtime_dir.rglob("*"):
-            if asset_path.is_file():
+            expected_hashes: dict[str, str] = {}
+            if lockfile is not None and lockfile.runtime_assets:
+                for asset_key, entry in lockfile.runtime_assets.items():
+                    if entry.sha256 is not None:
+                        expected_hashes[asset_key] = entry.sha256
+            for asset_key, (asset_path, computed_sha256) in runtime_results.items():
+                if asset_key in expected_hashes and computed_sha256 != expected_hashes[asset_key]:
+                    raise RuntimeDownloadError(
+                        f"SHA256 mismatch for runtime asset {asset_key}. "
+                        f"Expected: {expected_hashes[asset_key]}, got: {computed_sha256}."
+                    )
                 rel = asset_path.relative_to(runtime_dir)
                 file_key = str(rel)
                 content = asset_path.read_bytes()
                 media_type = mimetypes.guess_type(str(asset_path))[0] or "application/octet-stream"
                 runtime_asset_files[file_key] = (content, media_type)
-        if resolved_runtime_serving == "local":
-            lockfile_url = None
+            if lockfile is not None:
+                lockfile.runtime_assets = {}
+                for asset_key, (_asset_path, computed_sha256) in runtime_results.items():
+                    if asset_key in ("core.js", "core.css"):
+                        url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(
+                            pyscript_version=PYSCRIPT_VERSION, filename=asset_key
+                        )
+                    else:
+                        url = PYODIDE_RUNTIME_URL_TEMPLATE.format(
+                            pyodide_version=lockfile.pyodide_version, filename=asset_key
+                        )
+                    lockfile.runtime_assets[asset_key] = RuntimeAssetEntry(url=url, sha256=computed_sha256)
+                lockfile_path = app.config.app_package_path / LOCKFILE_NAME
+                save_lockfile(lockfile, lockfile_path)
+        except RuntimeDownloadError as e:
+            import sys
+
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        lockfile_url = None
 
     cdn_pure_python_names: list[str] = []
     cdn_extracted_deps: list[tuple[str, pathlib.Path]] = []
@@ -154,7 +183,7 @@ def create_asgi_app(
                     print(f"Error: {e}", file=sys.stderr)
                     sys.exit(1)
                 if cdn_temp_dir_obj is None:
-                    cdn_temp_dir_obj = tempfile.TemporaryDirectory()
+                    cdn_temp_dir_obj = TemporaryDirectory()
                     cdn_temp_dir_obj.__enter__()
                 extract_dest = pathlib.Path(cdn_temp_dir_obj.name) / name
                 extract_dest.mkdir(parents=True, exist_ok=True)

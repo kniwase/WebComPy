@@ -440,3 +440,38 @@ class TestLockfileRuntimeServing:
         assert loaded is not None
         assert loaded.runtime_serving == "local"
         assert "core_js" in loaded.runtime_assets
+
+
+class TestGenerateLockfileRuntimeAssets:
+    def test_runtime_local_populates_urls(self, monkeypatch, tmp_path):
+
+        from webcompy.cli._lockfile import generate_lockfile
+
+        cache_dir = tmp_path / "cache"
+        monkeypatch.setattr("webcompy.cli._pyodide_lock.CACHE_DIR", cache_dir)
+        lockfile, _errors, _warnings = generate_lockfile(
+            dependencies=[],
+            pyscript_version="2026.3.1",
+            runtime_serving="local",
+        )
+        assert lockfile.runtime_serving == "local"
+        assert "core.js" in lockfile.runtime_assets
+        assert "core.css" in lockfile.runtime_assets
+        assert "pyodide.mjs" in lockfile.runtime_assets
+        assert lockfile.runtime_assets["core.js"].url.startswith("https://pyscript.net/releases/")
+        assert lockfile.runtime_assets["pyodide.mjs"].url.startswith("https://cdn.jsdelivr.net/pyodide/")
+        assert lockfile.runtime_assets["core.js"].sha256 is None
+        assert lockfile.runtime_assets["pyodide.mjs"].sha256 is None
+
+    def test_runtime_cdn_no_runtime_assets(self, monkeypatch, tmp_path):
+        from webcompy.cli._lockfile import generate_lockfile
+
+        cache_dir = tmp_path / "cache"
+        monkeypatch.setattr("webcompy.cli._pyodide_lock.CACHE_DIR", cache_dir)
+        lockfile, _errors, _warnings = generate_lockfile(
+            dependencies=[],
+            pyscript_version="2026.3.1",
+            runtime_serving="cdn",
+        )
+        assert lockfile.runtime_serving == "cdn"
+        assert lockfile.runtime_assets == {}

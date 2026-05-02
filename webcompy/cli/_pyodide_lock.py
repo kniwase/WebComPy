@@ -7,6 +7,8 @@ import urllib.error
 import urllib.request
 
 PYODIDE_LOCK_URL_TEMPLATE = "https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json"
+PYSCRIPT_RELEASE_URL_TEMPLATE = "https://pyscript.net/releases/{pyscript_version}/{filename}"
+PYODIDE_RUNTIME_URL_TEMPLATE = "https://cdn.jsdelivr.net/pyodide/v{pyodide_version}/full/{filename}"
 
 CACHE_DIR = pathlib.Path(os.environ.get("XDG_CACHE_HOME", pathlib.Path.home() / ".cache")) / "webcompy"
 

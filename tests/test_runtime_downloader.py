@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import pathlib
 from unittest.mock import patch
 
@@ -33,30 +32,12 @@ FAKE_PYODIDE_MJS_DATA = b"pyodide-mjs-data"
 FAKE_PYODIDE_ASM_WASM_DATA = b"pyodide-asm-wasm-data"
 FAKE_PYODIDE_ASM_JS_DATA = b"pyodide-asm-js-data"
 FAKE_PYODIDE_STDLIB_DATA = b"python-stdlib-data"
-
-
-def _make_fake_pyodide_lock() -> dict:
-    return {
-        "packages": {
-            "pyodide": {
-                "file_name": "pyodide.mjs",
-                "sha256": hashlib.sha256(FAKE_PYODIDE_MJS_DATA).hexdigest(),
-            },
-            "pyodide_asm": {
-                "file_name": "pyodide.asm.wasm",
-                "sha256": hashlib.sha256(FAKE_PYODIDE_ASM_WASM_DATA).hexdigest(),
-            },
-            "python_stdlib": {
-                "file_name": "python_stdlib.zip",
-                "sha256": hashlib.sha256(FAKE_PYODIDE_STDLIB_DATA).hexdigest(),
-            },
-        },
-    }
+FAKE_PYODIDE_LOCK_DATA = b"pyodide-lock-data"
 
 
 def _pyodide_data_for_url(url: str) -> bytes:
     if "pyodide-lock.json" in url:
-        return json.dumps(_make_fake_pyodide_lock()).encode("utf-8")
+        return FAKE_PYODIDE_LOCK_DATA
     if "pyodide.mjs" in url:
         return FAKE_PYODIDE_MJS_DATA
     if "pyodide.asm.wasm" in url:
@@ -90,7 +71,7 @@ class TestDownloadRuntimeAssets:
         with patch("webcompy.cli._runtime_downloader._download_file", side_effect=_mock_download_file):
             dest_dir = tmp_path / "assets"
             dest_dir.mkdir()
-            download_runtime_assets(pyodide_version, pyscript_version, dest_dir)
+            results = download_runtime_assets(pyodide_version, pyscript_version, dest_dir)
 
         assert (dest_dir / "core.js").is_file()
         assert (dest_dir / "core.css").is_file()
@@ -99,6 +80,23 @@ class TestDownloadRuntimeAssets:
         assert (dest_dir / "pyodide" / "pyodide.asm.js").is_file()
         assert (dest_dir / "pyodide" / "python_stdlib.zip").is_file()
         assert (dest_dir / "pyodide" / "pyodide-lock.json").is_file()
+        assert len(results) == len(PYSCRIPT_CORE_ASSETS) + len(PYODIDE_RUNTIME_ASSETS)
+
+    def test_returns_sha256_hashes(self, tmp_path, clean_cache):
+        pyodide_version = "0.29.3"
+        pyscript_version = "2026.3.1"
+
+        with patch("webcompy.cli._runtime_downloader._download_file", side_effect=_mock_download_file):
+            dest_dir = tmp_path / "assets"
+            dest_dir.mkdir()
+            results = download_runtime_assets(pyodide_version, pyscript_version, dest_dir)
+
+        for _filename, (path, sha256) in results.items():
+            assert isinstance(path, pathlib.Path)
+            assert isinstance(sha256, str)
+            assert len(sha256) == 64
+            expected = hashlib.sha256(path.read_bytes()).hexdigest()
+            assert sha256 == expected
 
     def test_caches_assets(self, tmp_path, clean_cache):
         pyodide_version = "0.29.3"
@@ -122,26 +120,6 @@ class TestDownloadRuntimeAssets:
             second_count = download_counts["total"] - first_count
 
         assert second_count == 0
-
-    def test_sha256_mismatch_raises_error(self, tmp_path, clean_cache):
-        pyodide_version = "0.29.3"
-        pyscript_version = "2026.3.1"
-
-        def mismatch_mock(url, dest):
-            if "pyscript.net" in url:
-                return _mock_download_file(url, dest)
-            data = _pyodide_data_for_url(url)
-            if "pyodide-lock.json" not in url:
-                data = b"corrupted-data"
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(data)
-            return data
-
-        with patch("webcompy.cli._runtime_downloader._download_file", side_effect=mismatch_mock):
-            dest_dir = tmp_path / "assets"
-            dest_dir.mkdir()
-            with pytest.raises(RuntimeDownloadError):
-                download_runtime_assets(pyodide_version, pyscript_version, dest_dir)
 
     def test_download_failure_raises_error(self, tmp_path, clean_cache):
         pyodide_version = "0.29.3"

@@ -4,7 +4,11 @@ import json
 import pathlib
 from dataclasses import dataclass, field
 
-from webcompy.cli._pyodide_lock import PyodideLockFetchError, fetch_pyodide_lock, get_pyodide_version
+from webcompy.cli._pyodide_lock import (
+    PyodideLockFetchError,
+    fetch_pyodide_lock,
+    get_pyodide_version,
+)
 
 LOCKFILE_VERSION = 2
 LOCKFILE_NAME = "webcompy-lock.json"
@@ -190,6 +194,18 @@ def generate_lockfile(
             )
             pure_python_packages[dep.name] = entry
 
+    runtime_assets: dict[str, RuntimeAssetEntry] = {}
+    if runtime_serving == "local":
+        from webcompy.cli._pyodide_lock import PYODIDE_RUNTIME_URL_TEMPLATE, PYSCRIPT_RELEASE_URL_TEMPLATE
+        from webcompy.cli._runtime_downloader import PYODIDE_RUNTIME_ASSETS, PYSCRIPT_CORE_ASSETS
+
+        for asset_key in PYSCRIPT_CORE_ASSETS:
+            url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(pyscript_version=pyscript_version, filename=asset_key)
+            runtime_assets[asset_key] = RuntimeAssetEntry(url=url)
+        for asset_key in PYODIDE_RUNTIME_ASSETS:
+            url = PYODIDE_RUNTIME_URL_TEMPLATE.format(pyodide_version=pyodide_version, filename=asset_key)
+            runtime_assets[asset_key] = RuntimeAssetEntry(url=url)
+
     lockfile = Lockfile(
         pyodide_version=pyodide_version,
         pyscript_version=pyscript_version,
@@ -197,6 +213,7 @@ def generate_lockfile(
         pure_python_packages=pure_python_packages,
         wasm_serving=wasm_serving,
         runtime_serving=runtime_serving,
+        runtime_assets=runtime_assets,
     )
 
     return lockfile, errors, warnings
