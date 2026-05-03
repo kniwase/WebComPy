@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import pathlib
 import urllib.error
 import urllib.request
@@ -12,10 +11,6 @@ if TYPE_CHECKING:
     from webcompy.cli._lockfile import Lockfile
 
 PYODIDE_CDN_URL_TEMPLATE = "https://cdn.jsdelivr.net/pyodide/v{version}/full/{file_name}"
-
-CACHE_DIR = (
-    pathlib.Path(os.environ.get("XDG_CACHE_HOME", pathlib.Path.home() / ".cache")) / "webcompy" / "pyodide-packages"
-)
 
 
 class PyodideDownloadError(Exception):
@@ -37,8 +32,9 @@ def download_pyodide_wheel(
     file_name: str,
     pyodide_version: str,
     expected_sha256: str,
+    modules_dir: pathlib.Path,
 ) -> pathlib.Path:
-    cache_dir = CACHE_DIR / pyodide_version
+    cache_dir = modules_dir / "pyodide-packages" / pyodide_version
     cached_path = cache_dir / file_name
 
     if cached_path.is_file():
@@ -49,7 +45,7 @@ def download_pyodide_wheel(
 
     url = PYODIDE_CDN_URL_TEMPLATE.format(version=pyodide_version, file_name=file_name)
     try:
-        req = urllib.request.Request(url)
+        req = urllib.request.Request(url, headers={"User-Agent": "WebComPy/0.1"})
         with urllib.request.urlopen(req, timeout=60) as resp:
             data = resp.read()
     except (urllib.error.URLError, OSError, TimeoutError) as e:
@@ -72,6 +68,7 @@ def download_pyodide_wheel(
 
 def download_wasm_wheels(
     lockfile: Lockfile,
+    modules_dir: pathlib.Path,
 ) -> dict[str, pathlib.Path]:
     results: dict[str, pathlib.Path] = {}
     for name, entry in lockfile.wasm_packages.items():
@@ -80,6 +77,7 @@ def download_wasm_wheels(
                 entry.file_name,
                 lockfile.pyodide_version,
                 entry.sha256,
+                modules_dir,
             )
             results[name] = wheel_path
     return results

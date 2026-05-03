@@ -22,22 +22,23 @@ class TestGetPyodideVersion:
 
 
 class TestFetchPyodideLock:
-    def test_uses_cached_file(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("webcompy.cli._pyodide_lock.CACHE_DIR", tmp_path)
+    def test_uses_cached_file(self, tmp_path):
         lock_data = {"packages": {"numpy": {"version": "2.2.5"}}}
-        cached_path = tmp_path / "pyodide-lock-0.29.3.json"
+        modules_dir = tmp_path / ".webcompy_modules"
+        cached_path = modules_dir / "pyodide-lock" / "pyodide-lock-0.29.3.json"
+        cached_path.parent.mkdir(parents=True, exist_ok=True)
         cached_path.write_text(json.dumps(lock_data), encoding="utf-8")
 
         with patch("webcompy.cli._pyodide_lock.urllib.request.urlopen") as mock_urlopen:
-            result = fetch_pyodide_lock("0.29.3")
+            result = fetch_pyodide_lock("0.29.3", modules_dir)
             mock_urlopen.assert_not_called()
 
         assert result is not None
         assert "packages" in result
         assert "numpy" in result["packages"]
 
-    def test_fetches_when_no_cache(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("webcompy.cli._pyodide_lock.CACHE_DIR", tmp_path)
+    def test_fetches_when_no_cache(self, tmp_path):
+        modules_dir = tmp_path / ".webcompy_modules"
 
         lock_data = {"packages": {"numpy": {"version": "2.2.5"}}}
         mock_response = MagicMock()
@@ -46,35 +47,36 @@ class TestFetchPyodideLock:
         mock_response.__exit__ = MagicMock(return_value=False)
 
         with patch("webcompy.cli._pyodide_lock.urllib.request.urlopen", return_value=mock_response):
-            result = fetch_pyodide_lock("0.29.3")
+            result = fetch_pyodide_lock("0.29.3", modules_dir)
 
         assert result is not None
         assert "packages" in result
-        cached_path = tmp_path / "pyodide-lock-0.29.3.json"
+        cached_path = modules_dir / "pyodide-lock" / "pyodide-lock-0.29.3.json"
         assert cached_path.exists()
 
-    def test_network_failure_no_cache_raises(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("webcompy.cli._pyodide_lock.CACHE_DIR", tmp_path)
+    def test_network_failure_no_cache_raises(self, tmp_path):
+        modules_dir = tmp_path / ".webcompy_modules"
 
         import urllib.error
 
         with patch("webcompy.cli._pyodide_lock.urllib.request.urlopen", side_effect=urllib.error.URLError("fail")):
             try:
-                fetch_pyodide_lock("0.99.0")
+                fetch_pyodide_lock("0.99.0", modules_dir)
                 raise AssertionError("Should have raised PyodideLockFetchError")
             except PyodideLockFetchError as e:
                 assert "0.99.0" in str(e)
 
-    def test_network_failure_with_cache_returns_cached(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("webcompy.cli._pyodide_lock.CACHE_DIR", tmp_path)
+    def test_network_failure_with_cache_returns_cached(self, tmp_path):
+        modules_dir = tmp_path / ".webcompy_modules"
         lock_data = {"packages": {"numpy": {"version": "2.2.5"}}}
-        cached_path = tmp_path / "pyodide-lock-0.29.3.json"
+        cached_path = modules_dir / "pyodide-lock" / "pyodide-lock-0.29.3.json"
+        cached_path.parent.mkdir(parents=True, exist_ok=True)
         cached_path.write_text(json.dumps(lock_data), encoding="utf-8")
 
         import urllib.error
 
         with patch("webcompy.cli._pyodide_lock.urllib.request.urlopen", side_effect=urllib.error.URLError("fail")):
-            result = fetch_pyodide_lock("0.29.3")
+            result = fetch_pyodide_lock("0.29.3", modules_dir)
 
         assert result is not None
         assert "packages" in result

@@ -24,6 +24,7 @@ from webcompy.cli._runtime_downloader import RuntimeDownloadError, download_runt
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     discover_app,
+    ensure_webcompy_modules_dir,
     generate_app_version,
     get_generate_config,
     get_webcompy_packge_dir,
@@ -53,11 +54,15 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
     resolve_dependencies(app, lockfile_sync_config=generate_config.lockfile_sync_config)
     assert app.config.dependencies is not None
 
+    modules_dir = app.config.app_package_path / ".webcompy_modules"
+    ensure_webcompy_modules_dir(modules_dir)
+
     with app.di_scope:
         lockfile, lockfile_errors, lockfile_warnings = resolve_lockfile(
             app.config.dependencies,
             PYSCRIPT_VERSION,
             app.config.app_package_path / LOCKFILE_NAME,
+            modules_dir,
             wasm_serving=app.config.wasm_serving or "cdn",
             runtime_serving=app.config.runtime_serving or "cdn",
         )
@@ -97,6 +102,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                             entry.file_name,
                             lockfile.pyodide_version,
                             entry.sha256,
+                            modules_dir,
                         )
                     except PyodideDownloadError as e:
                         import sys
@@ -109,16 +115,13 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                 lockfile_url = PYODIDE_LOCK_URL_TEMPLATE.format(version=lockfile.pyodide_version)
 
         runtime_asset_results: dict[str, tuple[pathlib.Path, str]] = {}
-        runtime_temp_dir_obj: TemporaryDirectory | None = None
         try:
             if resolved_runtime_serving == "local":
                 try:
-                    runtime_temp_dir_obj = TemporaryDirectory()
-                    runtime_dir = pathlib.Path(runtime_temp_dir_obj.name)
                     runtime_asset_results = download_runtime_assets(
                         lockfile.pyodide_version if lockfile else "0.29.3",
                         PYSCRIPT_VERSION,
-                        runtime_dir,
+                        modules_dir,
                     )
                     if lockfile is not None:
                         verify_and_update_runtime_assets(
@@ -147,6 +150,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                                 entry.pyodide_file_name,
                                 lockfile.pyodide_version,
                                 entry.pyodide_sha256,
+                                modules_dir,
                             )
                         except PyodideDownloadError as e:
                             import sys
@@ -258,8 +262,6 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                 print(html_path)
 
         finally:
-            if runtime_temp_dir_obj is not None:
-                runtime_temp_dir_obj.cleanup()
             if cdn_temp_dir_obj is not None:
                 cdn_temp_dir_obj.__exit__(None, None, None)
 

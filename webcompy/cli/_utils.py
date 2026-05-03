@@ -18,9 +18,13 @@ def get_app_from_import_path(import_path: str) -> WebComPyApp:
     module_path, var_name = import_path.rsplit(":", 1)
     try:
         module = importlib.import_module(module_path)
-    except ModuleNotFoundError:
+    except ModuleNotFoundError as e:
+        if e.name == module_path or e.name == module_path.split(".")[0]:
+            raise WebComPyCliException(
+                f"No python module named '{module_path}'",
+            ) from None
         raise WebComPyCliException(
-            f"No python module named '{module_path}'",
+            f"Failed to import '{module_path}': {e.msg} (missing dependency: {e.name})",
         ) from None
     app = getattr(module, var_name, None)
     if app is None:
@@ -133,6 +137,13 @@ def get_webcompy_packge_dir(path: pathlib.Path | None = None) -> pathlib.Path:
         return path.absolute()
     else:
         return get_webcompy_packge_dir(path.parent)
+
+
+def ensure_webcompy_modules_dir(modules_dir: pathlib.Path) -> None:
+    modules_dir.mkdir(parents=True, exist_ok=True)
+    gitignore = modules_dir / ".gitignore"
+    if not gitignore.exists():
+        gitignore.write_text("*\n", encoding="utf-8")
 
 
 def generate_app_version(app_version: str | None = None) -> str:
