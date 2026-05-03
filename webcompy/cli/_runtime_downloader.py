@@ -60,7 +60,8 @@ def download_runtime_assets(
 
         if cached_path.is_file():
             dest_path.parent.mkdir(parents=True, exist_ok=True)
-            dest_path.write_bytes(cached_path.read_bytes())
+            if dest_path != cached_path:
+                dest_path.write_bytes(cached_path.read_bytes())
             sha256 = _sha256_of_file(dest_path)
             results[rel_path] = (dest_path, sha256)
             continue
@@ -82,7 +83,8 @@ def download_runtime_assets(
 
         if cached_path.is_file():
             dest_path.parent.mkdir(parents=True, exist_ok=True)
-            dest_path.write_bytes(cached_path.read_bytes())
+            if dest_path != cached_path:
+                dest_path.write_bytes(cached_path.read_bytes())
             sha256 = _sha256_of_file(dest_path)
             results[rel_path] = (dest_path, sha256)
             continue

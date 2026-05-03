@@ -84,7 +84,7 @@ The CLI SHALL NOT write to or read from `~/.cache/webcompy/` (or `XDG_CACHE_HOME
 - **WHEN** a developer runs `python -m webcompy start --dev --runtime-serving local` on a machine without `~/.cache/webcompy/`
 - **THEN** the build SHALL succeed
 - **AND** `~/.cache/webcompy/` SHALL NOT be created
-- **AND` all downloaded files SHALL be stored in `{app_package_path}/.webcompy_modules/`
+- **AND** all downloaded files SHALL be stored in `{app_package_path}/.webcompy_modules/`
 
 #### Scenario: Existing ~/.cache/webcompy is ignored
 - **WHEN** a developer has an existing `~/.cache/webcompy/` with cached assets from a previous version
