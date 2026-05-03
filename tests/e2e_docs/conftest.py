@@ -5,7 +5,6 @@ import os
 import pathlib
 import shutil
 import subprocess
-import sys
 import threading
 import time
 import urllib.request
@@ -84,21 +83,23 @@ def pytest_configure(config):
 @pytest.fixture(scope="session")
 def docs_prod_server():
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(PROJECT_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(DOCS_APP_DIR) + os.pathsep + env.get("PYTHONPATH", "")
 
     log_file = SERVER_LOG.open("w")
     proc = subprocess.Popen(
         [
-            sys.executable,
+            "uv",
+            "run",
+            "--project",
+            str(PROJECT_ROOT),
+            "python",
             "-m",
             "webcompy",
             "start",
-            "--app",
-            "docs_app.bootstrap:app",
             "--port",
             str(PORT),
         ],
-        cwd=str(PROJECT_ROOT),
+        cwd=str(DOCS_APP_DIR),
         stdout=log_file,
         stderr=subprocess.STDOUT,
         env=env,
@@ -144,22 +145,24 @@ def docs_static_site():
     TMP_DIR.mkdir(parents=True)
 
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(PROJECT_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(DOCS_APP_DIR) + os.pathsep + env.get("PYTHONPATH", "")
 
     dist_dir = TMP_DIR / "dist"
 
     result = subprocess.run(
         [
-            sys.executable,
+            "uv",
+            "run",
+            "--project",
+            str(PROJECT_ROOT),
+            "python",
             "-m",
             "webcompy",
             "generate",
-            "--app",
-            "docs_app.bootstrap:app",
             "--dist",
             str(dist_dir),
         ],
-        cwd=str(PROJECT_ROOT),
+        cwd=str(DOCS_APP_DIR),
         env=env,
         capture_output=True,
         text=True,
