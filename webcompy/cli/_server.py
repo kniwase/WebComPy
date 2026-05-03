@@ -342,7 +342,6 @@ def run_server(app: WebComPyApp | None = None):
     standalone = args.get("standalone")
     if standalone is not None:
         app.config.standalone = standalone
-    resolve_standalone_config(app.config)
 
     port = args.get("port") or server_config.port
     asgi = create_asgi_app(app, server_config)

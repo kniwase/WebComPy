@@ -37,13 +37,13 @@ class TestResolveStandaloneConfig:
         config = AppConfig(standalone=True, serve_all_deps=False)
         resolve_standalone_config(config)
         captured = capsys.readouterr()
-        assert "standalone=True forces serve_all_deps=True" in captured.out
+        assert "standalone=True forces serve_all_deps=True" in captured.err
 
     def test_standalone_true_no_warning_when_serve_all_deps_true(self, capsys):
         config = AppConfig(standalone=True, serve_all_deps=True)
         resolve_standalone_config(config)
         captured = capsys.readouterr()
-        assert "standalone" not in captured.out
+        assert "standalone" not in captured.err
 
     def test_standalone_true_explicit_wasm_cdn_preserved(self):
         config = AppConfig(standalone=True, wasm_serving="cdn")
@@ -84,6 +84,14 @@ class TestResolveStandaloneConfig:
         resolve_standalone_config(config)
         assert config.wasm_serving == first_wasm
         assert config.runtime_serving == first_runtime
+
+    def test_no_duplicate_warning_on_second_call(self, capsys):
+        config = AppConfig(standalone=True, serve_all_deps=False)
+        resolve_standalone_config(config)
+        capsys.readouterr()
+        resolve_standalone_config(config)
+        captured = capsys.readouterr()
+        assert "standalone" not in captured.err
 
     def test_no_standalone_default_serve_all_deps_true(self):
         config = AppConfig()

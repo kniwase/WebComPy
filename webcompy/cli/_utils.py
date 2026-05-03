@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import pathlib
+import sys
 from datetime import datetime
 from importlib import import_module
 
@@ -13,7 +14,7 @@ from webcompy.cli._exception import WebComPyCliException
 def resolve_standalone_config(config: AppConfig) -> None:
     if config.standalone:
         if config.serve_all_deps is False:
-            print("Warning: standalone=True forces serve_all_deps=True", flush=True)
+            print("Warning: standalone=True forces serve_all_deps=True", file=sys.stderr, flush=True)
         config.serve_all_deps = True
         if config.wasm_serving is None:
             config.wasm_serving = "local"
