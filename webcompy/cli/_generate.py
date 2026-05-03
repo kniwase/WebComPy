@@ -1,6 +1,7 @@
 import os
 import pathlib
 import shutil
+import sys
 from functools import partial
 from tempfile import TemporaryDirectory
 
@@ -68,21 +69,19 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             standalone=app.config.standalone,
         )
         for warning in lockfile_warnings:
-            print(f"Warning: {warning}", flush=True)
+            print(f"Warning: {warning}", file=sys.stderr, flush=True)
         for err in lockfile_errors:
-            print(f"Error: {err}", flush=True)
+            print(f"Error: {err}", file=sys.stderr, flush=True)
 
         if lockfile is not None:
             env_errors, env_warnings = validate_local_environment(lockfile, serve_all_deps=app.config.serve_all_deps)
             for warning in env_warnings:
-                print(f"Warning: {warning}", flush=True)
+                print(f"Warning: {warning}", file=sys.stderr, flush=True)
             for err in env_errors:
-                print(f"Error: {err}", flush=True)
+                print(f"Error: {err}", file=sys.stderr, flush=True)
             lockfile_errors.extend(env_errors)
 
         if lockfile_errors:
-            import sys
-
             print("Build failed due to lock file errors. Fix the above issues and try again.", file=sys.stderr)
             sys.exit(1)
 
@@ -105,8 +104,6 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                             entry.sha256,
                         )
                     except PyodideDownloadError as e:
-                        import sys
-
                         print(f"Error: {e}", file=sys.stderr)
                         sys.exit(1)
                     wasm_local_urls[name] = f"{base_url}_webcompy-assets/packages/{entry.file_name}"
@@ -135,8 +132,6 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                             app.config.app_package_path / LOCKFILE_NAME,
                         )
                 except RuntimeDownloadError as e:
-                    import sys
-
                     print(f"Error: {e}", file=sys.stderr)
                     sys.exit(1)
                 lockfile_url = None
@@ -155,8 +150,6 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                                 entry.pyodide_sha256,
                             )
                         except PyodideDownloadError as e:
-                            import sys
-
                             print(f"Error: {e}", file=sys.stderr)
                             sys.exit(1)
                         if cdn_temp_dir_obj is None:

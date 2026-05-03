@@ -1,6 +1,7 @@
 import asyncio
 import mimetypes
 import pathlib
+import sys
 from functools import partial
 from operator import truth
 from re import compile as re_compile
@@ -70,21 +71,19 @@ def create_asgi_app(
         standalone=app.config.standalone,
     )
     for warning in lockfile_warnings:
-        print(f"Warning: {warning}", flush=True)
+        print(f"Warning: {warning}", file=sys.stderr, flush=True)
     for err in lockfile_errors:
-        print(f"Error: {err}", flush=True)
+        print(f"Error: {err}", file=sys.stderr, flush=True)
 
     if lockfile is not None:
         env_errors, env_warnings = validate_local_environment(lockfile, serve_all_deps=app.config.serve_all_deps)
         for warning in env_warnings:
-            print(f"Warning: {warning}", flush=True)
+            print(f"Warning: {warning}", file=sys.stderr, flush=True)
         for err in env_errors:
-            print(f"Error: {err}", flush=True)
+            print(f"Error: {err}", file=sys.stderr, flush=True)
         lockfile_errors.extend(env_errors)
 
     if lockfile_errors:
-        import sys
-
         print("Build failed due to lock file errors. Fix the above issues and try again.", file=sys.stderr)
         sys.exit(1)
 
@@ -135,8 +134,6 @@ def create_asgi_app(
                     media_type = mimetypes.guess_type(str(asset_path))[0] or "application/octet-stream"
                     runtime_asset_files[rel_path] = (content, media_type)
         except RuntimeDownloadError as e:
-            import sys
-
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
         lockfile_url = None
@@ -156,8 +153,6 @@ def create_asgi_app(
                         entry.pyodide_sha256,
                     )
                 except PyodideDownloadError as e:
-                    import sys
-
                     print(f"Error: {e}", file=sys.stderr)
                     sys.exit(1)
                 if cdn_temp_dir_obj is None:
