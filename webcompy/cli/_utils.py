@@ -18,9 +18,13 @@ def get_app_from_import_path(import_path: str) -> WebComPyApp:
     module_path, var_name = import_path.rsplit(":", 1)
     try:
         module = importlib.import_module(module_path)
-    except ModuleNotFoundError:
+    except ModuleNotFoundError as e:
+        if e.name == module_path or e.name == module_path.split(".")[0]:
+            raise WebComPyCliException(
+                f"No python module named '{module_path}'",
+            ) from None
         raise WebComPyCliException(
-            f"No python module named '{module_path}'",
+            f"Failed to import '{module_path}': {e.msg} (missing dependency: {e.name})",
         ) from None
     app = getattr(module, var_name, None)
     if app is None:
