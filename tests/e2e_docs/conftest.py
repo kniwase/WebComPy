@@ -140,6 +140,13 @@ def docs_prod_server():
 
 @pytest.fixture(scope="session")
 def docs_static_site():
+    dist_dir_env = os.environ.get("DOCS_DIST_DIR")
+    if dist_dir_env:
+        dist_dir = pathlib.Path(dist_dir_env)
+        assert dist_dir.exists(), f"DOCS_DIST_DIR does not exist: {dist_dir}"
+        yield dist_dir
+        return
+
     if TMP_DIR.exists():
         shutil.rmtree(TMP_DIR)
     TMP_DIR.mkdir(parents=True)
@@ -201,8 +208,9 @@ def docs_static_server(docs_static_site):
 
 
 @pytest.fixture
-def docs_server_url(serving_mode, docs_prod_server, docs_static_server):
+def docs_server_url(request, serving_mode, docs_static_server):
     if serving_mode == "prod":
+        request.getfixturevalue("docs_prod_server")
         return BASE_URL
     return docs_static_server
 
