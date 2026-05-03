@@ -28,7 +28,7 @@ class TestResolveStandaloneConfig:
         assert config.wasm_serving == "local"
         assert config.runtime_serving == "local"
 
-    def test_stalone_true_forces_serve_all_deps(self):
+    def test_standalone_true_forces_serve_all_deps(self):
         config = AppConfig(standalone=True, serve_all_deps=False)
         resolve_standalone_config(config)
         assert config.serve_all_deps is True

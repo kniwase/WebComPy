@@ -57,6 +57,7 @@ def create_asgi_app(
     if server_config is None:
         server_config = ServerConfig()
 
+    resolve_standalone_config(app.config)
     resolve_dependencies(app, lockfile_sync_config=server_config.lockfile_sync_config)
     assert app.config.dependencies is not None
 

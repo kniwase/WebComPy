@@ -14,12 +14,13 @@ from webcompy.cli._lockfile_sync import (
     resolve_dependencies,
     sync,
 )
-from webcompy.cli._utils import discover_app, get_lockfile_sync_config
+from webcompy.cli._utils import discover_app, get_lockfile_sync_config, resolve_standalone_config
 
 
 def lock_command() -> None:
     _, args = get_params()
     app, package = discover_app(args.get("app"))
+    resolve_standalone_config(app.config)
     lockfile_sync_config = get_lockfile_sync_config(package)
     resolve_dependencies(app, lockfile_sync_config)
     assert app.config.dependencies is not None
@@ -62,6 +63,7 @@ def lock_command() -> None:
             lockfile_path,
             wasm_serving=app.config.wasm_serving or "cdn",
             runtime_serving=app.config.runtime_serving or "cdn",
+            standalone=app.config.standalone,
         )
         for warning in warnings:
             print(f"Warning: {warning}", file=sys.stderr)
