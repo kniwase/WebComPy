@@ -112,6 +112,8 @@ jobs:
             files: tests/e2e/test_bundled_deps.py tests/e2e/test_bundled_deps_browser.py
           - name: runtime-local
             files: tests/e2e/test_runtime_local.py
+          - name: standalone
+            files: tests/e2e/test_standalone.py
           - name: docs-home
             files: tests/e2e_docs/test_home.py tests/e2e_docs/test_documents.py tests/e2e_docs/test_helloworld.py
           - name: docs-demos

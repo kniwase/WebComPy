@@ -489,3 +489,78 @@ class TestGenerateLockfileRuntimeAssets:
         )
         assert lockfile.runtime_serving == "cdn"
         assert lockfile.runtime_assets == {}
+
+
+class TestLockfileStandaloneField:
+    def test_default_standalone_false(self):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+        )
+        assert lockfile.standalone is False
+
+    def test_standalone_true_in_to_dict(self):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            standalone=True,
+        )
+        d = lockfile.to_dict()
+        assert d["standalone"] is True
+
+    def test_standalone_false_in_to_dict(self):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+        )
+        d = lockfile.to_dict()
+        assert d["standalone"] is False
+
+    def test_load_standalone_true(self, tmp_path):
+        data = {
+            "version": 2,
+            "pyodide_version": "0.29.3",
+            "pyscript_version": "2026.3.1",
+            "wasm_serving": "local",
+            "runtime_serving": "local",
+            "standalone": True,
+            "wasm_packages": {},
+            "pure_python_packages": {},
+        }
+        path = tmp_path / "lock.json"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        loaded = load_lockfile(path)
+        assert loaded is not None
+        assert loaded.standalone is True
+
+    def test_load_standalone_defaults_to_false(self, tmp_path):
+        data = {
+            "version": 2,
+            "pyodide_version": "0.29.3",
+            "pyscript_version": "2026.3.1",
+            "wasm_serving": "cdn",
+            "runtime_serving": "cdn",
+            "wasm_packages": {},
+            "pure_python_packages": {},
+        }
+        path = tmp_path / "lock.json"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        loaded = load_lockfile(path)
+        assert loaded is not None
+        assert loaded.standalone is False
+
+    def test_roundtrip_standalone(self, tmp_path):
+        lockfile = Lockfile(
+            pyodide_version="0.29.3",
+            pyscript_version="2026.3.1",
+            wasm_serving="local",
+            runtime_serving="local",
+            standalone=True,
+        )
+        path = tmp_path / "lock.json"
+        save_lockfile(lockfile, path)
+        loaded = load_lockfile(path)
+        assert loaded is not None
+        assert loaded.standalone is True
+        assert loaded.wasm_serving == "local"
+        assert loaded.runtime_serving == "local"
