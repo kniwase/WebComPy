@@ -39,7 +39,7 @@ def _sha256_of_file(path: pathlib.Path) -> str:
 
 def _download_file(url: str, dest: pathlib.Path) -> bytes:
     try:
-        req = urllib.request.Request(url)
+        req = urllib.request.Request(url, headers={"User-Agent": "WebComPy"})
         with urllib.request.urlopen(req, timeout=120) as resp:
             data = resp.read()
     except (urllib.error.URLError, OSError, TimeoutError) as e:

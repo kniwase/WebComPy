@@ -49,7 +49,7 @@ def download_pyodide_wheel(
 
     url = PYODIDE_CDN_URL_TEMPLATE.format(version=pyodide_version, file_name=file_name)
     try:
-        req = urllib.request.Request(url)
+        req = urllib.request.Request(url, headers={"User-Agent": "WebComPy"})
         with urllib.request.urlopen(req, timeout=60) as resp:
             data = resp.read()
     except (urllib.error.URLError, OSError, TimeoutError) as e:

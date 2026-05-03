@@ -50,7 +50,7 @@ def fetch_pyodide_lock(pyodide_version: str) -> dict:
     url = PYODIDE_LOCK_URL_TEMPLATE.format(version=pyodide_version)
     fetch_error: Exception | None = None
     try:
-        req = urllib.request.Request(url)
+        req = urllib.request.Request(url, headers={"User-Agent": "WebComPy"})
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = resp.read()
         lock_data = json.loads(data)
