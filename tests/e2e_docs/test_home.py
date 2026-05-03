@@ -21,3 +21,13 @@ def test_home_spa_navigation_to_helloworld(docs_app_page, assert_no_python_error
     assert "/sample/helloworld" in docs_app_page.url
     heading = docs_app_page.get_by_role("heading", name="Hello WebComPy!")
     assert heading.is_visible()
+
+
+@pytest.mark.e2e
+def test_home_spa_navigation_back_from_helloworld(docs_page_on, assert_no_python_errors):
+    page = docs_page_on("/sample/helloworld")
+    home_link = page.get_by_role("link", name="Home")
+    home_link.click()
+    assert page.url.endswith("/") or page.url == page.url.rstrip("/") + "/"
+    heading = page.get_by_role("heading", name="What is WebComPy")
+    assert heading.is_visible()
