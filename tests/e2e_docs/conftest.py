@@ -83,7 +83,7 @@ def pytest_configure(config):
 @pytest.fixture(scope="session")
 def docs_prod_server():
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(PROJECT_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(PROJECT_ROOT) + os.pathsep + str(DOCS_APP_DIR) + os.pathsep + env.get("PYTHONPATH", "")
 
     log_file = SERVER_LOG.open("w")
     proc = subprocess.Popen(
@@ -96,6 +96,8 @@ def docs_prod_server():
             "-m",
             "webcompy",
             "start",
+            "--app",
+            "docs_app.bootstrap:app",
             "--port",
             str(PORT),
         ],
@@ -145,7 +147,7 @@ def docs_static_site():
     TMP_DIR.mkdir(parents=True)
 
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(PROJECT_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(PROJECT_ROOT) + os.pathsep + str(DOCS_APP_DIR) + os.pathsep + env.get("PYTHONPATH", "")
 
     dist_dir = TMP_DIR / "dist"
 
@@ -159,6 +161,8 @@ def docs_static_site():
             "-m",
             "webcompy",
             "generate",
+            "--app",
+            "docs_app.bootstrap:app",
             "--dist",
             str(dist_dir),
         ],
