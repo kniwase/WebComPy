@@ -8,4 +8,5 @@ app_config = AppConfig(
     base_url="/",
     dependencies=None,
     dependencies_from="browser",
+    standalone=True,
 )
