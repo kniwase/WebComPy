@@ -112,6 +112,14 @@ jobs:
             files: tests/e2e/test_bundled_deps.py tests/e2e/test_bundled_deps_browser.py
           - name: runtime-local
             files: tests/e2e/test_runtime_local.py
+          - name: docs-home
+            files: tests/e2e_docs/test_home.py tests/e2e_docs/test_documents.py tests/e2e_docs/test_helloworld.py
+          - name: docs-demos
+            files: tests/e2e_docs/test_fizzbuzz.py tests/e2e_docs/test_todo.py
+          - name: docs-matplotlib
+            files: tests/e2e_docs/test_matplotlib.py
+          - name: docs-fetch
+            files: tests/e2e_docs/test_fetch.py
         serving_mode: [prod, static]
     steps:
       - uses: actions/checkout@v4
