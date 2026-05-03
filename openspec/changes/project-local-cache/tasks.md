@@ -38,7 +38,7 @@
 
 ## 6. Integration Verification
 
-- [ ] 6.1 Run `uv run python -m webcompy start --dev --app docs_app.bootstrap:app --runtime-serving local` and verify `.webcompy_modules/` is created with correct structure
-- [ ] 6.2 Verify dev server serves runtime assets from disk with `FileResponse`
-- [ ] 6.3 Run `uv run python -m webcompy generate --app docs_app.bootstrap:app --runtime-serving local` and verify `dist/_webcompy-assets/` is populated from `.webcompy_modules/`
-- [ ] 6.4 Verify `.gitignore` is created in `.webcompy_modules/` and `git status` does not show it as untracked
+- [x] 6.1 Run `uv run python -m webcompy start --dev --app docs_app.bootstrap:app --runtime-serving local` and verify `.webcompy_modules/` is created with correct structure
+- [x] 6.2 Verify dev server serves runtime assets from disk with `FileResponse`
+- [x] 6.3 Run `uv run python -m webcompy generate --app docs_app.bootstrap:app --runtime-serving local` and verify `dist/_webcompy-assets/` is populated from `.webcompy_modules/`
+- [x] 6.4 Verify `.gitignore` is created in `.webcompy_modules/` and `git status` does not show it as untracked
