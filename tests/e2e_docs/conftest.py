@@ -5,6 +5,7 @@ import os
 import pathlib
 import shutil
 import subprocess
+import sys
 import threading
 import time
 import urllib.request
@@ -86,16 +87,9 @@ def docs_prod_server():
     env["PYTHONPATH"] = str(PROJECT_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
 
     log_file = SERVER_LOG.open("w")
-    log_file.write(f"=== DEBUG: PYTHONPATH={env.get('PYTHONPATH', '')} ===\n")
-    log_file.write(f"=== DEBUG: cwd={PROJECT_ROOT} ===\n")
-    log_file.flush()
     proc = subprocess.Popen(
         [
-            "uv",
-            "run",
-            "--project",
-            str(PROJECT_ROOT),
-            "python",
+            sys.executable,
             "-m",
             "webcompy",
             "start",
@@ -156,11 +150,7 @@ def docs_static_site():
 
     result = subprocess.run(
         [
-            "uv",
-            "run",
-            "--project",
-            str(PROJECT_ROOT),
-            "python",
+            sys.executable,
             "-m",
             "webcompy",
             "generate",
