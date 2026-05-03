@@ -199,9 +199,9 @@ def generate_lockfile(
     runtime_assets: dict[str, RuntimeAssetEntry] = {}
     if runtime_serving == "local":
         from webcompy.cli._pyodide_lock import PYODIDE_RUNTIME_URL_TEMPLATE, PYSCRIPT_RELEASE_URL_TEMPLATE
-        from webcompy.cli._runtime_downloader import PYODIDE_RUNTIME_ASSETS, PYSCRIPT_CORE_ASSETS
+        from webcompy.cli._runtime_downloader import PYODIDE_RUNTIME_ASSETS
 
-        for asset_key in PYSCRIPT_CORE_ASSETS:
+        for asset_key in ("core.js", "core.css"):
             url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(pyscript_version=pyscript_version, filename=asset_key)
             runtime_assets[asset_key] = RuntimeAssetEntry(url=url)
         for asset_key in PYODIDE_RUNTIME_ASSETS:
