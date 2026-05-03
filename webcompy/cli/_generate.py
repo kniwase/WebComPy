@@ -27,6 +27,7 @@ from webcompy.cli._utils import (
     generate_app_version,
     get_generate_config,
     get_webcompy_packge_dir,
+    resolve_standalone_config,
 )
 from webcompy.cli._wheel_builder import make_webcompy_app_package
 
@@ -49,6 +50,10 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
     runtime_serving = args.get("runtime_serving")
     if runtime_serving is not None:
         app.config.runtime_serving = runtime_serving
+    standalone = args.get("standalone")
+    if standalone is not None:
+        app.config.standalone = standalone
+    resolve_standalone_config(app.config)
 
     resolve_dependencies(app, lockfile_sync_config=generate_config.lockfile_sync_config)
     assert app.config.dependencies is not None
@@ -60,6 +65,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             app.config.app_package_path / LOCKFILE_NAME,
             wasm_serving=app.config.wasm_serving or "cdn",
             runtime_serving=app.config.runtime_serving or "cdn",
+            standalone=app.config.standalone,
         )
         for warning in lockfile_warnings:
             print(f"Warning: {warning}", flush=True)
@@ -110,6 +116,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
         runtime_asset_results: dict[str, tuple[pathlib.Path, str]] = {}
         runtime_temp_dir_obj: TemporaryDirectory | None = None
+        cdn_temp_dir_obj = None
         try:
             if resolved_runtime_serving == "local":
                 try:
@@ -136,7 +143,6 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
             cdn_pure_python_names: list[str] = []
             cdn_extracted_deps: list[tuple[str, pathlib.Path]] = []
-            cdn_temp_dir_obj = None
             if not app.config.serve_all_deps:
                 cdn_pure_python_names = get_cdn_pure_python_package_names(lockfile)
             elif lockfile is not None:

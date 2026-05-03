@@ -45,6 +45,7 @@ from webcompy.cli._utils import (
     generate_app_version,
     get_server_config,
     get_webcompy_packge_dir,
+    resolve_standalone_config,
 )
 from webcompy.cli._wheel_builder import make_webcompy_app_package
 
@@ -65,6 +66,7 @@ def create_asgi_app(
         app.config.app_package_path / LOCKFILE_NAME,
         wasm_serving=app.config.wasm_serving or "cdn",
         runtime_serving=app.config.runtime_serving or "cdn",
+        standalone=app.config.standalone,
     )
     for warning in lockfile_warnings:
         print(f"Warning: {warning}", flush=True)
@@ -336,6 +338,11 @@ def run_server(app: WebComPyApp | None = None):
     runtime_serving = args.get("runtime_serving")
     if runtime_serving is not None:
         app.config.runtime_serving = runtime_serving
+    standalone = args.get("standalone")
+    if standalone is not None:
+        app.config.standalone = standalone
+    resolve_standalone_config(app.config)
+
     port = args.get("port") or server_config.port
     asgi = create_asgi_app(app, server_config)
     uvicorn.run(asgi, host="0.0.0.0", port=port, reload=server_config.dev)
