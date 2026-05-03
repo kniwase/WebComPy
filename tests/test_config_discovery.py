@@ -9,6 +9,7 @@ from webcompy.cli._exception import WebComPyCliException
 from webcompy.cli._utils import (
     _extract_package,
     discover_app,
+    get_app_from_import_path,
     get_generate_config,
     get_server_config,
 )
@@ -236,3 +237,69 @@ class TestDiscoverApp:
             pytest.raises(WebComPyCliException, match="app_import_path"),
         ):
             discover_app(None)
+
+
+class TestGetAppFromImportPath:
+    def test_raises_for_missing_top_level_module(self):
+        with pytest.raises(WebComPyCliException, match=r"No python module named 'nonexistent'"):
+            get_app_from_import_path("nonexistent:app")
+
+    def test_raises_for_missing_dotted_module(self):
+        with pytest.raises(WebComPyCliException, match=r"No python module named 'nonexistent\.sub'"):
+            get_app_from_import_path("nonexistent.sub:app")
+
+    def test_raises_for_missing_dependency(self):
+        with (
+            patch(
+                "webcompy.cli._utils.importlib.import_module",
+                side_effect=ModuleNotFoundError("No module named 'numpy'", name="numpy"),
+            ),
+            pytest.raises(
+                WebComPyCliException, match=r"Failed to import 'my_app\.bootstrap'.*missing dependency: numpy"
+            ),
+        ):
+            get_app_from_import_path("my_app.bootstrap:app")
+
+    def test_raises_for_missing_nested_dependency(self):
+        with (
+            patch(
+                "webcompy.cli._utils.importlib.import_module",
+                side_effect=ModuleNotFoundError("No module named 'some_dep'", name="some_dep"),
+            ),
+            pytest.raises(
+                WebComPyCliException, match=r"Failed to import 'my_app\.views'.*missing dependency: some_dep"
+            ),
+        ):
+            get_app_from_import_path("my_app.views:app")
+
+    def test_raises_for_invalid_format(self):
+        with pytest.raises(WebComPyCliException, match="Invalid app import path"):
+            get_app_from_import_path("no_colon")
+
+    def test_raises_for_missing_attribute(self):
+        mock_module = types.SimpleNamespace()
+
+        def mock_import(name):
+            if name == "my_app.bootstrap":
+                return mock_module
+            raise ModuleNotFoundError(name)
+
+        with (
+            patch("webcompy.cli._utils.importlib.import_module", side_effect=mock_import),
+            pytest.raises(WebComPyCliException, match=r"No attribute 'app' in module 'my_app\.bootstrap'"),
+        ):
+            get_app_from_import_path("my_app.bootstrap:app")
+
+    def test_raises_for_wrong_type(self):
+        mock_module = types.SimpleNamespace(app="not a WebComPyApp")
+
+        def mock_import(name):
+            if name == "my_app.bootstrap":
+                return mock_module
+            raise ModuleNotFoundError(name)
+
+        with (
+            patch("webcompy.cli._utils.importlib.import_module", side_effect=mock_import),
+            pytest.raises(WebComPyCliException, match="not a WebComPyApp instance"),
+        ):
+            get_app_from_import_path("my_app.bootstrap:app")
