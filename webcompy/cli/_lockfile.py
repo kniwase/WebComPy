@@ -155,6 +155,7 @@ def save_lockfile(lockfile: Lockfile, path: pathlib.Path) -> None:
 def generate_lockfile(
     dependencies: list[str],
     pyscript_version: str,
+    modules_dir: pathlib.Path,
     pyodide_version: str | None = None,
     wasm_serving: str = "cdn",
     runtime_serving: str = "cdn",
@@ -163,7 +164,7 @@ def generate_lockfile(
     if pyodide_version is None:
         pyodide_version = get_pyodide_version(pyscript_version)
 
-    pyodide_lock = fetch_pyodide_lock(pyodide_version)
+    pyodide_lock = fetch_pyodide_lock(pyodide_version, modules_dir)
 
     from webcompy.cli._dependency_resolver import PackageKind, classify_dependencies
 
@@ -362,6 +363,7 @@ def resolve_lockfile(
     dependencies: list[str],
     pyscript_version: str,
     lockfile_path: pathlib.Path,
+    modules_dir: pathlib.Path,
     wasm_serving: str = "cdn",
     runtime_serving: str = "cdn",
     standalone: bool = False,
@@ -375,6 +377,7 @@ def resolve_lockfile(
         lockfile, errors, warnings = generate_lockfile(
             dependencies,
             pyscript_version,
+            modules_dir,
             wasm_serving=wasm_serving,
             runtime_serving=runtime_serving,
             standalone=standalone,

@@ -155,6 +155,13 @@ def get_webcompy_packge_dir(path: pathlib.Path | None = None) -> pathlib.Path:
         return get_webcompy_packge_dir(path.parent)
 
 
+def ensure_webcompy_modules_dir(modules_dir: pathlib.Path) -> None:
+    modules_dir.mkdir(parents=True, exist_ok=True)
+    gitignore = modules_dir / ".gitignore"
+    if not gitignore.exists():
+        gitignore.write_text("*\n", encoding="utf-8")
+
+
 def generate_app_version(app_version: str | None = None) -> str:
     if app_version is not None:
         return app_version

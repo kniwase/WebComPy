@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import pathlib
 import urllib.error
 import urllib.request
@@ -9,8 +8,6 @@ import urllib.request
 PYODIDE_LOCK_URL_TEMPLATE = "https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json"
 PYSCRIPT_RELEASE_URL_TEMPLATE = "https://pyscript.net/releases/{pyscript_version}/{filename}"
 PYODIDE_RUNTIME_URL_TEMPLATE = "https://cdn.jsdelivr.net/pyodide/v{pyodide_version}/full/{filename}"
-
-CACHE_DIR = pathlib.Path(os.environ.get("XDG_CACHE_HOME", pathlib.Path.home() / ".cache")) / "webcompy"
 
 PYSCRIPT_TO_PYODIDE: dict[str, str] = {
     "2026.3.1": "0.29.3",
@@ -40,8 +37,9 @@ def _load_cached(cached_path: pathlib.Path) -> dict | None:
         return None
 
 
-def fetch_pyodide_lock(pyodide_version: str) -> dict:
-    cached_path = CACHE_DIR / f"pyodide-lock-{pyodide_version}.json"
+def fetch_pyodide_lock(pyodide_version: str, modules_dir: pathlib.Path) -> dict:
+    cache_dir = modules_dir / "pyodide-lock"
+    cached_path = cache_dir / f"pyodide-lock-{pyodide_version}.json"
 
     cached = _load_cached(cached_path)
     if cached is not None:
@@ -50,7 +48,7 @@ def fetch_pyodide_lock(pyodide_version: str) -> dict:
     url = PYODIDE_LOCK_URL_TEMPLATE.format(version=pyodide_version)
     fetch_error: Exception | None = None
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "WebComPy"})
+        req = urllib.request.Request(url, headers={"User-Agent": "WebComPy/0.1"})
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = resp.read()
         lock_data = json.loads(data)
@@ -59,7 +57,7 @@ def fetch_pyodide_lock(pyodide_version: str) -> dict:
         lock_data = None
 
     if lock_data is not None:
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        cache_dir.mkdir(parents=True, exist_ok=True)
         cached_path.write_text(json.dumps(lock_data, indent=2), encoding="utf-8")
         return lock_data
 

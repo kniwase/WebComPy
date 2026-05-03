@@ -457,15 +457,15 @@ class TestLockfileRuntimeServing:
 
 
 class TestGenerateLockfileRuntimeAssets:
-    def test_runtime_local_populates_urls(self, monkeypatch, tmp_path):
+    def test_runtime_local_populates_urls(self, tmp_path):
 
         from webcompy.cli._lockfile import generate_lockfile
 
-        cache_dir = tmp_path / "cache"
-        monkeypatch.setattr("webcompy.cli._pyodide_lock.CACHE_DIR", cache_dir)
+        modules_dir = tmp_path / ".webcompy_modules"
         lockfile, _errors, _warnings = generate_lockfile(
             dependencies=[],
             pyscript_version="2026.3.1",
+            modules_dir=modules_dir,
             runtime_serving="local",
         )
         assert lockfile.runtime_serving == "local"
@@ -477,14 +477,14 @@ class TestGenerateLockfileRuntimeAssets:
         assert lockfile.runtime_assets["core.js"].sha256 is None
         assert lockfile.runtime_assets["pyodide.mjs"].sha256 is None
 
-    def test_runtime_cdn_no_runtime_assets(self, monkeypatch, tmp_path):
+    def test_runtime_cdn_no_runtime_assets(self, tmp_path):
         from webcompy.cli._lockfile import generate_lockfile
 
-        cache_dir = tmp_path / "cache"
-        monkeypatch.setattr("webcompy.cli._pyodide_lock.CACHE_DIR", cache_dir)
+        modules_dir = tmp_path / ".webcompy_modules"
         lockfile, _errors, _warnings = generate_lockfile(
             dependencies=[],
             pyscript_version="2026.3.1",
+            modules_dir=modules_dir,
             runtime_serving="cdn",
         )
         assert lockfile.runtime_serving == "cdn"

@@ -247,10 +247,10 @@ When `serve_all_deps=True`, the CLI SHALL download pure-Python package wheels fr
 - **THEN** those packages SHALL be downloaded from the Pyodide CDN
 - **AND** their SHA256 hashes SHALL be verified against the lock file
 - **AND** the wheels SHALL be extracted and bundled into the app wheel
-- **AND** downloaded wheels SHALL be cached at `~/.cache/webcompy/pyodide-packages/{pyodide_version}/`
+- **AND** downloaded wheels SHALL be cached at `{app_package_path}/.webcompy_modules/pyodide-packages/{pyodide_version}/`
 
 #### Scenario: Cache hit
-- **WHEN** a previously downloaded wheel exists in the cache with a matching SHA256 hash
+- **WHEN** a previously downloaded wheel exists in the project-local cache with a matching SHA256 hash
 - **THEN** the download SHALL be skipped
 - **AND** the cached wheel SHALL be used
 
@@ -363,20 +363,35 @@ When `runtime_serving="local"`, the CLI SHALL download PyScript core assets (`co
 
 #### Scenario: Generating a static site with local runtime serving
 - **WHEN** a developer runs `python -m webcompy generate` with `AppConfig(runtime_serving="local")`
-- **THEN** PyScript core assets SHALL be downloaded to `dist/_webcompy-assets/`
-- **AND** Pyodide runtime assets SHALL be downloaded to `dist/_webcompy-assets/pyodide/`
+- **THEN** PyScript core assets SHALL be copied from `{app_package_path}/.webcompy_modules/runtime-assets/{pyscript_version}/` to `dist/_webcompy-assets/`
+- **AND** Pyodide runtime assets SHALL be copied from `{app_package_path}/.webcompy_modules/runtime-assets/{pyscript_version}/pyodide/` to `dist/_webcompy-assets/pyodide/`
 - **AND** the generated HTML SHALL reference local asset URLs instead of CDN URLs
 
 #### Scenario: Starting the dev server with local runtime serving
 - **WHEN** a developer runs `python -m webcompy start --dev` with `AppConfig(runtime_serving="local")`
-- **THEN** the dev server SHALL serve PyScript core assets from `/_webcompy-assets/`
-- **AND** the dev server SHALL serve Pyodide runtime assets from `/_webcompy-assets/pyodide/`
+- **THEN** the dev server SHALL serve PyScript core assets from `{app_package_path}/.webcompy_modules/runtime-assets/{pyscript_version}/`
+- **AND** the dev server SHALL serve Pyodide runtime assets from `{app_package_path}/.webcompy_modules/runtime-assets/{pyscript_version}/pyodide/`
 - **AND** the generated HTML SHALL reference local asset URLs
 
-#### Scenario: Runtime assets are cached
+#### Scenario: Runtime assets are cached locally
 - **WHEN** a developer runs `webcompy generate` or `webcompy start` with `runtime_serving="local"`
-- **THEN** downloaded runtime assets SHALL be cached at `~/.cache/webcompy/runtime-assets/{pyscript_version}/`
+- **THEN** downloaded runtime assets SHALL be cached at `{app_package_path}/.webcompy_modules/runtime-assets/{pyscript_version}/`
 - **AND** cached assets with matching versions SHALL be reused without network requests
+
+### Requirement: The dev server shall serve runtime and WASM assets from disk
+When `runtime_serving="local"` or `wasm_serving="local"`, the dev server SHALL serve assets directly from the project-local cache directory using `FileResponse` or equivalent disk-based streaming, rather than loading file contents into memory with `read_bytes()`.
+
+#### Scenario: Serving a local runtime asset
+- **WHEN** a browser requests `/_webcompy-assets/core.js`
+- **AND** `runtime_serving="local"`
+- **THEN** the server SHALL stream the file from `{app_package_path}/.webcompy_modules/runtime-assets/{pyscript_version}/core.js`
+- **AND** the file SHALL NOT be fully loaded into memory before the response begins
+
+#### Scenario: Serving a local WASM wheel
+- **WHEN** a browser requests `/_webcompy-assets/packages/{file_name}`
+- **AND** `wasm_serving="local"`
+- **THEN** the server SHALL stream the file from `{app_package_path}/.webcompy_modules/pyodide-packages/{pyodide_version}/{file_name}`
+- **AND** the file SHALL NOT be fully loaded into memory before the response begins
 
 ### Requirement: Downloaded runtime assets SHALL be verified against lock file hashes
 When `runtime_serving="local"`, the CLI SHALL compute SHA256 hashes of all downloaded runtime assets. If the lock file contains `runtime_assets` with SHA256 hashes (from a previous build), the CLI SHALL verify downloaded files against those hashes. On mismatch, the CLI SHALL raise an error. After verification, the CLI SHALL update the lock file with the computed hashes.
@@ -394,15 +409,12 @@ When `runtime_serving="local"`, the CLI SHALL compute SHA256 hashes of all downl
 - **AND** the lock file SHALL be updated with the newly computed hashes
 
 ### Requirement: Temporary directories used for runtime asset downloads SHALL be cleaned up
-When `webcompy generate` or `webcompy start` creates temporary directories for runtime asset downloads, those directories SHALL be cleaned up after use.
+When `webcompy generate` or `webcompy start` creates temporary directories for CDN pure-Python wheel extraction for bundling, those directories SHALL be cleaned up after use. Note: runtime and WASM assets no longer use temporary directories as they are served directly from the project-local cache.
 
-#### Scenario: Temporary directory cleanup after static site generation
-- **WHEN** `webcompy generate --runtime-serving local` completes
-- **THEN** any temporary directories created for runtime asset downloads SHALL be removed
-
-#### Scenario: Temporary directory cleanup after dev server shutdown
-- **WHEN** `webcompy start --dev --runtime-serving local` terminates
-- **THEN** any temporary directories created for runtime asset downloads SHALL be removed
+#### Scenario: Temporary directory cleanup after CDN wheel extraction
+- **WHEN** `webcompy generate` or `webcompy start` with `serve_all_deps=True` completes
+- **AND** CDN pure-Python wheels were extracted for bundling
+- **THEN** any temporary directories created for wheel extraction SHALL be removed
 
 ### Requirement: Runtime-local HTML shall reference local runtime asset URLs and configure PyScript for local Pyodide
 In runtime-local mode, `generate_html()` SHALL replace PyScript and Pyodide CDN URLs with same-origin paths under `/_webcompy-assets/`. The PyScript `py-config` SHALL include `interpreter` and `lockFileURL` pointing to local Pyodide assets.

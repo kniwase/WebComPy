@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import pathlib
 import urllib.error
 import urllib.request
@@ -16,10 +15,6 @@ PYODIDE_RUNTIME_ASSETS = [
     "python_stdlib.zip",
     "pyodide-lock.json",
 ]
-
-CACHE_DIR = (
-    pathlib.Path(os.environ.get("XDG_CACHE_HOME", pathlib.Path.home() / ".cache")) / "webcompy" / "runtime-assets"
-)
 
 
 class RuntimeDownloadError(Exception):
@@ -39,7 +34,7 @@ def _sha256_of_file(path: pathlib.Path) -> str:
 
 def _download_file(url: str, dest: pathlib.Path) -> bytes:
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "WebComPy"})
+        req = urllib.request.Request(url, headers={"User-Agent": "WebComPy/0.1"})
         with urllib.request.urlopen(req, timeout=120) as resp:
             data = resp.read()
     except (urllib.error.URLError, OSError, TimeoutError) as e:
@@ -52,19 +47,21 @@ def _download_file(url: str, dest: pathlib.Path) -> bytes:
 def download_runtime_assets(
     pyodide_version: str,
     pyscript_version: str,
-    dest_dir: pathlib.Path,
+    modules_dir: pathlib.Path,
+    dest_dir: pathlib.Path | None = None,
 ) -> dict[str, tuple[pathlib.Path, str]]:
     results: dict[str, tuple[pathlib.Path, str]] = {}
-    cache_dir = CACHE_DIR / pyscript_version
+    cache_dir = modules_dir / "runtime-assets" / pyscript_version
 
     for filename in PYSCRIPT_CORE_ASSETS:
         cached_path = cache_dir / filename
-        dest_path = dest_dir / filename
+        dest_path = (dest_dir or cache_dir) / filename
         rel_path = filename
 
         if cached_path.is_file():
             dest_path.parent.mkdir(parents=True, exist_ok=True)
-            dest_path.write_bytes(cached_path.read_bytes())
+            if dest_path != cached_path:
+                dest_path.write_bytes(cached_path.read_bytes())
             sha256 = _sha256_of_file(dest_path)
             results[rel_path] = (dest_path, sha256)
             continue
@@ -76,7 +73,7 @@ def download_runtime_assets(
         sha256 = hashlib.sha256(data).hexdigest()
         results[rel_path] = (dest_path, sha256)
 
-    pyodide_dest_dir = dest_dir / "pyodide"
+    pyodide_dest_dir = (dest_dir or cache_dir) / "pyodide"
     pyodide_cache_dir = cache_dir / "pyodide"
 
     for filename in PYODIDE_RUNTIME_ASSETS:
@@ -86,7 +83,8 @@ def download_runtime_assets(
 
         if cached_path.is_file():
             dest_path.parent.mkdir(parents=True, exist_ok=True)
-            dest_path.write_bytes(cached_path.read_bytes())
+            if dest_path != cached_path:
+                dest_path.write_bytes(cached_path.read_bytes())
             sha256 = _sha256_of_file(dest_path)
             results[rel_path] = (dest_path, sha256)
             continue

@@ -28,27 +28,25 @@ class TestSha256OfFile:
 
 
 class TestDownloadPyodideWheel:
-    def test_cache_hit_with_matching_sha256(self, tmp_path, monkeypatch):
+    def test_cache_hit_with_matching_sha256(self, tmp_path):
         content = b"fake wheel data"
         expected_sha256 = hashlib.sha256(content).hexdigest()
-        cache_dir = tmp_path / "cache" / "0.29.3"
+        modules_dir = tmp_path / ".webcompy_modules"
+        cache_dir = modules_dir / "pyodide-packages" / "0.29.3"
         cache_dir.mkdir(parents=True)
         wheel_path = cache_dir / "test-1.0-py3-none-any.whl"
         wheel_path.write_bytes(content)
 
-        monkeypatch.setattr("webcompy.cli._pyodide_downloader.CACHE_DIR", tmp_path / "cache")
-
-        result = download_pyodide_wheel("test-1.0-py3-none-any.whl", "0.29.3", expected_sha256)
+        result = download_pyodide_wheel("test-1.0-py3-none-any.whl", "0.29.3", expected_sha256, modules_dir)
         assert result == wheel_path
 
-    def test_sha256_mismatch_raises_error(self, tmp_path, monkeypatch):
+    def test_sha256_mismatch_raises_error(self, tmp_path):
         content = b"fake wheel data"
-        cache_dir = tmp_path / "cache" / "0.29.3"
+        modules_dir = tmp_path / ".webcompy_modules"
+        cache_dir = modules_dir / "pyodide-packages" / "0.29.3"
         cache_dir.mkdir(parents=True)
         wheel_path = cache_dir / "test-1.0-py3-none-any.whl"
         wheel_path.write_bytes(content)
-
-        monkeypatch.setattr("webcompy.cli._pyodide_downloader.CACHE_DIR", tmp_path / "cache")
 
         fake_download = b"corrupted data"
         with patch("webcompy.cli._pyodide_downloader.urllib.request.urlopen") as mock_urlopen:
@@ -57,31 +55,30 @@ class TestDownloadPyodideWheel:
             mock_urlopen.return_value.read.return_value = fake_download
 
             with pytest.raises(PyodideDownloadError, match="SHA256 verification failed"):
-                download_pyodide_wheel("test-1.0-py3-none-any.whl", "0.29.3", "wrong_hash")
+                download_pyodide_wheel("test-1.0-py3-none-any.whl", "0.29.3", "wrong_hash", modules_dir)
 
-    def test_network_failure_raises_error(self, tmp_path, monkeypatch):
+    def test_network_failure_raises_error(self, tmp_path):
         import urllib.error
 
-        monkeypatch.setattr("webcompy.cli._pyodide_downloader.CACHE_DIR", tmp_path / "cache_not_exist")
+        modules_dir = tmp_path / ".webcompy_modules"
 
         with patch("webcompy.cli._pyodide_downloader.urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.side_effect = urllib.error.URLError("network error")
 
             with pytest.raises(PyodideDownloadError, match="Failed to download"):
-                download_pyodide_wheel("test-1.0-py3-none-any.whl", "0.29.3", "abc123")
+                download_pyodide_wheel("test-1.0-py3-none-any.whl", "0.29.3", "abc123", modules_dir)
 
-    def test_downloads_and_saves_to_cache(self, tmp_path, monkeypatch):
+    def test_downloads_and_saves_to_cache(self, tmp_path):
         content = b"downloaded wheel data"
         expected_sha256 = hashlib.sha256(content).hexdigest()
-
-        monkeypatch.setattr("webcompy.cli._pyodide_downloader.CACHE_DIR", tmp_path / "cache")
+        modules_dir = tmp_path / ".webcompy_modules"
 
         with patch("webcompy.cli._pyodide_downloader.urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.return_value.__enter__ = lambda s: s
             mock_urlopen.return_value.__exit__ = lambda s, *a: None
             mock_urlopen.return_value.read.return_value = content
 
-            result = download_pyodide_wheel("test-1.0-py3-none-any.whl", "0.29.3", expected_sha256)
+            result = download_pyodide_wheel("test-1.0-py3-none-any.whl", "0.29.3", expected_sha256, modules_dir)
 
             assert result.exists()
             assert result.read_bytes() == content
