@@ -86,6 +86,9 @@ def docs_prod_server():
     env["PYTHONPATH"] = str(PROJECT_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
 
     log_file = SERVER_LOG.open("w")
+    log_file.write(f"=== DEBUG: PYTHONPATH={env.get('PYTHONPATH', '')} ===\n")
+    log_file.write(f"=== DEBUG: cwd={PROJECT_ROOT} ===\n")
+    log_file.flush()
     proc = subprocess.Popen(
         [
             "uv",
