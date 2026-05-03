@@ -13,7 +13,7 @@ from sse_starlette.sse import EventSourceResponse
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, Response
+from starlette.responses import FileResponse, HTMLResponse, Response
 from starlette.routing import Route
 from starlette.types import ASGIApp
 
@@ -42,6 +42,7 @@ from webcompy.cli._runtime_downloader import RuntimeDownloadError, download_runt
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
     discover_app,
+    ensure_webcompy_modules_dir,
     generate_app_version,
     get_server_config,
     get_webcompy_packge_dir,
@@ -56,6 +57,9 @@ def create_asgi_app(
     if server_config is None:
         server_config = ServerConfig()
 
+    modules_dir = app.config.app_package_path / ".webcompy_modules"
+    ensure_webcompy_modules_dir(modules_dir)
+
     resolve_dependencies(app, lockfile_sync_config=server_config.lockfile_sync_config)
     assert app.config.dependencies is not None
 
@@ -63,6 +67,7 @@ def create_asgi_app(
         app.config.dependencies,
         PYSCRIPT_VERSION,
         app.config.app_package_path / LOCKFILE_NAME,
+        modules_dir,
         wasm_serving=app.config.wasm_serving or "cdn",
         runtime_serving=app.config.runtime_serving or "cdn",
     )
@@ -92,45 +97,39 @@ def create_asgi_app(
 
     wasm_local_urls: dict[str, str] | None = None
     lockfile_url: str | None = None
-    wasm_asset_files: dict[str, tuple[bytes, str]] = {}
+    wasm_asset_files: dict[str, pathlib.Path] = {}
     if resolved_wasm_serving == "local" and lockfile is not None:
         pyodide_version = lockfile.pyodide_version
         lockfile_url = PYODIDE_LOCK_URL_TEMPLATE.format(version=pyodide_version)
 
-        downloaded_paths = download_wasm_wheels(lockfile)
+        downloaded_paths = download_wasm_wheels(lockfile, modules_dir)
         base_url = app.config.base_url
         wasm_local_urls = {}
         for name, entry in lockfile.wasm_packages.items():
             if entry.file_name and entry.sha256:
                 wasm_local_urls[name] = f"{base_url}_webcompy-assets/packages/{entry.file_name}"
                 if name in downloaded_paths:
-                    wheel_data = downloaded_paths[name].read_bytes()
-                    media_type = "application/octet-stream"
-                    wasm_asset_files[entry.file_name] = (wheel_data, media_type)
+                    wasm_asset_files[entry.file_name] = downloaded_paths[name]
 
     resolved_runtime_serving = app.config.runtime_serving or "cdn"
 
-    runtime_asset_files: dict[str, tuple[bytes, str]] = {}
+    runtime_asset_files: dict[str, pathlib.Path] = {}
     if resolved_runtime_serving == "local":
         try:
-            with TemporaryDirectory() as runtime_temp_dir:
-                runtime_dir = pathlib.Path(runtime_temp_dir)
-                runtime_results = download_runtime_assets(
-                    lockfile.pyodide_version if lockfile else "0.29.3",
+            runtime_results = download_runtime_assets(
+                lockfile.pyodide_version if lockfile else "0.29.3",
+                PYSCRIPT_VERSION,
+                modules_dir,
+            )
+            if lockfile is not None:
+                verify_and_update_runtime_assets(
+                    runtime_results,
+                    lockfile,
                     PYSCRIPT_VERSION,
-                    runtime_dir,
+                    app.config.app_package_path / LOCKFILE_NAME,
                 )
-                if lockfile is not None:
-                    verify_and_update_runtime_assets(
-                        runtime_results,
-                        lockfile,
-                        PYSCRIPT_VERSION,
-                        app.config.app_package_path / LOCKFILE_NAME,
-                    )
-                for rel_path, (asset_path, _sha256) in runtime_results.items():
-                    content = asset_path.read_bytes()
-                    media_type = mimetypes.guess_type(str(asset_path))[0] or "application/octet-stream"
-                    runtime_asset_files[rel_path] = (content, media_type)
+            for rel_path, (asset_path, _sha256) in runtime_results.items():
+                runtime_asset_files[rel_path] = asset_path
         except RuntimeDownloadError as e:
             import sys
 
@@ -151,6 +150,7 @@ def create_asgi_app(
                         entry.pyodide_file_name,
                         lockfile.pyodide_version,
                         entry.pyodide_sha256,
+                        modules_dir,
                     )
                 except PyodideDownloadError as e:
                     import sys
@@ -213,8 +213,8 @@ def create_asgi_app(
         async def send_wasm_asset(request: Request):
             filename: str = request.path_params.get("filename", "")  # type: ignore
             if filename in wasm_asset_files:
-                content, media_type = wasm_asset_files[filename]
-                return Response(content, media_type=media_type)
+                asset_path = wasm_asset_files[filename]
+                return FileResponse(asset_path, media_type="application/octet-stream")
             else:
                 raise HTTPException(404)
 
@@ -226,8 +226,9 @@ def create_asgi_app(
         async def send_runtime_asset(request: Request):
             filename: str = request.path_params.get("filename", "")  # type: ignore
             if filename in runtime_asset_files:
-                content, media_type = runtime_asset_files[filename]
-                return Response(content, media_type=media_type)
+                asset_path = runtime_asset_files[filename]
+                media_type = mimetypes.guess_type(str(asset_path))[0] or "application/octet-stream"
+                return FileResponse(asset_path, media_type=media_type)
             else:
                 raise HTTPException(404)
 

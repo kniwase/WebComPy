@@ -56,30 +56,22 @@ def _mock_download_file(url: str, dest: pathlib.Path) -> bytes:
     return data
 
 
-@pytest.fixture
-def clean_cache(tmp_path, monkeypatch):
-    cache_dir = tmp_path / "cache" / "webcompy" / "runtime-assets"
-    monkeypatch.setattr("webcompy.cli._runtime_downloader.CACHE_DIR", cache_dir)
-    yield cache_dir
-
-
 class TestDownloadRuntimeAssets:
-    def test_downloads_all_assets_to_correct_dirs(self, tmp_path, clean_cache):
+    def test_downloads_all_assets_to_correct_dirs(self, tmp_path):
         pyodide_version = "0.29.3"
         pyscript_version = "2026.3.1"
+        modules_dir = tmp_path / ".webcompy_modules"
 
         with patch("webcompy.cli._runtime_downloader._download_file", side_effect=_mock_download_file):
-            dest_dir = tmp_path / "assets"
-            dest_dir.mkdir()
-            results = download_runtime_assets(pyodide_version, pyscript_version, dest_dir)
+            results = download_runtime_assets(pyodide_version, pyscript_version, modules_dir)
 
-        assert (dest_dir / "core.js").is_file()
-        assert (dest_dir / "core.css").is_file()
-        assert (dest_dir / "pyodide" / "pyodide.mjs").is_file()
-        assert (dest_dir / "pyodide" / "pyodide.asm.wasm").is_file()
-        assert (dest_dir / "pyodide" / "pyodide.asm.js").is_file()
-        assert (dest_dir / "pyodide" / "python_stdlib.zip").is_file()
-        assert (dest_dir / "pyodide" / "pyodide-lock.json").is_file()
+        assert (modules_dir / "runtime-assets" / pyscript_version / "core.js").is_file()
+        assert (modules_dir / "runtime-assets" / pyscript_version / "core.css").is_file()
+        assert (modules_dir / "runtime-assets" / pyscript_version / "pyodide" / "pyodide.mjs").is_file()
+        assert (modules_dir / "runtime-assets" / pyscript_version / "pyodide" / "pyodide.asm.wasm").is_file()
+        assert (modules_dir / "runtime-assets" / pyscript_version / "pyodide" / "pyodide.asm.js").is_file()
+        assert (modules_dir / "runtime-assets" / pyscript_version / "pyodide" / "python_stdlib.zip").is_file()
+        assert (modules_dir / "runtime-assets" / pyscript_version / "pyodide" / "pyodide-lock.json").is_file()
         assert len(results) == len(PYSCRIPT_CORE_ASSETS) + len(PYODIDE_RUNTIME_ASSETS)
         assert "core.js" in results
         assert "core.css" in results
@@ -89,14 +81,13 @@ class TestDownloadRuntimeAssets:
         assert "pyodide/python_stdlib.zip" in results
         assert "pyodide/pyodide-lock.json" in results
 
-    def test_returns_sha256_hashes(self, tmp_path, clean_cache):
+    def test_returns_sha256_hashes(self, tmp_path):
         pyodide_version = "0.29.3"
         pyscript_version = "2026.3.1"
+        modules_dir = tmp_path / ".webcompy_modules"
 
         with patch("webcompy.cli._runtime_downloader._download_file", side_effect=_mock_download_file):
-            dest_dir = tmp_path / "assets"
-            dest_dir.mkdir()
-            results = download_runtime_assets(pyodide_version, pyscript_version, dest_dir)
+            results = download_runtime_assets(pyodide_version, pyscript_version, modules_dir)
 
         for _filename, (path, sha256) in results.items():
             assert isinstance(path, pathlib.Path)
@@ -105,9 +96,10 @@ class TestDownloadRuntimeAssets:
             expected = hashlib.sha256(path.read_bytes()).hexdigest()
             assert sha256 == expected
 
-    def test_caches_assets(self, tmp_path, clean_cache):
+    def test_caches_assets(self, tmp_path):
         pyodide_version = "0.29.3"
         pyscript_version = "2026.3.1"
+        modules_dir = tmp_path / ".webcompy_modules"
         download_counts = {"total": 0}
 
         def counting_mock(url, dest):
@@ -115,28 +107,25 @@ class TestDownloadRuntimeAssets:
             return _mock_download_file(url, dest)
 
         with patch("webcompy.cli._runtime_downloader._download_file", side_effect=counting_mock):
-            dest1 = tmp_path / "dest1"
-            dest1.mkdir()
-            download_runtime_assets(pyodide_version, pyscript_version, dest1)
+            download_runtime_assets(pyodide_version, pyscript_version, modules_dir)
             first_count = download_counts["total"]
 
         with patch("webcompy.cli._runtime_downloader._download_file", side_effect=counting_mock):
-            dest2 = tmp_path / "dest2"
-            dest2.mkdir()
-            download_runtime_assets(pyodide_version, pyscript_version, dest2)
+            download_runtime_assets(pyodide_version, pyscript_version, modules_dir)
             second_count = download_counts["total"] - first_count
 
         assert second_count == 0
 
-    def test_download_failure_raises_error(self, tmp_path, clean_cache):
+    def test_download_failure_raises_error(self, tmp_path):
         pyodide_version = "0.29.3"
         pyscript_version = "2026.3.1"
+        modules_dir = tmp_path / ".webcompy_modules"
 
-        with patch(
-            "webcompy.cli._runtime_downloader._download_file",
-            side_effect=RuntimeDownloadError("Failed to download: network error"),
+        with (
+            patch(
+                "webcompy.cli._runtime_downloader._download_file",
+                side_effect=RuntimeDownloadError("Failed to download: network error"),
+            ),
+            pytest.raises(RuntimeDownloadError),
         ):
-            dest_dir = tmp_path / "assets"
-            dest_dir.mkdir()
-            with pytest.raises(RuntimeDownloadError):
-                download_runtime_assets(pyodide_version, pyscript_version, dest_dir)
+            download_runtime_assets(pyodide_version, pyscript_version, modules_dir)

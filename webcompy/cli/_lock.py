@@ -14,7 +14,7 @@ from webcompy.cli._lockfile_sync import (
     resolve_dependencies,
     sync,
 )
-from webcompy.cli._utils import discover_app, get_lockfile_sync_config
+from webcompy.cli._utils import discover_app, ensure_webcompy_modules_dir, get_lockfile_sync_config
 
 
 def lock_command() -> None:
@@ -56,10 +56,13 @@ def lock_command() -> None:
             install_requirements(lockfile, requirements_path)
     else:
         lockfile_path = app.config.app_package_path / LOCKFILE_NAME
+        modules_dir = app.config.app_package_path / ".webcompy_modules"
+        ensure_webcompy_modules_dir(modules_dir)
         _lockfile, errors, warnings = resolve_lockfile(
             app.config.dependencies,
             PYSCRIPT_VERSION,
             lockfile_path,
+            modules_dir,
             wasm_serving=app.config.wasm_serving or "cdn",
             runtime_serving=app.config.runtime_serving or "cdn",
         )

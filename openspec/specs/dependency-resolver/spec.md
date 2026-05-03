@@ -135,7 +135,7 @@ When resolving a lock file for bundling (via `get_bundled_deps()` or equivalent)
 - **AND** the build SHALL fail
 
 ### Requirement: The Pyodide lock shall be fetched from CDN with local caching
-The Pyodide lock file SHALL be fetched from `https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json` and cached locally at `~/.cache/webcompy/pyodide-lock-{version}.json`. The Pyodide version SHALL be derived from the PyScript version via a mapping table. If the fetch fails and no cache exists, a `PyodideLockFetchError` SHALL be raised.
+The Pyodide lock file SHALL be fetched from `https://cdn.jsdelivr.net/pyodide/v{version}/full/pyodide-lock.json` and cached locally at `{app_package_path}/.webcompy_modules/pyodide-lock/pyodide-lock-{version}.json`. The Pyodide version SHALL be derived from the PyScript version via a mapping table. If the fetch fails and no cache exists, a `PyodideLockFetchError` SHALL be raised.
 
 #### Scenario: Fetching Pyodide lock for the first time
 - **WHEN** the Pyodide lock cache does not exist for the required version
