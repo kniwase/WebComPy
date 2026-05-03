@@ -6,8 +6,23 @@ from datetime import datetime
 from importlib import import_module
 
 from webcompy.app._app import WebComPyApp
-from webcompy.app._config import GenerateConfig, LockfileSyncConfig, ServerConfig
+from webcompy.app._config import AppConfig, GenerateConfig, LockfileSyncConfig, ServerConfig
 from webcompy.cli._exception import WebComPyCliException
+
+
+def resolve_standalone_config(config: AppConfig) -> None:
+    if config.standalone:
+        if config.serve_all_deps is False:
+            print("Warning: standalone=True forces serve_all_deps=True", flush=True)
+        config.serve_all_deps = True
+        if config.wasm_serving is None:
+            config.wasm_serving = "local"
+        if config.runtime_serving is None:
+            config.runtime_serving = "local"
+    if config.wasm_serving is None:
+        config.wasm_serving = "cdn"
+    if config.runtime_serving is None:
+        config.runtime_serving = "cdn"
 
 
 def get_app_from_import_path(import_path: str) -> WebComPyApp:

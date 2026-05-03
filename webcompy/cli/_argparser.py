@@ -58,6 +58,20 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         default=None,
         help="PyScript/Pyodide runtime serving mode: 'cdn' (default) or 'local'",
     )
+    standalone_flags = parser_start.add_mutually_exclusive_group()
+    standalone_flags.add_argument(
+        "--standalone",
+        action="store_true",
+        default=None,
+        dest="standalone",
+        help="enable standalone mode (all assets served locally)",
+    )
+    standalone_flags.add_argument(
+        "--no-standalone",
+        action="store_false",
+        dest="standalone",
+        help="disable standalone mode (default)",
+    )
     parser_start.set_defaults(__command_getter__=_command(subcommand_name))
 
     # generate
@@ -101,6 +115,20 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         choices=["cdn", "local"],
         default=None,
         help="PyScript/Pyodide runtime serving mode: 'cdn' (default) or 'local'",
+    )
+    standalone_flags = parser_generate.add_mutually_exclusive_group()
+    standalone_flags.add_argument(
+        "--standalone",
+        action="store_true",
+        default=None,
+        dest="standalone",
+        help="enable standalone mode (all assets served locally)",
+    )
+    standalone_flags.add_argument(
+        "--no-standalone",
+        action="store_false",
+        dest="standalone",
+        help="disable standalone mode (default)",
     )
     parser_generate.set_defaults(__command_getter__=_command(subcommand_name))
 
