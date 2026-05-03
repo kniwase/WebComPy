@@ -132,7 +132,9 @@ jobs:
         if: always()
         with:
           name: e2e-server-log-${{ matrix.group.name }}-${{ matrix.serving_mode }}
-          path: tests/e2e/.e2e-server.log
+          path: |
+            tests/e2e/.e2e-server.log
+            tests/e2e_docs/.e2e-docs-server.log
 
   review:
     if: always()
