@@ -95,7 +95,8 @@ class TestDownloadPyscriptBundle:
         for name in FAKE_BUNDLE_FILES:
             assert (cache_dir / name).is_file(), f"Expected {name} cached"
         for name in EXCLUDED_IN_ZIP:
-            assert not (cache_dir / name).is_file(), f"Should not cache {name}"
+            flat_name = name.rsplit("/", 1)[-1]
+            assert not (cache_dir / flat_name).is_file(), f"Should not cache {flat_name}"
 
     def test_returns_sha256_hashes(self, tmp_path):
         modules_dir = tmp_path / ".webcompy_modules"
