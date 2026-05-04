@@ -47,9 +47,13 @@ The dev server SHALL build a single Python wheel containing the webcompy framewo
 - **AND** `load_asset("logo")` SHALL return the file content as `bytes`
 
 ### Requirement: The generate command shall produce deployable static files
+
 Static site generation SHALL be available via `python -m webcompy generate` or `generate_static_site(app, generate_config=None)`. Both SHALL produce a complete static site in the configured output directory. The SSG process SHALL enter the app's DI scope for the entire generation pipeline to ensure `inject()` calls during route rendering succeed. A single bundled wheel SHALL be placed in `dist/_webcompy-app-package/`.
 
+When `runtime_serving="local"`, the generate command SHALL download and extract the PyScript offline bundle, placing all `.js` and `.css` files from the `pyscript/` directory (excluding `.map`, `.d.ts`, `micropython/`, `pyodide/`, `service-worker.js`, `mini-coi-fd.js`, `xterm.css`, and `index.html`) into `dist/_webcompy-assets/`.
+
 #### Scenario: Generating a multi-page application with history mode
+
 - **WHEN** routes are defined with history mode
 - **THEN** an `index.html` SHALL be generated for each route path
 - **AND** a `404.html` SHALL be generated for unmatched paths
@@ -59,19 +63,30 @@ Static site generation SHALL be available via `python -m webcompy generate` or `
 - **AND** a `.nojekyll` file SHALL be created for GitHub Pages compatibility
 
 #### Scenario: Generating a single-page application with hash mode
+
 - **WHEN** no router or hash mode is used
 - **THEN** a single `index.html` SHALL be generated at the dist root
 - **AND** all other assets SHALL be included as in the history mode case
 
 #### Scenario: Generating with custom dist via --dist flag
+
 - **WHEN** a developer runs `python -m webcompy generate --dist out`
 - **THEN** static files SHALL be generated in the `out` directory
 - **AND** the `--dist` flag SHALL override `GenerateConfig.dist`
 
 #### Scenario: Generating via generate_static_site(app)
+
 - **WHEN** a developer calls `generate_static_site(app)` with a `WebComPyApp` instance
 - **THEN** a static site SHALL be generated in the `dist` directory
 - **AND** all routes, app packages, and static files SHALL be included
+
+#### Scenario: Generating static site with runtime_serving=local
+
+- **WHEN** a developer runs `python -m webcompy generate` with `runtime_serving="local"` (or `standalone=True`)
+- **THEN** the generate command SHALL download the PyScript offline bundle if not cached
+- **AND** place all PyScript core bundle `.js` and `.css` files in `dist/_webcompy-assets/`
+- **AND** place all Pyodide runtime files in `dist/_webcompy-assets/pyodide/`
+- **AND** the generated HTML SHALL reference `/_webcompy-assets/core.js` for PyScript initialization
 
 ### Requirement: The init command shall scaffold a new project
 Running `python -m webcompy init` SHALL create the necessary project structure including a bootstrap file, static directory, and two configuration files (`webcompy_config.py` and `webcompy_server_config.py`).
@@ -358,22 +373,25 @@ The `webcompy lock` command SHALL support three additional operations beyond def
 - **AND** no `pyproject.toml` is found above `app_package_path`
 - **THEN** an error SHALL be reported instructing the developer to set `AppConfig.dependencies` explicitly
 
-### Requirement: The CLI shall download and serve PyScript/Pyodide runtime assets locally when runtime_serving is local
-When `runtime_serving="local"`, the CLI SHALL download PyScript core assets (`core.js`, `core.css`) and Pyodide runtime assets (`pyodide.mjs`, `pyodide.asm.wasm`, `pyodide.asm.js`, `python_stdlib.zip`, `pyodide-lock.json`) at build time and serve them from the same origin. PyScript core assets SHALL be placed at `/_webcompy-assets/` directly. Pyodide runtime assets SHALL be placed at `/_webcompy-assets/pyodide/`.
+### Requirement: The dev server shall serve runtime assets locally
+
+When `runtime_serving="local"`, the dev server SHALL serve all PyScript core bundle files and Pyodide runtime files from memory. This includes all `.js` and `.css` files extracted from the PyScript offline bundle.
+
+#### Scenario: Dev server with runtime_serving=local serves all PyScript bundle files
+
+- **WHEN** a developer starts the dev server with `runtime_serving="local"`
+- **THEN** all PyScript core bundle `.js` and `.css` files SHALL be available at `/_webcompy-assets/{filename}`
+- **AND** the browser SHALL be able to resolve all relative `import()` paths within the PyScript bundle
 
 #### Scenario: Generating a static site with local runtime serving
+
 - **WHEN** a developer runs `python -m webcompy generate` with `AppConfig(runtime_serving="local")`
 - **THEN** PyScript core assets SHALL be copied from `{app_package_path}/.webcompy_modules/runtime-assets/{pyscript_version}/` to `dist/_webcompy-assets/`
 - **AND** Pyodide runtime assets SHALL be copied from `{app_package_path}/.webcompy_modules/runtime-assets/{pyscript_version}/pyodide/` to `dist/_webcompy-assets/pyodide/`
 - **AND** the generated HTML SHALL reference local asset URLs instead of CDN URLs
 
-#### Scenario: Starting the dev server with local runtime serving
-- **WHEN** a developer runs `python -m webcompy start --dev` with `AppConfig(runtime_serving="local")`
-- **THEN** the dev server SHALL serve PyScript core assets from `{app_package_path}/.webcompy_modules/runtime-assets/{pyscript_version}/`
-- **AND** the dev server SHALL serve Pyodide runtime assets from `{app_package_path}/.webcompy_modules/runtime-assets/{pyscript_version}/pyodide/`
-- **AND** the generated HTML SHALL reference local asset URLs
-
 #### Scenario: Runtime assets are cached locally
+
 - **WHEN** a developer runs `webcompy generate` or `webcompy start` with `runtime_serving="local"`
 - **THEN** downloaded runtime assets SHALL be cached at `{app_package_path}/.webcompy_modules/runtime-assets/{pyscript_version}/`
 - **AND** cached assets with matching versions SHALL be reused without network requests
