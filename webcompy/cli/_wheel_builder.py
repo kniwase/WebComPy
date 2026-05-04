@@ -48,7 +48,6 @@ def _collect_package_files(
     for pkg in packages:
         pkg_rel = pkg.replace(".", os.sep)
         pkg_path = parent / pkg_rel
-        pkg_path_py = parent / f"{pkg_rel}.py"
         single_module_py = pkg_path / f"{pkg}.py"
         if pkg_path.is_dir() and not (pkg_path / "__init__.py").exists():
             if single_module_py.is_file():
@@ -58,13 +57,7 @@ def _collect_package_files(
                     files.append((single_module_py, arc_path))
                 continue
             continue
-        elif pkg_path_py.is_file():
-            arc_path = f"{pkg_rel}.py"
-            if arc_path not in seen:
-                seen.add(arc_path)
-                files.append((pkg_path_py, arc_path))
-            continue
-        elif not pkg_path.is_dir():
+        if not pkg_path.is_dir():
             continue
         for root, _dirs, filenames in os.walk(pkg_path):
             root_path = pathlib.Path(root)

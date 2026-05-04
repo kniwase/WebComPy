@@ -46,6 +46,12 @@ class LazyComponentGenerator(ComponentGenerator):
             self._resolve()
         except Exception:
             self._resolve_error = True
+            from webcompy._browser._modules import browser
+
+            if browser:
+                browser.console.warn(  # type: ignore[union-attr]
+                    f"[WebComPy] Failed to preload lazy route '{self._import_path}'"
+                )
 
     def __call__(self, props, *, slots=None):
         resolved = self._resolve()

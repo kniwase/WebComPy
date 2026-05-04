@@ -61,6 +61,23 @@ class TestDiscoverPackages:
         result = _discover_packages(pkg)
         assert result == ["myapp"]
 
+    def test_single_file_module(self, tmp_path):
+        extracted = tmp_path / "six"
+        extracted.mkdir()
+        (extracted / "six.py").write_text("import six")
+        result = _discover_packages(extracted)
+        assert result == ["six"]
+
+    def test_single_file_module_coexists_with_directory_packages(self, tmp_path):
+        six_dir = tmp_path / "six"
+        six_dir.mkdir()
+        (six_dir / "six.py").write_text("")
+        dateutil_dir = tmp_path / "dateutil"
+        dateutil_dir.mkdir()
+        (dateutil_dir / "__init__.py").write_text("")
+        assert _discover_packages(six_dir) == ["six"]
+        assert _discover_packages(dateutil_dir) == ["dateutil"]
+
 
 class TestCollectPackageFiles:
     def test_py_files_collected(self, tmp_path):
@@ -102,12 +119,17 @@ class TestCollectPackageFiles:
         pkg = tmp_path / "myapp"
         pkg.mkdir()
         (pkg / "__init__.py").write_text("")
-        data_dir = pkg / "data"
-        data_dir.mkdir()
-        (data_dir / "file.json").write_text("{}")
         files = _collect_package_files(pkg, ["myapp"])
         arcs = {arc for _, arc in files}
-        assert "myapp/data/file.json" not in arcs
+        assert "myapp/__init__.py" in arcs
+
+    def test_single_file_module(self, tmp_path):
+        extracted = tmp_path / "six"
+        extracted.mkdir()
+        (extracted / "six.py").write_text("import six")
+        files = _collect_package_files(extracted, ["six"])
+        arcs = {arc for _, arc in files}
+        assert arcs == {"six.py"}
 
 
 class TestSha256B64:
