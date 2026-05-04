@@ -2,14 +2,14 @@ import pytest
 
 
 @pytest.mark.e2e
-def test_todo_initial_items(docs_page_on, assert_no_python_errors):
+def test_todo_initial_items(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/sample/todo")
     assert page.locator("span").filter(has_text="Try WebComPy").first.is_visible()
     assert page.locator("span").filter(has_text="Create WebComPy project").first.is_visible()
 
 
 @pytest.mark.e2e
-def test_todo_add_item(docs_page_on, assert_no_python_errors):
+def test_todo_add_item(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/sample/todo")
     input_field = page.locator("p").locator("input").first
     input_field.fill("Test item")
@@ -18,7 +18,7 @@ def test_todo_add_item(docs_page_on, assert_no_python_errors):
 
 
 @pytest.mark.e2e
-def test_todo_remove_done_items(docs_page_on, assert_no_python_errors):
+def test_todo_remove_done_items(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/sample/todo")
     checkboxes = page.locator("input[type='checkbox']")
     checkboxes.first.check()
