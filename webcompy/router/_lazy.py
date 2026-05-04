@@ -11,11 +11,13 @@ class LazyComponentGenerator(ComponentGenerator):
     _import_path: str
     _caller_file: str
     _resolved: ComponentGenerator | None
+    _resolve_error: bool
 
     def __init__(self, import_path: str, caller_file: str) -> None:
         self._import_path = import_path
         self._caller_file = caller_file
         self._resolved = None
+        self._resolve_error = False
         attr_name = import_path.rsplit(":", 1)[-1]
         self._name = attr_name
         self._id = generate_id(attr_name)
@@ -40,7 +42,10 @@ class LazyComponentGenerator(ComponentGenerator):
         return self._resolved
 
     def _preload(self) -> None:
-        self._resolve()
+        try:
+            self._resolve()
+        except Exception:
+            self._resolve_error = True
 
     def __call__(self, props, *, slots=None):
         resolved = self._resolve()

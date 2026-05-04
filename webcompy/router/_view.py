@@ -24,5 +24,5 @@ class RouterView(DynamicElement):
         self._re_index_children()
         if not browser:
             self._switch._on_set_parent()
-        if self._router._preload:
-            self._router.preload_lazy_routes()
+            if self._router._preload:
+                self._router.preload_lazy_routes()

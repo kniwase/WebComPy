@@ -28,6 +28,11 @@ def _discover_packages(package_dir: pathlib.Path) -> list[str]:
         if "__init__.py" in files:
             rel = pathlib.Path(root).relative_to(package_dir.parent)
             packages.append(str(rel).replace(os.sep, "."))
+        elif root == str(package_dir):
+            for filename in files:
+                if filename.endswith(".py") and filename != "__init__.py":
+                    module_name = filename[:-3]
+                    packages.append(module_name)
         dirs[:] = [d for d in dirs if d != "__pycache__"]
     return sorted(packages)
 
@@ -43,7 +48,23 @@ def _collect_package_files(
     for pkg in packages:
         pkg_rel = pkg.replace(".", os.sep)
         pkg_path = parent / pkg_rel
-        if not pkg_path.is_dir():
+        pkg_path_py = parent / f"{pkg_rel}.py"
+        single_module_py = pkg_path / f"{pkg}.py"
+        if pkg_path.is_dir() and not (pkg_path / "__init__.py").exists():
+            if single_module_py.is_file():
+                arc_path = f"{pkg}.py"
+                if arc_path not in seen:
+                    seen.add(arc_path)
+                    files.append((single_module_py, arc_path))
+                continue
+            continue
+        elif pkg_path_py.is_file():
+            arc_path = f"{pkg_rel}.py"
+            if arc_path not in seen:
+                seen.add(arc_path)
+                files.append((pkg_path_py, arc_path))
+            continue
+        elif not pkg_path.is_dir():
             continue
         for root, _dirs, filenames in os.walk(pkg_path):
             root_path = pathlib.Path(root)

@@ -120,6 +120,8 @@ class AppDocumentRoot(Component):
                 ) or browser.document.getElementById("webcompy-loading")
                 if loading_el:
                     loading_el.remove()
+                if self._router and self._router._preload:
+                    self._router.preload_lazy_routes()
                 if self._app:
                     self._app._record_phase("loading_removed")
                     self._app._emit_profile_summary()
