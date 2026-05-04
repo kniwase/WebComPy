@@ -88,11 +88,11 @@ The `import_path` parameter in `lazy()` SHALL use an absolute dotted module path
 - **THEN** the module SHALL be imported and cached without triggering a render
 
 ### Requirement: The router shall auto-preload lazy routes after initial render
-When `Router` is created with `preload=True` (the default), the router SHALL automatically preload (resolve) all unresolved lazy routes after the initial page render. In the browser, preloading SHALL be scheduled via `setTimeout(0)` to avoid blocking the initial render. In non-browser (SSG) environments, preloading SHALL happen immediately.
+When `Router` is created with `preload=True` (the default), the router SHALL automatically preload (resolve) all unresolved lazy routes after the initial page render completes. In the browser, preloading SHALL be scheduled after the initial render's loading screen is removed, using `setTimeout(0)` to avoid blocking. In non-browser (SSG) environments, preloading SHALL happen immediately during `RouterView._on_set_parent()`.
 
 #### Scenario: Auto-preloading lazy routes in the browser
 - **WHEN** a developer creates `Router({"path": "/", "component": HomePage}, {"path": "/docs", "component": lazy("myapp.pages.docs:DocsPage", __file__)}, preload=True)`
-- **THEN** after the home page renders, `setTimeout(0)` SHALL be used to import the `myapp.pages.docs` module
+- **THEN** after the home page renders and the loading screen is removed, `setTimeout(0)` SHALL be used to import the `myapp.pages.docs` module
 - **AND** subsequent navigation to `/docs` SHALL be instant (module already loaded)
 
 #### Scenario: Auto-preloading disabled
@@ -104,6 +104,13 @@ When `Router` is created with `preload=True` (the default), the router SHALL aut
 - **WHEN** `Router.preload_lazy_routes()` is called in a non-browser environment
 - **THEN** all unresolved lazy routes SHALL be resolved immediately (no `setTimeout`)
 - **AND** all page components SHALL be available for SSG rendering
+
+#### Scenario: A lazy route fails to preload
+- **WHEN** preloading a `LazyComponentGenerator` fails (e.g., `ModuleNotFoundError`)
+- **THEN** the application SHALL NOT crash
+- **AND** the `LazyComponentGenerator._resolve_error` flag SHALL be set to `True`
+- **AND** other lazy routes SHALL continue to be preloaded without interruption
+- **AND** subsequent navigation to that route SHALL attempt resolution again via `_resolve()`
 
 ### Requirement: RouterLink shall preload lazy routes on hover
 `RouterLink` SHALL add a `mouseenter` event handler (via the `events` parameter, which uses `addEventListener`) that preloads the target route's `LazyComponentGenerator` when hovered. `Router` SHALL provide a `_get_component_for_path()` method that returns the `ComponentGenerator` for a given path.
@@ -119,13 +126,13 @@ When `Router` is created with `preload=True` (the default), the router SHALL aut
 - **THEN** no additional action SHALL be taken
 
 ### Requirement: RouterView shall be a DynamicElement (not an Element)
-`RouterView` SHALL extend `DynamicElement` instead of `Element`. This removes the unnecessary `<div webcompy-routerview>` wrapper from the DOM and provides the `_on_set_parent()` lifecycle hook for scheduling auto-preload. The `webcompy-routerview` attribute SHALL be removed as it has no consumers.
+`RouterView` SHALL extend `DynamicElement` instead of `Element`. This removes the unnecessary `<div webcompy-routerview>` wrapper from the DOM and provides the `_on_set_parent()` lifecycle hook. In non-browser environments, `_on_set_parent()` SHALL schedule auto-preload. In browser environments, auto-preload SHALL be deferred until after the initial render completes and the loading indicator is removed.
 
 #### Scenario: RouterView does not produce a DOM node
 - **WHEN** a `RouterView` is rendered in the browser
 - **THEN** it SHALL NOT create a `<div>` element
 - **AND** the `SwitchElement` child SHALL be positioned directly in the parent node
-- **AND** `RouterView._on_set_parent()` SHALL initialize children and schedule lazy route preloading
+- **AND** `RouterView._on_set_parent()` SHALL initialize children and, in non-browser environments, schedule lazy route preloading
 
 #### Scenario: RouterView SSG output
 - **WHEN** `generate_html()` produces output containing a `RouterView`
