@@ -333,8 +333,8 @@ def verify_and_update_runtime_assets(
     pyscript_version: str,
     lockfile_path: pathlib.Path,
 ) -> None:
-    from webcompy.cli._pyodide_lock import PYODIDE_RUNTIME_URL_TEMPLATE, PYSCRIPT_RELEASE_URL_TEMPLATE
-    from webcompy.cli._runtime_downloader import RuntimeDownloadError
+    from webcompy.cli._pyodide_lock import PYODIDE_RUNTIME_URL_TEMPLATE
+    from webcompy.cli._runtime_downloader import PYSCRIPT_OFFLINE_URL_TEMPLATE, RuntimeDownloadError
 
     expected_hashes: dict[str, str] = {}
     if lockfile.runtime_assets:
@@ -354,7 +354,7 @@ def verify_and_update_runtime_assets(
         if rel_path.startswith("pyodide/"):
             url = PYODIDE_RUNTIME_URL_TEMPLATE.format(pyodide_version=lockfile.pyodide_version, filename=filename)
         else:
-            url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(pyscript_version=pyscript_version, filename=filename)
+            url = PYSCRIPT_OFFLINE_URL_TEMPLATE.format(pyscript_version=pyscript_version)
         lockfile.runtime_assets[filename] = RuntimeAssetEntry(url=url, sha256=computed_sha256)
     save_lockfile(lockfile, lockfile_path)
 

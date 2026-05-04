@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import pathlib
+import sys
 import urllib.error
 import urllib.request
 import zipfile
@@ -178,7 +179,8 @@ def download_runtime_assets(
         for file_name, sha256_val in cdn_files + extra_files:
             try:
                 wheel_path = download_pyodide_wheel(file_name, pyodide_version, sha256_val, modules_dir)
-            except Exception:
+            except Exception as e:
+                print(f"Warning: failed to download CDN wheel {file_name}: {e}", file=sys.stderr, flush=True)
                 continue
             dest_path = pyodide_dest_dir / file_name
             dest_path.parent.mkdir(parents=True, exist_ok=True)

@@ -74,4 +74,5 @@ def test_standalone_static_has_local_lockfile_url(standalone_dist):
 def test_standalone_static_runtime_assets_exist(standalone_dist):
     assert (standalone_dist / "_webcompy-assets" / "core.js").exists()
     assert (standalone_dist / "_webcompy-assets" / "core.css").exists()
+    assert (standalone_dist / "_webcompy-assets" / "core-BuLtL7jM.js").exists()
     assert (standalone_dist / "_webcompy-assets" / "pyodide" / "pyodide.mjs").exists()
