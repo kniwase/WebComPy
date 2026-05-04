@@ -4,9 +4,9 @@ When SSG-deployed `docs_app` is accessed a second time (cached Pyodide runtime),
 
 ## What Changes
 
-- **Spike A**: Extend `_discover_packages()` and `_collect_package_files()` in `_wheel_builder.py` to detect and bundle single-file Python modules (e.g., `six.py`, `.py` files without an `__init__.py` sibling) alongside package-directory modules in the app wheel.
-- **Spike B**: Move browser-side lazy route preloading from `RouterView._on_set_parent()` (which fires during component init, before `app.run()` completes) to `AppDocumentRoot._render()` — scheduled after the loading screen is removed and the initial render is complete.
-- **Spike C**: Add error handling in `LazyComponentGenerator._preload()` and the `_do_preload` closure in `Router.preload_lazy_routes()` so that a failed preload does not crash the application. Failed preloads mark `_resolve_error = True` for diagnostic visibility.
+- Bundle single-file `.py` modules (e.g., `six.py`, `.py` files without an `__init__.py` sibling) alongside package-directory modules in the app wheel.
+- Defer browser-side lazy route preloading from component init time to after the initial render completes and the loading screen is removed.
+- Wrap lazy route preloading with error handling so that a failed preload does not crash the application or prevent other routes from preloading.
 
 ## Known Issues Addressed
 

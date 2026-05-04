@@ -22,10 +22,11 @@ When `Router` is created with `preload=True` (the default), the router SHALL aut
 - **WHEN** preloading a `LazyComponentGenerator` fails (e.g., `ModuleNotFoundError`)
 - **THEN** the application SHALL NOT crash
 - **AND** the `LazyComponentGenerator._resolve_error` flag SHALL be set to `True`
+- **AND** other lazy routes SHALL continue to be preloaded without interruption
 - **AND** subsequent navigation to that route SHALL attempt resolution again via `_resolve()`
 
 ### Requirement: RouterView shall be a DynamicElement (not an Element)
-`RouterView` SHALL extend `DynamicElement` instead of `Element`. This removes the unnecessary `<div webcompy-routerview>` wrapper from the DOM and provides the `_on_set_parent()` lifecycle hook. In non-browser environments, `_on_set_parent()` SHALL schedule auto-preload. In browser environments, auto-preload SHALL be deferred to `AppDocumentRoot._render()` after the loading screen is removed.
+`RouterView` SHALL extend `DynamicElement` instead of `Element`. This removes the unnecessary `<div webcompy-routerview>` wrapper from the DOM and provides the `_on_set_parent()` lifecycle hook. In non-browser environments, `_on_set_parent()` SHALL schedule auto-preload. In browser environments, auto-preload SHALL be deferred until after the initial render completes and the loading indicator is removed.
 
 #### Scenario: RouterView does not produce a DOM node
 - **WHEN** a `RouterView` is rendered in the browser

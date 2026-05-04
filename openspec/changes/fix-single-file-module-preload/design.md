@@ -37,18 +37,19 @@ app.__init__()
 
 **Rationale:** The extraction step (`extract_wheel`) correctly returns `(pkg_name, dest)` entries for both directory packages and single-file modules. The gap is only in wheel assembly — `_discover_packages` needs to recognize single `.py` files at the package root level, and `_collect_package_files` needs to include them as top-level wheel entries (`{module_name}.py` rather than `{module_name}/{module_name}.py`).
 
+A bundled dependency directory may contain both a same-named `.py` file and subdirectory entries (e.g. an extracted wheel with `six.py` plus `six-1.17.0.dist-info/` alongside it). Discovery must distinguish the module file from the dist-info artifacts. The guard `(pkg_dir / f"{pkg_name}.py").is_file()` ensures only actual Python modules are treated as single-file.
+
 **Alternatives considered:**
 - Separate collection pass for single-file modules: More code duplication; rejected.
 - Require all transitive deps to be directory packages: Unrealistic constraint; rejected.
 
 ### Decision 2: Schedule preload in `AppDocumentRoot._render()` after loading-screen removal
 
-**Rationale:** At this point, `app.run()` has completed, the DOM is rendered, and the loading spinner is removed. Pyodide's package initialization has had enough time even in the cached (fast) case. This is also the point where `AppDocumentRoot` already performs post-render cleanup — adding preload here keeps the lifecycle cohesive.
+**Rationale:** At this point, `app.run()` has completed, the DOM is rendered, and the loading spinner is removed. Pyodide's package initialization has had enough time even in the cached (fast) case. This is also the point where `AppDocumentRoot` already performs post-render cleanup — adding preload here keeps the lifecycle cohesive. The existing `__loading` guard ensures preload fires only once, on the first render cycle.
 
 **Alternatives considered:**
 - Wait for Pyodide `loadPackage` completion explicitly: Would require PyScript/Pyodide internal APIs; fragile and not portable across PyScript versions.
 - Increase timeout: Papering over a race, not fixing it.
-- Preload in `app.run()` after render: `app.run()` calls `self._root.render()` — equivalent to this decision.
 
 ### Decision 3: Contextlib.suppress + `_resolve_error` flag for error isolation
 
