@@ -312,7 +312,7 @@ Lockfile population SHALL be progressive: `generate_lockfile()` initially record
 
 - **WHEN** `webcompy lock` is run with `runtime_serving="local"` (or `standalone=True`)
 - **THEN** the lockfile SHALL contain `runtime_assets` with `core.js` and `core.css` entries
-- **AND** each entry SHALL have a `url` field pointing to the PyScript release URL
+- **AND** each entry SHALL have a `url` field pointing to the PyScript offline bundle URL
 - **AND** SHA256 fields SHALL be `null` until files are actually downloaded
 
 #### Scenario: Lockfile updated after generate/start downloads bundle
