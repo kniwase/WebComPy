@@ -22,6 +22,7 @@ E2E_DIR = pathlib.Path(__file__).parent
 BASE_URL = "http://localhost:8088/"
 PORT = 8088
 PYSCRIPT_INIT_TIMEOUT = 120_000
+PYSCRIPT_POLL_INTERVAL = 500
 SERVER_LOG = pathlib.Path(__file__).parent / ".e2e-server.log"
 TMP_DIR = pathlib.Path(__file__).parent.parent.parent / ".tmp" / "e2e-static"
 
@@ -29,6 +30,14 @@ _PYTHON_TRACEBACK_PATTERNS = (
     "Traceback (most recent call last):",
     "micropip._vendored.",
     "pyodide.",
+)
+
+_ASSET_ERROR_PATTERNS = (
+    "Failed to load resource",
+    "Failed to find a valid digest",
+    "integrity",
+    "Failed to fetch",
+    "ModuleNotFoundError",
 )
 
 
@@ -76,6 +85,42 @@ def pytest_generate_tests(metafunc):
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "e2e: End-to-end tests requiring a browser and server")
+
+
+def _collect_console_errors(page: Page, errors: list[str]):
+    def on_console_msg(msg):
+        if msg.type == "error":
+            errors.append(msg.text)
+
+    page.on("console", on_console_msg)
+
+
+def _check_asset_errors(errors: list[str]):
+    asset_errors = [e for e in errors if any(p in e for p in _ASSET_ERROR_PATTERNS)]
+    if asset_errors:
+        pytest.exit(
+            f"Asset loading errors detected ({len(asset_errors)}) — aborting all tests:\n"
+            + "\n---\n".join(asset_errors)
+        )
+
+
+def _wait_for_pyscript_init(page: Page, console_errors_list: list[str]):
+    start_time = time.monotonic()
+    while True:
+        _check_asset_errors(console_errors_list)
+        try:
+            page.wait_for_selector("#webcompy-loading", state="hidden", timeout=PYSCRIPT_POLL_INTERVAL)
+        except Exception:
+            pass
+        else:
+            page.wait_for_selector("#webcompy-app:not([hidden])", timeout=PYSCRIPT_POLL_INTERVAL)
+            return
+        if time.monotonic() - start_time > PYSCRIPT_INIT_TIMEOUT / 1000:
+            remaining_errors = console_errors_list[-5:] if console_errors_list else []
+            pytest.fail(
+                f"PyScript did not initialize within {PYSCRIPT_INIT_TIMEOUT / 1000:.0f}s\n"
+                + f"Last console errors: {remaining_errors}"
+            )
 
 
 @pytest.fixture(scope="session")
@@ -214,39 +259,33 @@ def server_url(serving_mode, prod_server, static_server):
 
 
 @pytest.fixture
-def app_page(page: Page, server_url):
+def console_errors(page: Page):
+    errors: list[str] = []
+    _collect_console_errors(page, errors)
+    yield errors
+
+
+@pytest.fixture
+def app_page(page: Page, server_url, console_errors):
     page.goto(server_url)
-    page.wait_for_selector("#webcompy-loading", state="hidden", timeout=PYSCRIPT_INIT_TIMEOUT)
-    page.wait_for_selector("#webcompy-app:not([hidden])", timeout=PYSCRIPT_INIT_TIMEOUT)
+    _wait_for_pyscript_init(page, console_errors)
     return page
 
 
 @pytest.fixture
-def page_on(page: Page, server_url) -> Callable[[str], Page]:
+def page_on(page: Page, server_url, console_errors) -> Callable[[str], Page]:
     def _navigate(path: str) -> Page:
         page.goto(f"{server_url}{path.lstrip('/')}")
-        page.wait_for_selector("#webcompy-loading", state="hidden", timeout=PYSCRIPT_INIT_TIMEOUT)
-        page.wait_for_selector("#webcompy-app:not([hidden])", timeout=PYSCRIPT_INIT_TIMEOUT)
+        _wait_for_pyscript_init(page, console_errors)
         return page
 
     return _navigate
 
 
 @pytest.fixture
-def console_errors(page: Page):
-    errors: list[str] = []
-
-    def on_console_msg(msg):
-        if msg.type == "error":
-            errors.append(msg.text)
-
-    page.on("console", on_console_msg)
-    yield errors
-
-
-@pytest.fixture
-def assert_no_python_errors(console_errors: list[str]):
+def assert_no_console_errors(console_errors: list[str]):
     yield
+    _check_asset_errors(console_errors)
     python_errors = [err for err in console_errors if any(pattern in err for pattern in _PYTHON_TRACEBACK_PATTERNS)]
     assert not python_errors, f"Python errors detected in browser console ({len(python_errors)}):\n" + "\n---\n".join(
         python_errors

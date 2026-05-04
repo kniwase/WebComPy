@@ -97,6 +97,7 @@ class Lockfile:
     wasm_serving: str = "cdn"
     runtime_serving: str = "cdn"
     runtime_assets: dict[str, RuntimeAssetEntry] = field(default_factory=dict)
+    standalone: bool = False
 
     def to_dict(self) -> dict:
         d: dict = {
@@ -105,6 +106,7 @@ class Lockfile:
             "pyscript_version": self.pyscript_version,
             "wasm_serving": self.wasm_serving,
             "runtime_serving": self.runtime_serving,
+            "standalone": self.standalone,
             "wasm_packages": {name: entry.to_dict() for name, entry in self.wasm_packages.items()},
             "pure_python_packages": {name: entry.to_dict() for name, entry in self.pure_python_packages.items()},
         }
@@ -138,6 +140,7 @@ def load_lockfile(path: pathlib.Path) -> Lockfile | None:
         wasm_serving=data.get("wasm_serving", "cdn"),
         runtime_serving=data.get("runtime_serving", "cdn"),
         runtime_assets=runtime_assets,
+        standalone=data.get("standalone", False),
     )
 
 
@@ -156,6 +159,7 @@ def generate_lockfile(
     pyodide_version: str | None = None,
     wasm_serving: str = "cdn",
     runtime_serving: str = "cdn",
+    standalone: bool = False,
 ) -> tuple[Lockfile, list[str], list[str]]:
     if pyodide_version is None:
         pyodide_version = get_pyodide_version(pyscript_version)
@@ -194,12 +198,12 @@ def generate_lockfile(
 
     runtime_assets: dict[str, RuntimeAssetEntry] = {}
     if runtime_serving == "local":
-        from webcompy.cli._pyodide_lock import PYODIDE_RUNTIME_URL_TEMPLATE, PYSCRIPT_RELEASE_URL_TEMPLATE
-        from webcompy.cli._runtime_downloader import PYODIDE_RUNTIME_ASSETS, PYSCRIPT_CORE_ASSETS
+        from webcompy.cli._pyodide_lock import PYODIDE_RUNTIME_URL_TEMPLATE
+        from webcompy.cli._runtime_downloader import PYODIDE_RUNTIME_ASSETS, PYSCRIPT_OFFLINE_URL_TEMPLATE
 
-        for asset_key in PYSCRIPT_CORE_ASSETS:
-            url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(pyscript_version=pyscript_version, filename=asset_key)
-            runtime_assets[asset_key] = RuntimeAssetEntry(url=url)
+        offline_url = PYSCRIPT_OFFLINE_URL_TEMPLATE.format(pyscript_version=pyscript_version)
+        for asset_key in ("core.js", "core.css"):
+            runtime_assets[asset_key] = RuntimeAssetEntry(url=offline_url)
         for asset_key in PYODIDE_RUNTIME_ASSETS:
             url = PYODIDE_RUNTIME_URL_TEMPLATE.format(pyodide_version=pyodide_version, filename=asset_key)
             runtime_assets[asset_key] = RuntimeAssetEntry(url=url)
@@ -212,6 +216,7 @@ def generate_lockfile(
         wasm_serving=wasm_serving,
         runtime_serving=runtime_serving,
         runtime_assets=runtime_assets,
+        standalone=standalone,
     )
 
     return lockfile, errors, warnings
@@ -328,8 +333,8 @@ def verify_and_update_runtime_assets(
     pyscript_version: str,
     lockfile_path: pathlib.Path,
 ) -> None:
-    from webcompy.cli._pyodide_lock import PYODIDE_RUNTIME_URL_TEMPLATE, PYSCRIPT_RELEASE_URL_TEMPLATE
-    from webcompy.cli._runtime_downloader import RuntimeDownloadError
+    from webcompy.cli._pyodide_lock import PYODIDE_RUNTIME_URL_TEMPLATE
+    from webcompy.cli._runtime_downloader import PYSCRIPT_OFFLINE_URL_TEMPLATE, RuntimeDownloadError
 
     expected_hashes: dict[str, str] = {}
     if lockfile.runtime_assets:
@@ -349,7 +354,7 @@ def verify_and_update_runtime_assets(
         if rel_path.startswith("pyodide/"):
             url = PYODIDE_RUNTIME_URL_TEMPLATE.format(pyodide_version=lockfile.pyodide_version, filename=filename)
         else:
-            url = PYSCRIPT_RELEASE_URL_TEMPLATE.format(pyscript_version=pyscript_version, filename=filename)
+            url = PYSCRIPT_OFFLINE_URL_TEMPLATE.format(pyscript_version=pyscript_version)
         lockfile.runtime_assets[filename] = RuntimeAssetEntry(url=url, sha256=computed_sha256)
     save_lockfile(lockfile, lockfile_path)
 
@@ -361,6 +366,7 @@ def resolve_lockfile(
     modules_dir: pathlib.Path,
     wasm_serving: str = "cdn",
     runtime_serving: str = "cdn",
+    standalone: bool = False,
 ) -> tuple[Lockfile | None, list[str], list[str]]:
     existing = load_lockfile(lockfile_path)
     if existing is not None:
@@ -369,7 +375,12 @@ def resolve_lockfile(
             return existing, [], []
     try:
         lockfile, errors, warnings = generate_lockfile(
-            dependencies, pyscript_version, modules_dir, wasm_serving=wasm_serving, runtime_serving=runtime_serving
+            dependencies,
+            pyscript_version,
+            modules_dir,
+            wasm_serving=wasm_serving,
+            runtime_serving=runtime_serving,
+            standalone=standalone,
         )
     except PyodideLockFetchError as e:
         if existing is not None:

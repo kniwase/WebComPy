@@ -28,3 +28,25 @@
 #### Scenario: standalone=False does not affect other settings
 - **WHEN** a developer creates `AppConfig(standalone=False)`
 - **THEN** `wasm_serving` SHALL be `"cdn"`, `runtime_serving` SHALL be `"cdn"`, and `serve_all_deps` SHALL be `True` (their own defaults)
+
+### Requirement: Switching standalone mode shall take effect on a fresh configuration
+`resolve_standalone_config()` mutates `AppConfig` in place, replacing `None` sentinel values with resolved strings (`"cdn"` or `"local"`). Because `None` sentinels are consumed on the first call, standalone mode switching only takes effect when applied to a fresh `AppConfig` instance (e.g., a new CLI invocation creates a new config). Explicitly set values (`"cdn"` or `"local"`) SHALL be preserved across calls; only `None` sentinel values SHALL be overridden.
+
+#### Scenario: Switching from non-standalone to standalone in a new execution context
+- **WHEN** a developer runs `webcompy generate` (non-standalone) and then runs `webcompy generate --standalone`
+- **THEN** a fresh `AppConfig` SHALL be created with `standalone=True`
+- **AND** `resolve_standalone_config()` SHALL set `wasm_serving` to `"local"`, `runtime_serving` to `"local"`, and `serve_all_deps` to `True`
+
+#### Scenario: Switching from standalone to non-standalone in a new execution context
+- **WHEN** a developer runs `webcompy generate --standalone` and then runs `webcompy generate --no-standalone`
+- **THEN** a fresh `AppConfig` SHALL be created with `standalone=False`
+- **AND** `resolve_standalone_config()` SHALL set `wasm_serving` to `"cdn"`, `runtime_serving` to `"cdn"`, and `serve_all_deps` to `True`
+
+#### Scenario: Explicit values are preserved within a single resolution
+- **WHEN** a developer creates `AppConfig(standalone=True, wasm_serving="cdn")`
+- **THEN** `resolve_standalone_config()` SHALL preserve `wasm_serving="cdn"` and set `runtime_serving="local"`
+
+#### Scenario: Re-running resolve_standalone_config is idempotent
+- **WHEN** `resolve_standalone_config()` is called multiple times on the same `AppConfig` instance
+- **THEN** the result SHALL be the same as calling it once
+- **AND** no additional warnings SHALL be emitted beyond the first call

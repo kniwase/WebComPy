@@ -300,25 +300,68 @@ When auto-discovery finds a project root, the discovered `requirements_path` SHA
 - **THEN** the lock file SHALL contain `"runtime_serving": "cdn"`
 - **AND** the `runtime_assets` section SHALL NOT be present
 
-### Requirement: The lock file shall include runtime asset metadata when runtime_serving is local
-When `runtime_serving="local"`, `webcompy-lock.json` SHALL include a `runtime_assets` section recording the download URLs of PyScript and Pyodide runtime files. SHA256 hashes are populated after the first build: `webcompy lock` records URLs only (with `sha256: null`), and the first `webcompy start` or `webcompy generate` computes and writes SHA256 hashes to the lock file. Subsequent builds verify downloaded files against these recorded hashes.
+### Requirement: The lockfile shall record all runtime assets
 
-#### Scenario: Runtime assets section after lock generation
-- **WHEN** a lock file is generated with `webcompy lock` and `runtime_serving="local"`
-- **THEN** the `runtime_assets` section SHALL contain entries for `core.js`, `core.css`, `pyodide.mjs`, `pyodide.asm.wasm`, `pyodide.asm.js`, `python_stdlib.zip`, and `pyodide-lock.json`
-- **AND** each entry SHALL include the download `url`
-- **AND** each entry's `sha256` SHALL be `null` (not yet computed)
+When `runtime_serving="local"`, the lockfile SHALL record all runtime asset files in the `runtime_assets` field. This SHALL include all `.js` and `.css` files from the PyScript core bundle (not just `core.js` and `core.css`) and all Pyodide runtime files.
 
-#### Scenario: Runtime assets section after first build
-- **WHEN** a build (`webcompy start` or `webcompy generate`) runs with `runtime_serving="local"` and downloads runtime assets
-- **THEN** each `runtime_assets` entry SHALL be updated with the computed `sha256` hash
-- **AND** the lock file SHALL be re-saved with the computed hashes
+Each entry in `runtime_assets` SHALL have the filename as key and an object with `url` and `sha256` fields.
 
-#### Scenario: SHA256 verification on subsequent builds
-- **WHEN** a build runs with `runtime_serving="local"` and the lock file already contains `runtime_assets` with `sha256` hashes
-- **THEN** each downloaded file's SHA256 SHALL be verified against the recorded hash
-- **AND** a mismatch SHALL raise a `RuntimeDownloadError`
+Lockfile population SHALL be progressive: `generate_lockfile()` initially records `core.js`/`core.css` with placeholder entries (no SHA256). After `download_runtime_assets()` completes, `verify_and_update_runtime_assets()` SHALL replace the `runtime_assets` dict with the complete set of downloaded files, each with verified SHA256.
+
+#### Scenario: Initial lockfile generation with runtime_serving=local
+
+- **WHEN** `webcompy lock` is run with `runtime_serving="local"` (or `standalone=True`)
+- **THEN** the lockfile SHALL contain `runtime_assets` with `core.js` and `core.css` entries
+- **AND** each entry SHALL have a `url` field pointing to the PyScript offline bundle URL
+- **AND** SHA256 fields SHALL be `null` until files are actually downloaded
+
+#### Scenario: Lockfile updated after generate/start downloads bundle
+
+- **WHEN** `webcompy generate` or `webcompy start` runs with `runtime_serving="local"`
+- **AND** the PyScript offline bundle is downloaded and extracted
+- **THEN** `runtime_assets` in the lockfile SHALL be replaced with entries for ALL downloaded `.js` and `.css` files from the bundle
+- **AND** each entry SHALL have the filename as key (e.g., `core-BuLtL7jM.js`)
+- **AND** each entry SHALL have a `sha256` field with the computed hash
+
+#### Scenario: Lockfile regeneration when stale bundle files
+
+- **WHEN** an existing lockfile has `runtime_assets` containing only `core.js` and `core.css`
+- **AND** `webcompy generate` or `webcompy start` is run with `runtime_serving="local"`
+- **THEN** `verify_and_update_runtime_assets()` SHALL replace the `runtime_assets` dict with the complete set of downloaded files
+- **AND** SHA256 hashes SHALL be computed and recorded for all files
 
 #### Scenario: Runtime assets absent in CDN mode
+
 - **WHEN** a lock file is generated with `runtime_serving="cdn"`
 - **THEN** the `runtime_assets` section SHALL NOT be present
+
+### Requirement: The lock file shall record the standalone flag
+When `standalone=True` is set, `webcompy-lock.json` SHALL include a `"standalone": true` field for informational purposes. The actual asset metadata is recorded in the `runtime_assets` section (from `feat-pyscript-local-serving`) and `wasm_packages` entries. No separate `standalone_assets` section is needed.
+
+#### Scenario: Lock file with standalone mode
+- **WHEN** a lock file is generated with `standalone=True`
+- **THEN** the lock file SHALL contain `"standalone": true`
+- **AND** `wasm_serving` SHALL be `"local"`
+- **AND** `runtime_serving` SHALL be `"local"`
+- **AND** the `runtime_assets` section SHALL be populated (as defined by `feat-pyscript-local-serving`)
+
+#### Scenario: Lock file without standalone mode
+- **WHEN** a lock file is generated without standalone mode
+- **THEN** the `standalone` field SHALL be `false`
+
+### Requirement: The lock file shall reflect the current standalone mode when regenerated
+When switching between standalone and non-standalone modes, regenerating the lock file SHALL update all relevant fields to reflect the new configuration. The lock file is not automatically regenerated; the developer must run `webcompy lock` (or a generate/start command) to update it.
+
+#### Scenario: Regenerating lock file after switching from standalone to non-standalone
+- **WHEN** a lock file was generated with `standalone=True` and is regenerated with `standalone=False`
+- **THEN** `standalone` SHALL be `false`
+- **AND** `wasm_serving` SHALL be `"cdn"`
+- **AND** `runtime_serving` SHALL be `"cdn"`
+- **AND** the `runtime_assets` section SHALL be omitted (no longer needed in CDN mode)
+
+#### Scenario: Regenerating lock file after switching from non-standalone to standalone
+- **WHEN** a lock file was generated with `standalone=False` and is regenerated with `standalone=True`
+- **THEN** `standalone` SHALL be `true`
+- **AND** `wasm_serving` SHALL be `"local"`
+- **AND** `runtime_serving` SHALL be `"local"`
+- **AND** the `runtime_assets` section SHALL be populated with URLs for all runtime assets

@@ -1,6 +1,7 @@
 import os
 import pathlib
 import shutil
+import sys
 from functools import partial
 from tempfile import TemporaryDirectory
 
@@ -28,6 +29,7 @@ from webcompy.cli._utils import (
     generate_app_version,
     get_generate_config,
     get_webcompy_packge_dir,
+    resolve_standalone_config,
 )
 from webcompy.cli._wheel_builder import make_webcompy_app_package
 
@@ -50,6 +52,10 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
     runtime_serving = args.get("runtime_serving")
     if runtime_serving is not None:
         app.config.runtime_serving = runtime_serving
+    standalone = args.get("standalone")
+    if standalone is not None:
+        app.config.standalone = standalone
+    resolve_standalone_config(app.config)
 
     resolve_dependencies(app, lockfile_sync_config=generate_config.lockfile_sync_config)
     assert app.config.dependencies is not None
@@ -65,23 +71,22 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             modules_dir,
             wasm_serving=app.config.wasm_serving or "cdn",
             runtime_serving=app.config.runtime_serving or "cdn",
+            standalone=app.config.standalone,
         )
         for warning in lockfile_warnings:
-            print(f"Warning: {warning}", flush=True)
+            print(f"Warning: {warning}", file=sys.stderr, flush=True)
         for err in lockfile_errors:
-            print(f"Error: {err}", flush=True)
+            print(f"Error: {err}", file=sys.stderr, flush=True)
 
         if lockfile is not None:
             env_errors, env_warnings = validate_local_environment(lockfile, serve_all_deps=app.config.serve_all_deps)
             for warning in env_warnings:
-                print(f"Warning: {warning}", flush=True)
+                print(f"Warning: {warning}", file=sys.stderr, flush=True)
             for err in env_errors:
-                print(f"Error: {err}", flush=True)
+                print(f"Error: {err}", file=sys.stderr, flush=True)
             lockfile_errors.extend(env_errors)
 
         if lockfile_errors:
-            import sys
-
             print("Build failed due to lock file errors. Fix the above issues and try again.", file=sys.stderr)
             sys.exit(1)
 
@@ -105,8 +110,6 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                             modules_dir,
                         )
                     except PyodideDownloadError as e:
-                        import sys
-
                         print(f"Error: {e}", file=sys.stderr)
                         sys.exit(1)
                     wasm_local_urls[name] = f"{base_url}_webcompy-assets/packages/{entry.file_name}"
@@ -115,6 +118,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                 lockfile_url = PYODIDE_LOCK_URL_TEMPLATE.format(version=lockfile.pyodide_version)
 
         runtime_asset_results: dict[str, tuple[pathlib.Path, str]] = {}
+        cdn_temp_dir_obj = None
         try:
             if resolved_runtime_serving == "local":
                 try:
@@ -122,6 +126,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                         lockfile.pyodide_version if lockfile else "0.29.3",
                         PYSCRIPT_VERSION,
                         modules_dir,
+                        lock_file=lockfile,
                     )
                     if lockfile is not None:
                         verify_and_update_runtime_assets(
@@ -131,15 +136,12 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                             app.config.app_package_path / LOCKFILE_NAME,
                         )
                 except RuntimeDownloadError as e:
-                    import sys
-
                     print(f"Error: {e}", file=sys.stderr)
                     sys.exit(1)
                 lockfile_url = None
 
             cdn_pure_python_names: list[str] = []
             cdn_extracted_deps: list[tuple[str, pathlib.Path]] = []
-            cdn_temp_dir_obj = None
             if not app.config.serve_all_deps:
                 cdn_pure_python_names = get_cdn_pure_python_package_names(lockfile)
             elif lockfile is not None:
@@ -153,8 +155,6 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                                 modules_dir,
                             )
                         except PyodideDownloadError as e:
-                            import sys
-
                             print(f"Error: {e}", file=sys.stderr)
                             sys.exit(1)
                         if cdn_temp_dir_obj is None:

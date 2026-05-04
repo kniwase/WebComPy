@@ -1,6 +1,7 @@
 import asyncio
 import mimetypes
 import pathlib
+import sys
 from functools import partial
 from operator import truth
 from re import compile as re_compile
@@ -46,6 +47,7 @@ from webcompy.cli._utils import (
     generate_app_version,
     get_server_config,
     get_webcompy_packge_dir,
+    resolve_standalone_config,
 )
 from webcompy.cli._wheel_builder import make_webcompy_app_package
 
@@ -57,9 +59,9 @@ def create_asgi_app(
     if server_config is None:
         server_config = ServerConfig()
 
+    resolve_standalone_config(app.config)
     modules_dir = app.config.app_package_path / ".webcompy_modules"
     ensure_webcompy_modules_dir(modules_dir)
-
     resolve_dependencies(app, lockfile_sync_config=server_config.lockfile_sync_config)
     assert app.config.dependencies is not None
 
@@ -70,23 +72,22 @@ def create_asgi_app(
         modules_dir,
         wasm_serving=app.config.wasm_serving or "cdn",
         runtime_serving=app.config.runtime_serving or "cdn",
+        standalone=app.config.standalone,
     )
     for warning in lockfile_warnings:
-        print(f"Warning: {warning}", flush=True)
+        print(f"Warning: {warning}", file=sys.stderr, flush=True)
     for err in lockfile_errors:
-        print(f"Error: {err}", flush=True)
+        print(f"Error: {err}", file=sys.stderr, flush=True)
 
     if lockfile is not None:
         env_errors, env_warnings = validate_local_environment(lockfile, serve_all_deps=app.config.serve_all_deps)
         for warning in env_warnings:
-            print(f"Warning: {warning}", flush=True)
+            print(f"Warning: {warning}", file=sys.stderr, flush=True)
         for err in env_errors:
-            print(f"Error: {err}", flush=True)
+            print(f"Error: {err}", file=sys.stderr, flush=True)
         lockfile_errors.extend(env_errors)
 
     if lockfile_errors:
-        import sys
-
         print("Build failed due to lock file errors. Fix the above issues and try again.", file=sys.stderr)
         sys.exit(1)
 
@@ -120,6 +121,7 @@ def create_asgi_app(
                 lockfile.pyodide_version if lockfile else "0.29.3",
                 PYSCRIPT_VERSION,
                 modules_dir,
+                lock_file=lockfile,
             )
             if lockfile is not None:
                 verify_and_update_runtime_assets(
@@ -131,8 +133,6 @@ def create_asgi_app(
             for rel_path, (asset_path, _sha256) in runtime_results.items():
                 runtime_asset_files[rel_path] = asset_path
         except RuntimeDownloadError as e:
-            import sys
-
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
         lockfile_url = None
@@ -153,8 +153,6 @@ def create_asgi_app(
                         modules_dir,
                     )
                 except PyodideDownloadError as e:
-                    import sys
-
                     print(f"Error: {e}", file=sys.stderr)
                     sys.exit(1)
                 if cdn_temp_dir_obj is None:
@@ -337,6 +335,10 @@ def run_server(app: WebComPyApp | None = None):
     runtime_serving = args.get("runtime_serving")
     if runtime_serving is not None:
         app.config.runtime_serving = runtime_serving
+    standalone = args.get("standalone")
+    if standalone is not None:
+        app.config.standalone = standalone
+
     port = args.get("port") or server_config.port
     asgi = create_asgi_app(app, server_config)
     uvicorn.run(asgi, host="0.0.0.0", port=port, reload=server_config.dev)
