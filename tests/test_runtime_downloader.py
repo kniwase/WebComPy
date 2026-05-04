@@ -88,7 +88,8 @@ class TestDownloadPyscriptBundle:
         for name in FAKE_BUNDLE_FILES:
             assert name in results, f"Expected {name} in results"
         for name in EXCLUDED_IN_ZIP:
-            assert name not in results, f"Should not have {name} in results"
+            flat_name = name.rsplit("/", 1)[-1]
+            assert flat_name not in results, f"Should not have {flat_name} in results"
 
         cache_dir = modules_dir / "runtime-assets" / "2026.3.1" / "pyscript"
         for name in FAKE_BUNDLE_FILES:
