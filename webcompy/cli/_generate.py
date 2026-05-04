@@ -126,6 +126,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                         lockfile.pyodide_version if lockfile else "0.29.3",
                         PYSCRIPT_VERSION,
                         modules_dir,
+                        lock_file=lockfile,
                     )
                     if lockfile is not None:
                         verify_and_update_runtime_assets(

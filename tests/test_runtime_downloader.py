@@ -46,9 +46,9 @@ def _create_fake_bundle_zip() -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         for name, content in {**FAKE_BUNDLE_FILES, **EXCLUDED_IN_ZIP}.items():
-            zf.writestr(f"pyscript/{name}", content)
-        zf.writestr("pyscript/micropython/", "")
-        zf.writestr("pyscript/pyodide/", "")
+            zf.writestr(f"offline/pyscript/{name}", content)
+        zf.writestr("offline/pyscript/micropython/", "")
+        zf.writestr("offline/pyscript/pyodide/", "")
     return buf.getvalue()
 
 
