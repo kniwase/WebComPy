@@ -4,7 +4,7 @@
 
 Router hooks provide navigation lifecycle callbacks that enable plugins to intercept route changes, implement navigation guards, track page views for analytics, and handle routing errors.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: The router shall support navigation guard callbacks
 

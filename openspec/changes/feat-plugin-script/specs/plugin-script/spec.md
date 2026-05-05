@@ -4,7 +4,7 @@
 
 Plugin scripts provide a declarative mechanism for loading JavaScript resources in the browser at runtime, with support for conditional loading based on runtime expressions (e.g., URL query parameters). This enables patterns like "load a debug toolbar only when `?debug=True` is in the URL" without requiring developers to write raw inline JavaScript.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: PluginScript shall be a typed descriptor for script loading
 
