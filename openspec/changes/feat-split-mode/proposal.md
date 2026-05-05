@@ -14,7 +14,7 @@ Add an optional split mode that serves the webcompy framework, application code,
 
 ## Known Issues Addressed
 
-None (new capability).
+- **PyScript multi-wheel timeout disproved**: The previously reported PyScript initialization timeout with multiple local wheel URLs in `packages` was tested against PyScript 2026.3.1 and did not reproduce (see Experiment Results below). Strategy A is confirmed viable.
 
 ## Non-goals
 
@@ -104,30 +104,16 @@ class AppConfig:
 
 ## Tasks
 
-- [x] **Task 0: Experiment to determine viable loading strategy**
-  - Built minimal test with 2-4 local wheels in `.tmp/experiment/`
-  - Tested Strategy A, B serial, B parallel, C
-  - **Result**: Strategy A confirmed working, no timeout reproduced
+See `tasks.md` for full task breakdown (10 implementation tasks + 1 completed experiment task).
 
+- [x] **Task 0: Experiment** — determine viable loading strategy
 - [ ] **Task 1: Add `wheel_mode` to AppConfig**
-  - Add `wheel_mode: Literal["bundled", "split"] = "bundled"` to `AppConfig`
-  - Add `--wheel-mode` CLI flag
-  - Write unit tests
-
-- [ ] **Task 2: Implement split wheel generation**
-  - Reintroduce `make_browser_webcompy_wheel()` (reference: `feat/wheel-split` commit `d474c65`)
-  - Produce per-dependency wheels via `make_wheel()` with stable filenames
-  - Update `make_webcompy_app_package()` for app-only wheel in split mode
-  - Write unit tests
-
-- [ ] **Task 3: Update HTML generation for split mode**
-  - Implement multi-wheel `packages` list in `generate_html()`
-  - App wheel with content-hash, framework/dep wheels with stable URLs
-  - Write unit tests
-
-- [ ] **Task 4: Update dev server and SSG for multi-wheel serving**
-  - Serve multiple wheel files with per-type cache headers
-  - Update SSG output for multiple wheel files
-  - Write E2E tests
-
-- [ ] **Task 5: Add E2E tests for split mode**
+- [ ] **Task 2: Add `--wheel-mode` CLI flag**
+- [ ] **Task 3: Reintroduce `make_browser_webcompy_wheel()`**
+- [ ] **Task 4: Update `make_webcompy_app_package()` for split mode**
+- [ ] **Task 5: Implement per-dependency wheel generation**
+- [ ] **Task 6: Update HTML generation for split mode**
+- [ ] **Task 7: Update dev server for multi-wheel serving**
+- [ ] **Task 8: Update SSG for multi-wheel output**
+- [ ] **Task 9: Update E2E tests for split mode**
+- [ ] **Task 10: Lint, typecheck, and test validation**
