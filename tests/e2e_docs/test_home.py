@@ -1,5 +1,7 @@
 import pytest
 
+from tests.e2e_docs.conftest import _wait_for_pyscript_init
+
 
 @pytest.mark.e2e
 def test_home_page_heading(docs_app_page, assert_no_console_errors):
@@ -31,3 +33,9 @@ def test_home_spa_navigation_back_from_helloworld(docs_page_on, assert_no_consol
     assert page.url.endswith("/") or page.url == page.url.rstrip("/") + "/"
     heading = page.get_by_role("heading", name="What is WebComPy")
     assert heading.is_visible()
+
+
+@pytest.mark.e2e
+def test_home_reload_no_error(docs_app_page, docs_console_errors, assert_no_console_errors):
+    docs_app_page.reload()
+    _wait_for_pyscript_init(docs_app_page, docs_console_errors)

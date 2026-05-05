@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import urllib.parse
 from collections.abc import Callable, Sequence
+from contextlib import suppress
 from functools import partial
 from re import Match
 from re import compile as re_compile
@@ -157,19 +158,23 @@ class Router:
         lazy_components = [
             route[3]
             for route in self.__routes__
-            if isinstance(route[3], LazyComponentGenerator) and route[3]._resolved is None
+            if isinstance(route[3], LazyComponentGenerator)
+            and route[3]._resolved is None
+            and not route[3]._resolve_error
         ]
         if lazy_components:
             if browser:
 
                 def _batch_preload(components=lazy_components):
                     for c in components:
-                        c._preload()
+                        with suppress(Exception):
+                            c._preload()
 
                 browser.window.setTimeout(_batch_preload, 0)
             else:
                 for c in lazy_components:
-                    c._preload()
+                    with suppress(Exception):
+                        c._preload()
 
     def _get_component_for_path(self, path: str) -> ComponentGenerator[RouterContext] | None:
         clean_path = path
