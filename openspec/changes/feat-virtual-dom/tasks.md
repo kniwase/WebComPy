@@ -36,7 +36,6 @@
 
 - [ ] 6.1 Verify `DomNodeRef` is compatible with `VirtualDOMNode` — `DomNodeRef.__init_node__(node)` sets `self._node = node` and `node` must satisfy `DOMNode` Protocol; `VirtualDOMNode` already does
 - [ ] 6.2 Verify `ElementBase._init_new_node()` works on `VirtualDOMNode` — `setAttribute` and `addEventListener` use `DOMNode` Protocol which `VirtualDOMNode` implements
-- [ ] 6.3 Remove the `else: raise WebComPyException` branch from `_detach_node()` (`_abstract.py:59-60`) — the unified path always creates nodes via `inject(DOM_PORT_KEY)` regardless of environment
 
 ## 7. Tests
 
