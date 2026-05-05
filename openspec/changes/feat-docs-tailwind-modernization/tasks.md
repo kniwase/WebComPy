@@ -1,15 +1,15 @@
 - [ ] **Task 1**: Download and place Tailwind CSS and highlight.js assets
   - Download `https://cdn.tailwindcss.com` to `static/tailwindcss.js`
   - Download highlight.js `github-dark.min.css` and `github-dark-dimmed.min.css` to `static/highlightjs/`
-  - Download highlight.js default theme for light mode to `static/highlightjs/`
+  - **Also download** highlight.js default light theme (`default.min.css`) to `static/highlightjs/` for standalone mode
   - Estimated: 15 min
 
 - [ ] **Task 2**: Update `docs_app/bootstrap.py`
   - Remove Bootstrap CSS link and JS script
   - Remove `eruda` script (dev-only, not needed for docs)
-  - Add Tailwind CDN script tag with local fallback for standalone
-  - Add highlight.js light theme as default
-  - Configure `AppConfig.assets` if needed for static files
+  - Add Tailwind CDN script tag — use local path `static/tailwindcss.js` (served via `static_files_dir`)
+  - Add highlight.js light theme CSS as default
+  - **Note**: Static files in `static/` are automatically copied by SSG and served by dev server via `ServerConfig.static_files_dir`; no `AppConfig.assets` registration needed for these files
   - Estimated: 20 min
 
 - [ ] **Task 3**: Rewrite `docs_app/components/navigation.py` with Tailwind

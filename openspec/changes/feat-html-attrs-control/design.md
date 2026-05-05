@@ -30,9 +30,20 @@ WebComPy applications mount inside a `<div id="webcompy-app">` element. The surr
 
 This matches the existing pattern in `HeadPropsStore` where reactive values are supported for title/meta. For SSG, `Computed.value` is read at render time.
 
-### Decision: Apply browser-side changes in `_render()`
+### Decision: Register reactive callbacks for Computed values
 
-The `_render()` method on `AppDocumentRoot` already has access to the DOM via `browser.document`. Adding a hook here to sync `html_attrs` to the live `<html>` element keeps the timing correct (after initial render, before loading screen removal).
+For `Computed[str]` values, register `on_after_updating` callbacks on the `Computed` instance itself. When the computed value changes, the callback updates the DOM attribute directly via `browser.document.documentElement.setAttribute()`. This avoids requiring a full component re-render just to update an `<html>` attribute.
+
+For the initial render, attributes are synced inside `_render()` using `browser.document.documentElement.setAttribute()`.
+
+**Pattern:**
+```python
+for key, value in self._html_attrs.items():
+    if isinstance(value, Computed):
+        value.on_after_updating(lambda v, k=key: browser.document.documentElement.setAttribute(k, v))
+    else:
+        browser.document.documentElement.setAttribute(key, value)
+```
 
 ### Decision: Use `_HtmlElement` in `generate_html()` to emit attributes
 

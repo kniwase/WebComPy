@@ -8,8 +8,9 @@ The docs_app navigation bar currently depends on Bootstrap 5 JavaScript (`bootst
 - Use `Signal[bool]` for open/close state management
 - Implement click-outside detection to close dropdowns
 - Add proper ARIA attributes (`aria-expanded`, `aria-haspopup`, `aria-controls`) managed by reactive state
-- Maintain existing visual structure while removing all Bootstrap class names (preparation for Tailwind migration)
-- Remove `bootstrap.bundle.min.js` script from `docs_app/bootstrap.py`
+- Remove all Bootstrap-specific class names and replace with semantic HTML + minimal inline styles (preparation for Tailwind migration)
+- **Keep Bootstrap CSS link in `docs_app/bootstrap.py` for now** — removing it would break styling until Tailwind migration is complete
+- Remove only `bootstrap.bundle.min.js` script from `docs_app/bootstrap.py`
 
 ## Capabilities
 

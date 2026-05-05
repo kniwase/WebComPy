@@ -50,9 +50,9 @@ def close_dropdowns(event):
 - Click handler on each dropdown menu: doesn't catch clicks on sibling elements
 - Overlay element behind dropdowns: adds unnecessary DOM elements
 
-### Decision: Remove all Bootstrap classes, use semantic HTML + minimal styling
+### Decision: Remove all Bootstrap classes, use semantic HTML + minimal inline styles
 
-Since the next change will migrate to Tailwind CSS, remove Bootstrap-specific classes now and use semantic HTML structure. This avoids mixing Bootstrap and Tailwind classes.
+Since the next change will migrate to Tailwind CSS, remove Bootstrap-specific classes now and use semantic HTML structure with minimal inline styles. This avoids mixing Bootstrap and Tailwind classes. **Bootstrap CSS is kept in `bootstrap.py` temporarily** — only the JS bundle is removed, to prevent the navbar from becoming completely unstyled until Tailwind migration.
 
 ## Risks / Trade-offs
 
