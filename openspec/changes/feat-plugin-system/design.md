@@ -86,7 +86,7 @@ class Router:
         # Instance attributes (NOT class-level) — each Router has its own hooks
         self.before_route_change: list[Callable[[str, str], bool | None]] = []
         self.after_route_change: list[Callable[[str], None]] = []
-        self.on_route_error: list[Callable[[Exception], bool]] = []
+        self.on_route_error: list[Callable[[Exception], bool | None]] = []
 ```
 
 Plugins append callbacks to these lists. `before_route_change` returns `False` to cancel navigation (e.g., authentication guard). `on_route_error` callbacks receive the exception and return `True` to suppress propagation (handled), or `False`/`None` to allow the exception to propagate normally.
@@ -139,9 +139,9 @@ for ps in app._plugin_manager.scripts:
 
 # Render each PluginScript through the helper
 for ps in scripts_head_extra:
-    scripts_head.append(*_render_plugin_script(ps))
+    scripts_head.append(_render_plugin_script(ps))
 for ps in scripts_body_extra:
-    scripts_body.append(*_render_plugin_script(ps))
+    scripts_body.append(_render_plugin_script(ps))
 ```
 
 Both `app.config.scripts` (direct PluginScript descriptors) and `app._plugin_manager.scripts` (from plugin classes) are collected as full `PluginScript` objects and rendered through `_render_plugin_script()` from `feat-plugin-script`. This helper handles converting `PluginScript` instances with conditions into wrapper `<script>` tags and statically rendering those without conditions.
