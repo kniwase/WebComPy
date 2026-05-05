@@ -155,22 +155,26 @@ class Router:
         from webcompy._browser._modules import browser
         from webcompy.router._lazy import LazyComponentGenerator
 
-        for route in self.__routes__:
-            component = route[3]
-            if (
-                isinstance(component, LazyComponentGenerator)
-                and component._resolved is None
-                and not component._resolve_error
-            ):
-                if browser:
+        lazy_components = [
+            route[3]
+            for route in self.__routes__
+            if isinstance(route[3], LazyComponentGenerator)
+            and route[3]._resolved is None
+            and not route[3]._resolve_error
+        ]
+        if lazy_components:
+            if browser:
 
-                    def _do_preload(c=component):
+                def _batch_preload(components=lazy_components):
+                    for c in components:
                         with suppress(Exception):
                             c._preload()
 
-                    browser.window.setTimeout(_do_preload, 0)
-                else:
-                    component._preload()
+                browser.window.setTimeout(_batch_preload, 0)
+            else:
+                for c in lazy_components:
+                    with suppress(Exception):
+                        c._preload()
 
     def _get_component_for_path(self, path: str) -> ComponentGenerator[RouterContext] | None:
         clean_path = path

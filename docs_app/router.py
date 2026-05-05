@@ -1,10 +1,9 @@
 from webcompy.router import Router, lazy
 
-from .pages.home import HomePage
 from .pages.not_found import NotFound
 
 router = Router(
-    {"path": "/", "component": HomePage},
+    {"path": "/", "component": lazy("docs_app.pages.home:HomePage", __file__)},
     {"path": "/documents", "component": lazy("docs_app.pages.document.home:DocumentHomePage", __file__)},
     {"path": "/sample/helloworld", "component": lazy("docs_app.pages.demo.helloworld:HelloWorldPage", __file__)},
     {"path": "/sample/fizzbuzz", "component": lazy("docs_app.pages.demo.fizzbuzz:FizzbuzzPage", __file__)},
