@@ -88,7 +88,7 @@ The `import_path` parameter in `lazy()` SHALL use an absolute dotted module path
 - **THEN** the module SHALL be imported and cached without triggering a render
 
 ### Requirement: The router shall auto-preload lazy routes after initial render
-When `Router` is created with `preload=True` (the default), the router SHALL automatically preload (resolve) all unresolved lazy routes after the initial page render completes. In the browser, preloading SHALL be scheduled after the initial render's loading screen is removed, using `setTimeout(0)` to avoid blocking. In non-browser (SSG) environments, preloading SHALL happen immediately during `RouterView._on_set_parent()`.
+When `Router` is created with `preload=True` (the default), the router SHALL automatically preload (resolve) all unresolved lazy routes that have not previously failed after the initial page render completes. In the browser, preloading SHALL be scheduled after the initial render's loading screen is removed, using `setTimeout(0)` to avoid blocking. In non-browser (SSG) environments, preloading SHALL happen immediately during `RouterView._on_set_parent()`.
 
 #### Scenario: Auto-preloading lazy routes in the browser
 - **WHEN** a developer creates `Router({"path": "/", "component": HomePage}, {"path": "/docs", "component": lazy("myapp.pages.docs:DocsPage", __file__)}, preload=True)`

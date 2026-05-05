@@ -157,7 +157,11 @@ class Router:
 
         for route in self.__routes__:
             component = route[3]
-            if isinstance(component, LazyComponentGenerator) and component._resolved is None:
+            if (
+                isinstance(component, LazyComponentGenerator)
+                and component._resolved is None
+                and not component._resolve_error
+            ):
                 if browser:
 
                     def _do_preload(c=component):
