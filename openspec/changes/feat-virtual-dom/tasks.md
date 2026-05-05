@@ -17,9 +17,10 @@
 
 - [ ] 3.1 Remove `_render_html()` abstract method from `ElementAbstract` in `webcompy/elements/types/_abstract.py` — after cli/_html.py is migrated (task 5)
 - [ ] 3.2 Remove `_render_html()` from `ElementWithChildren` in `webcompy/elements/types/_base.py`
-- [ ] 3.3 Update `ElementBase._init_node()` in `_element.py` — remove `else: raise WebComPyException` branch; both browser and server now use `_create_node()` which delegates to `inject(DOM_PORT_KEY)`
-- [ ] 3.4 Update `TextElement._init_node()` in `_text.py` — same unification
-- [ ] 3.5 Update `_detach_node()` in `_abstract.py` — remove `else: raise WebComPyException` branch; the unified path calls `dom_port.create_text_node("")` and `parent_node.replaceChild(...)` which works on both BrowserDOMNode (real DOM) and VirtualDOMNode (children list)
+- [ ] 3.3 Update `TextElement._update_text()` in `webcompy/elements/types/_text.py` — remove `if browser:` branch; both environments call `node.textContent = new_text` since `VirtualDOMNode` supports it
+- [ ] 3.4 Remove `if not browser:` server branches from element `_on_set_parent()` — `_switch.py:84`, `_repeat.py:95`, `_view.py:25`. After virtual DOM unification, `_render()` creates nodes in both environments, making these server-only code paths dead or causing double creation
+- [ ] 3.5 Verify that `_init_node()` (already unbranchified by `feat-port-abstraction`) works correctly with `VirtualDOMNode` on the server — both `ElementBase._init_node()` and `TextElement._init_node()` / `NewLine._init_node()` call `_create_node()` which delegates to `inject(DOM_PORT_KEY)` returning a `VirtualDOMNode`
+- [ ] 3.6 Verify that `_detach_node()` (already unbranchified by `feat-port-abstraction`) works correctly with `VirtualDOMNode` on the server — `dom_port.create_text_node("")` returns a virtual text node and `parent_node.replaceChild(...)` operates on the virtual children list
 
 ## 4. Remove _render_html() from element subclasses
 
