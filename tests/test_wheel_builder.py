@@ -809,18 +809,20 @@ class TestMakeBrowserWebcompyWheel:
             assert "webcompy/app/__init__.py" in names
             assert "webcompy/elements/__init__.py" in names
 
-    def test_stable_filename(self, tmp_path):
+    def test_has_content_hash_filename(self, tmp_path):
         webcompy = self._create_package(tmp_path)
         dest = tmp_path / "dist"
         dest.mkdir()
         result = make_browser_webcompy_wheel(webcompy, dest, "0.0.1")
-        assert result.name == "webcompy-py3-none-any.whl"
+        assert re.match(r"webcompy-0\+sha\.[0-9a-f]{8}-py3-none-any\.whl", result.name)
 
-    def test_metadata_contains_version(self, tmp_path):
+    def test_metadata_contains_hash_version(self, tmp_path):
         webcompy = self._create_package(tmp_path)
         dest = tmp_path / "dist"
         dest.mkdir()
         result = make_browser_webcompy_wheel(webcompy, dest, "2.3.4")
         with zipfile.ZipFile(result) as zf:
-            metadata = zf.read("webcompy-2.3.4.dist-info/METADATA").decode()
-            assert "Version: 2.3.4" in metadata
+            names = zf.namelist()
+            meta_path = next(n for n in names if n.endswith("/METADATA"))
+            metadata = zf.read(meta_path).decode()
+            assert "Version: 0+sha." in metadata

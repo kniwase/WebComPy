@@ -50,7 +50,7 @@ from webcompy.cli._utils import (
     resolve_standalone_config,
 )
 from webcompy.cli._wheel_builder import (
-    _normalize_name,
+    _content_hash_wheel,
     make_browser_webcompy_wheel,
     make_webcompy_app_package,
     make_wheel,
@@ -179,13 +179,16 @@ def create_asgi_app(
     with TemporaryDirectory() as temp:
         temp_path = pathlib.Path(temp)
         if wheel_mode == "split":
-            make_browser_webcompy_wheel(
+            fw_wheel_path = make_browser_webcompy_wheel(
                 get_webcompy_packge_dir(),
                 temp_path,
                 app_version,
             )
+            dep_wheel_names: set[str] = {fw_wheel_path.name}
             for dep_name, dep_dir in all_bundled_deps:
-                make_wheel(dep_name, dep_dir, temp_path, app_version)
+                dep_wheel = make_wheel(dep_name, dep_dir, temp_path, app_version)
+                hashed_dep = _content_hash_wheel(dep_wheel, dep_name, app_version)
+                dep_wheel_names.add(hashed_dep.name)
             app_wheel_path = make_webcompy_app_package(
                 temp_path,
                 get_webcompy_packge_dir(),
@@ -206,6 +209,7 @@ def create_asgi_app(
                 bundled_deps=all_bundled_deps or None,
             )
             app_wheel_filename = app_wheel_path.name
+            dep_wheel_names: set[str] = set()
 
         app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (
@@ -215,20 +219,16 @@ def create_asgi_app(
             for p in temp_path.iterdir()
         }
 
-        dep_wheel_names: set[str] = {
-            f"{_normalize_name(dep_name)}-{app_version}-py3-none-any.whl" for dep_name, _dep_dir in all_bundled_deps
-        }
-
         async def send_app_package_file(request: Request):
             filename: str = request.path_params.get("filename", "")  # type: ignore
             if filename in app_package_files:
                 content, media_type = app_package_files[filename]
                 headers: dict[str, str] = {}
                 if wheel_mode == "split":
-                    if filename == "webcompy-py3-none-any.whl" or filename in dep_wheel_names:
-                        headers["Cache-Control"] = "max-age=86400, must-revalidate"
-                    elif server_config.dev:
+                    if filename == app_wheel_filename and server_config.dev:
                         headers["Cache-Control"] = "no-cache"
+                    else:
+                        headers["Cache-Control"] = "max-age=86400, must-revalidate"
                 elif server_config.dev and filename == app_wheel_filename:
                     headers["Cache-Control"] = "no-cache"
                 return Response(content, media_type=media_type, headers=headers)
@@ -283,9 +283,9 @@ def create_asgi_app(
 
     extra_wheel_filenames: list[str] | None = None
     if wheel_mode == "split":
-        extra_wheel_filenames = ["webcompy-py3-none-any.whl"]
-        for dep_name, _dep_dir in all_bundled_deps:
-            extra_wheel_filenames.append(f"{_normalize_name(dep_name)}-{app_version}-py3-none-any.whl")
+        extra_wheel_filenames = sorted(
+            f.name for f in temp_path.iterdir() if f.name.endswith(".whl") and f.name != app_wheel_filename
+        )
 
     html_generator = partial(
         generate_html,

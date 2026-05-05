@@ -275,13 +275,14 @@ def split_static_site():
     )
 
     app_wheel = next(
-        (f for f in wheel_files if "0+sha." in f.name),
+        (f for f in wheel_files if f.name.startswith(app_dir.name) and "0+sha." in f.name),
+        wheel_files[0],
+    )
+    framework_wheel = next(
+        (f for f in wheel_files if f.name.startswith("webcompy-") and "0+sha." in f.name),
         None,
     )
-    assert app_wheel is not None, f"No content-hash app wheel found in {[f.name for f in wheel_files]}"
-
-    framework_wheel = dist_dir / "_webcompy-app-package" / "webcompy-py3-none-any.whl"
-    assert framework_wheel.exists(), f"Framework wheel not found: {framework_wheel}"
+    assert framework_wheel is not None, f"No content-hash framework wheel found in {[f.name for f in wheel_files]}"
 
     yield dist_dir, app_wheel, framework_wheel, app_dir.name, wheel_files
 

@@ -88,11 +88,15 @@ class AppConfig:
 
 ### Content-Hash Strategy for Split Wheels
 
-| Wheel | Content-Hash | Rationale |
-|-------|-------------|-----------|
-| App | Yes (`myapp-0+sha.{hash8}-py3-none-any.whl`) | Changes frequently with app code |
-| Framework | No (`webcompy-py3-none-any.whl`) | WebComPy releases are infrequent; fixed URL with long cache |
-| Dependencies | No (`{dep_name}-py3-none-any.whl`) | Dependencies change less frequently; fixed URL with long cache |
+All wheels in split mode use content-derived hash filenames for automatic cache busting:
+
+| Wheel | Filename Pattern |
+|-------|-----------------|
+| App | `{app_name}-0+sha.{hash8}-py3-none-any.whl` |
+| Framework | `webcompy-0+sha.{hash8}-py3-none-any.whl` |
+| Dependencies | `{dep_name}-0+sha.{hash8}-py3-none-any.whl` |
+
+Content-hash ensures that any change produces a different filename, automatically invalidating browser caches without requiring end users to take any action.
 
 ## Specs Affected
 

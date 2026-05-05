@@ -32,7 +32,7 @@ from webcompy.cli._utils import (
     resolve_standalone_config,
 )
 from webcompy.cli._wheel_builder import (
-    _normalize_name,
+    _content_hash_wheel,
     make_browser_webcompy_wheel,
     make_webcompy_app_package,
     make_wheel,
@@ -207,15 +207,16 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
             extra_wheel_filenames: list[str] | None = None
             if wheel_mode == "split":
-                make_browser_webcompy_wheel(
+                fw_wheel = make_browser_webcompy_wheel(
                     get_webcompy_packge_dir(),
                     scripts_dir,
                     app_version,
                 )
-                extra_wheel_filenames = ["webcompy-py3-none-any.whl"]
+                extra_wheel_filenames = [fw_wheel.name]
                 for dep_name, dep_dir in all_bundled_deps:
-                    make_wheel(dep_name, dep_dir, scripts_dir, app_version)
-                    extra_wheel_filenames.append(f"{_normalize_name(dep_name)}-{app_version}-py3-none-any.whl")
+                    dep_wheel = make_wheel(dep_name, dep_dir, scripts_dir, app_version)
+                    hashed_dep = _content_hash_wheel(dep_wheel, dep_name, app_version)
+                    extra_wheel_filenames.append(hashed_dep.name)
                 wheel_path = make_webcompy_app_package(
                     scripts_dir,
                     get_webcompy_packge_dir(),
@@ -225,6 +226,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                     bundled_deps=None,
                     skip_webcompy=True,
                 )
+                extra_wheel_filenames.sort()
             else:
                 wheel_path = make_webcompy_app_package(
                     scripts_dir,

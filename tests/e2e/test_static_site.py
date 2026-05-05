@@ -33,19 +33,15 @@ class TestStaticSiteWheelFilename:
 
 @pytest.mark.e2e
 class TestSplitModeWheelFilenames:
-    def test_framework_wheel_exists(self, split_static_site):
-        _dist_dir, _app_wheel, framework_wheel, _app_name, _all_wheels = split_static_site
-        assert framework_wheel.exists()
-        assert framework_wheel.name == "webcompy-py3-none-any.whl"
+    def test_all_wheels_have_content_hash(self, split_static_site):
+        _dist_dir, _app_wheel, _framework_wheel, _app_name, all_wheels = split_static_site
+        for wf in all_wheels:
+            assert _WHEEL_FILENAME_RE.match(wf.name), f"Wheel {wf.name!r} does not match content-hash pattern"
 
     def test_framework_wheel_in_html(self, split_static_site):
-        dist_dir, _app_wheel, _framework_wheel, _app_name, _all_wheels = split_static_site
+        dist_dir, _app_wheel, framework_wheel, _app_name, _all_wheels = split_static_site
         html_content = (dist_dir / "index.html").read_text(encoding="utf-8")
-        assert "_webcompy-app-package/webcompy-py3-none-any.whl" in html_content
-
-    def test_app_wheel_has_content_hash(self, split_static_site):
-        _dist_dir, app_wheel, _framework_wheel, _app_name, _all_wheels = split_static_site
-        assert _WHEEL_FILENAME_RE.match(app_wheel.name)
+        assert f"_webcompy-app-package/{framework_wheel.name}" in html_content
 
     def test_all_wheels_are_valid_zips(self, split_static_site):
         _dist_dir, _app_wheel, _framework_wheel, _app_name, all_wheels = split_static_site

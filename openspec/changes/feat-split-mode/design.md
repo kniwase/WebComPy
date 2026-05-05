@@ -36,13 +36,14 @@ In dev mode:
 
 In SSG/production: ETag/Last-Modified by hosting provider.
 
-### D5: Content-hash only for app wheel
-- App wheel: retains the existing content-hash pattern (`myapp-0+sha.{hash8}-py3-none-any.whl`)
-- Framework wheel: stable filename (`webcompy-py3-none-any.whl`)
-- Dependency wheels: stable filenames (`{dep_name}-py3-none-any.whl`)
+### D5: Content-hash for all wheels in split mode
+All wheels use content-derived hash filenames for automatic cache busting:
 
-The content-hash on the app wheel ensures cache busting on application changes.
-Framework and dependency wheels use stable filenames with long-lived cache headers.
+- App wheel: `{app_name}-0+sha.{hash8}-py3-none-any.whl`
+- Framework wheel: `webcompy-0+sha.{hash8}-py3-none-any.whl`
+- Dependency wheels: `{dep_name}-0+sha.{hash8}-py3-none-any.whl`
+
+Content-hash ensures that any change (app code update, framework version bump, dependency version change) produces a different filename, automatically invalidating browser caches. This is essential for production deployments where end users cannot be asked to manually clear caches.
 
 ### D6: Interaction with existing serving modes
 

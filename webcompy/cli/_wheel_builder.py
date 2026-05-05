@@ -153,7 +153,7 @@ def make_browser_webcompy_wheel(
         record_content = _write_record(record_entries, dist_info)
         zf.writestr(f"{dist_info}/RECORD", record_content)
 
-    return wheel_path
+    return _content_hash_wheel(wheel_path, "webcompy", version)
 
 
 def _content_hash_wheel(wheel_path: pathlib.Path, name: str, app_version: str) -> pathlib.Path:
