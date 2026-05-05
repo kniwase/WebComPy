@@ -6,8 +6,8 @@
 
 ## 2. HTML Generation
 
-- [ ] 2.1 Add `_render_plugin_script(ps: PluginScript) -> _HtmlElement` helper in `webcompy/cli/_html.py` that converts a single `PluginScript` into either a static `<script>` element (no condition) or a wrapper `<script>` with inline JS (has condition)
-- [ ] 2.2 In `generate_html()`, extend `scripts_head` and `scripts_body` to include scripts from `app.config.scripts`, using `in_head` flag for placement
+- [ ] 2.1 Add `_render_plugin_script(ps: PluginScript) -> _HtmlElement` helper in `webcompy/cli/_html.py` that converts a single `PluginScript` into either a static `<script>` element (no condition) or a wrapper `<script>` with inline JS (has condition). **The wrapper tag placement follows `in_head`: wrapper is placed in `<head>` for `in_head=True`, at end of `<body>` for `in_head=False`.**
+- [ ] 2.2 In `generate_html()`, extend `scripts_head` and `scripts_body` to include scripts from `app.config.scripts`. For each PluginScript, call `_render_plugin_script()` and place the result according to `in_head` flag.
 - [ ] 2.3 Ensure `app.head["script"]` and `app.append_script()` continue to work identically (no regression)
 
 ## 3. Consumer: docs_app

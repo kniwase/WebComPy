@@ -58,15 +58,20 @@ class PluginManager:
     def __init__(self, app: WebComPyApp): ...
     def discover(self, plugin_paths: list[str]): ...
     def init_all(self): ...
+    def call_on_app_ready(self, app: WebComPyApp): ...
     @property
     def scripts(self) -> list[PluginScript]: ...
 ```
 
 `PluginManager` is created per-app instance. It:
-1. Discovers plugins: Splits each `"module:Class"` path, `importlib.import_module`s, validates the class is a `WebComPyPlugin`
-2. Collects providers from `get_providers()` and registers them with `app.di_scope`
-3. Instantiates each plugin and calls `on_app_init(app)`
-4. Exposes `scripts` property that collects `get_scripts()` from all plugins
+1. Stores the app reference at init time
+2. Discovers plugins: Splits each `"module:Class"` path, `importlib.import_module`s, validates the class is a `WebComPyPlugin`
+3. Collects providers from `get_providers()` and registers them with `app.di_scope` during `init_all()`
+4. Instantiates each plugin and calls `on_app_init(app)` during `init_all()`
+5. Exposes `scripts` property that collects `get_scripts()` from all plugins
+6. Provides `call_on_app_ready(app)` that calls `on_app_ready` on all plugin instances
+
+**Important**: `discover()` and `init_all()` must be called after the app's DI scope is set up, since `init_all()` registers providers into it. The correct call order in `WebComPyApp.__init__()` is documented in Decision 4.
 
 Alternatives considered:
 - Singleton PluginManager → conflicts with multi-app use cases (SSG renders per-route)
@@ -76,17 +81,20 @@ Alternatives considered:
 
 ```python
 class Router:
-    before_route_change: list[Callable[[str, str], bool | None]] = []  # (from_path, to_path) -> False to cancel
-    after_route_change: list[Callable[[str], None]] = []  # (path) -> None
-    on_route_error: list[Callable[[Exception], None]] = []  # (error) -> None
+    def __init__(self, ...):
+        ...
+        # Instance attributes (NOT class-level) — each Router has its own hooks
+        self.before_route_change: list[Callable[[str, str], bool | None]] = []
+        self.after_route_change: list[Callable[[str], None]] = []
+        self.on_route_error: list[Callable[[Exception], bool]] = []
 ```
 
-Plugins append callbacks to these lists. `before_route_change` returns `False` to cancel navigation (e.g., authentication guard).
+Plugins append callbacks to these lists. `before_route_change` returns `False` to cancel navigation (e.g., authentication guard). `on_route_error` callbacks receive the exception and return `True` to suppress propagation (handled), or `False`/`None` to allow the exception to propagate normally.
 
 Callbacks are dispatched:
-- `before_route_change`: In `Location.__set_path__()` before updating the signal value. Returns `False` to cancel navigation.
+- `before_route_change`: In `Location.__set_path__()` before updating the signal value. If ANY callback returns `False`, navigation is cancelled. Remaining callbacks are NOT called (short-circuit). `after_route_change` is NOT called when navigation is cancelled.
 - `after_route_change`: In `Location.__set_path__()` after updating the signal value, only if navigation was not cancelled.
-- `on_route_error`: The `Router` SHALL wrap the route resolution logic (e.g., `Router.__cases__` evaluation or `Router._get_elements_generator()`) in a try/except and dispatch any caught exceptions to `on_route_error` callbacks. If no callbacks handle the error (returning `True` to suppress), the exception SHALL propagate.
+- `on_route_error`: The `Router` SHALL wrap the route resolution logic in a try/except and dispatch any caught exceptions to `on_route_error` callbacks. If a callback returns `True`, the exception is suppressed. If all callbacks return `False` or `None`, the exception propagates.
 
 This is a minimal addition — no full middleware chain, no async support. Sufficient for initial plugin use cases.
 
@@ -116,27 +124,27 @@ Plugins are initialized after the DI scope and component store are set up but be
 
 ```python
 # In generate_html():
-scripts_head: Scripts = []
-scripts_body: Scripts = []
+scripts_head_extra: list[PluginScript] = []
+scripts_body_extra: list[PluginScript] = []
 
 # ... existing script collection ...
 
 # Scripts from AppConfig.scripts (direct PluginScript)
 for ps in app.config.scripts:
-    if ps.in_head:
-        scripts_head.append((ps.attrs, ps.script))
-    else:
-        scripts_body.append((ps.attrs, ps.script))
+    (scripts_head_extra if ps.in_head else scripts_body_extra).append(ps)
 
 # Scripts from PluginManager (plugin classes)
 for ps in app._plugin_manager.scripts:
-    if ps.in_head:
-        scripts_head.append((ps.attrs, ps.script))
-    else:
-        scripts_body.append((ps.attrs, ps.script))
+    (scripts_head_extra if ps.in_head else scripts_body_extra).append(ps)
+
+# Render each PluginScript through the helper
+for ps in scripts_head_extra:
+    scripts_head.append(*_render_plugin_script(ps))
+for ps in scripts_body_extra:
+    scripts_body.append(*_render_plugin_script(ps))
 ```
 
-Both `app.config.scripts` (direct PluginScript descriptors) and `app._plugin_manager.scripts` (from plugin classes) are collected. The existing `_render_plugin_script()` helper from `feat-plugin-script` handles converting `PluginScript` instances with conditions into wrapper `<script>` tags and statically rendering those without conditions. The `scripts_head`/`scripts_body` lists naturally extend to include plugin scripts.
+Both `app.config.scripts` (direct PluginScript descriptors) and `app._plugin_manager.scripts` (from plugin classes) are collected as full `PluginScript` objects and rendered through `_render_plugin_script()` from `feat-plugin-script`. This helper handles converting `PluginScript` instances with conditions into wrapper `<script>` tags and statically rendering those without conditions.
 
 ## Risks / Trade-offs
 
@@ -144,6 +152,7 @@ Both `app.config.scripts` (direct PluginScript descriptors) and `app._plugin_man
 - **[Low] Plugin discovery uses importlib at runtime** → `importlib.import_module(module_path)` in the browser requires the module to be bundled in the app wheel. Mitigation: Already handled by the dependency bundling pipeline (`LOCAL_PURE_PYTHON` packages are always bundled).
 - **[Low] Plugin ordering is declaration order** → Plugins are initialized in the order listed in `AppConfig.plugins`. Dependencies between plugins are not enforced. Mitigation: Document that plugin order matters. Inter-plugin dependency management can be added later.
 - **[Low] One plugin manager per app** → SSG with multiple concurrent renders could theoretically conflict. Mitigation: Each SSG render uses `with app.di_scope:`, and plugins are initialized once. This is safe because plugin state is stored per-instance.
+- **[Low] WebComPyPluginException location** → The exception class is defined in `webcompy.plugin` (alongside `WebComPyPlugin` and `PluginManager`), not in the shared `webcompy.exception` module. This keeps the plugin package self-contained.
 
 ## Open Questions
 

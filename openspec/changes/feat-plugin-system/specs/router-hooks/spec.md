@@ -8,14 +8,14 @@ Router hooks provide navigation lifecycle callbacks that enable plugins to inter
 
 ### Requirement: The router shall support navigation guard callbacks
 
-The `Router` class SHALL expose a `before_route_change` callback list. Plugins and other code SHALL be able to append callables that receive the current path and the target path. Returning `False` from a callback SHALL cancel the navigation. Returning `None` or `True` SHALL allow it.
+The `Router` class SHALL expose `before_route_change`, `after_route_change`, and `on_route_error` as instance attributes initialized in `__init__()`. Plugins and other code SHALL be able to append callables. For `before_route_change`, callbacks receive current and target paths and return `False` to cancel navigation. For `on_route_error`, callbacks receive the exception and return `True` to suppress propagation.
 
 #### Scenario: Authentication guard cancels navigation
 - **WHEN** a plugin appends `guard(from_path, to_path)` to `router.before_route_change`
 - **AND** `guard` returns `False` for an unauthenticated user
 - **AND** the user clicks `RouterLink` to `/admin`
 - **THEN** the navigation SHALL be cancelled
-- **AND** `guard` SHALL not be called for the same path
+- **AND** `after_route_change` callbacks SHALL NOT fire
 
 #### Scenario: Multiple guards run in order
 - **WHEN** `router.before_route_change` contains `[guard_a, guard_b]`
@@ -28,6 +28,7 @@ The `Router` class SHALL expose a `before_route_change` callback list. Plugins a
 - **AND** both return `None` or `True`
 - **THEN** the navigation SHALL proceed
 - **AND** the URL SHALL update
+- **AND** `after_route_change` callbacks SHALL fire
 
 ### Requirement: The router shall support after-navigation callbacks
 
@@ -46,17 +47,17 @@ The `Router` class SHALL expose an `after_route_change` callback list. Callbacks
 
 ### Requirement: The router shall support error callbacks
 
-The `Router` class SHALL expose an `on_route_error` callback list. Callbacks SHALL receive the exception when navigation raises an error.
+The `Router` class SHALL expose an `on_route_error` callback list as an instance attribute. Callbacks SHALL receive the exception and return `True` to suppress propagation, or `False`/`None` to allow the exception to propagate normally.
 
 #### Scenario: Handling a routing error
 - **WHEN** a route resolution raises `WebComPyRouterException`
-- **AND** `router.on_route_error` contains a handler
+- **AND** `router.on_route_error` contains a handler that returns `True`
 - **THEN** the handler SHALL be called with the exception
-- **AND** the application SHALL NOT crash
+- **AND** the exception SHALL be suppressed (application SHALL NOT crash)
 
-#### Scenario: No error handlers registered
-- **WHEN** a route resolution raises an exception
-- **AND** `router.on_route_error` is empty
+#### Scenario: Error handler does not suppress
+- **WHEN** a route resolution raises `WebComPyRouterException`
+- **AND** `router.on_route_error` contains a handler that returns `False` or `None`
 - **THEN** the exception SHALL propagate normally
 
 ### Requirement: Router hooks shall dispatch synchronously

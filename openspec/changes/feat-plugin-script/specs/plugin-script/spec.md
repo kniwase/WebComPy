@@ -45,7 +45,7 @@ When a `PluginScript` has no `condition` (`condition=None`), the framework SHALL
 
 ### Requirement: PluginScript with a condition shall render as a self-contained wrapper script
 
-When a `PluginScript` has a `condition`, the framework SHALL generate a wrapper `<script>` tag containing JavaScript that evaluates the condition and dynamically creates the actual `<script>` element.
+When a `PluginScript` has a `condition`, the framework SHALL generate a wrapper `<script>` tag containing JavaScript that evaluates the condition and dynamically creates the actual `<script>` element. The wrapper tag's placement in the HTML SHALL follow `in_head`: `in_head=True` places the wrapper in `<head>`, `in_head=False` places it at the end of `<body>`. When the PluginScript has `script` but no `src` in `attrs`, the inline code SHALL execute directly inside the condition block without creating a separate `<script>` element.
 
 #### Scenario: Conditional script rendering
 - **WHEN** `generate_html()` processes a `PluginScript(attrs={"type": "text/javascript", "src": "https://example.com/eruda.min.js"}, condition="new URLSearchParams(location.search).get('debug') === 'True'")`
@@ -58,9 +58,15 @@ When a `PluginScript` has a `condition`, the framework SHALL generate a wrapper 
 - **THEN** the generated wrapper JS SHALL create the `<script>` element and set `onload` to execute `initDebug()`
 - **AND** `initDebug()` SHALL only execute after the external script has loaded
 
+#### Scenario: Conditional inline-only script (no src)
+- **WHEN** `generate_html()` processes a `PluginScript(attrs={}, condition="location.search.includes('debug')", script="console.log('hello')")`
+- **THEN** the generated wrapper JS SHALL execute `console.log('hello')` directly inside the `if` block
+- **AND** no `onload` callback or dynamic `<script>` element SHALL be created
+
 #### Scenario: Conditional head script
 - **WHEN** `generate_html()` processes a `PluginScript(attrs={"src": "https://example.com/lib.js"}, condition="true", in_head=True)`
-- **THEN** the wrapper JS SHALL append the element to `document.head`
+- **THEN** the wrapper `<script>` tag SHALL be placed in `<head>`
+- **AND** the wrapper JS SHALL append the dynamically created element to `document.head`
 
 #### Scenario: Multiple conditional scripts
 - **WHEN** `AppConfig.scripts` contains two `PluginScript` instances, both with conditions

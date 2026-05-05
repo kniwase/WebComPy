@@ -24,7 +24,7 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 
 #### Scenario: Creating a minimal application configuration
 - **WHEN** a developer creates `AppConfig()` without explicit config
-- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=None`, `assets=None`, `app_package="."`, `profile=False`, `hydrate=True`, `version=None`, `serve_all_deps=True`, `scripts=[]`)
+- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=None`, `assets=None`, `app_package="."`, `profile=False`, `hydrate=True`, `version=None`, `serve_all_deps=True`, `scripts` shall be an empty list, default `field(default_factory=list)`)
 - **AND** the app SHALL function correctly with these defaults
 
 #### Scenario: Configuring profiling and hydration

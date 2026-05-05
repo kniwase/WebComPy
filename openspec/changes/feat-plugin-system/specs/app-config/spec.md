@@ -1,4 +1,5 @@
-# Application Configuration Changes
+**Merge note**: When both `feat-plugin-script` and `feat-plugin-system` are archived, the final merged spec for `app-config` SHALL include both `scripts` and `plugins` fields in the default values of the "Creating a minimal application configuration" scenario.
+
 
 ## ADDED Requirements
 
@@ -29,7 +30,7 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 
 #### Scenario: Creating a minimal application configuration
 - **WHEN** a developer creates `AppConfig()` without explicit config
-- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=None`, `assets=None`, `app_package="."`, `profile=False`, `hydrate=True`, `version=None`, `serve_all_deps=True`, `scripts=[]`, `plugins=[]`)
+- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=None`, `assets=None`, `app_package="."`, `profile=False`, `hydrate=True`, `version=None`, `serve_all_deps=True`, `scripts` shall be an empty list, `plugins` shall be an empty list, both default `field(default_factory=list)`)
 - **AND** the app SHALL function correctly with these defaults
 
 #### Scenario: Configuring profiling and hydration

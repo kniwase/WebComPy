@@ -12,9 +12,9 @@
 
 ## 3. WebComPyApp Integration
 
-- [ ] 3.1 In `WebComPyApp.__init__()`, create `PluginManager` instance, call `discover()` and `init_all()` after DI scope setup and before `AppDocumentRoot` creation
+- [ ] 3.1 In `WebComPyApp.__init__()`, create `PluginManager` instance, call `discover()` and `init_all()` after DI scope setup and before `AppDocumentRoot` creation. Store router as `self._router` and add a `router` property exposing it.
 - [ ] 3.2 In `WebComPyApp.run()`, call `on_app_ready(app)` on all plugins before the first render
-- [ ] 3.3 Export `PluginManager`, `WebComPyPlugin` from `webcompy/app/__init__.py` (re-export from `webcompy.plugin`)
+- [ ] 3.3 Export `PluginManager`, `WebComPyPlugin` from `webcompy/app/__init__.py` (re-export from `webcompy.plugin`). Re-export `WebComPyPluginException` as well.
 
 ## 4. Router Hooks
 
@@ -25,7 +25,7 @@
 
 ## 5. HTML Generation Integration
 
-- [ ] 5.1 In `webcompy/cli/_html.py`, collect scripts from `app._plugin_manager.scripts` property and add to `scripts_head`/`scripts_body`. **Depends on `feat-plugin-script` being merged first** — `_render_plugin_script()` must already exist in `webcompy/cli/_html.py`.
+- [ ] 5.1 In `webcompy/cli/_html.py`, collect `PluginScript` objects from `app.config.scripts` and `app._plugin_manager.scripts`, and render each through `_render_plugin_script()` from `feat-plugin-script`. **Depends on `feat-plugin-script` being merged first** — `_render_plugin_script()` must already exist in `webcompy/cli/_html.py`.
 
 ## 6. Consumer: docs_app
 

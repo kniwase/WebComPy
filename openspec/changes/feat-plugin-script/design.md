@@ -48,8 +48,9 @@ Alternatives considered:
 
 ### Decision 3: Render conditional scripts as self-contained wrapper `<script>` tags
 
-Each `PluginScript` with a `condition` produces a wrapper `<script>` with inline JS:
+Each `PluginScript` with a `condition` produces a wrapper `<script>` with inline JS. Two variants:
 
+**Case A: External script (`src` in attrs):**
 ```html
 <script>
 (function(){
@@ -58,16 +59,31 @@ Each `PluginScript` with a `condition` produces a wrapper `<script>` with inline
     __wc_s.type = '<type>';
     __wc_s.src = '<src>';
     __wc_s.onload = function() { <inline script>; };
-    document.<head|body>.appendChild(__wc_s);
+    (in_head ? document.head : document.body).appendChild(__wc_s);
   }
 })();
 </script>
 ```
 
+**Case B: Inline-only script (`script` but no `src`):**
+```html
+<script>
+(function(){
+  if (<condition>) {
+    <inline script>
+  }
+})();
+</script>
+```
+
+When a PluginScript has `script` but no `src`, the inline code executes directly inside the `if` block. No `onload` is needed since there is no external resource to load.
+
+The wrapper `<script>` tag's DOM placement follows `in_head`: `in_head=True` places the wrapper in `<head>`, `in_head=False` places it at the end of `<body>`.
+
 This approach:
 - Works identically in dev server and SSG (no server-side logic needed)
 - Is self-contained (no external dependencies)
-- Handles script ordering via `onload` callbacks for dependencies
+- Handles script ordering via `onload` callbacks when external scripts are needed
 
 Alternatives considered:
 - PyScript `js_modules` — requires ES module format; not all scripts (like eruda) are ES modules
@@ -83,7 +99,7 @@ Multiple scripts with the same condition will produce multiple wrappers. This is
 ## Risks / Trade-offs
 
 - **[Low] Multiple wrappers for same condition** → Each PluginScript with an identical condition produces its own wrapper `<script>`. Mitigation: Acceptable for eruda (2 scripts). Can optimize later by grouping.
-- **[Low] Condition is raw JS string** → No validation at build time. Syntax errors only surface in the browser. Mitigation: Documentation will show correct patterns. The API is inherently for developers comfortable with JS.
+    - **[Low] No validation on attrs** → The `attrs: dict[str, str]` field accepts arbitrary key-value pairs without validation. Invalid HTML attributes or unsafe values are passed through to the generated HTML. Mitigation: Document that attrs is passed through verbatim. Future versions may add validation for known-safe attribute names.
 - **[Low] CSP restrictions** → Inline wrapper scripts use `onload` callbacks. Mitigation: Document CSP implications. Future versions may support nonce-based approaches.
 - **[None] No breaking changes** — existing `append_script()` and static scripts are unchanged.
 
