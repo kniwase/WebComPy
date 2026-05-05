@@ -46,19 +46,16 @@ On the server, `_create_node()` calls `ServerDOMPort.create_element()` which ret
 
 **Alternative considered**: Keep `_render_html()` alongside virtual DOM. Rejected because maintaining two paths defeats the purpose. The whole point is unification.
 
-### Decision 4: _render_html() removal strategy — one class at a time
+### Decision 4: _render_html() removal strategy — implement virtual DOM first, remove old methods last
 
-**Chosen**: Remove `_render_html()` from the base class first, then each subclass, ensuring the virtual DOM path produces identical HTML output before deletion.
+**Chosen**: Implement `VirtualDOMNode` and `ServerDOMPort.render_html()`, update callers (`cli/_html.py`), then remove `_render_html()` from element base classes last. Ensure the virtual DOM path produces identical HTML output before deletion.
 
-**Rationale**: The `_render_html()` methods encode element-specific HTML formatting rules (void tags, self-closing, text escaping, attribute ordering). These rules must be replicated in `ServerDOMPort.render_html()` before the old methods can be deleted. A class-by-class approach allows side-by-side comparison during migration.
+**Rationale**: The `_render_html()` methods encode element-specific HTML formatting rules (void tags, self-closing, text escaping, attribute ordering). These rules must be replicated in `ServerDOMPort.render_html()` before the old methods can be deleted.
 
-**Migration ordering within element types:**
-1. `_element.py` — standard elements (most complex, self-closing logic)
-2. `_text.py` — text nodes and `<br>` (simple)
-3. `_switch.py` — conditional rendering (delegates to children)
-4. `_repeat.py` — list rendering (delegates to children)
-5. `_dynamic.py` — dynamic elements (delegates)
-6. `_abstract.py` — abstract base (remove abstract `_render_html`, must be last since other classes inherit from it)
+**Correct migration ordering:**
+1. Implement `VirtualDOMNode` + `ServerDOMPort.render_html()` (tasks 1-2)
+2. Update `cli/_html.py` to use `ServerDOMPort.render_html()` (task 5)
+3. THEN remove `_render_html()` from element classes — subclasses first (`_text.py`, `_dynamic.py`), base classes last (`_base.py`, `_abstract.py`) (tasks 3-4)
 
 ### Decision 5: VirtualDOMNode.event_listeners is a list of (event_name, handler) tuples
 

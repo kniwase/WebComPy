@@ -23,11 +23,8 @@
 
 ## 4. Remove _render_html() from element subclasses
 
-- [ ] 4.1 Remove `_render_html()` from `Element` in `webcompy/elements/types/_element.py`
-- [ ] 4.2 Remove `_render_html()` from `TextElement` and `NewLine` in `webcompy/elements/types/_text.py`
-- [ ] 4.3 Remove `_render_html()` from `SwitchElement` in `webcompy/elements/types/_switch.py`
-- [ ] 4.4 Remove `_render_html()` from `RepeatElement` in `webcompy/elements/types/_repeat.py`
-- [ ] 4.5 Remove `_render_html()` from `DynamicElement` in `webcompy/elements/types/_dynamic.py`
+- [ ] 4.1 Remove `_render_html()` from `TextElement` and `NewLine` in `webcompy/elements/types/_text.py`
+- [ ] 4.2 Remove `_render_html()` from `DynamicElement` in `webcompy/elements/types/_dynamic.py`
 
 ## 5. Update server-side rendering entry points
 

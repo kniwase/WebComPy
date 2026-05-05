@@ -6,7 +6,7 @@ Currently, server-side rendering uses a parallel code path (`_render_html()`) th
 
 - **NEW** `VirtualDOMNode` class satisfying the `DOMNode` Protocol — an in-memory DOM tree node with attribute storage, child management, and HTML serialization
 - **MODIFIED** `ServerDOMPort` — replaces exception-throwing stubs with `VirtualDOMNode` factory methods; `create_element()` returns a `VirtualDOMNode`, `create_text_node()` returns a virtual text node
-- **REMOVED** `_render_html()` methods across all element types (`_abstract.py`, `_element.py`, `_text.py`, `_switch.py`, `_repeat.py`, `_dynamic.py`, `_base.py`) — replaced by `render()` + `ServerDOMPort`
+- **REMOVED** `_render_html()` methods from element types (`_abstract.py`, `_base.py`, `_text.py`, `_dynamic.py`) — replaced by `render()` + `ServerDOMPort`
 - **MODIFIED** `render()` path becomes the single unified rendering entry point in both environments
 - **MODIFIED** Server-side rendering tests can validate full DOM tree structure (attribute values, child ordering, text content) instead of just HTML string comparison
 - **NEW** `ServerDOMPort` provides `render_html(node)` method that serializes the virtual tree to an HTML string
@@ -35,7 +35,7 @@ Currently, server-side rendering uses a parallel code path (`_render_html()`) th
 
 ## Impact
 
-- **Affected modules**: `webcompy/ports/_server/_dom.py` (major rewrite), all 8 element type files (remove `_render_html()`), `webcompy/elements/` (unified render path), existing SSG tests (migrate from string comparison to tree inspection)
+- **Affected modules**: `webcompy/ports/_server/_dom.py` (major rewrite), element types with `_render_html()` (`_abstract.py`, `_base.py`, `_text.py`, `_dynamic.py`), `webcompy/cli/_html.py` (caller), existing SSG tests (migrate from string comparison to tree inspection)
 - **Breaking**: `_render_html()` is **REMOVED** — any code calling it externally must migrate to `ServerDOMPort.render_html(node)`
 - **Dependency**: Requires `feat-port-abstraction` to be completed first (depends on `DOMNode` Protocol and `DOMPort.do` interface)
 - **Testing**: Server-side rendering tests gain ability to assert exact DOM tree shape instead of fragile HTML string matching

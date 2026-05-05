@@ -21,8 +21,8 @@ All element types SHALL use the same `render()` → `_get_node()` → `_init_nod
 
 ## REMOVED Requirements
 
-### Requirement: Elements shall represent DOM nodes and render to HTML strings via _render_html()
+### Requirement: Elements shall represent DOM nodes and compose into trees
 
-**Reason**: The dual rendering path (`render()` for browser DOM, `_render_html()` for server HTML) is unified. Server-side HTML generation is handled by `ServerDOMPort.render_html()` which serializes the virtual DOM tree.
+**Reason**: The dual rendering path (`_render()` for browser DOM, `_render_html()` for server HTML) is unified into a single `render()` entry point. The requirement that elements "compose into trees" and "are renderable to browser DOM nodes or HTML strings" (existing spec scenario) still holds — the change is that HTML rendering is now handled by `ServerDOMPort.render_html()` instead of per-element `_render_html()` methods.
 
 **Migration**: All element types remove their `_render_html()` methods. Callers use `ServerDOMPort.render_html(root_node)` instead. Existing HTML string tests should migrate to virtual DOM tree inspection or retain string comparison against `render_html()` output.

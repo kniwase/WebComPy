@@ -1,6 +1,6 @@
 ## Context
 
-WebComPy currently routes all browser API access through a single `browser` object (`_PyScriptBrowserModule`) that flattens the entire `js` (Pyodide) namespace into one module-like object. Twenty files import this object directly and guard every access with `if browser:` truthiness checks. This design has served well but has clear limitations:
+WebComPy currently routes all browser API access through a single `browser` object (`_PyScriptBrowserModule`) that flattens the entire `js` (Pyodide) namespace into one module-like object. Eighteen consumer files import this object directly and guard every access with `if browser:` truthiness checks. This design has served well but has clear limitations:
 
 - Testing DOM operations requires an actual browser (PyScript/Emscripten) environment
 - The all-or-nothing `browser` monolith cannot distinguish "DOM manipulation" from "history navigation" from "HTTP requests"
@@ -201,6 +201,8 @@ if browser is not None:
     browser.window.setTimeout(_flush_pending_effects, 0)
 
 # After
+from webcompy.di import inject, InjectionError
+
 try:
     dom = inject(DOM_PORT_KEY)
 except InjectionError:
@@ -211,7 +213,7 @@ else:
 
 ## Risks / Trade-offs
 
-- **[Large code change]** 20 files need migration from `browser` to port injection. → Mitigation: phased migration — introduce ports alongside browser, migrate file by file, run full test suite after each.
+- **[Large code change]** 18 files need migration from `browser` to port injection. → Mitigation: phased migration — introduce ports alongside browser, migrate file by file, run full test suite after each.
 - **[Performance]** BrowserDOMNode adapter adds one Python call layer per DOM operation. → Mitigation: adapter methods are thin one-liners delegating to JS objects; overhead is negligible compared to PyScript's existing proxy overhead.
 - **[Backward compatibility]** `browser` is part of `webcompy.__all__` and directly used by applications. → Mitigation: keep `browser` as deprecated shim during migration period with `DeprecationWarning` pointing to port APIs.
 - **[DOMNode Protocol size]** The explicit Protocol has ~20 methods. → Trade-off accepted: this is the standard DOM API surface needed by the element system. Extending `DOMNode` is rare.
