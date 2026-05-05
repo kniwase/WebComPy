@@ -4,7 +4,7 @@
 
 Enable WebComPy applications to use Tailwind CSS utility classes for styling. This includes CDN-based usage with local asset management for standalone/offline support, and demonstrates how Tailwind can coexist with WebComPy's `scoped_style` feature.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Tailwind CSS SHALL be loadable from local assets
 

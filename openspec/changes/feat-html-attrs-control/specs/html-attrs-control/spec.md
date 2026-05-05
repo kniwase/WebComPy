@@ -4,7 +4,7 @@
 
 WebComPy applications need the ability to set attributes on the root `<html>` element for features like class-based dark mode (`<html class="dark">`), language attributes (`lang="ja"`), or custom `data-*` attributes. This capability bridges the gap between the component tree (which renders inside `#webcompy-app`) and the outer document structure.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: The application shall support setting static attributes on the HTML element
 

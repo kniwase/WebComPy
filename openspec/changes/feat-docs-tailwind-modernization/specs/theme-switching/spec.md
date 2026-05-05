@@ -4,7 +4,7 @@
 
 Provide runtime light/dark theme switching for WebComPy applications. This enables users to toggle between themes manually, which is essential for documentation sites and applications that want to offer visual preference control.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: The application SHALL support reactive theme state
 
