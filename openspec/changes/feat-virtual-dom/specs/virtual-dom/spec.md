@@ -26,12 +26,21 @@ The virtual tree can be serialized to HTML for static site generation and inspec
 
 ### Requirement: VirtualDOMNode tree operations shall match DOM semantics
 
-`VirtualDOMNode.appendChild(child)` SHALL append `child` to the node's children list. `childNodes` SHALL return the list of child nodes. `removeChild(child)` SHALL remove `child` from the children list by identity. `remove()` SHALL remove the node from its parent's children.
+`VirtualDOMNode.appendChild(child)` SHALL append `child` to the node's children list. `insertBefore(new, ref)` SHALL insert `new` before `ref` in the children list. `replaceChild(new, old)` SHALL replace `old` with `new` at the same position. `removeChild(child)` SHALL remove `child` from the children list by identity. `remove()` SHALL remove the node from its parent's children. `childNodes` SHALL return the list of child nodes.
 
 #### Scenario: Building a virtual tree
 - **WHEN** `parent.appendChild(child1)` and `parent.appendChild(child2)` are called on a `VirtualDOMNode`
 - **THEN** `parent.childNodes` SHALL contain `[child1, child2]` in order
 - **AND** `child1` and `child2` SHALL have their `_parent` reference pointing to `parent`
+
+#### Scenario: Inserting before a reference node
+- **WHEN** `parent.insertBefore(child3, child2)` is called
+- **THEN** `parent.childNodes` SHALL contain `[child1, child3, child2]` in order
+
+#### Scenario: Replacing a child node
+- **WHEN** `parent.replaceChild(new_child, child1)` is called
+- **THEN** `new_child` SHALL occupy `child1`'s original position in `parent.childNodes`
+- **AND** `parent.childNodes` SHALL no longer contain `child1`
 
 #### Scenario: Removing a child from the virtual tree
 - **WHEN** `parent.removeChild(child1)` is called

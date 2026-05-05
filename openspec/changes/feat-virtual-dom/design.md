@@ -67,11 +67,11 @@ On the server, `_create_node()` calls `ServerDOMPort.create_element()` which ret
 
 **Rationale**: On the server, event listeners are never actually invoked — they're recorded for structural testing. A simple list is sufficient. No FFI proxy wrapping is needed (handled by `ServerFFIPort` which returns functions as-is).
 
-### Decision 6: VirtualDOMNode does not implement removeChild/insertBefore positioning
+### Decision 6: VirtualDOMNode implements all DOMNode tree operations
 
-**Chosen**: `VirtualDOMNode.appendChild()` appends to the children list. `removeChild()` removes by identity from the list. `insertBefore()` and `replaceChild()` are **not implemented** (raise `NotImplementedError` in phase 2).
+**Chosen**: `VirtualDOMNode` implements all `DOMNode` Protocol tree operations: `appendChild`, `removeChild`, `insertBefore`, `replaceChild`, and `remove`. All are straightforward list operations on the internal `_children` list.
 
-**Rationale**: The current element system never calls `insertBefore` or `replaceChild` on server-side nodes — those are only called during browser DOM reconciliation (`_reconcile_children` in `_repeat.py`). The virtual tree only needs `appendChild` and `removeChild` for tree construction. Adding unused methods adds complexity without value.
+**Rationale**: The `DOMNode` Protocol contract requires these methods, and they are trivial to implement as list operations. `insertBefore(new, ref)` finds `ref` in the children list and inserts `new` before it. `replaceChild(new, old)` replaces `old` with `new` at the same position. Completing the Protocol ensures `VirtualDOMNode` is a compliant implementation and avoids `NotImplementedError` surprises if the element system ever calls these methods on server-side nodes.
 
 ## Risks / Trade-offs
 

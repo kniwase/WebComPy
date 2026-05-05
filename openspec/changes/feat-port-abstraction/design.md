@@ -79,16 +79,15 @@ from webcompy.ports._browser._ffi import BrowserFFIPort
 
 ### Decision 6: DI key structure
 
-Five internal DI keys defined in `webcompy/ports/_keys.py`:
+Four internal DI keys defined in `webcompy/ports/_keys.py`:
 
 ```python
 DOM_PORT_KEY = InjectKey[DOMPort]("webcompy-port-dom")
 FFI_PORT_KEY = InjectKey[FFIPort]("webcompy-port-ffi")
 FETCH_PORT_KEY = InjectKey[FetchPort]("webcompy-port-fetch")
-HISTORY_PORT_KEY = InjectKey[HistoryPort]("webcompy-port-history")
 ```
 
-`HistoryPort` and its key live in `webcompy/router/` since it is router-internal. All other keys are in `webcompy/ports/`.
+`HISTORY_PORT_KEY` lives in `webcompy/router/_keys.py` since HistoryPort is router-internal. All other keys are in `webcompy/ports/`.
 
 ### Decision 7: Directory structure
 
