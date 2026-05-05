@@ -1,4 +1,5 @@
 import hashlib
+import pathlib
 import re
 import zipfile
 
@@ -13,7 +14,9 @@ from webcompy.cli._wheel_builder import (
     _write_metadata,
     _write_record,
     _write_wheel,
+    get_stable_wheel_filename,
     get_wheel_filename,
+    make_browser_webcompy_wheel,
     make_bundled_wheel,
     make_webcompy_app_package,
     make_wheel,
@@ -759,3 +762,65 @@ class TestMakeWebcompyAppPackageBundledDeps:
             top_level = zf.read(dist_info).decode()
             lines = top_level.strip().split("\n")
             assert "six" in lines
+
+
+class TestGetStableWheelFilename:
+    def test_simple_name(self):
+        assert get_stable_wheel_filename("webcompy") == "webcompy-py3-none-any.whl"
+
+    def test_underscore_name(self):
+        assert get_stable_wheel_filename("my_app") == "my_app-py3-none-any.whl"
+
+    def test_dotted_name(self):
+        assert get_stable_wheel_filename("my.app") == "my_app-py3-none-any.whl"
+
+
+class TestMakeBrowserWebcompyWheel:
+    def _create_package(self, tmp_path):
+        webcompy = tmp_path / "webcompy"
+        webcompy.mkdir()
+        (webcompy / "__init__.py").write_text("")
+        (webcompy / "app").mkdir()
+        (webcompy / "app" / "__init__.py").write_text("")
+        (webcompy / "elements").mkdir()
+        (webcompy / "elements" / "__init__.py").write_text("")
+        (webcompy / "cli").mkdir()
+        (webcompy / "cli" / "__init__.py").write_text("")
+        (webcompy / "cli" / "server.py").write_text("# server-only")
+        return webcompy
+
+    def test_excludes_cli(self, tmp_path):
+        webcompy = self._create_package(tmp_path)
+        dest = tmp_path / "dist"
+        dest.mkdir()
+        result = make_browser_webcompy_wheel(webcompy, dest, "0.0.1")
+        with zipfile.ZipFile(result) as zf:
+            names = zf.namelist()
+            assert not any("cli" in pathlib.Path(n).parts for n in names)
+
+    def test_contains_framework(self, tmp_path):
+        webcompy = self._create_package(tmp_path)
+        dest = tmp_path / "dist"
+        dest.mkdir()
+        result = make_browser_webcompy_wheel(webcompy, dest, "0.0.1")
+        with zipfile.ZipFile(result) as zf:
+            names = zf.namelist()
+            assert "webcompy/__init__.py" in names
+            assert "webcompy/app/__init__.py" in names
+            assert "webcompy/elements/__init__.py" in names
+
+    def test_stable_filename(self, tmp_path):
+        webcompy = self._create_package(tmp_path)
+        dest = tmp_path / "dist"
+        dest.mkdir()
+        result = make_browser_webcompy_wheel(webcompy, dest, "0.0.1")
+        assert result.name == "webcompy-py3-none-any.whl"
+
+    def test_metadata_contains_version(self, tmp_path):
+        webcompy = self._create_package(tmp_path)
+        dest = tmp_path / "dist"
+        dest.mkdir()
+        result = make_browser_webcompy_wheel(webcompy, dest, "2.3.4")
+        with zipfile.ZipFile(result) as zf:
+            metadata = zf.read("webcompy-2.3.4.dist-info/METADATA").decode()
+            assert "Version: 2.3.4" in metadata

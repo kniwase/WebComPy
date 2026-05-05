@@ -72,6 +72,12 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         dest="standalone",
         help="disable standalone mode (default)",
     )
+    parser_start.add_argument(
+        "--wheel-mode",
+        choices=["bundled", "split"],
+        default=None,
+        help="wheel bundling mode: 'bundled' (default) or 'split'",
+    )
     parser_start.set_defaults(__command_getter__=_command(subcommand_name))
 
     # generate
@@ -129,6 +135,12 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         action="store_false",
         dest="standalone",
         help="disable standalone mode (default)",
+    )
+    parser_generate.add_argument(
+        "--wheel-mode",
+        choices=["bundled", "split"],
+        default=None,
+        help="wheel bundling mode: 'bundled' (default) or 'split'",
     )
     parser_generate.set_defaults(__command_getter__=_command(subcommand_name))
 

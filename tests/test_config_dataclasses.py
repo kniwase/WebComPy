@@ -81,6 +81,18 @@ class TestAppConfig:
         config = AppConfig(runtime_serving="local")
         assert config.runtime_serving == "local"
 
+    def test_wheel_mode_defaults_to_bundled(self):
+        config = AppConfig()
+        assert config.wheel_mode == "bundled"
+
+    def test_wheel_mode_split(self):
+        config = AppConfig(wheel_mode="split")
+        assert config.wheel_mode == "split"
+
+    def test_wheel_mode_bundled_explicit(self):
+        config = AppConfig(wheel_mode="bundled")
+        assert config.wheel_mode == "bundled"
+
 
 class TestServerConfig:
     def test_defaults(self):
