@@ -2,7 +2,7 @@
 
 - [ ] 1.1 Create `webcompy/plugin/` package directory with `__init__.py`
 - [ ] 1.2 Define `WebComPyPlugin` base class in `webcompy/plugin/_plugin.py` with `name`, `version` class variables, static methods `get_providers()` and `get_scripts()`, and lifecycle hooks `on_app_init(self, app)`, `on_app_ready(self, app)`
-- [ ] 1.3 Define `PluginManager` class in `webcompy/plugin/_manager.py` with `discover(plugin_paths)`, `init_all()`, and `scripts` property
+- [ ] 1.3 Define `PluginManager` class in `webcompy/plugin/_manager.py` with `discover(plugin_paths)`, `init_all()`, `call_on_app_ready(app)`, and `scripts` property
 - [ ] 1.4 Define `WebComPyPluginException` exception class
 - [ ] 1.5 Export `WebComPyPlugin`, `PluginManager`, `WebComPyPluginException` from `webcompy/plugin/__init__.py`
 
@@ -25,7 +25,7 @@
 
 ## 5. HTML Generation Integration
 
-- [ ] 5.1 In `webcompy/cli/_html.py`, collect scripts from `app._plugin_manager.scripts` property and add to `scripts_head`/`scripts_body` (using `_render_conditional_script` from `feat-plugin-script`)
+- [ ] 5.1 In `webcompy/cli/_html.py`, collect scripts from `app._plugin_manager.scripts` property and add to `scripts_head`/`scripts_body`. **Depends on `feat-plugin-script` being merged first** — `_render_plugin_script()` must already exist in `webcompy/cli/_html.py`.
 
 ## 6. Consumer: docs_app
 
@@ -44,4 +44,4 @@
 
 ## 8. Type Stubs
 
-- [ ] 8.1 Create or update type stubs for `webcompy/plugin/` module if needed (check existing `.pyi` conventions)
+- [ ] 8.1 Create `webcompy/plugin/__init__.pyi` with type definitions for `WebComPyPlugin`, `PluginManager`, `WebComPyPluginException`. If `webcompy/app/__init__.pyi` exists, add re-exports for these classes.

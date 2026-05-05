@@ -81,9 +81,9 @@ Navigation hook callbacks SHALL be invoked for both hash mode (`#/path`) and his
 
 ### Requirement: Router hooks shall be accessible to plugins during initialization
 
-Plugins SHALL be able to register hook callbacks in `on_app_init()` via `app._root._router.before_route_change.append(...)`.
+The `WebComPyApp` SHALL expose the current `Router` instance as `app.router` so plugins can access it during `on_app_init()`. The `Router` instance SHALL be stored on the app before `PluginManager.init_all()` is called, ensuring plugins can register hook callbacks.
 
 #### Scenario: Auth plugin registers guard
-- **WHEN** an auth plugin's `on_app_init(app)` calls `app._root._router.before_route_change.append(auth_guard)`
+- **WHEN** an auth plugin's `on_app_init(app)` calls `app.router.before_route_change.append(auth_guard)`
 - **THEN** the guard SHALL be active for all subsequent navigations
 - **AND** the guard SHALL persist for the application's lifetime

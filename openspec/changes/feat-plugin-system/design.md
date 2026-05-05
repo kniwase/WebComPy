@@ -83,7 +83,10 @@ class Router:
 
 Plugins append callbacks to these lists. `before_route_change` returns `False` to cancel navigation (e.g., authentication guard).
 
-Callbacks are dispatched in `Location.__set_path__()` before updating the signal value (`before_route_change`) and after (`after_route_change`).
+Callbacks are dispatched:
+- `before_route_change`: In `Location.__set_path__()` before updating the signal value. Returns `False` to cancel navigation.
+- `after_route_change`: In `Location.__set_path__()` after updating the signal value, only if navigation was not cancelled.
+- `on_route_error`: The `Router` SHALL wrap the route resolution logic (e.g., `Router.__cases__` evaluation or `Router._get_elements_generator()`) in a try/except and dispatch any caught exceptions to `on_route_error` callbacks. If no callbacks handle the error (returning `True` to suppress), the exception SHALL propagate.
 
 This is a minimal addition — no full middleware chain, no async support. Sufficient for initial plugin use cases.
 
@@ -97,18 +100,19 @@ Alternatives considered:
 # In WebComPyApp.__init__():
 self._di_scope = DIScope()
 ...
+self._router = router  # store before PluginManager init so plugins can access it
 self._plugin_manager = PluginManager(self)
 if self._config.plugins:
     self._plugin_manager.discover(self._config.plugins)
     self._plugin_manager.init_all()
 ```
 
-Plugins are initialized after the DI scope and component store are set up but before `AppDocumentRoot` is created. This ensures:
+Plugins are initialized after the DI scope and component store are set up but before `AppDocumentRoot` is created. The router instance is stored on the app (`self._router`) before `init_all()` so plugins can call `app.router.before_route_change.append(...)` during `on_app_init()`. This ensures:
 - Plugins can register DI providers before any component tries to inject them
 - Plugins can hook into the router (if one exists) before route resolution starts
 - `generate_html()` can collect plugin scripts before HTML generation
 
-### Decision 5: generate_html() collects plugin scripts
+### Decision 5: generate_html() collects plugin scripts from both sources
 
 ```python
 # In generate_html():
@@ -117,7 +121,14 @@ scripts_body: Scripts = []
 
 # ... existing script collection ...
 
-# Plugin scripts (from PluginScript descriptor)
+# Scripts from AppConfig.scripts (direct PluginScript)
+for ps in app.config.scripts:
+    if ps.in_head:
+        scripts_head.append((ps.attrs, ps.script))
+    else:
+        scripts_body.append((ps.attrs, ps.script))
+
+# Scripts from PluginManager (plugin classes)
 for ps in app._plugin_manager.scripts:
     if ps.in_head:
         scripts_head.append((ps.attrs, ps.script))
@@ -125,7 +136,7 @@ for ps in app._plugin_manager.scripts:
         scripts_body.append((ps.attrs, ps.script))
 ```
 
-The existing `_render_conditional_script()` from `feat-plugin-script` handles converting `PluginScript` with conditions into wrapper `<script>` tags. The `scripts_head`/`scripts_body` lists naturally extend to include plugin scripts.
+Both `app.config.scripts` (direct PluginScript descriptors) and `app._plugin_manager.scripts` (from plugin classes) are collected. The existing `_render_plugin_script()` helper from `feat-plugin-script` handles converting `PluginScript` instances with conditions into wrapper `<script>` tags and statically rendering those without conditions. The `scripts_head`/`scripts_body` lists naturally extend to include plugin scripts.
 
 ## Risks / Trade-offs
 
