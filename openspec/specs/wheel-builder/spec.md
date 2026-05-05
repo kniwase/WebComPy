@@ -35,6 +35,12 @@ All wheels produced by the builder SHALL be valid PEP 427 `.whl` files. The buil
 - **THEN** the resulting wheel SHALL contain webcompy (excl. cli) and the app package only
 - **AND** the wheel filename SHALL follow the content-hash pattern
 
+#### Scenario: Building an app wheel with a single-file module dependency
+- **WHEN** a bundled dependency extracted from a CDN wheel is a single `.py` file module (no `__init__.py`, just a top-level `.py` file, e.g., `six.py`)
+- **THEN** the wheel SHALL include that `.py` file at the wheel root level (e.g., `six.py`, not `six/six.py`)
+- **AND** `top_level.txt` SHALL list the module name alongside other top-level packages
+- **AND** importing that module SHALL work after PyScript loads the wheel
+
 ### Requirement: The wheel builder shall support bundled dependencies in the app wheel
 `make_webcompy_app_package()` SHALL accept an optional `bundled_deps` parameter of type `list[tuple[str, pathlib.Path]]`. When provided, each tuple represents a package name and its installed directory path. These directories SHALL be included in the app wheel alongside the app package, and their top-level names SHALL appear in `top_level.txt`.
 

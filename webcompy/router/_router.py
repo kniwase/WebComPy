@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import urllib.parse
 from collections.abc import Callable, Sequence
+from contextlib import suppress
 from functools import partial
 from re import Match
 from re import compile as re_compile
@@ -156,11 +157,16 @@ class Router:
 
         for route in self.__routes__:
             component = route[3]
-            if isinstance(component, LazyComponentGenerator) and component._resolved is None:
+            if (
+                isinstance(component, LazyComponentGenerator)
+                and component._resolved is None
+                and not component._resolve_error
+            ):
                 if browser:
 
                     def _do_preload(c=component):
-                        c._preload()
+                        with suppress(Exception):
+                            c._preload()
 
                     browser.window.setTimeout(_do_preload, 0)
                 else:

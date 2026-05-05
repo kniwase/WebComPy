@@ -61,6 +61,23 @@ class TestDiscoverPackages:
         result = _discover_packages(pkg)
         assert result == ["myapp"]
 
+    def test_single_file_module(self, tmp_path):
+        extracted = tmp_path / "six"
+        extracted.mkdir()
+        (extracted / "six.py").write_text("import six")
+        result = _discover_packages(extracted)
+        assert result == ["six"]
+
+    def test_single_file_module_coexists_with_directory_packages(self, tmp_path):
+        six_dir = tmp_path / "six"
+        six_dir.mkdir()
+        (six_dir / "six.py").write_text("")
+        dateutil_dir = tmp_path / "dateutil"
+        dateutil_dir.mkdir()
+        (dateutil_dir / "__init__.py").write_text("")
+        assert _discover_packages(six_dir) == ["six"]
+        assert _discover_packages(dateutil_dir) == ["dateutil"]
+
 
 class TestCollectPackageFiles:
     def test_py_files_collected(self, tmp_path):
@@ -108,6 +125,14 @@ class TestCollectPackageFiles:
         files = _collect_package_files(pkg, ["myapp"])
         arcs = {arc for _, arc in files}
         assert "myapp/data/file.json" not in arcs
+
+    def test_single_file_module(self, tmp_path):
+        extracted = tmp_path / "six"
+        extracted.mkdir()
+        (extracted / "six.py").write_text("import six")
+        files = _collect_package_files(extracted, ["six"])
+        arcs = {arc for _, arc in files}
+        assert arcs == {"six.py"}
 
 
 class TestSha256B64:
@@ -706,3 +731,31 @@ class TestMakeWebcompyAppPackageBundledDeps:
             lines = top_level.strip().split("\n")
             assert "webcompy" in lines
             assert "myapp" in lines
+
+    def test_single_file_module_bundled_dep(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        six_dir = tmp_path / "six"
+        six_dir.mkdir()
+        (six_dir / "six.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+            bundled_deps=[("six", six_dir)],
+        )
+        with zipfile.ZipFile(result) as zf:
+            names = zf.namelist()
+            assert "six.py" in names
+            dist_info = next(n for n in names if n.endswith("/top_level.txt"))
+            top_level = zf.read(dist_info).decode()
+            lines = top_level.strip().split("\n")
+            assert "six" in lines
