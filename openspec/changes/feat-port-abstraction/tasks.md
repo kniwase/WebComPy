@@ -45,7 +45,7 @@
 - [ ] 8.1 Migrate `webcompy/elements/types/_element.py` — replace `from webcompy._browser._modules import browser` with `inject(DOM_PORT_KEY)` and `inject(FFI_PORT_KEY)` for DOM operations and event proxy creation/destruction. Refactor `_generate_event_handler()` to use `inject(FFI_PORT_KEY).create_proxy(event_handler)` instead of `browser.pyscript.ffi.create_proxy(event_handler)`
 - [ ] 8.2 Migrate `webcompy/elements/types/_text.py` — use `dom_port.create_text_node()` and `dom_port.create_element("br")`, remove only Pattern A `else: raise WebComPyException` guards (in `_init_node()` and `_create_node()`); keep `_update_text()` server branch (Pattern B) unchanged — it is addressed in `feat-virtual-dom`
 - [ ] 8.3 Migrate `webcompy/elements/types/_abstract.py` — use `dom_port.create_text_node("")` for placeholder node creation in `_detach_node`
-- [ ] 8.4 Migrate `webcompy/elements/types/_switch.py` — use `dom_port.schedule_macro_task()` instead of `browser.window.setTimeout`
+- [ ] 8.4 Migrate `webcompy/elements/types/_switch.py` — use `dom_port.schedule_macro_task()` instead of `browser.window.setTimeout`, and replace `browser is not None` truthiness checks (lines 71, 77) with `ENVIRONMENT == "pyscript"` from `webcompy.utils`
 - [ ] 8.5 Migrate `webcompy/elements/types/_repeat.py` — use `inject(DOM_PORT_KEY)` for `browser` truthiness checks
 - [ ] 8.6 Migrate `webcompy/elements/types/_dynamic.py` — remove `browser` import, use port injection
 
