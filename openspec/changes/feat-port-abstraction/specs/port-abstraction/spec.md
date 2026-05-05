@@ -77,7 +77,7 @@ Server port implementations SHALL provide the same method signatures and return 
 
 ### Requirement: History port shall be internal to the router module
 
-`HistoryPort` SHALL be defined within `webcompy/router/` as an internal abstraction, not in the public `webcompy/ports/` package. It SHALL provide methods `current_path`, `navigate`, `on_popstate`, and `off_popstate`. The browser implementation SHALL use `pyscript.context.window.history` and `pyscript.context.window.location`.
+`HistoryPort` SHALL be defined within `webcompy/router/` as an internal abstraction, not in the public `webcompy/ports/` package. It SHALL provide methods `current_path`, `current_search`, `navigate`, `on_popstate`, `off_popstate`, and `state` (property). The browser implementation SHALL use `pyscript.context.window.history` and `pyscript.context.window.location`.
 
 #### Scenario: HistoryPort provides current path in browser
 - **WHEN** `BrowserHistoryPort.current_path` is accessed

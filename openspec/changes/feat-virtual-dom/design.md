@@ -52,14 +52,13 @@ On the server, `_create_node()` calls `ServerDOMPort.create_element()` which ret
 
 **Rationale**: The `_render_html()` methods encode element-specific HTML formatting rules (void tags, self-closing, text escaping, attribute ordering). These rules must be replicated in `ServerDOMPort.render_html()` before the old methods can be deleted. A class-by-class approach allows side-by-side comparison during migration.
 
-**Migration order within element types:**
+**Migration ordering within element types:**
 1. `_element.py` — standard elements (most complex, self-closing logic)
 2. `_text.py` — text nodes and `<br>` (simple)
 3. `_switch.py` — conditional rendering (delegates to children)
 4. `_repeat.py` — list rendering (delegates to children)
 5. `_dynamic.py` — dynamic elements (delegates)
-6. `_abstract.py` — abstract base (remove abstract `_render_html`)
-7. `_base.py` — remove `_render_html` from concrete base
+6. `_abstract.py` — abstract base (remove abstract `_render_html`, must be last since other classes inherit from it)
 
 ### Decision 5: VirtualDOMNode.event_listeners is a list of (event_name, handler) tuples
 
@@ -72,6 +71,30 @@ On the server, `_create_node()` calls `ServerDOMPort.create_element()` which ret
 **Chosen**: `VirtualDOMNode` implements all `DOMNode` Protocol tree operations: `appendChild`, `removeChild`, `insertBefore`, `replaceChild`, and `remove`. All are straightforward list operations on the internal `_children` list.
 
 **Rationale**: The `DOMNode` Protocol contract requires these methods, and they are trivial to implement as list operations. `insertBefore(new, ref)` finds `ref` in the children list and inserts `new` before it. `replaceChild(new, old)` replaces `old` with `new` at the same position. Completing the Protocol ensures `VirtualDOMNode` is a compliant implementation and avoids `NotImplementedError` surprises if the element system ever calls these methods on server-side nodes.
+
+### Decision 7: cli/_html.py migration — render_html() on ServerDOMPort
+
+**Chosen**: `cli/_html.py`'s `_HtmlElement` is refactored to use `ServerDOMPort.render_html()` instead of calling `self._render_html()`. The `generate_html()` function injects `ServerDOMPort` from the app's DI scope and calls `port.render_html(root_element)` on the constructed virtual tree.
+
+**Rationale**: `_HtmlElement.render_html()` (line 19) currently calls `self._render_html(False, 0)`. After `_render_html()` is removed from base classes, this no longer works. The migration path:
+
+```
+Before: _HtmlElement.render_html() → self._render_html(False, 0)
+After:  ServerDOMPort.render_html(node) → traverses virtual tree, generates HTML
+```
+
+The `generate_html()` function, which has access to the `WebComPyApp` instance, enters the app's DI scope:
+```python
+with app.di_scope:
+    port = inject(DOM_PORT_KEY)
+    root = ... # build element tree (now creates VirtualDOMNodes)
+    html = port.render_html(root)
+```
+
+**Migration ordering**: Remove `_render_html()` from element base classes LAST (after all callers are updated), not first. This is the opposite of Decision 4 in feat-port-abstraction's design — the correct order is:
+1. Implement VirtualDOMNode + ServerDOMPort.render_html() (task 1-2)
+2. Update cli/_html.py to use ServerDOMPort.render_html() (task 5)
+3. THEN remove _render_html() from element classes (tasks 3-4)
 
 ## Risks / Trade-offs
 

@@ -10,15 +10,16 @@
 
 - [ ] 2.1 Rewrite `webcompy/ports/_server/_dom.py` — replace exception-throwing stubs with virtual DOM factory: `create_element()` returns `VirtualDOMNode`, `create_text_node()` returns virtual text node
 - [ ] 2.2 Implement `ServerDOMPort.render_html(node: DOMNode) -> str` — traverse virtual tree, serialize to HTML string
-- [ ] 2.3 Implement HTML serialization rules: HTML-escape text content and attribute values, self-close void elements (`br`, `hr`, `img`, `input`, `link`, `meta`, `source`, `area`, `base`, `col`, `embed`, `track`, `wbr`), omit `None`-valued attributes
+- [ ] 2.3 Implement HTML serialization rules: HTML-escape text content and attribute values, output void elements without closing tags (e.g., `<br>`, `<img>`) per HTML5 convention, omit `None`-valued attributes
 - [ ] 2.4 Verify `render_html()` produces identical output to current `_render_html()` methods — generate docs_app with both paths and diff results
 
 ## 3. Unify render path in element base classes
 
-- [ ] 3.1 Remove `_render_html()` abstract method from `ElementAbstract` in `webcompy/elements/types/_abstract.py`
+- [ ] 3.1 Remove `_render_html()` abstract method from `ElementAbstract` in `webcompy/elements/types/_abstract.py` — after cli/_html.py is migrated (task 5)
 - [ ] 3.2 Remove `_render_html()` from `ElementWithChildren` in `webcompy/elements/types/_base.py`
 - [ ] 3.3 Update `ElementBase._init_node()` in `_element.py` — remove `else: raise WebComPyException` branch; both browser and server now use `_create_node()` which delegates to `inject(DOM_PORT_KEY)`
 - [ ] 3.4 Update `TextElement._init_node()` in `_text.py` — same unification
+- [ ] 3.5 Update `_detach_node()` in `_abstract.py` — remove `else: raise WebComPyException` branch; the unified path calls `dom_port.create_text_node("")` and `parent_node.replaceChild(...)` which works on both BrowserDOMNode (real DOM) and VirtualDOMNode (children list)
 
 ## 4. Remove _render_html() from element subclasses
 
@@ -36,9 +37,9 @@
 
 ## 6. Element system adapter for server DOMPort
 
-- [ ] 6.1 In `ElementBase._create_node()`, add `DomNodeRef.__init_node__()` call so virtual nodes can satisfy `DOMNode` contract
-- [ ] 6.2 In `ElementBase._init_new_node()`, verify `setAttribute` / `addEventListener` work on `VirtualDOMNode`
-- [ ] 6.3 Make `DomNodeRef` compatible with `VirtualDOMNode` (current `__init_node__` expects `DOMNode` Protocol — should work)
+- [ ] 6.1 Verify `DomNodeRef` is compatible with `VirtualDOMNode` — `DomNodeRef.__init_node__(node)` sets `self._node = node` and `node` must satisfy `DOMNode` Protocol; `VirtualDOMNode` already does
+- [ ] 6.2 Verify `ElementBase._init_new_node()` works on `VirtualDOMNode` — `setAttribute` and `addEventListener` use `DOMNode` Protocol which `VirtualDOMNode` implements
+- [ ] 6.3 Remove the `else: raise WebComPyException` branch from `_detach_node()` (`_abstract.py:59-60`) — the unified path always creates nodes via `inject(DOM_PORT_KEY)` regardless of environment
 
 ## 7. Tests
 

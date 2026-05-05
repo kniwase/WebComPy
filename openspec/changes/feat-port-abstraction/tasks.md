@@ -2,7 +2,7 @@
 
 - [ ] 1.1 Create `webcompy/ports/` package structure with `__init__.py` and sub-package directories (`_browser/`, `_server/`)
 - [ ] 1.2 Add `httpx` as production dependency via `uv add httpx`
-- [ ] 1.3 Define `DOMNode` Protocol in `webcompy/ports/_dom.py` with explicit method signatures: `appendChild`, `insertBefore`, `replaceChild`, `removeChild`, `remove`, `setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`, `addEventListener`, `removeEventListener`, `textContent`, `nodeName`, `nodeType`, `childNodes`, `__webcompy_node__`
+- [ ] 1.3 Define `DOMNode` and `DOMNodeList` Protocol in `webcompy/ports/_dom.py` with explicit method signatures: `appendChild`, `insertBefore`, `replaceChild`, `removeChild`, `remove`, `setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`, `addEventListener` (with `capture=False`), `removeEventListener`, `textContent`, `nodeName`, `nodeType`, `childNodes` (returns `DOMNodeList` with `.length` and `__getitem__`), `__webcompy_node__`
 
 ## 2. DOMPort Protocol and implementations
 
@@ -32,7 +32,7 @@
 ## 6. DI keys and bootstrap wiring
 
 - [ ] 6.1 Define DI keys in `webcompy/ports/_keys.py`: `DOM_PORT_KEY`, `FFI_PORT_KEY`, `FETCH_PORT_KEY`
-- [ ] 6.2 Define internal `HISTORY_PORT_KEY` in `webcompy/router/_keys.py` (alongside existing `_ROUTER_KEY`)
+- [ ] 6.2 Define internal `HISTORY_PORT_KEY` in `webcompy/router/_keys.py` (alongside existing keys in that module)
 - [ ] 6.3 Wire port instantiation into `WebComPyApp.__init__` — create and provide all port implementations based on `ENVIRONMENT`, use existing `self._di_scope.provide()` pattern
 
 ## 7. Public API surface
@@ -42,7 +42,7 @@
 
 ## 8. Migrate element system
 
-- [ ] 8.1 Migrate `webcompy/elements/types/_element.py` — replace `from webcompy._browser._modules import browser` with `inject(DOM_PORT_KEY)` and `inject(FFI_PORT_KEY)` for DOM operations and event proxy creation/destruction
+- [ ] 8.1 Migrate `webcompy/elements/types/_element.py` — replace `from webcompy._browser._modules import browser` with `inject(DOM_PORT_KEY)` and `inject(FFI_PORT_KEY)` for DOM operations and event proxy creation/destruction. Refactor `_generate_event_handler()` to use `inject(FFI_PORT_KEY).create_proxy(event_handler)` instead of `browser.pyscript.ffi.create_proxy(event_handler)`
 - [ ] 8.2 Migrate `webcompy/elements/types/_text.py` — use `dom_port.create_text_node()` and `dom_port.create_element("br")`, remove `browser` guards
 - [ ] 8.3 Migrate `webcompy/elements/types/_abstract.py` — use `dom_port.create_text_node("")` for placeholder node creation in `_detach_node`
 - [ ] 8.4 Migrate `webcompy/elements/types/_switch.py` — use `dom_port.schedule_macro_task()` instead of `browser.window.setTimeout`
@@ -68,13 +68,18 @@
 
 ## 11. Migrate ajax (HttpClient → FetchPort)
 
-- [ ] 11.1 Refactor `webcompy/ajax/_fetch.py` — `HttpClient` methods delegate to `inject(FETCH_PORT_KEY).request()`, remove direct `browser.fetch` and `browser.pyscript.ffi` usage
-- [ ] 11.2 Move `Response` and `WebComPyHttpClientException` to `webcompy/ports/_fetch.py` (single source of truth); `ajax/_fetch.py` re-exports from there
+- [ ] 11.1 Move `Response` class and `WebComPyHttpClientException` to `webcompy/ports/_fetch.py` — these are shared types used by both BrowserFetchPort and ServerFetchPort
+- [ ] 11.2 Move all browser-specific fetch logic into `BrowserFetchPort.request()` — JSON serialization, `Content-Type` header, `FormData.new()` construction, `DomNodeRef` form element extraction, `pyscript.fetch` delegation, response header extraction, proxy cleanup
+- [ ] 11.3 Move server-side fetch logic into `ServerFetchPort.request()` — query param encoding, JSON serialization, `httpx.AsyncClient` delegation, response header extraction; raise `NotImplementedError` for `form_element` parameter (browser-only feature)
+- [ ] 11.4 Refactor `HttpClient` classmethods in `webcompy/ajax/_fetch.py` to delegate to `inject(FETCH_PORT_KEY).request()` — each method (`get`, `post`, `put`, `delete`, `patch`, `head`, `options`) passes its parameters through
+- [ ] 11.5 Update `webcompy/ajax/__init__.py` to re-export `Response` and `WebComPyHttpClientException` from `webcompy/ports/_fetch.py`
 
 ## 12. Deprecate browser object
 
 - [ ] 12.1 Add deprecation mechanism — `webcompy/_browser/_modules.py` emits `DeprecationWarning` on import when accessed from non-port code (keep existing `browser` functionality intact during deprecation period)
-- [ ] 12.2 Update `webcompy/__init__.py` `browser` export to go through deprecation-aware import path
+- [ ] 12.2 Update `webcompy/__init__.py` `browser` export to go through deprecation-aware import path; remove `browser` from `__all__` or mark as deprecated with a trailing comment
+- [ ] 12.3 Remove legacy `webcompy/_browser/_pyscript/` module after all consumers are migrated — the `browser` shim in `_modules.py` can remain but should delegate to ports internally
+- [ ] 12.4 Update `webcompy/_browser/_modules.pyi` type stub — mark `browser` as deprecated, keep type information for backward compatibility
 
 ## 13. Tests
 
@@ -85,7 +90,8 @@
 - [ ] 13.5 Write tests for `ServerFetchPort` HTTP request delegation through `httpx`
 - [ ] 13.6 Write tests for element system with `MockDOMPort` injected — verify correct DOM API calls during rendering
 - [ ] 13.7 Write tests for router `Location` with `MockFFIPort` and `MockHistoryPort` injected
-- [ ] 13.8 Run existing test suite and fix regressions
+- [ ] 13.8 Run existing test suite: `uv run python -m pytest tests/ --tb=short`
+- [ ] 13.9 Identify and fix test regressions caused by port migration — expected breakage: direct `browser` imports in tests, element creation without active DI scope, tests that call `_render_html()` directly
 
 ## 14. Verification
 

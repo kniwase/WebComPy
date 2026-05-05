@@ -34,9 +34,21 @@ The goal is to introduce function-specific port abstractions injected via the ex
 
 ### Decision 1: DOMNode as explicit-method Protocol
 
-**Chosen**: `DOMNode` Protocol with explicit method signatures (`appendChild`, `setAttribute`, `addEventListener`, `textContent`, `nodeName`, etc.)
+**Chosen**: `DOMNode` Protocol with explicit method signatures:
+- Tree: `appendChild(child)`, `removeChild(child)`, `insertBefore(new, ref)`, `replaceChild(new, old)`, `remove()`
+- Attributes: `setAttribute(name, value)`, `getAttribute(name)`, `removeAttribute(name)`, `hasAttribute(name)`, `getAttributeNames()`
+- Events: `addEventListener(event, handler, capture=False)`, `removeEventListener(event, handler)`
+- Content: `textContent` (get/set property), `nodeName` (property), `nodeType` (property)
+- Children: `childNodes` returns `DOMNodeList` (supports `.length` and `__getitem__`)
+- Metadata: `__webcompy_node__: bool`
 
-**Rationale**: The current `__getattr__`/`__setattr__` Protocol requires the node to be a raw JS proxy object. An explicit Protocol allows both `BrowserDOMNode` (thin JS adapter) and `VirtualDOMNode` (server-side tree) to satisfy the same interface without code changes at the call site. This preserves the existing `node.method()` call pattern across the entire element system.
+`DOMNodeList` is a Protocol with `length: int` (property) and `__getitem__(index: int) -> DOMNode`.
+
+**Rationale**: The current `__getattr__`/`__setattr__` Protocol requires the node to be a raw JS proxy object. An explicit Protocol allows both `BrowserDOMNode` (thin JS adapter) and `VirtualDOMNode` (server-side tree) to satisfy the same interface without code changes at the call site.
+
+`addEventListener` includes `capture=False` to match existing call sites (`_element.py:67,110` which pass `False` as the third argument). `BrowserDOMPort` passes through to the JS API; `VirtualDOMNode` ignores it.
+
+`childNodes` returns `DOMNodeList` (not a plain `list`) so both `.length` and indexing `[idx]` work identically across `BrowserDOMNode` (real JS NodeList) and `VirtualDOMNode` (custom list-like object).
 
 **Alternative considered**: Opaque handle + all operations through DOMPort. Rejected because it would require rewriting hundreds of `node.appendChild(child)` calls to `dom_port.append_child(node, child)` and makes the code significantly more verbose.
 
@@ -110,7 +122,92 @@ webcompy/ports/
     └── _fetch.py            # ServerFetchPort via httpx
 ```
 
-`HistoryPort` Protocol at `webcompy/router/_history_port.py` (internal). Browser implementation at `webcompy/router/_browser_history_port.py`. Server implementation inline or in `webcompy/router/_server_history_port.py`.
+`HistoryPort` Protocol at `webcompy/router/_history_port.py` (internal). Browser implementation at `webcompy/router/_browser_history.py`. Server implementation at `webcompy/router/_server_history.py`.
+
+### Decision 8: Migration pattern for `if browser:` branching logic
+
+The current codebase uses `if browser:` for two distinct purposes. Each requires a different migration strategy.
+
+**Pattern A — Guarding browser-only operations (most common):**
+```python
+# Before
+if browser:
+    browser.document.createElement("div")
+else:
+    raise WebComPyException(...)
+# After
+dom = inject(DOM_PORT_KEY)
+dom.create_element("div")  # ServerDOMPort raises in phase 1, VirtualDOMNode in phase 2
+```
+No branching needed — the port handles the difference internally.
+
+**Pattern B — Branching between browser and server rendering paths:**
+```python
+# Before (_switch.py, _repeat.py, _view.py, _dynamic.py, _component.py)
+if browser:
+    # Browser path: use setTimeout for deferred callbacks, real DOM mounting
+else:
+    # Server path: synchronous callbacks, no DOM mounting
+# After (phase 1: feat-port-abstraction)
+dom = inject(DOM_PORT_KEY)
+dom.schedule_macro_task(callback)  # Browser: setTimeout, Server: synchronous
+# Server-only shortcuts (_on_set_parent server branches) remain unchanged;
+# they are addressed in phase 2 (feat-virtual-dom) when render() is unified.
+```
+
+**Pattern C — `browser is not None` checks for effect scheduling:**
+```python
+# Before (_effect.py)
+if browser is not None:
+    browser.window.setTimeout(_flush_pending_effects, 0)
+# After
+inject(DOM_PORT_KEY).schedule_macro_task(_flush_pending_effects)
+# Browser: setTimeout(0), Server: synchronous execution
+```
+
+For cases where code genuinely needs to know the current environment (e.g., deferring lifecycle hooks differently), use `ENVIRONMENT` from `webcompy.utils`:
+```python
+from webcompy.utils import ENVIRONMENT
+if ENVIRONMENT == "pyscript":
+    # browser-specific logic
+```
+
+### Decision 9: Router initialization order — ports provided before Location creation
+
+**Chosen**: `WebComPyApp` provides all port implementations into `app.di_scope` BEFORE creating the `AppDocumentRoot` (which instantiates `Router` → `Location`). The initialization order is:
+
+```
+WebComPyApp.__init__:
+  1. Create DIScope
+  2. Provide ports into DIScope (all port implementations)
+  3. Create Router (requires DI scope active for HistoryPort injection)
+  4. Create AppDocumentRoot (root component, router, di_scope)
+```
+
+**Rationale**: The `Router.__init__` creates `Location()` which currently calls `browser.pyscript.ffi.create_proxy()` in its constructor. After migration, `Location` will use `inject(FFI_PORT_KEY)` and `inject(HISTORY_PORT_KEY)`. This requires the DI scope to be active with ports provided BEFORE `Router` is instantiated. The fix is to move port provision to occur before `Router` is created — this is a reordering of existing `__init__` steps, not a new architectural pattern.
+
+**Alternative considered**: Deferred Location initialization (create Router first, call `Location.init()` post-bootstrap). Rejected because it adds lifecycle complexity. The simple reordering works because port implementation classes have no dependencies themselves.
+
+### Decision 10: signal/_effect.py DI timing — use lazy inject() at call time
+
+**Chosen**: `_effect.py` removes the module-level `browser` import and instead calls `inject(DOM_PORT_KEY)` lazily at the point of use (inside `_schedule_effect()`). This avoids the module-import-time vs DI-bootstrap-time race condition.
+
+**Rationale**: `inject()` looks up the active DI scope from `ContextVar` at call time, not at module import time. Effects are only scheduled during rendering (after `app.run()` or SSG render), at which point the DI scope is active and ports are provided. The try/except ImportError guard is replaced by catching `InjectionError` from a failed inject — if no DI scope exists, effects execute synchronously as a safe fallback.
+
+```python
+# Before (_effect.py)
+from webcompy._browser._modules import browser
+if browser is not None:
+    browser.window.setTimeout(_flush_pending_effects, 0)
+
+# After
+try:
+    dom = inject(DOM_PORT_KEY)
+except InjectionError:
+    _flush_pending_effects()  # synchronous fallback
+else:
+    dom.schedule_macro_task(_flush_pending_effects)
+```
 
 ## Risks / Trade-offs
 
