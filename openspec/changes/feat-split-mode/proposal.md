@@ -2,7 +2,7 @@
 
 ## Summary
 
-Add an optional split mode that serves the webcompy framework, application code, and pure-Python dependencies as separate wheels instead of a single bundled wheel. This enables browser cache optimization — when only the app code changes, the framework and dependency wheels can be served from cache. This mode requires resolving PyScript's current limitation with multiple local wheel URLs in `packages`.
+Add an optional split mode that serves the webcompy framework, application code, and pure-Python dependencies as separate wheels instead of a single bundled wheel. This enables browser cache optimization — when only the app code changes, the framework and dependency wheels can be served from cache.
 
 ## Motivation
 
@@ -21,64 +21,51 @@ None (new capability).
 - This does not replace the default bundled mode — split mode is opt-in.
 - This does not implement per-route code splitting.
 
-## Blocker
-
-**PyScript issue**: Passing multiple local wheel URLs in `py-config.packages` causes initialization timeouts (confirmed in PyScript 2026.3.1). This change must first validate a workaround before committing to the split architecture.
-
 ## Dependencies
 
 - **Requires** `feat-dependency-bundling` — the lock file, dependency classification, and wheel builder are prerequisites.
 
-## Methodology: Experiment-First Approach
+## Experiment Results (2026-05-05)
 
-This change follows an **experiment-first** approach. Before committing to a specific implementation strategy, we will:
+A spike was conducted against PyScript 2026.3.1 to evaluate loading strategies:
 
-1. **Experiment with the `files` + `micropip` workaround first**
-   - Use PyScript's `files` config to place wheel files in the virtual filesystem
-   - Install them via `micropip.install()` in the startup script
-   - Validate that this avoids the `packages` timeout issue
+| Strategy | Description | Result |
+|----------|------------|--------|
+| **Strategy A** | Multiple local wheel URLs in `py-config.packages` | ✅ **Works** — no timeout, ~0.002s init overhead |
+| **Strategy A (stress)** | 10 wheel URLs (with duplicates) in `py-config.packages` | ✅ **Works** — no timeout |
+| Strategy B (serial) | `files` + `micropip.install()` with VFS path | ❌ Fails — micropip cannot parse bare filename as wheel |
+| Strategy B (parallel) | `files` + `asyncio.gather(micropip.install(...))` | ❌ Fails — Pyodide `set_wheel_metadata` internal error |
+| Strategy C | `files` + `emfs://` URL in `packages` | ❌ Fails — micropip cannot parse `emfs://` scheme |
 
-2. **Validate the approach end-to-end**
-   - Confirm PyScript initialization completes reliably
-   - Measure load time vs. bundled mode
-   - Check for edge cases (WASM deps, transitive deps, large number of wheels)
+**Conclusion**: Strategy A is the only viable loading strategy. The previously reported PyScript timeout with multiple local wheel URLs did not reproduce. Strategy B approaches all fail at the micropip/Pyodide integration level.
 
-3. **Based on experiment results, refine the design**
-   - If `files` + `micropip` works: design splits around this mechanism
-   - If not: investigate alternative strategies or wait for PyScript fix
-   - Update specs and design documents based on findings
-
-The specs, design, and tasks in this change are **preliminary** and will be revised based on experimental results. Do not treat them as final implementation requirements.
-
-## Preliminary Design Direction
+## Design
 
 ### Architecture
 
 ```
 BUNDLED MODE (default, feat-dependency-bundling):
   ╔═════════════════════════════════════╗
-  ║  myapp-py3-none-any.whl            ║
-  ║  ├── webcompy/ (excl. cli)           ║
+  ║  myapp-{hash}-py3-none-any.whl     ║
+  ║  ├── webcompy/ (excl. cli)         ║
   ║  ├── myapp/                        ║
   ║  ├── flask/                        ║
   ║  └── httpx/                        ║
   ╚═════════════════════════════════════╝
-  packages = ["/_webcompy-app-package/myapp-py3-none-any.whl", "numpy"]
+  packages = ["/_webcompy-app-package/myapp-{hash}-py3-none-any.whl", "numpy"]
 
 SPLIT MODE (feat-split-mode, opt-in):
   ╔══════════╗  ╔════════╗  ╔═══════╗  ╔═══════╗
   ║ webcompy ║  ║ myapp  ║  ║ flask ║  ║ httpx ║
   ║  .whl    ║  ║  .whl  ║  ║  .whl ║  ║  .whl ║
   ╚══════════╝  ╚════════╝  ╚═══════╝  ╚═══════╝
-  
-  Strategy A: packages (if PyScript fixes multi-wheel loading)
-    packages = ["/_.../webcompy.whl", "/_.../myapp.whl",
-                "/_.../flask.whl", "/_.../httpx.whl", "numpy"]
 
-  Strategy B: files + micropip (experiment-first)
-    files: place wheels in virtual filesystem
-    startup: await micropip.install() for each wheel
-    packages = ["numpy"]  (WASM from CDN only)
+  Strategy: packages with multiple local wheel URLs (confirmed working)
+    packages = ["/_.../webcompy-py3-none-any.whl",
+                "/_.../flask-py3-none-any.whl",
+                "/_.../httpx-py3-none-any.whl",
+                "/_.../myapp-{hash}-py3-none-any.whl",  # content-hash
+                "numpy"]  # WASM from CDN only
 ```
 
 ### Configuration
@@ -90,46 +77,7 @@ class AppConfig:
     wheel_mode: Literal["bundled", "split"] = "bundled"
 ```
 
-### Preliminary Experiment Plan
-
-**Experiment 1: `files` + `micropip` approach**
-
-```html
-<script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
-<py-config>
-  {
-    "files": {
-      "/wheels/webcompy-py3-none-any.whl": "/_webcompy-app-package/webcompy-py3-none-any.whl",
-      "/wheels/myapp-py3-none-any.whl": "/_webcompy-app-package/myapp-py3-none-any.whl",
-      "/wheels/flask-py3-none-any.whl": "/_webcompy-app-package/flask-py3-none-any.whl"
-    },
-    "packages": ["numpy"]
-  }
-</py-config>
-<script type="py">
-import asyncio
-import micropip
-async def main():
-    await micropip.install("/wheels/webcompy-py3-none-any.whl")
-    await micropip.install("/wheels/flask-py3-none-any.whl")
-    from myapp.bootstrap import app
-    app.run()
-asyncio.ensure_future(main())
-</script>
-```
-
-Measure:
-- Initialization time (vs. bundled mode baseline)
-- Reliability across reloads
-- Error handling for missing/wrong wheels
-
-**Experiment 2: Order-of-magnitude scaling**
-
-Test with 5, 10, 20 pure-Py dependency wheels to measure:
-- Whether initialization time scales linearly
-- Whether there's a practical limit
-
-### Cache Headers (Preliminary)
+### Cache Headers
 
 | Wheel | Dev Server | Production (SSG) |
 |-------|-----------|-------------------|
@@ -138,26 +86,48 @@ Test with 5, 10, 20 pure-Py dependency wheels to measure:
 | App (dev) | `no-cache` | N/A |
 | App (SSG) | N/A | ETag by hosting |
 
+### Content-Hash Strategy for Split Wheels
+
+| Wheel | Content-Hash | Rationale |
+|-------|-------------|-----------|
+| App | Yes (`myapp-0+sha.{hash8}-py3-none-any.whl`) | Changes frequently with app code |
+| Framework | No (`webcompy-py3-none-any.whl`) | WebComPy releases are infrequent; fixed URL with long cache |
+| Dependencies | No (`{dep_name}-py3-none-any.whl`) | Dependencies change less frequently; fixed URL with long cache |
+
 ## Specs Affected
 
 - `app-config` — add `wheel_mode` field
-- `cli` — add `--wheel-mode` CLI flag, multi-wheel serving
-- `wheel-builder` — reintroduce `make_browser_webcompy_wheel()`, add per-dependency wheel generation
+- `cli` — add `--wheel-mode` CLI flag, multi-wheel serving, cache headers per wheel type
+- `wheel-builder` — reintroduce `make_browser_webcompy_wheel()`, per-dependency wheel generation with stable filenames
 - `lockfile` — no changes needed (classification already tracks `is_wasm`)
 - `dependency-resolver` — no changes needed
 
 ## Tasks
 
-**Note: Tasks are preliminary and will be revised based on experiment results.**
+- [x] **Task 0: Experiment to determine viable loading strategy**
+  - Built minimal test with 2-4 local wheels in `.tmp/experiment/`
+  - Tested Strategy A, B serial, B parallel, C
+  - **Result**: Strategy A confirmed working, no timeout reproduced
 
-- [ ] **Task 0: Experiment with `files` + `micropip` approach**
-  - Build a minimal test with 2-3 local wheels using PyScript `files` config and `micropip.install()`
-  - Measure initialization time vs. bundled mode
-  - Document results and decide on implementation strategy
-  - Update this proposal and design based on findings
+- [ ] **Task 1: Add `wheel_mode` to AppConfig**
+  - Add `wheel_mode: Literal["bundled", "split"] = "bundled"` to `AppConfig`
+  - Add `--wheel-mode` CLI flag
+  - Write unit tests
 
-- [ ] **Task 1: Add `wheel_mode` to AppConfig** (after experiment confirms approach)
-- [ ] **Task 2: Implement split wheel generation** (after experiment confirms approach)
-- [ ] **Task 3: Update HTML generation for split mode** (after experiment confirms approach)
-- [ ] **Task 4: Update dev server and SSG for multi-wheel serving** (after experiment confirms approach)
-- [ ] **Task 5: Add E2E tests for split mode** (after experiment confirms approach)
+- [ ] **Task 2: Implement split wheel generation**
+  - Reintroduce `make_browser_webcompy_wheel()` (reference: `feat/wheel-split` commit `d474c65`)
+  - Produce per-dependency wheels via `make_wheel()` with stable filenames
+  - Update `make_webcompy_app_package()` for app-only wheel in split mode
+  - Write unit tests
+
+- [ ] **Task 3: Update HTML generation for split mode**
+  - Implement multi-wheel `packages` list in `generate_html()`
+  - App wheel with content-hash, framework/dep wheels with stable URLs
+  - Write unit tests
+
+- [ ] **Task 4: Update dev server and SSG for multi-wheel serving**
+  - Serve multiple wheel files with per-type cache headers
+  - Update SSG output for multiple wheel files
+  - Write E2E tests
+
+- [ ] **Task 5: Add E2E tests for split mode**
