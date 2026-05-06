@@ -5,6 +5,7 @@ import json
 from typing import TypeAlias
 
 from webcompy.app._app import WebComPyApp
+from webcompy.app._config import PluginScript
 from webcompy.components._component import Component
 from webcompy.elements.typealias import ElementChildren
 from webcompy.elements.types import Element, RepeatElement
@@ -112,6 +113,36 @@ def _load_scripts(scripts: Scripts):
     ]
 
 
+def _render_plugin_script(ps: PluginScript) -> _HtmlElement:
+    if ps.condition is None:
+        return _HtmlElement("script", ps.attrs, ps.script)
+    target = "document.head" if ps.in_head else "document.body"
+    if "src" in ps.attrs:
+        js_parts: list[str] = [
+            "(function(){",
+            f"  if ({ps.condition}) {{",
+            "    var __wc_s = document.createElement('script');",
+        ]
+        for key, value in ps.attrs.items():
+            escaped = json.dumps(value)
+            js_parts.append(f"    __wc_s.setAttribute({json.dumps(key)}, {escaped});")
+        if ps.script:
+            js_parts.append(f"    __wc_s.onload = function() {{ {ps.script} }};")
+        js_parts.append(f"    {target}.appendChild(__wc_s);")
+        js_parts.extend(["  }", "})();"])
+        return _HtmlElement("script", {}, "\n".join(js_parts))
+    if not ps.script:
+        return _HtmlElement("script", {})
+    js_parts = [
+        "(function(){",
+        f"  if ({ps.condition}) {{",
+        f"    {ps.script}",
+        "  }",
+        "})();",
+    ]
+    return _HtmlElement("script", {}, "\n".join(js_parts))
+
+
 def generate_html(
     app: WebComPyApp,
     dev_mode: bool,
@@ -186,6 +217,12 @@ def generate_html(
 
     scripts_head.extend(app.head["script"])
     scripts_body.extend(app.scripts)
+    plugin_head_scripts: list[_HtmlElement] = []
+    plugin_body_scripts: list[_HtmlElement] = []
+    for ps in app.config.scripts:
+        (plugin_head_scripts if ps.in_head else plugin_body_scripts).append(_render_plugin_script(ps))
+    for ps in app._plugin_manager.scripts:
+        (plugin_head_scripts if ps.in_head else plugin_body_scripts).append(_render_plugin_script(ps))
     if dev_mode:
         scripts_body.append(
             (
@@ -227,6 +264,7 @@ def generate_html(
             ),
             *[_HtmlElement("link", attrs) for attrs in app.head.get("link", [])],
             *_load_scripts(scripts_head),
+            *plugin_head_scripts,
         ),
         _HtmlElement(
             "body",
@@ -234,6 +272,7 @@ def generate_html(
             _Loadscreen(),
             app_root,
             *_load_scripts(scripts_body),
+            *plugin_body_scripts,
             "<!--webcompy-app-loader-->",
         ),
     ).render_html().replace("<!--webcompy-app-loader-->", app_loader_html)

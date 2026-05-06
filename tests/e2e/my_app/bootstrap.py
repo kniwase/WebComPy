@@ -13,6 +13,7 @@ app = WebComPyApp(
         app_package=Path(__file__).parent,
         base_url="/",
         dependencies=["aiofiles"],
+        plugins=["my_app.plugins:ErudaPlugin"],
     ),
 )
 app.provide(AppThemeKey, "app-dark-theme")

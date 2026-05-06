@@ -12,6 +12,7 @@ from webcompy.components._generator import ComponentStore
 from webcompy.di._keys import _COMPONENT_STORE_KEY
 from webcompy.di._scope import DIScope, _set_app_di_scope
 from webcompy.exception import WebComPyException
+from webcompy.plugin._manager import PluginManager
 from webcompy.router import Router
 from webcompy.utils import ENVIRONMENT
 
@@ -47,6 +48,11 @@ class WebComPyApp:
         self._di_scope.provide(_COMPONENT_STORE_KEY, self._component_store)
         self._defer_depth: int = 0
         self._deferred_callbacks: list = []
+        self._router = router
+        self._plugin_manager = PluginManager(self)
+        if self._config.plugins:
+            self._plugin_manager.discover(self._config.plugins)
+            self._plugin_manager.init_all()
         if ENVIRONMENT == "pyscript":
             self._di_scope.__enter__()
             _set_app_di_scope(self._di_scope)
@@ -112,6 +118,10 @@ class WebComPyApp:
         self._di_scope.provide(key, value)
 
     @property
+    def router(self):
+        return self._router
+
+    @property
     def routes(self):
         return self._root.routes
 
@@ -174,5 +184,6 @@ class WebComPyApp:
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("app.run() can only be called in a browser environment.")
         self._record_phase("run_start")
+        self._plugin_manager.call_on_app_ready(self)
         self._root._selector = selector
         self._root.render()

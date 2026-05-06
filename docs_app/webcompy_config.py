@@ -10,6 +10,7 @@ app_config = AppConfig(
     base_url="/",
     dependencies=None,
     dependencies_from="browser",
-    standalone=True,  # Generate docs with local runtime assets for offline capability
+    standalone=True,
+    plugins=["docs_app.plugins:ErudaPlugin"],
     wheel_mode="split",
 )
