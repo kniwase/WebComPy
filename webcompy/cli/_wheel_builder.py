@@ -94,6 +94,21 @@ def get_wheel_filename(name: str, version: str) -> str:
     return f"{_normalize_name(name)}-{version}-py3-none-any.whl"
 
 
+def make_browser_webcompy_wheel(
+    webcompy_package_dir: pathlib.Path,
+    dest: pathlib.Path,
+    version: str,
+) -> pathlib.Path:
+    wheel_path = make_wheel(
+        "webcompy",
+        webcompy_package_dir,
+        dest,
+        version,
+        exclude_parts=_BROWSER_ONLY_EXCLUDE,
+    )
+    return _content_hash_wheel(wheel_path, "webcompy", version)
+
+
 def _content_hash_wheel(wheel_path: pathlib.Path, name: str, app_version: str) -> pathlib.Path:
     digest = hashlib.sha256(wheel_path.read_bytes()).hexdigest()[:8]
     hash_version = f"0+sha.{digest}"
@@ -183,9 +198,13 @@ def make_wheel(
     dest: pathlib.Path,
     version: str,
     package_data: dict[str, list[str]] | None = None,
+    exclude_parts: set[str] | None = None,
 ) -> pathlib.Path:
     packages = _discover_packages(package_dir)
     files = _collect_package_files(package_dir, packages, package_data)
+    if exclude_parts:
+        files = [(fp, ap) for fp, ap in files if not any(part in exclude_parts for part in pathlib.Path(ap).parts)]
+        packages = [pkg for pkg in packages if not any(part in exclude_parts for part in pkg.split("."))]
     dist_name = _normalize_name(name)
     dist_info = f"{dist_name}-{version}.dist-info"
     top_levels: set[str] = set()
@@ -302,6 +321,7 @@ def make_webcompy_app_package(
     app_version: str,
     assets: dict[str, str] | None = None,
     bundled_deps: list[tuple[str, pathlib.Path]] | None = None,
+    skip_webcompy: bool = False,
 ) -> pathlib.Path:
     app_name = package_dir.name
     package_data: dict[str, list[str]] | None = None
@@ -313,10 +333,10 @@ def make_webcompy_app_package(
         registry_arc_path = f"{app_name}/_assets_registry.py"
         extra_files = [(registry_arc_path, registry_content.encode("utf-8"))]
 
-    package_dirs: list[tuple[str, pathlib.Path]] = [
-        ("webcompy", webcompy_package_dir),
-        (app_name, package_dir),
-    ]
+    package_dirs: list[tuple[str, pathlib.Path]] = []
+    if not skip_webcompy:
+        package_dirs.append(("webcompy", webcompy_package_dir))
+    package_dirs.append((app_name, package_dir))
     if bundled_deps:
         package_dirs.extend(bundled_deps)
 

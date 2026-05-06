@@ -122,6 +122,7 @@ def generate_html(
     wasm_local_urls: dict[str, str] | None = None,
     lockfile_url: str | None = None,
     runtime_serving: str = "cdn",
+    extra_wheel_filenames: list[str] | None = None,
 ):
     base_url = app.config.base_url
     app_root = (
@@ -154,6 +155,9 @@ def generate_html(
 
     app_wheel_url = f"{base_url}_webcompy-app-package/{wheel_filename}"
     py_packages = [app_wheel_url]
+    if extra_wheel_filenames:
+        for name in extra_wheel_filenames:
+            py_packages.insert(0, f"{base_url}_webcompy-app-package/{name}")
     for name in pyodide_package_names or []:
         if wasm_local_urls and name in wasm_local_urls:
             py_packages.append(wasm_local_urls[name])

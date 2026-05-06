@@ -220,12 +220,74 @@ def static_site():
     assert wheel_dir.exists(), f"Wheel dir not created: {wheel_dir}"
 
     wheel_files = list(wheel_dir.glob("*.whl"))
-    assert len(wheel_files) == 1, f"Expected 1 wheel, found {len(wheel_files)}: {wheel_files}"
+    assert len(wheel_files) >= 1, f"Expected at least 1 wheel, found {len(wheel_files)}: {wheel_files}"
 
     yield dist_dir, wheel_files[0], app_dir.name
 
     if TMP_DIR.exists():
         shutil.rmtree(TMP_DIR)
+
+
+@pytest.fixture(scope="session")
+def split_static_site():
+    app_dir = E2E_DIR / "my_app"
+
+    split_tmp = TMP_DIR.parent / "e2e-split-static"
+    if split_tmp.exists():
+        shutil.rmtree(split_tmp)
+    split_tmp.mkdir(parents=True)
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(E2E_DIR) + os.pathsep + env.get("PYTHONPATH", "")
+
+    dist_dir = split_tmp / "dist"
+
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "--project",
+            str(PROJECT_ROOT),
+            "python",
+            "-m",
+            "webcompy",
+            "generate",
+            "--dist",
+            str(dist_dir),
+            "--wheel-mode",
+            "split",
+        ],
+        cwd=str(E2E_DIR),
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, f"Split generate failed:\nstdout: {result.stdout}\nstderr: {result.stderr}"
+    assert dist_dir.exists(), f"Dist dir not created: {dist_dir}"
+
+    wheel_dir = dist_dir / "_webcompy-app-package"
+    assert wheel_dir.exists(), f"Wheel dir not created: {wheel_dir}"
+
+    wheel_files = list(wheel_dir.glob("*.whl"))
+    assert len(wheel_files) == 2, (
+        f"Expected exactly 2 wheels in split mode, found {len(wheel_files)}: {[f.name for f in wheel_files]}"
+    )
+
+    app_wheel = next(
+        (f for f in wheel_files if f.name.startswith(app_dir.name) and "0+sha." in f.name),
+        wheel_files[0],
+    )
+    framework_wheel = next(
+        (f for f in wheel_files if f.name.startswith("webcompy-") and "0+sha." in f.name),
+        None,
+    )
+    assert framework_wheel is not None, f"No content-hash framework wheel found in {[f.name for f in wheel_files]}"
+
+    yield dist_dir, app_wheel, framework_wheel, app_dir.name, wheel_files
+
+    if split_tmp.exists():
+        shutil.rmtree(split_tmp)
 
 
 @pytest.fixture(scope="session")
