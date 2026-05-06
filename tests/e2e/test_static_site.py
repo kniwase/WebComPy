@@ -29,3 +29,39 @@ class TestStaticSiteWheelFilename:
     def test_wheel_is_valid_zip(self, static_site):
         _, wheel_file, _ = static_site
         assert zipfile.is_zipfile(wheel_file), f"Wheel file is not a valid zip: {wheel_file}"
+
+
+@pytest.mark.e2e
+class TestSplitModeWheelFilenames:
+    def test_both_wheels_have_content_hash(self, split_static_site):
+        _dist_dir, _app_wheel, _framework_wheel, _app_name, all_wheels = split_static_site
+        assert len(all_wheels) == 2
+        for wf in all_wheels:
+            assert _WHEEL_FILENAME_RE.match(wf.name), f"Wheel {wf.name!r} does not match content-hash pattern"
+
+    def test_framework_wheel_in_html(self, split_static_site):
+        dist_dir, _app_wheel, framework_wheel, _app_name, _all_wheels = split_static_site
+        html_content = (dist_dir / "index.html").read_text(encoding="utf-8")
+        assert f"_webcompy-app-package/{framework_wheel.name}" in html_content
+
+    def test_app_wheel_in_html(self, split_static_site):
+        dist_dir, app_wheel, _framework_wheel, _app_name, _all_wheels = split_static_site
+        html_content = (dist_dir / "index.html").read_text(encoding="utf-8")
+        assert f"_webcompy-app-package/{app_wheel.name}" in html_content
+
+    def test_framework_wheel_before_app_wheel_in_packages(self, split_static_site):
+        dist_dir, app_wheel, framework_wheel, _app_name, _all_wheels = split_static_site
+        html_content = (dist_dir / "index.html").read_text(encoding="utf-8")
+        fw_url = f"_webcompy-app-package/{framework_wheel.name}"
+        app_url = f"_webcompy-app-package/{app_wheel.name}"
+        fw_idx = html_content.index(fw_url)
+        app_idx = html_content.index(app_url)
+        assert fw_idx < app_idx, (
+            f"Framework wheel ({fw_url}) at index {fw_idx} should appear before "
+            f"app wheel ({app_url}) at index {app_idx}"
+        )
+
+    def test_all_wheels_are_valid_zips(self, split_static_site):
+        _dist_dir, _app_wheel, _framework_wheel, _app_name, all_wheels = split_static_site
+        for wf in all_wheels:
+            assert zipfile.is_zipfile(wf), f"Not a valid zip: {wf.name}"

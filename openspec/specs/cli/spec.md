@@ -24,8 +24,8 @@ The development server SHALL be startable via `python -m webcompy start --dev` o
 - **THEN** the server SHALL start on port 3000
 - **AND** the `--port` flag SHALL override `ServerConfig.port`
 
-### Requirement: The dev server shall serve a single bundled wheel
-The dev server SHALL build a single Python wheel containing the webcompy framework (excluding `webcompy/cli/`), application code, and appropriate pure-Python dependencies based on `serve_all_deps`. When `serve_all_deps=True`, ALL pure-Python dependencies are bundled. When `serve_all_deps=False`, only pure-Python dependencies NOT available from the Pyodide CDN are bundled; CDN-available ones are loaded by name via `py-config.packages`. The wheel SHALL be served at a stable `/_webcompy-app-package/` endpoint. The app wheel in dev mode SHALL have `Cache-Control: no-cache`.
+### Requirement: The dev server and SSG shall support both bundled and split wheel mode
+The dev server SHALL build wheel(s) containing the webcompy framework (excluding `webcompy/cli/`), application code, and appropriate pure-Python dependencies based on `serve_all_deps`. When `wheel_mode="bundled"` (default), a single Python wheel is produced. When `wheel_mode="split"`, two wheel files are produced: a framework wheel (webcompy, excl. cli/) and an app wheel (app code + all dependencies bundled). When `serve_all_deps=True`, ALL pure-Python dependencies are bundled. When `serve_all_deps=False`, only pure-Python dependencies NOT available from the Pyodide CDN are bundled; CDN-available ones are loaded by name via `py-config.packages`. All wheels SHALL be served from a `/_webcompy-app-package/` endpoint. The app wheel in dev mode SHALL have `Cache-Control: no-cache`.
 
 #### Scenario: Starting the dev server with serve_all_deps=True
 - **WHEN** a developer runs `python -m webcompy start --dev` with `serve_all_deps=True` (default)
@@ -39,6 +39,17 @@ The dev server SHALL build a single Python wheel containing the webcompy framewo
 - **WHEN** a developer runs `python -m webcompy start --dev --no-serve-all-deps`
 - **THEN** the server SHALL build a single wheel containing webcompy (excl. cli), app code, and locally-bundled dependencies only
 - **AND** `py-config.packages` SHALL contain the app wheel URL, WASM package names, AND CDN pure-Python package names
+
+#### Scenario: Starting the dev server in split mode
+- **WHEN** a developer runs `python -m webcompy start --dev` with `AppConfig(wheel_mode="split")`
+- **THEN** the server SHALL build two wheels: framework and app-with-deps
+- **AND** the framework wheel SHALL receive `Cache-Control: max-age=86400, must-revalidate`
+- **AND** the app wheel SHALL receive `Cache-Control: no-cache` in dev mode
+
+#### Scenario: Generating a static site in split mode
+- **WHEN** a developer runs `python -m webcompy generate` with `AppConfig(wheel_mode="split")`
+- **THEN** two wheel files SHALL be placed in `dist/_webcompy-app-package/`
+- **AND** the generated HTML SHALL reference both wheel URLs and WASM package names
 
 #### Scenario: Dev server with assets
 - **WHEN** a developer configures `assets={"logo": "images/logo.png"}` in `AppConfig`
@@ -454,6 +465,13 @@ In runtime-local mode, `generate_html()` SHALL replace PyScript and Pyodide CDN 
 - **WHEN** `runtime_serving="cdn"` (default)
 - **THEN** `py-config` SHALL NOT include `interpreter` or `lockFileURL`
 - **AND** script and CSS tags SHALL reference CDN URLs
+
+### Requirement: CLI --wheel-mode flag shall override AppConfig.wheel_mode
+The `start` and `generate` CLI subcommands SHALL accept `--wheel-mode <mode>` where `<mode>` is `"bundled"` or `"split"`. This SHALL override `AppConfig.wheel_mode`.
+
+#### Scenario: Overriding with --wheel-mode split
+- **WHEN** a developer runs `python -m webcompy start --dev --wheel-mode split`
+- **THEN** split mode SHALL be used regardless of `AppConfig.wheel_mode`
 
 ### Requirement: The CLI shall accept --runtime-serving value flag
 The `start` and `generate` CLI subcommands SHALL accept `--runtime-serving <mode>` where `<mode>` is `"cdn"` or `"local"`. This overrides `AppConfig.runtime_serving`.

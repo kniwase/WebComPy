@@ -27,6 +27,7 @@ class AppConfig:
     wasm_serving: Literal["cdn", "local"] | None = None
     runtime_serving: Literal["cdn", "local"] | None = None
     standalone: bool = False
+    wheel_mode: Literal["bundled", "split"] = "bundled"
     scripts: list[PluginScript] = field(default_factory=list)
 
     def __post_init__(self):
