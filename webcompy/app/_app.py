@@ -158,6 +158,18 @@ class WebComPyApp:
     def update_head(self):
         return self._root.update_head
 
+    @property
+    def set_html_attr(self):
+        return self._root.set_html_attr
+
+    @property
+    def remove_html_attr(self):
+        return self._root.remove_html_attr
+
+    @property
+    def html_attrs(self):
+        return self._root.html_attrs
+
     def run(self, selector: str = "#webcompy-app") -> None:
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("app.run() can only be called in a browser environment.")
