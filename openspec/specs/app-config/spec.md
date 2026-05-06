@@ -11,7 +11,11 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 
 #### Scenario: Creating a minimal application configuration
 - **WHEN** a developer creates `AppConfig()` without explicit config
-- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=None`, `assets=None`, `app_package="."`, `profile=False`, `hydrate=True`, `version=None`, `serve_all_deps=True`, `scripts=[]` with `field(default_factory=list)`)
+- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=None`, `assets=None`, `app_package="."`, `profile=False`, `hydrate=True`, `version=None`, `serve_all_deps=True`, `scripts` shall be an empty list, `plugins` shall be an empty list, both default `field(default_factory=list)`)
+
+### Requirement: AppConfig shall include a plugins field for declarative plugin discovery
+
+`AppConfig` SHALL include a `plugins: list[str]` field that defaults to an empty list. Each string SHALL be an absolute module path with a colon-separated class name (e.g., `"myapp.plugins:ErudaPlugin"`). Plugins are discovered and initialized by `PluginManager` during `WebComPyApp.__init__()`.
 - **AND** the app SHALL function correctly with these defaults
 
 #### Scenario: Configuring profiling and hydration
