@@ -15,11 +15,8 @@ app_config = AppConfig(
                 "type": "text/javascript",
                 "src": "https://cdnjs.cloudflare.com/ajax/libs/eruda/2.4.1/eruda.min.js",
             },
-            in_head=True,
-            condition="new URLSearchParams(location.search).get('debug') === 'True'",
-        ),
-        PluginScript(
             script="eruda.init();",
+            in_head=True,
             condition="new URLSearchParams(location.search).get('debug') === 'True'",
         ),
     ],
