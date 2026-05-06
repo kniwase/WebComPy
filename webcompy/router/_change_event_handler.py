@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, Literal
 
 from webcompy._browser._modules import browser
@@ -12,10 +13,18 @@ class Location(SignalBase[str]):
     _state: dict[str, Any] | None
     _base_url: str
 
-    def __init__(self, mode: Literal["hash", "history"], base_url: str) -> None:
+    def __init__(
+        self,
+        mode: Literal["hash", "history"],
+        base_url: str,
+        before_route_change: list[Callable[[str, str], bool | None]] | None = None,
+        after_route_change: list[Callable[[str], None]] | None = None,
+    ) -> None:
         super().__init__("")
         self._state = None
         self._base_url = base_url.strip().strip("/")
+        self._before_route_change = before_route_change if before_route_change is not None else []
+        self._after_route_change = after_route_change if after_route_change is not None else []
         self._popstate_proxy = None
         self.set_mode(mode)
         if browser:
@@ -52,11 +61,16 @@ class Location(SignalBase[str]):
 
     @SignalBase._change_event
     def __set_path__(self, path: str, state: dict[str, Any] | None):
+        for guard in self._before_route_change:
+            if guard(self._value, path) is False:
+                return
         self._state = state
         if self.__mode__ == "hash" and path.startswith("#"):
             self._value = path[1:]
         else:
             self._value = path
+        for callback in self._after_route_change:
+            callback(path)
 
     def _refresh_path(self, _: Any = None):
         if browser and self.__mode__ == "history":

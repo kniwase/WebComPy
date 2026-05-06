@@ -1,11 +1,13 @@
+from typing import ClassVar
+
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import PluginScript
 
 class WebComPyPluginException(Exception): ...
 
 class WebComPyPlugin:
-    name: str
-    version: str
+    name: ClassVar[str] = ""
+    version: ClassVar[str] = "0.1.0"
 
     @staticmethod
     def get_providers() -> dict[object, object]: ...

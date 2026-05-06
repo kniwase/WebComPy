@@ -49,13 +49,18 @@ class Router:
         self.__mode__ = mode
         self.__base_url__ = base_url.strip().strip("/")
         self._base_url_stripper = partial(re_compile("^" + re_escape("/" + self.__base_url__)).sub, "")
-        self._location = Location(self.__mode__, self.__base_url__)
         self.__routes__ = self._generate_routes(pages)
         self._default = default
         self._preload = preload
         self.before_route_change: list[Callable[[str, str], bool | None]] = []
         self.after_route_change: list[Callable[[str], None]] = []
         self.on_route_error: list[Callable[[Exception], bool | None]] = []
+        self._location = Location(
+            self.__mode__,
+            self.__base_url__,
+            before_route_change=self.before_route_change,
+            after_route_change=self.after_route_change,
+        )
 
     @computed_property
     def __cases__(self):
@@ -156,13 +161,7 @@ class Router:
         ]
 
     def __set_path__(self, path: str, state: dict[str, Any] | None):
-        from_path = self._location._value
-        for guard in self.before_route_change:
-            if guard(from_path, path) is False:
-                return
         self._location.__set_path__(path, state)
-        for callback in self.after_route_change:
-            callback(path)
 
     def preload_lazy_routes(self) -> None:
         if not self._preload:

@@ -4,7 +4,7 @@
 
 The plugin system provides a formal extension mechanism for WebComPy applications. Third-party Python packages can hook into the application lifecycle, register DI services, and declare conditional JavaScript scripts — all through a structured `WebComPyPlugin` API. This enables use cases like debug toolbars, authentication guards, analytics tracking, and custom integrations without modifying the framework core.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: WebComPyPlugin shall provide a base class for framework extensions
 

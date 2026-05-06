@@ -1,5 +1,5 @@
-from webcompy.app._config import PluginScript
-from webcompy.plugin._plugin import WebComPyPlugin
+from webcompy.app import PluginScript
+from webcompy.plugin import WebComPyPlugin
 
 
 class ErudaPlugin(WebComPyPlugin):

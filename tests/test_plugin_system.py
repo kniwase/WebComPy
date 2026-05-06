@@ -5,6 +5,7 @@ from webcompy.app._config import AppConfig, PluginScript
 from webcompy.cli._html import generate_html
 from webcompy.plugin._manager import PluginManager
 from webcompy.plugin._plugin import WebComPyPlugin, WebComPyPluginException
+from webcompy.router._router import Router
 
 
 class _TestApp:
@@ -218,8 +219,6 @@ class TestGenerateHtmlWithPluginScripts:
 
 class TestRouterHooks:
     def test_before_route_change_cancel(self):
-        from webcompy.router._router import Router
-
         router = Router(mode="hash")
         cancelled: list[bool] = []
 
@@ -234,8 +233,6 @@ class TestRouterHooks:
         assert len(cancelled) == 0
 
     def test_before_route_change_allow(self):
-        from webcompy.router._router import Router
-
         router = Router(mode="hash")
         navigated: list[str] = []
 
@@ -249,8 +246,6 @@ class TestRouterHooks:
         assert navigated[0] == "/about"
 
     def test_multiple_guards_short_circuit(self):
-        from webcompy.router._router import Router
-
         router = Router(mode="hash")
         second_called = False
 
@@ -267,15 +262,22 @@ class TestRouterHooks:
         assert not second_called
 
     def test_on_route_error_suppress(self):
-        from webcompy.router._router import Router
-
         class BadRouter(Router):
             def __init__(self):
+                from collections.abc import Callable
+                from re import Match
+
                 self._location = type("Loc", (), {"_value": "/"})()
-                self.__routes__ = []
+                matcher: Callable[[str], Match[str] | None] = lambda _: None
+                self.__routes__ = [
+                    ("/test", matcher, [], type("DummyGen", (), {"_instance_id": ""})(), {}),
+                ]
                 self.before_route_change = []
                 self.after_route_change = []
                 self.on_route_error = []
+
+            def _get_elements_generator(self, args):
+                raise ValueError("test error")
 
         router = BadRouter()
         suppressed = False
@@ -287,23 +289,37 @@ class TestRouterHooks:
 
         router.on_route_error.append(handler)
         _ = router.__cases__
+        assert suppressed
 
     def test_on_route_error_propagate(self):
-        from webcompy.router._router import Router
+        class BadRouter(Router):
+            def __init__(self):
+                from collections.abc import Callable
+                from re import Match
 
-        router = Router(mode="hash")
-        router.before_route_change = []
-        router.after_route_change = []
-        handled = False
+                self._location = type("Loc", (), {"_value": "/"})()
+                matcher: Callable[[str], Match[str] | None] = lambda _: None
+                self.__routes__ = [
+                    ("/test", matcher, [], type("DummyGen", (), {"_instance_id": ""})(), {}),
+                ]
+                self.before_route_change = []
+                self.after_route_change = []
+                self.on_route_error = []
+
+            def _get_elements_generator(self, args):
+                raise ValueError("test error")
+
+        router = BadRouter()
+        called = False
 
         def handler(e):
-            nonlocal handled
-            handled = True
+            nonlocal called
+            called = True
             return False
 
+        import pytest
+
         router.on_route_error.append(handler)
-        try:
-            router.__set_path__("/error", {})
+        with pytest.raises(ValueError):
             _ = router.__cases__
-        except Exception:
-            assert handled
+        assert called
