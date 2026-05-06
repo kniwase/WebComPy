@@ -10,10 +10,10 @@
 - [x] **Task 5: Update dev server for two-wheel serving**
 - [x] **Task 6: Update SSG for two-wheel output**
 - [x] **Task 7: Update HTML generation for split mode**
-- [ ] **Task 8: Update E2E tests for two-wheel split mode**
+- [x] **Task 8: Update E2E tests for two-wheel split mode**
   - `conftest.py`: split_static_site fixture expects exactly 2 wheels
   - `test_static_site.py`: verify both wheels have content-hash, both in HTML
-- [ ] **Task 9: Lint, typecheck, and test validation**
+- [x] **Task 9: Lint, typecheck, and test validation**
   - `uv run ruff check .`
   - `uv run pyright`
   - `uv run python -m pytest tests/ --tb=short`
