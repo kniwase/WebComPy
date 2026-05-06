@@ -5,6 +5,7 @@ import json
 from typing import TypeAlias
 
 from webcompy.app._app import WebComPyApp
+from webcompy.app._config import PluginScript
 from webcompy.components._component import Component
 from webcompy.elements.typealias import ElementChildren
 from webcompy.elements.types import Element, RepeatElement
@@ -112,6 +113,36 @@ def _load_scripts(scripts: Scripts):
     ]
 
 
+def _render_plugin_script(ps: PluginScript) -> _HtmlElement:
+    if ps.condition is None:
+        return _HtmlElement("script", ps.attrs, ps.script)
+    target = "document.head" if ps.in_head else "document.body"
+    if "src" in ps.attrs:
+        js_parts: list[str] = [
+            "(function(){",
+            f"  if ({ps.condition}) {{",
+            "    var __wc_s = document.createElement('script');",
+        ]
+        for key, value in ps.attrs.items():
+            escaped = json.dumps(value)
+            js_parts.append(f"    __wc_s.setAttribute({json.dumps(key)}, {escaped});")
+        if ps.script:
+            js_parts.append(f"    __wc_s.onload = function() {{ {ps.script} }};")
+        js_parts.append(f"    {target}.appendChild(__wc_s);")
+        js_parts.extend(["  }", "})();"])
+        return _HtmlElement("script", {}, "\n".join(js_parts))
+    if not ps.script:
+        return _HtmlElement("script", {})
+    js_parts = [
+        "(function(){",
+        f"  if ({ps.condition}) {{",
+        f"    {ps.script}",
+        "  }",
+        "})();",
+    ]
+    return _HtmlElement("script", {}, "\n".join(js_parts))
+
+
 def generate_html(
     app: WebComPyApp,
     dev_mode: bool,
@@ -122,6 +153,7 @@ def generate_html(
     wasm_local_urls: dict[str, str] | None = None,
     lockfile_url: str | None = None,
     runtime_serving: str = "cdn",
+    extra_wheel_filenames: list[str] | None = None,
 ):
     base_url = app.config.base_url
     app_root = (
@@ -154,6 +186,9 @@ def generate_html(
 
     app_wheel_url = f"{base_url}_webcompy-app-package/{wheel_filename}"
     py_packages = [app_wheel_url]
+    if extra_wheel_filenames:
+        for name in extra_wheel_filenames:
+            py_packages.insert(0, f"{base_url}_webcompy-app-package/{name}")
     for name in pyodide_package_names or []:
         if wasm_local_urls and name in wasm_local_urls:
             py_packages.append(wasm_local_urls[name])
@@ -182,6 +217,8 @@ def generate_html(
 
     scripts_head.extend(app.head["script"])
     scripts_body.extend(app.scripts)
+    plugin_scripts_head = [_render_plugin_script(ps) for ps in app.config.scripts if ps.in_head]
+    plugin_scripts_body = [_render_plugin_script(ps) for ps in app.config.scripts if not ps.in_head]
     if dev_mode:
         scripts_body.append(
             (
@@ -223,6 +260,7 @@ def generate_html(
             ),
             *[_HtmlElement("link", attrs) for attrs in app.head.get("link", [])],
             *_load_scripts(scripts_head),
+            *plugin_scripts_head,
         ),
         _HtmlElement(
             "body",
@@ -230,6 +268,7 @@ def generate_html(
             _Loadscreen(),
             app_root,
             *_load_scripts(scripts_body),
+            *plugin_scripts_body,
             "<!--webcompy-app-loader-->",
         ),
     ).render_html().replace("<!--webcompy-app-loader-->", app_loader_html)

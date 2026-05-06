@@ -11,7 +11,7 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 
 #### Scenario: Creating a minimal application configuration
 - **WHEN** a developer creates `AppConfig()` without explicit config
-- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=None`, `assets=None`, `app_package="."`, `profile=False`, `hydrate=True`, `version=None`, `serve_all_deps=True`)
+- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=None`, `assets=None`, `app_package="."`, `profile=False`, `hydrate=True`, `version=None`, `serve_all_deps=True`, `scripts=[]` with `field(default_factory=list)`)
 - **AND** the app SHALL function correctly with these defaults
 
 #### Scenario: Configuring profiling and hydration
@@ -44,6 +44,20 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **WHEN** a developer creates `WebComPyApp(root_component=Root, config=AppConfig(base_url="/app/"))`
 - **THEN** the app SHALL use the provided configuration
 - **AND** the router SHALL use `base_url="/app/"` for URL handling
+
+### Requirement: AppConfig shall include a scripts field for declarative conditional script loading
+
+`AppConfig` SHALL include a `scripts: list[PluginScript]` field that defaults to an empty list. This field allows developers to declaratively define scripts that may be conditionally loaded at runtime in the browser. The `PluginScript` dataclass SHALL be defined in the same module (`webcompy/app/_config.py`) and exported in the public API.
+
+#### Scenario: Default scripts value
+- **WHEN** a developer creates `AppConfig()` without `scripts`
+- **THEN** `scripts` SHALL default to an empty list `[]`
+- **AND** no additional `<script>` tags SHALL appear in the generated HTML
+
+#### Scenario: Configuring conditional scripts
+- **WHEN** a developer creates `AppConfig(scripts=[PluginScript(attrs={"src": "https://example.com/debug.js"}, condition="location.search.includes('debug')")])`
+- **THEN** the configured scripts SHALL be passed to `generate_html()`
+- **AND** the generated HTML SHALL contain a wrapper `<script>` that loads `debug.js` only when `?debug` is in the URL
 
 ### Requirement: AppConfig shall include a serve_all_deps field for controlling dependency delivery
 `AppConfig` SHALL include a `serve_all_deps: bool = True` field. When `True` (default), all pure-Python packages that the WebComPy server can provide are served from the same origin — either bundled from local installation or downloaded from the Pyodide CDN and then bundled. When `False`, pure-Python packages available in the Pyodide CDN are loaded from the CDN by name via `py-config.packages`, and only packages not available from the CDN are bundled.
@@ -177,8 +191,19 @@ The `start` and `generate` CLI subcommands SHALL accept `--serve-all-deps` and `
 - **THEN** `serve_all_deps` SHALL be `True` for the session
 - **AND** CDN-available pure-Python packages SHALL be downloaded and bundled
 
+### Requirement: static_files_dir resolution shall be handled by call sites
+The `static_files_dir` field in `ServerConfig` and `GenerateConfig` SHALL remain a plain `str` field without a `static_files_dir_path` property. Path resolution SHALL be performed by the CLI call sites (`_generate.py`, `_server.py`) using `(app_package_path / static_files_dir).absolute()`.
+
+#### Scenario: GenerateConfig no longer exposes static_files_dir_path
+- **WHEN** code accesses a `GenerateConfig` instance
+- **THEN** `GenerateConfig` SHALL have a `static_files_dir: str` field and SHALL NOT have a `static_files_dir_path` property
+
+#### Scenario: ServerConfig no longer exposes static_files_dir_path
+- **WHEN** code accesses a `ServerConfig` instance
+- **THEN** `ServerConfig` SHALL have a `static_files_dir: str` field and SHALL NOT have a `static_files_dir_path` property
+
 ### Requirement: ServerConfig and GenerateConfig shall be internal
-`ServerConfig` and `GenerateConfig` SHALL be internal dataclasses used by CLI functions. They SHALL NOT be exported in `webcompy.__all__` or `webcompy.app.__all__`. Developers define them in `webcompy_server_config.py`, which the CLI reads from the app package or the project root.
+`ServerConfig` and `GenerateConfig` SHALL be internal dataclasses used by CLI functions. They SHALL NOT be exported in `webcompy.__all__` or `webcompy.app.__all__`. Developers define them in `webcompy_server_config.py`, which the CLI reads from the app package or the project root. The `static_files_dir` field in both classes SHALL be a plain `str` value resolved relative to `app_package_path` at the call site.
 
 #### Scenario: ServerConfig defaults
 - **WHEN** no `webcompy_server_config.py` exists (in the app package or at the project root) or it does not define `server_config`
@@ -295,3 +320,15 @@ The `start` and `generate` CLI subcommands SHALL accept `--runtime-serving <mode
 - **WHEN** `resolve_standalone_config()` is called multiple times on the same `AppConfig` instance
 - **THEN** the result SHALL be the same as calling it once
 - **AND** no additional warnings SHALL be emitted beyond the first call
+
+### Requirement: AppConfig shall include a wheel_mode field for controlling wheel bundling strategy
+`AppConfig` SHALL include a `wheel_mode: Literal["bundled", "split"] = "bundled"` field. When `"bundled"` (default), all code is combined into a single wheel. When `"split"`, two wheels are produced: a framework wheel (webcompy, excl. cli/) and an app wheel (app code + all pure-Python dependencies bundled together).
+
+#### Scenario: Default bundled mode
+- **WHEN** a developer creates `AppConfig()` without `wheel_mode`
+- **THEN** a single bundled wheel SHALL be produced containing webcompy (excl. cli), app code, and pure-Python dependencies
+
+#### Scenario: Split mode
+- **WHEN** a developer creates `AppConfig(wheel_mode="split")`
+- **THEN** two wheels SHALL be produced: framework wheel and app wheel (with all deps bundled)
+- **AND** both wheel URLs SHALL be listed in `py-config.packages`

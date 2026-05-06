@@ -50,17 +50,6 @@ app.set_head(
 app.append_script(
     {
         "type": "text/javascript",
-        "src": "https://cdnjs.cloudflare.com/ajax/libs/eruda/2.4.1/eruda.min.js",
-    },
-    in_head=True,
-)
-app.append_script(
-    {"type": "text/javascript"},
-    script="eruda.init();",
-)
-app.append_script(
-    {
-        "type": "text/javascript",
         "src": "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js",
     },
 )

@@ -31,7 +31,10 @@ from webcompy.cli._utils import (
     get_webcompy_packge_dir,
     resolve_standalone_config,
 )
-from webcompy.cli._wheel_builder import make_webcompy_app_package
+from webcompy.cli._wheel_builder import (
+    make_browser_webcompy_wheel,
+    make_webcompy_app_package,
+)
 
 
 def generate_static_site(app: WebComPyApp | None = None, generate_config: GenerateConfig | None = None):
@@ -55,6 +58,9 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
     standalone = args.get("standalone")
     if standalone is not None:
         app.config.standalone = standalone
+    wheel_mode = args.get("wheel_mode")
+    if wheel_mode is not None:
+        app.config.wheel_mode = wheel_mode
     resolve_standalone_config(app.config)
 
     resolve_dependencies(app, lockfile_sync_config=generate_config.lockfile_sync_config)
@@ -167,10 +173,13 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
             all_bundled_deps = bundled_deps + cdn_extracted_deps
 
-            dist = generate_config.dist if args.get("dist") is None else args["dist"]
             app_version = generate_app_version(app.config.version)
+            wheel_mode = app.config.wheel_mode
 
-            dist_dir = pathlib.Path(dist).absolute()
+            if args.get("dist") is not None:
+                dist_dir = pathlib.Path(args["dist"]).absolute()
+            else:
+                dist_dir = (app.config.app_package_path / generate_config.dist).absolute()
             if dist_dir.exists():
                 shutil.rmtree(dist_dir)
             os.mkdir(dist_dir)
@@ -184,7 +193,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                 cname_path.open("w", encoding="utf8").write(generate_config.cname)
                 print(cname_path)
 
-            static_files_dir = generate_config.static_files_dir_path.absolute()
+            static_files_dir = (app.config.app_package_path / generate_config.static_files_dir).absolute()
             for relative_path in get_static_files(static_files_dir):
                 src = static_files_dir / relative_path
                 dst = dist_dir / relative_path
@@ -195,14 +204,35 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
             scripts_dir = dist_dir / "_webcompy-app-package"
             os.mkdir(scripts_dir)
-            wheel_path = make_webcompy_app_package(
-                scripts_dir,
-                get_webcompy_packge_dir(),
-                app.config.app_package_path,
-                app_version,
-                app.config.assets,
-                bundled_deps=all_bundled_deps or None,
-            )
+
+            extra_wheel_filenames: list[str] | None = None
+            if wheel_mode == "split":
+                make_browser_webcompy_wheel(
+                    get_webcompy_packge_dir(),
+                    scripts_dir,
+                    app_version,
+                )
+                wheel_path = make_webcompy_app_package(
+                    scripts_dir,
+                    get_webcompy_packge_dir(),
+                    app.config.app_package_path,
+                    app_version,
+                    app.config.assets,
+                    bundled_deps=all_bundled_deps or None,
+                    skip_webcompy=True,
+                )
+                extra_wheel_filenames = sorted(
+                    f.name for f in scripts_dir.iterdir() if f.name.endswith(".whl") and f.name != wheel_path.name
+                )
+            else:
+                wheel_path = make_webcompy_app_package(
+                    scripts_dir,
+                    get_webcompy_packge_dir(),
+                    app.config.app_package_path,
+                    app_version,
+                    app.config.assets,
+                    bundled_deps=all_bundled_deps or None,
+                )
             wheel_filename = wheel_path.name
             for p in scripts_dir.iterdir():
                 print(p)
@@ -233,6 +263,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                 wasm_local_urls=wasm_local_urls or None,
                 lockfile_url=lockfile_url,
                 runtime_serving=resolved_runtime_serving,
+                extra_wheel_filenames=extra_wheel_filenames,
             )
             if app.router_mode == "history" and app.routes:
                 for p, _, _, _, page in app.routes:

@@ -49,7 +49,10 @@ from webcompy.cli._utils import (
     get_webcompy_packge_dir,
     resolve_standalone_config,
 )
-from webcompy.cli._wheel_builder import make_webcompy_app_package
+from webcompy.cli._wheel_builder import (
+    make_browser_webcompy_wheel,
+    make_webcompy_app_package,
+)
 
 
 def create_asgi_app(
@@ -169,18 +172,39 @@ def create_asgi_app(
     all_bundled_deps = bundled_deps + cdn_extracted_deps
 
     app_version = generate_app_version(app.config.version)
+    wheel_mode = app.config.wheel_mode
 
     with TemporaryDirectory() as temp:
         temp_path = pathlib.Path(temp)
-        wheel_path = make_webcompy_app_package(
-            temp_path,
-            get_webcompy_packge_dir(),
-            app.config.app_package_path,
-            app_version,
-            app.config.assets,
-            bundled_deps=all_bundled_deps or None,
-        )
-        wheel_filename = wheel_path.name
+        if wheel_mode == "split":
+            fw_wheel = make_browser_webcompy_wheel(
+                get_webcompy_packge_dir(),
+                temp_path,
+                app_version,
+            )
+            app_wheel_path = make_webcompy_app_package(
+                temp_path,
+                get_webcompy_packge_dir(),
+                app.config.app_package_path,
+                app_version,
+                app.config.assets,
+                bundled_deps=all_bundled_deps or None,
+                skip_webcompy=True,
+            )
+            app_wheel_filename = app_wheel_path.name
+            fw_wheel_filename = fw_wheel.name
+        else:
+            app_wheel_path = make_webcompy_app_package(
+                temp_path,
+                get_webcompy_packge_dir(),
+                app.config.app_package_path,
+                app_version,
+                app.config.assets,
+                bundled_deps=all_bundled_deps or None,
+            )
+            app_wheel_filename = app_wheel_path.name
+            fw_wheel_filename = ""
+
         app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (
                 p.open("rb").read(),
@@ -189,16 +213,25 @@ def create_asgi_app(
             for p in temp_path.iterdir()
         }
 
-    async def send_app_package_file(request: Request):
-        filename: str = request.path_params.get("filename", "")  # type: ignore
-        if filename in app_package_files:
-            content, media_type = app_package_files[filename]
-            headers: dict[str, str] = {}
-            if server_config.dev and filename == wheel_filename:
-                headers["Cache-Control"] = "no-cache"
-            return Response(content, media_type=media_type, headers=headers)
-        else:
-            raise HTTPException(404)
+        async def send_app_package_file(request: Request):
+            filename: str = request.path_params.get("filename", "")  # type: ignore
+            if filename in app_package_files:
+                content, media_type = app_package_files[filename]
+                headers: dict[str, str] = {}
+                if server_config.dev:
+                    if fw_wheel_filename and filename == fw_wheel_filename:
+                        headers["Cache-Control"] = "max-age=86400, must-revalidate"
+                    else:
+                        headers["Cache-Control"] = "no-cache"
+                return Response(content, media_type=media_type, headers=headers)
+            else:
+                raise HTTPException(404)
+
+        extra_wheel_filenames: list[str] | None = None
+        if wheel_mode == "split":
+            extra_wheel_filenames = sorted(
+                f.name for f in temp_path.iterdir() if f.name.endswith(".whl") and f.name != app_wheel_filename
+            )
 
     app_package_files_route = Route(
         "/_webcompy-app-package/{filename:path}",
@@ -233,7 +266,7 @@ def create_asgi_app(
         runtime_asset_routes.append(Route("/_webcompy-assets/{filename:path}", send_runtime_asset))
 
     static_file_routes: list[Route] = []
-    static_files_dir = server_config.static_files_dir_path.absolute()
+    static_files_dir = (app.config.app_package_path / server_config.static_files_dir).absolute()
     for relative_path in get_static_files(static_files_dir):
         static_file = static_files_dir / relative_path
         if (media_type := mimetypes.guess_type(str(static_file))[0]) is None:
@@ -252,11 +285,12 @@ def create_asgi_app(
         server_config.dev,
         True,
         app_version,
-        wheel_filename,
+        app_wheel_filename,
         pyodide_package_names=wasm_package_names + cdn_pure_python_names,
         wasm_local_urls=wasm_local_urls or None,
         lockfile_url=lockfile_url,
         runtime_serving=resolved_runtime_serving,
+        extra_wheel_filenames=extra_wheel_filenames,
     )
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + app.config.base_url.strip("/"))).sub,
@@ -338,6 +372,9 @@ def run_server(app: WebComPyApp | None = None):
     standalone = args.get("standalone")
     if standalone is not None:
         app.config.standalone = standalone
+    wheel_mode = args.get("wheel_mode")
+    if wheel_mode is not None:
+        app.config.wheel_mode = wheel_mode
 
     port = args.get("port") or server_config.port
     asgi = create_asgi_app(app, server_config)
