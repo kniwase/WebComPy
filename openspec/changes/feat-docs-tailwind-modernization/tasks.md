@@ -1,7 +1,6 @@
 - [ ] **Task 1**: Download and place Tailwind CSS and highlight.js assets
   - Download `https://cdn.tailwindcss.com` to `static/tailwindcss.js`
-  - Download highlight.js `github-dark.min.css` and `github-dark-dimmed.min.css` to `static/highlightjs/`
-  - **Also download** highlight.js default light theme (`default.min.css`) to `static/highlightjs/` for standalone mode
+  - Download highlight.js `github.min.css` (light theme) and `github-dark-dimmed.min.css` (dark theme) to `static/highlightjs/`
   - Estimated: 15 min
 
 - [ ] **Task 2**: Update `docs_app/bootstrap.py`
