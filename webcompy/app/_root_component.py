@@ -117,7 +117,6 @@ class AppDocumentRoot(Component):
             if self._app:
                 self._app._record_phase("run_done")
             if browser:
-                # Sync html_attrs to DOM
                 for key, value in self._html_attrs.items():
                     current = browser.document.documentElement.getAttribute(key)
                     expected = value.value if isinstance(value, Computed) else value
@@ -200,7 +199,6 @@ class AppDocumentRoot(Component):
 
     # HTML attribute controllers
     def set_html_attr(self, key: str, value: str | Computed[str]):
-        # Clean up existing consumer before overwriting
         if key in self._callback_consumers:
             consumer_destroy(self._callback_consumers[key])
             del self._callback_consumers[key]
