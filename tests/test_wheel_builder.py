@@ -14,7 +14,6 @@ from webcompy.cli._wheel_builder import (
     _write_metadata,
     _write_record,
     _write_wheel,
-    get_stable_wheel_filename,
     get_wheel_filename,
     make_browser_webcompy_wheel,
     make_bundled_wheel,
@@ -764,17 +763,6 @@ class TestMakeWebcompyAppPackageBundledDeps:
             assert "six" in lines
 
 
-class TestGetStableWheelFilename:
-    def test_simple_name(self):
-        assert get_stable_wheel_filename("webcompy") == "webcompy-py3-none-any.whl"
-
-    def test_underscore_name(self):
-        assert get_stable_wheel_filename("my_app") == "my_app-py3-none-any.whl"
-
-    def test_dotted_name(self):
-        assert get_stable_wheel_filename("my.app") == "my_app-py3-none-any.whl"
-
-
 class TestMakeBrowserWebcompyWheel:
     def _create_package(self, tmp_path):
         webcompy = tmp_path / "webcompy"
@@ -826,3 +814,55 @@ class TestMakeBrowserWebcompyWheel:
             meta_path = next(n for n in names if n.endswith("/METADATA"))
             metadata = zf.read(meta_path).decode()
             assert "Version: 0+sha." in metadata
+
+
+class TestMakeWebcompyAppPackageSkipWebcompy:
+    def test_skip_webcompy_excludes_framework(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        (webcompy_pkg / "app").mkdir()
+        (webcompy_pkg / "app" / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+            skip_webcompy=True,
+        )
+        with zipfile.ZipFile(result) as zf:
+            names = zf.namelist()
+            assert "myapp/__init__.py" in names
+            webcompy_entries = [n for n in names if n.startswith("webcompy/")]
+            assert len(webcompy_entries) == 0, f"webcompy found when skip_webcompy=True: {webcompy_entries}"
+
+    def test_skip_webcompy_top_level_excludes_webcompy(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+            skip_webcompy=True,
+        )
+        with zipfile.ZipFile(result) as zf:
+            names = zf.namelist()
+            dist_info = next(n for n in names if n.endswith("/top_level.txt"))
+            top_level = zf.read(dist_info).decode()
+            lines = top_level.strip().split("\n")
+            assert "myapp" in lines
+            assert "webcompy" not in lines

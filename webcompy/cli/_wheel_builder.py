@@ -94,65 +94,18 @@ def get_wheel_filename(name: str, version: str) -> str:
     return f"{_normalize_name(name)}-{version}-py3-none-any.whl"
 
 
-def get_stable_wheel_filename(name: str) -> str:
-    return f"{_normalize_name(name)}-py3-none-any.whl"
-
-
 def make_browser_webcompy_wheel(
     webcompy_package_dir: pathlib.Path,
     dest: pathlib.Path,
     version: str,
 ) -> pathlib.Path:
-    packages = _discover_packages(webcompy_package_dir)
-    files = _collect_package_files(webcompy_package_dir, packages)
-    filtered_files = [
-        (filepath, arc_path)
-        for filepath, arc_path in files
-        if not any(part in _BROWSER_ONLY_EXCLUDE for part in pathlib.Path(arc_path).parts)
-    ]
-    filtered_packages = [pkg for pkg in packages if not any(part in _BROWSER_ONLY_EXCLUDE for part in pkg.split("."))]
-
-    dist_name = _normalize_name("webcompy")
-    dist_info = f"{dist_name}-{version}.dist-info"
-    top_levels: set[str] = set()
-    for pkg in filtered_packages:
-        top_levels.add(pkg.split(".")[0])
-
-    wheel_filename = get_stable_wheel_filename("webcompy")
-    wheel_path = dest / wheel_filename
-    if wheel_path.exists():
-        os.remove(wheel_path)
-
-    record_entries: list[tuple[str, str, int]] = []
-    metadata_content = _write_metadata("webcompy", version)
-    metadata_path = f"{dist_info}/METADATA"
-    wheel_content = _write_wheel()
-    wheel_meta_path = f"{dist_info}/WHEEL"
-    top_level_content = "\n".join(sorted(top_levels)) + "\n"
-    top_level_path = f"{dist_info}/top_level.txt"
-
-    with zipfile.ZipFile(wheel_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        for filepath, arc_path in filtered_files:
-            data = filepath.read_bytes()
-            zf.writestr(arc_path, data)
-            record_entries.append((arc_path, _sha256_b64(data), len(data)))
-
-        zf.writestr(metadata_path, metadata_content)
-        record_entries.append(
-            (metadata_path, _sha256_b64(metadata_content.encode("utf-8")), len(metadata_content.encode("utf-8")))
-        )
-        zf.writestr(wheel_meta_path, wheel_content)
-        record_entries.append(
-            (wheel_meta_path, _sha256_b64(wheel_content.encode("utf-8")), len(wheel_content.encode("utf-8")))
-        )
-        zf.writestr(top_level_path, top_level_content)
-        record_entries.append(
-            (top_level_path, _sha256_b64(top_level_content.encode("utf-8")), len(top_level_content.encode("utf-8")))
-        )
-
-        record_content = _write_record(record_entries, dist_info)
-        zf.writestr(f"{dist_info}/RECORD", record_content)
-
+    wheel_path = make_wheel(
+        "webcompy",
+        webcompy_package_dir,
+        dest,
+        version,
+        exclude_parts=_BROWSER_ONLY_EXCLUDE,
+    )
     return _content_hash_wheel(wheel_path, "webcompy", version)
 
 
@@ -245,9 +198,13 @@ def make_wheel(
     dest: pathlib.Path,
     version: str,
     package_data: dict[str, list[str]] | None = None,
+    exclude_parts: set[str] | None = None,
 ) -> pathlib.Path:
     packages = _discover_packages(package_dir)
     files = _collect_package_files(package_dir, packages, package_data)
+    if exclude_parts:
+        files = [(fp, ap) for fp, ap in files if not any(part in exclude_parts for part in pathlib.Path(ap).parts)]
+        packages = [pkg for pkg in packages if not any(part in exclude_parts for part in pkg.split("."))]
     dist_name = _normalize_name(name)
     dist_info = f"{dist_name}-{version}.dist-info"
     top_levels: set[str] = set()

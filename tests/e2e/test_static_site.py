@@ -44,6 +44,11 @@ class TestSplitModeWheelFilenames:
         html_content = (dist_dir / "index.html").read_text(encoding="utf-8")
         assert f"_webcompy-app-package/{framework_wheel.name}" in html_content
 
+    def test_app_wheel_in_html(self, split_static_site):
+        dist_dir, app_wheel, _framework_wheel, _app_name, _all_wheels = split_static_site
+        html_content = (dist_dir / "index.html").read_text(encoding="utf-8")
+        assert f"_webcompy-app-package/{app_wheel.name}" in html_content
+
     def test_all_wheels_are_valid_zips(self, split_static_site):
         _dist_dir, _app_wheel, _framework_wheel, _app_name, all_wheels = split_static_site
         for wf in all_wheels:

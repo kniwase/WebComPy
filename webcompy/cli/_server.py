@@ -216,13 +216,11 @@ def create_asgi_app(
             if filename in app_package_files:
                 content, media_type = app_package_files[filename]
                 headers: dict[str, str] = {}
-                if wheel_mode == "split":
-                    if filename == app_wheel_filename and server_config.dev:
-                        headers["Cache-Control"] = "no-cache"
-                    else:
+                if server_config.dev:
+                    if wheel_mode == "split" and filename != app_wheel_filename:
                         headers["Cache-Control"] = "max-age=86400, must-revalidate"
-                elif server_config.dev and filename == app_wheel_filename:
-                    headers["Cache-Control"] = "no-cache"
+                    else:
+                        headers["Cache-Control"] = "no-cache"
                 return Response(content, media_type=media_type, headers=headers)
             else:
                 raise HTTPException(404)

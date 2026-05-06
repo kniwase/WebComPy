@@ -311,15 +311,6 @@ def get_bundled_deps(
     return result
 
 
-def get_dep_version(lockfile: Lockfile | None, dep_name: str) -> str | None:
-    if lockfile is None:
-        return None
-    entry = lockfile.pure_python_packages.get(dep_name)
-    if entry is not None:
-        return entry.version
-    return None
-
-
 def get_wasm_package_names(
     lockfile: Lockfile | None,
 ) -> list[str]:
