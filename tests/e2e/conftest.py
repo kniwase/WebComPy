@@ -270,8 +270,8 @@ def split_static_site():
     assert wheel_dir.exists(), f"Wheel dir not created: {wheel_dir}"
 
     wheel_files = list(wheel_dir.glob("*.whl"))
-    assert len(wheel_files) >= 2, (
-        f"Expected at least 2 wheels in split mode, found {len(wheel_files)}: {[f.name for f in wheel_files]}"
+    assert len(wheel_files) == 2, (
+        f"Expected exactly 2 wheels in split mode, found {len(wheel_files)}: {[f.name for f in wheel_files]}"
     )
 
     app_wheel = next(

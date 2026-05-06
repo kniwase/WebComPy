@@ -9,4 +9,5 @@ app_config = AppConfig(
     dependencies=None,
     dependencies_from="browser",
     standalone=True,  # Generate docs with local runtime assets for offline capability
+    wheel_mode="split",
 )

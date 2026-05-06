@@ -50,10 +50,8 @@ from webcompy.cli._utils import (
     resolve_standalone_config,
 )
 from webcompy.cli._wheel_builder import (
-    _content_hash_wheel,
     make_browser_webcompy_wheel,
     make_webcompy_app_package,
-    make_wheel,
 )
 
 
@@ -179,23 +177,18 @@ def create_asgi_app(
     with TemporaryDirectory() as temp:
         temp_path = pathlib.Path(temp)
         if wheel_mode == "split":
-            fw_wheel_path = make_browser_webcompy_wheel(
+            make_browser_webcompy_wheel(
                 get_webcompy_packge_dir(),
                 temp_path,
                 app_version,
             )
-            dep_wheel_names: set[str] = {fw_wheel_path.name}
-            for dep_name, dep_dir in all_bundled_deps:
-                dep_wheel = make_wheel(dep_name, dep_dir, temp_path, app_version)
-                hashed_dep = _content_hash_wheel(dep_wheel, dep_name, app_version)
-                dep_wheel_names.add(hashed_dep.name)
             app_wheel_path = make_webcompy_app_package(
                 temp_path,
                 get_webcompy_packge_dir(),
                 app.config.app_package_path,
                 app_version,
                 app.config.assets,
-                bundled_deps=None,
+                bundled_deps=all_bundled_deps or None,
                 skip_webcompy=True,
             )
             app_wheel_filename = app_wheel_path.name
@@ -209,7 +202,6 @@ def create_asgi_app(
                 bundled_deps=all_bundled_deps or None,
             )
             app_wheel_filename = app_wheel_path.name
-            dep_wheel_names: set[str] = set()
 
         app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (
@@ -234,6 +226,12 @@ def create_asgi_app(
                 return Response(content, media_type=media_type, headers=headers)
             else:
                 raise HTTPException(404)
+
+        extra_wheel_filenames: list[str] | None = None
+        if wheel_mode == "split":
+            extra_wheel_filenames = sorted(
+                f.name for f in temp_path.iterdir() if f.name.endswith(".whl") and f.name != app_wheel_filename
+            )
 
     app_package_files_route = Route(
         "/_webcompy-app-package/{filename:path}",
@@ -280,12 +278,6 @@ def create_asgi_app(
             return Response(content, media_type=_media_type)
 
         static_file_routes.append(Route("/" + relative_path, send_file))
-
-    extra_wheel_filenames: list[str] | None = None
-    if wheel_mode == "split":
-        extra_wheel_filenames = sorted(
-            f.name for f in temp_path.iterdir() if f.name.endswith(".whl") and f.name != app_wheel_filename
-        )
 
     html_generator = partial(
         generate_html,

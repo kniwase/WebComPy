@@ -33,8 +33,9 @@ class TestStaticSiteWheelFilename:
 
 @pytest.mark.e2e
 class TestSplitModeWheelFilenames:
-    def test_all_wheels_have_content_hash(self, split_static_site):
+    def test_both_wheels_have_content_hash(self, split_static_site):
         _dist_dir, _app_wheel, _framework_wheel, _app_name, all_wheels = split_static_site
+        assert len(all_wheels) == 2
         for wf in all_wheels:
             assert _WHEEL_FILENAME_RE.match(wf.name), f"Wheel {wf.name!r} does not match content-hash pattern"
 

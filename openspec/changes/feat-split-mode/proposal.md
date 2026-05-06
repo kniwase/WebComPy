@@ -55,16 +55,16 @@ BUNDLED MODE (default, feat-dependency-bundling):
   packages = ["/_webcompy-app-package/myapp-{hash}-py3-none-any.whl", "numpy"]
 
 SPLIT MODE (feat-split-mode, opt-in):
-  ╔══════════╗  ╔════════╗  ╔═══════╗  ╔═══════╗
-  ║ webcompy ║  ║ myapp  ║  ║ flask ║  ║ httpx ║
-  ║  .whl    ║  ║  .whl  ║  ║  .whl ║  ║  .whl ║
-  ╚══════════╝  ╚════════╝  ╚═══════╝  ╚═══════╝
+  ╔══════════════════════╗  ╔═════════════════════════════════════╗
+  ║ webcompy             ║  ║  myapp-{hash}-py3-none-any.whl     ║
+  ║  (excl. cli)         ║  ║  ├── myapp/                        ║
+  ║  -{hash}-py3-any.whl ║  ║  ├── flask/                        ║
+  ╚══════════════════════╝  ║  └── httpx/                        ║
+                            ╚═════════════════════════════════════╝
 
-  Strategy: packages with multiple local wheel URLs (confirmed working)
-    packages = ["/_.../webcompy-py3-none-any.whl",
-                "/_.../flask-py3-none-any.whl",
-                "/_.../httpx-py3-none-any.whl",
-                "/_.../myapp-{hash}-py3-none-any.whl",  # content-hash
+  Strategy: two wheels (framework + app-with-deps) in packages
+    packages = ["/_.../webcompy-0+sha.{hash8}-py3-none-any.whl",
+                "/_.../myapp-0+sha.{hash8}-py3-none-any.whl",
                 "numpy"]  # WASM from CDN only
 ```
 
@@ -86,17 +86,14 @@ class AppConfig:
 | App (dev) | `no-cache` | N/A |
 | App (SSG) | N/A | ETag by hosting |
 
-### Content-Hash Strategy for Split Wheels
+### Content-Hash Strategy
 
-All wheels in split mode use content-derived hash filenames for automatic cache busting:
+Both wheels use content-derived hash filenames:
 
 | Wheel | Filename Pattern |
 |-------|-----------------|
-| App | `{app_name}-0+sha.{hash8}-py3-none-any.whl` |
+| App (with deps) | `{app_name}-0+sha.{hash8}-py3-none-any.whl` |
 | Framework | `webcompy-0+sha.{hash8}-py3-none-any.whl` |
-| Dependencies | `{dep_name}-0+sha.{hash8}-py3-none-any.whl` |
-
-Content-hash ensures that any change produces a different filename, automatically invalidating browser caches without requiring end users to take any action.
 
 ## Specs Affected
 
@@ -108,16 +105,14 @@ Content-hash ensures that any change produces a different filename, automaticall
 
 ## Tasks
 
-See `tasks.md` for full task breakdown (10 implementation tasks + 1 completed experiment task).
+See `tasks.md` for full task breakdown.
 
 - [x] **Task 0: Experiment** — determine viable loading strategy
-- [ ] **Task 1: Add `wheel_mode` to AppConfig**
-- [ ] **Task 2: Add `--wheel-mode` CLI flag**
-- [ ] **Task 3: Reintroduce `make_browser_webcompy_wheel()`**
-- [ ] **Task 4: Update `make_webcompy_app_package()` for split mode**
-- [ ] **Task 5: Implement per-dependency wheel generation**
-- [ ] **Task 6: Update HTML generation for split mode**
-- [ ] **Task 7: Update dev server for multi-wheel serving**
-- [ ] **Task 8: Update SSG for multi-wheel output**
-- [ ] **Task 9: Update E2E tests for split mode**
-- [ ] **Task 10: Lint, typecheck, and test validation**
+- [x] **Task 1: Add `wheel_mode` to AppConfig**
+- [x] **Task 2: Add `--wheel-mode` CLI flag**
+- [x] **Task 3: Reintroduce `make_browser_webcompy_wheel()`**
+- [x] **Task 4: Update `make_webcompy_app_package()` for split mode**
+- [ ] **Task 5: Update HTML generation for split mode**
+- [ ] **Task 6: Update dev server and SSG for two-wheel serving**
+- [ ] **Task 7: Update E2E tests for split mode**
+- [ ] **Task 8: Lint, typecheck, and test validation**
