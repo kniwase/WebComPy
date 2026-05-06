@@ -167,10 +167,12 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
             all_bundled_deps = bundled_deps + cdn_extracted_deps
 
-            dist = generate_config.dist if args.get("dist") is None else args["dist"]
             app_version = generate_app_version(app.config.version)
 
-            dist_dir = pathlib.Path(dist).absolute()
+            if args.get("dist") is not None:
+                dist_dir = pathlib.Path(args["dist"]).absolute()
+            else:
+                dist_dir = (app.config.app_package_path / generate_config.dist).absolute()
             if dist_dir.exists():
                 shutil.rmtree(dist_dir)
             os.mkdir(dist_dir)
@@ -184,7 +186,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                 cname_path.open("w", encoding="utf8").write(generate_config.cname)
                 print(cname_path)
 
-            static_files_dir = generate_config.static_files_dir_path.absolute()
+            static_files_dir = (app.config.app_package_path / generate_config.static_files_dir).absolute()
             for relative_path in get_static_files(static_files_dir):
                 src = static_files_dir / relative_path
                 dst = dist_dir / relative_path
