@@ -190,8 +190,6 @@ class TestHtmlAttrs:
         app = _make_app()
         theme = Signal("light")
         app.set_html_attr("class", computed(lambda: theme.value))
-        # In test environment (no browser), no consumer is created
-        # because browser is None, so the Computed check in set_html_attr skips it
         assert "class" not in app._root._callback_consumers
         app.remove_html_attr("class")
         assert "class" not in app._root._callback_consumers
@@ -211,19 +209,15 @@ class TestHtmlAttrs:
         assert "class" in app._root._callback_consumers
         consumer1 = app._root._callback_consumers["class"]
 
-        # Overwrite with same key - old consumer should be destroyed
         app.set_html_attr("class", "static")
-        assert "class" not in app._root._callback_consumers  # old consumer removed
+        assert "class" not in app._root._callback_consumers
 
-        # Set again with Computed
         app.set_html_attr("class", c)
         assert "class" in app._root._callback_consumers
         consumer2 = app._root._callback_consumers["class"]
 
-        # remove_html_attr should destroy the consumer
         app.remove_html_attr("class")
         assert "class" not in app._root._callback_consumers
         assert "class" not in app._root._html_attrs
 
-        # Verify consumers are different instances (not leaked)
         assert consumer1 is not consumer2
