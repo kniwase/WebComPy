@@ -1,4 +1,4 @@
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import PluginScript
@@ -10,7 +10,7 @@ class WebComPyPlugin:
     version: ClassVar[str] = "0.1.0"
 
     @staticmethod
-    def get_providers() -> dict[object, object]: ...
+    def get_providers() -> dict[object, Any]: ...
     @staticmethod
     def get_scripts() -> list[PluginScript]: ...
     def on_app_init(self, app: WebComPyApp) -> None: ...
