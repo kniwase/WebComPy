@@ -4,7 +4,7 @@ from webcompy._browser import browser
 from webcompy.components import ComponentContext, define_component, on_before_destroy
 from webcompy.elements import html
 from webcompy.router import RouterLink
-from webcompy.signal import Signal
+from webcompy.signal import Signal, computed
 
 
 class _SubPage(TypedDict):
@@ -62,10 +62,7 @@ def Navbar(context: ComponentContext[list[Page]]):
 
     def _generate_navitem(page: Page, idx: int):
         if "children" in page:
-            is_open = _is_open(idx)
-            expanded = "true" if is_open else "false"
             menu_id = f"navbar-dropdown-{idx}"
-            menu_display = "block" if is_open else "none"
 
             main = (
                 [
@@ -96,7 +93,7 @@ def Navbar(context: ComponentContext[list[Page]]):
                 html.A(
                     {
                         "id": menu_id,
-                        "aria-expanded": expanded,
+                        "aria-expanded": computed(lambda idx=idx: "true" if _is_open(idx) else "false"),
                         "aria-haspopup": "true",
                         "aria-controls": menu_id,
                         "@click": lambda ev: _toggle(idx, ev),
@@ -107,7 +104,7 @@ def Navbar(context: ComponentContext[list[Page]]):
                     {
                         "id": menu_id,
                         "role": "menu",
-                        "style": {"display": menu_display},
+                        "style": computed(lambda idx=idx: f"display: {'block' if _is_open(idx) else 'none'};"),
                     },
                     *main,
                     *items,
@@ -122,8 +119,6 @@ def Navbar(context: ComponentContext[list[Page]]):
                 ),
             )
         return None
-
-    mobile_display = "block" if _mobile_open.value else "none"
 
     return html.NAV(
         {},
@@ -143,7 +138,7 @@ def Navbar(context: ComponentContext[list[Page]]):
             html.DIV(
                 {
                     "id": "navbarNav",
-                    "style": {"display": mobile_display},
+                    "style": computed(lambda: f"display: {'block' if _mobile_open.value else 'none'};"),
                 },
                 html.UL(
                     {},
