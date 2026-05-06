@@ -1,8 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
+
+
+@dataclass
+class PluginScript:
+    attrs: dict[str, str]
+    script: str | None = None
+    condition: str | None = None
+    in_head: bool = False
 
 
 @dataclass
@@ -20,6 +28,7 @@ class AppConfig:
     runtime_serving: Literal["cdn", "local"] | None = None
     standalone: bool = False
     wheel_mode: Literal["bundled", "split"] = "bundled"
+    scripts: list[PluginScript] = field(default_factory=list)
 
     def __post_init__(self):
         stripped = self.base_url.strip("/")
