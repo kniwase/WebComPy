@@ -177,7 +177,7 @@ def create_asgi_app(
     with TemporaryDirectory() as temp:
         temp_path = pathlib.Path(temp)
         if wheel_mode == "split":
-            make_browser_webcompy_wheel(
+            fw_wheel = make_browser_webcompy_wheel(
                 get_webcompy_packge_dir(),
                 temp_path,
                 app_version,
@@ -192,6 +192,7 @@ def create_asgi_app(
                 skip_webcompy=True,
             )
             app_wheel_filename = app_wheel_path.name
+            fw_wheel_filename = fw_wheel.name
         else:
             app_wheel_path = make_webcompy_app_package(
                 temp_path,
@@ -202,6 +203,7 @@ def create_asgi_app(
                 bundled_deps=all_bundled_deps or None,
             )
             app_wheel_filename = app_wheel_path.name
+            fw_wheel_filename = ""
 
         app_package_files: dict[str, tuple[bytes, str]] = {
             p.name: (
@@ -217,7 +219,7 @@ def create_asgi_app(
                 content, media_type = app_package_files[filename]
                 headers: dict[str, str] = {}
                 if server_config.dev:
-                    if wheel_mode == "split" and filename != app_wheel_filename:
+                    if fw_wheel_filename and filename == fw_wheel_filename:
                         headers["Cache-Control"] = "max-age=86400, must-revalidate"
                     else:
                         headers["Cache-Control"] = "no-cache"

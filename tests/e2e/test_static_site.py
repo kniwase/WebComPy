@@ -49,6 +49,18 @@ class TestSplitModeWheelFilenames:
         html_content = (dist_dir / "index.html").read_text(encoding="utf-8")
         assert f"_webcompy-app-package/{app_wheel.name}" in html_content
 
+    def test_framework_wheel_before_app_wheel_in_packages(self, split_static_site):
+        dist_dir, app_wheel, framework_wheel, _app_name, _all_wheels = split_static_site
+        html_content = (dist_dir / "index.html").read_text(encoding="utf-8")
+        fw_url = f"_webcompy-app-package/{framework_wheel.name}"
+        app_url = f"_webcompy-app-package/{app_wheel.name}"
+        fw_idx = html_content.index(fw_url)
+        app_idx = html_content.index(app_url)
+        assert fw_idx < app_idx, (
+            f"Framework wheel ({fw_url}) at index {fw_idx} should appear before "
+            f"app wheel ({app_url}) at index {app_idx}"
+        )
+
     def test_all_wheels_are_valid_zips(self, split_static_site):
         _dist_dir, _app_wheel, _framework_wheel, _app_name, all_wheels = split_static_site
         for wf in all_wheels:
