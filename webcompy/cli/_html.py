@@ -133,8 +133,6 @@ def _render_plugin_script(ps: PluginScript) -> _HtmlElement:
         return _HtmlElement("script", {}, "\n".join(js_parts))
     if not ps.script:
         return _HtmlElement("script", {})
-    if not ps.script:
-        return _HtmlElement("script", {})
     js_parts = [
         "(function(){",
         f"  if ({ps.condition}) {{",
