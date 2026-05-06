@@ -37,10 +37,6 @@ class ServerConfig:
     static_files_dir: str = "static"
     lockfile_sync_config: LockfileSyncConfig | None = None
 
-    @property
-    def static_files_dir_path(self) -> Path:
-        return Path(self.static_files_dir).absolute()
-
 
 @dataclass
 class GenerateConfig:
@@ -48,10 +44,6 @@ class GenerateConfig:
     cname: str = ""
     static_files_dir: str = "static"
     lockfile_sync_config: LockfileSyncConfig | None = None
-
-    @property
-    def static_files_dir_path(self) -> Path:
-        return Path(self.static_files_dir).absolute()
 
 
 @dataclass

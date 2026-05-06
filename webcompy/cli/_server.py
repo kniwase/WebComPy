@@ -266,7 +266,7 @@ def create_asgi_app(
         runtime_asset_routes.append(Route("/_webcompy-assets/{filename:path}", send_runtime_asset))
 
     static_file_routes: list[Route] = []
-    static_files_dir = server_config.static_files_dir_path.absolute()
+    static_files_dir = (app.config.app_package_path / server_config.static_files_dir).absolute()
     for relative_path in get_static_files(static_files_dir):
         static_file = static_files_dir / relative_path
         if (media_type := mimetypes.guess_type(str(static_file))[0]) is None:
