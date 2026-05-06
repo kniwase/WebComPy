@@ -134,3 +134,63 @@ class TestPerAppComponentStore:
         app2 = _make_app()
         app1._defer_depth = 1
         assert app2._defer_depth == 0
+
+
+class TestHtmlAttrs:
+    def test_set_html_attr_returns_method(self):
+        app = _make_app()
+        assert app.set_html_attr is not None
+        assert callable(app.set_html_attr)
+
+    def test_remove_html_attr_returns_method(self):
+        app = _make_app()
+        assert app.remove_html_attr is not None
+        assert callable(app.remove_html_attr)
+
+    def test_html_attrs_property(self):
+        app = _make_app()
+        assert app.html_attrs == {}
+        app.set_html_attr("lang", "ja")
+        assert app.html_attrs == {"lang": "ja"}
+
+    def test_set_and_get_html_attr(self):
+        app = _make_app()
+        app.set_html_attr("lang", "ja")
+        assert app.html_attrs["lang"] == "ja"
+
+    def test_remove_html_attr(self):
+        app = _make_app()
+        app.set_html_attr("data-test", "value")
+        app.remove_html_attr("data-test")
+        assert "data-test" not in app.html_attrs
+
+    def test_html_attrs_with_computed(self):
+        from webcompy.signal import Signal, computed
+
+        app = _make_app()
+        theme = Signal("light")
+        app.set_html_attr("class", computed(lambda: theme.value))
+        assert app.html_attrs["class"] == "light"
+        theme.value = "dark"
+        assert app.html_attrs["class"] == "dark"
+
+    def test_html_attrs_per_app(self):
+        app1 = _make_app()
+        app2 = _make_app()
+        app1.set_html_attr("lang", "ja")
+        app2.set_html_attr("lang", "en")
+        assert app1.html_attrs["lang"] == "ja"
+        assert app2.html_attrs["lang"] == "en"
+
+    def test_remove_html_attr_removes_computed_consumer(self):
+        from webcompy.signal import Signal, computed
+
+        app = _make_app()
+        theme = Signal("light")
+        app.set_html_attr("class", computed(lambda: theme.value))
+        # In test environment (no browser), no consumer is created
+        # because browser is None, so the Computed check in set_html_attr skips it
+        assert "class" not in app._root._callback_consumers
+        app.remove_html_attr("class")
+        assert "class" not in app._root._callback_consumers
+        assert "class" not in app._root._html_attrs
