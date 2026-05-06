@@ -16,14 +16,13 @@ The goal is to introduce function-specific port abstractions injected via the ex
 ## Goals / Non-Goals
 
 **Goals:**
-- Create typed port Protocol interfaces for DOM, FFI, HTTP, history, and cookie operations
+- Create typed port abstract base classes (ABCs) for DOM, FFI, HTTP, history, and cookie operations
 - Inject port implementations into `WebComPyApp.di_scope` at bootstrap, selected by environment
 - Replace all direct `browser` imports in framework code with `inject(PORT_KEY)` calls
 - Enable unit testing of DOM/event/fetch/history/cookie logic via mock port injection
 - Browser implementations use `pyscript.context` and `pyscript.ffi` as their foundation
-- `DOMNode` becomes an explicit-method Protocol enabling dual-environment node implementations
-- `Location` delegates history operations to `HistoryPort` via DI
-- `Router` receives `Location` via constructor injection
+- `DOMNode` as an explicit-method ABC enabling dual-environment node implementations
+- Merge `Location` into `HistoryPort` — one ABC for both reactive state and navigation operations
 - Remove the `browser` object entirely (no deprecation needed — unstable release)
 
 **Non-Goals:**
@@ -35,9 +34,17 @@ The goal is to introduce function-specific port abstractions injected via the ex
 
 ## Decisions
 
-### Decision 1: DOMNode as explicit-method Protocol
+### Decision 1: Ports as abstract base classes, not Protocols
 
-**Chosen**: `DOMNode` Protocol with explicit method signatures:
+**Chosen**: Ports are defined as Python abstract base classes (`ABC`) with `@abstractmethod` declarations instead of `typing.Protocol`.
+
+**Rationale**: Protocols enforce structural subtyping — any object with matching method names satisfies the type, even accidentally. ABCs enforce nominal subtyping — only explicit subclasses satisfy the type. This matters for DI because `InjectKey[DOMPort]` should only accept objects that intentionally implement the port contract, not any object that happens to have a `create_element` method. Additionally, `HistoryPort` needs to extend `SignalBase[str]` (for reactive path state), which requires inheritance — ABCs support this naturally while Protocols do not.
+
+**Alternative considered**: Protocols with `@runtime_checkable`. Rejected because they provide weaker guarantees in a DI system where the injected implementation is determined at bootstrap, not at type-check time.
+
+### Decision 2: DOMNode as explicit-method ABC
+
+**Chosen**: `DOMNode` ABC with explicit method signatures:
 - Tree: `appendChild(child)`, `removeChild(child)`, `insertBefore(new, ref)`, `replaceChild(new, old)`, `remove()`
 - Attributes: `setAttribute(name, value)`, `getAttribute(name)`, `removeAttribute(name)`, `hasAttribute(name)`, `getAttributeNames()`
 - Events: `addEventListener(event, handler, capture=False)`, `removeEventListener(event, handler)`
@@ -45,163 +52,108 @@ The goal is to introduce function-specific port abstractions injected via the ex
 - Children: `childNodes` returns `DOMNodeList` (supports `.length` and `__getitem__`)
 - Metadata: `__webcompy_node__: bool`
 
-`DOMNodeList` is a Protocol with `length: int` (property) and `__getitem__(index: int) -> DOMNode`.
+`DOMNodeList` is a simple class with `length: int` (property) and `__getitem__(index: int) -> DOMNode`.
 
-**Rationale**: The current `__getattr__`/`__setattr__` Protocol requires the node to be a raw JS proxy object. An explicit Protocol allows both `BrowserDOMNode` (thin JS adapter) and `VirtualDOMNode` (server-side tree) to satisfy the same interface without code changes at the call site.
+**Rationale**: The old `__getattr__`/`__setattr__` catch-all required the node to be a raw JS proxy object. An explicit ABC allows both `BrowserDOMNode` (thin JS adapter) and `VirtualDOMNode` (server-side tree) to implement the same interface without code changes at the call site.
 
 `addEventListener` includes `capture=False` to match existing call sites (`_element.py:67,110` which pass `False` as the third argument). `BrowserDOMPort` passes through to the JS API; `VirtualDOMNode` ignores it.
 
-`childNodes` returns `DOMNodeList` (not a plain `list`) so both `.length` and indexing `[idx]` work identically across `BrowserDOMNode` (real JS NodeList) and `VirtualDOMNode` (custom list-like object).
+**Alternative considered**: Opaque handle + all operations through DOMPort. Rejected because it would require rewriting hundreds of `node.appendChild(child)` calls to `dom_port.append_child(node, child)`.
 
-**Alternative considered**: Opaque handle + all operations through DOMPort. Rejected because it would require rewriting hundreds of `node.appendChild(child)` calls to `dom_port.append_child(node, child)` and makes the code significantly more verbose.
-
-### Decision 2: DOMPort as Factory + Query + Schedule (not full node API)
+### Decision 3: DOMPort as Factory + Query + Schedule (not full node API)
 
 **Chosen**: DOMPort provides `create_element`, `create_text_node`, `query_selector`, `get_element_by_id`, `set_title`, and `schedule_macro_task`. Node operations (`appendChild`, `setAttribute`, etc.) live on `DOMNode` itself.
 
 **Rationale**: Separating concerns keeps both interfaces small. `DOMPort` is the "document-level" gateway — creating nodes, querying the DOM, and providing scheduling. `DOMNode` is the "node-level" interface for tree manipulation. This maps naturally to the Web API where `document.createElement()` returns a node you then operate on directly.
 
-**Alternative considered**: Everything on DOMPort. Rejected for verbosity reasons (see Decision 1).
-
-### Decision 3: Port dependency pattern — app→port via inject(), intra-port via direct import
+### Decision 4: Port dependency pattern — app→port via inject(), intra-port via direct import
 
 The framework code layer (elements, router, app, etc.) resolves ports through DI:
 ```python
 dom = inject(DOM_PORT_KEY)  # framework code
 ```
 
-Browser port implementations import each other directly within the same implementation layer:
-```python
-# BrowserDOMPort uses BrowserFFIPort directly
-from webcompy.ports._browser._ffi import BrowserFFIPort
-```
+Browser port implementations import each other directly within the same implementation layer. App-layer code needs swappable implementations (browser vs server vs test mock). Browser-layer implementations are always deployed together and share the same runtime environment — they are implementation details of the browser platform, not independently swappable units.
 
-**Rationale**: App-layer code needs swappable implementations (browser vs server vs test mock). Browser-layer implementations are always deployed together and share the same runtime environment — they are implementation details of the browser platform, not independently swappable units.
-
-**Alternative considered**: DI injection for port-to-port dependencies. Rejected because it creates unnecessary initialization ordering constraints, adds DI keys for internal implementation details, and over-abstracts dependencies that only exist within one platform layer.
-
-### Decision 4: Browser implementations use pyscript.context + pyscript.ffi
+### Decision 5: Browser implementations use pyscript.context + pyscript.ffi
 
 **Chosen**: BrowserDOMPort uses `pyscript.context.document`/`pyscript.context.window`, BrowserFFIPort wraps `pyscript.ffi`, BrowserFetchPort wraps `pyscript.fetch`. BrowserHistoryPort uses `pyscript.context.window.history`/`pyscript.context.window.location`. BrowserCookiePort uses `pyscript.context.document.cookie`.
 
-**Rationale**: These are the official PyScript APIs. `pyscript.context` transparently handles main thread vs Worker differences. `pyscript.ffi` works across Pyodide and MicroPython. The previous approach of `import js` / `dir(js)` flattening is a legacy pattern that bypasses these abstractions and only works in the main thread.
+**Rationale**: These are the official PyScript APIs. `pyscript.context` transparently handles main thread vs Worker differences. `pyscript.ffi` works across Pyodide and MicroPython. The previous approach of `import js` / `dir(js)` flattening is a legacy pattern.
 
-### Decision 5: Server implementations — Spy for phase 1, Virtual DOM for phase 2
+### Decision 6: Server implementations — Spy for phase 1, Virtual DOM for phase 2
 
-**Phase 1 (this change)**: ServerDOMPort raises descriptive exceptions on node creation with clear messages. ServerFFIPort returns functions as-is (no proxy wrapping needed on server). ServerFetchPort uses `httpx` for actual HTTP requests. ServerHistoryPort stores path in a simple string attribute. ServerCookiePort parses Cookie headers and accumulates Set-Cookie headers.
+**Phase 1 (this change)**: ServerDOMPort raises descriptive exceptions on node creation. ServerFFIPort returns functions as-is. ServerFetchPort uses `httpx`. ServerHistoryPort stores path in a simple string. ServerCookiePort parses Cookie headers and accumulates Set-Cookie headers.
 
-**Phase 2 (future change)**: ServerDOMPort creates `VirtualDOMNode` instances that build an in-memory tree and generate HTML strings. This replaces the current `_render_html()` parallel path.
+**Phase 2 (future: feat-virtual-dom)**: ServerDOMPort creates `VirtualDOMNode` instances. HistoryPort's server path management integrates with the SSR rendering pipeline.
 
-### Decision 6: DI key structure
+### Decision 7: Merge Location into HistoryPort
 
-DI keys defined in `webcompy/ports/_keys.py`:
+**Chosen**: `Location` (a `SignalBase[str]` subclass that reads `window.location` and monitors popstate) is absorbed into `HistoryPort`. `HistoryPort` extends `SignalBase[str]` and provides:
+
+```python
+class HistoryPort(SignalBase[str]):
+    @property
+    def current_search(self) -> str: ...
+    @property
+    def history_state(self) -> dict | None: ...
+    def navigate(self, url: str, state: dict | None = None) -> None: ...
+```
+
+- Browser: `navigate()` calls `pushState` then updates `self.value` (triggers reactive propagation). `_refresh_from_window()` reads `window.location` on popstate. Constructor registers a `popstate` listener via `pyscript.ffi`.
+- Server: `navigate()` sets `self.value` directly. No window access.
+
+`Router` holds `self._history: HistoryPort` (instead of `self._location: Location`). `RouterLink._on_click` calls `inject(HISTORY_PORT_KEY).navigate(href, state)`.
+
+**Rationale**: `Location` and `HistoryPort` had overlapping responsibilities — Location held the reactive state, HistoryPort provided the operations. Merging them eliminates the artificial split, reduces DI keys from 2 to 1, and makes dependency graphs simpler (Router only needs `HistoryPort`, not both).
+
+**Alternative considered**: Keeping Location separate. Rejected because it created unnecessary indirection — all Location consumers also needed HistoryPort, and the two abstractions were never independently swappable.
+
+### Decision 8: DI key structure
+
+All DI keys in `webcompy/ports/_keys.py`:
 ```python
 DOM_PORT_KEY = InjectKey[DOMPort]("webcompy-port-dom")
 FFI_PORT_KEY = InjectKey[FFIPort]("webcompy-port-ffi")
 FETCH_PORT_KEY = InjectKey[FetchPort]("webcompy-port-fetch")
 COOKIE_PORT_KEY = InjectKey[CookiePort]("webcompy-port-cookie")
+HISTORY_PORT_KEY = InjectKey[HistoryPort]("webcompy-port-history")
 ```
 
-`HISTORY_PORT_KEY` lives in `webcompy/router/_keys.py` since HistoryPort is router-internal. All other keys are in `webcompy/ports/`.
+`HistoryPort` is a public port like the others — it is not router-internal.
 
-### Decision 7: Directory structure
+### Decision 9: Directory structure
 
 ```
 webcompy/ports/
-├── __init__.py              # Public API: Protocol re-exports
-├── _dom.py                  # DOMPort Protocol + DOMNode Protocol
-├── _ffi.py                  # FFIPort Protocol
-├── _fetch.py                # FetchPort Protocol + Response class
-├── _cookie.py               # CookiePort Protocol
-├── _keys.py                 # DI key definitions
+├── __init__.py              # Public API: ABC re-exports + DI keys
+├── _dom.py                  # DOMPort ABC + DOMNode ABC + DOMNodeList
+├── _ffi.py                  # FFIPort ABC
+├── _fetch.py                # FetchPort ABC + Response class
+├── _cookie.py               # CookiePort ABC
+├── _history.py              # HistoryPort ABC (extends SignalBase[str])
+├── _keys.py                 # All DI key definitions
 ├── _browser/
 │   ├── __init__.py
 │   ├── _dom.py              # BrowserDOMPort + BrowserDOMNode
 │   ├── _ffi.py              # BrowserFFIPort
 │   ├── _fetch.py            # BrowserFetchPort
-│   └── _cookie.py           # BrowserCookiePort
+│   ├── _cookie.py           # BrowserCookiePort
+│   └── _history.py          # BrowserHistoryPort
 └── _server/
     ├── __init__.py
     ├── _dom.py              # ServerDOMPort
     ├── _ffi.py              # ServerFFIPort
-    ├── _fetch.py            # ServerFetchPort via httpx
-    └── _cookie.py           # ServerCookiePort
+    ├── _fetch.py            # ServerFetchPort
+    ├── _cookie.py           # ServerCookiePort
+    └── _history.py          # ServerHistoryPort
 ```
 
-`HistoryPort` Protocol at `webcompy/router/_history_port.py` (internal). Browser implementation at `webcompy/router/_browser_history.py`. Server implementation at `webcompy/router/_server_history.py`.
+No more `webcompy/router/_history_port.py`, `_browser_history.py`, `_server_history.py` — HistoryPort lives in `ports/` like all other ports.
 
-### Decision 8: HistoryPort as active abstraction — Location and RouterLink delegate to it
+### Decision 10: Migration pattern for `if browser:` branching logic
 
-**Chosen**: `Location` no longer directly accesses `pyscript.context.window`. Instead, all history/location operations flow through `HistoryPort`:
-
-```python
-class Location(SignalBase[str]):
-    def __init__(self, mode, base_url):
-        self._popstate_handle = None
-        self.set_mode(mode)
-        if ENVIRONMENT == "pyscript":
-            self._popstate_handle = inject(HISTORY_PORT_KEY).on_popstate(self._refresh_path)
-
-    def _refresh_path(self, _=None):
-        history = inject(HISTORY_PORT_KEY)
-        path = history.current_path
-        state = history.state
-        self.__set_path__(path, state)
-
-    def destroy(self):
-        if self._popstate_handle is not None:
-            inject(HISTORY_PORT_KEY).off_popstate(self._popstate_handle)
-```
-
-```python
-# RouterLink._on_click
-history = inject(HISTORY_PORT_KEY)
-history.navigate(href, state)
-```
-
-**Rationale**: This achieves the original goal — browser and server share the same code path through `HistoryPort`. In the browser, `BrowserHistoryPort` delegates to `pyscript.context.window`. On the server, `ServerHistoryPort` stores path values internally. Unit tests can inject a mock `HistoryPort`.
-
-**Alternative considered**: Direct `pyscript.context.window` access in Location. Rejected because it defeats the purpose of the port abstraction — it makes Location browser-specific code that cannot be unit tested without a real browser environment, and creates divergent code paths between browser and server.
-
-### Decision 9: Router receives Location via constructor injection
-
-**Chosen**: `Router` accepts `location: Location` as a required constructor parameter instead of creating `Location(self.__mode__, self.__base_url__)` internally:
-
-```python
-class Router:
-    def __init__(self, *pages, location: Location, ...):
-        self._location = location
-
-# Bootstrap order in WebComPyApp.__init__:
-# 1. Provide all ports into DI scope
-# 2. Construct Location (within DI scope — inject(HISTORY_PORT_KEY) works)
-# 3. Construct Router(location=location)
-# 4. Construct AppDocumentRoot
-```
-
-**Rationale**: `Location.__init__` needs `inject(HISTORY_PORT_KEY)` which requires an active DI scope with `HistoryPort` provided. By moving Location construction after port provision, the DI lookup succeeds. This is a breaking change to `Router`'s public API, but acceptable for an unstable release.
-
-**Alternative considered**: Lazy initialization (`Location.init()` called later). Rejected because it adds lifecycle complexity and makes the object temporarily invalid. Constructor injection is cleaner and more testable.
-
-### Decision 10: Remove browser object entirely
-
-**Chosen**: The `browser` object and `webcompy/_browser/` module are removed completely. No deprecation period — WebComPy is an unstable release.
-
-**Rationale**: All framework code has been migrated to port injection. The `browser` object is dead code. A deprecation period serves no purpose when the framework doesn't guarantee backward compatibility.
-
-### Decision 11: CookiePort for cross-environment cookie access
-
-**Chosen**: `CookiePort` Protocol with methods `get(name)`, `set(name, value, *, max_age, path, secure, httponly, samesite)`, `delete(name, path)`, and `get_all()`.
-
-Browser implementation delegates to `document.cookie`. Server implementation parses the `Cookie` request header and accumulates `Set-Cookie` headers.
-
-**Rationale**: Cookies are needed for session management in SSR. A unified port abstraction allows framework code (e.g., authentication middleware) to work identically in both environments and be unit testable via mock injection.
-
-## Migration pattern for `if browser:` branching logic
-
-The current codebase uses `if browser:` for two distinct purposes. Each requires a different migration strategy.
-
-**Pattern A — Guarding browser-only operations (most common):**
+**Pattern A — Guarding browser-only operations:**
 ```python
 # Before
 if browser:
@@ -209,36 +161,38 @@ if browser:
 else:
     raise WebComPyException(...)
 # After
-dom = inject(DOM_PORT_KEY)
-dom.create_element("div")  # ServerDOMPort raises in phase 1, VirtualDOMNode in phase 2
+inject(DOM_PORT_KEY).create_element("div")  # ServerDOMPort raises
 ```
-No branching needed — the port handles the difference internally.
 
 **Pattern B — Branching between browser and server rendering paths:**
 ```python
-# Before (_switch.py, _repeat.py, _view.py, _dynamic.py, _component.py)
+# Before
 if browser:
-    # Browser path: use setTimeout for deferred callbacks, real DOM mounting
-else:
-    # Server path: synchronous callbacks, no DOM mounting
-# After (phase 1: feat-port-abstraction)
-dom = inject(DOM_PORT_KEY)
-dom.schedule_macro_task(callback)  # Browser: setTimeout, Server: synchronous
-# Server-only shortcuts (_on_set_parent server branches) remain unchanged;
-# they are addressed in phase 2 (feat-virtual-dom) when render() is unified.
+    browser.window.setTimeout(callback, 0)
+# After
+inject(DOM_PORT_KEY).schedule_macro_task(callback)  # Browser: setTimeout, Server: sync
 ```
 
-For cases where code genuinely needs to know the current environment (e.g., deferring lifecycle hooks differently), use `ENVIRONMENT` from `webcompy.utils`:
+**Pattern C — Environment-dependent behavior not covered by ports:**
 ```python
 from webcompy.utils import ENVIRONMENT
 if ENVIRONMENT == "pyscript":
-    # browser-specific logic
+    # browser-specific rendering logic
 ```
+
+### Decision 11: CookiePort for cross-environment cookie access
+
+`CookiePort` ABC with methods `get(name)`, `set(name, value, *, max_age, path, secure, httponly, samesite)`, `delete(name, path)`, and `get_all()`.
+
+Browser implementation delegates to `document.cookie`. Server implementation parses the `Cookie` request header and accumulates `Set-Cookie` headers for response.
+
+### Decision 12: Remove browser object entirely
+
+The `browser` object and `webcompy/_browser/` module are removed completely. No deprecation period — WebComPy is an unstable release. All framework code has been migrated to port injection.
 
 ## Risks / Trade-offs
 
-- **[Large code change]** 18 files needed migration from `browser` to port injection. → Mitigation: phased migration — introduce ports alongside browser, migrate file by file, run full test suite after each.
-- **[Performance]** BrowserDOMNode adapter adds one Python call layer per DOM operation. → Mitigation: adapter methods are thin one-liners delegating to JS objects; overhead is negligible compared to PyScript's existing proxy overhead.
-- **[Breaking change]** `Router` API changes (requires `location` parameter). → Acceptable for unstable release.
-- **[Breaking change]** `browser` object removed entirely. → Acceptable for unstable release; all consumers already migrated to ports.
-- **[DOMNode Protocol size]** The explicit Protocol has ~20 methods. → Trade-off accepted: this is the standard DOM API surface needed by the element system. Extending `DOMNode` is rare.
+- **[Large code change]** 20+ files migrated. → Mitigation: ports introduced alongside browser, migrated file by file, full test suite after each.
+- **[Performance]** BrowserDOMNode adapter adds one Python call layer per DOM operation. → Mitigation: thin one-liner delegation; overhead negligible compared to PyScript's existing proxy overhead.
+- **[Breaking change]** `browser` removed, `Location` removed, `Router` internal API changed. → Acceptable for unstable release.
+- **[Breaking change]** Apps that instantiate `Location` directly must switch to `HistoryPort`. → Acceptable for unstable release.
