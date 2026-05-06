@@ -2,7 +2,7 @@
 
 ## Purpose
 
-WebComPy accesses browser APIs through typed port Protocol interfaces injected via the dependency injection system. Each port covers a specific capability domain — DOM manipulation, FFI bridging, HTTP requests, history navigation — with browser and server implementations selected at bootstrap time. This replaces the monolithic `browser` object and enables unit testing of all browser-dependent code through mock port injection.
+WebComPy accesses browser APIs through typed port Protocol interfaces injected via the dependency injection system. Each port covers a specific capability domain — DOM manipulation, FFI bridging, HTTP requests, history navigation, cookie management — with browser and server implementations selected at bootstrap time. This replaces the monolithic `browser` object and enables unit testing of all browser-dependent code through mock port injection.
 
 ## ADDED Requirements
 
@@ -24,86 +24,23 @@ Each port SHALL be a Python Protocol class declaring the exact methods and type 
 - **WHEN** `webcompy/ports/_fetch.py` is imported
 - **THEN** it SHALL export a `FetchPort` Protocol with an async `request` method accepting `method`, `url`, `headers`, `query_params`, `json`, `body_data`, `form_data`, and `form_element` parameters
 
+#### Scenario: CookiePort Protocol definition
+- **WHEN** `webcompy/ports/_cookie.py` is imported
+- **THEN** it SHALL export a `CookiePort` Protocol with methods `get(name) -> str | None`, `set(name, value, *, max_age=None, path="/", secure=False, httponly=False, samesite=None)`, `delete(name, path="/")`, and `get_all() -> dict[str, str]`
+
 ### Requirement: Port implementations shall be selected by environment at bootstrap time
 
 `WebComPyApp` SHALL instantiate the appropriate port implementation for each port based on the current environment and provide them into `app.di_scope`. Browser implementations SHALL be used when `ENVIRONMENT == "pyscript"`; server implementations SHALL be used when `ENVIRONMENT == "other"`.
 
 #### Scenario: Ports provided during browser bootstrap
 - **WHEN** `WebComPyApp` is created and `ENVIRONMENT == "pyscript"`
-- **THEN** `BrowserDOMPort`, `BrowserFFIPort`, and `BrowserFetchPort` instances SHALL be provided into `app.di_scope` using `DOM_PORT_KEY`, `FFI_PORT_KEY`, and `FETCH_PORT_KEY`
+- **THEN** `BrowserDOMPort`, `BrowserFFIPort`, `BrowserFetchPort`, `BrowserCookiePort`, and `BrowserHistoryPort` instances SHALL be provided into `app.di_scope`
 - **AND** all ports SHALL be available via `inject()` during rendering
 
 #### Scenario: Ports provided during server bootstrap
 - **WHEN** `WebComPyApp` is created and `ENVIRONMENT == "other"`
-- **THEN** `ServerDOMPort`, `ServerFFIPort`, and `ServerFetchPort` instances SHALL be provided into `app.di_scope`
+- **THEN** `ServerDOMPort`, `ServerFFIPort`, `ServerFetchPort`, `ServerCookiePort`, and `ServerHistoryPort` instances SHALL be provided into `app.di_scope`
 - **AND** the DI scope SHALL be entered as a context manager
-
-### Requirement: Browser port implementations shall use pyscript.context and pyscript.ffi
-
-Browser port implementations SHALL access browser APIs through `pyscript.context.document`, `pyscript.context.window`, and `pyscript.ffi` rather than directly importing the `js` module.
-
-#### Scenario: BrowserDOMPort accesses document
-- **WHEN** `BrowserDOMPort.create_element("div")` is called in the browser
-- **THEN** it SHALL delegate to `pyscript.context.document.createElement("div")`
-- **AND** return a `BrowserDOMNode` wrapping the JS element
-
-#### Scenario: BrowserFFIPort creates a proxy
-- **WHEN** `BrowserFFIPort.create_proxy(handler)` is called in the browser
-- **THEN** it SHALL delegate to `pyscript.ffi.create_proxy(handler)`
-- **AND** return the resulting proxy object
-
-#### Scenario: BrowserFetchPort performs a request
-- **WHEN** `BrowserFetchPort.request("GET", url, ...)` is called in the browser
-- **THEN** it SHALL delegate to `pyscript.fetch(url, ...)`
-- **AND** return a `Response` object with `.text`, `.json()`, `.headers`, `.status_code`, `.ok`, and `.raise_for_status()`
-
-### Requirement: Server port implementations shall provide equivalent behavior
-
-Server port implementations SHALL provide the same method signatures and return types as browser implementations for all non-DOM operations. ServerDOMPort SHALL raise descriptive errors for DOM node creation during phase 1, indicating that only HTML string rendering is available.
-
-#### Scenario: ServerFFIPort returns functions as-is
-- **WHEN** `ServerFFIPort.create_proxy(handler)` is called on the server
-- **THEN** it SHALL return `handler` directly without any proxy wrapping
-- **AND** `ServerFFIPort.destroy_proxy(proxy)` SHALL be a no-op
-
-#### Scenario: ServerFetchPort uses httpx
-- **WHEN** `ServerFetchPort.request("GET", url, ...)` is called on the server
-- **THEN** it SHALL perform the request using `httpx.AsyncClient`
-- **AND** return a `Response` object matching the same interface
-
-#### Scenario: ServerDOMPort rejects DOM creation in phase 1
-- **WHEN** `ServerDOMPort.create_element("div")` is called on the server in phase 1
-- **THEN** it SHALL raise `WebComPyException` with a message indicating DOM operations are not available outside the browser
-
-### Requirement: History port shall be internal to the router module
-
-`HistoryPort` SHALL be defined within `webcompy/router/` as an internal abstraction, not in the public `webcompy/ports/` package. It SHALL provide methods `current_path`, `current_search`, `navigate`, `on_popstate`, `off_popstate`, and `state` (property). The browser implementation SHALL use `pyscript.context.window.history` and `pyscript.context.window.location`.
-
-#### Scenario: HistoryPort provides current path in browser
-- **WHEN** `BrowserHistoryPort.current_path` is accessed
-- **THEN** it SHALL return the path from `pyscript.context.window.location.pathname` (history mode) or `pyscript.context.window.location.hash` (hash mode)
-
-#### Scenario: HistoryPort navigates in browser
-- **WHEN** `BrowserHistoryPort.navigate("/new-path", state)` is called
-- **THEN** it SHALL call `pyscript.context.window.history.pushState(state, None, "/new-path")`
-
-#### Scenario: ServerHistoryPort stores path directly
-- **WHEN** `ServerHistoryPort.navigate("/new-path", state)` is called on the server
-- **THEN** it SHALL store the path and state internally
-- **AND** `current_path` SHALL return the stored path
-
-### Requirement: DOMNode Protocol shall have explicit method declarations
-
-`DOMNode` SHALL be a Protocol with explicit method signatures rather than `__getattr__`/`__setattr__` catch-all patterns. This enables dual-environment implementation — `BrowserDOMNode` wrapping a JS DOM node and `VirtualDOMNode` managing an in-memory tree — that satisfy the same Protocol.
-
-#### Scenario: Node tree operations via Protocol
-- **WHEN** framework code calls `parent.appendChild(child)` on a `DOMNode`
-- **THEN** the call SHALL work identically whether `parent` is a `BrowserDOMNode` or `VirtualDOMNode`
-- **AND** no runtime `browser` environment check SHALL be required at the call site
-
-#### Scenario: Attribute operations via Protocol
-- **WHEN** framework code calls `node.setAttribute("id", "foo")` on a `DOMNode`
-- **THEN** the call SHALL work identically across all DOMNode implementations
 
 ### Requirement: Framework code shall access ports via inject() or constructor injection
 
@@ -119,11 +56,89 @@ All framework code that currently accesses browser APIs SHALL obtain port refere
 - **THEN** it SHALL call `inject(DOM_PORT_KEY).schedule_macro_task(_flush_pending_effects)`
 - **AND** on the server, the callback SHALL execute synchronously
 
-### Requirement: The browser object shall be deprecated but remain accessible
+### Requirement: HistoryPort shall be actively used by Location and RouterLink
 
-The existing `browser` object SHALL remain accessible via `from webcompy import browser` and `from webcompy._browser import browser` during a deprecation period. Accessing it SHALL emit a `DeprecationWarning` directing users to port APIs. Framework-internal code SHALL NOT import `browser` directly after migration.
+`HistoryPort` SHALL be the single abstraction for all history and location operations. `Location` SHALL delegate history reads and popstate monitoring to `HistoryPort`. `RouterLink` SHALL delegate navigation to `HistoryPort`. Both `Location` and `RouterLink` SHALL obtain `HistoryPort` via `inject(HISTORY_PORT_KEY)`.
 
-#### Scenario: Deprecated browser access
-- **WHEN** application code accesses `from webcompy import browser`
-- **THEN** a `DeprecationWarning` SHALL be emitted
-- **AND** the `browser` object SHALL still function as before
+#### Scenario: Location reads path via HistoryPort
+- **WHEN** `Location._refresh_path()` is called
+- **THEN** it SHALL read `current_path` from the injected `HistoryPort`
+- **AND** `current_path` SHALL return `pathname` in history mode and `hash` in hash mode
+
+#### Scenario: RouterLink navigates via HistoryPort
+- **WHEN** `RouterLink._on_click()` is triggered in the browser
+- **THEN** it SHALL call `inject(HISTORY_PORT_KEY).navigate(href, state)`
+
+#### Scenario: HistoryPort handles popstate events
+- **WHEN** `Location.__init__` is called in the browser
+- **THEN** it SHALL register a popstate listener via `inject(HISTORY_PORT_KEY).on_popstate(callback)`
+- **AND** `Location.destroy()` SHALL call `HistoryPort.off_popstate(handle)`
+
+### Requirement: Router shall receive Location via constructor injection
+
+`Router` SHALL accept a `Location` instance as a constructor parameter rather than creating one internally. This allows `Location` to be constructed after the DI scope is active (with all ports provided), and enables testing with mock `Location` implementations.
+
+#### Scenario: Router receives Location externally
+- **WHEN** `Router` is instantiated
+- **THEN** it SHALL accept `location: Location` as a required constructor parameter
+- **AND** SHALL not create a `Location` instance internally
+
+#### Scenario: Bootstrap creates Location with active DI scope
+- **WHEN** `WebComPyApp.__init__` bootstraps the application
+- **THEN** ports SHALL be provided into `app.di_scope` first
+- **AND** `Location` SHALL be constructed within the active DI scope
+- **AND** `Router` SHALL receive the constructed `Location`
+
+### Requirement: CookiePort shall provide cross-environment cookie access
+
+`CookiePort` SHALL provide a uniform API for reading, writing, and deleting cookies across browser and server environments. The browser implementation SHALL delegate to `document.cookie`. The server implementation SHALL parse request `Cookie` headers and accumulate `Set-Cookie` headers for response.
+
+#### Scenario: Reading a cookie in the browser
+- **WHEN** `BrowserCookiePort.get("session_id")` is called
+- **THEN** it SHALL parse `document.cookie` and return the value for the matching key
+- **AND** return `None` if the key is not found
+
+#### Scenario: Setting a cookie in the browser
+- **WHEN** `BrowserCookiePort.set("theme", "dark", path="/", max_age=3600)` is called
+- **THEN** it SHALL write to `document.cookie` with the appropriate attributes
+
+#### Scenario: Reading a cookie on the server
+- **WHEN** `ServerCookiePort.get("session_id")` is called
+- **THEN** it SHALL parse the `Cookie` request header and return the value
+- **AND** return `None` if the key is not found
+
+#### Scenario: Setting a cookie on the server
+- **WHEN** `ServerCookiePort.set("theme", "dark", path="/", max_age=3600)` is called
+- **THEN** it SHALL accumulate a `Set-Cookie` header for the response
+- **AND** the header SHALL include the specified attributes
+
+### Requirement: Browser port implementations shall use pyscript.context and pyscript.ffi
+
+Browser port implementations SHALL access browser APIs through `pyscript.context.document`, `pyscript.context.window`, and `pyscript.ffi` rather than directly importing the `js` module.
+
+#### Scenario: BrowserDOMPort accesses document
+- **WHEN** `BrowserDOMPort.create_element("div")` is called in the browser
+- **THEN** it SHALL delegate to `pyscript.context.document.createElement("div")`
+- **AND** return a `BrowserDOMNode` wrapping the JS element
+
+### Requirement: Server port implementations shall provide equivalent behavior
+
+Server port implementations SHALL provide the same method signatures and return types as browser implementations for all non-DOM operations. ServerDOMPort SHALL raise descriptive errors for DOM node creation during phase 1.
+
+#### Scenario: ServerFetchPort uses httpx
+- **WHEN** `ServerFetchPort.request("GET", url, ...)` is called on the server
+- **THEN** it SHALL perform the request using `httpx.AsyncClient`
+- **AND** return a `Response` object matching the same interface
+
+#### Scenario: ServerDOMPort rejects DOM creation in phase 1
+- **WHEN** `ServerDOMPort.create_element("div")` is called on the server in phase 1
+- **THEN** it SHALL raise `WebComPyException` with a message indicating DOM operations are not available outside the browser
+
+### Requirement: DOMNode Protocol shall have explicit method declarations
+
+`DOMNode` SHALL be a Protocol with explicit method signatures rather than `__getattr__`/`__setattr__` catch-all patterns.
+
+#### Scenario: Node tree operations via Protocol
+- **WHEN** framework code calls `parent.appendChild(child)` on a `DOMNode`
+- **THEN** the call SHALL work identically whether `parent` is a `BrowserDOMNode` or `VirtualDOMNode`
+- **AND** no runtime environment check SHALL be required at the call site
