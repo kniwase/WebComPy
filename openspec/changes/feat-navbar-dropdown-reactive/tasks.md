@@ -21,7 +21,7 @@
 - [ ] **Task 4**: Add event listener cleanup on component destroy
   - Store reference to document click handler
   - Remove the handler when the navbar component is destroyed to prevent memory leaks
-  - Use `context.on_before_destroying` or equivalent lifecycle hook
+  - Use `context.on_before_destroy` lifecycle hook
   - Estimated: 15 min
 
 - [ ] **Task 5**: Test dropdown functionality

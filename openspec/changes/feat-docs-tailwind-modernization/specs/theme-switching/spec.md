@@ -27,13 +27,19 @@ The current theme class SHALL be applied to the `<html>` element so that CSS fra
 
 ### Requirement: The theme SHALL be per-application
 
-Each `WebComPyApp` instance SHALL have its own independent theme state. Multiple apps on the same page SHALL NOT share theme state.
+Each `WebComPyApp` instance SHALL have its own independent theme state. **However, since there is only one `<html>` element per document, setting `class` on `<html>` via `app.set_html_attr` means multiple apps on the same page will conflict.** The most recently rendered app's `html_attrs` will take effect. This is a known limitation of the single `<html>` element model.
 
-#### Scenario: Multiple apps with different themes
+#### Scenario: Single app theme switching
+- **WHEN** an app sets theme to `"dark"`
+- **THEN** the app's HTML output SHALL have `class="dark"`
+- **WHEN** the theme changes to `"light"`
+- **THEN** the app's HTML output SHALL have `class="light"`
+
+#### Scenario: Multiple apps limitation
 - **WHEN** app A sets theme to `"dark"`
 - **AND** app B sets theme to `"light"`
-- **THEN** app A's HTML SHALL have `class="dark"`
-- **AND** app B's HTML SHALL have `class="light"`
+- **THEN** only one theme class SHALL be present on the `<html>` element
+- **AND** the most recently rendered app's theme SHALL take effect
 
 ### Requirement: Theme toggle UI SHALL be accessible
 

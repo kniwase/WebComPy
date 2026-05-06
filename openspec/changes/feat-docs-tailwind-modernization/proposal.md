@@ -6,7 +6,7 @@ The docs_app currently uses Bootstrap 5 CSS with custom `scoped_style` CSS-in-Py
 
 - **Remove Bootstrap 5 CSS** from `docs_app/bootstrap.py`
 - **Add Tailwind CSS CDN JS** (`static/tailwindcss.js`, downloaded from CDN for standalone mode)
-- **Add highlight.js theme files** (`static/highlightjs/github-dark.min.css`, `static/highlightjs/github-dark-dimmed.min.css`)
+- **Add highlight.js theme files** (`static/highlightjs/github.min.css` for light, `static/highlightjs/github-dark-dimmed.min.css` for dark)
 - **Rewrite all docs_app component class names** from Bootstrap to Tailwind utility classes
   - `docs_app/components/navigation.py` — navbar with responsive mobile menu
   - `docs_app/components/demo_display.py` — card layout
@@ -15,7 +15,7 @@ The docs_app currently uses Bootstrap 5 CSS with custom `scoped_style` CSS-in-Py
 - **Add light/dark theme toggle** to navbar
   - Use `Signal` for theme state
   - Use `app.set_html_attr("class", computed(...))` (requires `feat-html-attrs-control`)
-  - Switch between `github-dark` and `github-light` (default) highlight.js themes
+  - Switch between `github-dark-dimmed` (dark) and `github` (light) highlight.js themes
 - **Preserve all `scoped_style` definitions** — Tailwind and scoped_style coexist
 - **Maintain `standalone=True`** — all assets served locally
 

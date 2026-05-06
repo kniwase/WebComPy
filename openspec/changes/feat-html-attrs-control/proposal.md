@@ -16,7 +16,10 @@ WebComPy renders content inside a mount element (`#webcompy-app`), but the `<htm
 - `html-attrs-control`: Reactive and static attribute management on the `<html>` element from WebComPy applications, for both browser and SSG environments.
 
 ### Modified Capabilities
-- `app`: Updated to include `set_html_attr` and `remove_html_attr` in forwarded properties; SSG output now includes `<html>` attributes.
+<!-- Existing capabilities whose REQUIREMENTS are changing (not just implementation).
+     Only list here if spec-level behavior changes. Each needs a delta spec file.
+     Use existing spec names from openspec/specs/. Leave empty if no requirement changes. -->
+<!-- None - this change only adds new forwarded properties without changing existing spec requirements -->
 
 ## Impact
 

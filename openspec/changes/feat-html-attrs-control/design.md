@@ -38,11 +38,27 @@ For the initial render, attributes are synced inside `_render()` using `browser.
 
 **Pattern:**
 ```python
+_callback_consumers: dict[str, CallbackConsumerNode] = {}
+
 for key, value in self._html_attrs.items():
     if isinstance(value, Computed):
-        value.on_after_updating(lambda v, k=key: browser.document.documentElement.setAttribute(k, v))
+        consumer = value.on_after_updating(
+            lambda v, k=key: browser.document.documentElement.setAttribute(k, v)
+        )
+        self._callback_consumers[key] = consumer
     else:
         browser.document.documentElement.setAttribute(key, value)
+```
+
+**Cleanup in `remove_html_attr`:**
+```python
+def remove_html_attr(self, key: str):
+    if key in self._callback_consumers:
+        self._callback_consumers[key].consumer_destroy()
+        del self._callback_consumers[key]
+    del self._html_attrs[key]
+    if browser:
+        browser.document.documentElement.removeAttribute(key)
 ```
 
 ### Decision: Use `_HtmlElement` in `generate_html()` to emit attributes
