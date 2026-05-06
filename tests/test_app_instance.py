@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 
 from webcompy.app._app import WebComPyApp
@@ -194,3 +196,34 @@ class TestHtmlAttrs:
         app.remove_html_attr("class")
         assert "class" not in app._root._callback_consumers
         assert "class" not in app._root._html_attrs
+
+    def test_consumer_destroy_called_when_overwriting_computed(self, monkeypatch):
+        from webcompy.signal import Signal, computed
+
+        mock_browser = MagicMock()
+        mock_browser.document.documentElement = MagicMock()
+        monkeypatch.setattr("webcompy.app._root_component.browser", mock_browser)
+
+        app = _make_app()
+        theme = Signal("light")
+        c = computed(lambda: theme.value)
+        app.set_html_attr("class", c)
+        assert "class" in app._root._callback_consumers
+        consumer1 = app._root._callback_consumers["class"]
+
+        # Overwrite with same key - old consumer should be destroyed
+        app.set_html_attr("class", "static")
+        assert "class" not in app._root._callback_consumers  # old consumer removed
+
+        # Set again with Computed
+        app.set_html_attr("class", c)
+        assert "class" in app._root._callback_consumers
+        consumer2 = app._root._callback_consumers["class"]
+
+        # remove_html_attr should destroy the consumer
+        app.remove_html_attr("class")
+        assert "class" not in app._root._callback_consumers
+        assert "class" not in app._root._html_attrs
+
+        # Verify consumers are different instances (not leaked)
+        assert consumer1 is not consumer2

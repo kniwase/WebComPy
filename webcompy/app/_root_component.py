@@ -17,6 +17,7 @@ from webcompy.exception import WebComPyException
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
 from webcompy.signal import Computed
+from webcompy.signal._graph import consumer_destroy
 
 if TYPE_CHECKING:
     from webcompy.app._app import WebComPyApp
@@ -201,8 +202,6 @@ class AppDocumentRoot(Component):
     def set_html_attr(self, key: str, value: str | Computed[str]):
         # Clean up existing consumer before overwriting
         if key in self._callback_consumers:
-            from webcompy.signal._graph import consumer_destroy
-
             consumer_destroy(self._callback_consumers[key])
             del self._callback_consumers[key]
         self._html_attrs[key] = value
@@ -216,8 +215,6 @@ class AppDocumentRoot(Component):
 
     def remove_html_attr(self, key: str):
         if key in self._callback_consumers:
-            from webcompy.signal._graph import consumer_destroy
-
             consumer_destroy(self._callback_consumers[key])
             del self._callback_consumers[key]
         if key in self._html_attrs:
