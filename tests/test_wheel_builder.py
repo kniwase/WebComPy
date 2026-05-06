@@ -866,3 +866,37 @@ class TestMakeWebcompyAppPackageSkipWebcompy:
             lines = top_level.strip().split("\n")
             assert "myapp" in lines
             assert "webcompy" not in lines
+
+    def test_skip_webcompy_with_bundled_deps(self, tmp_path):
+        webcompy_pkg = tmp_path / "webcompy"
+        webcompy_pkg.mkdir()
+        (webcompy_pkg / "__init__.py").write_text("")
+        app_pkg = tmp_path / "myapp"
+        app_pkg.mkdir()
+        (app_pkg / "__init__.py").write_text("")
+        click_pkg = tmp_path / "click"
+        click_pkg.mkdir()
+        (click_pkg / "__init__.py").write_text("")
+        dest = tmp_path / "dist"
+        dest.mkdir()
+
+        result = make_webcompy_app_package(
+            dest,
+            webcompy_pkg,
+            app_pkg,
+            "1.0.0",
+            skip_webcompy=True,
+            bundled_deps=[("click", click_pkg)],
+        )
+        with zipfile.ZipFile(result) as zf:
+            names = zf.namelist()
+            assert "myapp/__init__.py" in names
+            assert "click/__init__.py" in names
+            webcompy_entries = [n for n in names if n.startswith("webcompy/")]
+            assert len(webcompy_entries) == 0, f"webcompy found when skip_webcompy=True: {webcompy_entries}"
+            dist_info = next(n for n in names if n.endswith("/top_level.txt"))
+            top_level = zf.read(dist_info).decode()
+            lines = top_level.strip().split("\n")
+            assert "myapp" in lines
+            assert "click" in lines
+            assert "webcompy" not in lines
