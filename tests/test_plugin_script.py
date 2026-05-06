@@ -160,3 +160,124 @@ class TestGenerateHtmlWithPluginScripts:
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         assert "https://example.com/analytics.js" in html_str
+
+    def test_conditional_head_script_placed_in_head(self):
+        app = _make_app(
+            scripts=[
+                PluginScript(
+                    attrs={"src": "https://example.com/lib.js"},
+                    condition="true",
+                    in_head=True,
+                )
+            ]
+        )
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        head_section = html_str.split("<body>")[0]
+        assert "document.head.appendChild" in head_section
+
+    def test_conditional_body_script_placed_in_body(self):
+        app = _make_app(
+            scripts=[
+                PluginScript(
+                    attrs={"src": "https://example.com/lib.js"},
+                    condition="true",
+                    in_head=False,
+                )
+            ]
+        )
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        body_section = html_str.split("<body>")[1]
+        assert "document.body.appendChild" in body_section
+
+    def test_multiple_conditional_scripts(self):
+        app = _make_app(
+            scripts=[
+                PluginScript(
+                    attrs={"src": "https://example.com/script1.js"},
+                    condition="cond1",
+                ),
+                PluginScript(
+                    attrs={"src": "https://example.com/script2.js"},
+                    condition="cond2",
+                ),
+            ]
+        )
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert html_str.count("(function(){") == 2
+        assert "cond1" in html_str
+        assert "cond2" in html_str
+
+    def test_unconditional_head_script_placement(self):
+        app = _make_app(
+            scripts=[
+                PluginScript(
+                    attrs={"type": "text/javascript", "src": "https://example.com/head.js"},
+                    in_head=True,
+                )
+            ]
+        )
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        head_section = html_str.split("<body>")[0]
+        assert "https://example.com/head.js" in head_section
+
+    def test_unconditional_body_script_placement(self):
+        app = _make_app(
+            scripts=[
+                PluginScript(
+                    attrs={"type": "text/javascript", "src": "https://example.com/body.js"},
+                    in_head=False,
+                )
+            ]
+        )
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        body_section = html_str.split("<body>")[1]
+        assert "https://example.com/body.js" in body_section
+
+    def test_inline_only_script_with_condition_and_none_script(self):
+        app = _make_app(
+            scripts=[
+                PluginScript(
+                    attrs={},
+                    condition="true",
+                )
+            ]
+        )
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "onload" not in html_str
+        assert "createElement" not in html_str
