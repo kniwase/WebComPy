@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from webcompy.app import AppConfig, WebComPyApp
+from webcompy.app import AppConfig, PluginScript, WebComPyApp
 
 from .keys import AppThemeKey
 from .layout import Root
@@ -13,6 +13,20 @@ app = WebComPyApp(
         app_package=Path(__file__).parent,
         base_url="/",
         dependencies=["aiofiles"],
+        scripts=[
+            PluginScript(
+                attrs={
+                    "type": "text/javascript",
+                    "src": "https://cdnjs.cloudflare.com/ajax/libs/eruda/2.4.1/eruda.min.js",
+                },
+                in_head=True,
+                condition="new URLSearchParams(location.search).get('debug') === 'True'",
+            ),
+            PluginScript(
+                script="eruda.init();",
+                condition="new URLSearchParams(location.search).get('debug') === 'True'",
+            ),
+        ],
     ),
 )
 app.provide(AppThemeKey, "app-dark-theme")

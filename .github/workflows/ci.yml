@@ -119,6 +119,8 @@ jobs:
             files: tests/e2e/test_runtime_local.py
           - name: standalone
             files: tests/e2e/test_standalone.py
+          - name: plugin-script
+            files: tests/e2e/test_eruda.py
         serving_mode: [prod, static]
         include:
           - group:
