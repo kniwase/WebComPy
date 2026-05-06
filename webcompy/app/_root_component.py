@@ -17,9 +17,11 @@ from webcompy.exception import WebComPyException
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
 from webcompy.signal import Computed
+from webcompy.signal._graph import consumer_destroy
 
 if TYPE_CHECKING:
     from webcompy.app._app import WebComPyApp
+    from webcompy.signal._base import CallbackConsumerNode
 
 
 class Head(TypedDict, total=False):
@@ -90,6 +92,8 @@ class AppDocumentRoot(Component):
         self._links = []
         self._scripts = []
         self._scripts_head = []
+        self._html_attrs: dict[str, str | Computed[str]] = {}
+        self._callback_consumers: dict[str, CallbackConsumerNode] = {}
 
         with di_scope:
             super().__init__(_app_root_setup, None, {"root": lambda: root_component(None)})
@@ -112,19 +116,25 @@ class AppDocumentRoot(Component):
             self._property["on_after_rendering"]()
             if self._app:
                 self._app._record_phase("run_done")
-            if browser and self.__loading:
-                self.__loading = False
-                selector = self._selector or "#webcompy-app"
-                loading_el = browser.document.querySelector(
-                    f"{selector} > #webcompy-loading"
-                ) or browser.document.getElementById("webcompy-loading")
-                if loading_el:
-                    loading_el.remove()
-                if self._router and self._router._preload:
-                    self._router.preload_lazy_routes()
-                if self._app:
-                    self._app._record_phase("loading_removed")
-                    self._app._emit_profile_summary()
+            if browser:
+                for key, value in self._html_attrs.items():
+                    current = browser.document.documentElement.getAttribute(key)
+                    expected = value.value if isinstance(value, Computed) else value
+                    if current != expected:
+                        browser.document.documentElement.setAttribute(key, expected)  # type: ignore[union-attr]
+                if self.__loading:
+                    self.__loading = False
+                    selector = self._selector or "#webcompy-app"
+                    loading_el = browser.document.querySelector(
+                        f"{selector} > #webcompy-loading"
+                    ) or browser.document.getElementById("webcompy-loading")
+                    if loading_el:
+                        loading_el.remove()
+                    if self._router and self._router._preload:
+                        self._router.preload_lazy_routes()
+                    if self._app:
+                        self._app._record_phase("loading_removed")
+                        self._app._emit_profile_summary()
         finally:
             if not browser:
                 if app_token is not None:
@@ -186,6 +196,33 @@ class AppDocumentRoot(Component):
 
             store = inject(_COMPONENT_STORE_KEY)
         return " ".join(style for component in store.components.values() if (style := component.scoped_style))
+
+    # HTML attribute controllers
+    def set_html_attr(self, key: str, value: str | Computed[str]):
+        if key in self._callback_consumers:
+            consumer_destroy(self._callback_consumers[key])
+            del self._callback_consumers[key]
+        self._html_attrs[key] = value
+        if isinstance(value, Computed) and browser:
+            consumer = value.on_after_updating(
+                lambda v, k=key: browser.document.documentElement.setAttribute(k, v)  # type: ignore[union-attr]
+            )
+            self._callback_consumers[key] = consumer
+        if browser:
+            browser.document.documentElement.setAttribute(key, value.value if isinstance(value, Computed) else value)  # type: ignore[union-attr]
+
+    def remove_html_attr(self, key: str):
+        if key in self._callback_consumers:
+            consumer_destroy(self._callback_consumers[key])
+            del self._callback_consumers[key]
+        if key in self._html_attrs:
+            del self._html_attrs[key]
+        if browser:
+            browser.document.documentElement.removeAttribute(key)  # type: ignore[union-attr]
+
+    @property
+    def html_attrs(self) -> dict[str, str]:
+        return {k: (v.value if isinstance(v, Computed) else v) for k, v in self._html_attrs.items()}
 
     # Head controllers
     def set_title(self, title: str):

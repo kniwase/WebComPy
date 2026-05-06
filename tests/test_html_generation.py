@@ -273,3 +273,45 @@ class TestGenerateHtmlRuntimeLocalServing:
         assert config["lockFileURL"] == "https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide-lock.json"
         script_src = _extract_script_src(html_str)
         assert "pyscript.net" in script_src
+
+
+class TestHtmlAttrsInSsgOutput:
+    def test_html_attrs_in_static_generation(self):
+        app = _make_app()
+        app.set_html_attr("data-theme", "dark")
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert '<html data-theme="dark">' in html_str
+
+    def test_multiple_html_attrs_in_static_generation(self):
+        app = _make_app()
+        app.set_html_attr("lang", "ja")
+        app.set_html_attr("class", "dark")
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert '<html lang="ja" class="dark">' in html_str or '<html class="dark" lang="ja">' in html_str
+
+    def test_computed_html_attr_in_static_generation(self):
+        from webcompy.signal import Signal, computed
+
+        app = _make_app()
+        theme = Signal("light")
+        app.set_html_attr("class", computed(lambda: theme.value))
+        html_str = generate_html(
+            app,
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert '<html class="light">' in html_str

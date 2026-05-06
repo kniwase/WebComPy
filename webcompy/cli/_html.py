@@ -197,7 +197,7 @@ def generate_html(
 
     return "<!doctype html>" + _HtmlElement(
         "html",
-        {},
+        app._root.html_attrs,
         _HtmlElement(
             "head",
             {},
