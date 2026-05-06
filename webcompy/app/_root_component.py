@@ -199,6 +199,12 @@ class AppDocumentRoot(Component):
 
     # HTML attribute controllers
     def set_html_attr(self, key: str, value: str | Computed[str]):
+        # Clean up existing consumer before overwriting
+        if key in self._callback_consumers:
+            from webcompy.signal._graph import consumer_destroy
+
+            consumer_destroy(self._callback_consumers[key])
+            del self._callback_consumers[key]
         self._html_attrs[key] = value
         if isinstance(value, Computed) and browser:
             consumer = value.on_after_updating(
