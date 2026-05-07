@@ -29,6 +29,7 @@ class AppConfig:
     standalone: bool = False
     wheel_mode: Literal["bundled", "split"] = "bundled"
     scripts: list[PluginScript] = field(default_factory=list)
+    plugins: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         stripped = self.base_url.strip("/")

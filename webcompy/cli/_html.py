@@ -217,8 +217,12 @@ def generate_html(
 
     scripts_head.extend(app.head["script"])
     scripts_body.extend(app.scripts)
-    plugin_scripts_head = [_render_plugin_script(ps) for ps in app.config.scripts if ps.in_head]
-    plugin_scripts_body = [_render_plugin_script(ps) for ps in app.config.scripts if not ps.in_head]
+    plugin_head_scripts: list[_HtmlElement] = []
+    plugin_body_scripts: list[_HtmlElement] = []
+    for ps in app.config.scripts:
+        (plugin_head_scripts if ps.in_head else plugin_body_scripts).append(_render_plugin_script(ps))
+    for ps in app._plugin_manager.scripts:
+        (plugin_head_scripts if ps.in_head else plugin_body_scripts).append(_render_plugin_script(ps))
     if dev_mode:
         scripts_body.append(
             (
@@ -260,7 +264,7 @@ def generate_html(
             ),
             *[_HtmlElement("link", attrs) for attrs in app.head.get("link", [])],
             *_load_scripts(scripts_head),
-            *plugin_scripts_head,
+            *plugin_head_scripts,
         ),
         _HtmlElement(
             "body",
@@ -268,7 +272,7 @@ def generate_html(
             _Loadscreen(),
             app_root,
             *_load_scripts(scripts_body),
-            *plugin_scripts_body,
+            *plugin_body_scripts,
             "<!--webcompy-app-loader-->",
         ),
     ).render_html().replace("<!--webcompy-app-loader-->", app_loader_html)
