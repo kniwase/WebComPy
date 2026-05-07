@@ -49,8 +49,13 @@ The system SHALL define DI injection keys in `webcompy.ports._keys` for all 5 po
 - **THEN** each key is a distinct `InjectKey` instance usable with `inject()` and `provide()`
 
 ### Requirement: DOMNode ABC methods are available
-The `DOMNode` ABC SHALL expose tree manipulation (`appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove`), attribute methods (`setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`), event methods (`addEventListener`, `removeEventListener`), content properties (`textContent`, `childNodes`, `nodeName`, `nodeType`), and WebComPy markers (`__webcompy_node__`, `__webcompy_prerendered_node__`).
+The `DOMNode` ABC SHALL expose tree manipulation (`appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove`), attribute methods (`setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`), event methods (`addEventListener`, `removeEventListener`), content properties (`textContent`, `childNodes` (returns `DOMNodeList`), `nodeName`, `nodeType`), and WebComPy markers (`__webcompy_node__`, `__webcompy_prerendered_node__`).
 
 #### Scenario: BrowserDOMNode delegates to real DOM
 - **WHEN** `BrowserDOMNode(real_element).setAttribute("class", "foo")` is called
 - **THEN** the underlying browser element's class attribute is set to "foo"
+
+#### Scenario: DOMNodeList provides length and indexing
+- **WHEN** code accesses `node.childNodes` on a DOMNode
+- **THEN** it SHALL return a `DOMNodeList` instance
+- **AND** `DOMNodeList` SHALL support `.length` (int) and `[index]` access returning `DOMNode`

@@ -1,7 +1,7 @@
 ## 1. Integrate Location into HistoryPort
 
 - [ ] 1.1 Merge `Location.__set_path__`, `_refresh_path`, `set_mode`, `value`, `state` logic into `HistoryPort` / `BrowserHistoryPort` / `ServerHistoryPort`
-- [ ] 1.2 Delete `Location` class. Rename `webcompy/router/_change_event_handler.py` to `_history_events.py` with backward-compat alias `Location = HistoryPort`
+- [ ] 1.2 Delete `Location` class. Rename `webcompy/router/_change_event_handler.py` to `_history_events.py` with `type Location = HistoryPort` (type alias only, not instantiable)
 - [ ] 1.3 Delete old `webcompy/router/_history_port.py`, `_browser_history.py`, `_server_history.py`
 
 ## 2. Update Router and RouterView

@@ -36,7 +36,7 @@ RouterView SHALL use `HistoryPort`-aware logic. It injects `_ROUTER_KEY` to get 
 
 ### Decision 5: Rename _change_event_handler.py
 
-`webcompy/router/_change_event_handler.py` を `_history_events.py` にリネーム。Location コードを削除し、後方互換エイリアス `Location = HistoryPort` を残す。
+`webcompy/router/_change_event_handler.py` を `_history_events.py` にリネーム。Location コードを削除し、型エイリアス `type Location = HistoryPort` を残す（`Location()` でのインスタンス化は不可。参照は `BrowserHistoryPort`/`ServerHistoryPort` を使用）。
 
 ### Decision 6: MockHistoryPort for testing
 
