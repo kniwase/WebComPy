@@ -15,7 +15,7 @@
 
 ### Modified Capabilities
 
-- `browser-api`: 6つの要素ファイルがポート注入に移行。`BrowserDOMPort`/`BrowserFFIPort`/`BrowserHistoryPort` が DI 経由で利用可能になり、`browser` オブジェクトのインポートは残ります（`browser` 経由でのみ使用可能）。
+- `browser-api`: 6つの要素ファイルがポート注入に移行。`inject(DOM_PORT_KEY)`/`inject(FFI_PORT_KEY)` 経由でのみブラウザAPIにアクセス。`browser` インポートは残るがガードのみに使用。
 
 ## Impact
 

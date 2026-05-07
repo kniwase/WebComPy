@@ -18,6 +18,18 @@
 - [ ] 3.5 Create `webcompy/ports/_browser/_dom.py` with `BrowserDOMPort` subclass using `pyscript.context.document`
 - [ ] 3.6 Create `webcompy/ports/_server/_dom.py` with `ServerDOMPort` subclass — raises `WebComPyException` on DOM element creation in phase 1
 
+## 4. FFIPort
+
+- [ ] 4.1 Create `webcompy/ports/_ffi.py` with `FFIPort` ABC (create_proxy, destroy_proxy, is_none, to_js, assign)
+- [ ] 4.2 Create `webcompy/ports/_browser/_ffi.py` with `BrowserFFIPort` subclass using `pyscript.ffi`
+- [ ] 4.3 Create `webcompy/ports/_server/_ffi.py` with `ServerFFIPort` subclass (pass-through implementations)
+
+## 5. FetchPort
+
+- [ ] 5.1 Create `webcompy/ports/_fetch.py` with `Response` dataclass and `FetchPort` ABC
+- [ ] 5.2 Create `webcompy/ports/_browser/_fetch.py` with `BrowserFetchPort` subclass using `pyscript.fetch`
+- [ ] 5.3 Create `webcompy/ports/_server/_fetch.py` with `ServerFetchPort` subclass using `httpx`
+
 ## 6. CookiePort
 
 - [ ] 6.1 Create `webcompy/ports/_cookie.py` with `CookiePort` ABC — methods: `get(name)`, `set(name, value, *, max_age, path, secure, httponly, samesite)`, `delete(name, path)`, `get_all()`
