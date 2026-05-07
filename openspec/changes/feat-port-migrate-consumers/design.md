@@ -1,29 +1,29 @@
 ## Context
 
-`feat-port-migrate-elements` で要素システムの移行が完了し、残りの非要素系消費者（ajax, aio, signal/effect, logging, components）を同様にポート注入へ移行する。
+With `feat-port-migrate-elements` complete, the remaining non-element consumers (ajax, aio, signal/effect, logging, components) are migrated to port injection in the same manner.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- ajax: `BrowserFetchPort` を `inject(FETCH_PORT_KEY)` で取得
-- aio: `browser` → `ENVIRONMENT` ガードに置換
+- ajax: obtain `BrowserFetchPort` via `inject(FETCH_PORT_KEY)`
+- aio: replace `browser` → `ENVIRONMENT` guard
 - signal/effect: `browser.window.setTimeout` → `inject(DOM_PORT_KEY).schedule_macro_task`
 - logging: `browser.console.log` → `pyscript.context.window.console.log`
 - components: `browser` truthiness → `ENVIRONMENT == "pyscript"`
 
 **Non-Goals:**
-- `browser` オブジェクトの削除
+- Remove the `browser` object
 
 ## Decisions
 
-### Decision 1: logging はポート注入を使わず pyscript.context を直接使用
+### Decision 1: Logging uses `pyscript.context` directly, not port injection
 
-logging は軽量で環境に依存しない。`pyscript.context.window.console.log` を直接呼び出す。ポートを追加するほどの複雑さはない。
+Logging is lightweight and environment-agnostic. It calls `pyscript.context.window.console.log` directly. Not complex enough to warrant a port.
 
-### Decision 2: ajax.fetch はポート注入を使用
+### Decision 2: Ajax.fetch uses port injection
 
-FetchPort はブラウザとサーバーで実装が異なるため、DI 注入が適切。
+FetchPort has different implementations for browser and server, making DI injection appropriate.
 
 ## Risks / Trade-offs
 
-- リスクなし — 純粋な置換のみ
+- No risk — pure replacement only

@@ -1,25 +1,25 @@
 ## Why
 
-`Location` と `HistoryPort` は責務が重複している（どちらもリアクティブなパス状態 + ナビゲーション操作）。`Location` を `HistoryPort` に統合し、`Router` が `HistoryPort` を外部から受け取るようにする。また `CookiePort` のブラウザ/サーバー実装を追加する。
+`Location` and `HistoryPort` have overlapping responsibilities (both manage reactive path state and navigation operations). Merge `Location` into `HistoryPort` and update `Router` to accept `HistoryPort` via constructor injection. Also add `CookiePort` browser/server implementations.
 
 ## What Changes
 
-- **REMOVED** `Location` クラス — 全機能が `HistoryPort` に統合される
-- **MODIFIED** `Router`: `location: Location` → `history: HistoryPort` をコンストラクタで受け取る。**BREAKING**
-- **MODIFIED** `RouterLink._on_click`: `inject(HISTORY_PORT_KEY).navigate()` を使用
-- **MODIFIED** `WebComPyApp`: `CookiePort` も DI スコープに提供
-- **REMOVED** `webcompy/router/_browser_history.py`, `_server_history.py`, `_history_port.py` (古い HistoryPort 定義)
-- **NEW** `BrowserCookiePort`, `ServerCookiePort` （すでに feat-port-definitions で追加済みのため、本フェーズでは提供のみ）
+- **REMOVED** `Location` class — all functionality merged into `HistoryPort`
+- **MODIFIED** `Router`: accepts `history: HistoryPort` via constructor instead of `location: Location`. **BREAKING**
+- **MODIFIED** `RouterLink._on_click`: uses `inject(HISTORY_PORT_KEY).navigate()`
+- **MODIFIED** `WebComPyApp`: also provides `CookiePort` in DI scope
+- **REMOVED** `webcompy/router/_browser_history.py`, `_server_history.py`, `_history_port.py` (old HistoryPort definitions)
+- **NEW** `BrowserCookiePort`, `ServerCookiePort` (already added by feat-port-definitions; this phase only provides them)
 
 ## Capabilities
 
 ### Modified Capabilities
 
-- `router`: Router が Location の代わりに HistoryPort を受け取る。API 破壊的変更
-- `browser-api`: Location クラスを削除、HistoryPort に統合
+- `router`: Router receives HistoryPort instead of Location. Breaking API change.
+- `browser-api`: Location class removed, merged into HistoryPort.
 
 ## Impact
 
-- **Breaking**: `Router(...)` の呼び出し側をすべて更新する必要がある
-- **Breaking**: `Location` の全参照を `HistoryPort` に置き換え
-- **Affected**: router/ (4ファイル), app/_app.py, E2E テストアプリ
+- **Breaking**: All `Router(...)` call sites must be updated
+- **Breaking**: All `Location` references must be replaced with `HistoryPort`
+- **Affected**: router/ (4 files), app/_app.py, E2E test apps

@@ -1,51 +1,51 @@
 ## Context
 
-`Location` (`SignalBase[str]`) はリアクティブなパス状態と popstate リスナーを提供する。`HistoryPort` は ABC として同様の責務を持つ。両者は重複しており、統合する。
+`Location` (`SignalBase[str]`) provides reactive path state and a popstate listener. `HistoryPort` is an ABC with the same responsibility. The two overlap and must be unified.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- `Location` を削除し、全機能を `HistoryPort` に統合
-- `Router` が `history: HistoryPort` をコンストラクタで受け取る
-- `RouterView._on_set_parent` を HistoryPort 対応に更新
-- `RouterLink` が `inject(HISTORY_PORT_KEY).navigate()` でナビゲーション
-- `CookiePort` を DI スコープに提供
-- `MockHistoryPort` (HistoryPort 継承) をテスト用に追加
-- `_change_event_handler.py` を `_history_events.py` にリネーム（後方互換エイリアス `Location = HistoryPort` 付き）
+- Delete `Location` and merge all functionality into `HistoryPort`
+- `Router` accepts `history: HistoryPort` via constructor
+- `RouterView._on_set_parent` updated for HistoryPort compatibility
+- `RouterLink` navigates via `inject(HISTORY_PORT_KEY).navigate()`
+- `CookiePort` provided in DI scope
+- `MockHistoryPort` (extends `HistoryPort`) added for testing
+- Rename `_change_event_handler.py` to `_history_events.py` with `type Location = HistoryPort` alias
 
 **Non-Goals:**
-- RouterMode や base_url の API 変更
+- Change RouterMode or base_url API
 
 ## Decisions
 
 ### Decision 1: HistoryPort extends SignalBase[str]
 
-`SignalBase[str]` を継承することで、`value` プロパティがリアクティブになる。`producer_accessed()` で依存関係を追跡し、`navigate()` で epoch/version/consumer 通知を行う。
+Inheriting `SignalBase[str]` makes the `value` property reactive. `producer_accessed()` tracks dependencies; `navigate()` increments epoch/version and notifies consumers.
 
-### Decision 2: navigate() は Browser API で pushState せず、値更新のみ
+### Decision 2: `navigate()` updates value only, does not call pushState
 
-`RouterLink._on_click` が `pushState` を呼び、`Router.__set_path__` が `HistoryPort.navigate()` を呼ぶ。`navigate()` は値の更新とリアクティブ通知のみを行い、二重 `pushState` を避ける。
+`RouterLink._on_click` calls `pushState`, and `Router.__set_path__` calls `HistoryPort.navigate()`. `navigate()` only updates the value and triggers reactive notification, avoiding double `pushState`.
 
-### Decision 3: Router は history を必須の外部注入パラメータとして受け取る
+### Decision 3: Router receives history as a required constructor parameter
 
-旧コードでは Router が内部で Location を生成していた。新コードでは DI スコープ有効後に外部から注入する。
+Previously, Router created Location internally. Now it must be injected externally after the DI scope is active.
 
 ### Decision 4: Update RouterView._on_set_parent
 
-RouterView SHALL use `HistoryPort`-aware logic. It injects `_ROUTER_KEY` to get the Router (which holds `HistoryPort` via constructor), and delegates route case evaluation through `router.__cases__` (a `computed_property` that reads from `router._history.value`). No direct `HistoryPort` injection needed in RouterView.
+RouterView injects `_ROUTER_KEY` to get the Router (which holds `HistoryPort` via constructor), and delegates route case evaluation through `router.__cases__` (a `computed_property` that reads from `router._history.value`). No direct `HistoryPort` injection needed in RouterView.
 
 ### Decision 5: Rename _change_event_handler.py
 
-`webcompy/router/_change_event_handler.py` を `_history_events.py` にリネーム。Location コードを削除し、型エイリアス `type Location = HistoryPort` を残す（`Location()` でのインスタンス化は不可。参照は `BrowserHistoryPort`/`ServerHistoryPort` を使用）。
+Rename `webcompy/router/_change_event_handler.py` to `_history_events.py`. Remove Location code and keep `type Location = HistoryPort` as a type alias (not instantiable; use `BrowserHistoryPort`/`ServerHistoryPort` for construction).
 
 ### Decision 6: MockHistoryPort for testing
 
-`tests/conftest.py` に `MockHistoryPort` (HistoryPort 継承) を追加。DI スコープなしでテスト内で Router を構築可能にする。
+Add `MockHistoryPort` (extends `HistoryPort`) to `tests/conftest.py`. Enables constructing `Router` in tests without an active DI scope.
 
 ### Decision 7: Public API exports
 
-`webcompy/ports/__init__.py` で全 ABC、DOMNodeList、DI キーをエクスポート。`webcompy/router/__init__.py` から Location エクスポートを削除。
+`webcompy/ports/__init__.py` exports all ABCs, `DOMNodeList`, and DI keys. `webcompy/router/__init__.py` removes Location exports.
 
 ## Risks / Trade-offs
 
-- [Risk] `Router(mode=...)` の既存呼び出しがすべて壊れる → Mitigation: 全呼び出し箇所を特定して修正
+- [Risk] All existing `Router(mode=...)` calls break → Mitigation: Identify and update all call sites

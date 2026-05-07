@@ -1,23 +1,23 @@
 ## Context
 
-`WebComPyApp.__init__` は現在 `app.di_scope` を作成し `ComponentStore` を提供する。ポートのブラウザ/サーバー実装は `feat-port-definitions` で追加済み。アプリ初期化時にそれらを DI スコープに提供する。
+`WebComPyApp.__init__` currently creates `app.di_scope` and provides `ComponentStore`. Browser/server port implementations were already added by `feat-port-definitions`. The app must provide them to the DI scope during initialization.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- PyScript 環境で `BrowserDOMPort`, `BrowserFFIPort`, `BrowserFetchPort`, `BrowserHistoryPort` を提供
-- サーバー環境で `ServerDOMPort`, `ServerFFIPort`, `ServerFetchPort`, `ServerHistoryPort` を提供
+- In PyScript environment: provide `BrowserDOMPort`, `BrowserFFIPort`, `BrowserFetchPort`, `BrowserHistoryPort`
+- In server environment: provide `ServerDOMPort`, `ServerFFIPort`, `ServerFetchPort`, `ServerHistoryPort`
 
 **Non-Goals:**
-- 既存の `browser` インポートの削除（次のフェーズ）
-- Router API の変更（次のフェーズ）
+- Remove existing `browser` imports (next phase)
+- Change Router API (subsequent phase)
 
 ## Decisions
 
-### Decision 1: ポート提供は `_register_deferred_components()` の後、`AppDocumentRoot` 構築の前
+### Decision 1: Ports provided after `_register_deferred_components()`, before `AppDocumentRoot`
 
-`_register_deferred_components()` は DI スコープが必要なため先に実行し、その後にポートを提供する。ポートは `AppDocumentRoot` のレンダリング前に利用可能になる。
+`_register_deferred_components()` requires the DI scope, so it runs first. Ports are provided immediately after. They become available before `AppDocumentRoot` is constructed and rendered.
 
 ## Risks / Trade-offs
 
-- リスクなし — ポートはまだどのコンポーネントからも要求されていない。追加のみ
+- No risk — ports are not yet required by any component. Addition only.

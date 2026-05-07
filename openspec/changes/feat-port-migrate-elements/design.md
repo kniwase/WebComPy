@@ -1,32 +1,32 @@
 ## Context
 
-`webcompy/elements/` の6ファイルで `browser` オブジェクトがインポートされ、DOM操作とイベントプロキシに使われている。`feat-port-definitions` で DOMPort、FFIPort が定義・実装済み。これらを DI 注入に切り替える。
+Six files in `webcompy/elements/` import the `browser` object and use it for DOM operations and event proxies. `feat-port-definitions` has already defined and implemented DOMPort and FFIPort. This phase switches those consumers to DI injection.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- `browser.pyscript.ffi.create_proxy(event_handler)` → `inject(FFI_PORT_KEY).create_proxy(event_handler)` （`ENVIRONMENT` ガード付き）
+- `browser.pyscript.ffi.create_proxy(event_handler)` → `inject(FFI_PORT_KEY).create_proxy(event_handler)` (with `ENVIRONMENT` guard)
 - `browser.document.createElement(tag)` → `inject(DOM_PORT_KEY).create_element(tag)`
 - `browser.document.createTextNode(text)` → `inject(DOM_PORT_KEY).create_text_node(text)`
 - `browser.window.setTimeout(cb, 0)` → `inject(DOM_PORT_KEY).schedule_macro_task(cb)`
-- `if browser:` → `if ENVIRONMENT == "pyscript":`（等価な環境ガード）
-- `browser is not None` → `ENVIRONMENT == "pyscript"`（等価な環境ガード）
-- `not browser:` → `ENVIRONMENT != "pyscript":`（等価な環境ガード）
+- `if browser:` → `if ENVIRONMENT == "pyscript":` (equivalent environment guard)
+- `browser is not None` → `ENVIRONMENT == "pyscript"` (equivalent environment guard)
+- `not browser:` → `ENVIRONMENT != "pyscript":` (equivalent environment guard)
 
 **Non-Goals:**
-- `browser` オブジェクトの削除（後のフェーズ）
-- 他のパッケージの移行（次のフェーズ）
-- `Router` API の変更（後のフェーズ）
+- Remove the `browser` object (subsequent phase)
+- Migrate other packages (next phase)
+- Change Router API (subsequent phase)
 
 ## Decisions
 
-### Decision 1: ENVIRONMENT ガードを browser ガードと完全等価に保つ
+### Decision 1: Environment guards are exactly equivalent to browser guards
 
-`browser` は PyScript 環境で truthy、それ以外で falsy。`ENVIRONMENT == "pyscript"` と完全に等価なため、単純置換で十分。
+`browser` is truthy in PyScript and falsy otherwise. `ENVIRONMENT == "pyscript"` is exactly equivalent, so simple replacement suffices.
 
-### Decision 2: イベントハンドラは `_generate_event_handler` 内でのみ FFI プロキシを作成
+### Decision 2: Event handler proxies are created only inside `_generate_event_handler`
 
-`_generate_event_handler` はすでに `if browser:` ガードを持っている。これを `if ENVIRONMENT == "pyscript": inject(FFI_PORT_KEY).create_proxy(event_handler)` に置き換える。
+`_generate_event_handler` already has an `if browser:` guard. Replace it with `if ENVIRONMENT == "pyscript": inject(FFI_PORT_KEY).create_proxy(event_handler)`.
 
 ### Decision 3: Migration patterns for `if browser:` branching logic
 
@@ -67,4 +67,4 @@ if ENVIRONMENT == "pyscript":
 
 ## Risks / Trade-offs
 
-- [Risk] サーバー側の `else: raise WebComPyException` パスが消える → Mitigation: サーバー側では `ENVIRONMENT != "pyscript"` のコードパスが別途存在し、DOM操作は実行されない
+- [Risk] Server-side `else: raise WebComPyException` path disappears → Mitigation: Server-side `ENVIRONMENT != "pyscript"` code paths exist separately and DOM operations are not executed there

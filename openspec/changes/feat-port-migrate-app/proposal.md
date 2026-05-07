@@ -1,18 +1,18 @@
 ## Why
 
-ポート実装が存在し全消費者が `inject(PORT_KEY)` を使用できるようになった。`WebComPyApp.__init__` で DI スコープにポートを提供し、アプリ起動時に全ポートが利用可能になるようにする。
+Port implementations exist and all consumers can now use `inject(PORT_KEY)`. `WebComPyApp.__init__` must provide the ports into the DI scope so they are available at application startup.
 
 ## What Changes
 
-- **MODIFIED** `webcompy/app/_app.py`: `__init__` 内の `_register_deferred_components()` 呼び出し後に、環境に応じて5つのポート実装を `self._di_scope.provide()` で注入
+- **MODIFIED** `webcompy/app/_app.py`: After `_register_deferred_components()`, provide the 4 port implementations (DOM, FFI, Fetch, History) into `self._di_scope.provide()` depending on environment
 
 ## Capabilities
 
 ### Modified Capabilities
 
-- `app-config`: `WebComPyApp` のブートストラップが環境に応じたポートを DI スコープに提供する
+- `app-config`: `WebComPyApp` bootstrap provides environment-specific ports into the DI scope
 
 ## Impact
 
-- **Affected**: `webcompy/app/_app.py` のみ
-- **No breaking changes**: 既存の全テストが変更なしでパス。ポートはすでに利用可能であり、アプリが提供を開始するだけ
+- **Affected**: `webcompy/app/_app.py` only
+- **No breaking changes**: All existing tests pass unchanged. Ports are already available; the app just starts providing them.

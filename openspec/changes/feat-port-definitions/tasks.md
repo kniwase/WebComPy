@@ -16,7 +16,7 @@
 - [ ] 3.3 Create `webcompy/ports/_dom.py` with `DOMPort` ABC (create_element, create_text_node, query_selector, get_element_by_id, set_title, schedule_macro_task)
 - [ ] 3.4 Create `webcompy/ports/_browser/_dom.py` with `BrowserDOMNode` subclass wrapping real DOM elements
 - [ ] 3.5 Create `webcompy/ports/_browser/_dom.py` with `BrowserDOMPort` subclass using `pyscript.context.document`
-- [ ] 3.6 Create `webcompy/ports/_server/_dom.py` with `ServerDOMPort` subclass — raises `WebComPyException` on DOM element creation in phase 1
+- [ ] 3.6 Create `webcompy/ports/_server/_dom.py` with `ServerDOMPort` subclass — raises `WebComPyException` on DOM element creation
 
 ## 4. FFIPort
 

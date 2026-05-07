@@ -1,6 +1,6 @@
 ## Why
 
-`ajax/`, `aio/`, `signal/`, `logging.py`, `components/_component.py` の5ファイルが `browser` オブジェクトを直接インポートしている。`feat-port-definitions` と `feat-port-migrate-elements` の完了により、残りの全消費者をポート注入に移行する。
+Five files across `ajax/`, `aio/`, `signal/`, `logging.py`, and `components/_component.py` import the `browser` object directly. With `feat-port-definitions` and `feat-port-migrate-elements` complete, the remaining non-element consumers are migrated to port injection.
 
 ## What Changes
 
@@ -14,9 +14,9 @@
 
 ### Modified Capabilities
 
-- `browser-api`: ajax、aio、signal、logging、components の各サブシステムがポート注入に移行
+- `browser-api`: ajax, aio, signal, logging, and components subsystems migrated to port injection
 
 ## Impact
 
 - **Affected**: ajax (1), aio (1), signal (1), logging (1), components (1)
-- **No breaking changes**: 移行は等価な置換のみ
+- **No breaking changes**: Migration is equivalent replacement only
