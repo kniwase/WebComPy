@@ -28,6 +28,43 @@
 
 `_generate_event_handler` はすでに `if browser:` ガードを持っている。これを `if ENVIRONMENT == "pyscript": inject(FFI_PORT_KEY).create_proxy(event_handler)` に置き換える。
 
+### Decision 3: Migration patterns for `if browser:` branching logic
+
+**Pattern A — Guarding browser-only operations:**
+```python
+# Before
+if browser:
+    browser.document.createElement("div")
+else:
+    raise WebComPyException(...)
+# After
+if ENVIRONMENT == "pyscript":
+    inject(DOM_PORT_KEY).create_element("div")
+else:
+    raise WebComPyException(...)
+```
+
+**Pattern B — Branching between browser and server rendering paths:**
+```python
+# Before
+if browser:
+    browser.window.setTimeout(callback, 0)
+# After
+if ENVIRONMENT == "pyscript":
+    inject(DOM_PORT_KEY).schedule_macro_task(callback)
+```
+
+**Pattern C — Environment-dependent behavior not covered by ports:**
+```python
+# Before (in _repeat.py, _dynamic.py)
+if browser:
+    # browser-specific rendering logic
+# After
+from webcompy.utils import ENVIRONMENT
+if ENVIRONMENT == "pyscript":
+    # browser-specific rendering logic
+```
+
 ## Risks / Trade-offs
 
 - [Risk] サーバー側の `else: raise WebComPyException` パスが消える → Mitigation: サーバー側では `ENVIRONMENT != "pyscript"` のコードパスが別途存在し、DOM操作は実行されない

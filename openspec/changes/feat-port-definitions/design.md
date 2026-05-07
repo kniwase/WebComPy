@@ -58,13 +58,38 @@ webcompy/ports/
 DOMNode ABC with explicit method signatures replacing direct DOM property access:
 - Tree: `appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove`
 - Attributes: `setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`
-- Events: `addEventListener`, `removeEventListener`
-- Content: `textContent` (property), `childNodes` (property)
-- WebComPy markers: `__webcompy_node__` and `__webcompy_prerendered_node__` (properties)
+- Events: `addEventListener` (with `capture=False` default), `removeEventListener`
+- Content: `textContent` (property), `childNodes` (property, returns `DOMNodeList`)
+- WebComPy markers: `__webcompy_node__` and `__webcompy_prerendered_node__` (properties with setters)
 
-### Decision 4: HistoryPort extends SignalBase[str]
+`DOMNodeList` is a simple class (not ABC) with `length: int` (property) and `__getitem__(index: int) -> DOMNode`.
 
-HistoryPort inherits `SignalBase[str]` to enable reactive path state. It has a concrete `value` property using `producer_accessed()`, plus abstract `current_search`, `history_state`, and `navigate` methods. Server implementation stores path internally; browser reads from `pyscript.context.window`.
+### Decision 4: Port dependency pattern — app→port via inject(), intra-port via direct import
+
+Framework code resolves ports through DI: `dom = inject(DOM_PORT_KEY)`. Browser port implementations import each other directly within the same implementation layer. App-layer code needs swappable implementations (browser vs server vs test mock). Browser-layer implementations are always deployed together — they are implementation details of the browser platform, not independently swappable units.
+
+### Decision 5: DI key naming convention
+
+All DI keys in `webcompy/ports/_keys.py`:
+```python
+DOM_PORT_KEY = InjectKey[DOMPort]("webcompy-port-dom")
+FFI_PORT_KEY = InjectKey[FFIPort]("webcompy-port-ffi")
+FETCH_PORT_KEY = InjectKey[FetchPort]("webcompy-port-fetch")
+COOKIE_PORT_KEY = InjectKey[CookiePort]("webcompy-port-cookie")
+HISTORY_PORT_KEY = InjectKey[HistoryPort]("webcompy-port-history")
+```
+
+### Decision 6: HistoryPort extends SignalBase[str]
+
+HistoryPort inherits `SignalBase[str]` to enable reactive path state. It has a concrete `value` property using `producer_accessed()`, plus abstract `current_search`, `history_state`, `navigate`, and `refresh_from_window` methods. Server implementation stores path internally; browser reads from `pyscript.context.window`.
+
+### Decision 7: CookiePort API
+
+CookiePort ABC with methods:
+- `get(name: str) -> str | None`
+- `set(name: str, value: str, *, max_age: int | None = None, path: str = "/", secure: bool = False, httponly: bool = False, samesite: str | None = None)`
+- `delete(name: str, path: str = "/")`
+- `get_all() -> dict[str, str]`
 
 ## Risks / Trade-offs
 

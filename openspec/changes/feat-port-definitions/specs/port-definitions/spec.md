@@ -27,11 +27,11 @@ The system SHALL provide browser implementations for all 5 ports using `pyscript
 - **THEN** its `value` property returns the current `window.location.pathname`
 
 ### Requirement: Server port implementations exist
-The system SHALL provide server implementations for all 5 ports. FetchPort SHALL use `httpx`. Other ports SHALL use internal state. These SHALL be located in `webcompy.ports._server`.
+The system SHALL provide server implementations for all 5 ports. FetchPort SHALL use `httpx`. Other ports SHALL use internal state. These SHALL be located in `webcompy.ports._server`. ServerDOMPort SHALL raise `WebComPyException` on DOM node creation in phase 1.
 
-#### Scenario: ServerDOMPort creates detached nodes
-- **WHEN** `ServerDOMPort.create_element("div")` is called
-- **THEN** a `ServerDOMNode` with tagName "div" is returned
+#### Scenario: ServerDOMPort rejects DOM creation in phase 1
+- **WHEN** `ServerDOMPort.create_element("div")` or `create_text_node(...)` is called on the server in phase 1
+- **THEN** it SHALL raise `WebComPyException` with a message indicating DOM operations are not available outside the browser
 
 #### Scenario: ServerFetchPort uses httpx
 - **WHEN** `ServerFetchPort.fetch("https://example.com/api")` is called

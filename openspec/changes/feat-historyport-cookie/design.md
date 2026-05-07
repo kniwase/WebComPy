@@ -7,8 +7,11 @@
 **Goals:**
 - `Location` を削除し、全機能を `HistoryPort` に統合
 - `Router` が `history: HistoryPort` をコンストラクタで受け取る
+- `RouterView._on_set_parent` を HistoryPort 対応に更新
 - `RouterLink` が `inject(HISTORY_PORT_KEY).navigate()` でナビゲーション
 - `CookiePort` を DI スコープに提供
+- `MockHistoryPort` (HistoryPort 継承) をテスト用に追加
+- `_change_event_handler.py` を `_history_events.py` にリネーム（後方互換エイリアス `Location = HistoryPort` 付き）
 
 **Non-Goals:**
 - RouterMode や base_url の API 変更
@@ -26,6 +29,22 @@
 ### Decision 3: Router は history を必須の外部注入パラメータとして受け取る
 
 旧コードでは Router が内部で Location を生成していた。新コードでは DI スコープ有効後に外部から注入する。
+
+### Decision 4: Update RouterView._on_set_parent
+
+RouterView SHALL use `HistoryPort`-aware logic. It injects `_ROUTER_KEY` to get the Router (which holds `HistoryPort` via constructor), and delegates route case evaluation through `router.__cases__` (a `computed_property` that reads from `router._history.value`). No direct `HistoryPort` injection needed in RouterView.
+
+### Decision 5: Rename _change_event_handler.py
+
+`webcompy/router/_change_event_handler.py` を `_history_events.py` にリネーム。Location コードを削除し、後方互換エイリアス `Location = HistoryPort` を残す。
+
+### Decision 6: MockHistoryPort for testing
+
+`tests/conftest.py` に `MockHistoryPort` (HistoryPort 継承) を追加。DI スコープなしでテスト内で Router を構築可能にする。
+
+### Decision 7: Public API exports
+
+`webcompy/ports/__init__.py` で全 ABC、DOMNodeList、DI キーをエクスポート。`webcompy/router/__init__.py` から Location エクスポートを削除。
 
 ## Risks / Trade-offs
 
