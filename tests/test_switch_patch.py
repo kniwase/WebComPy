@@ -427,7 +427,7 @@ class TestSwitchElementRefreshPatching:
         _, generator = sw._select_generator()
         new_children = sw._generate_children(generator)
         old_children = sw._children
-        sw._children = _patch_children(old_children, new_children)
+        sw._children = _patch_children(old_children, new_children, sw._node_idx)
         for c_idx, child in enumerate(sw._children):
             child._node_idx = sw._node_idx + c_idx
             if not child._mounted:
