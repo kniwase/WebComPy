@@ -23,8 +23,13 @@
 - [ ] 5.1 Replace `browser` import with `ENVIRONMENT` in `webcompy/components/_component.py`
 - [ ] 5.2 Replace `browser` truthiness check with `ENVIRONMENT == "pyscript"`
 
-## 6. Verification
+## 6. Migrate router/_lazy
 
-- [ ] 6.1 Run lint and typecheck
-- [ ] 6.2 Run all unit tests
-- [ ] 6.3 Run full E2E suite
+- [ ] 6.1 Replace `browser` try/import block with `pyscript.context` import in `webcompy/router/_lazy.py`
+- [ ] 6.2 Replace `browser.console.warn(...)` with `context.window.console.warn(...)`
+
+## 7. Verification
+
+- [ ] 7.1 Run lint and typecheck
+- [ ] 7.2 Run all unit tests
+- [ ] 7.3 Run full E2E suite

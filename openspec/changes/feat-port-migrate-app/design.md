@@ -7,6 +7,7 @@
 **Goals:**
 - In PyScript environment: provide `BrowserDOMPort`, `BrowserFFIPort`, `BrowserFetchPort`, `BrowserHistoryPort`
 - In server environment: provide `ServerDOMPort`, `ServerFFIPort`, `ServerFetchPort`, `ServerHistoryPort`
+- Migrate `_root_component.py`: replace 16 `browser` access sites with `inject(DOM_PORT_KEY)`/`inject(FFI_PORT_KEY)` and equivalent `ENVIRONMENT` guards
 
 **Non-Goals:**
 - Remove existing `browser` imports (next phase)

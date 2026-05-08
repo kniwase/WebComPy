@@ -8,6 +8,7 @@ Five files across `ajax/`, `aio/`, `signal/`, `logging.py`, and `components/_com
 - **MODIFIED** `aio/_aio.py`: `browser` truthiness → `ENVIRONMENT == "pyscript"`
 - **MODIFIED** `signal/_effect.py`: `browser.window.setTimeout` → `inject(DOM_PORT_KEY).schedule_macro_task`
 - **MODIFIED** `logging.py`: `browser.console.log` → `pyscript.context.window.console.log`
+- **MODIFIED** `router/_lazy.py`: `browser.console.warn` → `pyscript.context.window.console.warn`
 - **MODIFIED** `components/_component.py`: `browser` truthiness → `ENVIRONMENT == "pyscript"`
 
 ## Capabilities
@@ -18,5 +19,5 @@ Five files across `ajax/`, `aio/`, `signal/`, `logging.py`, and `components/_com
 
 ## Impact
 
-- **Affected**: ajax (1), aio (1), signal (1), logging (1), components (1)
+- **Affected**: ajax (1), aio (1), signal (1), logging (1), router/_lazy (1), components (1)
 - **No breaking changes**: Migration is equivalent replacement only

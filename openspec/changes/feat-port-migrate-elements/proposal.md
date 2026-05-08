@@ -8,14 +8,14 @@ Six files in `webcompy/elements/` import the `browser` object for DOM operations
 - **MODIFIED** `_text.py`: `browser` → `inject(DOM_PORT_KEY)`
 - **MODIFIED** `_abstract.py`: `browser` → `inject(DOM_PORT_KEY)`
 - **MODIFIED** `_switch.py`: `browser.window.setTimeout` → `inject(DOM_PORT_KEY).schedule_macro_task`
-- **MODIFIED** `_dynamic.py`: `if browser:` → `if ENVIRONMENT == "pyscript:`
+- **MODIFIED** `_dynamic.py`: `if browser:` → `if ENVIRONMENT == "pyscript":`
 - **MODIFIED** `_repeat.py`: `if browser`/`not browser` → `ENVIRONMENT` checks
 
 ## Capabilities
 
 ### Modified Capabilities
 
-- `browser-api`: Six element files migrated to port injection. Browser API access through `inject(DOM_PORT_KEY)`/`inject(FFI_PORT_KEY)` only. `browser` import remains but used only for guards.
+- `browser-api`: Six element files migrated to port injection. All browser API access through `inject(DOM_PORT_KEY)`/`inject(FFI_PORT_KEY)`. `browser` import replaced by `ENVIRONMENT` checks. Server-side fallback paths preserved.
 
 ## Impact
 

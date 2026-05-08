@@ -14,7 +14,7 @@ The `webcompy.logging` module SHALL use `pyscript.context.window.console.log` di
 - **WHEN** `logging.log()` is called in PyScript environment
 - **THEN** it SHALL output via `pyscript.context.window.console.log()`
 
-### Requirement: Effect scheduling uses scheduled_macro_task
+### Requirement: Effect scheduling uses schedule_macro_task
 The signal effect system SHALL schedule deferred callbacks through `inject(DOM_PORT_KEY).schedule_macro_task()`.
 
 #### Scenario: Effects scheduled via port

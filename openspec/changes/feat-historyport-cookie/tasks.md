@@ -10,7 +10,7 @@
 - [ ] 2.2 Replace `self._location.__set_path__` with `self._history.navigate()` in `Router.__set_path__`
 - [ ] 2.3 Update `Router.__cases__` computed to track `self._history.value`
 - [ ] 2.4 Update `RouterView._on_set_parent` to work with HistoryPort-aware Router
-- [ ] 2.5 Remove `HISTORY_PORT_KEY` from `webcompy/router/_keys.py` (key is now in `webcompy/ports/_keys.py` from phase 1). Update all imports of `HISTORY_PORT_KEY` to use `webcompy.ports._keys`.
+- [ ] 2.5 Ensure no `HISTORY_PORT_KEY` exists in `webcompy/router/_keys.py` (key is defined in `webcompy/ports/_keys.py` from phase 1). Verify all consumers import `HISTORY_PORT_KEY` from `webcompy.ports._keys`.
 
 ## 3. Update RouterLink
 
