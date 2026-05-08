@@ -339,6 +339,27 @@ class TestPatchChildren:
         assert new1._node_cache is old2_node
         assert new2._node_cache is old1_node
 
+    def test_patch_with_offset_preserves_preceding_siblings(self, fake_browser_full):
+        old_child = self._make_element("div")
+        old_node = old_child._node_cache
+
+        parent_node = FakeDOMNode("article")
+        sibling = FakeDOMNode("h2", text_content="Page Title")
+        parent_node.childNodes._nodes.append(sibling)
+        sibling._FakeDOMNode__parentNode = parent_node
+        parent_node.childNodes._nodes.append(old_node)
+        old_node._FakeDOMNode__parentNode = parent_node
+
+        new_child = self._add_parent_to(Element("div", {}, {}, None, None))
+        node_idx_offset = 1
+        result = _patch_children([old_child], [new_child], node_idx_offset)
+
+        assert len(result) == 1
+        assert result[0] is new_child
+        assert new_child._node_cache is old_node
+        assert new_child._mounted is True
+        assert parent_node.childNodes[0] is sibling
+
 
 class TestRepositionNode:
     def test_reposition_appends_when_index_exceeds_length(self, fake_browser_full):
