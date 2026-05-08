@@ -9,8 +9,12 @@
 - [ ] 2.1 Remove `browser` export from `webcompy/__init__.py`
 - [ ] 2.2 Update `pyproject.toml` stubPath: `_browser` → `ports`
 
-## 3. Verification
+## 3. Verify no remaining browser imports
 
-- [ ] 3.1 Run lint and typecheck
-- [ ] 3.2 Run all unit tests
-- [ ] 3.3 Run full E2E suite
+- [ ] 3.1 Run `grep -rn "from webcompy._browser" webcompy/ tests/` — confirm zero matches
+
+## 4. Verification
+
+- [ ] 4.1 Run lint and typecheck
+- [ ] 4.2 Run all unit tests
+- [ ] 4.3 Run full E2E suite
