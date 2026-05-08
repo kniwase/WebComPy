@@ -87,6 +87,7 @@ def _reposition_node(element: ElementAbstract, new_index: int) -> None:
 def _patch_children(
     old_children: list[ElementAbstract],
     new_children: list[ElementAbstract],
+    node_idx_offset: int = 0,
 ) -> list[ElementAbstract]:
     matched_old_indices: set[int] = set()
 
@@ -106,7 +107,7 @@ def _patch_children(
             elif isinstance(new_child, ElementBase) and isinstance(old_child, ElementBase):
                 new_child._adopt_node(old_node)
                 _patch_children(old_child._children, new_child._children)
-            _reposition_node(new_child, new_idx)
+            _reposition_node(new_child, node_idx_offset + new_idx)
         else:
             for old_idx, old_child in enumerate(old_children):
                 if old_idx in matched_old_indices:
@@ -120,7 +121,7 @@ def _patch_children(
                     elif isinstance(new_child, ElementBase) and isinstance(old_child, ElementBase):
                         new_child._adopt_node(old_node)
                         _patch_children(old_child._children, new_child._children)
-                    _reposition_node(new_child, new_idx)
+                    _reposition_node(new_child, node_idx_offset + new_idx)
                     break
 
     for old_idx, old_child in enumerate(old_children):

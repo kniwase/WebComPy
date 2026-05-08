@@ -67,7 +67,7 @@ class SwitchElement(DynamicElement):
         self._rendered_idx = idx
         new_children = self._generate_children(generator)
         old_children = self._children
-        self._children = _patch_children(old_children, new_children)
+        self._children = _patch_children(old_children, new_children, self._node_idx)
         should_defer = browser is not None and self._signal_activated
         if should_defer:
             start_defer_after_rendering()
