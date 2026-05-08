@@ -360,6 +360,34 @@ class TestPatchChildren:
         assert new_child._mounted is True
         assert parent_node.childNodes[0] is sibling
 
+    def test_patch_scan_match_with_offset_preserves_preceding_siblings(self, fake_browser_full):
+        old1 = self._make_element("span")
+        old2 = self._make_element("div")
+        old1_node = old1._node_cache
+        old2_node = old2._node_cache
+
+        parent_node = FakeDOMNode("article")
+        sibling = FakeDOMNode("h2", text_content="Page Title")
+        parent_node.childNodes._nodes.append(sibling)
+        sibling._FakeDOMNode__parentNode = parent_node
+        parent_node.childNodes._nodes.append(old1_node)
+        old1_node._FakeDOMNode__parentNode = parent_node
+        parent_node.childNodes._nodes.append(old2_node)
+        old2_node._FakeDOMNode__parentNode = parent_node
+
+        new1 = self._add_parent_to(Element("div", {}, {}, None, None))
+        new2 = self._add_parent_to(Element("span", {}, {}, None, None))
+
+        node_idx_offset = 1
+        result = _patch_children([old1, old2], [new1, new2], node_idx_offset)
+
+        assert len(result) == 2
+        assert parent_node.childNodes[0] is sibling
+        assert parent_node.childNodes[1] is old2_node
+        assert parent_node.childNodes[2] is old1_node
+        assert new1._node_cache is old2_node
+        assert new2._node_cache is old1_node
+
 
 class TestRepositionNode:
     def test_reposition_appends_when_index_exceeds_length(self, fake_browser_full):
