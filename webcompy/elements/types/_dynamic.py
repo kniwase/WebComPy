@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from contextlib import suppress
 
 from webcompy._browser._modules import browser
 from webcompy.elements._dom_objs import DOMNode
@@ -74,6 +75,9 @@ def _is_patchable(old: ElementAbstract, new: ElementAbstract) -> bool:
 def _reposition_node(element: ElementAbstract, new_index: int) -> None:
     node = element._node_cache
     parent = node.parentNode if node else None
+    if not parent and not isinstance(element, DynamicElement):
+        with suppress(AttributeError):
+            parent = element._parent._get_node()
     if not parent:
         return
     if new_index < parent.childNodes.length:
