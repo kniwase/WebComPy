@@ -6,7 +6,7 @@
 
 ## 2. Migrate _root_component.py
 
-- [ ] 2.1 Replace `from webcompy._browser._modules import browser` with DI key imports (`DOM_PORT_KEY`, `FFI_PORT_KEY`) and `ENVIRONMENT`
+- [ ] 2.1 Replace `from webcompy._browser._modules import browser` with DI key imports (`DOM_PORT_KEY` only) and `ENVIRONMENT`
 - [ ] 2.2 Replace all `if browser:` guards with `if ENVIRONMENT == "pyscript":`
 - [ ] 2.3 Replace `browser.document.title = title` with `inject(DOM_PORT_KEY).set_title(title)`
 - [ ] 2.4 Replace `browser.document.documentElement.setAttribute(key, ...)` / `getAttribute(key)` / `removeAttribute(key)` by getting the root element via `inject(DOM_PORT_KEY).query_selector("html")` and calling `node.setAttribute(key, ...)` / `node.getAttribute(key)` / `node.removeAttribute(key)` on the returned `DOMNode`

@@ -8,11 +8,11 @@ The `webcompy.ajax` module SHALL obtain HTTP functionality through `inject(FETCH
 - **THEN** it SHALL call `inject(FETCH_PORT_KEY).fetch(...)` instead of `browser.pyscript.fetch(...)`
 
 ### Requirement: Logging uses pyscript.context directly
-The `webcompy.logging` module SHALL use `pyscript.context.window.console.log` directly when in PyScript environment, without port abstraction.
+The `webcompy.logging` module SHALL use `pyscript.context.window.console` directly (with its full method set: debug, info, warn, error) when in PyScript environment, without port abstraction.
 
 #### Scenario: Logging outputs to browser console
-- **WHEN** `logging.log()` is called in PyScript environment
-- **THEN** it SHALL output via `pyscript.context.window.console.log()`
+- **WHEN** any logging level (debug, info, warn, error) is called in PyScript environment
+- **THEN** it SHALL output via the corresponding method on `pyscript.context.window.console`
 
 ### Requirement: Effect scheduling uses schedule_macro_task
 The signal effect system SHALL schedule deferred callbacks through `inject(DOM_PORT_KEY).schedule_macro_task()`.

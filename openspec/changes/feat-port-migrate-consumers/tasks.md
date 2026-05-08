@@ -16,7 +16,7 @@
 ## 4. Migrate logging
 
 - [ ] 4.1 Replace `browser` import with `pyscript.context` import in `webcompy/logging.py`
-- [ ] 4.2 Replace `_browser.console.log` with `context.window.console.log`
+- [ ] 4.2 Replace `_browser.console` (used as `_handler`) with `context.window.console` (preserving full method set: debug, info, warn, error)
 
 ## 5. Migrate components
 
