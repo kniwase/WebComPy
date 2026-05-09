@@ -411,6 +411,26 @@ class TestRepositionNode:
 
         _reposition_node(el, 0)
 
+    def test_reposition_reinserts_detached_node(self, fake_browser_full):
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._node_cache
+
+        el = Element("span", {}, {}, None, None)
+        el._parent = parent
+        el._node_idx = 0
+        el._event_handlers_added = {}
+
+        node = FakeDOMNode("span", text_content="reattached")
+        el._node_cache = node
+        el._mounted = True
+
+        _reposition_node(el, 0)
+
+        assert node in [parent_node.childNodes[i] for i in range(parent_node.childNodes.length)]
+        assert node.parentNode is parent_node
+
 
 class TestSwitchElementRefreshPatching:
     def _setup_switch(self, fake_browser, condition_val=True):
