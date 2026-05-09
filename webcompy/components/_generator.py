@@ -8,6 +8,7 @@ from typing import (
     Generic,
     TypeAlias,
     TypeVar,
+    cast,
 )
 
 from webcompy.components._component import Component
@@ -44,14 +45,69 @@ class ComponentStore:
 PropsType = TypeVar("PropsType")
 FuncComponentDef: TypeAlias = Callable[[ComponentContext[PropsType]], ElementChildren]
 
+StyleDeclaration: TypeAlias = str | dict[str, "StyleDeclaration"]
+StyleDict: TypeAlias = dict[str, StyleDeclaration]
+
 
 _unregistered_generators: list[ComponentGenerator[Any]] = []
+
+
+def _classify_nested_key(key: str) -> str:
+    if key.startswith("@"):
+        return "at-rule"
+    elif key.startswith(":"):
+        return "pseudo"
+    else:
+        return "combinator"
+
+
+def _format_properties(props: dict[str, str]) -> str:
+    return " ".join(f"{name}: {value};" for name, value in props.items())
+
+
+def _process_style_declaration(declaration: dict[str, StyleDeclaration]) -> dict[str, StyleDeclaration]:
+    result: dict[str, StyleDeclaration] = {}
+    for key, value in declaration.items():
+        if isinstance(value, dict):
+            result[key] = _process_style_declaration(value)
+        elif isinstance(value, str):
+            result[key] = value.strip().rstrip(";").rstrip()
+        else:
+            raise TypeError(
+                f"Invalid style value type for key '{key}': expected str or dict, got {type(value).__name__}"
+            )
+    return result
+
+
+def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaration]) -> str:
+    result = ""
+    props: dict[str, str] = {}
+    nested: dict[str, StyleDeclaration] = {}
+    for key, value in style_dict.items():
+        if isinstance(value, dict):
+            nested[key] = value
+        elif isinstance(value, str):
+            props[key] = value
+    if props:
+        result += f"{selector} {{ {_format_properties(props)} }}"
+    for nested_selector, nested_styles in nested.items():
+        key_type = _classify_nested_key(nested_selector)
+        if key_type == "at-rule":
+            inner_css = _generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", nested_styles))
+            result += f"{nested_selector} {{ {inner_css} }}"
+        elif key_type == "pseudo":
+            combined = f"{selector}{nested_selector}"
+            result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
+        else:
+            combined = f"{selector} {nested_selector}"
+            result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
+    return result
 
 
 class ComponentGenerator(Generic[PropsType]):
     _name: str
     _id: str
-    _style: dict[str, dict[str, str]]
+    _style: dict[str, StyleDict]
     _registered: bool
 
     def __init__(
@@ -92,12 +148,12 @@ class ComponentGenerator(Generic[PropsType]):
     def scoped_style(self) -> str:
         style = self._style
         return " ".join(
-            f"{selector} {{ " + " ".join(f"{name}: {value};" for name, value in props.items()) + " }"
-            for selector, props in style.items()
+            _generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", style_dict))
+            for selector, style_dict in style.items()
         )
 
     @scoped_style.setter
-    def scoped_style(self, style: dict[str, dict[str, str]]):
+    def scoped_style(self, style: dict[str, StyleDict]):
         cid = self._id
         self._style = dict(
             zip(
@@ -112,10 +168,7 @@ class ComponentGenerator(Generic[PropsType]):
                     )
                     for selector in map(lambda s: s.strip(), style.keys())
                 ),
-                (
-                    {prop: value.strip().rstrip(";").rstrip() for prop, value in declaration.items()}
-                    for declaration in style.values()
-                ),
+                (_process_style_declaration(declaration) for declaration in style.values()),
                 strict=True,
             )
         )
