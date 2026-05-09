@@ -169,7 +169,6 @@ Navbar.scoped_style = {
         "margin-right": "1rem",
     },
     " nav button": {
-        "display": "none",
         "background": "none",
         "border": "1px solid #ccc",
         "padding": "0.25rem 0.5rem",
@@ -215,25 +214,5 @@ Navbar.scoped_style = {
         "margin": "0.5rem 0",
         "border": "0",
         "border-top": "1px solid #dee2e6",
-    },
-    " @media (max-width: 768px)": {
-        " nav button": {
-            "display": "block",
-        },
-        " nav ul": {
-            "flex-direction": "column",
-            "position": "absolute",
-            "top": "100%",
-            "left": "0",
-            "right": "0",
-            "background-color": "#f8f9fa",
-            "border-bottom": "1px solid #dee2e6",
-            "padding": "0.5rem 1rem",
-        },
-        " nav li ul": {
-            "position": "static",
-            "border": "none",
-            "padding-left": "1rem",
-        },
     },
 }
