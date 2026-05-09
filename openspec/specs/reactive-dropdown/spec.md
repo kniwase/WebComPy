@@ -4,7 +4,7 @@
 
 Demonstrate that WebComPy's reactive system (`Signal`, `Computed`, event handlers) is sufficient to implement common UI interactions like dropdown menus without relying on external JavaScript libraries. This pattern serves as a foundation for future UI component libraries.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Dropdown state SHALL be managed by reactive Signals
 
