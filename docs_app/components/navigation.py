@@ -92,7 +92,7 @@ def Navbar(context: ComponentContext[list[Page]]):
                 {},
                 html.A(
                     {
-                        "id": menu_id,
+                        "id": f"{menu_id}-toggle",
                         "aria-expanded": computed(lambda idx=idx: "true" if _is_open(idx) else "false"),
                         "aria-haspopup": "true",
                         "aria-controls": menu_id,
@@ -129,7 +129,7 @@ def Navbar(context: ComponentContext[list[Page]]):
                 {
                     "type": "button",
                     "aria-controls": "navbarNav",
-                    "aria-expanded": "false",
+                    "aria-expanded": computed(lambda: "true" if _mobile_open.value else "false"),
                     "aria-label": "Toggle navigation",
                     "@click": _toggle_mobile,
                 },
@@ -169,6 +169,7 @@ Navbar.scoped_style = {
         "margin-right": "1rem",
     },
     " nav button": {
+        "display": "none",
         "background": "none",
         "border": "1px solid #ccc",
         "padding": "0.25rem 0.5rem",
@@ -214,5 +215,25 @@ Navbar.scoped_style = {
         "margin": "0.5rem 0",
         "border": "0",
         "border-top": "1px solid #dee2e6",
+    },
+    " @media (max-width: 768px)": {
+        " nav button": {
+            "display": "block",
+        },
+        " nav ul": {
+            "flex-direction": "column",
+            "position": "absolute",
+            "top": "100%",
+            "left": "0",
+            "right": "0",
+            "background-color": "#f8f9fa",
+            "border-bottom": "1px solid #dee2e6",
+            "padding": "0.5rem 1rem",
+        },
+        " nav li ul": {
+            "position": "static",
+            "border": "none",
+            "padding-left": "1rem",
+        },
     },
 }
