@@ -49,14 +49,28 @@ class Router:
         self.__mode__ = mode
         self.__base_url__ = base_url.strip().strip("/")
         self._base_url_stripper = partial(re_compile("^" + re_escape("/" + self.__base_url__)).sub, "")
-        self._location = Location(self.__mode__, self.__base_url__)
         self.__routes__ = self._generate_routes(pages)
         self._default = default
         self._preload = preload
+        self.before_route_change: list[Callable[[str, str], bool | None]] = []
+        self.after_route_change: list[Callable[[str], None]] = []
+        self.on_route_error: list[Callable[[Exception], bool | None]] = []
+        self._location = Location(
+            self.__mode__,
+            self.__base_url__,
+            before_route_change=self.before_route_change,
+            after_route_change=self.after_route_change,
+        )
 
     @computed_property
     def __cases__(self):
-        return list(map(self._get_elements_generator, self.__routes__))
+        try:
+            return list(map(self._get_elements_generator, self.__routes__))
+        except Exception as e:
+            for handler in self.on_route_error:
+                if handler(e) is True:
+                    return []
+            raise
 
     def __default__(self) -> ElementChildren:
         if self._default:

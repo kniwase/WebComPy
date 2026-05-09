@@ -167,6 +167,7 @@ jobs:
     if: always()
     needs: [openspec, openspec-check, lint, typecheck, generate, test, e2e-matrix]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     concurrency:
       group: review-${{ github.event.pull_request.number }}
       cancel-in-progress: true

@@ -162,7 +162,7 @@ When full hydration is enabled, elements SHALL use `_hydrate_node()` instead of 
 - **AND** the DOM node itself SHALL NOT be removed from the document
 
 ### Requirement: _patch_children() and _is_patchable() shall support node reuse across conditional branches
-`_patch_children(old_children, new_children)` SHALL recursively compare old and new element lists by tag name, adopting matching DOM nodes and cleaning up unmatched old elements. Matched old elements are detached via `_detach_from_node()`; unmatched old elements are removed via `_remove_element()`.
+`_patch_children(old_children, new_children)` SHALL recursively compare old and new element lists by tag name, adopting matching DOM nodes and cleaning up unmatched old elements. Matched old elements are detached via `_detach_from_node()`; unmatched old elements are removed via `_remove_element()`. When repositioning nodes within the parent DOM, the DynamicElement's `_node_idx` SHALL be added as an offset so that children are placed at the correct global DOM position (accounting for any preceding sibling DOM nodes).
 
 `_is_patchable(old, new)` SHALL return `True` when two elements share the same tag name (for `ElementBase`) or are both `TextElement` instances. `DynamicElement` pairs are never patchable. `Component` pairs are patchable when their root tag names match.
 
@@ -180,6 +180,27 @@ When full hydration is enabled, elements SHALL use `_hydrate_node()` instead of 
 - **THEN** it SHALL return `True`
 - **WHEN** `_is_patchable(old, new)` is called on a `DynamicElement` pair
 - **THEN** it SHALL return `False`
+
+#### Scenario: Repositioning children when DynamicElement has preceding siblings
+- **WHEN** `_patch_children()` is called on a DynamicElement whose `_node_idx` is greater than 0 (i.e., there are sibling DOM nodes before the DynamicElement's content in the parent)
+- **AND** a child element is repositioned via `_reposition_node()`
+- **THEN** the child SHALL be placed at `DynamicElement._node_idx + local_child_index` in the parent DOM
+- **AND** preceding sibling DOM nodes SHALL remain at their original positions
+
+### Requirement: _reposition_node() shall recover detached DOM nodes
+When `_reposition_node()` is called on an element whose cached DOM node has been detached from its DOM parent by an external mutation (i.e., `element._node_cache.parentNode` is `null`), the function SHALL resolve the correct parent DOM node from the element tree via `element._parent._get_node()` and reinsert the node at the target index. If `element._parent._get_node()` also fails to return a valid parent, the function SHALL return without error (no-op).
+
+This requirement SHALL NOT apply to `DynamicElement` instances themselves (which have no DOM node of their own).
+
+#### Scenario: Repositioning a text node detached by external code
+- **WHEN** a `TextElement`'s cached DOM node has been removed from the DOM by external JavaScript (e.g., highlight.js replacing `innerHTML`)
+- **AND** `_reposition_node()` is called on that `TextElement`
+- **THEN** the text node SHALL be reinserted into the DOM at the correct position using the parent DOM node obtained from `element._parent._get_node()`
+- **AND** if the target index exceeds the parent's child list length, the node SHALL be appended to the end
+
+#### Scenario: Repositioning a node that is already in the DOM
+- **WHEN** `_reposition_node()` is called on an element whose cached DOM node still has a valid `parentNode`
+- **THEN** the function SHALL use the existing `parentNode` directly (preserving existing behavior)
 
 ### Requirement: Conditional rendering shall reuse DOM nodes when branches share structure
 When a conditional branch changes, `SwitchElement._refresh()` SHALL use `_patch_children()` to compare old and new children, adopting matching DOM nodes instead of destroying and recreating all children. All children SHALL call `_render()` to ensure lifecycle hooks fire correctly on patched components and unmounted descendants are rendered. The deferred rendering mechanism (`start_defer_after_rendering` / `end_defer_after_rendering`) SHALL be preserved.

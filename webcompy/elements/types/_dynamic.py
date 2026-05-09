@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from contextlib import suppress
 
 from webcompy._browser._modules import browser
 from webcompy.elements._dom_objs import DOMNode
@@ -74,6 +75,9 @@ def _is_patchable(old: ElementAbstract, new: ElementAbstract) -> bool:
 def _reposition_node(element: ElementAbstract, new_index: int) -> None:
     node = element._node_cache
     parent = node.parentNode if node else None
+    if not parent and not isinstance(element, DynamicElement):
+        with suppress(AttributeError):
+            parent = element._parent._get_node()
     if not parent:
         return
     if new_index < parent.childNodes.length:
@@ -87,6 +91,7 @@ def _reposition_node(element: ElementAbstract, new_index: int) -> None:
 def _patch_children(
     old_children: list[ElementAbstract],
     new_children: list[ElementAbstract],
+    node_idx_offset: int = 0,
 ) -> list[ElementAbstract]:
     matched_old_indices: set[int] = set()
 
@@ -106,7 +111,7 @@ def _patch_children(
             elif isinstance(new_child, ElementBase) and isinstance(old_child, ElementBase):
                 new_child._adopt_node(old_node)
                 _patch_children(old_child._children, new_child._children)
-            _reposition_node(new_child, new_idx)
+            _reposition_node(new_child, node_idx_offset + new_idx)
         else:
             for old_idx, old_child in enumerate(old_children):
                 if old_idx in matched_old_indices:
@@ -120,7 +125,7 @@ def _patch_children(
                     elif isinstance(new_child, ElementBase) and isinstance(old_child, ElementBase):
                         new_child._adopt_node(old_node)
                         _patch_children(old_child._children, new_child._children)
-                    _reposition_node(new_child, new_idx)
+                    _reposition_node(new_child, node_idx_offset + new_idx)
                     break
 
     for old_idx, old_child in enumerate(old_children):
