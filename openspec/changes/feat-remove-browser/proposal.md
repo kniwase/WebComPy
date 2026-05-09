@@ -16,6 +16,12 @@ All consumers have been migrated to port injection. The `browser` object and `we
 
 - `browser-api`: `browser` object and `_browser/` module removed. All browser API access is through port injection only.
 
+## Non-goals
+
+- Adding new functionality — pure removal only
+- Deprecation period — unstable release, no backward compatibility needed
+- Migrating `_browser/_modules.pyi` (unnecessary — ports provide type checking)
+
 ## Impact
 
 - **Breaking**: `browser` object removal — all consumers must have been migrated in prior phases

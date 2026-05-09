@@ -18,6 +18,16 @@
 - `router`: Router receives HistoryPort instead of Location. Breaking API change.
 - `browser-api`: Location class removed, merged into HistoryPort.
 
+## Known Issues Addressed
+
+- **Location popstate proxy lifecycle**: The `Location` class required manual `destroy()` calls to clean up popstate proxy objects. By merging Location into `HistoryPort`/`BrowserHistoryPort`, the proxy lifecycle is managed internally — `BrowserHistoryPort.__init__` creates the proxy and `destroy()` releases it. Consumers no longer need to manage popstate cleanup.
+
+## Non-goals
+
+- Changing the Router mode or base_url API surface
+- Removing the `browser` object (done in prior phase)
+- Adding new HistoryPort methods beyond what Location already provided
+
 ## Impact
 
 - **Breaking**: All `Router(...)` call sites must be updated

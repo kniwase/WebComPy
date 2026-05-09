@@ -8,7 +8,7 @@ With `feat-port-migrate-elements` complete, the remaining non-element consumers 
 - ajax: obtain `BrowserFetchPort` via `inject(FETCH_PORT_KEY)`
 - aio: replace `browser` → `ENVIRONMENT` guard
 - signal/effect: `browser.window.setTimeout` → `inject(DOM_PORT_KEY).schedule_macro_task`
-- logging: `browser.console.log` → `pyscript.context.window.console.log`
+- logging: `browser.console` → `pyscript.context.window.console` (preserving full method set: debug, info, warn, error)
 - router/_lazy: `browser.console.warn` → `pyscript.context.window.console.warn`
 - components: `browser` truthiness → `ENVIRONMENT == "pyscript"`
 

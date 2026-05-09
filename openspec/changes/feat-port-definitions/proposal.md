@@ -27,6 +27,13 @@ No existing code is modified or removed.
 
 (None — this change adds dead code only.)
 
+## Non-goals
+
+- Migrating any existing consumers to use ports (subsequent phases)
+- Removing the `browser` object (subsequent phases)
+- Changing the Router API (subsequent phases)
+- Implementing a Virtual DOM (separate change)
+
 ## Impact
 
 - **Affected modules**: `webcompy/ports/` (new package only)

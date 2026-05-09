@@ -22,7 +22,7 @@
 ## 4. Update RouterView
 
 - [ ] 4.1 Replace `from webcompy._browser._modules import browser` import with `ENVIRONMENT`
-- [ ] 4.2 Replace `if not browser:` with `if ENVIRONMENT != "pyscript:"`
+- [ ] 4.2 Replace `if not browser:` with `if ENVIRONMENT != "pyscript":`
 - [ ] 4.3 Update `_on_set_parent` to work with HistoryPort-aware Router
 
 ## 5. Update Router preload_lazy_routes

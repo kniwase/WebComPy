@@ -17,6 +17,11 @@ Five files across `ajax/`, `aio/`, `signal/`, `logging.py`, and `components/_com
 
 - `browser-api`: ajax, aio, signal, logging, and components subsystems migrated to port injection
 
+## Non-goals
+
+- Removing the `browser` object (subsequent phase)
+- Changing the Router or Location API (subsequent phase)
+
 ## Impact
 
 - **Affected**: ajax (1), aio (1), signal (1), logging (1), router/_lazy (1), components (1)

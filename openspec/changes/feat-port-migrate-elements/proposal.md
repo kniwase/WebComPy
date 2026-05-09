@@ -17,6 +17,12 @@ Six files in `webcompy/elements/` import the `browser` object for DOM operations
 
 - `browser-api`: Six element files migrated to port injection. All browser API access through `inject(DOM_PORT_KEY)`/`inject(FFI_PORT_KEY)`. `browser` import replaced by `ENVIRONMENT` checks. Server-side fallback paths preserved.
 
+## Non-goals
+
+- Removing the `browser` object (subsequent phase)
+- Migrating other packages (next phase)
+- Changing the Router API (subsequent phase)
+
 ## Impact
 
 - **Affected**: 6 files in `webcompy/elements/types/`

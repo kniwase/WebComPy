@@ -13,6 +13,12 @@ Port implementations exist and all consumers can now use `inject(PORT_KEY)`. `We
 
 - `app-config`: `WebComPyApp` bootstrap provides environment-specific ports into the DI scope
 
+## Non-goals
+
+- Removing existing `browser` imports (next phase)
+- Changing the Router API (subsequent phase)
+- Providing `CookiePort` (phase 6)
+
 ## Impact
 
 - **Affected**: `webcompy/app/_app.py`, `webcompy/app/_root_component.py`
