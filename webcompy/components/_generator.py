@@ -52,6 +52,15 @@ StyleDict: TypeAlias = dict[str, StyleDeclaration]
 _unregistered_generators: list[ComponentGenerator[Any]] = []
 
 
+def _classify_nested_key(key: str) -> str:
+    if key.startswith("@"):
+        return "at-rule"
+    elif key.startswith(":"):
+        return "pseudo"
+    else:
+        return "combinator"
+
+
 def _format_properties(props: dict[str, str]) -> str:
     return " ".join(f"{name}: {value};" for name, value in props.items())
 
@@ -64,7 +73,9 @@ def _process_style_declaration(declaration: dict[str, StyleDeclaration]) -> dict
         elif isinstance(value, str):
             result[key] = value.strip().rstrip(";").rstrip()
         else:
-            result[key] = value
+            raise TypeError(
+                f"Invalid style value type for key '{key}': expected str or dict, got {type(value).__name__}"
+            )
     return result
 
 
@@ -80,8 +91,16 @@ def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaratio
     if props:
         result += f"{selector} {{ {_format_properties(props)} }}"
     for nested_selector, nested_styles in nested.items():
-        combined = f"{selector} {nested_selector}"
-        result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
+        key_type = _classify_nested_key(nested_selector)
+        if key_type == "at-rule":
+            inner_css = _generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", nested_styles))
+            result += f"{nested_selector} {{ {inner_css} }}"
+        elif key_type == "pseudo":
+            combined = f"{selector}{nested_selector}"
+            result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
+        else:
+            combined = f"{selector} {nested_selector}"
+            result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
     return result
 
 

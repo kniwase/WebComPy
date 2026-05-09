@@ -53,17 +53,17 @@ A component's scoped CSS SHALL be automatically prefixed with an attribute selec
 - **AND** the `.btn` style SHALL NOT affect `.btn` elements in other components
 
 ### Requirement: Scoped CSS shall support nested dictionary structures for media queries and pseudo-selectors
-The framework SHALL allow developers to define nested style dictionaries within `scoped_style`, where nested keys represent `@media` queries, `@supports` rules, or pseudo-class selectors. The framework SHALL recursively process these nested structures and generate valid CSS rules with proper selector scoping.
+The framework SHALL allow developers to define nested style dictionaries within `scoped_style`, where nested keys represent `@media` queries, `@supports` rules, or pseudo-class selectors. The framework SHALL recursively process these nested structures and generate valid CSS rules with proper selector scoping. At-rules (`@media`, `@supports`, `@container`) SHALL wrap selectors inside their blocks. Pseudo-classes (`:hover`, `:focus`) and pseudo-elements (`::before`, `::after`) SHALL attach directly to selectors without space. Combinator selectors (`>`, `+`, `~`, descendant space) SHALL maintain space separation.
 
 #### Scenario: Defining a media query within scoped style
 - **WHEN** a developer sets `scoped_style` with a nested `@media` rule:
   ```python
   {".button": {"color": "blue", "@media (max-width: 768px)": {"color": "red"}}}
   ```
-- **THEN** the framework SHALL generate two CSS rules:
+- **THEN** the framework SHALL generate valid CSS with at-rule wrapping:
   ```css
   .button[webcompy-cid-xxx] { color: blue; }
-  .button[webcompy-cid-xxx] @media (max-width: 768px) { color: red; }
+  @media (max-width: 768px) { .button[webcompy-cid-xxx] { color: red; } }
   ```
 - **AND** both rules SHALL be scoped to the component via the `[webcompy-cid-xxx]` attribute
 
@@ -72,10 +72,10 @@ The framework SHALL allow developers to define nested style dictionaries within 
   ```python
   {".button": {"color": "blue", ":hover": {"background": "yellow"}}}
   ```
-- **THEN** the framework SHALL generate:
+- **THEN** the framework SHALL generate pseudo-class attached without space:
   ```css
   .button[webcompy-cid-xxx] { color: blue; }
-  .button[webcompy-cid-xxx] :hover { background: yellow; }
+  .button[webcompy-cid-xxx]:hover { background: yellow; }
   ```
 
 #### Scenario: Defining deeply nested structures
@@ -92,8 +92,10 @@ The framework SHALL allow developers to define nested style dictionaries within 
 - **THEN** the framework SHALL generate:
   ```css
   .button[webcompy-cid-xxx] { color: blue; }
-  .button[webcompy-cid-xxx] @media (max-width: 768px) { color: red; }
-  .button[webcompy-cid-xxx] @media (max-width: 768px) :hover { background: yellow; }
+  @media (max-width: 768px) { 
+    .button[webcompy-cid-xxx] { color: red; }
+    .button[webcompy-cid-xxx]:hover { background: yellow; }
+  }
   ```
 
 ### Requirement: Nested scoped style shall maintain type safety with recursive type definition
@@ -123,7 +125,7 @@ The framework SHALL accept any string key in nested style dictionaries, allowing
 - **THEN** the framework SHALL generate:
   ```css
   .card[webcompy-cid-xxx] { padding: 20px; }
-  .card[webcompy-cid-xxx] @supports (display: grid) { display: grid; }
+  @supports (display: grid) { .card[webcompy-cid-xxx] { display: grid; } }
   ```
 
 #### Scenario: Using pseudo-elements
@@ -134,7 +136,7 @@ The framework SHALL accept any string key in nested style dictionaries, allowing
 - **THEN** the framework SHALL generate:
   ```css
   .tooltip[webcompy-cid-xxx] { position: relative; }
-  .tooltip[webcompy-cid-xxx] ::after { content: attr(data-tip); }
+  .tooltip[webcompy-cid-xxx]::after { content: attr(data-tip); }
   ```
 
 #### Scenario: Using combinator selectors in nested structure

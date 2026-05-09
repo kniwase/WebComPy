@@ -32,6 +32,10 @@ def test_scoped_style_media_query(page_on):
 
     style_content = page.locator("style").first.evaluate("el => el.textContent")
     assert "@media" in style_content
+    assert "media-text" in style_content
+    assert "@media (max-width: 768px) {" in style_content or "@media(max-width:768px){" in style_content.replace(
+        " ", ""
+    )
 
 
 def test_scoped_style_pseudo_class_nesting(page_on):
@@ -44,6 +48,8 @@ def test_scoped_style_pseudo_class_nesting(page_on):
 
     style_content = page.locator("style").first.evaluate("el => el.textContent")
     assert ":hover" in style_content
+    assert "hover-text" in style_content
+    assert ":hover {" in style_content or ":hover{" in style_content.replace(" ", "")
 
 
 def test_scoped_style_deep_nesting(page_on):
