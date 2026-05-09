@@ -19,7 +19,7 @@ With `feat-port-migrate-elements` complete, the remaining non-element consumers 
 
 ### Decision 1: Logging uses `pyscript.context` directly, not port injection
 
-Logging is lightweight and environment-agnostic. It calls `pyscript.context.window.console.log` directly. Not complex enough to warrant a port.
+Logging is lightweight and environment-agnostic. It uses `pyscript.context.window.console` directly (full method set: debug, info, warn, error). Not complex enough to warrant a port.
 
 ### Decision 2: Ajax.fetch uses port injection
 

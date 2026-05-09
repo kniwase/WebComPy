@@ -7,7 +7,7 @@ Five files across `ajax/`, `aio/`, `signal/`, `logging.py`, and `components/_com
 - **MODIFIED** `ajax/_fetch.py`: `browser.pyscript.fetch` → `inject(FETCH_PORT_KEY)`
 - **MODIFIED** `aio/_aio.py`: `browser` truthiness → `ENVIRONMENT == "pyscript"`
 - **MODIFIED** `signal/_effect.py`: `browser.window.setTimeout` → `inject(DOM_PORT_KEY).schedule_macro_task`
-- **MODIFIED** `logging.py`: `browser.console.log` → `pyscript.context.window.console.log`
+- **MODIFIED** `logging.py`: `browser.console` → `pyscript.context.window.console` (full method set: debug, info, warn, error)
 - **MODIFIED** `router/_lazy.py`: `browser.console.warn` → `pyscript.context.window.console.warn`
 - **MODIFIED** `components/_component.py`: `browser` truthiness → `ENVIRONMENT == "pyscript"`
 
