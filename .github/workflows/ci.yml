@@ -449,6 +449,10 @@ jobs:
               --field body="$COMMENT_BODY" \
               --silent
           fi
+          rm -f ci_summary_comment.md summary_table.md step_statuses.txt
+
+      - name: Ensure clean working tree
+        run: git checkout -- . && git clean -fd
 
       - name: Run OpenCode Review
         id: opencode-review
