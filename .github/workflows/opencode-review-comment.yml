@@ -36,6 +36,17 @@ jobs:
           fi
           echo "is_pr=true" >> $GITHUB_OUTPUT
 
+      - name: Prevent write operations
+        if: steps.check-pr.outputs.is_pr == 'true'
+        run: |
+          git config --global user.name "REVIEW ONLY"
+          git config --global user.email "review-only@noreply.github"
+          mkdir -p .git/hooks
+          echo '#!/bin/sh' > .git/hooks/pre-commit
+          echo 'echo "ERROR: This is a review-only workflow. Commits are not allowed." >&2' >> .git/hooks/pre-commit
+          echo 'exit 1' >> .git/hooks/pre-commit
+          chmod +x .git/hooks/pre-commit
+
       - name: Run OpenCode Review
         if: steps.check-pr.outputs.is_pr == 'true'
         id: opencode-review
