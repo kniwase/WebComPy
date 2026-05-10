@@ -213,9 +213,28 @@ jobs:
           git config --global user.name "REVIEW ONLY"
           git config --global user.email "review-only@noreply.github"
           mkdir -p .git/hooks
-          echo '#!/bin/sh' > .git/hooks/pre-commit
-          echo 'echo "ERROR: This is a review-only workflow. Commits are not allowed." >&2' >> .git/hooks/pre-commit
-          echo 'exit 1' >> .git/hooks/pre-commit
+          cat > .git/hooks/pre-commit << 'PRE_COMMIT'
+          #!/bin/sh
+          git stash --keep-index 2>/dev/null
+          echo "" >&2
+          echo "========================================" >&2
+          echo "⚠️  READ-ONLY REVIEW WORKFLOW ⚠️" >&2
+          echo "" >&2
+          echo "You just attempted to commit changes." >&2
+          echo "This is NOT allowed in this workflow." >&2
+          echo "Your role is CODE REVIEWER — do NOT implement fixes." >&2
+          echo "" >&2
+          echo "Instead, describe all issues as change requests" >&2
+          echo "in your review comment with:" >&2
+          echo "  REVIEW_RESULT: changes_requested" >&2
+          echo "" >&2
+          echo "The reviewee will apply your suggestions." >&2
+          echo "" >&2
+          echo "Now continue and publish your review comment." >&2
+          echo "========================================" >&2
+          echo "" >&2
+          exit 0
+          PRE_COMMIT
           chmod +x .git/hooks/pre-commit
 
       - uses: astral-sh/setup-uv@v6
@@ -480,8 +499,13 @@ jobs:
             - Attempt to fix issues you find — only report them
             - Execute shell commands that change the repository state
 
-            Your ONLY job is to READ code, ANALYZE it, and POST a review comment.
-            Do NOT make any changes to the codebase.
+            Any file modifications or commits you make will be silently
+            discarded by the workflow. Do NOT waste time implementing
+            fixes. Instead, describe them as change requests in your
+            review comment.
+
+            Your ONLY job is to READ code, ANALYZE it, and POST a review
+            comment. Do NOT make any changes to the codebase.
 
             1. Check previous review comments on this PR first. Do NOT repeat points that have already been raised and addressed. Do NOT re-raise issues that were already approved in a previous review round.
 
@@ -505,6 +529,35 @@ jobs:
             REVIEW_RESULT: approved
             or
             REVIEW_RESULT: changes_requested
+
+      - name: Report blocked changes
+        if: always() && (steps.opencode-review.outcome == 'success' || steps.opencode-review.outcome == 'failure')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          if git stash list | grep -q .; then
+            echo "### ⚠️ Agent Attempted to Commit Changes" > agent-changes.md
+            echo "" >> agent-changes.md
+            echo "The review agent attempted to commit the changes shown below." >> agent-changes.md
+            echo "This is a read-only review workflow — commits are blocked." >> agent-changes.md
+            echo "The reviewee should consider these as change requests." >> agent-changes.md
+            echo "" >> agent-changes.md
+            echo "<details><summary>Click to see blocked changes</summary>" >> agent-changes.md
+            echo "" >> agent-changes.md
+            echo '```diff' >> agent-changes.md
+            git stash show -p >> agent-changes.md 2>/dev/null || echo "(no diff available)" >> agent-changes.md
+            echo '```' >> agent-changes.md
+            echo "" >> agent-changes.md
+            echo "</details>" >> agent-changes.md
+            COMMENT_BODY=$(cat agent-changes.md)
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              --method POST \
+              --field body="$COMMENT_BODY" \
+              --silent
+            git stash clear
+          fi
 
       - name: Submit PR review based on result
         if: always() && steps.opencode-review.outcome != 'cancelled'
