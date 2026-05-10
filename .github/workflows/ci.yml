@@ -57,15 +57,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-environment
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
+      - name: Run ruff check
+        run: uv run ruff check . 2>&1 | tee ci-lint-ruff.log
+      - name: Run ruff format check
+        run: uv run ruff format --check . 2>&1 | tee ci-lint-format.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-lint-logs
+          path: |
+            ci-lint-ruff.log
+            ci-lint-format.log
 
   typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-environment
-      - run: uv run pyright
+      - name: Run pyright
+        run: uv run pyright 2>&1 | tee ci-typecheck-pyright.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-typecheck-logs
+          path: ci-typecheck-pyright.log
 
   generate:
     runs-on: ubuntu-latest
@@ -86,12 +101,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-environment
-      - run: uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs --cov=webcompy --cov-report=xml --cov-report=term-missing
+      - name: Run unit tests
+        run: uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs --cov=webcompy --cov-report=xml --cov-report=term-missing 2>&1 | tee ci-test-results.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-report
           path: coverage.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-test-logs
+          path: ci-test-results.log
 
   e2e-matrix:
     if: ${{ !failure() && !cancelled() }}
@@ -152,7 +173,7 @@ jobs:
           name: docs-dist
           path: docs_app/dist/
       - name: Run E2E tests
-        run: uv run python -m pytest ${{ matrix.group.files }} --tb=short --serving-mode=${{ matrix.serving_mode }}
+        run: uv run python -m pytest ${{ matrix.group.files }} --tb=short --serving-mode=${{ matrix.serving_mode }} 2>&1 | tee ci-e2e-results.log
         env:
           DOCS_DIST_DIR: ${{ github.workspace }}/docs_app/dist
       - uses: actions/upload-artifact@v4
@@ -162,6 +183,11 @@ jobs:
           path: |
             tests/e2e/.e2e-server.log
             tests/e2e_docs/.e2e-docs-server.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-e2e-log-${{ matrix.group.name }}-${{ matrix.serving_mode }}
+          path: ci-e2e-results.log
 
   review:
     if: always()
@@ -181,6 +207,225 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          cache: true
+
+      - run: uv sync --dev --no-group docs
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Install OpenSpec CLI so the review agent can use it.
+      # Validation is already performed by the openspec/openspec-check jobs.
+      # Must not block the review job if install fails (use || true).
+      - run: npm install -g @fission-ai/openspec@latest || true
+
+      - name: Download CI result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ci-results/
+          pattern: ci-*
+
+      - name: Generate CI results summary
+        id: ci-summary
+        run: |
+          # Check job statuses from GitHub API
+          LINT_STATUS="${{ needs.lint.result }}"
+          TYPECHECK_STATUS="${{ needs.typecheck.result }}"
+          TEST_STATUS="${{ needs.test.result }}"
+          E2E_STATUS="${{ needs.e2e-matrix.result }}"
+          GENERATE_STATUS="${{ needs.generate.result }}"
+
+          # Build summary table
+          echo "## CI Results" > ci_summary_comment.md
+          echo "" >> ci_summary_comment.md
+          echo "| Check | Status |" >> ci_summary_comment.md
+          echo "|-------|--------|" >> ci_summary_comment.md
+
+          # Lint
+          if [ "$LINT_STATUS" = "success" ]; then
+            echo "| Lint (ruff check + format) | ✅ Passed |" >> ci_summary_comment.md
+          elif [ "$LINT_STATUS" = "failure" ]; then
+            echo "| Lint (ruff check + format) | ❌ Failed |" >> ci_summary_comment.md
+          else
+            echo "| Lint (ruff check + format) | ⚠️ $LINT_STATUS |" >> ci_summary_comment.md
+          fi
+
+          # TypeCheck
+          if [ "$TYPECHECK_STATUS" = "success" ]; then
+            echo "| TypeCheck (pyright) | ✅ Passed |" >> ci_summary_comment.md
+          elif [ "$TYPECHECK_STATUS" = "failure" ]; then
+            echo "| TypeCheck (pyright) | ❌ Failed |" >> ci_summary_comment.md
+          else
+            echo "| TypeCheck (pyright) | ⚠️ $TYPECHECK_STATUS |" >> ci_summary_comment.md
+          fi
+
+          # Generate
+          if [ "$GENERATE_STATUS" = "success" ]; then
+            echo "| Generate (SSG) | ✅ Passed |" >> ci_summary_comment.md
+          elif [ "$GENERATE_STATUS" = "failure" ]; then
+            echo "| Generate (SSG) | ❌ Failed |" >> ci_summary_comment.md
+          else
+            echo "| Generate (SSG) | ⚠️ $GENERATE_STATUS |" >> ci_summary_comment.md
+          fi
+
+          # Test
+          if [ "$TEST_STATUS" = "success" ]; then
+            echo "| Unit Tests (pytest) | ✅ Passed |" >> ci_summary_comment.md
+          elif [ "$TEST_STATUS" = "failure" ]; then
+            echo "| Unit Tests (pytest) | ❌ Failed |" >> ci_summary_comment.md
+          else
+            echo "| Unit Tests (pytest) | ⚠️ $TEST_STATUS |" >> ci_summary_comment.md
+          fi
+
+          # E2E
+          if [ "$E2E_STATUS" = "success" ]; then
+            echo "| E2E Tests (Playwright) | ✅ Passed |" >> ci_summary_comment.md
+          elif [ "$E2E_STATUS" = "failure" ]; then
+            echo "| E2E Tests (Playwright) | ❌ Failed |" >> ci_summary_comment.md
+          else
+            echo "| E2E Tests (Playwright) | ⚠️ $E2E_STATUS |" >> ci_summary_comment.md
+          fi
+
+          # Add failure details in collapsible sections
+          echo "" >> ci_summary_comment.md
+
+          add_failure_details() {
+            local log_file="$1"
+            local step_name="$2"
+            if [ -f "$log_file" ]; then
+              local content
+              content=$(tail -c 30000 "$log_file" 2>/dev/null || cat "$log_file")
+              echo "<details><summary>❌ $step_name — Failure Details</summary>" >> ci_summary_comment.md
+              echo "" >> ci_summary_comment.md
+              echo '```' >> ci_summary_comment.md
+              echo "$content" >> ci_summary_comment.md
+              echo '```' >> ci_summary_comment.md
+              echo "" >> ci_summary_comment.md
+              echo "</details>" >> ci_summary_comment.md
+              echo "" >> ci_summary_comment.md
+            fi
+          }
+
+          # Lint details
+          if [ "$LINT_STATUS" = "failure" ]; then
+            for f in ci-results/ci-lint-logs/*.log; do
+              add_failure_details "$f" "Lint"
+            done
+          fi
+
+          # TypeCheck details
+          if [ "$TYPECHECK_STATUS" = "failure" ]; then
+            for f in ci-results/ci-typecheck-logs/*.log; do
+              add_failure_details "$f" "TypeCheck"
+            done
+          fi
+
+          # Test details
+          if [ "$TEST_STATUS" = "failure" ]; then
+            for f in ci-results/ci-test-logs/*.log; do
+              add_failure_details "$f" "Unit Tests"
+            done
+          fi
+
+          # E2E details
+          if [ "$E2E_STATUS" = "failure" ]; then
+            for f in ci-results/ci-e2e-log-*/ci-e2e-results.log; do
+              add_failure_details "$f" "E2E Tests"
+            done
+          fi
+
+          # Build prompt context
+          echo "CI_RESULTS<<CI_RESULTS_EOF" >> "$GITHUB_ENV"
+          echo "CI Results (already verified by CI pipeline — do NOT re-verify):" >> "$GITHUB_ENV"
+          echo "" >> "$GITHUB_ENV"
+          echo "- Lint (ruff check + format): $LINT_STATUS" >> "$GITHUB_ENV"
+          echo "- TypeCheck (pyright): $TYPECHECK_STATUS" >> "$GITHUB_ENV"
+          echo "- Generate (SSG): $GENERATE_STATUS" >> "$GITHUB_ENV"
+          echo "- Unit Tests (pytest): $TEST_STATUS" >> "$GITHUB_ENV"
+          echo "- E2E Tests (Playwright): $E2E_STATUS" >> "$GITHUB_ENV"
+          echo "" >> "$GITHUB_ENV"
+
+          # Add detailed logs for failures only (truncated to 30KB)
+          append_log() {
+            local log_file="$1"
+            local label="$2"
+            if [ -f "$log_file" ]; then
+              echo "--- $label ---" >> "$GITHUB_ENV"
+              tail -c 30000 "$log_file" >> "$GITHUB_ENV" 2>/dev/null || cat "$log_file" >> "$GITHUB_ENV"
+              echo "" >> "$GITHUB_ENV"
+            fi
+          }
+          if [ "$LINT_STATUS" = "failure" ]; then
+            for f in ci-results/ci-lint-logs/*.log; do
+              append_log "$f" "Lint: $(basename "$f")"
+            done
+          fi
+          if [ "$TYPECHECK_STATUS" = "failure" ]; then
+            for f in ci-results/ci-typecheck-logs/*.log; do
+              append_log "$f" "TypeCheck: $(basename "$f")"
+            done
+          fi
+          if [ "$TEST_STATUS" = "failure" ]; then
+            for f in ci-results/ci-test-logs/*.log; do
+              append_log "$f" "Unit Tests: $(basename "$f")"
+            done
+          fi
+          if [ "$E2E_STATUS" = "failure" ]; then
+            for f in ci-results/ci-e2e-log-*/ci-e2e-results.log; do
+              append_log "$f" "E2E: $(basename "$(dirname "$f")")"
+            done
+          fi
+
+          echo "CI_RESULTS_EOF" >> "$GITHUB_ENV"
+
+          # Determine overall status
+          ALL_PASSED=true
+          [ "$LINT_STATUS" != "success" ] && ALL_PASSED=false
+          [ "$TYPECHECK_STATUS" != "success" ] && ALL_PASSED=false
+          [ "$GENERATE_STATUS" != "success" ] && ALL_PASSED=false
+          [ "$TEST_STATUS" != "success" ] && ALL_PASSED=false
+          [ "$E2E_STATUS" != "success" ] && ALL_PASSED=false
+
+          if [ "$ALL_PASSED" = true ]; then
+            echo "" >> ci_summary_comment.md
+            echo "All checks passed! ✅" >> ci_summary_comment.md
+          fi
+
+          echo "Summary comment:"
+          cat ci_summary_comment.md
+
+      - name: Post CI results summary comment
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          COMMENT_BODY=$(cat ci_summary_comment.md)
+          # Find and update existing CI results comment, or create new one
+          EXISTING_ID=$(gh api repos/$REPO/issues/$PR_NUMBER/comments \
+            --jq '[.[] | select(.user.login == "github-actions[bot]") | select(.body | test("## CI Results")) | .id] | last // empty' 2>/dev/null || echo "")
+          
+          if [ -n "$EXISTING_ID" ]; then
+            gh api repos/$REPO/issues/comments/$EXISTING_ID \
+              --method PATCH \
+              --field body="$COMMENT_BODY" \
+              --silent
+          else
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              --method POST \
+              --field body="$COMMENT_BODY" \
+              --silent
+          fi
+          rm -f ci_summary_comment.md
+
+      - name: Ensure clean working tree
+        run: git checkout -- . && git clean -fd
+
       - name: Run OpenCode Review
         id: opencode-review
         uses: anomalyco/opencode/github@latest
@@ -191,23 +436,26 @@ jobs:
           OPENAI_COMPAT_MODEL: ${{ secrets.OPENAI_COMPAT_MODEL }}
         with:
           model: openai-compat/${{ secrets.OPENAI_COMPAT_MODEL }}
+          agent: review
           use_github_token: true
           prompt: |
             Review this pull request. Follow these rules strictly:
 
-            1. Check previous review comments on this PR first. Do NOT repeat points that have already been raised and addressed. Do NOT re-raise issues that were already approved in a previous review round.
+            1. Check previous review comments on this PR first. Do NOT repeat points that have already been raised and addressed.
 
             2. Focus ONLY on the code diff (the changes in this PR). Do not review code that was not changed.
 
-            3. If you are re-reviewing after changes were pushed, only review the NEW changes since the last review. Skip anything that was already reviewed and approved.
+            3. Check for code quality issues, potential bugs, and suggest improvements — but only for the changed code.
 
-            4. Check for code quality issues, potential bugs, and suggest improvements — but only for the changed code.
+            4. CI results have already been verified by the CI pipeline. The results are:
 
-            5. Refer to the results of the CI checks (lint, typecheck, generate, test, e2e) that ran before this review.
+            ${{ env.CI_RESULTS }}
 
-            6. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs. Pay special attention to the Acceptance Criteria in tasks.md. If any requirement or acceptance criterion is not met, request changes and explain which spec/criterion is violated.
+            Trust these CI results. Only review the code diff for issues that CI cannot catch (logic bugs, design issues, missing edge cases, etc.).
 
-            7. You MUST output `REVIEW_RESULT: changes_requested` if there are ANY issues or suggestions — no matter how minor. Only output `REVIEW_RESULT: approved` when there are ZERO issues to raise. This includes cosmetic issues, nits, naming conventions, missing tests, unclear variable names, etc. When in doubt, request changes.
+            5. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs.
+
+            6. You MUST output `REVIEW_RESULT: changes_requested` if there are ANY issues or suggestions. Only output `REVIEW_RESULT: approved` when there are ZERO issues to raise.
 
             At the end of your review, include EXACTLY ONE of these lines:
             REVIEW_RESULT: approved

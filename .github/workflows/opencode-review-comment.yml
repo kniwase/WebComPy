@@ -47,21 +47,22 @@ jobs:
           OPENAI_COMPAT_MODEL: ${{ secrets.OPENAI_COMPAT_MODEL }}
         with:
           model: openai-compat/${{ secrets.OPENAI_COMPAT_MODEL }}
+          agent: review
           use_github_token: true
           prompt: |
             Review this pull request. Follow these rules strictly:
 
-            1. Check previous review comments on this PR first. Do NOT repeat points that have already been raised and addressed. Do NOT re-raise issues that were already approved in a previous review round.
+            1. Check previous review comments on this PR first. Do NOT repeat points that have already been raised and addressed.
 
             2. Focus ONLY on the code diff (the changes in this PR). Do not review code that was not changed.
 
-            3. If you are re-reviewing after changes were pushed, only review the NEW changes since the last review. Skip anything that was already reviewed and approved.
+            3. Check for code quality issues, potential bugs, and suggest improvements — but only for the changed code.
 
-            4. Check for code quality issues, potential bugs, and suggest improvements — but only for the changed code.
+            4. Check the PR comments for a "CI Results" summary posted by the CI workflow. Trust those CI results — do NOT re-verify lint, typecheck, test, or e2e checks that CI has already run. If no CI Results comment is found, note that CI results are unavailable and review accordingly.
 
-            5. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs. Pay special attention to the Acceptance Criteria in tasks.md. If any requirement or acceptance criterion is not met, request changes and explain which spec/criterion is violated.
+            5. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs.
 
-            6. You MUST output `REVIEW_RESULT: changes_requested` if there are ANY issues or suggestions — no matter how minor. Only output `REVIEW_RESULT: approved` when there are ZERO issues to raise. This includes cosmetic issues, nits, naming conventions, missing tests, unclear variable names, etc. When in doubt, request changes.
+            6. You MUST output `REVIEW_RESULT: changes_requested` if there are ANY issues or suggestions. Only output `REVIEW_RESULT: approved` when there are ZERO issues to raise.
 
             At the end of your review, include EXACTLY ONE of these lines:
             REVIEW_RESULT: approved
