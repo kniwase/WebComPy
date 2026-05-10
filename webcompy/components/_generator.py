@@ -159,10 +159,27 @@ class ComponentGenerator(Generic[PropsType]):
     def scoped_style(self) -> str:
         style = self._style
         cid = self._id
-        return " ".join(
-            _generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", style_dict), cid)
-            for selector, style_dict in style.items()
-        )
+        parts: list[str] = []
+        for selector, style_dict in style.items():
+            if _classify_nested_key(selector.strip()) == "at-rule":
+                inner_parts: list[str] = []
+                for inner_sel, inner_styles in style_dict.items():
+                    stripped_inner = inner_sel.strip()
+                    scoped_inner = "".join(
+                        f"{s}[webcompy-cid-{cid}]{c}"
+                        for s, c in zip(
+                            _combinator_pattern.split(stripped_inner),
+                            [*_combinator_pattern.findall(stripped_inner), ""],
+                            strict=True,
+                        )
+                    )
+                    inner_parts.append(
+                        _generate_css_recursive(scoped_inner, cast("dict[str, StyleDeclaration]", inner_styles), cid)
+                    )
+                parts.append(f"{selector} {{ {' '.join(inner_parts)} }}")
+            else:
+                parts.append(_generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", style_dict), cid))
+        return " ".join(parts)
 
     @scoped_style.setter
     def scoped_style(self, style: dict[str, StyleDict]):
@@ -170,13 +187,14 @@ class ComponentGenerator(Generic[PropsType]):
         style_items: list[tuple[str, dict[str, StyleDeclaration]]] = []
         for selector, declaration in style.items():
             if _classify_nested_key(selector.strip()) == "at-rule":
-                processed_selector = selector
+                processed_selector = selector.strip()
             else:
+                stripped = selector.strip()
                 processed_selector = "".join(
-                    f"{selector}[webcompy-cid-{cid}]{combinator}"
-                    for selector, combinator in zip(
-                        _combinator_pattern.split(selector),
-                        [*_combinator_pattern.findall(selector), ""],
+                    f"{s}[webcompy-cid-{cid}]{c}"
+                    for s, c in zip(
+                        _combinator_pattern.split(stripped),
+                        [*_combinator_pattern.findall(stripped), ""],
                         strict=True,
                     )
                 )
