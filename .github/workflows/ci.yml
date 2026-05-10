@@ -218,10 +218,9 @@ jobs:
         with:
           node-version: 20
 
-      # The following install OpenSpec CLI so the review agent can use it.
+      # Install OpenSpec CLI so the review agent can use it.
       # Validation is already performed by the openspec/openspec-check jobs.
-      - run: npx @fission-ai/openspec@latest validate --specs
-      - run: npx @fission-ai/openspec@latest validate --changes
+      - run: npm install -g @fission-ai/openspec@latest
 
       - name: Download CI result artifacts
         uses: actions/download-artifact@v4
