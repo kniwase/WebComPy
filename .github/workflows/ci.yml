@@ -218,8 +218,10 @@ jobs:
         with:
           node-version: 20
 
-      - run: npx @fission-ai/openspec@latest validate --specs || true
-      - run: npx @fission-ai/openspec@latest validate --changes || true
+      # The following install OpenSpec CLI so the review agent can use it.
+      # Validation is already performed by the openspec/openspec-check jobs.
+      - run: npx @fission-ai/openspec@latest validate --specs
+      - run: npx @fission-ai/openspec@latest validate --changes
 
       - name: Download CI result artifacts
         uses: actions/download-artifact@v4
@@ -230,27 +232,6 @@ jobs:
       - name: Generate CI results summary
         id: ci-summary
         run: |
-          # Helper: check exit status from log content
-          check_log() {
-            local log_file="$1"
-            local step_name="$2"
-            if [ ! -f "$log_file" ]; then
-              echo "| $step_name | ⚠️ No log found |" >> summary_table.md
-              echo "MISSING" >> step_statuses.txt
-              return
-            fi
-            # Check for common failure indicators
-            local content
-            content=$(cat "$log_file")
-            if echo "$content" | grep -qiE "error|failed|failure|traceback|exception"; then
-              echo "| $step_name | ❌ Failed |" >> summary_table.md
-              echo "FAILED" >> step_statuses.txt
-            else
-              echo "| $step_name | ✅ Passed |" >> summary_table.md
-              echo "PASSED" >> step_statuses.txt
-            fi
-          }
-
           # Check job statuses from GitHub API
           LINT_STATUS="${{ needs.lint.result }}"
           TYPECHECK_STATUS="${{ needs.typecheck.result }}"
