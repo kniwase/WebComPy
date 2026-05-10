@@ -208,6 +208,19 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: astral-sh/setup-uv@v6
+        with:
+          cache: true
+
+      - run: uv sync --all-groups
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npx @fission-ai/openspec@latest validate --specs || true
+      - run: npx @fission-ai/openspec@latest validate --changes || true
+
       - name: Download CI result artifacts
         uses: actions/download-artifact@v4
         with:
