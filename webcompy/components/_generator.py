@@ -79,7 +79,7 @@ def _process_style_declaration(declaration: dict[str, StyleDeclaration]) -> dict
     return result
 
 
-def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaration]) -> str:
+def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaration], cid: str | None = None) -> str:
     result = ""
     props: dict[str, str] = {}
     nested: dict[str, StyleDeclaration] = {}
@@ -93,14 +93,25 @@ def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaratio
     for nested_selector, nested_styles in nested.items():
         key_type = _classify_nested_key(nested_selector)
         if key_type == "at-rule":
-            inner_css = _generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", nested_styles))
+            inner_css = _generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", nested_styles), cid)
             result += f"{nested_selector} {{ {inner_css} }}"
         elif key_type == "pseudo":
             combined = f"{selector}{nested_selector}"
-            result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
+            result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles), cid)
         else:
-            combined = f"{selector} {nested_selector}"
-            result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
+            if cid and f"[webcompy-cid-{cid}]" not in nested_selector:
+                scoped_nested = "".join(
+                    f"{s}[webcompy-cid-{cid}]{c}"
+                    for s, c in zip(
+                        _combinator_pattern.split(nested_selector),
+                        [*_combinator_pattern.findall(nested_selector), ""],
+                        strict=True,
+                    )
+                )
+            else:
+                scoped_nested = nested_selector
+            combined = f"{selector} {scoped_nested}"
+            result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles), cid)
     return result
 
 
@@ -147,31 +158,30 @@ class ComponentGenerator(Generic[PropsType]):
     @property
     def scoped_style(self) -> str:
         style = self._style
+        cid = self._id
         return " ".join(
-            _generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", style_dict))
+            _generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", style_dict), cid)
             for selector, style_dict in style.items()
         )
 
     @scoped_style.setter
     def scoped_style(self, style: dict[str, StyleDict]):
         cid = self._id
-        self._style = dict(
-            zip(
-                (
-                    "".join(
-                        f"{selector}[webcompy-cid-{cid}]{combinator}"
-                        for selector, combinator in zip(
-                            _combinator_pattern.split(selector),
-                            [*_combinator_pattern.findall(selector), ""],
-                            strict=True,
-                        )
+        style_items: list[tuple[str, dict[str, StyleDeclaration]]] = []
+        for selector, declaration in style.items():
+            if _classify_nested_key(selector.strip()) == "at-rule":
+                processed_selector = selector
+            else:
+                processed_selector = "".join(
+                    f"{selector}[webcompy-cid-{cid}]{combinator}"
+                    for selector, combinator in zip(
+                        _combinator_pattern.split(selector),
+                        [*_combinator_pattern.findall(selector), ""],
+                        strict=True,
                     )
-                    for selector in map(lambda s: s.strip(), style.keys())
-                ),
-                (_process_style_declaration(declaration) for declaration in style.values()),
-                strict=True,
-            )
-        )
+                )
+            style_items.append((processed_selector, _process_style_declaration(declaration)))
+        self._style = dict(style_items)
 
 
 def define_component(

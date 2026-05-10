@@ -185,3 +185,50 @@ class TestComponentGeneratorScopedStyle:
         assert ":hover { background: yellow; }" in css
         assert ".btn[webcompy-cid-]:hover" not in css
         assert ".btn[webcompy-cid-" in css.split(":hover")[0]
+
+    def test_top_level_media_at_rule(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"@media (max-width: 768px)": {".btn": {"color": "red"}}}
+        css = gen.scoped_style
+        assert "@media (max-width: 768px)" in css
+        assert "@media[webcompy-cid-" not in css
+        assert ".btn[webcompy-cid-" in css
+        assert "{ color: red; }" in css
+
+    def test_top_level_supports_at_rule(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"@supports (display: grid)": {".card": {"display": "grid"}}}
+        css = gen.scoped_style
+        assert "@supports (display: grid)" in css
+        assert "@supports[webcompy-cid-" not in css
+        assert ".card[webcompy-cid-" in css
+        assert "{ display: grid; }" in css
+
+    def test_top_level_at_rule_with_leading_whitespace(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {" @media (max-width: 768px)": {".btn": {"color": "red"}}}
+        css = gen.scoped_style
+        assert "@media (max-width: 768px)" in css
+        assert "@media[webcompy-cid-" not in css
+        assert ".btn[webcompy-cid-" in css
+
+    def test_top_level_at_rule_not_scoped(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"@media (max-width: 768px)": {"nav button": {"display": "block"}}}
+        css = gen.scoped_style
+        assert "@media[webcompy-cid-" not in css
+        assert "nav[webcompy-cid-" in css
+        assert "button[webcompy-cid-" in css
+
+    def test_selectors_inside_at_rule_are_scoped(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {
+            "@media (max-width: 768px)": {
+                ".btn": {"color": "red"},
+                "nav a": {"text-decoration": "none"},
+            }
+        }
+        css = gen.scoped_style
+        assert ".btn[webcompy-cid-" in css
+        assert "nav[webcompy-cid-" in css
+        assert "a[webcompy-cid-" in css
