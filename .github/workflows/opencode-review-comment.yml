@@ -51,6 +51,15 @@ jobs:
           prompt: |
             Review this pull request. Follow these rules strictly:
 
+            CRITICAL: You are a CODE REVIEWER ONLY. You MUST NOT:
+            - Modify any files in the repository
+            - Run git commit, git push, or any write operations
+            - Attempt to fix issues you find — only report them
+            - Execute shell commands that change the repository state
+
+            Your ONLY job is to READ code, ANALYZE it, and POST a review comment.
+            Do NOT make any changes to the codebase.
+
             1. Check previous review comments on this PR first. Do NOT repeat points that have already been raised and addressed. Do NOT re-raise issues that were already approved in a previous review round.
 
             2. Focus ONLY on the code diff (the changes in this PR). Do not review code that was not changed.
