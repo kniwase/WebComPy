@@ -212,7 +212,7 @@ jobs:
         with:
           cache: true
 
-      - run: uv sync --all-groups
+      - run: uv sync --dev --no-group docs
 
       - uses: actions/setup-node@v4
         with:
@@ -220,7 +220,8 @@ jobs:
 
       # Install OpenSpec CLI so the review agent can use it.
       # Validation is already performed by the openspec/openspec-check jobs.
-      - run: npm install -g @fission-ai/openspec@latest
+      # Must not block the review job if install fails (use || true).
+      - run: npm install -g @fission-ai/openspec@latest || true
 
       - name: Download CI result artifacts
         uses: actions/download-artifact@v4
@@ -297,17 +298,15 @@ jobs:
             local step_name="$2"
             if [ -f "$log_file" ]; then
               local content
-              content=$(cat "$log_file")
-              if echo "$content" | grep -qiE "error|failed|failure|traceback|exception"; then
-                echo "<details><summary>❌ $step_name — Failure Details</summary>" >> ci_summary_comment.md
-                echo "" >> ci_summary_comment.md
-                echo '```' >> ci_summary_comment.md
-                echo "$content" >> ci_summary_comment.md
-                echo '```' >> ci_summary_comment.md
-                echo "" >> ci_summary_comment.md
-                echo "</details>" >> ci_summary_comment.md
-                echo "" >> ci_summary_comment.md
-              fi
+              content=$(tail -c 30000 "$log_file" 2>/dev/null || cat "$log_file")
+              echo "<details><summary>❌ $step_name — Failure Details</summary>" >> ci_summary_comment.md
+              echo "" >> ci_summary_comment.md
+              echo '```' >> ci_summary_comment.md
+              echo "$content" >> ci_summary_comment.md
+              echo '```' >> ci_summary_comment.md
+              echo "" >> ci_summary_comment.md
+              echo "</details>" >> ci_summary_comment.md
+              echo "" >> ci_summary_comment.md
             fi
           }
 
@@ -350,41 +349,34 @@ jobs:
           echo "- E2E Tests (Playwright): $E2E_STATUS" >> "$GITHUB_ENV"
           echo "" >> "$GITHUB_ENV"
 
-          # Add detailed logs for failures only
+          # Add detailed logs for failures only (truncated to 30KB)
+          append_log() {
+            local log_file="$1"
+            local label="$2"
+            if [ -f "$log_file" ]; then
+              echo "--- $label ---" >> "$GITHUB_ENV"
+              tail -c 30000 "$log_file" >> "$GITHUB_ENV" 2>/dev/null || cat "$log_file" >> "$GITHUB_ENV"
+              echo "" >> "$GITHUB_ENV"
+            fi
+          }
           if [ "$LINT_STATUS" = "failure" ]; then
             for f in ci-results/ci-lint-logs/*.log; do
-              if [ -f "$f" ]; then
-                echo "--- Lint: $(basename "$f") ---" >> "$GITHUB_ENV"
-                cat "$f" >> "$GITHUB_ENV"
-                echo "" >> "$GITHUB_ENV"
-              fi
+              append_log "$f" "Lint: $(basename "$f")"
             done
           fi
           if [ "$TYPECHECK_STATUS" = "failure" ]; then
             for f in ci-results/ci-typecheck-logs/*.log; do
-              if [ -f "$f" ]; then
-                echo "--- TypeCheck: $(basename "$f") ---" >> "$GITHUB_ENV"
-                cat "$f" >> "$GITHUB_ENV"
-                echo "" >> "$GITHUB_ENV"
-              fi
+              append_log "$f" "TypeCheck: $(basename "$f")"
             done
           fi
           if [ "$TEST_STATUS" = "failure" ]; then
             for f in ci-results/ci-test-logs/*.log; do
-              if [ -f "$f" ]; then
-                echo "--- Unit Tests: $(basename "$f") ---" >> "$GITHUB_ENV"
-                cat "$f" >> "$GITHUB_ENV"
-                echo "" >> "$GITHUB_ENV"
-              fi
+              append_log "$f" "Unit Tests: $(basename "$f")"
             done
           fi
           if [ "$E2E_STATUS" = "failure" ]; then
             for f in ci-results/ci-e2e-log-*/ci-e2e-results.log; do
-              if [ -f "$f" ]; then
-                echo "--- E2E: $(basename "$(dirname "$f")") ---" >> "$GITHUB_ENV"
-                cat "$f" >> "$GITHUB_ENV"
-                echo "" >> "$GITHUB_ENV"
-              fi
+              append_log "$f" "E2E: $(basename "$(dirname "$f")")"
             done
           fi
 
@@ -429,7 +421,7 @@ jobs:
               --field body="$COMMENT_BODY" \
               --silent
           fi
-          rm -f ci_summary_comment.md summary_table.md step_statuses.txt
+          rm -f ci_summary_comment.md
 
       - name: Ensure clean working tree
         run: git checkout -- . && git clean -fd
