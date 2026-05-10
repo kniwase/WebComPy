@@ -208,45 +208,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prevent write operations
-        run: |
-          git config --global user.name "REVIEW ONLY"
-          git config --global user.email "review-only@noreply.github"
-          mkdir -p .git/hooks
-          cat > .git/hooks/pre-commit << 'PRE_COMMIT'
-          #!/bin/sh
-          git stash --keep-index 2>/dev/null
-          echo "" >&2
-          echo "========================================" >&2
-          echo "⚠️  READ-ONLY REVIEW WORKFLOW ⚠️" >&2
-          echo "" >&2
-          echo "You just attempted to commit changes." >&2
-          echo "This is NOT allowed in this workflow." >&2
-          echo "Your role is CODE REVIEWER — do NOT implement fixes." >&2
-          echo "" >&2
-          echo "Instead, describe all issues as change requests" >&2
-          echo "in your review comment with:" >&2
-          echo "  REVIEW_RESULT: changes_requested" >&2
-          echo "" >&2
-          echo "The reviewee will apply your suggestions." >&2
-          echo "" >&2
-          echo "Now continue and publish your review comment." >&2
-          echo "========================================" >&2
-          echo "" >&2
-          exit 0
-          PRE_COMMIT
-          chmod +x .git/hooks/pre-commit
-
-          cat > /usr/local/bin/git << 'GIT_WRAPPER'
-          #!/bin/bash
-          case "$1" in
-            push) echo "REVIEW-ONLY: push suppressed" >&2 ;;
-            *) /usr/bin/git "$@" ;;
-          esac
-          GIT_WRAPPER
-          chmod +x /usr/local/bin/git
-          echo "/usr/local/bin" >> $GITHUB_PATH
-
       - uses: astral-sh/setup-uv@v6
         with:
           cache: true
@@ -499,75 +460,31 @@ jobs:
           OPENAI_COMPAT_MODEL: ${{ secrets.OPENAI_COMPAT_MODEL }}
         with:
           model: openai-compat/${{ secrets.OPENAI_COMPAT_MODEL }}
+          agent: review
           use_github_token: true
           prompt: |
             Review this pull request. Follow these rules strictly:
 
-            CRITICAL: You are a CODE REVIEWER ONLY. You MUST NOT:
-            - Modify any files in the repository
-            - Run git commit, git push, or any write operations
-            - Attempt to fix issues you find — only report them
-            - Execute shell commands that change the repository state
-
-            Any file modifications or commits you make will be silently
-            discarded by the workflow. Do NOT waste time implementing
-            fixes. Instead, describe them as change requests in your
-            review comment.
-
-            Your ONLY job is to READ code, ANALYZE it, and POST a review
-            comment. Do NOT make any changes to the codebase.
-
-            1. Check previous review comments on this PR first. Do NOT repeat points that have already been raised and addressed. Do NOT re-raise issues that were already approved in a previous review round.
+            1. Check previous review comments on this PR first. Do NOT repeat points that have already been raised and addressed.
 
             2. Focus ONLY on the code diff (the changes in this PR). Do not review code that was not changed.
 
-            3. If you are re-reviewing after changes were pushed, only review the NEW changes since the last review. Skip anything that was already reviewed and approved.
+            3. Check for code quality issues, potential bugs, and suggest improvements — but only for the changed code.
 
-            4. Check for code quality issues, potential bugs, and suggest improvements — but only for the changed code.
-
-            5. CI results have already been verified by the CI pipeline. Do NOT re-run or re-verify lint, typecheck, test, or e2e checks. The CI results are:
+            4. CI results have already been verified by the CI pipeline. The results are:
 
             ${{ env.CI_RESULTS }}
 
             Trust these CI results. Only review the code diff for issues that CI cannot catch (logic bugs, design issues, missing edge cases, etc.).
 
-            6. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs. Pay special attention to the Acceptance Criteria in tasks.md. If any requirement or acceptance criterion is not met, request changes and explain which spec/criterion is violated.
+            5. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs.
 
-            7. You MUST output `REVIEW_RESULT: changes_requested` if there are ANY issues or suggestions — no matter how minor. Only output `REVIEW_RESULT: approved` when there are ZERO issues to raise. This includes cosmetic issues, nits, naming conventions, missing tests, unclear variable names, etc. When in doubt, request changes.
+            6. You MUST output `REVIEW_RESULT: changes_requested` if there are ANY issues or suggestions. Only output `REVIEW_RESULT: approved` when there are ZERO issues to raise.
 
             At the end of your review, include EXACTLY ONE of these lines:
             REVIEW_RESULT: approved
             or
             REVIEW_RESULT: changes_requested
-
-      - name: Report blocked changes
-        if: always() && (steps.opencode-review.outcome == 'success' || steps.opencode-review.outcome == 'failure')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-        run: |
-          if git stash list | grep -q .; then
-            echo "### ⚠️ Agent Attempted to Commit Changes" > agent-changes.md
-            echo "" >> agent-changes.md
-            echo "The review agent attempted to commit the changes shown below." >> agent-changes.md
-            echo "This is a read-only review workflow — commits are blocked." >> agent-changes.md
-            echo "The reviewee should consider these as change requests." >> agent-changes.md
-            echo "" >> agent-changes.md
-            echo "<details><summary>Click to see blocked changes</summary>" >> agent-changes.md
-            echo "" >> agent-changes.md
-            echo '```diff' >> agent-changes.md
-            git stash show -p >> agent-changes.md 2>/dev/null || echo "(no diff available)" >> agent-changes.md
-            echo '```' >> agent-changes.md
-            echo "" >> agent-changes.md
-            echo "</details>" >> agent-changes.md
-            COMMENT_BODY=$(cat agent-changes.md)
-            gh api repos/$REPO/issues/$PR_NUMBER/comments \
-              --method POST \
-              --field body="$COMMENT_BODY" \
-              --silent
-            git stash clear
-          fi
 
       - name: Submit PR review based on result
         if: always() && steps.opencode-review.outcome != 'cancelled'
