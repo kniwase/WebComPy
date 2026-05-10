@@ -59,9 +59,11 @@ jobs:
 
             4. Check for code quality issues, potential bugs, and suggest improvements — but only for the changed code.
 
-            5. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs. Pay special attention to the Acceptance Criteria in tasks.md. If any requirement or acceptance criterion is not met, request changes and explain which spec/criterion is violated.
+            5. Check the PR comments for a "CI Results" summary posted by the CI workflow. Trust those CI results — do NOT re-verify lint, typecheck, test, or e2e checks that CI has already run. Only review the code diff for issues that CI cannot catch (logic bugs, design issues, missing edge cases, etc.). If no CI Results comment is found, note that CI results are unavailable and review accordingly.
 
-            6. You MUST output `REVIEW_RESULT: changes_requested` if there are ANY issues or suggestions — no matter how minor. Only output `REVIEW_RESULT: approved` when there are ZERO issues to raise. This includes cosmetic issues, nits, naming conventions, missing tests, unclear variable names, etc. When in doubt, request changes.
+            6. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs. Pay special attention to the Acceptance Criteria in tasks.md. If any requirement or acceptance criterion is not met, request changes and explain which spec/criterion is violated.
+
+            7. You MUST output `REVIEW_RESULT: changes_requested` if there are ANY issues or suggestions — no matter how minor. Only output `REVIEW_RESULT: approved` when there are ZERO issues to raise. This includes cosmetic issues, nits, naming conventions, missing tests, unclear variable names, etc. When in doubt, request changes.
 
             At the end of your review, include EXACTLY ONE of these lines:
             REVIEW_RESULT: approved
