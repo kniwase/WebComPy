@@ -237,6 +237,16 @@ jobs:
           PRE_COMMIT
           chmod +x .git/hooks/pre-commit
 
+          cat > /usr/local/bin/git << 'GIT_WRAPPER'
+          #!/bin/bash
+          case "$1" in
+            push) echo "REVIEW-ONLY: push suppressed" >&2 ;;
+            *) /usr/bin/git "$@" ;;
+          esac
+          GIT_WRAPPER
+          chmod +x /usr/local/bin/git
+          echo "/usr/local/bin" >> $GITHUB_PATH
+
       - uses: astral-sh/setup-uv@v6
         with:
           cache: true
