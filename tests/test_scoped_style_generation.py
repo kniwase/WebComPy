@@ -190,7 +190,7 @@ class TestComponentGeneratorScopedStyle:
         gen = ComponentGenerator("TestComponent", lambda ctx: None)
         gen.scoped_style = {"@media (max-width: 768px)": {".btn": {"color": "red"}}}
         css = gen.scoped_style
-        assert "@media (max-width: 768px)" in css
+        assert "@media (max-width: 768px) {" in css or "@media(max-width:768px){" in css.replace(" ", "")
         assert "@media[webcompy-cid-" not in css
         assert ".btn[webcompy-cid-" in css
         assert "{ color: red; }" in css
@@ -232,3 +232,25 @@ class TestComponentGeneratorScopedStyle:
         assert ".btn[webcompy-cid-" in css
         assert "nav[webcompy-cid-" in css
         assert "a[webcompy-cid-" in css
+
+    def test_combinator_selector_no_orphan_cid(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {".menu": {"color": "black", "> li": {"color": "blue"}}}
+        css = gen.scoped_style
+        assert ".menu[webcompy-cid-" in css
+        assert "> li" in css
+        assert "webcompy-cid-]> li" not in css
+
+    def test_adjacent_combinator_no_orphan_cid(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"div": {"color": "black", "+ p": {"color": "red"}}}
+        css = gen.scoped_style
+        assert "+ p" in css
+        assert "webcompy-cid-]+ p" not in css
+
+    def test_sibling_combinator_no_orphan_cid(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"div": {"color": "black", "~ span": {"color": "red"}}}
+        css = gen.scoped_style
+        assert "~ span" in css
+        assert "webcompy-cid-]~ span" not in css

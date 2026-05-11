@@ -165,20 +165,31 @@ class ComponentGenerator(Generic[PropsType]):
                 inner_parts: list[str] = []
                 for inner_sel, inner_styles in style_dict.items():
                     stripped_inner = inner_sel.strip()
-                    scoped_inner = "".join(
-                        f"{s}[webcompy-cid-{cid}]{c}"
-                        for s, c in zip(
-                            _combinator_pattern.split(stripped_inner),
-                            [*_combinator_pattern.findall(stripped_inner), ""],
-                            strict=True,
+                    inner_type = _classify_nested_key(stripped_inner)
+                    if inner_type == "pseudo":
+                        inner_parts.append(
+                            _generate_css_recursive(stripped_inner, cast("dict[str, StyleDeclaration]", inner_styles))
                         )
-                    )
-                    inner_parts.append(
-                        _generate_css_recursive(scoped_inner, cast("dict[str, StyleDeclaration]", inner_styles), cid)
-                    )
-                parts.append(f"{selector} {{ {' '.join(inner_parts)} }}")
+                    elif inner_type == "combinator":
+                        scoped_inner = "".join(
+                            f"{s}[webcompy-cid-{cid}]{c}" if s else c
+                            for s, c in zip(
+                                _combinator_pattern.split(stripped_inner),
+                                [*_combinator_pattern.findall(stripped_inner), ""],
+                                strict=True,
+                            )
+                        )
+                        inner_parts.append(
+                            _generate_css_recursive(scoped_inner, cast("dict[str, StyleDeclaration]", inner_styles))
+                        )
+                    else:
+                        scoped_inner = f"{stripped_inner}[webcompy-cid-{cid}]"
+                        inner_parts.append(
+                            _generate_css_recursive(scoped_inner, cast("dict[str, StyleDeclaration]", inner_styles))
+                        )
+                parts.append(f"{selector.strip()} {{ {' '.join(inner_parts)} }}")
             else:
-                parts.append(_generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", style_dict), cid))
+                parts.append(_generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", style_dict)))
         return " ".join(parts)
 
     @scoped_style.setter
