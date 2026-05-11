@@ -93,7 +93,7 @@ def _process_style_declaration(declaration: dict[str, StyleDeclaration]) -> dict
     return result
 
 
-def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaration], cid: str | None = None) -> str:
+def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaration]) -> str:
     result = ""
     props: dict[str, str] = {}
     nested: dict[str, StyleDeclaration] = {}
@@ -107,18 +107,14 @@ def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaratio
     for nested_selector, nested_styles in nested.items():
         key_type = _classify_nested_key(nested_selector)
         if key_type == "at-rule":
-            inner_css = _generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", nested_styles), cid)
+            inner_css = _generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", nested_styles))
             result += f"{nested_selector} {{ {inner_css} }}"
         elif key_type == "pseudo":
             combined = f"{selector}{nested_selector}"
-            result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles), cid)
+            result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
         else:
-            if cid and f"[webcompy-cid-{cid}]" not in nested_selector:
-                scoped_nested = _scope_combinator_selector(nested_selector, cid)
-            else:
-                scoped_nested = nested_selector
-            combined = f"{selector} {scoped_nested}"
-            result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles), cid)
+            combined = f"{selector} {nested_selector}"
+            result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
     return result
 
 
@@ -177,36 +173,7 @@ class ComponentGenerator(Generic[PropsType]):
                     )
                 parts.append(f"{stripped} {{ {' '.join(inner_parts)} }}")
             elif _classify_nested_key(stripped) == "at-rule":
-                inner_parts: list[str] = []
-                for inner_sel, inner_styles in style_dict.items():
-                    stripped_inner = inner_sel.strip()
-                    inner_type = _classify_nested_key(stripped_inner)
-                    if inner_type == "at-rule":
-                        if stripped_inner.startswith("@keyframes"):
-                            key_parts: list[str] = []
-                            for k, v in inner_styles.items():
-                                key_parts.append(
-                                    _generate_css_recursive(k.strip(), cast("dict[str, StyleDeclaration]", v))
-                                )
-                            inner_parts.append(f"{stripped_inner} {{ {' '.join(key_parts)} }}")
-                        else:
-                            nested_parts = self._process_at_rule_inner(cast("StyleDict", inner_styles), cid)
-                            inner_parts.append(f"{stripped_inner} {{ {' '.join(nested_parts)} }}")
-                    elif inner_type == "pseudo":
-                        scoped = f"*[webcompy-cid-{cid}]{stripped_inner}"
-                        inner_parts.append(
-                            _generate_css_recursive(scoped, cast("dict[str, StyleDeclaration]", inner_styles))
-                        )
-                    elif inner_type == "combinator":
-                        scoped_inner = _scope_combinator_selector(stripped_inner, cid)
-                        inner_parts.append(
-                            _generate_css_recursive(scoped_inner, cast("dict[str, StyleDeclaration]", inner_styles))
-                        )
-                    else:
-                        scoped_inner = f"{stripped_inner}[webcompy-cid-{cid}]"
-                        inner_parts.append(
-                            _generate_css_recursive(scoped_inner, cast("dict[str, StyleDeclaration]", inner_styles))
-                        )
+                inner_parts = self._process_at_rule_inner(style_dict, cid)
                 parts.append(f"{stripped} {{ {' '.join(inner_parts)} }}")
             else:
                 parts.append(_generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", style_dict)))
