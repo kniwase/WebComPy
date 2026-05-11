@@ -35,3 +35,23 @@
 - [x] 5.3 Run `pyright` to verify type checking passes
 - [x] 5.4 Manually verify generated CSS in browser dev tools
 - [x] 5.5 Document change in release notes (bug fix)
+
+## 6. Extended At-Rule Support
+
+- [x] 6.1 Implement `_process_at_rule_inner` recursive method for nested at-rule handling
+- [x] 6.2 Implement `_scope_combinator_selector` shared helper for consistent combinator scoping
+- [x] 6.3 Add `@keyframes` special handling in getter (no cid on inner keys)
+- [x] 6.4 Add `@keyframes` handling inside nested at-rules in `_process_at_rule_inner`
+- [x] 6.5 Scope pseudo-class/element inside at-rules with `*[webcompy-cid-xxx]` prefix
+- [x] 6.6 Fix orphan attribute selectors from combinator-first keys with `*[webcompy-cid-xxx]` guard
+- [x] 6.7 Add defensive empty-string guard in `_generate_css_recursive` combinator branch
+- [x] 6.8 Add unit tests: nested at-rules (1-3 levels), @keyframes, pseudo/combinator in at-rule, @keyframes inside @media
+- [x] 6.9 Run all existing tests to verify no regressions
+
+## 7. OpenSpec Artifact Updates
+
+- [x] 7.1 Update design.md Goals/Non-Goals to reflect extended at-rule support
+- [x] 7.2 Update design.md Decisions with new implementation details
+- [x] 7.3 Update design.md Migration Plan with all supported CSS patterns
+- [x] 7.4 Update delta spec with nested at-rule, @keyframes, pseudo/combinator requirements
+- [x] 7.5 Update tasks.md with additional implementation tracks

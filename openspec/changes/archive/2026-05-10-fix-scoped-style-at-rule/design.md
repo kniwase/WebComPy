@@ -73,131 +73,101 @@ But the setter still corrupts **top-level** at-rules:
 
 **Goals:**
 
-- Detect at-rule keys in `scoped_style` setter
-- Skip cid application for at-rule keys
-- Preserve at-rule keys unchanged
-- Apply cid to selectors inside at-rule blocks (handled by existing logic)
-- Add unit tests for top-level at-rule
+- Detect at-rule keys in `scoped_style` setter and skip cid application
+- Generate valid CSS with wrapping `{ }` braces for top-level at-rules
+- Support nested at-rules (at-rule inside at-rule) with recursive wrapping
+- Support `@keyframes` with from/to/percentage inner keys (no cid applied)
+- Scope pseudo-class/element selectors inside at-rules with `*[webcompy-cid-xxx]`
+- Scope combinator selectors inside at-rules without orphan attribute selectors
+- Apply cid to bare selectors inside at-rule blocks
+- Maintain backward compatibility with existing nested and flat style usage
+- Add unit tests for top-level at-rules
 - Update specs with requirement
 
 **Non-Goals:**
 
-- No changes to `_generate_css_recursive` implementation
-- No nested at-rule support (at-rule inside at-rule)
-- No CSS parsing beyond prefix detection
-- No changes to pseudo-class or combinator handling
+- `@font-face`, `@property`, `@counter-style` property at-rules (proceed as normal selectors — no special handling needed since they contain only CSS properties)
+- Custom/non-standard at-rules
+- Full CSS parsing beyond prefix detection combined with combinator pattern matching
+- Performance optimizations (caching generated CSS)
 
 ## Decisions
 
-### Decision 1: Use `_classify_nested_key` for at-rule detection
+### Decision 1: Use `_classify_nested_key` for at-rule detection in setter and getter
 
-**Approach:**
+The setter strips the selector, classifies it with `_classify_nested_key`, and skips cid application for at-rules. Non-at-rule selectors receive cid as before via `_combinator_pattern.split/join`.
 
-Reuse the existing `_classify_nested_key` helper function:
+The getter dispatches top-level selectors based on classification:
+- `@keyframes` → special handling (no cid on inner keys)
+- Other at-rules (`@media`, `@supports`, `@container`) → recursive inner processing
+- Regular selectors → existing `_generate_css_recursive` path (no cid parameter)
+
+### Decision 2: Strip whitespace from all keys in setter
+
+Both at-rule and non-at-rule keys are stripped before processing. This avoids orphan attribute selectors from leading whitespace in combinator selectors, and ensures clean at-rule declarations.
+
+### Decision 3: `_scope_combinator_selector` helper for consistent scoping
+
+A shared helper function replaces inline combinator scoping logic used in multiple places (getter, `_process_at_rule_inner`, `_generate_css_recursive`).
 
 ```python
-from webcompy.components._generator import _classify_nested_key
+def _scope_combinator_selector(selector: str, cid: str) -> str:
+    parts = _combinator_pattern.split(selector)
+    combinators = [*_combinator_pattern.findall(selector), ""]
+    scoped_parts: list[str] = []
+    for i, (s, c) in enumerate(zip(parts, combinators, strict=True)):
+        if not s and i == 0:
+            scoped_parts.append(f"*[webcompy-cid-{cid}]{c}")  # pseudo-scope combinator-first
+        elif s:
+            scoped_parts.append(f"{s}[webcompy-cid-{cid}]{c}")
+        else:
+            scoped_parts.append(c)
+    return "".join(scoped_parts)
+```
 
-for selector in map(lambda s: s.strip(), style.keys()):
-    if _classify_nested_key(selector) == "at-rule":
-        # Skip cid application, use selector as-is
-        processed_selector = selector
+Key behaviors:
+- Combinator-first selectors (`"> li"`) get `*[webcompy-cid-xxx]` prepended for scoping
+- Empty string parts from the split do NOT get cid appended (prevents orphan attribute selectors)
+- Regular parts get `[webcompy-cid-xxx]` appended between the selector and the combinator
+
+### Decision 4: `_process_at_rule_inner` for recursive nested at-rule handling
+
+A recursive method on `ComponentGenerator` processes inner selectors within at-rule blocks. It classifies each inner selector and handles:
+
+- **at-rule** → recursive call to `_process_at_rule_inner`, wraps result in `{ }` (allows arbitrary nesting depth)
+- **pseudo-class/element** → scoped with `*[webcompy-cid-{cid}]` prefix (e.g., `*[webcompy-cid-xxx]:hover`)
+- **combinator** → scoped via `_scope_combinator_selector`
+- **bare selector** → simple `selector[webcompy-cid-xxx]` appending
+
+### Decision 5: `@keyframes` special handling in getter
+
+`@keyframes` inner keys (`from`, `to`, `0%`, `100%`) are not CSS selectors and must not receive cid attributes. The getter detects `@keyframes` (before the general at-rule check) and passes inner keys through `_generate_css_recursive` without any cid scoping.
+
+```css
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+```
+
+This also applies when `@keyframes` is nested inside another at-rule (e.g., `@media`), where both the getter and `_process_at_rule_inner` detect the `@keyframes` prefix.
+
+### Decision 6: Getter flow — top-level selector dispatch
+
+```python
+for selector, style_dict in self._style.items():
+    stripped = selector.strip()
+    if stripped.startswith("@keyframes"):
+        # @keyframes: no cid on inner keys
+        ...
+    elif _classify_nested_key(stripped) == "at-rule":
+        # @media, @supports, etc.: recursive inner processing
+        ...
     else:
-        # Apply cid scoping as before
-        processed_selector = "".join(
-            f"{selector}[webcompy-cid-{cid}]{combinator}"
-            for selector, combinator in zip(...)
-        )
+        # Regular selector: existing _generate_css_recursive (no cid)
+        ...
 ```
 
-**Rationale:**
+### Decision 7: `_generate_css_recursive`'s `cid` parameter — defensive guard
 
-- Function already exists and correctly identifies at-rules
-- Single source of truth for key classification
-- Consistent with `_generate_css_recursive` logic
-
-**Alternatives Considered:**
-
-- **Inline check**: `if selector.strip().startswith("@")` — simpler but duplicates logic
-- **New helper**: `_is_at_rule(key)` — unnecessary abstraction
-- **Regex**: Overkill for simple prefix detection
-
-### Decision 2: Preserve at-rule keys unchanged
-
-**Approach:**
-
-When an at-rule is detected, use the key as-is without cid application:
-
-```python
-style_items = []
-for selector, declaration in style.items():
-    if _classify_nested_key(selector.strip()) == "at-rule":
-        processed_selector = selector  # No cid
-    else:
-        processed_selector = "".join(
-            f"{selector}[webcompy-cid-{cid}]{combinator}"
-            for selector, combinator in zip(...)
-        )
-    style_items.append((processed_selector, _process_style_declaration(declaration)))
-
-self._style = dict(style_items)
-```
-
-**Example:**
-
-```python
-# Input
-{
-    " nav": {"display": "flex"},
-    " @media (max-width: 768px)": {" nav button": {"display": "block"}},
-}
-
-# After setter processing
-{
-    " nav[webcompy-cid-xxx]": {"display": "flex"},
-    " @media (max-width: 768px)": {" nav button[webcompy-cid-xxx]": {"display": "block"}},
-}
-```
-
-**Rationale:**
-
-- At-rule syntax must remain valid
-- Selectors inside at-rule blocks still receive cid (correct behavior)
-- Simple and predictable
-
-### Decision 3: Strip whitespace from all keys
-
-**Approach:**
-
-Use `strip()` for both at-rule classification and the processed key:
-
-```python
-stripped_selector = selector.strip()
-if _classify_nested_key(stripped_selector) == "at-rule":
-    processed_selector = stripped_selector
-```
-
-**Rationale:**
-
-- `" @media (...)"` is classified as at-rule despite leading space
-- CSS output is cleaner without leading whitespace on at-rule declarations
-- Consistent with non-at-rule key processing (also uses strip())
-
-### Decision 4: `_generate_css_recursive` and scoped_style getter handle at-rule wrapping
-
-**Approach:**
-
-The `scoped_style` getter calls `_generate_css_recursive` for each top-level selector. For non-at-rule selectors, the selector already has cid from the setter, and nested selectors inside are combined without additional cid application (to preserve valid CSS with combinators).
-
-For at-rule selectors, the getter iterates over inner selectors separately, applying cid scoping to each, then wraps all results inside the at-rule's `{ }` braces.
-
-`_generate_css_recursive`'s `cid` parameter (optional, default None) is only used in the getter's at-rule branch to scope "bare" selectors that are direct children of at-rule blocks. It is NOT passed in the non-at-rule path, avoiding orphan attribute selectors that would result from splitting combinator prefixes.
-
-**Rationale:**
-
-- Separation of concerns: setter handles top-level cid, getter handles at-rule wrapping
-- `_generate_css_recursive` with optional `cid` allows scoping inner selectors inside at-rules
-- Passing `cid=None` for non-at-rule paths prevents combinator regression
+The `cid` parameter is optional (`None` by default). When provided and the nested selector is a combinator, `_scope_combinator_selector` is used (with the `if not s and i == 0` guard preventing orphan attributes). The parameter is only passed when explicitly needed (inside at-rule blocks), keeping the non-at-rule path unchanged.
 
 ## Risks / Trade-offs
 
@@ -233,27 +203,45 @@ For at-rule selectors, the getter iterates over inner selectors separately, appl
 
 ## Migration Plan
 
-**No migration required** — this is a bug fix, not a breaking change.
+**No migration required** — this is a bug fix and feature extension, not a breaking change.
 
-**Before (Invalid CSS):**
+**Before (Invalid CSS for top-level at-rules):**
 
 ```css
-@media[webcompy-cid-xxx] (max-width:[webcompy-cid-xxx] 768px)[webcompy-cid-xxx] nav button { display: block; }
+@media[webcompy-cid-xxx] (max-width:[webcompy-cid-xxx] 768px) nav button { display: block; }
 ```
 
-**After (Valid CSS):**
+**After (Fully valid CSS with nesting and scoping):**
 
 ```css
-@media (max-width: 768px) { nav[webcompy-cid-xxx] button[webcompy-cid-xxx] { display: block; } }
+/* Top-level at-rule */
+@media (max-width: 768px) { .btn[webcompy-cid-xxx] { color: red; } }
+
+/* Nested at-rules */
+@media (max-width: 768px) { @supports (display: grid) { .card[webcompy-cid-xxx] { display: grid; } } }
+
+/* @keyframes */
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Pseudo-class inside at-rule */
+@media (...) { *[webcompy-cid-xxx]:hover { background: yellow; } }
+
+/* Combinator inside at-rule */
+@media (...) { .menu[webcompy-cid-xxx] > li[webcompy-cid-xxx] { color: blue; } }
 ```
 
 **Steps:**
 
-1. Update `scoped_style` setter to detect at-rules
-2. Add unit tests for top-level at-rule
-3. Add E2E test for top-level at-rule
-4. Update specs with requirement
-5. Run existing tests to verify no regressions
+1. Update `scoped_style` setter to detect at-rules and preserve them
+2. Update `scoped_style` getter to handle top-level at-rules with wrapping braces
+3. Add `_process_at_rule_inner` for recursive nested at-rule handling
+4. Add `_scope_combinator_selector` helper for consistent combinator scoping
+5. Add `@keyframes` special handling (no cid on inner keys)
+6. Fix `_generate_css_recursive` combinator branch defensive guard
+7. Add unit tests for all patterns (top-level, nested, @keyframes, pseudo, combinator)
+8. Add E2E test for top-level at-rule
+9. Update specs with requirements
+10. Run existing tests to verify no regressions
 
 ## Open Questions
 

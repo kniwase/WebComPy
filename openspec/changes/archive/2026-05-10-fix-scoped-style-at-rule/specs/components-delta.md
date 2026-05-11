@@ -96,6 +96,94 @@ The framework SHALL detect CSS at-rules by checking if the key starts with `@` (
 
 ---
 
+## New Requirement: Nested at-rule support
+
+### Requirement: Scoped CSS shall support nested at-rules
+
+The framework SHALL support CSS at-rules nested inside other at-rules to arbitrary depth. Inner at-rules SHALL NOT receive cid attribute scoping. Their content SHALL be wrapped in `{ }` braces, and selectors at the deepest nesting level SHALL receive proper cid scoping.
+
+#### Scenario: Nesting @supports inside @media
+
+- **WHEN** a developer nests `@supports` inside `@media`:
+  ```python
+  Component.scoped_style = {
+      "@media (max-width: 768px)": {
+          "@supports (display: grid)": {".card": {"display": "grid"}}
+      }
+  }
+  ```
+- **THEN** the framework SHALL generate:
+  ```css
+  @media (max-width: 768px) { @supports (display: grid) { .card[webcompy-cid-xxx] { display: grid; } } }
+  ```
+- **AND** the inner at-rule SHALL NOT receive cid attribute scoping
+
+#### Scenario: Triple-nested at-rules
+
+- **WHEN** a developer nests at-rules three levels deep:
+  ```python
+  {"@media (...)": {"@supports (...)": {"@container (...)": {".card": {"display": "grid"}}}}}
+  ```
+- **THEN** the framework SHALL generate valid CSS with all three wrapping levels
+- **AND** the innermost selector SHALL receive cid scoping
+
+### Requirement: Scoped CSS shall support @keyframes
+
+The framework SHALL support `@keyframes` at-rules used as top-level keys in `scoped_style`. `@keyframes` inner keys (`from`, `to`, `0%`, `100%`, etc.) SHALL NOT receive cid attribute scoping.
+
+#### Scenario: Defining @keyframes as top-level key
+
+- **WHEN** a developer defines `@keyframes` as a top-level key:
+  ```python
+  Component.scoped_style = {
+      "@keyframes spin": {
+          "0%": {"transform": "rotate(0deg)"},
+          "100%": {"transform": "rotate(360deg)"},
+      }
+  }
+  ```
+- **THEN** the framework SHALL generate:
+  ```css
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  ```
+- **AND** inner keys SHALL NOT receive cid attribute scoping
+
+#### Scenario: @keyframes nested inside @media
+
+- **WHEN** a developer nests `@keyframes` inside another at-rule:
+  ```python
+  {"@media (...)": {"@keyframes fade": {"from": {"opacity": "0"}, "to": {"opacity": "1"}}}}
+  ```
+- **THEN** the @keyframes inner keys SHALL NOT receive cid attribute scoping
+
+### Requirement: Pseudo-class/element selectors inside at-rules shall be scoped
+
+Pseudo-class (`:hover`, `:focus`) and pseudo-element (`::before`, `::after`) selectors used as direct children of at-rule blocks SHALL be scoped with `*[webcompy-cid-{cid}]` prefix to prevent leaking to elements outside the component.
+
+#### Scenario: Pseudo-class as direct child of @media
+
+- **WHEN** a developer uses `:hover` directly inside `@media`:
+  ```python
+  {"@media (max-width: 768px)": {":hover": {"background": "yellow"}}}
+  ```
+- **THEN** the framework SHALL generate:
+  ```css
+  @media (max-width: 768px) { *[webcompy-cid-xxx]:hover { background: yellow; } }
+  ```
+
+### Requirement: Combinator selectors inside at-rules shall be valid and scoped
+
+Combinator selectors (`>`, `+`, `~`, descendant space) used as direct children of at-rule blocks SHALL be scoped without producing orphan attribute selectors.
+
+#### Scenario: Combinator inside @media
+
+- **WHEN** a developer uses `> li` directly inside `@media`:
+  ```python
+  {"@media (...)": {"> li": {"color": "blue"}}}
+  ```
+- **THEN** the generated CSS SHALL contain valid scoped selectors
+- **AND** no orphan `[webcompy-cid-xxx]` attribute selectors SHALL appear before combinators
+
 ## Validation: Implementation Notes
 
 - `_generate_css_recursive` receives an optional `cid` parameter to scope bare selectors inside top-level at-rule blocks.
