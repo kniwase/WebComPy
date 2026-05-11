@@ -165,48 +165,39 @@ self._style = dict(style_items)
 - Selectors inside at-rule blocks still receive cid (correct behavior)
 - Simple and predictable
 
-### Decision 3: Handle leading/trailing whitespace
+### Decision 3: Strip whitespace from all keys
 
 **Approach:**
 
-Use `strip()` for classification, but preserve original key:
+Use `strip()` for both at-rule classification and the processed key:
 
 ```python
 stripped_selector = selector.strip()
 if _classify_nested_key(stripped_selector) == "at-rule":
-    processed_selector = selector  # Preserve original (with spaces if present)
+    processed_selector = stripped_selector
 ```
 
 **Rationale:**
 
-- `" @media (...)"` should be classified as at-rule despite leading space
-- Preserve developer's original formatting
-- CSS output will have consistent spacing from `_generate_css_recursive`
+- `" @media (...)"` is classified as at-rule despite leading space
+- CSS output is cleaner without leading whitespace on at-rule declarations
+- Consistent with non-at-rule key processing (also uses strip())
 
-**Alternatives Considered:**
-
-- **Always strip**: Could change intended formatting
-- **Require exact syntax**: Too strict, developers may add spaces
-
-### Decision 4: No changes to `_generate_css_recursive`
+### Decision 4: `_generate_css_recursive` and scoped_style getter handle at-rule wrapping
 
 **Approach:**
 
-The existing `_generate_css_recursive` function already handles at-rules correctly:
+The `scoped_style` getter calls `_generate_css_recursive` for each top-level selector. For non-at-rule selectors, the selector already has cid from the setter, and nested selectors inside are combined without additional cid application (to preserve valid CSS with combinators).
 
-```python
-if key_type == "at-rule":
-    inner_css = _generate_css_recursive(selector, nested_styles)
-    result += f"{nested_selector} {{ {inner_css} }}"
-```
+For at-rule selectors, the getter iterates over inner selectors separately, applying cid scoping to each, then wraps all results inside the at-rule's `{ }` braces.
 
-Since the setter now passes at-rule keys unchanged, this logic works as intended.
+`_generate_css_recursive`'s `cid` parameter (optional, default None) is only used in the getter's at-rule branch to scope "bare" selectors that are direct children of at-rule blocks. It is NOT passed in the non-at-rule path, avoiding orphan attribute selectors that would result from splitting combinator prefixes.
 
 **Rationale:**
 
-- Separation of concerns: setter handles cid, generator handles CSS structure
-- Minimal changes reduce risk
-- Existing tests for nested at-rules continue to pass
+- Separation of concerns: setter handles top-level cid, getter handles at-rule wrapping
+- `_generate_css_recursive` with optional `cid` allows scoping inner selectors inside at-rules
+- Passing `cid=None` for non-at-rule paths prevents combinator regression
 
 ## Risks / Trade-offs
 

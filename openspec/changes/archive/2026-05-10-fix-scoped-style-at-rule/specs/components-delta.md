@@ -96,39 +96,13 @@ The framework SHALL detect CSS at-rules by checking if the key starts with `@` (
 
 ---
 
-## Validation
+## Validation: Implementation Notes
 
-**Unit Test** (add to `tests/test_scoped_style_generation.py`):
+- `_generate_css_recursive` receives an optional `cid` parameter to scope bare selectors inside top-level at-rule blocks.
+- The getter handles at-rule wrapping (`{ }` braces) by iterating inner selectors separately.
+- Non-at-rule paths do NOT pass `cid` to `_generate_css_recursive` to avoid orphan attribute selectors from combinator patterns.
 
-```python
-def test_top_level_media_at_rule():
-    gen = ComponentGenerator("TestComponent", lambda ctx: None)
-    gen.scoped_style = {
-        "@media (max-width: 768px)": {
-            ".btn": {"color": "red"}
-        }
-    }
-    css = gen.scoped_style
-    assert "@media (max-width: 768px) {" in css
-    assert "@media[webcompy-cid-" not in css  # At-rule itself not scoped
-    assert ".btn[webcompy-cid-" in css  # Selector inside is scoped
-    assert "{ color: red; }" in css
-```
-
-**E2E Test** (add to `tests/e2e/test_scoped_style.py`):
-
-```python
-def test_scoped_style_top_level_media_query(page_on):
-    page = page_on("/scoped-style")
-    style_content = page.locator("style").first.evaluate("el => el.textContent")
-    
-    # Verify at-rule syntax is valid (no cid in @media declaration)
-    assert "@media (max-width:" in style_content or "@media(max-width:" in style_content.replace(" ", "")
-    assert "@media[webcompy-cid-" not in style_content  # Invalid syntax
-    
-    # Verify selectors inside are scoped
-    assert "webcompy-cid-" in style_content
-```
+**Unit Test examples are in `tests/test_scoped_style_generation.py`.**
 
 ---
 
