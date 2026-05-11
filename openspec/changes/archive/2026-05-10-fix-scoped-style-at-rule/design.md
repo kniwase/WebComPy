@@ -165,9 +165,9 @@ for selector, style_dict in self._style.items():
         ...
 ```
 
-### Decision 7: `_generate_css_recursive`'s `cid` parameter — defensive guard
+### Decision 7: `cid` parameter removed from `_generate_css_recursive`
 
-The `cid` parameter is optional (`None` by default). When provided and the nested selector is a combinator, `_scope_combinator_selector` is used (with the `if not s and i == 0` guard preventing orphan attributes). The parameter is only passed when explicitly needed (inside at-rule blocks), keeping the non-at-rule path unchanged.
+The `cid` parameter was removed from `_generate_css_recursive` as all callers pass `cid=None`. At-rule inner selector scoping is handled exclusively by `_process_at_rule_inner` and the getter using `_scope_combinator_selector`, making the parameter dead code. Removing it simplifies the function back to its original signature.
 
 ## Risks / Trade-offs
 
