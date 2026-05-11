@@ -14,6 +14,7 @@ def ScopedStylePage(context: ComponentContext[None]):
         html.P({"data-testid": "hover-text", "class": "hover-text"}, "Hover text"),
         html.P({"data-testid": "deep-text", "class": "deep-text"}, "Deep nested text"),
         html.P({"data-testid": "combinator-text", "class": "combinator-text"}, "Combinator text"),
+        html.P({"data-testid": "top-level-media-text", "class": "top-level-media-text"}, "Top-level media text"),
     )
 
 
@@ -47,6 +48,11 @@ ScopedStylePage.scoped_style = {
         "color": "navy",
         "> span": {
             "font-weight": "bold",
+        },
+    },
+    "@media (max-width: 768px)": {
+        ".top-level-media-text": {
+            "color": "teal",
         },
     },
 }
