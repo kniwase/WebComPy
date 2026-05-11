@@ -254,3 +254,67 @@ class TestComponentGeneratorScopedStyle:
         css = gen.scoped_style
         assert "~ span" in css
         assert "webcompy-cid-]~ span" not in css
+
+    def test_nested_at_rules(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"@media (max-width: 768px)": {"@supports (display: grid)": {".card": {"display": "grid"}}}}
+        css = gen.scoped_style
+        assert "@supports (display: grid) {" in css
+        assert "@supports[webcompy-cid-" not in css
+        assert ".card[webcompy-cid-" in css
+
+    def test_keyframes_no_cid_on_inner_keys(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {
+            "@keyframes spin": {
+                "0%": {"transform": "rotate(0deg)"},
+                "100%": {"transform": "rotate(360deg)"},
+            }
+        }
+        css = gen.scoped_style
+        assert "0% { transform: rotate(0deg); }" in css or "0%{transform:rotate(0deg);}" in css.replace(" ", "")
+        assert "100% { transform: rotate(360deg); }" in css or "100%{transform:rotate(360deg);}" in css.replace(" ", "")
+        assert "0%[webcompy-cid-" not in css
+        assert "100%[webcompy-cid-" not in css
+
+    def test_pseudo_in_top_level_at_rule_is_scoped(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"@media (max-width: 768px)": {":hover": {"background": "yellow"}}}
+        css = gen.scoped_style
+        assert "*[webcompy-cid-" in css
+        assert ":hover { background: yellow; }" in css or ":hover{background:yellow;}" in css.replace(" ", "")
+
+    def test_combinator_in_top_level_at_rule_is_scoped(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"@media (max-width: 768px)": {"> li": {"color": "blue"}}}
+        css = gen.scoped_style
+        assert "webcompy-cid-]> li" not in css
+        assert "webcompy-cid-" in css
+
+    def test_keyframes_inside_media_query(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {
+            "@media (max-width: 768px)": {"@keyframes fade": {"from": {"opacity": "0"}, "to": {"opacity": "1"}}}
+        }
+        css = gen.scoped_style
+        assert "@keyframes fade" in css
+        assert "from[webcompy-cid-" not in css
+        assert "to[webcompy-cid-" not in css
+
+    def test_double_nested_at_rules(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {
+            "@media (max-width: 768px)": {
+                "@supports (display: grid)": {"@container (min-width: 400px)": {".card": {"display": "grid"}}}
+            }
+        }
+        css = gen.scoped_style
+        assert "@container (min-width: 400px) {" in css or "@container(min-width:400px){" in css.replace(" ", "")
+        assert ".card[webcompy-cid-" in css
+
+    def test_pseudo_element_in_top_level_at_rule(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"@media (max-width: 768px)": {"::after": {"content": "''"}}}
+        css = gen.scoped_style
+        assert "*[webcompy-cid-" in css
+        assert "::after" in css
