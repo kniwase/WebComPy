@@ -138,7 +138,7 @@ def Navbar(context: ComponentContext[list[Page]]):
             html.DIV(
                 {
                     "id": "navbarNav",
-                    "style": computed(lambda: f"display: {'block' if _mobile_open.value else 'none'};"),
+                    "class": computed(lambda: "open" if _mobile_open.value else ""),
                 },
                 html.UL(
                     {},
@@ -187,6 +187,12 @@ Navbar.scoped_style = {
     " nav button:hover": {
         "background-color": "#f3f4f6",
     },
+    " #navbarNav": {
+        "display": "block",
+    },
+    " #navbarNav.open": {
+        "display": "block",
+    },
     " nav ul": {
         "display": "flex",
         "list-style": "none",
@@ -194,9 +200,6 @@ Navbar.scoped_style = {
         "padding": "0",
         "gap": "0.25rem",
         "align-items": "center",
-    },
-    " nav li": {
-        "position": "relative",
     },
     " nav li a, nav li a[class]": {
         "display": "block",
