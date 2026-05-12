@@ -5,10 +5,7 @@ from uuid import uuid4
 
 from webcompy._browser._modules import browser
 from webcompy.components._component import Component, HeadPropsStore, _active_app_context
-from webcompy.components._generator import (
-    ComponentGenerator,
-    define_component,
-)
+from webcompy.components._generator import ComponentGenerator
 from webcompy.di._keys import _HEAD_PROPS_KEY, _ROUTER_KEY
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import html
@@ -36,18 +33,6 @@ class HeadSignal(TypedDict):
     meta: Computed[dict[str, dict[str, str]]]
     link: list[dict[str, str]]
     script: list[tuple[dict[str, str], str | None]]
-
-
-def _app_root_setup(context):
-    return html.DIV({"id": "webcompy-app"}, context.slots("root"))
-
-
-_app_root_setup.__webcompy_component_definition__ = True
-
-
-@define_component
-def AppRootComponent(context):
-    return html.DIV({"id": "webcompy-app"}, context.slots("root"))
 
 
 class AppDocumentRoot(Component):
@@ -133,7 +118,7 @@ class AppDocumentRoot(Component):
                         browser.document.documentElement.setAttribute(key, expected)  # type: ignore[union-attr]
                 if self.__loading:
                     self.__loading = False
-                    selector = self._selector or "#webcompy-app"
+                    selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
                     loading_el = browser.document.querySelector(
                         f"{selector} > #webcompy-loading"
                     ) or browser.document.getElementById("webcompy-loading")
@@ -152,7 +137,7 @@ class AppDocumentRoot(Component):
 
     def _init_node(self) -> DOMNode:
         if browser:
-            selector = self._selector or "#webcompy-app"
+            selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
             node = browser.document.querySelector(selector)
             if node is None:
                 from webcompy.exception import WebComPyException as _WCE

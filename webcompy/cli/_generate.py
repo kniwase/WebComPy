@@ -55,6 +55,7 @@ def generate_static_site(app: WebComPyApp | None = None):
 
             app_module = _types.ModuleType("_webcompy_app")
             app_module.__file__ = str(_Path.cwd())
+            app_module.app = app
         build_config = WebComPyBuildConfig(app_module)
 
     serve_all_deps = args.get("serve_all_deps")
