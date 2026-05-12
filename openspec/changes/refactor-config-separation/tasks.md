@@ -31,9 +31,9 @@
 
 ## 5. Update HTML generation and root component
 
-- [ ] 5.1 Update `generate_html()` to accept `WebComPyBuildConfig` for build settings; use `config.app.config.selector` for mount div ID
-- [ ] 5.2 Update `_root_component.py`: use `app.config.selector` for `_selector` default value and `_init_node()`
-- [ ] 5.3 Update SSR div generation: use selector from `WebComPyAppConfig` (strip `#` prefix for HTML `id` attribute)
+- [x] 5.1 Update `generate_html()` to accept `app_package_name` param; use `app.config.selector` for mount div ID
+- [x] 5.2 Update `_root_component.py`: use `app.config.selector` for `_selector` default value and mount div ID
+- [x] 5.3 Update SSR div generation: use selector from `WebComPyAppConfig` (strip `#` prefix for HTML `id` attribute)
 
 ## 6. Update project templates and scaffolding
 
