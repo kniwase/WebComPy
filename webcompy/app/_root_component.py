@@ -74,6 +74,15 @@ class AppDocumentRoot(Component):
         self._selector = selector
         self._app = app
 
+        _mount_id = (app.config.selector.lstrip("#") if app else None) or (
+            selector.lstrip("#") if selector else "webcompy-app"
+        )
+
+        def _root_template(context):
+            return html.DIV({"id": _mount_id}, context.slots("root"))
+
+        _root_template.__webcompy_component_definition__ = True
+
         head_props = HeadPropsStore()
         self._head_props = head_props
         di_scope.provide(_HEAD_PROPS_KEY, head_props)
@@ -96,7 +105,7 @@ class AppDocumentRoot(Component):
         self._callback_consumers: dict[str, CallbackConsumerNode] = {}
 
         with di_scope:
-            super().__init__(_app_root_setup, None, {"root": lambda: root_component(None)})
+            super().__init__(_root_template, None, {"root": lambda: root_component(None)})
 
     @property
     def render(self):
