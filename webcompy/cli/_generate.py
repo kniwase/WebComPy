@@ -73,6 +73,7 @@ def generate_static_site(app: WebComPyApp | None = None):
     wheel_mode = args.get("wheel_mode")
     if wheel_mode is not None:
         build_config.wheel_mode = wheel_mode
+    build_config.resolve_standalone()
 
     assert app is not None
     resolve_dependencies(build_config)

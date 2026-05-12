@@ -30,6 +30,9 @@ class WebComPyBuildConfig:
     def __post_init__(self):
         self.app_package_path = Path(self.app_module.__file__).parent  # type: ignore[arg-type]
         self.app = getattr(self.app_module, self.app_var)
+        self.resolve_standalone()
+
+    def resolve_standalone(self):
         if self.standalone:
             import sys
 
@@ -40,7 +43,8 @@ class WebComPyBuildConfig:
                 self.wasm_serving = "local"
             if self.runtime_serving is None:
                 self.runtime_serving = "local"
-        if self.wasm_serving is None:
-            self.wasm_serving = "cdn"
-        if self.runtime_serving is None:
-            self.runtime_serving = "cdn"
+        else:
+            if self.wasm_serving is None:
+                self.wasm_serving = "cdn"
+            if self.runtime_serving is None:
+                self.runtime_serving = "cdn"

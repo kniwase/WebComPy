@@ -386,6 +386,7 @@ def run_server(app: WebComPyApp | None = None):
     wheel_mode = args.get("wheel_mode")
     if wheel_mode is not None:
         build_config.wheel_mode = wheel_mode
+    build_config.resolve_standalone()
 
     port = args.get("port") or build_config.server.port
     assert app is not None
