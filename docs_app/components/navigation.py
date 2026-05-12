@@ -158,6 +158,7 @@ Navbar.scoped_style = {
         "background-color": "#ffffff",
         "border-bottom": "1px solid #e1e4e8",
         "box-shadow": "0 1px 3px rgba(0,0,0,0.05)",
+        "position": "relative",
     },
     " nav div": {
         "display": "flex",
@@ -200,6 +201,9 @@ Navbar.scoped_style = {
         "padding": "0",
         "gap": "0.25rem",
         "align-items": "center",
+    },
+    " nav li": {
+        "position": "relative",
     },
     " nav li a, nav li a[class]": {
         "display": "block",
