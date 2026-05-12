@@ -2,91 +2,40 @@
 
 ## Purpose
 
-Application configuration provides type-safe, validated settings for WebComPy applications. `AppConfig` is the sole developer-facing configuration class, containing settings shared between browser and server environments. `ServerConfig` and `GenerateConfig` are internal dataclasses used by CLI functions, not exported in the public API.
+Application configuration provides type-safe, validated settings for WebComPy applications, cleanly separated into browser-relevant settings (`WebComPyAppConfig`) and server-only build settings (`WebComPyBuildConfig`). `WebComPyAppConfig` is importable from `webcompy.app` without importing any server-only modules, enabling library usage in PyScript. `WebComPyBuildConfig` and `WebComPyServerConfig` are importable from `webcompy.cli.config` and are automatically excluded from browser wheels.
 
 ## Requirements
 
 ### Requirement: Application configuration shall use type-safe dataclasses
-The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` dataclasses with validated fields and sensible defaults. `AppConfig` SHALL contain settings shared between browser and server environments (including `app_package` for server-side use). `ServerConfig` and `GenerateConfig` are internal types used by CLI functions, not part of the public API surface. `AppConfig` is the sole developer-facing configuration class.
+The framework SHALL provide `WebComPyAppConfig`, `WebComPyBuildConfig`, and `WebComPyServerConfig` dataclasses with validated fields and sensible defaults. `WebComPyAppConfig` SHALL contain only browser-relevant settings (`base_url`, `selector`, `profile`, `hydrate`, `scripts`, `plugins`) and be importable from `webcompy.app`. `WebComPyBuildConfig` SHALL contain build-time settings and be importable from `webcompy.cli.config`. It SHALL accept the app's Python module object (`app_module`) as its first required positional argument and `app_var: str = "app"` for the instance variable name. `WebComPyServerConfig` SHALL contain ASGI server settings and be importable from `webcompy.cli.config`. `WebComPyServerConfig` is a nested field of `WebComPyBuildConfig` via the `server` attribute. The former `AppConfig` (with mixed browser/server fields), `ServerConfig`, and `GenerateConfig` dataclasses are removed.
 
 #### Scenario: Creating a minimal application configuration
-- **WHEN** a developer creates `AppConfig()` without explicit config
-- **THEN** default `AppConfig` values SHALL be used (`base_url="/"`, `dependencies=None`, `assets=None`, `app_package="."`, `profile=False`, `hydrate=True`, `version=None`, `serve_all_deps=True`, `scripts` shall be an empty list, `plugins` shall be an empty list, both default `field(default_factory=list)`)
-
-### Requirement: AppConfig shall include a plugins field for declarative plugin discovery
-
-`AppConfig` SHALL include a `plugins: list[str]` field that defaults to an empty list. Each string SHALL be an absolute module path with a colon-separated class name (e.g., `"myapp.plugins:ErudaPlugin"`). Plugins are discovered and initialized by `PluginManager` during `WebComPyApp.__init__()`.
+- **WHEN** a developer creates `WebComPyAppConfig()` without explicit config
+- **THEN** default `WebComPyAppConfig` values SHALL be used (`base_url="/"`, `selector="#webcompy-app"`, `profile=False`, `hydrate=True`, `scripts=[]`, `plugins=[]`)
 - **AND** the app SHALL function correctly with these defaults
 
+#### Scenario: Creating a build configuration
+- **WHEN** a developer creates `WebComPyBuildConfig(app_module)` where `app_module` is the app module object (`import my_app.app as app_module`)
+- **THEN** `config.app_package_path` SHALL be `/path/to/my_app/` (from `Path(app_module.__file__).parent`)
+- **AND** `config.app` SHALL be the `WebComPyApp` instance from `getattr(app_module, "app")`
+- **AND** default `WebComPyBuildConfig` values SHALL be used
+
 #### Scenario: Configuring profiling and hydration
-- **WHEN** a developer creates `AppConfig(profile=True, hydrate=False)`
+- **WHEN** a developer creates `WebComPyAppConfig(profile=True, hydrate=False)`
 - **THEN** `profile` SHALL be stored as `True`
 - **AND** `hydrate` SHALL be stored as `False`
-- **AND** the generated HTML SHALL include profiling bootstrap code when `profile=True`
-- **AND** `WebComPyApp.__init__()` SHALL also accept a `profile` parameter directly; when `profile` is not explicitly `True`, `config.profile` SHALL be read to determine the effective value
 
-#### Scenario: Hydrate parameter on WebComPyApp overrides AppConfig
-- **WHEN** a developer creates `WebComPyApp(..., hydrate=False, config=AppConfig(hydrate=True))`
-- **THEN** the explicit `hydrate=False` parameter SHALL take precedence over `config.hydrate`
-
-#### Scenario: Hydrate defaults from AppConfig
-- **WHEN** a developer creates `WebComPyApp(..., config=AppConfig(hydrate=True))` without an explicit `hydrate` parameter
-- **THEN** `config.hydrate` SHALL be used as the effective value
-
-#### Scenario: Configuring base URL and dependencies
-- **WHEN** a developer creates `AppConfig(base_url="/myapp/", dependencies=["pandas"])`
-- **THEN** `base_url` SHALL be normalized to `"/myapp/"` (trailing slash)
-- **AND** `dependencies` SHALL be stored as a copy of the provided list
-
-#### Scenario: Configuring app version
-- **WHEN** a developer creates `AppConfig(version="1.0.0")`
-- **THEN** `version` SHALL be stored as `"1.0.0"`
-- **AND** the wheel METADATA SHALL include `Version: 0+sha.{hash8}` (content-derived hash overrides the configured version for PEP 427 compliance)
-- **AND** the wheel URL SHALL change when application code changes (content-hash cache busting)
+#### Scenario: Configuring base URL
+- **WHEN** a developer creates `WebComPyAppConfig(base_url="/myapp/")`
+- **THEN** `base_url` SHALL be normalized to `"/myapp/"`
 
 #### Scenario: Passing configuration to WebComPyApp
-- **WHEN** a developer creates `WebComPyApp(root_component=Root, config=AppConfig(base_url="/app/"))`
+- **WHEN** a developer creates `WebComPyApp(root_component=Root, config=WebComPyAppConfig(base_url="/app/"))`
 - **THEN** the app SHALL use the provided configuration
 - **AND** the router SHALL use `base_url="/app/"` for URL handling
 
-### Requirement: AppConfig shall include a scripts field for declarative conditional script loading
-
-`AppConfig` SHALL include a `scripts: list[PluginScript]` field that defaults to an empty list. This field allows developers to declaratively define scripts that may be conditionally loaded at runtime in the browser. The `PluginScript` dataclass SHALL be defined in the same module (`webcompy/app/_config.py`) and exported in the public API.
-
-#### Scenario: Default scripts value
-- **WHEN** a developer creates `AppConfig()` without `scripts`
-- **THEN** `scripts` SHALL default to an empty list `[]`
-- **AND** no additional `<script>` tags SHALL appear in the generated HTML
-
-#### Scenario: Configuring conditional scripts
-- **WHEN** a developer creates `AppConfig(scripts=[PluginScript(attrs={"src": "https://example.com/debug.js"}, condition="location.search.includes('debug')")])`
-- **THEN** the configured scripts SHALL be passed to `generate_html()`
-- **AND** the generated HTML SHALL contain a wrapper `<script>` that loads `debug.js` only when `?debug` is in the URL
-
-### Requirement: AppConfig shall include a serve_all_deps field for controlling dependency delivery
-`AppConfig` SHALL include a `serve_all_deps: bool = True` field. When `True` (default), all pure-Python packages that the WebComPy server can provide are served from the same origin — either bundled from local installation or downloaded from the Pyodide CDN and then bundled. When `False`, pure-Python packages available in the Pyodide CDN are loaded from the CDN by name via `py-config.packages`, and only packages not available from the CDN are bundled.
-
-#### Scenario: Default serve_all_deps behavior
-- **WHEN** a developer creates `AppConfig()` without `serve_all_deps`
-- **THEN** `serve_all_deps` SHALL be `True`
-- **AND** all pure-Python packages SHALL be bundled into the app wheel
-- **AND** only WASM package names SHALL appear in `py-config.packages`
-
-#### Scenario: Explicit serve_all_deps=True
-- **WHEN** a developer creates `AppConfig(serve_all_deps=True)`
-- **THEN** pure-Python packages in the Pyodide CDN SHALL be downloaded at build time and bundled into the app wheel
-- **AND** pure-Python packages NOT in the Pyodide CDN SHALL be bundled from local installation
-- **AND** only WASM package names SHALL appear in `py-config.packages`
-
-#### Scenario: Explicit serve_all_deps=False
-- **WHEN** a developer creates `AppConfig(serve_all_deps=False)`
-- **THEN** pure-Python packages in the Pyodide CDN SHALL NOT be bundled
-- **AND** their package names SHALL appear in `py-config.packages` for CDN loading
-- **AND** pure-Python packages NOT in the Pyodide CDN SHALL be bundled from local installation
-- **AND** WASM package names SHALL appear in `py-config.packages`
-
-### Requirement: AppConfig base_url shall normalize input
-`AppConfig.base_url` SHALL accept strings with or without leading/trailing slashes and normalize them to the form `/path/` (or `/` for root).
+### Requirement: WebComPyAppConfig base_url shall normalize input
+`WebComPyAppConfig.base_url` SHALL accept strings with or without leading/trailing slashes and normalize them to the form `/path/` (or `/` for root).
 
 #### Scenario: Normalizing base URLs
 - **WHEN** a developer provides `base_url="myapp"`
@@ -96,8 +45,116 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **WHEN** a developer provides `base_url=""`
 - **THEN** it SHALL be normalized to `"/"`
 
-### Requirement: AppConfig assets shall map keys to file paths
-`AppConfig.assets` SHALL accept an optional mapping of string keys to file paths relative to the app package directory. These assets SHALL be included in the bundled wheel and accessible at runtime via `load_asset`.
+### Requirement: WebComPyAppConfig shall contain only browser-relevant settings
+`WebComPyAppConfig` SHALL be a lightweight dataclass containing only settings relevant to both browser and server environments: `base_url`, `selector`, `profile`, `hydrate`, `scripts`, and `plugins`. It SHALL be importable from `webcompy.app` without importing any server-only modules. `WebComPyAppConfig` SHALL NOT contain any fields related to build configuration, dependency management, or wheel packaging.
+
+#### Scenario: Creating a minimal WebComPyAppConfig
+- **WHEN** a developer creates `WebComPyAppConfig()`
+- **THEN** default values SHALL be `base_url="/"`, `selector="#webcompy-app"`, `profile=False`, `hydrate=True`, `scripts=[]`, `plugins=[]`
+
+#### Scenario: Creating a WebComPyAppConfig with custom selector
+- **WHEN** a developer creates `WebComPyAppConfig(selector="#my-widget")`
+- **THEN** `selector` SHALL be `"#my-widget"`
+
+#### Scenario: WebComPyAppConfig is importable in browser environment
+- **WHEN** a developer writes `from webcompy.app import WebComPyAppConfig` in PyScript
+- **THEN** the import SHALL succeed without importing any CLI or server modules
+- **AND** `sys.modules` SHALL NOT contain `webcompy.cli` or `webcompy.cli.config`
+
+### Requirement: WebComPyBuildConfig shall contain all build-time settings
+`WebComPyBuildConfig` SHALL be a dataclass containing all settings needed for SSR/SSG builds, wheel packaging, and dependency resolution. It SHALL accept the app's Python module object (`app_module`) as its first required positional argument and `app_var: str = "app"` as an optional keyword argument for the instance variable name. In `__post_init__`, it SHALL compute `app = getattr(app_module, app_var)` and `app_package_path = Path(app_module.__file__).parent`. It SHALL be importable from `webcompy.cli.config` and SHALL NOT be importable from `webcompy.app`. `WebComPyBuildConfig` SHALL include fields from the former `AppConfig` (server-only fields), `GenerateConfig`, and `ServerConfig` (as a nested `server` field).
+
+#### Scenario: Creating a minimal WebComPyBuildConfig
+- **WHEN** a developer creates `WebComPyBuildConfig(app_module)` where `app_module` is the `my_app.app` module object
+- **AND** `app_module.__file__` is `/path/to/my_app/app.py`
+- **THEN** `config.app_package_path` SHALL be `/path/to/my_app/` (computed from `Path(app_module.__file__).parent`)
+- **AND** `config.app` SHALL be the `WebComPyApp` instance from `getattr(app_module, "app")` (default `app_var`)
+- **AND** default values SHALL be `dependencies=None`, `dependencies_from=None`, `assets=None`, `version=None`, `serve_all_deps=True`, `wasm_serving=None`, `runtime_serving=None`, `standalone=False`, `wheel_mode="bundled"`, `dist="dist"`, `cname=""`, `static_files_dir="static"`, `lockfile_sync_config=None`
+- **AND** `server` SHALL default to `WebComPyServerConfig()`
+
+#### Scenario: Creating a WebComPyBuildConfig with custom app_var
+- **WHEN** a developer creates `WebComPyBuildConfig(app_module, app_var="my_app_instance")`
+- **THEN** `config.app` SHALL be `getattr(app_module, "my_app_instance")`
+
+#### Scenario: app_package_path derivation from app_module.__file__
+- **WHEN** `import my_app.app as app_module` and `app_module.__file__` is `/home/project/my_app/app.py`
+- **THEN** `config.app_package_path` SHALL be `/home/project/my_app/`
+- **AND** `config.app_package_path.name` SHALL be `"my_app"`
+
+#### Scenario: Creating a WebComPyBuildConfig with nested server config
+- **WHEN** a developer creates `WebComPyBuildConfig(app_module, server=WebComPyServerConfig(port=3000, dev=True))`
+- **THEN** `server.port` SHALL be `3000`
+- **AND** `server.dev` SHALL be `True`
+
+### Requirement: WebComPyServerConfig shall contain ASGI server settings
+`WebComPyServerConfig` SHALL be a lightweight dataclass with `port: int = 8080` and `dev: bool = False`. It SHALL be importable from `webcompy.cli.config` and SHALL NOT be importable from `webcompy.app`. It SHALL be a nested field of `WebComPyBuildConfig` via the `server` attribute.
+
+#### Scenario: Creating a default WebComPyServerConfig
+- **WHEN** a developer creates `WebComPyServerConfig()`
+- **THEN** `port` SHALL be `8080` and `dev` SHALL be `False`
+
+#### Scenario: WebComPyServerConfig is not importable from webcompy.app
+- **WHEN** a developer attempts `from webcompy.app import WebComPyServerConfig`
+- **THEN** an `ImportError` SHALL be raised
+
+#### Scenario: WebComPyServerConfig is importable from webcompy.cli.config
+- **WHEN** a developer writes `from webcompy.cli.config import WebComPyServerConfig`
+- **THEN** the import SHALL succeed
+
+### Requirement: WebComPyApp.run shall use selector from config
+`WebComPyApp.run()` SHALL mount the app using `self.config.selector` (defaulting to `"#webcompy-app"`) instead of accepting a `selector` parameter. The `selector` parameter SHALL be removed from `run()`.
+
+#### Scenario: Running app with default selector
+- **WHEN** a developer calls `app.run()` with `WebComPyAppConfig(selector="#webcompy-app")`
+- **THEN** the app SHALL mount at the `#webcompy-app` element
+
+#### Scenario: Running app with custom selector
+- **WHEN** a developer calls `app.run()` with `WebComPyAppConfig(selector="#my-widget")`
+- **THEN** the app SHALL mount at the `#my-widget` element
+
+### Requirement: WebComPyApp.__init__ shall not accept profile or hydrate parameters
+`WebComPyApp.__init__` SHALL NOT accept `profile` or `hydrate` keyword arguments. These settings SHALL only be set via `WebComPyAppConfig`.
+
+#### Scenario: Creating app with profile via config
+- **WHEN** a developer creates `WebComPyApp(root_component=Root, config=WebComPyAppConfig(profile=True))`
+- **THEN** the app SHALL have profiling enabled
+
+#### Scenario: Creating app with hydrate via config
+- **WHEN** a developer creates `WebComPyApp(root_component=Root, config=WebComPyAppConfig(hydrate=False))`
+- **THEN** the app SHALL have hydration disabled
+
+#### Scenario: Passing profile or hydrate to __init__ raises TypeError
+- **WHEN** a developer creates `WebComPyApp(root_component=Root, config=WebComPyAppConfig(), profile=True)`
+- **THEN** a `TypeError` SHALL be raised
+
+### Requirement: SSR/SSG generated HTML shall use selector from config
+The SSR and SSG HTML generators SHALL use `app.config.selector` to determine the mount div ID. The generated `<div>` element SHALL use the ID from the selector (without the `#` prefix).
+
+#### Scenario: Generating HTML with default selector
+- **WHEN** SSR/SSG generates HTML with `WebComPyAppConfig(selector="#webcompy-app")`
+- **THEN** the generated HTML SHALL contain `<div id="webcompy-app">`
+
+#### Scenario: Generating HTML with custom selector
+- **WHEN** SSR/SSG generates HTML with `WebComPyAppConfig(selector="#my-widget")`
+- **THEN** the generated HTML SHALL contain `<div id="my-widget">`
+
+### Requirement: Library usage shall not require server-only imports
+When using WebComPy as a library in PyScript (importing via CDN or direct wheel), a developer SHALL only need to import from `webcompy.app`. No import from `webcompy.cli.config` or `webcompy.cli` SHALL be required for library usage.
+
+#### Scenario: Library usage with minimal imports
+- **WHEN** a developer writes in PyScript:
+  ```python
+  from webcompy.app import WebComPyApp, WebComPyAppConfig
+  from my_component import MyComponent
+
+  app = WebComPyApp(root_component=MyComponent, config=WebComPyAppConfig())
+  app.run()
+  ```
+- **THEN** no server-only modules SHALL be imported
+- **AND** the app SHALL mount and render correctly
+
+### Requirement: WebComPyBuildConfig.assets shall map keys to file paths
+`WebComPyBuildConfig.assets` SHALL accept an optional mapping of string keys to file paths relative to the app package directory. These assets SHALL be included in the bundled wheel and accessible at runtime via `load_asset`.
 
 #### Scenario: Configuring assets
 - **WHEN** a developer provides `assets={"logo": "images/logo.png"}`
@@ -109,230 +166,122 @@ The framework SHALL provide `AppConfig`, `ServerConfig`, and `GenerateConfig` da
 - **THEN** `assets` SHALL default to `None`
 - **AND** no assets SHALL be included in the bundled wheel
 
-### Requirement: AppConfig dependencies shall default to None and support auto-population from pyproject.toml
-`AppConfig.dependencies` SHALL accept `None` as a default value (instead of `[]`). When `dependencies` is `None`, the CLI SHALL auto-populate it from `pyproject.toml` using the group specified by `dependencies_from`. When `dependencies` is explicitly set to a list, it SHALL be used as-is without reading `pyproject.toml`. This eliminates the need for developers to manually duplicate dependency lists in both `AppConfig` and `pyproject.toml`.
+### Requirement: WebComPyBuildConfig.dependencies shall default to None and support auto-population from pyproject.toml
+`WebComPyBuildConfig.dependencies` SHALL accept `None` as a default value (instead of `[]`). When `dependencies` is `None`, the CLI SHALL auto-populate it from `pyproject.toml` using the group specified by `dependencies_from`. When `dependencies` is explicitly set to a list, it SHALL be used as-is without reading `pyproject.toml`.
 
 #### Scenario: Auto-populating dependencies from pyproject.toml optional-dependencies
-- **WHEN** a developer creates `AppConfig(dependencies=None, dependencies_from="browser")`
+- **WHEN** a developer creates `WebComPyBuildConfig(app, dependencies=None, dependencies_from="browser")`
 - **AND** `pyproject.toml` contains `[project.optional-dependencies] browser = ["numpy", "matplotlib"]`
-- **THEN** the CLI SHALL set `app.config.dependencies` to `["numpy", "matplotlib"]`
-- **AND** the lock file SHALL be generated as if the developer had written `AppConfig(dependencies=["numpy", "matplotlib"])`
-
-#### Scenario: Auto-populating dependencies from pyproject.toml project.dependencies
-- **WHEN** a developer creates `AppConfig(dependencies=None, dependencies_from=None)`
-- **AND** `pyproject.toml` contains `[project] dependencies = ["flask", "click"]`
-- **THEN** the CLI SHALL set `app.config.dependencies` to `["flask", "click"]`
+- **THEN** the CLI SHALL set `config.dependencies` to `["numpy", "matplotlib"]`
 
 #### Scenario: Explicit dependencies take precedence
-- **WHEN** a developer creates `AppConfig(dependencies=["numpy"])`
+- **WHEN** a developer creates `WebComPyBuildConfig(app, dependencies=["numpy"])`
 - **THEN** the CLI SHALL use `["numpy"]` as-is
 - **AND** no `pyproject.toml` dependency reading SHALL occur
 
-#### Scenario: Empty explicit dependencies list
-- **WHEN** a developer creates `AppConfig(dependencies=[])`
-- **THEN** the CLI SHALL use `[]` (no dependencies)
-- **AND** no `pyproject.toml` dependency reading SHALL occur
-
-#### Scenario: Pyproject.toml not found with None dependencies
-- **WHEN** a developer creates `AppConfig(dependencies=None)`
-- **AND** no `pyproject.toml` is found above `app_package_path`
-- **THEN** an error SHALL be reported instructing the developer to either set `AppConfig.dependencies` explicitly or ensure `pyproject.toml` exists
-
-#### Scenario: Optional-dependencies group not found
-- **WHEN** a developer creates `AppConfig(dependencies=None, dependencies_from="browser")`
-- **AND** `pyproject.toml` exists but `[project.optional-dependencies]` has no `"browser"` key
-- **THEN** an error SHALL be reported indicating that the `"browser"` group was not found in `pyproject.toml`
-
-#### Scenario: Dependency version specifiers are stripped
-- **WHEN** `pyproject.toml` contains `dependencies = ["flask==3.1.0", "click>=8.0"]`
-- **AND** a developer creates `AppConfig(dependencies=None, dependencies_from=None)`
-- **THEN** the CLI SHALL extract package names as `["flask", "click"]`
-- **AND** version specifiers SHALL be stripped (version pinning is handled by `webcompy-lock.json`)
-
-### Requirement: AppConfig dependencies_from shall default to None and read project.dependencies
-`AppConfig.dependencies_from` SHALL default to `None`. When `None`, `[project.dependencies]` from `pyproject.toml` is used. When set to a string value (e.g., `"browser"`), `[project.optional-dependencies.{value}]` is used.
+### Requirement: WebComPyBuildConfig.dependencies_from shall default to None and read project.dependencies
+`WebComPyBuildConfig.dependencies_from` SHALL default to `None`. When `None`, `[project.dependencies]` from `pyproject.toml` is used. When set to a string value, `[project.optional-dependencies.{value}]` is used.
 
 #### Scenario: Default dependencies_from reads project.dependencies
-- **WHEN** `AppConfig(dependencies=None)` is created without `dependencies_from`
+- **WHEN** `WebComPyBuildConfig(app, dependencies=None)` is created without `dependencies_from`
 - **THEN** `[project.dependencies]` from `pyproject.toml` SHALL be read
-
-#### Scenario: dependencies_from mismatch warning
-- **WHEN** `AppConfig.dependencies_from="browser"` differs from `LockfileSyncConfig.sync_group`
-- **THEN** a warning SHALL be emitted indicating the mismatch and potential inconsistency
 
 ### Requirement: Pure-Python packages in the Pyodide CDN shall be bundled when serve_all_deps is True
 When `serve_all_deps=True`, pure-Python packages available in the Pyodide CDN SHALL be bundled into the app wheel. This replaces the previous behavior where they were neither bundled nor loaded from the CDN, making them unavailable in the browser.
 
 #### Scenario: Pure-Python CDN package with serve_all_deps=True
-- **WHEN** `AppConfig(dependencies=["httpx"], serve_all_deps=True)` and `httpx` is a pure-Python package in the Pyodide CDN
+- **WHEN** `WebComPyBuildConfig(app, dependencies=["httpx"], serve_all_deps=True)` and `httpx` is a pure-Python package in the Pyodide CDN
 - **THEN** `httpx` SHALL be downloaded from the Pyodide CDN at build time
 - **AND** `httpx` SHALL be bundled into the app wheel
-- **AND** `httpx` SHALL NOT appear in `py-config.packages`
 
 #### Scenario: Pure-Python CDN package with serve_all_deps=False
-- **WHEN** `AppConfig(dependencies=["httpx"], serve_all_deps=False)` and `httpx` is a pure-Python package in the Pyodide CDN
+- **WHEN** `WebComPyBuildConfig(app, dependencies=["httpx"], serve_all_deps=False)` and `httpx` is a pure-Python package in the Pyodide CDN
 - **THEN** `httpx` SHALL NOT be bundled into the app wheel
 - **AND** `httpx` SHALL appear in `py-config.packages` as a plain package name
 
-### Requirement: Only WASM packages shall be loaded from the Pyodide CDN by name; pure-Python CDN package handling depends on serve_all_deps
-Only WASM packages SHALL always be loaded from the Pyodide CDN by name via `py-config.packages`. Pure-Python packages available in the Pyodide CDN SHALL be either bundled (when `serve_all_deps=True`) or loaded from the CDN by name (when `serve_all_deps=False`).
-
-#### Scenario: WASM package (regardless of serve_all_deps)
-- **WHEN** a dependency is a WASM package in the Pyodide CDN
-- **THEN** it SHALL always be loaded from the CDN by name via `py-config.packages`
-- **AND** it SHALL NOT be bundled
-
-### Requirement: CLI flags shall override serve_all_deps
-The `start` and `generate` CLI subcommands SHALL accept `--serve-all-deps` and `--no-serve-all-deps` flags that override `AppConfig.serve_all_deps`.
-
-#### Scenario: Overriding with --no-serve-all-deps
-- **WHEN** a developer runs `python -m webcompy start --dev --no-serve-all-deps`
-- **THEN** `serve_all_deps` SHALL be `False` for the session
-- **AND** CDN-available pure-Python packages SHALL be loaded from CDN
-
-#### Scenario: Overriding with --serve-all-deps
-- **WHEN** a developer runs `python -m webcompy generate --serve-all-deps`
-- **THEN** `serve_all_deps` SHALL be `True` for the session
-- **AND** CDN-available pure-Python packages SHALL be downloaded and bundled
-
-### Requirement: static_files_dir resolution shall be handled by call sites
-The `static_files_dir` field in `ServerConfig` and `GenerateConfig` SHALL remain a plain `str` field without a `static_files_dir_path` property. Path resolution SHALL be performed by the CLI call sites (`_generate.py`, `_server.py`) using `(app_package_path / static_files_dir).absolute()`.
-
-#### Scenario: GenerateConfig no longer exposes static_files_dir_path
-- **WHEN** code accesses a `GenerateConfig` instance
-- **THEN** `GenerateConfig` SHALL have a `static_files_dir: str` field and SHALL NOT have a `static_files_dir_path` property
-
-#### Scenario: ServerConfig no longer exposes static_files_dir_path
-- **WHEN** code accesses a `ServerConfig` instance
-- **THEN** `ServerConfig` SHALL have a `static_files_dir: str` field and SHALL NOT have a `static_files_dir_path` property
-
-### Requirement: ServerConfig and GenerateConfig shall be internal
-`ServerConfig` and `GenerateConfig` SHALL be internal dataclasses used by CLI functions. They SHALL NOT be exported in `webcompy.__all__` or `webcompy.app.__all__`. Developers define them in `webcompy_server_config.py`, which the CLI reads from the app package or the project root. The `static_files_dir` field in both classes SHALL be a plain `str` value resolved relative to `app_package_path` at the call site.
-
-#### Scenario: ServerConfig defaults
-- **WHEN** no `webcompy_server_config.py` exists (in the app package or at the project root) or it does not define `server_config`
-- **THEN** `ServerConfig()` defaults SHALL be used (`port=8080`, `dev=False`, `static_files_dir="static"`)
-
-#### Scenario: GenerateConfig defaults
-- **WHEN** no `webcompy_server_config.py` exists (in the app package or at the project root) or it does not define `generate_config`
-- **THEN** `GenerateConfig()` defaults SHALL be used (`dist="dist"`, `cname=""`, `static_files_dir="static"`)
-
-#### Scenario: runtime_serving is not on ServerConfig or GenerateConfig
-- **WHEN** a developer creates `ServerConfig()` or `GenerateConfig()`
-- **THEN** neither dataclass SHALL have a `runtime_serving` field
-- **AND** `runtime_serving` SHALL only be available on `AppConfig`
-
-### Requirement: AppConfig shall include a wasm_serving field for controlling WASM package delivery
-`AppConfig` SHALL include a `wasm_serving: Literal["cdn", "local"] | None = None` field. When `None` or `"cdn"`, WASM packages are loaded from the Pyodide CDN by package name. When `"local"`, WASM package wheel files are downloaded at build time and served from the same origin. The `None` sentinel enables `standalone` mode (in `feat-standalone`) to distinguish between "unset" (overridden to `"local"`) and "explicitly set to `"cdn"`" (preserved).
+### Requirement: WebComPyBuildConfig shall include a wasm_serving field for controlling WASM package delivery
+`WebComPyBuildConfig` SHALL include a `wasm_serving: Literal["cdn", "local"] | None = None` field. When `None` or `"cdn"`, WASM packages are loaded from the Pyodide CDN. When `"local"`, WASM package wheel files are downloaded at build time and served from the same origin.
 
 #### Scenario: Default CDN mode
-- **WHEN** a developer creates `AppConfig()` without `wasm_serving`
-- **THEN** WASM packages SHALL be loaded from the Pyodide CDN via `py-config.packages` package names
+- **WHEN** a developer creates `WebComPyBuildConfig(app)` without `wasm_serving`
+- **THEN** WASM packages SHALL be loaded from the Pyodide CDN
 
 #### Scenario: Local WASM serving mode
-- **WHEN** a developer creates `AppConfig(wasm_serving="local")`
-- **THEN** WASM package wheel files SHALL be downloaded from the Pyodide CDN at build time
-- **AND** they SHALL be served from `/_webcompy-assets/packages/` via local wheel URLs in `py-config.packages`
+- **WHEN** a developer creates `WebComPyBuildConfig(app, wasm_serving="local")`
+- **THEN** WASM packages SHALL be downloaded and served locally
 
-### Requirement: CLI flags shall override wasm_serving
-The `start` and `generate` CLI subcommands SHALL accept `--wasm-serving <mode>` (where `<mode>` is `cdn` or `local`) that overrides `AppConfig.wasm_serving`. This follows the value-argument pattern rather than the boolean toggle pattern, because `wasm_serving` has more than two meaningful values in future extensions.
-
-#### Scenario: Overriding with --wasm-serving local
-- **WHEN** a developer runs `python -m webcompy start --dev --wasm-serving local`
-- **THEN** `wasm_serving` SHALL be `"local"` for the session
-- **AND** WASM packages SHALL be downloaded and served locally
-
-#### Scenario: Overriding with --wasm-serving cdn
-- **WHEN** a developer runs `python -m webcompy generate --wasm-serving cdn`
-- **THEN** `wasm_serving` SHALL be `"cdn"` for the session
-- **AND** WASM packages SHALL be loaded from the Pyodide CDN by name
-
-#### Scenario: Default when no flag is provided
-- **WHEN** a developer runs `python -m webcompy start --dev` without `--wasm-serving`
-- **THEN** `wasm_serving` SHALL use the value from `AppConfig.wasm_serving` (default `"cdn"`)
-
-### Requirement: AppConfig shall include a runtime_serving field for controlling PyScript/Pyodide runtime delivery
-`AppConfig` SHALL include a `runtime_serving: Literal["cdn", "local"] | None = None` field. When `None` (default), the effective value is `"cdn"`. The `None` sentinel enables the `standalone` flag to distinguish between "unset (should be overridden to `local`)" and "explicitly set to `cdn` (should be preserved)". When `"cdn"` (default), the PyScript runtime (`core.js`, `core.css`) and the Pyodide engine (`pyodide.mjs`, `pyodide.asm.wasm`, `python_stdlib.zip`, `pyodide-lock.json`) are loaded from their respective CDNs. When `"local"`, all runtime assets are downloaded at build time and served from the same origin.
+### Requirement: WebComPyBuildConfig shall include a runtime_serving field for controlling PyScript/Pyodide runtime delivery
+`WebComPyBuildConfig` SHALL include a `runtime_serving: Literal["cdn", "local"] | None = None` field. When `None` (default), the effective value is `"cdn"`. When `"local"`, all runtime assets are downloaded at build time and served from the same origin.
 
 #### Scenario: Default CDN mode
-- **WHEN** a developer creates `AppConfig()` without `runtime_serving`
+- **WHEN** a developer creates `WebComPyBuildConfig(app)` without `runtime_serving`
 - **THEN** PyScript and Pyodide runtime assets SHALL be loaded from CDN URLs
 
 #### Scenario: Local runtime serving mode
-- **WHEN** a developer creates `AppConfig(runtime_serving="local")`
-- **THEN** all PyScript and Pyodide runtime assets SHALL be downloaded at build time
-- **AND** PyScript core assets SHALL be served from `/_webcompy-assets/` and Pyodide runtime assets SHALL be served from `/_webcompy-assets/pyodide/`
-- **AND** `py-config` SHALL include `interpreter` pointing to `/_webcompy-assets/pyodide/pyodide.mjs`
-- **AND** `py-config` SHALL include `lockFileURL` pointing to `/_webcompy-assets/pyodide/pyodide-lock.json`
+- **WHEN** a developer creates `WebComPyBuildConfig(app, runtime_serving="local")`
+- **THEN** all runtime assets SHALL be downloaded and served locally
 
-### Requirement: CLI flags shall override runtime_serving
-The `start` and `generate` CLI subcommands SHALL accept `--runtime-serving <mode>` where `<mode>` is `"cdn"` or `"local"`. This overrides `AppConfig.runtime_serving`, similar to how `--serve-all-deps` overrides `AppConfig.serve_all_deps`.
-
-#### Scenario: Overriding with --runtime-serving local
-- **WHEN** a developer runs `python -m webcompy start --dev --runtime-serving local`
-- **THEN** `runtime_serving` SHALL be `"local"` for the session
-
-#### Scenario: Overriding with --runtime-serving cdn
-- **WHEN** a developer runs `python -m webcompy generate --runtime-serving cdn`
-- **THEN** `runtime_serving` SHALL be `"cdn"` for the session
-
-### Requirement: AppConfig shall include a standalone flag for complete offline capability
-`AppConfig` SHALL include a `standalone: bool = False` field. When `True`, all local-serving modes are enabled simultaneously: `serve_all_deps` SHALL be forced to `True`, `wasm_serving` SHALL default to `"local"`, and `runtime_serving` SHALL default to `"local"`. Individual config options explicitly set by the developer SHALL take precedence over `standalone` defaults.
+### Requirement: WebComPyBuildConfig shall include a standalone flag for complete offline capability
+`WebComPyBuildConfig` SHALL include a `standalone: bool = False` field. When `True`, all local-serving modes are enabled simultaneously. Individual config options explicitly set by the developer SHALL take precedence over `standalone` defaults.
 
 #### Scenario: Enabling standalone mode with defaults
-- **WHEN** a developer creates `AppConfig(standalone=True)` without overriding individual settings
+- **WHEN** a developer creates `WebComPyBuildConfig(app, standalone=True)` without overriding individual settings
 - **THEN** `serve_all_deps` SHALL be `True`
 - **AND** `wasm_serving` SHALL be `"local"`
 - **AND** `runtime_serving` SHALL be `"local"`
-- **AND** the build SHALL produce a fully self-contained output with zero external CDN requests
-- **AND** `py-config` SHALL include `"interpreter": "/_webcompy-assets/pyodide/pyodide.mjs"` (via `runtime_serving="local"`)
-- **AND** `py-config` SHALL include `"lockFileURL": "/_webcompy-assets/pyodide/pyodide-lock.json"` (via `runtime_serving="local"`)
 
 #### Scenario: Individual overrides take precedence
-- **WHEN** a developer creates `AppConfig(standalone=True, wasm_serving="cdn")`
-- **THEN** the explicit `wasm_serving="cdn"` SHALL take precedence over the `standalone` default
-- **AND** WASM packages SHALL be loaded from the CDN
-- **AND** `runtime_serving` SHALL still default to `"local"` and `serve_all_deps` SHALL be `True`
+- **WHEN** a developer creates `WebComPyBuildConfig(app, standalone=True, wasm_serving="cdn")`
+- **THEN** the explicit `wasm_serving="cdn"` SHALL take precedence
 
-#### Scenario: standalone=True forces serve_all_deps=True
-- **WHEN** a developer creates `AppConfig(standalone=True, serve_all_deps=False)`
-- **THEN** `serve_all_deps` SHALL be `True` (standalone overrides)
-- **AND** a warning SHALL be emitted that `standalone=True` forces `serve_all_deps=True`
-
-#### Scenario: standalone=False does not affect other settings
-- **WHEN** a developer creates `AppConfig(standalone=False)`
-- **THEN** `wasm_serving` SHALL be `"cdn"`, `runtime_serving` SHALL be `"cdn"`, and `serve_all_deps` SHALL be `True` (their own defaults)
-
-### Requirement: Switching standalone mode shall take effect on a fresh configuration
-`resolve_standalone_config()` mutates `AppConfig` in place, replacing `None` sentinel values with resolved strings (`"cdn"` or `"local"`). Because `None` sentinels are consumed on the first call, standalone mode switching only takes effect when applied to a fresh `AppConfig` instance (e.g., a new CLI invocation creates a new config). Explicitly set values (`"cdn"` or `"local"`) SHALL be preserved across calls; only `None` sentinel values SHALL be overridden.
-
-#### Scenario: Switching from non-standalone to standalone in a new execution context
-- **WHEN** a developer runs `webcompy generate` (non-standalone) and then runs `webcompy generate --standalone`
-- **THEN** a fresh `AppConfig` SHALL be created with `standalone=True`
-- **AND** `resolve_standalone_config()` SHALL set `wasm_serving` to `"local"`, `runtime_serving` to `"local"`, and `serve_all_deps` to `True`
-
-#### Scenario: Switching from standalone to non-standalone in a new execution context
-- **WHEN** a developer runs `webcompy generate --standalone` and then runs `webcompy generate --no-standalone`
-- **THEN** a fresh `AppConfig` SHALL be created with `standalone=False`
-- **AND** `resolve_standalone_config()` SHALL set `wasm_serving` to `"cdn"`, `runtime_serving` to `"cdn"`, and `serve_all_deps` to `True`
-
-#### Scenario: Explicit values are preserved within a single resolution
-- **WHEN** a developer creates `AppConfig(standalone=True, wasm_serving="cdn")`
-- **THEN** `resolve_standalone_config()` SHALL preserve `wasm_serving="cdn"` and set `runtime_serving="local"`
-
-#### Scenario: Re-running resolve_standalone_config is idempotent
-- **WHEN** `resolve_standalone_config()` is called multiple times on the same `AppConfig` instance
-- **THEN** the result SHALL be the same as calling it once
-- **AND** no additional warnings SHALL be emitted beyond the first call
-
-### Requirement: AppConfig shall include a wheel_mode field for controlling wheel bundling strategy
-`AppConfig` SHALL include a `wheel_mode: Literal["bundled", "split"] = "bundled"` field. When `"bundled"` (default), all code is combined into a single wheel. When `"split"`, two wheels are produced: a framework wheel (webcompy, excl. cli/) and an app wheel (app code + all pure-Python dependencies bundled together).
+### Requirement: WebComPyBuildConfig shall include a wheel_mode field for controlling wheel bundling strategy
+`WebComPyBuildConfig` SHALL include a `wheel_mode: Literal["bundled", "split"] = "bundled"` field.
 
 #### Scenario: Default bundled mode
-- **WHEN** a developer creates `AppConfig()` without `wheel_mode`
-- **THEN** a single bundled wheel SHALL be produced containing webcompy (excl. cli), app code, and pure-Python dependencies
+- **WHEN** a developer creates `WebComPyBuildConfig(app)` without `wheel_mode`
+- **THEN** a single bundled wheel SHALL be produced
 
 #### Scenario: Split mode
-- **WHEN** a developer creates `AppConfig(wheel_mode="split")`
-- **THEN** two wheels SHALL be produced: framework wheel and app wheel (with all deps bundled)
-- **AND** both wheel URLs SHALL be listed in `py-config.packages`
+- **WHEN** a developer creates `WebComPyBuildConfig(app, wheel_mode="split")`
+- **THEN** two wheels SHALL be produced: framework wheel and app wheel
+
+### Requirement: WebComPyAppConfig shall include a plugins field for declarative plugin discovery
+`WebComPyAppConfig` SHALL include a `plugins: list[str]` field that defaults to an empty list. Each string SHALL be an absolute module path with a colon-separated class name. Plugins are discovered and initialized by `PluginManager` during `WebComPyApp.__init__()`.
+
+#### Scenario: Configuring plugins
+- **WHEN** a developer creates `WebComPyAppConfig(plugins=["myapp.plugins:ErudaPlugin"])`
+- **THEN** the plugin SHALL be discovered and initialized
+
+### Requirement: WebComPyAppConfig shall include a scripts field for declarative conditional script loading
+`WebComPyAppConfig` SHALL include a `scripts: list[PluginScript]` field that defaults to an empty list. The `PluginScript` dataclass SHALL be defined in `webcompy.app._config` and exported in the public API.
+
+#### Scenario: Default scripts value
+- **WHEN** a developer creates `WebComPyAppConfig()` without `scripts`
+- **THEN** `scripts` SHALL default to an empty list
+
+### Requirement: CLI flags shall override build config values
+CLI flags SHALL override values from `WebComPyBuildConfig`. The following flags SHALL be supported: `--dev`, `--port`, `--dist`, `--config`, `--serve-all-deps`, `--no-serve-all-deps`, `--wasm-serving`, `--runtime-serving`, `--standalone`, `--no-standalone`, `--wheel-mode`.
+
+#### Scenario: Overriding with --no-serve-all-deps
+- **WHEN** a developer runs `python -m webcompy start --dev --no-serve-all-deps`
+- **THEN** `WebComPyBuildConfig.serve_all_deps` SHALL be `False` for the session
+
+#### Scenario: Overriding with --wasm-serving local
+- **WHEN** a developer runs `python -m webcompy start --dev --wasm-serving local`
+- **THEN** `WebComPyBuildConfig.wasm_serving` SHALL be `"local"` for the session
+
+#### Scenario: Overriding with --runtime-serving local
+- **WHEN** a developer runs `python -m webcompy start --dev --runtime-serving local`
+- **THEN** `WebComPyBuildConfig.runtime_serving` SHALL be `"local"` for the session
+
+#### Scenario: Overriding with --standalone
+- **WHEN** a developer runs `python -m webcompy generate --standalone`
+- **THEN** `WebComPyBuildConfig.standalone` SHALL be `True` for the session
+
+### Requirement: WebComPyBuildConfig shall include a lockfile_sync_config field
+`WebComPyBuildConfig` SHALL include a `lockfile_sync_config: LockfileSyncConfig | None = None` field. `LockfileSyncConfig` SHALL be defined in `webcompy.cli.config` with `requirements_path: str | None = None` and `sync_group: str | None = None`.
+
+#### Scenario: Omitting lockfile_sync_config
+- **WHEN** a developer creates `WebComPyBuildConfig(app)` without `lockfile_sync_config`
+- **THEN** `lockfile_sync_config` SHALL default to `None`
+- **AND** lock file sync commands SHALL use auto-discovery

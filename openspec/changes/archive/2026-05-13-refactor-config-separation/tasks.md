@@ -62,7 +62,7 @@
 
 ## 9. Update OpenSpec specs
 
-- [ ] 9.1 Update `openspec/specs/app-config/spec.md` to reflect `WebComPyAppConfig` and `WebComPyBuildConfig`
-- [ ] 9.2 Update `openspec/specs/project-config/spec.md` to reflect single config file and `--config` flag
-- [ ] 9.3 Update `openspec/specs/cli/spec.md` to reflect new config structure and `app.py` entry point
+- [x] 9.1 Update `openspec/specs/app-config/spec.md` to reflect `WebComPyAppConfig` and `WebComPyBuildConfig`
+- [x] 9.2 Update `openspec/specs/project-config/spec.md` to reflect single config file and `--config` flag
+- [x] 9.3 Update `openspec/specs/cli/spec.md` to reflect new config structure and `app.py` entry point
 - [ ] 9.4 Archive this change with `/opsx-archive`
