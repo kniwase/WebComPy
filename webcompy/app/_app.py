@@ -4,7 +4,7 @@ import platform
 import time
 from typing import Any
 
-from webcompy.app._config import AppConfig
+from webcompy.app._config import WebComPyAppConfig
 from webcompy.app._root_component import AppDocumentRoot
 from webcompy.components import ComponentGenerator
 from webcompy.components._component import _set_app_instance
@@ -20,7 +20,7 @@ from webcompy.utils import ENVIRONMENT
 class WebComPyApp:
     _root: AppDocumentRoot
     _di_scope: DIScope
-    _config: AppConfig
+    _config: WebComPyAppConfig
     _component_store: ComponentStore
     _profile: bool
     _profile_data: dict[str, float]
@@ -30,19 +30,13 @@ class WebComPyApp:
         *,
         root_component: ComponentGenerator[None],
         router: Router | None = None,
-        config: AppConfig | None = None,
-        profile: bool = False,
-        hydrate: bool | None = None,
+        config: WebComPyAppConfig | None = None,
     ) -> None:
-        self._config = config or AppConfig()
-        if not profile and self._config.profile:
-            profile = True
-        self._profile = profile
+        self._config = config or WebComPyAppConfig()
+        self._profile = self._config.profile
         self._profile_data: dict[str, float] = {}
-        self._hydrate = hydrate if hydrate is not None else self._config.hydrate
-        self._config.hydrate = self._hydrate
+        self._hydrate = self._config.hydrate
         self._record_phase("init_start")
-        self._config.profile = profile
         self._di_scope = DIScope()
         self._component_store = ComponentStore()
         self._di_scope.provide(_COMPONENT_STORE_KEY, self._component_store)
@@ -70,7 +64,7 @@ class WebComPyApp:
         self._record_phase("init_done")
 
     @property
-    def config(self) -> AppConfig:
+    def config(self) -> WebComPyAppConfig:
         return self._config
 
     @property
@@ -180,10 +174,10 @@ class WebComPyApp:
     def html_attrs(self):
         return self._root.html_attrs
 
-    def run(self, selector: str = "#webcompy-app") -> None:
+    def run(self) -> None:
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("app.run() can only be called in a browser environment.")
         self._record_phase("run_start")
         self._plugin_manager.call_on_app_ready(self)
-        self._root._selector = selector
+        self._root._selector = self._config.selector
         self._root.render()
