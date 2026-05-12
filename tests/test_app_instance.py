@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from webcompy.app._app import WebComPyApp
-from webcompy.app._config import AppConfig
+from webcompy.app._config import WebComPyAppConfig
 from webcompy.components._generator import define_component
 from webcompy.router import Router
 
@@ -23,17 +23,17 @@ class TestWebComPyAppConfig:
     def test_default_config(self):
         app = _make_app()
         assert app.config.base_url == "/"
-        assert app.config.dependencies is None
-        assert app.config.assets is None
+        assert app.config.selector == "#webcompy-app"
+        assert app.config.profile is False
 
     def test_custom_config(self):
-        config = AppConfig(base_url="/myapp", dependencies=["numpy"])
+        config = WebComPyAppConfig(base_url="/myapp", selector="#custom")
         app = _make_app(config=config)
         assert app.config.base_url == "/myapp/"
-        assert app.config.dependencies == ["numpy"]
+        assert app.config.selector == "#custom"
 
     def test_config_stored(self):
-        config = AppConfig()
+        config = WebComPyAppConfig()
         app = _make_app(config=config)
         assert app.config is config
 

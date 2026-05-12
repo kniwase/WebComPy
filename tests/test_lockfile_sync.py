@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 import pytest
 
-from webcompy.app._config import AppConfig, LockfileSyncConfig
 from webcompy.cli._exception import WebComPyCliException
 from webcompy.cli._lockfile import Lockfile, PurePythonPackageEntry, WasmPackageEntry
 from webcompy.cli._lockfile_sync import (
@@ -17,7 +16,8 @@ from webcompy.cli._lockfile_sync import (
     sync_from_pyproject_toml,
     sync_from_requirements_txt,
 )
-from webcompy.cli._utils import get_lockfile_sync_config
+from webcompy.cli.config._build_config import WebComPyBuildConfig
+from webcompy.cli.config._server_config import LockfileSyncConfig
 
 
 class TestDiscoverProjectRoot:
@@ -99,40 +99,27 @@ class TestDiscoverRequirementsPath:
         assert result == root / "requirements.txt"
 
 
-class TestGetLockfileSyncConfig:
-    def test_config_with_sync_group(self):
-        from webcompy.app._config import LockfileSyncConfig as LSC
+class TestLockfileSyncConfig:
+    def test_defaults(self):
+        config = LockfileSyncConfig()
+        assert config.requirements_path is None
+        assert config.sync_group is None
 
-        mock_module = types.SimpleNamespace(lockfile_sync_config=LSC(sync_group="browser"))
-
-        def mock_import(name):
-            if name == "webcompy_server_config":
-                return mock_module
-            raise ModuleNotFoundError
-
-        with patch("webcompy.cli._utils.import_module", side_effect=mock_import):
-            config = get_lockfile_sync_config()
+    def test_with_sync_group(self):
+        config = LockfileSyncConfig(sync_group="browser")
         assert config.sync_group == "browser"
         assert config.requirements_path is None
 
-    def test_config_without_lockfile_sync_config(self):
-        mock_module = types.SimpleNamespace()
-
-        def mock_import(name):
-            if name == "webcompy_server_config":
-                return mock_module
-            raise ModuleNotFoundError
-
-        with patch("webcompy.cli._utils.import_module", side_effect=mock_import):
-            config = get_lockfile_sync_config()
-        assert config.requirements_path is None
+    def test_with_requirements_path(self):
+        config = LockfileSyncConfig(requirements_path="../requirements.txt")
+        assert config.requirements_path == "../requirements.txt"
         assert config.sync_group is None
 
-    def test_missing_config_file(self):
-        with patch("webcompy.cli._utils.import_module", side_effect=ModuleNotFoundError):
-            config = get_lockfile_sync_config()
-        assert config.requirements_path is None
-        assert config.sync_group is None
+
+class _FakeModule:
+    def __init__(self, path=None):
+        self.__file__ = str(path or "/fake/module.py")
+        self.app = None
 
 
 def _make_lockfile():
@@ -205,11 +192,10 @@ class TestRecordRequirementsPath:
         app_dir = tmp_path / "project" / "my_app"
         app_dir.mkdir(parents=True)
         (tmp_path / "project" / "pyproject.toml").write_text("[project]\n")
-        config_path = app_dir / "webcompy_server_config.py"
+        config_path = app_dir / "webcompy_config.py"
         config_path.write_text(
-            "from webcompy.app._config import GenerateConfig, ServerConfig\n\n"
-            "server_config = ServerConfig(port=8080, dev=False)\n"
-            "generate_config = GenerateConfig(dist='docs')\n",
+            "from webcompy.cli.config._build_config import WebComPyBuildConfig\n\n"
+            "config = WebComPyBuildConfig(app_module=None)\n",
             encoding="utf-8",
         )
         record_requirements_path(app_dir, tmp_path / "project" / "requirements.txt", config_path)
@@ -220,12 +206,12 @@ class TestRecordRequirementsPath:
         app_dir = tmp_path / "project" / "my_app"
         app_dir.mkdir(parents=True)
         (tmp_path / "project" / "pyproject.toml").write_text("[project]\n")
-        config_path = app_dir / "webcompy_server_config.py"
+        config_path = app_dir / "webcompy_config.py"
         original = (
-            "from webcompy.app._config import GenerateConfig, LockfileSyncConfig, ServerConfig\n\n"
-            "server_config = ServerConfig(port=8080, dev=False)\n"
-            "generate_config = GenerateConfig(dist='docs')\n"
-            "lockfile_sync_config = LockfileSyncConfig(sync_group='browser')\n"
+            "from webcompy.cli.config._build_config import WebComPyBuildConfig\n"
+            "from webcompy.cli.config._server_config import LockfileSyncConfig\n\n"
+            "config = WebComPyBuildConfig(app_module=None,\n"
+            "    lockfile_sync_config=LockfileSyncConfig(sync_group='browser'))\n"
         )
         config_path.write_text(original, encoding="utf-8")
         record_requirements_path(app_dir, tmp_path / "project" / "requirements.txt", config_path)
@@ -434,29 +420,16 @@ class TestInstallRequirements:
 
 class TestResolveDependencies:
     def test_explicit_dependencies_not_overwritten(self, tmp_path):
-        from webcompy.app._app import WebComPyApp
-        from webcompy.components._generator import define_component
-
-        @define_component
-        def Root(context):
-            from webcompy.elements import html
-
-            return html.DIV({}, "test")
-
-        app = WebComPyApp(root_component=Root, config=AppConfig(dependencies=["numpy"]))
-        resolve_dependencies(app)
-        assert app.config.dependencies == ["numpy"]
+        app_dir = tmp_path / "my_app"
+        app_dir.mkdir()
+        build_config = WebComPyBuildConfig(
+            app_module=_FakeModule(app_dir),
+            dependencies=["numpy"],
+        )
+        resolve_dependencies(build_config)
+        assert build_config.dependencies == ["numpy"]
 
     def test_auto_populate_from_project_dependencies(self, tmp_path):
-        from webcompy.app._app import WebComPyApp
-        from webcompy.components._generator import define_component
-
-        @define_component
-        def Root(context):
-            from webcompy.elements import html
-
-            return html.DIV({}, "test")
-
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
             '[project]\nname = "test"\ndependencies = ["flask>=3.0", "click==8.1.7"]\n',
@@ -464,24 +437,15 @@ class TestResolveDependencies:
         )
         app_dir = tmp_path / "my_app"
         app_dir.mkdir()
-        app = WebComPyApp(
-            root_component=Root,
-            config=AppConfig(app_package=app_dir, dependencies=None),
+        build_config = WebComPyBuildConfig(
+            app_module=_FakeModule(app_dir),
+            dependencies=None,
         )
         with patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path):
-            resolve_dependencies(app)
-        assert app.config.dependencies == ["flask", "click"]
+            resolve_dependencies(build_config)
+        assert build_config.dependencies == ["flask", "click"]
 
     def test_auto_populate_from_optional_dependencies(self, tmp_path):
-        from webcompy.app._app import WebComPyApp
-        from webcompy.components._generator import define_component
-
-        @define_component
-        def Root(context):
-            from webcompy.elements import html
-
-            return html.DIV({}, "test")
-
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
             '[project]\nname = "test"\ndependencies = []\n\n[project.optional-dependencies]\nbrowser = ["numpy", "matplotlib"]\n',
@@ -489,43 +453,26 @@ class TestResolveDependencies:
         )
         app_dir = tmp_path / "my_app"
         app_dir.mkdir()
-        app = WebComPyApp(
-            root_component=Root,
-            config=AppConfig(app_package=app_dir, dependencies=None, dependencies_from="browser"),
+        build_config = WebComPyBuildConfig(
+            app_module=_FakeModule(app_dir),
+            dependencies=None,
+            dependencies_from="browser",
         )
         with patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path):
-            resolve_dependencies(app)
-        assert app.config.dependencies == ["numpy", "matplotlib"]
+            resolve_dependencies(build_config)
+        assert build_config.dependencies == ["numpy", "matplotlib"]
 
     def test_no_pyproject_raises(self, tmp_path):
-        from webcompy.app._app import WebComPyApp
-        from webcompy.components._generator import define_component
-
-        @define_component
-        def Root(context):
-            from webcompy.elements import html
-
-            return html.DIV({}, "test")
-
         app_dir = tmp_path / "no_project" / "my_app"
         app_dir.mkdir(parents=True)
-        app = WebComPyApp(
-            root_component=Root,
-            config=AppConfig(app_package=app_dir, dependencies=None),
+        build_config = WebComPyBuildConfig(
+            app_module=_FakeModule(app_dir),
+            dependencies=None,
         )
         with pytest.raises(WebComPyCliException, match=r"pyproject\.toml"):
-            resolve_dependencies(app)
+            resolve_dependencies(build_config)
 
     def test_missing_optional_group_raises(self, tmp_path):
-        from webcompy.app._app import WebComPyApp
-        from webcompy.components._generator import define_component
-
-        @define_component
-        def Root(context):
-            from webcompy.elements import html
-
-            return html.DIV({}, "test")
-
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
             '[project]\nname = "test"\ndependencies = []\n\n[project.optional-dependencies]\nbrowser = []\n',
@@ -533,26 +480,18 @@ class TestResolveDependencies:
         )
         app_dir = tmp_path / "my_app"
         app_dir.mkdir()
-        app = WebComPyApp(
-            root_component=Root,
-            config=AppConfig(app_package=app_dir, dependencies=None, dependencies_from="dev"),
+        build_config = WebComPyBuildConfig(
+            app_module=_FakeModule(app_dir),
+            dependencies=None,
+            dependencies_from="dev",
         )
         with (
             patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path),
             pytest.raises(WebComPyCliException, match="dev"),
         ):
-            resolve_dependencies(app)
+            resolve_dependencies(build_config)
 
     def test_version_specifiers_stripped(self, tmp_path):
-        from webcompy.app._app import WebComPyApp
-        from webcompy.components._generator import define_component
-
-        @define_component
-        def Root(context):
-            from webcompy.elements import html
-
-            return html.DIV({}, "test")
-
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
             '[project]\nname = "test"\ndependencies = ["flask>=3.0", "numpy==2.2.5"]\n',
@@ -560,24 +499,15 @@ class TestResolveDependencies:
         )
         app_dir = tmp_path / "my_app"
         app_dir.mkdir()
-        app = WebComPyApp(
-            root_component=Root,
-            config=AppConfig(app_package=app_dir, dependencies=None),
+        build_config = WebComPyBuildConfig(
+            app_module=_FakeModule(app_dir),
+            dependencies=None,
         )
         with patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path):
-            resolve_dependencies(app)
-        assert app.config.dependencies == ["flask", "numpy"]
+            resolve_dependencies(build_config)
+        assert build_config.dependencies == ["flask", "numpy"]
 
     def test_dependencies_from_sync_group_mismatch_warning(self, tmp_path, capsys):
-        from webcompy.app._app import WebComPyApp
-        from webcompy.components._generator import define_component
-
-        @define_component
-        def Root(context):
-            from webcompy.elements import html
-
-            return html.DIV({}, "test")
-
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
             '[project]\nname = "test"\n\n[project.optional-dependencies]\nbrowser = ["flask"]\n',
@@ -585,13 +515,14 @@ class TestResolveDependencies:
         )
         app_dir = tmp_path / "my_app"
         app_dir.mkdir()
-        app = WebComPyApp(
-            root_component=Root,
-            config=AppConfig(app_package=app_dir, dependencies=None, dependencies_from="browser"),
+        build_config = WebComPyBuildConfig(
+            app_module=_FakeModule(app_dir),
+            dependencies=None,
+            dependencies_from="browser",
+            lockfile_sync_config=LockfileSyncConfig(sync_group="deps"),
         )
-        sync_config = LockfileSyncConfig(sync_group="deps")
         with patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path):
-            resolve_dependencies(app, sync_config)
+            resolve_dependencies(build_config)
         captured = capsys.readouterr()
         assert "differs from" in captured.err
 

@@ -4,7 +4,7 @@ import json
 import re
 
 from webcompy.app._app import WebComPyApp
-from webcompy.app._config import AppConfig
+from webcompy.app._config import WebComPyAppConfig
 from webcompy.cli._html import generate_html
 from webcompy.components._generator import define_component
 
@@ -19,7 +19,7 @@ def _TestRoot(context):
 def _make_app(**config_kwargs):
     return WebComPyApp(
         root_component=_TestRoot,
-        config=AppConfig(app_package=".", **config_kwargs),
+        config=WebComPyAppConfig(**config_kwargs),
     )
 
 
@@ -34,6 +34,7 @@ class TestRuntimeLocalHtmlIntegration:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -52,6 +53,7 @@ class TestRuntimeLocalHtmlIntegration:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
