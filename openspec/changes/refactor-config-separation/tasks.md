@@ -51,14 +51,14 @@
 
 ## 8. Update tests
 
-- [ ] 8.1 Update `tests/test_config_dataclasses.py` to use `WebComPyAppConfig` and `WebComPyBuildConfig`
-- [ ] 8.2 Update `tests/test_app_instance.py` to use new config classes and remove `profile`/`hydrate`/`selector` params from `WebComPyApp`
-- [ ] 8.3 Update `tests/test_standalone_config.py` to use `WebComPyBuildConfig`
-- [ ] 8.4 Update `tests/test_lockfile_sync.py` to use `WebComPyBuildConfig`
-- [ ] 8.5 Add test for `WebComPyBuildConfig` — app_package_path derivation from `app_module.__file__` and app instance from `getattr(app_module, app_var)`
-- [ ] 8.6 Add test for `WebComPyAppConfig.selector` and `WebComPyApp.run()` without selector param
-- [ ] 8.7 Add test for `--config` CLI flag
-- [ ] 8.8 Add test for library usage (import from `webcompy.app` only, no `webcompy.cli.config` imported)
+- [x] 8.1 Update `tests/test_config_dataclasses.py` to use `WebComPyAppConfig` and `WebComPyBuildConfig`
+- [x] 8.2 Update `tests/test_app_instance.py` to use new config classes and remove `profile`/`hydrate`/`selector` params from `WebComPyApp`
+- [x] 8.3 Update `tests/test_standalone_config.py` to use `WebComPyBuildConfig`
+- [x] 8.4 Update `tests/test_lockfile_sync.py` to use `WebComPyBuildConfig`
+- [x] 8.5 Add test for `WebComPyBuildConfig` — app_package_path derivation from `app_module.__file__` and app instance from `getattr(app_module, app_var)`
+- [x] 8.6 Add test for `WebComPyAppConfig.selector` and `WebComPyApp.run()` without selector param
+- [x] 8.7 Add test for `--config` CLI flag
+- [x] 8.8 Add test for library usage (import from `webcompy.app` only, no `webcompy.cli.config` imported)
 
 ## 9. Update OpenSpec specs
 
