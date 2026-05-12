@@ -19,7 +19,6 @@ from starlette.routing import Route
 from starlette.types import ASGIApp
 
 from webcompy.app._app import WebComPyApp
-from webcompy.app._config import ServerConfig
 from webcompy.cli._argparser import get_params
 from webcompy.cli._html import PYSCRIPT_VERSION, generate_html
 from webcompy.cli._lockfile import (
@@ -42,40 +41,37 @@ from webcompy.cli._pyodide_lock import PYODIDE_LOCK_URL_TEMPLATE
 from webcompy.cli._runtime_downloader import RuntimeDownloadError, download_runtime_assets
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
-    discover_app,
+    discover_config,
     ensure_webcompy_modules_dir,
     generate_app_version,
-    get_server_config,
     get_webcompy_packge_dir,
-    resolve_standalone_config,
 )
 from webcompy.cli._wheel_builder import (
     make_browser_webcompy_wheel,
     make_webcompy_app_package,
 )
+from webcompy.cli.config._build_config import WebComPyBuildConfig
 
 
 def create_asgi_app(
     app: WebComPyApp,
-    server_config: ServerConfig | None = None,
+    build_config: WebComPyBuildConfig,
 ) -> ASGIApp:
-    if server_config is None:
-        server_config = ServerConfig()
+    build_config.server = build_config.server
 
-    resolve_standalone_config(app.config)
-    modules_dir = app.config.app_package_path / ".webcompy_modules"
+    modules_dir = build_config.app_package_path / ".webcompy_modules"
     ensure_webcompy_modules_dir(modules_dir)
-    resolve_dependencies(app, lockfile_sync_config=server_config.lockfile_sync_config)
-    assert app.config.dependencies is not None
+    resolve_dependencies(build_config)
+    assert build_config.dependencies is not None
 
     lockfile, lockfile_errors, lockfile_warnings = resolve_lockfile(
-        app.config.dependencies,
+        build_config.dependencies,
         PYSCRIPT_VERSION,
-        app.config.app_package_path / LOCKFILE_NAME,
+        build_config.app_package_path / LOCKFILE_NAME,
         modules_dir,
-        wasm_serving=app.config.wasm_serving or "cdn",
-        runtime_serving=app.config.runtime_serving or "cdn",
-        standalone=app.config.standalone,
+        wasm_serving=build_config.wasm_serving or "cdn",
+        runtime_serving=build_config.runtime_serving or "cdn",
+        standalone=build_config.standalone,
     )
     for warning in lockfile_warnings:
         print(f"Warning: {warning}", file=sys.stderr, flush=True)
@@ -83,7 +79,7 @@ def create_asgi_app(
         print(f"Error: {err}", file=sys.stderr, flush=True)
 
     if lockfile is not None:
-        env_errors, env_warnings = validate_local_environment(lockfile, serve_all_deps=app.config.serve_all_deps)
+        env_errors, env_warnings = validate_local_environment(lockfile, serve_all_deps=build_config.serve_all_deps)
         for warning in env_warnings:
             print(f"Warning: {warning}", file=sys.stderr, flush=True)
         for err in env_errors:
@@ -94,9 +90,9 @@ def create_asgi_app(
         print("Build failed due to lock file errors. Fix the above issues and try again.", file=sys.stderr)
         sys.exit(1)
 
-    resolved_wasm_serving = app.config.wasm_serving or "cdn"
+    resolved_wasm_serving = build_config.wasm_serving or "cdn"
 
-    bundled_deps = get_bundled_deps(lockfile, serve_all_deps=app.config.serve_all_deps)
+    bundled_deps = get_bundled_deps(lockfile, serve_all_deps=build_config.serve_all_deps)
     wasm_package_names = get_wasm_package_names(lockfile)
 
     wasm_local_urls: dict[str, str] | None = None
@@ -115,7 +111,7 @@ def create_asgi_app(
                 if name in downloaded_paths:
                     wasm_asset_files[entry.file_name] = downloaded_paths[name]
 
-    resolved_runtime_serving = app.config.runtime_serving or "cdn"
+    resolved_runtime_serving = build_config.runtime_serving or "cdn"
 
     runtime_asset_files: dict[str, pathlib.Path] = {}
     if resolved_runtime_serving == "local":
@@ -131,7 +127,7 @@ def create_asgi_app(
                     runtime_results,
                     lockfile,
                     PYSCRIPT_VERSION,
-                    app.config.app_package_path / LOCKFILE_NAME,
+                    build_config.app_package_path / LOCKFILE_NAME,
                 )
             for rel_path, (asset_path, _sha256) in runtime_results.items():
                 runtime_asset_files[rel_path] = asset_path
@@ -143,7 +139,7 @@ def create_asgi_app(
     cdn_pure_python_names: list[str] = []
     cdn_extracted_deps: list[tuple[str, pathlib.Path]] = []
     cdn_temp_dir_obj = None
-    if not app.config.serve_all_deps:
+    if not build_config.serve_all_deps:
         cdn_pure_python_names = get_cdn_pure_python_package_names(lockfile)
     elif lockfile is not None:
         for name, entry in lockfile.pure_python_packages.items():
@@ -171,8 +167,8 @@ def create_asgi_app(
 
     all_bundled_deps = bundled_deps + cdn_extracted_deps
 
-    app_version = generate_app_version(app.config.version)
-    wheel_mode = app.config.wheel_mode
+    app_version = generate_app_version(build_config.version)
+    wheel_mode = build_config.wheel_mode
 
     with TemporaryDirectory() as temp:
         temp_path = pathlib.Path(temp)
@@ -185,9 +181,9 @@ def create_asgi_app(
             app_wheel_path = make_webcompy_app_package(
                 temp_path,
                 get_webcompy_packge_dir(),
-                app.config.app_package_path,
+                build_config.app_package_path,
                 app_version,
-                app.config.assets,
+                build_config.assets,
                 bundled_deps=all_bundled_deps or None,
                 skip_webcompy=True,
             )
@@ -197,9 +193,9 @@ def create_asgi_app(
             app_wheel_path = make_webcompy_app_package(
                 temp_path,
                 get_webcompy_packge_dir(),
-                app.config.app_package_path,
+                build_config.app_package_path,
                 app_version,
-                app.config.assets,
+                build_config.assets,
                 bundled_deps=all_bundled_deps or None,
             )
             app_wheel_filename = app_wheel_path.name
@@ -218,7 +214,7 @@ def create_asgi_app(
             if filename in app_package_files:
                 content, media_type = app_package_files[filename]
                 headers: dict[str, str] = {}
-                if server_config.dev:
+                if build_config.server.dev:
                     if fw_wheel_filename and filename == fw_wheel_filename:
                         headers["Cache-Control"] = "max-age=86400, must-revalidate"
                     else:
@@ -266,7 +262,7 @@ def create_asgi_app(
         runtime_asset_routes.append(Route("/_webcompy-assets/{filename:path}", send_runtime_asset))
 
     static_file_routes: list[Route] = []
-    static_files_dir = (app.config.app_package_path / server_config.static_files_dir).absolute()
+    static_files_dir = (build_config.app_package_path / build_config.static_files_dir).absolute()
     for relative_path in get_static_files(static_files_dir):
         static_file = static_files_dir / relative_path
         if (media_type := mimetypes.guess_type(str(static_file))[0]) is None:
@@ -282,7 +278,8 @@ def create_asgi_app(
     html_generator = partial(
         generate_html,
         app,
-        server_config.dev,
+        build_config.app_package_path.name,
+        build_config.server.dev,
         True,
         app_version,
         app_wheel_filename,
@@ -323,7 +320,7 @@ def create_asgi_app(
 
         html_route = Route("/", send_html)
 
-    if server_config.dev:
+    if build_config.server.dev:
 
         async def loop():
             while True:
@@ -352,30 +349,44 @@ def create_asgi_app(
 def run_server(app: WebComPyApp | None = None):
     _, args = get_params()
     if app is None:
-        app_import_path = args.get("app")
-        app, package = discover_app(app_import_path)
-        server_config = get_server_config(package)
+        build_config = discover_config(args.get("config"))
+        app = build_config.app
     else:
-        server_config = ServerConfig()
+        import types as _types
+
+        app_module = None
+        for mod in sys.modules.values():
+            if isinstance(mod, _types.ModuleType) and mod.__name__ == app.__class__.__module__:
+                continue
+            if isinstance(mod, _types.ModuleType) and hasattr(mod, "app") and mod.app is app:
+                app_module = mod
+                break
+        if app_module is None:
+            from pathlib import Path as _Path
+
+            app_module = _types.ModuleType("_webcompy_app")
+            app_module.__file__ = str(_Path.cwd())
+        build_config = WebComPyBuildConfig(app_module)
 
     if args.get("dev"):
-        server_config.dev = True
+        build_config.server.dev = True
     serve_all_deps = args.get("serve_all_deps")
     if serve_all_deps is not None:
-        app.config.serve_all_deps = serve_all_deps
+        build_config.serve_all_deps = serve_all_deps
     wasm_serving = args.get("wasm_serving")
     if wasm_serving is not None:
-        app.config.wasm_serving = wasm_serving
+        build_config.wasm_serving = wasm_serving
     runtime_serving = args.get("runtime_serving")
     if runtime_serving is not None:
-        app.config.runtime_serving = runtime_serving
+        build_config.runtime_serving = runtime_serving
     standalone = args.get("standalone")
     if standalone is not None:
-        app.config.standalone = standalone
+        build_config.standalone = standalone
     wheel_mode = args.get("wheel_mode")
     if wheel_mode is not None:
-        app.config.wheel_mode = wheel_mode
+        build_config.wheel_mode = wheel_mode
 
-    port = args.get("port") or server_config.port
-    asgi = create_asgi_app(app, server_config)
-    uvicorn.run(asgi, host="0.0.0.0", port=port, reload=server_config.dev)
+    port = args.get("port") or build_config.server.port
+    assert app is not None
+    asgi = create_asgi_app(app, build_config)
+    uvicorn.run(asgi, host="0.0.0.0", port=port, reload=build_config.server.dev)

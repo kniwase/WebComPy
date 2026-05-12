@@ -1,149 +1,39 @@
 from __future__ import annotations
 
-import importlib
 import pathlib
-import sys
 from datetime import datetime
 from importlib import import_module
 
-from webcompy.app._app import WebComPyApp
-from webcompy.app._config import AppConfig, GenerateConfig, LockfileSyncConfig, ServerConfig
 from webcompy.cli._exception import WebComPyCliException
+from webcompy.cli.config._build_config import WebComPyBuildConfig
 
 
-def resolve_standalone_config(config: AppConfig) -> None:
-    if config.standalone:
-        if config.serve_all_deps is False:
-            print("Warning: standalone=True forces serve_all_deps=True", file=sys.stderr, flush=True)
-        config.serve_all_deps = True
-        if config.wasm_serving is None:
-            config.wasm_serving = "local"
-        if config.runtime_serving is None:
-            config.runtime_serving = "local"
-    if config.wasm_serving is None:
-        config.wasm_serving = "cdn"
-    if config.runtime_serving is None:
-        config.runtime_serving = "cdn"
-
-
-def get_app_from_import_path(import_path: str) -> WebComPyApp:
-    if ":" not in import_path:
-        raise WebComPyCliException(
-            f"Invalid app import path '{import_path}'. Expected format: 'module.path:variable_name'",
-        )
-    module_path, var_name = import_path.rsplit(":", 1)
-    try:
-        module = importlib.import_module(module_path)
-    except ModuleNotFoundError as e:
-        if e.name == module_path or e.name == module_path.split(".")[0]:
+def discover_config(module_path: str | None = None) -> WebComPyBuildConfig:
+    if module_path:
+        try:
+            config_module = import_module(module_path)
+        except ModuleNotFoundError:
             raise WebComPyCliException(
                 f"No python module named '{module_path}'",
             ) from None
-        raise WebComPyCliException(
-            f"Failed to import '{module_path}': {e.msg} (missing dependency: {e.name})",
-        ) from None
-    app = getattr(module, var_name, None)
-    if app is None:
-        raise WebComPyCliException(
-            f"No attribute '{var_name}' in module '{module_path}'",
-        )
-    if not isinstance(app, WebComPyApp):
-        raise WebComPyCliException(
-            f"'{import_path}' is not a WebComPyApp instance",
-        )
-    return app
-
-
-def _extract_package(import_path: str) -> str | None:
-    if ":" not in import_path:
-        raise WebComPyCliException(
-            f"Invalid app import path '{import_path}'. Expected format: 'module.path:variable_name'",
-        )
-    module_path = import_path.rsplit(":", 1)[0]
-    parts = module_path.rsplit(".", 1)
-    if len(parts) == 1:
-        return None
-    return parts[0]
-
-
-def discover_app(
-    app_import_path: str | None = None,
-) -> tuple[WebComPyApp, str | None]:
-    if app_import_path:
-        package = _extract_package(app_import_path)
-        return get_app_from_import_path(app_import_path), package
-    try:
-        webcompy_config = import_module("webcompy_config")
-    except ModuleNotFoundError:
-        raise WebComPyCliException(
-            "No python module named 'webcompy_config'. "
-            "Provide --app flag or create webcompy_config.py with app_import_path.",
-        ) from None
-    app_import_path_value = getattr(webcompy_config, "app_import_path", None)
-    if app_import_path_value is None:
-        raise WebComPyCliException(
-            "No 'app_import_path' in 'webcompy_config.py'",
-        )
-    package = _extract_package(app_import_path_value)
-    return get_app_from_import_path(app_import_path_value), package
-
-
-def _import_config_module(module_name: str):
-    try:
-        return import_module(module_name)
-    except ModuleNotFoundError:
-        return None
-
-
-def get_server_config(package: str | None = None) -> ServerConfig:
-    for prefix in ([package] if package else []) + [None]:
-        module_name = f"{prefix}.webcompy_server_config" if prefix else "webcompy_server_config"
-        module = _import_config_module(module_name)
-        if module is None:
-            continue
-        server_config = getattr(module, "server_config", None)
-        if server_config is None:
-            continue
-        if not isinstance(server_config, ServerConfig):
+    else:
+        try:
+            config_module = import_module("webcompy_config")
+        except ModuleNotFoundError:
             raise WebComPyCliException(
-                f"'server_config' in '{module_name}' is not a ServerConfig instance",
-            )
-        return server_config
-    return ServerConfig()
-
-
-def get_generate_config(package: str | None = None) -> GenerateConfig:
-    for prefix in ([package] if package else []) + [None]:
-        module_name = f"{prefix}.webcompy_server_config" if prefix else "webcompy_server_config"
-        module = _import_config_module(module_name)
-        if module is None:
-            continue
-        generate_config = getattr(module, "generate_config", None)
-        if generate_config is None:
-            continue
-        if not isinstance(generate_config, GenerateConfig):
-            raise WebComPyCliException(
-                f"'generate_config' in '{module_name}' is not a GenerateConfig instance",
-            )
-        return generate_config
-    return GenerateConfig()
-
-
-def get_lockfile_sync_config(package: str | None = None) -> LockfileSyncConfig:
-    for prefix in ([package] if package else []) + [None]:
-        module_name = f"{prefix}.webcompy_server_config" if prefix else "webcompy_server_config"
-        module = _import_config_module(module_name)
-        if module is None:
-            continue
-        lockfile_sync_config = getattr(module, "lockfile_sync_config", None)
-        if lockfile_sync_config is None:
-            continue
-        if not isinstance(lockfile_sync_config, LockfileSyncConfig):
-            raise WebComPyCliException(
-                f"'lockfile_sync_config' in '{module_name}' is not a LockfileSyncConfig instance",
-            )
-        return lockfile_sync_config
-    return LockfileSyncConfig()
+                "No python module named 'webcompy_config'. Provide --config flag or create webcompy_config.py.",
+            ) from None
+    config = getattr(config_module, "config", None)
+    if config is None:
+        raise WebComPyCliException(
+            "No 'config' attribute in config module. "
+            "Define 'config = WebComPyBuildConfig(app_module, ...)' in the config file.",
+        )
+    if not isinstance(config, WebComPyBuildConfig):
+        raise WebComPyCliException(
+            "'config' is not a WebComPyBuildConfig instance",
+        )
+    return config
 
 
 def get_webcompy_packge_dir(path: pathlib.Path | None = None) -> pathlib.Path:

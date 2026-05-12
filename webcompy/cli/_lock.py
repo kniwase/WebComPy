@@ -15,27 +15,23 @@ from webcompy.cli._lockfile_sync import (
     sync,
 )
 from webcompy.cli._utils import (
-    discover_app,
+    discover_config,
     ensure_webcompy_modules_dir,
-    get_lockfile_sync_config,
-    resolve_standalone_config,
 )
 
 
 def lock_command() -> None:
     _, args = get_params()
-    app, package = discover_app(args.get("app"))
-    resolve_standalone_config(app.config)
-    lockfile_sync_config = get_lockfile_sync_config(package)
-    resolve_dependencies(app, lockfile_sync_config)
-    assert app.config.dependencies is not None
+    config = discover_config(args.get("config"))
+    resolve_dependencies(config)
+    assert config.dependencies is not None
 
     export_flag = args.get("export", False)
     sync_flag = args.get("sync", False)
     install_flag = args.get("install", False)
 
     if export_flag or sync_flag or install_flag:
-        lockfile_path = app.config.app_package_path / LOCKFILE_NAME
+        lockfile_path = config.app_package_path / LOCKFILE_NAME
 
         from webcompy.cli._lockfile import load_lockfile
 
@@ -44,34 +40,36 @@ def lock_command() -> None:
             print("Error: Lock file not found. Run 'webcompy lock' first.", file=sys.stderr)
             sys.exit(1)
 
-        requirements_path = discover_requirements_path(app.config.app_package_path, lockfile_sync_config)
+        requirements_path = discover_requirements_path(config.app_package_path, config.lockfile_sync_config)
 
         if export_flag:
             export_requirements(lockfile, requirements_path)
             print(requirements_path)
-            if lockfile_sync_config is None or lockfile_sync_config.requirements_path is None:
-                record_requirements_path(app.config.app_package_path, requirements_path)
+            if config.lockfile_sync_config is None or config.lockfile_sync_config.requirements_path is None:
+                record_requirements_path(config.app_package_path, requirements_path)
         elif sync_flag:
-            project_root = discover_project_root(app.config.app_package_path)
+            project_root = discover_project_root(config.app_package_path)
             report_lines = sync(
-                lockfile, project_root, lockfile_sync_config.sync_group if lockfile_sync_config else None
+                lockfile,
+                project_root,
+                config.lockfile_sync_config.sync_group if config.lockfile_sync_config else None,
             )
             for line in report_lines:
                 print(line)
         elif install_flag:
             install_requirements(lockfile, requirements_path)
     else:
-        lockfile_path = app.config.app_package_path / LOCKFILE_NAME
-        modules_dir = app.config.app_package_path / ".webcompy_modules"
+        lockfile_path = config.app_package_path / LOCKFILE_NAME
+        modules_dir = config.app_package_path / ".webcompy_modules"
         ensure_webcompy_modules_dir(modules_dir)
         _lockfile, errors, warnings = resolve_lockfile(
-            app.config.dependencies,
+            config.dependencies,
             PYSCRIPT_VERSION,
             lockfile_path,
             modules_dir,
-            wasm_serving=app.config.wasm_serving or "cdn",
-            runtime_serving=app.config.runtime_serving or "cdn",
-            standalone=app.config.standalone,
+            wasm_serving=config.wasm_serving or "cdn",
+            runtime_serving=config.runtime_serving or "cdn",
+            standalone=config.standalone,
         )
         for warning in warnings:
             print(f"Warning: {warning}", file=sys.stderr)

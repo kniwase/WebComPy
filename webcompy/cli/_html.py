@@ -145,6 +145,7 @@ def _render_plugin_script(ps: PluginScript) -> _HtmlElement:
 
 def generate_html(
     app: WebComPyApp,
+    app_package_name: str,
     dev_mode: bool,
     prerender: bool,
     app_version: str,
@@ -156,12 +157,13 @@ def generate_html(
     extra_wheel_filenames: list[str] | None = None,
 ):
     base_url = app.config.base_url
+    selector_id = app.config.selector.lstrip("#")
     app_root = (
         app._root
         if prerender
         else _HtmlElement(
             "div",
-            {"id": "webcompy-app", "hidden": ""},
+            {"id": selector_id, "hidden": ""},
         )
     )
     scripts_head: Scripts = []
@@ -208,7 +210,7 @@ def generate_html(
     if app.config.profile:
         py_script_lines.append("import time")
         py_script_lines.append("_pyscript_ready = time.perf_counter()")
-    py_script_lines.append(f"from {app.config.app_package_path.name}.bootstrap import app")
+    py_script_lines.append(f"from {app_package_name}.app import app")
     if app.config.profile:
         py_script_lines.append('app._profile_data["pyscript_ready"] = _pyscript_ready')
     py_script_lines.append("app.run()")
