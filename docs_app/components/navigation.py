@@ -34,6 +34,10 @@ def Navbar(context: ComponentContext[list[Page]]):
     def _toggle(idx: int, ev: Any):
         if hasattr(ev, "stopPropagation"):
             ev.stopPropagation()
+        # Close all other dropdowns (exclusive display)
+        for other_idx, state in _open_states.items():
+            if other_idx != idx:
+                state.value = False
         state = _get_state(idx)
         state.value = not state.value
 
@@ -182,11 +186,15 @@ Navbar.scoped_style = {
         "background": "none",
         "border": "1px solid #d0d7de",
         "border-radius": "6px",
-        "padding": "0.5rem 0.75rem",
+        "padding": "0.5rem",
+        "width": "2.5rem",
+        "height": "2.5rem",
         "font-size": "1.25rem",
         "cursor": "pointer",
         "color": "#24292f",
         "transition": "background-color 0.2s ease",
+        "text-align": "center",
+        "line-height": "1",
     },
     " nav button:hover": {
         "background-color": "#f3f4f6",
