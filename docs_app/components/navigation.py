@@ -165,6 +165,7 @@ Navbar.scoped_style = {
     " nav div": {
         "display": "flex",
         "align-items": "center",
+        "justify-content": "space-between",
         "width": "100%",
         "max-width": "1200px",
         "margin": "0 auto",
@@ -189,12 +190,6 @@ Navbar.scoped_style = {
     },
     " nav button:hover": {
         "background-color": "#f3f4f6",
-    },
-    " #navbarNav": {
-        "display": "block",
-    },
-    " #navbarNav.open": {
-        "display": "block",
     },
     " nav ul": {
         "display": "flex",
@@ -252,12 +247,21 @@ Navbar.scoped_style = {
         "border-top": "1px solid #e1e4e8",
     },
     " @media (max-width: 768px)": {
+        " nav div": {
+            "flex-wrap": "wrap",
+        },
+        " nav span": {
+            "order": "1",
+        },
         " nav button": {
             "display": "block",
+            "order": "2",
             "margin-left": "auto",
         },
         " #navbarNav": {
             "display": "none",
+            "order": "3",
+            "width": "100%",
         },
         " #navbarNav.open": {
             "display": "block",
