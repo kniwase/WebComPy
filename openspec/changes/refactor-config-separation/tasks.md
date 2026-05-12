@@ -1,9 +1,9 @@
 ## 1. Create webcompy.cli.config package
 
-- [ ] 1.1 Create `webcompy/cli/config/__init__.py` with exports: `WebComPyBuildConfig`, `WebComPyServerConfig`, `LockfileSyncConfig`
-- [ ] 1.2 Create `webcompy/cli/config/_server_config.py` with `WebComPyServerConfig(port=8080, dev=False)` dataclass
-- [ ] 1.3 Create `webcompy/cli/config/_build_config.py` with `WebComPyBuildConfig` dataclass accepting `app_module` (ModuleType, required positional) + `app_var` (str, default `"app"`) + all fields from former AppConfig server-only fields + GenerateConfig fields + ServerConfig as nested `server` field; `__post_init__` computes `app_package_path = Path(app_module.__file__).parent` and `app = getattr(app_module, app_var)`
-- [ ] 1.4 Move `LockfileSyncConfig` from `webcompy/app/_config.py` to `webcompy/cli/config/_server_config.py`
+- [x] 1.1 Create `webcompy/cli/config/__init__.py` with exports: `WebComPyBuildConfig`, `WebComPyServerConfig`, `LockfileSyncConfig`
+- [x] 1.2 Create `webcompy/cli/config/_server_config.py` with `WebComPyServerConfig(port=8080, dev=False)` dataclass
+- [x] 1.3 Create `webcompy/cli/config/_build_config.py` with `WebComPyBuildConfig` dataclass accepting `app_module` (ModuleType, required positional) + `app_var` (str, default `"app"`) + all fields from former AppConfig server-only fields + GenerateConfig fields + ServerConfig as nested `server` field; `__post_init__` computes `app_package_path = Path(app_module.__file__).parent` and `app = getattr(app_module, app_var)`
+- [x] 1.4 Move `LockfileSyncConfig` from `webcompy/app/_config.py` to `webcompy/cli/config/_server_config.py`
 
 ## 2. Refactor WebComPyAppConfig
 
