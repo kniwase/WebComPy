@@ -1,8 +1,10 @@
-from typing import TypedDict
+from typing import Any, TypedDict
 
-from webcompy.components import ComponentContext, define_component
+from webcompy._browser import browser
+from webcompy.components import ComponentContext, define_component, on_before_destroy
 from webcompy.elements import html
 from webcompy.router import RouterLink
+from webcompy.signal import Signal, computed
 
 
 class _SubPage(TypedDict):
@@ -21,8 +23,51 @@ class Page(_PageRequired, total=False):
 
 @define_component
 def Navbar(context: ComponentContext[list[Page]]):
-    def generate_navitem(page: Page, idx: int):
+    _open_states: dict[int, Signal[bool]] = {}
+    _mobile_open = Signal(False)
+
+    def _get_state(idx: int) -> Signal[bool]:
+        if idx not in _open_states:
+            _open_states[idx] = Signal(False)
+        return _open_states[idx]
+
+    def _toggle(idx: int, ev: Any):
+        if hasattr(ev, "stopPropagation"):
+            ev.stopPropagation()
+        # Close all other dropdowns (exclusive display)
+        for other_idx, state in _open_states.items():
+            if other_idx != idx:
+                state.value = False
+        state = _get_state(idx)
+        state.value = not state.value
+
+    def _close_all():
+        for state in _open_states.values():
+            state.value = False
+        _mobile_open.value = False
+
+    def _is_open(idx: int):
+        return _get_state(idx).value
+
+    def _toggle_mobile(ev: Any):
+        if hasattr(ev, "stopPropagation"):
+            ev.stopPropagation()
+        _mobile_open.value = not _mobile_open.value
+
+    def _on_click_outside(ev: Any):
+        _close_all()
+
+    if browser:
+        browser.document.addEventListener("click", _on_click_outside)
+
+        @on_before_destroy
+        def _cleanup():
+            browser.document.removeEventListener("click", _on_click_outside)
+
+    def _generate_navitem(page: Page, idx: int):
         if "children" in page:
+            menu_id = f"navbar-dropdown-{idx}"
+
             main = (
                 [
                     html.LI(
@@ -30,13 +75,9 @@ def Navbar(context: ComponentContext[list[Page]]):
                         RouterLink(
                             to=page["to"],
                             text=[page["title"]],
-                            attrs={"class": "dropdown-item"},
                         ),
                     ),
-                    html.LI(
-                        {"class": "dropdown-item"},
-                        html.HR({"class": "dropdown-divider"}),
-                    ),
+                    html.LI({}, html.HR({})),
                 ]
                 if "to" in page
                 else []
@@ -47,27 +88,28 @@ def Navbar(context: ComponentContext[list[Page]]):
                     RouterLink(
                         to=sub["to"],
                         text=[sub["title"]],
-                        attrs={"class": "dropdown-item"},
+                        attrs={"@click": lambda ev: _close_all()},
                     ),
                 )
                 for sub in page["children"]
             )
             return html.LI(
-                {"class": "nav-item dropdown"},
+                {},
                 html.A(
                     {
-                        "id": f"navbar-dropdown-{idx}",
-                        "class": "nav-link dropdown-toggle",
-                        "data-bs-toggle": "dropdown",
-                        "role": "button",
-                        "aria-expanded": "false",
+                        "id": f"{menu_id}-toggle",
+                        "aria-expanded": computed(lambda idx=idx: "true" if _is_open(idx) else "false"),
+                        "aria-haspopup": "true",
+                        "aria-controls": menu_id,
+                        "@click": lambda ev: _toggle(idx, ev),
                     },
                     page["title"],
                 ),
                 html.UL(
                     {
-                        "class": "dropdown-menu",
-                        "aria-labelledby": f"navbar-dropdown-{idx}",
+                        "id": menu_id,
+                        "role": "menu",
+                        "style": computed(lambda idx=idx: f"display: {'block' if _is_open(idx) else 'none'};"),
                     },
                     *main,
                     *items,
@@ -75,41 +117,190 @@ def Navbar(context: ComponentContext[list[Page]]):
             )
         if "to" in page:
             return html.LI(
-                {"class": "nav-item"},
+                {},
                 RouterLink(
                     to=page["to"],
                     text=[page["title"]],
-                    attrs={"class": "nav-link"},
+                    attrs={"@click": lambda ev: _close_all()},
                 ),
             )
         return None
 
     return html.NAV(
-        {"class": "navbar navbar-expand-md navbar-light bg-light"},
+        {},
         html.DIV(
-            {"class": "container-fluid"},
-            html.SPAN(
-                {"class": "navbar-brand mb-0 h1"},
-                "WebComPy",
-            ),
+            {},
+            html.SPAN({}, "WebComPy"),
             html.BUTTON(
                 {
-                    "class": "navbar-toggler",
                     "type": "button",
-                    "data-bs-toggle": "collapse",
-                    "data-bs-target": "#navbarNav",
                     "aria-controls": "navbarNav",
-                    "aria-expanded": "false",
+                    "aria-expanded": computed(lambda: "true" if _mobile_open.value else "false"),
                     "aria-label": "Toggle navigation",
+                    "@click": _toggle_mobile,
                 },
-                html.SPAN({"class": "navbar-toggler-icon"}),
+                html.SPAN({}, "☰"),
             ),
             html.DIV(
-                {"class": "collapse navbar-collapse", "id": "navbarNav"},
+                {
+                    "id": "navbarNav",
+                    "class": computed(lambda: "open" if _mobile_open.value else ""),
+                },
                 html.UL(
-                    {"class": "navbar-nav"},
-                    *tuple(generate_navitem(page, idx) for idx, page in enumerate(context.props)),
+                    {},
+                    *tuple(_generate_navitem(page, idx) for idx, page in enumerate(context.props)),
                 ),
             ),
         ),
     )
+
+
+Navbar.scoped_style = {
+    " nav": {
+        "display": "flex",
+        "align-items": "center",
+        "justify-content": "space-between",
+        "padding": "0.75rem 1.5rem",
+        "background-color": "#ffffff",
+        "border-bottom": "1px solid #e1e4e8",
+        "box-shadow": "0 1px 3px rgba(0,0,0,0.05)",
+        "position": "relative",
+    },
+    " nav div": {
+        "display": "flex",
+        "align-items": "center",
+        "justify-content": "space-between",
+        "width": "100%",
+        "max-width": "1200px",
+        "margin": "0 auto",
+    },
+    " nav span": {
+        "font-size": "1.35rem",
+        "font-weight": "700",
+        "color": "#24292f",
+        "margin-right": "2rem",
+        "letter-spacing": "-0.02em",
+    },
+    " nav button": {
+        "display": "none",
+        "background": "none",
+        "border": "1px solid #d0d7de",
+        "border-radius": "6px",
+        "padding": "0.5rem",
+        "width": "2.5rem",
+        "height": "2.5rem",
+        "font-size": "1.25rem",
+        "cursor": "pointer",
+        "color": "#24292f",
+        "transition": "background-color 0.2s ease",
+        "text-align": "center",
+        "line-height": "1",
+    },
+    " nav button:hover": {
+        "background-color": "#f3f4f6",
+    },
+    " nav ul": {
+        "display": "flex",
+        "list-style": "none",
+        "margin": "0",
+        "padding": "0",
+        "gap": "0.25rem",
+        "align-items": "center",
+    },
+    " nav li": {
+        "position": "relative",
+    },
+    " nav li a, nav li a[class]": {
+        "display": "block",
+        "padding": "0.5rem 0.875rem",
+        "text-decoration": "none",
+        "color": "#24292f",
+        "font-size": "0.9rem",
+        "font-weight": "500",
+        "cursor": "pointer",
+        "border-radius": "6px",
+        "transition": "background-color 0.15s ease, color 0.15s ease",
+    },
+    " nav li a:hover": {
+        "background-color": "#f3f4f6",
+        "color": "#000000",
+    },
+    " nav li a[aria-expanded='true']": {
+        "background-color": "#f3f4f6",
+    },
+    " nav li ul": {
+        "position": "absolute",
+        "top": "calc(100% + 4px)",
+        "left": "0",
+        "background-color": "#ffffff",
+        "border": "1px solid #d0d7de",
+        "border-radius": "8px",
+        "min-width": "12rem",
+        "padding": "0.5rem 0",
+        "list-style": "none",
+        "z-index": "1000",
+        "box-shadow": "0 4px 12px rgba(0,0,0,0.1)",
+    },
+    " nav li ul li a": {
+        "padding": "0.5rem 1rem",
+        "font-size": "0.85rem",
+        "border-radius": "0",
+    },
+    " nav li ul li a:hover": {
+        "background-color": "#f6f8fa",
+    },
+    " nav li ul hr": {
+        "margin": "0.5rem 0",
+        "border": "0",
+        "border-top": "1px solid #e1e4e8",
+    },
+    " @media (max-width: 768px)": {
+        " nav div": {
+            "flex-wrap": "wrap",
+        },
+        " nav span": {
+            "order": "1",
+        },
+        " nav button": {
+            "display": "block",
+            "order": "2",
+            "margin-left": "auto",
+        },
+        " #navbarNav": {
+            "display": "none",
+            "order": "3",
+            "width": "100%",
+        },
+        " #navbarNav.open": {
+            "display": "block",
+        },
+        " nav ul": {
+            "flex-direction": "column",
+            "position": "absolute",
+            "top": "calc(100% + 1px)",
+            "left": "0",
+            "right": "0",
+            "background-color": "#ffffff",
+            "border-bottom": "1px solid #e1e4e8",
+            "border-top": "1px solid #e1e4e8",
+            "padding": "0.75rem 1.5rem",
+            "gap": "0",
+            "box-shadow": "0 4px 12px rgba(0,0,0,0.08)",
+            "z-index": "999",
+        },
+        " nav li": {
+            "width": "100%",
+        },
+        " nav li a, nav li a[class]": {
+            "padding": "0.75rem 0",
+            "border-radius": "0",
+        },
+        " nav li ul": {
+            "position": "static",
+            "border": "none",
+            "box-shadow": "none",
+            "padding-left": "1rem",
+            "min-width": "auto",
+        },
+    },
+}
