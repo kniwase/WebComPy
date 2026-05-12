@@ -7,27 +7,27 @@
 
 ## 2. Refactor WebComPyAppConfig
 
-- [ ] 2.1 Replace `AppConfig` in `webcompy/app/_config.py` with `WebComPyAppConfig` containing only: `base_url`, `selector`, `profile`, `hydrate`, `scripts`, `plugins`
-- [ ] 2.2 Add `selector: str = "#webcompy-app"` field to `WebComPyAppConfig`
-- [ ] 2.3 Keep `PluginScript` in `webcompy/app/_config.py` (used by browser)
-- [ ] 2.4 Update `webcompy/app/__init__.py` exports: `WebComPyAppConfig`, `PluginScript`, `WebComPyApp`, `WebComPyPlugin`, `WebComPyPluginException`; remove `LockfileSyncConfig`, `AppConfig` aliases
+- [x] 2.1 Replace `AppConfig` in `webcompy/app/_config.py` with `WebComPyAppConfig` containing only: `base_url`, `selector`, `profile`, `hydrate`, `scripts`, `plugins`
+- [x] 2.2 Add `selector: str = "#webcompy-app"` field to `WebComPyAppConfig`
+- [x] 2.3 Keep `PluginScript` in `webcompy/app/_config.py` (used by browser)
+- [x] 2.4 Update `webcompy/app/__init__.py` exports: `WebComPyAppConfig`, `PluginScript`, `WebComPyApp`, `WebComPyPlugin`, `WebComPyPluginException`; remove `LockfileSyncConfig`, `AppConfig` aliases
 
 ## 3. Update WebComPyApp
 
-- [ ] 3.1 Remove `profile` and `hydrate` parameters from `WebComPyApp.__init__`; use `self.config.profile` and `self.config.hydrate` directly
-- [ ] 3.2 Remove `selector` parameter from `WebComPyApp.run()`; use `self.config.selector` instead
-- [ ] 3.3 Update `AppDocumentRoot` to use `selector` from app config for the div ID
+- [x] 3.1 Remove `profile` and `hydrate` parameters from `WebComPyApp.__init__`; use `self.config.profile` and `self.config.hydrate` directly
+- [x] 3.2 Remove `selector` parameter from `WebComPyApp.run()`; use `self.config.selector` instead
+- [x] 3.3 Update `AppDocumentRoot` to use `selector` from app config for the div ID
 
 ## 4. Update CLI modules
 
-- [ ] 4.1 Update `_utils.py`: replace `discover_app()` with `discover_config()` that finds `webcompy_config.py` and returns `WebComPyBuildConfig`; add `get_server_config()` / `get_generate_config()` replacements that read from `WebComPyBuildConfig`
-- [ ] 4.2 Update `_argparser.py`: replace `--app` flag with `--config` flag; keep `--dev`, `--port`, `--dist`, `--serve-all-deps`, `--no-serve-all-deps`, `--wasm-serving`, `--runtime-serving`, `--standalone`, `--no-standalone`, `--wheel-mode`
-- [ ] 4.3 Update `_server.py`: read all build settings from `WebComPyBuildConfig` instead of `AppConfig`; read server settings from `config.server`; use `config.app` for `WebComPyApp` instance; use `config.app_package_path` for package resolution
-- [ ] 4.4 Update `_generate.py`: read all build settings from `WebComPyBuildConfig`; read SSG settings (`dist`, `cname`, `static_files_dir`) from `config` directly; use `config.app` and `config.app_package_path`
-- [ ] 4.5 Update `_html.py`: change bootstrap import from `{name}.bootstrap` to `{name}.app`; use `app.config.selector` for div ID; read build settings from `WebComPyBuildConfig` passed as parameter
-- [ ] 4.6 Update `_lock.py`: read `config.app_package_path` from `WebComPyBuildConfig`; use `config.app` for dependency resolution
-- [ ] 4.7 Update `_lockfile_sync.py`: read config from `WebComPyBuildConfig`; use `config.app_package_path`, `config.dependencies`, `config.dependencies_from`, `config.lockfile_sync_config`
-- [ ] 4.8 Update `resolve_standalone_config()` in `_utils.py` to work on `WebComPyBuildConfig` instead of `AppConfig`
+- [x] 4.1 Update `_utils.py`: replace `discover_app()` with `discover_config()` that finds `webcompy_config.py` and returns `WebComPyBuildConfig`; add `get_server_config()` / `get_generate_config()` replacements that read from `WebComPyBuildConfig`
+- [x] 4.2 Update `_argparser.py`: replace `--app` flag with `--config` flag; keep `--dev`, `--port`, `--dist`, `--serve-all-deps`, `--no-serve-all-deps`, `--wasm-serving`, `--runtime-serving`, `--standalone`, `--no-standalone`, `--wheel-mode`
+- [x] 4.3 Update `_server.py`: read all build settings from `WebComPyBuildConfig` instead of `AppConfig`; read server settings from `config.server`; use `config.app` for `WebComPyApp` instance; use `config.app_package_path` for package resolution
+- [x] 4.4 Update `_generate.py`: read all build settings from `WebComPyBuildConfig`; read SSG settings (`dist`, `cname`, `static_files_dir`) from `config` directly; use `config.app` and `config.app_package_path`
+- [x] 4.5 Update `_html.py`: change bootstrap import from `{name}.bootstrap` to `{name}.app`; use `app.config.selector` for div ID; read build settings from `WebComPyBuildConfig` passed as parameter
+- [x] 4.6 Update `_lock.py`: read `config.app_package_path` from `WebComPyBuildConfig`; use `config.app` for dependency resolution
+- [x] 4.7 Update `_lockfile_sync.py`: read config from `WebComPyBuildConfig`; use `config.app_package_path`, `config.dependencies`, `config.dependencies_from`, `config.lockfile_sync_config`
+- [x] 4.8 Update `resolve_standalone_config()` in `_utils.py` to work on `WebComPyBuildConfig` instead of `AppConfig`
 
 ## 5. Update HTML generation and root component
 
