@@ -84,6 +84,7 @@ def Navbar(context: ComponentContext[list[Page]]):
                     RouterLink(
                         to=sub["to"],
                         text=[sub["title"]],
+                        attrs={"@click": lambda ev: _close_all()},
                     ),
                 )
                 for sub in page["children"]
@@ -116,6 +117,7 @@ def Navbar(context: ComponentContext[list[Page]]):
                 RouterLink(
                     to=page["to"],
                     text=[page["title"]],
+                    attrs={"@click": lambda ev: _close_all()},
                 ),
             )
         return None
@@ -253,6 +255,12 @@ Navbar.scoped_style = {
         " nav button": {
             "display": "block",
             "margin-left": "auto",
+        },
+        " #navbarNav": {
+            "display": "none",
+        },
+        " #navbarNav.open": {
+            "display": "block",
         },
         " nav ul": {
             "flex-direction": "column",
