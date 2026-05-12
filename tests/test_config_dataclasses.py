@@ -62,15 +62,15 @@ class TestWebComPyAppConfig:
 
 class TestWebComPyBuildConfig:
     def _make_module(self, tmp_path, code="app = None"):
-        bootstrap = tmp_path / "bootstrap.py"
-        bootstrap.write_text(code)
+        app_module = tmp_path / "app_mod.py"
+        app_module.write_text(code)
         import sys
 
         sys.path.insert(0, str(tmp_path))
         try:
             import importlib
 
-            return importlib.import_module("bootstrap")
+            return importlib.import_module("app_mod")
         finally:
             sys.path.pop(0)
 

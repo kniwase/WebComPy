@@ -186,7 +186,7 @@ def classify_dependencies(
             if pkg_dir is None:
                 errors.append(
                     f"Package '{dep_name}' not found locally and not in Pyodide CDN. "
-                    f"Install it locally or add it to AppConfig.dependencies."
+                    f"Install it locally or add it to WebComPyBuildConfig.dependencies."
                 )
                 continue
             if not _is_pure_python_package(pkg_dir):
@@ -279,7 +279,7 @@ def _resolve_all_transitives(
                 if pkg_dir is None:
                     warnings.append(
                         f"Transitive dependency '{trans_name}' not found locally "
-                        f"and not in Pyodide CDN. Consider adding it to AppConfig.dependencies."
+                        f"and not in Pyodide CDN. Consider adding it to WebComPyBuildConfig.dependencies."
                     )
                     continue
                 if not _is_pure_python_package(pkg_dir):

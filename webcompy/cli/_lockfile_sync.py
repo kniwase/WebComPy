@@ -103,7 +103,7 @@ def record_requirements_path(
         return
     new_lines = []
     if not has_lockfile_sync_import:
-        new_lines.append("from webcompy.app._config import LockfileSyncConfig")
+        new_lines.append("from webcompy.cli.config import LockfileSyncConfig")
     new_lines.append(f"lockfile_sync_config = LockfileSyncConfig(requirements_path='{rel_path}')")
     with open(config_path, "a", encoding="utf-8") as f:
         f.write("\n" + "\n".join(new_lines) + "\n")
