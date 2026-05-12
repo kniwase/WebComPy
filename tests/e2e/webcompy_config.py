@@ -1,6 +1,10 @@
-from pathlib import Path
+import my_app.app as app_module
 
-from webcompy.app import AppConfig
+from webcompy.cli.config import WebComPyBuildConfig, WebComPyServerConfig
 
-app_import_path = "my_app.bootstrap:app"
-app_config = AppConfig(app_package=Path(__file__).parent / "my_app", base_url="/", dependencies=["aiofiles"])
+config = WebComPyBuildConfig(
+    app_module,
+    dependencies=["aiofiles"],
+    server=WebComPyServerConfig(port=8088),
+    static_files_dir="../static",
+)

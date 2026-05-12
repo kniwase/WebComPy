@@ -1,6 +1,4 @@
-from pathlib import Path
-
-from webcompy.app import AppConfig, WebComPyApp
+from webcompy.app import WebComPyApp, WebComPyAppConfig
 
 from .keys import AppThemeKey
 from .layout import Root
@@ -9,10 +7,8 @@ from .router import router
 app = WebComPyApp(
     root_component=Root,
     router=router,
-    config=AppConfig(
-        app_package=Path(__file__).parent,
+    config=WebComPyAppConfig(
         base_url="/",
-        dependencies=["aiofiles"],
         plugins=["my_app.plugins:ErudaPlugin"],
     ),
 )
