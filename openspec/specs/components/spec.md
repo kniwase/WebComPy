@@ -52,8 +52,8 @@ A component's scoped CSS SHALL be automatically prefixed with an attribute selec
 - **AND** the component's root element SHALL have the `webcompy-cid-{id}` attribute
 - **AND** the `.btn` style SHALL NOT affect `.btn` elements in other components
 
-### Requirement: Scoped CSS shall support nested dictionary structures for media queries and pseudo-selectors
-The framework SHALL allow developers to define nested style dictionaries within `scoped_style`, where nested keys represent `@media` queries, `@supports` rules, or pseudo-class selectors. The framework SHALL recursively process these nested structures and generate valid CSS rules with proper selector scoping. At-rules (`@media`, `@supports`, `@container`) SHALL wrap selectors inside their blocks. Pseudo-classes (`:hover`, `:focus`) and pseudo-elements (`::before`, `::after`) SHALL attach directly to selectors without space. Combinator selectors (`>`, `+`, `~`, descendant space) SHALL maintain space separation.
+### Requirement: Scoped CSS shall support nested dictionary structures for media queries, at-rules, and pseudo-selectors
+The framework SHALL allow developers to use CSS at-rules (`@media`, `@supports`, `@container`, etc.) as either top-level keys or nested keys in `scoped_style` dictionaries. At-rule keys themselves SHALL NOT receive the `[webcompy-cid-{id}]` attribute selector. Selectors inside at-rule blocks SHALL receive proper scoping. The framework SHALL recursively process these nested structures and generate valid CSS rules. At-rules (`@media`, `@supports`, `@container`) SHALL wrap selectors inside their blocks. Pseudo-classes (`:hover`, `:focus`) and pseudo-elements (`::before`, `::after`) SHALL attach directly to selectors without space. Combinator selectors (`>`, `+`, `~`, descendant space) SHALL maintain space separation.
 
 #### Scenario: Defining a media query within scoped style
 - **WHEN** a developer sets `scoped_style` with a nested `@media` rule:
@@ -97,6 +97,33 @@ The framework SHALL allow developers to define nested style dictionaries within 
     .button[webcompy-cid-xxx]:hover { background: yellow; }
   }
   ```
+
+#### Scenario: Using at-rules as top-level keys in scoped style
+- **WHEN** a developer defines an at-rule as a top-level key in `scoped_style`:
+  ```python
+  Component.scoped_style = {
+      "@media (max-width: 768px)": {
+          ".button": {"color": "red"}
+      }
+  }
+  ```
+- **THEN** the at-rule key itself SHALL NOT receive the `[webcompy-cid-{id}]` attribute
+- **AND** selectors inside the at-rule block SHALL receive the `[webcompy-cid-{id}]` attribute
+- **AND** the generated CSS SHALL be valid:
+  ```css
+  @media (max-width: 768px) { .button[webcompy-cid-xxx] { color: red; } }
+  ```
+- **AND** the at-rule syntax SHALL remain intact (no attribute selectors in `@media` declaration)
+
+#### Scenario: At-rule detection with leading whitespace
+- **WHEN** a developer uses leading whitespace in an at-rule key:
+  ```python
+  Component.scoped_style = {
+      " @media (max-width: 768px)": {".button": {"color": "red"}}
+  }
+  ```
+- **THEN** the framework SHALL classify the key as an at-rule (despite leading space)
+- **AND** the at-rule SHALL NOT receive cid attribute scoping
 
 ### Requirement: Nested scoped style shall maintain type safety with recursive type definition
 The framework SHALL provide type annotations that accurately describe the nested structure of scoped styles, enabling IDE autocomplete and static type checking.

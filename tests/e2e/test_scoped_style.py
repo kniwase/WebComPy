@@ -74,3 +74,17 @@ def test_scoped_style_combinator_selector(page_on):
 
     style_content = page.locator("style").first.evaluate("el => el.textContent")
     assert ">" in style_content
+
+
+def test_scoped_style_top_level_media_query(page_on):
+    page = page_on("/scoped-style")
+    top_level_media_text = page.locator("[data-testid='top-level-media-text']")
+    expect(top_level_media_text).to_be_visible()
+
+    style_content = page.locator("style").first.evaluate("el => el.textContent")
+
+    assert "@media (max-width:" in style_content or "@media(max-width:" in style_content.replace(" ", "")
+    assert "@media[webcompy-cid-" not in style_content
+
+    assert "top-level-media-text" in style_content
+    assert "webcompy-cid-" in style_content
