@@ -25,15 +25,21 @@ Clicking anywhere outside an open dropdown menu SHALL close all open dropdowns.
 - **THEN** the dropdown SHALL close
 - **AND** the `aria-expanded` attribute SHALL update to `"false"`
 
-### Requirement: Dropdown menus SHALL support multiple instances
+### Requirement: Dropdown menus SHALL support multiple instances with exclusive display
 
-Multiple dropdown menus SHALL be able to coexist, each with independent open/close state.
+Multiple dropdown menus SHALL be able to coexist, each with independent open/close state. By default, opening one dropdown SHALL close all other dropdowns (exclusive display) to prevent UI clutter. All dropdowns SHALL close when clicking outside.
 
-#### Scenario: Multiple dropdowns on the same page
+#### Scenario: Multiple dropdowns on the same page with exclusive display
 - **WHEN** a navbar contains two dropdown menus
 - **AND** the first dropdown is opened
 - **THEN** clicking the second dropdown toggle SHALL open the second menu
-- **AND** the first menu SHALL remain open (unless clicked outside)
+- **AND** the first menu SHALL close (exclusive display)
+
+#### Scenario: Clicking outside closes all dropdowns
+- **WHEN** multiple dropdowns are open
+- **AND** the user clicks outside any dropdown menu and toggle button
+- **THEN** all dropdowns SHALL close
+- **AND** all `aria-expanded` attributes SHALL update to `"false"`
 
 ### Requirement: Dropdowns SHALL maintain proper ARIA attributes
 
