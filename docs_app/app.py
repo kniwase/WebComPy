@@ -1,13 +1,12 @@
-from webcompy.app import WebComPyApp
+from webcompy.app import WebComPyApp, WebComPyAppConfig
 
 from .layout import Root
 from .router import router
-from .webcompy_config import app_config
 
 app = WebComPyApp(
     root_component=Root,
     router=router,
-    config=app_config,
+    config=WebComPyAppConfig(base_url="/", plugins=["docs_app.plugins:ErudaPlugin"]),
 )
 app.set_head(
     {
