@@ -153,40 +153,120 @@ When `serve_all_deps=True`, the CLI SHALL download pure-Python package wheels fr
 ### Requirement: The CLI shall pass CDN pure-Python package names to HTML when serve_all_deps is False
 When `serve_all_deps=False`, pure-Python packages available in the Pyodide CDN SHALL be loaded from the CDN by name. Their package names SHALL appear in `py-config.packages` alongside WASM package names.
 
+#### Scenario: Starting dev server with serve_all_deps=False
+- **WHEN** a developer runs `python -m webcompy start --dev --no-serve-all-deps`
+- **AND** the lock file contains pure-Python packages with `in_pyodide_cdn=True`
+- **THEN** those package names SHALL appear in `py-config.packages`
+- **AND** those packages SHALL NOT be bundled into the app wheel
+
+#### Scenario: Generating static site with serve_all_deps=False
+- **WHEN** a developer runs `python -m webcompy generate --no-serve-all-deps`
+- **THEN** CDN pure-Python package names SHALL appear in the generated HTML `py-config.packages`
+- **AND** the app wheel SHALL NOT contain those packages
+
 ### Requirement: The webcompy lock command shall generate or update the lock file
 Running `webcompy lock` SHALL generate or update `webcompy-lock.json` in the app package directory. The lock file records Pyodide CDN package versions, bundled package versions and sources, and the Pyodide/PyScript versions used for classification.
+
+#### Scenario: Generating a lock file
+- **WHEN** a developer runs `webcompy lock` with `WebComPyBuildConfig(app, dependencies=["flask", "numpy"])`
+- **THEN** `webcompy-lock.json` SHALL be created in the app package directory
+
+#### Scenario: Lock file already exists and dependencies unchanged
+- **WHEN** `webcompy-lock.json` exists and `WebComPyBuildConfig.dependencies` matches
+- **THEN** the existing lock file SHALL be validated and reused without network requests
+
+#### Scenario: Lock file is stale
+- **WHEN** `webcompy-lock.json` exists but `WebComPyBuildConfig.dependencies` has changed
+- **THEN** the lock file SHALL be regenerated
 
 ### Requirement: The lock file shall be auto-generated on start and generate
 The `webcompy start` and `webcompy generate` commands SHALL auto-generate `webcompy-lock.json` if it does not exist or is stale.
 
+#### Scenario: Starting dev server without lock file
+- **WHEN** a developer runs `python -m webcompy start --dev` without a `webcompy-lock.json`
+- **THEN** the lock file SHALL be automatically generated before building wheels
+
+#### Scenario: Generating static site with stale lock file
+- **WHEN** a developer runs `python -m webcompy generate` and the lock file is stale
+- **THEN** the lock file SHALL be regenerated before building wheels
+
 ### Requirement: The webcompy lock command shall support dependency export, sync, and install operations
 The `webcompy lock` command SHALL support `--export`, `--sync`, and `--install` operations. All three operations use `WebComPyBuildConfig.lockfile_sync_config` for configuration.
+
+#### Scenario: Running webcompy lock --export
+- **WHEN** a developer runs `webcompy lock --export`
+- **THEN** a `requirements.txt` file SHALL be generated containing pinned versions for all locally-required packages from the lock file
 
 #### Scenario: Running webcompy lock --sync with sync_group configuration
 - **WHEN** a developer has `LockfileSyncConfig(sync_group="browser")` in `webcompy_config.py`
 - **AND** runs `webcompy lock --sync`
 - **THEN** the command SHALL compare `[project.optional-dependencies.browser]` from `pyproject.toml` against the lock file
 
+#### Scenario: Running webcompy lock --install
+- **WHEN** a developer runs `webcompy lock --install`
+- **THEN** `uv pip install -r {path}` SHALL be executed if `uv` is available, otherwise `sys.executable -m pip install -r {path}`
+
 ### Requirement: The dev server shall serve runtime assets locally
 When `runtime_serving="local"`, the dev server SHALL serve all PyScript core bundle files and Pyodide runtime files from memory.
+
+#### Scenario: Dev server with runtime_serving=local serves all PyScript bundle files
+- **WHEN** a developer starts the dev server with `runtime_serving="local"`
+- **THEN** all PyScript core bundle `.js` and `.css` files SHALL be available at `/_webcompy-assets/{filename}`
 
 ### Requirement: The dev server shall serve runtime and WASM assets from disk
 When `runtime_serving="local"` or `wasm_serving="local"`, the dev server SHALL serve assets directly from the project-local cache directory using `FileResponse` or equivalent disk-based streaming.
 
+#### Scenario: Serving a local runtime asset
+- **WHEN** a browser requests `/_webcompy-assets/core.js` and `runtime_serving="local"`
+- **THEN** the server SHALL stream the file from the project-local cache directory
+- **AND** the file SHALL NOT be fully loaded into memory before the response begins
+
 ### Requirement: Downloaded runtime assets SHALL be verified against lock file hashes
 When `runtime_serving="local"`, the CLI SHALL compute SHA256 hashes of all downloaded runtime assets and verify them against the lock file.
+
+#### Scenario: First build with runtime_serving=local
+- **WHEN** a developer runs `webcompy generate --runtime-serving local` for the first time
+- **THEN** runtime assets SHALL be downloaded and their SHA256 hashes computed
+- **AND** the lock file SHALL be updated with `runtime_assets` entries containing URLs and computed SHA256 hashes
+
+#### Scenario: Subsequent build with runtime_serving=local
+- **WHEN** a developer runs `webcompy generate --runtime-serving local` and the lock file contains `runtime_assets` with SHA256 hashes
+- **THEN** downloaded runtime assets SHALL be verified against the lock file hashes
 
 ### Requirement: Temporary directories used for runtime asset downloads SHALL be cleaned up
 When `webcompy generate` or `webcompy start` creates temporary directories for CDN pure-Python wheel extraction for bundling, those directories SHALL be cleaned up after use.
 
+#### Scenario: Temporary directory cleanup after CDN wheel extraction
+- **WHEN** `webcompy generate` or `webcompy start` with `serve_all_deps=True` completes
+- **AND** CDN pure-Python wheels were extracted for bundling
+- **THEN** any temporary directories created for wheel extraction SHALL be removed
+
 ### Requirement: Runtime-local HTML shall reference local runtime asset URLs and configure PyScript for local Pyodide
 In runtime-local mode, `generate_html()` SHALL replace PyScript and Pyodide CDN URLs with same-origin paths under `/_webcompy-assets/`. The PyScript `py-config` SHALL include `interpreter` and `lockFileURL` pointing to local Pyodide assets.
+
+#### Scenario: Runtime-local PyScript script tag
+- **WHEN** runtime-local mode is enabled
+- **THEN** the `<script type="module" src="...">` tag SHALL reference `/_webcompy-assets/core.js`
+- **AND** the CSS link SHALL reference `/_webcompy-assets/core.css`
+
+#### Scenario: Non-runtime-local HTML is unchanged
+- **WHEN** `runtime_serving="cdn"` (default)
+- **THEN** `py-config` SHALL NOT include `interpreter` or `lockFileURL`
+- **AND** script and CSS tags SHALL reference CDN URLs
 
 ### Requirement: CLI --wheel-mode flag shall override WebComPyBuildConfig.wheel_mode
 The `start` and `generate` CLI subcommands SHALL accept `--wheel-mode <mode>` where `<mode>` is `"bundled"` or `"split"`. This SHALL override `WebComPyBuildConfig.wheel_mode`.
 
+#### Scenario: Overriding with --wheel-mode split
+- **WHEN** a developer runs `python -m webcompy start --dev --wheel-mode split`
+- **THEN** split mode SHALL be used regardless of `WebComPyBuildConfig.wheel_mode`
+
 ### Requirement: The CLI shall accept --runtime-serving value flag
 The `start` and `generate` CLI subcommands SHALL accept `--runtime-serving <mode>` where `<mode>` is `"cdn"` or `"local"`. This overrides `WebComPyBuildConfig.runtime_serving`.
+
+#### Scenario: Overriding with --runtime-serving local
+- **WHEN** a developer runs `python -m webcompy start --dev --runtime-serving local`
+- **THEN** `runtime_serving` SHALL be `"local"` for the session
 
 ### Requirement: The CLI shall support standalone build mode as an orchestration of all local-serving modes
 When `standalone=True` is set, the CLI SHALL enable all local-serving modes and orchestrate the download of all required assets from CDN.
@@ -209,5 +289,24 @@ Each CLI invocation creates a fresh `WebComPyBuildConfig` instance. The `--stand
 ### Requirement: Application configuration shall support assets
 `WebComPyBuildConfig` SHALL accept an `assets` parameter that maps string keys to file paths relative to the app package directory. These assets SHALL be included in the bundled wheel and accessible at runtime via `load_asset`.
 
+#### Scenario: Configuring assets for application resources
+- **WHEN** a developer specifies `assets={"logo": "images/logo.png", "config": "data/settings.json"}`
+- **THEN** the CLI SHALL include the referenced files in the bundled wheel inside the app package tree
+- **AND** an `_assets_registry.py` module SHALL be generated mapping `"logo"` to `"app/images/logo.png"` and `"config"` to `"app/data/settings.json"`
+- **AND** those files SHALL be accessible via `load_asset("logo")` and `load_asset("config")` in the browser environment
+
+#### Scenario: Omitting assets
+- **WHEN** a developer does not specify `assets`
+- **THEN** only Python source files, stub files, and `py.typed` markers SHALL be included in the wheel
+- **AND** no `_assets_registry.py` module SHALL be generated
+
 ### Requirement: Assets shall be loadable by key at runtime
-The `webcompy.assets` module SHALL provide a `load_asset(key: str) -> bytes` function and an `AssetNotFoundError` exception.
+The `webcompy.assets` module SHALL provide a `load_asset(key: str) -> bytes` function and an `AssetNotFoundError` exception. When called, `load_asset` SHALL look up the key in the app's `_assets_registry` module and return the file content as `bytes` using `importlib.resources`.
+
+#### Scenario: Loading an asset by key
+- **WHEN** `load_asset("logo")` is called in browser code where `_assets_registry` maps `"logo"` to `"app/images/logo.png"`
+- **THEN** the function SHALL return the raw `bytes` content of `app/images/logo.png`
+
+#### Scenario: Asset key not found
+- **WHEN** `load_asset("nonexistent")` is called
+- **THEN** `AssetNotFoundError` SHALL be raised with the key as an attribute

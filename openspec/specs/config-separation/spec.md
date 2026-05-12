@@ -1,4 +1,10 @@
-## ADDED Requirements
+# Config Separation
+
+## Purpose
+
+WebComPy configuration is cleanly separated into browser-relevant settings (`WebComPyAppConfig` in `webcompy.app`) and server-only build settings (`WebComPyBuildConfig`/`WebComPyServerConfig` in `webcompy.cli.config`). This enables library usage of WebComPy in PyScript without importing any server-only modules, and ensures that browser wheels automatically exclude `webcompy.cli` via the existing `_BROWSER_ONLY_EXCLUDE` mechanism.
+
+## Requirements
 
 ### Requirement: WebComPyAppConfig shall contain only browser-relevant settings
 `WebComPyAppConfig` SHALL be a lightweight dataclass containing only settings relevant to both browser and server environments: `base_url`, `selector`, `profile`, `hydrate`, `scripts`, and `plugins`. It SHALL be importable from `webcompy.app` without importing any server-only modules. `WebComPyAppConfig` SHALL NOT contain any fields related to build configuration, dependency management, or wheel packaging.
