@@ -146,3 +146,13 @@ webcompy-lock.json
 # Playwright MCP
 .playwright-mcp/
 
+# Workspace directory for development artifacts (tracked via .gitkeep)
+.workspace/*
+!.workspace/.gitkeep
+
+# Browser test screenshots and recordings (root only, allow in static/)
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+
