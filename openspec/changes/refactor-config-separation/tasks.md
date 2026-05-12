@@ -37,10 +37,10 @@
 
 ## 6. Update project templates and scaffolding
 
-- [ ] 6.1 Update `webcompy/cli/template_data/webcompy_config.py` to use `WebComPyBuildConfig` and `WebComPyServerConfig` from `webcompy.cli.config`
-- [ ] 6.2 Rename `webcompy/cli/template_data/app/bootstrap.py` to `app.py`; update import from `webcompy_config` to use new config module
-- [ ] 6.3 Delete `webcompy/cli/template_data/webcompy_server_config.py` (merged into `webcompy_config.py`)
-- [ ] 6.4 Update `_init_project.py` to generate `app.py` instead of `bootstrap.py`; generate single `webcompy_config.py` instead of two config files
+- [x] 6.1 Update `webcompy/cli/template_data/webcompy_config.py` to use `WebComPyBuildConfig` and `WebComPyServerConfig` from `webcompy.cli.config`
+- [x] 6.2 Rename `webcompy/cli/template_data/app/bootstrap.py` to `app.py`; update import from `webcompy_config` to use new config module
+- [x] 6.3 Delete `webcompy/cli/template_data/webcompy_server_config.py` (merged into `webcompy_config.py`)
+- [x] 6.4 Update `_init_project.py` to generate `app.py` instead of `bootstrap.py`; generate single `webcompy_config.py` instead of two config files
 
 ## 7. Update docs_app
 
