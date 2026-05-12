@@ -44,10 +44,10 @@
 
 ## 7. Update docs_app
 
-- [ ] 7.1 Rename `docs_app/bootstrap.py` to `docs_app/app.py`; update internal imports
-- [ ] 7.2 Merge `docs_app/webcompy_server_config.py` into `docs_app/webcompy_config.py` using `WebComPyBuildConfig`
-- [ ] 7.3 Update `docs_app/webcompy_config.py` to use new config structure
-- [ ] 7.4 Update any references to `bootstrap` → `app` throughout `docs_app/`
+- [x] 7.1 Rename `docs_app/bootstrap.py` to `docs_app/app.py`; update internal imports
+- [x] 7.2 Merge `docs_app/webcompy_server_config.py` into `docs_app/webcompy_config.py` using `WebComPyBuildConfig`
+- [x] 7.3 Update `docs_app/webcompy_config.py` to use new config structure
+- [x] 7.4 Update any references to `bootstrap` → `app` throughout `docs_app/`
 
 ## 8. Update tests
 
