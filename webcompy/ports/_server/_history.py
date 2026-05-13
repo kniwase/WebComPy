@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from webcompy.ports._history import HistoryPort
+from webcompy.signal._base import SignalBase
 
 
 class ServerHistoryPort(HistoryPort):
@@ -14,6 +15,7 @@ class ServerHistoryPort(HistoryPort):
     def history_state(self) -> object | None:
         return self._state
 
+    @SignalBase._change_event
     def navigate(self, path: str) -> None:
         self._value = path
 

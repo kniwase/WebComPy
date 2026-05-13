@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+
 import httpx
 
 from webcompy.ports._fetch import FetchPort, Response
@@ -29,8 +31,6 @@ class ServerFetchPort(FetchPort):
     def __del__(self) -> None:
         import asyncio
 
-        try:
+        with contextlib.suppress(RuntimeError):
             loop = asyncio.get_running_loop()
             task = loop.create_task(self._client.aclose())  # noqa: F841, RUF006
-        except RuntimeError:
-            pass

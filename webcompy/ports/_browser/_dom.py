@@ -17,20 +17,28 @@ class BrowserDOMNode(DOMNode):
         self._node = node
 
     def append_child(self, child: DOMNode) -> None:
-        if isinstance(child, BrowserDOMNode):
-            self._node.appendChild(child._node)
+        if not isinstance(child, BrowserDOMNode):
+            raise TypeError(f"Expected BrowserDOMNode, got {type(child).__name__}")
+        self._node.appendChild(child._node)
 
     def remove_child(self, child: DOMNode) -> None:
-        if isinstance(child, BrowserDOMNode):
-            self._node.removeChild(child._node)
+        if not isinstance(child, BrowserDOMNode):
+            raise TypeError(f"Expected BrowserDOMNode, got {type(child).__name__}")
+        self._node.removeChild(child._node)
 
     def insert_before(self, new_node: DOMNode, ref_node: DOMNode) -> None:
-        if isinstance(new_node, BrowserDOMNode) and isinstance(ref_node, BrowserDOMNode):
-            self._node.insertBefore(new_node._node, ref_node._node)
+        if not isinstance(new_node, BrowserDOMNode):
+            raise TypeError(f"Expected BrowserDOMNode, got {type(new_node).__name__}")
+        if not isinstance(ref_node, BrowserDOMNode):
+            raise TypeError(f"Expected BrowserDOMNode, got {type(ref_node).__name__}")
+        self._node.insertBefore(new_node._node, ref_node._node)
 
     def replace_child(self, new_node: DOMNode, old_node: DOMNode) -> None:
-        if isinstance(new_node, BrowserDOMNode) and isinstance(old_node, BrowserDOMNode):
-            self._node.replaceChild(new_node._node, old_node._node)
+        if not isinstance(new_node, BrowserDOMNode):
+            raise TypeError(f"Expected BrowserDOMNode, got {type(new_node).__name__}")
+        if not isinstance(old_node, BrowserDOMNode):
+            raise TypeError(f"Expected BrowserDOMNode, got {type(old_node).__name__}")
+        self._node.replaceChild(new_node._node, old_node._node)
 
     def remove(self) -> None:
         self._node.remove()

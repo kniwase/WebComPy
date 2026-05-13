@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from webcompy._browser._modules import browser as _raw_browser
 from webcompy.exception import WebComPyException
 from webcompy.ports._fetch import FetchPort, Response
@@ -22,31 +24,32 @@ class BrowserFetchPort(FetchPort):
         body: str | None = None,
     ) -> Response:
         options: dict = {"method": method}
-        if headers:
-            options["headers"] = self._browser.pyscript.ffi.create_proxy(headers)
-        if body:
-            options["body"] = body
+        headers_proxy: Any = None
+        try:
+            if headers:
+                headers_proxy = self._browser.pyscript.ffi.create_proxy(headers)
+                options["headers"] = headers_proxy
+            if body:
+                options["body"] = body
 
-        res = await self._browser.fetch(url, **options)
+            res = await self._browser.fetch(url, **options)
 
-        headers_obj = res.headers
-        response = Response(
-            text=await res.text(),
-            headers=dict(
-                zip(
-                    list(headers_obj.keys()),
-                    list(headers_obj.values()),
-                    strict=True,
-                )
-            ),
-            status_code=res.status,
-            status_text=res.statusText,
-            ok=res.ok,
-        )
-
-        if headers:
-            proxy = options.pop("headers", None)
-            if proxy and hasattr(proxy, "destroy"):
-                proxy.destroy()
+            headers_obj = res.headers
+            response = Response(
+                text=await res.text(),
+                headers=dict(
+                    zip(
+                        list(headers_obj.keys()),
+                        list(headers_obj.values()),
+                        strict=True,
+                    )
+                ),
+                status_code=res.status,
+                status_text=res.statusText,
+                ok=res.ok,
+            )
+        finally:
+            if headers_proxy is not None and hasattr(headers_proxy, "destroy"):
+                headers_proxy.destroy()
 
         return response
