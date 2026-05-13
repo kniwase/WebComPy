@@ -24,6 +24,7 @@ dependencies = [
     "sse-starlette",
     "uvicorn",
     "aiofiles",
+    "httpx",
 ]
 
 [project.urls]
