@@ -7,6 +7,8 @@ from typing import Literal
 
 from webcompy.cli.config._server_config import LockfileSyncConfig, WebComPyServerConfig
 
+_UNSET = object()
+
 
 @dataclass
 class WebComPyBuildConfig:
@@ -30,6 +32,12 @@ class WebComPyBuildConfig:
     def __post_init__(self):
         self.app_package_path = Path(self.app_module.__file__).parent  # type: ignore[arg-type]
         self.app = getattr(self.app_module, self.app_var)
+        self._explicit_wasm_serving: Literal["cdn", "local"] | object = (
+            self.wasm_serving if self.wasm_serving is not None else _UNSET
+        )
+        self._explicit_runtime_serving: Literal["cdn", "local"] | object = (
+            self.runtime_serving if self.runtime_serving is not None else _UNSET
+        )
         self.resolve_standalone()
 
     def resolve_standalone(self):
@@ -39,12 +47,10 @@ class WebComPyBuildConfig:
             if self.serve_all_deps is False:
                 print("Warning: standalone=True forces serve_all_deps=True", file=sys.stderr, flush=True)
             self.serve_all_deps = True
-            if self.wasm_serving is None:
-                self.wasm_serving = "local"
-            if self.runtime_serving is None:
-                self.runtime_serving = "local"
+            self.wasm_serving = "local" if self._explicit_wasm_serving is _UNSET else self._explicit_wasm_serving
+            self.runtime_serving = (
+                "local" if self._explicit_runtime_serving is _UNSET else self._explicit_runtime_serving
+            )
         else:
-            if self.wasm_serving is None:
-                self.wasm_serving = "cdn"
-            if self.runtime_serving is None:
-                self.runtime_serving = "cdn"
+            self.wasm_serving = "cdn" if self._explicit_wasm_serving is _UNSET else self._explicit_wasm_serving
+            self.runtime_serving = "cdn" if self._explicit_runtime_serving is _UNSET else self._explicit_runtime_serving

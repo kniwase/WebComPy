@@ -1,4 +1,4 @@
-from webcompy.cli.config._build_config import WebComPyBuildConfig
+from webcompy.cli.config._build_config import _UNSET, WebComPyBuildConfig
 
 
 class _FakeModule:
@@ -96,3 +96,69 @@ class TestResolveStandaloneConfig:
     def test_no_standalone_default_serve_all_deps_true(self):
         config = _make_config()
         assert config.serve_all_deps is True
+
+
+class TestResolveStandaloneCliOverride:
+    def test_standalone_true_then_no_standalone_resets_to_cdn(self):
+        config = _make_config(standalone=True)
+        assert config.wasm_serving == "local"
+        assert config.runtime_serving == "local"
+        config.standalone = False
+        config.resolve_standalone()
+        assert config.wasm_serving == "cdn"
+        assert config.runtime_serving == "cdn"
+
+    def test_standalone_true_explicit_wasm_preserved_after_no_standalone(self):
+        config = _make_config(standalone=True, wasm_serving="cdn")
+        assert config.wasm_serving == "cdn"
+        assert config.runtime_serving == "local"
+        config.standalone = False
+        config.resolve_standalone()
+        assert config.wasm_serving == "cdn"
+        assert config.runtime_serving == "cdn"
+
+    def test_standalone_false_then_standalone_true_resets_to_local(self):
+        config = _make_config(standalone=False)
+        assert config.wasm_serving == "cdn"
+        assert config.runtime_serving == "cdn"
+        config.standalone = True
+        config.resolve_standalone()
+        assert config.wasm_serving == "local"
+        assert config.runtime_serving == "local"
+
+    def test_standalone_false_explicit_local_preserved_after_standalone_true(self):
+        config = _make_config(standalone=False, wasm_serving="local")
+        assert config.wasm_serving == "local"
+        assert config.runtime_serving == "cdn"
+        config.standalone = True
+        config.resolve_standalone()
+        assert config.wasm_serving == "local"
+        assert config.runtime_serving == "local"
+
+    def test_cli_override_wasm_serving_marked_explicit(self):
+        config = _make_config(standalone=True)
+        config.wasm_serving = "cdn"
+        config._explicit_wasm_serving = "cdn"
+        config.standalone = False
+        config.resolve_standalone()
+        assert config.wasm_serving == "cdn"
+        assert config.runtime_serving == "cdn"
+
+    def test_cli_override_runtime_serving_marked_explicit(self):
+        config = _make_config(standalone=True)
+        config.runtime_serving = "local"
+        config._explicit_runtime_serving = "local"
+        config.standalone = False
+        config.resolve_standalone()
+        assert config.wasm_serving == "cdn"
+        assert config.runtime_serving == "local"
+
+    def test_explicit_unset_sentinel_tracked(self):
+        config = _make_config()
+        assert config._explicit_wasm_serving is _UNSET
+        assert config._explicit_runtime_serving is _UNSET
+
+    def test_explicit_values_tracked_on_init(self):
+        config = _make_config(wasm_serving="local", runtime_serving="cdn")
+        assert config._explicit_wasm_serving == "local"
+        assert config._explicit_runtime_serving == "cdn"

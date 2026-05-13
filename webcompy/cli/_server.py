@@ -377,9 +377,11 @@ def run_server(app: WebComPyApp | None = None):
     wasm_serving = args.get("wasm_serving")
     if wasm_serving is not None:
         build_config.wasm_serving = wasm_serving
+        build_config._explicit_wasm_serving = wasm_serving
     runtime_serving = args.get("runtime_serving")
     if runtime_serving is not None:
         build_config.runtime_serving = runtime_serving
+        build_config._explicit_runtime_serving = runtime_serving
     standalone = args.get("standalone")
     if standalone is not None:
         build_config.standalone = standalone
