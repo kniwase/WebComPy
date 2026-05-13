@@ -28,6 +28,9 @@ class ServerFetchPort(FetchPort):
             ok=res.is_success,
         )
 
+    async def close(self) -> None:
+        await self._client.aclose()
+
     def __del__(self) -> None:
         import asyncio
 

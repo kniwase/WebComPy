@@ -15,6 +15,7 @@ class BrowserDOMNode(DOMNode):
         assert _raw_browser is not None
         self._browser = _raw_browser
         self._node = node
+        self._event_proxies: dict[tuple[str, int, bool], Any] = {}
 
     def append_child(self, child: DOMNode) -> None:
         if not isinstance(child, BrowserDOMNode):
@@ -66,8 +67,10 @@ class BrowserDOMNode(DOMNode):
         *,
         capture: bool = False,
     ) -> None:
-        handler = self._browser.pyscript.ffi.create_proxy(handler)
-        self._node.addEventListener(event_type, handler, capture)
+        proxy = self._browser.pyscript.ffi.create_proxy(handler)
+        key = (event_type, id(handler), capture)
+        self._event_proxies[key] = proxy
+        self._node.addEventListener(event_type, proxy, capture)
 
     def remove_event_listener(
         self,
@@ -76,7 +79,13 @@ class BrowserDOMNode(DOMNode):
         *,
         capture: bool = False,
     ) -> None:
-        self._node.removeEventListener(event_type, handler, capture)
+        key = (event_type, id(handler), capture)
+        proxy = self._event_proxies.get(key)
+        if proxy is not None:
+            self._node.removeEventListener(event_type, proxy, capture)
+            if hasattr(proxy, "destroy"):
+                proxy.destroy()
+            del self._event_proxies[key]
 
     @property
     def text_content(self) -> str | None:
@@ -140,5 +149,4 @@ class BrowserDOMPort(DOMPort):
         self._browser.document.title = title
 
     def schedule_macro_task(self, callback: Any) -> None:
-        callback = self._browser.pyscript.ffi.create_proxy(callback)
         self._browser.window.setTimeout(callback, 0)
