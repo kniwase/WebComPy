@@ -2,179 +2,106 @@
 
 ## Purpose
 
-Project configuration separates browser-relevant app settings from server-side-only settings using two configuration files. `webcompy_config.py` contains settings shared between browser and server environments (including the app import path for CLI discovery), while `webcompy_server_config.py` contains settings only needed for development, serving, and static site generation. This separation ensures that browser code never imports server-only dependencies and allows CLI tools to discover the application without mandatory `--app` flags. Configuration files can be placed either at the project root or inside the app package directory.
+Project configuration uses a single configuration file (`webcompy_config.py`) containing a `WebComPyBuildConfig` instance that holds all build-time and server settings. This consolidates the former two-file pattern (`webcompy_config.py` and `webcompy_server_config.py`) into one file, and replaces the `app_import_path` string with a direct module import pattern. The app entry point file is named `app.py` (formerly `bootstrap.py`).
 
 ## Requirements
 
-### Requirement: Project configuration shall use a two-file pattern
-The project SHALL use two configuration files: `webcompy_config.py` for app-shared settings and `webcompy_server_config.py` for server-only settings. `webcompy_config.py` SHALL contain `app_import_path` (a string in `"module.path:variable_name"` format) and `app_config` (an `AppConfig` instance). `webcompy_server_config.py` SHALL contain `server_config` (a `ServerConfig` instance) and `generate_config` (a `GenerateConfig` instance). Configuration files SHALL be placed either at the project root or inside the app package directory.
+### Requirement: Project configuration shall use a single config file
+The project SHALL use a single configuration file: `webcompy_config.py`. This file SHALL contain `config = WebComPyBuildConfig(app_module, ...)` with all build and server settings. The former `webcompy_server_config.py` is removed. `WebComPyBuildConfig` is imported from `webcompy.cli.config`. The app module SHALL be imported via `import my_app.app as app_module` (not `from my_app.app import app`, as the latter returns the instance, losing access to `__file__`). The app entry point file SHALL be named `app.py` (formerly `bootstrap.py`).
 
-#### Scenario: Creating a minimal project configuration at the project root
-- **WHEN** a developer creates `webcompy_config.py` at the project root with `app_import_path = "my_app.bootstrap:app"` and `app_config = AppConfig(app_package="my_app")`
-- **THEN** the CLI SHALL be able to discover the app without `--app`
-- **AND** `bootstrap.py` SHALL be able to import `app_config` from `webcompy_config`
+#### Scenario: Creating a project configuration
+- **WHEN** a developer creates `webcompy_config.py` at the project root with:
+  ```python
+  import my_app.app as app_module
+  from webcompy.cli.config import WebComPyBuildConfig, WebComPyServerConfig
+
+  config = WebComPyBuildConfig(
+      app_module,
+      dependencies=None,
+      dependencies_from="browser",
+      server=WebComPyServerConfig(port=8080),
+  )
+  ```
+- **THEN** the CLI SHALL be able to discover the app and config without `--config`
+- **AND** `app.py` SHALL be the app entry point (not `bootstrap.py`)
 
 #### Scenario: Creating a project configuration inside the app package
-- **WHEN** a developer creates `webcompy_config.py` inside the `my_app/` package with `app_import_path = "my_app.bootstrap:app"` and `app_config = AppConfig(app_package=Path(__file__).parent)`
-- **AND** the developer runs `python -m webcompy start --app my_app.bootstrap:app`
-- **THEN** the CLI SHALL discover the app via the `--app` flag
-- **AND** server/generate config SHALL be read from `my_app.webcompy_server_config` if present
-
-#### Scenario: Creating a server configuration
-- **WHEN** a developer creates `webcompy_server_config.py` with `server_config = ServerConfig(port=8080)` and `generate_config = GenerateConfig(dist="dist")`
-- **THEN** `run_server()` SHALL use `server_config.port` as the default port
-- **AND** `generate_static_site()` SHALL use `generate_config.dist` as the default output directory
+- **WHEN** a developer creates `webcompy_config.py` inside the `my_app/` package
+- **AND** runs `python -m webcompy start --config my_app/webcompy_config.py`
+- **THEN** the CLI SHALL discover the app via the config
 
 #### Scenario: Omitting server configuration
-- **WHEN** a developer does not create `webcompy_server_config.py`
-- **THEN** `ServerConfig()` defaults SHALL be used for serving
-- **AND** `GenerateConfig()` defaults SHALL be used for SSG
-- **AND** the application SHALL function correctly
+- **WHEN** a developer creates `WebComPyBuildConfig(app)` without `server`
+- **THEN** `WebComPyServerConfig()` defaults SHALL be used (`port=8080`, `dev=False`)
 
-### Requirement: CLI shall discover the app via app_import_path
-The CLI SHALL discover the `WebComPyApp` instance by first checking the `--app` CLI flag, then falling back to `webcompy_config.py`'s `app_import_path`. When `--app` is provided, the CLI SHALL derive the app package from the import path and search for configuration files in that package first, then fall back to the project root. The `app_import_path` SHALL follow the `"module.path:variable_name"` format. The `discover_app` function in `webcompy.cli` SHALL return a tuple of `(WebComPyApp, str | None)`, where the second element is the derived package name (or `None` for top-level modules). The `get_server_config` and `get_generate_config` functions SHALL accept an optional `package` parameter to search package-level config first.
+### Requirement: CLI shall discover the app via --config or webcompy_config.py
+The CLI SHALL discover the `WebComPyApp` instance and build configuration by first checking the `--config` CLI flag, then falling back to `webcompy_config.py` in the current working directory. The `--app` flag is removed. The `--config` flag accepts a Python import path string (e.g., `"my_project.webcompy_config"`). The config module's parent directory must be on `sys.path`. The default CWD-based discovery works because CWD is on `sys.path`.
 
-#### Scenario: Discovery via --app flag
-- **WHEN** a developer runs `python -m webcompy start --app my_app.bootstrap:app`
-- **THEN** the CLI SHALL import `my_app.bootstrap` and get the `app` attribute
-- **AND** the CLI SHALL derive the package as `"my_app"`
-- **AND** `webcompy_config.py` SHALL NOT be required
-- **AND** `webcompy_server_config.py` SHALL be searched first as `my_app.webcompy_server_config`, then as root-level `webcompy_server_config`
+#### Scenario: Discovery via --config flag
+- **WHEN** a developer runs `python -m webcompy start --config path.to.my_config`
+- **THEN** the CLI SHALL import `path.to.my_config` and get the `config` attribute
+- **AND** `config.app` SHALL be the computed `WebComPyApp` instance
+- **AND** `config.app_package_path` SHALL be derived from `config.app_module.__file__`
+- **AND** `config.server` SHALL provide server settings
 
 #### Scenario: Discovery via root-level webcompy_config.py
-- **WHEN** a developer runs `python -m webcompy start` without `--app`
-- **AND** `webcompy_config.py` exists at the project root with `app_import_path = "my_app.bootstrap:app"`
-- **THEN** the CLI SHALL import `my_app.bootstrap` and get the `app` attribute
+- **WHEN** a developer runs `python -m webcompy start` without `--config`
+- **AND** `webcompy_config.py` exists at the project root with `config = WebComPyBuildConfig(app, ...)`
+- **THEN** the CLI SHALL import `webcompy_config` and get the `config` attribute
 
-#### Scenario: No app_import_path and no --app flag
-- **WHEN** a developer runs `python -m webcompy start` without `--app`
-- **AND** no `webcompy_config.py` exists at the project root or it has no `app_import_path`
-- **THEN** a clear error SHALL be raised indicating that either `--app` or `webcompy_config.py` with `app_import_path` is required
-
-### Requirement: dist and static_files_dir shall be resolved relative to the app package directory
-The `dist` and `static_files_dir` values in `GenerateConfig` SHALL be resolved relative to `app_package_path` (the resolved absolute path of `AppConfig.app_package`). When the value is an absolute path, it SHALL be used as-is. When relative, it SHALL be joined with `app_package_path` and then resolved to an absolute path.
-
-#### Scenario: Relative dist resolved against app_package_path
-- **WHEN** `AppConfig(app_package="my_app")` and `GenerateConfig(dist="dist")`
-- **THEN** static site output SHALL be written to `<app_package_path>/dist/`
-
-#### Scenario: Relative static_files_dir resolved against app_package_path
-- **WHEN** `AppConfig(app_package="my_app")` and `GenerateConfig(static_files_dir="static")`
-- **THEN** static files SHALL be read from `<app_package_path>/static/`
-
-#### Scenario: Absolute dist path bypasses app_package_path
-- **WHEN** `AppConfig(app_package="my_app")` and `GenerateConfig(dist="/tmp/out")`
-- **THEN** static site output SHALL be written to `/tmp/out/`
-
-#### Scenario: Default app_package resolves to CWD
-- **WHEN** `AppConfig()` with default `app_package="."` and `GenerateConfig(dist="dist")`
-- **THEN** `app_package_path` SHALL equal the project root (CWD)
-- **AND** static site output SHALL be written to `./dist/` (unchanged from previous behavior)
-
-### Requirement: static_files_dir_path property shall be removed from ServerConfig and GenerateConfig
-`ServerConfig` and `GenerateConfig` SHALL NOT expose a `static_files_dir_path` property. Path resolution of `static_files_dir` SHALL occur at the call sites (`_generate.py` and `_server.py`) where `app_package_path` is available. The `static_files_dir` string field SHALL remain as the user-facing configuration value.
-
-#### Scenario: static_files_dir is resolved in generate context
-- **WHEN** `generate_static_site()` runs
-- **THEN** `static_files_dir` SHALL be resolved as `(app.config.app_package_path / generate_config.static_files_dir).absolute()`
-
-#### Scenario: static_files_dir is resolved in server context
-- **WHEN** `create_asgi_app()` runs
-- **THEN** `static_files_dir` SHALL be resolved as `(app.config.app_package_path / server_config.static_files_dir).absolute()`
+#### Scenario: No config file and no --config flag
+- **WHEN** a developer runs `python -m webcompy start` without `--config`
+- **AND** no `webcompy_config.py` exists at the project root
+- **THEN** a clear error SHALL be raised indicating that `--config` flag or `webcompy_config.py` is required
 
 ### Requirement: CLI flags shall override config file values
-CLI flags (`--dev`, `--port`, `--dist`) SHALL override values from `webcompy_server_config.py` and the defaults. When a flag is provided, it takes precedence; when not provided, the config file value or default is used. The `--dist` CLI flag SHALL accept CWD-relative or absolute paths and SHALL bypass `app_package_path`-relative resolution.
-
-#### Scenario: Overriding port with --port
-- **WHEN** `webcompy_server_config.py` sets `server_config = ServerConfig(port=8080)`
-- **AND** a developer runs `python -m webcompy start --port 3000`
-- **THEN** the server SHALL start on port 3000
-
-#### Scenario: Overriding dist with --dist forces CWD-relative path
-- **WHEN** `webcompy_server_config.py` sets `generate_config = GenerateConfig(dist="dist")`
-- **AND** a developer runs `python -m webcompy generate --dist out`
-- **THEN** static files SHALL be generated in the CWD-relative `out` directory (bypassing `app_package_path`-relative resolution)
+CLI flags SHALL override values from `WebComPyBuildConfig` and `WebComPyServerConfig`. When a flag is provided, it takes precedence; when not provided, the config value or default is used.
 
 #### Scenario: Overriding dev mode with --dev
 - **WHEN** a developer runs `python -m webcompy start --dev`
-- **THEN** hot-reload SHALL be enabled regardless of `ServerConfig.dev` value
+- **THEN** hot-reload SHALL be enabled regardless of `WebComPyServerConfig.dev` value
 
-#### Scenario: No overrides
-- **WHEN** a developer runs `python -m webcompy start` without flags
-- **AND** `webcompy_server_config.py` sets `server_config = ServerConfig(port=8080)`
-- **THEN** the server SHALL start on port 8080
+#### Scenario: Overriding dist with --dist
+- **WHEN** a developer runs `python -m webcompy generate --dist out`
+- **THEN** static files SHALL be generated in the `out` directory (bypassing `WebComPyBuildConfig.dist`)
+
+### Requirement: Project scaffolding shall generate single config file and app.py
+`python -m webcompy init` SHALL generate a single `webcompy_config.py` at the project root with `config = WebComPyBuildConfig(...)` and an `app.py` file (not `bootstrap.py`).
+
+#### Scenario: Running webcompy init
+- **WHEN** a developer runs `python -m webcompy init`
+- **THEN** `webcompy_config.py` SHALL be created at the project root with `config = WebComPyBuildConfig(app, ...)`
+- **AND** `app.py` SHALL be created (not `bootstrap.py`)
+- **AND** the project SHALL be immediately runnable via `python -m webcompy start`
+
+### Requirement: dist and static_files_dir shall be resolved relative to the app package directory
+The `dist` and `static_files_dir` values in `WebComPyBuildConfig` SHALL be resolved relative to `app_package_path` (the resolved path from `Path(app_module.__file__).parent`). When the value is an absolute path, it SHALL be used as-is. When relative, it SHALL be joined with `app_package_path` and then resolved to an absolute path.
+
+#### Scenario: Relative dist resolved against app_package_path
+- **WHEN** `WebComPyBuildConfig(app_module)` with `dist="dist"`
+- **THEN** static site output SHALL be written to `<app_package_path>/dist/`
+
+#### Scenario: Relative static_files_dir resolved against app_package_path
+- **WHEN** `WebComPyBuildConfig(app_module)` with `static_files_dir="static"`
+- **THEN** static files SHALL be read from `<app_package_path>/static/`
+
+#### Scenario: Absolute dist path bypasses app_package_path
+- **WHEN** `WebComPyBuildConfig(app_module)` with `dist="/tmp/out"`
+- **THEN** static site output SHALL be written to `/tmp/out/`
 
 ### Requirement: LockfileSyncConfig shall configure lock file sync behavior
-`webcompy_server_config.py` SHALL support an optional `lockfile_sync_config` attribute of type `LockfileSyncConfig`. This dataclass configures how `webcompy lock --export`, `--sync`, and `--install` discover and interact with project dependency files.
+`WebComPyBuildConfig` SHALL support an optional `lockfile_sync_config` field of type `LockfileSyncConfig`. This dataclass configures how `webcompy lock --export`, `--sync`, and `--install` discover and interact with project dependency files.
 
 #### Scenario: Creating a LockfileSyncConfig with explicit requirements_path
-- **WHEN** a developer creates `webcompy_server_config.py` with `lockfile_sync_config = LockfileSyncConfig(requirements_path="../requirements.txt")`
+- **WHEN** a developer creates `WebComPyBuildConfig(app_module, lockfile_sync_config=LockfileSyncConfig(requirements_path="../requirements.txt"))`
 - **THEN** `webcompy lock --export` SHALL use the specified path instead of auto-discovery
 - **AND** the path SHALL be resolved relative to `app_package_path`
 
 #### Scenario: Creating a LockfileSyncConfig with sync_group
-- **WHEN** a developer creates `webcompy_server_config.py` with `lockfile_sync_config = LockfileSyncConfig(sync_group="browser")`
+- **WHEN** a developer creates `WebComPyBuildConfig(app_module, lockfile_sync_config=LockfileSyncConfig(sync_group="browser"))`
 - **THEN** `webcompy lock --sync` SHALL compare `[project.optional-dependencies.browser]` from `pyproject.toml` instead of `[project.dependencies]`
 
 #### Scenario: Omitting LockfileSyncConfig
-- **WHEN** a developer does not include `lockfile_sync_config` in `webcompy_server_config.py`
+- **WHEN** a developer does not include `lockfile_sync_config` in `WebComPyBuildConfig`
 - **THEN** lock file sync commands SHALL use auto-discovery (walk up from `app_package_path` to find `pyproject.toml`)
 - **AND** `--sync` SHALL compare `[project.dependencies]` by default
-
-#### Scenario: Recording auto-discovered path
-- **WHEN** a developer runs `webcompy lock --export` for the first time
-- **AND** `LockfileSyncConfig.requirements_path` is not set
-- **AND** auto-discovery finds the project root
-- **THEN** `LockfileSyncConfig.requirements_path` SHALL be written to `webcompy_server_config.py` with the discovered relative path
-
-### Requirement: Project setup examples shall cover common package managers
-The WebComPy documentation SHALL provide setup examples for projects using `uv` (recommended) and `poetry` as their package manager, showing how to configure `LockfileSyncConfig` and `pyproject.toml` for each workflow.
-
-#### Scenario: Setting up a WebComPy project with uv
-- **WHEN** a developer uses `uv` for dependency management
-- **THEN** the documentation SHALL show how to:
-  1. Create a `pyproject.toml` with browser dependencies in `[project.dependencies]` or `[project.optional-dependencies.browser]`
-  2. Set `LockfileSyncConfig(sync_group="browser")` in `webcompy_server_config.py` if using optional dependencies
-  3. Run `webcompy lock` to generate the lock file
-  4. Run `webcompy lock --install` to install matching versions locally
-  5. Use `uv pip install -r requirements.txt` as an alternative after `webcompy lock --export`
-
-#### Scenario: Setting up a WebComPy project with poetry
-- **WHEN** a developer uses `poetry` for dependency management
-- **THEN** the documentation SHALL show how to:
-  1. Create a `pyproject.toml` with `[tool.poetry.dependencies]` or `[project.optional-dependencies.browser]`
-  2. Set `LockfileSyncConfig(sync_group="browser")` if using optional dependencies
-  3. Run `webcompy lock` to generate the lock file
-  4. Run `webcompy lock --sync` to compare poetry-managed versions with the lock file
-  5. Note that `webcompy lock --install` uses `uv pip` or `pip`, not `poetry install`
-
-### Requirement: Project scaffolding shall generate two config files
-`python -m webcompy init` SHALL generate both `webcompy_config.py` (with `app_import_path` and `app_config`) and `webcompy_server_config.py` (with `server_config` and `generate_config`) at the project root.
-
-#### Scenario: Running webcompy init
-- **WHEN** a developer runs `python -m webcompy init`
-- **THEN** `webcompy_config.py` SHALL be created at the project root with `app_import_path` and `app_config`
-- **AND** `webcompy_server_config.py` SHALL be created at the project root with `server_config` and `generate_config`
-- **AND** `bootstrap.py` SHALL import `app_config` from `webcompy_config`
-- **AND** the project SHALL be immediately runnable via `python -m webcompy start`
-- **AND** `lockfile_sync_config` SHALL NOT be included in the generated `webcompy_server_config.py` (it is optional and auto-discovery handles the default case)
-
-### Requirement: AppConfig dependencies shall default to None and support auto-population from pyproject.toml
-`AppConfig.dependencies` SHALL default to `None`. When `None`, the CLI SHALL auto-populate it from `pyproject.toml` using the group specified by `AppConfig.dependencies_from`. When set to an explicit list, it SHALL be used as-is. Version specifiers in `pyproject.toml` entries SHALL be stripped — only package names are used.
-
-#### Scenario: Configuring dependencies with dependencies_from
-- **WHEN** a developer creates `AppConfig(dependencies=None, dependencies_from="browser")`
-- **AND** `pyproject.toml` has `[project.optional-dependencies] browser = ["numpy", "matplotlib"]`
-- **THEN** the CLI SHALL resolve `dependencies` to `["numpy", "matplotlib"]` before lock file generation
-
-#### Scenario: Configuring dependencies explicitly (backward compatible)
-- **WHEN** a developer creates `AppConfig(dependencies=["numpy", "matplotlib"])`
-- **THEN** the CLI SHALL use the explicit list without reading `pyproject.toml`
-
-#### Scenario: Default dependencies_from reads project.dependencies
-- **WHEN** a developer creates `AppConfig(dependencies=None)` without `dependencies_from`
-- **THEN** the CLI SHALL read `[project.dependencies]` from `pyproject.toml`
-
-#### Scenario: dependencies_from and sync_group mismatch
-- **WHEN** `AppConfig(dependencies_from="browser")` and `LockfileSyncConfig(sync_group="deps")` differ
-- **THEN** a warning SHALL be emitted indicating potential inconsistency

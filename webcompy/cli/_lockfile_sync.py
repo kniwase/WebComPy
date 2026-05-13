@@ -8,10 +8,14 @@ import shutil
 import subprocess
 import sys
 import tomllib
+from typing import TYPE_CHECKING
 
-from webcompy.app._config import LockfileSyncConfig
 from webcompy.cli._exception import WebComPyCliException
 from webcompy.cli._lockfile import Lockfile
+from webcompy.cli.config._server_config import LockfileSyncConfig
+
+if TYPE_CHECKING:
+    from webcompy.cli.config._build_config import WebComPyBuildConfig
 
 
 def discover_project_root(app_package_path: pathlib.Path) -> pathlib.Path:
@@ -20,7 +24,7 @@ def discover_project_root(app_package_path: pathlib.Path) -> pathlib.Path:
             return dir_path
     raise WebComPyCliException(
         f"Could not find pyproject.toml above {app_package_path}. "
-        "Set LockfileSyncConfig.requirements_path in webcompy_server_config.py."
+        "Set LockfileSyncConfig.requirements_path in webcompy_config.py."
     )
 
 
@@ -68,12 +72,12 @@ def record_requirements_path(
         if config_module_path is not None:
             return config_module_path
         for candidate in [
-            app_package_path / "webcompy_server_config.py",
+            app_package_path / "webcompy_config.py",
         ]:
             if candidate.exists():
                 return candidate
         for dir_path in app_package_path.parents:
-            candidate = dir_path / "webcompy_server_config.py"
+            candidate = dir_path / "webcompy_config.py"
             if candidate.exists():
                 return candidate
         return None
@@ -81,7 +85,7 @@ def record_requirements_path(
     config_path = _find_config_module()
     if config_path is None or not config_path.exists():
         print(
-            f"Warning: Could not find webcompy_server_config.py to record requirements_path. "
+            f"Warning: Could not find webcompy_config.py to record requirements_path. "
             f"Please add: lockfile_sync_config = LockfileSyncConfig(requirements_path='{rel_path}')",
             file=sys.stderr,
         )
@@ -99,7 +103,7 @@ def record_requirements_path(
         return
     new_lines = []
     if not has_lockfile_sync_import:
-        new_lines.append("from webcompy.app._config import LockfileSyncConfig")
+        new_lines.append("from webcompy.cli.config import LockfileSyncConfig")
     new_lines.append(f"lockfile_sync_config = LockfileSyncConfig(requirements_path='{rel_path}')")
     with open(config_path, "a", encoding="utf-8") as f:
         f.write("\n" + "\n".join(new_lines) + "\n")
@@ -291,46 +295,47 @@ def _parse_dependency_name(dep: str) -> str:
     return dep
 
 
-def resolve_dependencies(app, lockfile_sync_config: LockfileSyncConfig | None = None) -> None:
-    if app.config.dependencies is not None:
+def resolve_dependencies(build_config: WebComPyBuildConfig) -> None:
+    if build_config.dependencies is not None:
         return
-    project_root = discover_project_root(app.config.app_package_path)
+    project_root = discover_project_root(build_config.app_package_path)
     pyproject_path = project_root / "pyproject.toml"
     try:
         with open(pyproject_path, "rb") as f:
             data = tomllib.load(f)
     except Exception as e:
         raise WebComPyCliException(f"Error reading pyproject.toml: {e}") from e
-    if app.config.dependencies_from is None:
+    if build_config.dependencies_from is None:
         deps = data.get("project", {}).get("dependencies", None)
         if deps is None:
             raise WebComPyCliException(
                 "No [project.dependencies] found in pyproject.toml. "
-                "Set AppConfig.dependencies explicitly or add [project.dependencies]."
+                "Set WebComPyBuildConfig.dependencies explicitly or add [project.dependencies]."
             )
     else:
         opt_deps = data.get("project", {}).get("optional-dependencies", None)
         if opt_deps is None:
             raise WebComPyCliException(
                 f"No [project.optional-dependencies] found in pyproject.toml. "
-                f"Set AppConfig.dependencies explicitly or add [project.optional-dependencies.{app.config.dependencies_from}]."
+                f"Set WebComPyBuildConfig.dependencies explicitly or add [project.optional-dependencies.{build_config.dependencies_from}]."
             )
-        deps = opt_deps.get(app.config.dependencies_from, None)
+        deps = opt_deps.get(build_config.dependencies_from, None)
         if deps is None:
             raise WebComPyCliException(
-                f"No [project.optional-dependencies.{app.config.dependencies_from}] found in pyproject.toml. "
-                f"Set AppConfig.dependencies explicitly or add the optional-dependencies group."
+                f"No [project.optional-dependencies.{build_config.dependencies_from}] found in pyproject.toml. "
+                f"Set WebComPyBuildConfig.dependencies explicitly or add the optional-dependencies group."
             )
-    app.config.dependencies = [_parse_dependency_name(dep) for dep in deps]
+    build_config.dependencies = [_parse_dependency_name(dep) for dep in deps]
     if (
-        app.config.dependencies_from is not None
-        and lockfile_sync_config is not None
-        and lockfile_sync_config.sync_group is not None
-        and app.config.dependencies_from != lockfile_sync_config.sync_group
+        build_config.dependencies_from is not None
+        and build_config.lockfile_sync_config is not None
+        and build_config.lockfile_sync_config.sync_group is not None
+        and build_config.dependencies_from != build_config.lockfile_sync_config.sync_group
     ):
-        print(
-            f'⚠ AppConfig.dependencies_from="{app.config.dependencies_from}" differs from '
-            f'LockfileSyncConfig.sync_group="{lockfile_sync_config.sync_group}". '
-            "This may cause inconsistencies between lock file generation and sync comparison.",
-            file=sys.stderr,
+        import sys as _sys
+
+        _sys.stderr.write(
+            f'⚠ WebComPyBuildConfig.dependencies_from="{build_config.dependencies_from}" differs from '
+            f'LockfileSyncConfig.sync_group="{build_config.lockfile_sync_config.sync_group}". '
+            "This may cause inconsistencies between lock file generation and sync comparison.\n"
         )

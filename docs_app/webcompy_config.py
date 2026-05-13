@@ -1,16 +1,15 @@
-from pathlib import Path
+import docs_app.app as app_module
+from webcompy.cli.config import LockfileSyncConfig, WebComPyBuildConfig, WebComPyServerConfig
 
-from webcompy.app import AppConfig
-
-app_import_path = "docs_app.bootstrap:app"
-# Uses split mode to dogfood two-wheel serving and independently cache the
-# framework wheel across docs deployments.
-app_config = AppConfig(
-    app_package=Path(__file__).parent,
-    base_url="/",
+config = WebComPyBuildConfig(
+    app_module,
     dependencies=None,
     dependencies_from="browser",
     standalone=True,
-    plugins=["docs_app.plugins:ErudaPlugin"],
     wheel_mode="split",
+    dist="dist",
+    cname="webcompy.net",
+    static_files_dir="static",
+    lockfile_sync_config=LockfileSyncConfig(sync_group="browser"),
+    server=WebComPyServerConfig(port=8080),
 )

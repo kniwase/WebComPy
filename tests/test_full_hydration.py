@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from tests.conftest import FakeDOMNode
-from webcompy.app._config import AppConfig
+from webcompy.app._config import WebComPyAppConfig
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._text import TextElement
@@ -227,15 +227,15 @@ class TestHydrateNode:
 
 class TestAppConfigHydrate:
     def test_app_config_hydrate_default_true(self):
-        config = AppConfig()
+        config = WebComPyAppConfig()
         assert config.hydrate is True
 
     def test_app_config_hydrate_false(self):
-        config = AppConfig(hydrate=False)
+        config = WebComPyAppConfig(hydrate=False)
         assert config.hydrate is False
 
     def test_app_config_hydrate_true(self):
-        config = AppConfig(hydrate=True)
+        config = WebComPyAppConfig(hydrate=True)
         assert config.hydrate is True
 
 
@@ -261,8 +261,8 @@ class TestWebComPyAppHydrate:
         def HydrateRoot2(context):
             return html.DIV({}, "hello")
 
-        app = WebComPyApp(root_component=HydrateRoot2, hydrate=False)
-        assert app._hydrate is False
+        app = WebComPyApp(root_component=HydrateRoot2)
+        assert app._hydrate is True
 
     def test_app_hydrate_from_config(self):
         from webcompy.app._app import WebComPyApp
@@ -273,19 +273,6 @@ class TestWebComPyAppHydrate:
         def HydrateRoot3(context):
             return html.DIV({}, "hello")
 
-        config = AppConfig(hydrate=False)
+        config = WebComPyAppConfig(hydrate=False)
         app = WebComPyApp(root_component=HydrateRoot3, config=config)
-        assert app._hydrate is False
-
-    def test_app_hydrate_parameter_overrides_config(self):
-        from webcompy.app._app import WebComPyApp
-        from webcompy.components._generator import define_component
-        from webcompy.elements import html
-
-        @define_component
-        def HydrateRoot4(context):
-            return html.DIV({}, "hello")
-
-        config = AppConfig(hydrate=True)
-        app = WebComPyApp(root_component=HydrateRoot4, hydrate=False, config=config)
         assert app._hydrate is False

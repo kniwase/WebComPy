@@ -1,6 +1,4 @@
-from webcompy_config import app_config
-
-from webcompy.app import WebComPyApp
+from webcompy.app import WebComPyApp, WebComPyAppConfig
 
 from .components.root import Root
 from .router import router
@@ -8,7 +6,7 @@ from .router import router
 app = WebComPyApp(
     root_component=Root,
     router=router,
-    config=app_config,
+    config=WebComPyAppConfig(base_url="/"),
 )
 app.set_head(
     {

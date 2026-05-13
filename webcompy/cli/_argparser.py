@@ -28,9 +28,9 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         help="server port",
     )
     parser_start.add_argument(
-        "--app",
+        "--config",
         type=str,
-        help="import path for app instance (e.g., my_app.bootstrap:app)",
+        help="Python import path for config module (e.g., my_project.webcompy_config)",
     )
     serve_all_deps_flags = parser_start.add_mutually_exclusive_group()
     serve_all_deps_flags.add_argument(
@@ -92,9 +92,9 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         help="dist dir",
     )
     parser_generate.add_argument(
-        "--app",
+        "--config",
         type=str,
-        help="import path for app instance (e.g., my_app.bootstrap:app)",
+        help="Python import path for config module (e.g., my_project.webcompy_config)",
     )
     serve_all_deps_flags = parser_generate.add_mutually_exclusive_group()
     serve_all_deps_flags.add_argument(
@@ -159,9 +159,9 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         help="Generates or updates webcompy-lock.json.",
     )
     parser_lock.add_argument(
-        "--app",
+        "--config",
         type=str,
-        help="import path for app instance (e.g., my_app.bootstrap:app)",
+        help="Python import path for config module (e.g., my_project.webcompy_config)",
     )
     lock_flags = parser_lock.add_mutually_exclusive_group()
     lock_flags.add_argument(

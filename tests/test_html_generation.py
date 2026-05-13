@@ -2,7 +2,7 @@ import json
 import re
 
 from webcompy.app._app import WebComPyApp
-from webcompy.app._config import AppConfig
+from webcompy.app._config import WebComPyAppConfig
 from webcompy.cli._html import generate_html
 from webcompy.components._generator import define_component
 
@@ -17,7 +17,7 @@ def _TestRoot(context):
 def _make_app(**config_kwargs):
     return WebComPyApp(
         root_component=_TestRoot,
-        config=AppConfig(app_package=".", **config_kwargs),
+        config=WebComPyAppConfig(**config_kwargs),
     )
 
 
@@ -32,6 +32,7 @@ class TestGenerateHtmlDefaultMode:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -46,6 +47,7 @@ class TestGenerateHtmlDefaultMode:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -64,6 +66,7 @@ class TestGenerateHtmlWasmLocalServing:
         }
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -84,6 +87,7 @@ class TestGenerateHtmlWasmLocalServing:
         }
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -99,6 +103,7 @@ class TestGenerateHtmlWasmLocalServing:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -112,6 +117,7 @@ class TestGenerateHtmlWasmLocalServing:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -128,6 +134,7 @@ class TestGenerateHtmlWasmLocalServing:
         }
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -159,6 +166,7 @@ class TestGenerateHtmlRuntimeLocalServing:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -172,6 +180,7 @@ class TestGenerateHtmlRuntimeLocalServing:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -185,6 +194,7 @@ class TestGenerateHtmlRuntimeLocalServing:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -199,6 +209,7 @@ class TestGenerateHtmlRuntimeLocalServing:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -213,6 +224,7 @@ class TestGenerateHtmlRuntimeLocalServing:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -228,6 +240,7 @@ class TestGenerateHtmlRuntimeLocalServing:
         app = _make_app(base_url="/myapp/")
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -246,6 +259,7 @@ class TestGenerateHtmlRuntimeLocalServing:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -261,6 +275,7 @@ class TestGenerateHtmlRuntimeLocalServing:
         app = _make_app()
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -281,6 +296,7 @@ class TestHtmlAttrsInSsgOutput:
         app.set_html_attr("data-theme", "dark")
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -294,6 +310,7 @@ class TestHtmlAttrsInSsgOutput:
         app.set_html_attr("class", "dark")
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -309,6 +326,7 @@ class TestHtmlAttrsInSsgOutput:
         app.set_html_attr("class", computed(lambda: theme.value))
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",

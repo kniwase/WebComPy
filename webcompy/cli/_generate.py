@@ -6,7 +6,6 @@ from functools import partial
 from tempfile import TemporaryDirectory
 
 from webcompy.app._app import WebComPyApp
-from webcompy.app._config import GenerateConfig
 from webcompy.cli._argparser import get_params
 from webcompy.cli._html import PYSCRIPT_VERSION, generate_html
 from webcompy.cli._lockfile import (
@@ -24,60 +23,76 @@ from webcompy.cli._pyodide_lock import PYODIDE_LOCK_URL_TEMPLATE
 from webcompy.cli._runtime_downloader import RuntimeDownloadError, download_runtime_assets
 from webcompy.cli._static_files import get_static_files
 from webcompy.cli._utils import (
-    discover_app,
+    discover_config,
     ensure_webcompy_modules_dir,
     generate_app_version,
-    get_generate_config,
     get_webcompy_packge_dir,
-    resolve_standalone_config,
 )
 from webcompy.cli._wheel_builder import (
     make_browser_webcompy_wheel,
     make_webcompy_app_package,
 )
+from webcompy.cli.config._build_config import WebComPyBuildConfig
 
 
-def generate_static_site(app: WebComPyApp | None = None, generate_config: GenerateConfig | None = None):
+def generate_static_site(app: WebComPyApp | None = None):
     _, args = get_params()
-    package = None
     if app is None:
-        app_import_path = args.get("app")
-        app, package = discover_app(app_import_path)
-    if generate_config is None:
-        generate_config = get_generate_config(package)
+        build_config = discover_config(args.get("config"))
+        app = build_config.app
+    else:
+        import types as _types
+
+        app_module = None
+        for mod in sys.modules.values():
+            if isinstance(mod, _types.ModuleType) and mod.__name__ == app.__class__.__module__:
+                continue
+            if isinstance(mod, _types.ModuleType) and hasattr(mod, "app") and mod.app is app:
+                app_module = mod
+                break
+        if app_module is None:
+            from pathlib import Path as _Path
+
+            app_module = _types.ModuleType("_webcompy_app")
+            app_module.__file__ = str(_Path.cwd())
+            app_module.app = app
+        build_config = WebComPyBuildConfig(app_module)
 
     serve_all_deps = args.get("serve_all_deps")
     if serve_all_deps is not None:
-        app.config.serve_all_deps = serve_all_deps
+        build_config.serve_all_deps = serve_all_deps
     wasm_serving = args.get("wasm_serving")
     if wasm_serving is not None:
-        app.config.wasm_serving = wasm_serving
+        build_config.wasm_serving = wasm_serving
+        build_config._explicit_wasm_serving = wasm_serving
     runtime_serving = args.get("runtime_serving")
     if runtime_serving is not None:
-        app.config.runtime_serving = runtime_serving
+        build_config.runtime_serving = runtime_serving
+        build_config._explicit_runtime_serving = runtime_serving
     standalone = args.get("standalone")
     if standalone is not None:
-        app.config.standalone = standalone
+        build_config.standalone = standalone
     wheel_mode = args.get("wheel_mode")
     if wheel_mode is not None:
-        app.config.wheel_mode = wheel_mode
-    resolve_standalone_config(app.config)
+        build_config.wheel_mode = wheel_mode
+    build_config.resolve_standalone()
 
-    resolve_dependencies(app, lockfile_sync_config=generate_config.lockfile_sync_config)
-    assert app.config.dependencies is not None
+    assert app is not None
+    resolve_dependencies(build_config)
+    assert build_config.dependencies is not None
 
-    modules_dir = app.config.app_package_path / ".webcompy_modules"
+    modules_dir = build_config.app_package_path / ".webcompy_modules"
     ensure_webcompy_modules_dir(modules_dir)
 
     with app.di_scope:
         lockfile, lockfile_errors, lockfile_warnings = resolve_lockfile(
-            app.config.dependencies,
+            build_config.dependencies,
             PYSCRIPT_VERSION,
-            app.config.app_package_path / LOCKFILE_NAME,
+            build_config.app_package_path / LOCKFILE_NAME,
             modules_dir,
-            wasm_serving=app.config.wasm_serving or "cdn",
-            runtime_serving=app.config.runtime_serving or "cdn",
-            standalone=app.config.standalone,
+            wasm_serving=build_config.wasm_serving or "cdn",
+            runtime_serving=build_config.runtime_serving or "cdn",
+            standalone=build_config.standalone,
         )
         for warning in lockfile_warnings:
             print(f"Warning: {warning}", file=sys.stderr, flush=True)
@@ -85,7 +100,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             print(f"Error: {err}", file=sys.stderr, flush=True)
 
         if lockfile is not None:
-            env_errors, env_warnings = validate_local_environment(lockfile, serve_all_deps=app.config.serve_all_deps)
+            env_errors, env_warnings = validate_local_environment(lockfile, serve_all_deps=build_config.serve_all_deps)
             for warning in env_warnings:
                 print(f"Warning: {warning}", file=sys.stderr, flush=True)
             for err in env_errors:
@@ -96,11 +111,11 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             print("Build failed due to lock file errors. Fix the above issues and try again.", file=sys.stderr)
             sys.exit(1)
 
-        bundled_deps = get_bundled_deps(lockfile, serve_all_deps=app.config.serve_all_deps)
+        bundled_deps = get_bundled_deps(lockfile, serve_all_deps=build_config.serve_all_deps)
         wasm_package_names = get_wasm_package_names(lockfile)
 
-        resolved_wasm_serving = app.config.wasm_serving or "cdn"
-        resolved_runtime_serving = app.config.runtime_serving or "cdn"
+        resolved_wasm_serving = build_config.wasm_serving or "cdn"
+        resolved_runtime_serving = build_config.runtime_serving or "cdn"
         base_url = app.config.base_url
         wasm_local_urls: dict[str, str] = {}
         wasm_wheel_paths: dict[str, pathlib.Path] = {}
@@ -139,7 +154,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                             runtime_asset_results,
                             lockfile,
                             PYSCRIPT_VERSION,
-                            app.config.app_package_path / LOCKFILE_NAME,
+                            build_config.app_package_path / LOCKFILE_NAME,
                         )
                 except RuntimeDownloadError as e:
                     print(f"Error: {e}", file=sys.stderr)
@@ -148,7 +163,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
             cdn_pure_python_names: list[str] = []
             cdn_extracted_deps: list[tuple[str, pathlib.Path]] = []
-            if not app.config.serve_all_deps:
+            if not build_config.serve_all_deps:
                 cdn_pure_python_names = get_cdn_pure_python_package_names(lockfile)
             elif lockfile is not None:
                 for name, entry in lockfile.pure_python_packages.items():
@@ -173,13 +188,13 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
 
             all_bundled_deps = bundled_deps + cdn_extracted_deps
 
-            app_version = generate_app_version(app.config.version)
-            wheel_mode = app.config.wheel_mode
+            app_version = generate_app_version(build_config.version)
+            wheel_mode = build_config.wheel_mode
 
             if args.get("dist") is not None:
                 dist_dir = pathlib.Path(args["dist"]).absolute()
             else:
-                dist_dir = (app.config.app_package_path / generate_config.dist).absolute()
+                dist_dir = (build_config.app_package_path / build_config.dist).absolute()
             if dist_dir.exists():
                 shutil.rmtree(dist_dir)
             os.mkdir(dist_dir)
@@ -188,12 +203,12 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             nojekyll_path.touch()
             print(nojekyll_path)
 
-            if generate_config.cname:
+            if build_config.cname:
                 cname_path = dist_dir / "CNAME"
-                cname_path.open("w", encoding="utf8").write(generate_config.cname)
+                cname_path.open("w", encoding="utf8").write(build_config.cname)
                 print(cname_path)
 
-            static_files_dir = (app.config.app_package_path / generate_config.static_files_dir).absolute()
+            static_files_dir = (build_config.app_package_path / build_config.static_files_dir).absolute()
             for relative_path in get_static_files(static_files_dir):
                 src = static_files_dir / relative_path
                 dst = dist_dir / relative_path
@@ -215,9 +230,9 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                 wheel_path = make_webcompy_app_package(
                     scripts_dir,
                     get_webcompy_packge_dir(),
-                    app.config.app_package_path,
+                    build_config.app_package_path,
                     app_version,
-                    app.config.assets,
+                    build_config.assets,
                     bundled_deps=all_bundled_deps or None,
                     skip_webcompy=True,
                 )
@@ -228,9 +243,9 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
                 wheel_path = make_webcompy_app_package(
                     scripts_dir,
                     get_webcompy_packge_dir(),
-                    app.config.app_package_path,
+                    build_config.app_package_path,
                     app_version,
-                    app.config.assets,
+                    build_config.assets,
                     bundled_deps=all_bundled_deps or None,
                 )
             wheel_filename = wheel_path.name
@@ -255,6 +270,7 @@ def generate_static_site(app: WebComPyApp | None = None, generate_config: Genera
             html_generator = partial(
                 generate_html,
                 app,
+                build_config.app_package_path.name,
                 False,
                 True,
                 app_version,

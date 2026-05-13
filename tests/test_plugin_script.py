@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from webcompy.app._config import AppConfig, PluginScript
+from webcompy.app._config import PluginScript, WebComPyAppConfig
 from webcompy.cli._html import generate_html
 
 
@@ -15,7 +15,7 @@ def _make_app(**config_kwargs):
 
     return WebComPyApp(
         root_component=_TestRoot,
-        config=AppConfig(app_package=".", **config_kwargs),
+        config=WebComPyAppConfig(**config_kwargs),
     )
 
 
@@ -39,12 +39,12 @@ class TestPluginScript:
         assert ps.in_head is True
 
     def test_default_scripts_field(self):
-        config = AppConfig()
+        config = WebComPyAppConfig()
         assert config.scripts == []
 
     def test_scripts_with_plugin_scripts(self):
         ps = PluginScript(attrs={"src": "https://example.com/lib.js"})
-        config = AppConfig(scripts=[ps])
+        config = WebComPyAppConfig(scripts=[ps])
         assert len(config.scripts) == 1
         assert config.scripts[0] is ps
 
@@ -61,6 +61,7 @@ class TestGenerateHtmlWithPluginScripts:
         )
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -80,6 +81,7 @@ class TestGenerateHtmlWithPluginScripts:
         )
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -99,6 +101,7 @@ class TestGenerateHtmlWithPluginScripts:
         )
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -120,6 +123,7 @@ class TestGenerateHtmlWithPluginScripts:
         )
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -140,6 +144,7 @@ class TestGenerateHtmlWithPluginScripts:
         )
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -154,6 +159,7 @@ class TestGenerateHtmlWithPluginScripts:
         app.append_script({"type": "text/javascript", "src": "https://example.com/analytics.js"})
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -173,6 +179,7 @@ class TestGenerateHtmlWithPluginScripts:
         )
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -193,6 +200,7 @@ class TestGenerateHtmlWithPluginScripts:
         )
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -216,6 +224,7 @@ class TestGenerateHtmlWithPluginScripts:
         )
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -236,6 +245,7 @@ class TestGenerateHtmlWithPluginScripts:
         )
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -255,6 +265,7 @@ class TestGenerateHtmlWithPluginScripts:
         )
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
@@ -274,6 +285,7 @@ class TestGenerateHtmlWithPluginScripts:
         )
         html_str = generate_html(
             app,
+            app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",

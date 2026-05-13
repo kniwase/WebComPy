@@ -13,7 +13,7 @@ from . import (
 )
 from ._browser import browser
 from ._version import __version__
-from .app._config import AppConfig
+from .app._config import WebComPyAppConfig
 from .assets import AssetNotFoundError, load_asset
 from .di import DIScope, InjectionError, InjectKey, inject, provide
 
@@ -24,11 +24,11 @@ else:
 
 
 __all__ = [
-    "AppConfig",
     "AssetNotFoundError",
     "DIScope",
     "InjectKey",
     "InjectionError",
+    "WebComPyAppConfig",
     "__version__",
     "aio",
     "ajax",

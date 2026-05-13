@@ -68,8 +68,6 @@ def Home(_: ComponentContext[None]):
                 ),
                 "Configure ",
                 html.CODE({}, "webcompy_config.py"),
-                " to use auto-discovery, and ",
-                html.CODE({}, "webcompy_server_config.py"),
                 " with ",
                 html.CODE({}, "LockfileSyncConfig"),
                 ":",
@@ -77,17 +75,17 @@ def Home(_: ComponentContext[None]):
                     {
                         "lang": "python",
                         "code": """
-                            # webcompy_config.py
-                            app_config = AppConfig(
-                                app_package=Path(__file__).parent / "app",
-                                base_url="/",
-                                dependencies=None,
-                                dependencies_from="browser",
-                            )
+                        # webcompy_config.py
+                        import app.app as app_module
+                        from webcompy.cli.config import WebComPyBuildConfig, LockfileSyncConfig
 
-                            # webcompy_server_config.py
-                            lockfile_sync_config = LockfileSyncConfig(sync_group="browser")
-                        """,
+                        config = WebComPyBuildConfig(
+                            app_module,
+                            dependencies=None,
+                            dependencies_from="browser",
+                            lockfile_sync_config=LockfileSyncConfig(sync_group="browser"),
+                        )
+                    """,
                     }
                 ),
                 "Generate the lock file and start the dev server:",
@@ -132,8 +130,6 @@ def Home(_: ComponentContext[None]):
                 html.BR(),
                 "Then configure ",
                 html.CODE({}, "webcompy_config.py"),
-                " and ",
-                html.CODE({}, "webcompy_server_config.py"),
                 " as shown above, and run:",
                 SyntaxHighlighting(
                     {

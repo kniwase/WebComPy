@@ -5,10 +5,7 @@ from uuid import uuid4
 
 from webcompy._browser._modules import browser
 from webcompy.components._component import Component, HeadPropsStore, _active_app_context
-from webcompy.components._generator import (
-    ComponentGenerator,
-    define_component,
-)
+from webcompy.components._generator import ComponentGenerator
 from webcompy.di._keys import _HEAD_PROPS_KEY, _ROUTER_KEY
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import html
@@ -38,18 +35,6 @@ class HeadSignal(TypedDict):
     script: list[tuple[dict[str, str], str | None]]
 
 
-def _app_root_setup(context):
-    return html.DIV({"id": "webcompy-app"}, context.slots("root"))
-
-
-_app_root_setup.__webcompy_component_definition__ = True
-
-
-@define_component
-def AppRootComponent(context):
-    return html.DIV({"id": "webcompy-app"}, context.slots("root"))
-
-
 class AppDocumentRoot(Component):
     _router: Router | None
     _links: list[dict[str, str]]
@@ -74,6 +59,15 @@ class AppDocumentRoot(Component):
         self._selector = selector
         self._app = app
 
+        _mount_id = (app.config.selector.lstrip("#") if app else None) or (
+            selector.lstrip("#") if selector else "webcompy-app"
+        )
+
+        def _root_template(context):
+            return html.DIV({"id": _mount_id}, context.slots("root"))
+
+        _root_template.__webcompy_component_definition__ = True
+
         head_props = HeadPropsStore()
         self._head_props = head_props
         di_scope.provide(_HEAD_PROPS_KEY, head_props)
@@ -96,7 +90,7 @@ class AppDocumentRoot(Component):
         self._callback_consumers: dict[str, CallbackConsumerNode] = {}
 
         with di_scope:
-            super().__init__(_app_root_setup, None, {"root": lambda: root_component(None)})
+            super().__init__(_root_template, None, {"root": lambda: root_component(None)})
 
     @property
     def render(self):
@@ -124,7 +118,7 @@ class AppDocumentRoot(Component):
                         browser.document.documentElement.setAttribute(key, expected)  # type: ignore[union-attr]
                 if self.__loading:
                     self.__loading = False
-                    selector = self._selector or "#webcompy-app"
+                    selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
                     loading_el = browser.document.querySelector(
                         f"{selector} > #webcompy-loading"
                     ) or browser.document.getElementById("webcompy-loading")
@@ -143,7 +137,7 @@ class AppDocumentRoot(Component):
 
     def _init_node(self) -> DOMNode:
         if browser:
-            selector = self._selector or "#webcompy-app"
+            selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
             node = browser.document.querySelector(selector)
             if node is None:
                 from webcompy.exception import WebComPyException as _WCE

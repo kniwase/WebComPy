@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from webcompy.app._app import WebComPyApp
-from webcompy.app._config import AppConfig, PluginScript
+from webcompy.app._config import PluginScript, WebComPyAppConfig
 from webcompy.cli._html import generate_html
 from webcompy.plugin._manager import PluginManager
 from webcompy.plugin._plugin import WebComPyPlugin, WebComPyPluginException
@@ -17,7 +17,7 @@ class _TestApp:
         def _TestRoot(context):
             return html.DIV({}, "test")
 
-        config = AppConfig(app_package=".", plugins=plugins or [])
+        config = WebComPyAppConfig(plugins=plugins or [])
         self.app = WebComPyApp(root_component=_TestRoot, config=config)
 
 
@@ -206,6 +206,7 @@ class TestGenerateHtmlWithPluginScripts:
             test_app = _TestApp(plugins=["tests.test_plugin_system:PluginForHtml"])
             html_str = generate_html(
                 test_app.app,
+                app_package_name="test_pkg",
                 dev_mode=False,
                 prerender=False,
                 app_version="0.0.0",
