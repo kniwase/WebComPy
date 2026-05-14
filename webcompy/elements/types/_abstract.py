@@ -3,12 +3,14 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import cast
 
-from webcompy._browser._modules import browser
+from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException
+from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.signal._base import CallbackConsumerNode
 from webcompy.signal._container import SignalReceivable
 from webcompy.signal._graph import consumer_destroy
+from webcompy.utils import ENVIRONMENT
 
 
 class ElementAbstract(SignalReceivable):
@@ -51,9 +53,9 @@ class ElementAbstract(SignalReceivable):
             self._mounted = True
 
     def _detach_node(self):
-        if browser and self._node_cache:
+        if ENVIRONMENT == "pyscript" and self._node_cache:
             parent_node = self._parent._get_node()
-            self._remount_to = cast("DOMNode", browser.document.createTextNode(""))
+            self._remount_to = cast("DOMNode", inject(DOM_PORT_KEY).create_text_node(""))
             parent_node.replaceChild(self._remount_to, self._node_cache)
             self._mounted = False
         else:

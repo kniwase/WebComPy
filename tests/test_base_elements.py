@@ -76,19 +76,7 @@ class TestInsertChild:
 
 
 class TestPopChild:
-    def test_pop_child_removes_at_index(self, monkeypatch):
-        import importlib
-
-        from tests.conftest import FakeBrowserModule
-
-        fake = FakeBrowserModule()
-        for mod_name in [
-            "webcompy.elements.types._element",
-            "webcompy.elements.types._abstract",
-            "webcompy.elements.types._text",
-        ]:
-            mod = importlib.import_module(mod_name)
-            monkeypatch.setattr(mod, "browser", fake)
+    def test_pop_child_removes_at_index(self):
         parent = _make_parent()
         parent._append_child("a")
         parent._append_child("b")

@@ -131,11 +131,11 @@ class BrowserDOMPort(DOMPort):
         assert _raw_browser is not None
         self._browser = _raw_browser
 
-    def create_element(self, tag: str) -> DOMNode:
-        return BrowserDOMNode(self._browser.document.createElement(tag))
+    def create_element(self, tag: str) -> Any:
+        return self._browser.document.createElement(tag)
 
-    def create_text_node(self, text: str) -> DOMNode:
-        return BrowserDOMNode(self._browser.document.createTextNode(text))
+    def create_text_node(self, text: str) -> Any:
+        return self._browser.document.createTextNode(text)
 
     def query_selector(self, selector: str) -> DOMNode | None:
         el = self._browser.document.querySelector(selector)

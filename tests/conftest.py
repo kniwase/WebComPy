@@ -276,15 +276,65 @@ def fake_document(fake_browser):
 @pytest.fixture(autouse=True)
 def reset_di_scope():
     from webcompy.components._generator import _unregistered_generators
-    from webcompy.di._scope import _active_di_scope
 
     saved = _unregistered_generators[:]
-    token = _active_di_scope.set(None) if _active_di_scope.get(None) is not None else None
     _unregistered_generators.clear()
     yield
-    if token is not None:
-        _active_di_scope.reset(token)
-    else:
-        _active_di_scope.set(None)
     _unregistered_generators.clear()
     _unregistered_generators.extend(saved)
+
+
+class FakeBrowserDOMPort:
+    def create_element(self, tag: str):
+        return FakeDOMNode(tag)
+
+    def create_text_node(self, text: str):
+        return FakeDOMNode("#text", text_content=text)
+
+    def schedule_macro_task(self, callback):
+        pass
+
+
+class FakeBrowserFFIPort:
+    def create_proxy(self, func):
+        proxy = MagicMock(side_effect=func)
+        proxy.destroy = MagicMock()
+        return proxy
+
+    def destroy_proxy(self, proxy):
+        if hasattr(proxy, "destroy"):
+            proxy.destroy()
+
+    def is_none(self, value):
+        return value is None
+
+
+@pytest.fixture
+def fake_browser_full(monkeypatch, reset_di_scope):
+    import importlib
+
+    from webcompy.di._scope import DIScope, _active_di_scope
+    from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY
+
+    modules_with_env = [
+        "webcompy.elements.types._element",
+        "webcompy.elements.types._abstract",
+        "webcompy.elements.types._text",
+        "webcompy.elements.types._switch",
+        "webcompy.elements.types._dynamic",
+        "webcompy.elements.types._repeat",
+    ]
+    for mod_name in modules_with_env:
+        mod = importlib.import_module(mod_name)
+        monkeypatch.setattr(mod, "ENVIRONMENT", "pyscript")
+
+    dom_port = FakeBrowserDOMPort()
+    ffi_port = FakeBrowserFFIPort()
+
+    scope = DIScope()
+    scope.provide(DOM_PORT_KEY, dom_port)
+    scope.provide(FFI_PORT_KEY, ffi_port)
+
+    prev_token = _active_di_scope.set(scope)
+    yield dom_port, ffi_port
+    _active_di_scope.reset(prev_token)

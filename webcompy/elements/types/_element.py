@@ -4,8 +4,8 @@ from collections.abc import Callable, Iterable
 from inspect import iscoroutinefunction
 from typing import Any, cast
 
-from webcompy._browser._modules import browser
 from webcompy.aio import resolve_async
+from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMEvent, DOMNode
 from webcompy.elements.typealias._element_property import (
     AttrValue,
@@ -16,8 +16,10 @@ from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._base import ElementWithChildren
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.exception import WebComPyException
+from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY
 from webcompy.signal._base import SignalBase
 from webcompy.signal._graph import consumer_destroy
+from webcompy.utils import ENVIRONMENT
 
 
 def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent], Any]:
@@ -27,8 +29,8 @@ def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent]
         else:
             _event_handler(ev)
 
-    if browser:
-        return browser.pyscript.ffi.create_proxy(event_handler)
+    if ENVIRONMENT == "pyscript":
+        return inject(FFI_PORT_KEY).create_proxy(event_handler)
     else:
         return event_handler
 
@@ -73,7 +75,7 @@ class ElementBase(ElementWithChildren):
         return existing.nodeName.lower() == self._tag_name
 
     def _init_node(self) -> DOMNode:
-        if browser:
+        if ENVIRONMENT == "pyscript":
             existing_node = self._get_existing_node()
             if existing_node:
                 if (
@@ -91,8 +93,8 @@ class ElementBase(ElementWithChildren):
             raise WebComPyException("Not in Browser environment.")
 
     def _create_node(self) -> DOMNode:
-        if browser:
-            return cast("DOMNode", browser.document.createElement(self._tag_name))
+        if ENVIRONMENT == "pyscript":
+            return cast("DOMNode", inject(DOM_PORT_KEY).create_element(self._tag_name))
         else:
             raise WebComPyException("Not in Browser environment.")
 
@@ -136,7 +138,7 @@ class ElementBase(ElementWithChildren):
         if node:
             for name, handler in self._event_handlers_added.items():
                 node.removeEventListener(name, handler)
-                if browser:
+                if ENVIRONMENT == "pyscript":
                     handler.destroy()
             self._event_handlers_added.clear()
         for cb in self._callback_nodes:
@@ -152,7 +154,7 @@ class ElementBase(ElementWithChildren):
         node = self._get_node()
         for name, event_handler in self._event_handlers_added.items():
             node.removeEventListener(name, event_handler)
-            if browser:
+            if ENVIRONMENT == "pyscript":
                 event_handler.destroy()
         if self._ref is not None:
             self._ref.__reset_node__()

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from webcompy._browser._modules import browser
+from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.exception import WebComPyException
+from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.signal._base import SignalBase
+from webcompy.utils import ENVIRONMENT
 
 
 class NewLine(ElementAbstract):
@@ -22,7 +24,7 @@ class NewLine(ElementAbstract):
         return existing.nodeName.lower() == "br"
 
     def _init_node(self) -> DOMNode:
-        if browser:
+        if ENVIRONMENT == "pyscript":
             existing_node = self._get_existing_node()
             if existing_node:
                 if (
@@ -40,8 +42,8 @@ class NewLine(ElementAbstract):
             raise WebComPyException("Not in Browser environment.")
 
     def _create_node(self) -> DOMNode:
-        if browser:
-            return cast("DOMNode", browser.document.createElement("br"))
+        if ENVIRONMENT == "pyscript":
+            return cast("DOMNode", inject(DOM_PORT_KEY).create_element("br"))
         else:
             raise WebComPyException("Not in Browser environment.")
 
@@ -79,7 +81,7 @@ class TextElement(ElementAbstract):
         return text
 
     def _init_node(self) -> DOMNode:
-        if browser:
+        if ENVIRONMENT == "pyscript":
             existing_node = self._get_existing_node()
             if existing_node:
                 if (
@@ -97,13 +99,13 @@ class TextElement(ElementAbstract):
             raise WebComPyException("Not in Browser environment.")
 
     def _create_node(self) -> DOMNode:
-        if browser:
-            return cast("DOMNode", browser.document.createTextNode(self._get_text()))
+        if ENVIRONMENT == "pyscript":
+            return cast("DOMNode", inject(DOM_PORT_KEY).create_text_node(self._get_text()))
         else:
             raise WebComPyException("Not in Browser environment.")
 
     def _update_text(self, new_text: str):
-        if browser:
+        if ENVIRONMENT == "pyscript":
             node = self._get_node()
             if node:
                 node.textContent = new_text

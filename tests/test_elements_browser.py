@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from tests.conftest import FakeDOMNode
 from webcompy.elements.types._element import Element, _generate_event_handler
 from webcompy.elements.types._refference import DomNodeRef
@@ -12,24 +10,6 @@ from webcompy.exception import WebComPyException
 class FakeRootElement(Element):
     _get_belonging_component = lambda self: ""
     _get_belonging_components = lambda self: ()
-
-
-def _patch_browser(monkeypatch, fake_browser):
-    import importlib
-
-    modules_with_browser = [
-        "webcompy.elements.types._element",
-        "webcompy.elements.types._abstract",
-        "webcompy.elements.types._text",
-        "webcompy.elements.types._switch",
-        "webcompy.elements.types._repeat",
-    ]
-    for module_name in modules_with_browser:
-        mod = importlib.import_module(module_name)
-        monkeypatch.setattr(mod, "browser", fake_browser)
-    from webcompy._browser import _modules
-
-    monkeypatch.setattr(_modules, "browser", fake_browser)
 
 
 def _setup_element(tag="div", attrs=None, events=None, ref=None, children=None):
@@ -45,15 +25,6 @@ def _setup_element(tag="div", attrs=None, events=None, ref=None, children=None):
     el._parent = parent
     el._node_idx = 0
     return el
-
-
-@pytest.fixture
-def fake_browser_full(monkeypatch):
-    from tests.conftest import FakeBrowserModule
-
-    browser = FakeBrowserModule()
-    _patch_browser(monkeypatch, browser)
-    return browser
 
 
 class TestElementInitNode:
