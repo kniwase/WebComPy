@@ -31,7 +31,7 @@ The system SHALL provide browser implementations for all 5 ports using `pyscript
 - **THEN** its `value` property returns the current `window.location.pathname`
 
 ### Requirement: Server port implementations exist
-The system SHALL provide server implementations for all 5 ports. FetchPort SHALL use `httpx`. Other ports SHALL use internal state. These SHALL be located in `webcompy.ports._server`. ServerDOMPort SHALL raise `WebComPyException` on DOM node creation.
+The system SHALL provide server implementations for all 5 ports. FetchPort SHALL use `httpx`. Other ports SHALL use internal state. These SHALL be located in `webcompy.ports._server`. ServerDOMPort SHALL raise `WebComPyException` on DOM node creation. Server-side port implementations SHALL be excluded from browser wheels via the `_BROWSER_ONLY_EXCLUDE` mechanism.
 
 #### Scenario: ServerDOMPort rejects DOM creation
 - **WHEN** `ServerDOMPort.create_element("div")` or `create_text_node(...)` is called on the server
@@ -44,6 +44,12 @@ The system SHALL provide server implementations for all 5 ports. FetchPort SHALL
 #### Scenario: ServerHistoryPort stores path internally
 - **WHEN** `ServerHistoryPort.navigate("/test")` is called
 - **THEN** the port's `value` property returns "/test"
+
+#### Scenario: ServerCookiePort ignores Set-Cookie attributes (current limitation)
+- **WHEN** `ServerCookiePort.set(name, value, max_age=3600, secure=True, samesite="Strict")` is called on the server
+- **THEN** only the name/value pair is stored in the internal dict
+- **AND** the `max_age`, `secure`, `httponly`, `path`, and `samesite` parameters are discarded
+- **NOTE**: When embedded API server or RPC functionality is implemented in a future change, cookie attributes SHALL be propagated via `Set-Cookie` response headers. The current internal-state implementation is sufficient for SSR/SSG where cookies are read-only.
 
 ### Requirement: DI keys are defined
 The system SHALL define DI injection keys in `webcompy.ports._keys` for all 5 ports.
