@@ -7,17 +7,21 @@ import pathlib
 import re
 import zipfile
 
-_BROWSER_ONLY_EXCLUDE = {"cli"}
+_BROWSER_ONLY_EXCLUDE = {"webcompy.cli", "webcompy.ports._server"}
+
+
+def _is_browser_excluded(arc_path: str, patterns: set[str]) -> bool:
+    dotted = arc_path.replace("/", ".")
+    return any(dotted == pat or dotted.startswith(pat + ".") for pat in patterns)
 
 
 def _filter_excluded_subpackages(
     packages: list[str],
-    top_level_name: str,
-    exclude: set[str],
+    patterns: set[str],
 ) -> list[str]:
-    if not exclude:
+    if not patterns:
         return packages
-    return [pkg for pkg in packages if not (pkg.startswith(f"{top_level_name}.") and pkg.split(".")[1] in exclude)]
+    return [pkg for pkg in packages if not any(pkg == pat or pkg.startswith(pat + ".") for pat in patterns)]
 
 
 def _discover_packages(package_dir: pathlib.Path) -> list[str]:
@@ -203,8 +207,8 @@ def make_wheel(
     packages = _discover_packages(package_dir)
     files = _collect_package_files(package_dir, packages, package_data)
     if exclude_parts:
-        files = [(fp, ap) for fp, ap in files if not any(part in exclude_parts for part in pathlib.Path(ap).parts)]
-        packages = [pkg for pkg in packages if not any(part in exclude_parts for part in pkg.split("."))]
+        files = [(fp, ap) for fp, ap in files if not _is_browser_excluded(ap, exclude_parts)]
+        packages = _filter_excluded_subpackages(packages, exclude_parts)
     dist_name = _normalize_name(name)
     dist_info = f"{dist_name}-{version}.dist-info"
     top_levels: set[str] = set()
@@ -355,13 +359,11 @@ def make_webcompy_app_package(
     for pkg_name, pkg_dir in package_dirs:
         packages = _discover_packages(pkg_dir)
         if pkg_name == "webcompy":
-            packages = _filter_excluded_subpackages(packages, "webcompy", _BROWSER_ONLY_EXCLUDE)
+            packages = _filter_excluded_subpackages(packages, _BROWSER_ONLY_EXCLUDE)
         files = _collect_package_files(pkg_dir, packages, package_data if pkg_name == app_name else None)
         for filepath, arc_path in files:
-            if pkg_name == "webcompy":
-                parts = pathlib.Path(arc_path).parts
-                if len(parts) > 1 and parts[1] in _BROWSER_ONLY_EXCLUDE:
-                    continue
+            if pkg_name == "webcompy" and _is_browser_excluded(arc_path, _BROWSER_ONLY_EXCLUDE):
+                continue
             if arc_path not in seen:
                 seen.add(arc_path)
                 all_files.append((filepath, arc_path))
