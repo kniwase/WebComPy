@@ -94,7 +94,7 @@ class ElementBase(ElementWithChildren):
 
     def _create_node(self) -> DOMNode:
         if ENVIRONMENT == "pyscript":
-            return cast("DOMNode", inject(DOM_PORT_KEY).create_element(self._tag_name))
+            return inject(DOM_PORT_KEY).create_element(self._tag_name)
         else:
             raise WebComPyException("Not in Browser environment.")
 

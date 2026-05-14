@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
@@ -43,7 +43,7 @@ class NewLine(ElementAbstract):
 
     def _create_node(self) -> DOMNode:
         if ENVIRONMENT == "pyscript":
-            return cast("DOMNode", inject(DOM_PORT_KEY).create_element("br"))
+            return inject(DOM_PORT_KEY).create_element("br")
         else:
             raise WebComPyException("Not in Browser environment.")
 
@@ -100,7 +100,7 @@ class TextElement(ElementAbstract):
 
     def _create_node(self) -> DOMNode:
         if ENVIRONMENT == "pyscript":
-            return cast("DOMNode", inject(DOM_PORT_KEY).create_text_node(self._get_text()))
+            return inject(DOM_PORT_KEY).create_text_node(self._get_text())
         else:
             raise WebComPyException("Not in Browser environment.")
 

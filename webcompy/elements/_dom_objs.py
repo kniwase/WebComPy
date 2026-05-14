@@ -1,12 +1,8 @@
+from __future__ import annotations
+
 from typing import Any, Protocol
 
-
-class DOMNode(Protocol):
-    __webcompy_node__: bool
-
-    def __getattr__(self, name: str) -> Any: ...
-
-    def __setattr__(self, name: str, obj: Any) -> Any: ...
+from webcompy.ports._dom import DOMNode
 
 
 class DOMEvent(Protocol):

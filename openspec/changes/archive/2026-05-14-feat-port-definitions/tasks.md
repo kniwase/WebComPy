@@ -11,7 +11,7 @@
 
 ## 3. DOMPort and DOMNode
 
-- [x] 3.1 Create `webcompy/ports/_dom.py` with `DOMNode` ABC (tree, attr, event, content methods + WebComPy markers)
+- [x] 3.1 Create `webcompy/ports/_dom.py` with `DOMNode` Protocol (tree, attr, event, content methods + WebComPy markers)
 - [x] 3.2 Create `webcompy/ports/_dom.py` with `DOMNodeList` class (not ABC) — `length` property + `__getitem__`
 - [x] 3.3 Create `webcompy/ports/_dom.py` with `DOMPort` ABC (create_element, create_text_node, query_selector, get_element_by_id, set_title, schedule_macro_task)
 - [x] 3.4 Create `webcompy/ports/_browser/_dom.py` with `BrowserDOMNode` subclass wrapping real DOM elements

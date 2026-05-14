@@ -8,7 +8,7 @@ from webcompy.ports._dom import DOMNode, DOMNodeList, DOMPort
 from webcompy.utils._environment import ENVIRONMENT
 
 
-class BrowserDOMNode(DOMNode):
+class BrowserDOMNode:
     def __init__(self, node: Any) -> None:
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("BrowserDOMNode is only available in browser environment")
@@ -17,24 +17,24 @@ class BrowserDOMNode(DOMNode):
         self._node = node
         self._event_proxies: dict[tuple[str, int, bool], Any] = {}
 
-    def append_child(self, child: DOMNode) -> None:
+    def appendChild(self, child: DOMNode) -> None:
         if not isinstance(child, BrowserDOMNode):
             raise TypeError(f"Expected BrowserDOMNode, got {type(child).__name__}")
         self._node.appendChild(child._node)
 
-    def remove_child(self, child: DOMNode) -> None:
+    def removeChild(self, child: DOMNode) -> None:
         if not isinstance(child, BrowserDOMNode):
             raise TypeError(f"Expected BrowserDOMNode, got {type(child).__name__}")
         self._node.removeChild(child._node)
 
-    def insert_before(self, new_node: DOMNode, ref_node: DOMNode) -> None:
+    def insertBefore(self, new_node: DOMNode, ref_node: DOMNode) -> None:
         if not isinstance(new_node, BrowserDOMNode):
             raise TypeError(f"Expected BrowserDOMNode, got {type(new_node).__name__}")
         if not isinstance(ref_node, BrowserDOMNode):
             raise TypeError(f"Expected BrowserDOMNode, got {type(ref_node).__name__}")
         self._node.insertBefore(new_node._node, ref_node._node)
 
-    def replace_child(self, new_node: DOMNode, old_node: DOMNode) -> None:
+    def replaceChild(self, new_node: DOMNode, old_node: DOMNode) -> None:
         if not isinstance(new_node, BrowserDOMNode):
             raise TypeError(f"Expected BrowserDOMNode, got {type(new_node).__name__}")
         if not isinstance(old_node, BrowserDOMNode):
@@ -44,67 +44,70 @@ class BrowserDOMNode(DOMNode):
     def remove(self) -> None:
         self._node.remove()
 
-    def set_attribute(self, name: str, value: str) -> None:
+    def setAttribute(self, name: str, value: str) -> None:
         self._node.setAttribute(name, value)
 
-    def get_attribute(self, name: str) -> str | None:
+    def getAttribute(self, name: str) -> str | None:
         val = self._node.getAttribute(name)
         return val if val is not None else None
 
-    def remove_attribute(self, name: str) -> None:
+    def removeAttribute(self, name: str) -> None:
         self._node.removeAttribute(name)
 
-    def has_attribute(self, name: str) -> bool:
+    def hasAttribute(self, name: str) -> bool:
         return self._node.hasAttribute(name)
 
-    def get_attribute_names(self) -> list[str]:
+    def getAttributeNames(self) -> list[str]:
         return list(self._node.getAttributeNames())
 
-    def add_event_listener(
+    def addEventListener(
         self,
         event_type: str,
         handler: Any,
-        *,
-        capture: bool = False,
+        options_or_capture: Any = False,
     ) -> None:
         proxy = self._browser.pyscript.ffi.create_proxy(handler)
-        key = (event_type, id(handler), capture)
+        key = (event_type, id(handler), bool(options_or_capture))
         self._event_proxies[key] = proxy
-        self._node.addEventListener(event_type, proxy, capture)
+        self._node.addEventListener(event_type, proxy, bool(options_or_capture))
 
-    def remove_event_listener(
+    def removeEventListener(
         self,
         event_type: str,
         handler: Any,
-        *,
-        capture: bool = False,
+        options_or_capture: Any = False,
     ) -> None:
-        key = (event_type, id(handler), capture)
+        key = (event_type, id(handler), bool(options_or_capture))
         proxy = self._event_proxies.get(key)
         if proxy is not None:
-            self._node.removeEventListener(event_type, proxy, capture)
+            self._node.removeEventListener(event_type, proxy, bool(options_or_capture))
             if hasattr(proxy, "destroy"):
                 proxy.destroy()
             del self._event_proxies[key]
 
     @property
-    def text_content(self) -> str | None:
+    def textContent(self) -> str | None:
         return self._node.textContent
 
-    @text_content.setter
-    def text_content(self, value: str | None) -> None:
+    @textContent.setter
+    def textContent(self, value: str | None) -> None:
         self._node.textContent = value
 
     @property
-    def child_nodes(self) -> DOMNodeList:
+    def childNodes(self) -> DOMNodeList:
         return DOMNodeList([BrowserDOMNode(n) for n in self._node.childNodes])
 
     @property
-    def node_name(self) -> str:
+    def parentNode(self) -> DOMNode | None:
+        p = self._node.parentNode
+        return BrowserDOMNode(p) if p else None
+
+    @property
+    def nodeName(self) -> str:
         return str(self._node.nodeName)
 
     @property
-    def node_type(self) -> int:
+    def nodeType(self) -> int:
         return int(self._node.nodeType)
 
     @property
@@ -131,10 +134,10 @@ class BrowserDOMPort(DOMPort):
         assert _raw_browser is not None
         self._browser = _raw_browser
 
-    def create_element(self, tag: str) -> Any:
+    def create_element(self, tag: str) -> DOMNode:
         return self._browser.document.createElement(tag)
 
-    def create_text_node(self, text: str) -> Any:
+    def create_text_node(self, text: str) -> DOMNode:
         return self._browser.document.createTextNode(text)
 
     def query_selector(self, selector: str) -> DOMNode | None:

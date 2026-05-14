@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import cast
 
 from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
@@ -55,8 +54,9 @@ class ElementAbstract(SignalReceivable):
     def _detach_node(self):
         if ENVIRONMENT == "pyscript" and self._node_cache:
             parent_node = self._parent._get_node()
-            self._remount_to = cast("DOMNode", inject(DOM_PORT_KEY).create_text_node(""))
-            parent_node.replaceChild(self._remount_to, self._node_cache)
+            remount = inject(DOM_PORT_KEY).create_text_node("")
+            self._remount_to = remount
+            parent_node.replaceChild(remount, self._node_cache)
             self._mounted = False
         else:
             raise WebComPyException("Not in Browser environment.")

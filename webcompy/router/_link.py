@@ -90,7 +90,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                 raise WebComPyRouterException("Keys of Argument 'params' of RouterLink must be str.")
         if not browser:
             return
-        href: str = ev.currentTarget.getAttribute("href")
+        href = ev.currentTarget.getAttribute("href") or ""
         current_path = (
             browser.window.location.pathname if self._router.__mode__ == "history" else browser.window.location.hash
         )

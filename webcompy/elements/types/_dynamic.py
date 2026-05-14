@@ -74,7 +74,9 @@ def _is_patchable(old: ElementAbstract, new: ElementAbstract) -> bool:
 
 def _reposition_node(element: ElementAbstract, new_index: int) -> None:
     node = element._node_cache
-    parent = node.parentNode if node else None
+    if node is None:
+        return
+    parent = node.parentNode
     if not parent and not isinstance(element, DynamicElement):
         with suppress(AttributeError):
             parent = element._parent._get_node()

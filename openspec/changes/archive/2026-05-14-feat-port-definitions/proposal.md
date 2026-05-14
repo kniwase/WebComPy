@@ -6,7 +6,7 @@ WebComPy currently accesses browser APIs through a single `browser` monolith obj
 
 - **NEW** `webcompy/ports/` public package with `__init__.py`
 - **NEW** `DOMPort` (ABC): DOM node creation, element querying, title control, macro-task scheduling
-- **NEW** `DOMNode` (ABC): explicit-method node interface (`appendChild`, `setAttribute`, `addEventListener`, etc.)
+- **NEW** `DOMNode` (Protocol): structural-method node interface (`appendChild`, `setAttribute`, `addEventListener`, etc.) — raw JS nodes, `BrowserDOMNode`, and `VirtualDOMNode` all satisfy it structurally
 - **NEW** `FFIPort` (ABC): Python↔JavaScript bridge (`create_proxy`, `destroy_proxy`, `is_none`, `to_js`, `assign`)
 - **NEW** `FetchPort` (ABC): HTTP requests with a `Response` dataclass
 - **NEW** `CookiePort` (ABC): cookie read/write/delete
@@ -21,7 +21,7 @@ No existing code is modified or removed.
 
 ### New Capabilities
 
-- `port-definitions`: Typed port ABCs (DOMPort, DOMNode, FFIPort, FetchPort, CookiePort, HistoryPort) with dual-environment implementations and DI keys, added as pure additive code with zero consumers.
+- `port-definitions`: Typed port ABCs (DOMPort, FFIPort, FetchPort, CookiePort, HistoryPort) and DOMNode Protocol with dual-environment implementations and DI keys, added as pure additive code with zero consumers.
 
 ### Modified Capabilities
 

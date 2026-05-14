@@ -53,16 +53,18 @@ webcompy/ports/
     _history.py      # ServerHistoryPort
 ```
 
-### Decision 3: DOMNode as explicit-method ABC
+### Decision 3: DOMNode as structural Protocol
 
-DOMNode ABC with explicit method signatures replacing direct DOM property access:
+`DOMNode` Protocol with camelCase method signatures matching browser DOM API:
 - Tree: `appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove`
 - Attributes: `setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`
-- Events: `addEventListener` (with `capture=False` default), `removeEventListener`
-- Content: `textContent` (property), `childNodes` (property, returns `DOMNodeList`)
+- Events: `addEventListener` (with `options_or_capture=False` default), `removeEventListener`
+- Content: `textContent` (property), `childNodes` (property, returns `DOMNodeList`), `parentNode` (property)
 - WebComPy markers: `__webcompy_node__` and `__webcompy_prerendered_node__` (properties with setters)
 
 `DOMNodeList` is a simple class (not ABC) with `length: int` (property) and `__getitem__(index: int) -> DOMNode`.
+
+Any object structurally satisfying these members — raw JS node, `BrowserDOMNode` wrapper, or `VirtualDOMNode` — is accepted as a `DOMNode` via Protocol structural subtyping. No explicit inheritance required.
 
 ### Decision 4: Port dependency pattern — app→port via inject(), intra-port via direct import
 
