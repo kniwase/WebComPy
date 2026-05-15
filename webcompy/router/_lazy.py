@@ -5,6 +5,7 @@ import importlib
 from webcompy.components._generator import ComponentGenerator
 from webcompy.components._libs import generate_id
 from webcompy.router._pages import WebComPyRouterException
+from webcompy.utils._environment import ENVIRONMENT
 
 
 class LazyComponentGenerator(ComponentGenerator):
@@ -46,12 +47,10 @@ class LazyComponentGenerator(ComponentGenerator):
             self._resolve()
         except Exception:
             self._resolve_error = True
-            from webcompy._browser._modules import browser
+            if ENVIRONMENT == "pyscript":
+                from pyscript import context
 
-            if browser:
-                browser.console.warn(  # type: ignore[union-attr]
-                    f"[WebComPy] Failed to preload lazy route '{self._import_path}'"
-                )
+                context.window.console.warn(f"[WebComPy] Failed to preload lazy route '{self._import_path}'")
 
     def __call__(self, props, *, slots=None):
         resolved = self._resolve()

@@ -5,8 +5,9 @@ from typing import Any, Literal
 
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.exception import WebComPyException
-
-from webcompy._browser._modules import browser
+from webcompy.di import inject
+from webcompy.ports._keys import FETCH_PORT_KEY, FFI_PORT_KEY
+from webcompy.utils._environment import ENVIRONMENT
 
 
 # HttpClient
@@ -106,27 +107,23 @@ class HttpClient:
                 form_element is not None,
             )
         )
-        if browser:
-            req_headers = browser.pyscript.ffi.create_proxy(req_headers)
-            if method not in {"GET", "OPTIONS", "HEAD"} and has_body:
-                if json is not None:
-                    req_headers["Content-Type"] = "application/json"
-                    body = json_dumps(json, ensure_ascii=True)
-                elif body_data is not None:
-                    body = body_data
-                elif form_data is not None:
-                    body = browser.FormData.new()
-                    for key, value in form_data.items():
-                        body.set(key, value)
-                elif form_element is not None:
-                    body = browser.FormData.new(form_element.node)
-                else:
-                    body = None
-                options = {"method": method, "headers": req_headers, "body": body}
-            else:
-                options = {"method": method, "headers": req_headers}
+        if form_data is not None or form_element is not None:
+            from webcompy._browser._modules import browser as _raw_browser
+
+            if _raw_browser is None:
+                raise WebComPyHttpClientException
+            ffi_port = inject(FFI_PORT_KEY)
+            req_headers_proxy = ffi_port.create_proxy(req_headers)
             try:
-                res = await browser.fetch(send_url, **options)
+                if form_data is not None:
+                    form_body = _raw_browser.FormData.new()
+                    for key, value in form_data.items():
+                        form_body.set(key, value)
+                elif form_element is not None:
+                    form_body = _raw_browser.FormData.new(form_element.node)
+                else:
+                    form_body = None
+                res = await _raw_browser.fetch(send_url, method=method, headers=req_headers_proxy, body=form_body)
             except Exception as err:
                 raise WebComPyHttpClientException(str(err)) from err
             else:
@@ -145,7 +142,31 @@ class HttpClient:
                     ok=res.ok,
                 )
             finally:
-                req_headers.destroy()
+                ffi_port.destroy_proxy(req_headers_proxy)
+        elif ENVIRONMENT == "pyscript":
+            if method not in {"GET", "OPTIONS", "HEAD"} and has_body:
+                if json is not None:
+                    req_headers["Content-Type"] = "application/json"
+                    body = json_dumps(json, ensure_ascii=True)
+                elif body_data is not None:
+                    body = body_data if isinstance(body_data, str) else body_data.decode()
+                else:
+                    body = None
+            else:
+                body = None
+
+            try:
+                ports_res = await inject(FETCH_PORT_KEY).fetch(send_url, method=method, headers=req_headers, body=body)
+            except Exception as err:
+                raise WebComPyHttpClientException(str(err)) from err
+            else:
+                ret = Response(
+                    text=ports_res.text,
+                    headers=ports_res.headers,
+                    status_code=ports_res.status_code,
+                    reason=ports_res.status_text,
+                    ok=ports_res.ok,
+                )
         else:
             raise WebComPyHttpClientException
         return ret

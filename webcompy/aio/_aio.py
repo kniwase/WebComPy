@@ -8,7 +8,7 @@ from traceback import TracebackException
 from typing import Any, Generic, ParamSpec, TypeAlias, TypeVar
 
 from webcompy import logging
-from webcompy._browser._modules import browser
+from webcompy.utils._environment import ENVIRONMENT
 
 AsyncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
 
@@ -22,7 +22,7 @@ def _aio_run_browser(coro: Coroutine[Any, Any, Any]) -> None:
 _aio_run_browser_tasks: list[asyncio.Task[Any]] = []
 
 
-aio_run: AsyncResolver = _aio_run_browser if browser else asyncio.run
+aio_run: AsyncResolver = _aio_run_browser if ENVIRONMENT == "pyscript" else asyncio.run
 
 
 A = ParamSpec("A")

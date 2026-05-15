@@ -5,7 +5,6 @@ from contextvars import ContextVar
 from typing import Any, TypeAlias, TypeGuard
 from uuid import UUID, uuid4
 
-from webcompy._browser._modules import browser
 from webcompy.components._hooks import _active_component_context
 from webcompy.components._libs import ComponentProperty, Context, generate_id
 from webcompy.di._scope import DIScope, _active_di_scope
@@ -13,6 +12,7 @@ from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
 from webcompy.signal import ReactiveDict, computed_property
+from webcompy.utils._environment import ENVIRONMENT
 
 _active_app_context: ContextVar[Any] = ContextVar("_active_app_context", default=None)
 
@@ -169,7 +169,7 @@ class Component(ElementBase):
         super()._render()
         after_rendering = self._property["on_after_rendering"]
         app = _active_app_context.get()
-        if app is not None and app._defer_depth > 0 and browser:
+        if app is not None and app._defer_depth > 0 and ENVIRONMENT == "pyscript":
             app._deferred_callbacks.append(after_rendering)
         else:
             after_rendering()
