@@ -3,13 +3,13 @@ from __future__ import annotations
 from abc import abstractmethod
 from contextlib import suppress
 
-from webcompy._browser._modules import browser
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._base import ElementWithChildren
 from webcompy.elements.types._element import ElementBase
 from webcompy.elements.types._text import TextElement
 from webcompy.signal._graph import consumer_destroy
+from webcompy.utils import ENVIRONMENT
 
 
 class DynamicElement(ElementWithChildren):
@@ -23,7 +23,7 @@ class DynamicElement(ElementWithChildren):
         return self._parent._get_node()
 
     def _render(self):
-        if browser:
+        if ENVIRONMENT == "pyscript":
             parent_node = self._parent._get_node()
             _position_element_nodes(self, parent_node, self._node_idx)
         else:
@@ -74,7 +74,9 @@ def _is_patchable(old: ElementAbstract, new: ElementAbstract) -> bool:
 
 def _reposition_node(element: ElementAbstract, new_index: int) -> None:
     node = element._node_cache
-    parent = node.parentNode if node else None
+    if node is None:
+        return
+    parent = node.parentNode
     if not parent and not isinstance(element, DynamicElement):
         with suppress(AttributeError):
             parent = element._parent._get_node()

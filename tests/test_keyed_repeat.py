@@ -1,8 +1,4 @@
-import importlib
-
-import pytest
-
-from tests.conftest import FakeBrowserModule, FakeDOMNode
+from tests.conftest import FakeDOMNode
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._text import TextElement
@@ -20,29 +16,6 @@ def _make_parent():
     parent._node_cache = FakeDOMNode("div")
     parent._mounted = True
     return parent
-
-
-def _patch_browser(monkeypatch, fake_browser):
-    modules_with_browser = [
-        "webcompy.elements.types._element",
-        "webcompy.elements.types._abstract",
-        "webcompy.elements.types._text",
-        "webcompy.elements.types._switch",
-        "webcompy.elements.types._repeat",
-    ]
-    for module_name in modules_with_browser:
-        mod = importlib.import_module(module_name)
-        monkeypatch.setattr(mod, "browser", fake_browser)
-    from webcompy._browser import _modules
-
-    monkeypatch.setattr(_modules, "browser", fake_browser)
-
-
-@pytest.fixture
-def fake_browser_full(monkeypatch):
-    browser = FakeBrowserModule()
-    _patch_browser(monkeypatch, browser)
-    return browser
 
 
 class TestKeyedReconciliation:

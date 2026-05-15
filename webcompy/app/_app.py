@@ -52,6 +52,12 @@ class WebComPyApp:
             _set_app_di_scope(self._di_scope)
             _set_app_instance(self)
             from webcompy.components._generator import _register_deferred_components
+            from webcompy.ports._browser._dom import BrowserDOMPort
+            from webcompy.ports._browser._ffi import BrowserFFIPort
+            from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY
+
+            self._di_scope.provide(DOM_PORT_KEY, BrowserDOMPort())
+            self._di_scope.provide(FFI_PORT_KEY, BrowserFFIPort())
 
             _register_deferred_components()
         else:

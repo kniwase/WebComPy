@@ -20,7 +20,9 @@ The system SHALL provide browser implementations for all 5 ports using `pyscript
 
 #### Scenario: BrowserDOMPort creates real DOM elements
 - **WHEN** `BrowserDOMPort.create_element("div")` is called in a PyScript environment
-- **THEN** a `BrowserDOMNode` wrapping a real browser `HTMLDivElement` is returned
+- **THEN** a raw browser `HTMLDivElement` is returned
+- **AND** `BrowserDOMPort.create_text_node("hello")` SHALL return a raw browser `Text` node
+- **AND** both SHALL satisfy the `DOMNode` Protocol structurally (no nominal inheritance required)
 
 #### Scenario: BrowserFFIPort uses pyscript.ffi
 - **WHEN** `BrowserFFIPort.create_proxy(some_func)` is called
@@ -58,12 +60,17 @@ The system SHALL define DI injection keys in `webcompy.ports._keys` for all 5 po
 - **WHEN** all 5 port keys are imported from `webcompy.ports._keys`
 - **THEN** each key is a distinct `InjectKey` instance usable with `inject()` and `provide()`
 
-### Requirement: DOMNode ABC methods are available
-The `DOMNode` ABC SHALL expose tree manipulation (`appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove`), attribute methods (`setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`), event methods (`addEventListener`, `removeEventListener`), content properties (`textContent`, `childNodes` (returns `DOMNodeList`), `nodeName`, `nodeType`), and WebComPy markers (`__webcompy_node__`, `__webcompy_prerendered_node__`).
+### Requirement: DOMNode Protocol methods are available
+The `DOMNode` Protocol SHALL expose tree manipulation (`appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove`), attribute methods (`setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`), event methods (`addEventListener`, `removeEventListener`), content properties (`textContent`, `childNodes` (returns `DOMNodeList`), `parentNode`, `nodeName`, `nodeType`), and WebComPy markers (`__webcompy_node__`, `__webcompy_prerendered_node__`). Any object — raw JS node, `BrowserDOMNode` wrapper, or `VirtualDOMNode` — that structurally satisfies these members SHALL be accepted as a `DOMNode`.
 
 #### Scenario: BrowserDOMNode delegates to real DOM
 - **WHEN** `BrowserDOMNode(real_element).setAttribute("class", "foo")` is called
 - **THEN** the underlying browser element's class attribute is set to "foo"
+
+#### Scenario: Raw JS nodes satisfy DOMNode Protocol
+- **WHEN** a raw `document.createElement("div")` value is returned from `BrowserDOMPort.create_element()`
+- **THEN** it SHALL satisfy the `DOMNode` Protocol structurally
+- **AND** the elements layer SHALL operate on it without `cast` wrappers
 
 #### Scenario: DOMNodeList provides length and indexing
 - **WHEN** code accesses `node.childNodes` on a DOMNode

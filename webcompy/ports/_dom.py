@@ -1,84 +1,62 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Protocol
 
 
-class DOMNode(ABC):
-    @abstractmethod
-    def append_child(self, child: DOMNode) -> None: ...
-    @abstractmethod
-    def remove_child(self, child: DOMNode) -> None: ...
-    @abstractmethod
-    def insert_before(self, new_node: DOMNode, ref_node: DOMNode) -> None: ...
-    @abstractmethod
-    def replace_child(self, new_node: DOMNode, old_node: DOMNode) -> None: ...
-    @abstractmethod
-    def remove(self) -> None: ...
-
-    @abstractmethod
-    def set_attribute(self, name: str, value: str) -> None: ...
-    @abstractmethod
-    def get_attribute(self, name: str) -> str | None: ...
-    @abstractmethod
-    def remove_attribute(self, name: str) -> None: ...
-    @abstractmethod
-    def has_attribute(self, name: str) -> bool: ...
-    @abstractmethod
-    def get_attribute_names(self) -> list[str]: ...
-
-    @abstractmethod
-    def add_event_listener(
-        self,
-        event_type: str,
-        handler: Any,
-        *,
-        capture: bool = False,
-    ) -> None: ...
-    @abstractmethod
-    def remove_event_listener(
-        self,
-        event_type: str,
-        handler: Any,
-        *,
-        capture: bool = False,
-    ) -> None: ...
-
+class DOMNode(Protocol):
     @property
-    @abstractmethod
-    def text_content(self) -> str | None: ...
-
-    @text_content.setter
-    @abstractmethod
-    def text_content(self, value: str | None) -> None: ...
-
-    @property
-    @abstractmethod
-    def child_nodes(self) -> DOMNodeList: ...
-
-    @property
-    @abstractmethod
-    def node_name(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def node_type(self) -> int: ...
-
-    @property
-    @abstractmethod
     def __webcompy_node__(self) -> bool: ...
-
     @__webcompy_node__.setter
-    @abstractmethod
     def __webcompy_node__(self, value: bool) -> None: ...
 
     @property
-    @abstractmethod
     def __webcompy_prerendered_node__(self) -> bool: ...
-
     @__webcompy_prerendered_node__.setter
-    @abstractmethod
     def __webcompy_prerendered_node__(self, value: bool) -> None: ...
+
+    def appendChild(self, child: DOMNode) -> None: ...
+    def removeChild(self, child: DOMNode) -> None: ...
+    def insertBefore(self, new_node: DOMNode, ref_node: DOMNode) -> None: ...
+    def replaceChild(self, new_node: DOMNode, old_node: DOMNode) -> None: ...
+    def remove(self) -> None: ...
+
+    def setAttribute(self, name: str, value: str) -> None: ...
+    def getAttribute(self, name: str) -> str | None: ...
+    def removeAttribute(self, name: str) -> None: ...
+    def hasAttribute(self, name: str) -> bool: ...
+    def getAttributeNames(self) -> list[str]: ...
+
+    def addEventListener(
+        self,
+        event_type: str,
+        handler: Any,
+        options_or_capture: Any = False,
+    ) -> None: ...
+    def removeEventListener(
+        self,
+        event_type: str,
+        handler: Any,
+        options_or_capture: Any = False,
+    ) -> None: ...
+
+    @property
+    def textContent(self) -> str | None: ...
+
+    @textContent.setter
+    def textContent(self, value: str | None) -> None: ...
+
+    @property
+    def childNodes(self) -> DOMNodeList: ...
+
+    @property
+    def parentNode(self) -> DOMNode | None: ...
+
+    @property
+    def nodeName(self) -> str: ...
+
+    @property
+    def nodeType(self) -> int: ...
 
 
 class DOMNodeList:

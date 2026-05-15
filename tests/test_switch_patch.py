@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import pytest
-
-from tests.conftest import FakeBrowserModule, FakeDOMNode
+from tests.conftest import FakeDOMNode
 from webcompy.elements.types._dynamic import _is_patchable, _patch_children, _reposition_node
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._refference import DomNodeRef
@@ -28,25 +26,6 @@ def _setup_parent():
     return parent
 
 
-def _patch_browser(monkeypatch, fake_browser):
-    import importlib
-
-    modules_with_browser = [
-        "webcompy.elements.types._element",
-        "webcompy.elements.types._abstract",
-        "webcompy.elements.types._text",
-        "webcompy.elements.types._switch",
-        "webcompy.elements.types._repeat",
-        "webcompy.components._component",
-    ]
-    for module_name in modules_with_browser:
-        mod = importlib.import_module(module_name)
-        monkeypatch.setattr(mod, "browser", fake_browser)
-    from webcompy._browser import _modules
-
-    monkeypatch.setattr(_modules, "browser", fake_browser)
-
-
 def _setup_element(tag="div", attrs=None, events=None, ref=None, children=None):
     root = FakeRootElement("div", {}, {}, None, None)
     root._node_cache = FakeDOMNode("div")
@@ -60,13 +39,6 @@ def _setup_element(tag="div", attrs=None, events=None, ref=None, children=None):
     el._parent = parent
     el._node_idx = 0
     return el
-
-
-@pytest.fixture
-def fake_browser_full(monkeypatch):
-    browser = FakeBrowserModule()
-    _patch_browser(monkeypatch, browser)
-    return browser
 
 
 class TestElementDetachFromNode:
@@ -433,7 +405,7 @@ class TestRepositionNode:
 
 
 class TestSwitchElementRefreshPatching:
-    def _setup_switch(self, fake_browser, condition_val=True):
+    def _setup_switch(self, condition_val=True):
         cond = Signal(condition_val)
         cases = [(cond, lambda: Element("span", {}, {}, None, None))]
         sw = SwitchElement(cases, None)
@@ -513,7 +485,7 @@ class TestSwitchElementRefreshPatching:
         assert sw._children[0]._mounted is True
 
     def test_refresh_first_render_has_no_old_children(self, fake_browser_full):
-        sw, _cond = self._setup_switch(fake_browser_full, True)
+        sw, _cond = self._setup_switch(True)
         sw._render()
 
         assert len(sw._children) == 1
