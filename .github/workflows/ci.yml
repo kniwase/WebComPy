@@ -448,6 +448,22 @@ jobs:
             printf '%s\n' "$CI_RESULTS" > .tmp/ci-results.txt
           fi
 
+      - name: Fetch incremental diff since last review
+        id: inc-diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          LAST_SHA=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" \
+            --jq '[.[] | select(.user.login == "github-actions") | select(.body | test("REVIEWED_AT:"))] | last | .body | capture("REVIEWED_AT: (?<sha>[a-f0-9]{40})") | .sha // empty')
+          if [ -n "$LAST_SHA" ] && git cat-file -e "$LAST_SHA" 2>/dev/null; then
+            git diff "$LAST_SHA"..HEAD > .tmp/pr-diff-since-last.txt
+            echo "Incremental diff generated from $LAST_SHA"
+          else
+            echo "# No REVIEWED_AT marker found in previous bot comments." > .tmp/pr-diff-since-last.txt
+          fi
+
       - name: Run OpenCode Review
         id: opencode-review
         timeout-minutes: 20
@@ -463,6 +479,7 @@ jobs:
             --model "openai-compat/$OPENAI_COMPAT_MODEL" \
             --agent ci-review \
             --file .tmp/pr-diff.txt \
+            --file .tmp/pr-diff-since-last.txt \
             --title "PR #$PR_NUMBER Review" \
             "Review this pull request. The PR diff is attached.
           CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
@@ -492,8 +509,12 @@ jobs:
             echo "Review output is empty, skipping comment post."
             exit 0
           fi
-          jq -Rs --argjson limit 60000 \
-            '{body: (. | if length > $limit then .[:$limit] + "\n\n[truncated]" else . end)}' \
+          SHA=$(git rev-parse HEAD)
+          jq -Rs --argjson limit 60000 --arg sha "$SHA" \
+            '{body: (
+              (. | if length > $limit then .[:$limit] + "\n\n[truncated]" else . end)
+              + "\n\nREVIEWED_AT: " + $sha
+            )}' \
             .tmp/review-output.md \
             | gh api "repos/$REPO/issues/$PR_NUMBER/comments" \
               --method POST \
