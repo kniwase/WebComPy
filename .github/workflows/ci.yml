@@ -464,6 +464,8 @@ jobs:
           CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
           Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases).
 
+          .tmp/ and .workspace/ are your scratch workspace — you may write files there for intermediate work.
+
           When you have completed your review, write ONLY the final review to .tmp/review-output.txt.
           Do NOT write your research process, tool calls, or file reads — only the final review.
           The file MUST contain:
@@ -484,7 +486,9 @@ jobs:
         if: always() && steps.opencode-review.outcome != 'cancelled'
         run: |
           set -eo pipefail
-          sed -i 's/\x1b\[[0-9;]*m//g' .tmp/review-output.txt
+          if [ -f .tmp/review-output.txt ]; then
+            sed -i 's/\x1b\[[0-9;]*m//g' .tmp/review-output.txt
+          fi
 
       - name: Post review output as comment
         if: always() && steps.opencode-review.outcome != 'cancelled'

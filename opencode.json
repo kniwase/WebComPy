@@ -28,8 +28,11 @@
       "description": "CI-only read-only code reviewer for pull requests",
       "mode": "primary",
       "permission": {
-        "edit": "allow",
-        "write": "allow",
+        "edit": {
+          "*": "deny",
+          ".tmp/*": "allow",
+          ".workspace/*": "allow"
+        },
         "bash": {
           "git commit*": "deny",
           "git push*": "deny"
