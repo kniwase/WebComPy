@@ -472,7 +472,13 @@ jobs:
           - At the end, EXACTLY ONE of:
             REVIEW_RESULT: approved
             or
-            REVIEW_RESULT: changes_requested"
+            REVIEW_RESULT: changes_requested
+
+          After writing, re-read .tmp/review-output.txt and self-review your review:
+          - Verify all claims are backed by the actual diff
+          - Check for formatting issues, typos, or unclear language
+          - Confirm the REVIEW_RESULT marker is present and correct
+          - If you find any issues, rewrite the file with corrections"
 
       - name: Strip ANSI escapes from review output
         if: always() && steps.opencode-review.outcome != 'cancelled'
