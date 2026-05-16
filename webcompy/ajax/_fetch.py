@@ -122,7 +122,7 @@ class HttpClient:
                 elif form_element is not None:
                     form_body = _raw_browser.FormData.new(form_element.node)
                 else:
-                    form_body = None
+                    form_body = None  # unreachable; kept for pyright type narrowing
                 res = await _raw_browser.fetch(send_url, method=method, headers=req_headers_proxy, body=form_body)
             except Exception as err:
                 raise WebComPyHttpClientException(str(err)) from err
