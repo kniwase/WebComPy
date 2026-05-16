@@ -438,7 +438,12 @@ jobs:
       - name: Write CI results to file
         env:
           CI_RESULTS: ${{ env.CI_RESULTS }}
-        run: printf '%s\n' "$CI_RESULTS" > .tmp/ci-results.txt
+        run: |
+          if [ -z "$CI_RESULTS" ]; then
+            echo "No CI results available (pipeline passed with no failures)." > .tmp/ci-results.txt
+          else
+            printf '%s\n' "$CI_RESULTS" > .tmp/ci-results.txt
+          fi
 
       - name: Run OpenCode Review
         id: opencode-review
@@ -461,15 +466,23 @@ jobs:
 
       - name: Strip ANSI escapes from review output
         if: always() && steps.opencode-review.outcome != 'cancelled'
-        run: sed -i 's/\x1b\[[0-9;]*m//g' /tmp/review-output.txt
+        run: |
+          set -eo pipefail
+          sed -i 's/\x1b\[[0-9;]*m//g' /tmp/review-output.txt
 
       - name: Post review output as comment
         if: always() && steps.opencode-review.outcome != 'cancelled'
         env:
+          # GH_TOKEN for gh CLI; GITHUB_TOKEN (above) for opencode CLI
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
+          set -eo pipefail
+          if [ ! -s /tmp/review-output.txt ]; then
+            echo "Review output is empty, skipping comment post."
+            exit 0
+          fi
           jq -Rs '{body: .}' /tmp/review-output.txt \
             | gh api repos/$REPO/issues/$PR_NUMBER/comments \
               --method POST \
