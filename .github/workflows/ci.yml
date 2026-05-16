@@ -443,6 +443,7 @@ jobs:
           OPENAI_COMPAT_MODEL: ${{ secrets.OPENAI_COMPAT_MODEL }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          set -eo pipefail
           opencode run \
             --model "openai-compat/$OPENAI_COMPAT_MODEL" \
             --agent review \
@@ -471,16 +472,20 @@ jobs:
           or
           REVIEW_RESULT: changes_requested" 2>&1 | tee /tmp/review-output.txt
 
+      - name: Strip ANSI escapes from review output
+        run: sed -i 's/\x1b\[[0-9;]*m//g' /tmp/review-output.txt
+
       - name: Post review output as comment
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
-          gh api repos/$REPO/issues/$PR_NUMBER/comments \
-            --method POST \
-            --field body="$(cat /tmp/review-output.txt)" \
-            --silent
+          jq -Rs '{body: .}' /tmp/review-output.txt \
+            | gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              --method POST \
+              --input - \
+              --silent
 
       - name: Submit PR review based on result
         if: always() && steps.opencode-review.outcome != 'cancelled'
