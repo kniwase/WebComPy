@@ -3,8 +3,7 @@ from webcompy.cli.config import LockfileSyncConfig, WebComPyBuildConfig, WebComP
 
 config = WebComPyBuildConfig(
     app_module,
-    dependencies=None,
-    dependencies_from="browser",
+    dependencies=[],
     standalone=True,
     wheel_mode="split",
     dist="dist",
