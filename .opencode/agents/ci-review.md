@@ -44,11 +44,11 @@ Format your review using this EXACT template:
 
 #### <category name>
 
-- 🔴 **High** — <short summary>
+- 🔴 **High** — **<short summary>**
   <full description of the issue and impact>
   → <fix suggestion>
 
-- 🟡 **Medium** — <short summary>
+- 🟡 **Medium** — **<short summary>**
   <full description of the issue and impact>
   → <fix suggestion>
 
