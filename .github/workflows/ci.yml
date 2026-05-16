@@ -207,6 +207,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - uses: astral-sh/setup-uv@v6
         with:
@@ -531,15 +532,21 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          REVIEW_OUTCOME: ${{ steps.opencode-review.outcome }}
         run: |
           COMMENT_ID=$(gh api repos/$REPO/issues/$PR_NUMBER/comments \
             --jq '[.[] | select(.user.login == "github-actions[bot]") | select(.body | test("REVIEW_RESULT:")) | .id] | last // empty')
 
           if [ -z "$COMMENT_ID" ]; then
-            echo "::warning::No review result marker found in comments, requesting changes as safety default"
-            gh pr review $PR_NUMBER --request-changes --body "OpenCode review result could not be determined. Please review manually."
-            echo "::error::Review result undetermined - merge blocked as safety default"
-            exit 1
+            if [ "$REVIEW_OUTCOME" = "failure" ]; then
+              echo "::warning::OpenCode review step encountered an infrastructure error"
+              gh pr review $PR_NUMBER --comment --body "CI review step encountered an error and could not complete. Please re-run the CI workflow."
+            else
+              echo "::warning::No review result marker found in comments, requesting changes as safety default"
+              gh pr review $PR_NUMBER --request-changes --body "OpenCode review result could not be determined. Please review manually."
+              echo "::error::Review result undetermined - merge blocked as safety default"
+              exit 1
+            fi
           fi
 
           COMMENT_BODY=$(gh api repos/$REPO/issues/comments/$COMMENT_ID --jq '.body')
