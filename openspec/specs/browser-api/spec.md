@@ -71,11 +71,15 @@ Objects that bridge Python and JavaScript (such as event handlers) SHALL be crea
 - **AND** each proxy SHALL be `destroy()`ed to release the JavaScript reference
 
 ### Requirement: AJAX accesses fetch via port
-The `webcompy.ajax` module SHALL obtain HTTP functionality through `inject(FETCH_PORT_KEY)` rather than `browser.pyscript.fetch`.
+The `webcompy.ajax` module SHALL obtain HTTP functionality through `inject(FETCH_PORT_KEY)` rather than `browser.pyscript.fetch`, except for FormData requests which SHALL fall back to raw `browser` directly until a FormData-capable port exists.
 
 #### Scenario: Ajax uses injected FetchPort
-- **WHEN** `webcompy.ajax._fetch` performs an HTTP request
+- **WHEN** `webcompy.ajax._fetch` performs an HTTP request with JSON or string body
 - **THEN** it SHALL call `inject(FETCH_PORT_KEY).fetch(...)` instead of `browser.pyscript.fetch(...)`
+
+#### Scenario: Ajax uses raw browser for FormData
+- **WHEN** `webcompy.ajax._fetch` performs an HTTP request with FormData body
+- **THEN** it SHALL use raw `browser.fetch` directly with `browser.FormData`
 
 ### Requirement: Logging uses pyscript.context directly
 The `webcompy.logging` module SHALL use `pyscript.context.window.console` directly (with its full method set: debug, info, warn, error) when in PyScript environment, without port abstraction.
