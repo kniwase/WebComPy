@@ -426,6 +426,14 @@ jobs:
       - name: Ensure clean working tree
         run: git checkout -- . && git clean -fd
 
+      - name: Install OpenCode
+        run: npm install -g opencode-ai@v1.15.0
+
+      - name: Fetch PR diff
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr diff $PR_NUMBER > /tmp/pr-diff.txt
+
       - name: Run OpenCode Review
         id: opencode-review
         env:
@@ -434,10 +442,7 @@ jobs:
           OPENAI_COMPAT_BASE_URL: ${{ secrets.OPENAI_COMPAT_BASE_URL }}
           OPENAI_COMPAT_MODEL: ${{ secrets.OPENAI_COMPAT_MODEL }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
         run: |
-          npm install -g opencode-ai@v1.15.0
-          gh pr diff $PR_NUMBER > /tmp/pr-diff.txt
           opencode run \
             --model "openai-compat/$OPENAI_COMPAT_MODEL" \
             --agent review \
@@ -465,6 +470,13 @@ jobs:
           REVIEW_RESULT: approved
           or
           REVIEW_RESULT: changes_requested" 2>&1 | tee /tmp/review-output.txt
+
+      - name: Post review output as comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
           gh api repos/$REPO/issues/$PR_NUMBER/comments \
             --method POST \
             --field body="$(cat /tmp/review-output.txt)" \
