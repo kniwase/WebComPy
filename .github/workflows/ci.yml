@@ -464,25 +464,15 @@ jobs:
           CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
           Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases).
 
-          Output format:
-          - Separate your research process from the final review with \`---\` on its own line
-          - After \`---\`, include only blank lines before the final review
-          - Begin your final review with a level-2 Markdown heading (\`## Code Review\` or \`## PR Review\`)
-          - Do NOT include tool calls, file paths, or research notes in the final output
-          - You MUST output REVIEW_RESULT: changes_requested if there are ANY issues or suggestions. Only output REVIEW_RESULT: approved when there are ZERO issues to raise.
-          - At the end of your review, include EXACTLY ONE of these lines:
+          When you have completed your review, write ONLY the final review to .tmp/review-output.txt.
+          Do NOT write your research process, tool calls, or file reads — only the final review.
+          The file MUST contain:
+          - A level-2 Markdown heading (\`## Code Review\` or \`## PR Review\`)
+          - Your analysis, issues found, and summary
+          - At the end, EXACTLY ONE of:
             REVIEW_RESULT: approved
             or
-            REVIEW_RESULT: changes_requested" 2>/dev/null \
-          | awk '
-            /^---$/ && !review { after_hr = 1; next }
-            after_hr && !review {
-              if (/^## /) { review = 1; after_hr = 0 }
-              else if (!/^$/) { after_hr = 0 }
-              next
-            }
-            review
-          ' > .tmp/review-output.txt
+            REVIEW_RESULT: changes_requested"
 
       - name: Strip ANSI escapes from review output
         if: always() && steps.opencode-review.outcome != 'cancelled'

@@ -29,6 +29,7 @@
       "mode": "primary",
       "permission": {
         "edit": "deny",
+        "write": "allow",
         "bash": {
           "git commit*": "deny",
           "git push*": "deny"
