@@ -455,24 +455,9 @@ jobs:
             --agent review \
             --file /tmp/pr-diff.txt \
             --title "PR #$PR_NUMBER Review" \
-            "Review this pull request. Follow these rules strictly:
-
-          1. Check previous review comments on this PR first. Do NOT repeat points that have already been raised and addressed.
-
-          2. Focus ONLY on the code diff (the changes in this PR). Do not review code that was not changed.
-
-          3. Check for code quality issues, potential bugs, and suggest improvements — but only for the changed code.
-
-          4. CI results have already been verified by the CI pipeline. Read /tmp/ci-results.txt for the full results. Trust these CI results. Only review the code diff for issues that CI cannot catch (logic bugs, design issues, missing edge cases, etc.).
-
-          5. If the PR diff includes changes under \`openspec/changes/archive/\`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs.
-
-          6. You MUST output \`REVIEW_RESULT: changes_requested\` if there are ANY issues or suggestions. Only output \`REVIEW_RESULT: approved\` when there are ZERO issues to raise.
-
-          At the end of your review, include EXACTLY ONE of these lines:
-          REVIEW_RESULT: approved
-          or
-          REVIEW_RESULT: changes_requested" > /tmp/review-output.txt
+            "Review this pull request. The PR diff is attached.
+          CI results have already been verified by the CI pipeline — read /tmp/ci-results.txt for the full results.
+          Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases)." > /tmp/review-output.txt
 
       - name: Strip ANSI escapes from review output
         if: always() && steps.opencode-review.outcome != 'cancelled'
