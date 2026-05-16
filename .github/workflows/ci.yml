@@ -481,8 +481,10 @@ jobs:
             --file .tmp/pr-diff.txt \
             --file .tmp/pr-diff-since-last.txt \
             --title "PR #$PR_NUMBER Review" \
-            "Review this pull request. The PR diff is attached.
-          CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
+            "Review this pull request. Two diff files are attached:
+           - .tmp/pr-diff.txt — full diff against the merge base
+           - .tmp/pr-diff-since-last.txt — incremental diff since the last CI review (or a note if unavailable)
+           CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
           Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases).
 
           .tmp/ and .workspace/ are your scratch workspace — you may write files there for intermediate work.
