@@ -34,7 +34,8 @@ Format your review using this EXACT template:
 ---
 
 ### 🟢 What's Good
-- <bullet points for well-done aspects, design decisions, error handling, readability, etc.>
+- <short summary>
+  <full description with detail>
 
 ---
 
@@ -42,17 +43,21 @@ Format your review using this EXACT template:
 
 #### <category name>
 
-| Severity | Issue | Recommendation |
-|----------|-------|----------------|
-| 🔴 High | <description> | <fix suggestion> |
-| 🟡 Medium | <description> | <fix suggestion> |
+- 🔴 **High** — <short summary>
+  <full description of the issue and impact>
+  → <fix suggestion>
+
+- 🟡 **Medium** — <short summary>
+  <full description of the issue and impact>
+  → <fix suggestion>
 
 <code blocks or additional detail if needed>
 
 ---
 
 ### 🟡 Warnings / Considerations
-- <trade-offs, performance concerns, future risks — things that are not bugs but worth noting>
+- <short summary>
+  <full description of the trade-off, concern, or risk>
 
 ---
 
@@ -71,7 +76,7 @@ REVIEW_RESULT: <approved | changes_requested>
 
 Rules for the template:
 - Use emoji indicators consistently: 🔴=bug/blocker, 🟡=warning/medium, 🟢=positive, 🔵=note/low
-- Use tables for issue lists and verdict counts — never use bare bullet lists for issues
+- Structure each bullet point as: `<short summary>` on the first line, followed by indented full description and/or recommendation
 - Keep sections in this exact order — do not reorder or omit sections
 - Use code blocks with language tags for code snippets
 - Use bullet points inside 🟢 What's Good and 🟡 Warnings sections
