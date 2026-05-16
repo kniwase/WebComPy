@@ -450,8 +450,9 @@ jobs:
 
       - name: Run OpenCode Review
         id: opencode-review
+        timeout-minutes: 20
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           OPENAI_COMPAT_API_KEY: ${{ secrets.OPENAI_COMPAT_API_KEY }}
           OPENAI_COMPAT_BASE_URL: ${{ secrets.OPENAI_COMPAT_BASE_URL }}
           OPENAI_COMPAT_MODEL: ${{ secrets.OPENAI_COMPAT_MODEL }}
@@ -482,7 +483,6 @@ jobs:
       - name: Post review output as comment
         if: always() && steps.opencode-review.outcome != 'cancelled'
         env:
-          # GH_TOKEN for gh CLI; GITHUB_TOKEN (above) for opencode CLI
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
@@ -492,13 +492,9 @@ jobs:
             echo "Review output is empty, skipping comment post."
             exit 0
           fi
-          SIZE=$(wc -c < .tmp/review-output.md)
-          if [ "$SIZE" -gt 60000 ]; then
-            echo "Review output too large ($SIZE bytes), truncating."
-            head -c 60000 .tmp/review-output.md > .tmp/review-output-truncated.md
-            mv .tmp/review-output-truncated.md .tmp/review-output.md
-          fi
-          jq -Rs '{body: .}' .tmp/review-output.md \
+          jq -Rs --argjson limit 60000 \
+            '{body: (. | if length > $limit then .[:$limit] + "\n\n[truncated]" else . end)}' \
+            .tmp/review-output.md \
             | gh api "repos/$REPO/issues/$PR_NUMBER/comments" \
               --method POST \
               --input - \
