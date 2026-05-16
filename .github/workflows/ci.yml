@@ -467,14 +467,8 @@ jobs:
           .tmp/ and .workspace/ are your scratch workspace — you may write files there for intermediate work.
 
           When you have completed your review, write ONLY the final review to .tmp/review-output.md.
+          Follow the review template format specified in your agent configuration.
           Do NOT write your research process, tool calls, or file reads — only the final review.
-          The file MUST contain:
-          - A level-2 Markdown heading (\`## Code Review\` or \`## PR Review\`)
-          - Your analysis, issues found, and summary
-          - At the end, EXACTLY ONE of:
-            REVIEW_RESULT: approved
-            or
-            REVIEW_RESULT: changes_requested
 
           After writing, re-read .tmp/review-output.md and self-review your review:
           - Verify all claims are backed by the actual diff
