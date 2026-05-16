@@ -15,7 +15,6 @@ def FetchSamplePage(context: ComponentContext[RouterContext]):
                 "title": "Fetch Sample",
                 "app_name": "fetch_sample",
                 "demo_path": "/_demos/fetch_sample/app.py",
-                "packages": [],
             }
         ),
     )

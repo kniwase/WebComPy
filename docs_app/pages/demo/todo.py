@@ -10,5 +10,5 @@ def ToDoListPage(context: ComponentContext[RouterContext]):
     context.set_title("ToDo List - WebCompy Demo")
     return html.DIV(
         {"class": "container"},
-        DemoDisplay({"title": "ToDo List", "app_name": "todo", "demo_path": "/_demos/todo/app.py", "packages": []}),
+        DemoDisplay({"title": "ToDo List", "app_name": "todo", "demo_path": "/_demos/todo/app.py"}),
     )

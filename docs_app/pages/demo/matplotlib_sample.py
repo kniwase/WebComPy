@@ -15,7 +15,6 @@ def MatpoltlibSamplePage(context: ComponentContext[RouterContext]):
                 "title": "Matplotlib Sample",
                 "app_name": "matplotlib_sample",
                 "demo_path": "/_demos/matplotlib_sample/app.py",
-                "packages": ["numpy", "matplotlib"],
             }
         ),
     )

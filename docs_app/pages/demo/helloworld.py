@@ -10,7 +10,5 @@ def HelloWorldPage(context: ComponentContext[RouterContext]):
     context.set_title("HelloWorld - WebCompy Demo")
     return html.DIV(
         {"class": "container"},
-        DemoDisplay(
-            {"title": "HelloWorld", "app_name": "helloworld", "demo_path": "/_demos/helloworld/app.py", "packages": []}
-        ),
+        DemoDisplay({"title": "HelloWorld", "app_name": "helloworld", "demo_path": "/_demos/helloworld/app.py"}),
     )

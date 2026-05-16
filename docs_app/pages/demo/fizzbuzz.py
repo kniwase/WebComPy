@@ -10,7 +10,5 @@ def FizzbuzzPage(context: ComponentContext[RouterContext]):
     context.set_title("FizzBuzz - WebCompy Demo")
     return html.DIV(
         {"class": "container"},
-        DemoDisplay(
-            {"title": "FizzBuzz", "app_name": "fizzbuzz", "demo_path": "/_demos/fizzbuzz/app.py", "packages": []}
-        ),
+        DemoDisplay({"title": "FizzBuzz", "app_name": "fizzbuzz", "demo_path": "/_demos/fizzbuzz/app.py"}),
     )

@@ -21,15 +21,18 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
 
     @AsyncWrapper()
     async def _load():
-        res = await HttpClient.get(context.props["demo_path"])
-        if res.ok:
-            source_code.value = res.text
-        else:
+        try:
+            res = await HttpClient.get(context.props["demo_path"])
+            if res.ok:
+                source_code.value = res.text
+            else:
+                source_code.value = f"# Failed to load {context.props['demo_path']}"
+        except Exception:
             source_code.value = f"# Failed to load {context.props['demo_path']}"
         _run_highlight()
 
     def _run_highlight():
-        if browser and code_ref.element:
+        if browser and code_ref.element and hasattr(browser.window, "hljs"):
             browser.window.hljs.highlightElement(code_ref.element)
 
     @context.on_after_rendering
