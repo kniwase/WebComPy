@@ -28,7 +28,7 @@
       "description": "CI-only read-only code reviewer for pull requests",
       "mode": "primary",
       "permission": {
-        "edit": "deny",
+        "edit": "allow",
         "write": "allow",
         "bash": {
           "git commit*": "deny",
