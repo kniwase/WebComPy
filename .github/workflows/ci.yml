@@ -455,8 +455,9 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
-          LAST_SHA=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" \
-            --jq '[.[] | select(.user.login == "github-actions") | select(.body | test("REVIEWED_AT:"))] | last | .body | capture("REVIEWED_AT: (?<sha>[a-f0-9]{40})") | .sha // empty')
+          REVIEWED_AT_COMMENT=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" \
+            --jq '[.[] | select(.user.login == "github-actions") | select(.body | test("REVIEWED_AT:"))] | last.body // empty')
+          LAST_SHA=$(echo "$REVIEWED_AT_COMMENT" | grep -oP 'REVIEWED_AT: \K[a-f0-9]{40}' | head -1)
           if [ -n "$LAST_SHA" ] && git cat-file -e "$LAST_SHA" 2>/dev/null; then
             git diff "$LAST_SHA"..HEAD > .tmp/pr-diff-since-last.txt
             echo "Incremental diff generated from $LAST_SHA"
