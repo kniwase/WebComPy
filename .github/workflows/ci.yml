@@ -431,6 +431,7 @@ jobs:
 
       - name: Fetch PR diff
         env:
+          GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: gh pr diff $PR_NUMBER > /tmp/pr-diff.txt
 
@@ -477,7 +478,7 @@ jobs:
 
       - name: Post review output as comment
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
