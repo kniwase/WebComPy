@@ -12,7 +12,7 @@ permission:
     "git push*": deny
     "gh pr merge*": deny
     "gh pr review*": deny
-    "curl *": deny
+    "curl": deny
     "rm -rf *": deny
 ---
 

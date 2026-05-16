@@ -401,7 +401,7 @@ jobs:
       - name: Post CI results summary comment
         if: github.event_name == 'pull_request'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
@@ -450,14 +450,15 @@ jobs:
 
       - name: Fetch incremental diff since last review
         id: inc-diff
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
           REVIEWED_AT_COMMENT=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" \
-            --jq '[.[] | select(.user.login == "github-actions") | select(.body | test("REVIEWED_AT:"))] | last.body // empty')
-          LAST_SHA=$(echo "$REVIEWED_AT_COMMENT" | grep -oP 'REVIEWED_AT: \K[a-f0-9]{40}' | head -1)
+            --jq '[.[] | select(.user.login == "github-actions[bot]") | select(.body | test("REVIEWED_AT:"))] | last.body // empty')
+          LAST_SHA=$(echo "$REVIEWED_AT_COMMENT" | sed -n 's/.*REVIEWED_AT: \([a-f0-9]\{40\}\).*/\1/p' | head -1)
           if [ -n "$LAST_SHA" ] && git cat-file -e "$LAST_SHA" 2>/dev/null; then
             git diff "$LAST_SHA"..HEAD > .tmp/pr-diff-since-last.txt
             echo "Incremental diff generated from $LAST_SHA"
@@ -527,7 +528,7 @@ jobs:
       - name: Submit PR review based on result
         if: always() && steps.opencode-review.outcome != 'cancelled'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
