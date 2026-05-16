@@ -466,7 +466,7 @@ jobs:
 
           .tmp/ and .workspace/ are your scratch workspace — you may write files there for intermediate work.
 
-          When you have completed your review, write ONLY the final review to .tmp/review-output.txt.
+          When you have completed your review, write ONLY the final review to .tmp/review-output.md.
           Do NOT write your research process, tool calls, or file reads — only the final review.
           The file MUST contain:
           - A level-2 Markdown heading (\`## Code Review\` or \`## PR Review\`)
@@ -476,7 +476,7 @@ jobs:
             or
             REVIEW_RESULT: changes_requested
 
-          After writing, re-read .tmp/review-output.txt and self-review your review:
+          After writing, re-read .tmp/review-output.md and self-review your review:
           - Verify all claims are backed by the actual diff
           - Check for formatting issues, typos, or unclear language
           - Confirm the REVIEW_RESULT marker is present and correct
@@ -486,8 +486,8 @@ jobs:
         if: always() && steps.opencode-review.outcome != 'cancelled'
         run: |
           set -eo pipefail
-          if [ -f .tmp/review-output.txt ]; then
-            sed -i 's/\x1b\[[0-9;]*m//g' .tmp/review-output.txt
+          if [ -f .tmp/review-output.md ]; then
+            sed -i 's/\x1b\[[0-9;]*m//g' .tmp/review-output.md
           fi
 
       - name: Post review output as comment
@@ -499,11 +499,11 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -eo pipefail
-          if [ ! -s .tmp/review-output.txt ]; then
+          if [ ! -s .tmp/review-output.md ]; then
             echo "Review output is empty, skipping comment post."
             exit 0
           fi
-          jq -Rs '{body: .}' .tmp/review-output.txt \
+          jq -Rs '{body: .}' .tmp/review-output.md \
             | gh api repos/$REPO/issues/$PR_NUMBER/comments \
               --method POST \
               --input - \
