@@ -6,6 +6,8 @@ from collections.abc import Callable
 from contextvars import ContextVar
 from typing import Any
 
+from webcompy.di import InjectionError, inject
+from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.signal._graph import (
     SignalNode,
     _CallbackMixin,
@@ -14,12 +16,6 @@ from webcompy.signal._graph import (
     consumer_destroy,
     producer_mark_clean,
 )
-
-try:
-    from webcompy._browser._modules import browser
-except ImportError:
-    browser = None
-
 
 _active_scope: ContextVar[EffectScope | None] = ContextVar("_active_scope", default=None)
 
@@ -143,22 +139,16 @@ def effect_scope() -> _EffectScopeContextManager:
 
 
 def _schedule_effect(effect_node: EffectNode) -> None:
-    if browser is not None:
-        _schedule_effect_browser(effect_node)
-    else:
-        _run_effect_synchronously(effect_node)
-
-
-def _schedule_effect_browser(effect_node: EffectNode) -> None:
     global _scheduling_scheduled
     _pending_effects.append(effect_node)
     if not _scheduling_scheduled:
-        _scheduling_scheduled = True
         try:
-            browser.window.setTimeout(_flush_pending_effects, 0)  # type: ignore[union-attr]
-        except Exception:
+            inject(DOM_PORT_KEY).schedule_macro_task(_flush_pending_effects)
+        except InjectionError:
             _scheduling_scheduled = False
             _run_effect_synchronously(effect_node)
+        else:
+            _scheduling_scheduled = True
 
 
 def _flush_pending_effects() -> None:

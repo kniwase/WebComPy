@@ -1,7 +1,7 @@
 from logging import getLogger as _getLogger
 from typing import Any, Protocol
 
-from webcompy._browser._modules import browser as _browser
+from webcompy.utils._environment import ENVIRONMENT
 
 
 class _Handler(Protocol):
@@ -14,7 +14,12 @@ class _Handler(Protocol):
     def error(self, msg: str): ...
 
 
-_handler: _Handler = _browser.console if _browser else _getLogger("uvicorn")
+if ENVIRONMENT == "pyscript":
+    from pyscript import context
+
+    _handler: _Handler = context.window.console
+else:
+    _handler = _getLogger("uvicorn")
 
 
 def _convert_msg(values: tuple[Any]):

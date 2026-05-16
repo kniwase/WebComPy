@@ -53,10 +53,12 @@ class WebComPyApp:
             _set_app_instance(self)
             from webcompy.components._generator import _register_deferred_components
             from webcompy.ports._browser._dom import BrowserDOMPort
+            from webcompy.ports._browser._fetch import BrowserFetchPort
             from webcompy.ports._browser._ffi import BrowserFFIPort
-            from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY
+            from webcompy.ports._keys import DOM_PORT_KEY, FETCH_PORT_KEY, FFI_PORT_KEY
 
             self._di_scope.provide(DOM_PORT_KEY, BrowserDOMPort())
+            self._di_scope.provide(FETCH_PORT_KEY, BrowserFetchPort())
             self._di_scope.provide(FFI_PORT_KEY, BrowserFFIPort())
 
             _register_deferred_components()

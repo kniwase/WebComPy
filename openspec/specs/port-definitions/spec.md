@@ -61,11 +61,7 @@ The system SHALL define DI injection keys in `webcompy.ports._keys` for all 5 po
 - **THEN** each key is a distinct `InjectKey` instance usable with `inject()` and `provide()`
 
 ### Requirement: DOMNode Protocol methods are available
-The `DOMNode` Protocol SHALL expose tree manipulation (`appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove`), attribute methods (`setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`), event methods (`addEventListener`, `removeEventListener`), content properties (`textContent`, `childNodes` (returns `DOMNodeList`), `parentNode`, `nodeName`, `nodeType`), and WebComPy markers (`__webcompy_node__`, `__webcompy_prerendered_node__`). Any object — raw JS node, `BrowserDOMNode` wrapper, or `VirtualDOMNode` — that structurally satisfies these members SHALL be accepted as a `DOMNode`.
-
-#### Scenario: BrowserDOMNode delegates to real DOM
-- **WHEN** `BrowserDOMNode(real_element).setAttribute("class", "foo")` is called
-- **THEN** the underlying browser element's class attribute is set to "foo"
+The `DOMNode` Protocol SHALL expose tree manipulation (`appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove`), attribute methods (`setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`), event methods (`addEventListener`, `removeEventListener`), content properties (`textContent`, `childNodes` (returns `DOMNodeList`), `parentNode`, `nodeName`, `nodeType`), and WebComPy markers (`__webcompy_node__`, `__webcompy_prerendered_node__`). Any object — raw JS node or `VirtualDOMNode` — that structurally satisfies these members SHALL be accepted as a `DOMNode`.
 
 #### Scenario: Raw JS nodes satisfy DOMNode Protocol
 - **WHEN** a raw `document.createElement("div")` value is returned from `BrowserDOMPort.create_element()`
