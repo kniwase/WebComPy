@@ -1,5 +1,6 @@
 ---
-description: CI-only read-only code reviewer for pull requests
+name: ci-review
+description: Automated CI code reviewer — runs in GitHub Actions to review pull request diffs
 mode: primary
 permission:
   edit:

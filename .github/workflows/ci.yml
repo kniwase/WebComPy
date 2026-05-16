@@ -429,6 +429,9 @@ jobs:
       - name: Install OpenCode
         run: npm install -g opencode-ai@v1.15.0
 
+      - name: Ensure scratch directory exists
+        run: mkdir -p .tmp
+
       - name: Fetch PR diff
         env:
           GH_TOKEN: ${{ github.token }}
@@ -457,7 +460,7 @@ jobs:
           set -eo pipefail
           opencode run \
             --model "openai-compat/$OPENAI_COMPAT_MODEL" \
-            --agent review \
+            --agent ci-review \
             --file .tmp/pr-diff.txt \
             --title "PR #$PR_NUMBER Review" \
             "Review this pull request. The PR diff is attached.
@@ -489,8 +492,14 @@ jobs:
             echo "Review output is empty, skipping comment post."
             exit 0
           fi
+          SIZE=$(wc -c < .tmp/review-output.md)
+          if [ "$SIZE" -gt 60000 ]; then
+            echo "Review output too large ($SIZE bytes), truncating."
+            head -c 60000 .tmp/review-output.md > .tmp/review-output-truncated.md
+            mv .tmp/review-output-truncated.md .tmp/review-output.md
+          fi
           jq -Rs '{body: .}' .tmp/review-output.md \
-            | gh api repos/$REPO/issues/$PR_NUMBER/comments \
+            | gh api "repos/$REPO/issues/$PR_NUMBER/comments" \
               --method POST \
               --input - \
               --silent
