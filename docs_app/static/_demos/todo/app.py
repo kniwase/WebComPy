@@ -1,0 +1,121 @@
+import uuid
+from typing import Any, TypedDict
+
+from webcompy.app import WebComPyApp
+from webcompy.components import ComponentContext, define_component
+from webcompy.elements import DomNodeRef, html, repeat
+from webcompy.signal import ReactiveDict, Signal, computed
+
+
+class TodoData(TypedDict):
+    title: Signal[str]
+    done: Signal[bool]
+
+
+@define_component
+def ToDoItem(context: ComponentContext[TodoData]):
+    input_ref = DomNodeRef()
+
+    def on_change_state(_: Any):
+        context.props["done"].value = input_ref.checked
+
+    return html.LI(
+        {},
+        html.LABEL(
+            {},
+            html.INPUT(
+                {
+                    "type": "checkbox",
+                    "@change": on_change_state,
+                    ":ref": input_ref,
+                },
+            ),
+        ),
+        " ",
+        html.SPAN(
+            {"style": computed(lambda: "text-decoration: line-through;" if context.props["done"].value else "")},
+            context.props["title"],
+        ),
+    )
+
+
+ToDoItem.scoped_style = {
+    "li": {
+        "color": "#2d8fdd",
+        "border-left": " solid 6px #2d8fdd",
+        "background": "#f1f8ff",
+        "line-height": "1.5",
+        "margin": "5px",
+        "padding": "5px",
+        "vertical-align": "middle",
+        "list-style-type": "none",
+    }
+}
+
+
+@define_component
+def App(_: ComponentContext[None]):
+    input_ref = DomNodeRef()
+    data: ReactiveDict[str, TodoData] = ReactiveDict(
+        {
+            str(uuid.uuid4()): {
+                "title": Signal("Try WebComPy"),
+                "done": Signal(False),
+            },
+            str(uuid.uuid4()): {
+                "title": Signal("Create WebComPy project"),
+                "done": Signal(False),
+            },
+        }
+    )
+
+    def append_item(_: Any):
+        title = input_ref.value
+        if title:
+            data[str(uuid.uuid4())] = {
+                "title": Signal(title),
+                "done": Signal(False),
+            }
+        input_ref.value = ""
+
+    def remove_done_items(_: Any):
+        keys_to_remove = [k for k, v in data.value.items() if v["done"].value]
+        for k in keys_to_remove:
+            del data[k]
+
+    return html.DIV(
+        {},
+        html.P(
+            {},
+            "Title: ",
+            html.INPUT({":ref": input_ref}),
+            html.BUTTON({"@click": append_item}, "Add ToDo"),
+            html.BUTTON({"@click": remove_done_items}, "Remove Done Items"),
+        ),
+        html.UL(
+            {},
+            repeat(
+                data,
+                lambda v, k: ToDoItem(v),
+            ),
+        ),
+    )
+
+
+App.scoped_style = {
+    "button": {
+        "display": "inline-block",
+        "text-decoration": "none",
+        "border": "solid 2px #668ad8",
+        "border-radius": "3px",
+        "transition": "0.2s",
+        "color": "black",
+    },
+    "button:hover": {
+        "background": "#668ad8",
+        "color": "white",
+    },
+}
+
+app = WebComPyApp(root_component=App)
+app.run()
