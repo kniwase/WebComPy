@@ -207,6 +207,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - uses: astral-sh/setup-uv@v6
         with:
@@ -401,7 +402,7 @@ jobs:
       - name: Post CI results summary comment
         if: github.event_name == 'pull_request'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
@@ -426,57 +427,126 @@ jobs:
       - name: Ensure clean working tree
         run: git checkout -- . && git clean -fd
 
+      - name: Install OpenCode
+        run: npm install -g opencode-ai@v1.15.0
+
+      - name: Ensure scratch directory exists
+        run: mkdir -p .tmp
+
+      - name: Fetch PR diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr diff $PR_NUMBER > .tmp/pr-diff.txt
+
+      - name: Write CI results to file
+        env:
+          CI_RESULTS: ${{ env.CI_RESULTS }}
+        run: |
+          if [ -z "$CI_RESULTS" ]; then
+            echo "No CI results available (pipeline passed with no failures)." > .tmp/ci-results.txt
+          else
+            printf '%s\n' "$CI_RESULTS" > .tmp/ci-results.txt
+          fi
+
+      - name: Fetch incremental diff since last review
+        id: inc-diff
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          REVIEWED_AT_COMMENT=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" \
+            --jq '[.[] | select(.user.login == "github-actions[bot]") | select(.body | test("REVIEWED_AT:"))] | last.body // empty')
+          LAST_SHA=$(echo "$REVIEWED_AT_COMMENT" | sed -n 's/.*REVIEWED_AT: \([a-f0-9]\{40\}\).*/\1/p' | head -1)
+          if [ -n "$LAST_SHA" ] && git cat-file -e "$LAST_SHA" 2>/dev/null; then
+            git diff "$LAST_SHA"..HEAD > .tmp/pr-diff-since-last.txt
+            echo "Incremental diff generated from $LAST_SHA"
+          else
+            echo "# No REVIEWED_AT marker found in previous bot comments." > .tmp/pr-diff-since-last.txt
+          fi
+
       - name: Run OpenCode Review
         id: opencode-review
-        uses: anomalyco/opencode/github@latest
+        timeout-minutes: 20
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           OPENAI_COMPAT_API_KEY: ${{ secrets.OPENAI_COMPAT_API_KEY }}
           OPENAI_COMPAT_BASE_URL: ${{ secrets.OPENAI_COMPAT_BASE_URL }}
           OPENAI_COMPAT_MODEL: ${{ secrets.OPENAI_COMPAT_MODEL }}
-        with:
-          model: openai-compat/${{ secrets.OPENAI_COMPAT_MODEL }}
-          agent: review
-          use_github_token: true
-          prompt: |
-            Review this pull request. Follow these rules strictly:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -eo pipefail
+          opencode run \
+            --model "openai-compat/$OPENAI_COMPAT_MODEL" \
+            --agent ci-review \
+            --file .tmp/pr-diff.txt \
+            --file .tmp/pr-diff-since-last.txt \
+            --title "PR #$PR_NUMBER Review" \
+            "Review this pull request. Two diff files are attached:
+           - .tmp/pr-diff.txt — full diff against the merge base
+           - .tmp/pr-diff-since-last.txt — incremental diff since the last CI review (or a note if unavailable)
+           CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
+          Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases).
 
-            1. Check previous review comments on this PR first. Do NOT repeat points that have already been raised and addressed.
+          .tmp/ and .workspace/ are your scratch workspace — you may write files there for intermediate work.
 
-            2. Focus ONLY on the code diff (the changes in this PR). Do not review code that was not changed.
+          When you have completed your review, write ONLY the final review to .tmp/review-output.md.
+          Follow the review template format specified in your agent configuration.
+          Do NOT write your research process, tool calls, or file reads — only the final review.
 
-            3. Check for code quality issues, potential bugs, and suggest improvements — but only for the changed code.
+          After writing, re-read .tmp/review-output.md and self-review your review:
+          - Verify all claims are backed by the actual diff
+          - Check for formatting issues, typos, or unclear language
+          - Confirm the REVIEW_RESULT marker is present and correct
+          - If you find any issues, rewrite the file with corrections"
 
-            4. CI results have already been verified by the CI pipeline. The results are:
-
-            ${{ env.CI_RESULTS }}
-
-            Trust these CI results. Only review the code diff for issues that CI cannot catch (logic bugs, design issues, missing edge cases, etc.).
-
-            5. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs.
-
-            6. You MUST output `REVIEW_RESULT: changes_requested` if there are ANY issues or suggestions. Only output `REVIEW_RESULT: approved` when there are ZERO issues to raise.
-
-            At the end of your review, include EXACTLY ONE of these lines:
-            REVIEW_RESULT: approved
-            or
-            REVIEW_RESULT: changes_requested
+      - name: Post review output as comment
+        if: always() && steps.opencode-review.outcome != 'cancelled'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eo pipefail
+          if [ ! -s .tmp/review-output.md ]; then
+            echo "Review output is empty, skipping comment post."
+            exit 0
+          fi
+          SHA=$(git rev-parse HEAD)
+          jq -Rs --argjson limit 60000 --arg sha "$SHA" \
+            '{body: (
+              (. | if length > $limit then .[:$limit] + "\n\n[truncated]" else . end)
+              + "\n\nREVIEWED_AT: " + $sha
+            )}' \
+            .tmp/review-output.md \
+            | gh api "repos/$REPO/issues/$PR_NUMBER/comments" \
+              --method POST \
+              --input - \
+              --silent
 
       - name: Submit PR review based on result
         if: always() && steps.opencode-review.outcome != 'cancelled'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          REVIEW_OUTCOME: ${{ steps.opencode-review.outcome }}
         run: |
           COMMENT_ID=$(gh api repos/$REPO/issues/$PR_NUMBER/comments \
             --jq '[.[] | select(.user.login == "github-actions[bot]") | select(.body | test("REVIEW_RESULT:")) | .id] | last // empty')
 
           if [ -z "$COMMENT_ID" ]; then
-            echo "::warning::No review result marker found in comments, requesting changes as safety default"
-            gh pr review $PR_NUMBER --request-changes --body "OpenCode review result could not be determined. Please review manually."
-            echo "::error::Review result undetermined - merge blocked as safety default"
-            exit 1
+            if [ "$REVIEW_OUTCOME" = "failure" ]; then
+              echo "::warning::OpenCode review step encountered an infrastructure error"
+              gh pr review $PR_NUMBER --comment --body "CI review step encountered an error and could not complete. Please re-run the CI workflow."
+            else
+              echo "::warning::No review result marker found in comments, requesting changes as safety default"
+              gh pr review $PR_NUMBER --request-changes --body "OpenCode review result could not be determined. Please review manually."
+              echo "::error::Review result undetermined - merge blocked as safety default"
+              exit 1
+            fi
           fi
 
           COMMENT_BODY=$(gh api repos/$REPO/issues/comments/$COMMENT_ID --jq '.body')
