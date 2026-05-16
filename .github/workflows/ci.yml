@@ -476,14 +476,6 @@ jobs:
           - Confirm the REVIEW_RESULT marker is present and correct
           - If you find any issues, rewrite the file with corrections"
 
-      - name: Strip ANSI escapes from review output
-        if: always() && steps.opencode-review.outcome != 'cancelled'
-        run: |
-          set -eo pipefail
-          if [ -f .tmp/review-output.md ]; then
-            sed -i 's/\x1b\[[0-9;]*m//g' .tmp/review-output.md
-          fi
-
       - name: Post review output as comment
         if: always() && steps.opencode-review.outcome != 'cancelled'
         env:
