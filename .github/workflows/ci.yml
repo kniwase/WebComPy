@@ -433,7 +433,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: gh pr diff $PR_NUMBER > /tmp/pr-diff.txt
+        run: gh pr diff $PR_NUMBER > .tmp/pr-diff.txt
 
       - name: Write CI results to file
         env:
@@ -458,17 +458,22 @@ jobs:
           opencode run \
             --model "openai-compat/$OPENAI_COMPAT_MODEL" \
             --agent review \
-            --file /tmp/pr-diff.txt \
+            --file .tmp/pr-diff.txt \
             --title "PR #$PR_NUMBER Review" \
             "Review this pull request. The PR diff is attached.
           CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
-          Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases)." > /tmp/review-output.txt
+          Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases)." 2>/dev/null \
+          | awk '
+            /^---$/ && !review { after_hr = 1; next }
+            after_hr && !review && /^## / { review = 1; after_hr = 0 }
+            review
+          ' > .tmp/review-output.txt
 
       - name: Strip ANSI escapes from review output
         if: always() && steps.opencode-review.outcome != 'cancelled'
         run: |
           set -eo pipefail
-          sed -i 's/\x1b\[[0-9;]*m//g' /tmp/review-output.txt
+          sed -i 's/\x1b\[[0-9;]*m//g' .tmp/review-output.txt
 
       - name: Post review output as comment
         if: always() && steps.opencode-review.outcome != 'cancelled'
@@ -479,11 +484,11 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -eo pipefail
-          if [ ! -s /tmp/review-output.txt ]; then
+          if [ ! -s .tmp/review-output.txt ]; then
             echo "Review output is empty, skipping comment post."
             exit 0
           fi
-          jq -Rs '{body: .}' /tmp/review-output.txt \
+          jq -Rs '{body: .}' .tmp/review-output.txt \
             | gh api repos/$REPO/issues/$PR_NUMBER/comments \
               --method POST \
               --input - \
