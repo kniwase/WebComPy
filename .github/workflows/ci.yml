@@ -438,7 +438,7 @@ jobs:
       - name: Write CI results to file
         env:
           CI_RESULTS: ${{ env.CI_RESULTS }}
-        run: printf '%s\n' "$CI_RESULTS" > /tmp/ci-results.txt
+        run: printf '%s\n' "$CI_RESULTS" > .tmp/ci-results.txt
 
       - name: Run OpenCode Review
         id: opencode-review
@@ -456,7 +456,7 @@ jobs:
             --file /tmp/pr-diff.txt \
             --title "PR #$PR_NUMBER Review" \
             "Review this pull request. The PR diff is attached.
-          CI results have already been verified by the CI pipeline — read /tmp/ci-results.txt for the full results.
+          CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
           Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases)." > /tmp/review-output.txt
 
       - name: Strip ANSI escapes from review output
