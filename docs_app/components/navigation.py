@@ -1,8 +1,9 @@
 from typing import Any, TypedDict
 
-from webcompy._browser import browser
 from webcompy.components import ComponentContext, define_component, on_before_destroy
+from webcompy.di import inject
 from webcompy.elements import html
+from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router import RouterLink
 from webcompy.signal import Signal, computed
 
@@ -57,12 +58,17 @@ def Navbar(context: ComponentContext[list[Page]]):
     def _on_click_outside(ev: Any):
         _close_all()
 
-    if browser:
-        browser.document.addEventListener("click", _on_click_outside)
+    try:
+        dom = inject(DOM_PORT_KEY)
+    except Exception:
+        dom = None
+
+    if dom:
+        dom.add_document_event_listener("click", _on_click_outside)
 
         @on_before_destroy
         def _cleanup():
-            browser.document.removeEventListener("click", _on_click_outside)
+            dom.remove_document_event_listener("click", _on_click_outside)
 
     def _generate_navitem(page: Page, idx: int):
         if "children" in page:

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import contextlib
 
-from webcompy._browser._modules import browser as _raw_browser
 from webcompy.exception import WebComPyException
+from webcompy.ports._browser._raw import browser as _raw_browser
 from webcompy.ports._history import HistoryPort
 from webcompy.signal._base import SignalBase
 from webcompy.utils._environment import ENVIRONMENT

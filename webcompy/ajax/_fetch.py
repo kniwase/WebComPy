@@ -108,7 +108,7 @@ class HttpClient:
             )
         )
         if form_data is not None or form_element is not None:
-            from webcompy._browser._modules import browser as _raw_browser
+            from webcompy.ports._browser._raw import browser as _raw_browser
 
             if _raw_browser is None:
                 raise WebComPyHttpClientException

@@ -24,3 +24,9 @@ class ServerDOMPort(DOMPort):
 
     def schedule_macro_task(self, callback: Any) -> None:
         pass
+
+    def add_document_event_listener(self, event_type: str, handler: Any) -> None:
+        pass
+
+    def remove_document_event_listener(self, event_type: str, handler: Any) -> None:
+        pass

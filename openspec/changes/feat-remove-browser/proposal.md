@@ -13,8 +13,11 @@ This phase relocates the browser object definition from its public location (`_b
 - **MODIFIED** `webcompy/ports/_browser/_history.py`: import path updated to `_raw`
 - **MODIFIED** `webcompy/ports/_browser/_cookie.py`: import path updated to `_raw`
 - **MODIFIED** `webcompy/ajax/_fetch.py`: FormData fallback import path updated to `_raw`
+- **MODIFIED** `docs_app/components/navigation.py`: import path `_browser` → `ports._browser._raw`
+- **MODIFIED** `docs_app/components/syntax_highlighting.py`: import path `webcompy` → `ports._browser._raw`
+- **MODIFIED** `docs_app/components/demo_display.py`: import path `webcompy` → `ports._browser._raw`
 - **REMOVED** `browser` export from `webcompy/__init__.py`
-- **REMOVED** `webcompy/_browser/__init__.py`, `webcompy/_browser/_modules.py`, `webcompy/_browser/` directory
+- **REMOVED** `browser` re-export from `webcompy/_browser/__init__.py`
 - **MODIFIED** `pyproject.toml`: change `stubPath` from `_browser` to `ports`
 
 ## Capabilities

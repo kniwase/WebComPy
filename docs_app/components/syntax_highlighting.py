@@ -1,8 +1,8 @@
 from typing import TypedDict
 
-from webcompy import browser
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DomNodeRef, html
+from webcompy.ports._browser._raw import browser
 from webcompy.utils import strip_multiline_text
 
 

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from webcompy._browser._modules import browser as _raw_browser
 from webcompy.exception import WebComPyException
+from webcompy.ports._browser._raw import browser as _raw_browser
 from webcompy.ports._dom import DOMNode, DOMPort
 from webcompy.utils._environment import ENVIRONMENT
 
@@ -32,3 +32,9 @@ class BrowserDOMPort(DOMPort):
 
     def schedule_macro_task(self, callback: Any) -> None:
         self._browser.window.setTimeout(callback, 0)
+
+    def add_document_event_listener(self, event_type: str, handler: Any) -> None:
+        self._browser.document.addEventListener(event_type, handler)
+
+    def remove_document_event_listener(self, event_type: str, handler: Any) -> None:
+        self._browser.document.removeEventListener(event_type, handler)

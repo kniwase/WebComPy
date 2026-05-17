@@ -294,6 +294,12 @@ class FakeBrowserDOMPort:
     def schedule_macro_task(self, callback):
         pass
 
+    def add_document_event_listener(self, event_type, handler):
+        pass
+
+    def remove_document_event_listener(self, event_type, handler):
+        pass
+
 
 class FakeBrowserFFIPort:
     def create_proxy(self, func):
