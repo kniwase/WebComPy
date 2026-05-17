@@ -1,3 +1,4 @@
+from webcompy.app import WebComPyApp
 from webcompy.components import (
     ComponentContext,
     define_component,
@@ -8,7 +9,7 @@ from webcompy.signal import ReactiveDict, Signal, computed
 
 
 @define_component
-def Fizzbuzz(context: ComponentContext[None]):
+def App(context: ComponentContext[None]):
     opened = Signal(True)
     fizzbuzz_dict: ReactiveDict[int, str] = ReactiveDict()
     _next_n = Signal(1)
@@ -99,7 +100,7 @@ def Fizzbuzz(context: ComponentContext[None]):
     )
 
 
-Fizzbuzz.scoped_style = {
+App.scoped_style = {
     "ul": {
         "border": "dashed 2px #668ad8",
         "background": "#f1f8ff",
@@ -127,3 +128,6 @@ Fizzbuzz.scoped_style = {
         "color": "white",
     },
 }
+
+app = WebComPyApp(root_component=App)
+app.run()

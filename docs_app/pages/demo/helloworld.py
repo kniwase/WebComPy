@@ -3,34 +3,12 @@ from webcompy.elements import html
 from webcompy.router import RouterContext
 
 from ...components.demo_display import DemoDisplay
-from ...templates.demo.helloworld import HelloWorld
 
 
 @define_component
 def HelloWorldPage(context: ComponentContext[RouterContext]):
-    title = "HelloWorld"
-    context.set_title(f"{title} - WebCompy Demo")
-
+    context.set_title("HelloWorld - WebCompy Demo")
     return html.DIV(
-        {},
-        DemoDisplay(
-            {
-                "title": title,
-                "code": """
-                    from webcompy.elements import html
-                    from webcompy.components import define_component, ComponentContext
-
-
-                    @define_component
-                    def HelloWorld(_: ComponentContext[None]):
-                        return html.DIV(
-                            {},
-                            html.H1(
-                                {},
-                                "Hello WebComPy!",
-                            ),
-                        )""",
-            },
-            slots={"component": lambda: HelloWorld(None)},
-        ),
+        {"class": "container"},
+        DemoDisplay({"title": "HelloWorld", "app_name": "helloworld", "demo_path": "/_demos/helloworld/app.py"}),
     )

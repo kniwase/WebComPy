@@ -256,7 +256,7 @@ def generate_html(
             ),
             _HtmlElement(
                 "style",
-                {},
+                {"id": "webcompy-scoped-styles"},
                 " ".join(
                     (
                         "*[hidden]{display: none;}",

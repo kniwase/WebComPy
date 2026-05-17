@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/_webcompy-assets/core.css">
+</head>
+<body>
+<div id="webcompy-loading">
+  <style>#webcompy-loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.15);z-index:9999}.wc-loader{border:12px solid lightgray;border-radius:50%;border-top:12px solid skyblue;width:100px;height:100px;animation:spin 1s linear infinite}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>
+  <div class="wc-loader"></div>
+</div>
+
+<div id="webcompy-app"></div>
+
+<script id="demo-script" type="py"></script>
+
+<script>
+  (() => {
+    const APP_PACKAGES = {
+      helloworld: [],
+      fizzbuzz: [],
+      todo: [],
+      fetch_sample: [],
+      matplotlib_sample: ["numpy", "matplotlib"],
+    };
+    const p = new URLSearchParams(location.search);
+    const app = p.get("app");
+    if (!app || !(app in APP_PACKAGES)) {
+      document.body.textContent = "Invalid app name.";
+      return;
+    }
+
+    let wheel = "";
+    try {
+      const parentScript = window.parent.document.querySelector('script[type="py"][config]');
+      if (parentScript) {
+        const raw = parentScript.getAttribute("config").replace(/&quot;/g, '"');
+        const config = JSON.parse(raw);
+        wheel = config.packages.find(function (p) { return p.indexOf("webcompy-") !== -1; }) || "";
+      }
+    } catch (e) {
+      console.error("Failed to resolve webcompy wheel URL from parent config:", e);
+    }
+    if (!wheel || !/^\/_webcompy-app-package\//.test(wheel)) {
+      document.body.textContent = "Wheel URL not found.";
+      return;
+    }
+
+    const extra = APP_PACKAGES[app];
+    const config = {
+      packages: [wheel, ...extra],
+      experimental_create_proxy: "auto",
+    };
+    if (extra.length === 0) {
+      config.interpreter = "/_webcompy-assets/pyodide/pyodide.mjs";
+      config.lockFileURL = "/_webcompy-assets/pyodide/pyodide-lock.json";
+    }
+
+    const script = document.getElementById("demo-script");
+    script.setAttribute("src", "/_demos/" + app + "/app.py");
+    script.setAttribute("config", JSON.stringify(config));
+  })();
+</script>
+
+<script type="module" src="/_webcompy-assets/core.js"></script>
+
+</body>
+</html>

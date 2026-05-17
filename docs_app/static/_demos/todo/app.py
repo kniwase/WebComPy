@@ -1,6 +1,7 @@
 import uuid
 from typing import Any, TypedDict
 
+from webcompy.app import WebComPyApp
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DomNodeRef, html, repeat
 from webcompy.signal import ReactiveDict, Signal, computed
@@ -53,7 +54,7 @@ ToDoItem.scoped_style = {
 
 
 @define_component
-def ToDoList(_: ComponentContext[None]):
+def App(_: ComponentContext[None]):
     input_ref = DomNodeRef()
     data: ReactiveDict[str, TodoData] = ReactiveDict(
         {
@@ -101,7 +102,7 @@ def ToDoList(_: ComponentContext[None]):
     )
 
 
-ToDoList.scoped_style = {
+App.scoped_style = {
     "button": {
         "display": "inline-block",
         "text-decoration": "none",
@@ -115,3 +116,6 @@ ToDoList.scoped_style = {
         "color": "white",
     },
 }
+
+app = WebComPyApp(root_component=App)
+app.run()

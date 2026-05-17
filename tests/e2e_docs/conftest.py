@@ -125,6 +125,29 @@ def _wait_for_pyscript_init(page: Page, console_errors_list: list[str]):
             )
 
 
+def _wait_for_demo_iframe(page: Page, app_name: str):
+    start_time = time.monotonic()
+    frame_selector = f'iframe[src*="{app_name}"]'
+    while True:
+        try:
+            frame = page.frame_locator(frame_selector)
+            frame.locator("#webcompy-loading").wait_for(state="hidden", timeout=PYSCRIPT_POLL_INTERVAL)
+        except Exception:
+            pass
+        else:
+            try:
+                frame.locator("#webcompy-app:not([hidden])").wait_for(timeout=PYSCRIPT_POLL_INTERVAL)
+            except Exception:
+                pass
+            else:
+                return frame
+        elapsed = time.monotonic() - start_time
+        if elapsed > PYSCRIPT_INIT_TIMEOUT / 1000:
+            pytest.fail(
+                f"Demo iframe '{app_name}' PyScript did not initialize within {PYSCRIPT_INIT_TIMEOUT / 1000:.0f}s"
+            )
+
+
 @pytest.fixture(scope="session")
 def docs_prod_server():
     env = os.environ.copy()
