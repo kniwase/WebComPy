@@ -29,7 +29,6 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
                 source_code.value = f"# Failed to load {context.props['demo_path']}"
         except Exception:
             source_code.value = f"# Failed to load {context.props['demo_path']}"
-        _run_highlight()
 
     def _run_highlight():
         if browser and code_ref.element and hasattr(browser.window, "hljs"):
@@ -38,6 +37,11 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
     @context.on_after_rendering
     def _():
         _load()
+
+    @context.on_after_rendering
+    def _highlight():
+        if source_code.value:
+            _run_highlight()
 
     return html.DIV(
         {},
