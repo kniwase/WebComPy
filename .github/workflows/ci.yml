@@ -512,12 +512,12 @@ jobs:
           If .tmp/review-output.md does not exist when you finish, your work
           will be discarded and the review step will fail.
 
-           STEP-BY-STEP:
-           1. Analyze the diff and write your review
-           2. Call Write tool: filePath=.tmp/review-output.md, content=<your review>
-           3. Call Read tool on .tmp/review-output.md to verify it was written correctly
-           4. Confirm the last line is exactly REVIEW_RESULT: approved or REVIEW_RESULT: changes_requested
-           5. Only then are you truly done — do not stop before step 4"
+          STEP-BY-STEP:
+          1. Analyze the diff and write your review
+          2. Call Write tool: filePath=.tmp/review-output.md, content=<your review>
+          3. Call Read tool on .tmp/review-output.md to verify it was written correctly
+          4. Confirm the last line is exactly REVIEW_RESULT: approved or REVIEW_RESULT: changes_requested
+          5. Only then are you truly done — do not stop before step 4"
 
           _review_ok() {
             [ -s .tmp/review-output.md ] || return 1
