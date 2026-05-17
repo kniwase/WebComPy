@@ -43,9 +43,6 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
     @context.on_after_rendering
     def _():
         _load()
-
-    @context.on_after_rendering
-    def _highlight():
         if source_code.value:
             _run_highlight()
 
