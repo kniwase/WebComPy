@@ -3,18 +3,20 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypedDict
 from uuid import uuid4
 
-from webcompy._browser._modules import browser
 from webcompy.components._component import Component, HeadPropsStore, _active_app_context
 from webcompy.components._generator import ComponentGenerator
+from webcompy.di import inject
 from webcompy.di._keys import _HEAD_PROPS_KEY, _ROUTER_KEY
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import html
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.exception import WebComPyException
+from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
 from webcompy.signal import Computed
 from webcompy.signal._graph import consumer_destroy
+from webcompy.utils import ENVIRONMENT
 
 if TYPE_CHECKING:
     from webcompy.app._app import WebComPyApp
@@ -74,11 +76,11 @@ class AppDocumentRoot(Component):
         if self._router:
             di_scope.provide(_ROUTER_KEY, self._router)
             di_scope.provide(RouterKey, self._router)
-        if browser:
+        if ENVIRONMENT == "pyscript":
 
             def updte_title(title: str | None):
                 if title is not None:
-                    browser.document.title = title  # type: ignore
+                    inject(DOM_PORT_KEY).set_title(title)
 
             head_props.title.on_after_updating(updte_title)
 
@@ -110,25 +112,30 @@ class AppDocumentRoot(Component):
             self._property["on_after_rendering"]()
             if self._app:
                 self._app._record_phase("run_done")
-            if browser:
+            if ENVIRONMENT == "pyscript":
                 for key, value in self._html_attrs.items():
-                    current = browser.document.documentElement.getAttribute(key)
+                    html_el = inject(DOM_PORT_KEY).query_selector("html")
+                    current = html_el.getAttribute(key) if html_el else None
                     expected = value.value if isinstance(value, Computed) else value
-                    if current != expected:
-                        browser.document.documentElement.setAttribute(key, expected)  # type: ignore[union-attr]
+                    if current != expected and html_el:
+                        html_el.setAttribute(key, expected)
                 if self.__loading:
                     self.__loading = False
                     if self._app:
                         style_text = self.style
-                        if style_text is not None and not browser.document.getElementById("webcompy-scoped-styles"):
-                            style_el = browser.document.createElement("style")
+                        if style_text is not None and not inject(DOM_PORT_KEY).get_element_by_id(
+                            "webcompy-scoped-styles"
+                        ):
+                            style_el = inject(DOM_PORT_KEY).create_element("style")
                             style_el.setAttribute("id", "webcompy-scoped-styles")
                             style_el.textContent = "*[hidden]{display: none;} " + style_text
-                            browser.document.head.appendChild(style_el)
+                            head_el = inject(DOM_PORT_KEY).query_selector("head")
+                            if head_el:
+                                head_el.appendChild(style_el)
                     selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
-                    loading_el = browser.document.querySelector(
-                        f"{selector} > #webcompy-loading"
-                    ) or browser.document.getElementById("webcompy-loading")
+                    loading_el = inject(DOM_PORT_KEY).query_selector(f"{selector} > #webcompy-loading") or inject(
+                        DOM_PORT_KEY
+                    ).get_element_by_id("webcompy-loading")
                     if loading_el:
                         loading_el.remove()
                     if self._router and self._router._preload:
@@ -137,15 +144,15 @@ class AppDocumentRoot(Component):
                         self._app._record_phase("loading_removed")
                         self._app._emit_profile_summary()
         finally:
-            if not browser:
+            if ENVIRONMENT != "pyscript":
                 if app_token is not None:
                     _active_app_context.reset(app_token)
                 _active_di_scope.reset(token)
 
     def _init_node(self) -> DOMNode:
-        if browser:
+        if ENVIRONMENT == "pyscript":
             selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
-            node = browser.document.querySelector(selector)
+            node = inject(DOM_PORT_KEY).query_selector(selector)
             if node is None:
                 from webcompy.exception import WebComPyException as _WCE
 
@@ -204,13 +211,15 @@ class AppDocumentRoot(Component):
             consumer_destroy(self._callback_consumers[key])
             del self._callback_consumers[key]
         self._html_attrs[key] = value
-        if isinstance(value, Computed) and browser:
+        if isinstance(value, Computed) and ENVIRONMENT == "pyscript":
             consumer = value.on_after_updating(
-                lambda v, k=key: browser.document.documentElement.setAttribute(k, v)  # type: ignore[union-attr]
+                lambda v, k=key: el.setAttribute(k, v) if (el := inject(DOM_PORT_KEY).query_selector("html")) else None
             )
             self._callback_consumers[key] = consumer
-        if browser:
-            browser.document.documentElement.setAttribute(key, value.value if isinstance(value, Computed) else value)  # type: ignore[union-attr]
+        if ENVIRONMENT == "pyscript":
+            html_el = inject(DOM_PORT_KEY).query_selector("html")
+            if html_el:
+                html_el.setAttribute(key, value.value if isinstance(value, Computed) else value)
 
     def remove_html_attr(self, key: str):
         if key in self._callback_consumers:
@@ -218,8 +227,10 @@ class AppDocumentRoot(Component):
             del self._callback_consumers[key]
         if key in self._html_attrs:
             del self._html_attrs[key]
-        if browser:
-            browser.document.documentElement.removeAttribute(key)  # type: ignore[union-attr]
+        if ENVIRONMENT == "pyscript":
+            html_el = inject(DOM_PORT_KEY).query_selector("html")
+            if html_el:
+                html_el.removeAttribute(key)
 
     @property
     def html_attrs(self) -> dict[str, str]:
