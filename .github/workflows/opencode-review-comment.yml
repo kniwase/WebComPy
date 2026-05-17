@@ -50,7 +50,7 @@ jobs:
           agent: review
           use_github_token: true
           prompt: |
-            Review this pull request. Follow these rules strictly:
+            Review this pull request as a WebComPy-specialized reviewer. Follow these rules strictly:
 
             1. Check previous review comments on this PR first. Do NOT repeat points that have already been raised and addressed.
 
@@ -60,9 +60,11 @@ jobs:
 
             4. Check the PR comments for a "CI Results" summary posted by the CI workflow. Trust those CI results — do NOT re-verify lint, typecheck, test, or e2e checks that CI has already run. If no CI Results comment is found, note that CI results are unavailable and review accordingly.
 
-            5. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs.
+            5. SPEC-DRIVEN REVIEW: Classify changed files by subsystem and read the corresponding `openspec/specs/` before reviewing. Read `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md` first, then subsystem specs per the mapping in your agent configuration. Use specs as a checklist — verify no "SHALL" requirement is violated.
 
-            6. You MUST output `REVIEW_RESULT: changes_requested` if there are ANY issues or suggestions. Only output `REVIEW_RESULT: approved` when there are ZERO issues to raise.
+            6. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs.
+
+            7. You MUST output `REVIEW_RESULT: changes_requested` if there are ANY issues or suggestions. Only output `REVIEW_RESULT: approved` when there are ZERO issues to raise.
 
             At the end of your review, include EXACTLY ONE of these lines:
             REVIEW_RESULT: approved
