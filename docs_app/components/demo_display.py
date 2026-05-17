@@ -19,8 +19,10 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
     code_ref = DomNodeRef()
     source_code = Signal("")
 
+    source_code.on_after_updating(lambda _: run_highlight())
+
     @AsyncWrapper()
-    async def _load():
+    async def load():
         if source_code.value:
             return
         try:
@@ -32,15 +34,13 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
         except Exception:
             source_code.value = f"# Failed to load {context.props['demo_path']}"
 
-    def _run_highlight():
+    def run_highlight():
         if browser and code_ref.element and hasattr(browser.window, "hljs"):
             browser.window.hljs.highlightElement(code_ref.element)
 
     @context.on_after_rendering
     def _():
-        _load()
-        if source_code.value:
-            _run_highlight()
+        load()
 
     return html.DIV(
         {},
