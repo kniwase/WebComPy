@@ -34,7 +34,7 @@
     try {
       const parentScript = window.parent.document.querySelector('script[type="py"][config]');
       if (parentScript) {
-        const raw = parentScript.getAttribute("config").replace(/&amp;quot;/g, '"').replace(/&quot;/g, '"');
+        const raw = parentScript.getAttribute("config").replace(/&quot;/g, '"');
         const config = JSON.parse(raw);
         wheel = config.packages.find(function (p) { return p.indexOf("webcompy-") !== -1; }) || "";
       }
