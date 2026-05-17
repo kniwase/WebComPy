@@ -6,7 +6,7 @@ from ...components.demo_display import DemoDisplay
 
 
 @define_component
-def MatpoltlibSamplePage(context: ComponentContext[RouterContext]):
+def MatplotlibSamplePage(context: ComponentContext[RouterContext]):
     context.set_title("Matplotlib Sample - WebCompy Demo")
     return html.DIV(
         {"class": "container"},

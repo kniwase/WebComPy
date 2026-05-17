@@ -16,20 +16,20 @@
 
 ## 3. Rewrite DemoDisplay with template + srcdoc + fetch
 
-- [ ] 3.1 Add `_DEMO_SHELL_HTML` template string with `__PACKAGES__` and `{app_name}` placeholders
-- [ ] 3.2 Add `_resolve_packages()` helper that reads parent config via `querySelector` and extracts webcompy wheel + extra packages
-- [ ] 3.3 Add async fetch logic: `HttpClient.get(demo_path)` → source code string
-- [ ] 3.4 Build iframe srcdoc: replace placeholders, wrap source code in `<script type="py">`
-- [ ] 3.5 Set iframe via `DomNodeRef` + `element.srcdoc`
-- [ ] 3.6 Bind fetched source code to `SyntaxHighlighting` display
+- [x] 3.1 Add `_DEMO_SHELL_HTML` template string with `__PACKAGES__` and `{app_name}` placeholders (superseded — static HTML approach instead; see `docs_app/static/_demos/standard.html`)
+- [x] 3.2 Add `_resolve_packages()` helper that reads parent config via `querySelector` and extracts webcompy wheel + extra packages (implemented in `standard.html` inline JS)
+- [x] 3.3 Add async fetch logic: `HttpClient.get(demo_path)` → source code string (implemented in `demo_display.py:_load()`)
+- [x] 3.4 Build iframe srcdoc: replace placeholders, wrap source code in `<script type="py">` (superseded — static HTML with `src` + `config` attributes)
+- [x] 3.5 Set iframe via `DomNodeRef` + `element.srcdoc` (superseded — iframe `src` attribute with query param routing)
+- [x] 3.6 Bind fetched source code to `SyntaxHighlighting` display (superseded — `DemoDisplay` renders code directly via reactive `source_code` Signal + hljs)
 
 ## 4. Rewrite demo page components with app_name + demo_path
 
-- [ ] 4.1 Rewrite `docs_app/pages/demo/helloworld.py` — pass `app_name="helloworld"`, `demo_path="/_demos/helloworld/app.py"`
-- [ ] 4.2 Rewrite `docs_app/pages/demo/fizzbuzz.py` — same pattern
-- [ ] 4.3 Rewrite `docs_app/pages/demo/todo.py` — same pattern
-- [ ] 4.4 Rewrite `docs_app/pages/demo/fetch_sample.py` — same pattern
-- [ ] 4.5 Rewrite `docs_app/pages/demo/matplotlib_sample.py` — same pattern
+- [x] 4.1 Rewrite `docs_app/pages/demo/helloworld.py` — pass `app_name="helloworld"`, `demo_path="/_demos/helloworld/app.py"`
+- [x] 4.2 Rewrite `docs_app/pages/demo/fizzbuzz.py` — same pattern
+- [x] 4.3 Rewrite `docs_app/pages/demo/todo.py` — same pattern
+- [x] 4.4 Rewrite `docs_app/pages/demo/fetch_sample.py` — same pattern
+- [x] 4.5 Rewrite `docs_app/pages/demo/matplotlib_sample.py` — same pattern
 
 ## 5. Clean up unused files
 
@@ -39,12 +39,12 @@
 - [x] 5.4 Remove `docs_app/templates/demo/fetch_sample.py`
 - [x] 5.5 Remove `docs_app/templates/demo/matplotlib_sample.py`
 - [x] 5.6 Remove `docs_app/static/fetch_sample/sample.json` (moved to `_demos/fetch_sample/`)
-- [ ] 5.7 Remove `docs_app/static/_demos/standard.html` (no longer needed — template is in Python)
-- [ ] 5.8 Remove `docs_app/static/_demos/numeric.html` (no longer needed)
-- [ ] 5.9 Clean up `docs_app/dist/_demos/` stale files if they exist
+- [x] 5.7 Remove `docs_app/static/_demos/standard.html` (no longer needed — template is in Python) (superseded — kept as shared static shell)
+- [x] 5.8 Remove `docs_app/static/_demos/numeric.html` (no longer needed) (no such file existed)
+- [x] 5.9 Clean up `docs_app/dist/_demos/` stale files if they exist (not applicable)
 
 ## 6. Run lint, type check, and tests
 
-- [ ] 6.1 Run `uv run ruff check .` and fix any issues
-- [ ] 6.2 Run `uv run pyright` and fix any type errors
-- [ ] 6.3 Run `uv run python -m pytest tests/ --tb=short` and ensure all tests pass
+- [x] 6.1 Run `uv run ruff check .` and fix any issues
+- [x] 6.2 Run `uv run pyright` and fix any type errors
+- [x] 6.3 Run `uv run python -m pytest tests/ --tb=short` and ensure all tests pass
