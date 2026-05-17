@@ -522,7 +522,7 @@ jobs:
           _review_ok() {
             [ -s .tmp/review-output.md ] || return 1
             local last
-            last=$(tail -n 1 .tmp/review-output.md)
+            last=$(grep -v '^[[:space:]]*$' .tmp/review-output.md | tail -n 1)
             [ "$last" = "REVIEW_RESULT: approved" ] || [ "$last" = "REVIEW_RESULT: changes_requested" ]
           }
 
