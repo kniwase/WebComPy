@@ -202,7 +202,7 @@ jobs:
       id-token: write
       contents: read
       pull-requests: write
-      issues: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
         with:
