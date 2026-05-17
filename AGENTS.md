@@ -166,15 +166,39 @@ This ensures the automated PR review always has current knowledge of the framewo
 | `overview` | Framework purpose, core promises, and development lifecycle |
 | `architecture` | Dual-environment model, project structure, CLI workflows, hydration |
 | `reactive` | Reactive state primitives and change propagation |
+| `effect` | Side-effecting functions with automatic reactive dependency tracking and lifecycle-bound cleanup |
 | `components` | Component definition styles, props, slots, scoped CSS, lifecycle |
+| `composables` | Reusable stateful logic functions for function-style component setup |
 | `elements` | DOM element creation, reactive updates, conditional/list rendering |
+| `list-reconciliation` | Key-based reconciliation for efficient DOM reuse when reactive lists/dicts change |
+| `nested-dynamic-element` | Nesting of `repeat` and `switch` at arbitrary depth |
+| `dict-repeat-overload` | Efficient DOM reconciliation for `ReactiveDict` with `repeat()` |
 | `router` | Client-side routing, hash/history modes, path params |
+| `router-hooks` | Navigation lifecycle callbacks (`before_route_change`, `after_route_change`, `on_route_error`) |
 | `app` | Application bootstrapping, hydration, head management |
+| `app-lifecycle` | App start/run/shutdown across browser (`app.run()`) and server entry points |
 | `app-config` | AppConfig, ServerConfig, GenerateConfig dataclasses |
-| `project-config` | Two-file project configuration (webcompy_config.py, webcompy_server_config.py) |
+| `config-separation` | Separation of browser-relevant config from server-only build config |
+| `project-config` | Two-file project configuration (`webcompy_config.py`, `webcompy_server_config.py`) |
 | `cli` | Dev server, SSG, project scaffolding, configuration |
 | `browser-api` | Browser environment detection and API abstraction |
+| `port-definitions` | Typed, injectable port ABCs (DOM, FFI, fetch, cookie, history) replacing monolithic `browser` |
 | `async` | Async operations, HTTP client integration |
+| `di-scope` | Resolution boundary and lifecycle for DI values, hierarchy mirroring component tree |
+| `di-injection` | Provide/inject pattern for scoped dependency resolution, replacing global singletons |
+| `dependency-resolver` | Classification of app dependencies for browser deployment (CDN vs local bundling) |
+| `e2e-testing` | Browser-based validation that WebComPy apps load and render correctly |
+| `docs-e2e` | E2E testing for docs_app pages, interactive demos, and console error validation |
+| `internal-naming` | Correct English spelling of internal/private API identifiers |
+| `package-kind` | `PackageKind` enum for classifying browser dependencies (WASM/CDN_PURE_PYTHON/LOCAL_PURE_PYTHON) |
+| `lockfile` | Reproducible builds via `webcompy-lock.json` recording dependency classifications and sources |
+| `pyscript-bundle` | Local serving of complete PyScript offline bundle |
+| `wheel-builder` | PEP 427-compliant Python wheel production for browser deployment |
+| `project-local-cache` | Per-app `.webcompy_modules/` cache for downloaded Pyodide/PyScript runtime assets |
+| `plugin-system` | Extension mechanism via `WebComPyPlugin` base class for lifecycle hooks and DI services |
+| `plugin-script` | Declarative loading of JavaScript resources with conditional runtime expressions |
+| `reactive-dropdown` | Demonstration that WebComPy's reactive system handles UI interactions like dropdown menus |
+| `demo-iframe-isolation` | Isolated iframe PyScript contexts for demos with on-demand dependency loading |
 
 ## Git Conventions
 

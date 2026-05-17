@@ -37,6 +37,7 @@ Follow these rules for every review:
    | `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md` |
    | `webcompy/router/` | `openspec/specs/router/spec.md`, `openspec/specs/router-hooks/spec.md` |
    | `webcompy/_browser/` | `openspec/specs/browser-api/spec.md` |
+   | `webcompy/ports/` | `openspec/specs/port-definitions/spec.md` |
    | `webcompy/di/` | `openspec/specs/di-scope/spec.md`, `openspec/specs/di-injection/spec.md`, `openspec/specs/dependency-resolver/spec.md` |
    | `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md` |
    | `webcompy/ajax/`, `webcompy/aio/` | `openspec/specs/async/spec.md` |
