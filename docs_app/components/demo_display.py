@@ -6,6 +6,7 @@ from webcompy.ajax import HttpClient
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DomNodeRef, html
 from webcompy.signal import Signal
+from webcompy.utils import strip_multiline_text
 
 
 class DemoComponentProps(TypedDict):
@@ -28,7 +29,7 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
         try:
             res = await HttpClient.get(context.props["demo_path"])
             if res.ok:
-                source_code.value = res.text
+                source_code.value = strip_multiline_text(res.text).strip()
             else:
                 source_code.value = f"# Failed to load {context.props['demo_path']}"
         except Exception:
