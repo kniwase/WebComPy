@@ -113,8 +113,9 @@ class AppDocumentRoot(Component):
             if self._app:
                 self._app._record_phase("run_done")
             if ENVIRONMENT == "pyscript":
+                _dom = inject(DOM_PORT_KEY)
+                html_el = _dom.query_selector("html")
                 for key, value in self._html_attrs.items():
-                    html_el = inject(DOM_PORT_KEY).query_selector("html")
                     current = html_el.getAttribute(key) if html_el else None
                     expected = value.value if isinstance(value, Computed) else value
                     if current != expected and html_el:
@@ -123,19 +124,17 @@ class AppDocumentRoot(Component):
                     self.__loading = False
                     if self._app:
                         style_text = self.style
-                        if style_text is not None and not inject(DOM_PORT_KEY).get_element_by_id(
-                            "webcompy-scoped-styles"
-                        ):
-                            style_el = inject(DOM_PORT_KEY).create_element("style")
+                        if style_text is not None and not _dom.get_element_by_id("webcompy-scoped-styles"):
+                            style_el = _dom.create_element("style")
                             style_el.setAttribute("id", "webcompy-scoped-styles")
                             style_el.textContent = "*[hidden]{display: none;} " + style_text
-                            head_el = inject(DOM_PORT_KEY).query_selector("head")
+                            head_el = _dom.query_selector("head")
                             if head_el:
                                 head_el.appendChild(style_el)
                     selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
-                    loading_el = inject(DOM_PORT_KEY).query_selector(f"{selector} > #webcompy-loading") or inject(
-                        DOM_PORT_KEY
-                    ).get_element_by_id("webcompy-loading")
+                    loading_el = _dom.query_selector(f"{selector} > #webcompy-loading") or _dom.get_element_by_id(
+                        "webcompy-loading"
+                    )
                     if loading_el:
                         loading_el.remove()
                     if self._router and self._router._preload:
@@ -217,7 +216,8 @@ class AppDocumentRoot(Component):
             )
             self._callback_consumers[key] = consumer
         if ENVIRONMENT == "pyscript":
-            html_el = inject(DOM_PORT_KEY).query_selector("html")
+            _dom = inject(DOM_PORT_KEY)
+            html_el = _dom.query_selector("html")
             if html_el:
                 html_el.setAttribute(key, value.value if isinstance(value, Computed) else value)
 
@@ -228,7 +228,8 @@ class AppDocumentRoot(Component):
         if key in self._html_attrs:
             del self._html_attrs[key]
         if ENVIRONMENT == "pyscript":
-            html_el = inject(DOM_PORT_KEY).query_selector("html")
+            _dom = inject(DOM_PORT_KEY)
+            html_el = _dom.query_selector("html")
             if html_el:
                 html_el.removeAttribute(key)
 

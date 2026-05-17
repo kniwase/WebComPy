@@ -203,7 +203,7 @@ class TestHtmlAttrs:
         mock_dom.query_selector = MagicMock(return_value=MagicMock())
         from webcompy.ports._keys import DOM_PORT_KEY
 
-        app._di_scope._providers[DOM_PORT_KEY] = mock_dom
+        app._di_scope.provide(DOM_PORT_KEY, mock_dom)
         monkeypatch.setattr("webcompy.app._root_component.ENVIRONMENT", "pyscript")
 
         with app._di_scope:

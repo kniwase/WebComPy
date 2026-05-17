@@ -29,6 +29,14 @@ All 16 `browser` access sites are replaced:
 - `if browser:` → `if ENVIRONMENT == "pyscript":`
 - `browser.document.createElement(...)` / `browser.document.head.appendChild(...)` → via `inject(DOM_PORT_KEY).create_element(...)`
 
+### Decision 3: `ServerHistoryPort` uses `mode="history"` for SSG
+
+`ServerHistoryPort` is constructed with `mode="history"` (not `"hash"`). SSG generates clean URL paths without hash fragments, so history mode is the appropriate default for server-side rendering.
+
+### Decision 4: `inject()` in `set_html_attr` callback lambda relies on DI scope fallback
+
+The lambda callback registered via `value.on_after_updating()` calls `inject(DOM_PORT_KEY)`. In the PyScript environment the DI scope is entered at app init and never exited, so `inject()` always resolves. If the `ContextVar` binding is lost during a JS→Python callback, `inject()` falls back to `_get_app_di_scope()`, which also holds the ports. Either path resolves correctly.
+
 ## Risks / Trade-offs
 
 - No risk — ports are not yet required by any component. Addition only.
