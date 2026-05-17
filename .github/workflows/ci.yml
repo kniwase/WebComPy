@@ -460,9 +460,16 @@ jobs:
           REVIEWED_AT_COMMENT=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" \
             --jq '[.[] | select(.user.login == "github-actions[bot]") | select(.body | test("REVIEWED_AT:"))] | last.body // empty')
           LAST_SHA=$(echo "$REVIEWED_AT_COMMENT" | sed -n 's/.*REVIEWED_AT: \([a-f0-9]\{40\}\).*/\1/p' | head -1)
+          MERGE_BASE=$(git merge-base HEAD origin/main)
           if [ -n "$LAST_SHA" ] && git cat-file -e "$LAST_SHA" 2>/dev/null; then
-            git diff "$LAST_SHA"..HEAD > .tmp/pr-diff-since-last.txt
-            echo "Incremental diff generated from $LAST_SHA"
+            if git merge-base --is-ancestor "$LAST_SHA" "$MERGE_BASE" 2>/dev/null; then
+              git diff "$LAST_SHA"..HEAD > .tmp/pr-diff-since-last.txt
+              echo "Incremental diff generated from $LAST_SHA"
+            else
+              echo "# Incremental diff unavailable: branch was rebased or merged with main since last review." > .tmp/pr-diff-since-last.txt
+              echo "# Full PR diff is attached separately as .tmp/pr-diff.txt." >> .tmp/pr-diff-since-last.txt
+              echo "Incremental diff skipped — $LAST_SHA is not an ancestor of $MERGE_BASE"
+            fi
           else
             echo "# No REVIEWED_AT marker found in previous bot comments." > .tmp/pr-diff-since-last.txt
           fi
