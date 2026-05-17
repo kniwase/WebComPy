@@ -481,7 +481,6 @@ jobs:
 
           MAX_RETRIES=2
           attempt=0
-          FILES="--file .tmp/pr-diff.txt --file .tmp/pr-diff-since-last.txt"
           PROMPT="Review this pull request. Two diff files are attached:
           - .tmp/pr-diff.txt — full diff against the merge base
           - .tmp/pr-diff-since-last.txt — incremental diff since the last CI review (or a note if unavailable)
@@ -526,15 +525,16 @@ jobs:
           You MUST use the Write tool to write ONLY the final review to .tmp/review-output.md."
             fi
 
-            opencode run \
-              --model "openai-compat/$OPENAI_COMPAT_MODEL" \
+            script -q -c "opencode run \
+              --model \"openai-compat/$OPENAI_COMPAT_MODEL\" \
               --agent ci-review \
-              $FILES \
-              --title "PR #$PR_NUMBER Review" \
-              "$PROMPT$RETRY_MSG" \
-              2>&1 | tee .tmp/review-raw-output.txt
+              --file .tmp/pr-diff.txt \
+              --file .tmp/pr-diff-since-last.txt \
+              --title \"PR #$PR_NUMBER Review\" \
+              \"$PROMPT$RETRY_MSG\"" \
+              .tmp/review-raw-output.txt
 
-            if [ -s .tmp/review-output.md ] && grep -q "REVIEW_RESULT:" .tmp/review-output.md; then
+            if [ -s .tmp/review-output.md ] && grep -Eq "^REVIEW_RESULT: (approved|changes_requested)$" .tmp/review-output.md; then
               echo "::notice::Review output written on attempt $attempt"
               break
             fi
