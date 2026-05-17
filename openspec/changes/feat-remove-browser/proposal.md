@@ -1,28 +1,35 @@
 ## Why
 
-All consumers have been migrated to port injection. The `browser` object and `webcompy/_browser/` directory are no longer needed. Remove them to clean up the codebase.
+All framework and application consumers have been migrated to port injection. The public `browser` object export (`from webcompy import browser`) is no longer needed. However, port implementations (`ports/_browser/*.py`) and the AJAX FormData fallback still depend on the raw browser object internally.
+
+This phase relocates the browser object definition from its public location (`_browser/_modules.py`) to an internal location (`ports/_browser/_raw.py`), updates all internal import paths, and removes the public export. The old `_browser/` directory itself is deleted after all consumers (including Router in phase 6) are confirmed clear.
 
 ## What Changes
 
-- **REMOVED** `webcompy/_browser/_modules.py` — `browser` object definition
-- **REMOVED** `webcompy/_browser/__init__.py`
-- **REMOVED** `webcompy/_browser/` directory entirely
+- **NEW** `webcompy/ports/_browser/_raw.py` — raw browser object definition (relocated from `_browser/_modules.py`)
+- **MODIFIED** `webcompy/ports/_browser/_dom.py`: import path updated to `_raw`
+- **MODIFIED** `webcompy/ports/_browser/_ffi.py`: import path updated to `_raw`
+- **MODIFIED** `webcompy/ports/_browser/_fetch.py`: import path updated to `_raw`
+- **MODIFIED** `webcompy/ports/_browser/_history.py`: import path updated to `_raw`
+- **MODIFIED** `webcompy/ports/_browser/_cookie.py`: import path updated to `_raw`
+- **MODIFIED** `webcompy/ajax/_fetch.py`: FormData fallback import path updated to `_raw`
 - **REMOVED** `browser` export from `webcompy/__init__.py`
+- **REMOVED** `webcompy/_browser/__init__.py`, `webcompy/_browser/_modules.py`, `webcompy/_browser/` directory
 - **MODIFIED** `pyproject.toml`: change `stubPath` from `_browser` to `ports`
 
 ## Capabilities
 
 ### Modified Capabilities
 
-- `browser-api`: `browser` object and `_browser/` module removed. All browser API access is through port injection only.
+- `browser-api`: `browser` public export removed. Browser object lives only as an internal implementation detail under `ports/_browser/_raw.py`.
 
 ## Non-goals
 
-- Adding new functionality — pure removal only
+- Removing `browser` references within Router files (phase 6)
+- Removing the browser object definition entirely (it is still needed by port implementations until a pure-Python alternative exists)
 - Deprecation period — unstable release, no backward compatibility needed
-- Migrating `_browser/_modules.pyi` (unnecessary — ports provide type checking)
 
 ## Impact
 
-- **Breaking**: `browser` object removal — all consumers must have been migrated in prior phases
-- **Affected**: `webcompy/__init__.py`, `pyproject.toml`, `webcompy/_browser/` (deleted)
+- **Breaking**: `from webcompy import browser` / `from webcompy._browser import browser` no longer works
+- **Affected**: `webcompy/__init__.py`, `pyproject.toml`, `webcompy/_browser/` (deleted), 6 port implementation files (import path update)

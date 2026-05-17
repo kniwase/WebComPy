@@ -1,17 +1,17 @@
 ## Why
 
-Port implementations exist and all consumers can now use `inject(PORT_KEY)`. `WebComPyApp.__init__` must provide the ports into the DI scope so they are available at application startup.
+DOM, FFI, and Fetch ports are already provided into the DI scope by phase 3 (`feat-port-migrate-consumers`). This phase completes app-level port registration by adding `HistoryPort` in the browser branch and all four server-side port implementations. It also migrates `_root_component.py` from `browser` to port injection.
 
 ## What Changes
 
-- **MODIFIED** `webcompy/app/_app.py`: After `_register_deferred_components()`, provide the 4 port implementations (DOM, FFI, Fetch, History) into `self._di_scope.provide()` depending on environment
-- **MODIFIED** `webcompy/app/_root_component.py`: Replace `browser` imports and `if browser:` guards with `inject(PORT_KEY)` calls and `ENVIRONMENT == "pyscript"` checks
+- **MODIFIED** `webcompy/app/_app.py`: Provide `BrowserHistoryPort` in the PyScript branch (alongside existing DOM/FFI/Fetch ports). Provide `ServerDOMPort`, `ServerFFIPort`, `ServerFetchPort`, `ServerHistoryPort` in the server branch (preparatory for `feat-virtual-dom`)
+- **MODIFIED** `webcompy/app/_root_component.py`: Replace `browser` imports and `if browser:` guards with port injection and `ENVIRONMENT` checks
 
 ## Capabilities
 
 ### Modified Capabilities
 
-- `app-config`: `WebComPyApp` bootstrap provides environment-specific ports into the DI scope
+- `app-config`: `WebComPyApp` bootstrap provides `HistoryPort` (browser) and all server-side port implementations into the DI scope
 
 ## Non-goals
 
@@ -22,4 +22,4 @@ Port implementations exist and all consumers can now use `inject(PORT_KEY)`. `We
 ## Impact
 
 - **Affected**: `webcompy/app/_app.py`, `webcompy/app/_root_component.py`
-- **No breaking changes**: All existing tests pass unchanged. Ports are already available; the app just starts providing them.
+- **No breaking changes**: All existing tests pass unchanged

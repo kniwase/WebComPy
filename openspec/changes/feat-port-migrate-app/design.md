@@ -1,13 +1,13 @@
 ## Context
 
-`WebComPyApp.__init__` currently creates `app.di_scope` and provides `ComponentStore`. Browser/server port implementations were already added by `feat-port-definitions`. The app must provide them to the DI scope during initialization.
+Phase 3 (`feat-port-migrate-consumers`) already provides `BrowserDOMPort`, `BrowserFFIPort`, and `BrowserFetchPort` in the PyScript branch of `WebComPyApp.__init__`. This phase adds the missing `HistoryPort` to that branch and provides all four server-side port implementations for the server branch. It also migrates `_root_component.py` away from `browser`.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- In PyScript environment: provide `BrowserDOMPort`, `BrowserFFIPort`, `BrowserFetchPort`, `BrowserHistoryPort`
-- In server environment: provide `ServerDOMPort`, `ServerFFIPort`, `ServerFetchPort`, `ServerHistoryPort`
-- Migrate `_root_component.py`: replace 16 `browser` access sites with `inject(DOM_PORT_KEY)` and equivalent `ENVIRONMENT` guards
+- PyScript branch: provide `BrowserHistoryPort` (in addition to existing DOM/FFI/Fetch ports)
+- Server branch: provide `ServerDOMPort`, `ServerFFIPort`, `ServerFetchPort`, `ServerHistoryPort`
+- Migrate `_root_component.py`: replace `browser` access with `inject(DOM_PORT_KEY)` and `ENVIRONMENT` equivalents
 
 **Non-Goals:**
 - Remove existing `browser` imports (next phase)
@@ -15,9 +15,19 @@
 
 ## Decisions
 
-### Decision 1: Ports provided after `_register_deferred_components()`, before `AppDocumentRoot`
+### Decision 1: Ports provided after imports, before `AppDocumentRoot`
 
-`_register_deferred_components()` requires the DI scope, so it runs first. Ports are provided immediately after. They become available before `AppDocumentRoot` is constructed and rendered.
+Existing DOM/FFI/Fetch ports are already provided in the PyScript branch at import time. HistoryPort is added there. Server ports are provided in the server `else` block after `_register_deferred_components()`.
+
+### Decision 2: `_root_component.py` replaces `browser` with `inject(DOM_PORT_KEY)`
+
+All 16 `browser` access sites are replaced:
+- `browser.document.title` → `inject(DOM_PORT_KEY).set_title(title)`
+- `browser.document.querySelector(...)` → `inject(DOM_PORT_KEY).query_selector(...)`
+- `browser.document.getElementById(...)` → `inject(DOM_PORT_KEY).get_element_by_id(...)`
+- `browser.document.documentElement.*` → root element obtained via `inject(DOM_PORT_KEY).query_selector("html")`
+- `if browser:` → `if ENVIRONMENT == "pyscript":`
+- `browser.document.createElement(...)` / `browser.document.head.appendChild(...)` → via `inject(DOM_PORT_KEY).create_element(...)`
 
 ## Risks / Trade-offs
 
