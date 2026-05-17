@@ -139,16 +139,19 @@ When working on the codebase (developing, reviewing, or refactoring), always rea
 
 | Changed files | Specs to read |
 |---|---|
-| `webcompy/reactive/` | `openspec/specs/reactive/spec.md`, `openspec/specs/effect/spec.md` |
+| `webcompy/signal/` | `openspec/specs/reactive/spec.md`, `openspec/specs/effect/spec.md` |
 | `webcompy/components/` | `openspec/specs/components/spec.md`, `openspec/specs/composables/spec.md` |
 | `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md` |
 | `webcompy/router/` | `openspec/specs/router/spec.md`, `openspec/specs/router-hooks/spec.md` |
 | `webcompy/_browser/` | `openspec/specs/browser-api/spec.md` |
 | `webcompy/ports/` | `openspec/specs/port-definitions/spec.md` |
+| `webcompy/plugin/` | `openspec/specs/plugin-system/spec.md`, `openspec/specs/plugin-script/spec.md` |
 | `webcompy/di/` | `openspec/specs/di-scope/spec.md`, `openspec/specs/di-injection/spec.md`, `openspec/specs/dependency-resolver/spec.md` |
 | `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md` |
 | `webcompy/ajax/`, `webcompy/aio/` | `openspec/specs/async/spec.md` |
 | `webcompy/cli/` | `openspec/specs/cli/spec.md`, `openspec/specs/project-config/spec.md`, `openspec/specs/config-separation/spec.md` |
+
+Other directories (`webcompy/exception/`, `webcompy/utils/`, `webcompy/reactive/`) do not have dedicated specs — review against `overview` and `architecture` specs only.
 
 Use specs as a checklist: verify no "SHALL" requirement is violated by your changes. Reviewers use this mapping for spec-driven PR review; developers use it to ensure their implementation aligns with the framework's promised behavior before opening a PR.
 
