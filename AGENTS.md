@@ -133,17 +133,36 @@ WebComPy uses OpenSpec for spec-driven development. Specs define **what the fram
 - Describe **observable behavior**, not class hierarchies or method signatures.
 - Keep specs focused on capabilities. Internal refactoring that doesn't change user-facing behavior doesn't need a spec change.
 
+### File → Spec Mapping
+
+When working on the codebase (developing, reviewing, or refactoring), always read the relevant specs based on the files you touch. Start with `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md`, then read the subsystem specs:
+
+| Changed files | Specs to read |
+|---|---|
+| `webcompy/reactive/` | `openspec/specs/reactive/spec.md`, `openspec/specs/effect/spec.md` |
+| `webcompy/components/` | `openspec/specs/components/spec.md`, `openspec/specs/composables/spec.md` |
+| `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md` |
+| `webcompy/router/` | `openspec/specs/router/spec.md`, `openspec/specs/router-hooks/spec.md` |
+| `webcompy/_browser/` | `openspec/specs/browser-api/spec.md` |
+| `webcompy/ports/` | `openspec/specs/port-definitions/spec.md` |
+| `webcompy/di/` | `openspec/specs/di-scope/spec.md`, `openspec/specs/di-injection/spec.md`, `openspec/specs/dependency-resolver/spec.md` |
+| `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md` |
+| `webcompy/ajax/`, `webcompy/aio/` | `openspec/specs/async/spec.md` |
+| `webcompy/cli/` | `openspec/specs/cli/spec.md`, `openspec/specs/project-config/spec.md`, `openspec/specs/config-separation/spec.md` |
+
+Use specs as a checklist: verify no "SHALL" requirement is violated by your changes. Reviewers use this mapping for spec-driven PR review; developers use it to ensure their implementation aligns with the framework's promised behavior before opening a PR.
+
 ### CI Review Agent Maintenance
 
-When specs are added, modified, or removed, the CI review agent at `.opencode/agents/ci-review.md` MUST be updated to stay in sync:
+When specs are added, modified, or removed, the mapping table above and the CI review agent at `.opencode/agents/ci-review.md` MUST be updated to stay in sync:
 
-- **New spec added** — add the spec to the file→spec mapping table in the "SPEC-DRIVEN REVIEW" section
-- **New subsystem or directory created** — add a row to the file→spec mapping table
-- **New framework invariants discovered** — add to the "Critical Framework Invariants" section
-- **Spec removed or renamed** — remove or update the corresponding mapping entry
-- **Spec requirements materially changed** — review whether the invariant descriptions still hold
+- **New spec added** — add the spec to the file→spec mapping table above
+- **New subsystem or directory created** — add a row to the file→spec mapping table above
+- **New framework invariants discovered** — add to the "Critical Framework Invariants" section in `.opencode/agents/ci-review.md`
+- **Spec removed or renamed** — remove or update the corresponding entries in the mapping table above
+- **Spec requirements materially changed** — review whether the invariant descriptions in `.opencode/agents/ci-review.md` still hold
 
-This ensures the automated PR review always has current knowledge of the framework's promised behavior.
+This ensures all agents — development and review alike — share current knowledge of the framework's promised behavior.
 
 ### Language Rules
 

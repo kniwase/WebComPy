@@ -28,22 +28,7 @@ Follow these rules for every review:
 
 3. Check for code quality issues, potential bugs, and suggest improvements — but only for the changed code.
 
-4. **SPEC-DRIVEN REVIEW**: Classify changed files by subsystem and read the corresponding specs from `openspec/specs/`. Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md`. Then read subsystem specs based on changed paths:
-
-   | Changed files | Specs to read |
-   |---|---|
-   | `webcompy/reactive/` | `openspec/specs/reactive/spec.md`, `openspec/specs/effect/spec.md` |
-   | `webcompy/components/` | `openspec/specs/components/spec.md`, `openspec/specs/composables/spec.md` |
-   | `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md` |
-   | `webcompy/router/` | `openspec/specs/router/spec.md`, `openspec/specs/router-hooks/spec.md` |
-   | `webcompy/_browser/` | `openspec/specs/browser-api/spec.md` |
-   | `webcompy/ports/` | `openspec/specs/port-definitions/spec.md` |
-   | `webcompy/di/` | `openspec/specs/di-scope/spec.md`, `openspec/specs/di-injection/spec.md`, `openspec/specs/dependency-resolver/spec.md` |
-   | `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md` |
-   | `webcompy/ajax/`, `webcompy/aio/` | `openspec/specs/async/spec.md` |
-   | `webcompy/cli/` | `openspec/specs/cli/spec.md`, `openspec/specs/project-config/spec.md`, `openspec/specs/config-separation/spec.md` |
-
-   Use specs as a checklist: verify no "SHALL" requirement is violated.
+4. **SPEC-DRIVEN REVIEW**: Classify changed files by subsystem and read the corresponding specs from `openspec/specs/` using the file→spec mapping in `AGENTS.md`. Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md`. Use specs as a checklist: verify no "SHALL" requirement is violated.
 
 5. If the PR diff includes changes under `openspec/changes/archive/`, read the corresponding Change artifacts (proposal.md, design.md, tasks.md, and specs/) and verify that the implementation correctly satisfies ALL requirements defined in those specs.
 
