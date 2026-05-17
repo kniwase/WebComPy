@@ -133,6 +133,40 @@ WebComPy uses OpenSpec for spec-driven development. Specs define **what the fram
 - Describe **observable behavior**, not class hierarchies or method signatures.
 - Keep specs focused on capabilities. Internal refactoring that doesn't change user-facing behavior doesn't need a spec change.
 
+### File → Spec Mapping
+
+When working on the codebase (developing, reviewing, or refactoring), always read the relevant specs based on the files you touch. Start with `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md`, then read the subsystem specs:
+
+| Changed files | Specs to read |
+|---|---|
+| `webcompy/signal/` | `openspec/specs/reactive/spec.md`, `openspec/specs/effect/spec.md` |
+| `webcompy/components/` | `openspec/specs/components/spec.md`, `openspec/specs/composables/spec.md` |
+| `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md` |
+| `webcompy/router/` | `openspec/specs/router/spec.md`, `openspec/specs/router-hooks/spec.md` |
+| `webcompy/_browser/` | `openspec/specs/browser-api/spec.md` |
+| `webcompy/ports/` | `openspec/specs/port-definitions/spec.md` |
+| `webcompy/plugin/` | `openspec/specs/plugin-system/spec.md`, `openspec/specs/plugin-script/spec.md` |
+| `webcompy/di/` | `openspec/specs/di-scope/spec.md`, `openspec/specs/di-injection/spec.md`, `openspec/specs/dependency-resolver/spec.md` |
+| `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md` |
+| `webcompy/ajax/`, `webcompy/aio/` | `openspec/specs/async/spec.md` |
+| `webcompy/cli/` | `openspec/specs/cli/spec.md`, `openspec/specs/project-config/spec.md`, `openspec/specs/config-separation/spec.md` |
+
+Other directories (`webcompy/exception/`, `webcompy/utils/`) do not have dedicated specs — review against `overview` and `architecture` specs only.
+
+Use specs as a checklist: verify no "SHALL" requirement is violated by your changes. Reviewers use this mapping for spec-driven PR review; developers use it to ensure their implementation aligns with the framework's promised behavior before opening a PR.
+
+### CI Review Agent Maintenance
+
+When specs are added, modified, or removed, the mapping table above and the CI review agent at `.opencode/agents/ci-review.md` MUST be updated to stay in sync:
+
+- **New spec added** — add the spec to the file→spec mapping table above
+- **New subsystem or directory created** — add a row to the file→spec mapping table above
+- **New framework invariants discovered** — add to the "Critical Framework Invariants" section in `.opencode/agents/ci-review.md`
+- **Spec removed or renamed** — remove or update the corresponding entries in the mapping table above
+- **Spec requirements materially changed** — review whether the invariant descriptions in `.opencode/agents/ci-review.md` still hold
+
+This ensures all agents — development and review alike — share current knowledge of the framework's promised behavior.
+
 ### Language Rules
 
 - All documents (proposals, designs, specs, tasks) and code comments MUST be written in English.
@@ -154,15 +188,39 @@ WebComPy uses OpenSpec for spec-driven development. Specs define **what the fram
 | `overview` | Framework purpose, core promises, and development lifecycle |
 | `architecture` | Dual-environment model, project structure, CLI workflows, hydration |
 | `reactive` | Reactive state primitives and change propagation |
+| `effect` | Side-effecting functions with automatic reactive dependency tracking and lifecycle-bound cleanup |
 | `components` | Component definition styles, props, slots, scoped CSS, lifecycle |
+| `composables` | Reusable stateful logic functions for function-style component setup |
 | `elements` | DOM element creation, reactive updates, conditional/list rendering |
+| `list-reconciliation` | Key-based reconciliation for efficient DOM reuse when reactive lists/dicts change |
+| `nested-dynamic-element` | Nesting of `repeat` and `switch` at arbitrary depth |
+| `dict-repeat-overload` | Efficient DOM reconciliation for `ReactiveDict` with `repeat()` |
 | `router` | Client-side routing, hash/history modes, path params |
+| `router-hooks` | Navigation lifecycle callbacks (`before_route_change`, `after_route_change`, `on_route_error`) |
 | `app` | Application bootstrapping, hydration, head management |
+| `app-lifecycle` | App start/run/shutdown across browser (`app.run()`) and server entry points |
 | `app-config` | AppConfig, ServerConfig, GenerateConfig dataclasses |
-| `project-config` | Two-file project configuration (webcompy_config.py, webcompy_server_config.py) |
+| `config-separation` | Separation of browser-relevant config from server-only build config |
+| `project-config` | Two-file project configuration (`webcompy_config.py`, `webcompy_server_config.py`) |
 | `cli` | Dev server, SSG, project scaffolding, configuration |
 | `browser-api` | Browser environment detection and API abstraction |
+| `port-definitions` | Typed, injectable port ABCs (DOM, FFI, fetch, cookie, history) replacing monolithic `browser` |
 | `async` | Async operations, HTTP client integration |
+| `di-scope` | Resolution boundary and lifecycle for DI values, hierarchy mirroring component tree |
+| `di-injection` | Provide/inject pattern for scoped dependency resolution, replacing global singletons |
+| `dependency-resolver` | Classification of app dependencies for browser deployment (CDN vs local bundling) |
+| `e2e-testing` | Browser-based validation that WebComPy apps load and render correctly |
+| `docs-e2e` | E2E testing for docs_app pages, interactive demos, and console error validation |
+| `internal-naming` | Correct English spelling of internal/private API identifiers |
+| `package-kind` | `PackageKind` enum for classifying browser dependencies (WASM/CDN_PURE_PYTHON/LOCAL_PURE_PYTHON) |
+| `lockfile` | Reproducible builds via `webcompy-lock.json` recording dependency classifications and sources |
+| `pyscript-bundle` | Local serving of complete PyScript offline bundle |
+| `wheel-builder` | PEP 427-compliant Python wheel production for browser deployment |
+| `project-local-cache` | Per-app `.webcompy_modules/` cache for downloaded Pyodide/PyScript runtime assets |
+| `plugin-system` | Extension mechanism via `WebComPyPlugin` base class for lifecycle hooks and DI services |
+| `plugin-script` | Declarative loading of JavaScript resources with conditional runtime expressions |
+| `reactive-dropdown` | Demonstration that WebComPy's reactive system handles UI interactions like dropdown menus |
+| `demo-iframe-isolation` | Isolated iframe PyScript contexts for demos with on-demand dependency loading |
 
 ## Git Conventions
 

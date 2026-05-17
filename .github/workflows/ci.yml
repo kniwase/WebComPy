@@ -487,11 +487,13 @@ jobs:
 
           MAX_ATTEMPTS=2
           attempt=0
-          PROMPT="Review this pull request. Two diff files are attached:
+          PROMPT="Review this pull request as a WebComPy-specialized reviewer. Two diff files are attached:
           - .tmp/pr-diff.txt — full diff against the merge base
           - .tmp/pr-diff-since-last.txt — incremental diff since the last CI review (or a note if unavailable)
           CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
-          Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases).
+          Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases, spec violations).
+
+          SPEC-DRIVEN REVIEW: Classify changed files by subsystem and read the corresponding \`openspec/specs/\` before reviewing. Always start with \`openspec/specs/overview/spec.md\` and \`openspec/specs/architecture/spec.md\`. Then read subsystem specs as specified in your agent configuration. Use specs as a checklist — verify no \"SHALL\" requirement is violated.
 
           .tmp/ and .workspace/ are your scratch workspace — you may write files there for intermediate work.
 
