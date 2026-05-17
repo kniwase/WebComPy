@@ -506,33 +506,34 @@ jobs:
           If .tmp/review-output.md does not exist when you finish, your work
           will be discarded and the review step will fail.
 
-          STEP-BY-STEP:
-          1. Analyze the diff and write your review
-          2. Call Write tool: filePath=\".tmp/review-output.md\", content=\"<your review>\"
-          3. Call Read tool on .tmp/review-output.md to verify it was written correctly
-          4. Confirm the last line is exactly \"REVIEW_RESULT: approved\" or \"REVIEW_RESULT: changes_requested\"
-          5. Only then are you truly done — do not stop before step 4"
+           STEP-BY-STEP:
+           1. Analyze the diff and write your review
+           2. Call Write tool: filePath=.tmp/review-output.md, content=<your review>
+           3. Call Read tool on .tmp/review-output.md to verify it was written correctly
+           4. Confirm the last line is exactly REVIEW_RESULT: approved or REVIEW_RESULT: changes_requested
+           5. Only then are you truly done — do not stop before step 4"
 
           while [ $attempt -lt $MAX_RETRIES ]; do
             attempt=$((attempt + 1))
 
             RETRY_MSG=""
+            FILES="--file .tmp/pr-diff.txt --file .tmp/pr-diff-since-last.txt"
             if [ $attempt -gt 1 ]; then
+              FILES="$FILES --file .tmp/review-raw-output.log"
               RETRY_MSG="
 
           RETRY ATTEMPT: The previous run completed without writing .tmp/review-output.md.
-          Your analysis from the previous attempt is in .tmp/review-raw-output.txt — recover it.
+          Your analysis from the previous attempt is in .tmp/review-raw-output.log — recover it.
           You MUST use the Write tool to write ONLY the final review to .tmp/review-output.md."
             fi
 
-            script -q -c "opencode run \
-              --model \"openai-compat/$OPENAI_COMPAT_MODEL\" \
+            opencode run \
+              --model "openai-compat/$OPENAI_COMPAT_MODEL" \
               --agent ci-review \
-              --file .tmp/pr-diff.txt \
-              --file .tmp/pr-diff-since-last.txt \
-              --title \"PR #$PR_NUMBER Review\" \
-              \"$PROMPT$RETRY_MSG\"" \
-              .tmp/review-raw-output.txt
+              $FILES \
+              --title "PR #$PR_NUMBER Review" \
+              "$PROMPT$RETRY_MSG" \
+              2>&1 | tee .tmp/review-raw-output.log
 
             if [ -s .tmp/review-output.md ] && grep -Eq "^REVIEW_RESULT: (approved|changes_requested)$" .tmp/review-output.md; then
               echo "::notice::Review output written on attempt $attempt"
