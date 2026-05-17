@@ -42,7 +42,7 @@
       console.error("Failed to resolve webcompy wheel URL from parent config:", e);
     }
     if (!wheel || !/^\/_webcompy-app-package\//.test(wheel)) {
-      document.body.textContent = "Invalid or missing webcompy wheel URL.";
+      document.body.textContent = "Wheel URL not found.";
       return;
     }
 
