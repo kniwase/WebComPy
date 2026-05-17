@@ -151,7 +151,7 @@ When working on the codebase (developing, reviewing, or refactoring), always rea
 | `webcompy/ajax/`, `webcompy/aio/` | `openspec/specs/async/spec.md` |
 | `webcompy/cli/` | `openspec/specs/cli/spec.md`, `openspec/specs/project-config/spec.md`, `openspec/specs/config-separation/spec.md` |
 
-Other directories (`webcompy/exception/`, `webcompy/utils/`, `webcompy/reactive/`) do not have dedicated specs — review against `overview` and `architecture` specs only.
+Other directories (`webcompy/exception/`, `webcompy/utils/`) do not have dedicated specs — review against `overview` and `architecture` specs only.
 
 Use specs as a checklist: verify no "SHALL" requirement is violated by your changes. Reviewers use this mapping for spec-driven PR review; developers use it to ensure their implementation aligns with the framework's promised behavior before opening a PR.
 
