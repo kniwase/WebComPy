@@ -486,7 +486,7 @@ jobs:
         run: |
           set -eo pipefail
 
-          MAX_RETRIES=2
+          MAX_ATTEMPTS=2
           attempt=0
           PROMPT="Review this pull request. Two diff files are attached:
           - .tmp/pr-diff.txt — full diff against the merge base
@@ -520,7 +520,14 @@ jobs:
            4. Confirm the last line is exactly REVIEW_RESULT: approved or REVIEW_RESULT: changes_requested
            5. Only then are you truly done — do not stop before step 4"
 
-          while [ $attempt -lt $MAX_RETRIES ]; do
+          _review_ok() {
+            [ -s .tmp/review-output.md ] || return 1
+            local last
+            last=$(tail -n 1 .tmp/review-output.md)
+            [ "$last" = "REVIEW_RESULT: approved" ] || [ "$last" = "REVIEW_RESULT: changes_requested" ]
+          }
+
+          while [ $attempt -lt $MAX_ATTEMPTS ]; do
             attempt=$((attempt + 1))
 
             RETRY_MSG=""
@@ -542,7 +549,7 @@ jobs:
               "$PROMPT$RETRY_MSG" \
               2>&1 | tee .tmp/review-raw-output.log || true
 
-            if [ -s .tmp/review-output.md ] && grep -Eq "^REVIEW_RESULT: (approved|changes_requested)$" .tmp/review-output.md; then
+            if _review_ok; then
               echo "::notice::Review output written on attempt $attempt"
               break
             fi
@@ -550,8 +557,8 @@ jobs:
             echo "::warning::Attempt $attempt: review-output.md missing or lacks REVIEW_RESULT marker"
           done
 
-          if [ ! -s .tmp/review-output.md ] || ! grep -Eq "^REVIEW_RESULT: (approved|changes_requested)$" .tmp/review-output.md; then
-            echo "::error::All $MAX_RETRIES attempts failed to produce valid review output"
+          if ! _review_ok; then
+            echo "::error::All $MAX_ATTEMPTS attempts failed to produce valid review output"
             exit 1
           fi
 
