@@ -530,9 +530,9 @@ jobs:
             attempt=$((attempt + 1))
 
             RETRY_MSG=""
-            FILES="--file .tmp/pr-diff.txt --file .tmp/pr-diff-since-last.txt"
+            FILES=(--file .tmp/pr-diff.txt --file .tmp/pr-diff-since-last.txt)
             if [ $attempt -gt 1 ]; then
-              FILES="$FILES --file .tmp/review-raw-output.log"
+              FILES+=(--file .tmp/review-raw-output.log)
               RETRY_MSG="
 
           RETRY ATTEMPT: The previous run completed without writing .tmp/review-output.md.
@@ -543,7 +543,7 @@ jobs:
             opencode run \
               --model "openai-compat/$OPENAI_COMPAT_MODEL" \
               --agent ci-review \
-              $FILES \
+              "${FILES[@]}" \
               --title "PR #$PR_NUMBER Review" \
               "$PROMPT$RETRY_MSG" \
               2>&1 | tee .tmp/review-raw-output.log || true
