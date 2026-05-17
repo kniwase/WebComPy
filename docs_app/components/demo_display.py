@@ -19,8 +19,14 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
     code_ref = DomNodeRef()
     source_code = Signal("")
 
+    _fetched = False
+
     @AsyncWrapper()
     async def _load():
+        nonlocal _fetched
+        if _fetched:
+            return
+        _fetched = True
         try:
             res = await HttpClient.get(context.props["demo_path"])
             if res.ok:

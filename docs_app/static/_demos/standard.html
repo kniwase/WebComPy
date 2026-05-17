@@ -34,12 +34,15 @@
     try {
       const parentScript = window.parent.document.querySelector('script[type="py"][config]');
       if (parentScript) {
-        const config = JSON.parse(parentScript.getAttribute("config").replace(/&quot;/g, '"'));
+        const raw = parentScript.getAttribute("config").replace(/&amp;quot;/g, '"').replace(/&quot;/g, '"');
+        const config = JSON.parse(raw);
         wheel = config.packages.find(function (p) { return p.indexOf("webcompy-") !== -1; }) || "";
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Failed to resolve webcompy wheel URL from parent config:", e);
+    }
     if (!wheel) {
-      document.body.textContent = "Wheel URL not found.";
+      document.body.textContent = "Wheel URL not found. The demo iframe must be served from the same origin as the parent page.";
       return;
     }
 
