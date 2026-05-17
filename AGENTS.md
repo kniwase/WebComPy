@@ -133,6 +133,18 @@ WebComPy uses OpenSpec for spec-driven development. Specs define **what the fram
 - Describe **observable behavior**, not class hierarchies or method signatures.
 - Keep specs focused on capabilities. Internal refactoring that doesn't change user-facing behavior doesn't need a spec change.
 
+### CI Review Agent Maintenance
+
+When specs are added, modified, or removed, the CI review agent at `.opencode/agents/ci-review.md` MUST be updated to stay in sync:
+
+- **New spec added** — add the spec to the file→spec mapping table in the "SPEC-DRIVEN REVIEW" section
+- **New subsystem or directory created** — add a row to the file→spec mapping table
+- **New framework invariants discovered** — add to the "Critical Framework Invariants" section
+- **Spec removed or renamed** — remove or update the corresponding mapping entry
+- **Spec requirements materially changed** — review whether the invariant descriptions still hold
+
+This ensures the automated PR review always has current knowledge of the framework's promised behavior.
+
 ### Language Rules
 
 - All documents (proposals, designs, specs, tasks) and code comments MUST be written in English.
