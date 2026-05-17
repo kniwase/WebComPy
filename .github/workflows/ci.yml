@@ -202,7 +202,7 @@ jobs:
       id-token: write
       contents: read
       pull-requests: write
-      issues: read
+      issues: write  # required for POST/PATCH to /issues/{number}/comments via gh api
     steps:
       - uses: actions/checkout@v4
         with:
@@ -461,15 +461,21 @@ jobs:
             --jq '[.[] | select(.user.login == "github-actions[bot]") | select(.body | test("REVIEWED_AT:"))] | last.body // empty')
           LAST_SHA=$(echo "$REVIEWED_AT_COMMENT" | sed -n 's/.*REVIEWED_AT: \([a-f0-9]\{40\}\).*/\1/p' | head -1)
           if [ -n "$LAST_SHA" ] && git cat-file -e "$LAST_SHA" 2>/dev/null; then
-            git diff "$LAST_SHA"..HEAD > .tmp/pr-diff-since-last.txt
-            echo "Incremental diff generated from $LAST_SHA"
+            if git merge-base --is-ancestor "$LAST_SHA" HEAD 2>/dev/null; then
+              git diff "$LAST_SHA"..HEAD > .tmp/pr-diff-since-last.txt
+              echo "Incremental diff generated from $LAST_SHA"
+            else
+              echo "# Incremental diff unavailable: branch was rebased or merged with main since last review." > .tmp/pr-diff-since-last.txt
+              echo "# Full PR diff is attached separately as .tmp/pr-diff.txt." >> .tmp/pr-diff-since-last.txt
+              echo "Incremental diff skipped — $LAST_SHA is not an ancestor of HEAD"
+            fi
           else
             echo "# No REVIEWED_AT marker found in previous bot comments." > .tmp/pr-diff-since-last.txt
           fi
 
       - name: Run OpenCode Review
         id: opencode-review
-        timeout-minutes: 20
+        timeout-minutes: 30
         env:
           GITHUB_TOKEN: ${{ github.token }}
           OPENAI_COMPAT_API_KEY: ${{ secrets.OPENAI_COMPAT_API_KEY }}
@@ -478,16 +484,13 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -eo pipefail
-          opencode run \
-            --model "openai-compat/$OPENAI_COMPAT_MODEL" \
-            --agent ci-review \
-            --file .tmp/pr-diff.txt \
-            --file .tmp/pr-diff-since-last.txt \
-            --title "PR #$PR_NUMBER Review" \
-            "Review this pull request. Two diff files are attached:
-           - .tmp/pr-diff.txt — full diff against the merge base
-           - .tmp/pr-diff-since-last.txt — incremental diff since the last CI review (or a note if unavailable)
-           CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
+
+          MAX_ATTEMPTS=2
+          attempt=0
+          PROMPT="Review this pull request. Two diff files are attached:
+          - .tmp/pr-diff.txt — full diff against the merge base
+          - .tmp/pr-diff-since-last.txt — incremental diff since the last CI review (or a note if unavailable)
+          CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
           Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases).
 
           .tmp/ and .workspace/ are your scratch workspace — you may write files there for intermediate work.
@@ -500,7 +503,63 @@ jobs:
           - Verify all claims are backed by the actual diff
           - Check for formatting issues, typos, or unclear language
           - Confirm the REVIEW_RESULT marker is present and correct
-          - If you find any issues, rewrite the file with corrections"
+          - If you find any issues, rewrite the file with corrections
+
+          CRITICAL — OUTPUT INSTRUCTIONS (read twice):
+          Your review is NOT complete until you have called the Write tool
+          to save your final review to .tmp/review-output.md.
+          Writing to stdout is NOT sufficient — the file MUST exist on disk.
+          If .tmp/review-output.md does not exist when you finish, your work
+          will be discarded and the review step will fail.
+
+          STEP-BY-STEP:
+          1. Analyze the diff and write your review
+          2. Call Write tool: filePath=.tmp/review-output.md, content=<your review>
+          3. Call Read tool on .tmp/review-output.md to verify it was written correctly
+          4. Confirm the last line is exactly REVIEW_RESULT: approved or REVIEW_RESULT: changes_requested
+          5. Only then are you truly done — do not stop before step 4"
+
+          _review_ok() {
+            [ -s .tmp/review-output.md ] || return 1
+            local last
+            last=$(grep -v '^[[:space:]]*$' .tmp/review-output.md | tail -n 1)
+            [ "$last" = "REVIEW_RESULT: approved" ] || [ "$last" = "REVIEW_RESULT: changes_requested" ]
+          }
+
+          while [ $attempt -lt $MAX_ATTEMPTS ]; do
+            attempt=$((attempt + 1))
+
+            RETRY_MSG=""
+            FILES=(--file .tmp/pr-diff.txt --file .tmp/pr-diff-since-last.txt)
+            if [ $attempt -gt 1 ]; then
+              FILES+=(--file .tmp/review-raw-output.log)
+              RETRY_MSG="
+
+          RETRY ATTEMPT: The previous run completed without writing .tmp/review-output.md.
+          Your analysis from the previous attempt is in .tmp/review-raw-output.log — recover it.
+          You MUST use the Write tool to write ONLY the final review to .tmp/review-output.md."
+            fi
+
+            opencode run \
+              --model "openai-compat/$OPENAI_COMPAT_MODEL" \
+              --agent ci-review \
+              "${FILES[@]}" \
+              --title "PR #$PR_NUMBER Review" \
+              "$PROMPT$RETRY_MSG" \
+              2>&1 | tee .tmp/review-raw-output.log || true
+
+            if _review_ok; then
+              echo "::notice::Review output written on attempt $attempt"
+              break
+            fi
+
+            echo "::warning::Attempt $attempt: review-output.md missing or lacks REVIEW_RESULT marker"
+          done
+
+          if ! _review_ok; then
+            echo "::error::All $MAX_ATTEMPTS attempts failed to produce valid review output"
+            exit 1
+          fi
 
       - name: Post review output as comment
         if: always() && steps.opencode-review.outcome != 'cancelled'
