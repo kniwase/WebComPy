@@ -198,26 +198,30 @@ class TestHtmlAttrs:
     def test_consumer_destroy_called_when_overwriting_computed(self, monkeypatch):
         from webcompy.signal import Signal, computed
 
-        mock_browser = MagicMock()
-        mock_browser.document.documentElement = MagicMock()
-        monkeypatch.setattr("webcompy.app._root_component.browser", mock_browser)
-
         app = _make_app()
-        theme = Signal("light")
-        c = computed(lambda: theme.value)
-        app.set_html_attr("class", c)
-        assert "class" in app._root._callback_consumers
-        consumer1 = app._root._callback_consumers["class"]
+        mock_dom = MagicMock()
+        mock_dom.query_selector = MagicMock(return_value=MagicMock())
+        from webcompy.ports._keys import DOM_PORT_KEY
 
-        app.set_html_attr("class", "static")
-        assert "class" not in app._root._callback_consumers
+        app._di_scope.provide(DOM_PORT_KEY, mock_dom)
+        monkeypatch.setattr("webcompy.app._root_component.ENVIRONMENT", "pyscript")
 
-        app.set_html_attr("class", c)
-        assert "class" in app._root._callback_consumers
-        consumer2 = app._root._callback_consumers["class"]
+        with app._di_scope:
+            theme = Signal("light")
+            c = computed(lambda: theme.value)
+            app.set_html_attr("class", c)
+            assert "class" in app._root._callback_consumers
+            consumer1 = app._root._callback_consumers["class"]
 
-        app.remove_html_attr("class")
-        assert "class" not in app._root._callback_consumers
-        assert "class" not in app._root._html_attrs
+            app.set_html_attr("class", "static")
+            assert "class" not in app._root._callback_consumers
 
-        assert consumer1 is not consumer2
+            app.set_html_attr("class", c)
+            assert "class" in app._root._callback_consumers
+            consumer2 = app._root._callback_consumers["class"]
+
+            app.remove_html_attr("class")
+            assert "class" not in app._root._callback_consumers
+            assert "class" not in app._root._html_attrs
+
+            assert consumer1 is not consumer2

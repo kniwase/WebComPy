@@ -1,6 +1,6 @@
 ## Context
 
-`Location` (`SignalBase[str]`) provides reactive path state and a popstate listener. `HistoryPort` is an ABC with the same responsibility. The two overlap and must be unified.
+`Location` (`SignalBase[str]`) provides reactive path state and a popstate listener. `HistoryPort` is an ABC with the same responsibility. The two overlap and must be unified. This phase also completes `_browser/` removal since all Router `browser` references are migrated here.
 
 ## Goals / Non-Goals
 
@@ -12,6 +12,8 @@
 - `CookiePort` provided in DI scope
 - `MockHistoryPort` (extends `HistoryPort`) added for testing
 - Rename `_change_event_handler.py` to `_history_events.py` with `type Location = HistoryPort` alias
+- Delete `_browser/_modules.py` (re-export stub from phase 5, no longer needed)
+- Delete `_browser/` directory entirely
 
 **Non-Goals:**
 - Change RouterMode or base_url API
@@ -46,6 +48,11 @@ Add `MockHistoryPort` (extends `HistoryPort`) to `tests/conftest.py`. Enables co
 
 `webcompy/ports/__init__.py` exports all ABCs, `DOMNodeList`, and DI keys. `webcompy/router/__init__.py` removes Location exports.
 
+### Decision 8: _browser/ directory fully deleted
+
+After all Router files are migrated away from `browser`, the `_browser/_modules.py` re-export stub (created in phase 5) is removed along with the entire `_browser/` directory.
+
 ## Risks / Trade-offs
 
 - [Risk] All existing `Router(mode=...)` calls break → Mitigation: Identify and update all call sites
+- [Risk] `_browser/` deletion removes stub that downstream code might import → Mitigation: Verify zero imports remain before deleting

@@ -1,12 +1,16 @@
 ## MODIFIED Requirements
 
-### Requirement: browser object removed
-The `browser` object and `webcompy/_browser/` directory SHALL be removed. All browser API access SHALL go through port ABCs.
+### Requirement: browser public export removed
+The `browser` public export from `webcomppy` SHALL be removed. The browser object definition SHALL be relocated to `webcompy/ports/_browser/_raw.py` as an internal implementation detail.
 
-#### Scenario: browser import raises ImportError
-- **WHEN** code attempts `from webcompy._browser._modules import browser`
-- **THEN** Python SHALL raise `ImportError`
+#### Scenario: public browser import raises AttributeError
+- **WHEN** code attempts `from webcompy import browser`
+- **THEN** Python SHALL raise `AttributeError`
 
-#### Scenario: Ports remain functional
-- **WHEN** `browser` is removed
-- **THEN** all existing framework functionality SHALL continue to work through port injection
+#### Scenario: Internal browser object accessible for port implementations
+- **WHEN** port implementations under `ports/_browser/` access the raw browser object
+- **THEN** they SHALL import from `webcompy.ports._browser._raw`
+
+#### Scenario: _browser/_modules.py preserved as re-export stub
+- **WHEN** Router files (to be migrated in phase 6) import from `webcompy._browser._modules`
+- **THEN** the import SHALL succeed via a thin re-export stub delegating to `webcompy.ports._browser._raw`

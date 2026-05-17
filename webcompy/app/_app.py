@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import platform
 import time
 from typing import Any
 
@@ -55,16 +54,38 @@ class WebComPyApp:
             from webcompy.ports._browser._dom import BrowserDOMPort
             from webcompy.ports._browser._fetch import BrowserFetchPort
             from webcompy.ports._browser._ffi import BrowserFFIPort
-            from webcompy.ports._keys import DOM_PORT_KEY, FETCH_PORT_KEY, FFI_PORT_KEY
+            from webcompy.ports._browser._history import BrowserHistoryPort
+            from webcompy.ports._keys import (
+                DOM_PORT_KEY,
+                FETCH_PORT_KEY,
+                FFI_PORT_KEY,
+                HISTORY_PORT_KEY,
+            )
 
             self._di_scope.provide(DOM_PORT_KEY, BrowserDOMPort())
             self._di_scope.provide(FETCH_PORT_KEY, BrowserFetchPort())
             self._di_scope.provide(FFI_PORT_KEY, BrowserFFIPort())
+            self._di_scope.provide(HISTORY_PORT_KEY, BrowserHistoryPort(mode="hash"))
 
             _register_deferred_components()
         else:
             with self._di_scope:
                 from webcompy.components._generator import _register_deferred_components
+                from webcompy.ports._keys import (
+                    DOM_PORT_KEY,
+                    FETCH_PORT_KEY,
+                    FFI_PORT_KEY,
+                    HISTORY_PORT_KEY,
+                )
+                from webcompy.ports._server._dom import ServerDOMPort
+                from webcompy.ports._server._fetch import ServerFetchPort
+                from webcompy.ports._server._ffi import ServerFFIPort
+                from webcompy.ports._server._history import ServerHistoryPort
+
+                self._di_scope.provide(DOM_PORT_KEY, ServerDOMPort())
+                self._di_scope.provide(FETCH_PORT_KEY, ServerFetchPort())
+                self._di_scope.provide(FFI_PORT_KEY, ServerFFIPort())
+                self._di_scope.provide(HISTORY_PORT_KEY, ServerHistoryPort(mode="history"))
 
                 _register_deferred_components()
         self._record_phase("imports_done")
@@ -105,10 +126,10 @@ class WebComPyApp:
         lines.append("  " + "─" * (label_width + 8))
         lines.append("  Total:".ljust(label_width + 4) + f"{total:.3f}s")
         output = "\n".join(lines)
-        if platform.system() == "Emscripten":
-            from webcompy._browser._modules import browser as _browser
+        if ENVIRONMENT == "pyscript":
+            from pyscript import context  # type: ignore[import-untyped]
 
-            _browser.console.log(output)  # type: ignore[union-attr]
+            context.window.console.log(output)  # type: ignore[union-attr]
         else:
             print(output)
 

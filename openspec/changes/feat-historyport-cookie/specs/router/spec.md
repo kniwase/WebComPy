@@ -15,8 +15,19 @@ The `Location` class SHALL be removed. All path state and navigation functionali
 - **WHEN** code previously used `Location.__set_path__`
 - **THEN** it SHALL use `HistoryPort.navigate()` instead
 
+### Requirement: _browser/ directory removed
+The `webcompy/_browser/` directory SHALL be fully deleted. All remaining `browser` references in Router files SHALL be migrated to `context.window.*` or port injection.
+
+#### Scenario: _browser/ directory does not exist
+- **WHEN** the framework is installed and imported
+- **THEN** `webcompy/_browser/` SHALL not exist on disk
+
+#### Scenario: Router files use context.window instead of browser
+- **WHEN** Router files need window-level browser APIs
+- **THEN** they SHALL access them via `pyscript.context.window` instead of the removed `browser` object
+
 ## REMOVED Requirements
 
 ### Requirement: Location popstate proxy
-**Reason**: Replaced by `BrowserHistoryPort._popstate_handle` which manages its own proxy lifecycle.
+**Reason**: Replaced by `BrowserHistoryPort` which manages its own proxy lifecycle.
 **Migration**: Use `BrowserHistoryPort` which handles popstate internally. No consumer-level cleanup needed.

@@ -2,7 +2,7 @@
 
 - [ ] 1.1 Merge `Location.__set_path__`, `_refresh_path`, `set_mode`, `value`, `state` logic into `HistoryPort` / `BrowserHistoryPort` / `ServerHistoryPort`
 - [ ] 1.2 Delete `Location` class. Rename `webcompy/router/_change_event_handler.py` to `_history_events.py` with `type Location = HistoryPort` (type alias only, not instantiable)
-- [ ] 1.3 Delete old `webcompy/router/_history_port.py`, `_browser_history.py`, `_server_history.py`
+- [ ] 1.3 Delete old HistoryPort duplicates (none exist — HistoryPort was defined in `webcompy/ports/_history.py` in phase 1)
 
 ## 2. Update Router
 
@@ -34,22 +34,29 @@
 ## 6. Update WebComPyApp
 
 - [ ] 6.1 Provide `CookiePort` in DI scope
-- [ ] 6.2 Provide `HistoryPort` in DI scope before Router construction
+- [ ] 6.2 `HistoryPort` already provided in phase 4; verify it is available before `Router` construction
 
 ## 7. Update public API exports
 
 - [ ] 7.1 Update `webcompy/ports/__init__.py` — export all ABCs, `DOMNodeList`, DI keys
 - [ ] 7.2 Remove `Location` exports from `webcompy/router/__init__.py`
 
-## 8. Update tests and E2E apps
+## 8. Remove _browser/ directory
 
-- [ ] 8.1 Add `MockHistoryPort` (inherits `HistoryPort`) to `tests/conftest.py`
-- [ ] 8.2 Update all `Router(mode=...)` calls in unit tests, conftest fixtures, E2E apps
-- [ ] 8.3 Update `test_location.py` to test `BrowserHistoryPort` instead of `Location`
-- [ ] 8.4 Update E2E my_app/router.py to use new Router API
+- [ ] 8.1 Verify zero imports remaining: `grep -rn "from webcompy\._browser" webcompy/ tests/ --include="*.py"` confirms no matches
+- [ ] 8.2 Delete `webcompy/_browser/_modules.py` (re-export stub from phase 5)
+- [ ] 8.3 Delete `webcompy/_browser/__init__.py`
+- [ ] 8.4 Delete `webcompy/_browser/` directory
 
-## 9. Verification
+## 9. Update tests and E2E apps
 
-- [ ] 9.1 Run lint and typecheck
-- [ ] 9.2 Run all unit tests
-- [ ] 9.3 Run full E2E suite
+- [ ] 9.1 Add `MockHistoryPort` (inherits `HistoryPort`) to `tests/conftest.py`
+- [ ] 9.2 Update all `Router(mode=...)` calls in unit tests, conftest fixtures, E2E apps
+- [ ] 9.3 Update `test_location.py` to test `BrowserHistoryPort` instead of `Location`
+- [ ] 9.4 Update E2E my_app/router.py to use new Router API
+
+## 10. Verification
+
+- [ ] 10.1 Run lint and typecheck
+- [ ] 10.2 Run all unit tests
+- [ ] 10.3 Run full E2E suite
