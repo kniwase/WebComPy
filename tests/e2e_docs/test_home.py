@@ -1,6 +1,6 @@
 import pytest
 
-from tests.e2e_docs.conftest import _wait_for_pyscript_init
+from tests.e2e_docs.conftest import _wait_for_demo_iframe, _wait_for_pyscript_init
 
 
 @pytest.mark.e2e
@@ -21,7 +21,8 @@ def test_home_spa_navigation_to_helloworld(docs_app_page, assert_no_console_erro
     helloworld_link = docs_app_page.get_by_role("link", name="HelloWorld")
     helloworld_link.click()
     assert "/sample/helloworld" in docs_app_page.url
-    heading = docs_app_page.get_by_role("heading", name="Hello WebComPy!")
+    frame = _wait_for_demo_iframe(docs_app_page, "helloworld")
+    heading = frame.get_by_role("heading", name="Hello WebComPy!")
     assert heading.is_visible()
 
 

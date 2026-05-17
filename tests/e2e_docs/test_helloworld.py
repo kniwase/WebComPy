@@ -1,19 +1,21 @@
 import pytest
 
-from tests.e2e_docs.conftest import _wait_for_pyscript_init
+from tests.e2e_docs.conftest import _wait_for_demo_iframe, _wait_for_pyscript_init
 
 
 @pytest.mark.e2e
 def test_helloworld_page_heading(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/sample/helloworld")
-    heading = page.get_by_role("heading", name="Hello WebComPy!")
+    frame = _wait_for_demo_iframe(page, "helloworld")
+    heading = frame.get_by_role("heading", name="Hello WebComPy!")
     assert heading.is_visible()
 
 
 @pytest.mark.e2e
 def test_helloworld_page_text(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/sample/helloworld")
-    assert page.locator("h1").get_by_text("Hello WebComPy!").is_visible()
+    frame = _wait_for_demo_iframe(page, "helloworld")
+    assert frame.locator("h1").get_by_text("Hello WebComPy!").is_visible()
 
 
 @pytest.mark.e2e

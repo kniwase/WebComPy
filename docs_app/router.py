@@ -10,7 +10,7 @@ router = Router(
     {"path": "/sample/todo", "component": lazy("docs_app.pages.demo.todo:ToDoListPage", __file__)},
     {
         "path": "/sample/matplotlib",
-        "component": lazy("docs_app.pages.demo.matplotlib_sample:MatpoltlibSamplePage", __file__),
+        "component": lazy("docs_app.pages.demo.matplotlib_sample:MatplotlibSamplePage", __file__),
     },
     {"path": "/sample/fetch", "component": lazy("docs_app.pages.demo.fetch_sample:FetchSamplePage", __file__)},
     default=NotFound,

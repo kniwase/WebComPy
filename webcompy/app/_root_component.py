@@ -118,6 +118,13 @@ class AppDocumentRoot(Component):
                         browser.document.documentElement.setAttribute(key, expected)  # type: ignore[union-attr]
                 if self.__loading:
                     self.__loading = False
+                    if self._app:
+                        style_text = self.style
+                        if style_text is not None and not browser.document.getElementById("webcompy-scoped-styles"):
+                            style_el = browser.document.createElement("style")
+                            style_el.setAttribute("id", "webcompy-scoped-styles")
+                            style_el.textContent = "*[hidden]{display: none;} " + style_text
+                            browser.document.head.appendChild(style_el)
                     selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
                     loading_el = browser.document.querySelector(
                         f"{selector} > #webcompy-loading"

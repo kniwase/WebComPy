@@ -1,37 +1,41 @@
 import pytest
 
-from tests.e2e_docs.conftest import _wait_for_pyscript_init
+from tests.e2e_docs.conftest import _wait_for_demo_iframe, _wait_for_pyscript_init
 
 
 @pytest.mark.e2e
 def test_fizzbuzz_initial_state(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/sample/fizzbuzz")
-    assert page.get_by_text("Count: 10").is_visible()
+    frame = _wait_for_demo_iframe(page, "fizzbuzz")
+    assert frame.get_by_text("Count: 10").is_visible()
 
 
 @pytest.mark.e2e
 def test_fizzbuzz_add_button(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/sample/fizzbuzz")
-    add_button = page.get_by_role("button", name="Add")
+    frame = _wait_for_demo_iframe(page, "fizzbuzz")
+    add_button = frame.get_by_role("button", name="Add")
     add_button.click()
-    assert page.get_by_text("Count: 11").is_visible()
+    assert frame.get_by_text("Count: 11").is_visible()
 
 
 @pytest.mark.e2e
 def test_fizzbuzz_pop_button(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/sample/fizzbuzz")
-    pop_button = page.get_by_role("button", name="Pop")
+    frame = _wait_for_demo_iframe(page, "fizzbuzz")
+    pop_button = frame.get_by_role("button", name="Pop")
     pop_button.click()
-    assert page.get_by_text("Count: 9").is_visible()
+    assert frame.get_by_text("Count: 9").is_visible()
 
 
 @pytest.mark.e2e
 def test_fizzbuzz_hide_toggle(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/sample/fizzbuzz")
-    toggle_button = page.get_by_role("button", name="Hide")
+    frame = _wait_for_demo_iframe(page, "fizzbuzz")
+    toggle_button = frame.get_by_role("button", name="Hide")
     toggle_button.click()
-    assert page.locator("div").filter(has_text="FizzBuzz Hidden").first.is_visible()
-    show_button = page.get_by_role("button", name="Open")
+    assert frame.locator("div").filter(has_text="FizzBuzz Hidden").first.is_visible()
+    show_button = frame.get_by_role("button", name="Open")
     assert show_button.is_visible()
 
 

@@ -23,7 +23,7 @@ def SyntaxHighlighting(context: ComponentContext[SyntaxHighlightingProps]):
     return html.PRE(
         {},
         html.CODE(
-            {"class": "language-" + context.props["lang"], ":ref": code_ref},
+            {"class": f"language-{context.props['lang']}", ":ref": code_ref},
             strip_multiline_text(context.props["code"]).strip(),
         ),
     )

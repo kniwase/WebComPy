@@ -4,18 +4,19 @@ from io import BytesIO
 import numpy as np
 from matplotlib import pyplot as plt
 
+from webcompy.app import WebComPyApp
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DOMEvent, DomNodeRef, html
 from webcompy.signal import Signal, computed
 
 
 @define_component
-def MatpoltlibSample(context: ComponentContext[None]):
+def App(context: ComponentContext[None]):
     input_ref = DomNodeRef()
 
     fig, ax = plt.subplots()
-    x = np.linspace(-5, 5, 250)  # type: ignore
-    (line,) = ax.plot(x, np.array([0 for _ in x]))  # type: ignore
+    x = np.linspace(-5, 5, 250)
+    (line,) = ax.plot(x, np.array([0 for _ in x]))
 
     count = Signal(15)
 
@@ -33,9 +34,7 @@ def MatpoltlibSample(context: ComponentContext[None]):
             input_ref.value = str(count.value)
 
     calc_square_wave = np.vectorize(
-        lambda x: np.vectorize(lambda k: (1 / (2 * k + 1)) * np.sin((2 * k + 1) * x))(
-            np.arange(count.value)  # type: ignore
-        ).sum()
+        lambda x: np.vectorize(lambda k: (1 / (2 * k + 1)) * np.sin((2 * k + 1) * x))(np.arange(count.value)).sum()
     )
 
     @computed
@@ -89,7 +88,7 @@ def MatpoltlibSample(context: ComponentContext[None]):
     )
 
 
-MatpoltlibSample.scoped_style = {
+App.scoped_style = {
     "button": {
         "display": "inline-block",
         "text-decoration": "none",
@@ -109,3 +108,6 @@ MatpoltlibSample.scoped_style = {
         "height": "auto",
     },
 }
+
+app = WebComPyApp(root_component=App)
+app.run()

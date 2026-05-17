@@ -177,6 +177,28 @@ The framework SHALL accept any string key in nested style dictionaries, allowing
   .menu[webcompy-cid-xxx] > li { color: blue; }
   ```
 
+### Requirement: Scoped CSS SHALL be injected at browser runtime when SSR is absent
+When a `WebComPyApp` is created and rendered entirely at browser runtime (no server-side rendering), the framework SHALL inject scoped component styles into the DOM as a `<style id="webcompy-scoped-styles">` element in `document.head`. When SSR has already produced such a `<style>` element, the runtime SHALL NOT create a duplicate.
+
+#### Scenario: Runtime injection when SSR is absent
+- **WHEN** a `WebComPyApp` is created and `app.run()` is called at browser runtime with no pre-existing `<style id="webcompy-scoped-styles">` in the DOM
+- **THEN** `AppDocumentRoot._render()` SHALL create a `<style id="webcompy-scoped-styles">` element
+- **AND** SHALL set its `textContent` to the concatenated scoped styles from all registered components
+- **AND** SHALL append it to `document.head`
+- **AND** component `scoped_style` rules SHALL apply correctly
+
+#### Scenario: No duplicate when SSR has already injected styles
+- **WHEN** a `WebComPyApp` hydrates a page that was server-side rendered
+- **AND** the SSR output already contains `<style id="webcompy-scoped-styles">` in the document head
+- **THEN** `AppDocumentRoot._render()` SHALL check `document.getElementById("webcompy-scoped-styles")`
+- **AND** finding an existing element, SHALL skip injection
+- **AND** no duplicate `<style>` element SHALL be created
+
+#### Scenario: Runtime style injection in isolated contexts
+- **WHEN** a `WebComPyApp` runs inside an iframe with no SSR
+- **THEN** scoped component styles SHALL be injected at runtime
+- **AND** components inside the iframe SHALL render with their defined `scoped_style` CSS
+
 ### Requirement: Components shall manage their lifecycle
 Components SHALL provide hooks for before rendering, after rendering, and before destruction. These hooks allow components to perform side effects like fetching data, setting up subscriptions, or cleaning up resources. When `on_after_rendering` is triggered as part of a reactive update cascade (e.g., during `SwitchElement._refresh()`), it SHALL be deferred until after the reactive propagation completes, ensuring the DOM is fully settled before side effects run.
 
