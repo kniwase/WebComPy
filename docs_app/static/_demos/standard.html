@@ -41,8 +41,8 @@
     } catch (e) {
       console.error("Failed to resolve webcompy wheel URL from parent config:", e);
     }
-    if (!wheel) {
-      document.body.textContent = "Wheel URL not found. The demo iframe must be served from the same origin as the parent page.";
+    if (!wheel || !/^\/_webcompy-app-package\//.test(wheel)) {
+      document.body.textContent = "Invalid or missing webcompy wheel URL.";
       return;
     }
 

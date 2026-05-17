@@ -24,7 +24,7 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
 
     @AsyncWrapper()
     async def load():
-        if source_code.value:
+        if source_code.value and not source_code.value.startswith("# Failed"):
             return
         try:
             res = await HttpClient.get(context.props["demo_path"])
