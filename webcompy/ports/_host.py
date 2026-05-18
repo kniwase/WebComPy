@@ -21,7 +21,6 @@ class HostPort(ABC):
         ...
 
     @overload
-    @abstractmethod
     def create_js_global_getter(self, name: str, *, wrapper: Callable[[Any | None], T_co]) -> Callable[[], T_co]:
         """Create a lazy getter with a wrapper transformation.
 
@@ -38,7 +37,6 @@ class HostPort(ABC):
         ...
 
     @overload
-    @abstractmethod
     def create_js_global_getter(self, name: str, *, default: T_co) -> Callable[[], Any | T_co]:
         """Create a lazy getter with a fallback value.
 
@@ -54,7 +52,6 @@ class HostPort(ABC):
         ...
 
     @overload
-    @abstractmethod
     def create_js_global_getter(
         self,
         name: str,
