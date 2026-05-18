@@ -62,7 +62,7 @@ The `Router` class SHALL expose an `on_route_error` callback list as an instance
 
 ### Requirement: Router hooks shall dispatch synchronously
 
-All router hooks (`before_route_change`, `after_route_change`, `on_route_error`) SHALL be dispatched synchronously during the `Location.__set_path__()` call. Async operations SHALL NOT be supported in the initial implementation.
+All router hooks (`before_route_change`, `after_route_change`, `on_route_error`) SHALL be dispatched synchronously during the `Router.__set_path__()` call. Async operations SHALL NOT be supported in the initial implementation.
 
 #### Scenario: Guard runs synchronously
 - **WHEN** `router.before_route_change` contains a guard

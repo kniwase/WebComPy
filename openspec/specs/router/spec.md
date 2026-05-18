@@ -6,7 +6,7 @@ A front-end router solves a fundamental problem in single-page applications: syn
 
 WebComPy provides two routing modes — hash mode for simple deployments (like static hosting services) and history mode for clean URLs (requiring server-side support). The router integrates with the reactive system so that URL changes automatically propagate to the UI: when a route changes, the page component updates without any manual wiring.
 
-**What WebComPy does not yet provide:** Other frameworks support nested routes and route guards (before/after navigation hooks). The `Location` object's `popstate` proxy requires manual `destroy()` calls for cleanup.
+**What WebComPy does not yet provide:** Other frameworks support nested routes and route guards (before/after navigation hooks).
 
 ## Requirements
 
@@ -156,3 +156,29 @@ When the current URL does not match any defined route, the router SHALL render a
 #### Scenario: Subclass accessing ComponentGenerator attributes
 - **WHEN** `LazyComponentGenerator` subclasses `ComponentGenerator`
 - **THEN** it SHALL be able to read and write `_name`, `_id`, `_style`, `_registered`, `_component_def` on the parent class
+
+### Requirement: Router receives HistoryPort via constructor
+`Router` SHALL accept a `HistoryPort` instance as a constructor parameter rather than creating a `Location` internally.
+
+#### Scenario: Router constructed with HistoryPort
+- **WHEN** `Router(pages..., history=history_port)` is instantiated
+- **THEN** `self._history` SHALL reference the provided `HistoryPort`
+- **AND** `Router.__set_path__` SHALL delegate to `self._history.navigate()`
+
+### Requirement: Location class removed
+The `Location` class SHALL be removed. All path state and navigation functionality SHALL be provided by `HistoryPort`.
+
+#### Scenario: HistoryPort replaces Location references
+- **WHEN** code previously used `Location.__set_path__`
+- **THEN** it SHALL use `HistoryPort.navigate()` instead
+
+### Requirement: _browser/ directory removed
+The `webcompy/_browser/` directory SHALL be fully deleted. All remaining `browser` references in Router files SHALL be migrated to `context.window.*` or port injection.
+
+#### Scenario: _browser/ directory does not exist
+- **WHEN** the framework is installed and imported
+- **THEN** `webcompy/_browser/` SHALL not exist on disk
+
+#### Scenario: Router files use context.window instead of browser
+- **WHEN** Router files need window-level browser APIs
+- **THEN** they SHALL access them via `pyscript.context.window` instead of the removed `browser` object

@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from tests.conftest import FakeDOMEvent
+from tests.conftest import FakeDOMEvent, MockHistoryPort
 from webcompy.di._keys import _ROUTER_KEY
 from webcompy.di._scope import DIScope
 from webcompy.elements.types._element import Element
@@ -19,7 +19,8 @@ class FakeRootElement(Element):
 
 def _make_router(mode="hash", base_url=""):
     page = RouterPage(path="/home", component=MagicMock(spec=object))
-    return Router(page, mode=mode, base_url=base_url)
+    hist = MockHistoryPort(mode=mode)
+    return Router(page, history=hist, base_url=base_url)
 
 
 class TestRouterLinkHref:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from tests.conftest import MockHistoryPort
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import PluginScript, WebComPyAppConfig
 from webcompy.cli._html import generate_html
@@ -220,7 +221,7 @@ class TestGenerateHtmlWithPluginScripts:
 
 class TestRouterHooks:
     def test_before_route_change_cancel(self):
-        router = Router(mode="hash")
+        router = Router(history=MockHistoryPort(mode="hash"))
         cancelled: list[bool] = []
 
         def guard(from_path, to_path):
@@ -234,7 +235,7 @@ class TestRouterHooks:
         assert len(cancelled) == 0
 
     def test_before_route_change_allow(self):
-        router = Router(mode="hash")
+        router = Router(history=MockHistoryPort(mode="hash"))
         navigated: list[str] = []
 
         def guard(from_path, to_path):
@@ -247,7 +248,7 @@ class TestRouterHooks:
         assert navigated[0] == "/about"
 
     def test_multiple_guards_short_circuit(self):
-        router = Router(mode="hash")
+        router = Router(history=MockHistoryPort(mode="hash"))
         second_called = False
 
         def guard_a(from_path, to_path):
@@ -268,7 +269,7 @@ class TestRouterHooks:
                 from collections.abc import Callable
                 from re import Match
 
-                self._location = type("Loc", (), {"_value": "/"})()
+                self._history = type("Hist", (), {"_value": "/", "value": "/", "state": None})()
                 matcher: Callable[[str], Match[str] | None] = lambda _: None
                 self.__routes__ = [
                     ("/test", matcher, [], type("DummyGen", (), {"_instance_id": ""})(), {}),
@@ -298,7 +299,7 @@ class TestRouterHooks:
                 from collections.abc import Callable
                 from re import Match
 
-                self._location = type("Loc", (), {"_value": "/"})()
+                self._history = type("Hist", (), {"_value": "/", "value": "/", "state": None})()
                 matcher: Callable[[str], Match[str] | None] = lambda _: None
                 self.__routes__ = [
                     ("/test", matcher, [], type("DummyGen", (), {"_instance_id": ""})(), {}),
