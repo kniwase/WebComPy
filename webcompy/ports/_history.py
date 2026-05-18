@@ -51,7 +51,6 @@ class HistoryPort(SignalBase[str]):
         """
         ...
 
-    @SignalBase._change_event
     def navigate(self, path: str, state: dict[str, Any] | None = None) -> None:
         """Update the signal value and optionally store route state.
 
@@ -65,6 +64,10 @@ class HistoryPort(SignalBase[str]):
         normalized = path[1:] if self._mode == "hash" and path.startswith("#") else path
         if self._value == normalized and self._state is state:
             return
+        self._do_navigate(normalized, state)
+
+    @SignalBase._change_event
+    def _do_navigate(self, normalized: str, state: dict[str, Any] | None) -> None:
         self._state = state
         self._value = normalized
 

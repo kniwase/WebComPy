@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -265,13 +264,6 @@ class FakeBrowserModule:
 class MockHistoryPort(HistoryPort):
     def __init__(self, *, mode: str = "history", initial_path: str = "/"):
         super().__init__(initial_path, mode=mode)  # type: ignore[arg-type]
-
-    def navigate(self, path: str, state: dict[str, Any] | None = None) -> None:
-        normalized = path[1:] if self._mode == "hash" and path.startswith("#") else path
-        if self._value == normalized and self._state is state:
-            return
-        self._state = state
-        self._value = normalized
 
     def current_search(self) -> str:
         return ""
