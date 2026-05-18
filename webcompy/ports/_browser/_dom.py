@@ -30,9 +30,6 @@ class BrowserDOMPort(DOMPort):
     def set_title(self, title: str) -> None:
         self._browser.document.title = title
 
-    def schedule_macro_task(self, callback: Any) -> None:
-        self._browser.window.setTimeout(callback, 0)
-
     def add_document_event_listener(self, event_type: str, handler: Any) -> None:
         self._browser.document.addEventListener(event_type, handler)
 

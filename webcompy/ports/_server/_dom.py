@@ -22,9 +22,6 @@ class ServerDOMPort(DOMPort):
     def set_title(self, title: str) -> None:
         pass
 
-    def schedule_macro_task(self, callback: Any) -> None:
-        pass
-
     def add_document_event_listener(self, event_type: str, handler: Any) -> None:
         pass
 

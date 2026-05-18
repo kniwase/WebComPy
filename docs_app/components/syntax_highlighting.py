@@ -1,8 +1,9 @@
 from typing import TypedDict
 
 from webcompy.components import ComponentContext, define_component
+from webcompy.di import inject
 from webcompy.elements import DomNodeRef, html
-from webcompy.ports._browser._raw import browser
+from webcompy.ports._keys import HOST_PORT_KEY
 from webcompy.utils import strip_multiline_text
 
 
@@ -14,11 +15,13 @@ class SyntaxHighlightingProps(TypedDict):
 @define_component
 def SyntaxHighlighting(context: ComponentContext[SyntaxHighlightingProps]):
     code_ref = DomNodeRef()
+    get_hljs = inject(HOST_PORT_KEY).create_js_global_getter("hljs")
 
     @context.on_after_rendering
     def _():
-        if browser:
-            browser.window.hljs.highlightElement(code_ref.element)
+        hljs = get_hljs()
+        if hljs is not None:
+            hljs.highlightElement(code_ref.element)
 
     return html.PRE(
         {},

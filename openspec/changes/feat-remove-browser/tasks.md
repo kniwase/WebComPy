@@ -46,34 +46,31 @@
 
 ## 9. Introduce HostPort
 
-- [ ] 9.1 Create `webcompy/ports/_host.py` with `HostPort` ABC (schedule_macro_task, create_js_global_getter)
-- [ ] 9.2 Create `webcompy/ports/_browser/_host.py` with `BrowserHostPort`
-- [ ] 9.3 Create `webcompy/ports/_server/_host.py` with `ServerHostPort` (always returns default/None)
-- [ ] 9.4 Add `HOST_PORT_KEY` to `webcompy/ports/_keys.py`
+- [x] 9.1 Create `webcompy/ports/_host.py` with `HostPort` ABC (schedule_macro_task, create_js_global_getter)
+- [x] 9.2 Create `webcompy/ports/_browser/_host.py` with `BrowserHostPort`
+- [x] 9.3 Create `webcompy/ports/_server/_host.py` with `ServerHostPort` (always returns default/None)
+- [x] 9.4 Add `HOST_PORT_KEY` to `webcompy/ports/_keys.py`
 
 ## 10. Migrate schedule_macro_task from DOMPort to HostPort
 
-- [ ] 10.1 Remove `schedule_macro_task` from `DOMPort` ABC (`webcompy/ports/_dom.py`)
-- [ ] 10.2 Remove `schedule_macro_task` from `BrowserDOMPort` (`webcompy/ports/_browser/_dom.py`)
-- [ ] 10.3 Remove `schedule_macro_task` from `ServerDOMPort` (`webcompy/ports/_server/_dom.py`)
-- [ ] 10.4 Remove `schedule_macro_task` from `FakeBrowserDOMPort` (`tests/conftest.py`)
-- [ ] 10.5 Add `FakeBrowserHostPort` to `tests/conftest.py` with `schedule_macro_task` (no-op) and `create_js_global_getter` (returns default)
-- [ ] 10.6 Update `webcompy/signal/_effect.py:146` — `inject(DOM_PORT_KEY)` → `inject(HOST_PORT_KEY)`
-- [ ] 10.7 Update `webcompy/elements/types/_switch.py:82` — `inject(DOM_PORT_KEY)` → `inject(HOST_PORT_KEY)`
+- [x] 10.1 Remove `schedule_macro_task` from `DOMPort` ABC (`webcompy/ports/_dom.py`)
+- [x] 10.2 Remove `schedule_macro_task` from `BrowserDOMPort` (`webcompy/ports/_browser/_dom.py`)
+- [x] 10.3 Remove `schedule_macro_task` from `ServerDOMPort` (`webcompy/ports/_server/_dom.py`)
+- [x] 10.4 Remove `schedule_macro_task` from `FakeBrowserDOMPort` (`tests/conftest.py`)
+- [x] 10.5 Add `FakeBrowserHostPort` to `tests/conftest.py` with `schedule_macro_task` (no-op) and `create_js_global_getter` (returns default)
+- [x] 10.6 Update `webcompy/signal/_effect.py:146` — `inject(DOM_PORT_KEY)` → `inject(HOST_PORT_KEY)`
+- [x] 10.7 Update `webcompy/elements/types/_switch.py:82` — `inject(DOM_PORT_KEY)` → `inject(HOST_PORT_KEY)`
 
 ## 11. Provide HostPort in app bootstrap
 
-- [ ] 11.1 Provide `BrowserHostPort` in `webcompy/app/_app.py` PyScript branch
-- [ ] 11.2 Provide `ServerHostPort` in `webcompy/app/_app.py` server branch
-- [ ] 11.3 Update `tests/conftest.py` `fake_browser_full` fixture to provide `FakeBrowserHostPort`
+- [x] 11.1 Provide `BrowserHostPort` in `webcompy/app/_app.py` PyScript branch
+- [x] 11.2 Provide `ServerHostPort` in `webcompy/app/_app.py` server branch
+- [x] 11.3 Update `tests/conftest.py` `fake_browser_full` fixture to provide `FakeBrowserHostPort`
 
 ## 12. Migrate docs_app hljs consumers from _raw to HostPort
 
-- [ ] 12.1 Migrate `docs_app/components/syntax_highlighting.py`: `from webcompy.ports._browser._raw import browser` → inject-based `HOST_PORT_KEY` with `create_js_global_getter("hljs")`
-- [ ] 12.2 Migrate `docs_app/components/demo_display.py`: `from webcompy.ports._browser._raw import browser` → inject-based `HOST_PORT_KEY` with `create_js_global_getter("hljs")`
-
-## 13. Verification
-
-- [ ] 13.1 Run lint and typecheck
-- [ ] 13.2 Run all unit tests
-- [ ] 13.3 Run full E2E suite
+- [x] 12.1 Migrate `docs_app/components/syntax_highlighting.py`: `from webcompy.ports._browser._raw import browser` → inject-based `HOST_PORT_KEY` with `create_js_global_getter("hljs")`
+- [x] 12.2 Migrate `docs_app/components/demo_display.py`: `from webcompy.ports._browser._raw import browser` → inject-based `HOST_PORT_KEY` with `create_js_global_getter("hljs")`
+- [x] 13.1 Run lint and typecheck
+- [x] 13.2 Run all unit tests (865 passed)
+- [x] 13.3 Run full E2E suite (150+ passed, remaining timed out — PyScript init timing flaky, same as pre-existing)

@@ -10,7 +10,7 @@ from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement, _patch_children
 from webcompy.exception import WebComPyException
-from webcompy.ports._keys import DOM_PORT_KEY
+from webcompy.ports._keys import HOST_PORT_KEY
 from webcompy.signal._base import SignalBase
 from webcompy.utils import ENVIRONMENT
 
@@ -79,7 +79,7 @@ class SwitchElement(DynamicElement):
         if should_defer and ENVIRONMENT == "pyscript":
             deferred = end_defer_after_rendering()
             for callback in deferred:
-                inject(DOM_PORT_KEY).schedule_macro_task(callback)
+                inject(HOST_PORT_KEY).schedule_macro_task(callback)
         self._parent._re_index_children(False)
 
     def _on_set_parent(self):
