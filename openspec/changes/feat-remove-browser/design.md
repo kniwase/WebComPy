@@ -12,6 +12,9 @@ This phase relocates the browser object definition to an internal location and u
 - Replace `_browser/_modules.py` with a thin re-export stub (for Router compatibility)
 - Remove `browser` from `webcompy/__init__.py` (public export gone)
 - Update `pyproject.toml` `stubPath`
+- Introduce `HostPort` ABC with `schedule_macro_task` and `create_js_global_getter`
+- Separate `window`-level operations from `DOMPort` into `HostPort`
+- Migrate `docs_app` hljs consumers from raw browser import to `HostPort` injection
 
 **Non-Goals:**
 - Migrate Router files (phase 6)
@@ -59,3 +62,42 @@ The public `browser` export is removed. Any external code importing `from webcom
 
 - [Risk] A missed consumer still imports `browser` from public API → Mitigation: E2E tests will detect
 - [Router breakage] Router files import from `_browser/_modules` which is preserved as a re-export stub → Safe until phase 6
+
+### Decision 6: HostPort separates window-level concerns from DOMPort
+
+`DOMPort` is scoped to document-level operations (element creation, selector queries, title, document event listeners). A new `HostPort` ABC is introduced for window-level operations: JS global object access and macro-task scheduling.
+
+**Rationale**: `document` and `window` are distinct browser API surfaces. Mixing them in `DOMPort` conflates responsibilities. Separating them also allows `HostPort` to carry the `create_js_global_getter` factory — a natural fit since all JS globals live on `window`.
+
+**HostPort API**:
+```python
+class HostPort(ABC):
+    def schedule_macro_task(self, callback: Callable[..., Any]) -> None: ...
+    def create_js_global_getter(
+        self,
+        name: str,
+        *,
+        wrapper: Callable[[Any | None], T_co] | None = None,
+        default: Any | None = None,
+    ) -> Callable[[], T_co]: ...
+```
+
+- `create_js_global_getter` returns a zero-arg function that lazily resolves `window[name]`
+- `wrapper=None` → identity (returns `Any | None`)
+- `wrapper=func` → `func(global_obj)` — `T_co` is inferred from wrapper's return type
+- `default` → syntactic sugar, returned when the global is missing
+- Server-side (`ServerHostPort`) always returns `None` (or `default` if provided)
+
+### Decision 7: schedule_macro_task moves from DOMPort to HostPort
+
+`scheduler_macro_task` (which calls `window.setTimeout(callback, 0)`) is a window-level operation, not a document-level one. It moves to `HostPort`.
+
+- `DOMPort` ABC removes `schedule_macro_task`
+- 2 consumer sites (`signal/_effect.py`, `elements/types/_switch.py`) update `inject(DOM_PORT_KEY)` → `inject(HOST_PORT_KEY)`
+- `BrowserHostPort` implements via `window.setTimeout`; `ServerHostPort` is no-op
+
+### Decision 8: docs_app hljs consumers migrate from _raw to HostPort
+
+`syntax_highlighting.py` and `demo_display.py` currently import the raw browser object to access `browser.window.hljs`. With `HostPort`, they use `create_js_global_getter("hljs")` instead — a typed, injectable interface that hides the raw browser object.
+
+The getter is created once during component setup and called in `on_after_rendering` / `run_highlight`. This eliminates the last framework-external `_raw` browser references.
