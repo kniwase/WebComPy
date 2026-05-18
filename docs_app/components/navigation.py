@@ -1,7 +1,7 @@
 from typing import Any, TypedDict
 
 from webcompy.components import ComponentContext, define_component, on_before_destroy
-from webcompy.di import inject
+from webcompy.di import InjectionError, inject
 from webcompy.elements import html
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router import RouterLink
@@ -60,7 +60,7 @@ def Navbar(context: ComponentContext[list[Page]]):
 
     try:
         dom = inject(DOM_PORT_KEY)
-    except Exception:
+    except InjectionError:
         dom = None
 
     if dom:

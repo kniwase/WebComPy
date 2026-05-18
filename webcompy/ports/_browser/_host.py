@@ -36,10 +36,10 @@ class BrowserHostPort(HostPort):
     ) -> Callable[[], Any]:
         def _getter() -> Any:
             value = getattr(self._browser.window, name, None)
-            if value is None:
-                return default
             if wrapper is not None:
                 return wrapper(value)
+            if value is None:
+                return default
             return value
 
         return _getter

@@ -107,12 +107,13 @@ A `HostPort` SHALL provide the `schedule_macro_task` and `create_js_global_gette
 #### Scenario: create_js_global_getter resolves window globals
 - **WHEN** `create_js_global_getter("hljs")` is called in the browser
 - **THEN** the returned zero-arg function SHALL return `window.hljs`
-- **AND** if `wrapper` is provided, the wrapper function SHALL transform the resolved value
-- **AND** if the global is missing, the result SHALL be `None` (or `default`, if provided)
+- **AND** if `wrapper` is provided, the wrapper function SHALL always be called — receiving the resolved global (or `None` if missing)
+- **AND** if the global is missing and no `wrapper` is provided, the result SHALL be `None` (or `default`, if provided)
 
 #### Scenario: create_js_global_getter returns default on server
 - **WHEN** `create_js_global_getter("hljs")` is called on the server (SSG)
 - **THEN** the returned zero-arg function SHALL return `None` (or `default`, if provided)
+- **AND** if `wrapper` is provided, it SHALL be called with `None` (the global is always missing on the server)
 
 #### Scenario: DOMPort no longer carries schedule_macro_task
 - **WHEN** code inspects `DOMPort` ABC
