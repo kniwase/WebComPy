@@ -291,8 +291,21 @@ class FakeBrowserDOMPort:
     def create_text_node(self, text: str):
         return FakeDOMNode("#text", text_content=text)
 
+    def add_document_event_listener(self, event_type, handler):
+        return lambda: None
+
+
+class FakeBrowserHostPort:
     def schedule_macro_task(self, callback):
         pass
+
+    def create_js_global_getter(self, name, *, wrapper=None, default=None):
+        def _getter():
+            if wrapper is not None:
+                return wrapper(None)
+            return default
+
+        return _getter
 
 
 class FakeBrowserFFIPort:
@@ -314,7 +327,7 @@ def fake_browser_full(monkeypatch, reset_di_scope):
     import importlib
 
     from webcompy.di._scope import DIScope, _active_di_scope
-    from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY
+    from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
 
     modules_with_env = [
         "webcompy.elements.types._element",
@@ -329,12 +342,14 @@ def fake_browser_full(monkeypatch, reset_di_scope):
         monkeypatch.setattr(mod, "ENVIRONMENT", "pyscript")
 
     dom_port = FakeBrowserDOMPort()
+    host_port = FakeBrowserHostPort()
     ffi_port = FakeBrowserFFIPort()
 
     scope = DIScope()
     scope.provide(DOM_PORT_KEY, dom_port)
+    scope.provide(HOST_PORT_KEY, host_port)
     scope.provide(FFI_PORT_KEY, ffi_port)
 
     prev_token = _active_di_scope.set(scope)
-    yield dom_port, ffi_port
+    yield dom_port, host_port, ffi_port
     _active_di_scope.reset(prev_token)

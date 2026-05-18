@@ -55,17 +55,20 @@ class WebComPyApp:
             from webcompy.ports._browser._fetch import BrowserFetchPort
             from webcompy.ports._browser._ffi import BrowserFFIPort
             from webcompy.ports._browser._history import BrowserHistoryPort
+            from webcompy.ports._browser._host import BrowserHostPort
             from webcompy.ports._keys import (
                 DOM_PORT_KEY,
                 FETCH_PORT_KEY,
                 FFI_PORT_KEY,
                 HISTORY_PORT_KEY,
+                HOST_PORT_KEY,
             )
 
             self._di_scope.provide(DOM_PORT_KEY, BrowserDOMPort())
             self._di_scope.provide(FETCH_PORT_KEY, BrowserFetchPort())
             self._di_scope.provide(FFI_PORT_KEY, BrowserFFIPort())
             self._di_scope.provide(HISTORY_PORT_KEY, BrowserHistoryPort(mode="hash"))
+            self._di_scope.provide(HOST_PORT_KEY, BrowserHostPort())
 
             _register_deferred_components()
         else:
@@ -76,16 +79,19 @@ class WebComPyApp:
                     FETCH_PORT_KEY,
                     FFI_PORT_KEY,
                     HISTORY_PORT_KEY,
+                    HOST_PORT_KEY,
                 )
                 from webcompy.ports._server._dom import ServerDOMPort
                 from webcompy.ports._server._fetch import ServerFetchPort
                 from webcompy.ports._server._ffi import ServerFFIPort
                 from webcompy.ports._server._history import ServerHistoryPort
+                from webcompy.ports._server._host import ServerHostPort
 
                 self._di_scope.provide(DOM_PORT_KEY, ServerDOMPort())
                 self._di_scope.provide(FETCH_PORT_KEY, ServerFetchPort())
                 self._di_scope.provide(FFI_PORT_KEY, ServerFFIPort())
                 self._di_scope.provide(HISTORY_PORT_KEY, ServerHistoryPort(mode="history"))
+                self._di_scope.provide(HOST_PORT_KEY, ServerHostPort())
 
                 _register_deferred_components()
         self._record_phase("imports_done")

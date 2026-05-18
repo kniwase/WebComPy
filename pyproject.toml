@@ -95,7 +95,7 @@ include = [
     "docs_app",
     "tests",
 ]
-stubPath = "webcompy/_browser"
+stubPath = "webcompy/ports"
 
 [dependency-groups]
 dev = [

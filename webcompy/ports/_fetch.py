@@ -31,4 +31,16 @@ class FetchPort(ABC):
         method: str = "GET",
         headers: dict[str, str] | None = None,
         body: str | None = None,
-    ) -> Response: ...
+    ) -> Response:
+        """Perform an HTTP request.
+
+        Args:
+            url: Target URL.
+            method: HTTP method (default ``"GET"``).
+            headers: Optional request headers.
+            body: Optional request body.
+
+        Returns:
+            A ``Response`` object with text, headers, and status.
+        """
+        ...

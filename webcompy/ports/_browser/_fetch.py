@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from webcompy._browser._modules import browser as _raw_browser
 from webcompy.exception import WebComPyException
+from webcompy.ports._browser._raw import browser as _raw_browser
 from webcompy.ports._fetch import FetchPort, Response
 from webcompy.utils._environment import ENVIRONMENT
 

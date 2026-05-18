@@ -1,10 +1,11 @@
 from typing import TypedDict
 
-from webcompy import browser
 from webcompy.aio import AsyncWrapper
 from webcompy.ajax import HttpClient
 from webcompy.components import ComponentContext, define_component
+from webcompy.di import inject
 from webcompy.elements import DomNodeRef, html
+from webcompy.ports._keys import HOST_PORT_KEY
 from webcompy.signal import Signal
 from webcompy.utils import strip_multiline_text
 
@@ -19,6 +20,7 @@ class DemoComponentProps(TypedDict):
 def DemoDisplay(context: ComponentContext[DemoComponentProps]):
     code_ref = DomNodeRef()
     source_code = Signal("")
+    get_hljs = inject(HOST_PORT_KEY).create_js_global_getter("hljs")
 
     source_code.on_after_updating(lambda _: run_highlight())
 
@@ -36,8 +38,9 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
             source_code.value = f"# Failed to load {context.props['demo_path']}"
 
     def run_highlight():
-        if browser and code_ref.element and hasattr(browser.window, "hljs"):
-            browser.window.hljs.highlightElement(code_ref.element)
+        hljs = get_hljs()
+        if hljs is not None and code_ref.element:
+            hljs.highlightElement(code_ref.element)
 
     @context.on_after_rendering
     def _():

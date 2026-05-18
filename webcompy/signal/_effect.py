@@ -7,7 +7,7 @@ from contextvars import ContextVar
 from typing import Any
 
 from webcompy.di import InjectionError, inject
-from webcompy.ports._keys import DOM_PORT_KEY
+from webcompy.ports._keys import HOST_PORT_KEY
 from webcompy.signal._graph import (
     SignalNode,
     _CallbackMixin,
@@ -143,7 +143,7 @@ def _schedule_effect(effect_node: EffectNode) -> None:
     _pending_effects.append(effect_node)
     if not _scheduling_scheduled:
         try:
-            inject(DOM_PORT_KEY).schedule_macro_task(_flush_pending_effects)
+            inject(HOST_PORT_KEY).schedule_macro_task(_flush_pending_effects)
         except InjectionError:
             _scheduling_scheduled = False
             _run_effect_synchronously(effect_node)

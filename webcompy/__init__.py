@@ -11,7 +11,6 @@ from . import (
     signal,
     utils,
 )
-from ._browser import browser
 from ._version import __version__
 from .app._config import WebComPyAppConfig
 from .assets import AssetNotFoundError, load_asset
@@ -33,7 +32,6 @@ __all__ = [
     "aio",
     "ajax",
     "app",
-    "browser",
     "cli",
     "components",
     "di",

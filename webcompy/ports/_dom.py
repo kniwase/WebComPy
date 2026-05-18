@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import Any, Protocol
 
 
@@ -73,14 +74,71 @@ class DOMNodeList:
 
 class DOMPort(ABC):
     @abstractmethod
-    def create_element(self, tag: str) -> DOMNode: ...
+    def create_element(self, tag: str) -> DOMNode:
+        """Create an HTML element.
+
+        Args:
+            tag: HTML tag name (e.g. ``"div"``, ``"span"``, ``"p"``).
+
+        Returns:
+            A new DOM element.
+        """
+        ...
+
     @abstractmethod
-    def create_text_node(self, text: str) -> DOMNode: ...
+    def create_text_node(self, text: str) -> DOMNode:
+        """Create a text node.
+
+        Args:
+            text: Text content for the node.
+
+        Returns:
+            A new text node.
+        """
+        ...
+
     @abstractmethod
-    def query_selector(self, selector: str) -> DOMNode | None: ...
+    def query_selector(self, selector: str) -> DOMNode | None:
+        """Query the document for the first element matching a CSS selector.
+
+        Args:
+            selector: CSS selector string.
+
+        Returns:
+            The first matching element, or ``None`` if none found.
+        """
+        ...
+
     @abstractmethod
-    def get_element_by_id(self, element_id: str) -> DOMNode | None: ...
+    def get_element_by_id(self, element_id: str) -> DOMNode | None:
+        """Retrieve an element by its ``id`` attribute.
+
+        Args:
+            element_id: The element's ``id`` value.
+
+        Returns:
+            The matching element, or ``None`` if not found.
+        """
+        ...
+
     @abstractmethod
-    def set_title(self, title: str) -> None: ...
+    def set_title(self, title: str) -> None:
+        """Set the document title (``document.title``).
+
+        Args:
+            title: New document title.
+        """
+        ...
+
     @abstractmethod
-    def schedule_macro_task(self, callback: Any) -> None: ...
+    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        """Register a document-level event listener via ``document.addEventListener``.
+
+        Args:
+            event_type: Event name (e.g. ``"click"``, ``"keydown"``).
+            handler: Callback invoked when the event fires.
+
+        Returns:
+            A cleanup function; call it to remove the listener.
+        """
+        ...

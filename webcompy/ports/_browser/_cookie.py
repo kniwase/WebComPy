@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from urllib.parse import unquote
 
-from webcompy._browser._modules import browser as _raw_browser
 from webcompy.exception import WebComPyException
+from webcompy.ports._browser._raw import browser as _raw_browser
 from webcompy.ports._cookie import CookiePort
 from webcompy.utils._environment import ENVIRONMENT
 
