@@ -42,7 +42,7 @@ The elements package SHALL obtain DOM port references through `inject(DOM_PORT_K
 
 #### Scenario: SwitchElement schedules macro task via port
 - **WHEN** `SwitchElement._refresh()` has deferred callbacks
-- **THEN** it SHALL call `inject(DOM_PORT_KEY).schedule_macro_task(callback)` when `ENVIRONMENT == "pyscript"`
+- **THEN** it SHALL call `inject(HOST_PORT_KEY).schedule_macro_task(callback)` when `ENVIRONMENT == "pyscript"`
 
 #### Scenario: RepeatElement uses ENVIRONMENT for runtime branching
 - **WHEN** `RepeatElement._on_set_parent()` or `_update_dom_range()` runs
@@ -88,10 +88,32 @@ The `webcompy.logging` module SHALL use `pyscript.context.window.console` direct
 - **WHEN** any logging level (debug, info, warn, error) is called in PyScript environment
 - **THEN** it SHALL output via the corresponding method on `pyscript.context.window.console`
 
-### Requirement: Effect scheduling uses schedule_macro_task
-The signal effect system SHALL schedule deferred callbacks through `inject(DOM_PORT_KEY).schedule_macro_task()`.
+### Requirement: Effect scheduling uses HostPort.schedule_macro_task
+The signal effect system SHALL schedule deferred callbacks through `inject(HOST_PORT_KEY).schedule_macro_task()`.
 
 #### Scenario: Effects scheduled via port
 - **WHEN** `_schedule_effect` runs in PyScript environment
-- **THEN** it SHALL use `inject(DOM_PORT_KEY).schedule_macro_task(_flush_pending_effects)`
+- **THEN** it SHALL use `inject(HOST_PORT_KEY).schedule_macro_task(_flush_pending_effects)`
 - **AND** fall back to synchronous execution if injection fails
+
+### Requirement: HostPort provides window-level operations
+A `HostPort` SHALL provide the `schedule_macro_task` and `create_js_global_getter` methods for window-level operations, separate from `DOMPort`'s document-level operations.
+
+#### Scenario: schedule_macro_task deferred via HostPort
+- **WHEN** framework code calls `host_port.schedule_macro_task(callback)`
+- **THEN** in the browser, the callback SHALL be deferred via `window.setTimeout(callback, 0)`
+- **AND** in the server, the call SHALL be a no-op
+
+#### Scenario: create_js_global_getter resolves window globals
+- **WHEN** `create_js_global_getter("hljs")` is called in the browser
+- **THEN** the returned zero-arg function SHALL return `window.hljs`
+- **AND** if `wrapper` is provided, the wrapper function SHALL transform the resolved value
+- **AND** if the global is missing, the result SHALL be `None` (or `default`, if provided)
+
+#### Scenario: create_js_global_getter returns default on server
+- **WHEN** `create_js_global_getter("hljs")` is called on the server (SSG)
+- **THEN** the returned zero-arg function SHALL return `None` (or `default`, if provided)
+
+#### Scenario: DOMPort no longer carries schedule_macro_task
+- **WHEN** code inspects `DOMPort` ABC
+- **THEN** `schedule_macro_task` SHALL NOT be present
