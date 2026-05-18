@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from webcompy.exception import WebComPyException
@@ -22,8 +23,5 @@ class ServerDOMPort(DOMPort):
     def set_title(self, title: str) -> None:
         pass
 
-    def add_document_event_listener(self, event_type: str, handler: Any) -> None:
-        pass
-
-    def remove_document_event_listener(self, event_type: str, handler: Any) -> None:
-        pass
+    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        return lambda: None

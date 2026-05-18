@@ -292,10 +292,7 @@ class FakeBrowserDOMPort:
         return FakeDOMNode("#text", text_content=text)
 
     def add_document_event_listener(self, event_type, handler):
-        pass
-
-    def remove_document_event_listener(self, event_type, handler):
-        pass
+        return lambda: None
 
 
 class FakeBrowserHostPort:

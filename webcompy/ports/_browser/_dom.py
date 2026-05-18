@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from webcompy.exception import WebComPyException
@@ -30,8 +31,13 @@ class BrowserDOMPort(DOMPort):
     def set_title(self, title: str) -> None:
         self._browser.document.title = title
 
-    def add_document_event_listener(self, event_type: str, handler: Any) -> None:
-        self._browser.document.addEventListener(event_type, handler)
+    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        proxy = self._browser.pyscript.ffi.create_proxy(handler)
+        self._browser.document.addEventListener(event_type, proxy)
 
-    def remove_document_event_listener(self, event_type: str, handler: Any) -> None:
-        self._browser.document.removeEventListener(event_type, handler)
+        def _remove() -> None:
+            self._browser.document.removeEventListener(event_type, proxy)
+            if hasattr(proxy, "destroy"):
+                proxy.destroy()
+
+        return _remove

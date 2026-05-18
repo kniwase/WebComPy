@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import Any, Protocol
 
 
@@ -83,6 +84,4 @@ class DOMPort(ABC):
     @abstractmethod
     def set_title(self, title: str) -> None: ...
     @abstractmethod
-    def add_document_event_listener(self, event_type: str, handler: Any) -> None: ...
-    @abstractmethod
-    def remove_document_event_listener(self, event_type: str, handler: Any) -> None: ...
+    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]: ...

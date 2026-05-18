@@ -64,11 +64,11 @@ def Navbar(context: ComponentContext[list[Page]]):
         dom = None
 
     if dom:
-        dom.add_document_event_listener("click", _on_click_outside)
+        _remove_click = dom.add_document_event_listener("click", _on_click_outside)
 
         @on_before_destroy
         def _cleanup():
-            dom.remove_document_event_listener("click", _on_click_outside)
+            _remove_click()
 
     def _generate_navitem(page: Page, idx: int):
         if "children" in page:
