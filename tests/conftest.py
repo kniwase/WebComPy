@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -259,12 +260,47 @@ class FakeBrowserModule:
         return True
 
 
+class MockHistoryPort:
+    def __init__(self, *, mode: str = "history", initial_path: str = "/"):
+        self._mode = mode
+        self._value = initial_path
+        self._state: dict[str, Any] | None = None
+
+    @property
+    def mode(self) -> str:
+        return self._mode
+
+    @property
+    def value(self) -> str:
+        return self._value
+
+    @property
+    def state(self):
+        return self._state
+
+    def navigate(self, path: str, state: dict[str, Any] | None = None):
+        self._state = state
+        if self._mode == "hash" and path.startswith("#"):
+            self._value = path[1:]
+        else:
+            self._value = path
+
+    def current_search(self) -> str:
+        return ""
+
+    def history_state(self) -> object | None:
+        return self._state
+
+    def refresh_from_window(self) -> None:
+        pass
+
+
 @pytest.fixture
 def fake_browser(monkeypatch):
     browser = FakeBrowserModule()
-    from webcompy._browser import _modules
+    from webcompy.ports._browser import _raw
 
-    monkeypatch.setattr(_modules, "browser", browser)
+    monkeypatch.setattr(_raw, "browser", browser)
     return browser
 
 

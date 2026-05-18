@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+from typing import Literal
 
 from webcompy.exception import WebComPyException
 from webcompy.ports._browser._raw import browser as _raw_browser
@@ -10,7 +11,7 @@ from webcompy.utils._environment import ENVIRONMENT
 
 
 class BrowserHistoryPort(HistoryPort):
-    def __init__(self, *, mode: str) -> None:
+    def __init__(self, *, mode: Literal["hash", "history"]) -> None:
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("BrowserHistoryPort is only available in browser environment")
         assert _raw_browser is not None
@@ -34,11 +35,12 @@ class BrowserHistoryPort(HistoryPort):
     def history_state(self) -> object | None:
         return self._browser.window.history.state
 
-    def navigate(self, path: str) -> None:
-        self._browser.window.history.pushState(None, "", path)
-        self.refresh_from_window()
-
     @SignalBase._change_event
     def refresh_from_window(self) -> None:
         location = self._browser.window.location
         self._value = location.pathname + location.search + location.hash
+        hist_state = self._browser.window.history.state
+        if hist_state is not None and not self._browser.pyscript.ffi.is_none(hist_state):
+            self._state = hist_state.to_dict()
+        else:
+            self._state = None
