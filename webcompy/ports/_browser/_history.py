@@ -20,6 +20,7 @@ class BrowserHistoryPort(HistoryPort):
         super().__init__(initial_path, mode=mode)
         self._popstate_handler_proxy = self._browser.pyscript.ffi.create_proxy(self._on_popstate)
         self._browser.window.addEventListener("popstate", self._popstate_handler_proxy)
+        self.refresh_from_window()
 
     def _on_popstate(self, event: object) -> None:
         self.refresh_from_window()

@@ -19,7 +19,6 @@ from webcompy.elements.typealias._element_property import (
     ElementChildren,
 )
 from webcompy.elements.types._element import Element
-from webcompy.ports._keys import HISTORY_PORT_KEY
 from webcompy.router._lazy import LazyComponentGenerator
 from webcompy.router._pages import WebComPyRouterException
 from webcompy.signal import SignalBase, computed_property
@@ -109,7 +108,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                     state = None
                     logging.warn("Argument 'params' of RouterLink should be a Signal Object of json-serializable dict.")
             context.window.history.pushState(state, None, href)
-            inject(HISTORY_PORT_KEY).navigate(href, params)
+            self._router.__set_path__(href, params)
 
     def _on_mouseenter(self, _ev=None):
         to_path = self._to.value if isinstance(self._to, SignalBase) else self._to
