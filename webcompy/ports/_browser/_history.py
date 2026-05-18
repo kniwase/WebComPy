@@ -38,7 +38,11 @@ class BrowserHistoryPort(HistoryPort):
     @SignalBase._change_event
     def refresh_from_window(self) -> None:
         location = self._browser.window.location
-        self._value = location.pathname + location.search + location.hash
+        if self._mode == "history":
+            self._value = location.pathname + location.search
+        else:
+            hash_val = location.hash
+            self._value = hash_val[1:] if hash_val.startswith("#") else hash_val
         hist_state = self._browser.window.history.state
         if hist_state is not None and not self._browser.pyscript.ffi.is_none(hist_state):
             self._state = hist_state.to_dict()

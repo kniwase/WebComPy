@@ -66,7 +66,7 @@ class TestBrowserHistoryPortRefreshPath:
 
             HistoryPort.__init__(hist, "/", mode="hash")
             hist.refresh_from_window()
-            assert hist.value == "//about"
+            assert hist.value == "/about"
         finally:
             _raw.browser = old_browser
 

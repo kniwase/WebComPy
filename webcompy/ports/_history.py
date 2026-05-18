@@ -62,11 +62,11 @@ class HistoryPort(SignalBase[str]):
             path: Target URL path.
             state: Optional state dict to store alongside the path.
         """
+        normalized = path[1:] if self._mode == "hash" and path.startswith("#") else path
+        if self._value == normalized and self._state is state:
+            return
         self._state = state
-        if self._mode == "hash" and path.startswith("#"):
-            self._value = path[1:]
-        else:
-            self._value = path
+        self._value = normalized
 
     @abstractmethod
     def refresh_from_window(self) -> None:

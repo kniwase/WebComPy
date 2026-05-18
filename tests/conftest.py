@@ -5,6 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from webcompy.ports._history import HistoryPort
+
 
 class FakeDOMNode:
     def __init__(self, tag: str = "div", text_content: str | None = None):
@@ -260,30 +262,16 @@ class FakeBrowserModule:
         return True
 
 
-class MockHistoryPort:
+class MockHistoryPort(HistoryPort):
     def __init__(self, *, mode: str = "history", initial_path: str = "/"):
-        self._mode = mode
-        self._value = initial_path
-        self._state: dict[str, Any] | None = None
+        super().__init__(initial_path, mode=mode)  # type: ignore[arg-type]
 
-    @property
-    def mode(self) -> str:
-        return self._mode
-
-    @property
-    def value(self) -> str:
-        return self._value
-
-    @property
-    def state(self):
-        return self._state
-
-    def navigate(self, path: str, state: dict[str, Any] | None = None):
+    def navigate(self, path: str, state: dict[str, Any] | None = None) -> None:
+        normalized = path[1:] if self._mode == "hash" and path.startswith("#") else path
+        if self._value == normalized and self._state is state:
+            return
         self._state = state
-        if self._mode == "hash" and path.startswith("#"):
-            self._value = path[1:]
-        else:
-            self._value = path
+        self._value = normalized
 
     def current_search(self) -> str:
         return ""

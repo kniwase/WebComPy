@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Literal
 
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.app._root_component import AppDocumentRoot
@@ -46,6 +46,9 @@ class WebComPyApp:
         if self._config.plugins:
             self._plugin_manager.discover(self._config.plugins)
             self._plugin_manager.init_all()
+        router_mode: Literal["hash", "history"] = (
+            self._router.__mode__ if self._router else "history"  # type: ignore[assignment]
+        )
         if ENVIRONMENT == "pyscript":
             self._di_scope.__enter__()
             _set_app_di_scope(self._di_scope)
@@ -70,7 +73,7 @@ class WebComPyApp:
             self._di_scope.provide(DOM_PORT_KEY, BrowserDOMPort())
             self._di_scope.provide(FETCH_PORT_KEY, BrowserFetchPort())
             self._di_scope.provide(FFI_PORT_KEY, BrowserFFIPort())
-            self._di_scope.provide(HISTORY_PORT_KEY, BrowserHistoryPort(mode="history"))
+            self._di_scope.provide(HISTORY_PORT_KEY, BrowserHistoryPort(mode=router_mode))
             self._di_scope.provide(HOST_PORT_KEY, BrowserHostPort())
 
             _register_deferred_components()
@@ -96,7 +99,7 @@ class WebComPyApp:
                 self._di_scope.provide(DOM_PORT_KEY, ServerDOMPort())
                 self._di_scope.provide(FETCH_PORT_KEY, ServerFetchPort())
                 self._di_scope.provide(FFI_PORT_KEY, ServerFFIPort())
-                self._di_scope.provide(HISTORY_PORT_KEY, ServerHistoryPort(mode="history"))
+                self._di_scope.provide(HISTORY_PORT_KEY, ServerHistoryPort(mode=router_mode))
                 self._di_scope.provide(HOST_PORT_KEY, ServerHostPort())
 
                 _register_deferred_components()
