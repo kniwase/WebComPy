@@ -66,17 +66,45 @@
 - [ ] 8.5 Write tests for server-side rendering of components with attributes, event handlers, conditional branches, and list rendering
 - [ ] 8.6 Run existing test suite and fix regressions
 
-## 9. Cleanup
+## 9. E2E test migration to unit tests
 
-- [ ] 9.1 Search codebase for any remaining `_render_html` references — ensure all are removed or migrated
-- [ ] 9.2 Remove any `_render_html`-specific test utilities or helpers
-- [ ] 9.3 Update type stubs if `_render_html` appears in any `.pyi` files
+### Purely rendering — fully migratable (24 tests)
 
-## 10. Verification
+- [ ] 9.1 Migrate `tests/e2e/test_component.py` (2 tests) — replace `to_be_visible`/`to_have_text` with `TestRenderer.render()` + virtual tree assertions; component text content is fully verifiable via `VirtualDOMNode`
+- [ ] 9.2 Migrate `tests/e2e/test_standalone.py` (4 tests) — CDN URL absence, local asset paths, file existence checks; no Playwright usage, move these to `tests/` under `pytest.mark.e2e` removed
+- [ ] 9.3 Migrate `tests/e2e/test_bundled_deps.py` (9 tests) — lockfile existence/schema, wheel content, HTML string verification; no Playwright usage, move to `tests/` as regular unit tests
+- [ ] 9.4 Migrate `tests/e2e/test_static_site.py` (7 tests) — wheel filename content-hash pattern, zip validity, HTML wheel URL; no Playwright usage, move to `tests/`
+- [ ] 9.5 Migrate `test_runtime_local_no_cdn_urls` and `test_runtime_local_static_assets_exist` from `tests/e2e/test_runtime_local.py` (2 tests) — HTML string verification without Playwright
 
-- [ ] 10.1 Run lint: `uv run ruff check .`
-- [ ] 10.2 Run type check: `uv run pyright`
-- [ ] 10.3 Run unit tests: `uv run python -m pytest tests/ --tb=short`
-- [ ] 10.4 Run SSG and verify output: `uv run python -m webcompy generate --app docs_app.bootstrap:app`
-- [ ] 10.5 Diff generated docs against baseline to confirm no output regressions
-- [ ] 10.6 Verify dev server starts: `uv run python -m webcompy start --dev --app docs_app.bootstrap:app`
+### Mixed — extract rendering-only assertions into new unit tests (~15 tests)
+
+- [ ] 9.6 Add `test_switch_initial_state` to `tests/test_switch.py` using `TestRenderer` — verify `switch()` renders the correct branch on initial render without browser interaction
+- [ ] 9.7 Add initial reactive text value tests to `tests/test_reactive.py` using `TestRenderer` — verify computed signals render correct initial text in the virtual tree
+- [ ] 9.8 Add initial nested dynamic state test to `tests/test_nested_dynamic.py` using `TestRenderer` — verify `repeat` inside `switch` renders correct initial children
+- [ ] 9.9 Add DI inject rendering test to `tests/test_di.py` using `TestRenderer` — verify `provide`/`inject` values are correctly rendered in component output
+- [ ] 9.10 Add lifecycle render-count test to `tests/test_lifecycle.py` using `TestRenderer` — verify initial `render-count` is 1 in the virtual tree
+
+### Remove redundant E2E assertions (already covered by existing unit tests)
+
+- [ ] 9.11 Remove style textContent assertions from `tests/e2e/test_scoped_style.py` — CSS content (selector names, pseudo-classes, `webcompy-cid-`) is already fully covered by `tests/test_scoped_style_generation.py`; keep only `getComputedStyle` color assertions
+- [ ] 9.12 Remove initial empty-list `to_have_count(0)` assertions from `tests/e2e/test_repeat.py`, `test_keyed_repeat.py`, `test_dict_repeat.py` — already covered by `tests/test_repeat.py` etc.
+
+### Verification
+
+- [ ] 9.13 Verify all E2E tests pass after migration — remaining E2E tests must still pass with reduced scope
+- [ ] 9.14 Update CI e2e-matrix in `.github/workflows/ci.yml` if any E2E test files are removed or renamed
+
+## 10. Cleanup
+
+- [ ] 10.1 Search codebase for any remaining `_render_html` references — ensure all are removed or migrated
+- [ ] 10.2 Remove any `_render_html`-specific test utilities or helpers
+- [ ] 10.3 Update type stubs if `_render_html` appears in any `.pyi` files
+
+## 11. Verification
+
+- [ ] 11.1 Run lint: `uv run ruff check .`
+- [ ] 11.2 Run type check: `uv run pyright`
+- [ ] 11.3 Run unit tests: `uv run python -m pytest tests/ --tb=short`
+- [ ] 11.4 Run SSG and verify output: `uv run python -m webcompy generate --app docs_app.bootstrap:app`
+- [ ] 11.5 Diff generated docs against baseline to confirm no output regressions
+- [ ] 11.6 Verify dev server starts: `uv run python -m webcompy start --dev --app docs_app.bootstrap:app`
