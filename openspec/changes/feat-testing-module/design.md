@@ -138,6 +138,8 @@ def create_test_app(scope, root_component=None, **kwargs):
 
 **Rationale**: Many component tests need access to signals, DI values, or the app's `provide()` method. `TestRenderer.render()` handles the simple case; `create_test_app()` handles the advanced case where the test needs to manipulate signals or DI before rendering.
 
+**Implementation note on ContextVar**: Setting `_active_scope` directly bypasses the normal `DIScope.__enter__`/`__exit__` context manager that sets `_active_di_scope` (a `ContextVar`). The implementation MUST also set `_active_di_scope.set(scope)` and provide a cleanup callback (returned from `create_test_app()`) to reset it, OR use `app.di_scope` as a context manager internally. Otherwise, `inject()` calls from within component setup (which checks `_active_di_scope` before falling back to `_app_di_scope`) may fail to resolve dependencies.
+
 ### Decision 6: TestRenderer and TestRendererResult
 
 **Chosen**: `TestRenderer` renders a component to a `VirtualDOMNode` tree. `TestRendererResult` wraps the root node and provides query/assertion/event/re-render methods.

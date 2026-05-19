@@ -28,11 +28,19 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: webcompy.testing package shall provide fake port implementations
 
-`FakeBrowserDOMPort` SHALL implement `DOMPort` with `create_element()` returning a `FakeDOMNode` and `create_text_node()` returning a text `FakeDOMNode`. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` as a no-op. `FakeBrowserFFIPort` SHALL implement all 5 abstract methods of `FFIPort`: `create_proxy`, `destroy_proxy`, `is_none`, `to_js`, `assign`.
+`FakeBrowserDOMPort` SHALL implement `DOMPort` with `create_element()` returning a `FakeDOMNode`, `create_text_node()` returning a text `FakeDOMNode`, `create_event()` returning a `VirtualDOMEvent` with the given type and options, and `add_document_event_listener()` returning a no-op cleanup callback. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` as a no-op and `create_js_global_getter()` returning a callable that returns `None`. `FakeBrowserFFIPort` SHALL implement `FFIPort` with all 5 abstract methods: `create_proxy` (returns `MagicMock` wrapping the original), `destroy_proxy`, `is_none`, `to_js`, `assign`.
 
 #### Scenario: FakeBrowserDOMPort creates FakeDOMNodes
 - **WHEN** `FakeBrowserDOMPort().create_element("span")` is called
 - **THEN** a `FakeDOMNode` with `nodeName == "SPAN"` SHALL be returned
+
+#### Scenario: FakeBrowserDOMPort.create_event returns a VirtualDOMEvent
+- **WHEN** `FakeBrowserDOMPort().create_event("click", bubbles=True, cancelable=False)` is called
+- **THEN** a `VirtualDOMEvent` with `type == "click"`, `bubbles == True`, `cancelable == False` SHALL be returned
+
+#### Scenario: FakeBrowserHostPort.create_js_global_getter returns a None-returning callable
+- **WHEN** `getter = FakeBrowserHostPort().create_js_global_getter("someName")` is called
+- **THEN** `getter()` SHALL return `None`
 
 #### Scenario: FakeBrowserFFIPort satisfies the full FFIPort ABC
 - **WHEN** `FakeBrowserFFIPort.to_js({"key": "val"})` is called
