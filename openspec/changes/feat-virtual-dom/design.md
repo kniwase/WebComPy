@@ -8,6 +8,9 @@ This change replaces the exception-throwing stubs in `ServerDOMPort` with a virt
 
 **Goals:**
 - Implement `VirtualDOMNode` satisfying the `DOMNode` Protocol with attribute storage, child management, and `__webcompy_node__` marker
+- Implement `VirtualDOMEvent` satisfying the `DOMEvent` Protocol with full event propagation (at-target + bubbling)
+- Add `dispatchEvent` to `DOMNode` Protocol and `create_event` to `DOMPort` ABC
+- Move `DOMEvent` Protocol from `webcompy/elements/_dom_objs.py` to `webcompy/ports/_dom.py`
 - `ServerDOMPort` returns `VirtualDOMNode` instances from `create_element()` / `create_text_node()`
 - Remove all `_render_html()` methods from element type classes
 - `render()` becomes the single rendering entry point for both environments
@@ -19,6 +22,8 @@ This change replaces the exception-throwing stubs in `ServerDOMPort` with a virt
 - Performance optimization of virtual tree operations
 - Worker-thread rendering
 - Hydration of virtual trees (only real DOM nodes are hydrated)
+- Capturing phase (event handlers always use `useCapture=False`; at-target + bubbling only)
+- `document.createEvent("MouseEvent")`-style legacy API (constructor-style only)
 
 ## Decisions
 
@@ -63,31 +68,68 @@ On the server, `_create_node()` calls `ServerDOMPort.create_element()` which ret
 
 **Rationale**: `ServerFFIPort.create_proxy()` returns the handler as-is (identity). The handlers stored here are the exact functions produced by `_generate_event_handler()`, which wraps user handlers for async resolution. No FFI proxy wrapping is needed.
 
-### Decision 5b: VirtualDOMNode supports dispatchEvent() for component behavior testing
+### Decision 5b: VirtualDOMNode.dispatchEvent() implements standard event propagation
 
-**Chosen**: `VirtualDOMNode.dispatchEvent(event: VirtualDOMEvent)` fires all stored handlers matching `event.type` synchronously. `VirtualDOMEvent` is a companion class in the same module providing minimal fields (`type`, `target`, `currentTarget`, `preventDefault`). Combined with the unified render path and synchronous signal propagation, this enables end-to-end component behavior tests:
+**Chosen**: `VirtualDOMNode.dispatchEvent(event: DOMEvent) -> bool` executes the at-target phase followed by the bubbling phase (if `event.bubbles` is `True`). `VirtualDOMEvent` is a concrete class satisfying the `DOMEvent` Protocol with full event fields.
+
+Event propagation flow:
+```
+dispatchEvent(event) on a node:
+  1. Set event.target = node, event.eventPhase = AT_TARGET (2)
+  2. Set event.currentTarget = node
+  3. Fire all stored handlers matching event.type synchronously
+  4. If event.bubbles and not event._propagation_stopped:
+     a. Walk node.parentNode chain upward
+     b. For each ancestor:
+        - Set event.eventPhase = BUBBLING (3)
+        - Set event.currentTarget = ancestor
+        - Fire ancestor's handlers matching event.type
+        - Stop if event._propagation_stopped
+  5. Return not event.defaultPrevented
+```
+
+**Rationale**: Three facts make full event propagation viable without a browser:
+1. **Handler wrapping happens at `addEventListener` time** — `_generate_event_handler()` wraps the user handler and `ServerFFIPort.create_proxy()` returns it as-is. The stored handler is call-ready.
+2. **Signal propagation is synchronous** — `Signal.set_value()` triggers all `on_after_updating` callbacks within the same call stack.
+3. **The unified render path** renders to `VirtualDOMNode` — `render()` → `_mount_node()` operates on the virtual tree identically.
+
+The capturing phase is intentionally excluded because WebComPy always passes `useCapture=False` to `addEventListener` — all framework-registered handlers run during the bubbling phase. Bubbling through the ancestor chain is straightforward since `VirtualDOMNode` stores `_parent` references. `event.stopPropagation()` allows event handlers to prevent ancestor dispatch, matching browser behavior.
+
+`preventDefault` gates on `event.cancelable` per spec: `event.defaultPrevented` is set to `True` only when `cancelable` is `True`. The return value (`True` unless default prevented) enables guards like `if not node.dispatchEvent(...): return`.
 
 ```python
 result = TestRenderer.render(Counter)
 button = result.query_selector("button")
 assert result.find_by_text("Clicked: 0")
 
-button.dispatchEvent(VirtualDOMEvent("click"))
+event = VirtualDOMEvent("click", bubbles=True, cancelable=True)
+button.dispatchEvent(event)
 # → handler fires → signal.set(1) → computed recalc → _refresh()
-# → child._render() → VirtualDOMNode.appendChild()
+# → VirtualDOMNode.appendChild()
 
-result.rerender()  # re-execute component.render() on the virtual tree
+result.rerender()
 assert result.find_by_text("Clicked: 1")
+assert event.defaultPrevented == False
 ```
 
-**Rationale**: Three facts make this viable without a browser:
-1. **Handler wrapping happens at `addEventListener` time** — `_generate_event_handler()` wraps the user handler and `ServerFFIPort.create_proxy()` returns it as-is. The stored handler is call-ready.
-2. **Signal propagation is synchronous** — `Signal.set_value()` triggers all `on_after_updating` callbacks (`_refresh()`, `_generate_attr_updater()`) within the same call stack.
-3. **The unified render path** renders to `VirtualDOMNode` — `_render()` → `_mount_node()` → `appendChild()`/`insertBefore()` all operate on the virtual tree.
+**Alternative considered**: Skip bubbling, only fire on the target node. Rejected because bubbling is a core DOM event semantic. Without bubbling, event delegation patterns (where a parent listens for child events) would not be testable, and the behavior would diverge from browser DOM. Walking the ancestor chain is a trivial `while parent` loop.
 
-The `rerender()` method on `TestRendererResult` re-drives component `render()` so the queryable tree reflects post-event state.
+### Decision 9: DOMPort.create_event() — constructor-style event factory
 
-**Non-goal boundary**: `preventDefault`, `stopPropagation`, event bubbling, and `event.target`/`currentTarget` reference management are NOT emulated. `VirtualDOMEvent` provides only `type`, `target`, `currentTarget`, and `preventDefault` (no-op). Full JS event model simulation is intentionally out of scope.
+**Chosen**: `DOMPort.create_event(event_type: str, *, bubbles: bool = False, cancelable: bool = False) -> DOMEvent`. BrowserDOMPort creates a native JS `Event` (via `new Event(type, {bubbles, cancelable})`), ServerDOMPort returns a `VirtualDOMEvent`.
+
+```python
+def create_event(self, event_type: str, *, bubbles: bool = False, cancelable: bool = False) -> DOMEvent:
+    ...
+```
+
+**Rationale**: The `new Event(type, eventInitDict)` constructor pattern is the modern standard. `bubbles` and `cancelable` as keyword-only arguments mirror the `EventInit` dictionary. The legacy `document.createEvent("MouseEvent")` API is not supported because WebComPy has no use for MouseEvent-specific properties (clientX, screenY, etc.) — test events are dispatched programmatically, not derived from actual mouse positions.
+
+### Decision 10: DOMEvent Protocol moves to ports/_dom.py
+
+**Chosen**: Move the `DOMEvent` Protocol from `webcompy/elements/_dom_objs.py` to `webcompy/ports/_dom.py`, alongside `DOMNode` and `DOMPort`. `webcompy/elements/_dom_objs.py` re-exports it for backwards compatibility.
+
+**Rationale**: `DOMEvent`, `DOMNode`, and `DOMPort` form a cohesive domain — they are the three pillars of the abstracted DOM layer. Grouping them in the same module makes the ports layer self-contained: all type contracts that port implementations must satisfy live in `webcompy/ports/_dom.py`. This also enables `VirtualDOMEvent` (in `ports/_server/`) to reference the Protocol without importing from `webcompy/elements/`, avoiding potential circular dependencies.
 
 ### Decision 6: VirtualDOMNode implements all DOMNode tree operations
 
