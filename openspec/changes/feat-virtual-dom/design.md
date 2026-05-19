@@ -53,9 +53,10 @@ On the server, `_create_node()` calls `ServerDOMPort.create_element()` which ret
 **Rationale**: The `_render_html()` methods encode element-specific HTML formatting rules (void tags, self-closing, text escaping, attribute ordering). These rules must be replicated in `ServerDOMPort.render_html()` before the old methods can be deleted.
 
 **Correct migration ordering:**
-1. Implement `VirtualDOMNode` + `ServerDOMPort.render_html()` (tasks 1-2)
-2. Update `cli/_html.py` to use `ServerDOMPort.render_html()` (task 5)
-3. THEN remove `_render_html()` from element classes — subclasses first (`_text.py`, `_dynamic.py`), base classes last (`_base.py`, `_abstract.py`) (tasks 3-4)
+1. Implement `VirtualDOMNode` + `ServerDOMPort.render_html()` (groups 1-2)
+2. Create `webcompy.testing` module and extract test utilities from `conftest` (group 3)
+3. Update `cli/_html.py` to use `ServerDOMPort.render_html()` (group 6)
+4. THEN remove `_render_html()` from element classes — subclasses first (`_text.py`, `_dynamic.py`), base classes last (`_base.py`, `_abstract.py`) (groups 4-5)
 
 ### Decision 5: VirtualDOMNode.event_listeners is a list of (event_name, handler) tuples
 
@@ -89,9 +90,24 @@ with app.di_scope:
 ```
 
 **Migration ordering**: Remove `_render_html()` from element base classes LAST (after all callers are updated), not first. This is the opposite of Decision 4 in feat-port-abstraction's design — the correct order is:
-1. Implement VirtualDOMNode + ServerDOMPort.render_html() (task 1-2)
-2. Update cli/_html.py to use ServerDOMPort.render_html() (task 5)
-3. THEN remove _render_html() from element classes (tasks 3-4)
+1. Implement VirtualDOMNode + ServerDOMPort.render_html() (groups 1-2)
+2. Create webcompy.testing module (group 3)
+3. Update cli/_html.py to use ServerDOMPort.render_html() (group 6)
+4. THEN remove _render_html() from element classes (groups 4-5)
+
+### Decision 8: webcompy.testing module — extract test utilities from conftest
+
+**Chosen**: Create a `webcompy.testing` package that houses `FakeDOMNode` and fake port implementations (`FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort`), plus convenience helpers (`create_browser_scope()`, `create_server_scope()`, `create_test_app()`). The module SHALL be excluded from browser wheels via `_BROWSER_ONLY_EXCLUDE`.
+
+**Rationale**: `tests/conftest.py` currently contains ~200 lines of reusable fake/mock classes that are also imported directly by 8+ test files (`from conftest import FakeDOMNode`). These utilities are useful for third-party app testing as well. Extracting them to a proper package under `webcompy.testing`:
+- Makes them importable by external app test suites
+- Provides pre-configured DI scope helpers (`create_browser_scope()`, `create_server_scope()`)
+- Centralizes the fake implementations in one discoverable location
+- Fixes `FakeBrowserFFIPort` Protocol non-compliance (missing `to_js`/`assign`)
+
+**Exclusion from browser wheels**: Adding `"webcompy.testing"` to `_BROWSER_ONLY_EXCLUDE` in `webcompy/cli/_wheel_builder.py` ensures the testing module is never bundled into browser-deployed wheels. The `_is_browser_excluded` function uses prefix matching, so `"webcompy.testing"` matches all submodules.
+
+**Alternative considered**: Keep in `conftest.py`. Rejected because external projects cannot import from test conftest, and the fake classes have outgrown their single-file origin.
 
 ## Risks / Trade-offs
 
