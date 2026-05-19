@@ -24,6 +24,10 @@
 - [ ] 3.7 Add `"webcompy.testing"` to `_BROWSER_ONLY_EXCLUDE` in `webcompy/cli/_wheel_builder.py` — prevents the testing module from being bundled into browser wheels
 - [ ] 3.8 Update all test files that import from `conftest` (`FakeDOMNode`, `FakeBrowserDOMPort`, `MockHistoryPort` is out of scope) to import from `webcompy.testing` instead
 - [ ] 3.9 Remove `FakeDOMNode`, `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort` from `tests/conftest.py` — replaced by imports from `webcompy.testing`
+- [ ] 3.10 Create `webcompy/testing/_renderer.py` with `TestRenderer` class — high-level API for rendering components to `VirtualDOMNode` trees and querying the result (jsdom-like for WebComPy)
+- [ ] 3.11 Implement `TestRenderer.render(component)` — creates a `DIScope` with `ServerDOMPort`, calls `component.render()`, returns a `TestRendererResult` wrapping the virtual root node
+- [ ] 3.12 Implement `TestRendererResult` query methods — `query_selector(tag)`, `query_selector_all(tag)`, `find_by_text(text)`, `find_by_attribute(name, value)`, `to_html()` — traverse the virtual tree and return matching `VirtualDOMNode`(s)
+- [ ] 3.13 Implement `TestRendererResult` tree assertion helpers — `assert_element(tag, text=None)`, `assert_element_count(tag, count)`, `assert_has_class(cls)` — raise `AssertionError` on mismatch
 
 ## 4. Unify render path in element base classes
 

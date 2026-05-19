@@ -109,6 +109,37 @@ with app.di_scope:
 
 **Alternative considered**: Keep in `conftest.py`. Rejected because external projects cannot import from test conftest, and the fake classes have outgrown their single-file origin.
 
+### Decision 9: TestRenderer — jsdom-like high-level testing API
+
+**Chosen**: Provide a `TestRenderer` class in `webcompy.testing` that renders components to `VirtualDOMNode` trees and offers query/assertion methods on the result. This is the WebComPy equivalent of jsdom or React Testing Library's `render()`.
+
+```python
+from webcompy.testing import TestRenderer
+
+result = TestRenderer.render(MyComponent(props={"name": "World"}))
+
+# Query the virtual DOM tree
+h1 = result.query_selector("h1")
+assert h1.textContent == "Hello World"
+items = result.query_selector_all("li")
+assert len(items) == 3
+
+# Convenience finders
+node = result.find_by_text("Hello")
+node = result.find_by_attribute("id", "main")
+
+# HTML output
+html = result.to_html()
+
+# Built-in assertion helpers
+result.assert_element_count("li", 3)
+result.assert_has_class("container")
+```
+
+**Rationale**: After virtual DOM unification, any component can be rendered server-side via `render()` → `VirtualDOMNode`. `TestRenderer` wraps the boilerplate of DI scope setup, renders the component, and provides query/assertion methods. This turns component rendering tests from fragile HTML string comparison into structural assertions on the virtual DOM tree. The `TestRendererResult` query methods (`query_selector`, `query_selector_all`, `find_by_text`, `find_by_attribute`) traverse the `VirtualDOMNode` tree and return matching nodes for further inspection.
+
+**Alternative considered**: Let users call `component.render()` directly via `create_server_scope()`. Rejected because the setup boilerplate (DI scope, ENVIRONMENT patching, app instantiation) is non-trivial and error-prone. A single `TestRenderer.render()` call is the ergonomic entry point.
+
 ## Risks / Trade-offs
 
 - **[HTML output divergence]** ServerDOMPort.render_html() might produce different HTML than the old _render_html() methods. → Mitigation: generate docs_app with both old and new paths, diff the output, fix discrepancies before deleting _render_html().
