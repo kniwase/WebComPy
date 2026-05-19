@@ -61,7 +61,7 @@ The system SHALL define DI injection keys in `webcompy.ports._keys` for all 6 po
 - **THEN** each key is a distinct `InjectKey` instance usable with `inject()` and `provide()`
 
 ### Requirement: DOMNode Protocol methods are available
-The `DOMNode` Protocol SHALL expose tree manipulation (`appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove`), attribute methods (`setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`), event methods (`addEventListener`, `removeEventListener`), content properties (`textContent`, `childNodes` (returns `DOMNodeList`), `parentNode`, `nodeName`, `nodeType`), and WebComPy markers (`__webcompy_node__`, `__webcompy_prerendered_node__`). Any object — raw JS node or `VirtualDOMNode` — that structurally satisfies these members SHALL be accepted as a `DOMNode`.
+The `DOMNode` Protocol SHALL expose tree manipulation (`appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove`), attribute methods (`setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`), event methods (`addEventListener`, `removeEventListener`, `dispatchEvent(event: DOMEvent) -> bool`), content properties (`textContent`, `childNodes` (returns `DOMNodeList`), `parentNode`, `nodeName`, `nodeType`), and WebComPy markers (`__webcompy_node__`, `__webcompy_prerendered_node__`). Any object — raw JS node or `VirtualDOMNode` — that structurally satisfies these members SHALL be accepted as a `DOMNode`.
 
 #### Scenario: Raw JS nodes satisfy DOMNode Protocol
 - **WHEN** a raw `document.createElement("div")` value is returned from `BrowserDOMPort.create_element()`
@@ -72,6 +72,28 @@ The `DOMNode` Protocol SHALL expose tree manipulation (`appendChild`, `removeChi
 - **WHEN** code accesses `node.childNodes` on a DOMNode
 - **THEN** it SHALL return a `DOMNodeList` instance
 - **AND** `DOMNodeList` SHALL support `.length` (int) and `[index]` access returning `DOMNode`
+
+#### Scenario: dispatchEvent is callable on any DOMNode
+- **WHEN** code calls `node.dispatchEvent(event)` through the `DOMNode` Protocol
+- **THEN** the operation SHALL work on both `BrowserDOMNode` (delegates to native JS) and `VirtualDOMNode` (synchronous handler invocation with at-target + bubbling propagation)
+
+### Requirement: DOMEvent Protocol is defined in the ports layer
+
+The `DOMEvent` Protocol SHALL be defined in `webcompy/ports/_dom.py` alongside `DOMNode` and `DOMPort`. It SHALL define the interface for DOM event objects: `type` (str), `bubbles` (bool), `cancelable` (bool), `target` (DOMNode | None), `currentTarget` (DOMNode | None), `defaultPrevented` (bool), `eventPhase` (int), `timeStamp` (int), `preventDefault()`, and `stopPropagation()`.
+
+#### Scenario: DOMEvent is co-located with DOMNode and DOMPort
+- **WHEN** a developer imports `webcompy.ports._dom`
+- **THEN** `DOMEvent`, `DOMNode`, and `DOMPort` SHALL all be available from the same module
+
+#### Scenario: DOMEvent fields match the browser Event interface subset
+- **WHEN** a `DOMEvent` is accessed through the Protocol
+- **THEN** `type` SHALL return the event name string
+- **AND** `bubbles` SHALL indicate whether the event bubbles
+- **AND** `cancelable` SHALL indicate whether `preventDefault()` is effective
+- **AND** `defaultPrevented` SHALL return `True` only after `preventDefault()` is called on a cancelable event
+- **AND** `eventPhase` SHALL return 0 (NONE), 2 (AT_TARGET), or 3 (BUBBLING)
+- **AND** `stopPropagation()` SHALL halt further ancestor dispatch
+- **AND** `preventDefault()` SHALL set `defaultPrevented` to `True` only when `cancelable` is `True`
 
 ### Requirement: Port responsibilities are scoped by browser API surface
 Ports SHALL be organized around distinct browser API surfaces rather than arbitrary groupings. `DOMPort` SHALL handle document-level operations (`document.createElement`, `document.querySelector`, `document.title`, `document.addEventListener`). `HostPort` SHALL handle general window-level operations (JS global object access via `getattr(window, name, None)`, `window.setTimeout` for macro-task scheduling). Additional port ABCs SHALL be introduced when a new category of browser API surface is identified, following MDN's classification of browser features. This ensures each port has a clear, narrow responsibility and prevents ports from becoming monolithic catch-all abstractions.

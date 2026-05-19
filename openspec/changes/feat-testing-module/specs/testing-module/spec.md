@@ -22,7 +22,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 #### Scenario: Dispatching a VirtualDOMEvent on FakeDOMNode
 - **WHEN** `handler = lambda ev: None` is registered via `node.addEventListener("click", handler)`
-- **AND** `node.dispatchEvent(VirtualDOMEvent("click"))` is called
+- **AND** `node.dispatchEvent(VirtualDOMEvent("click"))` is called (where `VirtualDOMEvent` is imported from `webcompy.ports._server._virtual_dom` — re-exported by `webcompy.testing`)
 - **THEN** the handler SHALL be invoked with the event
 
 ### Requirement: webcompy.testing package shall provide fake port implementations
@@ -41,7 +41,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: webcompy.testing package shall provide scope helpers
 
-`create_browser_scope()` SHALL return a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, and `FakeBrowserFFIPort` wired to their standard injection keys. `create_server_scope()` SHALL return a `DIScope` with `ServerDOMPort`, `ServerHostPort`, and `ServerFFIPort` wired to their standard injection keys. `create_test_app(scope, **config_overrides)` SHALL return a minimal `WebComPyApp` instance with the given DI scope.
+`create_browser_scope()` SHALL return a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, and `FakeBrowserFFIPort` wired to their standard injection keys. `create_server_scope()` SHALL return a `DIScope` with `ServerDOMPort`, `ServerHostPort`, and `ServerFFIPort` wired to their standard injection keys. `create_test_app(scope, **config_overrides)` SHALL return a minimal `WebComPyApp` instance with the given DI scope set directly on `app._active_scope` — this is an intentional test-only escape hatch, not a public API contract, and SHALL NOT be used in production code.
 
 #### Scenario: create_browser_scope returns a ready-to-use DIScope
 - **WHEN** `scope = create_browser_scope()` is called
@@ -56,7 +56,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: TestRenderer shall render components to VirtualDOMNode trees
 
-`TestRenderer.render(component)` SHALL create a server-side DI scope, instantiate a minimal `WebComPyApp`, render the component via `component.render()`, and return a `TestRendererResult` wrapping the root `VirtualDOMNode`. `TestRendererResult` SHALL provide query methods (`query_selector`, `query_selector_all`, `find_by_text`, `find_by_attribute`), `to_html()`, `rerender()`, and assertion helpers (`assert_element_count`, `assert_has_class`).
+`TestRenderer.render(component)` SHALL set the runtime environment to non-PyScript during rendering to ensure the element system uses server-side code paths (i.e., `_create_node()` calls `ServerDOMPort.create_element()` rather than `BrowserDOMPort.create_element()`). It SHALL create a server-side DI scope, instantiate a minimal `WebComPyApp`, render the component via `component.render()`, and return a `TestRendererResult` wrapping the root `VirtualDOMNode`. `TestRendererResult` SHALL provide query methods (`query_selector`, `query_selector_all`, `find_by_text`, `find_by_attribute`), `to_html()`, `rerender()`, and assertion helpers (`assert_element_count`, `assert_has_class`).
 
 #### Scenario: Rendering a simple component
 - **WHEN** `result = TestRenderer.render(component)` is called
