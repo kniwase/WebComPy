@@ -64,9 +64,22 @@ class HistoryPort(SignalBase[str]):
             state: Optional state dict to store alongside the path.
         """
         normalized = path[1:] if self._mode == "hash" and path.startswith("#") else path
-        if self._value == normalized and self._state is state:
+        if self._value == normalized and self._state == state:
             return
         self._do_navigate(normalized, state)
+
+    def set_navigation_callback(
+        self,
+        callback: Callable[[str, dict[str, Any] | None], None] | None,
+    ) -> None:
+        """Set a callback invoked on popstate events instead of the default
+        ``_do_navigate()`` path.
+
+        Args:
+            callback: A callable receiving ``(path, state)`` when the browser
+                popstate event fires, or ``None`` to clear.
+        """
+        self._navigation_callback = callback
 
     @SignalBase._change_event
     def _do_navigate(self, normalized: str, state: dict[str, Any] | None) -> None:

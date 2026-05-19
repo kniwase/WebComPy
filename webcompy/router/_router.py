@@ -50,7 +50,7 @@ class Router:
         self._history = history
         self.__mode__ = mode if history is None else history.mode
         if history is not None:
-            history._navigation_callback = self.__set_path__
+            history.set_navigation_callback(self.__set_path__)
         self.__base_url__ = base_url.strip().strip("/")
         self._base_url_stripper = partial(re_compile("^" + re_escape("/" + self.__base_url__)).sub, "")
         self.__routes__ = self._generate_routes(pages)
@@ -69,7 +69,7 @@ class Router:
             history = inject(HISTORY_PORT_KEY)
             self._history = history
             self.__mode__ = history.mode
-            history._navigation_callback = self.__set_path__
+            history.set_navigation_callback(self.__set_path__)
         return history  # type: ignore[return-value]
 
     @computed_property
