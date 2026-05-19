@@ -85,6 +85,14 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **AND** `result.rerender()` is called
 - **THEN** `result.query_selector("span")` SHALL reflect the updated signal value
 
+#### Scenario: Server scope rerender handles synchronous signal updates only
+- **WHEN** `result = TestRenderer.render(component)` is called (using default server scope)
+- **AND** `dispatchEvent` triggers a signal update synchronously
+- **AND** `result.rerender()` is called
+- **THEN** synchronous signal effects SHALL be reflected in the re-rendered tree
+- **BUT** `on_after_rendering` lifecycle hooks that depend on `schedule_macro_task()` SHALL NOT fire (because `ServerHostPort.schedule_macro_task()` is a no-op)
+- **AND** tests requiring macro-task-dependent lifecycle hooks SHALL use `create_browser_scope()` instead of the default server scope
+
 #### Scenario: Generating HTML from the virtual tree
 - **WHEN** `html = result.to_html()` is called
 - **THEN** the string SHALL match `ServerDOMPort.render_html(root)`
