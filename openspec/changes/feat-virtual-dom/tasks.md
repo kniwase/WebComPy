@@ -79,23 +79,22 @@
 - [ ] 9.4 Migrate `tests/e2e/test_static_site.py` (7 tests) — wheel filename content-hash pattern, zip validity, HTML wheel URL; no Playwright usage, move to `tests/`
 - [ ] 9.5 Migrate `test_runtime_local_no_cdn_urls` and `test_runtime_local_static_assets_exist` from `tests/e2e/test_runtime_local.py` (2 tests) — HTML string verification without Playwright
 
-### Mixed — extract rendering-only assertions into new unit tests (~15 tests)
+### Mixed — fully migratable with dispatchEvent (29 tests)
 
-- [ ] 9.6 Add `test_switch_initial_state` to `tests/test_switch.py` using `TestRenderer` — verify `switch()` renders the correct branch on initial render without browser interaction
-- [ ] 9.7 Add initial reactive text value tests to `tests/test_reactive.py` using `TestRenderer` — verify computed signals render correct initial text in the virtual tree
-- [ ] 9.8 Add initial nested dynamic state test to `tests/test_nested_dynamic.py` using `TestRenderer` — verify `repeat` inside `switch` renders correct initial children
-- [ ] 9.9 Add DI inject rendering test to `tests/test_di.py` using `TestRenderer` — verify `provide`/`inject` values are correctly rendered in component output
-- [ ] 9.10 Add lifecycle render-count test to `tests/test_lifecycle.py` using `TestRenderer` — verify initial `render-count` is 1 in the virtual tree
-
-### Remove redundant E2E assertions (already covered by existing unit tests)
-
-- [ ] 9.11 Remove style textContent assertions from `tests/e2e/test_scoped_style.py` — CSS content (selector names, pseudo-classes, `webcompy-cid-`) is already fully covered by `tests/test_scoped_style_generation.py`; keep only `getComputedStyle` color assertions
-- [ ] 9.12 Remove initial empty-list `to_have_count(0)` assertions from `tests/e2e/test_repeat.py`, `test_keyed_repeat.py`, `test_dict_repeat.py` — already covered by `tests/test_repeat.py` etc.
+- [ ] 9.6 Migrate `test_switch.py` (3 tests) — all tests use only click events; `dispatchEvent(MockDOMEvent("click"))` replaces Playwright `click()`. Default state, toggle on, toggle off all work via virtual DOM assertions.
+- [ ] 9.7 Migrate `test_reactive.py` (3 tests) — text update, list operations, dict operations all triggered by button clicks ignoring event arg. dispatchEvent + rerender + virtual tree assertions fully cover.
+- [ ] 9.8 Migrate `test_repeat.py` (3 tests) — initial empty state (no interaction) plus add/remove via clicks. dispatchEvent covers all interactive assertions.
+- [ ] 9.9 Migrate `test_keyed_repeat.py` (4 of 5 tests) — initial empty, add items, remove first, insert at start all use click-only handlers. **Exclude**: `test_keyed_repeat_input_preserved_after_add` — verifies real browser `<input>` widget state survives keyed reconciliation; virtual DOM has no equivalent widget state.
+- [ ] 9.10 Migrate `test_dict_repeat.py` (4 of 5 tests) — same pattern as keyed repeat. **Exclude**: `test_dict_repeat_input_preserved_after_add` — same browser `<input>` widget state requirement.
+- [ ] 9.11 Migrate `test_nested_dynamic.py` (6 tests) — all tests (initial view, switch to grid, switch back, add item, add then switch, remove first) use click-only handlers. dispatchEvent + rerender covers all.
+- [ ] 9.12 Migrate `test_scoped_style.py` (2 of 7 tests) — `test_scoped_style_attribute_selector` and `test_scoped_style_top_level_media_query` only check `<style>` element `textContent` against virtual DOM. **Exclude**: 5 tests using `getComputedStyle()` which requires a real browser CSS engine.
+- [ ] 9.13 Migrate `test_di.py` (2 of 5 tests) — `test_provide_inject_from_parent` and `test_inject_from_app_level` can render DI components directly via TestRenderer with proper DI scope set up. **Exclude**: 3 tests using RouterLink navigation (inert outside PyScript) and `assert_no_console_errors`.
+- [ ] 9.14 Migrate `test_lifecycle.py` (2 of 3 tests) — `test_lifecycle_hooks_fire` and `test_on_after_rendering_on_interactions` use click-only handler or no interaction. **Exclude**: `test_on_before_rendering_on_navigation` — depends on RouterLink navigation and RouterView destroy/recreate cycle.
 
 ### Verification
 
-- [ ] 9.13 Verify all E2E tests pass after migration — remaining E2E tests must still pass with reduced scope
-- [ ] 9.14 Update CI e2e-matrix in `.github/workflows/ci.yml` if any E2E test files are removed or renamed
+- [ ] 9.15 Verify all E2E tests pass after migration — remaining E2E tests must still pass with reduced scope (11 browser-required tests stay in E2E)
+- [ ] 9.16 Update CI e2e-matrix in `.github/workflows/ci.yml` if any E2E test files are removed or renamed
 
 ## 10. Cleanup
 
