@@ -8,22 +8,23 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: webcompy.testing package shall provide FakeDOMNode
 
-`FakeDOMNode` SHALL be a concrete class satisfying the `DOMNode` Protocol. It SHALL store tag name, attributes, children, event listeners, text content, `__webcompy_node__`, and `__webcompy_prerendered_node__`. It SHALL implement all tree operations (`appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove`), attribute operations (`setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`), and event operations (`addEventListener`, `removeEventListener`, `dispatchEvent(VirtualDOMEvent)`). It SHALL expose `childNodes` (returning a `DOMNodeList`-compatible wrapper), `parentNode`, `nodeName`, `nodeType`, and `textContent` properties.
+`FakeDOMNode` SHALL extend `VirtualDOMNode` (from `webcompy.ports._server._virtual_dom`). It SHALL inherit all `DOMNode` Protocol methods — tree operations (`appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove`), attribute operations (`setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`), event operations (`addEventListener`, `removeEventListener`, `dispatchEvent(VirtualDOMEvent)`), and properties (`childNodes`, `parentNode`, `nodeName`, `nodeType`, `textContent`, `__webcompy_node__`). It SHALL add: `textContent_write_count` and `setAttribute_count` counter increments on mutation, `__webcompy_prerendered_node__ = False`, and a `__setattr__` guard for attribute proxying.
 
 #### Scenario: Creating a FakeDOMNode for browser-side mock tests
-- **WHEN** `FakeDOMNode("div")` is instantiated
-- **THEN** a node with `nodeName == "DIV"` and `nodeType == 1` SHALL be returned
+- **WHEN** `FakeDOMNode("div")` is instantiated (inheriting `VirtualDOMNode.__init__`)
+- **THEN** a node with `nodeName == "DIV"` and `nodeType == 1` SHALL be returned (inherited from `VirtualDOMNode`)
 - **AND** `__webcompy_node__ == True`
+- **AND** `__webcompy_prerendered_node__ == False` (set by `FakeDOMNode.__init__`)
 
-#### Scenario: Building a tree with FakeDOMNode
-- **WHEN** `parent.appendChild(child)` is called
-- **THEN** `child.parentNode` SHALL reference `parent`
+#### Scenario: FakeDOMNode inherits tree operations from VirtualDOMNode
+- **WHEN** `parent.appendChild(child)` is called on a `FakeDOMNode`
+- **THEN** `child.parentNode` SHALL reference `parent` (inherited from `VirtualDOMNode.appendChild`)
 - **AND** `parent.childNodes` SHALL contain `child`
 
-#### Scenario: Dispatching a VirtualDOMEvent on FakeDOMNode
+#### Scenario: FakeDOMNode inherits dispatchEvent from VirtualDOMNode
 - **WHEN** `handler = lambda ev: None` is registered via `node.addEventListener("click", handler)`
-- **AND** `node.dispatchEvent(VirtualDOMEvent("click"))` is called (where `VirtualDOMEvent` is imported from `webcompy.ports._server._virtual_dom` — re-exported by `webcompy.testing`)
-- **THEN** the handler SHALL be invoked with the event
+- **AND** `node.dispatchEvent(VirtualDOMEvent("click"))` is called
+- **THEN** the handler SHALL be invoked with the event (propagation inherited from `VirtualDOMNode.dispatchEvent`)
 
 ### Requirement: webcompy.testing package shall provide fake port implementations
 

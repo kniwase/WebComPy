@@ -39,11 +39,50 @@ This enables a testing module that renders components to `VirtualDOMNode` trees 
 
 **Rationale**: Same approach as `webcompy.cli` and `webcompy.ports._server` — these are server/dev-only code. The `_is_browser_excluded` function uses prefix matching, so `"webcompy.testing"` matches all submodules. This prevents test utilities from being bundled into browser-deployed wheels.
 
-### Decision 2: FakeDOMNode extracted with minimal changes
+### Decision 2: FakeDOMNode inherits from VirtualDOMNode
 
-**Chosen**: Move `FakeDOMNode` from `tests/conftest.py` to `webcompy/testing/_dom.py`. Keep its behavior identical — `__webcompy_node__`, `__webcompy_prerendered_node__`, tree ops, attribute storage, event listener recording, counter attributes (`textContent_write_count`, `setAttribute_count`).
+**Chosen**: `FakeDOMNode` extends `VirtualDOMNode` and overrides only test-specific behavior: `setAttribute`/`textContent` increment counters, `__setattr__` guard, `__webcompy_prerendered_node__ = False`. All tree operations, attribute storage, event listener management, and `dispatchEvent(VirtualDOMEvent)` are inherited from `VirtualDOMNode`.
 
-**Rationale**: `FakeDOMNode` is used by 8+ test files that import `from conftest import FakeDOMNode`. Changing behavior risks breaking existing tests. The only new capability is `dispatchEvent(VirtualDOMEvent)`, which is added to align with `VirtualDOMNode` in `feat-virtual-dom`. `FakeDOMNode` is the browser-test equivalent; `VirtualDOMNode` is the server-test equivalent.
+```python
+from webcompy.ports._server._virtual_dom import VirtualDOMNode
+
+class FakeDOMNode(VirtualDOMNode):
+    def __init__(self, tag: str = "div", text_content: str | None = None):
+        super().__init__(tag, text_content)
+        self.__webcompy_prerendered_node__ = False
+        self.textContent_write_count = 0
+        self.setAttribute_count = 0
+
+    @VirtualDOMNode.textContent.setter  # type: ignore[attr-defined]
+    def textContent(self, value):
+        self._text_content = value
+        self.textContent_write_count += 1
+
+    def setAttribute(self, name, value):
+        super().setAttribute(name, value)
+        self.setAttribute_count += 1
+
+    def __setattr__(self, name, value):
+        if name.startswith("_VirtualDOMNode__") or name in (
+            "__webcompy_node__",
+            "__webcompy_prerendered_node__",
+        ):
+            object.__setattr__(self, name, value)
+        else:
+            try:
+                object.__getattribute__(self, name)
+                object.__setattr__(self, name, value)
+            except AttributeError:
+                object.__setattr__(self, name, value)
+
+    def __getattr__(self, name):
+        if name.startswith("_VirtualDOMNode__"):
+            raise AttributeError(name)
+        return object.__getattribute__(self, name)
+```
+
+**Rationale**: `VirtualDOMNode` already implements the full `DOMNode` Protocol — all tree operations, attribute storage, event listener management, and `dispatchEvent(VirtualDOMEvent)` with bubbling propagation. Writing these again in `FakeDOMNode` would be ~80% code duplication. Inheritance eliminates duplication and ensures `dispatchEvent` semantics remain identical. The dependency direction is safe: `webcompy.testing` → `webcompy.ports._server` — both are excluded from browser wheels. The `__setattr__` guard references `_VirtualDOMNode__` (name-mangled superclass internal name) since Python name mangling is based on the class where the attribute is defined.
+
 
 ### Decision 3: FakeBrowserFFIPort Protocol compliance fix
 
@@ -184,5 +223,5 @@ result.assert_has_class("container")
 ## Risks / Trade-offs
 
 - **[TestRenderer environment setup]** Monkeypatching `ENVIRONMENT` on element modules must match the pattern used by `fake_browser_full` fixture. If the patching is skipped, `_init_node()` methods will still have `ENVIRONMENT == "pyscript"` branches that raise exceptions. → Mitigation: `TestRenderer.render()` includes the same monkeypatch logic.
-- **[FakeDOMNode vs VirtualDOMNode divergence]** `FakeDOMNode` and `VirtualDOMNode` are structurally similar but not unified. `FakeDOMNode` has extra test-oriented attributes (counters, `__setattr__` guard). → Trade-off accepted: `FakeDOMNode` is for browser-side mock tests; `VirtualDOMNode` is for server-side rendering tests. They serve different purposes.
+- **[FakeDOMNode inherits VirtualDOMNode]** `FakeDOMNode` extends `VirtualDOMNode`, adding only test-specific attributes (counters, `__setattr__` guard, `__webcompy_prerendered_node__`). Any `VirtualDOMNode` API change will automatically propagate to `FakeDOMNode`. → Trade-off accepted: `webcompy.testing` depends on `webcompy.ports._server` — both are excluded from browser wheels, so this is safe.
 - **[E2E coverage gap]** Migrating tests from browser to unit loses coverage of PyScript integration bugs. → Mitigation: remaining E2E tests cover the PyScript lifecycle indirectly. The migrated tests cover logic that was never PyScript-dependent.
