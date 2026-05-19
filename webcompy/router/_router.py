@@ -16,7 +16,7 @@ from typing import (
 from webcompy.components import ComponentGenerator
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._switch import NodeGenerator
-from webcompy.router._change_event_handler import Location
+from webcompy.ports._history import HistoryPort
 from webcompy.router._context import RouterContext, TypedRouterContext
 from webcompy.router._pages import RouterPage
 from webcompy.signal._computed import computed_property
@@ -34,7 +34,7 @@ _get_path_params = re_compile(r"{([^\{\}/]+)}").findall
 
 
 class Router:
-    _location: Location
+    _history: HistoryPort | None
     __mode__: Literal["hash", "history"]
     __routes__: list[RouteType]
 
@@ -42,11 +42,15 @@ class Router:
         self,
         *pages: RouterPage,
         default: ComponentGenerator[TypedRouterContext[Any, Any, Any]] | None = None,
+        history: HistoryPort | None = None,
         mode: Literal["hash", "history"] = "hash",
         base_url: str = "",
         preload: bool = True,
     ) -> None:
-        self.__mode__ = mode
+        self._history = history
+        self.__mode__ = mode if history is None else history.mode
+        if history is not None:
+            history.set_navigation_callback(self.__set_path__)
         self.__base_url__ = base_url.strip().strip("/")
         self._base_url_stripper = partial(re_compile("^" + re_escape("/" + self.__base_url__)).sub, "")
         self.__routes__ = self._generate_routes(pages)
@@ -55,12 +59,18 @@ class Router:
         self.before_route_change: list[Callable[[str, str], bool | None]] = []
         self.after_route_change: list[Callable[[str], None]] = []
         self.on_route_error: list[Callable[[Exception], bool | None]] = []
-        self._location = Location(
-            self.__mode__,
-            self.__base_url__,
-            before_route_change=self.before_route_change,
-            after_route_change=self.after_route_change,
-        )
+
+    def _resolve_history(self) -> HistoryPort:
+        history = self._history
+        if history is None:
+            from webcompy.di import inject
+            from webcompy.ports._keys import HISTORY_PORT_KEY
+
+            history = inject(HISTORY_PORT_KEY)
+            self._history = history
+            self.__mode__ = history.mode
+            history.set_navigation_callback(self.__set_path__)
+        return history  # type: ignore[return-value]
 
     @computed_property
     def __cases__(self):
@@ -90,7 +100,8 @@ class Router:
             return "Not Found"
 
     def _get_current_path(self):
-        decoded_href = tuple(map(urllib.parse.unquote, self._location.value.split("?", 2)))
+        history = self._resolve_history()
+        decoded_href = tuple(map(urllib.parse.unquote, history.value.split("?", 2)))
         pathname, search = (decoded_href[0], "") if len(decoded_href) == 1 else decoded_href
         return pathname, search
 
@@ -118,6 +129,7 @@ class Router:
         match: Match[str] | None,
         path_param_names: list[str],
     ):
+        history = self._resolve_history()
         query = (
             {
                 name: value
@@ -136,7 +148,7 @@ class Router:
             path=pathname,
             query_params=query,
             path_params=path_params,
-            state=self._location.state if self._location.state else {},
+            state=history.state or {},
         )
 
     def _generate_route_matcher(self, path: str):
@@ -161,13 +173,21 @@ class Router:
         ]
 
     def __set_path__(self, path: str, state: dict[str, Any] | None):
-        self._location.__set_path__(path, state)
+        history = self._resolve_history()
+        for guard in self.before_route_change:
+            if guard(history.value, path) is False:
+                return
+        history.navigate(path, state)
+        for callback in self.after_route_change:
+            callback(path)
 
     def preload_lazy_routes(self) -> None:
         if not self._preload:
             return
-        from webcompy._browser._modules import browser
+        from webcompy.di import inject
+        from webcompy.ports._keys import HOST_PORT_KEY
         from webcompy.router._lazy import LazyComponentGenerator
+        from webcompy.utils._environment import ENVIRONMENT
 
         lazy_components = [
             route[3]
@@ -177,14 +197,14 @@ class Router:
             and not route[3]._resolve_error
         ]
         if lazy_components:
-            if browser:
+            if ENVIRONMENT == "pyscript":
 
                 def _batch_preload(components=lazy_components):
                     for c in components:
                         with suppress(Exception):
                             c._preload()
 
-                browser.window.setTimeout(_batch_preload, 0)
+                inject(HOST_PORT_KEY).schedule_macro_task(_batch_preload)
             else:
                 for c in lazy_components:
                     with suppress(Exception):

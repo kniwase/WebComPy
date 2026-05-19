@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import types
 
+from tests.conftest import MockHistoryPort
 from webcompy.components import ComponentGenerator, define_component
 from webcompy.components._component import HeadPropsStore
 from webcompy.components._generator import ComponentStore
@@ -234,7 +235,7 @@ class TestRouterViewDynamicElement:
         from webcompy.router._view import RouterView
 
         scope = DIScope()
-        router = Router(preload=False)
+        router = Router(history=MockHistoryPort(mode="hash"), preload=False)
         scope.provide(_ROUTER_KEY, router)
         scope.__enter__()
         try:
@@ -248,7 +249,7 @@ class TestRouterViewDynamicElement:
         from webcompy.router._view import RouterView
 
         scope = DIScope()
-        router = Router(preload=False)
+        router = Router(history=MockHistoryPort(mode="hash"), preload=False)
         scope.provide(_ROUTER_KEY, router)
         scope.__enter__()
         try:
@@ -275,6 +276,7 @@ class TestRouterPreload:
 
             router = Router(
                 {"path": "/", "component": lazy("preload_route_module:PreloadRoute", __file__)},
+                history=MockHistoryPort(mode="hash"),
                 preload=False,
             )
             gen = router._get_component_for_path("/")
@@ -300,6 +302,7 @@ class TestRouterPreload:
 
             router = Router(
                 {"path": "/", "component": lazy("skip_module:SkipPreload", __file__)},
+                history=MockHistoryPort(mode="hash"),
                 preload=False,
             )
             gen = router._get_component_for_path("/")
@@ -320,6 +323,7 @@ class TestRouterGetComponentForPath:
 
             router = Router(
                 {"path": "/test", "component": comp},
+                history=MockHistoryPort(mode="hash"),
                 preload=False,
             )
             result = router._get_component_for_path("/test")
@@ -328,7 +332,7 @@ class TestRouterGetComponentForPath:
             scope.__exit__(None, None, None)
 
     def test_no_match_returns_none(self):
-        router = Router(preload=False)
+        router = Router(history=MockHistoryPort(mode="hash"), preload=False)
         result = router._get_component_for_path("/nonexistent")
         assert result is None
 
@@ -343,6 +347,7 @@ class TestRouterGetComponentForPath:
 
             router = Router(
                 {"path": "/users/{id}", "component": comp},
+                history=MockHistoryPort(mode="hash"),
                 preload=False,
             )
             result = router._get_component_for_path("/users/42")
@@ -391,6 +396,7 @@ class TestRouterLinkMouseenter:
 
         router = Router(
             {"path": "/target", "component": lazy_gen},
+            history=MockHistoryPort(mode="hash"),
             preload=False,
         )
         scope.provide(_ROUTER_KEY, router)
@@ -417,6 +423,7 @@ class TestRouterLinkMouseenter:
         comp = _make_test_component("EagerComp")
         router = Router(
             {"path": "/eager", "component": comp},
+            history=MockHistoryPort(mode="hash"),
             preload=False,
         )
         scope.provide(_ROUTER_KEY, router)
@@ -448,6 +455,7 @@ class TestRouterLinkMouseenter:
 
         router = Router(
             {"path": "/page", "component": lazy_gen},
+            history=MockHistoryPort(mode="hash"),
             preload=False,
         )
         scope.provide(_ROUTER_KEY, router)
@@ -474,7 +482,7 @@ class TestRouterLinkMouseenter:
 
         router = Router(
             {"path": "/page", "component": lazy_gen},
-            mode="history",
+            history=MockHistoryPort(mode="history"),
             base_url="myapp",
             preload=False,
         )

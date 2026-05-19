@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from tests.conftest import MockHistoryPort
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.components._generator import define_component
@@ -40,17 +41,20 @@ class TestWebComPyAppConfig:
 
 class TestWebComPyAppForwarding:
     def test_routes_property(self):
-        router = Router(mode="hash")
+        hist = MockHistoryPort(mode="hash")
+        router = Router(history=hist)
         app = _make_app(router=router)
         assert app.routes is app._root.routes
 
     def test_router_mode_property(self):
-        router = Router(mode="hash")
+        hist = MockHistoryPort(mode="hash")
+        router = Router(history=hist)
         app = _make_app(router=router)
         assert app.router_mode == "hash"
 
     def test_set_path(self):
-        router = Router(mode="hash")
+        hist = MockHistoryPort(mode="hash")
+        router = Router(history=hist)
         app = _make_app(router=router)
         app.set_path("/test")
 

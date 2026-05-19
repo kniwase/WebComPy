@@ -1,20 +1,38 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections.abc import Callable
+from typing import Any, Literal
 
 from webcompy.signal._base import SignalBase
 from webcompy.signal._graph import producer_accessed
 
 
 class HistoryPort(SignalBase[str]):
-    def __init__(self, initial_path: str, *, mode: str) -> None:
+    def __init__(self, initial_path: str, *, mode: Literal["hash", "history"]) -> None:
         super().__init__(initial_path)
-        self._mode = mode
+        self._mode: Literal["hash", "history"] = mode
+        self._state: dict[str, Any] | None = None
+        self._navigation_callback: Callable[[str, dict[str, Any] | None], None] | None = None
+
+    @property
+    def mode(self) -> Literal["hash", "history"]:
+        return self._mode
 
     @property
     def value(self) -> str:
         producer_accessed(self)
         return self._value
+
+    @property
+    @SignalBase._get_event
+    def state(self) -> dict[str, Any] | None:
+        """Return the current route state.
+
+        Returns:
+            State dict associated with the current navigation, or ``None``.
+        """
+        return self._state
 
     @abstractmethod
     def current_search(self) -> str:
@@ -35,14 +53,38 @@ class HistoryPort(SignalBase[str]):
         """
         ...
 
-    @abstractmethod
-    def navigate(self, path: str) -> None:
-        """Push a new entry onto the history stack and update the signal.
+    def navigate(self, path: str, state: dict[str, Any] | None = None) -> None:
+        """Update the signal value and optionally store route state.
+
+        Does NOT call ``pushState`` — callers are responsible for browser
+        history manipulation.
 
         Args:
             path: Target URL path.
+            state: Optional state dict to store alongside the path.
         """
-        ...
+        normalized = path[1:] if self._mode == "hash" and path.startswith("#") else path
+        if self._value == normalized and self._state == state:
+            return
+        self._do_navigate(normalized, state)
+
+    def set_navigation_callback(
+        self,
+        callback: Callable[[str, dict[str, Any] | None], None] | None,
+    ) -> None:
+        """Set a callback invoked on popstate events instead of the default
+        ``_do_navigate()`` path.
+
+        Args:
+            callback: A callable receiving ``(path, state)`` when the browser
+                popstate event fires, or ``None`` to clear.
+        """
+        self._navigation_callback = callback
+
+    @SignalBase._change_event
+    def _do_navigate(self, normalized: str, state: dict[str, Any] | None) -> None:
+        self._state = state
+        self._value = normalized
 
     @abstractmethod
     def refresh_from_window(self) -> None:

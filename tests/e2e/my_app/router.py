@@ -36,5 +36,4 @@ router = Router(
     {"path": "/di-inject", "component": DiInjectPage},
     default=NotFound,
     mode="history",
-    base_url="",
 )

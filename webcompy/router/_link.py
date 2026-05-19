@@ -10,7 +10,6 @@ from typing import (
     cast,
 )
 
-from webcompy._browser._modules import browser
 from webcompy.di import inject
 from webcompy.di._exceptions import InjectionError
 from webcompy.di._keys import _ROUTER_KEY
@@ -23,6 +22,7 @@ from webcompy.elements.types._element import Element
 from webcompy.router._lazy import LazyComponentGenerator
 from webcompy.router._pages import WebComPyRouterException
 from webcompy.signal import SignalBase, computed_property
+from webcompy.utils._environment import ENVIRONMENT
 from webcompy.utils._serialize import is_json_seriarizable
 
 ParamsType = TypeVar("ParamsType")
@@ -88,11 +88,13 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                 raise WebComPyRouterException("Argument 'params' of RouterLink must be Signal Object of Dict.")
             if any(not isinstance(k, str) for k in self._params.value):  # type: ignore
                 raise WebComPyRouterException("Keys of Argument 'params' of RouterLink must be str.")
-        if not browser:
+        if ENVIRONMENT != "pyscript":
             return
+        from pyscript import context  # type: ignore[import-untyped]
+
         href = ev.currentTarget.getAttribute("href") or ""
         current_path = (
-            browser.window.location.pathname if self._router.__mode__ == "history" else browser.window.location.hash
+            context.window.location.pathname if self._router.__mode__ == "history" else context.window.location.hash
         )
         if current_path != href:
             if self._params is None:
@@ -105,7 +107,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                 else:
                     state = None
                     logging.warn("Argument 'params' of RouterLink should be a Signal Object of json-serializable dict.")
-            browser.window.history.pushState(state, None, href)
+            context.window.history.pushState(state, None, href)
             self._router.__set_path__(href, params)
 
     def _on_mouseenter(self, _ev=None):
