@@ -26,12 +26,14 @@ Currently, server-side rendering uses a parallel code path (`_render_html()`) th
 ## Known Issues Addressed
 
 - **No virtual DOM diffing** — this change introduces a virtual DOM tree for server-side *construction*, not diffing. Browser-side still uses direct DOM manipulation. The virtual DOM serves as a testable representation, not a diffing algorithm.
+- **Event dispatching on VirtualDOMNode** — `dispatchEvent()` fires stored event handlers synchronously. Combined with the unified render path, this enables end-to-end component behavior tests (click → signal update → re-render → query updated virtual tree) without a browser.
 
 ## Non-goals
 
 - Browser-side virtual DOM diffing (remains direct DOM manipulation)
 - Incremental/patch-based SSR updates (full tree rebuild per render)
 - Worker thread rendering (virtual DOM builds in main server thread only)
+- Full JS event model emulation (no `preventDefault`, `stopPropagation`, `event.target`/`currentTarget` reference management — MockDOMEvent covers essential fields only)
 
 ## Impact
 

@@ -4,7 +4,9 @@
 - [ ] 1.2 Implement tree operations: `appendChild`, `removeChild`, `insertBefore`, `replaceChild`, `remove` — manage children list and parent references
 - [ ] 1.3 Implement attribute operations: `setAttribute`, `getAttribute`, `removeAttribute`, `hasAttribute`, `getAttributeNames`
 - [ ] 1.4 Implement event operations: `addEventListener`, `removeEventListener` — store as `(event_name, handler)` tuples
-- [ ] 1.5 Implement properties: `childNodes` (returns list), `textContent` (get/set), `nodeName` (returns tag_name), `nodeType` (1=element, 3=text)
+- [ ] 1.5 Implement `dispatchEvent(event: MockDOMEvent) -> None` — fire stored handlers matching `event.type` synchronously so that signal updates and re-rendering propagate within the same call stack
+- [ ] 1.6 Create `MockDOMEvent` class in `webcompy/testing/_dom.py` — minimal `type`, `target`, `currentTarget`, `preventDefault` for use with `VirtualDOMNode.dispatchEvent()`
+- [ ] 1.7 Implement properties: `childNodes` (returns list), `textContent` (get/set), `nodeName` (returns tag_name), `nodeType` (1=element, 3=text)
 
 ## 2. ServerDOMPort rewrite
 
@@ -28,6 +30,7 @@
 - [ ] 3.11 Implement `TestRenderer.render(component)` — creates a `DIScope` with `ServerDOMPort`, calls `component.render()`, returns a `TestRendererResult` wrapping the virtual root node
 - [ ] 3.12 Implement `TestRendererResult` query methods — `query_selector(tag)`, `query_selector_all(tag)`, `find_by_text(text)`, `find_by_attribute(name, value)`, `to_html()` — traverse the virtual tree and return matching `VirtualDOMNode`(s)
 - [ ] 3.13 Implement `TestRendererResult` tree assertion helpers — `assert_element(tag, text=None)`, `assert_element_count(tag, count)`, `assert_has_class(cls)` — raise `AssertionError` on mismatch
+- [ ] 3.14 Implement `TestRendererResult.rerender()` — re-executes component `render()` on the existing virtual root so that signal changes from `dispatchEvent()` are reflected in the queryable tree
 
 ## 4. Unify render path in element base classes
 

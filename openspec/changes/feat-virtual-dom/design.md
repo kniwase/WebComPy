@@ -62,7 +62,33 @@ On the server, `_create_node()` calls `ServerDOMPort.create_element()` which ret
 
 **Chosen**: Store event listeners as `list[tuple[str, Callable]]` on `VirtualDOMNode`. `addEventListener` appends, `removeEventListener` removes by identity.
 
-**Rationale**: On the server, event listeners are never actually invoked — they're recorded for structural testing. A simple list is sufficient. No FFI proxy wrapping is needed (handled by `ServerFFIPort` which returns functions as-is).
+**Rationale**: `ServerFFIPort.create_proxy()` returns the handler as-is (identity). The handlers stored here are the exact functions produced by `_generate_event_handler()`, which wraps user handlers for async resolution. No FFI proxy wrapping is needed.
+
+### Decision 5b: VirtualDOMNode supports dispatchEvent() for component behavior testing
+
+**Chosen**: `VirtualDOMNode.dispatchEvent(event: MockDOMEvent)` fires all stored handlers matching `event.type` synchronously. A `MockDOMEvent` class provides minimal fields (`type`, `target`, `currentTarget`, `preventDefault`). Combined with the unified render path and synchronous signal propagation, this enables end-to-end component behavior tests:
+
+```python
+result = TestRenderer.render(Counter)
+button = result.query_selector("button")
+assert result.find_by_text("Clicked: 0")
+
+button.dispatchEvent(MockDOMEvent("click"))
+# → handler fires → signal.set(1) → computed recalc → _refresh()
+# → child._render() → VirtualDOMNode.appendChild()
+
+result.rerender()  # re-execute component.render() on the virtual tree
+assert result.find_by_text("Clicked: 1")
+```
+
+**Rationale**: Three facts make this viable without a browser:
+1. **Handler wrapping happens at `addEventListener` time** — `_generate_event_handler()` wraps the user handler and `ServerFFIPort.create_proxy()` returns it as-is. The stored handler is call-ready.
+2. **Signal propagation is synchronous** — `Signal.set_value()` triggers all `on_after_updating` callbacks (`_refresh()`, `_generate_attr_updater()`) within the same call stack.
+3. **The unified render path** renders to `VirtualDOMNode` — `_render()` → `_mount_node()` → `appendChild()`/`insertBefore()` all operate on the virtual tree.
+
+The `rerender()` method on `TestRendererResult` re-drives component `render()` so the queryable tree reflects post-event state.
+
+**Non-goal boundary**: `preventDefault`, `stopPropagation`, event bubbling, and `event.target`/`currentTarget` reference management are NOT emulated. `MockDOMEvent` provides only `type`, `target`, `currentTarget`, and `preventDefault` (no-op). Full JS event model simulation is intentionally out of scope.
 
 ### Decision 6: VirtualDOMNode implements all DOMNode tree operations
 
