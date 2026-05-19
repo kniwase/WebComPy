@@ -4,7 +4,7 @@
 
 WebComPy uses a `DOMNode` Protocol to abstract DOM operations. In the browser, `BrowserDOMNode` wraps a real JavaScript DOM node. On the server, `VirtualDOMNode` builds an in-memory DOM tree that satisfies the same Protocol. This enables a single rendering code path that works identically in both environments — the element system calls `dom_port.create_element()` and operates on the returned `DOMNode` without knowing whether it's real or virtual.
 
-The virtual tree can be serialized to HTML for static site generation and inspected in tests to verify exact DOM structure.
+The virtual tree can be serialized to HTML for static site generation and inspected in tests to verify exact DOM structure. Events can be created via `DOMPort.create_event()` and dispatched on `VirtualDOMNode` to simulate user interactions for component behavior testing.
 
 ## ADDED Requirements
 
@@ -54,7 +54,7 @@ The virtual tree can be serialized to HTML for static site generation and inspec
 
 `VirtualDOMNode.setAttribute(name, value)` SHALL store the attribute. `getAttribute(name)` SHALL return the stored value or `None`. `removeAttribute(name)` SHALL remove it. `hasAttribute(name)` SHALL return `True` if stored. `getAttributeNames()` SHALL return all stored attribute names.
 
-`VirtualDOMNode.addEventListener(event, handler)` SHALL record the event-handler pair. `removeEventListener(event, handler)` SHALL remove it by identity.
+`VirtualDOMNode.addEventListener(event, handler)` SHALL record the event-handler pair. `removeEventListener(event, handler)` SHALL remove it by identity. `VirtualDOMNode.dispatchEvent(event: DOMEvent)` SHALL fire stored handlers and propagate through ancestors per standard DOM event phase semantics.
 
 #### Scenario: Setting and reading attributes on a virtual node
 - **WHEN** `node.setAttribute("id", "my-id")` is called
@@ -67,6 +67,74 @@ The virtual tree can be serialized to HTML for static site generation and inspec
 - **THEN** the handler SHALL be recorded
 - **WHEN** `node.removeEventListener("click", handler)` is called
 - **THEN** the handler SHALL no longer be recorded
+
+### Requirement: VirtualDOMEvent shall satisfy the DOMEvent Protocol
+
+`VirtualDOMEvent` SHALL be a concrete class satisfying the `DOMEvent` Protocol defined in `webcompy/ports/_dom.py` (moved from `webcompy/elements/_dom_objs.py`). It SHALL provide `type`, `bubbles`, `cancelable`, `target`, `currentTarget`, `defaultPrevented`, `eventPhase`, `timeStamp`, `preventDefault()`, and `stopPropagation()`. It SHALL live in `webcompy/ports/_server/_virtual_dom.py` alongside `VirtualDOMNode`.
+
+#### Scenario: Constructing a VirtualDOMEvent
+- **WHEN** `VirtualDOMEvent("click")` is created
+- **THEN** `event.type` SHALL be `"click"`
+- **AND** `event.bubbles` SHALL be `False` (default)
+- **AND** `event.cancelable` SHALL be `False` (default)
+- **AND** `event.defaultPrevented` SHALL be `False`
+- **AND** `event.eventPhase` SHALL be `0` (NONE)
+- **AND** `event.target` SHALL be `None` (set by `dispatchEvent`)
+
+#### Scenario: Constructing a bubbling cancelable event
+- **WHEN** `VirtualDOMEvent("submit", bubbles=True, cancelable=True)` is created
+- **THEN** `event.bubbles` SHALL be `True`
+- **AND** `event.cancelable` SHALL be `True`
+
+#### Scenario: preventDefault on a cancelable event
+- **WHEN** `event = VirtualDOMEvent("click", cancelable=True)` and `event.preventDefault()` is called
+- **THEN** `event.defaultPrevented` SHALL be `True`
+
+#### Scenario: preventDefault on a non-cancelable event is ignored
+- **WHEN** `event = VirtualDOMEvent("click", cancelable=False)` and `event.preventDefault()` is called
+- **THEN** `event.defaultPrevented` SHALL remain `False`
+
+#### Scenario: stopPropagation
+- **WHEN** `event.stopPropagation()` is called during `dispatchEvent` handler execution
+- **THEN** further ancestor traversal SHALL be stopped
+
+### Requirement: VirtualDOMNode.dispatchEvent() shall implement standard event propagation
+
+`VirtualDOMNode.dispatchEvent(event: DOMEvent) -> bool` SHALL execute the at-target phase followed by the bubbling phase (if `event.bubbles` is `True`). During the at-target phase, `event.eventPhase` SHALL be `2` (AT_TARGET) and `event.target` and `event.currentTarget` SHALL both reference the dispatch target. Handlers registered via `addEventListener` with matching `event.type` SHALL be invoked synchronously. During the bubbling phase, `event.eventPhase` SHALL be `3` (BUBBLING) and `event.currentTarget` SHALL reference each ancestor. Propagation SHALL stop if `event.stopPropagation()` is called. The return value SHALL be `False` if `event.defaultPrevented` is `True` after all handlers have run, `True` otherwise. The capturing phase SHALL NOT be implemented (WebComPy event handlers always use `False` for `useCapture`).
+
+#### Scenario: Dispatching a non-bubbling event on the target
+- **WHEN** `node.addEventListener("click", handler)` is called
+- **AND** `event = VirtualDOMEvent("click", bubbles=False)` is created
+- **AND** `node.dispatchEvent(event)` is called
+- **THEN** `event.target` SHALL reference `node`
+- **AND** `event.currentTarget` SHALL reference `node`
+- **AND** `event.eventPhase` SHALL be `2` (AT_TARGET)
+- **AND** `handler` SHALL be invoked with `event`
+- **AND** no ancestor handlers SHALL be invoked
+
+#### Scenario: Dispatching a bubbling event through ancestors
+- **WHEN** `child.appendChild(grandchild)` builds a tree
+- **AND** `parent.addEventListener("click", parent_handler)` is registered
+- **AND** `child.addEventListener("click", child_handler)` is registered
+- **AND** `event = VirtualDOMEvent("click", bubbles=True)` is created
+- **AND** `grandchild.dispatchEvent(event)` is called
+- **THEN** `grandchild_handler` SHALL be invoked (at-target)
+- **AND** `child_handler` SHALL be invoked (bubbling, currentTarget = child)
+- **AND** `parent_handler` SHALL be invoked (bubbling, currentTarget = parent)
+- **AND** handlers SHALL be invoked in that order
+
+#### Scenario: stopPropagation during bubbling
+- **WHEN** `child.addEventListener("click", lambda e: e.stopPropagation())` is registered
+- **AND** `grandchild.dispatchEvent(VirtualDOMEvent("click", bubbles=True))` is called
+- **THEN** `parent_handler` SHALL NOT be invoked
+
+#### Scenario: dispatchEvent returns bool indicating default prevented
+- **WHEN** `event = VirtualDOMEvent("click", cancelable=True)` and a handler calls `event.preventDefault()`
+- **AND** `result = node.dispatchEvent(event)` is called
+- **THEN** `result` SHALL be `False`
+- **WHEN** no handler calls `preventDefault()`
+- **AND** `result = node.dispatchEvent(event)` is called
+- **THEN** `result` SHALL be `True`
 
 ### Requirement: ServerDOMPort.render_html() shall serialize VirtualDOMNode trees to HTML
 
