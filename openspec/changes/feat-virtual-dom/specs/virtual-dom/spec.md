@@ -54,7 +54,7 @@ The virtual tree can be serialized to HTML for static site generation and inspec
 
 `VirtualDOMNode.setAttribute(name, value)` SHALL store the attribute. `getAttribute(name)` SHALL return the stored value or `None`. `removeAttribute(name)` SHALL remove it. `hasAttribute(name)` SHALL return `True` if stored. `getAttributeNames()` SHALL return all stored attribute names.
 
-`VirtualDOMNode.addEventListener(event, handler)` SHALL record the event-handler pair. `removeEventListener(event, handler)` SHALL remove it by identity.
+`VirtualDOMNode.addEventListener(event, handler)` SHALL record the event-handler pair. `removeEventListener(event, handler)` SHALL remove it by identity. `VirtualDOMNode.dispatchEvent(event: VirtualDOMEvent)` SHALL fire all stored handlers matching `event.type` synchronously.
 
 #### Scenario: Setting and reading attributes on a virtual node
 - **WHEN** `node.setAttribute("id", "my-id")` is called
@@ -67,6 +67,20 @@ The virtual tree can be serialized to HTML for static site generation and inspec
 - **THEN** the handler SHALL be recorded
 - **WHEN** `node.removeEventListener("click", handler)` is called
 - **THEN** the handler SHALL no longer be recorded
+
+#### Scenario: Dispatching an event on a virtual node
+- **WHEN** `node.addEventListener("click", handler)` is called
+- **AND** `node.dispatchEvent(VirtualDOMEvent("click"))` is called
+- **THEN** `handler` SHALL be invoked with the `VirtualDOMEvent` argument
+
+### Requirement: VirtualDOMEvent shall provide minimal event fields
+
+`VirtualDOMEvent` SHALL be a simple class with `type` (event name string), `target` (the node), `currentTarget` (the node), and `preventDefault` (no-op). It SHALL live in `webcompy/ports/_server/_virtual_dom.py` alongside `VirtualDOMNode`.
+
+#### Scenario: Constructing a VirtualDOMEvent
+- **WHEN** `VirtualDOMEvent("click")` is created
+- **THEN** `event.type` SHALL be `"click"`
+- **AND** `event.preventDefault()` SHALL be a no-op
 
 ### Requirement: ServerDOMPort.render_html() shall serialize VirtualDOMNode trees to HTML
 

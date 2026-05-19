@@ -33,7 +33,7 @@ Currently, server-side rendering uses a parallel code path (`_render_html()`) th
 - Browser-side virtual DOM diffing (remains direct DOM manipulation)
 - Incremental/patch-based SSR updates (full tree rebuild per render)
 - Worker thread rendering (virtual DOM builds in main server thread only)
-- Full JS event model emulation (no `preventDefault`, `stopPropagation`, `event.target`/`currentTarget` reference management — MockDOMEvent covers essential fields only)
+- Full JS event model emulation (no `preventDefault`, `stopPropagation`, `event.target`/`currentTarget` reference management — VirtualDOMEvent covers essential fields only)
 
 ## Impact
 

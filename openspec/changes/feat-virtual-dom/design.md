@@ -53,10 +53,9 @@ On the server, `_create_node()` calls `ServerDOMPort.create_element()` which ret
 **Rationale**: The `_render_html()` methods encode element-specific HTML formatting rules (void tags, self-closing, text escaping, attribute ordering). These rules must be replicated in `ServerDOMPort.render_html()` before the old methods can be deleted.
 
 **Correct migration ordering:**
-1. Implement `VirtualDOMNode` + `ServerDOMPort.render_html()` (groups 1-2)
-2. Create `webcompy.testing` module and extract test utilities from `conftest` (group 3)
-3. Update `cli/_html.py` to use `ServerDOMPort.render_html()` (group 6)
-4. THEN remove `_render_html()` from element classes — subclasses first (`_text.py`, `_dynamic.py`), base classes last (`_base.py`, `_abstract.py`) (groups 4-5)
+1. Implement `VirtualDOMNode` + `VirtualDOMEvent` + `ServerDOMPort.render_html()` (groups 1-2)
+2. Update `cli/_html.py` to use `ServerDOMPort.render_html()` (group 6)
+3. THEN remove `_render_html()` from element classes — subclasses first (`_text.py`, `_dynamic.py`), base classes last (`_base.py`, `_abstract.py`) (groups 3, 5)
 
 ### Decision 5: VirtualDOMNode.event_listeners is a list of (event_name, handler) tuples
 
@@ -66,14 +65,14 @@ On the server, `_create_node()` calls `ServerDOMPort.create_element()` which ret
 
 ### Decision 5b: VirtualDOMNode supports dispatchEvent() for component behavior testing
 
-**Chosen**: `VirtualDOMNode.dispatchEvent(event: MockDOMEvent)` fires all stored handlers matching `event.type` synchronously. A `MockDOMEvent` class provides minimal fields (`type`, `target`, `currentTarget`, `preventDefault`). Combined with the unified render path and synchronous signal propagation, this enables end-to-end component behavior tests:
+**Chosen**: `VirtualDOMNode.dispatchEvent(event: VirtualDOMEvent)` fires all stored handlers matching `event.type` synchronously. `VirtualDOMEvent` is a companion class in the same module providing minimal fields (`type`, `target`, `currentTarget`, `preventDefault`). Combined with the unified render path and synchronous signal propagation, this enables end-to-end component behavior tests:
 
 ```python
 result = TestRenderer.render(Counter)
 button = result.query_selector("button")
 assert result.find_by_text("Clicked: 0")
 
-button.dispatchEvent(MockDOMEvent("click"))
+button.dispatchEvent(VirtualDOMEvent("click"))
 # → handler fires → signal.set(1) → computed recalc → _refresh()
 # → child._render() → VirtualDOMNode.appendChild()
 
@@ -88,7 +87,7 @@ assert result.find_by_text("Clicked: 1")
 
 The `rerender()` method on `TestRendererResult` re-drives component `render()` so the queryable tree reflects post-event state.
 
-**Non-goal boundary**: `preventDefault`, `stopPropagation`, event bubbling, and `event.target`/`currentTarget` reference management are NOT emulated. `MockDOMEvent` provides only `type`, `target`, `currentTarget`, and `preventDefault` (no-op). Full JS event model simulation is intentionally out of scope.
+**Non-goal boundary**: `preventDefault`, `stopPropagation`, event bubbling, and `event.target`/`currentTarget` reference management are NOT emulated. `VirtualDOMEvent` provides only `type`, `target`, `currentTarget`, and `preventDefault` (no-op). Full JS event model simulation is intentionally out of scope.
 
 ### Decision 6: VirtualDOMNode implements all DOMNode tree operations
 
@@ -116,55 +115,15 @@ with app.di_scope:
 ```
 
 **Migration ordering**: Remove `_render_html()` from element base classes LAST (after all callers are updated), not first. This is the opposite of Decision 4 in feat-port-abstraction's design — the correct order is:
-1. Implement VirtualDOMNode + ServerDOMPort.render_html() (groups 1-2)
-2. Create webcompy.testing module (group 3)
-3. Update cli/_html.py to use ServerDOMPort.render_html() (group 6)
-4. THEN remove _render_html() from element classes (groups 4-5)
+1. Implement VirtualDOMNode + VirtualDOMEvent + ServerDOMPort.render_html() (groups 1-2)
+2. Update cli/_html.py to use ServerDOMPort.render_html() (group 6)
+3. THEN remove _render_html() from element classes — subclasses first, base classes last (groups 3, 5)
 
-### Decision 8: webcompy.testing module — extract test utilities from conftest
+### Decision 8: RouterLink._on_click() accessible outside browser
 
-**Chosen**: Create a `webcompy.testing` package that houses `FakeDOMNode` and fake port implementations (`FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort`), plus convenience helpers (`create_browser_scope()`, `create_server_scope()`, `create_test_app()`). The module SHALL be excluded from browser wheels via `_BROWSER_ONLY_EXCLUDE`.
+**Chosen**: Modify `RouterLink._on_click()` to execute `self._router.__set_path__()` unconditionally. Only `pushState` and `window.location` access remain guarded behind `ENVIRONMENT == "pyscript"`.
 
-**Rationale**: `tests/conftest.py` currently contains ~200 lines of reusable fake/mock classes that are also imported directly by 8+ test files (`from conftest import FakeDOMNode`). These utilities are useful for third-party app testing as well. Extracting them to a proper package under `webcompy.testing`:
-- Makes them importable by external app test suites
-- Provides pre-configured DI scope helpers (`create_browser_scope()`, `create_server_scope()`)
-- Centralizes the fake implementations in one discoverable location
-- Fixes `FakeBrowserFFIPort` Protocol non-compliance (missing `to_js`/`assign`)
-
-**Exclusion from browser wheels**: Adding `"webcompy.testing"` to `_BROWSER_ONLY_EXCLUDE` in `webcompy/cli/_wheel_builder.py` ensures the testing module is never bundled into browser-deployed wheels. The `_is_browser_excluded` function uses prefix matching, so `"webcompy.testing"` matches all submodules.
-
-**Alternative considered**: Keep in `conftest.py`. Rejected because external projects cannot import from test conftest, and the fake classes have outgrown their single-file origin.
-
-### Decision 9: TestRenderer — jsdom-like high-level testing API
-
-**Chosen**: Provide a `TestRenderer` class in `webcompy.testing` that renders components to `VirtualDOMNode` trees and offers query/assertion methods on the result. This is the WebComPy equivalent of jsdom or React Testing Library's `render()`.
-
-```python
-from webcompy.testing import TestRenderer
-
-result = TestRenderer.render(MyComponent(props={"name": "World"}))
-
-# Query the virtual DOM tree
-h1 = result.query_selector("h1")
-assert h1.textContent == "Hello World"
-items = result.query_selector_all("li")
-assert len(items) == 3
-
-# Convenience finders
-node = result.find_by_text("Hello")
-node = result.find_by_attribute("id", "main")
-
-# HTML output
-html = result.to_html()
-
-# Built-in assertion helpers
-result.assert_element_count("li", 3)
-result.assert_has_class("container")
-```
-
-**Rationale**: After virtual DOM unification, any component can be rendered server-side via `render()` → `VirtualDOMNode`. `TestRenderer` wraps the boilerplate of DI scope setup, renders the component, and provides query/assertion methods. This turns component rendering tests from fragile HTML string comparison into structural assertions on the virtual DOM tree. The `TestRendererResult` query methods (`query_selector`, `query_selector_all`, `find_by_text`, `find_by_attribute`) traverse the `VirtualDOMNode` tree and return matching nodes for further inspection.
-
-**Alternative considered**: Let users call `component.render()` directly via `create_server_scope()`. Rejected because the setup boilerplate (DI scope, ENVIRONMENT patching, app instantiation) is non-trivial and error-prone. A single `TestRenderer.render()` call is the ergonomic entry point.
+**Rationale**: `Router._router.__set_path__()` is pure Python logic (guards → navigate → after_route_change hooks). It works with any `HistoryPort`, including `MockHistoryPort`. The `from pyscript import context` and `context.window.history.pushState()` are browser-only infrastructure. Moving `__set_path__` outside the guard enables `dispatchEvent(VirtualDOMEvent("click"))` on rendered RouterLinks to trigger full route transitions in test contexts. This is the smallest possible change — 1-2 lines — to unlock RouterLink navigation testing without a browser.
 
 ## Risks / Trade-offs
 
