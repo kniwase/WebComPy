@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections.abc import Callable
 from typing import Any, Literal
 
 from webcompy.signal._base import SignalBase
@@ -12,6 +13,7 @@ class HistoryPort(SignalBase[str]):
         super().__init__(initial_path)
         self._mode: Literal["hash", "history"] = mode
         self._state: dict[str, Any] | None = None
+        self._navigation_callback: Callable[[str, dict[str, Any] | None], None] | None = None
 
     @property
     def mode(self) -> Literal["hash", "history"]:
