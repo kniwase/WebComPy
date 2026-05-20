@@ -10,7 +10,6 @@ from webcompy.di._keys import _HEAD_PROPS_KEY, _ROUTER_KEY
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import html
 from webcompy.elements._dom_objs import DOMNode
-from webcompy.exception import WebComPyException
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
@@ -103,6 +102,7 @@ class AppDocumentRoot(Component):
         app_token = _active_app_context.set(self._app) if self._app else None
         try:
             self._property["on_before_rendering"]()
+            self._mount_node()
             if self._app and self._app._hydrate and not self.__hydrated:
                 self.__hydrated = True
                 for child in self._children:
@@ -149,8 +149,8 @@ class AppDocumentRoot(Component):
                 _active_di_scope.reset(token)
 
     def _init_node(self) -> DOMNode:
+        selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
         if ENVIRONMENT == "pyscript":
-            selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
             node = inject(DOM_PORT_KEY).query_selector(selector)
             if node is None:
                 from webcompy.exception import WebComPyException as _WCE
@@ -163,7 +163,11 @@ class AppDocumentRoot(Component):
             self._mark_as_prerendered(node)
             return node
         else:
-            raise WebComPyException("Not in Browser environment.")
+            mount_id = selector.lstrip("#")
+            node = inject(DOM_PORT_KEY).create_element("div")
+            node.setAttribute("id", mount_id)
+            node.__webcompy_node__ = True
+            return node
 
     def _mark_as_prerendered(self, node: DOMNode):
         node.__webcompy_prerendered_node__ = True
@@ -171,7 +175,9 @@ class AppDocumentRoot(Component):
             self._mark_as_prerendered(child)
 
     def _mount_node(self):
-        pass
+        if ENVIRONMENT == "pyscript":
+            return
+        super()._mount_node()
 
     def _get_belonging_component(self):
         return ""

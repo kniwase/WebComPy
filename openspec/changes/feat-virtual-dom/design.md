@@ -167,6 +167,35 @@ with app.di_scope:
 
 **Rationale**: `Router._router.__set_path__()` is pure Python logic (guards → navigate → after_route_change hooks). It works with any `HistoryPort`, including `MockHistoryPort`. The `from pyscript import context` and `context.window.history.pushState()` are browser-only infrastructure. Moving `__set_path__` outside the guard enables `dispatchEvent(VirtualDOMEvent("click"))` on rendered RouterLinks to trigger full route transitions in test contexts. This is the smallest possible change — 1-2 lines — to unlock RouterLink navigation testing without a browser.
 
+### Decision 11: AppDocumentRoot._init_node() supports server-side virtual DOM
+
+**Chosen**: Remove the `ENVIRONMENT == "pyscript"` guard from `AppDocumentRoot._init_node()`. On the server, `_init_node()` SHALL create a `VirtualDOMNode` via `ServerDOMPort.create_element()` with the mount element's tag and id attribute, instead of querying an existing DOM node. The `query_selector` / hydration path remains browser-only because there is no pre-existing DOM on the server. `AppDocumentRoot._mount_node()` already overrides to a no-op, so no mounting logic changes.
+
+```python
+def _init_node(self) -> DOMNode:
+    selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
+    if ENVIRONMENT == "pyscript":
+        node = inject(DOM_PORT_KEY).query_selector(selector)
+        if node is None:
+            raise WebComPyException(f"Mount point '{selector}' not found in document.")
+        for name in tuple(node.getAttributeNames()):
+            if name != "id" and not name.startswith("webcompy"):
+                node.removeAttribute(name)
+        node.__webcompy_node__ = True
+        self._mark_as_prerendered(node)
+        return node
+    else:
+        mount_id = selector.lstrip("#")
+        node = inject(DOM_PORT_KEY).create_element("div")
+        node.setAttribute("id", mount_id)
+        node.__webcompy_node__ = True
+        return node
+```
+
+**Rationale**: The unified rendering path requires every element's `_init_node()` to work in both environments. `AppDocumentRoot._init_node()` was the last remaining method that raised an exception on the server, breaking `render()` for SSG and server-side tests. On the server, there is no existing DOM to query or hydrate — the mount element is created fresh as a `VirtualDOMNode`. The `id` attribute is set from the selector so `render_html()` produces `<div id="webcompy-app">` matching the expected SSG output. The browser path (hydration via `query_selector`) remains unchanged.
+
+**Alternative considered**: Make `_init_node()` a no-op on the server and let the root element's child (`html.DIV`) create the mount node. Rejected because `AppDocumentRoot._get_node()` would return `None`, breaking any code that calls `root._get_node()` to access the mount node during server-side rendering.
+
 ## Risks / Trade-offs
 
 - **[HTML output divergence]** ServerDOMPort.render_html() might produce different HTML than the old _render_html() methods. → Mitigation: generate docs_app with both old and new paths, diff the output, fix discrepancies before deleting _render_html().
