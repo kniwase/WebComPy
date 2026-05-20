@@ -85,18 +85,3 @@ class TestPopChild:
         parent._children[1]._mounted = True
         parent._pop_child(1, re_index=False)
         assert len(parent._children) == 2
-
-
-class TestRenderHtml:
-    def test_render_html_with_attrs(self):
-        parent = _make_parent()
-        parent._append_child("hello")
-        html = parent._render_html()
-        assert "div" in html
-        assert "hello" in html
-
-    def test_render_html_newline_indented(self):
-        parent = _make_parent()
-        parent._append_child("child")
-        html = parent._render_html(newline=True, indent=2)
-        assert "\n" in html

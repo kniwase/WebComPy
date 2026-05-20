@@ -4,7 +4,6 @@ from tests.conftest import FakeDOMNode
 from webcompy.elements.types._element import Element, _generate_event_handler
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._text import NewLine, TextElement
-from webcompy.exception import WebComPyException
 
 
 class FakeRootElement(Element):
@@ -104,38 +103,86 @@ class TestElementRemoveElement:
 
 
 class TestElementNoBrowser:
-    def test_init_node_raises_without_browser(self):
-        el = Element("div", {}, {}, None, None)
-        parent = Element("div", {}, {}, None, None)
-        el._parent = parent
-        el._node_idx = 0
-        try:
-            el._init_node()
-            raise AssertionError("Should have raised")
-        except WebComPyException as e:
-            assert "Not in Browser" in str(e)
+    def test_init_node_works_with_server_dom_port(self):
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy.ports._server._dom import ServerDOMPort
 
-    def test_text_init_node_raises_without_browser(self):
-        text_el = TextElement("hello")
-        parent = Element("div", {}, {}, None, None)
-        text_el._parent = parent
-        text_el._node_idx = 0
+        port = ServerDOMPort()
+        scope = DIScope()
+        scope.provide(DOM_PORT_KEY, port)
+        token = _active_di_scope.set(scope)
         try:
-            text_el._init_node()
-            raise AssertionError("Should have raised")
-        except WebComPyException:
-            pass
+            root = FakeRootElement("div", {}, {}, None, None)
+            root._node_cache = port.create_element("div")
+            root._mounted = True
+            parent = FakeRootElement("div", {}, {}, None, None)
+            parent._parent = root
+            parent._node_idx = 0
+            parent._node_cache = port.create_element("div")
+            parent._mounted = True
+            el = Element("div", {}, {}, None, None)
+            el._parent = parent
+            el._node_idx = 0
+            node = el._init_node()
+            assert node is not None
+            assert node.nodeName == "DIV"
+        finally:
+            _active_di_scope.reset(token)
 
-    def test_newline_init_node_raises_without_browser(self):
-        br = NewLine()
-        parent = Element("div", {}, {}, None, None)
-        br._parent = parent
-        br._node_idx = 0
+    def test_text_init_node_works_with_server_dom_port(self):
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy.ports._server._dom import ServerDOMPort
+
+        port = ServerDOMPort()
+        scope = DIScope()
+        scope.provide(DOM_PORT_KEY, port)
+        token = _active_di_scope.set(scope)
         try:
-            br._init_node()
-            raise AssertionError("Should have raised")
-        except WebComPyException:
-            pass
+            root = FakeRootElement("div", {}, {}, None, None)
+            root._node_cache = port.create_element("div")
+            root._mounted = True
+            parent = FakeRootElement("div", {}, {}, None, None)
+            parent._parent = root
+            parent._node_idx = 0
+            parent._node_cache = port.create_element("div")
+            parent._mounted = True
+            text_el = TextElement("hello")
+            text_el._parent = parent
+            text_el._node_idx = 0
+            node = text_el._init_node()
+            assert node is not None
+            assert node.textContent == "hello"
+        finally:
+            _active_di_scope.reset(token)
+
+    def test_newline_init_node_works_with_server_dom_port(self):
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy.ports._server._dom import ServerDOMPort
+
+        port = ServerDOMPort()
+        scope = DIScope()
+        scope.provide(DOM_PORT_KEY, port)
+        token = _active_di_scope.set(scope)
+        try:
+            root = FakeRootElement("div", {}, {}, None, None)
+            root._node_cache = port.create_element("div")
+            root._mounted = True
+            parent = FakeRootElement("div", {}, {}, None, None)
+            parent._parent = root
+            parent._node_idx = 0
+            parent._node_cache = port.create_element("div")
+            parent._mounted = True
+            br = NewLine()
+            br._parent = parent
+            br._node_idx = 0
+            node = br._init_node()
+            assert node is not None
+            assert node.nodeName == "BR"
+        finally:
+            _active_di_scope.reset(token)
 
 
 class TestTextElementWithBrowser:
@@ -161,9 +208,26 @@ class TestTextElementWithBrowser:
         assert text_el._get_node().textContent == "changed"
 
     def test_text_update_without_browser(self):
-        text_el = TextElement("hello")
-        text_el._update_text("world")
-        assert text_el._text == "world"
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy.ports._server._dom import ServerDOMPort
+
+        port = ServerDOMPort()
+        scope = DIScope()
+        scope.provide(DOM_PORT_KEY, port)
+        token = _active_di_scope.set(scope)
+        try:
+            parent = FakeRootElement("div", {}, {}, None, None)
+            parent._node_cache = port.create_element("div")
+            parent._mounted = True
+            text_el = TextElement("hello")
+            text_el._parent = parent
+            text_el._node_idx = 0
+            text_el._init_node()
+            text_el._update_text("world")
+            assert text_el._get_node().textContent == "world"
+        finally:
+            _active_di_scope.reset(token)
 
     def test_hydrate_prerendered_text_node_reuses_node(self, fake_browser_full):
         parent = FakeRootElement("div", {}, {}, None, None)
