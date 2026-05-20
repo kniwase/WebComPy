@@ -9,7 +9,6 @@ from webcompy.elements.types._base import ElementWithChildren
 from webcompy.elements.types._element import ElementBase
 from webcompy.elements.types._text import TextElement
 from webcompy.signal._graph import consumer_destroy
-from webcompy.utils import ENVIRONMENT
 
 
 class DynamicElement(ElementWithChildren):
@@ -23,12 +22,8 @@ class DynamicElement(ElementWithChildren):
         return self._parent._get_node()
 
     def _render(self):
-        if ENVIRONMENT == "pyscript":
-            parent_node = self._parent._get_node()
-            _position_element_nodes(self, parent_node, self._node_idx)
-        else:
-            for child in self._children:
-                child._render()
+        parent_node = self._parent._get_node()
+        _position_element_nodes(self, parent_node, self._node_idx)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         for callback_node in self._callback_nodes:
@@ -45,9 +40,6 @@ class DynamicElement(ElementWithChildren):
         for child in self._children:
             if not child._mounted:
                 child._render()
-
-    def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str:
-        return ("\n" if newline else "").join(child._render_html(newline, indent, count) for child in self._children)
 
     @property
     def _parent(self) -> ElementWithChildren:

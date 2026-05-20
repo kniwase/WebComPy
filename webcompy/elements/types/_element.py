@@ -15,11 +15,9 @@ from webcompy.elements.typealias._element_property import (
 from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._base import ElementWithChildren
 from webcompy.elements.types._refference import DomNodeRef
-from webcompy.exception import WebComPyException
 from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY
 from webcompy.signal._base import SignalBase
 from webcompy.signal._graph import consumer_destroy
-from webcompy.utils import ENVIRONMENT
 
 
 def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent], Any]:
@@ -29,10 +27,7 @@ def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent]
         else:
             _event_handler(ev)
 
-    if ENVIRONMENT == "pyscript":
-        return inject(FFI_PORT_KEY).create_proxy(event_handler)
-    else:
-        return event_handler
+    return inject(FFI_PORT_KEY).create_proxy(event_handler)
 
 
 _WEBCOMPY_INTERNAL_ATTRS = {"id", "webcompy-component"}
@@ -75,28 +70,22 @@ class ElementBase(ElementWithChildren):
         return existing.nodeName.lower() == self._tag_name
 
     def _init_node(self) -> DOMNode:
-        if ENVIRONMENT == "pyscript":
-            existing_node = self._get_existing_node()
-            if existing_node:
-                if (
-                    getattr(existing_node, "__webcompy_prerendered_node__", False)
-                    and existing_node.nodeName.lower() == self._tag_name
-                ):
-                    self._adopt_node(existing_node)
-                    return existing_node
-                else:
-                    existing_node.remove()
-            node = self._create_node()
-            self._init_new_node(node)
-            return node
-        else:
-            raise WebComPyException("Not in Browser environment.")
+        existing_node = self._get_existing_node()
+        if existing_node:
+            if (
+                getattr(existing_node, "__webcompy_prerendered_node__", False)
+                and existing_node.nodeName.lower() == self._tag_name
+            ):
+                self._adopt_node(existing_node)
+                return existing_node
+            else:
+                existing_node.remove()
+        node = self._create_node()
+        self._init_new_node(node)
+        return node
 
     def _create_node(self) -> DOMNode:
-        if ENVIRONMENT == "pyscript":
-            return inject(DOM_PORT_KEY).create_element(self._tag_name)
-        else:
-            raise WebComPyException("Not in Browser environment.")
+        return inject(DOM_PORT_KEY).create_element(self._tag_name)
 
     def _init_new_node(self, node: DOMNode) -> None:
         node.__webcompy_node__ = True
@@ -138,7 +127,7 @@ class ElementBase(ElementWithChildren):
         if node:
             for name, handler in self._event_handlers_added.items():
                 node.removeEventListener(name, handler)
-                if ENVIRONMENT == "pyscript":
+                if hasattr(handler, "destroy"):
                     handler.destroy()
             self._event_handlers_added.clear()
         for cb in self._callback_nodes:
@@ -154,7 +143,7 @@ class ElementBase(ElementWithChildren):
         node = self._get_node()
         for name, event_handler in self._event_handlers_added.items():
             node.removeEventListener(name, event_handler)
-            if ENVIRONMENT == "pyscript":
+            if hasattr(event_handler, "destroy"):
                 event_handler.destroy()
         if self._ref is not None:
             self._ref.__reset_node__()

@@ -2,19 +2,39 @@ from __future__ import annotations
 
 import html as html_module
 import json
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import PluginScript
 from webcompy.components._component import Component
+from webcompy.di import inject
 from webcompy.elements.typealias import ElementChildren
 from webcompy.elements.types import Element, RepeatElement
+from webcompy.elements.types._base import ElementWithChildren
+from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.signal._computed import computed
 
 Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]
 
 PYSCRIPT_VERSION = "2026.3.1"
 PYSCRIPT_BASE_URL = f"https://pyscript.net/releases/{PYSCRIPT_VERSION}"
+
+
+class _DummyParent:
+    def __init__(self, node) -> None:
+        self._node = node
+
+    def _get_node(self):
+        return self._node
+
+    def _get_belonging_component(self):
+        return ""
+
+    def _get_belonging_components(self):
+        return ()
+
+    def _re_index_children(self, recursive):
+        pass
 
 
 class _HtmlElement(Element):
@@ -33,7 +53,17 @@ class _HtmlElement(Element):
         )
 
     def render_html(self):
-        return self._render_html(False, 0)
+        port = inject(DOM_PORT_KEY)
+        root_node = port.create_element("div")
+        root_node.__webcompy_node__ = False
+        root_node.__webcompy_prerendered_node__ = True
+        self._parent = cast("ElementWithChildren", _DummyParent(root_node))
+        self._node_idx = 0
+        self._render()
+        root_child = root_node.childNodes[0] if root_node.childNodes.length > 0 else None
+        if root_child is None:
+            return ""
+        return port.render_html(root_child)
 
     def _get_belonging_component(self):
         return ""
@@ -277,4 +307,4 @@ def generate_html(
             *plugin_body_scripts,
             "<!--webcompy-app-loader-->",
         ),
-    ).render_html().replace("<!--webcompy-app-loader-->", app_loader_html)
+    ).render_html().replace("&lt;!--webcompy-app-loader--&gt;", app_loader_html)

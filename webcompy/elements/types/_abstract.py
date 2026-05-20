@@ -4,12 +4,10 @@ from abc import abstractmethod
 
 from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
-from webcompy.exception import WebComPyException
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.signal._base import CallbackConsumerNode
 from webcompy.signal._container import SignalReceivable
 from webcompy.signal._graph import consumer_destroy
-from webcompy.utils import ENVIRONMENT
 
 
 class ElementAbstract(SignalReceivable):
@@ -52,14 +50,12 @@ class ElementAbstract(SignalReceivable):
             self._mounted = True
 
     def _detach_node(self):
-        if ENVIRONMENT == "pyscript" and self._node_cache:
+        if self._node_cache:
             parent_node = self._parent._get_node()
             remount = inject(DOM_PORT_KEY).create_text_node("")
             self._remount_to = remount
             parent_node.replaceChild(remount, self._node_cache)
             self._mounted = False
-        else:
-            raise WebComPyException("Not in Browser environment.")
 
     @abstractmethod
     def _init_node(self) -> DOMNode: ...
@@ -134,6 +130,3 @@ class ElementAbstract(SignalReceivable):
             existing_node: DOMNode = parent_node.childNodes[self._node_idx]
             return existing_node
         return None
-
-    @abstractmethod
-    def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str: ...

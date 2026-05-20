@@ -88,27 +88,29 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                 raise WebComPyRouterException("Argument 'params' of RouterLink must be Signal Object of Dict.")
             if any(not isinstance(k, str) for k in self._params.value):  # type: ignore
                 raise WebComPyRouterException("Keys of Argument 'params' of RouterLink must be str.")
-        if ENVIRONMENT != "pyscript":
-            return
-        from pyscript import context  # type: ignore[import-untyped]
+        href = self._href.value if isinstance(self._href, SignalBase) else self._href
+        if ENVIRONMENT == "pyscript":
+            from pyscript import context  # type: ignore[import-untyped]
 
-        href = ev.currentTarget.getAttribute("href") or ""
-        current_path = (
-            context.window.location.pathname if self._router.__mode__ == "history" else context.window.location.hash
-        )
-        if current_path != href:
-            if self._params is None:
-                state = None
-                params = None
-            else:
-                params = dict(self._params.value.items())
-                if is_json_seriarizable(self._params.value):
-                    state = params
-                else:
+            current_path = (
+                context.window.location.pathname if self._router.__mode__ == "history" else context.window.location.hash
+            )
+            if current_path != href:
+                if self._params is None:
                     state = None
-                    logging.warn("Argument 'params' of RouterLink should be a Signal Object of json-serializable dict.")
-            context.window.history.pushState(state, None, href)
-            self._router.__set_path__(href, params)
+                    params = None
+                else:
+                    params = dict(self._params.value.items())
+                    if is_json_seriarizable(self._params.value):
+                        state = params
+                    else:
+                        state = None
+                        logging.warn(
+                            "Argument 'params' of RouterLink should be a Signal Object of json-serializable dict."
+                        )
+                context.window.history.pushState(state, None, href)
+        params = None if self._params is None else dict(self._params.value.items())
+        self._router.__set_path__(href, params)
 
     def _on_mouseenter(self, _ev=None):
         to_path = self._to.value if isinstance(self._to, SignalBase) else self._to

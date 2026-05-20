@@ -5,6 +5,38 @@ from collections.abc import Callable
 from typing import Any, Protocol
 
 
+class DOMEvent(Protocol):
+    def __getattr__(self, _: str) -> Any: ...
+
+    @property
+    def bubbles(self) -> bool: ...
+
+    @property
+    def cancelable(self) -> bool: ...
+
+    @property
+    def currentTarget(self) -> DOMNode | None: ...
+
+    @property
+    def defaultPrevented(self) -> bool: ...
+
+    @property
+    def eventPhase(self) -> int: ...
+
+    @property
+    def target(self) -> DOMNode | None: ...
+
+    @property
+    def timeStamp(self) -> int: ...
+
+    @property
+    def type(self) -> str: ...
+
+    def preventDefault(self) -> None: ...
+
+    def stopPropagation(self) -> None: ...
+
+
 class DOMNode(Protocol):
     @property
     def __webcompy_node__(self) -> bool: ...
@@ -40,6 +72,8 @@ class DOMNode(Protocol):
         handler: Any,
         options_or_capture: Any = False,
     ) -> None: ...
+
+    def dispatchEvent(self, event: DOMEvent) -> bool: ...
 
     @property
     def textContent(self) -> str | None: ...
@@ -140,5 +174,25 @@ class DOMPort(ABC):
 
         Returns:
             A cleanup function; call it to remove the listener.
+        """
+        ...
+
+    @abstractmethod
+    def create_event(
+        self,
+        event_type: str,
+        *,
+        bubbles: bool = False,
+        cancelable: bool = False,
+    ) -> DOMEvent:
+        """Create a DOM event object.
+
+        Args:
+            event_type: Event type string (e.g. ``"click"``, ``"submit"``).
+            bubbles: Whether the event bubbles up through the DOM.
+            cancelable: Whether the event can be canceled via ``preventDefault()``.
+
+        Returns:
+            A new DOM event object.
         """
         ...

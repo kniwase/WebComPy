@@ -12,7 +12,6 @@ from webcompy.elements.types._dynamic import DynamicElement, _patch_children
 from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY
 from webcompy.signal._base import SignalBase
-from webcompy.utils import ENVIRONMENT
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
 SwitchCasesSignal: TypeAlias = list[tuple[SignalBase[Any], NodeGenerator]]
@@ -70,34 +69,27 @@ class SwitchElement(DynamicElement):
         new_children = self._generate_children(generator)
         old_children = self._children
         self._children = _patch_children(old_children, new_children, self._node_idx)
-        should_defer = ENVIRONMENT == "pyscript" and self._signal_activated
+        should_defer = self._signal_activated
         if should_defer:
             start_defer_after_rendering()
         for c_idx, child in enumerate(self._children):
             child._node_idx = self._node_idx + c_idx
             child._render()
-        if should_defer and ENVIRONMENT == "pyscript":
+        if should_defer:
             deferred = end_defer_after_rendering()
             for callback in deferred:
                 inject(HOST_PORT_KEY).schedule_macro_task(callback)
         self._parent._re_index_children(False)
 
     def _on_set_parent(self):
-        if ENVIRONMENT != "pyscript":
-
-            def refresh(*args: Any):
-                idx, generator = self._select_generator()
-                self._rendered_idx = idx
-                self._children = self._generate_children(generator)
-
-            refresh()
-
-            if not self._signal_activated:
-                self._signal_activated = True
-
-                if isinstance(self._cases, SignalBase):
-                    self._add_callback_node(self._cases.on_after_updating(refresh))
-                else:
-                    for cond, _ in self._cases:
-                        if isinstance(cond, SignalBase):  # type: ignore
-                            self._add_callback_node(cond.on_after_updating(refresh))
+        idx, generator = self._select_generator()
+        self._rendered_idx = idx
+        self._children = self._generate_children(generator)
+        if not self._signal_activated:
+            self._signal_activated = True
+            if isinstance(self._cases, SignalBase):
+                self._add_callback_node(self._cases.on_after_updating(self._refresh))
+            else:
+                for cond, _ in self._cases:
+                    if isinstance(cond, SignalBase):  # type: ignore
+                        self._add_callback_node(cond.on_after_updating(self._refresh))
