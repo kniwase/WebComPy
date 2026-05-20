@@ -366,7 +366,7 @@ def assert_no_console_errors(console_errors: list[str]):
 
 @pytest.fixture(autouse=True)
 def _check_console_errors_after_test(request):
-    console_errors = request.config.getfixturevalue("console_errors") if "page" in request.fixturenames else None
+    console_errors = request.getfixturevalue("console_errors") if "page" in request.fixturenames else None
     yield
     if console_errors is not None:
         _check_asset_errors(console_errors)

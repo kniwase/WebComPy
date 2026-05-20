@@ -84,7 +84,7 @@ class TextElement(ElementAbstract):
     def _create_node(self) -> DOMNode:
         return inject(DOM_PORT_KEY).create_text_node(self._get_text())
 
-    def _update_text(self, new_text: str):
+    def _update_text(self, new_text: Any):
         node = self._get_node()
         if node:
-            node.textContent = new_text
+            node.textContent = new_text if isinstance(new_text, str) else str(new_text)
