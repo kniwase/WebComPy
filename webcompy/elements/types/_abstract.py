@@ -96,10 +96,8 @@ class ElementAbstract(SignalReceivable):
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         for callback_node in self._callback_nodes:
             consumer_destroy(callback_node)
-        if remove_node:
-            node = self._get_node()
-            if node:
-                node.remove()
+        if remove_node and self._node_cache:
+            self._node_cache.remove()
         self._clear_node_cache(False)
         self.__purge_signal_members__()
         del self
@@ -125,6 +123,8 @@ class ElementAbstract(SignalReceivable):
         self._node_cache = None
 
     def _get_existing_node(self) -> DOMNode | None:
+        if not hasattr(self, "_node_idx"):
+            return None
         parent_node = self._parent._get_node()
         if parent_node.childNodes.length > self._node_idx:
             existing_node: DOMNode = parent_node.childNodes[self._node_idx]

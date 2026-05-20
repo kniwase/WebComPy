@@ -23,6 +23,8 @@ class DynamicElement(ElementWithChildren):
 
     def _render(self):
         parent_node = self._parent._get_node()
+        for c_idx, child in enumerate(self._children):
+            child._node_idx = self._node_idx + c_idx
         _position_element_nodes(self, parent_node, self._node_idx)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):

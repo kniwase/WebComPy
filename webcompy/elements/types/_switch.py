@@ -8,7 +8,7 @@ from webcompy.components._component import end_defer_after_rendering, start_defe
 from webcompy.di import inject
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
-from webcompy.elements.types._dynamic import DynamicElement, _patch_children
+from webcompy.elements.types._dynamic import DynamicElement, _patch_children, _position_element_nodes
 from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY
 from webcompy.signal._base import SignalBase
@@ -48,7 +48,14 @@ class SwitchElement(DynamicElement):
         return [ele] if ele is not None else []
 
     def _render(self):
-        self._refresh()
+        if self._children and all(child._mounted is None for child in self._children):
+            parent_node = self._parent._get_node()
+            for c_idx, child in enumerate(self._children):
+                child._node_idx = self._node_idx + c_idx
+                child._render()
+            _position_element_nodes(self, parent_node, self._node_idx)
+        else:
+            self._refresh()
         if not self._signal_activated:
             self._signal_activated = True
             if isinstance(self._cases, SignalBase):
@@ -61,6 +68,12 @@ class SwitchElement(DynamicElement):
     def _refresh(self, *args: Any):
         idx, generator = self._select_generator()
         if idx == self._rendered_idx:
+            if self._children and all(child._mounted is None for child in self._children):
+                parent_node = self._parent._get_node()
+                for c_idx, child in enumerate(self._children):
+                    child._node_idx = self._node_idx + c_idx
+                    child._render()
+                _position_element_nodes(self, parent_node, self._node_idx)
             return
         parent_node = self._parent._get_node()
         if not parent_node:
