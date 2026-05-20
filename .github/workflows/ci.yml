@@ -54,13 +54,20 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-environment
       - name: Run ruff check
-        run: uv run ruff check . 2>&1 | tee ci-lint-ruff.log
+        run: |
+          uv run ruff check . 2>&1 | tee ci-lint-ruff.log
+          exit "${PIPESTATUS[0]}"
       - name: Run ruff format check
-        run: uv run ruff format --check . 2>&1 | tee ci-lint-format.log
+        run: |
+          uv run ruff format --check . 2>&1 | tee ci-lint-format.log
+          exit "${PIPESTATUS[0]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -71,11 +78,16 @@ jobs:
 
   typecheck:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-environment
       - name: Run pyright
-        run: uv run pyright 2>&1 | tee ci-typecheck-pyright.log
+        run: |
+          uv run pyright 2>&1 | tee ci-typecheck-pyright.log
+          exit "${PIPESTATUS[0]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -98,11 +110,16 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-environment
       - name: Run unit tests
-        run: uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs --cov=webcompy --cov-report=xml --cov-report=term-missing 2>&1 | tee ci-test-results.log
+        run: |
+          uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs --cov=webcompy --cov-report=xml --cov-report=term-missing 2>&1 | tee ci-test-results.log
+          exit "${PIPESTATUS[0]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -118,6 +135,9 @@ jobs:
     if: ${{ !failure() && !cancelled() }}
     needs: [lint, typecheck, generate, test]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
     strategy:
       fail-fast: false
       matrix:
@@ -173,7 +193,9 @@ jobs:
           name: docs-dist
           path: docs_app/dist/
       - name: Run E2E tests
-        run: uv run python -m pytest ${{ matrix.group.files }} --tb=short --serving-mode=${{ matrix.serving_mode }} 2>&1 | tee ci-e2e-results.log
+        run: |
+          uv run python -m pytest ${{ matrix.group.files }} --tb=short --serving-mode=${{ matrix.serving_mode }} 2>&1 | tee ci-e2e-results.log
+          exit "${PIPESTATUS[0]}"
         env:
           DOCS_DIST_DIR: ${{ github.workspace }}/docs_app/dist
       - uses: actions/upload-artifact@v4
