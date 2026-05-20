@@ -63,7 +63,9 @@ class _HtmlElement(Element):
         root_child = root_node.childNodes[0] if root_node.childNodes.length > 0 else None
         if root_child is None:
             return ""
-        return port.render_html(root_child)
+        result = port.render_html(root_child)
+        self._clear_node_cache()
+        return result
 
     def _get_belonging_component(self):
         return ""

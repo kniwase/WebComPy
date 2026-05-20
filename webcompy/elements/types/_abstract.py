@@ -121,6 +121,7 @@ class ElementAbstract(SignalReceivable):
 
     def _clear_node_cache(self, recursive: bool = True):
         self._node_cache = None
+        self._mounted = None
 
     def _get_existing_node(self) -> DOMNode | None:
         if not hasattr(self, "_node_idx"):
