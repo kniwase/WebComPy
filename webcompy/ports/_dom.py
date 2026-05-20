@@ -105,6 +105,12 @@ class DOMNodeList:
     def __getitem__(self, index: int) -> DOMNode:
         return self._nodes[index]
 
+    def __iter__(self):
+        return iter(self._nodes)
+
+    def __len__(self) -> int:
+        return len(self._nodes)
+
 
 class DOMPort(ABC):
     @abstractmethod
