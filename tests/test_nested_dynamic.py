@@ -152,7 +152,7 @@ class TestPositionElementNodes:
 
 
 class TestRenderHTMLWithNesting:
-    def test_repeat_inside_switch_render_html(self):
+    def test_repeat_inside_switch_rendering(self):
         cond = Signal(True)
         rl = ReactiveList(["hello", "world"])
         inner_rep = RepeatElement(rl, lambda item: TextElement(item))
@@ -164,7 +164,7 @@ class TestRenderHTMLWithNesting:
         assert sw._children is not None
         assert len(sw._children) > 0
 
-    def test_switch_inside_repeat_render_html(self):
+    def test_switch_inside_repeat_rendering(self):
         rl = ReactiveList(["a", "b"])
         rep = RepeatElement(
             rl,

@@ -57,24 +57,24 @@
 
 ## 9. Tests
 
-- [ ] 9.1 Write tests for `VirtualDOMNode` — tree construction, attribute operations, event listener recording, dispatchEvent (including bubbling, stopPropagation, preventDefault)
-- [ ] 9.2 Write tests for `ServerDOMPort.render_html()` — element serialization, void tags, attribute escaping, text escaping, nested trees
-- [ ] 9.3 Write tests for unified render path — render the same component tree in both browser mock and server DOMPort, verify identical structure
-- [ ] 9.4 Update existing SSG tests — migrate from HTML string comparison to virtual tree structure inspection where beneficial; keep string comparison as integration tests
-- [ ] 9.5 Write tests for server-side rendering of components with attributes, event handlers, conditional branches, and list rendering
-- [ ] 9.6 Run existing test suite and fix regressions
+- [x] 9.1 Write tests for `VirtualDOMNode` — tree construction, attribute operations, event listener recording, dispatchEvent (including bubbling, stopPropagation, preventDefault)
+- [x] 9.2 Write tests for `ServerDOMPort.render_html()` — element serialization, void tags, attribute escaping, text escaping, nested trees
+- [x] 9.3 Write tests for unified render path — render the same component tree in both browser mock and server DOMPort, verify identical structure
+- [x] 9.4 Update existing SSG tests — migrate from HTML string comparison to virtual tree structure inspection where beneficial; keep string comparison as integration tests
+- [x] 9.5 Write tests for server-side rendering of components with attributes, event handlers, conditional branches, and list rendering
+- [x] 9.6 Run existing test suite and fix regressions
 
 ## 10. Cleanup
 
-- [ ] 10.1 Search codebase for any remaining `_render_html` references — ensure all are removed or migrated
-- [ ] 10.2 Remove any `_render_html`-specific test utilities or helpers
-- [ ] 10.3 Update type stubs if `_render_html` appears in any `.pyi` files
+- [x] 10.1 Search codebase for any remaining `_render_html` references — ensure all are removed or migrated
+- [x] 10.2 Remove any `_render_html`-specific test utilities or helpers
+- [x] 10.3 Update type stubs if `_render_html` appears in any `.pyi` files
 
 ## 11. Verification
 
-- [ ] 11.1 Run lint: `uv run ruff check .`
-- [ ] 11.2 Run type check: `uv run pyright`
-- [ ] 11.3 Run unit tests: `uv run python -m pytest tests/ --tb=short`
-- [ ] 11.4 Run SSG and verify output: `uv run python -m webcompy generate --app docs_app.bootstrap:app`
-- [ ] 11.5 Diff generated docs against baseline to confirm no output regressions
-- [ ] 11.6 Verify dev server starts: `uv run python -m webcompy start --dev --app docs_app.bootstrap:app`
+- [x] 11.1 Run lint: `uv run ruff check .`
+- [x] 11.2 Run type check: `uv run pyright`
+- [x] 11.3 Run unit tests: `uv run python -m pytest tests/ --tb=short`
+- [x] 11.4 Run SSG and verify output: `uv run python -m webcompy generate --app docs_app.bootstrap:app`
+- [x] 11.5 Diff generated docs against baseline to confirm no output regressions
+- [x] 11.6 Verify dev server starts: `uv run python -m webcompy start --dev --app docs_app.bootstrap:app`
