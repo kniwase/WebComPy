@@ -59,13 +59,12 @@ class _HtmlElement(Element):
         root_node.__webcompy_prerendered_node__ = True
         self._parent = cast("ElementWithChildren", _DummyParent(root_node))
         self._node_idx = 0
+        self._clear_node_cache()
         self._render()
         root_child = root_node.childNodes[0] if root_node.childNodes.length > 0 else None
         if root_child is None:
             return ""
-        result = port.render_html(root_child)
-        self._clear_node_cache()
-        return result
+        return port.render_html(root_child)
 
     def _get_belonging_component(self):
         return ""
