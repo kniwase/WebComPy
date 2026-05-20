@@ -42,6 +42,7 @@ class ElementWithChildren(ElementAbstract):
 
     def _hydrate_node(self):
         result = super()._hydrate_node()
+        self._re_index_children()
         for child in self._children:
             child._hydrate_node()
         if (node := self._get_node()) is not None:

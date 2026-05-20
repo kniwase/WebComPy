@@ -39,7 +39,10 @@ class DynamicElement(ElementWithChildren):
     def _hydrate_node(self) -> None:
         for child in self._children:
             child._hydrate_node()
+        idx = self._node_idx
         for child in self._children:
+            child._node_idx = idx
+            idx += child._node_count
             if not child._mounted:
                 child._render()
 
