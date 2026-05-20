@@ -20,9 +20,21 @@ def _aio_run_browser(coro: Coroutine[Any, Any, Any]) -> None:
 
 
 _aio_run_browser_tasks: list[asyncio.Task[Any]] = []
+_aio_run_server_tasks: list[asyncio.Task[Any]] = []
 
 
-aio_run: AsyncResolver = _aio_run_browser if ENVIRONMENT == "pyscript" else asyncio.run
+def _aio_run_server(coro: Coroutine[Any, Any, Any]) -> None:
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(coro)
+    else:
+        task = loop.create_task(coro)
+        _aio_run_server_tasks.append(task)
+        task.add_done_callback(lambda t: _aio_run_server_tasks.remove(t))
+
+
+aio_run: AsyncResolver = _aio_run_browser if ENVIRONMENT == "pyscript" else _aio_run_server
 
 
 A = ParamSpec("A")
