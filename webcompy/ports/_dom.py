@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any, Protocol
 
 
@@ -105,7 +105,7 @@ class DOMNodeList:
     def __getitem__(self, index: int) -> DOMNode:
         return self._nodes[index]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[DOMNode]:
         return iter(self._nodes)
 
     def __len__(self) -> int:

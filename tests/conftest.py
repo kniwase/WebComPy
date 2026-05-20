@@ -102,6 +102,8 @@ class FakeDOMNode:
             self.__event_listeners[event] = [h for h in self.__event_listeners[event] if h is not handler]
 
     def dispatchEvent(self, event):
+        for handler in self.__event_listeners.get(event.type, []):
+            handler(event)
         return True
 
     @property

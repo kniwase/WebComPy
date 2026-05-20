@@ -16,7 +16,7 @@ AsyncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
 def _aio_run_browser(coro: Coroutine[Any, Any, Any]) -> None:
     task = asyncio.ensure_future(coro)
     _aio_run_browser_tasks.append(task)
-    task.add_done_callback(lambda t: _aio_run_browser_tasks.remove(t))
+    task.add_done_callback(lambda t: _aio_run_browser_tasks.remove(t) if t in _aio_run_browser_tasks else None)
 
 
 _aio_run_browser_tasks: list[asyncio.Task[Any]] = []
@@ -31,7 +31,7 @@ def _aio_run_server(coro: Coroutine[Any, Any, Any]) -> None:
     else:
         task = loop.create_task(coro)
         _aio_run_server_tasks.append(task)
-        task.add_done_callback(lambda t: _aio_run_server_tasks.remove(t))
+        task.add_done_callback(lambda t: _aio_run_server_tasks.remove(t) if t in _aio_run_server_tasks else None)
 
 
 aio_run: AsyncResolver = _aio_run_browser if ENVIRONMENT == "pyscript" else _aio_run_server
