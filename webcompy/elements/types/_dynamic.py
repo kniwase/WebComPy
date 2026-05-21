@@ -25,6 +25,8 @@ class DynamicElement(ElementWithChildren):
         parent_node = self._parent._get_node()
         for c_idx, child in enumerate(self._children):
             child._node_idx = self._node_idx + c_idx
+            if child._mounted is None:
+                child._render()
         _position_element_nodes(self, parent_node, self._node_idx)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):

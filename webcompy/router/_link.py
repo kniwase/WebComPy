@@ -122,7 +122,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
     def _generate_attrs(self) -> dict[str, AttrValue]:
         attrs = self._given_attrs if self._given_attrs else {}
         return {
-            **attrs,
+            **{k: v for k, v in attrs.items() if not k.startswith("@")},
             "href": self._href,
             "webcompy-routerlink": True,
         }
