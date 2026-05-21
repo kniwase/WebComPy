@@ -12,6 +12,7 @@ from webcompy.elements.types._dynamic import DynamicElement, _patch_children, _p
 from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY
 from webcompy.signal._base import SignalBase
+from webcompy.utils._environment import ENVIRONMENT
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
 SwitchCasesSignal: TypeAlias = list[tuple[SignalBase[Any], NodeGenerator]]
@@ -95,6 +96,8 @@ class SwitchElement(DynamicElement):
         self._parent._re_index_children(False)
 
     def _on_set_parent(self):
+        if ENVIRONMENT == "pyscript":
+            return
         idx, generator = self._select_generator()
         self._rendered_idx = idx
         self._children = self._generate_children(generator)
