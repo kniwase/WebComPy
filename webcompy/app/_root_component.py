@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
-from uuid import uuid4
 
 from webcompy.components._component import Component, HeadPropsStore, _active_app_context
 from webcompy.components._generator import ComponentGenerator
@@ -52,7 +51,6 @@ class AppDocumentRoot(Component):
         selector: str | None = None,
         app: WebComPyApp | None = None,
     ) -> None:
-        self._instance_id = uuid4()
         self.__loading = True
         self.__hydrated = False
         self._router = router
@@ -83,7 +81,7 @@ class AppDocumentRoot(Component):
 
             head_props.title.on_after_updating(updte_title)
 
-        self._set_title("")
+        head_props._app_title = ""
         self._links = []
         self._scripts = []
         self._scripts_head = []
@@ -242,6 +240,10 @@ class AppDocumentRoot(Component):
     @property
     def html_attrs(self) -> dict[str, str]:
         return {k: (v.value if isinstance(v, Computed) else v) for k, v in self._html_attrs.items()}
+
+    def _set_title(self, title: str):
+        if self._head_props is not None:
+            self._head_props._app_title = title
 
     # Head controllers
     def set_title(self, title: str):

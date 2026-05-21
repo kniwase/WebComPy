@@ -5,6 +5,7 @@ from webcompy.di._exceptions import InjectionError
 from webcompy.di._keys import _ROUTER_KEY
 from webcompy.elements.types._dynamic import DynamicElement
 from webcompy.elements.types._switch import SwitchElement
+from webcompy.utils._environment import ENVIRONMENT
 
 
 class RouterView(DynamicElement):
@@ -21,6 +22,7 @@ class RouterView(DynamicElement):
         self._children = [self._switch]
         self._switch._parent = self
         self._re_index_children()
-        self._switch._on_set_parent()
-        if self._router._preload:
-            self._router.preload_lazy_routes()
+        if ENVIRONMENT != "pyscript":
+            self._switch._on_set_parent()
+            if self._router._preload:
+                self._router.preload_lazy_routes()

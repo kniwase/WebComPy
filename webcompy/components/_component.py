@@ -56,11 +56,12 @@ class HeadPropsStore:
     def __init__(self) -> None:
         self.titles = ReactiveDict[UUID, str]({})
         self.head_metas = ReactiveDict[UUID, dict[str, dict[str, str]]]({})
+        self._app_title: str | None = None
 
     @computed_property
     def title(self):
         values = tuple(self.titles.values())
-        return values[-1] if values else None
+        return values[-1] if values else self._app_title
 
     @computed_property
     def head_meta(self):

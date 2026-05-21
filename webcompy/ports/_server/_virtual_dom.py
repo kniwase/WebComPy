@@ -136,6 +136,8 @@ class VirtualDOMNode:
         self._children.append(child)
 
     def removeChild(self, child: DOMNode) -> None:
+        if child not in self._children:
+            raise ValueError("Node is not a child of this element")
         self._children.remove(child)
         _as_virtual(child)._parent = None
 
@@ -143,6 +145,8 @@ class VirtualDOMNode:
         new_v = _as_virtual(new_node)
         if new_v._parent is not None:
             new_v._parent.removeChild(new_node)
+        if ref_node not in self._children:
+            raise ValueError("Reference node is not a child of this element")
         idx = self._children.index(ref_node)
         new_v._parent = self
         self._children.insert(idx, new_node)
@@ -152,6 +156,8 @@ class VirtualDOMNode:
         old_v = _as_virtual(old_node)
         if new_v._parent is not None:
             new_v._parent.removeChild(new_node)
+        if old_node not in self._children:
+            raise ValueError("Node to replace is not a child of this element")
         idx = self._children.index(old_node)
         self._children[idx] = new_node
         new_v._parent = self
@@ -161,7 +167,7 @@ class VirtualDOMNode:
         if self._parent is not None:
             self._parent.removeChild(self)
 
-    def setAttribute(self, name: str, value: str) -> None:
+    def setAttribute(self, name: str, value: str | None) -> None:
         self._attributes[name] = value
 
     def getAttribute(self, name: str) -> str | None:

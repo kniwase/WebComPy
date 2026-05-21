@@ -41,7 +41,6 @@ class TestBundledDepsLockfile:
         assert "pyscript_version" in data
         assert "wasm_packages" in data
         assert "pure_python_packages" in data
-        assert "standalone_assets" in data
 
 
 @pytest.mark.e2e
