@@ -306,12 +306,5 @@ def generate_html(
             app_root,
             *_load_scripts(scripts_body),
             *plugin_body_scripts,
-            "<!--webcompy-app-loader-->",
         ),
-    ).render_html().replace("&lt;!--webcompy-app-loader--&gt;", app_loader_html)
-    # NOTE: The "<!--webcompy-app-loader-->" text node above is passed through
-    # render_html(), which HTML-escapes it to "&lt;!--webcompy-app-loader--&gt;".
-    # We then replace the escaped version with the actual app loader script tag.
-    # This depends on VirtualDOMNode.render_html() escaping text content via
-    # html.escape(). If the serialization strategy changes, this replacement
-    # must be updated accordingly.
+    ).render_html().replace("</body>", f"{app_loader_html}</body>")
