@@ -229,12 +229,17 @@ class TestVirtualDOMNodeDispatchEvent:
 
     def test_dispatch_sets_target_and_phase(self):
         node = VirtualDOMNode("div")
-        node.addEventListener("click", lambda e: None)
+        captured = {}
+        node.addEventListener(
+            "click", lambda e: captured.update(eventPhase=e.eventPhase, currentTarget=e.currentTarget, target=e.target)
+        )
         event = VirtualDOMEvent("click")
         node.dispatchEvent(event)
-        assert event._target is node
-        assert event._current_target is node
-        assert event._event_phase == 2
+        assert captured["eventPhase"] == 2
+        assert captured["currentTarget"] is node
+        assert captured["target"] is node
+        assert event._event_phase == 0
+        assert event._current_target is None
 
     def test_dispatch_bubbling(self):
         grandparent = VirtualDOMNode("div")
@@ -257,7 +262,7 @@ class TestVirtualDOMNodeDispatchEvent:
         assert len(child_called) == 1
         assert len(parent_called) == 1
         assert len(gp_called) == 1
-        assert event._event_phase == 3
+        assert event._event_phase == 0
 
     def test_dispatch_no_bubbling(self):
         grandparent = VirtualDOMNode("div")

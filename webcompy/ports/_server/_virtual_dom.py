@@ -223,9 +223,7 @@ class VirtualDOMNode:
         for et, handler in self._event_listeners:
             if et == event.type:
                 handler(event)
-        if event_v._propagation_stopped:
-            return not event_v._default_prevented
-        if event.bubbles:
+        if not event_v._propagation_stopped and event.bubbles:
             event_v._event_phase = 3
             ancestor = self._parent
             while ancestor is not None:
@@ -237,6 +235,8 @@ class VirtualDOMNode:
                     if et == event.type:
                         handler(event)
                 ancestor = ancestor_v._parent
+        event_v._event_phase = 0
+        event_v._current_target = None
         return not event_v._default_prevented
 
 
