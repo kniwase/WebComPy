@@ -199,6 +199,9 @@ class VirtualDOMNode:
         self._event_listeners = [(et, h) for et, h in self._event_listeners if not (et == event_type and h is handler)]
 
     def dispatchEvent(self, event: DOMEvent) -> bool:
+        # VirtualDOMNode and VirtualDOMEvent live in the same module, so
+        # we directly access the event's private attributes (_target,
+        # _propagation_stopped, etc.) to implement DOM-spec event phases.
         event_v = _as_virtual_event(event)
         event_v._target = self
         event_v._current_target = self

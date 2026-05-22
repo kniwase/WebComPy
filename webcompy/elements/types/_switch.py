@@ -96,6 +96,9 @@ class SwitchElement(DynamicElement):
         self._parent._re_index_children(False)
 
     def _on_set_parent(self):
+        # In the browser, rendering is triggered by mount via DynamicElement._render(),
+        # so pre-creating children here is unnecessary. On the server, children must be
+        # pre-created for SSG since there is no browser-initiated mount cycle.
         if ENVIRONMENT == "pyscript":
             return
         idx, generator = self._select_generator()
