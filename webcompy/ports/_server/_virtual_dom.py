@@ -204,7 +204,7 @@ class VirtualDOMNode:
         event_v._current_target = self
         event_v._event_phase = 2
         for et, handler in self._event_listeners:
-            if et == event.type and not event_v._propagation_stopped:
+            if et == event.type:
                 handler(event)
         if event_v._propagation_stopped:
             return not event_v._default_prevented
@@ -212,22 +212,24 @@ class VirtualDOMNode:
             event_v._event_phase = 3
             ancestor = self._parent
             while ancestor is not None:
+                if event_v._propagation_stopped:
+                    break
                 ancestor_v = _as_virtual(ancestor)
                 event_v._current_target = ancestor
                 for et, handler in ancestor_v._event_listeners:
-                    if et == event.type and not event_v._propagation_stopped:
+                    if et == event.type:
                         handler(event)
-                if event_v._propagation_stopped:
-                    break
                 ancestor = ancestor_v._parent
         return not event_v._default_prevented
 
 
 def _as_virtual(node: DOMNode) -> VirtualDOMNode:
-    assert isinstance(node, VirtualDOMNode)
+    if not isinstance(node, VirtualDOMNode):
+        raise TypeError(f"Expected VirtualDOMNode, got {type(node).__name__}")
     return node
 
 
 def _as_virtual_event(event: DOMEvent) -> VirtualDOMEvent:
-    assert isinstance(event, VirtualDOMEvent)
+    if not isinstance(event, VirtualDOMEvent):
+        raise TypeError(f"Expected VirtualDOMEvent, got {type(event).__name__}")
     return event

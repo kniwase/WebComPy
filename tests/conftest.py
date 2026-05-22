@@ -104,7 +104,7 @@ class FakeDOMNode:
     def dispatchEvent(self, event):
         for handler in self.__event_listeners.get(event.type, []):
             handler(event)
-        return True
+        return not event.defaultPrevented
 
     @property
     def nodeType(self):
