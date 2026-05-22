@@ -95,9 +95,6 @@ class SwitchElement(DynamicElement):
         self._parent._re_index_children(False)
 
     def _on_set_parent(self):
-        idx, generator = self._select_generator()
-        self._rendered_idx = idx
-        self._children = self._generate_children(generator)
         if not self._signal_activated:
             self._signal_activated = True
             if isinstance(self._cases, SignalBase):

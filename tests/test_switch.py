@@ -56,7 +56,23 @@ class TestSelectGenerator:
 
 
 class TestOnSetParent:
-    def test_on_set_parent_initializes_children(self):
+    def test_on_set_parent_registers_signal_callbacks(self):
+        cond = Signal(True)
+        cases = [(cond, lambda: TextElement("yes"))]
+        sw = SwitchElement(cases, None)
+        sw._on_set_parent()
+        assert sw._signal_activated is True
+        assert len(sw._callback_nodes) > 0
+
+    def test_on_set_parent_registers_static_case_callbacks(self):
+        cond = Signal(False)
+        cases = [(cond, lambda: TextElement("no"))]
+        sw = SwitchElement(cases, lambda: TextElement("default"))
+        sw._on_set_parent()
+        assert sw._signal_activated is True
+        assert len(sw._callback_nodes) > 0
+
+    def test_render_creates_children(self, fake_browser_full):
         from tests.conftest import FakeDOMNode
         from webcompy.elements.types._element import Element
 
@@ -71,26 +87,6 @@ class TestOnSetParent:
         parent._mounted = True
         sw._parent = parent
         sw._node_idx = 0
-        sw._on_set_parent()
+        sw._render()
         assert len(sw._children) == 1
         assert sw._rendered_idx == 0
-
-    def test_on_set_parent_registers_reactive_callback(self):
-        from tests.conftest import FakeDOMNode
-        from webcompy.elements.types._element import Element
-
-        class FakeRootElement(Element):
-            _get_belonging_component = lambda self: ""
-            _get_belonging_components = lambda self: ()
-
-        cond = Signal(True)
-        cases = [(cond, lambda: TextElement("yes"))]
-        sw = SwitchElement(cases, None)
-        parent = FakeRootElement("div", {}, {}, None, None)
-        parent._node_cache = FakeDOMNode("div")
-        parent._mounted = True
-        sw._parent = parent
-        sw._node_idx = 0
-        sw._on_set_parent()
-        assert sw._signal_activated is True
-        assert len(sw._callback_nodes) > 0
