@@ -143,7 +143,7 @@ class RepeatElement(DynamicElement):
         parent_node = self._parent._get_node()
         if not parent_node:
             raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
-        if self._has_key and self._children_keys:
+        if self._has_key and self._signal_activated and self._children_keys:
             self._reconcile_children()
         else:
             for _ in range(len(self._children)):
