@@ -114,11 +114,25 @@ class VirtualDOMNode:
 
     @property
     def textContent(self) -> str | None:
+        if self._node_type == 1:
+            parts: list[str] = []
+            for child in self._children:
+                text = child.textContent
+                if text is not None:
+                    parts.append(text)
+            return "".join(parts) if parts else ""
         return self._text_content
 
     @textContent.setter
     def textContent(self, value: str | None) -> None:
-        self._text_content = value
+        if self._node_type == 1:
+            self._children.clear()
+            if value is not None:
+                child = VirtualDOMNode("#text", node_type=3, text_content=value)
+                child._parent = self
+                self._children.append(child)
+        else:
+            self._text_content = value
 
     @property
     def childNodes(self) -> DOMNodeList:

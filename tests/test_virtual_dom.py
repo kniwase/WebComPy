@@ -8,7 +8,7 @@ class TestVirtualDOMNodeConstruction:
         node = VirtualDOMNode("div")
         assert node.nodeName == "DIV"
         assert node.nodeType == 1
-        assert node.textContent is None
+        assert node.textContent == ""
         assert node.__webcompy_node__ is True
         assert node.__webcompy_prerendered_node__ is False
 
