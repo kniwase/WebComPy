@@ -36,7 +36,7 @@ This enables a testing module that renders components to `VirtualDOMNode` trees 
 
 ### Decision 1: webcompy.testing as a separate package, excluded from browser wheels
 
-**Chosen**: Create `webcompy/testing/` with `__init__.py`, `_dom.py` (FakeDOMNode), `_ports.py` (fake port implementations), `_renderer.py` (TestRenderer / TestRendererResult), and `_asgi.py` (create_test_asgi_app). Add `"webcompy.testing"` to `_BROWSER_ONLY_EXCLUDE`.
+**Chosen**: Create `webcompy/testing/` with `__init__.py`, `_dom.py` (FakeDOMNode), `_ports.py` (fake port implementations), `_renderer.py` (TestRenderer / TestRendererResult), and `_asgi.py` (create_test_asgi_app, format_html). Add `"webcompy.testing"` to `_BROWSER_ONLY_EXCLUDE`.
 
 **Rationale**: Same approach as `webcompy.cli` and `webcompy.ports._server` — these are server/dev-only code. The `_is_browser_excluded` function uses prefix matching, so `"webcompy.testing"` matches all submodules. This prevents test utilities from being bundled into browser-deployed wheels.
 
@@ -224,7 +224,33 @@ assert response.status_code == 200
 - Stateless — cannot test reactive state changes triggered by click events (use `TestRenderer` for that)
 - No PyScript hydration or browser JS runtime (use Playwright E2E for that)
 
-### Decision 8: Three-tier test migration strategy
+### Decision 9: HTML formatter for test comparison reliability
+
+**Chosen**: Provide `format_html(html: str) -> str` in `webcompy.testing._asgi` that normalizes HTML strings via `beautifulsoup4` parsing and re-serialization, producing a canonical form suitable for string comparison in tests. `TestRendererResult.to_html(pretty: bool = False)` uses this when `pretty=True`. `beautifulsoup4` IS added to the `dev` dependency group — it IS a test utility, not a runtime dependency, so it does not go in core `dependencies`.
+
+```python
+from webcompy.testing import format_html
+
+def test_my_component():
+    result = TestRenderer.render(MyComponent())
+    html = format_html(result.to_html())
+    expected = format_html("<div><h1>Hello</h1></div>")
+    assert html == expected
+```
+
+**Rationale**: SSR output (`render_html()`) is naturally compact — no whitespace between tags. This makes direct string comparison fragile: a single extra space or attribute reordering causes false failures. `beautifulsoup4` parses both actual and expected HTML into a canonical tree and re-serializes them identically, guaranteeing reliable comparison. The library is pure Python, well-maintained, and handles edge cases (void elements, raw content elements like `<script>`/`<style>`, self-closing tags) correctly.
+
+**Why not use `prettify()`?** `prettify()` adds newlines and indentation, which changes inline element layout. Using `str(soup)` or `soup.decode()` preserves semantic equivalence without introducing whitespace artifacts.
+
+**Why not format SSR output by default?** The current `_serialize_node()` output is already compact (no extra whitespace). Introducing `beautifulsoup4` into the production code path would be a runtime dependency with no benefit to end users — browsers render compact HTML correctly, and developer inspection happens via devtools' Elements panel.
+
+**Test verification strategy**: Unit tests for the testing module itself MUST verify both:
+- `TestRendererResult.to_html()` (raw, no formatting) — confirms the serialization pipeline is correct
+- `format_html(result.to_html()) == format_html(expected)` — confirms canonical comparison works
+
+Existing `webcompy.ports._server._dom` tests for `_serialize_node()` remain unchanged and validate raw output correctness.
+
+### Decision 10: Three-tier test migration strategy
 
 **Chosen**: Replace the previous two-tier strategy (TestRenderer + Playwright) with a three-tier approach using httpx ASGI integration as the first tier for static renders.
 

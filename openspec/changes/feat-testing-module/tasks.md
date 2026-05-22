@@ -20,6 +20,8 @@
 - [ ] 2.4 Implement `TestRendererResult.to_html()` — delegates to `ServerDOMPort.render_html(root)`
 - [ ] 2.5 Implement `TestRendererResult.rerender()` — re-executes component `render()` on the existing virtual root so that signal changes from `dispatchEvent(VirtualDOMEvent)` are reflected in the queryable tree
 - [ ] 2.6 Implement `TestRendererResult` tree assertion helpers — `assert_element_count(tag, count)`, `assert_has_class(cls)` — raise `AssertionError` on mismatch
+- [ ] 2.7 Implement `format_html(html: str) -> str` — normalize HTML strings via `beautifulsoup4` parsing and re-serialization, producing a canonical form for reliable string comparison in tests. Used by `TestRendererResult.to_html(pretty=True)`.
+- [ ] 2.8 Add `format_html` tests — verify (a) raw `to_html()` output is correct against expected serialization, (b) `format_html()` canonicalizes equivalent HTML to the same string
 
 ## 3. E2E test migration — Tier 1: httpx ASGI static renders (~7 tests)
 
