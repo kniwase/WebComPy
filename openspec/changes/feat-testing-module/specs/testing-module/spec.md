@@ -63,6 +63,27 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **THEN** `scope.inject(DOM_PORT_KEY)` SHALL return a `ServerDOMPort`
 - **AND** `scope.inject(FFI_PORT_KEY)` SHALL return a `ServerFFIPort`
 
+### Requirement: create_test_asgi_app shall provide a lightweight Starlette ASGI app for httpx-based SSR testing
+
+`create_test_asgi_app(app)` SHALL return a Starlette ASGI app with a catch-all route (`{path:path}` in history mode, `/` in hash mode) that, on each request, enters `app.di_scope`, calls `app.set_path(requested_path)`, generates SSR HTML via `generate_html()` (using `ServerDOMPort`), and returns `HTMLResponse(html_string)`. It SHALL skip all heavy build steps: dependency resolution, wheel building, WASM downloading, runtime asset downloading, and static file serving. It SHALL be usable with `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))` to test the full SSR pipeline — routing, DI scope, `AppDocumentRoot`, and HTML page generation — without a browser.
+
+#### Scenario: Testing full SSR pipeline with httpx
+- **WHEN** a user creates a test app via `create_test_app(scope, root_component=PageComponent())`
+- **AND** creates an ASGI app via `create_test_asgi_app(app)`
+- **AND** sends `httpx.Client(transport=ASGITransport(app=asgi)).get("/page-path")`
+- **THEN** the response status SHALL be 200
+- **AND** the response body SHALL contain the page component's rendered text
+
+#### Scenario: Routing resolves via app.set_path()
+- **WHEN** a GET request is sent to `/some-page`
+- **THEN** `app.set_path("/some-page")` SHALL be called before HTML generation
+- **AND** the Router SHALL match the correct route
+
+#### Scenario: DI scope is active during request
+- **WHEN** a component uses `inject(SomeKey)` during rendering
+- **AND** the key was registered via `app.provide(SomeKey, value)` before `create_test_asgi_app()`
+- **THEN** `inject(SomeKey)` SHALL return the provided value in the rendered HTML
+
 ### Requirement: TestRenderer shall render components to VirtualDOMNode trees
 
 `TestRenderer.render(component)` SHALL set the runtime environment to non-PyScript during rendering to ensure the element system uses server-side code paths (i.e., `_create_node()` calls `ServerDOMPort.create_element()` rather than `BrowserDOMPort.create_element()`). It SHALL create a server-side DI scope, instantiate a minimal `WebComPyApp`, render the component via `component.render()`, and return a `TestRendererResult` wrapping the root `VirtualDOMNode`. `TestRendererResult` SHALL provide query methods (`query_selector`, `query_selector_all`, `find_by_text`, `find_by_attribute`), `to_html()`, `rerender()`, and assertion helpers (`assert_element_count`, `assert_has_class`).

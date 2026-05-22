@@ -15,9 +15,10 @@ This enables a testing module that renders components to `VirtualDOMNode` trees 
 
 **Goals:**
 - `webcompy.testing` package with `FakeDOMNode`, fake port implementations, and scope helpers
+- `create_test_asgi_app()` — lightweight Starlette ASGI app for httpx-based SSR testing of the full HTTP→HTML pipeline
 - `TestRenderer` / `TestRendererResult` — render components, query trees, dispatch events, re-render
 - Fix `FakeBrowserFFIPort` Protocol compliance
-- Migrate ~55 E2E tests to unit tests using `TestRenderer`
+- Migrate E2E tests using a three-tier strategy: httpx ASGI (static renders), TestRenderer (interactive), Playwright (browser-only behavior)
 - Exclude `webcompy.testing` from browser wheels
 - Backwards-compatible re-exports from `tests/conftest.py`
 
@@ -35,7 +36,7 @@ This enables a testing module that renders components to `VirtualDOMNode` trees 
 
 ### Decision 1: webcompy.testing as a separate package, excluded from browser wheels
 
-**Chosen**: Create `webcompy/testing/` with `__init__.py`, `_dom.py` (FakeDOMNode), `_ports.py` (fake port implementations), and `_renderer.py` (TestRenderer / TestRendererResult). Add `"webcompy.testing"` to `_BROWSER_ONLY_EXCLUDE`.
+**Chosen**: Create `webcompy/testing/` with `__init__.py`, `_dom.py` (FakeDOMNode), `_ports.py` (fake port implementations), `_renderer.py` (TestRenderer / TestRendererResult), and `_asgi.py` (create_test_asgi_app). Add `"webcompy.testing"` to `_BROWSER_ONLY_EXCLUDE`.
 
 **Rationale**: Same approach as `webcompy.cli` and `webcompy.ports._server` — these are server/dev-only code. The `_is_browser_excluded` function uses prefix matching, so `"webcompy.testing"` matches all submodules. This prevents test utilities from being bundled into browser-deployed wheels.
 
@@ -189,28 +190,106 @@ result.assert_has_class("container")
 
 **Rationale**: This is the jsdom-like API for WebComPy. After `feat-virtual-dom`, any component can be rendered to a `VirtualDOMNode` tree. `TestRenderer` wraps the boilerplate and provides ergonomic query/assertion methods. The `rerender()` method is essential for testing reactive behavior after `dispatchEvent(VirtualDOMEvent)` — it re-drives component `render()` so the queryable tree reflects post-signal-update state.
 
-### Decision 7: E2E test migration strategy
+### Decision 7: httpx ASGI integration — testing the full SSR pipeline
 
-**Chosen**: Migrate tests in dependency order, using `TestRenderer` as the verification tool. Keep E2E tests for browser-only behavior.
+**Chosen**: Add `create_test_asgi_app()` to `webcompy.testing`. This builds a minimal Starlette ASGI app from a given `WebComPyApp` instance, skipping dependency resolution, wheel building, and runtime asset downloading. Users can then test the full ASGI request→SSR→HTML pipeline using `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))`.
 
-**Migratable (with TestRenderer)**:
+```python
+from httpx import ASGITransport, Client
+from webcompy.testing import create_test_app, create_server_scope, create_test_asgi_app
+
+scope = create_server_scope()
+app = create_test_app(scope, root_component=MyPage())
+asgi = create_test_asgi_app(app)
+
+client = Client(transport=ASGITransport(app=asgi), base_url="http://test")
+response = client.get("/mypage")
+assert "Hello World" in response.text
+assert response.status_code == 200
+```
+
+`create_test_asgi_app(app)`:
+1. Creates a Starlette app with one catch-all route (`{path:path}`) in history mode (or root route in hash mode)
+2. Each request enters `app.di_scope`, calls `app.set_path(requested_path)`, and returns `HTMLResponse(html_string)` where `html_string` is the SSR output via `_HtmlElement.render_html()`
+3. Uses `ServerDOMPort`, `ServerHostPort`, `ServerFFIPort` (already provisioned by `create_server_scope()`)
+
+**Rationale**: `TestRenderer.render()` renders a single component to a `VirtualDOMNode` tree, but bypasses the full ASGI pipeline — routing, `app.set_path()`, `AppDocumentRoot` wrapper, `app.di_scope` context manager, and HTML page generation (`generate_html()`). `httpx` + `ASGITransport` exercises this entire pipeline without a browser. This is already a project dependency (used by `ServerFetchPort`). The approach mirrors Django's `Client` / Starlette's `TestClient` pattern.
+
+**Advantages**:
+- Full routing + SSR pipeline coverage that `TestRenderer` cannot provide
+- Millisecond-level test execution vs 1-2 second Playwright startup
+- No added dependencies (`httpx` is already a project dependency)
+
+**Limitations**:
+- Stateless — cannot test reactive state changes triggered by click events (use `TestRenderer` for that)
+- No PyScript hydration or browser JS runtime (use Playwright E2E for that)
+
+### Decision 8: Three-tier test migration strategy
+
+**Chosen**: Replace the previous two-tier strategy (TestRenderer + Playwright) with a three-tier approach using httpx ASGI integration as the first tier for static renders.
+
+```
+┌──────────────────────────────────────────────────────┐
+│                   Testing Pyramid                    │
+│                                                      │
+│      ┌─────────────┐    ブラウザ必須の挙動           │
+│      │   E2E       │    getComputedStyle, input      │
+│      │ (Playwright)│    widget state, navigation      │
+│      └──────┬──────┘    lifecycle, console errors    │
+│             │                                        │
+│      ┌──────▼──────┐    完全な ASGI パイプライン     │
+│      │  httpx ASGI │    ルーティング + SSR + HTML     │
+│      │ integration │    app.di_scope + set_path      │
+│      └──────┬──────┘                                 │
+│             │                                        │
+│      ┌──────▼──────┐    コンポーネント直接レンダリング │
+│      │ TestRenderer│    VirtualDOM ツリー操作        │
+│      │  (unit)     │    dispatchEvent + rerender     │
+│      └─────────────┘                                 │
+└──────────────────────────────────────────────────────┘
+```
+
+| Tier | Tool | Scope | Tests |
+|------|------|-------|-------|
+| Tier 1 (httpx) | `httpx` + `create_test_asgi_app()` | Full SSR pipeline: routing, DI scope, HTML generation, static renders | ~8 tests (initial state / no interaction) |
+| Tier 2 (TestRenderer) | `TestRenderer.render()` + `dispatchEvent` + `rerender` | Single-component render + reactive state change via virtual events | ~19 tests (click-driven reactive updates) |
+| Tier 3 (Playwright) | E2E (unchanged) | Browser-only behavior | ~8 tests (getComputedStyle, input widget state, navigation lifecycle, console errors) |
+
+**Tier 1 — httpx ASGI (static initial renders)**:
 
 | E2E File | Tests | Mechanism |
 |----------|-------|-----------|
-| `test_component.py` | 2 | `TestRenderer` + `query_selector` + `textContent` |
-| `test_standalone.py` | 4 | Pure file/string checks (no Playwright) |
-| `test_bundled_deps.py` | 9 | Pure file/string checks (no Playwright) |
-| `test_static_site.py` | 7 | Pure file/string checks (no Playwright) |
-| `test_runtime_local.py` | 2 | HTML string verification |
-| `test_switch.py` | 3 | `TestRenderer` + `dispatchEvent(VirtualDOMEvent("click"))` |
+| `test_component.py` | 2 | httpx GET → assert HTML contains expected text |
+| `test_switch.py` | 1 (`default_state`) | httpx GET → assert HTML contains "on" branch, excludes "off" branch |
+| `test_repeat.py` | 1 (`initial_empty`) | httpx GET → assert HTML has zero `<li>` elements |
+| `test_keyed_repeat.py` | 1 (`initial_empty`) | httpx GET → assert HTML has zero `<li>` elements |
+| `test_dict_repeat.py` | 1 (`initial_empty`) | httpx GET → assert HTML has zero `<li>` elements |
+| `test_nested_dynamic.py` | 1 (`initial_list_view`) | httpx GET → assert HTML has 3 list items, 0 grid items |
+| `test_di.py` | 1 (`inject_from_app_level`) | httpx GET → assert HTML contains injected value text |
+
+**Tier 2 — TestRenderer (interactive)**:
+
+| E2E File | Tests | Mechanism |
+|----------|-------|-----------|
+| `test_switch.py` | 2 (`toggle`, `toggle_back`) | `TestRenderer` + `dispatchEvent(VirtualDOMEvent("click"))` |
 | `test_reactive.py` | 3 | `TestRenderer` + `dispatchEvent` + `rerender` |
-| `test_repeat.py` | 3 | `TestRenderer` + `dispatchEvent` + `rerender` |
-| `test_keyed_repeat.py` | 4 | `TestRenderer` + `dispatchEvent` + `rerender` |
-| `test_dict_repeat.py` | 4 | `TestRenderer` + `dispatchEvent` + `rerender` |
-| `test_nested_dynamic.py` | 6 | `TestRenderer` + `dispatchEvent` + `rerender` |
+| `test_repeat.py` | 2 (`add_items`, `remove_items`) | `TestRenderer` + `dispatchEvent` + `rerender` |
+| `test_keyed_repeat.py` | 3 (`add_items`, `remove_first`, `insert_at_start`) | `TestRenderer` + `dispatchEvent` + `rerender` |
+| `test_dict_repeat.py` | 3 (`add_items`, `remove_first`, `clear`) | `TestRenderer` + `dispatchEvent` + `rerender` |
+| `test_nested_dynamic.py` | 5 (`switch_to_grid`, `switch_back`, `add_item`, `add_then_switch`, `remove_first`) | `TestRenderer` + `dispatchEvent` + `rerender` |
 | `test_scoped_style.py` | 2 | `TestRenderer` + style node `textContent` inspection |
-| `test_di.py` | 4 | `TestRenderer` with DI scope + `dispatchEvent` for RouterLink navigation |
-| `test_lifecycle.py` | 2 | `TestRenderer` + `dispatchEvent` |
+| `test_di.py` | 1 (`provide_inject_from_parent`) | `TestRenderer` with DI scope |
+| `test_lifecycle.py` | 1 (`hooks_fire`) | `TestRenderer` |
+
+**Tier 3 — Playwright E2E (browser-required)**:
+
+| Reason | Tests | Files |
+|--------|-------|-------|
+| `getComputedStyle()` | 5 | `test_scoped_style.py` |
+| Browser `<input>` widget state | 2 | `test_keyed_repeat.py`, `test_dict_repeat.py` |
+| RouterView lifecycle on navigation | 1 | `test_lifecycle.py` |
+| `assert_no_console_errors` | 3 | `test_di.py`, `test_bootstrap.py` |
+| All `tests/e2e_docs/` | ~27 | docs E2E (iframe + PyScript) |
 
 **Browser-required (remain in E2E)**:
 
