@@ -1,6 +1,7 @@
 from typing import Protocol
 from unittest.mock import MagicMock
 
+from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements._dom_objs import DOMEvent, DOMNode
 from webcompy.elements.generators import (
     break_line,
@@ -14,6 +15,8 @@ from webcompy.elements.generators import (
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._text import TextElement
 from webcompy.exception import WebComPyException
+from webcompy.ports._keys import DOM_PORT_KEY
+from webcompy.ports._server._dom import ServerDOMPort
 from webcompy.signal import ReactiveList, Signal
 
 
@@ -104,8 +107,10 @@ class TestGenerators:
         assert t._text is r
 
     def test_break_line_creates_newline(self):
+        from webcompy.elements.types._text import NewLine
+
         br = break_line()
-        assert br._render_html() == "<br>"
+        assert isinstance(br, NewLine)
 
     def test_switch_creates_switch_element(self):
         r = Signal(True)
@@ -122,27 +127,59 @@ class TestGenerators:
 
 
 class TestElementRenderHtml:
+    def _render_element_html(self, el):
+        port = ServerDOMPort()
+        root_node = port.create_element("div")
+        root_node.__webcompy_node__ = False
+        root_node.__webcompy_prerendered_node__ = True
+
+        class _DummyParent:
+            def __init__(self, node):
+                self._node = node
+
+            def _get_node(self):
+                return self._node
+
+            def _get_belonging_component(self):
+                return ""
+
+            def _get_belonging_components(self):
+                return ()
+
+            def _re_index_children(self, recursive):
+                pass
+
+        scope = DIScope()
+        scope.provide(DOM_PORT_KEY, port)
+        token = _active_di_scope.set(scope)
+        try:
+            el._parent = _DummyParent(root_node)
+            el._node_idx = 0
+            el._render()
+            root_child = root_node.childNodes[0] if root_node.childNodes.length > 0 else None
+            if root_child is None:
+                return ""
+            return port.render_html(root_child)
+        finally:
+            _active_di_scope.reset(token)
+
     def test_render_simple_element(self):
         el = create_element("div", {"class": "container"})
-        el._parent = _make_parent()
-        html = el._render_html()
+        html = self._render_element_html(el)
         assert "div" in html
         assert "container" in html
 
     def test_render_with_children(self):
-        el = create_element("p", {}, text("hello"))
-        el._parent = _make_parent()
-        html = el._render_html()
+        el = create_element("p", {}, TextElement("hello"))
+        html = self._render_element_html(el)
         assert "hello" in html
 
     def test_render_boolean_attr(self):
         el = create_element("input", {"disabled": True})
-        el._parent = _make_parent()
-        html = el._render_html()
+        html = self._render_element_html(el)
         assert "disabled" in html
 
     def test_render_false_attr_omitted(self):
         el = create_element("input", {"disabled": False})
-        el._parent = _make_parent()
-        html = el._render_html()
+        html = self._render_element_html(el)
         assert "disabled" not in html

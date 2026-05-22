@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
-from uuid import uuid4
 
 from webcompy.components._component import Component, HeadPropsStore, _active_app_context
 from webcompy.components._generator import ComponentGenerator
@@ -10,7 +9,6 @@ from webcompy.di._keys import _HEAD_PROPS_KEY, _ROUTER_KEY
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import html
 from webcompy.elements._dom_objs import DOMNode
-from webcompy.exception import WebComPyException
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
@@ -53,7 +51,6 @@ class AppDocumentRoot(Component):
         selector: str | None = None,
         app: WebComPyApp | None = None,
     ) -> None:
-        self._instance_id = uuid4()
         self.__loading = True
         self.__hydrated = False
         self._router = router
@@ -84,7 +81,7 @@ class AppDocumentRoot(Component):
 
             head_props.title.on_after_updating(updte_title)
 
-        self._set_title("")
+        head_props._app_title = ""
         self._links = []
         self._scripts = []
         self._scripts_head = []
@@ -103,6 +100,7 @@ class AppDocumentRoot(Component):
         app_token = _active_app_context.set(self._app) if self._app else None
         try:
             self._property["on_before_rendering"]()
+            self._mount_node()
             if self._app and self._app._hydrate and not self.__hydrated:
                 self.__hydrated = True
                 for child in self._children:
@@ -149,8 +147,8 @@ class AppDocumentRoot(Component):
                 _active_di_scope.reset(token)
 
     def _init_node(self) -> DOMNode:
+        selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
         if ENVIRONMENT == "pyscript":
-            selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
             node = inject(DOM_PORT_KEY).query_selector(selector)
             if node is None:
                 from webcompy.exception import WebComPyException as _WCE
@@ -163,7 +161,11 @@ class AppDocumentRoot(Component):
             self._mark_as_prerendered(node)
             return node
         else:
-            raise WebComPyException("Not in Browser environment.")
+            mount_id = selector.lstrip("#")
+            node = inject(DOM_PORT_KEY).create_element("div")
+            node.setAttribute("id", mount_id)
+            node.__webcompy_node__ = True
+            return node
 
     def _mark_as_prerendered(self, node: DOMNode):
         node.__webcompy_prerendered_node__ = True
@@ -171,7 +173,9 @@ class AppDocumentRoot(Component):
             self._mark_as_prerendered(child)
 
     def _mount_node(self):
-        pass
+        if ENVIRONMENT == "pyscript":
+            return
+        super()._mount_node()
 
     def _get_belonging_component(self):
         return ""
@@ -236,6 +240,10 @@ class AppDocumentRoot(Component):
     @property
     def html_attrs(self) -> dict[str, str]:
         return {k: (v.value if isinstance(v, Computed) else v) for k, v in self._html_attrs.items()}
+
+    def _set_title(self, title: str):
+        if self._head_props is not None:
+            self._head_props._app_title = title
 
     # Head controllers
     def set_title(self, title: str):

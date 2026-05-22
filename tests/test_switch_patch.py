@@ -422,22 +422,30 @@ class TestSwitchElementRefreshPatching:
         return sw, cond
 
     def test_refresh_patches_matching_tags(self, fake_browser_full):
-        active = Signal(True)
-        cases = [
-            (active, lambda: Element("span", {"class": "old"}, {}, None, None)),
-            (active, lambda: Element("span", {"class": "new"}, {}, None, None)),
-        ]
-        sw = SwitchElement(cases, None)
-        root = FakeRootElement("div", {}, {}, None, None)
-        root._node_cache = FakeDOMNode("div")
-        root._mounted = True
-        parent = FakeRootElement("div", {}, {}, None, None)
-        parent._parent = root
-        parent._node_idx = 0
-        parent._node_cache = FakeDOMNode("div")
-        parent._mounted = True
-        sw._parent = parent
-        sw._node_idx = 0
+        sw, _cond = self._setup_switch()
+        sw._render()
+        assert len(sw._children) == 1
+        assert sw._children[0]._tag_name == "span"
+
+        old_node = sw._children[0]._node_cache
+
+        _, generator = sw._select_generator()
+        new_children = sw._generate_children(generator)
+        for i, child in enumerate(new_children):
+            child._node_idx = sw._node_idx + i
+        old_children = sw._children
+        sw._children = _patch_children(old_children, new_children, sw._node_idx)
+        for c_idx, child in enumerate(sw._children):
+            child._node_idx = sw._node_idx + c_idx
+            if not child._mounted:
+                child._render()
+
+        assert len(sw._children) == 1
+        assert sw._children[0]._tag_name == "span"
+        assert sw._children[0]._node_cache is old_node
+
+    def test_refresh_first_render_patches_same_case(self, fake_browser_full):
+        sw, _cond = self._setup_switch()
         sw._render()
         assert len(sw._children) == 1
         assert sw._children[0]._tag_name == "span"
@@ -458,33 +466,39 @@ class TestSwitchElementRefreshPatching:
         assert sw._children[0]._node_cache is old_node
 
     def test_refresh_replaces_non_matching_tags(self, fake_browser_full):
+        sw, cond = self._setup_switch()
+        sw._render()
+        assert len(sw._children) == 1
+        assert sw._children[0]._tag_name == "span"
+
+        cond.value = False
         cond1 = Signal(True)
         cond2 = Signal(False)
         cases = [
             (cond1, lambda: Element("span", {}, {}, None, None)),
             (cond2, lambda: Element("div", {}, {}, None, None)),
         ]
-        sw = SwitchElement(cases, None)
+        sw2 = SwitchElement(cases, None)
         root = FakeRootElement("div", {}, {}, None, None)
         root._node_cache = FakeDOMNode("div")
         root._mounted = True
-        parent = FakeRootElement("div", {}, {}, None, None)
-        parent._parent = root
-        parent._node_idx = 0
-        parent._node_cache = FakeDOMNode("div")
-        parent._mounted = True
-        sw._parent = parent
-        sw._node_idx = 0
-        sw._render()
+        parent2 = FakeRootElement("div", {}, {}, None, None)
+        parent2._parent = root
+        parent2._node_idx = 0
+        parent2._node_cache = FakeDOMNode("div")
+        parent2._mounted = True
+        sw2._parent = parent2
+        sw2._node_idx = 0
+        sw2._render()
 
         cond1.value = False
         cond2.value = True
 
-        assert len(sw._children) == 1
-        assert sw._children[0]._tag_name == "div"
-        assert sw._children[0]._mounted is True
+        assert len(sw2._children) == 1
+        assert sw2._children[0]._tag_name == "div"
+        assert sw2._children[0]._mounted is True
 
-    def test_refresh_first_render_has_no_old_children(self, fake_browser_full):
+    def test_refresh_first_render_has_no_old_children_simple(self, fake_browser_full):
         sw, _cond = self._setup_switch(True)
         sw._render()
 

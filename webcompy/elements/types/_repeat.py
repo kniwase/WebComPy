@@ -11,7 +11,6 @@ from webcompy.elements.types._dynamic import DynamicElement, _position_element_n
 from webcompy.elements.types._text import NewLine
 from webcompy.exception import WebComPyException
 from webcompy.signal import SignalBase, computed
-from webcompy.utils import ENVIRONMENT
 
 K = TypeVar("K", str, int)
 V = TypeVar("V")
@@ -92,10 +91,9 @@ class RepeatElement(DynamicElement):
         return self._single_arg_template(v)  # type: ignore[misc]
 
     def _on_set_parent(self):
-        if ENVIRONMENT != "pyscript":
-            self._children = self._generate_children()
-            if self._has_key:
-                self._populate_key_map()
+        self._children = self._generate_children()
+        if self._has_key:
+            self._populate_key_map()
 
     def _populate_key_map(self):
         self._key_to_child = {}
@@ -145,7 +143,7 @@ class RepeatElement(DynamicElement):
         parent_node = self._parent._get_node()
         if not parent_node:
             raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
-        if self._has_key and ENVIRONMENT == "pyscript" and self._children_keys:
+        if self._has_key and self._signal_activated and self._children_keys:
             self._reconcile_children()
         else:
             for _ in range(len(self._children)):

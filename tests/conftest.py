@@ -101,6 +101,15 @@ class FakeDOMNode:
         if event in self.__event_listeners:
             self.__event_listeners[event] = [h for h in self.__event_listeners[event] if h is not handler]
 
+    def dispatchEvent(self, event):
+        for handler in self.__event_listeners.get(event.type, []):
+            handler(event)
+        return not event.defaultPrevented
+
+    @property
+    def nodeType(self):
+        return 3 if self.__nodeName == "#text" else 1
+
     def __setattr__(self, name, value):
         if name.startswith("_FakeDOMNode__") or name in (
             "__webcompy_node__",
@@ -307,8 +316,24 @@ class FakeBrowserDOMPort:
     def create_text_node(self, text: str):
         return FakeDOMNode("#text", text_content=text)
 
+    def query_selector(self, selector: str):
+        return None
+
+    def get_element_by_id(self, element_id: str):
+        return None
+
+    def set_title(self, title: str):
+        pass
+
     def add_document_event_listener(self, event_type, handler):
         return lambda: None
+
+    def create_event(self, event_type, *, bubbles=False, cancelable=False):
+        event = MagicMock()
+        event.type = event_type
+        event.bubbles = bubbles
+        event.cancelable = cancelable
+        return event
 
 
 class FakeBrowserHostPort:
@@ -345,14 +370,7 @@ def fake_browser_full(monkeypatch, reset_di_scope):
     from webcompy.di._scope import DIScope, _active_di_scope
     from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
 
-    modules_with_env = [
-        "webcompy.elements.types._element",
-        "webcompy.elements.types._abstract",
-        "webcompy.elements.types._text",
-        "webcompy.elements.types._switch",
-        "webcompy.elements.types._dynamic",
-        "webcompy.elements.types._repeat",
-    ]
+    modules_with_env: list[str] = []
     for mod_name in modules_with_env:
         mod = importlib.import_module(mod_name)
         monkeypatch.setattr(mod, "ENVIRONMENT", "pyscript")
@@ -369,3 +387,20 @@ def fake_browser_full(monkeypatch, reset_di_scope):
     prev_token = _active_di_scope.set(scope)
     yield dom_port, host_port, ffi_port
     _active_di_scope.reset(prev_token)
+
+
+@pytest.fixture
+def server_di_scope():
+    from webcompy.di._scope import DIScope, _active_di_scope
+    from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
+    from webcompy.ports._server._dom import ServerDOMPort
+    from webcompy.ports._server._ffi import ServerFFIPort
+    from webcompy.ports._server._host import ServerHostPort
+
+    scope = DIScope()
+    scope.provide(DOM_PORT_KEY, ServerDOMPort())
+    scope.provide(HOST_PORT_KEY, ServerHostPort())
+    scope.provide(FFI_PORT_KEY, ServerFFIPort())
+    token = _active_di_scope.set(scope)
+    yield scope
+    _active_di_scope.reset(token)

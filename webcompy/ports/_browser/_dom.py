@@ -5,7 +5,7 @@ from typing import Any
 
 from webcompy.exception import WebComPyException
 from webcompy.ports._browser._raw import browser as _raw_browser
-from webcompy.ports._dom import DOMNode, DOMPort
+from webcompy.ports._dom import DOMEvent, DOMNode, DOMPort
 from webcompy.utils._environment import ENVIRONMENT
 
 
@@ -41,3 +41,12 @@ class BrowserDOMPort(DOMPort):
                 proxy.destroy()
 
         return _remove
+
+    def create_event(
+        self,
+        event_type: str,
+        *,
+        bubbles: bool = False,
+        cancelable: bool = False,
+    ) -> DOMEvent:
+        return self._browser.window.Event.new(event_type, {"bubbles": bubbles, "cancelable": cancelable})

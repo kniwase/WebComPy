@@ -4,12 +4,10 @@ from abc import abstractmethod
 
 from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
-from webcompy.exception import WebComPyException
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.signal._base import CallbackConsumerNode
 from webcompy.signal._container import SignalReceivable
 from webcompy.signal._graph import consumer_destroy
-from webcompy.utils import ENVIRONMENT
 
 
 class ElementAbstract(SignalReceivable):
@@ -52,14 +50,12 @@ class ElementAbstract(SignalReceivable):
             self._mounted = True
 
     def _detach_node(self):
-        if ENVIRONMENT == "pyscript" and self._node_cache:
+        if self._node_cache:
             parent_node = self._parent._get_node()
             remount = inject(DOM_PORT_KEY).create_text_node("")
             self._remount_to = remount
             parent_node.replaceChild(remount, self._node_cache)
             self._mounted = False
-        else:
-            raise WebComPyException("Not in Browser environment.")
 
     @abstractmethod
     def _init_node(self) -> DOMNode: ...
@@ -100,10 +96,8 @@ class ElementAbstract(SignalReceivable):
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         for callback_node in self._callback_nodes:
             consumer_destroy(callback_node)
-        if remove_node:
-            node = self._get_node()
-            if node:
-                node.remove()
+        if remove_node and self._node_cache:
+            self._node_cache.remove()
         self._clear_node_cache(False)
         self.__purge_signal_members__()
         del self
@@ -127,13 +121,13 @@ class ElementAbstract(SignalReceivable):
 
     def _clear_node_cache(self, recursive: bool = True):
         self._node_cache = None
+        self._mounted = None
 
     def _get_existing_node(self) -> DOMNode | None:
+        if not hasattr(self, "_node_idx"):
+            return None
         parent_node = self._parent._get_node()
         if parent_node.childNodes.length > self._node_idx:
             existing_node: DOMNode = parent_node.childNodes[self._node_idx]
             return existing_node
         return None
-
-    @abstractmethod
-    def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str: ...

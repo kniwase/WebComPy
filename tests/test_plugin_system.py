@@ -205,14 +205,15 @@ class TestGenerateHtmlWithPluginScripts:
         test_module.PluginForHtml = PluginForHtml
         try:
             test_app = _TestApp(plugins=["tests.test_plugin_system:PluginForHtml"])
-            html_str = generate_html(
-                test_app.app,
-                app_package_name="test_pkg",
-                dev_mode=False,
-                prerender=False,
-                app_version="0.0.0",
-                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
-            )
+            with test_app.app.di_scope:
+                html_str = generate_html(
+                    test_app.app,
+                    app_package_name="test_pkg",
+                    dev_mode=False,
+                    prerender=False,
+                    app_version="0.0.0",
+                    wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+                )
             assert "https://example.com/plugin.js" in html_str
             assert "location.search.includes('debug')" in html_str
         finally:

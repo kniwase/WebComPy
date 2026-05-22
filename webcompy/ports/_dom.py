@@ -1,8 +1,40 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any, Protocol
+
+
+class DOMEvent(Protocol):
+    def __getattr__(self, _: str) -> Any: ...
+
+    @property
+    def bubbles(self) -> bool: ...
+
+    @property
+    def cancelable(self) -> bool: ...
+
+    @property
+    def currentTarget(self) -> DOMNode | None: ...
+
+    @property
+    def defaultPrevented(self) -> bool: ...
+
+    @property
+    def eventPhase(self) -> int: ...
+
+    @property
+    def target(self) -> DOMNode | None: ...
+
+    @property
+    def timeStamp(self) -> int: ...
+
+    @property
+    def type(self) -> str: ...
+
+    def preventDefault(self) -> None: ...
+
+    def stopPropagation(self) -> None: ...
 
 
 class DOMNode(Protocol):
@@ -22,7 +54,7 @@ class DOMNode(Protocol):
     def replaceChild(self, new_node: DOMNode, old_node: DOMNode) -> None: ...
     def remove(self) -> None: ...
 
-    def setAttribute(self, name: str, value: str) -> None: ...
+    def setAttribute(self, name: str, value: str | None) -> None: ...
     def getAttribute(self, name: str) -> str | None: ...
     def removeAttribute(self, name: str) -> None: ...
     def hasAttribute(self, name: str) -> bool: ...
@@ -40,6 +72,8 @@ class DOMNode(Protocol):
         handler: Any,
         options_or_capture: Any = False,
     ) -> None: ...
+
+    def dispatchEvent(self, event: DOMEvent) -> bool: ...
 
     @property
     def textContent(self) -> str | None: ...
@@ -70,6 +104,12 @@ class DOMNodeList:
 
     def __getitem__(self, index: int) -> DOMNode:
         return self._nodes[index]
+
+    def __iter__(self) -> Iterator[DOMNode]:
+        return iter(self._nodes)
+
+    def __len__(self) -> int:
+        return len(self._nodes)
 
 
 class DOMPort(ABC):
@@ -140,5 +180,25 @@ class DOMPort(ABC):
 
         Returns:
             A cleanup function; call it to remove the listener.
+        """
+        ...
+
+    @abstractmethod
+    def create_event(
+        self,
+        event_type: str,
+        *,
+        bubbles: bool = False,
+        cancelable: bool = False,
+    ) -> DOMEvent:
+        """Create a DOM event object.
+
+        Args:
+            event_type: Event type string (e.g. ``"click"``, ``"submit"``).
+            bubbles: Whether the event bubbles up through the DOM.
+            cancelable: Whether the event can be canceled via ``preventDefault()``.
+
+        Returns:
+            A new DOM event object.
         """
         ...

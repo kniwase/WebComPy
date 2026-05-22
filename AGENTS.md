@@ -144,7 +144,8 @@ When working on the codebase (developing, reviewing, or refactoring), always rea
 | `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md` |
 | `webcompy/router/` | `openspec/specs/router/spec.md`, `openspec/specs/router-hooks/spec.md` |
 | `webcompy/_browser/` | `openspec/specs/browser-api/spec.md` |
-| `webcompy/ports/` | `openspec/specs/port-definitions/spec.md` |
+| `webcompy/ports/` | `openspec/specs/port-abstraction/spec.md` |
+| `webcompy/ports/_server/` | `openspec/specs/virtual-dom/spec.md` |
 | `webcompy/plugin/` | `openspec/specs/plugin-system/spec.md`, `openspec/specs/plugin-script/spec.md` |
 | `webcompy/di/` | `openspec/specs/di-scope/spec.md`, `openspec/specs/di-injection/spec.md`, `openspec/specs/dependency-resolver/spec.md` |
 | `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md` |
@@ -204,7 +205,8 @@ This ensures all agents — development and review alike — share current knowl
 | `project-config` | Two-file project configuration (`webcompy_config.py`, `webcompy_server_config.py`) |
 | `cli` | Dev server, SSG, project scaffolding, configuration |
 | `browser-api` | Browser environment detection and API abstraction |
-| `port-definitions` | Typed, injectable port ABCs (DOM, FFI, fetch, cookie, history) replacing monolithic `browser` |
+| `port-abstraction` | Typed, injectable port ABCs (DOM, FFI, fetch, cookie, history) replacing monolithic `browser` |
+| `virtual-dom` | Server-side virtual DOM tree (VirtualDOMNode, VirtualDOMEvent, render_html) for SSG and testing |
 | `async` | Async operations, HTTP client integration |
 | `di-scope` | Resolution boundary and lifecycle for DI values, hierarchy mirroring component tree |
 | `di-injection` | Provide/inject pattern for scoped dependency resolution, replacing global singletons |

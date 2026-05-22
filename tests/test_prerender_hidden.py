@@ -23,14 +23,15 @@ def _make_app():
 class TestPrerenderHiddenAttribute:
     def test_prerender_output_has_no_hidden(self):
         app = _make_app()
-        html = generate_html(
-            app,
-            app_package_name="test_pkg",
-            dev_mode=False,
-            prerender=True,
-            app_version="0.0.0",
-            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
-        )
+        with app.di_scope:
+            html = generate_html(
+                app,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=True,
+                app_version="0.0.0",
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
         match = re.search(r'<div id="webcompy-app"[^>]*>', html)
         assert match is not None
         tag = match.group()
@@ -38,14 +39,15 @@ class TestPrerenderHiddenAttribute:
 
     def test_non_prerender_output_has_hidden(self):
         app = _make_app()
-        html = generate_html(
-            app,
-            app_package_name="test_pkg",
-            dev_mode=False,
-            prerender=False,
-            app_version="0.0.0",
-            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
-        )
+        with app.di_scope:
+            html = generate_html(
+                app,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=False,
+                app_version="0.0.0",
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
         match = re.search(r'<div id="webcompy-app"[^>]*>', html)
         assert match is not None
         tag = match.group()

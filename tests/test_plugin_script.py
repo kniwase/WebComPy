@@ -19,6 +19,11 @@ def _make_app(**config_kwargs):
     )
 
 
+def _generate_html(app, **kwargs):
+    with app.di_scope:
+        return generate_html(app, **kwargs)
+
+
 class TestPluginScript:
     def test_defaults(self):
         ps = PluginScript(attrs={"type": "text/javascript"})
@@ -59,7 +64,7 @@ class TestGenerateHtmlWithPluginScripts:
                 )
             ]
         )
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -79,7 +84,7 @@ class TestGenerateHtmlWithPluginScripts:
                 )
             ]
         )
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -99,7 +104,7 @@ class TestGenerateHtmlWithPluginScripts:
                 )
             ]
         )
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -121,7 +126,7 @@ class TestGenerateHtmlWithPluginScripts:
                 )
             ]
         )
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -142,7 +147,7 @@ class TestGenerateHtmlWithPluginScripts:
                 )
             ]
         )
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -157,7 +162,7 @@ class TestGenerateHtmlWithPluginScripts:
     def test_existing_append_script_still_works(self):
         app = _make_app()
         app.append_script({"type": "text/javascript", "src": "https://example.com/analytics.js"})
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -177,7 +182,7 @@ class TestGenerateHtmlWithPluginScripts:
                 )
             ]
         )
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -198,7 +203,7 @@ class TestGenerateHtmlWithPluginScripts:
                 )
             ]
         )
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -222,7 +227,7 @@ class TestGenerateHtmlWithPluginScripts:
                 ),
             ]
         )
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -243,7 +248,7 @@ class TestGenerateHtmlWithPluginScripts:
                 )
             ]
         )
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -263,7 +268,7 @@ class TestGenerateHtmlWithPluginScripts:
                 )
             ]
         )
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -283,7 +288,7 @@ class TestGenerateHtmlWithPluginScripts:
                 )
             ]
         )
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,

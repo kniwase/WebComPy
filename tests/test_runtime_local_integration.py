@@ -23,6 +23,11 @@ def _make_app(**config_kwargs):
     )
 
 
+def _generate_html(app, **kwargs):
+    with app.di_scope:
+        return generate_html(app, **kwargs)
+
+
 def _extract_py_config(html_str: str) -> dict:
     match = re.search(r'config="([^"]+)"', html_str)
     assert match is not None
@@ -32,7 +37,7 @@ def _extract_py_config(html_str: str) -> dict:
 class TestRuntimeLocalHtmlIntegration:
     def test_runtime_local_with_wasm_local(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -51,7 +56,7 @@ class TestRuntimeLocalHtmlIntegration:
 
     def test_no_external_cdn_urls_in_runtime_local_html(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,

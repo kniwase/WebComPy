@@ -12,7 +12,6 @@ from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
 from webcompy.signal import ReactiveDict, computed_property
-from webcompy.utils._environment import ENVIRONMENT
 
 _active_app_context: ContextVar[Any] = ContextVar("_active_app_context", default=None)
 
@@ -57,11 +56,12 @@ class HeadPropsStore:
     def __init__(self) -> None:
         self.titles = ReactiveDict[UUID, str]({})
         self.head_metas = ReactiveDict[UUID, dict[str, dict[str, str]]]({})
+        self._app_title: str | None = None
 
     @computed_property
     def title(self):
         values = tuple(self.titles.values())
-        return values[-1] if values else None
+        return values[-1] if values else self._app_title
 
     @computed_property
     def head_meta(self):
@@ -169,7 +169,7 @@ class Component(ElementBase):
         super()._render()
         after_rendering = self._property["on_after_rendering"]
         app = _active_app_context.get()
-        if app is not None and app._defer_depth > 0 and ENVIRONMENT == "pyscript":
+        if app is not None and app._defer_depth > 0:
             app._deferred_callbacks.append(after_rendering)
         else:
             after_rendering()

@@ -5,10 +5,8 @@ from typing import Any
 from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
-from webcompy.exception import WebComPyException
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.signal._base import SignalBase
-from webcompy.utils import ENVIRONMENT
 
 
 class NewLine(ElementAbstract):
@@ -24,34 +22,22 @@ class NewLine(ElementAbstract):
         return existing.nodeName.lower() == "br"
 
     def _init_node(self) -> DOMNode:
-        if ENVIRONMENT == "pyscript":
-            existing_node = self._get_existing_node()
-            if existing_node:
-                if (
-                    getattr(existing_node, "__webcompy_prerendered_node__", False)
-                    and existing_node.nodeName.lower() == "br"
-                ):
-                    self._adopt_node(existing_node)
-                    return existing_node
-                else:
-                    existing_node.remove()
-            node = self._create_node()
-            self._init_new_node(node)
-            return node
-        else:
-            raise WebComPyException("Not in Browser environment.")
+        existing_node = self._get_existing_node()
+        if existing_node:
+            if (
+                getattr(existing_node, "__webcompy_prerendered_node__", False)
+                and existing_node.nodeName.lower() == "br"
+            ):
+                self._adopt_node(existing_node)
+                return existing_node
+            else:
+                existing_node.remove()
+        node = self._create_node()
+        self._init_new_node(node)
+        return node
 
     def _create_node(self) -> DOMNode:
-        if ENVIRONMENT == "pyscript":
-            return inject(DOM_PORT_KEY).create_element("br")
-        else:
-            raise WebComPyException("Not in Browser environment.")
-
-    def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str:
-        if newline:
-            return (" " * indent * count) + "<br>"
-        else:
-            return "<br>"
+        return inject(DOM_PORT_KEY).create_element("br")
 
 
 class TextElement(ElementAbstract):
@@ -81,39 +67,24 @@ class TextElement(ElementAbstract):
         return text
 
     def _init_node(self) -> DOMNode:
-        if ENVIRONMENT == "pyscript":
-            existing_node = self._get_existing_node()
-            if existing_node:
-                if (
-                    getattr(existing_node, "__webcompy_prerendered_node__", False)
-                    and existing_node.nodeName.lower() == "#text"
-                ):
-                    self._adopt_node(existing_node)
-                    return existing_node
-                else:
-                    existing_node.remove()
-            node = self._create_node()
-            self._init_new_node(node)
-            return node
-        else:
-            raise WebComPyException("Not in Browser environment.")
+        existing_node = self._get_existing_node()
+        if existing_node:
+            if (
+                getattr(existing_node, "__webcompy_prerendered_node__", False)
+                and existing_node.nodeName.lower() == "#text"
+            ):
+                self._adopt_node(existing_node)
+                return existing_node
+            else:
+                existing_node.remove()
+        node = self._create_node()
+        self._init_new_node(node)
+        return node
 
     def _create_node(self) -> DOMNode:
-        if ENVIRONMENT == "pyscript":
-            return inject(DOM_PORT_KEY).create_text_node(self._get_text())
-        else:
-            raise WebComPyException("Not in Browser environment.")
+        return inject(DOM_PORT_KEY).create_text_node(self._get_text())
 
-    def _update_text(self, new_text: str):
-        if ENVIRONMENT == "pyscript":
-            node = self._get_node()
-            if node:
-                node.textContent = new_text
-        else:
-            self._text = new_text
-
-    def _render_html(self, newline: bool = False, indent: int = 2, count: int = 0) -> str:
-        if newline:
-            return (" " * indent * count) + self._get_text()
-        else:
-            return self._get_text()
+    def _update_text(self, new_text: Any):
+        node = self._get_node()
+        if node:
+            node.textContent = new_text if isinstance(new_text, str) else str(new_text)

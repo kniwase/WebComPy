@@ -112,11 +112,10 @@ def _wait_for_pyscript_init(page: Page, console_errors_list: list[str]):
         _check_asset_errors(console_errors_list)
         try:
             page.wait_for_selector("#webcompy-loading", state="hidden", timeout=PYSCRIPT_POLL_INTERVAL)
-        except Exception:
-            pass
-        else:
             page.wait_for_selector("#webcompy-app:not([hidden])", timeout=PYSCRIPT_POLL_INTERVAL)
             return
+        except Exception:
+            pass
         if time.monotonic() - start_time > PYSCRIPT_INIT_TIMEOUT / 1000:
             remaining_errors = console_errors_list[-5:] if console_errors_list else []
             pytest.fail(
@@ -130,17 +129,18 @@ def _wait_for_demo_iframe(page: Page, app_name: str):
     frame_selector = f'iframe[src*="{app_name}"]'
     while True:
         try:
-            frame = page.frame_locator(frame_selector)
+            page.wait_for_selector(frame_selector, timeout=PYSCRIPT_POLL_INTERVAL)
+            iframe_element = page.query_selector(frame_selector)
+            if iframe_element is None:
+                raise Exception("iframe not found")
+            frame = iframe_element.content_frame()
+            if frame is None:
+                raise Exception("iframe has no content frame")
             frame.locator("#webcompy-loading").wait_for(state="hidden", timeout=PYSCRIPT_POLL_INTERVAL)
+            frame.locator("#webcompy-app:not([hidden])").wait_for(timeout=PYSCRIPT_POLL_INTERVAL)
+            return frame
         except Exception:
             pass
-        else:
-            try:
-                frame.locator("#webcompy-app:not([hidden])").wait_for(timeout=PYSCRIPT_POLL_INTERVAL)
-            except Exception:
-                pass
-            else:
-                return frame
         elapsed = time.monotonic() - start_time
         if elapsed > PYSCRIPT_INIT_TIMEOUT / 1000:
             pytest.fail(

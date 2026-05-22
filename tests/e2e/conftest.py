@@ -104,10 +104,20 @@ def _check_asset_errors(errors: list[str]):
         )
 
 
+def _check_python_errors(errors: list[str]):
+    python_errors = [e for e in errors if any(p in e for p in _PYTHON_TRACEBACK_PATTERNS)]
+    if python_errors:
+        pytest.fail(
+            f"Python errors detected during initialization ({len(python_errors)}):\n"
+            + "\n---\n".join(python_errors[:5])
+        )
+
+
 def _wait_for_pyscript_init(page: Page, console_errors_list: list[str]):
     start_time = time.monotonic()
     while True:
         _check_asset_errors(console_errors_list)
+        _check_python_errors(console_errors_list)
         try:
             page.wait_for_selector("#webcompy-loading", state="hidden", timeout=PYSCRIPT_POLL_INTERVAL)
         except Exception:
@@ -352,3 +362,17 @@ def assert_no_console_errors(console_errors: list[str]):
     assert not python_errors, f"Python errors detected in browser console ({len(python_errors)}):\n" + "\n---\n".join(
         python_errors
     )
+
+
+@pytest.fixture(autouse=True)
+def _check_console_errors_after_test(request):
+    console_errors = request.getfixturevalue("console_errors") if "page" in request.fixturenames else None
+    yield
+    if console_errors is not None:
+        _check_asset_errors(console_errors)
+        python_errors = [err for err in console_errors if any(pattern in err for pattern in _PYTHON_TRACEBACK_PATTERNS)]
+        if python_errors:
+            pytest.fail(
+                f"Python errors detected in browser console ({len(python_errors)}):\n"
+                + "\n---\n".join(python_errors[:5])
+            )

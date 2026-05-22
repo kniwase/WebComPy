@@ -21,6 +21,11 @@ def _make_app(**config_kwargs):
     )
 
 
+def _generate_html(app, **kwargs):
+    with app.di_scope:
+        return generate_html(app, **kwargs)
+
+
 def _extract_py_config(html_str: str) -> dict:
     match = re.search(r'config="([^"]+)"', html_str)
     assert match is not None
@@ -30,7 +35,7 @@ def _extract_py_config(html_str: str) -> dict:
 class TestGenerateHtmlDefaultMode:
     def test_packages_include_cdn_names(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -45,7 +50,7 @@ class TestGenerateHtmlDefaultMode:
 
     def test_no_lockfile_url_by_default(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -64,7 +69,7 @@ class TestGenerateHtmlWasmLocalServing:
             "numpy": "/_webcompy-assets/packages/numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
             "matplotlib": "/_webcompy-assets/packages/matplotlib-3.8.4-cp313-cp313-pyodide_2025_0_wasm32.whl",
         }
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -85,7 +90,7 @@ class TestGenerateHtmlWasmLocalServing:
         wasm_local_urls = {
             "numpy": "/_webcompy-assets/packages/numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
         }
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -101,7 +106,7 @@ class TestGenerateHtmlWasmLocalServing:
 
     def test_lockfile_url_cdn(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -115,7 +120,7 @@ class TestGenerateHtmlWasmLocalServing:
 
     def test_lockfile_url_local(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -132,7 +137,7 @@ class TestGenerateHtmlWasmLocalServing:
         wasm_local_urls = {
             "numpy": "/_webcompy-assets/packages/numpy-2.2.5-cp313-cp313-pyodide_2025_0_wasm32.whl",
         }
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -164,7 +169,7 @@ def _extract_css_href(html_str: str) -> str | None:
 class TestGenerateHtmlRuntimeLocalServing:
     def test_runtime_local_script_src(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -178,7 +183,7 @@ class TestGenerateHtmlRuntimeLocalServing:
 
     def test_runtime_local_css_href(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -192,7 +197,7 @@ class TestGenerateHtmlRuntimeLocalServing:
 
     def test_runtime_local_py_config_includes_interpreter_and_lockfile(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -207,7 +212,7 @@ class TestGenerateHtmlRuntimeLocalServing:
 
     def test_runtime_cdn_no_interpreter_no_lockfile(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -222,7 +227,7 @@ class TestGenerateHtmlRuntimeLocalServing:
 
     def test_runtime_cdn_script_and_css_use_cdn(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -238,7 +243,7 @@ class TestGenerateHtmlRuntimeLocalServing:
 
     def test_runtime_local_with_base_url(self):
         app = _make_app(base_url="/myapp/")
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -257,7 +262,7 @@ class TestGenerateHtmlRuntimeLocalServing:
 
     def test_runtime_local_overrides_lockfile_url(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -273,7 +278,7 @@ class TestGenerateHtmlRuntimeLocalServing:
 
     def test_runtime_cdn_wasm_local_lockfile_url(self):
         app = _make_app()
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -294,7 +299,7 @@ class TestHtmlAttrsInSsgOutput:
     def test_html_attrs_in_static_generation(self):
         app = _make_app()
         app.set_html_attr("data-theme", "dark")
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -308,7 +313,7 @@ class TestHtmlAttrsInSsgOutput:
         app = _make_app()
         app.set_html_attr("lang", "ja")
         app.set_html_attr("class", "dark")
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -324,7 +329,7 @@ class TestHtmlAttrsInSsgOutput:
         app = _make_app()
         theme = Signal("light")
         app.set_html_attr("class", computed(lambda: theme.value))
-        html_str = generate_html(
+        html_str = _generate_html(
             app,
             app_package_name="test_pkg",
             dev_mode=False,

@@ -196,6 +196,82 @@ class TestHydrateNode:
         assert text_el._mounted is True
 
 
+class TestHydrateNodeIdx:
+    def test_element_with_children_hydrate_sets_node_idx(self, fake_browser_full):
+        from webcompy.signal import Signal
+
+        text_value = Signal("hello")
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        child_prerendered = FakeDOMNode("#text", text_content="hello")
+        child_prerendered.__webcompy_prerendered_node__ = True
+        parent_node.appendChild(child_prerendered)
+
+        el = Element("div", {}, {}, None, [text_value])
+        el._parent = parent
+        el._node_idx = 0
+        for child in el._children:
+            if hasattr(child, "_node_idx"):
+                del child._node_idx
+        el._hydrate_node()
+
+        assert hasattr(el._children[0], "_node_idx")
+
+    def test_element_with_children_hydrate_re_indexes_correctly(self, fake_browser_full):
+        from webcompy.signal import Signal
+
+        text_a = Signal("aaa")
+        text_b = Signal("bbb")
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        for text in ("aaa", "bbb"):
+            node = FakeDOMNode("#text", text_content=text)
+            node.__webcompy_prerendered_node__ = True
+            parent_node.appendChild(node)
+
+        el = Element("div", {}, {}, None, [text_a, text_b])
+        el._parent = parent
+        el._node_idx = 0
+        for child in el._children:
+            if hasattr(child, "_node_idx"):
+                del child._node_idx
+        el._hydrate_node()
+
+        assert el._children[0]._node_idx == 0
+        assert el._children[1]._node_idx == 1
+
+    def test_dynamic_element_hydrate_sets_node_idx_before_render(self, fake_browser_full):
+        from webcompy.elements.types._switch import SwitchElement
+        from webcompy.signal import Signal
+
+        cond = Signal(True)
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        inner_node = FakeDOMNode("span")
+        inner_node.__webcompy_prerendered_node__ = True
+        parent_node.appendChild(inner_node)
+
+        sw = SwitchElement([(cond, lambda: Element("span", {}, {}, None, None))], None)
+        sw._parent = parent
+        sw._node_idx = 0
+        sw._on_set_parent()
+
+        for child in sw._children:
+            if hasattr(child, "_node_idx"):
+                del child._node_idx
+
+        sw._hydrate_node()
+
+        for child in sw._children:
+            assert hasattr(child, "_node_idx"), f"child {child} missing _node_idx after _hydrate_node"
+
+
 class TestAppConfigHydrate:
     def test_app_config_hydrate_default_true(self):
         config = WebComPyAppConfig()

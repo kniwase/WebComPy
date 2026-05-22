@@ -10,7 +10,7 @@ T_co = TypeVar("T_co", covariant=True)
 
 class ServerHostPort(HostPort):
     def schedule_macro_task(self, callback: Callable[..., Any]) -> None:
-        pass
+        callback()
 
     @overload
     def create_js_global_getter(self, name: str, *, wrapper: Callable[[Any | None], T_co]) -> Callable[[], T_co]: ...
