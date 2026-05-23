@@ -105,7 +105,7 @@ class TestRenderer:
                 pass
 
         instance = component(None)
-        instance._parent = _DummyParent(root_node)
+        instance._parent = _DummyParent(root_node)  # type: ignore[assignment]
         instance._node_idx = 0
         instance._render()
 

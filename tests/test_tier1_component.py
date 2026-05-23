@@ -2,8 +2,14 @@ import asyncio
 import sys
 
 import httpx
+import pytest
 
-sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent / "tests" / "e2e"))
+E2E_DIR = __import__("pathlib").Path(__file__).parent.parent / "tests" / "e2e"
+
+
+@pytest.fixture(autouse=True)
+def _add_e2e_path(monkeypatch):
+    monkeypatch.setattr(sys, "path", [str(E2E_DIR), *sys.path])
 
 
 def _client(app):

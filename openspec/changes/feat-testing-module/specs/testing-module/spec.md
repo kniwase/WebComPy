@@ -28,7 +28,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: webcompy.testing package shall provide fake port implementations
 
-`FakeBrowserDOMPort` SHALL implement `DOMPort` with `create_element()` returning a `FakeDOMNode`, `create_text_node()` returning a text `FakeDOMNode`, `create_event()` returning a `VirtualDOMEvent` with the given type and options, and `add_document_event_listener()` returning a no-op cleanup callback. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` as a no-op and `create_js_global_getter()` returning a callable that returns `None`. `FakeBrowserFFIPort` SHALL implement `FFIPort` with all 5 abstract methods: `create_proxy` (returns `MagicMock` wrapping the original), `destroy_proxy`, `is_none`, `to_js`, `assign`.
+`FakeBrowserDOMPort` SHALL implement `DOMPort` with `create_element()` returning a `FakeDOMNode`, `create_text_node()` returning a text `FakeDOMNode`, `create_event()` returning a `VirtualDOMEvent` with the given type and options, and `add_document_event_listener()` returning a no-op cleanup callback. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` calling `callback()` synchronously and `create_js_global_getter()` returning a callable that returns `None`. `FakeBrowserFFIPort` SHALL implement `FFIPort` with all 5 abstract methods: `create_proxy` (returns `MagicMock` wrapping the original), `destroy_proxy`, `is_none`, `to_js`, `assign`. `FakeFetchPort` SHALL implement `FetchPort` with `request()` returning a `FetchResponse` containing canned JSON data for test isolation.
 
 #### Scenario: FakeBrowserDOMPort creates FakeDOMNodes
 - **WHEN** `FakeBrowserDOMPort().create_element("span")` is called
@@ -48,9 +48,35 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **WHEN** `FakeBrowserFFIPort.assign(target, source)` is called
 - **THEN** `target.update(source)` SHALL be executed and `target` returned
 
+#### Scenario: FakeFetchPort returns canned JSON responses
+- **WHEN** `FakeFetchPort().request(method="GET", url="/api/users")` is called
+- **THEN** a `FetchResponse` with canned JSON data SHALL be returned
+- **AND** the response text SHALL match the pre-defined test fixture data
+
+### Requirement: webcompy.testing package shall provide format_html for canonical HTML comparison
+
+`format_html(html: str) -> str` SHALL normalize HTML strings via `beautifulsoup4` parsing and re-serialization, producing a canonical form for reliable string comparison in tests. It SHALL be used by `TestRendererResult.to_html(pretty=True)`.
+
+#### Scenario: Canonicalizing equivalent HTML with format_html
+- **WHEN** two equivalent HTML strings with different whitespace or attribute order are passed to `format_html()`
+- **THEN** the outputs SHALL be identical
+
+### Requirement: webcompy.testing package shall provide mock_app_run for importing modules that call app.run() at module level
+
+`mock_app_run()` SHALL return a context manager that temporarily replaces `WebComPyApp.run` with a no-op, enabling `import` of modules that call `app.run()` at module level (like demo applications). On exit, `WebComPyApp.run` SHALL be restored to its original value even if an exception occurs.
+
+#### Scenario: mock_app_run enables import of demo modules
+- **WHEN** `with mock_app_run():` is entered
+- **THEN** importing a module that calls `WebComPyApp().run()` at module level SHALL succeed without error
+- **AND** after exit, `WebComPyApp.run` SHALL be restored to its original method
+
+#### Scenario: mock_app_run survives exceptions
+- **WHEN** an exception is raised inside `with mock_app_run():`
+- **THEN** `WebComPyApp.run` SHALL still be restored to its original method
+
 ### Requirement: webcompy.testing package shall provide scope helpers
 
-`create_browser_scope()` SHALL return a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, and `FakeBrowserFFIPort` wired to their standard injection keys. `create_server_scope()` SHALL return a `DIScope` with `ServerDOMPort`, `ServerHostPort`, and `ServerFFIPort` wired to their standard injection keys. `create_test_app(scope, **config_overrides)` SHALL return a minimal `WebComPyApp` instance with the given DI scope set directly on `app._active_scope` — this is an intentional test-only escape hatch, not a public API contract, and SHALL NOT be used in production code.
+`create_browser_scope()` SHALL return a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort`, and `FakeFetchPort` wired to their standard injection keys. `create_server_scope()` SHALL return a `DIScope` with `ServerDOMPort`, `ServerHostPort`, `ServerFFIPort`, and `ServerFetchPort` wired to their standard injection keys. `TestRenderer.render()` SHALL include `FakeFetchPort` wired to `FETCH_PORT_KEY` in its DI scope. `create_test_app(*, root_component, **config_overrides)` SHALL return a minimal `WebComPyApp` instance. Callers manage DI scope via `app.di_scope` — this is an intentional test-only escape hatch, not a public API contract, and SHALL NOT be used in production code.
 
 #### Scenario: create_browser_scope returns a ready-to-use DIScope
 - **WHEN** `scope = create_browser_scope()` is called
@@ -68,7 +94,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 `create_test_asgi_app(app)` SHALL return a Starlette ASGI app with a catch-all route (`{path:path}` in history mode, `/` in hash mode) that, on each request, enters `app.di_scope`, calls `app.set_path(requested_path)`, generates SSR HTML via `generate_html()` (using `ServerDOMPort`), and returns `HTMLResponse(html_string)`. It SHALL skip all heavy build steps: dependency resolution, wheel building, WASM downloading, runtime asset downloading, and static file serving. It SHALL be usable with `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))` to test the full SSR pipeline — routing, DI scope, `AppDocumentRoot`, and HTML page generation — without a browser.
 
 #### Scenario: Testing full SSR pipeline with httpx
-- **WHEN** a user creates a test app via `create_test_app(scope, root_component=PageComponent())`
+- **WHEN** a user creates a test app via `create_test_app(root_component=PageComponent())`
 - **AND** creates an ASGI app via `create_test_asgi_app(app)`
 - **AND** sends `httpx.Client(transport=ASGITransport(app=asgi)).get("/page-path")`
 - **THEN** the response status SHALL be 200
@@ -86,7 +112,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: TestRenderer shall render components to VirtualDOMNode trees
 
-`TestRenderer.render(component)` SHALL set the runtime environment to non-PyScript during rendering to ensure the element system uses server-side code paths (i.e., `_create_node()` calls `ServerDOMPort.create_element()` rather than `BrowserDOMPort.create_element()`). It SHALL create a server-side DI scope, instantiate a minimal `WebComPyApp`, render the component via `component.render()`, and return a `TestRendererResult` wrapping the root `VirtualDOMNode`. `TestRendererResult` SHALL provide query methods (`query_selector`, `query_selector_all`, `find_by_text`, `find_by_attribute`), `to_html()`, `rerender()`, and assertion helpers (`assert_element_count`, `assert_has_class`).
+`TestRenderer.render(component)` SHALL create a browser-style DI scope with `FakeBrowserDOMPort` (so that `addEventListener` is called on VDOM nodes during rendering), instantiate the component, render it to a `VirtualDOMNode` tree, and return a `TestRendererResult` wrapping the root `VirtualDOMNode`. `TestRendererResult` SHALL provide query methods (`query_selector`, `query_selector_all`, `find_by_text`, `find_by_attribute`), `to_html()`, and assertion helpers (`assert_element_count`, `assert_has_class`). The `dispatchEvent(VirtualDOMEvent)` mechanism SHALL trigger Signal callbacks that directly mutate the VDOM tree (matching browser behavior), eliminating the need for a separate `rerender()` step. The `close()` method SHALL reset the active DI scope.
 
 #### Scenario: Rendering a simple component
 - **WHEN** `result = TestRenderer.render(component)` is called
@@ -108,19 +134,17 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **AND** `node = result.find_by_attribute("id", "main")` is called
 - **THEN** `node` SHALL be the `<div>` VirtualDOMNode
 
-#### Scenario: Dispatching an event and re-rendering
+#### Scenario: Dispatching an event triggers VDOM mutation directly
 - **WHEN** `button = result.query_selector("button")` returns a node
 - **AND** `button.dispatchEvent(VirtualDOMEvent("click"))` is called
-- **AND** `result.rerender()` is called
-- **THEN** `result.query_selector("span")` SHALL reflect the updated signal value
+- **THEN** `result.query_selector("span")` SHALL reflect the updated signal value immediately (no `rerender()` needed — Signal callbacks mutate VDOM directly)
 
-#### Scenario: Server scope rerender handles synchronous signal updates only
-- **WHEN** `result = TestRenderer.render(component)` is called (using default server scope)
-- **AND** `dispatchEvent` triggers a signal update synchronously
-- **AND** `result.rerender()` is called
-- **THEN** synchronous signal effects SHALL be reflected in the re-rendered tree
-- **BUT** `on_after_rendering` lifecycle hooks that depend on `schedule_macro_task()` SHALL NOT fire (because `ServerHostPort.schedule_macro_task()` is a no-op)
-- **AND** tests requiring macro-task-dependent lifecycle hooks SHALL use `create_browser_scope()` instead of the default server scope
+#### Scenario: Synchronous signal updates are reflected after dispatchEvent
+- **WHEN** `result = TestRenderer.render(component)` is called (using browser-style scope with `FakeBrowserDOMPort`)
+- **AND** `dispatchEvent(VirtualDOMEvent("click"))` triggers a signal update synchronously
+- **THEN** synchronous signal effects SHALL be reflected in the VDOM tree immediately
+- **BUT** `on_after_rendering` lifecycle hooks that depend on `schedule_macro_task()` SHALL NOT fire (because the test scope uses `FakeBrowserHostPort`, not `ServerHostPort`)
+- **AND** tests requiring macro-task-dependent lifecycle hooks SHALL wire `FakeBrowserHostPort.schedule_macro_task` for synchronous callback execution
 
 #### Scenario: Generating HTML from the virtual tree
 - **WHEN** `html = result.to_html()` is called

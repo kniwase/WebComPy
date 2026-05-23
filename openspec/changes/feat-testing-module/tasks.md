@@ -91,12 +91,12 @@ These tests are in `tests/e2e/` but never use Playwright. They inspect build out
 
 `DomNodeRef` delegates property access (`ref.value`, `ref.checked`) to its bound DOM node via `__getattr__`/`__setattr__`. In the browser, these are real `HTMLInputElement` properties. `VirtualDOMNode` currently has no `__getattr__`/`__setattr__` — accessing `.value` raises `AttributeError`. This blocks ToDo and Matplotlib demo tests which use `DomNodeRef` for input state.
 
-- [ ] 9.1.1 Add `_dom_properties: dict[str, Any]` to `VirtualDOMNode.__init__` — storage for DOM element-specific properties (`.value`, `.checked`, `.type`, etc.)
-- [ ] 9.1.2 Add `VirtualDOMNode.__getattr__` — routes unknown attribute reads to `_dom_properties`, raises `AttributeError` if not found (NOT returning `None` — different semantics from `VirtualDOMEvent.__getattr__`)
-- [ ] 9.1.3 Add `VirtualDOMNode.__setattr__` — routes unknown attribute writes to `_dom_properties`; known instance attributes (`_tag_name`, `_attributes`, etc.) use `object.__setattr__` as before
-- [ ] 9.1.4 Update `FakeDOMNode.__setattr__`/`__getattr__` to delegate to `super()` for dom properties — currently `FakeDOMNode.__setattr__` stores all unknown attrs in `__dict__`, bypassing `_dom_properties`
-- [ ] 9.1.5 Add unit tests for VirtualDOMNode dom property round-trip (set `.value` → get `.value`, set `.checked` → get `.checked`, access unset property → `AttributeError`)
-- [ ] 9.1.6 Add unit tests for FakeDOMNode dom property passthrough via DomNodeRef
+- [x] 9.1.1 Add `_dom_properties: dict[str, Any]` to `VirtualDOMNode.__init__` — storage for DOM element-specific properties (`.value`, `.checked`, `.type`, etc.)
+- [x] 9.1.2 Add `VirtualDOMNode.__getattr__` — routes unknown attribute reads to `_dom_properties`, raises `AttributeError` if not found (NOT returning `None` — different semantics from `VirtualDOMEvent.__getattr__`)
+- [x] 9.1.3 Add `VirtualDOMNode.__setattr__` — routes unknown attribute writes to `_dom_properties`; known instance attributes (`_tag_name`, `_attributes`, etc.) use `object.__setattr__` as before
+- [x] 9.1.4 Update `FakeDOMNode.__setattr__`/`__getattr__` to delegate to `super()` for dom properties — currently `FakeDOMNode.__setattr__` stores all unknown attrs in `__dict__`, bypassing `_dom_properties`
+- [x] 9.1.5 Add unit tests for VirtualDOMNode dom property round-trip (set `.value` → get `.value`, set `.checked` → get `.checked`, access unset property → `AttributeError`)
+- [x] 9.1.6 Add unit tests for FakeDOMNode dom property passthrough via DomNodeRef
 
 **Scope**: ~3 files changed (`_virtual_dom.py`, `testing/_dom.py`, test files), ~2h
 
