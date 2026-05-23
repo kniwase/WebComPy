@@ -56,7 +56,7 @@ class FakeDOMNode(VirtualDOMNode):
 
     @VirtualDOMNode.textContent.setter  # type: ignore[attr-defined]
     def textContent(self, value):
-        self._text_content = value
+        VirtualDOMNode.textContent.fset(self, value)  # type: ignore[misc]
         self.textContent_write_count += 1
 
     def setAttribute(self, name, value):
@@ -118,77 +118,80 @@ def create_server_scope() -> DIScope:
     scope.provide(DOM_PORT_KEY, ServerDOMPort())
     scope.provide(HOST_PORT_KEY, ServerHostPort())
     scope.provide(FFI_PORT_KEY, ServerFFIPort())
+    scope.provide(FETCH_PORT_KEY, ServerFetchPort())
     return scope
 ```
 
-**Rationale**: The `fake_browser_full` fixture in `tests/conftest.py` is 30 lines of setup — monkeypatching `ENVIRONMENT`, creating a `DIScope`, providing ports, setting the active scope. This boilerplate should be a one-liner for app developers writing tests.
+**Rationale**: The `fake_browser_full` fixture in `tests/conftest.py` is 30 lines of setup — monkeypatching `ENVIRONMENT`, creating a `DIScope`, providing ports, setting the active scope. This boilerplate should be a one-liner for app developers writing tests. `FETCH_PORT_KEY` is provided in `create_server_scope()` for SSR completeness — SSR components may need to resolve fetch operations.
 
 ### Decision 5: create_test_app() — minimal WebComPyApp factory
 
-**Chosen**: `create_test_app(scope: DIScope, root_component=None, **config_overrides)` instantiates a minimal `WebComPyApp` with the given scope. Returns the app instance with the scope active.
+**Chosen**: `create_test_app(*, root_component, **config_overrides)` instantiates a minimal `WebComPyApp` with the given component and config overrides. Returns the app instance.
 
 ```python
-def create_test_app(scope, root_component=None, **kwargs):
-    config = AppConfig(**kwargs)
-    app = WebComPyApp(config=config)
-    if root_component is not None:
-        app.set_root(root_component)
-    app._active_scope = scope  # so app.di_scope uses this scope
+def create_test_app(
+    *,
+    root_component: ComponentGenerator,
+    **config_overrides: Any,
+) -> WebComPyApp:
+    config_kwargs = {k: v for k, v in config_overrides.items() if hasattr(WebComPyAppConfig, k)}
+    config = WebComPyAppConfig(**config_kwargs)
+    app = WebComPyApp(root_component=root_component, config=config)
     return app
 ```
 
-**Rationale**: Many component tests need access to signals, DI values, or the app's `provide()` method. `TestRenderer.render()` handles the simple case; `create_test_app()` handles the advanced case where the test needs to manipulate signals or DI before rendering.
+**Rationale**: Many component tests need access to signals, DI values, or the app's `provide()` method. `TestRenderer.render()` handles the simple case; `create_test_app()` handles the advanced case where the test needs to manipulate signals or DI before rendering. The scope parameter was removed from the original design — callers manage DI scope via `app.di_scope` context manager or `_active_di_scope` ContextVar directly.
 
-**Implementation note on ContextVar**: Setting `_active_scope` directly bypasses the normal `DIScope.__enter__`/`__exit__` context manager that sets `_active_di_scope` (a `ContextVar`). The implementation MUST also set `_active_di_scope.set(scope)` and provide a cleanup callback (returned from `create_test_app()`) to reset it, OR use `app.di_scope` as a context manager internally. Otherwise, `inject()` calls from within component setup (which checks `_active_di_scope` before falling back to `_app_di_scope`) may fail to resolve dependencies.
+**Deviation from original design**: The original design included a `scope` parameter. This was removed because `create_test_app()` already creates the app with a built-in DI scope; callers can enter it via `app.di_scope` or use `_active_di_scope.set()` for more complex scenarios.
 
 ### Decision 6: TestRenderer and TestRendererResult
 
-**Chosen**: `TestRenderer` renders a component to a `VirtualDOMNode` tree. `TestRendererResult` wraps the root node and provides query/assertion/event/re-render methods.
+**Chosen**: `TestRenderer` renders a component to a `VirtualDOMNode` tree. `TestRendererResult` wraps the root node and provides query/assertion methods. Events dispatched via `dispatchEvent(VirtualDOMEvent)` trigger Signal callbacks that directly mutate the VDOM — no explicit `rerender()` needed.
 
 ```python
 from webcompy.testing import TestRenderer
 
-# Basic rendering
 result = TestRenderer.render(MyComponent(props={"name": "World"}))
 
-# Query virtual DOM tree
 h1 = result.query_selector("h1")
 items = result.query_selector_all("li")
 node = result.find_by_text("Hello")
 node = result.find_by_attribute("id", "main")
 
-# Event dispatch + re-render
 button = result.query_selector("button")
 button.dispatchEvent(VirtualDOMEvent("click"))
-result.rerender()
 assert result.find_by_text("Clicked: 1")
 
-# HTML output
 html = result.to_html()
 
-# Assertion helpers
 result.assert_element_count("li", 3)
 result.assert_has_class("container")
+
+result.close()
 ```
 
 `TestRenderer.render()`:
-1. Creates a `create_server_scope()`
-2. Creates a `WebComPyApp` with default config
-3. Monkeypatches `ENVIRONMENT` to non-pyscript on element modules
-4. Renders the component via `component.render()`
-5. Returns `TestRendererResult(app, root_node, scope)`
+1. Creates a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort`, `HeadPropsStore`
+2. Sets `_active_di_scope` ContextVar to the scope (returns a token for later reset)
+3. Creates a `VirtualDOMNode("div")` with `__webcompy_node__ = False`, `__webcompy_prerendered_node__ = True`
+4. Instantiates the component generator, attaches it to a `_DummyParent` (a minimal ElementWithChildren protocol object), sets `_node_idx = 0`, and calls `_render()`
+5. Returns `TestRendererResult(component, instance, root_node, scope_token)`
 
 `TestRendererResult`:
 - `query_selector(tag: str) -> VirtualDOMNode | None` — DFS for first element matching `tag`
 - `query_selector_all(tag: str) -> list[VirtualDOMNode]` — DFS for all elements matching `tag`
 - `find_by_text(text: str) -> VirtualDOMNode | None` — DFS for node with matching `textContent`
 - `find_by_attribute(name: str, value: str) -> VirtualDOMNode | None` — DFS for node with matching attribute
-- `to_html() -> str` — delegates to `ServerDOMPort.render_html(root)`
-- `rerender()` — re-executes `component.render()` on the virtual tree
+- `to_html(pretty: bool = False) -> str` — delegates to `ServerDOMPort.render_html(root)`, optionally formats via `format_html()`
 - `assert_element_count(tag: str, count: int)` — `assert len(query_selector_all(tag)) == count`
 - `assert_has_class(cls: str)` — `assert "class" in root.getAttributeNames()` and the class is present
+- `close()` — resets `_active_di_scope` ContextVar using the stored `scope_token`
 
-**Rationale**: This is the jsdom-like API for WebComPy. After `feat-virtual-dom`, any component can be rendered to a `VirtualDOMNode` tree. `TestRenderer` wraps the boilerplate and provides ergonomic query/assertion methods. The `rerender()` method is essential for testing reactive behavior after `dispatchEvent(VirtualDOMEvent)` — it re-drives component `render()` so the queryable tree reflects post-signal-update state.
+**Deviation from original design**:
+- **FakeBrowserDOMPort instead of ServerDOMPort**: `TestRenderer` uses `FakeBrowserDOMPort` so that `addEventListener()` is called on the VDOM during component rendering. When `dispatchEvent(VirtualDOMEvent)` is called, Signal callbacks fire and directly mutate the VDOM (`textContent`, `setAttribute`, child replacement) — this matches browser behavior exactly.
+- **No `rerender()` method**: The original design proposed a `rerender()` that re-executes `component.render()`. This was removed because `dispatchEvent` triggers Signal change callbacks which directly mutate the VDOM. Re-creating the component instance via re-render would reset signals, causing tests like `keyed_repeat_remove_first` and `keyed_repeat_insert_at_start` to fail.
+- **DI scope lifecycle**: The scope token from `_active_di_scope.set()` is stored in `TestRendererResult` so `inject()` calls from Signal callbacks can resolve dependencies. `close()` resets the ContextVar.
+- **_DummyParent**: A minimal protocol object satisfying `ElementWithChildren` requirements (`_get_node`, `_get_belonging_component`, `_get_belonging_components`, `_re_index_children`) is used to attach the component instance to the VDOM root without instantiating a full `WebComPyApp`.
 
 ### Decision 7: httpx ASGI integration — testing the full SSR pipeline
 
@@ -303,7 +306,7 @@ Existing `webcompy.ports._server._dom` tests for `_serialize_node()` remain unch
 | `test_keyed_repeat.py` | 3 (`add_items`, `remove_first`, `insert_at_start`) | `TestRenderer` + `dispatchEvent` + `rerender` |
 | `test_dict_repeat.py` | 3 (`add_items`, `remove_first`, `clear`) | `TestRenderer` + `dispatchEvent` + `rerender` |
 | `test_nested_dynamic.py` | 5 (`switch_to_grid`, `switch_back`, `add_item`, `add_then_switch`, `remove_first`) | `TestRenderer` + `dispatchEvent` + `rerender` |
-| `test_scoped_style.py` | 2 | `TestRenderer` + style node `textContent` inspection |
+| `test_scoped_style.py` | 2 | `component.scoped_style` string inspection (cid presence, @media structure) |
 | `test_di.py` | 1 (`provide_inject_from_parent`) | `TestRenderer` with DI scope |
 | `test_lifecycle.py` | 1 (`hooks_fire`) | `TestRenderer` |
 
