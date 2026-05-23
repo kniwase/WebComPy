@@ -157,7 +157,7 @@ class TestUnifiedRenderPath:
         fake_info = _extract_node_info(fake_node)
         virtual_info = _extract_node_info(virtual_node, is_virtual=True)
         assert fake_info["nodeName"] == virtual_info["nodeName"]
-        assert "click" in fake_node._FakeDOMNode__event_listeners
+        assert any(et == "click" for et, _ in fake_node._event_listeners)
         assert any(et == "click" for et, _ in virtual_node._event_listeners)
 
     def test_server_render_produces_valid_html(self):

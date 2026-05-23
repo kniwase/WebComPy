@@ -47,16 +47,16 @@ class TestElementDetachFromNode:
         el = _setup_element("div", {}, {"click": handler})
         node = FakeDOMNode("div")
         el._adopt_node(node)
-        assert len(node._FakeDOMNode__event_listeners.get("click", [])) > 0
+        assert any(et == "click" for et, _ in node._event_listeners)
         el._detach_from_node()
-        assert len(node._FakeDOMNode__event_listeners.get("click", [])) == 0
+        assert not any(et == "click" for et, _ in node._event_listeners)
 
     def test_detach_destroys_proxy(self, fake_browser_full):
         handler = lambda ev: None
         el = _setup_element("div", {}, {"click": handler})
         node = FakeDOMNode("div")
         el._adopt_node(node)
-        proxy = next(iter(node._FakeDOMNode__event_listeners["click"]))
+        proxy = next(h for et, h in node._event_listeners if et == "click")
         el._detach_from_node()
         proxy.destroy.assert_called()
 
@@ -318,9 +318,9 @@ class TestPatchChildren:
         parent_node = FakeDOMNode("article")
         sibling = FakeDOMNode("h2", text_content="Page Title")
         parent_node.childNodes._nodes.append(sibling)
-        sibling._FakeDOMNode__parentNode = parent_node
+        sibling._parent = parent_node
         parent_node.childNodes._nodes.append(old_node)
-        old_node._FakeDOMNode__parentNode = parent_node
+        old_node._parent = parent_node
 
         new_child = self._add_parent_to(Element("div", {}, {}, None, None))
         node_idx_offset = 1
@@ -341,11 +341,11 @@ class TestPatchChildren:
         parent_node = FakeDOMNode("article")
         sibling = FakeDOMNode("h2", text_content="Page Title")
         parent_node.childNodes._nodes.append(sibling)
-        sibling._FakeDOMNode__parentNode = parent_node
+        sibling._parent = parent_node
         parent_node.childNodes._nodes.append(old1_node)
-        old1_node._FakeDOMNode__parentNode = parent_node
+        old1_node._parent = parent_node
         parent_node.childNodes._nodes.append(old2_node)
-        old2_node._FakeDOMNode__parentNode = parent_node
+        old2_node._parent = parent_node
 
         new1 = self._add_parent_to(Element("div", {}, {}, None, None))
         new2 = self._add_parent_to(Element("span", {}, {}, None, None))

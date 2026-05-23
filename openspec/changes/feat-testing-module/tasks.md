@@ -1,39 +1,39 @@
 ## 1. webcompy.testing package foundation
 
-- [ ] 1.1 Create `webcompy/testing/` package — `__init__.py` re-exporting key symbols (`FakeDOMNode`, `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort`, `TestRenderer`, `TestRendererResult`, `VirtualDOMEvent`, `create_browser_scope`, `create_server_scope`, `create_test_app`, `create_test_asgi_app`)
-- [ ] 1.2 Create `webcompy/testing/_dom.py` — move `FakeDOMNode` from `tests/conftest.py` with no behavior changes, add `dispatchEvent(VirtualDOMEvent)`
-- [ ] 1.3 Create `webcompy/testing/_ports.py` — move `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort` from `tests/conftest.py`
-- [ ] 1.4 Fix `FakeBrowserFFIPort` Protocol compliance — add missing `to_js` and `assign` methods that match `FFIPort` ABC
-- [ ] 1.5 Create `create_browser_scope()` — returns a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort` wired up, mirroring the `fake_browser_full` fixture
-- [ ] 1.6 Create `create_server_scope()` — returns a `DIScope` with `ServerDOMPort`, `ServerHostPort`, `ServerFFIPort` wired up; enables `component.render()` to build `VirtualDOMNode` trees in tests
-- [ ] 1.7 Create `create_test_app()` — instantiates a minimal `WebComPyApp` with the given scope, enabling component rendering tests without a full server
-- [ ] 1.8 Create `create_test_asgi_app()` — builds a lightweight Starlette ASGI app with a catch-all route that enters `app.di_scope`, sets the router path, and returns `HTMLResponse` of SSR output. Skips dependency resolution, wheel building, and runtime asset downloading. Usable with `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))` for testing the full SSR pipeline.
-- [ ] 1.9 Add `"webcompy.testing"` to `_BROWSER_ONLY_EXCLUDE` in `webcompy/cli/_wheel_builder.py` — prevents the testing module from being bundled into browser wheels
-- [ ] 1.10 Update `tests/conftest.py` — re-export `FakeDOMNode`, `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort` from `webcompy.testing` for backwards compatibility
-- [ ] 1.11 Update all test files that import from `conftest` (`FakeDOMNode`, `FakeBrowserDOMPort` — `MockHistoryPort` is out of scope) to import from `webcompy.testing` instead
+- [x] 1.1 Create `webcompy/testing/` package — `__init__.py` re-exporting key symbols (`FakeDOMNode`, `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort`, `TestRenderer`, `TestRendererResult`, `VirtualDOMEvent`, `create_browser_scope`, `create_server_scope`, `create_test_app`, `create_test_asgi_app`)
+- [x] 1.2 Create `webcompy/testing/_dom.py` — move `FakeDOMNode` from `tests/conftest.py` with no behavior changes, add `dispatchEvent(VirtualDOMEvent)`
+- [x] 1.3 Create `webcompy/testing/_ports.py` — move `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort` from `tests/conftest.py`
+- [x] 1.4 Fix `FakeBrowserFFIPort` Protocol compliance — add missing `to_js` and `assign` methods that match `FFIPort` ABC
+- [x] 1.5 Create `create_browser_scope()` — returns a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort` wired up, mirroring the `fake_browser_full` fixture
+- [x] 1.6 Create `create_server_scope()` — returns a `DIScope` with `ServerDOMPort`, `ServerHostPort`, `ServerFFIPort` wired up; enables `component.render()` to build `VirtualDOMNode` trees in tests
+- [x] 1.7 Create `create_test_app()` — instantiates a minimal `WebComPyApp` with the given scope, enabling component rendering tests without a full server
+- [x] 1.8 Create `create_test_asgi_app()` — builds a lightweight Starlette ASGI app with a catch-all route that enters `app.di_scope`, sets the router path, and returns `HTMLResponse` of SSR output. Skips dependency resolution, wheel building, and runtime asset downloading. Usable with `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))` for testing the full SSR pipeline.
+- [x] 1.9 Add `"webcompy.testing"` to `_BROWSER_ONLY_EXCLUDE` in `webcompy/cli/_wheel_builder.py` — prevents the testing module from being bundled into browser wheels
+- [x] 1.10 Update `tests/conftest.py` — re-export `FakeDOMNode`, `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort` from `webcompy.testing` for backwards compatibility
+- [x] 1.11 Update all test files that import from `conftest` (`FakeDOMNode`, `FakeBrowserDOMPort` — `MockHistoryPort` is out of scope) to import from `webcompy.testing` instead
 
 ## 2. TestRenderer and TestRendererResult
 
-- [ ] 2.1 Create `webcompy/testing/_renderer.py` with `TestRenderer` class — high-level API for rendering components to `VirtualDOMNode` trees and querying the result
-- [ ] 2.2 Implement `TestRenderer.render(component)` — monkeypatches `ENVIRONMENT` on element modules, creates server-side DI scope, instantiates minimal `WebComPyApp`, calls `component.render()`, returns `TestRendererResult(app, root_node, scope)`
-- [ ] 2.3 Implement `TestRendererResult` query methods — `query_selector(tag)` (DFS, first match), `query_selector_all(tag)` (DFS, all matches), `find_by_text(text)`, `find_by_attribute(name, value)` — traverse the virtual tree and return matching `VirtualDOMNode`(s)
-- [ ] 2.4 Implement `TestRendererResult.to_html()` — delegates to `ServerDOMPort.render_html(root)`
-- [ ] 2.5 Implement `TestRendererResult.rerender()` — re-executes component `render()` on the existing virtual root so that signal changes from `dispatchEvent(VirtualDOMEvent)` are reflected in the queryable tree
-- [ ] 2.6 Implement `TestRendererResult` tree assertion helpers — `assert_element_count(tag, count)`, `assert_has_class(cls)` — raise `AssertionError` on mismatch
-- [ ] 2.7 Implement `format_html(html: str) -> str` — normalize HTML strings via `beautifulsoup4` parsing and re-serialization, producing a canonical form for reliable string comparison in tests. Used by `TestRendererResult.to_html(pretty=True)`.
-- [ ] 2.8 Add `format_html` tests — verify (a) raw `to_html()` output is correct against expected serialization, (b) `format_html()` canonicalizes equivalent HTML to the same string
+- [x] 2.1 Create `webcompy/testing/_renderer.py` with `TestRenderer` class — high-level API for rendering components to `VirtualDOMNode` trees and querying the result
+- [x] 2.2 Implement `TestRenderer.render(component)` — monkeypatches `ENVIRONMENT` on element modules, creates server-side DI scope, instantiates minimal `WebComPyApp`, calls `component.render()`, returns `TestRendererResult(app, root_node, scope)`
+- [x] 2.3 Implement `TestRendererResult` query methods — `query_selector(tag)` (DFS, first match), `query_selector_all(tag)` (DFS, all matches), `find_by_text(text)`, `find_by_attribute(name, value)` — traverse the virtual tree and return matching `VirtualDOMNode`(s)
+- [x] 2.4 Implement `TestRendererResult.to_html()` — delegates to `ServerDOMPort.render_html(root)`
+- [x] 2.5 Implement `TestRendererResult.rerender()` — re-executes component `render()` on the existing virtual root so that signal changes from `dispatchEvent(VirtualDOMEvent)` are reflected in the queryable tree
+- [x] 2.6 Implement `TestRendererResult` tree assertion helpers — `assert_element_count(tag, count)`, `assert_has_class(cls)` — raise `AssertionError` on mismatch
+- [x] 2.7 Implement `format_html(html: str) -> str` — normalize HTML strings via `beautifulsoup4` parsing and re-serialization, producing a canonical form for reliable string comparison in tests. Used by `TestRendererResult.to_html(pretty=True)`.
+- [x] 2.8 Add `format_html` tests — verify (a) raw `to_html()` output is correct against expected serialization, (b) `format_html()` canonicalizes equivalent HTML to the same string
 
 ## 3. E2E test migration — Tier 1: httpx ASGI static renders (~7 tests)
 
 These tests verify the initial SSR render of pages (no user interaction). They are replaced by httpx GET requests through `create_test_asgi_app()`, exercising the full routing + DI scope + HTML generation pipeline.
 
-- [ ] 3.1 Migrate `tests/e2e/test_component.py` (2 tests) — replace Playwright `page_on()` + `to_be_visible`/`to_have_text` assertions with httpx GET + HTML string assertions
-- [ ] 3.2 Migrate `test_switch_default_state` from `tests/e2e/test_switch.py` (1 test) — httpx GET to `/switch`, assert "on" branch visible and "off" branch absent in HTML
-- [ ] 3.3 Migrate `test_repeat_initial_empty` from `tests/e2e/test_repeat.py` (1 test) — httpx GET to `/repeat`, assert zero `<li>` elements in HTML
-- [ ] 3.4 Migrate `test_keyed_repeat_initial_empty` from `tests/e2e/test_keyed_repeat.py` (1 test) — httpx GET to `/keyed-repeat`, assert zero `<li>` elements in HTML
-- [ ] 3.5 Migrate `test_dict_repeat_initial_empty` from `tests/e2e/test_dict_repeat.py` (1 test) — httpx GET to `/dict-repeat`, assert zero `<li>` elements in HTML
-- [ ] 3.6 Migrate `test_nested_repeat_in_switch_initial_list_view` from `tests/e2e/test_nested_dynamic.py` (1 test) — httpx GET to `/nested-dynamic`, assert 3 list items and 0 grid items in HTML
-- [ ] 3.7 Migrate `test_inject_from_app_level` from `tests/e2e/test_di.py` (1 test) — httpx GET to `/di-inject`, assert injected value text appears in HTML
+- [x] 3.1 Migrate `tests/e2e/test_component.py` (2 tests) — replace Playwright `page_on()` + `to_be_visible`/`to_have_text` assertions with httpx GET + HTML string assertions
+- [x] 3.2 Migrate `test_switch_default_state` from `tests/e2e/test_switch.py` (1 test) — httpx GET to `/switch`, assert "on" branch visible and "off" branch absent in HTML
+- [x] 3.3 Migrate `test_repeat_initial_empty` from `tests/e2e/test_repeat.py` (1 test) — httpx GET to `/repeat`, assert zero `<li>` elements in HTML
+- [x] 3.4 Migrate `test_keyed_repeat_initial_empty` from `tests/e2e/test_keyed_repeat.py` (1 test) — httpx GET to `/keyed-repeat`, assert zero `<li>` elements in HTML
+- [x] 3.5 Migrate `test_dict_repeat_initial_empty` from `tests/e2e/test_dict_repeat.py` (1 test) — httpx GET to `/dict-repeat`, assert zero `<li>` elements in HTML
+- [x] 3.6 Migrate `test_nested_repeat_in_switch_initial_list_view` from `tests/e2e/test_nested_dynamic.py` (1 test) — httpx GET to `/nested-dynamic`, assert 3 list items and 0 grid items in HTML
+- [x] 3.7 Migrate `test_inject_from_app_level` from `tests/e2e/test_di.py` (1 test) — httpx GET to `/di-inject`, assert injected value text appears in HTML
 
 ## 4. E2E test migration — Tier 2: TestRenderer interactive (~19 tests)
 
