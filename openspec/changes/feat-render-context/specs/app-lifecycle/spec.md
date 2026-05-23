@@ -2,7 +2,7 @@
 
 ### Requirement: The application entry point shall connect all subsystems
 
-`WebComPyApp` SHALL serve as the immutable definition holder that wires together the root component, the router definition, and the configuration. It SHALL NOT hold mutable rendering state — all mutable state SHALL belong to `RenderContext`, which is created per-request on the server and once in the browser. `WebComPyApp` SHALL provide a `create_render_context(path="")` method that creates a fresh `RenderContext` with all request-scoped state (DI scope, Router, AppDocumentRoot, HeadPropsStore, Server ports, Signal graph). In the browser, `app.run()` SHALL create a single `RenderContext` internally and delegate rendering to it. On the server, each SSR request SHALL create a new `RenderContext` via `create_render_context()`, render HTML, and then dispose it. Module-level fallback references (`_app_di_scope`, `_app_instance`) MAY still exist for browser environments where `ContextVar` propagation is unreliable. The `_active_app_context` ContextVar (currently set to the `WebComPyApp` instance during rendering) SHALL be set to the `RenderContext` instance instead, and its fallback `_app_instance` SHALL reference the `RenderContext` not the app. `start_defer_after_rendering()` and `end_defer_after_rendering()` SHALL delegate to `RenderContext._defer_depth` and `RenderContext._deferred_callbacks` via `_active_app_context` or the fallback. `app.di_scope` SHALL raise `AttributeError` on the server (directing users to `RenderContext.di_scope`) and SHALL be a forwarded property in the browser (delegating to the active RenderContext's DI scope).
+`WebComPyApp` SHALL serve as the immutable definition holder that wires together the root component, the router definition, and the configuration. It SHALL NOT hold mutable rendering state — all mutable state SHALL belong to `RenderContext`, which is created per-request on the server and once in the browser. `WebComPyApp` SHALL provide a `create_render_context(path="")` method that creates a fresh `RenderContext` with all request-scoped state (DI scope, Router, AppDocumentRoot, HeadPropsStore, Server ports, Signal graph). In the browser, `app.run()` SHALL create a single `RenderContext` internally and delegate rendering to it. On the server, each SSR request SHALL create a new `RenderContext` via `create_render_context()`, render HTML, and then dispose it. Module-level fallback references (`_app_di_scope`, `_app_instance`) MAY still exist for browser environments where `ContextVar` propagation is unreliable. The `_active_app_context` ContextVar (currently set to the `WebComPyApp` instance during rendering) SHALL be set to the `RenderContext` instance instead, and its fallback `_app_instance` SHALL reference the `RenderContext` not the app. `start_defer_after_rendering()` and `end_defer_after_rendering()` SHALL delegate to `RenderContext._defer_depth` and `RenderContext._deferred_callbacks` via `_active_app_context` or the fallback. `app.di_scope` SHALL delegate to `RenderContext.di_scope` when a `RenderContext` exists, and SHALL raise `AttributeError` otherwise (directing users to `RenderContext.di_scope`).
 
 #### Scenario: Creating a minimal application with config
 - **WHEN** a developer writes `app = WebComPyApp(root_component=MyApp, config=AppConfig(base_url="/app/"))`
@@ -30,7 +30,7 @@
 
 ### Requirement: WebComPyApp shall forward AppDocumentRoot properties
 
-`WebComPyApp` SHALL provide transparent access to frequently used properties from the current `RenderContext`'s `AppDocumentRoot` in the browser. The forwarded properties and methods SHALL include: `routes`, `router_mode`, `set_path`, `head`, `style`, `scripts`, `set_title`, `set_meta`, `append_link`, `append_script`, `set_head`, `update_head`, `set_html_attr`, `remove_html_attr`, `html_attrs`. In the browser, these SHALL delegate to the single long-lived `RenderContext`. On the server, `WebComPyApp` SHALL NOT have these forwarded properties — server code MUST use `RenderContext` directly. `app.di_scope` SHALL raise `AttributeError` on the server indicating that `RenderContext.di_scope` should be used instead.
+`WebComPyApp` SHALL provide transparent access to frequently used properties from the current `RenderContext`'s `AppDocumentRoot` when a `RenderContext` exists. The forwarded properties and methods SHALL include: `routes`, `router_mode`, `set_path`, `head`, `style`, `scripts`, `set_title`, `set_meta`, `append_link`, `append_script`, `set_head`, `update_head`, `set_html_attr`, `remove_html_attr`, `html_attrs`. When no `RenderContext` exists, these SHALL raise `AttributeError`. In the browser, `app.run()` creates a `RenderContext` internally, so these forwarded properties are available after `app.run()` is called. `app.di_scope` SHALL delegate to `RenderContext.di_scope` when a `RenderContext` exists, and raise `AttributeError` otherwise.
 
 #### Scenario: Accessing app routes in the browser
 - **WHEN** a developer accesses `app.routes` in the browser
@@ -42,6 +42,8 @@
 - **THEN** the head management properties SHALL reflect the current request's state
 - **AND** modifying head properties on one `RenderContext` SHALL NOT affect another `RenderContext`
 
-#### Scenario: Accessing app.di_scope on the server raises error
-- **WHEN** a developer accesses `app.di_scope` on a `WebComPyApp` in a server environment
-- **THEN** an `AttributeError` SHALL be raised directing them to use `RenderContext.di_scope`
+#### Scenario: Accessing app.di_scope behavior
+- **WHEN** a developer accesses `app.di_scope` and a `RenderContext` exists (e.g., after `create_render_context()` or `app.run()`)
+- **THEN** the call SHALL delegate to `RenderContext.di_scope`
+- **AND** when no `RenderContext` exists (e.g., before `create_render_context()` is called on the server)
+- **THEN** an `AttributeError` SHALL be raised directing them to create a `RenderContext` first
