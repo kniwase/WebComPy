@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import MagicMock
 
-from webcompy.ports._fetch import Response
+from webcompy.ports._fetch import FetchPort, Response
+from webcompy.ports._server._virtual_dom import VirtualDOMEvent
 from webcompy.testing._dom import FakeDOMNode
 
 
@@ -32,12 +33,8 @@ class FakeBrowserDOMPort:
         *,
         bubbles: bool = False,
         cancelable: bool = False,
-    ) -> Any:
-        event = MagicMock()
-        event.type = event_type
-        event.bubbles = bubbles
-        event.cancelable = cancelable
-        return event
+    ) -> VirtualDOMEvent:
+        return VirtualDOMEvent(event_type, bubbles=bubbles, cancelable=cancelable)
 
 
 class FakeBrowserHostPort:
@@ -81,7 +78,7 @@ class FakeBrowserFFIPort:
         return target
 
 
-class FakeFetchPort:
+class FakeFetchPort(FetchPort):
     async def fetch(
         self,
         url: str,
