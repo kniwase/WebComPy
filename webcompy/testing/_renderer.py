@@ -65,6 +65,12 @@ class TestRendererResult:
         class_attr = self._root_node.getAttribute("class")
         assert class_attr is not None and cls in class_attr.split(), f"Root element does not have class '{cls}'"
 
+    def __enter__(self) -> TestRendererResult:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
     def close(self) -> None:
         _active_di_scope.reset(self._scope_token)  # type: ignore[arg-type]
 
