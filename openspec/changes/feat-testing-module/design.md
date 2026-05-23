@@ -335,3 +335,53 @@ Existing `webcompy.ports._server._dom` tests for `_serialize_node()` remain unch
 - **[TestRenderer environment setup]** Monkeypatching `ENVIRONMENT` on element modules must match the pattern used by `fake_browser_full` fixture. If the patching is skipped, `_init_node()` methods will still have `ENVIRONMENT == "pyscript"` branches that raise exceptions. → Mitigation: `TestRenderer.render()` includes the same monkeypatch logic.
 - **[FakeDOMNode inherits VirtualDOMNode]** `FakeDOMNode` extends `VirtualDOMNode`, adding only test-specific attributes (counters, `__setattr__` guard, `__webcompy_prerendered_node__`). Any `VirtualDOMNode` API change will automatically propagate to `FakeDOMNode`. → Trade-off accepted: `webcompy.testing` depends on `webcompy.ports._server` — both are excluded from browser wheels, so this is safe.
 - **[E2E coverage gap]** Migrating tests from browser to unit loses coverage of PyScript integration bugs. → Mitigation: remaining E2E tests cover the PyScript lifecycle indirectly. The migrated tests cover logic that was never PyScript-dependent.
+
+### Decision 11: mock_app_run() context manager for testing demo apps
+
+**Chosen**: Provide `mock_app_run()` in `webcompy.testing` — a context manager that temporarily replaces `WebComPyApp.run` with a no-op, enabling `import` of modules that call `app.run()` at module level (e.g., `docs_app/static/_demos/*/app.py`).
+
+```python
+from webcompy.testing import mock_app_run, TestRenderer
+
+with mock_app_run():
+    from docs_app.static._demos.fizzbuzz.app import App
+    result = TestRenderer.render(App)
+    # ... assertions ...
+```
+
+```python
+# Implementation sketch — webcompy/testing/_app.py
+from contextlib import contextmanager
+from webcompy.app._app import WebComPyApp
+
+@contextmanager
+def mock_app_run():
+    original = WebComPyApp.run
+
+    def _noop(self):
+        pass
+
+    WebComPyApp.run = _noop
+    try:
+        yield
+    finally:
+        WebComPyApp.run = original
+```
+
+**Rationale**: Demo apps in `docs_app/static/_demos/` follow the pattern:
+
+```python
+@define_component
+def App(_): ...
+app = WebComPyApp(root_component=App)
+app.run()  # ← raises outside Emscripten
+```
+
+Importing these modules outside PyScript fails immediately at `app.run()`. Without `mock_app_run()`, each test would need to manually `importlib.import_module` with monkeypatching or `sys.modules` manipulation — boilerplate that belongs in the testing framework.
+
+**Scope**: This enables unit-testing demo components (HelloWorld, FizzBuzz, ToDo) with `TestRenderer`. It does NOT enable testing demo apps that depend on `DomNodeRef` (ToDo, Matplotlib), `HttpClient` (Fetch), or `asyncio` scheduling (Fetch) — those require a real browser runtime.
+
+**Non-goals**:
+- Does not mock `WebComPyApp.__init__` or any other app behavior — only `run()` is affected
+- Does not provide a per-test cleanup mechanism beyond the context manager's `finally` block
+- Demo app E2E tests that verify iframe rendering, PyScript hydration, or reload behavior remain in E2E
