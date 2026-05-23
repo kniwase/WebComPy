@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from contextvars import Token
 from typing import TYPE_CHECKING, Any
 
 from webcompy.app._config import WebComPyAppConfig
@@ -13,7 +14,7 @@ from webcompy.components._generator import (
     _register_deferred_components,
 )
 from webcompy.di._keys import _COMPONENT_STORE_KEY
-from webcompy.di._scope import DIScope, _set_app_di_scope
+from webcompy.di._scope import DIScope, _active_di_scope, _set_app_di_scope
 from webcompy.router import Router
 from webcompy.utils import ENVIRONMENT
 
@@ -27,6 +28,7 @@ class RenderContext:
     _di_scope: DIScope
     _component_store: ComponentStore
     _router: Router | None
+    _di_scope_token: Token[DIScope] | None
 
     def __init__(self, app: WebComPyApp, path: str = "") -> None:
         self._app = app
@@ -48,6 +50,7 @@ class RenderContext:
         )
 
         self._di_scope.__enter__()
+        self._di_scope_token = self._di_scope._token
 
         if ENVIRONMENT == "pyscript":
             _set_app_di_scope(self._di_scope)
@@ -146,6 +149,11 @@ class RenderContext:
         _active_app_context.set(None)
         _set_app_di_scope(None)
         _set_app_instance(None)
+        if self._app._render_context is self:
+            self._app._render_context = None
+        if self._di_scope_token is not None:
+            _active_di_scope.reset(self._di_scope_token)
+            self._di_scope_token = None
         self._di_scope.__exit__(None, None, None)
         self._di_scope.dispose()
         self._root = None  # type: ignore[assignment]

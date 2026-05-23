@@ -94,13 +94,12 @@ class WebComPyApp:
 
         ctx = RenderContext(self, path)
         self._render_context = ctx
-        self._flush_deferred_ops()
+        self._apply_deferred_ops(ctx)
         return ctx
 
-    def _flush_deferred_ops(self) -> None:
+    def _apply_deferred_ops(self, ctx: RenderContext) -> None:
         for method_name, args, kwargs in self._deferred_ops:
-            getattr(self._render_context, method_name)(*args, **kwargs)
-        self._deferred_ops.clear()
+            getattr(ctx, method_name)(*args, **kwargs)
 
     @property
     def di_scope(self):

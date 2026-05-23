@@ -31,7 +31,7 @@ class TestAppDiScopeServerError:
         app.provide("key", "value")
         assert len(app._deferred_ops) == 1
         ctx = app.create_render_context()
-        assert len(app._deferred_ops) == 0
+        assert len(app._deferred_ops) == 1
         ctx.dispose()
 
     def test_render_context_has_di_scope(self):
@@ -43,7 +43,7 @@ class TestAppDiScopeServerError:
         assert ctx.di_scope is not None
         ctx.dispose()
 
-    def test_deferred_ops_only_flushed_once(self):
+    def test_deferred_ops_applied_on_every_context(self):
         app = WebComPyApp(
             root_component=_ErrorTestRoot,
             config=WebComPyAppConfig(),
@@ -52,9 +52,9 @@ class TestAppDiScopeServerError:
         assert len(app._deferred_ops) == 1
 
         ctx1 = app.create_render_context()
-        assert len(app._deferred_ops) == 0
+        assert len(app._deferred_ops) == 1
         ctx1.dispose()
 
         ctx2 = app.create_render_context()
-        assert len(app._deferred_ops) == 0
+        assert len(app._deferred_ops) == 1
         ctx2.dispose()
