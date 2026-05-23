@@ -16,7 +16,8 @@ Currently, all test utilities (fake DOM nodes, fake port implementations, browse
 - **NEW** `"webcompy.testing"` added to `_BROWSER_ONLY_EXCLUDE` — excludes the module from browser wheels
 - **MIGRATED** `tests/e2e/test_component.py`, `test_standalone.py`, `test_bundled_deps.py`, `test_static_site.py`, `test_runtime_local.py` (24 tests) — purely rendering tests, no browser interaction
 - **MIGRATED** `tests/e2e/test_switch.py`, `test_reactive.py`, `test_repeat.py`, `test_keyed_repeat.py` (4/5), `test_dict_repeat.py` (4/5), `test_nested_dynamic.py`, `test_scoped_style.py` (2/7), `test_di.py` (4/5), `test_lifecycle.py` (2/3) — interactive tests now covered by `TestRenderer.render()` + `VirtualDOMEvent` dispatch + `rerender()` + virtual tree assertions
-- **PLANNED** Migrate `tests/e2e_docs/test_helloworld.py` (3 tests) and `tests/e2e_docs/test_fizzbuzz.py` (5 tests) — demo app component rendering + reactive interaction tests replaced by `TestRenderer.render()` via `mock_app_run()` context manager
+- **PLANNED** Migrate `tests/e2e_docs/test_helloworld.py` (2 of 3 tests) and `tests/e2e_docs/test_fizzbuzz.py` (4 of 5 tests) — demo app component rendering + reactive interaction tests replaced by `TestRenderer.render()` via `mock_app_run()` context manager. Reload tests remain in E2E.
+- **PLANNED** Add unit tests for `tests/e2e_docs/test_todo.py`, `tests/e2e_docs/test_fetch.py`, `tests/e2e_docs/test_matplotlib.py` — fast unit test counterparts via `TestRenderer.render()` + `dispatchEvent(VirtualDOMEvent)`, **additive** alongside existing Playwright E2E tests.
 
 ## Capabilities
 

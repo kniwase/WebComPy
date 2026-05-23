@@ -8,6 +8,7 @@ from webcompy.testing._ports import (
     FakeBrowserDOMPort,
     FakeBrowserFFIPort,
     FakeBrowserHostPort,
+    FakeFetchPort,
 )
 from webcompy.testing._renderer import TestRenderer, TestRendererResult
 from webcompy.testing._scope import (
@@ -21,6 +22,7 @@ __all__ = [
     "FakeBrowserFFIPort",
     "FakeBrowserHostPort",
     "FakeDOMNode",
+    "FakeFetchPort",
     "TestRenderer",
     "TestRendererResult",
     "VirtualDOMEvent",

@@ -85,4 +85,47 @@ These tests are in `tests/e2e/` but never use Playwright. They inspect build out
 - [x] 8.4 Migrate `tests/e2e_docs/test_fizzbuzz.py` (4 of 5 tests) — initial_state, add, pop, hide_toggle replaced by `TestRenderer.render()` + `dispatchEvent(VirtualDOMEvent("click"))` via `mock_app_run()`. Reload test remains in E2E.
 - [x] 8.5 Trim migrated E2E tests from docs E2E files and consolidate CI docs-e2e groups — removed 2 helloworld + 4 fizzbuzz tests from E2E docs files. CI matrix groups unchanged (all 4 groups run in parallel; consolidation provides no speedup).
 
+## 9. VirtualDOMNode DomNodeRef support + ToDo demos unit tests (planned)
+
+### 9.1 VirtualDOMNode `_dom_properties` — enabling DomNodeRef `.value`/`.checked` access
+
+`DomNodeRef` delegates property access (`ref.value`, `ref.checked`) to its bound DOM node via `__getattr__`/`__setattr__`. In the browser, these are real `HTMLInputElement` properties. `VirtualDOMNode` currently has no `__getattr__`/`__setattr__` — accessing `.value` raises `AttributeError`. This blocks ToDo and Matplotlib demo tests which use `DomNodeRef` for input state.
+
+- [ ] 9.1.1 Add `_dom_properties: dict[str, Any]` to `VirtualDOMNode.__init__` — storage for DOM element-specific properties (`.value`, `.checked`, `.type`, etc.)
+- [ ] 9.1.2 Add `VirtualDOMNode.__getattr__` — routes unknown attribute reads to `_dom_properties`, raises `AttributeError` if not found (NOT returning `None` — different semantics from `VirtualDOMEvent.__getattr__`)
+- [ ] 9.1.3 Add `VirtualDOMNode.__setattr__` — routes unknown attribute writes to `_dom_properties`; known instance attributes (`_tag_name`, `_attributes`, etc.) use `object.__setattr__` as before
+- [ ] 9.1.4 Update `FakeDOMNode.__setattr__`/`__getattr__` to delegate to `super()` for dom properties — currently `FakeDOMNode.__setattr__` stores all unknown attrs in `__dict__`, bypassing `_dom_properties`
+- [ ] 9.1.5 Add unit tests for VirtualDOMNode dom property round-trip (set `.value` → get `.value`, set `.checked` → get `.checked`, access unset property → `AttributeError`)
+- [ ] 9.1.6 Add unit tests for FakeDOMNode dom property passthrough via DomNodeRef
+
+**Scope**: ~3 files changed (`_virtual_dom.py`, `testing/_dom.py`, test files), ~2h
+
+### 9.2 ToDo demos unit tests
+
+With `_dom_properties`, the ToDo demo's `on_change_state` callback (`input_ref.checked`) becomes testable. The test must set `input.checked = True` on the VDOM node before dispatching `@change` event, emulating browser checkbox behavior. Unit tests are **additive** — existing E2E tests remain in `tests/e2e_docs/test_todo.py`.
+
+- [x] 9.2.1 Add 4 ToDo unit tests to `tests/test_docs_demos.py` — `test_todo_initial_items`, `test_todo_add_item`, `test_todo_toggle_checkbox`, `test_todo_remove_done_items` — using `mock_app_run()` + `TestRenderer.render()` + `dispatchEvent(VirtualDOMEvent("change"))`.
+
+### 9.3 Fetch demos unit tests
+
+Fetch demo uses `on_after_rendering` + `HttpClient.get()` + `AsyncWrapper` + `resolve_async`. To enable unit testing:
+- `TestRenderer.render()` scope wires `FETCH_PORT_KEY` with `FakeFetchPort` (self-contained stub returning canned JSON responses).
+- `HttpClient.request()` changed from `ENVIRONMENT == "pyscript"`-only guard to `else` fallback path — `inject(FETCH_PORT_KEY)` is now used on both PyScript and server-side.
+- `ServerHostPort.schedule_macro_task` already calls callback synchronously (no change needed).
+- `FakeBrowserHostPort.schedule_macro_task` changed from no-op to synchronous callback execution.
+Unit tests are **additive** — existing E2E tests remain in `tests/e2e_docs/test_fetch.py`.
+
+- [x] 9.3.1 Wire `FETCH_PORT_KEY` with `FakeFetchPort` in `TestRenderer.render()` scope; add `FakeFetchPort` to `webcompy/testing/_ports.py`
+- [x] 9.3.2 `ServerHostPort.schedule_macro_task` already calls callback synchronously; `FakeBrowserHostPort.schedule_macro_task` changed from `pass` to `callback()`
+- [x] 9.3.3 Add `test_fetch_page_loads` to `tests/test_docs_demos.py` — `mock_app_run()` + `TestRenderer.render()`, assert "User Data", "Alice", "Bob", "Charlie" in HTML
+
+### 9.4 Matplotlib demos unit tests
+
+Matplotlib demo uses `DomNodeRef` (resolved by 9.1) + `numpy`/`matplotlib`. `numpy`/`matplotlib` are already in `pyproject.toml` under `docs` optional-dependency group (`uv sync --group docs`). The `@computed` `fig_data` signal accesses `fig.canvas.draw()` which works server-side with standard CPython numpy/matplotlib. Unit tests are **additive** — existing E2E tests remain in `tests/e2e_docs/test_matplotlib.py`.
+
+- [x] 9.4.1 Install `numpy`/`matplotlib` as test dependency — `uv sync --group docs` is sufficient
+- [x] 9.4.2 Verify `MatplotlibSamplePage` renders via `mock_app_run()` + `TestRenderer.render()` — assert `<img>` tag with base64 PNG data present (`test_matplotlib_image_rendered`)
+- [x] 9.4.3 Add `test_matplotlib_page_heading`, `test_matplotlib_initial_value`, `test_matplotlib_increment_button` to `tests/test_docs_demos.py` — slider interaction via `dispatchEvent(VirtualDOMEvent("click"))` with `DomNodeRef` for `.value`
+- [x] 9.4.4 Docs-e2e CI groups unchanged — unit tests are additive, no consolidation needed
+
 

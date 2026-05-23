@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import MagicMock
 
+from webcompy.ports._fetch import Response
 from webcompy.testing._dom import FakeDOMNode
 
 
@@ -41,7 +42,7 @@ class FakeBrowserDOMPort:
 
 class FakeBrowserHostPort:
     def schedule_macro_task(self, callback: Any) -> None:
-        pass
+        callback()
 
     def create_js_global_getter(
         self,
@@ -78,3 +79,21 @@ class FakeBrowserFFIPort:
         for source in sources:
             target.update(source)
         return target
+
+
+class FakeFetchPort:
+    async def fetch(
+        self,
+        url: str,
+        *,
+        method: str = "GET",
+        headers: dict[str, str] | None = None,
+        body: str | None = None,
+    ) -> Response:
+        return Response(
+            text='{"data": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}, {"id": 3, "name": "Charlie"}]}',
+            headers={"content-type": "application/json"},
+            status_code=200,
+            status_text="OK",
+            ok=True,
+        )

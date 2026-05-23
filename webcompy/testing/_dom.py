@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from webcompy.ports._dom import DOMEvent
 from webcompy.ports._server._virtual_dom import VirtualDOMNode
 
 
@@ -20,23 +19,34 @@ class FakeDOMNode(VirtualDOMNode):
         VirtualDOMNode.textContent.fset(self, value)  # type: ignore[misc]
         self.textContent_write_count += 1
 
-    def dispatchEvent(self, event: DOMEvent) -> bool:
-        return super().dispatchEvent(event)
-
     def __setattr__(self, name: str, value: object) -> None:
-        if name.startswith("_VirtualDOMNode__") or name in (
-            "__webcompy_node__",
-            "__webcompy_prerendered_node__",
+        if (
+            name.startswith("_VirtualDOMNode__")
+            or name in ("__webcompy_node__", "__webcompy_prerendered_node__")
+            or name in ("textContent_write_count", "setAttribute_count")
+            or name
+            in {
+                "nodeName",
+                "nodeType",
+                "textContent",
+                "childNodes",
+                "firstChild",
+                "lastChild",
+                "parentNode",
+                "attributes",
+                "innerHTML",
+                "outerHTML",
+            }
+            or name.startswith("_")
         ):
             object.__setattr__(self, name, value)
         else:
-            try:
-                object.__getattribute__(self, name)
-                object.__setattr__(self, name, value)
-            except AttributeError:
-                object.__setattr__(self, name, value)
+            super().__setattr__(name, value)
 
     def __getattr__(self, name: str) -> object:
         if name.startswith("_VirtualDOMNode__"):
             raise AttributeError(name)
-        return object.__getattribute__(self, name)
+        try:
+            return self._dom_properties[name]
+        except KeyError:
+            return object.__getattribute__(self, name)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from tests.conftest import (
     FakeBrowserDOMPort,
     FakeBrowserFFIPort,
@@ -8,6 +10,7 @@ from tests.conftest import (
 )
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements.types._element import Element
+from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._text import TextElement
 from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
 from webcompy.ports._server._dom import ServerDOMPort
@@ -166,3 +169,40 @@ class TestUnifiedRenderPath:
         port = ServerDOMPort()
         html = port.render_html(virtual_node)
         assert html == '<div class="container">hello</div>'
+
+
+class TestFakeDOMNodeDomNodeRefPassthrough:
+    def test_set_value_via_ref(self):
+        node = FakeDOMNode("input")
+        ref = DomNodeRef()
+        ref.__init_node__(node)
+        ref.value = "hello"
+        assert ref.value == "hello"
+        assert node.value == "hello"
+
+    def test_set_checked_via_ref(self):
+        node = FakeDOMNode("input")
+        ref = DomNodeRef()
+        ref.__init_node__(node)
+        ref.checked = True
+        assert ref.checked is True
+        assert node.checked is True
+
+    def test_access_unset_property_via_ref_raises_attribute_error(self):
+        node = FakeDOMNode("div")
+        ref = DomNodeRef()
+        ref.__init_node__(node)
+        with pytest.raises(AttributeError):
+            _ = ref.nonexistent_property
+
+    def test_ref_property_isolation(self):
+        node_a = FakeDOMNode("input")
+        node_b = FakeDOMNode("input")
+        ref_a = DomNodeRef()
+        ref_b = DomNodeRef()
+        ref_a.__init_node__(node_a)
+        ref_b.__init_node__(node_b)
+        ref_a.value = "foo"
+        ref_b.value = "bar"
+        assert ref_a.value == "foo"
+        assert ref_b.value == "bar"

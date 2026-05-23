@@ -385,3 +385,66 @@ Importing these modules outside PyScript fails immediately at `app.run()`. Witho
 - Does not mock `WebComPyApp.__init__` or any other app behavior — only `run()` is affected
 - Does not provide a per-test cleanup mechanism beyond the context manager's `finally` block
 - Demo app E2E tests that verify iframe rendering, PyScript hydration, or reload behavior remain in E2E
+
+### Decision 12: VirtualDOMNode `_dom_properties` for DomNodeRef support
+
+**Chosen**: Add `_dom_properties: dict[str, Any]` to `VirtualDOMNode` with `__getattr__`/`__setattr__` routing, enabling `DomNodeRef` property delegation (`.value`, `.checked`) in server-side tests.
+
+**Context**: `DomNodeRef` delegates unknown attribute access to its bound DOM node via `getattr(self._node, name)` / `setattr(self._node, name, value)`. In the browser, `HTMLInputElement.value` and `HTMLInputElement.checked` are native properties. `VirtualDOMNode` has no such properties — accessing `.value` raises `AttributeError`. This blocks unit-testing any component using `DomNodeRef` (ToDo, Matplotlib demos).
+
+```python
+# VirtualDOMNode additions
+class VirtualDOMNode:
+    def __init__(self, ...):
+        # ... existing code ...
+        self._dom_properties: dict[str, Any] = {}
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self._dom_properties:
+            return self._dom_properties[name]
+        raise AttributeError(
+            f"'{type(self).__name__}' object has no attribute '{name}'"
+        )
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name.startswith("_") or name in {
+            "nodeName", "nodeType", "textContent", "childNodes",
+            "firstChild", "lastChild", "parentNode", "attributes",
+            "innerHTML", "outerHTML",
+        }:
+            object.__setattr__(self, name, value)
+        else:
+            self._dom_properties[name] = value
+```
+
+**FakeDOMNode**: `FakeDOMNode` currently overrides `__setattr__` and `__getattr__`. These must be updated to delegate to `super()` for dom properties. Specifically, `FakeDOMNode.__setattr__` must call `super().__setattr__()` instead of `object.__setattr__()` for unknown attributes, and `FakeDOMNode.__getattr__` must check `_dom_properties` before falling through to `object.__getattribute__`.
+
+**Rationale**:
+- `DomNodeRef` is the only mechanism for component code to access DOM element properties in WebComPy. Making `VirtualDOMNode` aware of dom properties enables `TestRenderer` tests to exercise checkbox toggling, input validation, and slider interactions — the same patterns used in `dispatchEvent(VirtualDOMEvent)` for click handlers.
+- `_serialize_node()` only uses `getAttributeNames()` — dom properties are NOT serialized to HTML. SSG output is unaffected.
+- `DOMNode` Protocol does not include `.value`/`.checked` — they're DOM element-specific, not protocol members. This is purely an implementation detail for testing.
+- `__getattr__` raises `AttributeError` (NOT returning `None`) — `VirtualDOMEvent.__getattr__` returns `None` for event properties, but node properties need proper error semantics.
+
+**Impact**: ~3 files changed (`_virtual_dom.py`, `testing/_dom.py`, test files). No SSG impact. No E2E impact (browser-only runtime uses real DOM nodes).
+
+### Decision 13: ToDo demos unit tests (dom properties dependency)
+
+**Chosen**: Add unit tests for the ToDo demo in `tests/test_docs_demos.py` using `mock_app_run()` + `TestRenderer.render()`, pre-setting `.checked` on virtual input nodes before dispatching `@change` events. Existing E2E tests in `tests/e2e_docs/test_todo.py` remain unchanged — unit tests are **additive**, not a replacement. Requires Decision 12 (`_dom_properties`).
+
+**Rationale**: The ToDo demo tests checkbox toggle, add item, and remove done items — all purely DOM-property-driven interactions. `DomNodeRef` is the blocker. Setting `input.checked = True` on the VDOM node before `dispatchEvent(VirtualDOMEvent("change"))` emulates browser checkbox behavior faithfully. Unit tests provide fast feedback without Playwright; E2E tests verify the full browser pipeline.
+
+### Decision 14: Fetch/Matplotlib demo unit tests
+
+**Chosen**: Add unit tests for Fetch and Matplotlib demos in `tests/test_docs_demos.py` alongside existing E2E tests. The blockers are solvable:
+
+**Fetch (1 test: `test_fetch_page_loads`)**:
+- `on_after_rendering` → `ServerHostPort.schedule_macro_task` already calls `callback()` synchronously (not a no-op). `FakeBrowserHostPort.schedule_macro_task` changed from `pass` to `callback()`.
+- `HttpClient.get()` → `HttpClient.request()` changed from `ENVIRONMENT == "pyscript"`-only guard to `else` fallback: `inject(FETCH_PORT_KEY)` is now used on both PyScript and server-side.
+- `FETCH_PORT_KEY` wired to `FakeFetchPort` in `TestRenderer.render()` scope — self-contained stub returning canned JSON matching `sample.json`.
+
+**Matplotlib (4 tests: heading, initial_value, increment_button, image_rendered)**:
+- `DomNodeRef` (`.value` property) → resolved by Decision 12 (`_dom_properties`).
+- `numpy`/`matplotlib` → already in `pyproject.toml` under `docs` optional-dependency group. `uv sync --group docs` installs them as standard CPython packages. `fig.canvas.draw()` + `base64` encoding works server-side.
+- `@computed` `fig_data` → renders `<img src="data:image/png;base64,...">` — `TestRenderer.to_html()` captures this without browser rendering.
+
+**Rationale**: Fetch and Matplotlib demos are the remaining docs E2E tests that can have fast unit test counterparts. Unit tests are **additive** — existing Playwright E2E tests remain in `tests/e2e_docs/` to verify the full iframe + PyScript pipeline. Together with Section 9.1-9.2, this gives us full unit test coverage for all docs demo components while preserving browser-level validation.
