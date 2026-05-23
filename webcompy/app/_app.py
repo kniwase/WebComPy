@@ -94,7 +94,6 @@ class WebComPyApp:
 
         ctx = RenderContext(self, path)
         self._render_context = ctx
-        self._apply_deferred_ops(ctx)
         return ctx
 
     def _apply_deferred_ops(self, ctx: RenderContext) -> None:

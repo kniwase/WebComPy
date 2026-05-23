@@ -116,6 +116,8 @@ class RenderContext:
             app=self._app,
         )
 
+        app._apply_deferred_ops(self)
+
         if self._router:
             self._root.set_path(path)
 
