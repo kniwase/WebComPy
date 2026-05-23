@@ -24,8 +24,10 @@ def _make_app(**config_kwargs):
 
 
 def _generate_html(app, **kwargs):
-    with app.di_scope:
-        return generate_html(app, **kwargs)
+    ctx = app.create_render_context()
+    html = generate_html(ctx, **kwargs)
+    ctx.dispose()
+    return html
 
 
 def _extract_py_config(html_str: str) -> dict:

@@ -49,15 +49,15 @@ The plugin system passes `WebComPyApp` to hooks (`on_app_init`, `on_app_ready`),
 | `_router_pages`, `_router_mode`, `_router_base_url` | ✓ (definitions) | |
 | `_plugin_classes` | ✓ (discovered classes) | |
 | `_component_generators` | ✓ (registered generators) | |
-| `_profile` | ✓ | |
+| `_profile` | ✓ (config-derived, never mutated) | |
 | `_di_scope` | | ✓ (new per request) |
-| `_component_store` | | ✓ (new per request, definitions shared) |
+| `_component_store` | | ✓ (new per request, definitions populated from `_component_generators` via `_register_deferred_components()`) |
 | `_router` | | ✓ (new per request) |
 | `_root` | | ✓ (new per request) |
 | `_defer_depth` | | ✓ |
 | `_deferred_callbacks` | | ✓ |
-| `_profile_data` | | ✓ |
-| `_hydrate` | | ✓ |
+| `_profile_data` | | ✓ (per-request, forwarded from `WebComPyApp.profile_data` in browser) |
+| `_hydrate` | ✓ (config-derived, never mutated per request — hydration flag comes from AppConfig) | |
 
 **Design principle**: When uncertain whether a new element belongs to `WebComPyApp` or `RenderContext`, prefer `RenderContext`. This errs on the side of safety against cross-request vulnerabilities.
 
@@ -85,7 +85,7 @@ The distinction between hooks:
 - `on_render_context_init(ctx: RenderContext)`: Called per request (server) or once (browser). DI providers can be registered here.
 - `on_app_ready(ctx: RenderContext)`: Called only in the browser after DOM is available. Browser-specific initialization.
 
-This is a **breaking change** for `on_app_ready` signature. Plugins updating to the new API will need to change `on_app_ready(self, app)` to `on_app_ready(self, ctx)`.
+This is a **breaking change** for `on_app_ready` signature. Plugins must change `on_app_ready(self, app)` to `on_app_ready(self, ctx)`. No backward compatibility is maintained (WebComPy is pre-stable software).
 
 ### Decision 5: `app.run()` delegates to `RenderContext` internally
 
@@ -107,7 +107,7 @@ This is a **breaking change** for `on_app_ready` signature. Plugins updating to 
 
 ## Risks / Trade-offs
 
-- **[Breaking change: `on_app_ready` signature]** → Mitigate with deprecation period: accept both `(app: WebComPyApp)` and `(ctx: RenderContext)` signatures during migration, warn on old signature.
+- **[Breaking change: `on_app_ready` signature]** → No backward compatibility. Plugins must update. WebComPy is pre-stable software, breaking API changes are acceptable.
 - **[Performance cost of per-request RenderContext creation]** → The most expensive operation (component tree construction) already happens per-request in the current SSR path via `app.set_path()` + `app._root.render()`. Creating a fresh `RenderContext` adds only cheap operations (DIScope, ports, Router). Benchmark before/after to confirm negligible overhead.
 - **[Signal graph `_epoch` as global]** → Keep as monotonically increasing global (never reset). Each fresh RenderContext creates new signal nodes whose `last_clean_epoch` receives the current `_epoch` value at construction, which is always correct for staleness detection. Resetting `_epoch` would cause cross-request staleness bugs during concurrent SSR.
 - **[Plugin migration burden]** → Provide clear migration guide. The change is small (one parameter type change). Most plugins don't use `on_app_ready` at all.

@@ -28,7 +28,6 @@ class TestProfileDataProperty:
         result = app.profile_data
         assert isinstance(result, dict)
         assert "init_start" in result
-        assert "imports_done" in result
         assert "init_done" in result
 
 
@@ -49,7 +48,7 @@ class TestRecordPhase:
         assert "should_not_exist" not in app._profile_data
 
     def test_record_phase_values_monotonically_increasing(self):
-        counter = iter([1.0, 2.0, 3.0])
+        counter = iter([1.0, 2.0])
 
         def mock_counter():
             return next(counter)
@@ -57,8 +56,7 @@ class TestRecordPhase:
         with patch("webcompy.app._app.time.perf_counter", side_effect=mock_counter):
             config = WebComPyAppConfig(profile=True)
             app = _make_app(config=config)
-        assert app._profile_data["init_start"] < app._profile_data["imports_done"]
-        assert app._profile_data["imports_done"] < app._profile_data["init_done"]
+        assert app._profile_data["init_start"] < app._profile_data["init_done"]
 
 
 class TestEmitProfileSummary:
@@ -110,7 +108,6 @@ class TestAppInitRecordsPhases:
         data = app.profile_data
         assert data is not None
         assert "init_start" in data
-        assert "imports_done" in data
         assert "init_done" in data
 
     def test_config_profile_synced(self):

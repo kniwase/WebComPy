@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
-from webcompy.components._component import Component, HeadPropsStore, _active_app_context
+from webcompy.components._component import Component, HeadPropsStore
 from webcompy.components._generator import ComponentGenerator
 from webcompy.di import inject
 from webcompy.di._keys import _HEAD_PROPS_KEY, _ROUTER_KEY
@@ -97,7 +97,6 @@ class AppDocumentRoot(Component):
 
     def _render(self):
         token = _active_di_scope.set(self._di_scope)
-        app_token = _active_app_context.set(self._app) if self._app else None
         try:
             self._property["on_before_rendering"]()
             self._mount_node()
@@ -142,8 +141,6 @@ class AppDocumentRoot(Component):
                         self._app._emit_profile_summary()
         finally:
             if ENVIRONMENT != "pyscript":
-                if app_token is not None:
-                    _active_app_context.reset(app_token)
                 _active_di_scope.reset(token)
 
     def _init_node(self) -> DOMNode:
@@ -199,13 +196,10 @@ class AppDocumentRoot(Component):
 
     @property
     def style(self):
-        if self._app is not None:
-            store = self._app._component_store
-        else:
-            from webcompy.di import inject
-            from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.di import inject
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
 
-            store = inject(_COMPONENT_STORE_KEY)
+        store = inject(_COMPONENT_STORE_KEY)
         return " ".join(style for component in store.components.values() if (style := component.scoped_style))
 
     # HTML attribute controllers

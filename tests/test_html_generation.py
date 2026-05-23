@@ -22,8 +22,10 @@ def _make_app(**config_kwargs):
 
 
 def _generate_html(app, **kwargs):
-    with app.di_scope:
-        return generate_html(app, **kwargs)
+    ctx = app.create_render_context()
+    html = generate_html(ctx, **kwargs)
+    ctx.dispose()
+    return html
 
 
 def _extract_py_config(html_str: str) -> dict:
@@ -298,43 +300,49 @@ class TestGenerateHtmlRuntimeLocalServing:
 class TestHtmlAttrsInSsgOutput:
     def test_html_attrs_in_static_generation(self):
         app = _make_app()
-        app.set_html_attr("data-theme", "dark")
-        html_str = _generate_html(
-            app,
+        ctx = app.create_render_context()
+        ctx.set_html_attr("data-theme", "dark")
+        html_str = generate_html(
+            ctx,
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
+        ctx.dispose()
         assert '<html data-theme="dark">' in html_str
 
     def test_multiple_html_attrs_in_static_generation(self):
         app = _make_app()
-        app.set_html_attr("lang", "ja")
-        app.set_html_attr("class", "dark")
-        html_str = _generate_html(
-            app,
+        ctx = app.create_render_context()
+        ctx.set_html_attr("lang", "ja")
+        ctx.set_html_attr("class", "dark")
+        html_str = generate_html(
+            ctx,
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
+        ctx.dispose()
         assert '<html lang="ja" class="dark">' in html_str or '<html class="dark" lang="ja">' in html_str
 
     def test_computed_html_attr_in_static_generation(self):
         from webcompy.signal import Signal, computed
 
         app = _make_app()
+        ctx = app.create_render_context()
         theme = Signal("light")
-        app.set_html_attr("class", computed(lambda: theme.value))
-        html_str = _generate_html(
-            app,
+        ctx.set_html_attr("class", computed(lambda: theme.value))
+        html_str = generate_html(
+            ctx,
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
             app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
+        ctx.dispose()
         assert '<html class="light">' in html_str

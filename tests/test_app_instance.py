@@ -44,7 +44,9 @@ class TestWebComPyAppForwarding:
         hist = MockHistoryPort(mode="hash")
         router = Router(history=hist)
         app = _make_app(router=router)
-        assert app.routes is app._root.routes
+        ctx = app.create_render_context()
+        assert app.routes is ctx._root.routes
+        ctx.dispose()
 
     def test_router_mode_property(self):
         hist = MockHistoryPort(mode="hash")
@@ -56,45 +58,65 @@ class TestWebComPyAppForwarding:
         hist = MockHistoryPort(mode="hash")
         router = Router(history=hist)
         app = _make_app(router=router)
+        ctx = app.create_render_context("/test")
         app.set_path("/test")
+        ctx.dispose()
 
     def test_style_property(self):
         app = _make_app()
-        assert app.style is app._root.style
+        ctx = app.create_render_context()
+        assert app.style is ctx._root.style
+        ctx.dispose()
 
     def test_scripts_property(self):
         app = _make_app()
-        assert app.scripts == app._root.scripts
+        ctx = app.create_render_context()
+        assert app.scripts == ctx._root.scripts
+        ctx.dispose()
 
     def test_head_property(self):
         app = _make_app()
+        ctx = app.create_render_context()
         head = app.head
         assert "title" in head
         assert "meta" in head
+        ctx.dispose()
 
     def test_set_title(self):
         app = _make_app()
+        ctx = app.create_render_context()
         app.set_title("Test")
+        ctx.dispose()
 
     def test_set_meta(self):
         app = _make_app()
+        ctx = app.create_render_context()
         app.set_meta("charset", {"charset": "utf-8"})
+        ctx.dispose()
 
     def test_append_link(self):
         app = _make_app()
+        ctx = app.create_render_context()
         app.append_link({"rel": "stylesheet", "href": "/style.css"})
+        ctx.dispose()
 
     def test_append_script(self):
         app = _make_app()
+        ctx = app.create_render_context()
         app.append_script({"type": "text/javascript"}, "console.log('hi')")
+        ctx.dispose()
 
     def test_set_head(self):
         app = _make_app()
+        ctx = app.create_render_context()
         app.set_head({"title": "Test"})
+        ctx.dispose()
 
     def test_update_head(self):
         app = _make_app()
+        ctx = app.create_render_context()
         app.update_head({"title": "Test"})
+        ctx.dispose()
 
     def test_no_router_routes_is_none(self):
         app = _make_app()
@@ -102,7 +124,7 @@ class TestWebComPyAppForwarding:
 
     def test_no_router_mode_is_none(self):
         app = _make_app()
-        assert app.router_mode is None
+        assert app.router_mode == "history"
 
 
 class TestWebComPyAppRun:
@@ -118,86 +140,115 @@ class TestPerAppComponentStore:
     def test_two_apps_have_separate_stores(self):
         app1 = _make_app()
         app2 = _make_app()
-        assert app1._component_store is not app2._component_store
+        ctx1 = app1.create_render_context()
+        ctx2 = app2.create_render_context()
+        assert ctx1._component_store is not ctx2._component_store
+        ctx1.dispose()
+        ctx2.dispose()
 
     def test_app_store_is_provided_in_di(self):
         from webcompy.di._keys import _COMPONENT_STORE_KEY
 
         app = _make_app()
-        with app.di_scope:
-            from webcompy.di import inject
+        ctx = app.create_render_context()
+        from webcompy.di import inject
 
-            store = inject(_COMPONENT_STORE_KEY)
-            assert store is app._component_store
+        store = inject(_COMPONENT_STORE_KEY)
+        assert store is ctx._component_store
+        ctx.dispose()
 
     def test_app_defer_depth_initial(self):
         app = _make_app()
-        assert app._defer_depth == 0
-        assert app._deferred_callbacks == []
+        ctx = app.create_render_context()
+        assert ctx._defer_depth == 0
+        assert ctx._deferred_callbacks == []
+        ctx.dispose()
 
     def test_two_apps_independent_defer_state(self):
         app1 = _make_app()
         app2 = _make_app()
-        app1._defer_depth = 1
-        assert app2._defer_depth == 0
+        ctx1 = app1.create_render_context()
+        ctx2 = app2.create_render_context()
+        ctx1._defer_depth = 1
+        assert ctx2._defer_depth == 0
+        ctx1.dispose()
+        ctx2.dispose()
 
 
 class TestHtmlAttrs:
     def test_set_html_attr_returns_method(self):
         app = _make_app()
+        ctx = app.create_render_context()
         assert app.set_html_attr is not None
         assert callable(app.set_html_attr)
+        ctx.dispose()
 
     def test_remove_html_attr_returns_method(self):
         app = _make_app()
+        ctx = app.create_render_context()
         assert app.remove_html_attr is not None
         assert callable(app.remove_html_attr)
+        ctx.dispose()
 
     def test_html_attrs_property(self):
         app = _make_app()
+        ctx = app.create_render_context()
         assert app.html_attrs == {}
         app.set_html_attr("lang", "ja")
         assert app.html_attrs == {"lang": "ja"}
+        ctx.dispose()
 
     def test_set_and_get_html_attr(self):
         app = _make_app()
+        ctx = app.create_render_context()
         app.set_html_attr("lang", "ja")
         assert app.html_attrs["lang"] == "ja"
+        ctx.dispose()
 
     def test_remove_html_attr(self):
         app = _make_app()
+        ctx = app.create_render_context()
         app.set_html_attr("data-test", "value")
         app.remove_html_attr("data-test")
         assert "data-test" not in app.html_attrs
+        ctx.dispose()
 
     def test_html_attrs_with_computed(self):
         from webcompy.signal import Signal, computed
 
         app = _make_app()
+        ctx = app.create_render_context()
         theme = Signal("light")
         app.set_html_attr("class", computed(lambda: theme.value))
         assert app.html_attrs["class"] == "light"
         theme.value = "dark"
         assert app.html_attrs["class"] == "dark"
+        ctx.dispose()
 
     def test_html_attrs_per_app(self):
         app1 = _make_app()
         app2 = _make_app()
+        ctx1 = app1.create_render_context()
+        ctx2 = app2.create_render_context()
         app1.set_html_attr("lang", "ja")
         app2.set_html_attr("lang", "en")
         assert app1.html_attrs["lang"] == "ja"
         assert app2.html_attrs["lang"] == "en"
+        ctx1.dispose()
+        ctx2.dispose()
 
     def test_remove_html_attr_removes_computed_consumer(self):
         from webcompy.signal import Signal, computed
 
         app = _make_app()
+        ctx = app.create_render_context()
         theme = Signal("light")
         app.set_html_attr("class", computed(lambda: theme.value))
-        assert "class" not in app._root._callback_consumers
+        assert "class" not in ctx._root._callback_consumers
         app.remove_html_attr("class")
-        assert "class" not in app._root._callback_consumers
-        assert "class" not in app._root._html_attrs
+        assert "class" not in ctx._root._callback_consumers
+        assert "class" not in ctx._root._html_attrs
+        ctx.dispose()
 
     def test_consumer_destroy_called_when_overwriting_computed(self, monkeypatch):
         from webcompy.signal import Signal, computed
@@ -207,25 +258,26 @@ class TestHtmlAttrs:
         mock_dom.query_selector = MagicMock(return_value=MagicMock())
         from webcompy.ports._keys import DOM_PORT_KEY
 
-        app._di_scope.provide(DOM_PORT_KEY, mock_dom)
+        ctx = app.create_render_context()
+        ctx.di_scope.provide(DOM_PORT_KEY, mock_dom)
         monkeypatch.setattr("webcompy.app._root_component.ENVIRONMENT", "pyscript")
 
-        with app._di_scope:
-            theme = Signal("light")
-            c = computed(lambda: theme.value)
-            app.set_html_attr("class", c)
-            assert "class" in app._root._callback_consumers
-            consumer1 = app._root._callback_consumers["class"]
+        theme = Signal("light")
+        c = computed(lambda: theme.value)
+        app.set_html_attr("class", c)
+        assert "class" in ctx._root._callback_consumers
+        consumer1 = ctx._root._callback_consumers["class"]
 
-            app.set_html_attr("class", "static")
-            assert "class" not in app._root._callback_consumers
+        app.set_html_attr("class", "static")
+        assert "class" not in ctx._root._callback_consumers
 
-            app.set_html_attr("class", c)
-            assert "class" in app._root._callback_consumers
-            consumer2 = app._root._callback_consumers["class"]
+        app.set_html_attr("class", c)
+        assert "class" in ctx._root._callback_consumers
+        consumer2 = ctx._root._callback_consumers["class"]
 
-            app.remove_html_attr("class")
-            assert "class" not in app._root._callback_consumers
-            assert "class" not in app._root._html_attrs
+        app.remove_html_attr("class")
+        assert "class" not in ctx._root._callback_consumers
+        assert "class" not in ctx._root._html_attrs
 
-            assert consumer1 is not consumer2
+        assert consumer1 is not consumer2
+        ctx.dispose()

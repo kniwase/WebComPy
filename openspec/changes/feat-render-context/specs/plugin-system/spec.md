@@ -30,12 +30,6 @@
 - **AND** `on_app_ready(ctx)` SHALL be called once with the `RenderContext`
 - **AND** `on_app_ready` SHALL have access to browser DOM APIs
 
-#### Scenario: Backward compatibility for on_app_ready
-- **WHEN** a plugin defines `on_app_ready(self, app)` with the old `WebComPyApp` signature (parameter name is `app`, NOT `ctx`)
-- **THEN** a deprecation warning SHALL be issued via `warnings.warn(..., DeprecationWarning)`
-- **AND** the method SHALL still be called with the `RenderContext` as the argument
-- **AND** the `RenderContext` SHALL have `.config` and `.di_scope` properties so that common old-style `on_app_ready(app)` code accessing `app.config` or `app.di_scope` continues to work
-
 ### Requirement: PluginManager shall initialize plugins in both app and render context phases
 
 `PluginManager` SHALL support two initialization phases: app-level initialization (discovering plugins, calling `on_app_init`) during `WebComPyApp` creation, and render-context-level initialization (calling `on_render_context_init`, registering per-request providers) during `RenderContext` creation.

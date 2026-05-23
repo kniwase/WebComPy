@@ -1,28 +1,33 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Literal
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Literal
 
 from webcompy.app._config import WebComPyAppConfig
-from webcompy.app._root_component import AppDocumentRoot
 from webcompy.components import ComponentGenerator
-from webcompy.components._component import _set_app_instance
-from webcompy.components._generator import ComponentStore
-from webcompy.di._keys import _COMPONENT_STORE_KEY
-from webcompy.di._scope import DIScope, _set_app_di_scope
 from webcompy.exception import WebComPyException
 from webcompy.plugin._manager import PluginManager
 from webcompy.router import Router
 from webcompy.utils import ENVIRONMENT
 
+if TYPE_CHECKING:
+    from webcompy.app._render_context import RenderContext
+
+
+def _make_deferred(app: WebComPyApp, method_name: str) -> Callable[..., None]:
+    def _deferred(*args: Any, **kwargs: Any) -> None:
+        app._deferred_ops.append((method_name, args, kwargs))
+
+    _deferred.__qualname__ = method_name
+    return _deferred
+
 
 class WebComPyApp:
-    _root: AppDocumentRoot
-    _di_scope: DIScope
     _config: WebComPyAppConfig
-    _component_store: ComponentStore
     _profile: bool
     _profile_data: dict[str, float]
+    _render_context: RenderContext | None
 
     def __init__(
         self,
@@ -36,75 +41,20 @@ class WebComPyApp:
         self._profile_data: dict[str, float] = {}
         self._hydrate = self._config.hydrate
         self._record_phase("init_start")
-        self._di_scope = DIScope()
-        self._component_store = ComponentStore()
-        self._di_scope.provide(_COMPONENT_STORE_KEY, self._component_store)
-        self._defer_depth: int = 0
-        self._deferred_callbacks: list = []
+        self._root_component_def = root_component
         self._router = router
+        self._router_pages = router.__routes__ if router else None
+        self._router_mode: Literal["hash", "history"] = (
+            router.__mode__ if router else "history"  # type: ignore[assignment]
+        )
+        self._router_base_url = router.__base_url__ if router else None
+        self._component_generators: dict[str, ComponentGenerator[Any]] = {}
+        self._deferred_ops: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
         self._plugin_manager = PluginManager(self)
         if self._config.plugins:
             self._plugin_manager.discover(self._config.plugins)
             self._plugin_manager.init_all()
-        router_mode: Literal["hash", "history"] = (
-            self._router.__mode__ if self._router else "history"  # type: ignore[assignment]
-        )
-        if ENVIRONMENT == "pyscript":
-            self._di_scope.__enter__()
-            _set_app_di_scope(self._di_scope)
-            _set_app_instance(self)
-            from webcompy.components._generator import _register_deferred_components
-            from webcompy.ports._browser._cookie import BrowserCookiePort
-            from webcompy.ports._browser._dom import BrowserDOMPort
-            from webcompy.ports._browser._fetch import BrowserFetchPort
-            from webcompy.ports._browser._ffi import BrowserFFIPort
-            from webcompy.ports._browser._history import BrowserHistoryPort
-            from webcompy.ports._browser._host import BrowserHostPort
-            from webcompy.ports._keys import (
-                COOKIE_PORT_KEY,
-                DOM_PORT_KEY,
-                FETCH_PORT_KEY,
-                FFI_PORT_KEY,
-                HISTORY_PORT_KEY,
-                HOST_PORT_KEY,
-            )
-
-            self._di_scope.provide(COOKIE_PORT_KEY, BrowserCookiePort())
-            self._di_scope.provide(DOM_PORT_KEY, BrowserDOMPort())
-            self._di_scope.provide(FETCH_PORT_KEY, BrowserFetchPort())
-            self._di_scope.provide(FFI_PORT_KEY, BrowserFFIPort())
-            self._di_scope.provide(HISTORY_PORT_KEY, BrowserHistoryPort(mode=router_mode))
-            self._di_scope.provide(HOST_PORT_KEY, BrowserHostPort())
-
-            _register_deferred_components()
-        else:
-            with self._di_scope:
-                from webcompy.components._generator import _register_deferred_components
-                from webcompy.ports._keys import (
-                    COOKIE_PORT_KEY,
-                    DOM_PORT_KEY,
-                    FETCH_PORT_KEY,
-                    FFI_PORT_KEY,
-                    HISTORY_PORT_KEY,
-                    HOST_PORT_KEY,
-                )
-                from webcompy.ports._server._cookie import ServerCookiePort
-                from webcompy.ports._server._dom import ServerDOMPort
-                from webcompy.ports._server._fetch import ServerFetchPort
-                from webcompy.ports._server._ffi import ServerFFIPort
-                from webcompy.ports._server._history import ServerHistoryPort
-                from webcompy.ports._server._host import ServerHostPort
-
-                self._di_scope.provide(COOKIE_PORT_KEY, ServerCookiePort())
-                self._di_scope.provide(DOM_PORT_KEY, ServerDOMPort())
-                self._di_scope.provide(FETCH_PORT_KEY, ServerFetchPort())
-                self._di_scope.provide(FFI_PORT_KEY, ServerFFIPort())
-                self._di_scope.provide(HISTORY_PORT_KEY, ServerHistoryPort(mode=router_mode))
-                self._di_scope.provide(HOST_PORT_KEY, ServerHostPort())
-
-                _register_deferred_components()
-        self._record_phase("imports_done")
-        self._root = AppDocumentRoot(root_component, router, self._di_scope, app=self)
+        self._render_context = None
         self._record_phase("init_done")
 
     @property
@@ -148,12 +98,33 @@ class WebComPyApp:
         else:
             print(output)
 
+    def create_render_context(self, path: str = "") -> RenderContext:
+        from webcompy.app._render_context import RenderContext
+
+        ctx = RenderContext(self, path)
+        self._render_context = ctx
+        self._flush_deferred_ops()
+        return ctx
+
+    def _flush_deferred_ops(self) -> None:
+        for method_name, args, kwargs in self._deferred_ops:
+            getattr(self._render_context, method_name)(*args, **kwargs)
+        self._deferred_ops.clear()
+
     @property
-    def di_scope(self) -> DIScope:
-        return self._di_scope
+    def di_scope(self):
+        if self._render_context is not None:
+            return self._render_context.di_scope
+        raise AttributeError(
+            "WebComPyApp.di_scope is not available without a RenderContext. "
+            "Use app.create_render_context(path) or call app.run() in the browser."
+        )
 
     def provide(self, key: object, value: Any) -> None:
-        self._di_scope.provide(key, value)
+        if self._render_context is not None:
+            self._render_context.provide(key, value)
+            return
+        self._deferred_ops.append(("provide", (key, value), {}))
 
     @property
     def router(self):
@@ -161,67 +132,105 @@ class WebComPyApp:
 
     @property
     def routes(self):
-        return self._root.routes
+        if self._render_context is not None:
+            return self._render_context.routes
+        return self._router_pages
 
     @property
     def router_mode(self):
-        return self._root.router_mode
+        if self._render_context is not None:
+            return self._render_context.router_mode
+        return self._router_mode
 
     def set_path(self, path: str):
-        return self._root.set_path(path)
+        if self._render_context is not None:
+            return self._render_context.set_path(path)
+        if ENVIRONMENT == "pyscript":
+            return None
+        raise AttributeError(
+            "WebComPyApp.set_path() is not available on the server. "
+            "Use RenderContext.set_path() instead via app.create_render_context(path)."
+        )
 
     @property
     def head(self):
-        return self._root.head
+        if self._render_context is not None:
+            return self._render_context.head
+        raise AttributeError("WebComPyApp.head is not available without a RenderContext.")
 
     @property
     def style(self):
-        return self._root.style
+        if self._render_context is not None:
+            return self._render_context.style
+        raise AttributeError("WebComPyApp.style is not available without a RenderContext.")
 
     @property
     def scripts(self):
-        return self._root.scripts
+        if self._render_context is not None:
+            return self._render_context.scripts
+        raise AttributeError("WebComPyApp.scripts is not available without a RenderContext.")
 
-    @property
-    def set_title(self):
-        return self._root.set_title
+    def set_title(self, title: str) -> None:
+        if self._render_context is not None:
+            return self._render_context.set_title(title)
+        self._deferred_ops.append(("set_title", (title,), {}))
 
-    @property
-    def set_meta(self):
-        return self._root.set_meta
+    def set_meta(self, key: str, attributes: dict[str, str]) -> None:
+        if self._render_context is not None:
+            return self._render_context.set_meta(key, attributes)
+        self._deferred_ops.append(("set_meta", (key, attributes), {}))
 
-    @property
-    def append_link(self):
-        return self._root.append_link
+    def append_link(self, attributes: dict[str, str]) -> None:
+        if self._render_context is not None:
+            return self._render_context.append_link(attributes)
+        self._deferred_ops.append(("append_link", (attributes,), {}))
 
-    @property
-    def append_script(self):
-        return self._root.append_script
+    def append_script(
+        self,
+        attributes: dict[str, str],
+        script: str | None = None,
+        in_head: bool = False,
+    ) -> None:
+        if self._render_context is not None:
+            return self._render_context.append_script(attributes, script, in_head)
+        self._deferred_ops.append(("append_script", (attributes, script, in_head), {}))
 
-    @property
-    def set_head(self):
-        return self._root.set_head
+    def set_head(self, head: Any) -> None:
+        if self._render_context is not None:
+            return self._render_context.set_head(head)
+        self._deferred_ops.append(("set_head", (head,), {}))
 
-    @property
-    def update_head(self):
-        return self._root.update_head
+    def update_head(self, head: Any) -> None:
+        if self._render_context is not None:
+            return self._render_context.update_head(head)
+        self._deferred_ops.append(("update_head", (head,), {}))
 
-    @property
-    def set_html_attr(self):
-        return self._root.set_html_attr
+    def set_html_attr(self, key: str, value: Any) -> None:
+        if self._render_context is not None:
+            return self._render_context.set_html_attr(key, value)
+        self._deferred_ops.append(("set_html_attr", (key, value), {}))
 
-    @property
-    def remove_html_attr(self):
-        return self._root.remove_html_attr
+    def remove_html_attr(self, key: str) -> None:
+        if self._render_context is not None:
+            return self._render_context.remove_html_attr(key)
+        self._deferred_ops.append(("remove_html_attr", (key,), {}))
 
     @property
     def html_attrs(self):
-        return self._root.html_attrs
+        if self._render_context is not None:
+            return self._render_context.html_attrs
+        raise AttributeError("WebComPyApp.html_attrs is not available without a RenderContext.")
 
     def run(self) -> None:
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("app.run() can only be called in a browser environment.")
         self._record_phase("run_start")
-        self._plugin_manager.call_on_app_ready(self)
-        self._root._selector = self._config.selector
-        self._root.render()
+        from webcompy.components._component import _active_app_context, _set_app_instance
+
+        ctx = self.create_render_context()
+        self._render_context = ctx
+        _active_app_context.set(ctx)
+        _set_app_instance(ctx)
+        self._plugin_manager.call_on_app_ready(ctx)
+        ctx._root._selector = self._config.selector
+        ctx._root.render()

@@ -7,14 +7,14 @@ from webcompy.signal._composable import use_counter
 from webcompy.signal._effect import (
     effect_scope,
 )
-from webcompy.signal._graph import reset_graph_state
+from webcompy.signal._graph import set_active_consumer
 
 
 @pytest.fixture(autouse=True)
 def reset_state():
-    reset_graph_state()
+    set_active_consumer(None)
     yield
-    reset_graph_state()
+    set_active_consumer(None)
 
 
 class TestEffectBasic:

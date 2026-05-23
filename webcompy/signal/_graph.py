@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-_active_consumer: SignalNode | None = None
-_in_notification_phase: bool = False
+from contextvars import ContextVar
+
+_active_consumer_cv: ContextVar[SignalNode | None] = ContextVar("_active_consumer_cv", default=None)
+_in_notification_phase_cv: ContextVar[bool | None] = ContextVar("_in_notification_phase_cv", default=None)
+_active_consumer_global: SignalNode | None = None
+_in_notification_phase_global: bool = False
 _epoch: int = 0
 
 
@@ -66,21 +70,37 @@ _SENTINEL = object()
 
 
 def set_active_consumer(consumer: SignalNode | None) -> SignalNode | None:
-    global _active_consumer
-    prev = _active_consumer
-    _active_consumer = consumer
+    global _active_consumer_global
+    prev = _active_consumer_global
+    _active_consumer_global = consumer
+    _active_consumer_cv.set(consumer)
     return prev
 
 
 def get_active_consumer() -> SignalNode | None:
-    return _active_consumer
+    result = _active_consumer_cv.get(None)
+    if result is not None:
+        return result
+    return _active_consumer_global
+
+
+def _get_in_notification_phase() -> bool:
+    val = _in_notification_phase_cv.get(None)
+    if val is not None:
+        return val
+    return _in_notification_phase_global
+
+
+def _set_in_notification_phase(value: bool) -> None:
+    global _in_notification_phase_global
+    _in_notification_phase_global = value
+    _in_notification_phase_cv.set(value)
 
 
 def producer_accessed(producer: SignalNode) -> None:
-    global _active_consumer
-    if _active_consumer is None:
+    consumer = get_active_consumer()
+    if consumer is None:
         return
-    consumer = _active_consumer
     edge = _find_consumer_edge(producer, consumer)
     if edge is not None:
         edge.last_read_version = producer.version
@@ -93,8 +113,7 @@ def producer_accessed(producer: SignalNode) -> None:
 
 
 def producer_notify_consumers(producer: SignalNode) -> None:
-    global _in_notification_phase
-    _in_notification_phase = True
+    _set_in_notification_phase(True)
     try:
         consumers_to_notify: list[SignalNode] = []
         edge = producer.consumers
@@ -108,7 +127,7 @@ def producer_notify_consumers(producer: SignalNode) -> None:
                 consumer.dirty = True
                 consumer_mark_dirty(consumer)
     finally:
-        _in_notification_phase = False
+        _set_in_notification_phase(False)
 
 
 def producer_update_value_version(producer: SignalNode) -> None:
@@ -152,9 +171,7 @@ def consumer_poll_producers_for_change(consumer: SignalNode) -> bool:
 
 
 def consumer_before_computation(consumer: SignalNode) -> SignalNode | None:
-    global _active_consumer
-    prev = _active_consumer
-    _active_consumer = consumer
+    prev = set_active_consumer(consumer)
     return prev
 
 
@@ -162,8 +179,7 @@ def consumer_after_computation(
     consumer: SignalNode,
     prev_consumer: SignalNode | None,
 ) -> None:
-    global _active_consumer
-    _active_consumer = prev_consumer
+    set_active_consumer(prev_consumer)
     edge = consumer.producers
     while edge is not None:
         next_edge = edge.next_producer
@@ -290,13 +306,6 @@ def _track_live_consumer(edge: SignalEdge) -> None:
 
 def _untrack_live_consumer(edge: SignalEdge) -> None:
     pass
-
-
-def reset_graph_state() -> None:
-    global _active_consumer, _in_notification_phase, _epoch
-    _active_consumer = None
-    _in_notification_phase = False
-    _epoch = 0
 
 
 def increment_epoch() -> int:

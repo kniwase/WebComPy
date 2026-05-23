@@ -6,6 +6,7 @@ from webcompy.app._config import PluginScript
 
 if TYPE_CHECKING:
     from webcompy.app._app import WebComPyApp
+    from webcompy.app._render_context import RenderContext
 
 
 class WebComPyPluginException(Exception):
@@ -27,5 +28,8 @@ class WebComPyPlugin:
     def on_app_init(self, app: WebComPyApp) -> None:
         pass
 
-    def on_app_ready(self, app: WebComPyApp) -> None:
+    def on_render_context_init(self, ctx: RenderContext) -> None:
+        pass
+
+    def on_app_ready(self, ctx: RenderContext) -> None:
         pass
