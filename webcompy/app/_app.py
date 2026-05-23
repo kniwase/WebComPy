@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Literal
 
 from webcompy.app._config import WebComPyAppConfig
@@ -13,14 +12,6 @@ from webcompy.utils import ENVIRONMENT
 
 if TYPE_CHECKING:
     from webcompy.app._render_context import RenderContext
-
-
-def _make_deferred(app: WebComPyApp, method_name: str) -> Callable[..., None]:
-    def _deferred(*args: Any, **kwargs: Any) -> None:
-        app._deferred_ops.append((method_name, args, kwargs))
-
-    _deferred.__qualname__ = method_name
-    return _deferred
 
 
 class WebComPyApp:

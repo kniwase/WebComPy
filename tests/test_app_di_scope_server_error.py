@@ -42,3 +42,19 @@ class TestAppDiScopeServerError:
         ctx = app.create_render_context()
         assert ctx.di_scope is not None
         ctx.dispose()
+
+    def test_deferred_ops_only_flushed_once(self):
+        app = WebComPyApp(
+            root_component=_ErrorTestRoot,
+            config=WebComPyAppConfig(),
+        )
+        app.set_head({"title": "First"})
+        assert len(app._deferred_ops) == 1
+
+        ctx1 = app.create_render_context()
+        assert len(app._deferred_ops) == 0
+        ctx1.dispose()
+
+        ctx2 = app.create_render_context()
+        assert len(app._deferred_ops) == 0
+        ctx2.dispose()

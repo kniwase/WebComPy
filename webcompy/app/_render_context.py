@@ -178,37 +178,34 @@ class RenderContext:
     def scripts(self):
         return self._root.scripts
 
-    @property
-    def set_title(self):
-        return self._root.set_title
+    def set_title(self, title: str) -> None:
+        return self._root.set_title(title)
 
-    @property
-    def set_meta(self):
-        return self._root.set_meta
+    def set_meta(self, key: str, attributes: dict[str, str]) -> None:
+        return self._root.set_meta(key, attributes)
 
-    @property
-    def append_link(self):
-        return self._root.append_link
+    def append_link(self, attributes: dict[str, str]) -> None:
+        return self._root.append_link(attributes)
 
-    @property
-    def append_script(self):
-        return self._root.append_script
+    def append_script(
+        self,
+        attributes: dict[str, str],
+        script: str | None = None,
+        in_head: bool = False,
+    ) -> None:
+        return self._root.append_script(attributes, script, in_head)
 
-    @property
-    def set_head(self):
-        return self._root.set_head
+    def set_head(self, head: Any) -> None:
+        return self._root.set_head(head)
 
-    @property
-    def update_head(self):
-        return self._root.update_head
+    def update_head(self, head: Any) -> None:
+        return self._root.update_head(head)
 
-    @property
-    def set_html_attr(self):
-        return self._root.set_html_attr
+    def set_html_attr(self, key: str, value: Any) -> None:
+        return self._root.set_html_attr(key, value)
 
-    @property
-    def remove_html_attr(self):
-        return self._root.remove_html_attr
+    def remove_html_attr(self, key: str) -> None:
+        return self._root.remove_html_attr(key)
 
     @property
     def html_attrs(self):
