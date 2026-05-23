@@ -273,3 +273,59 @@ def test_di_inject_from_app_level():
     app._di_scope.provide(AppThemeKey, "app-dark-theme")
     result = TestRenderer.render(DiInjectPage)
     assert "app-dark-theme" in result.to_html()
+
+
+def test_reactive_list_operations():
+    from my_app.pages.signal import ReactivePage
+
+    result = TestRenderer.render(ReactivePage)
+    list_count = result.find_by_attribute("data-testid", "list-count")
+    assert list_count is not None
+    assert list_count.textContent == "3"
+
+    add_btn = result.find_by_attribute("data-testid", "list-add-btn")
+    add_btn.dispatchEvent(VirtualDOMEvent("click"))
+    assert list_count.textContent == "4"
+
+    remove_btn = result.find_by_attribute("data-testid", "list-remove-btn")
+    remove_btn.dispatchEvent(VirtualDOMEvent("click"))
+    assert list_count.textContent == "3"
+
+
+def test_reactive_dict_operations():
+    from my_app.pages.signal import ReactivePage
+
+    result = TestRenderer.render(ReactivePage)
+    dict_count = result.find_by_attribute("data-testid", "dict-count")
+    assert dict_count is not None
+    assert dict_count.textContent == "1"
+
+    add_btn = result.find_by_attribute("data-testid", "dict-add-btn")
+    add_btn.dispatchEvent(VirtualDOMEvent("click"))
+    assert dict_count.textContent == "2"
+
+
+def test_scoped_style_attribute_selector():
+    from my_app.pages.scoped_style import ScopedStylePage
+
+    style_content = ScopedStylePage.scoped_style
+    assert "webcompy-cid-" in style_content
+
+
+def test_scoped_style_top_level_media_query():
+    from my_app.pages.scoped_style import ScopedStylePage
+
+    style_content = ScopedStylePage.scoped_style
+    assert "top-level-media-text" in style_content
+    assert "webcompy-cid-" in style_content
+    assert any(token in style_content.replace(" ", "") for token in ("@media(max-width:", "@media (max-width:"))
+    assert "@media[webcompy-cid-" not in style_content
+
+
+def test_lifecycle_hooks_fire():
+    from my_app.pages.lifecycle import LifecyclePage
+
+    result = TestRenderer.render(LifecyclePage)
+    render_count = result.find_by_attribute("data-testid", "render-count")
+    assert render_count is not None
+    assert render_count.textContent == "1"
