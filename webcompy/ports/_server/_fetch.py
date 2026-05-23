@@ -34,6 +34,6 @@ class ServerFetchPort(FetchPort):
     def __del__(self) -> None:
         import asyncio
 
-        with contextlib.suppress(RuntimeError):
+        with contextlib.suppress(RuntimeError, ImportError, ModuleNotFoundError):
             loop = asyncio.get_running_loop()
             task = loop.create_task(self._client.aclose())  # noqa: F841, RUF006

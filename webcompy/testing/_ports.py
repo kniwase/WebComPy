@@ -3,12 +3,15 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import MagicMock
 
+from webcompy.ports._dom import DOMPort
 from webcompy.ports._fetch import FetchPort, Response
+from webcompy.ports._ffi import FFIPort
+from webcompy.ports._host import HostPort
 from webcompy.ports._server._virtual_dom import VirtualDOMEvent
 from webcompy.testing._dom import FakeDOMNode
 
 
-class FakeBrowserDOMPort:
+class FakeBrowserDOMPort(DOMPort):
     def create_element(self, tag: str) -> FakeDOMNode:
         return FakeDOMNode(tag)
 
@@ -37,7 +40,7 @@ class FakeBrowserDOMPort:
         return VirtualDOMEvent(event_type, bubbles=bubbles, cancelable=cancelable)
 
 
-class FakeBrowserHostPort:
+class FakeBrowserHostPort(HostPort):
     def schedule_macro_task(self, callback: Any) -> None:
         callback()
 
@@ -56,7 +59,7 @@ class FakeBrowserHostPort:
         return _getter
 
 
-class FakeBrowserFFIPort:
+class FakeBrowserFFIPort(FFIPort):
     def create_proxy(self, func: Any) -> Any:
         proxy = MagicMock(side_effect=func)
         proxy.destroy = MagicMock()
@@ -72,10 +75,8 @@ class FakeBrowserFFIPort:
     def to_js(self, value: Any, **kwargs: Any) -> Any:
         return value
 
-    def assign(self, target: Any, *sources: Any) -> Any:
-        for source in sources:
-            target.update(source)
-        return target
+    def assign(self, target: Any, source: Any) -> None:
+        target.update(source)
 
 
 class FakeFetchPort(FetchPort):

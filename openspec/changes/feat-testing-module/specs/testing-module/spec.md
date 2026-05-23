@@ -76,7 +76,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: webcompy.testing package shall provide scope helpers
 
-`create_browser_scope()` SHALL return a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort`, and `FakeFetchPort` wired to their standard injection keys. `create_server_scope()` SHALL return a `DIScope` with `ServerDOMPort`, `ServerHostPort`, `ServerFFIPort`, and `ServerFetchPort` wired to their standard injection keys. `TestRenderer.render()` SHALL include `FakeFetchPort` wired to `FETCH_PORT_KEY` in its DI scope. `create_test_app(*, root_component, **config_overrides)` SHALL return a minimal `WebComPyApp` instance. Callers manage DI scope via `app.di_scope` — this is an intentional test-only escape hatch, not a public API contract, and SHALL NOT be used in production code.
+`create_browser_scope()` SHALL return a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, and `FakeBrowserFFIPort` wired to their standard injection keys. `create_server_scope()` SHALL return a `DIScope` with `ServerDOMPort`, `ServerHostPort`, `ServerFFIPort`, and `ServerFetchPort` wired to their standard injection keys. `TestRenderer.render()` SHALL include `FakeFetchPort` wired to `FETCH_PORT_KEY` in its DI scope. `create_test_app(*, root_component, **config_overrides)` SHALL return a minimal `WebComPyApp` instance. Callers manage DI scope via `app.di_scope` — this is an intentional test-only escape hatch, not a public API contract, and SHALL NOT be used in production code.
 
 #### Scenario: create_browser_scope returns a ready-to-use DIScope
 - **WHEN** `scope = create_browser_scope()` is called
