@@ -48,8 +48,10 @@ class RenderContext:
         )
 
         self._di_scope.__enter__()
-        _set_app_di_scope(self._di_scope)
-        _set_app_instance(self)
+
+        if ENVIRONMENT == "pyscript":
+            _set_app_di_scope(self._di_scope)
+            _set_app_instance(self)
 
         if ENVIRONMENT == "pyscript":
             from webcompy.ports._browser._cookie import BrowserCookiePort
@@ -138,14 +140,10 @@ class RenderContext:
     def render_html(self, **kwargs: Any) -> str:
         from webcompy.cli._html import generate_html
 
-        _active_app_context.set(self)
-        _set_app_instance(self)
-        try:
-            return generate_html(self, **kwargs)
-        finally:
-            _set_app_instance(None)
+        return generate_html(self, **kwargs)
 
     def dispose(self) -> None:
+        _active_app_context.set(None)
         _set_app_di_scope(None)
         _set_app_instance(None)
         self._di_scope.__exit__(None, None, None)

@@ -5,7 +5,7 @@ import json
 from typing import TYPE_CHECKING, TypeAlias, cast
 
 from webcompy.app._config import PluginScript
-from webcompy.components._component import Component
+from webcompy.components._component import Component, _active_app_context, _set_app_instance
 from webcompy.di import inject
 from webcompy.elements.typealias import ElementChildren
 from webcompy.elements.types import Element, RepeatElement
@@ -177,6 +177,40 @@ def _render_plugin_script(ps: PluginScript) -> _HtmlElement:
 
 
 def generate_html(
+    ctx: RenderContext,
+    app_package_name: str,
+    dev_mode: bool,
+    prerender: bool,
+    app_version: str,
+    wheel_filename: str,
+    pyodide_package_names: list[str] | None = None,
+    wasm_local_urls: dict[str, str] | None = None,
+    lockfile_url: str | None = None,
+    runtime_serving: str = "cdn",
+    extra_wheel_filenames: list[str] | None = None,
+):
+    token = _active_app_context.set(ctx)
+    _set_app_instance(ctx)
+    try:
+        return _generate_html_impl(
+            ctx,
+            app_package_name,
+            dev_mode,
+            prerender,
+            app_version,
+            wheel_filename,
+            pyodide_package_names,
+            wasm_local_urls,
+            lockfile_url,
+            runtime_serving,
+            extra_wheel_filenames,
+        )
+    finally:
+        _active_app_context.reset(token)
+        _set_app_instance(None)
+
+
+def _generate_html_impl(
     ctx: RenderContext,
     app_package_name: str,
     dev_mode: bool,

@@ -168,7 +168,7 @@ class Component(ElementBase):
         self._property["on_before_rendering"]()
         super()._render()
         after_rendering = self._property["on_after_rendering"]
-        app = _active_app_context.get()
+        app = _active_app_context.get() or _get_app_instance()
         if app is not None and app._defer_depth > 0:
             app._deferred_callbacks.append(after_rendering)
         else:
