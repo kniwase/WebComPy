@@ -61,15 +61,16 @@ The plugin system passes `WebComPyApp` to hooks (`on_app_init`, `on_app_ready`),
 
 **Design principle**: When uncertain whether a new element belongs to `WebComPyApp` or `RenderContext`, prefer `RenderContext`. This errs on the side of safety against cross-request vulnerabilities.
 
-### Decision 3: Signal graph globals → `ContextVar`
+### Decision 3: Signal graph globals → `ContextVar`, `_epoch` stays global
 
-**Choice**: Convert `_active_consumer` and `_in_notification_phase` in `_graph.py` from module-level globals to `ContextVar`s. Keep `_epoch` as a module-level global but call `reset_graph_state()` in `RenderContext.dispose()`.
+**Choice**: Convert `_active_consumer` and `_in_notification_phase` in `_graph.py` from module-level globals to `ContextVar`s with module-level fallback globals (`_active_consumer_global`, `_in_notification_phase_global`) for PyScript environments where ContextVar propagation is unreliable across JS→Python callbacks. Keep `_epoch` as a module-level global that is **never reset** — it grows monotonically and serves as a logical clock for staleness detection. Remove `reset_graph_state()` entirely; disposal of signal nodes is handled by `consumer_destroy()` called from DI scope and effect scope disposal.
 
 **Alternatives considered**:
-- **Reset `_epoch` per request**: Rejected because stale `SignalNode.last_clean_epoch` values from a previous request's graph would be incorrectly treated as "current" if `_epoch` is reset to 0.
-- **Keep all as globals**: Rejected because `_active_consumer` and `_in_notification_phase` are set/reset during computation and could interleave across async tasks.
+- **Reset `_epoch` per RenderContext**: Rejected because it creates a race condition during concurrent requests. Request A's signal nodes have `last_clean_epoch=5`, Request B's `dispose()` resets `_epoch=0`, then Request A's nodes are incorrectly treated as stale (`0 != 5`). Monotonic growth is safe.
+- **Reset `_epoch` at dispose but sequence is non-concurrent**: Rejected because Starlette+uvicorn uses `asyncio` which is concurrent within a single event loop.
+- **Keep all as globals**: Rejected because `_active_consumer` and `_in_notification_phase` are set/reset during computation and could interleave across async tasks without ContextVar isolation.
 
-**Rationale**: `ContextVar` provides per-async-task isolation for `_active_consumer` and `_in_notification_phase`, which are transient computation state. `_epoch` is monotonically increasing and used for staleness detection — since `RenderContext.dispose()` destroys all signal nodes, resetting it is safe within a disposed context, but keeping it global avoids cross-request staleness issues. `reset_graph_state()` in `dispose()` handles cleanup.
+**Rationale**: `ContextVar` provides per-async-task isolation for `_active_consumer` and `_in_notification_phase`, which are transient computation state. The fallback globals exist for PyScript where ContextVar bindings are lost across JS→Python callbacks (same pattern already used for `_active_di_scope`/`_app_di_scope`). `_epoch` is a monotonically increasing logical clock — since each `RenderContext` creates all-new signal nodes, their `last_clean_epoch` is always set to the current `_epoch` at creation time, which is correct regardless of the epoch's absolute value. Python ints have unlimited precision, so overflow is not a concern.
 
 ### Decision 4: Plugin lifecycle hooks
 
@@ -108,5 +109,5 @@ This is a **breaking change** for `on_app_ready` signature. Plugins updating to 
 
 - **[Breaking change: `on_app_ready` signature]** → Mitigate with deprecation period: accept both `(app: WebComPyApp)` and `(ctx: RenderContext)` signatures during migration, warn on old signature.
 - **[Performance cost of per-request RenderContext creation]** → The most expensive operation (component tree construction) already happens per-request in the current SSR path via `app.set_path()` + `app._root.render()`. Creating a fresh `RenderContext` adds only cheap operations (DIScope, ports, Router). Benchmark before/after to confirm negligible overhead.
-- **[Signal graph `_epoch` as global]** → Keep as global since `RenderContext.dispose()` calls `reset_graph_state()` which resets it. Each fresh RenderContext starts from `_epoch=0`. No stale references survive disposal.
+- **[Signal graph `_epoch` as global]** → Keep as monotonically increasing global (never reset). Each fresh RenderContext creates new signal nodes whose `last_clean_epoch` receives the current `_epoch` value at construction, which is always correct for staleness detection. Resetting `_epoch` would cause cross-request staleness bugs during concurrent SSR.
 - **[Plugin migration burden]** → Provide clear migration guide. The change is small (one parameter type change). Most plugins don't use `on_app_ready` at all.

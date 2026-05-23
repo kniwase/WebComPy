@@ -24,7 +24,7 @@ The same Python source code SHALL execute correctly both in the browser (via PyS
 
 ### Requirement: Multiple WebComPy applications shall coexist without interference
 
-Each `WebComPyApp` instance SHALL hold only immutable definitions. Each `RenderContext` SHALL have its own DI scope, Router, and component tree. Global singletons SHALL NOT be used for request-scoped state. Module-level signal graph globals (`_active_consumer`, `_in_notification_phase`) SHALL use `ContextVar` for async-safe isolation between concurrent requests.
+Each `WebComPyApp` instance SHALL hold only immutable definitions. Each `RenderContext` SHALL have its own DI scope, Router, and component tree. Global singletons SHALL NOT be used for request-scoped state. Module-level signal graph globals (`_active_consumer`, `_in_notification_phase`) SHALL use `ContextVar` for async-safe isolation between concurrent requests, with module-level fallback globals (`_active_consumer_global`, `_in_notification_phase_global`) for PyScript environments where ContextVar propagation is unreliable. The `_active_app_context` ContextVar SHALL reference the `RenderContext` instance, not the `WebComPyApp`, and its module-level fallback `_app_instance` SHALL also reference the current `RenderContext`.
 
 #### Scenario: Two apps on the same page (browser)
 - **WHEN** two `WebComPyApp` instances are created with different root components in the browser

@@ -35,9 +35,9 @@ A `RenderContext` class SHALL hold all mutable runtime state needed for a single
 
 #### Scenario: Disposing a RenderContext after SSR rendering
 - **WHEN** `ctx = app.create_render_context(path)` then `ctx.render_html(...)` then `ctx.dispose()` is called on the server
-- **THEN** all DI scope children SHALL be disposed
-- **AND** all EffectScopes SHALL be disposed
-- **AND** Signal graph state SHALL be reset via `reset_graph_state()`
+- **THEN** all DI scope children SHALL be disposed via `DIScope.dispose()`
+- **AND** all EffectScopes SHALL be disposed (via `DIScope.dispose()` cascading to child scopes that contain effect scopes)
+- **AND** Signal graph nodes owned by the disposed RenderContext's components SHALL be cleaned up via `consumer_destroy()` (called from DI scope disposal and effect scope disposal)
 - **AND** no circular references that prevent garbage collection SHALL remain
 
 #### Scenario: Disposing a RenderContext is not required in the browser
@@ -87,7 +87,7 @@ When adding new elements to the framework, if it is uncertain whether an element
 
 ### Requirement: Signal graph globals shall use ContextVar for async safety
 
-`_active_consumer` and `_in_notification_phase` in `_graph.py` SHALL be converted from module-level globals to `ContextVar`s. `_epoch` SHALL remain a module-level global but SHALL be reset by `reset_graph_state()` when a `RenderContext` is disposed.
+`_active_consumer` and `_in_notification_phase` in `_graph.py` SHALL be converted from module-level globals to `ContextVar`s, with module-level fallback globals (`_active_consumer_global`, `_in_notification_phase_global`) for PyScript environments where `ContextVar` propagation is unreliable across JS→Python callbacks. All read/write access SHALL check `ContextVar` first and fall back to the global when ContextVar is unset. `_epoch` SHALL remain a module-level global that grows monotonically and is never reset — Python integers have unlimited precision so overflow is not a concern. `reset_graph_state()` SHALL be removed; the disposal of signal graph resources is handled by `consumer_destroy()` called from DI scope and effect scope disposal, combined with ContextVar-based isolation for transient computation state.
 
 #### Scenario: Concurrent async requests with isolated signal computation
 - **WHEN** two SSR requests are being processed concurrently in an async context
@@ -95,9 +95,15 @@ When adding new elements to the framework, if it is uncertain whether an element
 - **THEN** `_active_consumer` in one request SHALL NOT affect `_active_consumer` in the other
 - **AND** `_in_notification_phase` in one request SHALL NOT affect `_in_notification_phase` in the other
 
-#### Scenario: Epoch reset on RenderContext disposal
+#### Scenario: Signal graph state cleanup on RenderContext disposal
 - **WHEN** `ctx.dispose()` is called after SSR rendering
-- **THEN** `reset_graph_state()` SHALL be called
-- **AND** `_active_consumer` SHALL be set to `None`
-- **AND** `_in_notification_phase` SHALL be set to `False`
-- **AND** `_epoch` SHALL be reset to `0`
+- **THEN** all signal nodes belonging to disposed components SHALL be cleaned up via `consumer_destroy()`
+- **AND** the `_epoch` counter SHALL continue from its current value — it SHALL NOT be reset
+- **AND** no `reset_graph_state()` function SHALL exist
+- **AND** `_active_consumer` and `_in_notification_phase` ContextVars SHALL revert to defaults when the async task completes
+
+#### Scenario: PyScript fallback for ContextVar
+- **WHEN** a JS event handler invokes a Python callback in PyScript
+- **AND** the `ContextVar` for `_active_consumer` is unset (PyScript does not propagate ContextVars across JS→Python boundaries)
+- **THEN** the accessor function SHALL fall back to the module-level global `_active_consumer_global`
+- **AND** signal dependency tracking SHALL work correctly despite the ContextVar being unset
