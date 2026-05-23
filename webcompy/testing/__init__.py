@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from webcompy.ports._server._virtual_dom import VirtualDOMEvent
+from webcompy.testing._app import mock_app_run
 from webcompy.testing._asgi import create_test_asgi_app, format_html
 from webcompy.testing._dom import FakeDOMNode
 from webcompy.testing._ports import (
@@ -28,4 +29,5 @@ __all__ = [
     "create_test_app",
     "create_test_asgi_app",
     "format_html",
+    "mock_app_run",
 ]

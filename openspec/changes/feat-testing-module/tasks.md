@@ -79,10 +79,10 @@ These tests are in `tests/e2e/` but never use Playwright. They inspect build out
 
 ## 8. mock_app_run() and docs demo unit tests (planned)
 
-- [ ] 8.1 Add `mock_app_run()` context manager to `webcompy/testing/` — temporarily replaces `WebComPyApp.run` with a no-op, enabling `import` of modules that call `app.run()` at module level. Implement in `webcompy/testing/_app.py`, re-export from `__init__.py`.
-- [ ] 8.2 Add `mock_app_run` unit tests — verify that within context: (a) `WebComPyApp.run` is replaced with no-op, (b) after context exit original `run` is restored, (c) `import` of a module with `app.run()` succeeds without raising `WebComPyException`.
-- [ ] 8.3 Migrate `tests/e2e_docs/test_helloworld.py` (3 tests) — replace Playwright `docs_page_on("/sample/helloworld")` + iframe assertions with `TestRenderer.render()` via `mock_app_run()`. Verify heading text and component structure.
-- [ ] 8.4 Migrate `tests/e2e_docs/test_fizzbuzz.py` (5 tests) — replace Playwright `docs_page_on("/sample/fizzbuzz")` + button click assertions with `TestRenderer.render()` + `dispatchEvent(VirtualDOMEvent("click"))` via `mock_app_run()`. Verify initial state, Add/Pop/Toggle/Hide buttons, and list count.
-- [ ] 8.5 Consolidate CI docs-e2e groups — remove migrated tests from docs E2E matrix entries, update group file lists.
+- [x] 8.1 Add `mock_app_run()` context manager to `webcompy/testing/` — temporarily replaces `WebComPyApp.run` with a no-op, enabling `import` of modules that call `app.run()` at module level. Implement in `webcompy/testing/_app.py`, re-export from `__init__.py`.
+- [x] 8.2 Add `mock_app_run` unit tests — test_docs_demos.py: verify context manager replaces/restores run, survives exception, enables import + TestRenderer of demo modules.
+- [x] 8.3 Migrate `tests/e2e_docs/test_helloworld.py` (2 of 3 tests) — `test_helloworld_renders_heading` + `test_helloworld_heading_text` replaced by `TestRenderer.render()` via `mock_app_run()`. Reload test remains in E2E.
+- [x] 8.4 Migrate `tests/e2e_docs/test_fizzbuzz.py` (4 of 5 tests) — initial_state, add, pop, hide_toggle replaced by `TestRenderer.render()` + `dispatchEvent(VirtualDOMEvent("click"))` via `mock_app_run()`. Reload test remains in E2E.
+- [x] 8.5 Trim migrated E2E tests from docs E2E files and consolidate CI docs-e2e groups — removed 2 helloworld + 4 fizzbuzz tests from E2E docs files. CI matrix groups unchanged (all 4 groups run in parallel; consolidation provides no speedup).
 
 
