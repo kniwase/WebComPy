@@ -6,20 +6,20 @@
 
 ## 2. Server Management (serve / stop)
 
-- [ ] 2.1 Implement `inspect serve` command: find free port, launch `webcompy start` subprocess, write PID file, output JSON
-- [ ] 2.2 Implement `inspect stop` command: read PID file, SIGTERM, wait with timeout, clean up PID file, output JSON
-- [ ] 2.3 Add `--dev`, `--port`, `--config`, `--runtime-serving`, and `--app` flags to `inspect serve`
+- [ ] 2.1 Implement `inspect serve` command: find free port, launch `webcompy start` subprocess via `discover_config()`, write PID file, output JSON
+- [ ] 2.2 Implement `inspect stop` command: read PID file, verify process is still running, SIGTERM, wait with `--timeout` (default 10s), clean up PID file, output JSON
+- [ ] 2.3 Add `--dev`, `--port`, `--config`, and `--runtime-serving` flags to `inspect serve`
 - [ ] 2.4 Handle stale PID files and port conflicts in `serve`
 
 ## 3. Browser Inspection Commands
 
 - [ ] 3.1 Implement shared Playwright browser launch helper with `--wait-for` support
 - [ ] 3.2 Implement `inspect screenshot` command with `--selector`, `--full-page`, `--output`, `--wait-for` flags
-- [ ] 3.3 Implement `inspect console` command with `--level`, `--wait`, `--wait-for` flags; reuse `ConsoleMessage` pattern from E2E conftest
+- [ ] 3.3 Implement `inspect console` command with `--level` (default `warning`), `--wait`, `--wait-for` flags; reuse `ConsoleMessage` pattern from E2E conftest
 - [ ] 3.4 Implement `inspect query` command with `--property` (text, html, attr:NAME, visible, count) and `--wait-for` flags
 - [ ] 3.5 Implement `inspect click` command with `--wait-for` flag
 - [ ] 3.6 Implement `inspect navigate` command with `--wait-for` flag
-- [ ] 3.7 Implement `inspect verify` command with repeatable `--expect` assertions and exit code 0/1
+- [ ] 3.7 Implement `inspect verify` command with repeatable `--expect` assertions (`selector=text`, `selector*=text`, `selector:visible`, `selector:attr:name=value`, `console:no-error`, `console:no-level=LEVEL`) and exit code 0/1
 
 ## 4. Error Handling and Polish
 
@@ -29,5 +29,5 @@
 
 ## 5. Spec Updates
 
-- [ ] 5.1 Update `openspec/specs/cli/spec.md` to include the `inspect serve` CLI flag modifications (`--runtime-serving`)
+- [ ] 5.1 Update `openspec/specs/cli/spec.md` to include the `inspect serve` `--runtime-serving` flag addition
 - [ ] 5.2 Update `.opencode/agents/ci-review.md` file→spec mapping to include `inspect-cli`

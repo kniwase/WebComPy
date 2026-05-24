@@ -1,29 +1,38 @@
 ## ADDED Requirements
 
-### Requirement: The inspect serve command shall launch a WebComPy app on an auto-detected port
-The `webcompy inspect serve` command SHALL start a WebComPy application server. When `--port 0` is specified (the default), the server SHALL bind to an OS-assigned free port. The command SHALL output JSON containing the `port`, `url`, and `pid` of the server process. The `--app` flag SHALL accept an import path to the `WebComPyApp` instance (e.g., `my_app.app:app`). The `--config` flag SHALL accept an import path to a `WebComPyBuildConfig` instance, following the same discovery rules as `webcompy start`. The server SHALL be started as a background subprocess. The `--dev` flag SHALL enable hot-reload mode.
+### Requirement: The inspect serve command shall launch a WebComPy app server as a subprocess on an auto-detected port
+The `webcompy inspect serve` command SHALL start a WebComPy application server by launching `webcompy start` as a background subprocess. When `--port 0` is specified (the default), the server SHALL bind to an OS-assigned free port. The command SHALL output JSON containing the `port`, `url`, and `pid` of the server process. The `--config` flag SHALL accept an import path to a `WebComPyBuildConfig` instance, following the same discovery rules as `webcompy start` (i.e., `discover_config()`). The `--dev` flag SHALL enable hot-reload mode. The `--runtime-serving` flag SHALL accept `"cdn"` or `"local"` and override `WebComPyBuildConfig.runtime_serving`.
 
 #### Scenario: Starting a server with auto-detected port
-- **WHEN** a developer runs `webcompy inspect serve --app my_app.app:app`
+- **WHEN** a developer runs `webcompy inspect serve --config my_app.config`
 - **THEN** the server SHALL start on an OS-assigned free port
 - **AND** JSON output SHALL include `{"port": N, "url": "http://localhost:N/", "pid": P}`
 
 #### Scenario: Starting a server with a specific port
-- **WHEN** a developer runs `webcompy inspect serve --app my_app.app:app --port 8080`
+- **WHEN** a developer runs `webcompy inspect serve --config my_app.config --port 8080`
 - **THEN** the server SHALL start on port 8080
 - **AND** JSON output SHALL include `{"port": 8080, "url": "http://localhost:8080/", "pid": P}`
 
 #### Scenario: Starting a server in dev mode
-- **WHEN** a developer runs `webcompy inspect serve --app my_app.app:app --dev`
+- **WHEN** a developer runs `webcompy inspect serve --config my_app.config --dev`
 - **THEN** the server SHALL start with hot-reload enabled
 - **AND** `WebComPyServerConfig.dev` SHALL be `True`
 
+#### Scenario: Starting a server with runtime-serving override
+- **WHEN** a developer runs `webcompy inspect serve --config my_app.config --runtime-serving local`
+- **THEN** `runtime_serving` SHALL be `"local"` for the session
+
+#### Scenario: Starting a server using default config discovery
+- **WHEN** a developer runs `webcompy inspect serve` without `--config`
+- **AND** `webcompy_config.py` exists at the project root
+- **THEN** the CLI SHALL discover the config using the same rules as `webcompy start`
+
 ### Requirement: The inspect serve command shall manage PID files for server lifecycle
-The `serve` command SHALL write a PID file to `.tmp/webcompy-inspect/<port>.pid` containing JSON with `pid`, `port`, `url`, and `app_path`. The PID file directory SHALL be created if it does not exist. Stale PID files (where the process no longer exists) SHALL be cleaned up when `serve` encounters a conflicting port.
+The `serve` command SHALL write a PID file to `.tmp/webcompy-inspect/<port>.pid` containing JSON with `pid`, `port`, `url`, and `config_path`. The PID file directory SHALL be created if it does not exist. Stale PID files (where the process no longer exists) SHALL be cleaned up when `serve` encounters a conflicting port.
 
 #### Scenario: PID file creation
 - **WHEN** `serve` successfully starts a server on port N
-- **THEN** a file at `.tmp/webcompy-inspect/N.pid` SHALL contain `{"pid": P, "port": N, "url": "http://localhost:N/", "app_path": "..."}`
+- **THEN** a file at `.tmp/webcompy-inspect/N.pid` SHALL contain `{"pid": P, "port": N, "url": "http://localhost:N/", "config_path": "..."}`
 
 #### Scenario: Cleaning up stale PID file
 - **WHEN** `serve` finds a PID file for port N but the process no longer exists
@@ -31,17 +40,28 @@ The `serve` command SHALL write a PID file to `.tmp/webcompy-inspect/<port>.pid`
 - **AND** the server SHALL start normally on port N
 
 ### Requirement: The inspect stop command shall stop a running server
-The `webcompy inspect stop` command SHALL accept a port number and terminate the server process associated with that port. It SHALL read the PID file, send SIGTERM, wait for the process to exit (with a timeout), and clean up the PID file.
+The `webcompy inspect stop` command SHALL accept a port number and terminate the server process associated with that port. It SHALL read the PID file, verify that the process with the stored PID is still running and is the expected server process, send SIGTERM, wait for the process to exit (with a default timeout of 10 seconds, overridable via `--timeout`), and clean up the PID file.
 
 #### Scenario: Stopping a running server
 - **WHEN** a developer runs `webcompy inspect stop 8080` and a server is running on port 8080
-- **THEN** the server process SHALL be terminated
+- **THEN** the command SHALL verify the PID file exists and the process is still running
+- **AND** the server process SHALL be terminated via SIGTERM
 - **AND** the PID file SHALL be removed
 - **AND** JSON output SHALL include `{"stopped": true, "port": 8080}`
 
 #### Scenario: Stopping a non-existent server
 - **WHEN** a developer runs `webcompy inspect stop 9999` and no server is running on port 9999
 - **THEN** JSON output SHALL include `{"stopped": false, "port": 9999, "error": "No server found on port 9999"}`
+
+#### Scenario: Stopping with custom timeout
+- **WHEN** a developer runs `webcompy inspect stop 8080 --timeout 30`
+- **THEN** the command SHALL wait up to 30 seconds for the process to exit
+
+#### Scenario: Stopping with stale PID file
+- **WHEN** a developer runs `webcompy inspect stop 8080`
+- **AND** a PID file exists for port 8080 but the process no longer exists
+- **THEN** the stale PID file SHALL be removed
+- **AND** JSON output SHALL include `{"stopped": false, "port": 8080, "error": "No server found on port 8080"}`
 
 ### Requirement: The inspect screenshot command shall capture browser screenshots
 The `webcompy inspect screenshot <url>` command SHALL launch a headless Chromium browser, navigate to the URL, and capture a screenshot. The `--selector` flag SHALL limit the screenshot to a specific CSS selector. The `--full-page` flag SHALL capture the entire scrollable page. The `--output` flag SHALL specify the output file path; if omitted, the screenshot SHALL be written to stdout as base64-encoded PNG data. The `--wait-for` flag SHALL accept a CSS selector and wait for it to appear before capturing.
@@ -60,7 +80,7 @@ The `webcompy inspect screenshot <url>` command SHALL launch a headless Chromium
 - **AND** the screenshot SHALL show the fully rendered application
 
 ### Requirement: The inspect console command shall collect browser console messages
-The `webcompy inspect console <url>` command SHALL launch a headless Chromium browser, navigate to the URL, register a console message listener, collect messages for a configurable duration, and output them as JSON. The `--level` flag SHALL filter messages by severity (error, warning, info, log, debug), defaulting to `warning`. The `--wait` flag SHALL specify the collection duration in milliseconds, defaulting to 5000. The `--wait-for` flag SHALL accept a CSS selector to wait for before starting collection.
+The `webcompy inspect console <url>` command SHALL launch a headless Chromium browser, navigate to the URL, register a console message listener, collect messages for a configurable duration, and output them as JSON. The `--level` flag SHALL filter messages by severity (error, warning, info, log, debug), defaulting to `warning`. The default level of `warning` (which includes `error` and `warning`) is intentionally different from the E2E test file-level default of `debug` — the CLI default prioritizes actionable output for developers, while the E2E default prioritizes comprehensive logging for test diagnostics. The `--wait` flag SHALL specify the collection duration in milliseconds, defaulting to 5000. The `--wait-for` flag SHALL accept a CSS selector to wait for before starting collection.
 
 #### Scenario: Collecting console errors and warnings
 - **WHEN** a developer runs `webcompy inspect console http://localhost:8080/ --level warning`
@@ -112,9 +132,17 @@ The `webcompy inspect navigate <url> <path>` command SHALL launch a headless Chr
 - **AND** JSON output SHALL include `{"current_url": "http://localhost:8080/about", "title": "About"}`
 
 ### Requirement: The inspect verify command shall assert expectations about a page
-The `webcompy inspect verify <url>` command SHALL launch a headless Chromium browser, navigate to the URL, and check one or more expectations. The `--expect` flag SHALL accept repeatable assertion strings in the format `selector:text`, `selector:visible`, `selector:attr:name=value`, or `console:level=error`. The command SHALL exit with code 0 if all expectations pass, and code 1 if any fail.
+The `webcompy inspect verify <url>` command SHALL launch a headless Chromium browser, navigate to the URL, and check one or more expectations. The `--expect` flag SHALL accept repeatable assertion strings. Each `--expect` value SHALL use one of the following syntaxes:
+- `selector=expected_text` — assert that the element's text content equals `expected_text` (exact match)
+- `selector*=partial_text` — assert that the element's text content contains `partial_text` (substring match)
+- `selector:visible` — assert that the element is visible
+- `selector:attr:name=value` — assert that the element's attribute `name` equals `value`
+- `console:no-error` — assert that no error-level console messages were logged
+- `console:no-level=LEVEL` — assert that no messages of the specified level were logged
 
-#### Scenario: Verifying element text
+The command SHALL exit with code 0 if all expectations pass, and code 1 if any fail.
+
+#### Scenario: Verifying element text (exact match)
 - **WHEN** a developer runs `webcompy inspect verify http://localhost:8080/ --expect "h1=Hello World" --expect "#counter:visible"`
 - **THEN** JSON output SHALL include `{"passed": ["h1=Hello World", "#counter:visible"], "failed": []}`
 - **AND** exit code SHALL be 0
@@ -126,9 +154,12 @@ The `webcompy inspect verify <url>` command SHALL launch a headless Chromium bro
 - **AND** exit code SHALL be 1
 
 #### Scenario: Verifying console has no errors
-- **WHEN** a developer runs `webcompy inspect verify http://localhost:8080/ --expect "console:level=error" --wait-for "#webcompy-app"`
+- **WHEN** a developer runs `webcompy inspect verify http://localhost:8080/ --expect "console:no-error" --wait-for "#webcompy-app"`
 - **THEN** the browser SHALL navigate to the URL, wait for `#webcompy-app`, collect console messages
 - **AND** verify that no error-level messages were logged
+
+### Requirement: Each inspect browser command shall launch an independent browser session
+Each `inspect` command that interacts with a browser (`screenshot`, `console`, `query`, `click`, `navigate`, `verify`) SHALL launch a fresh headless Chromium browser instance, perform its operation, and close the browser before exiting. Browser sessions are NOT reused across separate `inspect` invocations. This ensures isolation between commands but means each command incurs browser startup latency.
 
 ### Requirement: The inspect command shall handle missing Playwright gracefully
 When the `playwright` package is not installed, any `inspect` subcommand SHALL print a helpful error message suggesting installation commands and exit with code 1.
@@ -141,9 +172,9 @@ When the `playwright` package is not installed, any `inspect` subcommand SHALL p
 
 ## MODIFIED Requirements
 
-### Requirement: The CLI shall accept --runtime-serving value flag
-The `start`, `generate`, and `inspect serve` CLI subcommands SHALL accept `--runtime-serving <mode>` where `<mode>` is `"cdn"` or `"local"`. This overrides `WebComPyBuildConfig.runtime_serving`.
+### Requirement: The inspect serve command shall accept --runtime-serving flag
+The `inspect serve` CLI subcommand SHALL accept `--runtime-serving <mode>` where `<mode>` is `"cdn"` or `"local"`. This overrides `WebComPyBuildConfig.runtime_serving`, following the same pattern as the existing `start` and `generate` commands.
 
 #### Scenario: Overriding with --runtime-serving local for inspect serve
-- **WHEN** a developer runs `webcompy inspect serve --app my_app.app:app --runtime-serving local`
+- **WHEN** a developer runs `webcompy inspect serve --config my_app.config --runtime-serving local`
 - **THEN** `runtime_serving` SHALL be `"local"` for the session
