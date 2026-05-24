@@ -46,7 +46,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **WHEN** `FakeBrowserFFIPort.to_js({"key": "val"})` is called
 - **THEN** the original dict SHALL be returned
 - **WHEN** `FakeBrowserFFIPort.assign(target, source)` is called
-- **THEN** `target.update(source)` SHALL be executed and `target` returned
+- **THEN** `target.update(source)` SHALL be executed
 
 #### Scenario: FakeFetchPort returns canned JSON responses
 - **WHEN** `FakeFetchPort().fetch(method="GET", url="/api/users")` is called
@@ -112,7 +112,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: TestRenderer shall render components to VirtualDOMNode trees
 
-`TestRenderer.render(component)` SHALL create a browser-style DI scope with `FakeBrowserDOMPort` (so that `addEventListener` is called on VDOM nodes during rendering), instantiate the component, render it to a `VirtualDOMNode` tree, and return a `TestRendererResult` wrapping the root `VirtualDOMNode`. `TestRendererResult` SHALL provide query methods (`query_selector`, `query_selector_all`, `find_by_text`, `find_by_attribute`), `to_html()`, and assertion helpers (`assert_element_count`, `assert_has_class`). The `dispatchEvent(VirtualDOMEvent)` mechanism SHALL trigger Signal callbacks that directly mutate the VDOM tree (matching browser behavior), eliminating the need for a separate `rerender()` step. The `close()` method SHALL reset the active DI scope.
+`TestRenderer.render(component)` SHALL create a browser-style DI scope with `FakeBrowserDOMPort` (so that `addEventListener` is called on VDOM nodes during rendering), instantiate the component, render it to a `VirtualDOMNode` tree, and return a `TestRendererResult` wrapping the root `VirtualDOMNode`. `TestRendererResult` SHALL provide query methods (`query_selector`, `query_selector_all`, `find_by_text`, `find_by_attribute`), `to_html()`, and assertion helpers (`assert_element_count`, `assert_has_class`). The `dispatchEvent(VirtualDOMEvent)` mechanism SHALL trigger Signal callbacks that directly mutate the VDOM tree (matching browser behavior), eliminating the need for a separate `rerender()` step. The `close()` method SHALL call `scope.dispose()` (clearing all providers and recursively disposing child scopes) and reset the active DI scope.
 
 #### Scenario: Rendering a simple component
 - **WHEN** `result = TestRenderer.render(component)` is called

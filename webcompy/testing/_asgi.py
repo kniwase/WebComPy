@@ -35,12 +35,12 @@ def create_test_asgi_app(app: WebComPyApp) -> ASGIApp:
 
         html_route = Route("/{path:path}", _send_html)
     else:
-        with app.di_scope:
-            app.set_path("/")
-            prerendered_html = _HtmlElement("div", {}, app._root).render_html()
 
         async def _send_html_static(_: Request) -> HTMLResponse:
-            return HTMLResponse(prerendered_html)
+            with app.di_scope:
+                app.set_path("/")
+                html = _HtmlElement("div", {}, app._root).render_html()
+                return HTMLResponse(html)
 
         html_route = Route("/", _send_html_static)
 

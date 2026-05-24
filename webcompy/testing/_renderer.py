@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class TestRendererResult:
-    __slots__ = ("_component", "_instance", "_parent_node", "_scope_token")
+    __slots__ = ("_component", "_instance", "_parent_node", "_scope", "_scope_token")
 
     def __init__(
         self,
@@ -26,11 +26,13 @@ class TestRendererResult:
         instance: object,
         parent_node: VirtualDOMNode,
         scope_token: object,
+        scope: DIScope,
     ) -> None:
         self._component = component
         self._instance = instance
         self._parent_node = parent_node
         self._scope_token = scope_token
+        self._scope = scope
 
     @property
     def _root_node(self) -> VirtualDOMNode:
@@ -72,6 +74,7 @@ class TestRendererResult:
         self.close()
 
     def close(self) -> None:
+        self._scope.dispose()
         _active_di_scope.reset(self._scope_token)  # type: ignore[arg-type]
 
 
@@ -115,7 +118,7 @@ class TestRenderer:
         instance._node_idx = 0
         instance._render()
 
-        return TestRendererResult(component, instance, root_node, scope_token)
+        return TestRendererResult(component, instance, root_node, scope_token, scope)
 
 
 def _dfs_first(node: VirtualDOMNode, tag: str) -> VirtualDOMNode | None:
