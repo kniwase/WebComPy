@@ -39,6 +39,7 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - Dev server (with Playwright MCP): Requires Node.js/npx. (1) Run `uv run python -m webcompy start --dev --app docs_app.bootstrap:app`, (2) use Playwright MCP tools to navigate to `http://localhost:8080/`. If the server fails to start, check `docs_app/webcompy_server_config.py` for port conflicts.
 - Static site generation: `uv run python -m webcompy generate --app docs_app.bootstrap:app`
 - Project scaffolding: `uv run python -m webcompy init`
+- Inspect CLI: `uv run python -m webcompy inspect <subcommand>` — subcommands: `serve`, `stop`, `screenshot`, `console`, `query`, `click`, `navigate`, `verify`. Requires Playwright (`uv sync --group dev && uv run playwright install chromium`).
 - Build package: `uv build`
 
 ## Lint & Type Check Commands
@@ -152,7 +153,7 @@ When working on the codebase (developing, reviewing, or refactoring), always rea
 | `webcompy/di/` | `openspec/specs/di-scope/spec.md`, `openspec/specs/di-injection/spec.md`, `openspec/specs/dependency-resolver/spec.md` |
 | `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md` |
 | `webcompy/ajax/`, `webcompy/aio/` | `openspec/specs/async/spec.md` |
-| `webcompy/cli/` | `openspec/specs/cli/spec.md`, `openspec/specs/project-config/spec.md`, `openspec/specs/config-separation/spec.md` |
+| `webcompy/cli/` | `openspec/specs/cli/spec.md`, `openspec/specs/project-config/spec.md`, `openspec/specs/config-separation/spec.md`, `openspec/specs/inspect-cli/spec.md` |
 
 Other directories (`webcompy/exception/`, `webcompy/utils/`) do not have dedicated specs — review against `overview` and `architecture` specs only.
 
@@ -225,6 +226,7 @@ This ensures all agents — development and review alike — share current knowl
 | `plugin-script` | Declarative loading of JavaScript resources with conditional runtime expressions |
 | `reactive-dropdown` | Demonstration that WebComPy's reactive system handles UI interactions like dropdown menus |
 | `demo-iframe-isolation` | Isolated iframe PyScript contexts for demos with on-demand dependency loading |
+| `inspect-cli` | CLI tool for launching, inspecting, and verifying WebComPy applications in a browser |
 
 ## Git Conventions
 

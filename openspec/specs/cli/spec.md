@@ -262,10 +262,14 @@ The `start` and `generate` CLI subcommands SHALL accept `--wheel-mode <mode>` wh
 - **THEN** split mode SHALL be used regardless of `WebComPyBuildConfig.wheel_mode`
 
 ### Requirement: The CLI shall accept --runtime-serving value flag
-The `start` and `generate` CLI subcommands SHALL accept `--runtime-serving <mode>` where `<mode>` is `"cdn"` or `"local"`. This overrides `WebComPyBuildConfig.runtime_serving`.
+The `start`, `generate`, and `inspect serve` CLI subcommands SHALL accept `--runtime-serving <mode>` where `<mode>` is `"cdn"` or `"local"`. This overrides `WebComPyBuildConfig.runtime_serving`.
 
 #### Scenario: Overriding with --runtime-serving local
 - **WHEN** a developer runs `python -m webcompy start --dev --runtime-serving local`
+- **THEN** `runtime_serving` SHALL be `"local"` for the session
+
+#### Scenario: Overriding with --runtime-serving local for inspect serve
+- **WHEN** a developer runs `webcompy inspect serve --config my_app.config --runtime-serving local`
 - **THEN** `runtime_serving` SHALL be `"local"` for the session
 
 ### Requirement: The CLI shall support standalone build mode as an orchestration of all local-serving modes
