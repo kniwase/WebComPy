@@ -116,14 +116,9 @@ def _is_process_running(pid: int) -> bool:
 
 
 def _verify_process_identity(pid: int, port: int) -> bool:
-    try:
-        cmdline_path = pathlib.Path(f"/proc/{pid}/cmdline")
-        if cmdline_path.exists():
-            cmdline = cmdline_path.read_text(encoding="utf-8")
-            if "webcompy" in cmdline and "start" in cmdline:
-                return True
-    except OSError:
-        pass
+    cmdline = _get_process_cmdline(pid)
+    if cmdline and "webcompy" in cmdline and "start" in cmdline:
+        return True
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(1)
@@ -131,6 +126,27 @@ def _verify_process_identity(pid: int, port: int) -> bool:
             return True
     except OSError:
         return False
+
+
+def _get_process_cmdline(pid: int) -> str | None:
+    try:
+        cmdline_path = pathlib.Path(f"/proc/{pid}/cmdline")
+        if cmdline_path.exists():
+            return cmdline_path.read_bytes().decode(encoding="utf-8", errors="replace").replace("\0", " ")
+    except OSError:
+        pass
+    try:
+        result = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return None
 
 
 def cmd_serve(args: Namespace) -> None:
@@ -175,6 +191,10 @@ def cmd_serve(args: Namespace) -> None:
     log_file = log_file_path.open("w")
     try:
         proc = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT)
+    except Exception as e:
+        log_file.close()
+        _write_json_error(f"Failed to start server: {e}")
+        sys.exit(1)
     finally:
         log_file.close()
 
@@ -231,12 +251,18 @@ def cmd_stop(args: Namespace) -> None:
     _write_json({"stopped": True, "port": port})
 
 
-def _launch_browser(url: str, wait_for: str | None = None) -> tuple[Playwright, Browser, Page]:
+def _launch_browser(
+    url: str,
+    wait_for: str | None = None,
+    on_console: Any | None = None,
+) -> tuple[Playwright, Browser, Page]:
     from playwright.sync_api import sync_playwright
 
     pw = sync_playwright().start()
     browser = pw.chromium.launch(headless=True)
     page = browser.new_page()
+    if on_console is not None:
+        page.on("console", on_console)
     page.goto(url, wait_until="domcontentloaded")
     if wait_for:
         page.wait_for_selector(wait_for, timeout=30000)
@@ -294,23 +320,21 @@ def cmd_console(args: Namespace) -> None:
     wait_ms: int = args.wait
     wait_for: str | None = args.wait_for
 
-    pw, browser, page = _launch_browser(url)
+    collected: list[ConsoleMessage] = []
+
+    def on_console_msg(msg):
+        loc = msg.location if isinstance(msg.location, dict) else {}
+        collected.append(
+            ConsoleMessage(
+                type=msg.type,
+                text=msg.text,
+                location=f"{loc.get('url', '')}:{loc.get('lineNumber', '')}:{loc.get('columnNumber', '')}",
+            )
+        )
+
+    pw, browser, page = _launch_browser(url, on_console=on_console_msg)
 
     try:
-        collected: list[ConsoleMessage] = []
-
-        def on_console_msg(msg):
-            loc = msg.location if isinstance(msg.location, dict) else {}
-            collected.append(
-                ConsoleMessage(
-                    type=msg.type,
-                    text=msg.text,
-                    location=f"{loc.get('url', '')}:{loc.get('lineNumber', '')}:{loc.get('columnNumber', '')}",
-                )
-            )
-
-        page.on("console", on_console_msg)
-
         if wait_for:
             page.wait_for_selector(wait_for, timeout=30000)
         time.sleep(wait_ms / 1000)
@@ -440,23 +464,21 @@ def cmd_verify(args: Namespace) -> None:
     expectations: list[str] = args.expect
     wait_for: str | None = args.wait_for
 
-    pw, browser, page = _launch_browser(url)
+    console_messages: list[ConsoleMessage] = []
+
+    def on_console_msg(msg):
+        loc = msg.location if isinstance(msg.location, dict) else {}
+        console_messages.append(
+            ConsoleMessage(
+                type=msg.type,
+                text=msg.text,
+                location=f"{loc.get('url', '')}:{loc.get('lineNumber', '')}:{loc.get('columnNumber', '')}",
+            )
+        )
+
+    pw, browser, page = _launch_browser(url, on_console=on_console_msg)
 
     try:
-        console_messages: list[ConsoleMessage] = []
-
-        def on_console_msg(msg):
-            loc = msg.location if isinstance(msg.location, dict) else {}
-            console_messages.append(
-                ConsoleMessage(
-                    type=msg.type,
-                    text=msg.text,
-                    location=f"{loc.get('url', '')}:{loc.get('lineNumber', '')}:{loc.get('columnNumber', '')}",
-                )
-            )
-
-        page.on("console", on_console_msg)
-
         if wait_for:
             page.wait_for_selector(wait_for, timeout=30000)
         else:
@@ -604,7 +626,12 @@ def get_inspect_parser() -> ArgumentParser:
 
     verify_parser = subparsers.add_parser("verify", help="Verify expectations about a page")
     verify_parser.add_argument("url", type=str, help="URL to verify")
-    verify_parser.add_argument("--expect", action="append", default=[], help="Expectation to verify (repeatable)")
+    verify_parser.add_argument(
+        "--expect",
+        action="append",
+        default=[],
+        help="Expectation: selector=text, selector*=text, selector:visible, selector:attr:name=value, console:no-error, console:no-level=LEVEL. Use :attr: for selectors containing =",
+    )
     verify_parser.add_argument("--wait-for", type=str, default=None, help="CSS selector to wait for before checking")
     verify_parser.set_defaults(func=cmd_verify)
 
