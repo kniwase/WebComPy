@@ -9,6 +9,7 @@ from webcompy.cli._server import run_server
 
 
 def main():
+    # inspect uses its own nested ArgumentParser, so it must bypass get_params()
     if len(sys.argv) > 1 and sys.argv[1] == "inspect":
         run_inspect()
         return
@@ -22,8 +23,6 @@ def main():
         init_project()
     elif command == "lock":
         lock_command()
-    elif command == "inspect":
-        run_inspect()
 
 
 if __name__ == "__main__":

@@ -10,9 +10,14 @@ import sys
 import time
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from playwright.sync_api import Browser, Page, Playwright
 
 PID_DIR = pathlib.Path(".tmp/webcompy-inspect")
+
+_DEFAULT_WAIT_SECONDS = 5
 
 _CONSOLE_LEVEL_ORDER: dict[str, int] = {
     "off": 0,
@@ -85,7 +90,7 @@ def _read_pid_file(port: int) -> dict[str, Any] | None:
         return None
 
 
-def _write_pid_file(port: int, pid: int, url: str, config_path: str) -> None:
+def _write_pid_file(port: int, pid: int, url: str, config_path: str | None) -> None:
     _ensure_pid_dir()
     path = _pid_file_path(port)
     path.write_text(
@@ -137,7 +142,7 @@ def cmd_serve(args: Namespace) -> None:
     runtime_serving: str | None = args.runtime_serving
 
     discover_config(config_path)
-    actual_config_path = config_path or "webcompy_config"
+    actual_config_path = config_path
 
     if port == 0:
         port = _find_free_port()
@@ -168,7 +173,10 @@ def cmd_serve(args: Namespace) -> None:
     log_file_path = PID_DIR / f"{port}.log"
     _ensure_pid_dir()
     log_file = log_file_path.open("w")
-    proc = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT)
+    try:
+        proc = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT)
+    finally:
+        log_file.close()
 
     url = f"http://localhost:{port}/"
     _write_pid_file(port, proc.pid, url, actual_config_path)
@@ -223,7 +231,7 @@ def cmd_stop(args: Namespace) -> None:
     _write_json({"stopped": True, "port": port})
 
 
-def _launch_browser(url: str, wait_for: str | None = None):
+def _launch_browser(url: str, wait_for: str | None = None) -> tuple[Playwright, Browser, Page]:
     from playwright.sync_api import sync_playwright
 
     pw = sync_playwright().start()
@@ -235,7 +243,7 @@ def _launch_browser(url: str, wait_for: str | None = None):
     return pw, browser, page
 
 
-def _close_browser(pw, browser, page):
+def _close_browser(pw: Playwright, browser: Browser, page: Page) -> None:
     page.close()
     browser.close()
     pw.stop()
@@ -452,7 +460,7 @@ def cmd_verify(args: Namespace) -> None:
         if wait_for:
             page.wait_for_selector(wait_for, timeout=30000)
         else:
-            time.sleep(5)
+            time.sleep(_DEFAULT_WAIT_SECONDS)
 
         passed: list[str] = []
         failed: list[dict[str, Any]] = []
