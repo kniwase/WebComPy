@@ -2,7 +2,7 @@
 
 - [ ] 1.1 Create `webcompy/cli/_inspect.py` module with empty subcommand stubs and Playwright availability check
 - [ ] 1.2 Register `inspect` subcommand group in `webcompy/cli/__init__.py`
-- [ ] 1.3 Add `.tmp/webcompy-inspect/` to `.gitignore`
+- [ ] 1.3 Verify that `.tmp/*` in `.gitignore` already covers `.tmp/webcompy-inspect/`
 
 ## 2. Server Management (serve / stop)
 

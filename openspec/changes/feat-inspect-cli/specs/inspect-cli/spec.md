@@ -140,6 +140,8 @@ The `webcompy inspect verify <url>` command SHALL launch a headless Chromium bro
 - `console:no-error` — assert that no error-level console messages were logged
 - `console:no-level=LEVEL` — assert that no messages of the specified level were logged
 
+The `--wait-for` flag SHALL accept a CSS selector to wait for before checking expectations. For `console:*` assertions, console messages SHALL be collected from page load until the `--wait-for` element becomes visible (or a default timeout of 5000ms if `--wait-for` is not specified), at which point collection ends and assertions are evaluated.
+
 The command SHALL exit with code 0 if all expectations pass, and code 1 if any fail.
 
 #### Scenario: Verifying element text (exact match)
