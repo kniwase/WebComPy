@@ -56,47 +56,47 @@
 
 ## 9. Merge origin/main (#171 testing module)
 
-- [ ] 9.1 Execute `git merge origin/main`
-- [ ] 9.2 Resolve conflicts in `_generator.py` — keep `_cid` attribute + `_id` property (our change)
-- [ ] 9.3 Resolve conflicts in `_lazy.py` — keep `_cid` attribute accesses (our change)
-- [ ] 9.4 Resolve conflicts in `_root_component.py` — keep `scoped_styles` dict + HeadElement integration (our change)
-- [ ] 9.5 Resolve conflicts in `_app.py` — keep `scoped_styles` forwarding (our change)
-- [ ] 9.6 Resolve conflicts in `_head.py` — keep the file (our change), testing module deleted it
-- [ ] 9.7 Resolve conflicts in `__init__.py` — keep `HeadElement` export (our change)
-- [ ] 9.8 Resolve conflicts in `_html.py` — keep per-component style generation (our change)
-- [ ] 9.9 Resolve conflicts in `_generate.py` — keep pre-resolve loop (our change)
-- [ ] 9.10 Resolve conflicts in `test_app_instance.py` — keep `scoped_styles` assertion (our change)
-- [ ] 9.11 Resolve conflicts in `AGENTS.md` — merge both spec mappings (our specs + testing-module)
-- [ ] 9.12 Verify all new files from #171 are present: `webcompy/testing/*`, new test files, etc.
+- [x] 9.1 Execute `git merge origin/main`
+- [x] 9.2 Resolve conflicts in `_generator.py` — keep `_cid` attribute + `_id` property (our change)
+- [x] 9.3 Resolve conflicts in `_lazy.py` — keep `_cid` attribute accesses (our change)
+- [x] 9.4 Resolve conflicts in `_root_component.py` — keep `scoped_styles` dict + HeadElement integration (our change)
+- [x] 9.5 Resolve conflicts in `_app.py` — keep `scoped_styles` forwarding (our change)
+- [x] 9.6 Resolve conflicts in `_head.py` — keep the file (our change), testing module deleted it
+- [x] 9.7 Resolve conflicts in `__init__.py` — keep `HeadElement` export (our change)
+- [x] 9.8 Resolve conflicts in `_html.py` — keep per-component style generation (our change)
+- [x] 9.9 Resolve conflicts in `_generate.py` — keep pre-resolve loop (our change)
+- [x] 9.10 Resolve conflicts in `test_app_instance.py` — keep `scoped_styles` assertion (our change)
+- [x] 9.11 Resolve conflicts in `AGENTS.md` — merge both spec mappings (our specs + testing-module)
+- [x] 9.12 Verify all new files from #171 are present: `webcompy/testing/*`, new test files, etc.
 
 ## 10. Extend FakeBrowserDOMPort with ServerDOMPort base and document tree
 
-- [ ] 10.1 Change `FakeBrowserDOMPort` to extend `ServerDOMPort` instead of `DOMPort(ABC)`
-- [ ] 10.2 Add `__init__` that creates internal document tree: `_html`, `_head`, `_body` as FakeDOMNode instances
-- [ ] 10.3 Override `create_element(tag)` to return `FakeDOMNode(tag)` (ServerDOMPort returns VirtualDOMNode)
-- [ ] 10.4 Implement `query_selector(selector)` — simple tag-name DFS search on `_html` tree
-- [ ] 10.5 Implement `get_element_by_id(element_id)` — DFS search by `id` attribute on `_html` tree
-- [ ] 10.6 Inherit all other methods from `ServerDOMPort` (create_event, create_text_node, set_title, add_document_event_listener, render_html)
-- [ ] 10.7 Update `TestRenderer.render()` to use extended FakeBrowserDOMPort (it already wires it, verify no breakage)
+- [x] 10.1 Change `FakeBrowserDOMPort` to extend `ServerDOMPort` instead of `DOMPort(ABC)`
+- [x] 10.2 Add `__init__` that creates internal document tree: `_html`, `_head`, `_body` as FakeDOMNode instances
+- [x] 10.3 Override `create_element(tag)` to return `FakeDOMNode(tag)` (ServerDOMPort returns VirtualDOMNode)
+- [x] 10.4 Implement `query_selector(selector)` — simple tag-name DFS search on `_html` tree
+- [x] 10.5 Implement `get_element_by_id(element_id)` — DFS search by `id` attribute on `_html` tree
+- [x] 10.6 Inherit all other methods from `ServerDOMPort` (create_event, create_text_node, set_title, add_document_event_listener, render_html)
+- [x] 10.7 Update `TestRenderer.render()` to use extended FakeBrowserDOMPort (it already wires it, verify no breakage)
 
 ## 11. New tests using testing module
 
-- [ ] 11.1 **SSG integration test**: Create a page component with scoped CSS, use `create_test_asgi_app()` + `httpx` to verify `<style data-webcompy-cid="...">` elements appear in HTML output and `*[hidden]{display:none}` is present
-- [ ] 11.2 **SSG lazy route test**: Pre-resolved lazy route component's scoped CSS appears in every page's HTML
-- [ ] 11.3 **HeadElement browser-path test**: Verify `HeadElement._render()` injects `*[hidden]` base rule via FakeBrowserDOMPort tree
-- [ ] 11.4 **HeadElement component style injection test**: Verify per-component `<style>` elements are appended to `head` node when component has scoped CSS
-- [ ] 11.5 **HeadElement idempotent test**: Verify second `_render()` call does not create duplicate `<style>` elements
-- [ ] 11.6 **HeadElement no-duplicate on existing styles test**: Verify pre-existing `data-webcompy-cid` elements in document tree are not duplicated
+- [x] 11.1 **SSG integration test**: Create a page component with scoped CSS, use `create_test_asgi_app()` + `httpx` to verify `<style data-webcompy-cid="...">` elements appear in HTML output and `*[hidden]{display:none}` is present
+- [x] 11.2 **SSG lazy route test**: Pre-resolved lazy route component's scoped CSS appears in every page's HTML
+- [x] 11.3 **HeadElement browser-path test**: Verify `HeadElement._render()` injects `*[hidden]` base rule via FakeBrowserDOMPort tree
+- [x] 11.4 **HeadElement component style injection test**: Verify per-component `<style>` elements are appended to `head` node when component has scoped CSS
+- [x] 11.5 **HeadElement idempotent test**: Verify second `_render()` call does not create duplicate `<style>` elements
+- [x] 11.6 **HeadElement no-duplicate on existing styles test**: Verify pre-existing `data-webcompy-cid` elements in document tree are not duplicated
 
 ## 12. CI review agent update
 
-- [ ] 12.1 Add `testing-module` to file→spec mapping in `.opencode/agents/ci-review.md` under `webcompy/testing/`
-- [ ] 12.2 Update `AGENTS.md` file→spec mapping: add both branches' entries (scoped-css-incremental, head-vdom, testing-module)
+- [x] 12.1 Add `testing-module` to file→spec mapping in `.opencode/agents/ci-review.md` under `webcompy/testing/`
+- [x] 12.2 Update `AGENTS.md` file→spec mapping: add both branches' entries (scoped-css-incremental, head-vdom, testing-module)
 
 ## 13. Final verification
 
-- [ ] 13.1 Run `uv run ruff check .` — no errors
-- [ ] 13.2 Run `uv run ruff format .` — all formatted
-- [ ] 13.3 Run `uv run pyright` — 0 errors
-- [ ] 13.4 Run `uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs` — all pass
-- [ ] 13.5 Run SSG: `uv run python -m webcompy generate --config docs_app.webcompy_config` — per-component style elements confirmed
+- [x] 13.1 Run `uv run ruff check .` — no errors
+- [x] 13.2 Run `uv run ruff format .` — all formatted
+- [x] 13.3 Run `uv run pyright` — 0 errors
+- [x] 13.4 Run `uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs` — all pass
+- [x] 13.5 Run SSG: `uv run python -m webcompy generate --config docs_app.webcompy_config` — per-component style elements confirmed
