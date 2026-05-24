@@ -44,7 +44,6 @@ _ASSET_ERROR_PATTERNS = (
 )
 
 _CONSOLE_LEVEL_ORDER = {"off": 0, "error": 1, "warning": 2, "info": 3, "log": 4, "debug": 5}
-_CONSOLE_LEVEL_KEYS = ("error", "warning", "info", "log")
 
 
 def _parse_console_level(value: str | None, default: str) -> str:
@@ -128,14 +127,6 @@ def pytest_generate_tests(metafunc):
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "e2e: End-to-end tests requiring a browser and server")
-
-
-def _collect_console_errors(page: Page, errors: list[str]):
-    def on_console_msg(msg):
-        if msg.type == "error":
-            errors.append(msg.text)
-
-    page.on("console", on_console_msg)
 
 
 def _check_asset_errors(messages: list[ConsoleMessage]):

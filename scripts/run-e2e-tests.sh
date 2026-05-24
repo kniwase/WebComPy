@@ -241,12 +241,12 @@ _run_single() {
 
   local start_time=$(date +%s)
 
-  local env_cmd=""
-  if [ ${#env_extra[@]} -gt 0 ]; then
-    env_cmd="${env_extra[*]} "
-  fi
+  local env_cmd=(env)
+  for e in "${env_extra[@]}"; do
+    env_cmd+=("$e")
+  done
 
-  if ${env_cmd}CONSOLE_LOG_DIR="$console_dir" \
+  if "${env_cmd[@]}" CONSOLE_LOG_DIR="$console_dir" \
      CONSOLE_FILE_LEVEL="$env_console_file_level" \
      CONSOLE_STDOUT_LEVEL="$env_console_stdout_level" \
      uv run python -m pytest $files --tb=short --serving-mode="$mode" > "$log_file" 2>&1; then

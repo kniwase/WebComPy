@@ -205,6 +205,7 @@ jobs:
           path: |
             tests/e2e/.e2e-server.log
             tests/e2e_docs/.e2e-docs-server.log
+            .tmp/e2e-test-corpus/
       - uses: actions/upload-artifact@v4
         if: always()
         with:

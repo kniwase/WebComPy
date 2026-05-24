@@ -45,7 +45,6 @@ _ASSET_ERROR_PATTERNS = (
 )
 
 _CONSOLE_LEVEL_ORDER = {"off": 0, "error": 1, "warning": 2, "info": 3, "log": 4, "debug": 5}
-_CONSOLE_LEVEL_KEYS = ("error", "warning", "info", "log")
 
 
 def _parse_console_level(value: str | None, default: str) -> str:
@@ -156,24 +155,6 @@ def _wait_for_pyscript_init(page: Page, console_messages_list: list[ConsoleMessa
             pytest.fail(
                 f"PyScript did not initialize within {PYSCRIPT_INIT_TIMEOUT / 1000:.0f}s\n"
                 + f"Last console messages: {[m.format() for m in remaining]}"
-            )
-
-
-def _wait_for_pyscript_init(page: Page, console_errors_list: list[str]):
-    start_time = time.monotonic()
-    while True:
-        _check_asset_errors(console_errors_list)
-        try:
-            page.wait_for_selector("#webcompy-loading", state="hidden", timeout=PYSCRIPT_POLL_INTERVAL)
-            page.wait_for_selector("#webcompy-app:not([hidden])", timeout=PYSCRIPT_POLL_INTERVAL)
-            return
-        except Exception:
-            pass
-        if time.monotonic() - start_time > PYSCRIPT_INIT_TIMEOUT / 1000:
-            remaining_errors = console_errors_list[-5:] if console_errors_list else []
-            pytest.fail(
-                f"PyScript did not initialize within {PYSCRIPT_INIT_TIMEOUT / 1000:.0f}s\n"
-                + f"Last console errors: {remaining_errors}"
             )
 
 
