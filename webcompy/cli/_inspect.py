@@ -9,8 +9,9 @@ import subprocess
 import sys
 import time
 from argparse import ArgumentParser, Namespace
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
+
+from webcompy.cli._console_types import ConsoleMessage
 
 if TYPE_CHECKING:
     from playwright.sync_api import Browser, Page, Playwright
@@ -27,16 +28,6 @@ _CONSOLE_LEVEL_ORDER: dict[str, int] = {
     "log": 4,
     "debug": 5,
 }
-
-
-@dataclass
-class ConsoleMessage:
-    type: str
-    text: str
-    location: str
-
-    def format(self) -> str:
-        return f"[{self.type}] {self.text} ({self.location})"
 
 
 def _find_free_port() -> int:
@@ -150,6 +141,7 @@ def _get_process_cmdline(pid: int) -> str | None:
 
 
 def cmd_serve(args: Namespace) -> None:
+    from webcompy.cli._exception import WebComPyCliException
     from webcompy.cli._utils import discover_config
 
     config_path: str | None = args.config
@@ -157,7 +149,11 @@ def cmd_serve(args: Namespace) -> None:
     port: int = args.port if args.port is not None else 0
     runtime_serving: str | None = args.runtime_serving
 
-    discover_config(config_path)
+    try:
+        discover_config(config_path)
+    except WebComPyCliException as e:
+        _write_json_error(str(e))
+        sys.exit(1)
     actual_config_path = config_path
 
     if port == 0:
@@ -390,7 +386,10 @@ def cmd_click(args: Namespace) -> None:
     pw, browser, page = _launch_browser(url)
 
     try:
-        element = page.query_selector(selector)
+        try:
+            element = page.wait_for_selector(selector, timeout=30000)
+        except Exception:
+            element = None
         if element is None:
             _write_json_error(f"Element not found: {selector}")
             sys.exit(1)
