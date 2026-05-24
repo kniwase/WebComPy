@@ -38,7 +38,7 @@
 - [ ] 6.2 `HeadElement.__init__` accepts `HeadPropsStore`, constructs initial children: `TitleElement`, `MetaElement`, `LinkElement`, `ScriptElement`, `StyleElement` subclasses or generic `Element` wrappers
 - [ ] 6.3 Implement `_render()` for browser: reconcile VDOM children with actual `<head>` DOM (create/update/remove child elements)
 - [ ] 6.4 Implement `render_html()` for server: produce HTML string for `<head>` and all children
-- [ ] 6.5 Integrate `_reconcile_scoped_styles()` logic into `HeadElement` as style children management
+- [ ] 6.5 Integrate `_reconcile_scoped_styles()` logic into `HeadElement` as style children management; **remove `_reconcile_scoped_styles()` from `AppDocumentRoot`** (this is the final home, not a second copy)
 - [ ] 6.6 Handle `html_attrs` management as part of `HeadElement` (since `<html>` is the sibling container)
 - [ ] 6.7 Export `HeadElement` from `webcompy/elements/__init__.py`
 

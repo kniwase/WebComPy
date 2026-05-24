@@ -153,3 +153,9 @@ The `*[hidden]{display:none}` utility rule remains in a dedicated `<style id="we
 ## Open Questions
 
 - HeadElement scope: Should it also handle plugin-provided head scripts, or should those remain injected by `_html.py`? → **Recommendation**: HeadElement handles core framework head content; plugin scripts stay in `_html.py` as they're generated externally.
+
+## Phasing
+
+**Phase 1** (this change): HeadElement manages core framework head content — `<title>`, `<meta>`, `<link>`, `<style>` (including scoped component styles). Plugin-provided scripts remain in `_html.py`. This keeps the scope focused on scoped CSS and head VDOM unification without coupling to the plugin system.
+
+**Phase 2** (future): Plugin head content may be integrated into HeadElement once the plugin system stabilizes and a clear interface for plugin-provided head entries is defined.
