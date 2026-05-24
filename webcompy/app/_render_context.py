@@ -44,7 +44,15 @@ class RenderContext:
         self._component_store = ComponentStore()
         self._di_scope.provide(_COMPONENT_STORE_KEY, self._component_store)
 
-        self._router = app._router
+        self._router = None
+        if app._router:
+            pages = [route[4] for route in app._router.__routes__]
+            self._router = Router(
+                *pages,
+                default=app._router._default,
+                mode=app._router.__mode__,
+                base_url=app._router.__base_url__ or "",
+            )
         router_mode = (
             self._router.__mode__ if self._router else "history"  # type: ignore[assignment]
         )
@@ -149,8 +157,9 @@ class RenderContext:
 
     def dispose(self) -> None:
         _active_app_context.set(None)
-        _set_app_di_scope(None)
-        _set_app_instance(None)
+        if ENVIRONMENT == "pyscript":
+            _set_app_di_scope(None)
+            _set_app_instance(None)
         if self._app._render_context is self:
             self._app._render_context = None
         if self._di_scope_token is not None:
