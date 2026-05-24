@@ -9,6 +9,7 @@ import threading
 import time
 import urllib.request
 from collections.abc import Callable
+from dataclasses import dataclass
 from functools import partial
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from typing import TYPE_CHECKING
@@ -40,6 +41,46 @@ _ASSET_ERROR_PATTERNS = (
     "Failed to fetch",
     "ModuleNotFoundError",
 )
+
+_CONSOLE_LEVEL_ORDER = {"off": 0, "error": 1, "warning": 2, "info": 3, "log": 4, "debug": 5}
+_CONSOLE_LEVEL_KEYS = ("error", "warning", "info", "log")
+
+
+def _parse_console_level(value: str | None, default: str) -> str:
+    if value is None:
+        return default
+    if value not in _CONSOLE_LEVEL_ORDER:
+        raise ValueError(f"Invalid console level: {value!r}. Expected one of: {', '.join(_CONSOLE_LEVEL_ORDER)}")
+    return value
+
+
+CONSOLE_FILE_LEVEL = _parse_console_level(os.environ.get("CONSOLE_FILE_LEVEL"), "debug")
+CONSOLE_STDOUT_LEVEL = _parse_console_level(os.environ.get("CONSOLE_STDOUT_LEVEL"), "warning")
+CONSOLE_LOG_DIR = os.environ.get("CONSOLE_LOG_DIR")
+
+
+@dataclass
+class ConsoleMessage:
+    type: str
+    text: str
+    location: str
+
+    def format(self) -> str:
+        return f"[{self.type}] {self.text} ({self.location})"
+
+
+def _collect_console_messages(page: Page, messages: list[ConsoleMessage]):
+    def on_console_msg(msg):
+        loc = msg.location if isinstance(msg.location, dict) else {}
+        messages.append(
+            ConsoleMessage(
+                type=msg.type,
+                text=msg.text,
+                location=f"{loc.get('url', '')}:{loc.get('lineNumber', '')}:{loc.get('columnNumber', '')}",
+            )
+        )
+
+    page.on("console", on_console_msg)
 
 
 class _QuietHandler(SimpleHTTPRequestHandler):
@@ -89,21 +130,31 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "e2e: End-to-end tests requiring a browser and server")
 
 
-def _collect_console_errors(page: Page, errors: list[str]):
-    def on_console_msg(msg):
-        if msg.type == "error":
-            errors.append(msg.text)
-
-    page.on("console", on_console_msg)
-
-
-def _check_asset_errors(errors: list[str]):
-    asset_errors = [e for e in errors if any(p in e for p in _ASSET_ERROR_PATTERNS)]
+def _check_asset_errors(messages: list[ConsoleMessage]):
+    asset_errors = [m for m in messages if m.type == "error" and any(p in m.text for p in _ASSET_ERROR_PATTERNS)]
     if asset_errors:
         pytest.exit(
             f"Asset loading errors detected ({len(asset_errors)}) — aborting all tests:\n"
-            + "\n---\n".join(asset_errors)
+            + "\n---\n".join(m.format() for m in asset_errors)
         )
+
+
+def _wait_for_pyscript_init(page: Page, console_messages_list: list[ConsoleMessage]):
+    start_time = time.monotonic()
+    while True:
+        _check_asset_errors(console_messages_list)
+        try:
+            page.wait_for_selector("#webcompy-loading", state="hidden", timeout=PYSCRIPT_POLL_INTERVAL)
+            page.wait_for_selector("#webcompy-app:not([hidden])", timeout=PYSCRIPT_POLL_INTERVAL)
+            return
+        except Exception:
+            pass
+        if time.monotonic() - start_time > PYSCRIPT_INIT_TIMEOUT / 1000:
+            remaining = console_messages_list[-5:] if console_messages_list else []
+            pytest.fail(
+                f"PyScript did not initialize within {PYSCRIPT_INIT_TIMEOUT / 1000:.0f}s\n"
+                + f"Last console messages: {[m.format() for m in remaining]}"
+            )
 
 
 def _wait_for_pyscript_init(page: Page, console_errors_list: list[str]):
@@ -284,36 +335,77 @@ def docs_server_url(request, serving_mode, docs_static_server):
 
 
 @pytest.fixture
-def docs_console_errors(page: Page):
-    errors: list[str] = []
-    _collect_console_errors(page, errors)
-    yield errors
+def docs_console_messages(page: Page):
+    messages: list[ConsoleMessage] = []
+    _collect_console_messages(page, messages)
+    yield messages
 
 
 @pytest.fixture
-def docs_app_page(page: Page, docs_server_url, docs_console_errors):
+def docs_console_errors(docs_console_messages: list[ConsoleMessage]):
+    yield [m.text for m in docs_console_messages if m.type == "error"]
+
+
+@pytest.fixture
+def docs_app_page(page: Page, docs_server_url, docs_console_messages):
     page.goto(docs_server_url)
-    _wait_for_pyscript_init(page, docs_console_errors)
+    _wait_for_pyscript_init(page, docs_console_messages)
     return page
 
 
 @pytest.fixture
-def docs_page_on(page: Page, docs_server_url, docs_console_errors) -> Callable[[str], Page]:
+def docs_page_on(page: Page, docs_server_url, docs_console_messages) -> Callable[[str], Page]:
     def _navigate(path: str) -> Page:
         page.goto(f"{docs_server_url}{path.lstrip('/')}")
-        _wait_for_pyscript_init(page, docs_console_errors)
+        _wait_for_pyscript_init(page, docs_console_messages)
         return page
 
     return _navigate
 
 
+def _write_console_log(request, console_messages_list: list[ConsoleMessage]):
+    if not CONSOLE_LOG_DIR:
+        return
+    level = _CONSOLE_LEVEL_ORDER[CONSOLE_FILE_LEVEL]
+    filtered = [m for m in console_messages_list if _CONSOLE_LEVEL_ORDER.get(m.type, 0) <= level]
+    if not filtered:
+        return
+    log_dir = pathlib.Path(CONSOLE_LOG_DIR)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    test_name = request.node.name.replace("/", "_").replace("::", "__").replace(" ", "_")
+    log_path = log_dir / f"console-{test_name}.log"
+    with log_path.open("w") as f:
+        for m in filtered:
+            f.write(m.format() + "\n")
+
+
 @pytest.fixture
-def assert_no_console_errors(docs_console_errors: list[str]):
+def assert_no_console_errors(docs_console_messages: list[ConsoleMessage], request):
     yield
-    _check_asset_errors(docs_console_errors)
+    _write_console_log(request, docs_console_messages)
+    _check_asset_errors(docs_console_messages)
     python_errors = [
-        err for err in docs_console_errors if any(pattern in err for pattern in _PYTHON_TRACEBACK_PATTERNS)
+        m for m in docs_console_messages if m.type == "error" and any(p in m.text for p in _PYTHON_TRACEBACK_PATTERNS)
     ]
     assert not python_errors, f"Python errors detected in browser console ({len(python_errors)}):\n" + "\n---\n".join(
-        python_errors
+        m.format() for m in python_errors
     )
+
+
+@pytest.fixture(autouse=True)
+def _check_console_errors_after_test(request):
+    docs_console_messages = request.getfixturevalue("docs_console_messages") if "page" in request.fixturenames else None
+    yield
+    if docs_console_messages is not None:
+        _write_console_log(request, docs_console_messages)
+        _check_asset_errors(docs_console_messages)
+        python_errors = [
+            m
+            for m in docs_console_messages
+            if m.type == "error" and any(p in m.text for p in _PYTHON_TRACEBACK_PATTERNS)
+        ]
+        if python_errors:
+            pytest.fail(
+                f"Python errors detected in browser console ({len(python_errors)}):\n"
+                + "\n---\n".join(m.format() for m in python_errors[:5])
+            )

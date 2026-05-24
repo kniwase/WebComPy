@@ -7,6 +7,8 @@
 #   scripts/run-e2e-tests.sh components interaction   # multiple groups
 #   scripts/run-e2e-tests.sh --serving-mode=static    # all groups, static mode only
 #   scripts/run-e2e-tests.sh docs-home --serving-mode=static
+#   scripts/run-e2e-tests.sh --console-level=error   # only show console errors in output
+#   scripts/run-e2e-tests.sh --console-file-level=info # save error+warning+info to file
 #
 # Prerequisites:
 #   uv sync --all-groups
@@ -27,6 +29,7 @@ mkdir -p "$CORPUS_DIR"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
+YELLOW='\033[0;33m'
 NC='\033[0m'
 
 # Group definitions — must match .github/workflows/ci.yml e2e-matrix
@@ -54,12 +57,25 @@ declare -A DOCS_GROUPS=(
 SERVING_MODES=("prod" "static")
 SELECTED_GROUPS=()
 SERVING_MODE_FILTER=""
+CONSOLE_LEVEL=""
+CONSOLE_FILE_LEVEL=""
 
 for arg in "$@"; do
   if [[ "$arg" == --serving-mode=* ]]; then
     SERVING_MODE_FILTER="${arg#--serving-mode=}"
+  elif [[ "$arg" == --console-level=* ]]; then
+    CONSOLE_LEVEL="${arg#--console-level=}"
+  elif [[ "$arg" == --console-file-level=* ]]; then
+    CONSOLE_FILE_LEVEL="${arg#--console-file-level=}"
   elif [[ "$arg" == "--help" ]] || [[ "$arg" == "-h" ]]; then
-    echo "Usage: scripts/run-e2e-tests.sh [group...] [--serving-mode=prod|static]"
+    echo "Usage: scripts/run-e2e-tests.sh [group...] [options]"
+    echo ""
+    echo "Options:"
+    echo "  --serving-mode=prod|static    Run only the specified serving mode"
+    echo "  --console-level=off|error|warning|info|log|debug"
+    echo "      Minimum console level to display in output (default: warning)"
+    echo "  --console-file-level=off|error|warning|info|log|debug"
+    echo "      Minimum console level to save to log files (default: debug)"
     echo ""
     echo "Core E2E groups:"
     for name in "${!E2E_GROUPS[@]}"; do
@@ -86,6 +102,60 @@ PASSED=0
 FAILED=0
 declare -a FAILED_NAMES=()
 
+_print_console_logs() {
+  local console_dir="$1"
+  local level_name="${2:-warning}"
+  local level_num=2
+  case "$level_name" in
+    off)    level_num=0 ;;
+    error)  level_num=1 ;;
+    warning) level_num=2 ;;
+    info)   level_num=3 ;;
+    log)    level_num=4 ;;
+    debug)  level_num=5 ;;
+  esac
+
+  if [ "$level_num" -eq 0 ] || [ ! -d "$console_dir" ]; then
+    return
+  fi
+
+  local found=0
+  for logfile in "$console_dir"/console-*.log; do
+    [ -f "$logfile" ] || continue
+    while IFS= read -r line; do
+      local msg_level_num=4
+      if [[ "$line" == \[error\]* ]]; then
+        msg_level_num=1
+      elif [[ "$line" == \[warning\]* ]]; then
+        msg_level_num=2
+      elif [[ "$line" == \[info\]* ]]; then
+        msg_level_num=3
+      elif [[ "$line" == \[log\]* ]]; then
+        msg_level_num=4
+      elif [[ "$line" == \[debug\]* ]]; then
+        msg_level_num=5
+      fi
+      if [ "$msg_level_num" -le "$level_num" ]; then
+        if [ "$found" -eq 0 ]; then
+          echo "       Console messages:"
+          echo "       ---"
+          found=1
+        fi
+        if [ "$msg_level_num" -le 1 ]; then
+          echo -e "       ${RED}${line}${NC}"
+        elif [ "$msg_level_num" -le 2 ]; then
+          echo -e "       ${YELLOW}${line}${NC}"
+        else
+          echo "       $line"
+        fi
+      fi
+    done < "$logfile"
+  done
+  if [ "$found" -eq 1 ]; then
+    echo "       ---"
+  fi
+}
+
 run_group() {
   local group_name="$1"
   local files="$2"
@@ -105,10 +175,20 @@ run_group() {
   for mode in "${modes[@]}"; do
     echo -e "${CYAN}━━━ $group_name ($mode) ━━━${NC}"
     local log_file="$CORPUS_DIR/e2e-$group_name-$mode.log"
+    local console_dir="$CORPUS_DIR/console-$group_name-$mode"
+    mkdir -p "$console_dir"
     local start_time=$(date +%s)
-    if uv run python -m pytest $files --tb=short --serving-mode="$mode" > "$log_file" 2>&1; then
+
+    local env_console_file_level="${CONSOLE_FILE_LEVEL:-debug}"
+    local env_console_stdout_level="${CONSOLE_LEVEL:-warning}"
+
+    if CONSOLE_LOG_DIR="$console_dir" \
+       CONSOLE_FILE_LEVEL="$env_console_file_level" \
+       CONSOLE_STDOUT_LEVEL="$env_console_stdout_level" \
+       uv run python -m pytest $files --tb=short --serving-mode="$mode" > "$log_file" 2>&1; then
       local elapsed=$(($(date +%s) - start_time))
       echo -e "${GREEN}OK${NC}  $group_name ($mode)  ${elapsed}s"
+      _print_console_logs "$console_dir" "$env_console_stdout_level"
       ((PASSED++)) || true
     else
       local elapsed=$(($(date +%s) - start_time))
@@ -119,7 +199,9 @@ run_group() {
         echo "       $line"
       done
       echo "       ---"
-      echo "       Full log: $log_file"
+      _print_console_logs "$console_dir" "$env_console_stdout_level"
+      echo "       Full test log: $log_file"
+      echo "       Console logs: $console_dir/"
       ((FAILED++)) || true
       FAILED_NAMES+=("$group_name ($mode)")
     fi
