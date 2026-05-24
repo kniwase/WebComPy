@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: The inspect serve command shall launch a WebComPy app server as a subprocess on an auto-detected port
-The `webcompy inspect serve` command SHALL start a WebComPy application server by launching `webcompy start` as a background subprocess. When `--port 0` is specified (the default), the server SHALL bind to an OS-assigned free port. The command SHALL output JSON containing the `port`, `url`, and `pid` of the server process. The `--config` flag SHALL accept an import path to a `WebComPyBuildConfig` instance, following the same discovery rules as `webcompy start` (i.e., `discover_config()`). The `--dev` flag SHALL enable hot-reload mode. The `--runtime-serving` flag SHALL accept `"cdn"` or `"local"` and override `WebComPyBuildConfig.runtime_serving`.
+The `webcompy inspect serve` command SHALL start a WebComPy application server by launching `webcompy start` as a background subprocess. When `--port 0` is specified (the default), `serve` SHALL find a free port before starting the subprocess and pass it to `webcompy start --port N`. The PID file SHALL use this pre-detected port. The command SHALL output JSON containing the `port`, `url`, and `pid` of the server process. The `--config` flag SHALL accept an import path to a `WebComPyBuildConfig` instance, following the same discovery rules as `webcompy start` (i.e., `discover_config()`). The `--dev` flag SHALL enable hot-reload mode. The `--runtime-serving` flag SHALL accept `"cdn"` or `"local"` and override `WebComPyBuildConfig.runtime_serving`.
 
 #### Scenario: Starting a server with auto-detected port
 - **WHEN** a developer runs `webcompy inspect serve --config my_app.config`
@@ -40,7 +40,7 @@ The `serve` command SHALL write a PID file to `.tmp/webcompy-inspect/<port>.pid`
 - **AND** the server SHALL start normally on port N
 
 ### Requirement: The inspect stop command shall stop a running server
-The `webcompy inspect stop` command SHALL accept a port number and terminate the server process associated with that port. It SHALL read the PID file, verify that the process with the stored PID is still running and is the expected server process, send SIGTERM, wait for the process to exit (with a default timeout of 10 seconds, overridable via `--timeout`), and clean up the PID file.
+The `webcompy inspect stop` command SHALL accept a port number and terminate the server process associated with that port. It SHALL read the PID file, verify that the process with the stored PID is still running and is the expected server process (by checking the process command line matches the expected `webcompy start` invocation, or by verifying the process is listening on the expected port), send SIGTERM, wait for the process to exit (with a default timeout of 10 seconds, overridable via `--timeout`), and clean up the PID file.
 
 #### Scenario: Stopping a running server
 - **WHEN** a developer runs `webcompy inspect stop 8080` and a server is running on port 8080

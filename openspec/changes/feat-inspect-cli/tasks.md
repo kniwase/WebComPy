@@ -6,8 +6,8 @@
 
 ## 2. Server Management (serve / stop)
 
-- [ ] 2.1 Implement `inspect serve` command: find free port, launch `webcompy start` subprocess via `discover_config()`, write PID file, output JSON
-- [ ] 2.2 Implement `inspect stop` command: read PID file, verify process is still running, SIGTERM, wait with `--timeout` (default 10s), clean up PID file, output JSON
+- [ ] 2.1 Implement `inspect serve` command: pre-detect free port when `--port 0`, launch `webcompy start --port N` subprocess via `discover_config()`, write PID file, output JSON
+- [ ] 2.2 Implement `inspect stop` command: read PID file, verify process identity (command line or port check), SIGTERM, wait with `--timeout` (default 10s), clean up PID file, output JSON
 - [ ] 2.3 Add `--dev`, `--port`, `--config`, and `--runtime-serving` flags to `inspect serve`
 - [ ] 2.4 Handle stale PID files and port conflicts in `serve`
 

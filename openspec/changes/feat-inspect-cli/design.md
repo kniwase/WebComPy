@@ -56,7 +56,7 @@ The `inspect` CLI subcommand bridges this gap by exposing these capabilities as 
 
 ### D4: Server process management via PID files
 
-**Decision**: `serve` writes a PID file to `.tmp/webcompy-inspect/<port>.pid` containing the process PID, port, and URL. `stop` reads this file to terminate the server. `serve` launches `webcompy start` as a subprocess.
+**Decision**: `serve` writes a PID file to `.tmp/webcompy-inspect/<port>.pid` containing the process PID, port, and URL. `stop` reads this file to terminate the server. `serve` launches `webcompy start` as a subprocess. When `--port 0` is specified, `serve` finds a free port first (using the same approach as the E2E test script's `_find_free_port()`) and passes it to `webcompy start --port N`.
 
 **Alternatives considered**:
 - Process group management (pgid): Less portable, harder to clean up
@@ -103,8 +103,8 @@ The `inspect` CLI subcommand bridges this gap by exposing these capabilities as 
 ## Risks / Trade-offs
 
 - **[Playwright installation required]** → Mitigate with clear error message suggesting `uv run playwright install chromium`
-- **[Port race condition]** → Mitigate by using port 0 (OS-assigned) and reading the actual port from the server log
+- **[Port race condition]** → Mitigate by pre-detecting a free port before starting the subprocess (same approach as E2E test script's `_find_free_port()`), then passing it to `webcompy start --port N`. TOCTOU race is accepted as inherent but unlikely in practice
 - **[Stale PID files]** → Mitigate by checking process existence before relying on PID files; clean up on `stop`
 - **[Browser startup latency]** → Accept as inherent; each command launches a fresh browser session. `serve` and `stop` are separate commands so the server stays running across multiple `inspect` calls
 - **[Console message collection timing]** → `console` command accepts `--wait` parameter (default 5s) to allow PyScript initialization to complete before collecting
-- **[PID reuse by unrelated processes]** → Mitigate by verifying the process with the stored PID is still running and is the expected server process before sending SIGTERM
+- **[PID reuse by unrelated processes]** → Mitigate by verifying the process command line matches the expected `webcompy start` invocation (via `psutil` or `/proc/<pid>/cmdline`), or by verifying the process is listening on the expected port
