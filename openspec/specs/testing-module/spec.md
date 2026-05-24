@@ -28,7 +28,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: webcompy.testing package shall provide fake port implementations
 
-`FakeBrowserDOMPort` SHALL implement `DOMPort` with `create_element()` returning a `FakeDOMNode`, `create_text_node()` returning a text `FakeDOMNode`, `create_event()` returning a `VirtualDOMEvent` with the given type and options, and `add_document_event_listener()` returning a no-op cleanup callback. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` calling `callback()` synchronously and `create_js_global_getter()` returning a callable that returns `None`. `FakeBrowserFFIPort` SHALL implement `FFIPort` with all 5 abstract methods: `create_proxy` (returns `MagicMock` wrapping the original), `destroy_proxy`, `is_none`, `to_js`, `assign`. `FakeFetchPort` SHALL implement `FetchPort` with `request()` returning a `FetchResponse` containing canned JSON data for test isolation.
+`FakeBrowserDOMPort` SHALL implement `DOMPort` with `create_element()` returning a `FakeDOMNode`, `create_text_node()` returning a text `FakeDOMNode`, `create_event()` returning a `VirtualDOMEvent` with the given type and options, and `add_document_event_listener()` returning a no-op cleanup callback. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` calling `callback()` synchronously and `create_js_global_getter()` returning a callable that returns `None`. `FakeBrowserFFIPort` SHALL implement `FFIPort` with all 5 abstract methods: `create_proxy` (returns `MagicMock` wrapping the original), `destroy_proxy`, `is_none`, `to_js`, `assign`. `FakeFetchPort` SHALL implement `FetchPort` with `fetch()` returning a `Response` containing canned JSON data for test isolation.
 
 #### Scenario: FakeBrowserDOMPort creates FakeDOMNodes
 - **WHEN** `FakeBrowserDOMPort().create_element("span")` is called
@@ -49,8 +49,8 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **THEN** `target.update(source)` SHALL be executed and `target` returned
 
 #### Scenario: FakeFetchPort returns canned JSON responses
-- **WHEN** `FakeFetchPort().request(method="GET", url="/api/users")` is called
-- **THEN** a `FetchResponse` with canned JSON data SHALL be returned
+- **WHEN** `FakeFetchPort().fetch(method="GET", url="/api/users")` is called
+- **THEN** a `Response` with canned JSON data SHALL be returned
 - **AND** the response text SHALL match the pre-defined test fixture data
 
 ### Requirement: webcompy.testing package shall provide format_html for canonical HTML comparison
@@ -143,8 +143,8 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **WHEN** `result = TestRenderer.render(component)` is called (using browser-style scope with `FakeBrowserDOMPort`)
 - **AND** `dispatchEvent(VirtualDOMEvent("click"))` triggers a signal update synchronously
 - **THEN** synchronous signal effects SHALL be reflected in the VDOM tree immediately
-- **BUT** `on_after_rendering` lifecycle hooks that depend on `schedule_macro_task()` SHALL NOT fire (because the test scope uses `FakeBrowserHostPort`, not `ServerHostPort`)
-- **AND** tests requiring macro-task-dependent lifecycle hooks SHALL wire `FakeBrowserHostPort.schedule_macro_task` for synchronous callback execution
+- **BUT** `on_after_rendering` lifecycle hooks that depend on `schedule_macro_task()` SHALL fire synchronously (because `FakeBrowserHostPort.schedule_macro_task` calls `callback()` immediately)
+- **AND** tests requiring macro-task-dependent lifecycle hooks SHALL wire `FakeBrowserHostPort` to achieve synchronous callback execution
 
 #### Scenario: Generating HTML from the virtual tree
 - **WHEN** `html = result.to_html()` is called
