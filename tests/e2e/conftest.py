@@ -276,7 +276,7 @@ def static_site():
 def split_static_site():
     app_dir = E2E_DIR / "my_app"
 
-    split_tmp = TMP_DIR.parent / "e2e-split-static"
+    split_tmp = TMP_DIR / "e2e-split-static"
     if split_tmp.exists():
         shutil.rmtree(split_tmp)
     split_tmp.mkdir(parents=True)

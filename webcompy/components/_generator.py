@@ -138,15 +138,13 @@ class ComponentGenerator(Generic[PropsType]):
             _unregistered_generators.append(self)
 
     def _try_register(self) -> bool:
-        if self._registered:
-            return True
         from webcompy.di import inject
         from webcompy.di._keys import _COMPONENT_STORE_KEY
 
         store = inject(_COMPONENT_STORE_KEY, default=None)
         if store is not None:
-            store.add_component(self._name, self)
-            self._registered = True
+            if self._name not in store.components:
+                store.add_component(self._name, self)
             return True
         return False
 
@@ -237,9 +235,5 @@ def define_component(
 
 
 def _register_deferred_components() -> None:
-    global _unregistered_generators
-    remaining: list[ComponentGenerator[Any]] = []
     for gen in _unregistered_generators:
-        if not gen._try_register():
-            remaining.append(gen)
-    _unregistered_generators = remaining
+        gen._try_register()

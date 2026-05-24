@@ -30,7 +30,7 @@ class RenderContext:
     _router: Router | None
     _di_scope_token: Token[DIScope] | None
 
-    def __init__(self, app: WebComPyApp, path: str = "") -> None:
+    def __init__(self, app: WebComPyApp, path: str | None = None) -> None:
         self._app = app
         self._config = app._config
         self._profile = app._profile
@@ -126,7 +126,7 @@ class RenderContext:
 
         app._apply_deferred_ops(self)
 
-        if self._router:
+        if self._router and path is not None:
             self._root.set_path(path)
 
         self._record_phase("init_done")

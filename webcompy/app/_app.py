@@ -95,7 +95,7 @@ class WebComPyApp:
         else:
             print(output)
 
-    def create_render_context(self, path: str = "") -> RenderContext:
+    def create_render_context(self, path: str | None = None) -> RenderContext:
         from webcompy.app._render_context import RenderContext
 
         ctx = RenderContext(self, path)
