@@ -9,6 +9,7 @@
 #   scripts/run-e2e-tests.sh docs-home --serving-mode=static
 #   scripts/run-e2e-tests.sh --console-level=error   # only show console errors in output
 #   scripts/run-e2e-tests.sh --console-file-level=info # save error+warning+info to file
+#   scripts/run-e2e-tests.sh --parallel               # run groups in parallel
 #
 # Prerequisites:
 #   uv sync --all-groups
@@ -59,6 +60,7 @@ SELECTED_GROUPS=()
 SERVING_MODE_FILTER=""
 CONSOLE_LEVEL=""
 CONSOLE_FILE_LEVEL=""
+PARALLEL=0
 
 for arg in "$@"; do
   if [[ "$arg" == --serving-mode=* ]]; then
@@ -67,6 +69,8 @@ for arg in "$@"; do
     CONSOLE_LEVEL="${arg#--console-level=}"
   elif [[ "$arg" == --console-file-level=* ]]; then
     CONSOLE_FILE_LEVEL="${arg#--console-file-level=}"
+  elif [[ "$arg" == "--parallel" ]]; then
+    PARALLEL=1
   elif [[ "$arg" == "--help" ]] || [[ "$arg" == "-h" ]]; then
     echo "Usage: scripts/run-e2e-tests.sh [group...] [options]"
     echo ""
@@ -76,6 +80,7 @@ for arg in "$@"; do
     echo "      Minimum console level to display in output (default: warning)"
     echo "  --console-file-level=off|error|warning|info|log|debug"
     echo "      Minimum console level to save to log files (default: debug)"
+    echo "  --parallel                     Run groups in parallel"
     echo ""
     echo "Core E2E groups:"
     for name in "${!E2E_GROUPS[@]}"; do
@@ -98,9 +103,48 @@ if [ ${#SELECTED_GROUPS[@]} -eq 0 ]; then
   SELECTED_GROUPS=("${!E2E_GROUPS[@]}" "${!DOCS_GROUPS[@]}")
 fi
 
-PASSED=0
-FAILED=0
-declare -a FAILED_NAMES=()
+_find_free_port() {
+  python3 -c "import socket; s=socket.socket(); s.bind(('',0)); print(s.getsockname()[1]); s.close()"
+}
+
+_build_run_tasks() {
+  local tasks=()
+  for group_name in "${SELECTED_GROUPS[@]}"; do
+    local files=""
+    if [[ "$group_name" == docs-* ]]; then
+      files="${DOCS_GROUPS[$group_name]:-}"
+      if [ -z "$files" ]; then
+        echo -e "${RED}Unknown group: $group_name${NC}"
+        echo "Available docs groups: ${!DOCS_GROUPS[*]}"
+        exit 1
+      fi
+    else
+      files="${E2E_GROUPS[$group_name]:-}"
+      if [ -z "$files" ]; then
+        echo -e "${RED}Unknown group: $group_name${NC}"
+        echo "Available core groups: ${!E2E_GROUPS[*]}"
+        exit 1
+      fi
+    fi
+
+    local modes=("${SERVING_MODES[@]}")
+    if [[ "$group_name" == docs-* ]]; then
+      modes=("static")
+    fi
+    if [ -n "$SERVING_MODE_FILTER" ]; then
+      if [[ ! " ${modes[*]} " =~ " ${SERVING_MODE_FILTER} " ]]; then
+        continue
+      fi
+      modes=("$SERVING_MODE_FILTER")
+    fi
+
+    for mode in "${modes[@]}"; do
+      tasks+=("$group_name|$mode|$files")
+    done
+  done
+
+  printf '%s\n' "${tasks[@]}"
+}
 
 _print_console_logs() {
   local console_dir="$1"
@@ -156,43 +200,238 @@ _print_console_logs() {
   fi
 }
 
-run_group() {
+_run_single() {
   local group_name="$1"
-  local files="$2"
-  local modes=("${SERVING_MODES[@]}")
+  local mode="$2"
+  local files="$3"
+
+  local log_file="$CORPUS_DIR/e2e-$group_name-$mode.log"
+  local console_dir="$CORPUS_DIR/console-$group_name-$mode"
+  local task_tmp_dir="$CORPUS_DIR/tmp-$group_name-$mode"
+  mkdir -p "$console_dir" "$task_tmp_dir"
+
+  local env_console_file_level="${CONSOLE_FILE_LEVEL:-debug}"
+  local env_console_stdout_level="${CONSOLE_LEVEL:-warning}"
+
+  local port=""
+  local env_extra=()
+
+  if [[ "$mode" == "prod" ]]; then
+    port=$(_find_free_port)
+    if [[ "$group_name" == docs-* ]]; then
+      env_extra+=("DOCS_E2E_PORT=$port")
+    elif [[ "$group_name" == runtime-local ]]; then
+      env_extra+=("RUNTIME_LOCAL_PORT=$port")
+    else
+      env_extra+=("E2E_PORT=$port")
+    fi
+  fi
 
   if [[ "$group_name" == docs-* ]]; then
-    modes=("static")
+    env_extra+=("DOCS_E2E_TMP_DIR=$task_tmp_dir")
+    env_extra+=("DOCS_E2E_SERVER_LOG=$task_tmp_dir/server.log")
+  elif [[ "$group_name" == runtime-local ]]; then
+    env_extra+=("RUNTIME_LOCAL_TMP_DIR=$task_tmp_dir")
+  elif [[ "$group_name" == standalone ]]; then
+    env_extra+=("STANDALONE_TMP_DIR=$task_tmp_dir")
+  else
+    env_extra+=("E2E_TMP_DIR=$task_tmp_dir")
+    env_extra+=("E2E_SERVER_LOG=$task_tmp_dir/server.log")
   fi
 
-  if [ -n "$SERVING_MODE_FILTER" ]; then
-    if [[ ! " ${modes[*]} " =~ " ${SERVING_MODE_FILTER} " ]]; then
-      return
+  local start_time=$(date +%s)
+
+  local env_cmd=""
+  if [ ${#env_extra[@]} -gt 0 ]; then
+    env_cmd="${env_extra[*]} "
+  fi
+
+  if ${env_cmd}CONSOLE_LOG_DIR="$console_dir" \
+     CONSOLE_FILE_LEVEL="$env_console_file_level" \
+     CONSOLE_STDOUT_LEVEL="$env_console_stdout_level" \
+     uv run python -m pytest $files --tb=short --serving-mode="$mode" > "$log_file" 2>&1; then
+    local elapsed=$(($(date +%s) - start_time))
+    echo -e "${GREEN}OK${NC}  $group_name ($mode)  ${elapsed}s${port:+  port=$port}"
+    _print_console_logs "$console_dir" "$env_console_stdout_level"
+    echo "0" > "$task_tmp_dir/.result"
+  else
+    local elapsed=$(($(date +%s) - start_time))
+    echo -e "${RED}FAIL${NC}  $group_name ($mode)  ${elapsed}s${port:+  port=$port}"
+    echo "       Last 20 lines of log:"
+    echo "       ---"
+    tail -20 "$log_file" | while IFS= read -r line; do
+      echo "       $line"
+    done
+    echo "       ---"
+    _print_console_logs "$console_dir" "$env_console_stdout_level"
+    echo "       Full test log: $log_file"
+    echo "       Console logs: $console_dir/"
+    echo "1" > "$task_tmp_dir/.result"
+  fi
+}
+
+_run_single_bg() {
+  local group_name="$1"
+  local mode="$2"
+  local files="$3"
+  local log_file="$CORPUS_DIR/e2e-$group_name-$mode.log"
+  local task_tmp_dir="$CORPUS_DIR/tmp-$group_name-$mode"
+  mkdir -p "$task_tmp_dir"
+
+  local port=""
+  local env_args=()
+
+  if [[ "$mode" == "prod" ]]; then
+    port=$(_find_free_port)
+    if [[ "$group_name" == docs-* ]]; then
+      env_args+=("DOCS_E2E_PORT=$port")
+    elif [[ "$group_name" == runtime-local ]]; then
+      env_args+=("RUNTIME_LOCAL_PORT=$port")
+    else
+      env_args+=("E2E_PORT=$port")
     fi
-    modes=("$SERVING_MODE_FILTER")
   fi
 
-  for mode in "${modes[@]}"; do
+  if [[ "$group_name" == docs-* ]]; then
+    env_args+=("DOCS_E2E_TMP_DIR=$task_tmp_dir")
+    env_args+=("DOCS_E2E_SERVER_LOG=$task_tmp_dir/server.log")
+  elif [[ "$group_name" == runtime-local ]]; then
+    env_args+=("RUNTIME_LOCAL_TMP_DIR=$task_tmp_dir")
+  elif [[ "$group_name" == standalone ]]; then
+    env_args+=("STANDALONE_TMP_DIR=$task_tmp_dir")
+  else
+    env_args+=("E2E_TMP_DIR=$task_tmp_dir")
+    env_args+=("E2E_SERVER_LOG=$task_tmp_dir/server.log")
+  fi
+
+  local console_dir="$CORPUS_DIR/console-$group_name-$mode"
+  mkdir -p "$console_dir"
+  local env_console_file_level="${CONSOLE_FILE_LEVEL:-debug}"
+  local env_console_stdout_level="${CONSOLE_LEVEL:-warning}"
+
+  local env_cmd=(env)
+  for e in "${env_args[@]}"; do
+    env_cmd+=("$e")
+  done
+
+  echo -e "${CYAN}━━━ $group_name ($mode) ━━━${NC}${port:+  port=$port} [background]"
+
+  "${env_cmd[@]}" CONSOLE_LOG_DIR="$console_dir" \
+    CONSOLE_FILE_LEVEL="$env_console_file_level" \
+    CONSOLE_STDOUT_LEVEL="$env_console_stdout_level" \
+    uv run python -m pytest $files --tb=short --serving-mode="$mode" \
+    > "$log_file" 2>&1
+}
+
+if [ "$PARALLEL" -eq 1 ]; then
+  declare -a PIDS=()
+  declare -A PID_TASK=()
+
+  while IFS='|' read -r group_name mode files; do
+    _run_single_bg "$group_name" "$mode" "$files" &
+    pid=$!
+    PIDS+=("$pid")
+    PID_TASK["$pid"]="$group_name ($mode)"
+  done < <(_build_run_tasks)
+
+  PASSED=0
+  FAILED=0
+  declare -a FAILED_NAMES=()
+
+  for pid in "${PIDS[@]}"; do
+    if wait "$pid"; then
+      ((PASSED++)) || true
+    else
+      ((FAILED++)) || true
+      FAILED_NAMES+=("${PID_TASK[$pid]}")
+    fi
+  done
+
+  echo ""
+  echo "──────────────────────────────────────────────"
+  echo -e "Total: ${GREEN}$PASSED passed${NC}, ${RED}$FAILED failed${NC}"
+  if [ ${#FAILED_NAMES[@]} -gt 0 ]; then
+    echo "Failures:"
+    for name in "${FAILED_NAMES[@]}"; do
+      echo "  - $name"
+      log_name="${name% (*}"
+      log_mode="${name#* (}"
+      log_mode="${log_mode%)}"
+      log_file="$CORPUS_DIR/e2e-$log_name-$log_mode.log"
+      if [ -f "$log_file" ]; then
+        echo "    Last 10 lines:"
+        tail -10 "$log_file" | while IFS= read -r line; do
+          echo "      $line"
+        done
+      fi
+    done
+  fi
+  echo "Logs saved to: $CORPUS_DIR"
+  echo "──────────────────────────────────────────────"
+
+  [ $FAILED -eq 0 ]
+else
+  PASSED=0
+  FAILED=0
+  declare -a FAILED_NAMES=()
+
+  while IFS='|' read -r group_name mode files; do
     echo -e "${CYAN}━━━ $group_name ($mode) ━━━${NC}"
-    local log_file="$CORPUS_DIR/e2e-$group_name-$mode.log"
-    local console_dir="$CORPUS_DIR/console-$group_name-$mode"
-    mkdir -p "$console_dir"
-    local start_time=$(date +%s)
+    start_time=$(date +%s)
 
-    local env_console_file_level="${CONSOLE_FILE_LEVEL:-debug}"
-    local env_console_stdout_level="${CONSOLE_LEVEL:-warning}"
+    log_file="$CORPUS_DIR/e2e-$group_name-$mode.log"
+    console_dir="$CORPUS_DIR/console-$group_name-$mode"
+    task_tmp_dir="$CORPUS_DIR/tmp-$group_name-$mode"
+    mkdir -p "$console_dir" "$task_tmp_dir"
 
-    if CONSOLE_LOG_DIR="$console_dir" \
+    env_console_file_level="${CONSOLE_FILE_LEVEL:-debug}"
+    env_console_stdout_level="${CONSOLE_LEVEL:-warning}"
+
+    port=""
+
+    if [[ "$mode" == "prod" ]]; then
+      port=$(_find_free_port)
+    fi
+
+    env_args=()
+    if [ -n "$port" ]; then
+      if [[ "$group_name" == docs-* ]]; then
+        env_args+=("DOCS_E2E_PORT=$port")
+      elif [[ "$group_name" == runtime-local ]]; then
+        env_args+=("RUNTIME_LOCAL_PORT=$port")
+      else
+        env_args+=("E2E_PORT=$port")
+      fi
+    fi
+
+    if [[ "$group_name" == docs-* ]]; then
+      env_args+=("DOCS_E2E_TMP_DIR=$task_tmp_dir")
+      env_args+=("DOCS_E2E_SERVER_LOG=$task_tmp_dir/server.log")
+    elif [[ "$group_name" == runtime-local ]]; then
+      env_args+=("RUNTIME_LOCAL_TMP_DIR=$task_tmp_dir")
+    elif [[ "$group_name" == standalone ]]; then
+      env_args+=("STANDALONE_TMP_DIR=$task_tmp_dir")
+    else
+      env_args+=("E2E_TMP_DIR=$task_tmp_dir")
+      env_args+=("E2E_SERVER_LOG=$task_tmp_dir/server.log")
+    fi
+
+    env_cmd=(env)
+    for e in "${env_args[@]}"; do
+      env_cmd+=("$e")
+    done
+
+    if "${env_cmd[@]}" CONSOLE_LOG_DIR="$console_dir" \
        CONSOLE_FILE_LEVEL="$env_console_file_level" \
        CONSOLE_STDOUT_LEVEL="$env_console_stdout_level" \
        uv run python -m pytest $files --tb=short --serving-mode="$mode" > "$log_file" 2>&1; then
-      local elapsed=$(($(date +%s) - start_time))
-      echo -e "${GREEN}OK${NC}  $group_name ($mode)  ${elapsed}s"
+      elapsed=$(($(date +%s) - start_time))
+      echo -e "${GREEN}OK${NC}  $group_name ($mode)  ${elapsed}s${port:+  port=$port}"
       _print_console_logs "$console_dir" "$env_console_stdout_level"
       ((PASSED++)) || true
     else
-      local elapsed=$(($(date +%s) - start_time))
-      echo -e "${RED}FAIL${NC}  $group_name ($mode)  ${elapsed}s"
+      elapsed=$(($(date +%s) - start_time))
+      echo -e "${RED}FAIL${NC}  $group_name ($mode)  ${elapsed}s${port:+  port=$port}"
       echo "       Last 20 lines of log:"
       echo "       ---"
       tail -20 "$log_file" | while IFS= read -r line; do
@@ -205,39 +444,19 @@ run_group() {
       ((FAILED++)) || true
       FAILED_NAMES+=("$group_name ($mode)")
     fi
-  done
-}
+  done < <(_build_run_tasks)
 
-for group_name in "${SELECTED_GROUPS[@]}"; do
-  files=""
-  if [[ "$group_name" == docs-* ]]; then
-    files="${DOCS_GROUPS[$group_name]:-}"
-    if [ -z "$files" ]; then
-      echo -e "${RED}Unknown group: $group_name${NC}"
-      echo "Available docs groups: ${!DOCS_GROUPS[*]}"
-      exit 1
-    fi
-  else
-    files="${E2E_GROUPS[$group_name]:-}"
-    if [ -z "$files" ]; then
-      echo -e "${RED}Unknown group: $group_name${NC}"
-      echo "Available core groups: ${!E2E_GROUPS[*]}"
-      exit 1
-    fi
+  echo ""
+  echo "──────────────────────────────────────────────"
+  echo -e "Total: ${GREEN}$PASSED passed${NC}, ${RED}$FAILED failed${NC}"
+  if [ ${#FAILED_NAMES[@]} -gt 0 ]; then
+    echo "Failures:"
+    for name in "${FAILED_NAMES[@]}"; do
+      echo "  - $name"
+    done
   fi
-  run_group "$group_name" "$files"
-done
+  echo "Logs saved to: $CORPUS_DIR"
+  echo "──────────────────────────────────────────────"
 
-echo ""
-echo "──────────────────────────────────────────────"
-echo -e "Total: ${GREEN}$PASSED passed${NC}, ${RED}$FAILED failed${NC}"
-if [ ${#FAILED_NAMES[@]} -gt 0 ]; then
-  echo "Failures:"
-  for name in "${FAILED_NAMES[@]}"; do
-    echo "  - $name"
-  done
+  [ $FAILED -eq 0 ]
 fi
-echo "Logs saved to: $CORPUS_DIR"
-echo "──────────────────────────────────────────────"
-
-[ $FAILED -eq 0 ]

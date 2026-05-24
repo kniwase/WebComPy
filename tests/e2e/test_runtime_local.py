@@ -19,8 +19,8 @@ pytestmark = [
 
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent
 E2E_DIR = pathlib.Path(__file__).parent
-PORT = 8089
-TMP_DIR = PROJECT_ROOT / ".tmp" / "e2e-runtime-local"
+PORT = int(os.environ.get("RUNTIME_LOCAL_PORT", "8089"))
+TMP_DIR = pathlib.Path(os.environ.get("RUNTIME_LOCAL_TMP_DIR", str(PROJECT_ROOT / ".tmp" / "e2e-runtime-local")))
 
 
 class _QuietHandler(SimpleHTTPRequestHandler):

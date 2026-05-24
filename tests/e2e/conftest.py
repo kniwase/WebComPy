@@ -20,12 +20,14 @@ if TYPE_CHECKING:
 
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent
 E2E_DIR = pathlib.Path(__file__).parent
-BASE_URL = "http://localhost:8088/"
-PORT = 8088
+PORT = int(os.environ.get("E2E_PORT", "8088"))
+BASE_URL = f"http://localhost:{PORT}/"
 PYSCRIPT_INIT_TIMEOUT = 120_000
 PYSCRIPT_POLL_INTERVAL = 500
-SERVER_LOG = pathlib.Path(__file__).parent / ".e2e-server.log"
-TMP_DIR = pathlib.Path(__file__).parent.parent.parent / ".tmp" / "e2e-static"
+SERVER_LOG = pathlib.Path(os.environ.get("E2E_SERVER_LOG", str(pathlib.Path(__file__).parent / ".e2e-server.log")))
+TMP_DIR = pathlib.Path(
+    os.environ.get("E2E_TMP_DIR", str(pathlib.Path(__file__).parent.parent.parent / ".tmp" / "e2e-static"))
+)
 
 _PYTHON_TRACEBACK_PATTERNS = (
     "Traceback (most recent call last):",

@@ -21,12 +21,14 @@ if TYPE_CHECKING:
 
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent
 DOCS_APP_DIR = PROJECT_ROOT / "docs_app"
-BASE_URL = "http://localhost:8081/"
-PORT = 8081
+PORT = int(os.environ.get("DOCS_E2E_PORT", "8081"))
+BASE_URL = f"http://localhost:{PORT}/"
 PYSCRIPT_INIT_TIMEOUT = 300_000
 PYSCRIPT_POLL_INTERVAL = 500
-SERVER_LOG = pathlib.Path(__file__).parent / ".e2e-docs-server.log"
-TMP_DIR = PROJECT_ROOT / ".tmp" / "e2e-docs-static"
+SERVER_LOG = pathlib.Path(
+    os.environ.get("DOCS_E2E_SERVER_LOG", str(pathlib.Path(__file__).parent / ".e2e-docs-server.log"))
+)
+TMP_DIR = pathlib.Path(os.environ.get("DOCS_E2E_TMP_DIR", str(PROJECT_ROOT / ".tmp" / "e2e-docs-static")))
 
 _PYTHON_TRACEBACK_PATTERNS = (
     "Traceback (most recent call last):",
