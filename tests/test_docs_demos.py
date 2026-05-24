@@ -1,3 +1,4 @@
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,11 @@ from webcompy.ports._server._virtual_dom import VirtualDOMEvent
 from webcompy.testing import TestRenderer, mock_app_run
 
 DOCS_APP_DIR = Path(__file__).parent.parent / "docs_app"
+
+_MATPLOTLIB_AVAILABLE = (
+    importlib.util.find_spec("matplotlib") is not None and importlib.util.find_spec("numpy") is not None
+)
+skip_matplotlib = pytest.mark.skipif(not _MATPLOTLIB_AVAILABLE, reason="Requires numpy and matplotlib")
 
 
 @pytest.fixture(autouse=True)
@@ -173,6 +179,7 @@ def test_fetch_page_loads():
             assert "Charlie" in html
 
 
+@skip_matplotlib
 def test_matplotlib_page_heading():
     with mock_app_run():
         from static._demos.matplotlib_sample.app import App
@@ -182,6 +189,7 @@ def test_matplotlib_page_heading():
             assert "Square Wave" in html
 
 
+@skip_matplotlib
 def test_matplotlib_initial_value():
     with mock_app_run():
         from static._demos.matplotlib_sample.app import App
@@ -191,6 +199,7 @@ def test_matplotlib_initial_value():
             assert "Value: 15" in html
 
 
+@skip_matplotlib
 def test_matplotlib_increment_button():
     with mock_app_run():
         from static._demos.matplotlib_sample.app import App
@@ -202,6 +211,7 @@ def test_matplotlib_increment_button():
             assert "Value: 16" in result.to_html()
 
 
+@skip_matplotlib
 def test_matplotlib_image_rendered():
     with mock_app_run():
         from static._demos.matplotlib_sample.app import App
