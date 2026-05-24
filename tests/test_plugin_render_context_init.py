@@ -7,6 +7,7 @@ from webcompy.app._config import WebComPyAppConfig
 from webcompy.components._generator import define_component
 from webcompy.plugin._manager import PluginManager
 from webcompy.plugin._plugin import WebComPyPlugin
+from webcompy.testing import create_test_app
 
 
 @define_component
@@ -27,14 +28,12 @@ class _InitCountingPlugin(WebComPyPlugin):
 
 class TestPluginRenderContextInit:
     def test_on_render_context_init_called_per_request(self):
-        import sys
-
         test_module = sys.modules[__name__]
         test_module._InitCountingPlugin = _InitCountingPlugin
         try:
-            app = WebComPyApp(
+            app = create_test_app(
                 root_component=_PluginTestRoot,
-                config=WebComPyAppConfig(plugins=["tests.test_plugin_render_context_init:_InitCountingPlugin"]),
+                plugins=["tests.test_plugin_render_context_init:_InitCountingPlugin"],
             )
             ctx1 = app.create_render_context()
             ctx2 = app.create_render_context()

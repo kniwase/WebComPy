@@ -85,6 +85,24 @@ When adding new elements to the framework, if it is uncertain whether an element
 - **AND** it is unclear whether the attribute should be on `WebComPyApp` or `RenderContext`
 - **THEN** the attribute SHALL be placed on `RenderContext`
 
+### Requirement: RenderContext shall integrate with the testing module
+
+The `webcompy.testing` module SHALL leverage `app.create_render_context()` for SSR test isolation. `create_test_asgi_app()` SHALL create a fresh `RenderContext` per request and dispose it after rendering. `render_app_html()` SHALL be a convenience function that wraps the full `create_render_context → generate_html → dispose` pipeline. `create_browser_scope()` and `create_server_scope()` are removed — port provisioning is handled automatically by `RenderContext.__init__`. `create_test_app()` SHALL use `__dataclass_fields__` for config override filtering to correctly handle dataclass fields with `default_factory`.
+
+#### Scenario: Testing SSR with RenderContext-based isolation
+- **WHEN** `app = create_test_app(root_component=MyRoot)` and `ctx = app.create_render_context("/path")` is called in a test
+- **THEN** port provisioning (server or browser) SHALL be handled automatically by `RenderContext.__init__`
+- **AND** the test SHALL NOT need to manually create DI scopes or wire ports
+
+#### Scenario: render_app_html convenience function
+- **WHEN** `html = render_app_html(app, path="/about", **gen_kwargs)` is called
+- **THEN** a `RenderContext` SHALL be created, `generate_html(ctx, **gen_kwargs)` SHALL be called, and `ctx.dispose()` SHALL be called in a `finally` block
+
+#### Scenario: Testing module scope helpers are removed
+- **WHEN** importing from `webcompy.testing`
+- **THEN** `create_browser_scope` and `create_server_scope` SHALL NOT be importable
+- **AND** `create_test_app` SHALL remain as the primary helper for creating reusable `WebComPyApp` instances
+
 ### Requirement: Signal graph globals shall use ContextVar for async safety
 
 `_active_consumer` and `_in_notification_phase` in `_graph.py` SHALL be converted from module-level globals to `ContextVar`s, with module-level fallback globals (`_active_consumer_global`, `_in_notification_phase_global`) for PyScript environments where `ContextVar` propagation is unreliable across JS→Python callbacks. All read/write access SHALL check `ContextVar` first and fall back to the global when ContextVar is unset. `_epoch` SHALL remain a module-level global that grows monotonically and is never reset — Python integers have unlimited precision so overflow is not a concern. `reset_graph_state()` SHALL be removed; the disposal of signal graph resources is handled by `consumer_destroy()` called from DI scope and effect scope disposal, combined with ContextVar-based isolation for transient computation state.

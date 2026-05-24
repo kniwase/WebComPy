@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from webcompy.app._app import WebComPyApp
-from webcompy.app._config import WebComPyAppConfig
-from webcompy.cli._html import generate_html
 from webcompy.components._generator import define_component
 from webcompy.signal import ReactiveList, Signal
+from webcompy.testing import create_test_app, render_app_html
 
 
 @define_component
@@ -58,17 +56,10 @@ def _NestedTestRoot(context):
     )
 
 
-def _make_app(root):
-    return WebComPyApp(
-        root_component=root,
-        config=WebComPyAppConfig(),
-    )
-
-
-def _generate(app, **kwargs):
-    ctx = app.create_render_context()
-    html = generate_html(
-        ctx,
+def _generate(root, **kwargs):
+    app = create_test_app(root_component=root)
+    return render_app_html(
+        app,
         app_package_name="test_pkg",
         dev_mode=False,
         prerender=True,
@@ -76,38 +67,36 @@ def _generate(app, **kwargs):
         wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         **kwargs,
     )
-    ctx.dispose()
-    return html
 
 
 class TestServerRenderingAttributes:
     def test_multiple_attributes_rendered(self):
-        html_str = _generate(_make_app(_AttrTestRoot))
+        html_str = _generate(_AttrTestRoot)
         assert 'class="container"' in html_str
         assert 'id="main"' in html_str
         assert 'data-value="42"' in html_str
 
     def test_text_content_rendered(self):
-        html_str = _generate(_make_app(_AttrTestRoot))
+        html_str = _generate(_AttrTestRoot)
         assert "hello" in html_str
 
 
 class TestServerRenderingEventHandlers:
     def test_button_with_event_handler(self):
-        html_str = _generate(_make_app(_EventTestRoot))
+        html_str = _generate(_EventTestRoot)
         assert "<button" in html_str
         assert "click me" in html_str
 
 
 class TestServerRenderingConditional:
     def test_conditional_true_branch(self):
-        html_str = _generate(_make_app(_ConditionalTestRoot))
+        html_str = _generate(_ConditionalTestRoot)
         assert 'data-branch="true"' in html_str
 
 
 class TestServerRenderingList:
     def test_list_items_rendered(self):
-        html_str = _generate(_make_app(_ListTestRoot))
+        html_str = _generate(_ListTestRoot)
         assert "<ul" in html_str
         assert "<li" in html_str
         assert ">a<" in html_str
@@ -117,7 +106,7 @@ class TestServerRenderingList:
 
 class TestServerRenderingNested:
     def test_nested_structure(self):
-        html_str = _generate(_make_app(_NestedTestRoot))
+        html_str = _generate(_NestedTestRoot)
         assert "<section" in html_str
         assert "<h1" in html_str
         assert ">title<" in html_str

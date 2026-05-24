@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from webcompy.app._app import WebComPyApp
-from webcompy.app._config import WebComPyAppConfig
 from webcompy.components._generator import define_component
+from webcompy.testing import create_test_app
 
 
 @define_component
@@ -14,10 +13,7 @@ def _IsolationRoot(context):
 
 class TestRenderContextIsolation:
     def test_independent_contexts_from_same_app(self):
-        app = WebComPyApp(
-            root_component=_IsolationRoot,
-            config=WebComPyAppConfig(),
-        )
+        app = create_test_app(root_component=_IsolationRoot)
 
         ctx1 = app.create_render_context()
         ctx1.set_title("Title 1")
@@ -47,10 +43,7 @@ class TestRenderContextIsolation:
         ctx2.dispose()
 
     def test_styles_isolated(self):
-        app = WebComPyApp(
-            root_component=_IsolationRoot,
-            config=WebComPyAppConfig(),
-        )
+        app = create_test_app(root_component=_IsolationRoot)
         ctx = app.create_render_context()
         style = ctx.style
         assert isinstance(style, str)

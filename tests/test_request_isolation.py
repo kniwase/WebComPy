@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from webcompy.app._app import WebComPyApp
-from webcompy.app._config import WebComPyAppConfig
-from webcompy.cli._html import generate_html
 from webcompy.components._generator import define_component
+from webcompy.testing import create_test_app
 
 
 @define_component
@@ -15,10 +13,9 @@ def _IsolationRoot(context):
 
 class TestRequestIsolation:
     def test_contexts_produce_independent_html(self):
-        app = WebComPyApp(
-            root_component=_IsolationRoot,
-            config=WebComPyAppConfig(),
-        )
+        from webcompy.cli._html import generate_html
+
+        app = create_test_app(root_component=_IsolationRoot)
 
         ctx1 = app.create_render_context("/page-a")
         ctx1.set_title("Page A")
@@ -56,10 +53,7 @@ class TestRequestIsolation:
         assert "/b.css" not in html1
 
     def test_head_props_isolated(self):
-        app = WebComPyApp(
-            root_component=_IsolationRoot,
-            config=WebComPyAppConfig(),
-        )
+        app = create_test_app(root_component=_IsolationRoot)
 
         ctx1 = app.create_render_context()
         ctx1.set_head(
@@ -86,10 +80,7 @@ class TestRequestIsolation:
         ctx2.dispose()
 
     def test_concurrent_contexts(self):
-        app = WebComPyApp(
-            root_component=_IsolationRoot,
-            config=WebComPyAppConfig(),
-        )
+        app = create_test_app(root_component=_IsolationRoot)
 
         contexts = []
         for i in range(10):

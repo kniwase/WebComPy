@@ -76,22 +76,34 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: webcompy.testing package shall provide scope helpers
 
-`create_browser_scope()` SHALL return a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, and `FakeBrowserFFIPort` wired to their standard injection keys. `create_server_scope()` SHALL return a `DIScope` with `ServerDOMPort`, `ServerHostPort`, `ServerFFIPort`, and `ServerFetchPort` wired to their standard injection keys. `TestRenderer.render()` SHALL NOT provide `FETCH_PORT_KEY` by default; tests that use `HttpClient` SHALL inject `FakeFetchPort` via `parent_scope`. `create_test_app(*, root_component, **config_overrides)` SHALL return a minimal `WebComPyApp` instance. Callers manage DI scope via `app.di_scope` — this is an intentional test-only escape hatch, not a public API contract, and SHALL NOT be used in production code.
+`create_test_app(*, root_component, **config_overrides)` SHALL return a minimal `WebComPyApp` instance. Config overrides SHALL be filtered to valid `WebComPyAppConfig` dataclass fields before constructing the config. When a `WebComPyApp` instance exists, callers SHALL create render contexts via `app.create_render_context(path)` — this SHALL be the standard test pattern for SSR and isolation testing. The old `create_browser_scope()` and `create_server_scope()` helpers are removed; port provisioning is handled internally by `RenderContext.__init__` which selects browser or server ports based on `ENVIRONMENT`.
 
-#### Scenario: create_browser_scope returns a ready-to-use DIScope
-- **WHEN** `scope = create_browser_scope()` is called
-- **THEN** `scope.inject(DOM_PORT_KEY)` SHALL return a `FakeBrowserDOMPort`
-- **AND** `scope.inject(FFI_PORT_KEY)` SHALL return a `FakeBrowserFFIPort`
-- **AND** `scope.inject(HOST_PORT_KEY)` SHALL return a `FakeBrowserHostPort`
+#### Scenario: create_test_app returns a reusable app instance
+- **WHEN** `app = create_test_app(root_component=MyRoot, base_url="/custom/")` is called
+- **THEN** a `WebComPyApp` with `base_url="/custom/"` SHALL be returned
+- **AND** the app SHALL be reusable across multiple `app.create_render_context()` calls
 
-#### Scenario: create_server_scope returns a ready-to-use DIScope
-- **WHEN** `scope = create_server_scope()` is called
-- **THEN** `scope.inject(DOM_PORT_KEY)` SHALL return a `ServerDOMPort`
-- **AND** `scope.inject(FFI_PORT_KEY)` SHALL return a `ServerFFIPort`
+#### Scenario: Config overrides filter to valid dataclass fields
+- **WHEN** `create_test_app(root_component=Root, plugins=["pkg:PluginClass"])` is called
+- **THEN** the `plugins` field SHALL be passed through to `WebComPyAppConfig`
+
+#### Scenario: RenderContext-based test isolation
+- **WHEN** `ctx = app.create_render_context("/page")` is called
+- **THEN** a fresh `RenderContext` with isolated `DIScope`, `ComponentStore`, and `Router` SHALL be returned
+- **AND** browser or server ports SHALL be provisioned automatically based on `ENVIRONMENT`
+
+### Requirement: render_app_html shall provide a one-call SSR helper
+
+`render_app_html(app, path="/", **kwargs)` SHALL be a convenience function that creates a `RenderContext` via `app.create_render_context(path)`, generates SSR HTML via `generate_html(ctx, **kwargs)`, calls `ctx.dispose()`, and returns the HTML string. The `**kwargs` SHALL be forwarded to `generate_html()` and SHALL include all required generation parameters (`app_package_name`, `dev_mode`, `prerender`, `app_version`, `wheel_filename`, `pyodide_package_names`, etc.). This replaces the repetitive 4-line `create_render_context → generate_html → dispose` pattern used throughout tests.
+
+#### Scenario: One-call SSR HTML generation
+- **WHEN** `html = render_app_html(app, path="/about", app_package_name="pkg", dev_mode=False, prerender=True, app_version="0.0.0", wheel_filename="pkg.whl")` is called
+- **THEN** the returned string SHALL be the full SSR HTML for the `/about` route
+- **AND** the `RenderContext` SHALL have been properly disposed after generation
 
 ### Requirement: create_test_asgi_app shall provide a lightweight Starlette ASGI app for httpx-based SSR testing
 
-`create_test_asgi_app(app)` SHALL return a Starlette ASGI app with a catch-all route (`{path:path}` in history mode, `/` in hash mode) that, on each request, enters `app.di_scope`, calls `app.set_path(requested_path)`, generates SSR HTML via `generate_html()` (using `ServerDOMPort`), and returns `HTMLResponse(html_string)`. It SHALL skip all heavy build steps: dependency resolution, wheel building, WASM downloading, runtime asset downloading, and static file serving. It SHALL be usable with `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))` to test the full SSR pipeline — routing, DI scope, `AppDocumentRoot`, and HTML page generation — without a browser.
+`create_test_asgi_app(app)` SHALL return a Starlette ASGI app with a catch-all route (`{path:path}` in history mode, `/` in hash mode) that, on each request, calls `app.create_render_context(path)` to create an isolated `RenderContext`, generates SSR HTML via `_HtmlElement("div", {}, ctx._root).render_html()`, calls `ctx.dispose()` in a `finally` block, and returns `HTMLResponse(html_string)`. It SHALL skip all heavy build steps: dependency resolution, wheel building, WASM downloading, runtime asset downloading, and static file serving. It SHALL be usable with `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))` to test the full SSR pipeline — routing, RenderContext, DI scope, `AppDocumentRoot`, and HTML page generation — without a browser.
 
 #### Scenario: Testing full SSR pipeline with httpx
 - **WHEN** a user creates a test app via `create_test_app(root_component=PageComponent())`
@@ -100,9 +112,10 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **THEN** the response status SHALL be 200
 - **AND** the response body SHALL contain the page component's rendered text
 
-#### Scenario: Routing resolves via app.set_path()
+#### Scenario: Each request creates a fresh RenderContext
 - **WHEN** a GET request is sent to `/some-page`
-- **THEN** `app.set_path("/some-page")` SHALL be called before HTML generation
+- **THEN** `app.create_render_context("/some-page")` SHALL be called, creating an isolated context
+- **AND** `ctx.dispose()` SHALL be called in the response `finally` block
 - **AND** the Router SHALL match the correct route
 
 #### Scenario: DI scope is active during request

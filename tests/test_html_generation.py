@@ -1,10 +1,9 @@
 import json
 import re
 
-from webcompy.app._app import WebComPyApp
-from webcompy.app._config import WebComPyAppConfig
 from webcompy.cli._html import generate_html
 from webcompy.components._generator import define_component
+from webcompy.testing import create_test_app, render_app_html
 
 
 @define_component
@@ -15,17 +14,11 @@ def _TestRoot(context):
 
 
 def _make_app(**config_kwargs):
-    return WebComPyApp(
-        root_component=_TestRoot,
-        config=WebComPyAppConfig(**config_kwargs),
-    )
+    return create_test_app(root_component=_TestRoot, **config_kwargs)
 
 
 def _generate_html(app, **kwargs):
-    ctx = app.create_render_context()
-    html = generate_html(ctx, **kwargs)
-    ctx.dispose()
-    return html
+    return render_app_html(app, **kwargs)
 
 
 def _extract_py_config(html_str: str) -> dict:
