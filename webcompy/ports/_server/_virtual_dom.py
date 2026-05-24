@@ -85,6 +85,7 @@ class VirtualDOMNode:
         self._parent: DOMNode | None = None
         self._webcompy_node: bool = True
         self._webcompy_prerendered_node: bool = False
+        self._dom_properties: dict[str, Any] = {}
 
     @property
     def __webcompy_node__(self) -> bool:
@@ -238,6 +239,28 @@ class VirtualDOMNode:
         event_v._event_phase = 0
         event_v._current_target = None
         return not event_v._default_prevented
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self._dom_properties:
+            return self._dom_properties[name]
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name.startswith("_") or name in {
+            "nodeName",
+            "nodeType",
+            "textContent",
+            "childNodes",
+            "firstChild",
+            "lastChild",
+            "parentNode",
+            "attributes",
+            "innerHTML",
+            "outerHTML",
+        }:
+            object.__setattr__(self, name, value)
+        else:
+            self._dom_properties[name] = value
 
 
 def _as_virtual(node: DOMNode) -> VirtualDOMNode:

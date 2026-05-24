@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from webcompy.ports._server._dom import ServerDOMPort
 from webcompy.ports._server._virtual_dom import VirtualDOMNode
 
@@ -158,3 +160,39 @@ class TestServerDOMPortCreateElement:
         port = ServerDOMPort()
         cleanup = port.add_document_event_listener("click", lambda e: None)
         cleanup()
+
+
+class TestVirtualDOMNodeDomProperties:
+    def test_set_and_get_value(self):
+        node = VirtualDOMNode("input")
+        node.value = "hello"
+        assert node.value == "hello"
+
+    def test_set_and_get_checked(self):
+        node = VirtualDOMNode("input")
+        node.checked = True
+        assert node.checked is True
+
+    def test_access_unset_property_raises_attribute_error(self):
+        node = VirtualDOMNode("div")
+        with pytest.raises(AttributeError):
+            _ = node.nonexistent_property
+
+    def test_dom_properties_not_serialized_to_html(self):
+        from webcompy.ports._server._dom import ServerDOMPort
+
+        node = VirtualDOMNode("input")
+        node.setAttribute("type", "text")
+        node.value = "testvalue"
+        port = ServerDOMPort()
+        html = port.render_html(node)
+        assert 'value="testvalue"' not in html
+        assert 'type="text"' in html
+
+    def test_dom_properties_isolated_between_instances(self):
+        node_a = VirtualDOMNode("input")
+        node_b = VirtualDOMNode("input")
+        node_a.value = "foo"
+        node_b.value = "bar"
+        assert node_a.value == "foo"
+        assert node_b.value == "bar"

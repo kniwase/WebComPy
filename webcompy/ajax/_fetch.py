@@ -7,7 +7,6 @@ from webcompy.elements.types._refference import DomNodeRef
 from webcompy.exception import WebComPyException
 from webcompy.di import inject
 from webcompy.ports._keys import FETCH_PORT_KEY, FFI_PORT_KEY
-from webcompy.utils._environment import ENVIRONMENT
 
 
 # HttpClient
@@ -143,7 +142,7 @@ class HttpClient:
                 )
             finally:
                 ffi_port.destroy_proxy(req_headers_proxy)
-        elif ENVIRONMENT == "pyscript":
+        else:
             if method not in {"GET", "OPTIONS", "HEAD"} and has_body:
                 if json is not None:
                     req_headers["Content-Type"] = "application/json"
@@ -167,8 +166,6 @@ class HttpClient:
                     reason=ports_res.status_text,
                     ok=ports_res.ok,
                 )
-        else:
-            raise WebComPyHttpClientException
         return ret
 
     @classmethod
