@@ -13,7 +13,7 @@ from webcompy.components._generator import (
     _register_deferred_components,
 )
 from webcompy.di._keys import _COMPONENT_STORE_KEY
-from webcompy.di._scope import DIScope, _set_app_di_scope
+from webcompy.di._scope import DIScope, _active_di_scope, _set_app_di_scope
 from webcompy.router import Router
 from webcompy.utils import ENVIRONMENT
 
@@ -57,6 +57,7 @@ class RenderContext:
         )
 
         self._di_scope.__enter__()
+        self._di_scope_token = self._di_scope._token
 
         if ENVIRONMENT == "pyscript":
             _set_app_di_scope(self._di_scope)
@@ -165,6 +166,9 @@ class RenderContext:
             _set_app_instance(None)
         if self._app._render_context is self:
             self._app._render_context = None
+        if self._di_scope_token is not None and self._di_scope._token is None:
+            _active_di_scope.reset(self._di_scope_token)
+        self._di_scope_token = None
         self._di_scope.__exit__(None, None, None)
         self._di_scope.dispose()
         self._root = None  # type: ignore[assignment]
