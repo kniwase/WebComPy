@@ -9,12 +9,13 @@ import threading
 import time
 import urllib.request
 from collections.abc import Callable
-from dataclasses import dataclass
 from functools import partial
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from typing import TYPE_CHECKING
 
 import pytest
+
+from webcompy.cli._console_types import ConsoleMessage
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page
@@ -58,16 +59,6 @@ def _parse_console_level(value: str | None, default: str) -> str:
 CONSOLE_FILE_LEVEL = _parse_console_level(os.environ.get("CONSOLE_FILE_LEVEL"), "debug")
 CONSOLE_STDOUT_LEVEL = _parse_console_level(os.environ.get("CONSOLE_STDOUT_LEVEL"), "warning")
 CONSOLE_LOG_DIR = os.environ.get("CONSOLE_LOG_DIR")
-
-
-@dataclass
-class ConsoleMessage:
-    type: str
-    text: str
-    location: str
-
-    def format(self) -> str:
-        return f"[{self.type}] {self.text} ({self.location})"
 
 
 def _collect_console_messages(page: Page, messages: list[ConsoleMessage]):

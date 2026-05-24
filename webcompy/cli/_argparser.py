@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from typing import Any, Literal
 
 
-def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str, Any]]:
+def get_params() -> tuple[Literal["start", "generate", "init", "lock", "inspect"], dict[str, Any]]:
     def _command(subcommand_name: str):
         return lambda: subcommand_name
 
@@ -180,6 +180,14 @@ def get_params() -> tuple[Literal["start", "generate", "init", "lock"], dict[str
         help="Export and install lock file dependencies",
     )
     parser_lock.set_defaults(__command_getter__=_command(subcommand_name))
+
+    # inspect (delegates to _inspect.py for sub-subcommand parsing)
+    subcommand_name = "inspect"
+    parser_inspect = subparsers.add_parser(
+        subcommand_name,
+        help=f"Inspect a WebComPy application. See `{maincommand} {subcommand_name} --help` for subcommands.",
+    )
+    parser_inspect.set_defaults(__command_getter__=_command(subcommand_name))
 
     # parse
     args = parser.parse_args()
