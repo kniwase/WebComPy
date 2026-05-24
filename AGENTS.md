@@ -48,6 +48,9 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - Type check: `uv run pyright`
 - Test: `uv run python -m pytest tests/ --tb=short`
 - Test with coverage: `uv run python -m pytest tests/ --tb=short --cov=webcompy --cov-report=term-missing`
+- E2E tests: `scripts/run-e2e-tests.sh` — runs all groups in both prod/static modes. For a single group: `scripts/run-e2e-tests.sh bootstrap-static`. For a single mode: `scripts/run-e2e-tests.sh --serving-mode=static`. CI reuses the same script with per-group invocations for parallel matrix execution.
+- Before running E2E tests, ensure Playwright is installed: `uv run playwright install chromium`. Docs E2E tests require `uv sync --all-groups` (for matplotlib/numpy).
+- When adding or renaming E2E test files, update both `scripts/run-e2e-tests.sh` group definitions AND the CI matrix in `.github/workflows/ci.yml`.
 - Pre-commit hooks run ruff (lint + format) and pyright automatically on commit
 
 ## CI
@@ -55,7 +58,6 @@ Code in `webcompy/cli/` and `webcompy/_browser/` is context-sensitive.
 - **Lint + Typecheck + Test + Generate**: runs on push to `main` and PRs (`.github/workflows/ci.yml`)
 - **Automated PR review**: runs on PRs via OpenCode with an OpenAI-compatible provider (`.github/workflows/opencode-review.yml`)
 - Coverage report is uploaded as a CI artifact
-- **When adding or renaming E2E test files**, you MUST update the `e2e-matrix` job in `.github/workflows/ci.yml` to include the new file in the appropriate `group.files` matrix entry. This is critical because the CI uses an explicit file list per group rather than auto-discovering all files in `tests/e2e/`.
 
 ## Code Conventions
 
