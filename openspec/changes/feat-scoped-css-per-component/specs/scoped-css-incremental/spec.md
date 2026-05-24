@@ -58,12 +58,12 @@ The framework SHALL NOT create duplicate `<style>` elements for the same compone
 
 ### Requirement: SSG SHALL pre-resolve all lazy routes before per-route generation
 
-During static site generation, all lazy route entries SHALL be pre-resolved via `_preload()` before the per-route `RenderContext` loop. This ensures each `RenderContext`'s `ComponentStore` contains all component generators, and every generated page includes complete scoped CSS.
+During static site generation, all lazy route entries SHALL be pre-resolved via `_preload()` before the per-route generation loop. This ensures `_register_deferred_components()` registers all component generators into the app's `ComponentStore`, and every generated page includes complete scoped CSS.
 
 #### Scenario: SSG with lazy routes
 - **WHEN** `generate_static_site()` is called with a router containing lazy routes
 - **THEN** before the per-route generation loop, all `LazyComponentGenerator` entries SHALL be pre-resolved
-- **AND** each `RenderContext.__init__` SHALL register all component generators into the context's `ComponentStore`
+- **AND** `_register_deferred_components()` SHALL register all component generators into the app's `ComponentStore`
 - **AND** every generated HTML page SHALL contain `<style data-webcompy-cid="...">` for all components with scoped CSS, regardless of which route the page represents
 
 ### Requirement: AppDocumentRoot SHALL expose scoped_styles as a cid-to-CSS dict
