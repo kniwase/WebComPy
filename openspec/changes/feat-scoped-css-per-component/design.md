@@ -1,6 +1,6 @@
 ## Context
 
-WebComPy currently uses a single monolithic `<style id="webcompy-scoped-styles">` element for all scoped component CSS. This is injected once at initial render (`AppDocumentRoot._render()` guarded by `self.__loading`) and never updated. Lazy-loaded components resolved during SPA navigation add their generators to `ComponentStore` but their CSS is never injected into the DOM. Similarly, SSG generates per-route HTML where each page only includes CSS for components rendered on that specific route, because each route gets its own `RenderContext` with its own `ComponentStore`.
+WebComPy currently uses a single monolithic `<style id="webcompy-scoped-styles">` element for all scoped component CSS. This is injected once at initial render (`AppDocumentRoot._render()` guarded by `self.__loading`) and never updated. Lazy-loaded components resolved during SPA navigation add their generators to `ComponentStore` but their CSS is never injected into the DOM. Similarly, SSG generates per-route HTML where each page only includes CSS for components rendered on that specific route, because each route rendering uses the same `ComponentStore` but only renders components for that route.
 
 Head element management (title, meta, links, scripts) is currently imperative through `AppDocumentRoot` methods. The SSG code (`_html.py`) reads these properties and constructs HTML fragments, while browser runtime manipulates the DOM directly. This creates a conceptual split between the two environments.
 
@@ -73,9 +73,7 @@ def _reconcile_scoped_styles(self):
 
 ### Decision 3: Replace `style` property with `scoped_styles` dict
 
-`AppDocumentRoot.style` (concatenated CSS string) is replaced with `scoped_styles: dict[str, str]` mapping `cid → CSS string`, sorted by cid for deterministic ordering.
-
-`RenderContext.scoped_styles` delegates to `AppDocumentRoot.scoped_styles`.
+`AppDocumentRoot.style` (concatenated CSS string) is replaced with `scoped_styles: dict[str, str]` mapping `cid → CSS string`, sorted by cid for deterministic ordering. `WebComPyApp` forwards `scoped_styles` as a property, replacing the previous `style` forwarding.
 
 **Alternatives considered:**
 - **Keep `style` and add `scoped_styles`**: Unnecessary duplication. Every consumer (SSG `_html.py`, browser `_reconcile_scoped_styles`) switches to the dict form.
@@ -85,7 +83,7 @@ def _reconcile_scoped_styles(self):
 
 ### Decision 4: SSG pre-resolve of all lazy routes
 
-Before the per-route SSG loop, all `LazyComponentGenerator` entries in routes are pre-resolved via `_preload()`. This ensures `_register_deferred_components()` in each `RenderContext.__init__` picks up all component generators.
+Before the per-route SSG loop, all `LazyComponentGenerator` entries in routes are pre-resolved via `_preload()`. This ensures `_register_deferred_components()` in `WebComPyApp.__init__` picks up all component generators into `ComponentStore`.
 
 ```python
 # In generate_static_site()
@@ -97,10 +95,10 @@ if app.router_mode == "history" and app.routes:
 ```
 
 **Alternatives considered:**
-- **Collect all styles before the loop and inject separately**: Would require extracting CSS outside the normal RenderContext → ComponentStore → scoped_styles pipeline. More code, more edge cases.
-- **Single RenderContext for all routes**: Would violate per-route isolation (different pages would share ComponentStore state).
+- **Collect all styles before the loop and inject separately**: Would require extracting CSS outside the normal ComponentStore → scoped_styles pipeline. More code, more edge cases.
+- **Single ComponentStore for all routes**: Would violate per-route isolation (different pages would share ComponentStore state).
 
-**Rationale:** Minimal change — one loop added before the existing generate loop. All component generators end up in `_unregistered_generators` and are picked up by each route's `RenderContext.__init__`.
+**Rationale:** Minimal change — one loop added before the existing generate loop. All component generators end up in `_unregistered_generators` and are picked up by `_register_deferred_components()` into the app's `ComponentStore`.
 
 ### Decision 5: HeadElement VDOM class
 
