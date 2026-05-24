@@ -1,0 +1,450 @@
+# Design: Testing Module
+
+## Context
+
+After `feat-virtual-dom` completes:
+
+- `VirtualDOMNode` satisfies the `DOMNode` Protocol with tree ops, attribute storage, event listener recording, and `dispatchEvent(VirtualDOMEvent)`.
+- `ServerDOMPort` creates `VirtualDOMNode` trees and provides `render_html()` for serialization.
+- Element types use a single unified `render()` path across browser and server.
+- `RouterLink._on_click()` calls `self._router.__set_path__()` unconditionally (only `pushState` is guarded behind `ENVIRONMENT == "pyscript"`).
+
+This enables a testing module that renders components to `VirtualDOMNode` trees and exercises the full reactive + routing pipeline without a browser.
+
+## Goals / Non-Goals
+
+**Goals:**
+- `webcompy.testing` package with `FakeDOMNode`, fake port implementations, and scope helpers
+- `create_test_asgi_app()` — lightweight Starlette ASGI app for httpx-based SSR testing of the full HTTP→HTML pipeline
+- `TestRenderer` / `TestRendererResult` — render components, query trees, dispatch events, re-render
+- Fix `FakeBrowserFFIPort` Protocol compliance
+- Migrate E2E tests using a three-tier strategy: httpx ASGI (static renders), TestRenderer (interactive), Playwright (browser-only behavior)
+- Exclude `webcompy.testing` from browser wheels
+- Backwards-compatible re-exports from `tests/conftest.py`
+
+**Non-Goals:**
+- CSS cascade / layout computation
+- Real browser `<input>` widget state emulation
+- `window.history.pushState` / `popstate` emulation
+- Console error capture
+
+## Dependency
+
+**Requires `feat-virtual-dom`** for: `VirtualDOMNode`, `VirtualDOMEvent`, `ServerDOMPort`, unified `render()`, and RouterLink `_on_click` fix. This change cannot be implemented first — it depends on the virtual DOM infrastructure.
+
+## Decisions
+
+### Decision 1: webcompy.testing as a separate package, excluded from browser wheels
+
+**Chosen**: Create `webcompy/testing/` with `__init__.py`, `_dom.py` (FakeDOMNode), `_ports.py` (fake port implementations), `_renderer.py` (TestRenderer / TestRendererResult), and `_asgi.py` (create_test_asgi_app, format_html). Add `"webcompy.testing"` to `_BROWSER_ONLY_EXCLUDE`.
+
+**Rationale**: Same approach as `webcompy.cli` and `webcompy.ports._server` — these are server/dev-only code. The `_is_browser_excluded` function uses prefix matching, so `"webcompy.testing"` matches all submodules. This prevents test utilities from being bundled into browser-deployed wheels.
+
+### Decision 2: FakeDOMNode inherits from VirtualDOMNode
+
+**Chosen**: `FakeDOMNode` extends `VirtualDOMNode` and overrides only test-specific behavior: `setAttribute`/`textContent` increment counters, `__setattr__` guard, `__webcompy_prerendered_node__ = False`. All tree operations, attribute storage, event listener management, and `dispatchEvent(VirtualDOMEvent)` are inherited from `VirtualDOMNode`.
+
+```python
+from webcompy.ports._server._virtual_dom import VirtualDOMNode
+
+class FakeDOMNode(VirtualDOMNode):
+    def __init__(self, tag: str = "div", text_content: str | None = None):
+        super().__init__(tag, text_content)
+        self.__webcompy_prerendered_node__ = False
+        self.textContent_write_count = 0
+        self.setAttribute_count = 0
+
+    @VirtualDOMNode.textContent.setter  # type: ignore[attr-defined]
+    def textContent(self, value):
+        VirtualDOMNode.textContent.fset(self, value)  # type: ignore[misc]
+        self.textContent_write_count += 1
+
+    def setAttribute(self, name, value):
+        super().setAttribute(name, value)
+        self.setAttribute_count += 1
+
+    def __setattr__(self, name, value):
+        if name.startswith("_VirtualDOMNode__") or name in (
+            "__webcompy_node__",
+            "__webcompy_prerendered_node__",
+        ):
+            object.__setattr__(self, name, value)
+        else:
+            try:
+                object.__getattribute__(self, name)
+                object.__setattr__(self, name, value)
+            except AttributeError:
+                object.__setattr__(self, name, value)
+
+    def __getattr__(self, name):
+        if name.startswith("_VirtualDOMNode__"):
+            raise AttributeError(name)
+        return object.__getattribute__(self, name)
+```
+
+**Rationale**: `VirtualDOMNode` already implements the full `DOMNode` Protocol — all tree operations, attribute storage, event listener management, and `dispatchEvent(VirtualDOMEvent)` with bubbling propagation. Writing these again in `FakeDOMNode` would be ~80% code duplication. Inheritance eliminates duplication and ensures `dispatchEvent` semantics remain identical. The dependency direction is safe: `webcompy.testing` → `webcompy.ports._server` — both are excluded from browser wheels. The `__setattr__` guard references `_VirtualDOMNode__` (name-mangled superclass internal name) since Python name mangling is based on the class where the attribute is defined.
+
+
+### Decision 3: FakeBrowserFFIPort Protocol compliance fix
+
+**Chosen**: Add `to_js` and `assign` methods to `FakeBrowserFFIPort` that match the `FFIPort` ABC.
+
+```python
+class FakeBrowserFFIPort:
+    def to_js(self, value: Any, **kwargs: Any) -> Any:
+        return value
+    def assign(self, target: Any, *sources: Any) -> Any:
+        for source in sources:
+            target.update(source)
+        return target
+```
+
+**Rationale**: The `FFIPort` ABC defines 5 abstract methods: `create_proxy`, `destroy_proxy`, `is_none`, `to_js`, `assign`. The current fake only implements 3 of them. This gap was harmless because no test calls `to_js`/`assign` directly, but as a proper testing module, Protocol compliance matters.
+
+### Decision 4: Scope helpers — create_browser_scope() and create_server_scope()
+
+**Chosen**: Two convenience functions that return pre-wired `DIScope` instances.
+
+```python
+def create_browser_scope() -> DIScope:
+    scope = DIScope()
+    scope.provide(DOM_PORT_KEY, FakeBrowserDOMPort())
+    scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
+    scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
+    return scope
+
+def create_server_scope() -> DIScope:
+    scope = DIScope()
+    scope.provide(DOM_PORT_KEY, ServerDOMPort())
+    scope.provide(HOST_PORT_KEY, ServerHostPort())
+    scope.provide(FFI_PORT_KEY, ServerFFIPort())
+    scope.provide(FETCH_PORT_KEY, ServerFetchPort())
+    return scope
+```
+
+**Rationale**: The `fake_browser_full` fixture in `tests/conftest.py` is 30 lines of setup — monkeypatching `ENVIRONMENT`, creating a `DIScope`, providing ports, setting the active scope. This boilerplate should be a one-liner for app developers writing tests. `FETCH_PORT_KEY` is provided in `create_server_scope()` for SSR completeness — SSR components may need to resolve fetch operations.
+
+### Decision 5: create_test_app() — minimal WebComPyApp factory
+
+**Chosen**: `create_test_app(*, root_component, **config_overrides)` instantiates a minimal `WebComPyApp` with the given component and config overrides. Returns the app instance.
+
+```python
+def create_test_app(
+    *,
+    root_component: ComponentGenerator,
+    **config_overrides: Any,
+) -> WebComPyApp:
+    config_kwargs = {k: v for k, v in config_overrides.items() if hasattr(WebComPyAppConfig, k)}
+    config = WebComPyAppConfig(**config_kwargs)
+    app = WebComPyApp(root_component=root_component, config=config)
+    return app
+```
+
+**Rationale**: Many component tests need access to signals, DI values, or the app's `provide()` method. `TestRenderer.render()` handles the simple case; `create_test_app()` handles the advanced case where the test needs to manipulate signals or DI before rendering. The scope parameter was removed from the original design — callers manage DI scope via `app.di_scope` context manager or `_active_di_scope` ContextVar directly.
+
+**Deviation from original design**: The original design included a `scope` parameter. This was removed because `create_test_app()` already creates the app with a built-in DI scope; callers can enter it via `app.di_scope` or use `_active_di_scope.set()` for more complex scenarios.
+
+### Decision 6: TestRenderer and TestRendererResult
+
+**Chosen**: `TestRenderer` renders a component to a `VirtualDOMNode` tree. `TestRendererResult` wraps the root node and provides query/assertion methods. Events dispatched via `dispatchEvent(VirtualDOMEvent)` trigger Signal callbacks that directly mutate the VDOM — no explicit `rerender()` needed.
+
+```python
+from webcompy.testing import TestRenderer
+
+result = TestRenderer.render(MyComponent(props={"name": "World"}))
+
+h1 = result.query_selector("h1")
+items = result.query_selector_all("li")
+node = result.find_by_text("Hello")
+node = result.find_by_attribute("id", "main")
+
+button = result.query_selector("button")
+button.dispatchEvent(VirtualDOMEvent("click"))
+assert result.find_by_text("Clicked: 1")
+
+html = result.to_html()
+
+result.assert_element_count("li", 3)
+result.assert_has_class("container")
+
+result.close()
+```
+
+`TestRenderer.render()`:
+1. Creates a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, `FakeBrowserFFIPort`, `HeadPropsStore`
+2. Sets `_active_di_scope` ContextVar to the scope (returns a token for later reset)
+3. Creates a `VirtualDOMNode("div")` with `__webcompy_node__ = False`, `__webcompy_prerendered_node__ = True`
+4. Instantiates the component generator, attaches it to a `_DummyParent` (a minimal ElementWithChildren protocol object), sets `_node_idx = 0`, and calls `_render()`
+5. Returns `TestRendererResult(component, instance, root_node, scope_token)`
+
+`TestRendererResult`:
+- `query_selector(tag: str) -> VirtualDOMNode | None` — DFS for first element matching `tag`
+- `query_selector_all(tag: str) -> list[VirtualDOMNode]` — DFS for all elements matching `tag`
+- `find_by_text(text: str) -> VirtualDOMNode | None` — DFS for node with matching `textContent`
+- `find_by_attribute(name: str, value: str) -> VirtualDOMNode | None` — DFS for node with matching attribute
+- `to_html(pretty: bool = False) -> str` — delegates to `ServerDOMPort.render_html(root)`, optionally formats via `format_html()`
+- `assert_element_count(tag: str, count: int)` — `assert len(query_selector_all(tag)) == count`
+- `assert_has_class(cls: str)` — `assert "class" in root.getAttributeNames()` and the class is present
+- `close()` — resets `_active_di_scope` ContextVar using the stored `scope_token`
+
+**Deviation from original design**:
+- **FakeBrowserDOMPort instead of ServerDOMPort**: `TestRenderer` uses `FakeBrowserDOMPort` so that `addEventListener()` is called on the VDOM during component rendering. When `dispatchEvent(VirtualDOMEvent)` is called, Signal callbacks fire and directly mutate the VDOM (`textContent`, `setAttribute`, child replacement) — this matches browser behavior exactly.
+- **No `rerender()` method**: The original design proposed a `rerender()` that re-executes `component.render()`. This was removed because `dispatchEvent` triggers Signal change callbacks which directly mutate the VDOM. Re-creating the component instance via re-render would reset signals, causing tests like `keyed_repeat_remove_first` and `keyed_repeat_insert_at_start` to fail.
+- **DI scope lifecycle**: The scope token from `_active_di_scope.set()` is stored in `TestRendererResult` so `inject()` calls from Signal callbacks can resolve dependencies. `close()` resets the ContextVar.
+- **_DummyParent**: A minimal protocol object satisfying `ElementWithChildren` requirements (`_get_node`, `_get_belonging_component`, `_get_belonging_components`, `_re_index_children`) is used to attach the component instance to the VDOM root without instantiating a full `WebComPyApp`.
+
+### Decision 7: httpx ASGI integration — testing the full SSR pipeline
+
+**Chosen**: Add `create_test_asgi_app()` to `webcompy.testing`. This builds a minimal Starlette ASGI app from a given `WebComPyApp` instance, skipping dependency resolution, wheel building, and runtime asset downloading. Users can then test the full ASGI request→SSR→HTML pipeline using `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))`.
+
+```python
+from httpx import ASGITransport, Client
+from webcompy.testing import create_test_app, create_server_scope, create_test_asgi_app
+
+scope = create_server_scope()
+app = create_test_app(scope, root_component=MyPage())
+asgi = create_test_asgi_app(app)
+
+client = Client(transport=ASGITransport(app=asgi), base_url="http://test")
+response = client.get("/mypage")
+assert "Hello World" in response.text
+assert response.status_code == 200
+```
+
+`create_test_asgi_app(app)`:
+1. Creates a Starlette app with one catch-all route (`{path:path}`) in history mode (or root route in hash mode)
+2. Each request enters `app.di_scope`, calls `app.set_path(requested_path)`, and returns `HTMLResponse(html_string)` where `html_string` is the SSR output via `_HtmlElement.render_html()`
+3. Uses `ServerDOMPort`, `ServerHostPort`, `ServerFFIPort` (already provisioned by `create_server_scope()`)
+
+**Rationale**: `TestRenderer.render()` renders a single component to a `VirtualDOMNode` tree, but bypasses the full ASGI pipeline — routing, `app.set_path()`, `AppDocumentRoot` wrapper, `app.di_scope` context manager, and HTML page generation (`generate_html()`). `httpx` + `ASGITransport` exercises this entire pipeline without a browser. This is already a project dependency (used by `ServerFetchPort`). The approach mirrors Django's `Client` / Starlette's `TestClient` pattern.
+
+**Advantages**:
+- Full routing + SSR pipeline coverage that `TestRenderer` cannot provide
+- Millisecond-level test execution vs 1-2 second Playwright startup
+- No added dependencies (`httpx` is already a project dependency)
+
+**Limitations**:
+- Stateless — cannot test reactive state changes triggered by click events (use `TestRenderer` for that)
+- No PyScript hydration or browser JS runtime (use Playwright E2E for that)
+
+### Decision 9: HTML formatter for test comparison reliability
+
+**Chosen**: Provide `format_html(html: str) -> str` in `webcompy.testing._asgi` that normalizes HTML strings via `beautifulsoup4` parsing and re-serialization, producing a canonical form suitable for string comparison in tests. `TestRendererResult.to_html(pretty: bool = False)` uses this when `pretty=True`. `beautifulsoup4` IS added to the `dev` dependency group — it IS a test utility, not a runtime dependency, so it does not go in core `dependencies`.
+
+```python
+from webcompy.testing import format_html
+
+def test_my_component():
+    result = TestRenderer.render(MyComponent())
+    html = format_html(result.to_html())
+    expected = format_html("<div><h1>Hello</h1></div>")
+    assert html == expected
+```
+
+**Rationale**: SSR output (`render_html()`) is naturally compact — no whitespace between tags. This makes direct string comparison fragile: a single extra space or attribute reordering causes false failures. `beautifulsoup4` parses both actual and expected HTML into a canonical tree and re-serializes them identically, guaranteeing reliable comparison. The library is pure Python, well-maintained, and handles edge cases (void elements, raw content elements like `<script>`/`<style>`, self-closing tags) correctly.
+
+**Why not use `prettify()`?** `prettify()` adds newlines and indentation, which changes inline element layout. Using `str(soup)` or `soup.decode()` preserves semantic equivalence without introducing whitespace artifacts.
+
+**Why not format SSR output by default?** The current `_serialize_node()` output is already compact (no extra whitespace). Introducing `beautifulsoup4` into the production code path would be a runtime dependency with no benefit to end users — browsers render compact HTML correctly, and developer inspection happens via devtools' Elements panel.
+
+**Test verification strategy**: Unit tests for the testing module itself MUST verify both:
+- `TestRendererResult.to_html()` (raw, no formatting) — confirms the serialization pipeline is correct
+- `format_html(result.to_html()) == format_html(expected)` — confirms canonical comparison works
+
+Existing `webcompy.ports._server._dom` tests for `_serialize_node()` remain unchanged and validate raw output correctness.
+
+### Decision 10: Three-tier test migration strategy
+
+**Chosen**: Replace the previous two-tier strategy (TestRenderer + Playwright) with a three-tier approach using httpx ASGI integration as the first tier for static renders.
+
+```
+┌──────────────────────────────────────────────────────┐
+│                   Testing Pyramid                    │
+│                                                      │
+│      ┌─────────────┐    ブラウザ必須の挙動           │
+│      │   E2E       │    getComputedStyle, input      │
+│      │ (Playwright)│    widget state, navigation      │
+│      └──────┬──────┘    lifecycle, console errors    │
+│             │                                        │
+│      ┌──────▼──────┐    完全な ASGI パイプライン     │
+│      │  httpx ASGI │    ルーティング + SSR + HTML     │
+│      │ integration │    app.di_scope + set_path      │
+│      └──────┬──────┘                                 │
+│             │                                        │
+│      ┌──────▼──────┐    コンポーネント直接レンダリング │
+│      │ TestRenderer│    VirtualDOM ツリー操作        │
+│      │  (unit)     │    dispatchEvent + rerender     │
+│      └─────────────┘                                 │
+└──────────────────────────────────────────────────────┘
+```
+
+| Tier | Tool | Scope | Tests |
+|------|------|-------|-------|
+| Tier 1 (httpx) | `httpx` + `create_test_asgi_app()` | Full SSR pipeline: routing, DI scope, HTML generation, static renders | ~8 tests (initial state / no interaction) |
+| Tier 2 (TestRenderer) | `TestRenderer.render()` + `dispatchEvent` + `rerender` | Single-component render + reactive state change via virtual events | ~19 tests (click-driven reactive updates) |
+| Tier 3 (Playwright) | E2E (unchanged) | Browser-only behavior | ~8 tests (getComputedStyle, input widget state, navigation lifecycle, console errors) |
+
+**Tier 1 — httpx ASGI (static initial renders)**:
+
+| E2E File | Tests | Mechanism |
+|----------|-------|-----------|
+| `test_component.py` | 2 | httpx GET → assert HTML contains expected text |
+| `test_switch.py` | 1 (`default_state`) | httpx GET → assert HTML contains "on" branch, excludes "off" branch |
+| `test_repeat.py` | 1 (`initial_empty`) | httpx GET → assert HTML has zero `<li>` elements |
+| `test_keyed_repeat.py` | 1 (`initial_empty`) | httpx GET → assert HTML has zero `<li>` elements |
+| `test_dict_repeat.py` | 1 (`initial_empty`) | httpx GET → assert HTML has zero `<li>` elements |
+| `test_nested_dynamic.py` | 1 (`initial_list_view`) | httpx GET → assert HTML has 3 list items, 0 grid items |
+| `test_di.py` | 1 (`inject_from_app_level`) | httpx GET → assert HTML contains injected value text |
+
+**Tier 2 — TestRenderer (interactive)**:
+
+| E2E File | Tests | Mechanism |
+|----------|-------|-----------|
+| `test_switch.py` | 2 (`toggle`, `toggle_back`) | `TestRenderer` + `dispatchEvent(VirtualDOMEvent("click"))` |
+| `test_reactive.py` | 3 | `TestRenderer` + `dispatchEvent` + `rerender` |
+| `test_repeat.py` | 2 (`add_items`, `remove_items`) | `TestRenderer` + `dispatchEvent` + `rerender` |
+| `test_keyed_repeat.py` | 3 (`add_items`, `remove_first`, `insert_at_start`) | `TestRenderer` + `dispatchEvent` + `rerender` |
+| `test_dict_repeat.py` | 3 (`add_items`, `remove_first`, `clear`) | `TestRenderer` + `dispatchEvent` + `rerender` |
+| `test_nested_dynamic.py` | 5 (`switch_to_grid`, `switch_back`, `add_item`, `add_then_switch`, `remove_first`) | `TestRenderer` + `dispatchEvent` + `rerender` |
+| `test_scoped_style.py` | 2 | `component.scoped_style` string inspection (cid presence, @media structure) |
+| `test_di.py` | 1 (`provide_inject_from_parent`) | `TestRenderer` with DI scope |
+| `test_lifecycle.py` | 1 (`hooks_fire`) | `TestRenderer` |
+
+**Tier 3 — Playwright E2E (browser-required)**:
+
+| Reason | Tests | Files |
+|--------|-------|-------|
+| `getComputedStyle()` | 5 | `test_scoped_style.py` |
+| Browser `<input>` widget state | 2 | `test_keyed_repeat.py`, `test_dict_repeat.py` |
+| RouterView lifecycle on navigation | 1 | `test_lifecycle.py` |
+| `assert_no_console_errors` | 3 | `test_di.py`, `test_bootstrap.py` |
+| All `tests/e2e_docs/` | ~27 | docs E2E (iframe + PyScript) |
+
+**Browser-required (remain in E2E)**:
+
+| Reason | Tests | Files |
+|--------|-------|-------|
+| `getComputedStyle()` | 5 | `test_scoped_style.py` |
+| Browser `<input>` widget state | 2 | `test_keyed_repeat.py`, `test_dict_repeat.py` |
+| RouterView lifecycle on navigation | 1 | `test_lifecycle.py` |
+| `assert_no_console_errors` | 3 | `test_di.py`, `test_bootstrap.py` |
+| All `tests/e2e_docs/` | ~27 | docs E2E (iframe + PyScript) |
+
+## Risks / Trade-offs
+
+- **[TestRenderer environment setup]** Monkeypatching `ENVIRONMENT` on element modules must match the pattern used by `fake_browser_full` fixture. If the patching is skipped, `_init_node()` methods will still have `ENVIRONMENT == "pyscript"` branches that raise exceptions. → Mitigation: `TestRenderer.render()` includes the same monkeypatch logic.
+- **[FakeDOMNode inherits VirtualDOMNode]** `FakeDOMNode` extends `VirtualDOMNode`, adding only test-specific attributes (counters, `__setattr__` guard, `__webcompy_prerendered_node__`). Any `VirtualDOMNode` API change will automatically propagate to `FakeDOMNode`. → Trade-off accepted: `webcompy.testing` depends on `webcompy.ports._server` — both are excluded from browser wheels, so this is safe.
+- **[E2E coverage gap]** Migrating tests from browser to unit loses coverage of PyScript integration bugs. → Mitigation: remaining E2E tests cover the PyScript lifecycle indirectly. The migrated tests cover logic that was never PyScript-dependent.
+
+### Decision 11: mock_app_run() context manager for testing demo apps
+
+**Chosen**: Provide `mock_app_run()` in `webcompy.testing` — a context manager that temporarily replaces `WebComPyApp.run` with a no-op, enabling `import` of modules that call `app.run()` at module level (e.g., `docs_app/static/_demos/*/app.py`).
+
+```python
+from webcompy.testing import mock_app_run, TestRenderer
+
+with mock_app_run():
+    from docs_app.static._demos.fizzbuzz.app import App
+    result = TestRenderer.render(App)
+    # ... assertions ...
+```
+
+```python
+# Implementation sketch — webcompy/testing/_app.py
+from contextlib import contextmanager
+from webcompy.app._app import WebComPyApp
+
+@contextmanager
+def mock_app_run():
+    original = WebComPyApp.run
+
+    def _noop(self):
+        pass
+
+    WebComPyApp.run = _noop
+    try:
+        yield
+    finally:
+        WebComPyApp.run = original
+```
+
+**Rationale**: Demo apps in `docs_app/static/_demos/` follow the pattern:
+
+```python
+@define_component
+def App(_): ...
+app = WebComPyApp(root_component=App)
+app.run()  # ← raises outside Emscripten
+```
+
+Importing these modules outside PyScript fails immediately at `app.run()`. Without `mock_app_run()`, each test would need to manually `importlib.import_module` with monkeypatching or `sys.modules` manipulation — boilerplate that belongs in the testing framework.
+
+**Scope**: This enables unit-testing demo components (HelloWorld, FizzBuzz, ToDo) with `TestRenderer`. It does NOT enable testing demo apps that depend on `DomNodeRef` (ToDo, Matplotlib), `HttpClient` (Fetch), or `asyncio` scheduling (Fetch) — those require a real browser runtime.
+
+**Non-goals**:
+- Does not mock `WebComPyApp.__init__` or any other app behavior — only `run()` is affected
+- Does not provide a per-test cleanup mechanism beyond the context manager's `finally` block
+- Demo app E2E tests that verify iframe rendering, PyScript hydration, or reload behavior remain in E2E
+
+### Decision 12: VirtualDOMNode `_dom_properties` for DomNodeRef support
+
+**Chosen**: Add `_dom_properties: dict[str, Any]` to `VirtualDOMNode` with `__getattr__`/`__setattr__` routing, enabling `DomNodeRef` property delegation (`.value`, `.checked`) in server-side tests.
+
+**Context**: `DomNodeRef` delegates unknown attribute access to its bound DOM node via `getattr(self._node, name)` / `setattr(self._node, name, value)`. In the browser, `HTMLInputElement.value` and `HTMLInputElement.checked` are native properties. `VirtualDOMNode` has no such properties — accessing `.value` raises `AttributeError`. This blocks unit-testing any component using `DomNodeRef` (ToDo, Matplotlib demos).
+
+```python
+# VirtualDOMNode additions
+class VirtualDOMNode:
+    def __init__(self, ...):
+        # ... existing code ...
+        self._dom_properties: dict[str, Any] = {}
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self._dom_properties:
+            return self._dom_properties[name]
+        raise AttributeError(
+            f"'{type(self).__name__}' object has no attribute '{name}'"
+        )
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name.startswith("_") or name in {
+            "nodeName", "nodeType", "textContent", "childNodes",
+            "firstChild", "lastChild", "parentNode", "attributes",
+            "innerHTML", "outerHTML",
+        }:
+            object.__setattr__(self, name, value)
+        else:
+            self._dom_properties[name] = value
+```
+
+**FakeDOMNode**: `FakeDOMNode` currently overrides `__setattr__` and `__getattr__`. These must be updated to delegate to `super()` for dom properties. Specifically, `FakeDOMNode.__setattr__` must call `super().__setattr__()` instead of `object.__setattr__()` for unknown attributes, and `FakeDOMNode.__getattr__` must check `_dom_properties` before falling through to `object.__getattribute__`.
+
+**Rationale**:
+- `DomNodeRef` is the only mechanism for component code to access DOM element properties in WebComPy. Making `VirtualDOMNode` aware of dom properties enables `TestRenderer` tests to exercise checkbox toggling, input validation, and slider interactions — the same patterns used in `dispatchEvent(VirtualDOMEvent)` for click handlers.
+- `_serialize_node()` only uses `getAttributeNames()` — dom properties are NOT serialized to HTML. SSG output is unaffected.
+- `DOMNode` Protocol does not include `.value`/`.checked` — they're DOM element-specific, not protocol members. This is purely an implementation detail for testing.
+- `__getattr__` raises `AttributeError` (NOT returning `None`) — `VirtualDOMEvent.__getattr__` returns `None` for event properties, but node properties need proper error semantics.
+
+**Impact**: ~3 files changed (`_virtual_dom.py`, `testing/_dom.py`, test files). No SSG impact. No E2E impact (browser-only runtime uses real DOM nodes).
+
+### Decision 13: ToDo demos unit tests (dom properties dependency)
+
+**Chosen**: Add unit tests for the ToDo demo in `tests/test_docs_demos.py` using `mock_app_run()` + `TestRenderer.render()`, pre-setting `.checked` on virtual input nodes before dispatching `@change` events. Existing E2E tests in `tests/e2e_docs/test_todo.py` remain unchanged — unit tests are **additive**, not a replacement. Requires Decision 12 (`_dom_properties`).
+
+**Rationale**: The ToDo demo tests checkbox toggle, add item, and remove done items — all purely DOM-property-driven interactions. `DomNodeRef` is the blocker. Setting `input.checked = True` on the VDOM node before `dispatchEvent(VirtualDOMEvent("change"))` emulates browser checkbox behavior faithfully. Unit tests provide fast feedback without Playwright; E2E tests verify the full browser pipeline.
+
+### Decision 14: Fetch/Matplotlib demo unit tests
+
+**Chosen**: Add unit tests for Fetch and Matplotlib demos in `tests/test_docs_demos.py` alongside existing E2E tests. The blockers are solvable:
+
+**Fetch (1 test: `test_fetch_page_loads`)**:
+- `on_after_rendering` → `ServerHostPort.schedule_macro_task` already calls `callback()` synchronously (not a no-op). `FakeBrowserHostPort.schedule_macro_task` changed from `pass` to `callback()`.
+- `HttpClient.get()` → `HttpClient.request()` changed from `ENVIRONMENT == "pyscript"`-only guard to `else` fallback: `inject(FETCH_PORT_KEY)` is now used on both PyScript and server-side.
+- `FETCH_PORT_KEY` wired to `FakeFetchPort` in `TestRenderer.render()` scope — self-contained stub returning canned JSON matching `sample.json`.
+
+**Matplotlib (4 tests: heading, initial_value, increment_button, image_rendered)**:
+- `DomNodeRef` (`.value` property) → resolved by Decision 12 (`_dom_properties`).
+- `numpy`/`matplotlib` → already in `pyproject.toml` under `docs` optional-dependency group. `uv sync --group docs` installs them as standard CPython packages. `fig.canvas.draw()` + `base64` encoding works server-side.
+- `@computed` `fig_data` → renders `<img src="data:image/png;base64,...">` — `TestRenderer.to_html()` captures this without browser rendering.
+
+**Rationale**: Fetch and Matplotlib demos are the remaining docs E2E tests that can have fast unit test counterparts. Unit tests are **additive** — existing Playwright E2E tests remain in `tests/e2e_docs/` to verify the full iframe + PyScript pipeline. Together with Section 9.1-9.2, this gives us full unit test coverage for all docs demo components while preserving browser-level validation.
