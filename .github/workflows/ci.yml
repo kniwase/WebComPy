@@ -215,7 +215,7 @@ jobs:
           path: ci-e2e-results.log
 
   review:
-    if: always()
+    if: success()
     needs: [openspec, openspec-check, lint, typecheck, generate, test, e2e-matrix]
     runs-on: ubuntu-latest
     timeout-minutes: 30
