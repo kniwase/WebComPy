@@ -14,7 +14,7 @@ pytestmark = [
 
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent
 E2E_DIR = pathlib.Path(__file__).parent
-TMP_DIR = PROJECT_ROOT / ".tmp" / "e2e-standalone"
+TMP_DIR = pathlib.Path(os.environ.get("STANDALONE_TMP_DIR", str(PROJECT_ROOT / ".tmp" / "e2e-standalone")))
 
 
 @pytest.fixture(scope="module")

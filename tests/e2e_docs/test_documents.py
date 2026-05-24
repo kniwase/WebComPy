@@ -16,7 +16,7 @@ def test_documents_page_title(docs_page_on, assert_no_console_errors):
 
 
 @pytest.mark.e2e
-def test_documents_reload_no_error(docs_page_on, docs_console_errors, assert_no_console_errors):
+def test_documents_reload_no_error(docs_page_on, docs_console_messages, assert_no_console_errors):
     page = docs_page_on("/documents")
     page.reload()
-    _wait_for_pyscript_init(page, docs_console_errors)
+    _wait_for_pyscript_init(page, docs_console_messages)

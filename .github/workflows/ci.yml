@@ -193,11 +193,11 @@ jobs:
           name: docs-dist
           path: docs_app/dist/
       - name: Run E2E tests
-        run: |
-          uv run python -m pytest ${{ matrix.group.files }} --tb=short --serving-mode=${{ matrix.serving_mode }} 2>&1 | tee ci-e2e-results.log
-          exit "${PIPESTATUS[0]}"
         env:
           DOCS_DIST_DIR: ${{ github.workspace }}/docs_app/dist
+        run: |
+          scripts/run-e2e-tests.sh ${{ matrix.group.name }} --serving-mode=${{ matrix.serving_mode }} 2>&1 | tee ci-e2e-results.log
+          exit "${PIPESTATUS[0]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -205,6 +205,7 @@ jobs:
           path: |
             tests/e2e/.e2e-server.log
             tests/e2e_docs/.e2e-docs-server.log
+            .tmp/e2e-test-corpus/
       - uses: actions/upload-artifact@v4
         if: always()
         with:

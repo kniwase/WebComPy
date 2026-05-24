@@ -37,6 +37,6 @@ def test_home_spa_navigation_back_from_helloworld(docs_page_on, assert_no_consol
 
 
 @pytest.mark.e2e
-def test_home_reload_no_error(docs_app_page, docs_console_errors, assert_no_console_errors):
+def test_home_reload_no_error(docs_app_page, docs_console_messages, assert_no_console_errors):
     docs_app_page.reload()
-    _wait_for_pyscript_init(docs_app_page, docs_console_errors)
+    _wait_for_pyscript_init(docs_app_page, docs_console_messages)
