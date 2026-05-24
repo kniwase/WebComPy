@@ -154,6 +154,7 @@ When working on the codebase (developing, reviewing, or refactoring), always rea
 | `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md`, `openspec/specs/render-context/spec.md` |
 | `webcompy/ajax/`, `webcompy/aio/` | `openspec/specs/async/spec.md` |
 | `webcompy/cli/` | `openspec/specs/cli/spec.md`, `openspec/specs/project-config/spec.md`, `openspec/specs/config-separation/spec.md`, `openspec/specs/inspect-cli/spec.md` |
+| `webcompy/testing/` | `openspec/specs/testing-module/spec.md` |
 
 Other directories (`webcompy/exception/`, `webcompy/utils/`) do not have dedicated specs — review against `overview` and `architecture` specs only.
 
@@ -227,6 +228,7 @@ This ensures all agents — development and review alike — share current knowl
 | `reactive-dropdown` | Demonstration that WebComPy's reactive system handles UI interactions like dropdown menus |
 | `demo-iframe-isolation` | Isolated iframe PyScript contexts for demos with on-demand dependency loading |
 | `inspect-cli` | CLI tool for launching, inspecting, and verifying WebComPy applications in a browser |
+| `testing-module` | TestRenderer, fake ports, and scope helpers for browserless component rendering tests |
 
 ## Git Conventions
 

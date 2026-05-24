@@ -116,6 +116,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-environment
+        with:
+          uv-sync-args: --all-groups
       - name: Run unit tests
         run: |
           uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs --cov=webcompy --cov-report=xml --cov-report=term-missing 2>&1 | tee ci-test-results.log
@@ -213,7 +215,7 @@ jobs:
           path: ci-e2e-results.log
 
   review:
-    if: always()
+    if: success()
     needs: [openspec, openspec-check, lint, typecheck, generate, test, e2e-matrix]
     runs-on: ubuntu-latest
     timeout-minutes: 30
