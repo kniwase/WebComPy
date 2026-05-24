@@ -1,4 +1,10 @@
-## ADDED Requirements
+# Inspect CLI
+
+## Purpose
+
+The inspect CLI provides programmatic access to a running WebComPy application for automated testing, verification, and debugging. It bridges the gap between the framework's browser-based runtime and external tooling by offering structured JSON output for all commands. This enables CI pipelines, AI agents, and developers to launch servers, capture screenshots, collect console output, query DOM state, and assert expectations — all without manual browser interaction.
+
+## Requirements
 
 ### Requirement: The inspect serve command shall launch a WebComPy app server as a subprocess on an auto-detected port
 The `webcompy inspect serve` command SHALL start a WebComPy application server by launching `webcompy start` as a background subprocess. When `--port 0` is specified (the default), `serve` SHALL find a free port before starting the subprocess and pass it to `webcompy start --port N`. The PID file SHALL use this pre-detected port. The command SHALL output JSON containing the `port`, `url`, and `pid` of the server process. The `--config` flag SHALL accept an import path to a `WebComPyBuildConfig` instance, following the same discovery rules as `webcompy start` (i.e., `discover_config()`). The `--dev` flag SHALL enable hot-reload mode. The `--runtime-serving` flag SHALL accept `"cdn"` or `"local"` and override `WebComPyBuildConfig.runtime_serving`.
@@ -163,6 +169,12 @@ The command SHALL exit with code 0 if all expectations pass, and code 1 if any f
 ### Requirement: Each inspect browser command shall launch an independent browser session
 Each `inspect` command that interacts with a browser (`screenshot`, `console`, `query`, `click`, `navigate`, `verify`) SHALL launch a fresh headless Chromium browser instance, perform its operation, and close the browser before exiting. Browser sessions are NOT reused across separate `inspect` invocations. This ensures isolation between commands but means each command incurs browser startup latency.
 
+#### Scenario: Running two consecutive inspect commands
+- **WHEN** a developer runs `webcompy inspect screenshot http://localhost:8080/ --output a.png`
+- **AND** then runs `webcompy inspect screenshot http://localhost:8080/ --output b.png`
+- **THEN** each command SHALL launch its own browser instance
+- **AND** the two browser instances SHALL be independent
+
 ### Requirement: The inspect command shall handle missing Playwright gracefully
 When the `playwright` package is not installed, any `inspect` subcommand SHALL print a helpful error message suggesting installation commands and exit with code 1.
 
@@ -171,12 +183,3 @@ When the `playwright` package is not installed, any `inspect` subcommand SHALL p
 - **AND** the `playwright` package is not installed
 - **THEN** the command SHALL print an error message containing installation instructions
 - **AND** exit with code 1
-
-## MODIFIED Requirements
-
-### Requirement: The inspect serve command shall accept --runtime-serving flag
-The `inspect serve` CLI subcommand SHALL accept `--runtime-serving <mode>` where `<mode>` is `"cdn"` or `"local"`. This overrides `WebComPyBuildConfig.runtime_serving`, following the same pattern as the existing `start` and `generate` commands.
-
-#### Scenario: Overriding with --runtime-serving local for inspect serve
-- **WHEN** a developer runs `webcompy inspect serve --config my_app.config --runtime-serving local`
-- **THEN** `runtime_serving` SHALL be `"local"` for the session
