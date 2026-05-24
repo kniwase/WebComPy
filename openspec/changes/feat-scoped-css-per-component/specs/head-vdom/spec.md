@@ -1,0 +1,70 @@
+# Head VDOM
+
+## Purpose
+
+WebComPy's document head management shall use a VDOM (Virtual DOM) approach instead of imperative `AppDocumentRoot` methods. A `HeadElement` VDOM class shall manage the `<head>` element's children declaratively, providing uniform rendering for both SSG (HTML string generation) and browser runtime (DOM manipulation). This replaces the split where SSG code manually constructs HTML fragments from head properties while browser code imperatively modifies the DOM.
+
+## Requirements
+
+### Requirement: HeadElement SHALL manage head content as VDOM children
+
+A `HeadElement` class SHALL represent the `<head>` element as a VDOM node with children for title, meta, link, script, and style elements. The class SHALL receive a `HeadPropsStore` and construct its initial children from it. Changes to head props SHALL be reflected by re-rendering the element tree.
+
+#### Scenario: Initial head rendering in browser
+- **WHEN** a `HeadElement` is first rendered in browser environment
+- **THEN** it SHALL create DOM elements in `document.head` for title, meta, link, and script entries
+- **AND** it SHALL include `<style id="webcompy-scoped-styles">` and per-component `<style data-webcompy-cid="...">` elements
+- **AND** it SHALL NOT duplicate elements that already exist from SSR
+
+#### Scenario: SSG head rendering
+- **WHEN** `generate_html()` renders a page during SSG
+- **THEN** `HeadElement.render_html()` SHALL produce HTML for `<head>` with all children
+- **AND** the output SHALL include `<title>`, `<meta>`, `<base>`, `<link>`, `<style>`, and `<script>` elements as appropriate
+- **AND** the SSG code SHALL NOT need to manually construct head HTML fragments
+
+#### Scenario: Reactive title update in browser
+- **WHEN** a component calls `context.set_title("New Title")`
+- **THEN** the `HeadPropsStore.title` reactive value SHALL update
+- **AND** `HeadElement` SHALL detect the change during re-render
+- **AND** `document.title` SHALL be updated accordingly
+
+### Requirement: HeadElement SHALL replace imperative head methods on AppDocumentRoot
+
+`AppDocumentRoot` SHALL delegate head management to `HeadElement`. The imperative methods `set_title`, `set_meta`, `append_link`, `append_script`, `set_head`, `update_head` on `AppDocumentRoot` SHALL be replaced with `HeadElement`-based equivalents.
+
+#### Scenario: Setting head via app
+- **WHEN** a developer calls `app.set_head({"title": "My App", "meta": {...}, "link": [...]})`
+- **THEN** the head configuration SHALL be passed to `HeadElement`
+- **AND** subsequent rendering SHALL reflect the configured head content
+
+#### Scenario: Appending a link
+- **WHEN** a developer calls `app.append_link({"rel": "stylesheet", "href": "..."})`
+- **THEN** the link SHALL be added to `HeadElement`'s children
+- **AND** on next render, the link element SHALL appear in the DOM (browser) or HTML output (SSG)
+
+### Requirement: Scoped CSS style elements SHALL be children of HeadElement
+
+Per-component `<style data-webcompy-cid="...">` elements SHALL be managed as children of `HeadElement`, rather than being injected imperatively. `_reconcile_scoped_styles()` SHALL be integrated into `HeadElement`'s render lifecycle.
+
+#### Scenario: HeadElement manages scoped styles
+- **WHEN** a new component is registered in `ComponentStore`
+- **AND** `HeadElement` renders
+- **THEN** any missing `<style data-webcompy-cid="...">` elements SHALL be added
+- **AND** existing elements SHALL NOT be duplicated
+
+### Requirement: HeadElement SHALL handle plugin-provided head content
+
+Plugin `WebComPyPlugin` instances that contribute head scripts or styles SHALL be represented as children of `HeadElement`.
+
+#### Scenario: Plugin head scripts
+- **WHEN** a plugin contributes a script via `plugin_scripts`
+- **THEN** the script SHALL be included as a `<script>` child of `HeadElement`
+- **AND** it SHALL appear in both SSG output and browser DOM
+
+### Requirement: HeadElement SHALL support html_attrs management
+
+`AppDocumentRoot` currently provides `set_html_attr`/`remove_html_attr`/`html_attrs` for managing `<html>` element attributes. This SHALL be integrated into `HeadElement` as html-level attribute management, since `<html>` is the sibling container for `<head>`.
+
+#### Scenario: Setting html lang attribute
+- **WHEN** a developer sets `app.set_html_attr("lang", "ja")`
+- **THEN** the `<html>` element SHALL have `lang="ja"` in both SSG output and browser DOM
