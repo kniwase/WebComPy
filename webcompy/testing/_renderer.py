@@ -3,14 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from webcompy.di._scope import DIScope, _active_di_scope
-from webcompy.ports._keys import DOM_PORT_KEY, FETCH_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
+from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
 from webcompy.ports._server._virtual_dom import VirtualDOMNode
 from webcompy.testing._asgi import format_html
 from webcompy.testing._ports import (
     FakeBrowserDOMPort,
     FakeBrowserFFIPort,
     FakeBrowserHostPort,
-    FakeFetchPort,
 )
 
 if TYPE_CHECKING:
@@ -80,7 +79,11 @@ class TestRendererResult:
 
 class TestRenderer:
     @staticmethod
-    def render(component: ComponentGenerator, *, parent_scope: DIScope | None = None) -> TestRendererResult:
+    def render(
+        component: ComponentGenerator,
+        *,
+        parent_scope: DIScope | None = None,
+    ) -> TestRendererResult:
         from webcompy.components._component import HeadPropsStore
         from webcompy.di._keys import _HEAD_PROPS_KEY
 
@@ -88,7 +91,6 @@ class TestRenderer:
         scope.provide(DOM_PORT_KEY, FakeBrowserDOMPort())
         scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
         scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
-        scope.provide(FETCH_PORT_KEY, FakeFetchPort())
         scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
 
         scope_token = _active_di_scope.set(scope)

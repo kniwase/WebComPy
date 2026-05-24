@@ -440,7 +440,7 @@ class VirtualDOMNode:
 **Fetch (1 test: `test_fetch_page_loads`)**:
 - `on_after_rendering` → `ServerHostPort.schedule_macro_task` already calls `callback()` synchronously (not a no-op). `FakeBrowserHostPort.schedule_macro_task` changed from `pass` to `callback()`.
 - `HttpClient.get()` → `HttpClient.request()` changed from `ENVIRONMENT == "pyscript"`-only guard to `else` fallback: `inject(FETCH_PORT_KEY)` is now used on both PyScript and server-side.
-- `FETCH_PORT_KEY` wired to `FakeFetchPort` in `TestRenderer.render()` scope — self-contained stub returning canned JSON matching `sample.json`.
+- `FETCH_PORT_KEY` wired to `FakeFetchPort` in `TestRenderer.render()` scope — `FakeFetchPort` accepts a constructor `responses` dict mapping `(method, url)` to `Response` objects. Tests inject custom `FakeFetchPort` via `parent_scope` DI: `DIScope().provide(FETCH_PORT_KEY, FakeFetchPort(responses={...}))` and pass to `TestRenderer.render(app, parent_scope=scope)`. `TestRenderer.render()` only provides a default `FakeFetchPort()` as fallback when `parent_scope` does not contain `FETCH_PORT_KEY`.
 
 **Matplotlib (4 tests: heading, initial_value, increment_button, image_rendered)**:
 - `DomNodeRef` (`.value` property) → resolved by Decision 12 (`_dom_properties`).

@@ -80,6 +80,9 @@ class FakeBrowserFFIPort(FFIPort):
 
 
 class FakeFetchPort(FetchPort):
+    def __init__(self, responses: dict[tuple[str, str], Response] | None = None) -> None:
+        self._responses = responses or {}
+
     async def fetch(
         self,
         url: str,
@@ -88,10 +91,9 @@ class FakeFetchPort(FetchPort):
         headers: dict[str, str] | None = None,
         body: str | None = None,
     ) -> Response:
-        return Response(
-            text='{"data": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}, {"id": 3, "name": "Charlie"}]}',
-            headers={"content-type": "application/json"},
-            status_code=200,
-            status_text="OK",
-            ok=True,
+        key = (method, url)
+        if key in self._responses:
+            return self._responses[key]
+        raise KeyError(
+            f"No canned response registered for {method} {url}. Registered keys: {list(self._responses.keys())}"
         )

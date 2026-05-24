@@ -4,8 +4,11 @@ from pathlib import Path
 import pytest
 
 from webcompy.app._app import WebComPyApp
+from webcompy.di._scope import DIScope
+from webcompy.ports._fetch import Response
+from webcompy.ports._keys import FETCH_PORT_KEY
 from webcompy.ports._server._virtual_dom import VirtualDOMEvent
-from webcompy.testing import TestRenderer, mock_app_run
+from webcompy.testing import FakeFetchPort, TestRenderer, mock_app_run
 
 DOCS_APP_DIR = Path(__file__).parent.parent / "docs_app"
 
@@ -168,10 +171,27 @@ def test_todo_remove_done_items():
 
 
 def test_fetch_page_loads():
+    sample_json = (DOCS_APP_DIR / "static" / "_demos" / "fetch_sample" / "sample.json").read_text()
+    scope = DIScope()
+    scope.provide(
+        FETCH_PORT_KEY,
+        FakeFetchPort(
+            responses={
+                ("GET", "/_demos/fetch_sample/sample.json"): Response(
+                    text=sample_json,
+                    headers={"content-type": "application/json"},
+                    status_code=200,
+                    status_text="OK",
+                    ok=True,
+                )
+            }
+        ),
+    )
+
     with mock_app_run():
         from static._demos.fetch_sample.app import App
 
-        with TestRenderer.render(App) as result:
+        with TestRenderer.render(App, parent_scope=scope) as result:
             html = result.to_html()
             assert "User Data" in html
             assert "Alice" in html

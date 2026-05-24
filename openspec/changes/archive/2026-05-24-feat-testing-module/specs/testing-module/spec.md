@@ -28,7 +28,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: webcompy.testing package shall provide fake port implementations
 
-`FakeBrowserDOMPort` SHALL implement `DOMPort` with `create_element()` returning a `FakeDOMNode`, `create_text_node()` returning a text `FakeDOMNode`, `create_event()` returning a `VirtualDOMEvent` with the given type and options, and `add_document_event_listener()` returning a no-op cleanup callback. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` calling `callback()` synchronously and `create_js_global_getter()` returning a callable that returns `None`. `FakeBrowserFFIPort` SHALL implement `FFIPort` with all 5 abstract methods: `create_proxy` (returns `MagicMock` wrapping the original), `destroy_proxy`, `is_none`, `to_js`, `assign`. `FakeFetchPort` SHALL implement `FetchPort` with `request()` returning a `FetchResponse` containing canned JSON data for test isolation.
+`FakeBrowserDOMPort` SHALL implement `DOMPort` with `create_element()` returning a `FakeDOMNode`, `create_text_node()` returning a text `FakeDOMNode`, `create_event()` returning a `VirtualDOMEvent` with the given type and options, and `add_document_event_listener()` returning a no-op cleanup callback. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` calling `callback()` synchronously and `create_js_global_getter()` returning a callable that returns `None`. `FakeBrowserFFIPort` SHALL implement `FFIPort` with all 5 abstract methods: `create_proxy` (returns `MagicMock` wrapping the original), `destroy_proxy`, `is_none`, `to_js`, `assign`. `FakeFetchPort` SHALL implement `FetchPort` with `fetch()` that matches registered responses by `(method, url)` key. It SHALL accept an optional `responses` constructor parameter — a `dict` mapping `(method, url)` tuples to `Response` objects. When `fetch(method, url, *, headers, body)` is called, it SHALL look up `(method, url)` in the responses dict and return the matching `Response`. If no match is found, it SHALL raise `KeyError` with a message listing available keys.
 
 #### Scenario: FakeBrowserDOMPort creates FakeDOMNodes
 - **WHEN** `FakeBrowserDOMPort().create_element("span")` is called
@@ -48,10 +48,10 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **WHEN** `FakeBrowserFFIPort.assign(target, source)` is called
 - **THEN** `target.update(source)` SHALL be executed and `target` returned
 
-#### Scenario: FakeFetchPort returns canned JSON responses
-- **WHEN** `FakeFetchPort().request(method="GET", url="/api/users")` is called
-- **THEN** a `FetchResponse` with canned JSON data SHALL be returned
-- **AND** the response text SHALL match the pre-defined test fixture data
+#### Scenario: FakeFetchPort returns canned responses by (method, url) key
+- **WHEN** `FakeFetchPort(responses={("GET", "/api/users"): Response(...)}).fetch(method="GET", url="/api/users")` is called
+- **THEN** the matching `Response` SHALL be returned
+- **AND** calling `fetch()` with an unregistered `(method, url)` SHALL raise `KeyError`
 
 ### Requirement: webcompy.testing package shall provide format_html for canonical HTML comparison
 
@@ -76,7 +76,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: webcompy.testing package shall provide scope helpers
 
-`create_browser_scope()` SHALL return a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, and `FakeBrowserFFIPort` wired to their standard injection keys. `create_server_scope()` SHALL return a `DIScope` with `ServerDOMPort`, `ServerHostPort`, `ServerFFIPort`, and `ServerFetchPort` wired to their standard injection keys. `TestRenderer.render()` SHALL include `FakeFetchPort` wired to `FETCH_PORT_KEY` in its DI scope. `create_test_app(*, root_component, **config_overrides)` SHALL return a minimal `WebComPyApp` instance. Callers manage DI scope via `app.di_scope` — this is an intentional test-only escape hatch, not a public API contract, and SHALL NOT be used in production code.
+`create_browser_scope()` SHALL return a `DIScope` with `FakeBrowserDOMPort`, `FakeBrowserHostPort`, and `FakeBrowserFFIPort` wired to their standard injection keys. `create_server_scope()` SHALL return a `DIScope` with `ServerDOMPort`, `ServerHostPort`, `ServerFFIPort`, and `ServerFetchPort` wired to their standard injection keys. `TestRenderer.render()` SHALL NOT provide `FETCH_PORT_KEY` by default; tests that use `HttpClient` SHALL inject `FakeFetchPort` via `parent_scope`. `create_test_app(*, root_component, **config_overrides)` SHALL return a minimal `WebComPyApp` instance. Callers manage DI scope via `app.di_scope` — this is an intentional test-only escape hatch, not a public API contract, and SHALL NOT be used in production code.
 
 #### Scenario: create_browser_scope returns a ready-to-use DIScope
 - **WHEN** `scope = create_browser_scope()` is called

@@ -109,7 +109,7 @@ With `_dom_properties`, the ToDo demo's `on_change_state` callback (`input_ref.c
 ### 9.3 Fetch demos unit tests
 
 Fetch demo uses `on_after_rendering` + `HttpClient.get()` + `AsyncWrapper` + `resolve_async`. To enable unit testing:
-- `TestRenderer.render()` scope wires `FETCH_PORT_KEY` with `FakeFetchPort` (self-contained stub returning canned JSON responses).
+- `TestRenderer.render()` scope wires `FETCH_PORT_KEY` with `FakeFetchPort` (constructor-based response mapping via `responses` dict). Tests inject custom `FakeFetchPort` via `parent_scope` DI.
 - `HttpClient.request()` changed from `ENVIRONMENT == "pyscript"`-only guard to `else` fallback path — `inject(FETCH_PORT_KEY)` is now used on both PyScript and server-side.
 - `ServerHostPort.schedule_macro_task` already calls callback synchronously (no change needed).
 - `FakeBrowserHostPort.schedule_macro_task` changed from no-op to synchronous callback execution.
