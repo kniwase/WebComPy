@@ -43,7 +43,7 @@ class TestElementInitNode:
         handler = lambda ev: None
         el = _setup_element("div", {}, {"click": handler})
         node = el._init_node()
-        assert "click" in node._FakeDOMNode__event_listeners
+        assert any(et == "click" for et, _ in node._event_listeners)
 
     def test_init_node_sets_ref(self, fake_browser_full):
         ref = DomNodeRef()

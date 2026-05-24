@@ -70,7 +70,7 @@ class TestElementAdoptNode:
         el = _setup_element("div", {}, {"click": handler})
         node = FakeDOMNode("div")
         el._adopt_node(node)
-        assert "click" in node._FakeDOMNode__event_listeners
+        assert any(et == "click" for et, _ in node._event_listeners)
 
     def test_adopt_node_initializes_ref(self, fake_browser_full):
         ref = DomNodeRef()

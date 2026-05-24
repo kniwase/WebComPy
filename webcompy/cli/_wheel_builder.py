@@ -7,7 +7,7 @@ import pathlib
 import re
 import zipfile
 
-_BROWSER_ONLY_EXCLUDE = {"webcompy.cli", "webcompy.ports._server"}
+_BROWSER_ONLY_EXCLUDE = {"webcompy.cli", "webcompy.ports._server", "webcompy.testing"}
 
 
 def _is_browser_excluded(arc_path: str, patterns: set[str]) -> bool:
