@@ -56,6 +56,8 @@ Watch for these WebComPy-specific issues that generic reviewers miss:
 
 **Scoped CSS**: At-rules (`@media`, `@supports`) must NOT receive the `[webcompy-cid-{id}]` attribute selector.
 
+**Inspect CLI Independence**: `inspect` subcommand bypasses `get_params()` and uses its own nested `ArgumentParser` via early `sys.argv[1]` intercept in `__main__.py`. Browser commands require Playwright (checked lazily per-command, not at import). Server management uses PID files under `.tmp/webcompy-inspect/`.
+
 Format your review using this EXACT template:
 
 ```
