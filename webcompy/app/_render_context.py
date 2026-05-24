@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-from contextvars import Token
 from typing import TYPE_CHECKING, Any
 
 from webcompy.app._config import WebComPyAppConfig
@@ -14,7 +13,7 @@ from webcompy.components._generator import (
     _register_deferred_components,
 )
 from webcompy.di._keys import _COMPONENT_STORE_KEY
-from webcompy.di._scope import DIScope, _active_di_scope, _set_app_di_scope
+from webcompy.di._scope import DIScope, _set_app_di_scope
 from webcompy.router import Router
 from webcompy.utils import ENVIRONMENT
 
@@ -28,12 +27,12 @@ class RenderContext:
     _di_scope: DIScope
     _component_store: ComponentStore
     _router: Router | None
-    _di_scope_token: Token[DIScope] | None
 
     def __init__(self, app: WebComPyApp, path: str | None = None) -> None:
         self._app = app
         self._config = app._config
         self._profile = app._profile
+        self._disposed = False
         self._profile_data: dict[str, float] = {}
         self._defer_depth: int = 0
         self._deferred_callbacks: list = []
@@ -58,13 +57,10 @@ class RenderContext:
         )
 
         self._di_scope.__enter__()
-        self._di_scope_token = self._di_scope._token
 
         if ENVIRONMENT == "pyscript":
             _set_app_di_scope(self._di_scope)
             _set_app_instance(self)
-
-        if ENVIRONMENT == "pyscript":
             from webcompy.ports._browser._cookie import BrowserCookiePort
             from webcompy.ports._browser._dom import BrowserDOMPort
             from webcompy.ports._browser._fetch import BrowserFetchPort
@@ -131,6 +127,10 @@ class RenderContext:
 
         self._record_phase("init_done")
 
+    def _check_disposed(self) -> None:
+        if self._disposed:
+            raise RuntimeError("RenderContext has been disposed")
+
     @property
     def config(self) -> WebComPyAppConfig:
         return self._config
@@ -145,9 +145,11 @@ class RenderContext:
 
     @property
     def di_scope(self) -> DIScope:
+        self._check_disposed()
         return self._di_scope
 
     def provide(self, key: object, value: Any) -> None:
+        self._check_disposed()
         self._di_scope.provide(key, value)
 
     def render_html(self, **kwargs: Any) -> str:
@@ -156,15 +158,13 @@ class RenderContext:
         return generate_html(self, **kwargs)
 
     def dispose(self) -> None:
+        self._disposed = True
         _active_app_context.set(None)
         if ENVIRONMENT == "pyscript":
             _set_app_di_scope(None)
             _set_app_instance(None)
         if self._app._render_context is self:
             self._app._render_context = None
-        if self._di_scope_token is not None:
-            _active_di_scope.reset(self._di_scope_token)
-            self._di_scope_token = None
         self._di_scope.__exit__(None, None, None)
         self._di_scope.dispose()
         self._root = None  # type: ignore[assignment]
@@ -174,34 +174,43 @@ class RenderContext:
 
     @property
     def routes(self):
+        self._check_disposed()
         return self._root.routes
 
     @property
     def router_mode(self):
+        self._check_disposed()
         return self._root.router_mode
 
     def set_path(self, path: str):
+        self._check_disposed()
         return self._root.set_path(path)
 
     @property
     def head(self):
+        self._check_disposed()
         return self._root.head
 
     @property
     def style(self):
+        self._check_disposed()
         return self._root.style
 
     @property
     def scripts(self):
+        self._check_disposed()
         return self._root.scripts
 
     def set_title(self, title: str) -> None:
+        self._check_disposed()
         return self._root.set_title(title)
 
     def set_meta(self, key: str, attributes: dict[str, str]) -> None:
+        self._check_disposed()
         return self._root.set_meta(key, attributes)
 
     def append_link(self, attributes: dict[str, str]) -> None:
+        self._check_disposed()
         return self._root.append_link(attributes)
 
     def append_script(
@@ -210,20 +219,26 @@ class RenderContext:
         script: str | None = None,
         in_head: bool = False,
     ) -> None:
+        self._check_disposed()
         return self._root.append_script(attributes, script, in_head)
 
     def set_head(self, head: Any) -> None:
+        self._check_disposed()
         return self._root.set_head(head)
 
     def update_head(self, head: Any) -> None:
+        self._check_disposed()
         return self._root.update_head(head)
 
     def set_html_attr(self, key: str, value: Any) -> None:
+        self._check_disposed()
         return self._root.set_html_attr(key, value)
 
     def remove_html_attr(self, key: str) -> None:
+        self._check_disposed()
         return self._root.remove_html_attr(key)
 
     @property
     def html_attrs(self):
+        self._check_disposed()
         return self._root.html_attrs

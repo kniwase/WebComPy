@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import TYPE_CHECKING, Any, Literal
 
 from webcompy.app._config import WebComPyAppConfig
@@ -17,7 +16,6 @@ if TYPE_CHECKING:
 class WebComPyApp:
     _config: WebComPyAppConfig
     _profile: bool
-    _profile_data: dict[str, float]
     _render_context: RenderContext | None
 
     def __init__(
@@ -29,10 +27,8 @@ class WebComPyApp:
     ) -> None:
         self._config = config or WebComPyAppConfig()
         self._profile = self._config.profile
-        self._profile_data: dict[str, float] = {}
         self._hydrate = self._config.hydrate
         self._render_context = None
-        self._record_phase("init_start")
         self._root_component_def = root_component
         self._router = router
         self._router_pages = router.__routes__ if router else None
@@ -46,7 +42,6 @@ class WebComPyApp:
         if self._config.plugins:
             self._plugin_manager.discover(self._config.plugins)
             self._plugin_manager.init_all()
-        self._record_phase("init_done")
 
     @property
     def config(self) -> WebComPyAppConfig:
@@ -56,20 +51,19 @@ class WebComPyApp:
     def profile_data(self) -> dict[str, float] | None:
         if self._render_context is not None:
             return self._render_context.profile_data
-        return self._profile_data if self._profile else None
+        return None
 
     def _record_phase(self, name: str) -> None:
         if self._render_context is not None:
             self._render_context._record_phase(name)
-            return
-        if self._profile:
-            self._profile_data[name] = time.perf_counter()
 
     def _emit_profile_summary(self) -> None:
         if not self._profile:
             return
         ctx = self._render_context
-        data = ctx._profile_data if ctx is not None else self._profile_data
+        if ctx is None:
+            return
+        data = ctx._profile_data
         pairs = [
             ("pyscript_ready", "imports_done", "pyscript_ready → imports_done"),
             ("imports_done", "init_done", "imports_done   → init_done"),
