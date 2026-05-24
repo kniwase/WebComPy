@@ -60,7 +60,7 @@ class TestWebComPyAppForwarding:
 
     def test_style_property(self):
         app = _make_app()
-        assert app.style is app._root.style
+        assert app.scoped_styles == app._root.scoped_styles
 
     def test_scripts_property(self):
         app = _make_app()

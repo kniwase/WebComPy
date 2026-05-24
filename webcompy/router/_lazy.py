@@ -21,7 +21,7 @@ class LazyComponentGenerator(ComponentGenerator):
         self._resolve_error = False
         attr_name = import_path.rsplit(":", 1)[-1]
         self._name = attr_name
-        self._id = generate_id(attr_name)
+        self._cid = generate_id(attr_name)
         self._style = {}
         self._component_def = None
         self._registered = False
@@ -36,7 +36,7 @@ class LazyComponentGenerator(ComponentGenerator):
             self._resolved = resolved
             self._component_def = resolved._component_def
             self._name = resolved._name
-            self._id = resolved._id
+            self._cid = resolved._id
             self._style = resolved._style
             self._registered = resolved._registered
             resolved._try_register()

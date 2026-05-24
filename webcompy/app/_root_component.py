@@ -5,10 +5,11 @@ from typing import TYPE_CHECKING, TypedDict
 from webcompy.components._component import Component, HeadPropsStore, _active_app_context
 from webcompy.components._generator import ComponentGenerator
 from webcompy.di import inject
-from webcompy.di._keys import _HEAD_PROPS_KEY, _ROUTER_KEY
+from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY, _ROUTER_KEY
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import html
 from webcompy.elements._dom_objs import DOMNode
+from webcompy.elements._head import HeadElement
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
@@ -87,6 +88,7 @@ class AppDocumentRoot(Component):
         self._scripts_head = []
         self._html_attrs: dict[str, str | Computed[str]] = {}
         self._callback_consumers: dict[str, CallbackConsumerNode] = {}
+        self._head_element = HeadElement(head_props)
 
         with di_scope:
             super().__init__(_root_template, None, {"root": lambda: root_component(None)})
@@ -112,23 +114,10 @@ class AppDocumentRoot(Component):
                 self._app._record_phase("run_done")
             if ENVIRONMENT == "pyscript":
                 _dom = inject(DOM_PORT_KEY)
-                html_el = _dom.query_selector("html")
-                for key, value in self._html_attrs.items():
-                    current = html_el.getAttribute(key) if html_el else None
-                    expected = value.value if isinstance(value, Computed) else value
-                    if current != expected and html_el:
-                        html_el.setAttribute(key, expected)
+                self._reconcile_html_attrs(_dom)
+                self._head_element._render()
                 if self.__loading:
                     self.__loading = False
-                    if self._app:
-                        style_text = self.style
-                        if style_text is not None and not _dom.get_element_by_id("webcompy-scoped-styles"):
-                            style_el = _dom.create_element("style")
-                            style_el.setAttribute("id", "webcompy-scoped-styles")
-                            style_el.textContent = "*[hidden]{display: none;} " + style_text
-                            head_el = _dom.query_selector("head")
-                            if head_el:
-                                head_el.appendChild(style_el)
                     selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
                     loading_el = _dom.query_selector(f"{selector} > #webcompy-loading") or _dom.get_element_by_id(
                         "webcompy-loading"
@@ -145,6 +134,14 @@ class AppDocumentRoot(Component):
                 if app_token is not None:
                     _active_app_context.reset(app_token)
                 _active_di_scope.reset(token)
+
+    def _reconcile_html_attrs(self, _dom):
+        html_el = _dom.query_selector("html")
+        for key, value in self._html_attrs.items():
+            current = html_el.getAttribute(key) if html_el else None
+            expected = value.value if isinstance(value, Computed) else value
+            if current != expected and html_el:
+                html_el.setAttribute(key, expected)
 
     def _init_node(self) -> DOMNode:
         selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
@@ -198,15 +195,14 @@ class AppDocumentRoot(Component):
             return None
 
     @property
-    def style(self):
-        if self._app is not None:
-            store = self._app._component_store
-        else:
-            from webcompy.di import inject
-            from webcompy.di._keys import _COMPONENT_STORE_KEY
-
-            store = inject(_COMPONENT_STORE_KEY)
-        return " ".join(style for component in store.components.values() if (style := component.scoped_style))
+    def scoped_styles(self):
+        store = self._app._component_store if self._app is not None else inject(_COMPONENT_STORE_KEY)
+        result: dict[str, str] = {}
+        for _name, component in sorted(store.components.items()):
+            style = component.scoped_style
+            if style:
+                result[component._id] = style
+        return result
 
     # HTML attribute controllers
     def set_html_attr(self, key: str, value: str | Computed[str]):

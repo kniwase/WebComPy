@@ -120,7 +120,7 @@ def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaratio
 
 class ComponentGenerator(Generic[PropsType]):
     _name: str
-    _id: str
+    _cid: str
     _style: dict[str, StyleDict]
     _registered: bool
 
@@ -132,10 +132,14 @@ class ComponentGenerator(Generic[PropsType]):
         self._style = {}
         self._component_def = component_def
         self._name: str = name
-        self._id = generate_id(name)
+        self._cid = generate_id(name)
         self._registered = False
         if not self._try_register():
             _unregistered_generators.append(self)
+
+    @property
+    def _id(self) -> str:
+        return self._cid
 
     def _try_register(self) -> bool:
         if self._registered:

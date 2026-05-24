@@ -288,13 +288,16 @@ def generate_html(
             _HtmlElement(
                 "style",
                 {"id": "webcompy-scoped-styles"},
-                " ".join(
-                    (
-                        "*[hidden]{display: none;}",
-                        app.style,
-                    )
-                ),
+                "*[hidden]{display: none;}",
             ),
+            *[
+                _HtmlElement(
+                    "style",
+                    {"data-webcompy-cid": cid},
+                    css,
+                )
+                for cid, css in app.scoped_styles.items()
+            ],
             *[_HtmlElement("link", attrs) for attrs in app.head.get("link", [])],
             *_load_scripts(scripts_head),
             *plugin_head_scripts,
