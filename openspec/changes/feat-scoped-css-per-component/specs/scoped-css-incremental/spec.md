@@ -11,7 +11,7 @@ Scoped component CSS is injected into the page as per-component `<style>` elemen
 Each component generator with scoped CSS SHALL produce its own `<style>` element with a `data-webcompy-cid="{hash}"` attribute, where `{hash}` is the component's MD5-based ID.
 
 #### Scenario: Rendering a page with multiple scoped components
-- **WHEN** a `RenderContext` renders a page with components Navbar (cid=abc), Home (cid=def), and SyntaxHighlighting (cid=ghi)
+- **WHEN** `AppDocumentRoot` renders a page with components Navbar (cid=abc), Home (cid=def), and SyntaxHighlighting (cid=ghi)
 - **THEN** the generated HTML SHALL contain:
   - `<style id="webcompy-scoped-styles">*[hidden]{display:none}</style>`
   - `<style data-webcompy-cid="abc">nav[webcompy-cid-abc]{...}</style>`
@@ -66,19 +66,15 @@ During static site generation, all lazy route entries SHALL be pre-resolved via 
 - **AND** each `RenderContext.__init__` SHALL register all component generators into the context's `ComponentStore`
 - **AND** every generated HTML page SHALL contain `<style data-webcompy-cid="...">` for all components with scoped CSS, regardless of which route the page represents
 
-### Requirement: RenderContext SHALL expose scoped_styles as a cid-to-CSS dict
+### Requirement: AppDocumentRoot SHALL expose scoped_styles as a cid-to-CSS dict
 
-`RenderContext.scoped_styles` SHALL return a `dict[str, str]` mapping component cid values to their CSS strings, sorted by cid for deterministic ordering. The previously existing `style` property (concatenated CSS string) SHALL be removed.
+`AppDocumentRoot.scoped_styles` SHALL return a `dict[str, str]` mapping component cid values to their CSS strings, sorted by cid for deterministic ordering. The previously existing `AppDocumentRoot.style` property (concatenated CSS string) SHALL be removed. `WebComPyApp` SHALL forward `scoped_styles` as a property, and the `WebComPyApp.style` forwarding property SHALL be removed.
 
 #### Scenario: Accessing scoped_styles during SSG
-- **WHEN** SSG `_html.py` accesses `ctx.scoped_styles`
+- **WHEN** SSG `_html.py` accesses `app.scoped_styles`
 - **THEN** it SHALL receive a dict like `{"abc": "nav[webcompy-cid-abc]{...}", "def": ".container[webcompy-cid-def]{...}"}`
 - **AND** the keys SHALL be sorted alphabetically
 - **AND** components without `scoped_style` SHALL be excluded
-
-#### Scenario: RenderContext after dispose
-- **WHEN** `scoped_styles` is accessed on a disposed `RenderContext`
-- **THEN** `RuntimeError("RenderContext has been disposed")` SHALL be raised
 
 ### Requirement: The *[hidden] utility rule SHALL remain in a dedicated element
 

@@ -14,11 +14,11 @@
 - [ ] 2.4 Replace `self.__loading`-guarded scoped style injection block in `_render()` with call to `_reconcile_scoped_styles()`
 - [ ] 2.5 Verify `__loading` guard removal does not affect loading screen removal logic
 
-## 3. RenderContext: expose scoped_styles
+## 3. AppDocumentRoot: expose scoped_styles (replacing style)
 
-- [ ] 3.1 Remove `RenderContext.style` property
-- [ ] 3.2 Add `RenderContext.scoped_styles` property delegating to `self._root.scoped_styles`, with `_check_disposed()` guard
-- [ ] 3.3 Update any internal references from `ctx.style` to `ctx.scoped_styles`
+- [ ] 3.1 Remove `AppDocumentRoot.style` property (concatenated CSS string)
+- [ ] 3.2 Add `AppDocumentRoot.scoped_styles` property returning `dict[str, str]` (cid → CSS), sorted by cid, excluding empty styles
+- [ ] 3.3 Add `WebComPyApp.scoped_styles` forwarding property; update SSG `_html.py` to use `app.scoped_styles` instead of `app.style`; remove `WebComPyApp.style` forwarding property
 
 ## 4. SSG: per-component `<style>` generation
 

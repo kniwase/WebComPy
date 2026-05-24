@@ -69,6 +69,8 @@ def _reconcile_scoped_styles(self):
 
 **Rationale:** `_render()` is the natural reconciliation point — it's already where the framework synchronizes state with DOM, and where the current `__loading`-guarded injection lives. The cost is negligible (10-50 components, one querySelector per component).
 
+**Migration note:** `_reconcile_scoped_styles()` is initially implemented on `AppDocumentRoot` (Task 2) for immediate bug-fix value. In Task 6, when `HeadElement` is introduced, the method moves to `HeadElement` and the `AppDocumentRoot` copy is removed. This two-phase approach allows the CSS injection fix to ship independently of the larger HeadElement refactor.
+
 ### Decision 3: Replace `style` property with `scoped_styles` dict
 
 `AppDocumentRoot.style` (concatenated CSS string) is replaced with `scoped_styles: dict[str, str]` mapping `cid → CSS string`, sorted by cid for deterministic ordering.
@@ -127,7 +129,7 @@ class HeadElement(ElementWithChildren):
 - **Keep imperative head + add style reconciliation**: Simpler but doesn't address the SSG/browser split. Head VDOM is scoped here because scoped CSS naturally integrates into it.
 - **Full reactive head**: Individual meta/link/script as reactive VDOM nodes with fine-grained diffing. Over-scoped for this change; full reconciliation is sufficient.
 
-**Rationale:** Unifies SSG and browser head rendering. Scoped CSS `<style>` elements become natural children of `HeadElement`, eliminating the special-case handling in both `_html.py` and `AppDocumentRoot._render()`.
+**Rationale:** Unifies SSG and browser head rendering. Scoped CSS `<style>` elements become natural children of `HeadElement`, eliminating the special-case handling in both `_html.py` and `AppDocumentRoot._render()`. The two-phase migration (Task 2: `AppDocumentRoot._reconcile_scoped_styles()` → Task 6: `HeadElement` style children) ensures the CSS injection fix is available before the HeadElement refactor completes.
 
 ### Decision 6: `*[hidden]` base rule stays in `id="webcompy-scoped-styles"`
 
