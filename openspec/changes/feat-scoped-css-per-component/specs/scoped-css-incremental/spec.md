@@ -89,3 +89,14 @@ The framework-level `*[hidden]{display:none}` rule SHALL remain in a `<style id=
 - **WHEN** any SSG page is generated
 - **THEN** the `<head>` SHALL contain `<style id="webcompy-scoped-styles">*[hidden]{display:none}</style>`
 - **AND** per-component `<style data-webcompy-cid="...">` elements SHALL follow it
+
+### Requirement: Scoped CSS output SHALL be verifiable via create_test_asgi_app
+
+The `create_test_asgi_app()` test utility SHALL produce HTML output that includes per-component `<style data-webcompy-cid="...">` elements for components with scoped CSS. Tests using `httpx` against the test ASGI app SHALL be able to verify scoped CSS element presence in SSR output.
+
+#### Scenario: SSR integration test verifies scoped CSS elements
+- **WHEN** a test creates a `WebComPyApp` with a page component that has scoped CSS
+- **AND** creates an ASGI app via `create_test_asgi_app(app)`
+- **AND** sends a GET request via httpx to the app
+- **THEN** the response body SHALL contain `data-webcompy-cid="` attribute string
+- **AND** the response body SHALL contain `*[hidden]{display: none;}`

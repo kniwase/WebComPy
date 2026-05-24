@@ -68,3 +68,20 @@ Plugin `WebComPyPlugin` instances that contribute head scripts or styles SHALL b
 #### Scenario: Setting html lang attribute
 - **WHEN** a developer sets `app.set_html_attr("lang", "ja")`
 - **THEN** the `<html>` element SHALL have `lang="ja"` in both SSG output and browser DOM
+
+### Requirement: HeadElement SHALL support testing via FakeBrowserDOMPort
+
+HeadElement's browser-path `_render()` method SHALL be testable without a real browser by using `FakeBrowserDOMPort` with an internal document tree. The extended `FakeBrowserDOMPort` SHALL support `query_selector("head")` returning a `FakeDOMNode`, enabling HeadElement to append `<style>` elements as children of the head node.
+
+#### Scenario: Testing HeadElement browser path with FakeBrowserDOMPort
+- **WHEN** a test creates a `FakeBrowserDOMPort` with internal document tree
+- **AND** registers it in a DI scope
+- **AND** registers component generators with `scoped_style` in `ComponentStore`
+- **AND** calls `HeadElement._render()` within the scope
+- **THEN** the internal `_head` node SHALL contain `<style id="webcompy-scoped-styles">*[hidden]{display:none}</style>`
+- **AND** SHALL contain `<style data-webcompy-cid="...">` for each component with scoped CSS
+
+#### Scenario: Idempotent HeadElement rendering via FakeBrowserDOMPort
+- **WHEN** `HeadElement._render()` is called a second time with the same scope
+- **THEN** no duplicate `<style>` elements SHALL be added to the internal head node
+- **AND** the count of `<style>` children SHALL remain unchanged

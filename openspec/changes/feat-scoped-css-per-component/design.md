@@ -19,6 +19,7 @@ Head element management (title, meta, links, scripts) is currently imperative th
 - Reactive per-element `<style>` management (removing styles when a component is unregistered) — CSS is append-only
 - Head element diffing at individual meta/link granularity — full head reconciliation is sufficient
 - Server-side head manipulation during SSR (SSG already reads head state, dev server doesn't manipulate head)
+- Full browser-environment DOM simulation — FakeBrowserDOMPort is a lightweight test tool, not a JSDOM equivalent
 
 ## Decisions
 
@@ -134,6 +135,65 @@ class HeadElement(ElementWithChildren):
 The `*[hidden]{display:none}` utility rule remains in a dedicated `<style id="webcompy-scoped-styles">` element. This is not scoped to any component — it's a framework-wide utility.
 
 **Rationale:** This rule is not component-specific. Keeping it in its own element with the original `id` provides backward compatibility for existing SSR pages during migration.
+
+### Decision 7: FakeBrowserDOMPort extends ServerDOMPort with internal document tree
+
+`FakeBrowserDOMPort` (previously a direct `DOMPort(ABC)` implementation) SHALL extend `ServerDOMPort` and override `create_element()` to return `FakeDOMNode`. It SHALL maintain an internal document tree (`<html><head></head><body></body></html>`) for `query_selector()` and `get_element_by_id()` lookups. All other methods (`create_event`, `create_text_node`, `set_title`, `add_document_event_listener`, `render_html`) SHALL be inherited from `ServerDOMPort`.
+
+```python
+class FakeBrowserDOMPort(ServerDOMPort):
+    def __init__(self):
+        super().__init__()
+        self._html = FakeDOMNode("html")
+        self._head = FakeDOMNode("head")
+        self._body = FakeDOMNode("body")
+        self._html.appendChild(self._head)
+        self._html.appendChild(self._body)
+
+    def create_element(self, tag: str) -> FakeDOMNode:
+        return FakeDOMNode(tag)
+
+    def query_selector(self, selector: str) -> DOMNode | None:
+        return _dfs_by_tag(self._html, selector)
+
+    def get_element_by_id(self, element_id: str) -> DOMNode | None:
+        return _dfs_by_id(self._html, element_id)
+```
+
+**Alternatives considered:**
+- **Keep FakeBrowserDOMPort standalone + add query_selector**: Duplicating ServerDOMPort logic.
+- **Add a separate FakeDocument helper**: Unnecessary abstraction for a simple tree search.
+
+**Rationale:** Extending `ServerDOMPort` gives us `render_html()` for free and reduces code duplication. The internal document tree enables `query_selector("head")` to return a `FakeDOMNode` that `appendChild` operations can target. This makes HeadElement's browser-path `_render()` (which calls `dom.query_selector("head")` → `head.appendChild(style_el)`) fully testable with `TestRenderer`.
+
+### Decision 8: Testing layering — SSR integration via create_test_asgi_app, browser path via TestRenderer
+
+Scoped CSS and HeadElement tests SHALL use two complementary approaches:
+
+- **SSG/SSR integration tests** via `create_test_asgi_app()` + `httpx`: Tests the full `generate_html()` pipeline (Real `ServerDOMPort`, `app.di_scope`, routing, head rendering). Verifies `<style data-webcompy-cid="...">` elements in HTML output.
+- **Browser-path tests** via `TestRenderer` with extended `FakeBrowserDOMPort`: Tests `HeadElement._render()` browser path, verifying that style elements are injected into the internal document tree, `*[hidden]` rule is added, and injection is idempotent. Uses `FakeBrowserDOMPort._html` tree to verify DOM mutations post-render.
+
+```python
+# SSR integration test
+app = WebComPyApp(root_component=Page, router=router, config=config)
+asgi = create_test_asgi_app(app)
+resp = httpx_client.get("/page")
+assert 'data-webcompy-cid="' in resp.text
+
+# Browser-path test
+port = FakeBrowserDOMPort()
+scope = create_browser_scope()
+scope.provide(DOM_PORT_KEY, port)
+with scope:
+    head_element._render()
+head = port.query_selector("head")
+styles = _dfs_all(head, "style")
+assert len(styles) == N  # component styles + hidden rule
+head_element._render()  # second call
+assert len(styles) == N  # idempotent
+```
+
+**Rationale:** Two test layers cover both the SSG output format and the browser runtime behavior. `create_test_asgi_app` gives end-to-end confidence that scoped styles appear in real HTML. `TestRenderer` with extended FakeBrowserDOMPort gives fast unit-level validation of the reconciliation logic without a browser.
 
 ## Risks / Trade-offs
 
