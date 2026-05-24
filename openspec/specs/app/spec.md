@@ -66,12 +66,18 @@ When components set the document title or meta tags, those changes SHALL be refl
 - **THEN** the previous page's title SHALL be removed and the new page's title SHALL take effect
 
 ### Requirement: The application shall support scoped CSS injection
-All registered components' scoped CSS SHALL be collected and injected into the document as a single `<style>` block during rendering. Each app SHALL have its own `ComponentStore` in its DI scope, ensuring style collection is isolated per app.
+All registered components' scoped CSS SHALL be collected and injected into the document as per-component `<style>` elements identified by `data-webcompy-cid` attributes. Each app SHALL have its own `ComponentStore` in its DI scope, ensuring style collection is isolated per app. A single `<style id="webcompy-scoped-styles">` element SHALL contain the framework-level `*[hidden]{display:none}` utility rule, separate from per-component style elements.
 
 #### Scenario: Rendering multiple components with scoped styles
 - **WHEN** components `A` and `B` each define scoped CSS
-- **THEN** both styles SHALL appear in a single `<style>` element in the document head
+- **THEN** each component's CSS SHALL appear in its own `<style data-webcompy-cid="...">` element in the document head
+- **AND** the `*[hidden]{display:none}` utility rule SHALL appear in `<style id="webcompy-scoped-styles">`
 - **AND** each style SHALL only affect elements within its respective component
+
+#### Scenario: Lazy component resolved after initial render
+- **WHEN** a lazy-loaded component with scoped CSS is resolved during SPA navigation
+- **THEN** its `<style data-webcompy-cid="...">` element SHALL be injected into `<head>` on the next render cycle
+- **AND** no duplicate style elements SHALL be created
 
 ### Requirement: Multiple WebComPy applications shall coexist without interference
 Each `WebComPyApp` instance SHALL have its own DI scope, Router, HeadPropsStore, ComponentStore, and deferred rendering state. Module level global singletons (`_root_di_scope`, `_default_component_store`, `RouterView._instance`) SHALL NOT be used as the *primary* mechanism for app-scoped state. The `_defer_after_rendering_depth` and `_deferred_after_rendering_callbacks` state SHALL be owned by the app instance, not by module globals. In the browser, module-level fallback references (`_app_di_scope`, `_app_instance`) exist because `ContextVar` bindings are not preserved across PyScript JS→Python callbacks; these fallbacks hold only the most recently created app's scope. In the server/SSG environment, full multi-app isolation is guaranteed through `ContextVar` bindings.
