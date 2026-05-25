@@ -38,7 +38,7 @@ The framework SHALL NOT create duplicate `<style>` elements for the same compone
 
 ### Requirement: Scoped CSS SHALL be reconciled on every render
 
-`AppDocumentRoot._render()` SHALL call `_reconcile_scoped_styles()` each render cycle. This function SHALL scan `ComponentStore.components`, check which CIDs are missing from the DOM, and inject only missing `<style>` elements into `<head>`.
+`AppDocumentRoot._render()` SHALL call `HeadElement._render()` each render cycle. `HeadElement._render()` SHALL scan `ComponentStore.components` via DI injection, check which CIDs are missing from the DOM, and inject only missing `<style>` elements into `<head>`.
 
 #### Scenario: Lazy component resolved during SPA navigation
 - **WHEN** a user navigates to a lazy-loaded route for the first time

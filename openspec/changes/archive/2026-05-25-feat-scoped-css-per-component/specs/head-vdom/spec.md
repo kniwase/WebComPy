@@ -8,12 +8,12 @@ WebComPy's document head management shall use a VDOM (Virtual DOM) approach inst
 
 ### Requirement: HeadElement SHALL manage head content as VDOM children
 
-A `HeadElement` class SHALL represent the `<head>` element as a VDOM node with children for title, meta, link, script, and style elements. The class SHALL receive a `HeadPropsStore` and construct its initial children from it. Changes to head props SHALL be reflected by re-rendering the element tree.
+A `HeadElement` class SHALL represent the `<head>` element as a VDOM node. The class SHALL receive a `HeadPropsStore` for reactive title and meta access. In the browser, `HeadElement._render()` SHALL inject `<style id="webcompy-scoped-styles">` and per-component `<style data-webcompy-cid="...">` elements into `document.head`. In SSG, `HeadElement.get_head_content_html()` SHALL produce HTML strings for title, meta, scoped style, and link elements.
 
 #### Scenario: Initial head rendering in browser
 - **WHEN** a `HeadElement` is first rendered in browser environment
-- **THEN** it SHALL create DOM elements in `document.head` for title, meta, link, and script entries
-- **AND** it SHALL include `<style id="webcompy-scoped-styles">` and per-component `<style data-webcompy-cid="...">` elements
+- **THEN** it SHALL inject a `<style id="webcompy-scoped-styles">` element with `*[hidden]{display:none}` into `document.head`
+- **AND** it SHALL inject `<style data-webcompy-cid="...">` elements for each registered component with scoped CSS
 - **AND** it SHALL NOT duplicate elements that already exist from SSR
 
 #### Scenario: SSG head rendering
