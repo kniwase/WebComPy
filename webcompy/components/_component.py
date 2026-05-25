@@ -161,6 +161,7 @@ class Component(ElementBase):
         }
         self._event_handlers = node._event_handlers
         self._ref = node._ref
+        self._preserve_children = node._preserve_children
         self._init_children(node._children)
         self._property = property
 

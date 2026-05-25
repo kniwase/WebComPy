@@ -29,7 +29,9 @@ V = TypeVar("V")
 
 EventKey = NewType("EventKey", str)
 DomNodeRefKey = NewType("DomNodeRefKey", str)
+PreserveChildrenKey = NewType("PreserveChildrenKey", str)
 noderef = DomNodeRefKey(":ref")
+preserve_children_key = PreserveChildrenKey(":preserve_children")
 
 
 def event(event_name: str):
@@ -45,15 +47,18 @@ def create_element(
     attrs: dict[str, AttrValue] = {}
     events: dict[str, EventHandler] = {}
     ref: DomNodeRef | None = None
+    preserve = False
     for name, value in attributes.items():
         if isinstance(value, DomNodeRef):
             if name == ":ref":
                 ref = value
+        elif isinstance(value, bool) and name == ":preserve_children":
+            preserve = value
         elif name.startswith("@") and callable(value):
             events[name[1:]] = value
         else:
             attrs[name] = value  # type: ignore[assignment]
-    return Element(tag_name, attrs, events, ref, children)
+    return Element(tag_name, attrs, events, ref, children, preserve_children=preserve)
 
 
 ChildNode: TypeAlias = ElementBase | TextElement | MultiLineTextElement | NewLine | SignalBase[Any] | str | None

@@ -54,6 +54,8 @@ Watch for these WebComPy-specific issues that generic reviewers miss:
 
 **Scoped CSS**: At-rules (`@media`, `@supports`) must NOT receive the `[webcompy-cid-{id}]` attribute selector.
 
+**Preserve Children**: `:preserve_children` attribute SHALL follow the `:ref` pattern (extracted in `create_element()`, stored as `_preserve_children`, never rendered as a DOM attribute). When `_preserve_children=True`, `_render()` and `_hydrate_node()` SHALL skip the excess-child-node cleanup loop. `Signal[bool]` SHALL NOT be extracted as `:preserve_children` — only literal Python `bool` values are recognized.
+
 **Scoped CSS Incremental**: Each component's scoped CSS SHALL be a separate `<style data-webcompy-cid="...">` element, not concatenated into a monolithic `<style id="webcompy-scoped-styles">`. `_reconcile_scoped_styles()` (in `HeadElement._render()`) SHALL be idempotent — check `querySelector('style[data-webcompy-cid="{cid}"]')` before injecting. The `*[hidden]{display:none}` rule SHALL remain in `<style id="webcompy-scoped-styles">`, separate from per-component elements. `AppDocumentRoot.scoped_styles` SHALL return `dict[str, str]` (cid→CSS), not a concatenated string.
 
 **Head VDOM**: Head content SHALL be managed via `HeadElement` (extends `ElementWithChildren`), not through imperative `AppDocumentRoot` methods. `_render()` SHALL reconcile scoped CSS styles in browser, SHALL be a no-op on server. `HeadElement.get_link_elements_html()` and `get_script_elements_html()` SHALL produce HTML fragments. `HeadElement.set_html_attr()`/`get_html_attrs()` SHALL manage `<html>` element attributes.

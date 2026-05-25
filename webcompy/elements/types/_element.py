@@ -158,11 +158,14 @@ class Element(ElementBase):
         events: dict[str, EventHandler] | None = None,
         ref: DomNodeRef | None = None,
         children: Iterable[ElementChildren] | None = None,
+        *,
+        preserve_children: bool = False,
     ) -> None:
         self._tag_name = cast("HtmlTags", tag_name.lower())
         self._attrs = attrs if attrs else dict()
         self._event_handlers = events if events else dict()
         self._ref = ref
+        self._preserve_children = preserve_children
         self._children = []
         super().__init__()
         self._init_children(children if children else list())

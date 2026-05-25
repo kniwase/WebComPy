@@ -144,7 +144,7 @@ When working on the codebase (developing, reviewing, or refactoring), always rea
 |---|---|---|
 | `webcompy/signal/` | `openspec/specs/reactive/spec.md`, `openspec/specs/effect/spec.md` |
 | `webcompy/components/` | `openspec/specs/components/spec.md`, `openspec/specs/composables/spec.md` |
-| `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md`, `openspec/specs/head-vdom/spec.md` |
+| `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md`, `openspec/specs/head-vdom/spec.md`, `openspec/specs/element-preserve-children/spec.md` |
 | `webcompy/router/` | `openspec/specs/router/spec.md`, `openspec/specs/router-hooks/spec.md` |
 | `webcompy/_browser/` | `openspec/specs/browser-api/spec.md` |
 | `webcompy/ports/` | `openspec/specs/port-abstraction/spec.md` |
@@ -200,6 +200,7 @@ This ensures all agents — development and review alike — share current knowl
 | `list-reconciliation` | Key-based reconciliation for efficient DOM reuse when reactive lists/dicts change |
 | `nested-dynamic-element` | Nesting of `repeat` and `switch` at arbitrary depth |
 | `dict-repeat-overload` | Efficient DOM reconciliation for `ReactiveDict` with `repeat()` |
+| `element-preserve-children` | `:preserve_children` attribute to retain externally-managed child DOM nodes across re-renders |
 | `head-vdom` | Declarative head element management via `HeadElement` VDOM, replacing imperative `AppDocumentRoot` methods |
 | `router` | Client-side routing, hash/history modes, path params |
 | `router-hooks` | Navigation lifecycle callbacks (`before_route_change`, `after_route_change`, `on_route_error`) |

@@ -48,6 +48,13 @@ class ElementAbstract(SignalReceivable):
                 parent_node.replaceChild(node, self._remount_to)
                 self._remount_to = None
             self._mounted = True
+        elif self._mounted and (node := self._get_node()) and node.parentNode is None:
+            parent_node = self._parent._get_node()
+            if parent_node.childNodes.length <= self._node_idx:
+                parent_node.appendChild(node)
+            else:
+                next_node = parent_node.childNodes[self._node_idx]
+                parent_node.insertBefore(node, next_node)
 
     def _detach_node(self):
         if self._node_cache:

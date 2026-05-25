@@ -18,6 +18,7 @@ class ElementWithChildren(ElementAbstract):
     _attrs: dict[str, AttrValue] = {}  # noqa: RUF012
     _event_handlers: dict[str, EventHandler] = {}  # noqa: RUF012
     _children: list[ElementAbstract] = []  # noqa: RUF012
+    _preserve_children: bool = False
     __parent: ElementWithChildren
 
     def __init__(self) -> None:
@@ -36,7 +37,7 @@ class ElementWithChildren(ElementAbstract):
         super()._render()
         for child in self._children:
             child._render()
-        if (node := self._get_node()) is not None:
+        if (node := self._get_node()) is not None and not self._preserve_children:
             for _ in range(node.childNodes.length - self._children_length):
                 node.childNodes[-1].remove()
 
@@ -45,7 +46,7 @@ class ElementWithChildren(ElementAbstract):
         self._re_index_children()
         for child in self._children:
             child._hydrate_node()
-        if (node := self._get_node()) is not None:
+        if (node := self._get_node()) is not None and not self._preserve_children:
             for _ in range(node.childNodes.length - self._children_length):
                 node.childNodes[-1].remove()
         return result
