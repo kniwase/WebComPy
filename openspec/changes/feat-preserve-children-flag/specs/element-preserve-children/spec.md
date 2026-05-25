@@ -8,7 +8,7 @@ The `:preserve_children` attribute allows elements to declare that external Java
 
 ### Requirement: Element shall accept :preserve_children attribute
 
-An `Element` or `Component` SHALL accept a `:preserve_children` boolean attribute that controls whether the framework's child-node cleanup is suppressed. The attribute SHALL follow the same pattern as `:ref`: extracted in `create_element()`, stored internally as `_preserve_children`, and never rendered as a DOM attribute. The default value SHALL be `False`.
+An `Element` or `Component` SHALL accept a `:preserve_children` boolean attribute that controls whether the framework's child-node cleanup is suppressed. The attribute SHALL follow the same pattern as `:ref`: extracted in `create_element()`, stored internally as `_preserve_children`, and never rendered as a DOM attribute. The default value SHALL be `False`. Only a literal Python `bool` value SHALL be accepted; passing a `Signal[bool]` SHALL be treated as a regular DOM attribute rather than being extracted as `:preserve_children`.
 
 #### Scenario: Setting :preserve_children on an element
 - **WHEN** a developer writes `html.CODE({"class": "language-python", ":preserve_children": True})`
@@ -22,6 +22,12 @@ An `Element` or `Component` SHALL accept a `:preserve_children` boolean attribut
 #### Scenario: Component inherits :preserve_children from root element
 - **WHEN** a component's root `Element` has `_preserve_children = True`
 - **THEN** the `Component` instance SHALL have `_preserve_children = True`
+
+#### Scenario: Signal[bool] is not extracted as :preserve_children
+- **WHEN** a developer writes `html.CODE({":preserve_children": my_signal})` where `my_signal` is a `Signal[bool]`
+- **THEN** the value SHALL NOT be extracted as `:preserve_children`
+- **AND** the element SHALL have `_preserve_children = False` (the default)
+- **AND** the `:preserve_children` key SHALL be treated as a regular attribute (passed to the DOM)
 
 ### Requirement: Render shall skip child cleanup when :preserve_children is set
 
@@ -42,10 +48,19 @@ When `ElementWithChildren._render()` executes on an element with `_preserve_chil
 - **AND** `node.childNodes.length` SHALL be 0 after the render
 
 #### Scenario: Children of preserved element still render normally
-- **WHEN** an element with `_preserve_children = True` has WebComPy-managed children
+- **WHEN** an element with `_preserve_children = True` has WebComPy-managed children (i.e., `_children_length > 0`)
 - **AND** the element's `_render()` is called
 - **THEN** each child SHALL call `_render()` normally
-- **AND** the parent element's cleanup loop SHALL be skipped
+- **AND** the parent element's entire cleanup loop SHALL be skipped
+- **AND** no child DOM nodes (WebComPy-managed or external) SHALL be removed by the cleanup
+
+#### Scenario: Preserve children with mixed WebComPy and external children
+- **WHEN** an element has `_preserve_children = True` and `_children_length = 3` (WebComPy-managed children)
+- **AND** external JavaScript has additionally injected 5 `<span>` nodes into the element's DOM node
+- **AND** the element's `_render()` is called
+- **THEN** all 3 WebComPy-managed children SHALL be rendered normally
+- **AND** all 5 external `<span>` nodes SHALL remain in the DOM
+- **AND** `node.childNodes.length` SHALL be at least 8 after the render (3 WebComPy + 5 external)
 
 ### Requirement: Hydrate shall skip child cleanup when :preserve_children is set
 

@@ -17,7 +17,8 @@ When external JavaScript libraries (e.g., highlight.js) modify the DOM inside el
 
 ### Modified Capabilities
 
-- `elements`: `_mount_node()` gains a detached-node recovery path; the `_patch_children()` spec's scenario for external DOM mutation is now handled at the mount level as well
+- `elements`: `_mount_node()` gains a detached-node recovery path
+- `components`: `Component.__init_component()` propagates `_preserve_children` from the root element
 
 ## Impact
 

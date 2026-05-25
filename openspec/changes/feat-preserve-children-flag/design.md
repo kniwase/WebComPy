@@ -86,6 +86,8 @@ elif self._mounted and (node := self._get_node()) and node.parentNode is None:
 | Normal, node in DOM | `True` | not None | Skip | Skip |
 | Adopted but detached | `True` | **None** | **Skip (bug)** | **Reinsert** |
 
+**Interaction with `DynamicElement._render()` and `_position_element_nodes()`**: The `_mount_node()` recovery path uses the same re-insertion logic (insertBefore/appendChild based on `_node_idx`) as the first-time mount path. For `DynamicElement` children, `DynamicElement._render()` additionally calls `_position_element_nodes()` after rendering children, which iterates all descendants and positions them. The `_mount_node()` recovery runs first (during `child._render()`), putting the node in the correct position. `_position_element_nodes()` runs afterward, finding the node already at the correct position (`ref_node is not node` → `False`), and becomes a no-op. No conflict.
+
 ### Decision 2: `:preserve_children` as a special attribute
 
 **Choice**: Introduce a boolean attribute `:preserve_children` that follows the same pattern as `:ref` (extracted in `create_element()`, stored on the element, never rendered as a DOM attribute).
