@@ -171,6 +171,7 @@ class RenderContext:
         self._di_scope_token = None
         self._di_scope.__exit__(None, None, None)
         self._di_scope.dispose()
+        self._root._head_element._cleanup_consumers()
         self._root = None  # type: ignore[assignment]
         self._di_scope = None  # type: ignore[assignment]
         self._component_store = None  # type: ignore[assignment]
