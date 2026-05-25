@@ -137,14 +137,96 @@ self._preserve_children = node._preserve_children
 
 **Rationale**: Components wrap a single root `Element`. Since `Component` extends `ElementBase`, it needs to carry the flag to ensure the cleanup guard works. This matches the existing pattern for `_ref`.
 
-### Decision 5: App-side changes (docs_app)
+### Decision 5: SyntaxHighlighting component enhancement
 
-**Choice**: In `DemoDisplay` and `SyntaxHighlighting`:
-- Add `:preserve_children: True` to the `CODE` element
-- Remove the `TextElement` child from WebComPy's management (no `source_code` signal in the CODE element)
-- Use `hljs.highlight(source_code_str, language_options)` + `code_ref.element.innerHTML = result.value` instead of `hljs.highlightElement()`
+**Choice**: Enhance the `SyntaxHighlighting` component to accept `SignalBase[str]` in addition to `str` for the `code` prop, add input validation, and switch to `hljs.highlight()` + `innerHTML`.
 
-**Rationale**: With `_preserve_children`, WebComPy won't delete hljs spans. With `highlight()` + `innerHTML`, we avoid the `highlightElement()` pattern of mutating the DOM in-place (which conflicts with WebComPy's assumptions about node ownership). Signal-based source code updates trigger re-highlight via `on_after_updating`.
+```python
+class SyntaxHighlightingProps(TypedDict):
+    code: str | SignalBase[str]
+    lang: str
+
+@define_component
+def SyntaxHighlighting(context: ComponentContext[SyntaxHighlightingProps]):
+    code = context.props["code"]
+    code_ref = DomNodeRef()
+    get_hljs = inject(HOST_PORT_KEY).create_js_global_getter("hljs")
+
+    def _get_source() -> str:
+        return code.value if isinstance(code, SignalBase) else code
+
+    def run_highlight():
+        source = _get_source()
+        source = _validate_code(source)
+        if not source.strip():
+            return
+        hljs = get_hljs()
+        if hljs is not None and code_ref.element:
+            result = hljs.highlight(source, {"language": context.props["lang"]})
+            code_ref.element.innerHTML = result.value
+
+    if isinstance(code, SignalBase):
+        code.on_after_updating(lambda _: run_highlight())
+
+    @context.on_after_rendering
+    def _():
+        run_highlight()
+
+    return html.PRE(
+        {},
+        html.CODE(
+            {
+                "class": f"language-{context.props['lang']}",
+                ":ref": code_ref,
+                ":preserve_children": True,
+            },
+        ),
+    )
+```
+
+Key design points:
+- **No `TextElement` child**: The `<code>` element has no WebComPy-managed children, so `_children_length = 0`. Combined with `:preserve_children`, the cleanup loop is skipped entirely.
+- **`SignalBase` branching**: `isinstance(code, SignalBase)` check determines whether to wire `on_after_updating` for reactive re-highlighting or run once on render.
+- **`hljs.highlight()` + `innerHTML`**: Replaces `hljs.highlightElement()` which mutates the DOM in-place. `hljs.highlight()` returns a `{value, language, ...}` result object; `value` is an HTML-safe string with hljs's own `escapeHTML()` applied.
+- **Backward compatible**: Existing call sites in `home.py` pass `str` values — no change needed.
+
+### Decision 6: DemoDisplay simplification
+
+**Choice**: Remove all hljs-related logic from `DemoDisplay` and delegate code rendering to `SyntaxHighlighting`.
+
+```python
+# Before: DemoDisplay manages code_ref, get_hljs, source_code, run_highlight
+# After:
+SyntaxHighlighting({"code": source_code, "lang": "python"})
+```
+
+**Rationale**: `DemoDisplay` was duplicating ~80% of `SyntaxHighlighting`'s logic. By passing the `source_code` Signal directly to `SyntaxHighlighting`, we eliminate the duplication. `DemoDisplay` retains only async loading (`load()`) and the iframe markup — the code card is entirely delegated.
+
+### Decision 7: Input validation
+
+**Choice**: Apply lightweight input validation in `_validate_code()` — size limit and null-byte detection only. Do NOT html-escape input (that would break hljs tokenization). Do NOT use DOMParser for output verification (hljs applies its own `escapeHTML()` internally, which is battle-tested).
+
+```python
+_MAX_CODE_LENGTH = 100_000
+
+def _validate_code(text: str) -> str:
+    if not isinstance(text, str):
+        return ""
+    if not text.strip():
+        return text
+    if len(text) > _MAX_CODE_LENGTH:
+        return "[Error: code too large]"
+    if "\x00" in text:
+        return "[Error: invalid characters]"
+    return text
+```
+
+**Rationale**: hljs applies `escapeHTML()` to all text content before wrapping in `<span>` elements. This means the output HTML is safe by construction — no `<script>` or other dangerous tags can appear inline. Input-side sanitization is limited to structural validation (size, encoding) because Python's `html.escape()` would corrupt the source text that hljs needs to parse as code syntax. Output-side DOMParser verification is unnecessary overhead.
+
+**Alternatives considered:**
+- `html.escape()` before hljs: breaks hljs tokenization (e.g., `<div>` becomes `&lt;div&gt;` and hljs can't recognize it as a tag name)
+- DOMParser output verification: adds per-render cost, hljs's own encoding makes it redundant
+- No validation at all: risk of degenerate inputs (huge strings, binary data) causing rendering issues
 
 ## Risks / Trade-offs
 

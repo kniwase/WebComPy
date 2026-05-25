@@ -21,12 +21,16 @@
 - [ ] 3.7 Run unit tests: Tasks 1.2 and 1.3 SHALL pass
 - [ ] 3.8 Run integration test: Task 1.4 SHALL pass
 
-## 4. App-Side Changes (docs_app)
+## 4. App-Side Changes — SyntaxHighlighting Enhancement
 
-- [ ] 4.1 Update `DemoDisplay` to use `:preserve_children: True`, remove `TextElement` child, use `hljs.highlight()` + `innerHTML`
-- [ ] 4.2 Update `SyntaxHighlighting` with same pattern
-- [ ] 4.3 Verify docs_app generates correctly via `webcompy generate`
-- [ ] 4.4 Optional: Manual E2E verification with Playwright (HelloWorld → FizzBuzz transition)
+- [ ] 4.1 Add input validation (`_validate_code`: size limit, null-byte detection, type check)
+- [ ] 4.2 Update `SyntaxHighlighting` props: `code: str | SignalBase[str]`
+- [ ] 4.3 Wire `SignalBase` path: `on_after_updating` for reactive re-highlight
+- [ ] 4.4 Switch from `hljs.highlightElement()` to `hljs.highlight()` + `code_ref.element.innerHTML`
+- [ ] 4.5 Use `:preserve_children: True` on `<code>` element, remove `TextElement` child
+- [ ] 4.6 Simplify `DemoDisplay`: remove hljs logic, delegate to `SyntaxHighlighting({"code": source_code, "lang": "python"})`
+- [ ] 4.7 Verify `home.py` call sites still work (static `str` props unchanged)
+- [ ] 4.8 Verify docs_app generates correctly via `webcompy generate`
 
 ## 5. Verification
 
@@ -35,4 +39,4 @@
 - [ ] 5.3 Run `uv run pyright` (type check)
 - [ ] 5.4 Run `uv run python -m pytest tests/ --tb=short` (unit tests)
 - [ ] 5.5 Run E2E tests: `scripts/run-e2e-tests.sh`
-- [ ] 5.6 Update `.opencode/agents/ci-review.md` with new file→spec mapping for `element-preserve-children`
+- [ ] 5.6 Update `.opencode/agents/ci-review.md` with new file→spec mapping for `element-preserve-children` and `syntax-highlighting-component`

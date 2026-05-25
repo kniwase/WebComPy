@@ -8,12 +8,15 @@ When external JavaScript libraries (e.g., highlight.js) modify the DOM inside el
 - Introduce `:preserve_children` boolean attribute on `Element`: when set, `ElementWithChildren._render()` and `ElementWithChildren._hydrate_node()` skip the excess-child-node cleanup loop, leaving externally-managed child DOM nodes intact
 - Thread `_preserve_children` flag through `Component.__init_component()` so components inherit the flag from their root element
 - Add `PreserveChildrenKey` to `generators.py` and wire it through `create_element()` (same pattern as `:ref` via `DomNodeRefKey`)
+- Enhance `SyntaxHighlighting` component: accept `SignalBase[str]` in addition to `str` for the `code` prop, add input validation (size limit, null-byte detection), switch from `hljs.highlightElement()` to `hljs.highlight()` + `innerHTML`, use `:preserve_children` on the `<code>` element
+- Simplify `DemoDisplay`: remove duplicated hljs logic, delegate code rendering to `SyntaxHighlighting` with `source_code` Signal
 
 ## Capabilities
 
 ### New Capabilities
 
 - `element-preserve-children`: The `:preserve_children` attribute that allows elements to retain externally-managed child DOM nodes across re-renders
+- `syntax-highlighting-component`: A reusable `SyntaxHighlighting` component with `SignalBase[str]` support, input validation, and safe `hljs.highlight()` integration
 
 ### Modified Capabilities
 
@@ -27,9 +30,10 @@ When external JavaScript libraries (e.g., highlight.js) modify the DOM inside el
 - `webcompy/elements/types/_element.py`: `Element`, `_get_processed_attrs()`, `_init_new_node()`, `_adopt_node()`
 - `webcompy/elements/generators.py`: `PreserveChildrenKey` type, `create_element()` extraction
 - `webcompy/components/_component.py`: `_preserve_children` propagation in `__init_component()`
-- `docs_app/components/demo_display.py`: update to use `:preserve_children` and `hljs.highlight()` + `innerHTML`
-- `docs_app/components/syntax_highlighting.py`: same update
-- Tests: new VDOM-based unit tests for all three scenarios
+- `docs_app/components/syntax_highlighting.py`: Signal support, input validation, `hljs.highlight()` + `innerHTML`, `:preserve_children`
+- `docs_app/components/demo_display.py`: remove hljs logic, delegate to `SyntaxHighlighting`
+- `docs_app/templates/home.py`: existing `SyntaxHighlighting` call sites remain compatible (static string props unchanged)
+- Tests: new VDOM-based unit tests for all three scenarios + syntax highlighting component tests
 
 ## Known Issues Addressed
 
