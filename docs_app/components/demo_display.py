@@ -68,3 +68,12 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
             ),
         ),
     )
+
+
+DemoDisplay.scoped_style = {
+    ".card-title": {
+        "padding-bottom": "8px",
+        "border-bottom": "1px solid #dee2e6",
+        "margin-bottom": "16px",
+    },
+}
