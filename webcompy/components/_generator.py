@@ -149,8 +149,34 @@ class ComponentGenerator(Generic[PropsType]):
         if store is not None:
             if self._name not in store.components:
                 store.add_component(self._name, self)
+                self._inject_scoped_style_if_new()
             return True
         return False
+
+    def _inject_scoped_style_if_new(self) -> None:
+        from webcompy.di import inject
+        from webcompy.utils import ENVIRONMENT
+
+        if ENVIRONMENT != "pyscript":
+            return
+        css = self.scoped_style
+        if not css:
+            return
+        cid = self._id
+        from webcompy.ports._keys import DOM_PORT_KEY
+
+        _dom = inject(DOM_PORT_KEY, default=None)
+        if _dom is None:
+            return
+        if _dom.query_selector(f'style[data-webcompy-cid="{cid}"]'):
+            return
+        head_el = _dom.query_selector("head")
+        if not head_el:
+            return
+        el = _dom.create_element("style")
+        el.setAttribute("data-webcompy-cid", cid)
+        el.textContent = css
+        head_el.appendChild(el)
 
     def __call__(
         self,
@@ -229,6 +255,7 @@ class ComponentGenerator(Generic[PropsType]):
                 )
             style_items.append((processed_selector, _process_style_declaration(declaration)))
         self._style = dict(style_items)
+        self._inject_scoped_style_if_new()
 
 
 def define_component(
