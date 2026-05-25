@@ -159,6 +159,8 @@ class RenderContext:
         return generate_html(self, **kwargs)
 
     def dispose(self) -> None:
+        if self._disposed:
+            return
         self._disposed = True
         _active_app_context.set(None)
         if ENVIRONMENT == "pyscript":
