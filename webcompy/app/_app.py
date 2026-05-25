@@ -175,8 +175,8 @@ class WebComPyApp:
         return self._root.head
 
     @property
-    def style(self):
-        return self._root.style
+    def scoped_styles(self):
+        return self._root.scoped_styles
 
     @property
     def scripts(self):

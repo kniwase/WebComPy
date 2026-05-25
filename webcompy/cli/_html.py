@@ -9,10 +9,9 @@ from webcompy.app._config import PluginScript
 from webcompy.components._component import Component
 from webcompy.di import inject
 from webcompy.elements.typealias import ElementChildren
-from webcompy.elements.types import Element, RepeatElement
+from webcompy.elements.types import Element
 from webcompy.elements.types._base import ElementWithChildren
 from webcompy.ports._keys import DOM_PORT_KEY
-from webcompy.signal._computed import computed
 
 Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]
 
@@ -269,33 +268,19 @@ def generate_html(
             )
         )
 
-    return "<!doctype html>" + _HtmlElement(
+    head_content_html = app._root._head_element.get_head_content_html()
+
+    html_output = "<!doctype html>" + _HtmlElement(
         "html",
         app._root.html_attrs,
         _HtmlElement(
             "head",
             {},
-            _HtmlElement("title", {}, app.head["title"]),
-            RepeatElement(
-                sequence=computed(lambda: list(app.head["meta"].value.values())),
-                template=lambda attrs: _HtmlElement("meta", attrs),
-            ),
             _HtmlElement("base", {"href": app.config.base_url}),
             _HtmlElement(
                 "link",
                 {"rel": "stylesheet", "href": core_css_url},
             ),
-            _HtmlElement(
-                "style",
-                {"id": "webcompy-scoped-styles"},
-                " ".join(
-                    (
-                        "*[hidden]{display: none;}",
-                        app.style,
-                    )
-                ),
-            ),
-            *[_HtmlElement("link", attrs) for attrs in app.head.get("link", [])],
             *_load_scripts(scripts_head),
             *plugin_head_scripts,
         ),
@@ -308,3 +293,5 @@ def generate_html(
             *plugin_body_scripts,
         ),
     ).render_html().replace("</body>", f"{app_loader_html}</body>")
+
+    return html_output.replace("<head>", f"<head>\n{head_content_html}", 1)

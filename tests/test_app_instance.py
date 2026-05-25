@@ -60,7 +60,7 @@ class TestWebComPyAppForwarding:
 
     def test_style_property(self):
         app = _make_app()
-        assert app.style is app._root.style
+        assert app.scoped_styles == app._root.scoped_styles
 
     def test_scripts_property(self):
         app = _make_app()
@@ -194,10 +194,10 @@ class TestHtmlAttrs:
         app = _make_app()
         theme = Signal("light")
         app.set_html_attr("class", computed(lambda: theme.value))
-        assert "class" not in app._root._callback_consumers
+        assert "class" not in app._root._head_element._callback_consumers
         app.remove_html_attr("class")
-        assert "class" not in app._root._callback_consumers
-        assert "class" not in app._root._html_attrs
+        assert "class" not in app._root._head_element._callback_consumers
+        assert "class" not in app._root._head_element._html_attrs
 
     def test_consumer_destroy_called_when_overwriting_computed(self, monkeypatch):
         from webcompy.signal import Signal, computed
@@ -208,24 +208,24 @@ class TestHtmlAttrs:
         from webcompy.ports._keys import DOM_PORT_KEY
 
         app._di_scope.provide(DOM_PORT_KEY, mock_dom)
-        monkeypatch.setattr("webcompy.app._root_component.ENVIRONMENT", "pyscript")
+        monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
 
         with app._di_scope:
             theme = Signal("light")
             c = computed(lambda: theme.value)
             app.set_html_attr("class", c)
-            assert "class" in app._root._callback_consumers
-            consumer1 = app._root._callback_consumers["class"]
+            assert "class" in app._root._head_element._callback_consumers
+            consumer1 = app._root._head_element._callback_consumers["class"]
 
             app.set_html_attr("class", "static")
-            assert "class" not in app._root._callback_consumers
+            assert "class" not in app._root._head_element._callback_consumers
 
             app.set_html_attr("class", c)
-            assert "class" in app._root._callback_consumers
-            consumer2 = app._root._callback_consumers["class"]
+            assert "class" in app._root._head_element._callback_consumers
+            consumer2 = app._root._head_element._callback_consumers["class"]
 
             app.remove_html_attr("class")
-            assert "class" not in app._root._callback_consumers
-            assert "class" not in app._root._html_attrs
+            assert "class" not in app._root._head_element._callback_consumers
+            assert "class" not in app._root._head_element._html_attrs
 
             assert consumer1 is not consumer2

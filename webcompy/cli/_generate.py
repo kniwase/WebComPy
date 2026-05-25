@@ -282,6 +282,9 @@ def generate_static_site(app: WebComPyApp | None = None):
                 extra_wheel_filenames=extra_wheel_filenames,
             )
             if app.router_mode == "history" and app.routes:
+                for _, _, _, _, page in app.routes:
+                    if hasattr(page, "_preload"):
+                        page._preload()
                 for p, _, _, _, page in app.routes:
                     paths = (
                         {p.format(**params) for params in path_params}

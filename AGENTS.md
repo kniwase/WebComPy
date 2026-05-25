@@ -141,17 +141,17 @@ WebComPy uses OpenSpec for spec-driven development. Specs define **what the fram
 When working on the codebase (developing, reviewing, or refactoring), always read the relevant specs based on the files you touch. Start with `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md`, then read the subsystem specs:
 
 | Changed files | Specs to read |
-|---|---|
+|---|---|---|
 | `webcompy/signal/` | `openspec/specs/reactive/spec.md`, `openspec/specs/effect/spec.md` |
 | `webcompy/components/` | `openspec/specs/components/spec.md`, `openspec/specs/composables/spec.md` |
-| `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md` |
+| `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md`, `openspec/specs/head-vdom/spec.md` |
 | `webcompy/router/` | `openspec/specs/router/spec.md`, `openspec/specs/router-hooks/spec.md` |
 | `webcompy/_browser/` | `openspec/specs/browser-api/spec.md` |
 | `webcompy/ports/` | `openspec/specs/port-abstraction/spec.md` |
 | `webcompy/ports/_server/` | `openspec/specs/virtual-dom/spec.md` |
 | `webcompy/plugin/` | `openspec/specs/plugin-system/spec.md`, `openspec/specs/plugin-script/spec.md` |
 | `webcompy/di/` | `openspec/specs/di-scope/spec.md`, `openspec/specs/di-injection/spec.md`, `openspec/specs/dependency-resolver/spec.md` |
-| `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md` |
+| `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md`, `openspec/specs/scoped-css-incremental/spec.md` |
 | `webcompy/ajax/`, `webcompy/aio/` | `openspec/specs/async/spec.md` |
 | `webcompy/cli/` | `openspec/specs/cli/spec.md`, `openspec/specs/project-config/spec.md`, `openspec/specs/config-separation/spec.md`, `openspec/specs/inspect-cli/spec.md` |
 | `webcompy/testing/` | `openspec/specs/testing-module/spec.md` |
@@ -200,6 +200,7 @@ This ensures all agents — development and review alike — share current knowl
 | `list-reconciliation` | Key-based reconciliation for efficient DOM reuse when reactive lists/dicts change |
 | `nested-dynamic-element` | Nesting of `repeat` and `switch` at arbitrary depth |
 | `dict-repeat-overload` | Efficient DOM reconciliation for `ReactiveDict` with `repeat()` |
+| `head-vdom` | Declarative head element management via `HeadElement` VDOM, replacing imperative `AppDocumentRoot` methods |
 | `router` | Client-side routing, hash/history modes, path params |
 | `router-hooks` | Navigation lifecycle callbacks (`before_route_change`, `after_route_change`, `on_route_error`) |
 | `app` | Application bootstrapping, hydration, head management |
@@ -228,6 +229,7 @@ This ensures all agents — development and review alike — share current knowl
 | `reactive-dropdown` | Demonstration that WebComPy's reactive system handles UI interactions like dropdown menus |
 | `demo-iframe-isolation` | Isolated iframe PyScript contexts for demos with on-demand dependency loading |
 | `inspect-cli` | CLI tool for launching, inspecting, and verifying WebComPy applications in a browser |
+| `scoped-css-incremental` | Per-component `<style data-webcompy-cid="...">` injection with idempotent incremental reconciliation |
 | `testing-module` | TestRenderer, fake ports, and scope helpers for browserless component rendering tests |
 
 ## Git Conventions
