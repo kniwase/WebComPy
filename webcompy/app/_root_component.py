@@ -14,12 +14,10 @@ from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
 from webcompy.signal import Computed
-from webcompy.signal._graph import consumer_destroy
 from webcompy.utils import ENVIRONMENT
 
 if TYPE_CHECKING:
     from webcompy.app._app import WebComPyApp
-    from webcompy.signal._base import CallbackConsumerNode
 
 
 class Head(TypedDict, total=False):
@@ -38,9 +36,6 @@ class HeadSignal(TypedDict):
 
 class AppDocumentRoot(Component):
     _router: Router | None
-    _links: list[dict[str, str]]
-    _scripts: list[tuple[dict[str, str], str | None]]
-    _scripts_head: list[tuple[dict[str, str], str | None]]
     __loading: bool
     __hydrated: bool
 
@@ -74,20 +69,7 @@ class AppDocumentRoot(Component):
         if self._router:
             di_scope.provide(_ROUTER_KEY, self._router)
             di_scope.provide(RouterKey, self._router)
-        if ENVIRONMENT == "pyscript":
-
-            def updte_title(title: str | None):
-                if title is not None:
-                    inject(DOM_PORT_KEY).set_title(title)
-
-            head_props.title.on_after_updating(updte_title)
-
-        head_props._app_title = ""
-        self._links = []
-        self._scripts = []
-        self._scripts_head = []
-        self._html_attrs: dict[str, str | Computed[str]] = {}
-        self._callback_consumers: dict[str, CallbackConsumerNode] = {}
+        self._scripts: list[tuple[dict[str, str], str | None]] = []
         self._head_element = HeadElement(head_props)
 
         with di_scope:
@@ -114,7 +96,6 @@ class AppDocumentRoot(Component):
                 self._app._record_phase("run_done")
             if ENVIRONMENT == "pyscript":
                 _dom = inject(DOM_PORT_KEY)
-                self._reconcile_html_attrs(_dom)
                 self._head_element._render()
                 if self.__loading:
                     self.__loading = False
@@ -134,14 +115,6 @@ class AppDocumentRoot(Component):
                 if app_token is not None:
                     _active_app_context.reset(app_token)
                 _active_di_scope.reset(token)
-
-    def _reconcile_html_attrs(self, _dom):
-        html_el = _dom.query_selector("html")
-        for key, value in self._html_attrs.items():
-            current = html_el.getAttribute(key) if html_el else None
-            expected = value.value if isinstance(value, Computed) else value
-            if current != expected and html_el:
-                html_el.setAttribute(key, expected)
 
     def _init_node(self) -> DOMNode:
         selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
@@ -204,52 +177,24 @@ class AppDocumentRoot(Component):
                 result[component._id] = style
         return result
 
-    # HTML attribute controllers
     def set_html_attr(self, key: str, value: str | Computed[str]):
-        if key in self._callback_consumers:
-            consumer_destroy(self._callback_consumers[key])
-            del self._callback_consumers[key]
-        self._html_attrs[key] = value
-        if isinstance(value, Computed) and ENVIRONMENT == "pyscript":
-            consumer = value.on_after_updating(
-                lambda v, k=key: el.setAttribute(k, v) if (el := inject(DOM_PORT_KEY).query_selector("html")) else None
-            )
-            self._callback_consumers[key] = consumer
-        if ENVIRONMENT == "pyscript":
-            _dom = inject(DOM_PORT_KEY)
-            html_el = _dom.query_selector("html")
-            if html_el:
-                html_el.setAttribute(key, value.value if isinstance(value, Computed) else value)
+        self._head_element.set_html_attr(key, value)
 
     def remove_html_attr(self, key: str):
-        if key in self._callback_consumers:
-            consumer_destroy(self._callback_consumers[key])
-            del self._callback_consumers[key]
-        if key in self._html_attrs:
-            del self._html_attrs[key]
-        if ENVIRONMENT == "pyscript":
-            _dom = inject(DOM_PORT_KEY)
-            html_el = _dom.query_selector("html")
-            if html_el:
-                html_el.removeAttribute(key)
+        self._head_element.remove_html_attr(key)
 
     @property
     def html_attrs(self) -> dict[str, str]:
-        return {k: (v.value if isinstance(v, Computed) else v) for k, v in self._html_attrs.items()}
+        return self._head_element.html_attrs
 
-    def _set_title(self, title: str):
-        if self._head_props is not None:
-            self._head_props._app_title = title
-
-    # Head controllers
     def set_title(self, title: str):
-        self._set_title(title)
+        self._head_element.set_title(title)
 
     def set_meta(self, key: str, attributes: dict[str, str]):
-        self._set_meta(key, attributes)
+        self._head_element.set_meta(key, attributes)
 
     def append_link(self, attributes: dict[str, str]):
-        self._links.append(attributes)
+        self._head_element.append_link(attributes)
 
     def append_script(
         self,
@@ -260,34 +205,17 @@ class AppDocumentRoot(Component):
         if not in_head:
             self._scripts.append((attributes, script))
         else:
-            self._scripts_head.append((attributes, script))
+            self._head_element.append_script(attributes, script)
 
     def set_head(self, head: Head):
-        self._set_title(head.get("title", ""))
-        for key, value in head.get("meta", {}).items():
-            self._set_meta(key, value)
-        self._links = head.get("link", [])
-        self._scripts_head = head.get("script", [])
+        self._head_element.set_head(head)
 
     def update_head(self, head: Head):
-        if "title" in head:
-            self.set_title(head["title"])
-        for key, meta in head.get("meta", {}).items():
-            self.set_meta(key, meta)
-        for link in head.get("link", []):
-            self.append_link(link)
-        for attrs, script in head.get("script", []):
-            self.append_script(attrs, script, True)
+        self._head_element.update_head(head)
 
     @property
     def head(self) -> HeadSignal:
-        assert self._head_props is not None
-        return {
-            "title": self._head_props.title,
-            "meta": self._head_props.head_meta,
-            "link": self._links,
-            "script": self._scripts_head,
-        }
+        return self._head_element.head_data  # type: ignore[return-value]
 
     @property
     def scripts(self):

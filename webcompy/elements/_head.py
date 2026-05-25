@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._base import ElementWithChildren
@@ -8,6 +9,7 @@ from webcompy.signal._computed import Computed
 
 if TYPE_CHECKING:
     from webcompy.components._component import HeadPropsStore
+    from webcompy.signal._base import CallbackConsumerNode
 
 
 class HeadElement(ElementWithChildren):
@@ -19,13 +21,27 @@ class HeadElement(ElementWithChildren):
         self._links: list[dict[str, str]] = []
         self._scripts_head: list[tuple[dict[str, str], str | None]] = []
         self._html_attrs: dict[str, str | Computed[str]] = {}
+        self._callback_consumers: dict[str, CallbackConsumerNode] = {}
+        self._app_meta_id = uuid4()
+
+        from webcompy.utils import ENVIRONMENT
+
+        if ENVIRONMENT == "pyscript":
+            from webcompy.di import inject
+            from webcompy.ports._keys import DOM_PORT_KEY
+
+            def updte_title(title: str | None):
+                if title is not None:
+                    inject(DOM_PORT_KEY).set_title(title)
+
+            head_props.title.on_after_updating(updte_title)
 
     @property
     def _node_count(self) -> int:
         return 0
 
     def _get_node(self) -> DOMNode:
-        return self._parent._get_node()
+        return self.__parent._get_node()
 
     @property
     def _parent(self) -> ElementWithChildren:
@@ -34,6 +50,55 @@ class HeadElement(ElementWithChildren):
     @_parent.setter
     def _parent(self, parent: ElementWithChildren):
         self.__parent = parent
+
+    def set_title(self, title: str):
+        if self._head_props is not None:
+            self._head_props._app_title = title
+
+    def set_meta(self, key: str, attributes: dict[str, str]):
+        if self._head_props is not None:
+            meta = self._head_props.head_metas.get(self._app_meta_id, {})
+            meta[key] = attributes
+            self._head_props.head_metas[self._app_meta_id] = meta
+
+    def append_link(self, attributes: dict[str, str]):
+        self._links.append(attributes)
+
+    def append_script(
+        self,
+        attributes: dict[str, str],
+        script: str | None = None,
+    ):
+        self._scripts_head.append((attributes, script))
+
+    def set_head(self, head):
+        self.set_title(head.get("title", ""))
+        for key, value in head.get("meta", {}).items():
+            self.set_meta(key, value)
+        self._links.clear()
+        self._links.extend(head.get("link", []))
+        self._scripts_head.clear()
+        self._scripts_head.extend(head.get("script", []))
+
+    def update_head(self, head):
+        if "title" in head:
+            self.set_title(head["title"])
+        for key, meta in head.get("meta", {}).items():
+            self.set_meta(key, meta)
+        for link in head.get("link", []):
+            self.append_link(link)
+        for attrs, script in head.get("script", []):
+            self.append_script(attrs, script)
+
+    @property
+    def head_data(self) -> dict:
+        assert self._head_props is not None
+        return {
+            "title": self._head_props.title,
+            "meta": self._head_props.head_meta,
+            "link": self._links,
+            "script": self._scripts_head,
+        }
 
     def _render(self):
         from webcompy.di import inject
@@ -65,39 +130,103 @@ class HeadElement(ElementWithChildren):
                 el.textContent = css
                 head_el.appendChild(el)
 
-    def get_link_elements_html(self) -> list[str]:
-        from webcompy.di import inject
-        from webcompy.ports._keys import DOM_PORT_KEY
+        self._reconcile_html_attrs(_dom)
 
-        port = inject(DOM_PORT_KEY)
-        result: list[str] = []
-        for attrs in sorted(self._links, key=lambda a: a.get("href", "")):
-            el = port.create_element("link")
-            for key, value in attrs.items():
-                el.setAttribute(key, value)
-            result.append(port.render_html(el))
-        return result
-
-    def get_script_elements_html(self) -> list[str]:
-        from webcompy.di import inject
-        from webcompy.ports._keys import DOM_PORT_KEY
-
-        port = inject(DOM_PORT_KEY)
-        result: list[str] = []
-        for attrs, script in self._scripts_head:
-            el = port.create_element("script")
-            for key, value in attrs.items():
-                el.setAttribute(key, value)
-            if script:
-                el.textContent = script
-            result.append(port.render_html(el))
-        return result
+    def _reconcile_html_attrs(self, _dom):
+        html_el = _dom.query_selector("html")
+        for key, value in self._html_attrs.items():
+            current = html_el.getAttribute(key) if html_el else None
+            expected = value.value if isinstance(value, Computed) else value
+            if current != expected and html_el:
+                html_el.setAttribute(key, expected)
 
     def set_html_attr(self, key: str, value: str | Computed[str]):
+        from webcompy.signal._graph import consumer_destroy
+        from webcompy.utils import ENVIRONMENT
+
+        if key in self._callback_consumers:
+            consumer_destroy(self._callback_consumers[key])
+            del self._callback_consumers[key]
         self._html_attrs[key] = value
+        if isinstance(value, Computed) and ENVIRONMENT == "pyscript":
+            from webcompy.di import inject
+            from webcompy.ports._keys import DOM_PORT_KEY
+
+            consumer = value.on_after_updating(
+                lambda v, k=key: el.setAttribute(k, v) if (el := inject(DOM_PORT_KEY).query_selector("html")) else None
+            )
+            self._callback_consumers[key] = consumer
+        if ENVIRONMENT == "pyscript":
+            from webcompy.di import inject
+            from webcompy.ports._keys import DOM_PORT_KEY
+
+            _dom = inject(DOM_PORT_KEY)
+            html_el = _dom.query_selector("html")
+            if html_el:
+                html_el.setAttribute(key, value.value if isinstance(value, Computed) else value)
 
     def remove_html_attr(self, key: str):
-        self._html_attrs.pop(key, None)
+        from webcompy.signal._graph import consumer_destroy
+        from webcompy.utils import ENVIRONMENT
 
-    def get_html_attrs(self) -> dict[str, str]:
+        if key in self._callback_consumers:
+            consumer_destroy(self._callback_consumers[key])
+            del self._callback_consumers[key]
+        if key in self._html_attrs:
+            del self._html_attrs[key]
+        if ENVIRONMENT == "pyscript":
+            from webcompy.di import inject
+            from webcompy.ports._keys import DOM_PORT_KEY
+
+            _dom = inject(DOM_PORT_KEY)
+            html_el = _dom.query_selector("html")
+            if html_el:
+                html_el.removeAttribute(key)
+
+    @property
+    def html_attrs(self) -> dict[str, str]:
         return {k: (v.value if isinstance(v, Computed) else v) for k, v in self._html_attrs.items()}
+
+    def get_head_content_html(self) -> str:
+        from webcompy.di import inject
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.ports._keys import DOM_PORT_KEY
+
+        port = inject(DOM_PORT_KEY)
+        parts: list[str] = []
+
+        title = self._head_props.title.value
+        if title:
+            el = port.create_element("title")
+            el.textContent = str(title)
+            parts.append(port.render_html(el))
+
+        for _key, attrs in sorted(self._head_props.head_meta.value.items()):
+            el = port.create_element("meta")
+            for k, v in attrs.items():
+                el.setAttribute(k, v)
+            parts.append(port.render_html(el))
+
+        el = port.create_element("style")
+        el.setAttribute("id", "webcompy-scoped-styles")
+        el.textContent = "*[hidden]{display: none;}"
+        parts.append(port.render_html(el))
+
+        store = inject(_COMPONENT_STORE_KEY)
+        for _name in sorted(store.components.keys()):
+            gen = store.components[_name]
+            cid = gen._id
+            css = gen.scoped_style
+            if css:
+                el = port.create_element("style")
+                el.setAttribute("data-webcompy-cid", cid)
+                el.textContent = css
+                parts.append(port.render_html(el))
+
+        for attrs in sorted(self._links, key=lambda a: a.get("href", "")):
+            el = port.create_element("link")
+            for k, v in attrs.items():
+                el.setAttribute(k, v)
+            parts.append(port.render_html(el))
+
+        return "\n".join(parts)
