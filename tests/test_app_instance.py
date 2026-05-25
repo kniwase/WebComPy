@@ -65,7 +65,7 @@ class TestWebComPyAppForwarding:
     def test_style_property(self):
         app = _make_app()
         ctx = app.create_render_context()
-        assert app.style is ctx._root.style
+        assert app.scoped_styles == ctx._root.scoped_styles
         ctx.dispose()
 
     def test_scripts_property(self):
@@ -244,10 +244,10 @@ class TestHtmlAttrs:
         ctx = app.create_render_context()
         theme = Signal("light")
         app.set_html_attr("class", computed(lambda: theme.value))
-        assert "class" not in ctx._root._callback_consumers
+        assert "class" not in ctx._root._head_element._callback_consumers
         app.remove_html_attr("class")
-        assert "class" not in ctx._root._callback_consumers
-        assert "class" not in ctx._root._html_attrs
+        assert "class" not in ctx._root._head_element._callback_consumers
+        assert "class" not in ctx._root._head_element._html_attrs
         ctx.dispose()
 
     def test_consumer_destroy_called_when_overwriting_computed(self, monkeypatch):
@@ -260,24 +260,24 @@ class TestHtmlAttrs:
 
         ctx = app.create_render_context()
         ctx.di_scope.provide(DOM_PORT_KEY, mock_dom)
-        monkeypatch.setattr("webcompy.app._root_component.ENVIRONMENT", "pyscript")
+        monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
 
         theme = Signal("light")
         c = computed(lambda: theme.value)
         app.set_html_attr("class", c)
-        assert "class" in ctx._root._callback_consumers
-        consumer1 = ctx._root._callback_consumers["class"]
+        assert "class" in ctx._root._head_element._callback_consumers
+        consumer1 = ctx._root._head_element._callback_consumers["class"]
 
         app.set_html_attr("class", "static")
-        assert "class" not in ctx._root._callback_consumers
+        assert "class" not in ctx._root._head_element._callback_consumers
 
         app.set_html_attr("class", c)
-        assert "class" in ctx._root._callback_consumers
-        consumer2 = ctx._root._callback_consumers["class"]
+        assert "class" in ctx._root._head_element._callback_consumers
+        consumer2 = ctx._root._head_element._callback_consumers["class"]
 
         app.remove_html_attr("class")
-        assert "class" not in ctx._root._callback_consumers
-        assert "class" not in ctx._root._html_attrs
+        assert "class" not in ctx._root._head_element._callback_consumers
+        assert "class" not in ctx._root._head_element._html_attrs
 
         assert consumer1 is not consumer2
         ctx.dispose()

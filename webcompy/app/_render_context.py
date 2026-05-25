@@ -196,9 +196,9 @@ class RenderContext:
         return self._root.head
 
     @property
-    def style(self):
+    def scoped_styles(self):
         self._check_disposed()
-        return self._root.style
+        return self._root.scoped_styles
 
     @property
     def scripts(self):

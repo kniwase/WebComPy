@@ -8,10 +8,9 @@ from webcompy.app._config import PluginScript
 from webcompy.components._component import Component, _active_app_context, _set_app_instance
 from webcompy.di import inject
 from webcompy.elements.typealias import ElementChildren
-from webcompy.elements.types import Element, RepeatElement
+from webcompy.elements.types import Element
 from webcompy.elements.types._base import ElementWithChildren
 from webcompy.ports._keys import DOM_PORT_KEY
-from webcompy.signal._computed import computed
 
 if TYPE_CHECKING:
     from webcompy.app._render_context import RenderContext
@@ -306,33 +305,19 @@ def _generate_html_impl(
             )
         )
 
-    return "<!doctype html>" + _HtmlElement(
+    head_content_html = ctx._root._head_element.get_head_content_html()
+
+    html_output = "<!doctype html>" + _HtmlElement(
         "html",
         ctx._root.html_attrs,
         _HtmlElement(
             "head",
             {},
-            _HtmlElement("title", {}, ctx.head["title"]),
-            RepeatElement(
-                sequence=computed(lambda: list(ctx.head["meta"].value.values())),
-                template=lambda attrs: _HtmlElement("meta", attrs),
-            ),
             _HtmlElement("base", {"href": ctx.config.base_url}),
             _HtmlElement(
                 "link",
                 {"rel": "stylesheet", "href": core_css_url},
             ),
-            _HtmlElement(
-                "style",
-                {"id": "webcompy-scoped-styles"},
-                " ".join(
-                    (
-                        "*[hidden]{display: none;}",
-                        ctx.style,
-                    )
-                ),
-            ),
-            *[_HtmlElement("link", attrs) for attrs in ctx.head.get("link", [])],
             *_load_scripts(scripts_head),
             *plugin_head_scripts,
         ),
@@ -345,3 +330,5 @@ def _generate_html_impl(
             *plugin_body_scripts,
         ),
     ).render_html().replace("</body>", f"{app_loader_html}</body>")
+
+    return html_output.replace("<head>", f"<head>\n{head_content_html}", 1)

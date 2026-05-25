@@ -28,7 +28,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### Requirement: webcompy.testing package shall provide fake port implementations
 
-`FakeBrowserDOMPort` SHALL implement `DOMPort` with `create_element()` returning a `FakeDOMNode`, `create_text_node()` returning a text `FakeDOMNode`, `create_event()` returning a `VirtualDOMEvent` with the given type and options, and `add_document_event_listener()` returning a no-op cleanup callback. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` calling `callback()` synchronously and `create_js_global_getter()` returning a callable that returns `None`. `FakeBrowserFFIPort` SHALL implement `FFIPort` with all 5 abstract methods: `create_proxy` (returns `MagicMock` wrapping the original), `destroy_proxy`, `is_none`, `to_js`, `assign`. `FakeFetchPort` SHALL implement `FetchPort` with `fetch()` that matches registered responses by `(method, url)` key. It SHALL accept an optional `responses` constructor parameter — a `dict` mapping `(method, url)` tuples to `Response` objects. When `fetch(method, url, *, headers, body)` is called, it SHALL look up `(method, url)` in the responses dict and return the matching `Response`. If no match is found, it SHALL raise `KeyError` with a message listing available keys.
+`FakeBrowserDOMPort` SHALL be a subclass of `ServerDOMPort` (from `webcompy.ports._server._dom`). It SHALL override `create_element()` to return `FakeDOMNode` instances instead of `VirtualDOMNode`. It SHALL override `create_text_node()` to return a text `FakeDOMNode`. It SHALL maintain an internal document tree consisting of `<html>`, `<head>`, and `<body>` `FakeDOMNode` instances. The `query_selector()` and `get_element_by_id()` methods SHALL search this internal tree instead of returning `None`. It SHALL inherit `create_event()`, `set_title()`, `add_document_event_listener()`, and `render_html()` from `ServerDOMPort`. The internal document tree SHALL preserve mutations across method calls within the same instance — appending elements to the tree SHALL be visible to subsequent `query_selector` and `get_element_by_id` calls. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` calling `callback()` synchronously and `create_js_global_getter()` returning a callable that returns `None`. `FakeBrowserFFIPort` SHALL implement `FFIPort` with all 5 abstract methods: `create_proxy` (returns `MagicMock` wrapping the original), `destroy_proxy`, `is_none`, `to_js`, `assign`. `FakeFetchPort` SHALL implement `FetchPort` with `fetch()` that matches registered responses by `(method, url)` key. It SHALL accept an optional `responses` constructor parameter — a `dict` mapping `(method, url)` tuples to `Response` objects. When `fetch(method, url, *, headers, body)` is called, it SHALL look up `(method, url)` in the responses dict and return the matching `Response`. If no match is found, it SHALL raise `KeyError` with a message listing available keys.
 
 #### Scenario: FakeBrowserDOMPort creates FakeDOMNodes
 - **WHEN** `FakeBrowserDOMPort().create_element("span")` is called
@@ -52,6 +52,29 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **WHEN** `FakeFetchPort(responses={("GET", "/api/users"): Response(...)}).fetch(method="GET", url="/api/users")` is called
 - **THEN** the matching `Response` SHALL be returned
 - **AND** calling `fetch()` with an unregistered `(method, url)` SHALL raise `KeyError`
+
+#### Scenario: FakeBrowserDOMPort query_selector searches internal document tree
+- **WHEN** `FakeBrowserDOMPort().query_selector("head")` is called
+- **THEN** the internal `_head` `FakeDOMNode` SHALL be returned (not `None`)
+
+#### Scenario: FakeBrowserDOMPort get_element_by_id searches internal document tree
+- **WHEN** a `<style id="webcompy-scoped-styles">` element has been appended to the internal `_head` node
+- **THEN** `FakeBrowserDOMPort.get_element_by_id("webcompy-scoped-styles")` SHALL return that `FakeDOMNode`
+
+#### Scenario: query_selector returns None for unmatched selectors
+- **WHEN** `FakeBrowserDOMPort().query_selector("footer")` is called
+- **AND** no `<footer>` element exists in the internal document tree
+- **THEN** `None` SHALL be returned
+
+#### Scenario: Internal document tree supports appendChild
+- **WHEN** `head.appendChild(style_el)` is called where `head` is the `FakeBrowserDOMPort().query_selector("head")` result
+- **THEN** the style element SHALL be added as a child of `head`
+- **AND** subsequent `query_selector("style")` calls SHALL find it
+
+#### Scenario: AppendChild mutations persist across queries
+- **WHEN** `port.query_selector("head").appendChild(el)` is called
+- **AND** `el.setAttribute("data-webcompy-cid", "abc")` is called
+- **THEN** a subsequent `port.query_selector('style[data-webcompy-cid="abc"]')` SHALL return `el`
 
 ### Requirement: webcompy.testing package shall provide format_html for canonical HTML comparison
 

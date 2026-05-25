@@ -148,10 +148,10 @@ class WebComPyApp:
         raise AttributeError("WebComPyApp.head is not available without a RenderContext.")
 
     @property
-    def style(self):
+    def scoped_styles(self):
         if self._render_context is not None:
-            return self._render_context.style
-        raise AttributeError("WebComPyApp.style is not available without a RenderContext.")
+            return self._render_context.scoped_styles
+        raise AttributeError("WebComPyApp.scoped_styles is not available without a RenderContext.")
 
     @property
     def scripts(self):

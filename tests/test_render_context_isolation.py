@@ -45,6 +45,6 @@ class TestRenderContextIsolation:
     def test_styles_isolated(self):
         app = create_test_app(root_component=_IsolationRoot)
         ctx = app.create_render_context()
-        style = ctx.style
-        assert isinstance(style, str)
+        scoped = ctx.scoped_styles
+        assert isinstance(scoped, dict)
         ctx.dispose()

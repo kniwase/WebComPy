@@ -56,6 +56,12 @@ Watch for these WebComPy-specific issues that generic reviewers miss:
 
 **Scoped CSS**: At-rules (`@media`, `@supports`) must NOT receive the `[webcompy-cid-{id}]` attribute selector.
 
+**Scoped CSS Incremental**: Each component's scoped CSS SHALL be a separate `<style data-webcompy-cid="...">` element, not concatenated into a monolithic `<style id="webcompy-scoped-styles">`. `_reconcile_scoped_styles()` (in `HeadElement._render()`) SHALL be idempotent — check `querySelector('style[data-webcompy-cid="{cid}"]')` before injecting. The `*[hidden]{display:none}` rule SHALL remain in `<style id="webcompy-scoped-styles">`, separate from per-component elements. `AppDocumentRoot.scoped_styles` SHALL return `dict[str, str]` (cid→CSS), not a concatenated string.
+
+**Head VDOM**: Head content SHALL be managed via `HeadElement` (extends `ElementWithChildren`), not through imperative `AppDocumentRoot` methods. `_render()` SHALL reconcile scoped CSS styles in browser, SHALL be a no-op on server. `HeadElement.get_link_elements_html()` and `get_script_elements_html()` SHALL produce HTML fragments. `HeadElement.set_html_attr()`/`get_html_attrs()` SHALL manage `<html>` element attributes.
+
+**Testing Module**: `FakeBrowserDOMPort` SHALL extend `ServerDOMPort` (not directly implement `DOMPort`). It SHALL maintain an internal document tree (`_html`/`_head`/`_body`) enabling `query_selector()` and `get_element_by_id()` lookups. `FakeDOMNode` SHALL extend `VirtualDOMNode`. All files under `webcompy.testing` SHALL be excluded from browser-targeted wheels.
+
 **Inspect CLI Independence**: `inspect` subcommand bypasses `get_params()` and uses its own nested `ArgumentParser` via early `sys.argv[1]` intercept in `__main__.py`. Browser commands require Playwright (checked lazily per-command, not at import). Server management uses PID files under `.tmp/webcompy-inspect/`.
 
 Format your review using this EXACT template:

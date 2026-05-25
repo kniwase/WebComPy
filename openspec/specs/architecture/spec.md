@@ -40,14 +40,16 @@ The `browser` object SHALL be `None` on the server and a proxy to the full brows
 - **AND** server-side code (SSG, configuration) SHALL not crash due to missing browser APIs
 
 ### Requirement: The application entry point shall connect all subsystems
-`WebComPyApp` SHALL serve as the immutable definition holder that wires together the root component, the router definition, and the configuration. It SHALL NOT hold mutable rendering state — all mutable state SHALL belong to `RenderContext`. `WebComPyApp` SHALL provide a `create_render_context(path="")` method that creates a fresh `RenderContext` with all request-scoped state. In the browser, `app.run()` SHALL create a single `RenderContext` internally. On the server, each SSR request SHALL create and dispose its own `RenderContext`. Module-level fallback references (`_app_di_scope`, `_app_instance`) MAY still exist for browser environments where `ContextVar` propagation is unreliable. The `_active_app_context` ContextVar SHALL reference the `RenderContext` instance, not the `WebComPyApp`. `start_defer_after_rendering()` and `end_defer_after_rendering()` SHALL delegate to `RenderContext._defer_depth` and `RenderContext._deferred_callbacks` via `_active_app_context` or the fallback. Server-side and SSG entry points SHALL be module-level functions (`create_asgi_app`, `run_server`, `generate_static_site`) that accept a `WebComPyApp` instance and optional `ServerConfig`/`GenerateConfig` dataclasses. Developers SHALL only need to provide a root component and optionally a router and config — the framework handles all internal wiring. There is no conversion between `AppConfig` and any other config type.
+### Requirement: The application entry point shall connect all subsystems
+`WebComPyApp` SHALL serve as the immutable definition holder that wires together the root component, the router, the reactive head management system via `HeadElement`, and the configuration. It SHALL NOT hold mutable rendering state — all mutable state SHALL belong to `RenderContext`. `WebComPyApp` SHALL provide a `create_render_context(path="")` method that creates a fresh `RenderContext` with all request-scoped state (DI scope, ComponentStore, HeadElement, Router). In the browser, `app.run()` SHALL create a single `RenderContext` internally. On the server, each SSR request SHALL create and dispose its own `RenderContext`. `HeadElement` SHALL manage the `<head>` DOM element or HTML output declaratively. Module-level fallback references (`_app_di_scope`, `_app_instance`) MAY still exist for browser environments where `ContextVar` propagation is unreliable. The `_active_app_context` ContextVar SHALL reference the `RenderContext` instance, not the `WebComPyApp`. `start_defer_after_rendering()` and `end_defer_after_rendering()` SHALL delegate to `RenderContext._defer_depth` and `RenderContext._deferred_callbacks` via `_active_app_context` or the fallback. Server-side and SSG entry points SHALL be module-level functions (`create_asgi_app`, `run_server`, `generate_static_site`) that accept a `WebComPyApp` instance and optional `ServerConfig`/`GenerateConfig` dataclasses. Developers SHALL only need to provide a root component and optionally a router and config — the framework handles all internal wiring. There is no conversion between `AppConfig` and any other config type.
 
 #### Scenario: Creating a minimal application with config
 - **WHEN** a developer writes `app = WebComPyApp(root_component=MyApp, config=AppConfig(base_url="/app/"))`
 - **THEN** the reactive system, component system, and element system SHALL be wired together
+- **AND** `HeadElement` SHALL be initialized with the app's `HeadPropsStore`
 - **AND** `app.run()` SHALL produce the full UI in the browser
 - **AND** `create_asgi_app(app)` SHALL return a mountable ASGI application
-- **AND** `generate_static_site(app)` SHALL produce static HTML
+- **AND** `generate_static_site(app)` SHALL produce static HTML with head content from `HeadElement`
 
 #### Scenario: Creating an application with routing
 - **WHEN** a developer writes `app = WebComPyApp(root_component=MyApp, router=router, config=AppConfig(base_url="/app/"))`
@@ -63,28 +65,18 @@ The `browser` object SHALL be `None` on the server and a proxy to the full brows
 - **AND** in the browser (PyScript) environment, a module-level fallback reference exists for DI resolution when `ContextVar` bindings are lost across JS→Python callbacks; this fallback holds only the most recently created app's scope, so multi-app isolation in the browser has this limitation
 
 ### Requirement: Global singletons shall be replaced by per-app or DI-provided values
-`RouterView._instance`, `_default_component_store`, and `_root_di_scope` module-level globals SHALL be removed. Framework code SHALL access Router, HeadProps, and ComponentStore via `inject()` with internal DI keys. Each app instance SHALL own its state without relying on module-level globals as the *primary* mechanism. `Router._instance` and `Component._head_props` have already been removed by `feat/provide-inject`. In the browser, `inject()` and `provide()` SHALL fall back to a module-level `_app_di_scope` reference when the `_active_di_scope` `ContextVar` is unset (which occurs when PyScript invokes Python callbacks from JS event handlers that do not carry `ContextVar` bindings). Similarly, `start_defer_after_rendering()` and `end_defer_after_rendering()` SHALL fall back to a module-level `_app_instance` reference when `_active_app_context` is unset.
+`RouterView._instance`, `_default_component_store`, and `_root_di_scope` module-level globals SHALL be removed. Framework code SHALL access Router, HeadProps, and ComponentStore via `inject()` with internal DI keys. Each app instance SHALL own its state without relying on module-level globals as the *primary* mechanism. `Router._instance` and `Component._head_props` have already been removed by `feat/provide-inject`. `HeadElement` SHALL own head rendering and scoped CSS management, with `AppDocumentRoot` delegating to it. In the browser, `inject()` and `provide()` SHALL fall back to a module-level `_app_di_scope` reference when the `_active_di_scope` `ContextVar` is unset (which occurs when PyScript invokes Python callbacks from JS event handlers that do not carry `ContextVar` bindings). Similarly, `start_defer_after_rendering()` and `end_defer_after_rendering()` SHALL fall back to a module-level `_app_instance` reference when `_active_app_context` is unset.
 
-#### Scenario: Router is provided via DI
-- **WHEN** `WebComPyApp` is created with a router
-- **THEN** the router SHALL be provided into the app DI scope using internal and public keys
-- **AND** `RouterView` and `TypedRouterLink` SHALL resolve it via `inject()`
-
-#### Scenario: ComponentStore is per-app
-- **WHEN** `WebComPyApp` is created
-- **THEN** it SHALL create its own `ComponentStore` and provide it into the app DI scope
-- **AND** `ComponentGenerator` SHALL register into the active app's store via DI when a scope is available
-- **AND** no module-level `_default_component_store` global SHALL exist
-
-#### Scenario: Head props are per-app via DI
+#### Scenario: Head props and HeadElement are per-app
 - **WHEN** `WebComPyApp` is created
 - **THEN** it SHALL create a `HeadPropsStore` and provide it into the app DI scope
-- **AND** component head management SHALL use `inject()` to access it
+- **AND** it SHALL initialize a `HeadElement` that manages the `<head>` element declaratively
+- **AND** component head management SHALL use `inject()` to access `HeadPropsStore`
 - **AND** no `Component._head_props` ClassVar SHALL exist
 
 #### Scenario: Two apps with independent state
 - **WHEN** two `WebComPyApp` instances exist
-- **THEN** each app SHALL have its own `ComponentStore`, `HeadPropsStore`, and DI scope
+- **THEN** each app SHALL have its own `ComponentStore`, `HeadPropsStore`, `HeadElement`, and DI scope
 - **AND** scoped CSS collection SHALL be isolated per app
 - **AND** title and meta settings in one app SHALL NOT affect the other
 

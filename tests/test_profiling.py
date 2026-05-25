@@ -27,6 +27,7 @@ class TestProfileDataProperty:
         assert app.profile_data is None
         ctx = _make_ctx(app)
         assert ctx.profile_data is None
+        ctx.dispose()
 
     def test_profile_data_empty_dict_when_enabled(self):
         config = WebComPyAppConfig(profile=True)
@@ -37,6 +38,7 @@ class TestProfileDataProperty:
         assert isinstance(data, dict)
         assert "init_start" in data
         assert "init_done" in data
+        ctx.dispose()
 
 
 class TestRecordPhase:
@@ -49,6 +51,7 @@ class TestRecordPhase:
             ctx._record_phase("custom_phase")
         assert "custom_phase" in ctx._profile_data
         assert ctx._profile_data["custom_phase"] == 2.0
+        ctx.dispose()
 
     def test_record_phase_noop_when_disabled(self):
         config = WebComPyAppConfig(profile=False)
@@ -56,6 +59,7 @@ class TestRecordPhase:
         ctx = _make_ctx(app)
         ctx._record_phase("should_not_exist")
         assert "should_not_exist" not in ctx._profile_data
+        ctx.dispose()
 
     def test_record_phase_values_monotonically_increasing(self):
         counter = iter([1.0, 1.5, 2.0])
@@ -71,6 +75,7 @@ class TestRecordPhase:
             app = _make_app(config=config)
             ctx = _make_ctx(app)
         assert ctx._profile_data["init_start"] < ctx._profile_data["init_done"]
+        ctx.dispose()
 
 
 class TestEmitProfileSummary:
@@ -93,6 +98,7 @@ class TestEmitProfileSummary:
             ctx._profile_data["pyscript_ready"] = 0.0
             ctx._profile_data["loading_removed"] = 0.501
             app._emit_profile_summary()
+        ctx.dispose()
         output = mock_print.call_args[0][0]
         assert "[WebComPy Profile]" in output
         assert "Total:" in output
@@ -128,6 +134,7 @@ class TestAppInitRecordsPhases:
         assert data is not None
         assert "init_start" in data
         assert "init_done" in data
+        ctx.dispose()
 
     def test_config_profile_synced(self):
         config = WebComPyAppConfig(profile=True)
@@ -140,3 +147,4 @@ class TestAppInitRecordsPhases:
         assert app._profile is True
         ctx = _make_ctx(app)
         assert ctx.profile_data is not None
+        ctx.dispose()
