@@ -16,7 +16,7 @@ When external JavaScript libraries (e.g., highlight.js) modify the DOM inside el
 ### New Capabilities
 
 - `element-preserve-children`: The `:preserve_children` attribute that allows elements to retain externally-managed child DOM nodes across re-renders
-- `syntax-highlighting-component`: A reusable `SyntaxHighlighting` component with `SignalBase[str]` support, input validation, and safe `hljs.highlight()` integration
+- `syntax-highlighting-component`: A reusable `SyntaxHighlighting` component with `SignalBase[str]` support, input validation, and safe `hljs.highlight()` integration — **this is a docs_app-internal component and is not synced to the main framework specs**
 
 ### Modified Capabilities
 
