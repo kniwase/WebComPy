@@ -32,11 +32,15 @@
 - [x] 4.7 Verify `home.py` call sites still work (static `str` props unchanged)
 - [x] 4.8 Verify docs_app generates correctly via `webcompy generate`
 
-## 5. Verification
+## 5. Bug Fix — NewLine._init_node() SPA Navigation
 
-- [x] 5.1 Run `uv run ruff check .` (lint)
-- [x] 5.2 Run `uv run ruff format .` (format check)
-- [x] 5.3 Run `uv run pyright` (type check)
-- [x] 5.4 Run `uv run python -m pytest tests/ --tb=short` (unit tests)
-- [x] 5.5 Run E2E tests: `scripts/run-e2e-tests.sh`
-- [x] 5.6 Update `.opencode/agents/ci-review.md` and `AGENTS.md` with new file→spec mapping for `element-preserve-children`
+- [x] 5.0 Fix `NewLine._init_node()` to check `__webcompy_node__` before calling `existing_node.remove()` (prevents destroying adopted WebComPy-managed nodes during SPA navigation)
+
+## 6. Verification
+
+- [x] 6.1 Run `uv run ruff check .` (lint)
+- [x] 6.2 Run `uv run ruff format .` (format check)
+- [x] 6.3 Run `uv run pyright` (type check)
+- [x] 6.4 Run `uv run python -m pytest tests/ --tb=short` (unit tests)
+- [x] 6.5 Run E2E tests: `scripts/run-e2e-tests.sh`
+- [x] 6.6 Update `.opencode/agents/ci-review.md` and `AGENTS.md` with new file→spec mapping for `element-preserve-children`

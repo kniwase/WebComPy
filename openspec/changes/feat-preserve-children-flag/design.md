@@ -228,6 +228,31 @@ def _validate_code(text: str) -> str:
 - DOMParser output verification: adds per-render cost, hljs's own encoding makes it redundant
 - No validation at all: risk of degenerate inputs (huge strings, binary data) causing rendering issues
 
+### Decision 8: NewLine._init_node() shall not remove WebComPy-managed nodes
+
+**Choice**: Add a guard in `NewLine._init_node()` to check whether the existing DOM node at the sibling index is managed by WebComPy before removing it.
+
+```python
+# Before (buggy):
+else:
+    existing_node.remove()
+
+# After (fixed):
+elif not getattr(existing_node, "__webcompy_node__", False):
+    existing_node.remove()
+```
+
+**Root cause**: During SPA navigation, `_patch_children()` removes unmatched old children including `<br>` elements created by `NewLine`. The DOM index shifts, and subsequent `NewLine._init_node()` calls that use the original sibling index find a different node (e.g., a Code card `<div>`) instead of a non-`<br>` node. The `else` branch unconditionally calls `existing_node.remove()`, destroying WebComPy-managed content that was adopted by the new branch's patching logic.
+
+**Rationale**: `NewLine._init_node()` should only remove DOM nodes that it created itself (i.e., non-`__webcompy_node__` whitespace nodes). If a `__webcompy_node__`-marked node appears at the sibling index, it means the DOM structure has been reshuffled by `_patch_children()` and the node belongs to another element. Skipping the remove in this case preserves the adopted node, which will be positioned correctly by `_reposition_node()` later.
+
+**Alternatives considered:**
+- Fix the index calculation in `_patch_children()` or `_reposition_node()`: This would require tracking removed node counts and adjusting indices globally — complex and fragile
+- Reset `_node_idx` on all remaining elements after `_patch_children()`: Would require a full re-index pass, adding complexity
+- Remove `NewLine._init_node()` entirely: Breaks whitespace formatting in SSR output
+
+**Interaction with `_patch_children()`**: After `_patch_children()` removes unmatched old `<br>` nodes, `DynamicElement._render()` calls `_render()` on remaining children. When `_render()` reaches a `NewLine` whose sibling index now points to a `__webcompy_node__` element, the guard prevents removal. The adopted node is then rendered normally by its owning element.
+
 ## Risks / Trade-offs
 
 - **[Risk] `:preserve_children` on an element blocks ALL child cleanup**: If the developer later adds WebComPy-managed children alongside externally-managed ones, the cleanup loop won't run. Developers must ensure all children of a `:preserve_children` element are externally-managed.
