@@ -8,7 +8,7 @@ Suspense provides a declarative way to show fallback content while async childre
 
 Suspense is complementary to `useAsyncResult`: `useAsyncResult` gives fine-grained control over loading/error/success states within a component, while `Suspense` gives declarative control at the element tree level, wrapping entire sections.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Suspense shall show fallback content while children are loading
 `Suspense` SHALL accept a `fallback` parameter (a `Callable[[], ChildNode]` generator) and a `children` parameter (a `Callable[[], ChildNode]` generator). When the children subtree has pending async operations, the fallback content SHALL be rendered in place of the children.

@@ -4,7 +4,7 @@
 
 Static site generation and the dev server currently use separate code paths to produce HTML, leading to duplicated setup logic and potential output divergence. By restructuring SSG to reuse the ASGI app (SSR pipeline), we ensure identical HTML output, eliminate code duplication, and enable async rendering in the SSR pipeline.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: generate_static_site() shall use ASGITransport to produce static HTML
 `generate_static_site()` SHALL create an ASGI app via `create_asgi_app()` and fetch each route using `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))`. The response HTML for each route SHALL be written to the appropriate file in the dist directory. This ensures SSG output is identical to dev server output.

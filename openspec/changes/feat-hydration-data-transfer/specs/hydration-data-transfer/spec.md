@@ -4,7 +4,7 @@
 
 When a WebComPy application is pre-rendered on the server (SSG or SSR) and then hydrated in the browser, the browser currently re-executes all component setups from scratch. This means every `AsyncResult` that completed on the server triggers a new async fetch, and users see loading states for data that was already available in the server-rendered HTML. The hydration data transfer mechanism eliminates this redundancy by serializing resolved server-side state into the HTML and restoring it during browser-side hydration.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: The transfer payload shall be embedded in the HTML output
 

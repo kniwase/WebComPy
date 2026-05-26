@@ -6,7 +6,7 @@ The rendering pipeline supports async component definitions, async lifecycle hoo
 
 This enables future async SSR capabilities (per-route data fetching, streaming) and allows developers to use `async def` lifecycle hooks for I/O-bound operations (API calls, async resource loading) without blocking the event loop.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: The rendering pipeline shall support async _render() methods
 

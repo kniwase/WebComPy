@@ -4,7 +4,7 @@
 
 Component setup functions may be `async def`, enabling developers to `await` async operations (API calls, async resource loading) during component initialization. The coroutine is resolved during the async `_render()` phase, making the fetched data available for the initial render. Synchronous component definitions continue to work unchanged — `inspect.iscoroutinefunction()` transparently detects async definitions and uses a two-phase initialization strategy.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Component setup functions may be async def
 
