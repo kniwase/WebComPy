@@ -3,11 +3,11 @@ from typing import TypedDict
 from webcompy.aio import AsyncWrapper
 from webcompy.ajax import HttpClient
 from webcompy.components import ComponentContext, define_component
-from webcompy.di import inject
-from webcompy.elements import DomNodeRef, html
-from webcompy.ports._keys import HOST_PORT_KEY
+from webcompy.elements import html
 from webcompy.signal import Signal
 from webcompy.utils import strip_multiline_text
+
+from .syntax_highlighting import SyntaxHighlighting
 
 
 class DemoComponentProps(TypedDict):
@@ -18,11 +18,7 @@ class DemoComponentProps(TypedDict):
 
 @define_component
 def DemoDisplay(context: ComponentContext[DemoComponentProps]):
-    code_ref = DomNodeRef()
     source_code = Signal("")
-    get_hljs = inject(HOST_PORT_KEY).create_js_global_getter("hljs")
-
-    source_code.on_after_updating(lambda _: run_highlight())
 
     @AsyncWrapper()
     async def load():
@@ -37,17 +33,12 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
         except Exception:
             source_code.value = f"# Failed to load {context.props['demo_path']}"
 
-    def run_highlight():
-        hljs = get_hljs()
-        if hljs is not None and code_ref.element:
-            hljs.highlightElement(code_ref.element)
-
     @context.on_after_rendering
     def _():
         load()
 
     return html.DIV(
-        {},
+        {"class": "demo-display-root"},
         html.DIV(
             {"class": "card"},
             html.DIV(
@@ -71,18 +62,21 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
                     html.DIV({"class": "card-header"}, "Code"),
                     html.DIV(
                         {"class": "card-body"},
-                        html.PRE(
-                            {},
-                            html.CODE(
-                                {
-                                    "class": "language-python",
-                                    ":ref": code_ref,
-                                },
-                                source_code,
-                            ),
-                        ),
+                        SyntaxHighlighting({"code": source_code, "lang": "python"}),
                     ),
                 ),
             ),
         ),
     )
+
+
+DemoDisplay.scoped_style = {
+    ".demo-display-root": {
+        "padding-top": "1rem",
+    },
+    ".card-title": {
+        "padding-bottom": "8px",
+        "border-bottom": "1px solid #dee2e6",
+        "margin-bottom": "16px",
+    },
+}
