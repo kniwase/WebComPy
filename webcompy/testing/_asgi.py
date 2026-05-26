@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse
@@ -22,25 +22,39 @@ def format_html(html: str) -> str:
     return str(soup)
 
 
+def render_app_html(app: WebComPyApp, path: str = "/", **kwargs: Any) -> str:
+    from webcompy.cli._html import generate_html
+
+    ctx = app.create_render_context(path)
+    try:
+        return generate_html(ctx, **kwargs)
+    finally:
+        ctx.dispose()
+
+
 def create_test_asgi_app(app: WebComPyApp) -> ASGIApp:
 
     if app.router_mode == "history" and app.routes:
 
         async def _send_html(request: Request) -> HTMLResponse:
-            with app.di_scope:
-                path: str = request.path_params.get("path", "")
-                app.set_path(path.strip("/"))
-                html = _HtmlElement("div", {}, app._root).render_html()
+            path: str = request.path_params.get("path", "")
+            ctx = app.create_render_context(path.strip("/"))
+            try:
+                html = _HtmlElement("div", {}, ctx._root).render_html()
                 return HTMLResponse(html)
+            finally:
+                ctx.dispose()
 
         html_route = Route("/{path:path}", _send_html)
     else:
 
         async def _send_html_static(_: Request) -> HTMLResponse:
-            with app.di_scope:
-                app.set_path("/")
-                html = _HtmlElement("div", {}, app._root).render_html()
+            ctx = app.create_render_context("/")
+            try:
+                html = _HtmlElement("div", {}, ctx._root).render_html()
                 return HTMLResponse(html)
+            finally:
+                ctx.dispose()
 
         html_route = Route("/", _send_html_static)
 

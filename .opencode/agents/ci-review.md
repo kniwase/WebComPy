@@ -1,7 +1,7 @@
 ---
 name: ci-review
 description: Automated CI code reviewer — runs in GitHub Actions to review pull request diffs
-mode: primary
+mode: all
 permission:
   edit:
     "*": deny
@@ -38,7 +38,9 @@ Watch for these WebComPy-specific issues that generic reviewers miss:
 
 **Dual Environment**: `browser` is `None` on server, a proxy in browser. Code accessing browser APIs without `if browser:` guard is a bug. Server-only imports (uvicorn, starlette) must not be imported in browser code paths.
 
-**No New Globals**: `_root_di_scope`, `_default_component_store`, `RouterView._instance` are removed/deprecated. Framework services must use `inject()` via DI, not module-level singletons. New code must not introduce module-level globals for app-scoped state.
+**No New Globals**: `_root_di_scope`, `_default_component_store`, `RouterView._instance` are removed/deprecated. Framework services must use `inject()` via DI, not module-level singletons. New code must not introduce module-level globals for app-scoped state. `_active_app_context` ContextVar references the `RenderContext`, not `WebComPyApp`.
+
+**RenderContext Isolation**: `RenderContext` owns all mutable rendering state per request. `WebComPyApp` is an immutable definition holder. `app.create_render_context(path)` creates a fresh context with independent DI scope, Router, and ComponentStore. `ctx.dispose()` must clean up all resources. `_deferred_ops` on `WebComPyApp` are applied to every RenderContext (never cleared). SSR paths must use `try/finally: ctx.dispose()`. Signal graph globals (`_active_consumer`, `_in_notification_phase`) use ContextVar with module-level fallback for PyScript.
 
 **Reactive Contracts**: Signal equality check is `old is new or old == new` — same-value set must NOT trigger notifications. Computed is lazily evaluated (only recomputes when read after dirty). Computed that returns unchanged result must NOT notify downstream.
 
