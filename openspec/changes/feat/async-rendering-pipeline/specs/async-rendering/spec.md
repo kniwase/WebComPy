@@ -1,0 +1,160 @@
+# Async Rendering Pipeline
+
+## Purpose
+
+The rendering pipeline supports async component definitions, async lifecycle hooks, and sibling parallel rendering. When a component definition, lifecycle hook, or child rendering involves an async operation, the pipeline awaits it. Existing synchronous code continues to work without modification — `inspect.iscoroutinefunction()` transparently detects async callables and awaits them, while sync callables execute directly.
+
+This enables future async SSR capabilities (per-route data fetching, streaming) and allows developers to use `async def` lifecycle hooks for I/O-bound operations (API calls, async resource loading) without blocking the event loop.
+
+## Requirements
+
+### Requirement: The rendering pipeline shall support async _render() methods
+
+`ElementAbstract._render()`, `ElementWithChildren._render()`, `DynamicElement._render()`, `RepeatElement._render()`, `SwitchElement._render()`, `Component._render()`, and `AppDocumentRoot._render()` SHALL be `async def` methods. All callers of these methods SHALL `await` them. The `_mount_node()` method SHALL remain synchronous since DOM operations are not async.
+
+#### Scenario: Rendering a component in the browser
+- **WHEN** `app.run()` is called in the browser
+- **THEN** the async render pipeline SHALL be scheduled via `asyncio.ensure_future(self._root._render())`
+- **AND** the component tree SHALL render correctly as before
+
+#### Scenario: Rendering a component during SSG
+- **WHEN** `generate_html()` is called during static site generation
+- **THEN** `await app_root._render()` SHALL be called within the async pipeline
+- **AND** the HTML output SHALL match the previous synchronous output
+
+#### Scenario: Backward compatibility of sync _render() callers
+- **WHEN** existing code calls `await element._render()` on an element that performs no async operations
+- **THEN** the behavior SHALL be identical to the previous synchronous `_render()` call
+
+### Requirement: Sibling children shall render in parallel via asyncio.gather()
+
+`ElementWithChildren._render()` and `AppDocumentRoot._render()` SHALL use `asyncio.gather()` to render all child elements concurrently. Each child's `_render()` SHALL be scheduled as a separate coroutine. This enables future I/O-bound parallelism during SSG and structural clarity for the async pipeline.
+
+#### Scenario: Rendering multiple sibling children
+- **WHEN** `ElementWithChildren._render()` is called with 3 children
+- **THEN** `asyncio.gather(child1._render(), child2._render(), child3._render())` SHALL be awaited
+- **AND** all 3 children SHALL complete rendering before the parent continues
+
+#### Scenario: Sibling rendering preserves DOM order
+- **WHEN** children are rendered via `asyncio.gather()`
+- **THEN** DOM node indices (`_node_idx`) SHALL be assigned before rendering begins
+- **AND** the final DOM order SHALL match the children list order regardless of completion order
+
+### Requirement: Lifecycle hooks shall support async callables
+
+`on_before_rendering` and `on_after_rendering` hooks SHALL accept both synchronous and asynchronous callables. `Component._render()` SHALL use `inspect.iscoroutinefunction()` to detect async hooks and `await` them. Synchronous hooks SHALL be called directly without wrapping.
+
+#### Scenario: Using a sync on_before_rendering hook
+- **WHEN** a component defines `@on_before_rendering def setup(self): ...` (synchronous)
+- **THEN** the hook SHALL be called directly during `_render()` without awaiting
+- **AND** the behavior SHALL be identical to the pre-async pipeline
+
+#### Scenario: Using an async on_before_rendering hook
+- **WHEN** a component defines `@on_before_rendering async def setup(self): ...` (asynchronous)
+- **THEN** `Component._render()` SHALL `await` the hook
+- **AND** the hook SHALL complete before rendering proceeds
+
+#### Scenario: Using an async on_after_rendering hook
+- **WHEN** a component defines `@on_after_rendering async def post_render(self): ...` (asynchronous)
+- **THEN** `Component._render()` SHALL `await` the hook after rendering completes
+- **AND** the behavior SHALL be identical to sync hooks for DOM update purposes
+
+#### Scenario: Async on_after_rendering during route navigation
+- **WHEN** an async `on_after_rendering` hook is deferred via `start_defer_after_rendering()`
+- **THEN** the async hook SHALL be scheduled via the host port's `schedule_macro_task()` mechanism
+- **AND** `aio_run()` SHALL be used to execute the async hook
+
+### Requirement: Context shall accept async lifecycle hooks
+
+`Context.on_before_rendering()`, `Context.on_after_rendering()`, and `Context.on_before_destroy()` SHALL accept both `Callable[[], Any]` and `Callable[[], Coroutine[Any, Any, Any]]` as arguments. The standalone decorator functions `@on_before_rendering`, `@on_after_rendering`, and `@on_before_destroy` SHALL also accept async callables.
+
+#### Scenario: Registering an async on_before_rendering hook via context method
+- **WHEN** a developer calls `context.on_before_rendering(async_hook)` inside a component setup function
+- **THEN** the async callable SHALL be stored as the hook
+- **AND** `Component._render()` SHALL detect it via `iscoroutinefunction()` and `await` it
+
+#### Scenario: Registering an async on_after_rendering hook via decorator
+- **WHEN** a developer uses `@on_after_rendering async def hook(): ...` inside a function-style component
+- **THEN** the async callable SHALL be registered as the hook
+- **AND** `Component._render()` SHALL `await` it during rendering
+
+### Requirement: ComponentProperty shall accept async lifecycle hooks in its type definition
+
+The `ComponentProperty` TypedDict SHALL type `on_before_rendering`, `on_after_rendering`, and `on_before_destroy` as `Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]` to reflect that both sync and async callables are valid.
+
+#### Scenario: Type checking a ComponentProperty with async hooks
+- **WHEN** a developer passes an async callable as `on_before_rendering` in a `ComponentProperty`
+- **THEN** a type checker SHALL accept it without error
+
+### Requirement: generate_html() shall be async
+
+`generate_html()` SHALL be an `async def` function returning `str`. Callers SHALL `await` it. This applies to both SSG (`_generate.py`) and dev server (`_server.py`) contexts.
+
+#### Scenario: Calling generate_html() during SSG
+- **WHEN** `generate_static_site()` calls `await generate_html(app, ...)`
+- **THEN** the HTML SHALL be generated correctly
+- **AND** the output SHALL match the previous synchronous output
+
+#### Scenario: Calling generate_html() in the dev server
+- **WHEN** the Starlette ASGI handler calls `await generate_html(app, ...)`
+- **THEN** the HTML SHALL be generated correctly
+- **AND** the response SHALL be returned to the client
+
+### Requirement: generate_static_site() shall be async
+
+`generate_static_site()` SHALL be an `async def` function. The CLI entry point SHALL use `asyncio.run()` to call it. Internal calls to `generate_html()` SHALL be awaited.
+
+#### Scenario: Running SSG from CLI
+- **WHEN** `python -m webcompy generate` is executed
+- **THEN** `asyncio.run(generate_static_site(...))` SHALL be called
+- **AND** all route HTML SHALL be generated correctly
+
+### Requirement: app.run() shall schedule the async render
+
+In the browser (PyScript) environment, `app.run()` SHALL schedule the async render via `asyncio.ensure_future(self._root._render())`. This SHALL NOT block the event loop. The loading indicator removal and profile recording SHALL happen within the async render pipeline.
+
+#### Scenario: Running an app in the browser
+- **WHEN** `app.run()` is called in a PyScript environment
+- **THEN** `asyncio.ensure_future(self._root._render())` SHALL be called
+- **AND** the application SHALL render and mount into the DOM correctly
+
+#### Scenario: Calling run() in a non-browser environment
+- **WHEN** `app.run()` is called in a non-PyScript environment
+- **THEN** a `WebComPyException` SHALL be raised (unchanged behavior)
+
+### Requirement: Dynamic element refresh shall be async
+
+`RepeatElement._refresh()` and `SwitchElement._refresh()` SHALL be `async def` methods. Their signal callback registrations SHALL wrap async callbacks with a scheduling utility (`aio_run()`) so that the signal system can invoke them correctly.
+
+#### Scenario: RepeatElement refresh triggered by signal update
+- **WHEN** a `ReactiveList` value changes and `RepeatElement._refresh()` is triggered
+- **THEN** the async `_refresh()` SHALL be scheduled via `aio_run()` from the signal callback
+- **AND** child rendering SHALL be awaited correctly
+
+#### Scenario: SwitchElement refresh triggered by signal update
+- **WHEN** a `Signal` value changes and `SwitchElement._refresh()` is triggered
+- **THEN** the async `_refresh()` SHALL be scheduled via `aio_run()` from the signal callback
+- **AND** deferred `on_after_rendering` callbacks SHALL be scheduled correctly
+
+### Requirement: Signal callbacks shall support async callables
+
+When an async callable is registered as a signal callback via `SignalBase.on_after_updating()`, the signal system SHALL schedule the callback via `aio_run()` (which uses `asyncio.ensure_future()` in the browser or `loop.create_task()` on the server). A utility function `_make_signal_callback()` SHALL wrap async callables for transparent scheduling.
+
+#### Scenario: Registering an async _refresh() as a signal callback
+- **WHEN** `RepeatElement._refresh()` is `async def` and registered via `self._sequence.on_after_updating(self._refresh)`
+- **THEN** `_make_signal_callback(self._refresh)` SHALL wrap it as a sync callable that calls `aio_run(self._refresh(*args))`
+- **AND** the signal system SHALL invoke the wrapped callback normally
+
+#### Scenario: Registering a sync _refresh() as a signal callback
+- **WHEN** a sync `_refresh()` method is registered as a signal callback
+- **THEN** `_make_signal_callback()` SHALL return the callback unchanged
+- **AND** the behavior SHALL be identical to the pre-async pipeline
+
+### Requirement: _HtmlElement.render_html() shall be async
+
+`_HtmlElement.render_html()` SHALL be an `async def` method that awaits `self._render()`. This propagates the async pipeline to the SSG layer.
+
+#### Scenario: Generating HTML for SSG
+- **WHEN** `_HtmlElement.render_html()` is called during `generate_html()`
+- **THEN** `await self._render()` SHALL be called
+- **AND** the rendered HTML string SHALL be returned
