@@ -123,7 +123,7 @@ Modify `webcompy/app/_root_component.py` and `webcompy/app/_app.py` to restore t
   - Parse its content using `deserialize_payload()`
   - If the payload is valid:
     - Call `browser_fetch_port.populate_from_transfer(payload.fetches)` to populate the fetch cache
-    - Set a module-level or app-level reference to `payload.async_results` for `AsyncResult` restoration
+    - Provide `payload.async_results` via DI (`HYDRATION_DATA_KEY`) in the root DI scope so `AsyncResult` instances can inject it during component setup
   - If the payload is missing or invalid, proceed with an empty payload
   - Remove the `<script>` element from the DOM after reading (to free memory)
 - During component setup, `useAsyncResult` checks the transfer payload for a matching component ID

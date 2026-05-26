@@ -50,13 +50,15 @@ This synchronous design prevents:
 ```python
 async def _render(self):
     await super()._render()
-    await asyncio.gather(*[child._render() for child in self._children])
+    results = await asyncio.gather(*[child._render() for child in self._children], return_exceptions=True)
     if (node := self._get_node()) is not None:
         for _ in range(node.childNodes.length - self._children_length):
             node.childNodes[-1].remove()
+    if errors := [r for r in results if isinstance(r, BaseException)]:
+        raise errors[0]  # Re-raise the first exception after all siblings complete
 ```
 
-**Rationale**: In the synchronous version, children are rendered sequentially. With async rendering, `asyncio.gather()` allows sibling children to render concurrently. This is safe because each child operates on its own DOM subtree. DOM mutations are sequential within a single child but independent across siblings. In the browser (Emscripten), `asyncio.gather()` still executes coroutines cooperatively on a single thread, so there are no race conditions on the DOM. On the server (SSG), this enables future I/O-bound parallelism.
+**Rationale**: In the synchronous version, children are rendered sequentially. With async rendering, `asyncio.gather(return_exceptions=True)` allows sibling children to render concurrently without cancelling siblings if one raises. Exceptions are collected and the first is re-raised after all siblings complete, preventing the DOM from being left in a partially rendered state. In the browser (Emscripten), `asyncio.gather()` still executes coroutines cooperatively on a single thread, so there are no race conditions on the DOM. On the server (SSG), this enables future I/O-bound parallelism.
 
 **Trade-off**: `asyncio.gather()` does not guarantee ordering of coroutine start, but it does guarantee ordering of results. Since DOM child indices are pre-assigned (`_node_idx`) and mounting uses `insertBefore` at specific positions, rendering order is determined by `_node_idx`, not execution order. This means sibling parallelism is safe.
 
@@ -101,14 +103,16 @@ async def _render(self):
 
 ### Decision 5: `AppDocumentRoot._render()` becomes async
 
-**Chosen** (pseudo-code showing the pattern; `_active_app_context` SHALL reference the `RenderContext` instance when SSR context is active, per `architecture` spec):
+**Chosen** (pseudo-code showing the pattern):
 
 ```python
 async def _render(self):
     token = _active_di_scope.set(self._di_scope)
-    app_token = _active_app_context.set(self._app) if self._app else None
-    # In SSR environments, _active_app_context references the RenderContext;
-    # in the browser, it falls back to the WebComPyApp for deferred callback access.
+    render_ctx_token = _active_app_context.set(self._render_context) if self._render_context else None
+    # _active_app_context always references the RenderContext (per render-context/spec.md).
+    # In the browser, ContextVar bindings may be lost in JS→Python callbacks;
+    # the fallback for those scenarios uses _app_instance_global (per architecture/spec.md),
+    # not _active_app_context.
     try:
         on_before = self._property["on_before_rendering"]
         if iscoroutinefunction(on_before):
@@ -129,8 +133,8 @@ async def _render(self):
         # ... rest (profile, loading removal, etc.) ...
     finally:
         if ENVIRONMENT != "pyscript":
-            if app_token is not None:
-                _active_app_context.reset(app_token)
+            if render_ctx_token is not None:
+                _active_app_context.reset(render_ctx_token)
             _active_di_scope.reset(token)
 ```
 

@@ -73,10 +73,11 @@ The `_pending_async_template` coroutine SHALL be set on the component during `__
 #### Scenario: Suspense boundary resolves async children before Component._render()
 - **WHEN** an async component is a descendant of `SuspenseElement`
 - **AND** `SuspenseElement._render()` is called
-- **THEN** Suspense SHALL traverse the tree to find all `Component._pending_async_template` coroutines
+- **THEN** Suspense SHALL provide a DI-scoped flag (`SUSPENSE_RESOLVING_KEY: InjectKey[bool]`) set to `True`
+- **AND** Suspense SHALL traverse the tree to find all `Component._pending_async_template` coroutines
 - **AND** Suspense SHALL `await asyncio.gather(*coroutines)` to resolve them in parallel
 - **AND** after resolution, Suspense SHALL call `Component._render()` on each resolved component
-- **AND** `Component._render()` SHALL find `_pending_async_template` is already `None` and skip the await
+- **AND** `Component._render()` SHALL check `inject(SUSPENSE_RESOLVING_KEY)` and skip the await when `_pending_async_template` is already `None`
 - **AND** fallback SHALL be replaced with children content
 
 #### Scenario: Async component without Suspense resolves in own _render()
@@ -128,10 +129,13 @@ If the `await self._pending_async_template` in `_render()` raises, the exception
 
 #### Scenario: Async setup raises an exception
 - **WHEN** an async component's setup function raises (e.g., `await fetch()` throws)
-- **THEN** the exception SHALL propagate to the caller of `_render()`
+- **THEN** the `try/except` block in `Component._render()` SHALL catch the exception
+- **AND** `self._remove_element()` SHALL be called to clean up any partially mounted DOM nodes
+- **AND** the exception SHALL propagate to the caller of `_render()` for parent-level error handling
 - **AND** the effect scope SHALL be disposed (from `__setup__`'s `finally`)
 - **AND** the DI child scope SHALL be disposed (from `__setup__`'s `finally`)
 - **AND** no resource leak SHALL occur
+- **AND** no partially rendered nodes SHALL remain in the DOM
 
 ### Requirement: define_component decorator shall preserve async def
 

@@ -8,7 +8,9 @@ Enable WebComPy components to fetch data from their own application's API endpoi
 
 ### Requirement: FetchPort shall classify URLs as self-site or external
 
-`FetchPort` SHALL provide an `is_self_site_url(url)` method that determines whether a URL refers to the same application (self-site) or an external resource. URLs starting with `/` (absolute path) or `.` (relative path) SHALL be classified as self-site. All other URLs SHALL be classified as external.
+`FetchPort` SHALL provide a non-abstract `is_self_site_url(url)` method with a default implementation returning `False`. This ensures backward compatibility with existing `FetchPort` implementations (including `BrowserFetchPort` and custom ports) that don't need self-site routing. URLs starting with `/` (absolute path) or `.` (relative path) SHALL be classified as self-site. All other URLs SHALL be classified as external.
+
+Relative URLs starting with `.` SHALL be resolved against `base_url` root, not the current route path. For example, with `base_url="/myapp/"`, a fetch to `./api/data` resolves to `/myapp/api/data`.
 
 #### Scenario: Classifying an absolute path URL
 - **WHEN** `fetch_port.is_self_site_url("/api/users")` is called

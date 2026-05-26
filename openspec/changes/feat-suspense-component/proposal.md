@@ -46,6 +46,8 @@ Developers need a `Suspense` component that:
 ## Dependency
 
 - **Requires** `feat/async-rendering-pipeline` — async `_render()` and async component setup are prerequisites for `Suspense` to await async operations.
+- **Requires** `feat/async-component-setup` — `_pending_async_template` tree traversal is used for async detection.
+- **Requires** `feat/hydration-data-transfer` — Suspense hydration checks the transfer payload to determine whether children async data was resolved during SSR.
 
 ## Impact
 

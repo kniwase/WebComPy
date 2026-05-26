@@ -190,11 +190,22 @@ During browser initialization, `AsyncResult` instances SHALL check the transfer 
 - **THEN** the response SHALL be cached under the key `"/api/users"` (method defaults to GET)
 - **AND** subsequent calls to `fetch("/api/users")` SHALL return the cached response
 
-#### Scenario: Caching a self-site POST response
-- **WHEN** `ServerFetchPort.fetch("/api/submit", method="POST", body='{"name": "Bob"}')` is called during SSR
-- **THEN** the response SHALL be cached under a key that includes the method and body
-- **AND** `fetch("/api/submit", method="POST", body='{"name": "Bob"}')` SHALL return the cached response
+#### Scenario: Caching a self-site POST response with dict body
+- **WHEN** `ServerFetchPort.fetch("/api/submit", method="POST", body={"name": "Bob"})` is called during SSR
+- **THEN** the response SHALL be cached under the key `POST:/api/submit:{"name":"Bob"}` (json.dumps with sort_keys)
+- **AND** `fetch("/api/submit", method="POST", body={"name": "Bob"})` SHALL return the cached response
 - **AND** `fetch("/api/submit")` (GET) SHALL NOT return the cached POST response
+
+#### Scenario: Unknown type tag during deserialization
+- **WHEN** the transfer payload contains an unrecognized type tag (e.g., `{"__custom__": "value"}`)
+- **THEN** the dict SHALL be left as-is without tag removal (passed through as a plain dict)
+- **AND** a warning SHALL be logged indicating the unknown type tag
+
+#### Scenario: Known type tag with invalid data
+- **WHEN** the transfer payload contains a known type tag with malformed data (e.g., `{"__datetime__": "not-a-datetime"}`)
+- **THEN** the entry SHALL be treated as a regular dict (not deserialized to the target type)
+- **AND** a warning SHALL be logged identifying the malformed entry
+- **AND** the component SHALL follow the normal lifecycle (no crash)
 
 #### Scenario: Collecting the response cache
 - **WHEN** `server_fetch_port.get_transfer_data()` is called after SSR rendering

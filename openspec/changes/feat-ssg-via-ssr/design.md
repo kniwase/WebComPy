@@ -215,29 +215,32 @@ asyncio.run(generate_static_site())
 
 **Rationale**: `asyncio.run()` is the standard way to run async code from a synchronous entry point. Since `generate_static_site()` is called from the CLI (which is synchronous), we need this wrapper. The function remains callable from Python code via `await generate_static_site(app)` or `asyncio.run(generate_static_site(app))`.
 
-### Decision 7: Hash mode SSR — async pre-render with caching
+### Decision 7: Hash mode SSR — async pre-render with caching, separate from create_asgi_app()
 
-**Chosen**: For hash mode apps (no history routing), `create_asgi_app()` pre-renders the HTML once at startup by awaiting `html_generator()` and caches the result. The `send_html()` handler returns the cached HTML without awaiting on each request.
+**Chosen**: For hash mode apps (no history routing), `create_asgi_app()` remains synchronous and creates the ASGI app. A separate async function `_pre_render_hash_mode_html(app)` is called after `create_asgi_app()` returns. It enters the DI scope, sets the path to `/`, awaits `html_generator()`, and caches the result. The `send_html()` handler returns the cached HTML without awaiting on each request.
 
 ```python
-# In create_asgi_app() for hash mode:
+# In _pre_render_hash_mode_html():
 with app.di_scope:
     app.set_path("/")
-    html = await html_generator()  # Pre-render once
+    cached_html = await html_generator()  # Pre-render once
 
-async def send_html(_: Request):
-    return HTMLResponse(html)
+def create_asgi_app(app, build_config, mode="dev"):  # synchronous
+    if app.router_mode == "hash":
+        html = None  # Will be set after async pre-render
+        async def send_html(_: Request):
+            return HTMLResponse(html)
+    # ... rest ...
+    return Starlette(...)
 ```
 
-**Rationale**: Hash mode apps serve the same HTML for all requests. Pre-rendering once at startup avoids redundant rendering. The async pre-render happens during `create_asgi_app()`, which itself may need to become async or use `asyncio.run()` at the call site.
+**Rationale**: `uvicorn.run()` expects a synchronous ASGI app factory. Making `create_asgi_app()` async forces all callers (`run_server()`, `generate_static_site()`) to use `asyncio.run()` or `await`, which is unnecessary complexity for the common history-mode case. Separating hash-mode pre-rendering into a standalone function keeps the ASGI app creation simple and synchronous.
 
-**Impact on `create_asgi_app()`**: Since `create_asgi_app()` now needs to await `html_generator()` for hash mode, it becomes `async def create_asgi_app()`. Callers (`run_server()` and `generate_static_site()`) must await it. The CLI entry point for `run_server()` uses `asyncio.run()` or `uvicorn.run()` handles the event loop.
+### Decision 8: CLI entry point — `run_server()` stays synchronous
 
-### Decision 8: CLI entry point for async generate
+**Chosen**: The `webcompy start` CLI command calls `create_asgi_app()` synchronously. For hash mode, it calls `asyncio.run(_pre_render_hash_mode_html(app))` after creation. For `webcompy generate`, the CLI calls `asyncio.run(generate_static_site())`.
 
-**Chosen**: The `webcompy generate` CLI command calls `asyncio.run(generate_static_site())`. The `webcompy start` CLI command creates the ASGI app synchronously (the app itself is async via Starlette, so `uvicorn.run()` manages the event loop).
-
-**Rationale**: `asyncio.run()` is the correct way to run async code from a synchronous context. The dev server doesn't need this because `uvicorn.run()` handles the event loop.
+**Rationale**: `run_server()` calls `uvicorn.run()` which manages its own event loop. `asyncio.run()` is only needed for the one-time hash-mode pre-render, not for creating the ASGI app itself.
 
 ## Risks / Trade-offs
 

@@ -70,7 +70,7 @@ However, developers still need a way to:
 
 ### D5: Timeout with fallback on expiry
 
-**Decision**: `Suspense` accepts an optional `timeout` parameter (default: 30 seconds). If children's async operations don't complete within the timeout, fallback content is rendered instead. This applies primarily to the server environment.
+**Decision**: `Suspense` accepts an optional `timeout` parameter (default: 10 seconds).
 
 **Alternatives considered**:
 - No timeout (wait forever): Could hang SSG builds indefinitely.
