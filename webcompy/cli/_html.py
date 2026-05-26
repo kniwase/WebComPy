@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import html as html_module
 import json
-from typing import TypeAlias, cast
+from typing import TYPE_CHECKING, TypeAlias, cast
 
-from webcompy.app._app import WebComPyApp
 from webcompy.app._config import PluginScript
-from webcompy.components._component import Component
+from webcompy.components._component import Component, _active_app_context, _set_app_instance
 from webcompy.di import inject
 from webcompy.elements.typealias import ElementChildren
 from webcompy.elements.types import Element
 from webcompy.elements.types._base import ElementWithChildren
 from webcompy.ports._keys import DOM_PORT_KEY
+
+if TYPE_CHECKING:
+    from webcompy.app._render_context import RenderContext
 
 Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]
 
@@ -174,7 +176,7 @@ def _render_plugin_script(ps: PluginScript) -> _HtmlElement:
 
 
 def generate_html(
-    app: WebComPyApp,
+    ctx: RenderContext,
     app_package_name: str,
     dev_mode: bool,
     prerender: bool,
@@ -186,10 +188,45 @@ def generate_html(
     runtime_serving: str = "cdn",
     extra_wheel_filenames: list[str] | None = None,
 ):
-    base_url = app.config.base_url
-    selector_id = app.config.selector.lstrip("#")
+    token = _active_app_context.set(ctx)
+    _set_app_instance(ctx)
+    try:
+        return _generate_html_impl(
+            ctx,
+            app_package_name,
+            dev_mode,
+            prerender,
+            app_version,
+            wheel_filename,
+            pyodide_package_names,
+            wasm_local_urls,
+            lockfile_url,
+            runtime_serving,
+            extra_wheel_filenames,
+        )
+    finally:
+        _active_app_context.reset(token)
+        _set_app_instance(None)
+
+
+def _generate_html_impl(
+    ctx: RenderContext,
+    app_package_name: str,
+    dev_mode: bool,
+    prerender: bool,
+    app_version: str,
+    wheel_filename: str,
+    pyodide_package_names: list[str] | None = None,
+    wasm_local_urls: dict[str, str] | None = None,
+    lockfile_url: str | None = None,
+    runtime_serving: str = "cdn",
+    extra_wheel_filenames: list[str] | None = None,
+):
+    app = ctx._app
+    base_url = ctx.config.base_url
+    selector_id = ctx.config.selector.lstrip("#")
     app_root = (
-        app._root
+        ctx._root
         if prerender
         else _HtmlElement(
             "div",
@@ -237,21 +274,21 @@ def generate_html(
         quote=True,
     )
     py_script_lines: list[str] = []
-    if app.config.profile:
+    if ctx.config.profile:
         py_script_lines.append("import time")
         py_script_lines.append("_pyscript_ready = time.perf_counter()")
     py_script_lines.append(f"from {app_package_name}.app import app")
-    if app.config.profile:
+    if ctx.config.profile:
         py_script_lines.append('app._profile_data["pyscript_ready"] = _pyscript_ready')
     py_script_lines.append("app.run()")
     py_script = "\n".join(py_script_lines)
     app_loader_html = f'<script type="py" config="{py_config}">\n{py_script}\n</script>'
 
-    scripts_head.extend(app.head["script"])
-    scripts_body.extend(app.scripts)
+    scripts_head.extend(ctx.head["script"])
+    scripts_body.extend(ctx.scripts)
     plugin_head_scripts: list[_HtmlElement] = []
     plugin_body_scripts: list[_HtmlElement] = []
-    for ps in app.config.scripts:
+    for ps in ctx.config.scripts:
         (plugin_head_scripts if ps.in_head else plugin_body_scripts).append(_render_plugin_script(ps))
     for ps in app._plugin_manager.scripts:
         (plugin_head_scripts if ps.in_head else plugin_body_scripts).append(_render_plugin_script(ps))
@@ -261,22 +298,22 @@ def generate_html(
                 {"type": "text/javascript"},
                 " ".join(
                     (
-                        f"var stream = new EventSource('{app.config.base_url}_webcompy_reload');",
+                        f"var stream = new EventSource('{ctx.config.base_url}_webcompy_reload');",
                         "stream.addEventListener('error', (e) => window.location.reload());",
                     )
                 ),
             )
         )
 
-    head_content_html = app._root._head_element.get_head_content_html()
+    head_content_html = ctx._root._head_element.get_head_content_html()
 
     html_output = "<!doctype html>" + _HtmlElement(
         "html",
-        app._root.html_attrs,
+        ctx._root.html_attrs,
         _HtmlElement(
             "head",
             {},
-            _HtmlElement("base", {"href": app.config.base_url}),
+            _HtmlElement("base", {"href": ctx.config.base_url}),
             _HtmlElement(
                 "link",
                 {"rel": "stylesheet", "href": core_css_url},

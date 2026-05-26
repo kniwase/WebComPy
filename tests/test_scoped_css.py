@@ -17,60 +17,60 @@ class TestScopedCssSSGOutput:
         from my_app.pages.scoped_style import ScopedStylePage
 
         from webcompy.app import WebComPyApp, WebComPyAppConfig
-        from webcompy.cli._html import generate_html
         from webcompy.router import Router
+        from webcompy.testing import render_app_html
 
         router = Router({"path": "/scoped", "component": ScopedStylePage}, mode="history")
         app = WebComPyApp(root_component=ScopedStylePage, router=router, config=WebComPyAppConfig(base_url="/"))
-        with app.di_scope:
-            html_str = generate_html(
-                app,
-                app_package_name="test",
-                dev_mode=False,
-                prerender=True,
-                app_version="0+sha.test",
-                wheel_filename="test-0+sha.test-py3-none-any.whl",
-            )
+        html_str = render_app_html(
+            app,
+            path="/scoped",
+            app_package_name="test",
+            dev_mode=False,
+            prerender=True,
+            app_version="0+sha.test",
+            wheel_filename="test-0+sha.test-py3-none-any.whl",
+        )
         assert 'data-webcompy-cid="' in html_str
 
     def test_hidden_rule_present_in_html(self):
         from my_app.pages.scoped_style import ScopedStylePage
 
         from webcompy.app import WebComPyApp, WebComPyAppConfig
-        from webcompy.cli._html import generate_html
         from webcompy.router import Router
+        from webcompy.testing import render_app_html
 
         router = Router({"path": "/scoped", "component": ScopedStylePage}, mode="history")
         app = WebComPyApp(root_component=ScopedStylePage, router=router, config=WebComPyAppConfig(base_url="/"))
-        with app.di_scope:
-            html_str = generate_html(
-                app,
-                app_package_name="test",
-                dev_mode=False,
-                prerender=True,
-                app_version="0+sha.test",
-                wheel_filename="test-0+sha.test-py3-none-any.whl",
-            )
+        html_str = render_app_html(
+            app,
+            path="/scoped",
+            app_package_name="test",
+            dev_mode=False,
+            prerender=True,
+            app_version="0+sha.test",
+            wheel_filename="test-0+sha.test-py3-none-any.whl",
+        )
         assert "*[hidden]{display: none;}" in html_str
 
     def test_scoped_css_not_present_for_no_style_component(self):
         from my_app.pages.home import HomePage
 
         from webcompy.app import WebComPyApp, WebComPyAppConfig
-        from webcompy.cli._html import generate_html
         from webcompy.router import Router
+        from webcompy.testing import render_app_html
 
         router = Router({"path": "/", "component": HomePage}, mode="history")
         app = WebComPyApp(root_component=HomePage, router=router, config=WebComPyAppConfig(base_url="/"))
-        with app.di_scope:
-            html_str = generate_html(
-                app,
-                app_package_name="test",
-                dev_mode=False,
-                prerender=True,
-                app_version="0+sha.test",
-                wheel_filename="test-0+sha.test-py3-none-any.whl",
-            )
+        html_str = render_app_html(
+            app,
+            path="/",
+            app_package_name="test",
+            dev_mode=False,
+            prerender=True,
+            app_version="0+sha.test",
+            wheel_filename="test-0+sha.test-py3-none-any.whl",
+        )
         assert 'data-webcompy-cid="' not in html_str
 
 

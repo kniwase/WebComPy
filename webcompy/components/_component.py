@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from contextvars import ContextVar
-from typing import Any, TypeAlias, TypeGuard
+from typing import TYPE_CHECKING, Any, TypeAlias, TypeGuard
 from uuid import UUID, uuid4
 
 from webcompy.components._hooks import _active_component_context
@@ -13,7 +13,10 @@ from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
 from webcompy.signal import ReactiveDict, computed_property
 
-_active_app_context: ContextVar[Any] = ContextVar("_active_app_context", default=None)
+if TYPE_CHECKING:
+    from webcompy.app._render_context import RenderContext
+
+_active_app_context: ContextVar[RenderContext | None] = ContextVar("_active_app_context", default=None)
 
 _app_instance: Any = None
 
@@ -168,7 +171,7 @@ class Component(ElementBase):
         self._property["on_before_rendering"]()
         super()._render()
         after_rendering = self._property["on_after_rendering"]
-        app = _active_app_context.get()
+        app = _active_app_context.get() or _get_app_instance()
         if app is not None and app._defer_depth > 0:
             app._deferred_callbacks.append(after_rendering)
         else:

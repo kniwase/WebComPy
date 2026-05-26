@@ -183,6 +183,13 @@ class HeadElement(ElementWithChildren):
             if html_el:
                 html_el.removeAttribute(key)
 
+    def _cleanup_consumers(self):
+        from webcompy.signal._graph import consumer_destroy
+
+        for consumer in self._callback_consumers.values():
+            consumer_destroy(consumer)
+        self._callback_consumers.clear()
+
     @property
     def html_attrs(self) -> dict[str, str]:
         return {k: (v.value if isinstance(v, Computed) else v) for k, v in self._html_attrs.items()}

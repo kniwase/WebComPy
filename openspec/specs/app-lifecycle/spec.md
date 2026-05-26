@@ -7,7 +7,7 @@ The application lifecycle defines how a WebComPy application starts, runs, and s
 ## Requirements
 
 ### Requirement: The application shall provide a browser entry point via app.run()
-In the browser (PyScript) environment, `app.run(selector)` SHALL mount and render the application into the DOM element matching the given CSS selector. The `selector` parameter SHALL default to `"#webcompy-app"` for backward compatibility. Calling `run()` in a non-PyScript (server) environment SHALL raise `WebComPyException`. In the browser, the DI scope SHALL be activated at `WebComPyApp` creation time via `__enter__()` without `__exit__()` (i.e., the scope remains active for the app's lifetime). In the server environment, the scope SHALL be entered/exited per-operation via `with app.di_scope:`.
+In the browser (PyScript) environment, `app.run(selector)` SHALL mount and render the application into the DOM element matching the given CSS selector. Calling `run()` in a non-PyScript (server) environment SHALL raise `WebComPyException`. `app.run()` SHALL internally create a single `RenderContext` via `create_render_context()`, which owns the DI scope, Router, AppDocumentRoot, and all rendering state. The `RenderContext`'s DI scope SHALL remain active for the app's lifetime. `on_render_context_init(ctx)` and `on_app_ready(ctx)` SHALL be called on plugins before the first render.
 
 #### Scenario: Running an app with profiling enabled
 - **WHEN** a developer creates `WebComPyApp(..., profile=True)` and calls `app.run()` in the browser
@@ -71,6 +71,20 @@ In the browser (PyScript) environment, `app.run(selector)` SHALL mount and rende
 - **WHEN** a developer calls `app.run("#nonexistent")` and no element matches
 - **THEN** a `WebComPyException` SHALL be raised indicating the mount point was not found
 
+### Requirement: The application shall create a RenderContext per request on the server
+On the server, `app.create_render_context(path)` SHALL create a fresh `RenderContext` for each SSR request. The `RenderContext` SHALL own all mutable rendering state: DI scope, Router, AppDocumentRoot, HeadPropsStore, Signal graph state, and deferred rendering state. After rendering, `RenderContext.dispose()` SHALL clean up all request-scoped resources. In the browser, `app.run()` SHALL internally create a single long-lived `RenderContext`.
+
+#### Scenario: Per-request RenderContext on the server
+- **WHEN** `create_asgi_app(app)` serves multiple HTTP requests
+- **THEN** each request SHALL create a new `RenderContext` via `app.create_render_context(path)`
+- **AND** no mutable state from one request SHALL leak into another
+- **AND** `RenderContext.dispose()` SHALL be called after HTML is generated
+
+#### Scenario: Single RenderContext in the browser
+- **WHEN** `app.run()` is called in the browser
+- **THEN** a single `RenderContext` SHALL be created internally
+- **AND** the `RenderContext` SHALL remain active for the entire browser session
+
 ### Requirement: The server entry point shall be a module-level function
 Server-side entry points SHALL be module-level functions (`create_asgi_app`, `run_server`) that accept a `WebComPyApp` instance and optional typed config dataclasses (`create_asgi_app(app, server_config=None)`). Dev mode is no longer a separate parameter — it is controlled by `ServerConfig.dev`. This avoids importing server-only dependencies (starlette, uvicorn) in the browser environment. Internally, CLI functions read `AppConfig` from `app.config` and pass `ServerConfig`/`GenerateConfig` as separate arguments; there is no conversion between config types.
 
@@ -123,7 +137,7 @@ Static site generation SHALL use a module-level function (`generate_static_site`
 - **AND** `generate_config` SHALL be read from `webcompy_server_config.py` (searched in the app package first when `--app` is used, then at the project root)
 
 ### Requirement: WebComPyApp shall forward AppDocumentRoot properties
-`WebComPyApp` SHALL provide transparent access to frequently used `AppDocumentRoot` properties. The following properties and methods SHALL be forwarded: `routes`, `router_mode`, `set_path`, `head`, `scoped_styles`, `scripts`, `set_title`, `set_meta`, `append_link`, `append_script`, `set_head`, `update_head`. The `style` forwarding property SHALL be removed (replaced by `scoped_styles`).
+`WebComPyApp` SHALL provide transparent access to frequently used `AppDocumentRoot` properties when a `RenderContext` exists. The following properties and methods SHALL be forwarded: `routes`, `router_mode`, `set_path`, `head`, `scoped_styles`, `scripts`, `set_title`, `set_meta`, `append_link`, `append_script`, `set_head`, `update_head`, `set_html_attr`, `remove_html_attr`, `html_attrs`. When no `RenderContext` exists, these SHALL raise `AttributeError`. `app.di_scope` SHALL delegate to `RenderContext.di_scope` when a `RenderContext` exists, and raise `AttributeError` otherwise.
 
 #### Scenario: Accessing app routes
 - **WHEN** a developer accesses `app.routes`

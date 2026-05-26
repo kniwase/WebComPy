@@ -277,12 +277,11 @@ def create_asgi_app(
 
     html_generator = partial(
         generate_html,
-        app,
-        build_config.app_package_path.name,
-        build_config.server.dev,
-        True,
-        app_version,
-        app_wheel_filename,
+        app_package_name=build_config.app_package_path.name,
+        dev_mode=build_config.server.dev,
+        prerender=True,
+        app_version=app_version,
+        wheel_filename=app_wheel_filename,
         pyodide_package_names=wasm_package_names + cdn_pure_python_names,
         wasm_local_urls=wasm_local_urls or None,
         lockfile_url=lockfile_url,
@@ -297,23 +296,25 @@ def create_asgi_app(
     if app.router_mode == "history" and app.routes:
 
         async def send_html(request: Request):  # type: ignore
-            with app.di_scope:
-                path: str = request.path_params.get("path", "")  # type: ignore
-                requested_path = base_url_stripper(path).strip("/")
-                accept_types: list[str] = request.headers.get("accept", "").split(",")
-                routes = r if (r := app.routes) else []
-                is_matched = truth(tuple(filter(lambda r: r[1](requested_path), routes)))
-                if is_matched or "text/html" in accept_types:
-                    app.set_path(requested_path)
-                    return HTMLResponse(html_generator())
-                else:
-                    raise HTTPException(404)
+            path: str = request.path_params.get("path", "")  # type: ignore
+            requested_path = base_url_stripper(path).strip("/")
+            accept_types: list[str] = request.headers.get("accept", "").split(",")
+            routes = r if (r := app.routes) else []
+            is_matched = truth(tuple(filter(lambda r: r[1](requested_path), routes)))
+            if is_matched or "text/html" in accept_types:
+                ctx = app.create_render_context(requested_path)
+                try:
+                    return HTMLResponse(html_generator(ctx))
+                finally:
+                    ctx.dispose()
+            else:
+                raise HTTPException(404)
 
         html_route = Route("/{path:path}", send_html)
     else:
-        with app.di_scope:
-            app.set_path("/")
-            html = html_generator()
+        ctx = app.create_render_context("/")
+        html = html_generator(ctx)
+        ctx.dispose()
 
         async def send_html(_: Request):  # type: ignore
             return HTMLResponse(html)

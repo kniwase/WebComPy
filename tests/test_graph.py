@@ -16,7 +16,6 @@ from webcompy.signal._graph import (
     producer_add_live_consumer,
     producer_notify_consumers,
     producer_remove_live_consumer_link,
-    reset_graph_state,
     set_active_consumer,
 )
 
@@ -49,9 +48,9 @@ class SimpleConsumerNode(SignalNode):
 
 @pytest.fixture(autouse=True)
 def reset_state():
-    reset_graph_state()
+    set_active_consumer(None)
     yield
-    reset_graph_state()
+    set_active_consumer(None)
 
 
 class TestGlobalState:
@@ -72,18 +71,17 @@ class TestGlobalState:
         assert prev is node1
         assert get_active_consumer() is node2
 
-    def test_reset_graph_state(self):
+    def test_set_active_consumer_none(self):
         node = SimpleSignalNode()
         set_active_consumer(node)
-        increment_epoch()
-        reset_graph_state()
+        assert get_active_consumer() is node
+        set_active_consumer(None)
         assert get_active_consumer() is None
 
     def test_increment_epoch(self):
         e1 = increment_epoch()
-        assert e1 == 1
         e2 = increment_epoch()
-        assert e2 == 2
+        assert e2 == e1 + 1
 
 
 class TestProducerConsumerEdges:
