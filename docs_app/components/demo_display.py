@@ -38,7 +38,7 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
         load()
 
     return html.DIV(
-        {},
+        {"class": "demo-display-root"},
         html.DIV(
             {"class": "card"},
             html.DIV(
@@ -71,6 +71,9 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
 
 
 DemoDisplay.scoped_style = {
+    ".demo-display-root": {
+        "padding-top": "1rem",
+    },
     ".card-title": {
         "padding-bottom": "8px",
         "border-bottom": "1px solid #dee2e6",
