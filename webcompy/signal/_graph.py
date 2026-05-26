@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextvars import ContextVar
 
 _active_consumer_cv: ContextVar[SignalNode | None] = ContextVar("_active_consumer_cv", default=None)
-_in_notification_phase_cv: ContextVar[bool | None] = ContextVar("_in_notification_phase_cv", default=None)
+_in_notification_phase_cv: ContextVar[bool] = ContextVar("_in_notification_phase_cv", default=False)
 _active_consumer_global: SignalNode | None = None
 _in_notification_phase_global: bool = False
 _epoch: int = 0

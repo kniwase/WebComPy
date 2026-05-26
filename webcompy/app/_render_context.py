@@ -59,6 +59,9 @@ class RenderContext:
         self._di_scope.__enter__()
         self._di_scope_token = self._di_scope._token
 
+        self._active_app_token = _active_app_context.set(self)
+        self._render_context_cv_token = app._render_context_cv.set(self)
+
         if ENVIRONMENT == "pyscript":
             _set_app_di_scope(self._di_scope)
             _set_app_instance(self)
@@ -162,12 +165,11 @@ class RenderContext:
         if self._disposed:
             return
         self._disposed = True
-        _active_app_context.set(None)
+        _active_app_context.reset(self._active_app_token)
+        self._app._render_context_cv.reset(self._render_context_cv_token)
         if ENVIRONMENT == "pyscript":
             _set_app_di_scope(None)
             _set_app_instance(None)
-        if self._app._render_context is self:
-            self._app._render_context = None
         if self._di_scope_token is not None and self._di_scope._token is None:
             _active_di_scope.reset(self._di_scope_token)
         self._di_scope_token = None

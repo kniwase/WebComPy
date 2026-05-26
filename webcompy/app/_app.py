@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, Literal
 
 from webcompy.app._config import WebComPyAppConfig
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
 class WebComPyApp:
     _config: WebComPyAppConfig
     _profile: bool
-    _render_context: RenderContext | None
+    _render_context_cv: ContextVar[RenderContext | None]
 
     def __init__(
         self,
@@ -28,7 +29,7 @@ class WebComPyApp:
         self._config = config or WebComPyAppConfig()
         self._profile = self._config.profile
         self._hydrate = self._config.hydrate
-        self._render_context = None
+        self._render_context_cv = ContextVar(f"_render_context_cv_{id(self)}", default=None)
         self._root_component_def = root_component
         self._router = router
         self._router_pages = router.__routes__ if router else None
@@ -49,18 +50,20 @@ class WebComPyApp:
 
     @property
     def profile_data(self) -> dict[str, float] | None:
-        if self._render_context is not None:
-            return self._render_context.profile_data
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.profile_data
         return None
 
     def _record_phase(self, name: str) -> None:
-        if self._render_context is not None:
-            self._render_context._record_phase(name)
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            ctx._record_phase(name)
 
     def _emit_profile_summary(self) -> None:
         if not self._profile:
             return
-        ctx = self._render_context
+        ctx = self._render_context_cv.get()
         if ctx is None:
             return
         data = ctx._profile_data
@@ -93,7 +96,7 @@ class WebComPyApp:
         from webcompy.app._render_context import RenderContext
 
         ctx = RenderContext(self, path)
-        self._render_context = ctx
+        self._render_context_cv.set(ctx)
         return ctx
 
     def _apply_deferred_ops(self, ctx: RenderContext) -> None:
@@ -102,16 +105,18 @@ class WebComPyApp:
 
     @property
     def di_scope(self):
-        if self._render_context is not None:
-            return self._render_context.di_scope
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.di_scope
         raise AttributeError(
             "WebComPyApp.di_scope is not available without a RenderContext. "
             "Use app.create_render_context(path) or call app.run() in the browser."
         )
 
     def provide(self, key: object, value: Any) -> None:
-        if self._render_context is not None:
-            self._render_context.provide(key, value)
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            ctx.provide(key, value)
             return
         self._deferred_ops.append(("provide", (key, value), {}))
 
@@ -121,19 +126,22 @@ class WebComPyApp:
 
     @property
     def routes(self):
-        if self._render_context is not None:
-            return self._render_context.routes
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.routes
         return self._router_pages
 
     @property
     def router_mode(self):
-        if self._render_context is not None:
-            return self._render_context.router_mode
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.router_mode
         return self._router_mode
 
     def set_path(self, path: str):
-        if self._render_context is not None:
-            return self._render_context.set_path(path)
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.set_path(path)
         if ENVIRONMENT == "pyscript":
             return None
         raise AttributeError(
@@ -143,35 +151,41 @@ class WebComPyApp:
 
     @property
     def head(self):
-        if self._render_context is not None:
-            return self._render_context.head
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.head
         raise AttributeError("WebComPyApp.head is not available without a RenderContext.")
 
     @property
     def scoped_styles(self):
-        if self._render_context is not None:
-            return self._render_context.scoped_styles
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.scoped_styles
         raise AttributeError("WebComPyApp.scoped_styles is not available without a RenderContext.")
 
     @property
     def scripts(self):
-        if self._render_context is not None:
-            return self._render_context.scripts
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.scripts
         raise AttributeError("WebComPyApp.scripts is not available without a RenderContext.")
 
     def set_title(self, title: str) -> None:
-        if self._render_context is not None:
-            return self._render_context.set_title(title)
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.set_title(title)
         self._deferred_ops.append(("set_title", (title,), {}))
 
     def set_meta(self, key: str, attributes: dict[str, str]) -> None:
-        if self._render_context is not None:
-            return self._render_context.set_meta(key, attributes)
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.set_meta(key, attributes)
         self._deferred_ops.append(("set_meta", (key, attributes), {}))
 
     def append_link(self, attributes: dict[str, str]) -> None:
-        if self._render_context is not None:
-            return self._render_context.append_link(attributes)
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.append_link(attributes)
         self._deferred_ops.append(("append_link", (attributes,), {}))
 
     def append_script(
@@ -180,34 +194,40 @@ class WebComPyApp:
         script: str | None = None,
         in_head: bool = False,
     ) -> None:
-        if self._render_context is not None:
-            return self._render_context.append_script(attributes, script, in_head)
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.append_script(attributes, script, in_head)
         self._deferred_ops.append(("append_script", (attributes, script, in_head), {}))
 
     def set_head(self, head: Any) -> None:
-        if self._render_context is not None:
-            return self._render_context.set_head(head)
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.set_head(head)
         self._deferred_ops.append(("set_head", (head,), {}))
 
     def update_head(self, head: Any) -> None:
-        if self._render_context is not None:
-            return self._render_context.update_head(head)
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.update_head(head)
         self._deferred_ops.append(("update_head", (head,), {}))
 
     def set_html_attr(self, key: str, value: Any) -> None:
-        if self._render_context is not None:
-            return self._render_context.set_html_attr(key, value)
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.set_html_attr(key, value)
         self._deferred_ops.append(("set_html_attr", (key, value), {}))
 
     def remove_html_attr(self, key: str) -> None:
-        if self._render_context is not None:
-            return self._render_context.remove_html_attr(key)
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.remove_html_attr(key)
         self._deferred_ops.append(("remove_html_attr", (key,), {}))
 
     @property
     def html_attrs(self):
-        if self._render_context is not None:
-            return self._render_context.html_attrs
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            return ctx.html_attrs
         raise AttributeError("WebComPyApp.html_attrs is not available without a RenderContext.")
 
     def run(self) -> None:
@@ -217,7 +237,6 @@ class WebComPyApp:
         from webcompy.components._component import _active_app_context, _set_app_instance
 
         ctx = self.create_render_context()
-        self._render_context = ctx
         _active_app_context.set(ctx)
         _set_app_instance(ctx)
         self._plugin_manager.call_on_app_ready(ctx)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from webcompy.components._generator import define_component
 from webcompy.testing import create_test_app
 
@@ -91,3 +93,43 @@ class TestRequestIsolation:
         for i, ctx in enumerate(contexts):
             assert ctx.head["title"].value == f"Page {i}"
             ctx.dispose()
+
+    def test_app_proxy_properties_not_corrupted_by_concurrent_contexts(self):
+        app = create_test_app(root_component=_IsolationRoot)
+
+        async def _with_context(path, lang):
+            ctx = app.create_render_context(path)
+            try:
+                app.set_html_attr("lang", lang)
+                app.set_title(f"Title {lang}")
+                assert app.html_attrs["lang"] == lang
+                assert ctx.head["title"].value == f"Title {lang}"
+                return lang
+            finally:
+                ctx.dispose()
+
+        async def _main():
+            results = await asyncio.gather(
+                _with_context("/ja", "ja"),
+                _with_context("/en", "en"),
+                _with_context("/fr", "fr"),
+            )
+            assert set(results) == {"ja", "en", "fr"}
+
+        asyncio.run(_main())
+
+    def test_create_render_context_not_corrupted_by_sequential_dispose(self):
+        app = create_test_app(root_component=_IsolationRoot)
+
+        ctx1 = app.create_render_context()
+        app.set_html_attr("lang", "ja")
+        ctx1.dispose()
+
+        ctx2 = app.create_render_context()
+        app.set_html_attr("lang", "en")
+        assert app.html_attrs["lang"] == "en"
+        ctx2.dispose()
+
+        ctx3 = app.create_render_context()
+        assert app.html_attrs == {}
+        ctx3.dispose()
