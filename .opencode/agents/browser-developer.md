@@ -9,7 +9,7 @@ permission:
     "webcompy/reactive/*": allow
     "webcompy/signal/*": allow
     "webcompy/router/*": allow
-    "webcompy/app/*": allow
+    "webcompy/app/*": allow  # Dual-environment code — also editable by server-developer
     "webcompy/_browser/*": allow
     "webcompy/ports/*": allow
     "!webcompy/ports/_server/*": deny

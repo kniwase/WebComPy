@@ -3,6 +3,9 @@ description: Develops UI component kits and docs_app components using WebComPy
 mode: subagent
 temperature: 0.2
 permission:
+  edit:
+    "docs_app/*": allow
+    ".workspace/*": allow
   bash:
     "*": ask
     "python -m webcompy *": allow

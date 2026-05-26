@@ -5,7 +5,7 @@ temperature: 0.1
 permission:
   edit:
     "webcompy/cli/*": allow
-    "webcompy/app/*": allow
+    "webcompy/app/*": allow  # Dual-environment code — also editable by browser-developer
     "webcompy/_browser/_modules.pyi": allow
     "webcompy/ports/_server/*": allow
     "webcompy/testing/*": allow
