@@ -28,7 +28,7 @@ Static site generation and the dev server currently use separate code paths to p
 
 ### Requirement: generate_html() shall be async (provided by async-rendering-pipeline)
 
-`generate_html()` SHALL be an `async def` function returning `Awaitable[str]`. This requirement is defined in `feat/async-rendering-pipeline` (`async-rendering/spec.md`). This change depends on that requirement and constrains its SSR/SSG callers.
+`generate_html()` SHALL be an `async def` function with the signature `async def generate_html(...) -> str`. Callers SHALL `await` the result. This requirement is defined in `feat/async-rendering-pipeline` (`async-rendering/spec.md`). This change depends on that requirement and constrains its SSR/SSG callers.
 
 #### Scenario: Calling generate_html() from send_html()
 - **WHEN** `send_html()` in `_server.py` needs to render HTML
@@ -102,7 +102,7 @@ Dependency resolution, lockfile handling, WASM/runtime asset management, and whe
 
 ### Requirement: create_asgi_app() shall remain synchronous; hash-mode pre-rendering shall be a separate step
 
-`create_asgi_app()` SHALL remain a synchronous function that returns an ASGI app. It SHALL NOT perform any async operations during construction. For hash-mode apps that need pre-rendered HTML cached at startup, a separate async function `_pre_render_hash_mode_html(app, html_generator)` SHALL be called after `create_asgi_app()` returns, producing the cached HTML that the hash-mode handler returns on every request. This separation keeps `create_asgi_app()` usable with `uvicorn.run()` (which expects a synchronous app factory) and avoids unnecessary async complexity for the common history-mode case.
+`create_asgi_app()` SHALL remain a synchronous function that returns an ASGI app. It SHALL NOT perform any async operations during construction. For hash-mode apps that need pre-rendered HTML cached at startup, a separate async function `_pre_render_hash_mode_html(app, html_generator)` SHALL be called after `create_asgi_app()` returns, producing the cached HTML that the hash-mode handler returns on every request. If `_pre_render_hash_mode_html()` raises an exception (e.g., due to a component rendering error during pre-rendering), the error SHALL propagate to the caller and the ASGI app SHALL NOT be started. This separation keeps `create_asgi_app()` usable with `uvicorn.run()` (which expects a synchronous app factory) and avoids unnecessary async complexity for the common history-mode case.
 
 #### Scenario: Creating an ASGI app for a hash-mode app
 - **WHEN** `create_asgi_app()` is called for a hash-mode app
@@ -120,6 +120,14 @@ Dependency resolution, lockfile handling, WASM/runtime asset management, and whe
 - **AND** for hash-mode, it SHALL call `asyncio.run(_pre_render_hash_mode_html(app))` after creation
 - **AND** the resolved ASGI app SHALL be passed to `uvicorn.run()` which expects a synchronous ASGI instance
 - **AND** `run_server()` SHALL remain a synchronous function
+
+#### Scenario: Hash-mode pre-rendering raises during component rendering
+- **WHEN** `_pre_render_hash_mode_html(app)` is called for a hash-mode app
+- **AND** a component raises during SSR (e.g., an async setup fails, or a blocked fetch triggers a 500)
+- **THEN** the error SHALL propagate to the caller
+- **AND** `run_server()` SHALL catch the exception and abort server startup
+- **AND** the ASGI app SHALL NOT be started
+- **AND** RenderContext SHALL be disposed via `finally` block before the exception propagates
 
 ### Requirement: generate_static_site() shall be async with asyncio.run() CLI wrapper
 `generate_static_site()` SHALL be an `async def` function. The CLI entry point SHALL call `asyncio.run(generate_static_site())`. Programmatic callers MAY use `await generate_static_site(app)` or `asyncio.run(generate_static_site(app))`.

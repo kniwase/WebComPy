@@ -119,13 +119,27 @@ During browser initialization, `BrowserFetchPort` SHALL read the transfer payloa
 
 ### Requirement: Component IDs shall be deterministically generated for transfer matching
 
-Component SHALL be assigned a deterministic `_component_id` based on the component's position in the element tree: the component type name, the depth in the tree, and the 0-indexed position among siblings at that depth. This hierarchical path SHALL produce the same ID when the same component tree is rendered on the server (SSR) and the browser (hydration), enabling reliable matching of `async_results` entries in the transfer payload to the correct `AsyncResult` instances.
+Component SHALL be assigned a deterministic `_component_id` at render time (during `_render()`) based on the component's position in the render tree. The `_component_id` is separate from the existing `_instance_id` (which is a UUID for instance identity) and is recomputed on each render to match the server-side tree structure. The `_component_id` formula SHALL be: `"<type_name>/<depth>/<sibling_index>"` where `type_name` is the component's class name, `depth` is the nesting level (0-indexed from root), and `sibling_index` is the 0-indexed position among siblings at that depth within the same parent. This hierarchical path SHALL produce the same ID when the same component tree is rendered on the server (SSR) and the browser (hydration), enabling reliable matching of `async_results` entries in the transfer payload to the correct `AsyncResult` instances.
+
+The `_component_id` SHALL be stored as a separate field (`_component_id: str | None`) on the `Component` class, distinct from `_instance_id`. It SHALL be computed during `_render()` (not `__init__()`) because the render tree position is only known once the component is placed in the tree. The ID is recomputed on each render cycle, so it reflects the current tree position. If the tree structure differs between SSR and browser hydration (e.g., conditional rendering, Suspense fallback changes), component IDs may not match, and `AsyncResult` transfer SHALL gracefully fall back to the normal lifecycle.
 
 #### Scenario: Same component tree produces same IDs on server and browser
 - **WHEN** a component tree is rendered during SSR, producing component IDs for `AsyncResult` entries
 - **AND** the same component tree is rendered during browser hydration
 - **THEN** each component's `_component_id` SHALL be identical in both environments
 - **AND** `async_results` entries in the transfer payload SHALL match the correct `AsyncResult` instances
+
+#### Scenario: _component_id is computed during _render() not __init__()
+- **WHEN** a `Component` is instantiated (before `_render()`)
+- **THEN** `_component_id` SHALL be `None`
+- **AND** during `_render()`, `_component_id` SHALL be computed from the component's current position in the render tree
+- **AND** `_component_id` SHALL be recomputed on each `_render()` call to reflect the current tree position
+
+#### Scenario: _component_id differs from _instance_id
+- **WHEN** a component is instantiated
+- **THEN** `_instance_id` SHALL be a UUID (random, unique per instance)
+- **AND** `_component_id` SHALL be a deterministic path-based string (e.g., `"MyPage/1/0"`)
+- **AND** `_component_id` SHALL be recomputed on each render while `_instance_id` SHALL remain stable for the instance lifetime
 
 #### Scenario: Component removal changes sibling indices for remaining components
 - **WHEN** a component tree has 3 siblings at depth 2 (indices 0, 1, 2)

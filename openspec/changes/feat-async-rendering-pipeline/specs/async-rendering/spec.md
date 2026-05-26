@@ -51,6 +51,8 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 
 `ElementWithChildren._render()` and `AppDocumentRoot._render()` SHALL use `asyncio.gather()` to render all child elements concurrently. Each child's `_render()` SHALL be scheduled as a separate coroutine. This enables future I/O-bound parallelism during SSG and structural clarity for the async pipeline.
 
+This is a behavioral change from the current sequential rendering pipeline. With sync rendering, children are processed one by one and an exception in child N aborts rendering immediately (children N+1 are never rendered). With `asyncio.gather(return_exceptions=True)`, ALL children render regardless of individual failures — after completion, the first exception is re-raised and `ElementWithChildren._render()` cleans up successfully rendered children via `_remove_element()` before re-raising. In the browser, `asyncio.gather()` provides structural clarity but not true parallelism; the parallel rendering benefit applies to SSG (CPython) only.
+
 #### Scenario: Rendering multiple sibling children
 - **WHEN** `ElementWithChildren._render()` is called with 3 children
 - **THEN** `asyncio.gather(child1._render(), child2._render(), child3._render())` SHALL be awaited
@@ -170,7 +172,7 @@ In the browser (PyScript) environment, `app.run()` SHALL schedule the async rend
 
 ### Requirement: Signal callbacks shall support async callables
 
-When an async callable is registered as a signal callback via `SignalBase.on_after_updating()`, the signal system SHALL schedule the callback via `aio_run()` (which uses `asyncio.ensure_future()` in the browser or `loop.create_task()` on the server). A utility function `_make_signal_callback()` SHALL wrap async callables for transparent scheduling.
+When an async callable is registered as a signal callback via `SignalBase.on_after_updating()`, the signal system SHALL schedule the callback via `aio_run()` (which uses `asyncio.ensure_future()` in the browser or `loop.create_task()` on the server). A utility function `_make_signal_callback()` SHALL wrap async callables for transparent scheduling. If an async signal callback raises an exception, the error SHALL be logged via the framework's error reporting mechanism (`webcompy.exception.report_error()`) and SHALL NOT crash the application.
 
 #### Scenario: Registering an async _refresh() as a signal callback
 - **WHEN** `RepeatElement._refresh()` is `async def` and registered via `self._sequence.on_after_updating(self._refresh)`

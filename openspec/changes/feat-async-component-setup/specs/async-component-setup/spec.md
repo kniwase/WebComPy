@@ -66,9 +66,29 @@ The coroutine SHALL be set on `self._pending_async_template` during `__init__()`
 - **AND** the component SHALL skip the two-phase init block
 - **AND** the component SHALL proceed directly to normal rendering
 
-### Requirement: Async component resolution shall be observable and Suspense-aware
+### Requirement: SUSPENSE_RESOLVING_KEY shall enable Suspense to own async resolution
 
-The `_pending_async_template` coroutine SHALL be set on the component during `__init__()` so it is observable via tree traversal **before any `_render()` is called**. When a component is wrapped in a `Suspense` boundary, `SuspenseElement._render()` SHALL own the resolution by traversing the element tree, collecting all pending `_pending_async_template` coroutines, awaiting them via `asyncio.gather()`, and then calling `Component._render()` on each resolved component. `Component._render()` SHALL detect whether it is being resolved by a Suspense ancestor and skip the await when `_pending_async_template` is already `None`.
+`SUSPENSE_RESOLVING_KEY` SHALL be defined as `InjectKey[bool]` in `webcompy/di/_keys.py`. It SHALL be provided with value `True` during `SuspenseElement._render()` (scoped to the Suspense subtree) and absent (`False` or not provided) in all other contexts. `Component._render()` SHALL inject `SUSPENSE_RESOLVING_KEY` and skip the await of `_pending_async_template` when its value is `True` and `_pending_async_template` is `None` (already resolved by Suspense). When the value is `False` or the key is not provided, `Component._render()` SHALL await `_pending_async_template` directly.
+
+The DI key SHALL be provided in the DI scope during `SuspenseElement._render()` before tree traversal, not in `__init__()`. For nested `Suspense` boundaries, each Suspense SHALL provide its own scope of `SUSPENSE_RESOLVING_KEY`, and descendant Components SHALL see the value from the nearest ancestor Suspense scope. After Suspense resolution completes, the Suspense-provided scope SHALL be disposed (via `finally` block), restoring the outer scope's value.
+
+#### Scenario: SUSPENSE_RESOLVING_KEY is True during Suspense._render()
+- **WHEN** `SuspenseElement._render()` is executing
+- **THEN** `SUSPENSE_RESOLVING_KEY` SHALL be provided as `True` in the DI scope
+- **AND** descendant `Component._render()` calls SHALL see `True` for this key
+- **AND** they SHALL skip awaiting `_pending_async_template`
+
+#### Scenario: SUSPENSE_RESOLVING_KEY is absent outside Suspense context
+- **WHEN** `Component._render()` is called without a Suspense ancestor
+- **THEN** `SUSPENSE_RESOLVING_KEY` SHALL be `False` or not present in the DI scope
+- **AND** `Component._render()` SHALL await `_pending_async_template` directly
+
+#### Scenario: Nested Suspense boundaries each provide their own scope
+- **WHEN** an inner `Suspense` boundary wraps an async component inside an outer `Suspense` boundary
+- **THEN** the inner `Suspense._render()` SHALL provide a new scope of `SUSPENSE_RESOLVING_KEY=True`
+- **AND** components inside the inner Suspense SHALL see `True`
+- **AND** after the inner Suspense completes, its scope SHALL be disposed
+- **AND** components in the outer Suspense (outside the inner one) SHALL see the outer scope's `True` value
 
 #### Scenario: Suspense boundary resolves async children before Component._render()
 - **WHEN** an async component is a descendant of `SuspenseElement`

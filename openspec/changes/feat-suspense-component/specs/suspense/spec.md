@@ -43,7 +43,10 @@ In the server environment (during static site generation or server-side renderin
 #### Scenario: SSR with async data that exceeds timeout
 - **WHEN** `Suspense` is rendered during SSG with `timeout=10`
 - **AND** the children's async operations do not complete within 10 seconds
-- **THEN** the generated HTML SHALL contain the fallback content
+- **THEN** pending async operations SHALL be cancelled via `asyncio.wait_for()`
+- **AND** partially-initialized components SHALL have `_remove_element()` called to clean up their DOM nodes
+- **AND** effect scopes for cancelled components SHALL be disposed
+- **AND** the generated HTML SHALL contain the fallback content
 - **AND** a warning SHALL be logged indicating the timeout was exceeded
 
 ### Requirement: Suspense shall show fallback then swap in browser environment
@@ -73,6 +76,8 @@ In the browser environment, `Suspense._render()` SHALL first render fallback con
 ### Requirement: Suspense shall accept a configurable timeout
 
 `Suspense` SHALL accept an optional `timeout` parameter (a `float` in seconds, default 10.0). This timeout applies to the server environment only — it determines how long `_render()` waits for async children before falling back. In the browser, the timeout has no effect (the fallback is shown indefinitely until children resolve or fail).
+
+When the SSR timeout expires, pending async operations SHALL be cancelled via `asyncio.wait_for()` task cancellation. Any partially-initialized components (with `_pending_async_template` still set) SHALL have `_remove_element()` called on them to prevent orphaned DOM nodes, and their effect scopes SHALL be disposed. The fallback content SHALL then be rendered in place of the cancelled children.
 
 #### Scenario: Custom timeout for slow data sources
 - **WHEN** a developer provides `Suspense(fallback=..., children=lambda: SlowComponent(), timeout=60.0)`
@@ -121,7 +126,11 @@ Suspense SHALL own the resolution: when it detects pending `_pending_async_templ
 
 ### Requirement: Suspense shall replace fallback with children during hydration
 
-When `SuspenseElement._hydrate_node()` is called in the browser, the server-rendered fallback DOM nodes SHALL be replaced with the actual children content. `_hydrate_node()` SHALL access the transfer payload **synchronously** via DI (`inject(HYDRATION_DATA_KEY)`) to determine whether children async data was pre-resolved during SSR. The DI-provided `HYDRATION_DATA_KEY` injection SHALL be available during the sync hydration phase because `app.run()` provides it before `create_render_context()` completes (per `feat-hydration-data-transfer`). If the transfer payload contains resolved `AsyncResult` data for the Suspense's children (checked via `has_resolved_data()` from the hydration module), `_hydrate_node()` SHALL synchronously mark the children's `_pending_async_template` as resolved (set to `None` and restore template from the cached component setup output in the transfer payload), then immediately render children. If no transfer data is present or the children's async setup is still unresolved, `_hydrate_node()` SHALL keep the fallback displayed, schedule async children resolution, and swap to children content when the async operations complete.
+When `SuspenseElement._hydrate_node()` is called in the browser, the server-rendered fallback DOM nodes SHALL be replaced with the actual children content. `_hydrate_node()` SHALL access the transfer payload **synchronously** via DI (`inject(HYDRATION_DATA_KEY)`) to determine whether children async data was pre-resolved during SSR. The DI-provided `HYDRATION_DATA_KEY` injection SHALL be available during the sync hydration phase because `app.run()` provides it before `create_render_context()` completes (per `feat-hydration-data-transfer`).
+
+If the transfer payload contains resolved `AsyncResult` data for the Suspense's children (checked via `has_resolved_data()` from the hydration module), `_hydrate_node()` SHALL call `__init_component()` **synchronously** with the cached template from the transfer payload, bypassing the `await` of `_pending_async_template`. Because the data is already available from SSR, no async resolution is needed — `_pending_async_template` SHALL be set to `None` and `__init_component()` SHALL be called directly with the resolved template. This is distinct from the browser-side `_render()` path where `_pending_async_template` is awaited.
+
+If no transfer data is present or the children's async setup is still unresolved, `_hydrate_node()` SHALL keep the fallback displayed, schedule async children resolution (via `asyncio.ensure_future(self._render())`), and swap to children content when the async operations complete.
 
 #### Scenario: Hydrating _hydrate_node() accesses transfer data synchronously via DI
 - **WHEN** `SuspenseElement._hydrate_node()` is called during browser hydration

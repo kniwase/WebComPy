@@ -37,6 +37,11 @@ Relative URLs starting with `.` SHALL be resolved against `base_url` root, not t
 - **THEN** self-site requests SHALL be routed through `httpx.ASGITransport` wrapping `asgi_app`
 - **AND** external requests SHALL continue to use the normal httpx client
 
+#### Scenario: Calling configure() multiple times
+- **WHEN** `configure()` is called more than once on the same `ServerFetchPort` instance
+- **THEN** the second call SHALL raise a `WebComPyException` indicating the fetch port is already configured
+- **AND** no state change SHALL occur (the original ASGI app and blocked paths SHALL remain in effect)
+
 #### Scenario: Self-site fetch before configuration
 - **WHEN** `server_fetch_port.fetch("/api/data")` is called before `configure()` has been called
 - **THEN** the fetch SHALL return a `Response` with `status_code=500` and an error message indicating the fetch port is not configured
@@ -59,7 +64,7 @@ Self-site requests SHALL be routed through `httpx.ASGITransport` wrapping the ap
 
 ### Requirement: ServerFetchPort shall block page routes during SSR
 
-Page routes (routes that have a corresponding `Component` registered via `app.routes`) SHALL be blocked during self-site fetch to prevent infinite recursion. Blocked paths SHALL be derived from `app.routes` — any route tuple `(path, page_component, *_rest)` where `page_component` is not `None` SHALL be considered a page route. Dynamic route segments (e.g., `/users/:id`) SHALL be converted to concrete paths using their path parameters before being added to the blocked paths set. Routes without path parameters that have dynamic segments SHALL be included as-is using the literal route pattern string (e.g., `/users/:id`). When a blocked path is requested, `ServerFetchPort` SHALL return a `Response` with `status_code=500` and a descriptive error message.
+Page routes (routes that have a corresponding `Component` registered via `app.routes`) SHALL be blocked during self-site fetch to prevent infinite recursion. Blocked paths SHALL be derived from `app.routes` — any route tuple `(path, page_component, *_rest)` where `page_component` is not `None` SHALL be considered a page route. If a route has dynamic segments (e.g., `/users/:id`) and the path parameters are available (e.g., during SSG where all routes are enumerated), the dynamic segments SHALL be substituted with concrete values to produce the actual path (e.g., `/users/42`). If path parameters are not available (e.g., during dev server startup where route enumeration may not be possible), the literal route pattern string (e.g., `/users/:id`) SHALL be added to the blocked paths set — the `ServerFetchPort` SHALL then perform a prefix check against blocked patterns in addition to exact path matching to catch dynamic segment variations. When a blocked path is requested, `ServerFetchPort` SHALL return a `Response` with `status_code=500` and a descriptive error message.
 
 #### Scenario: Fetching a blocked page route
 - **WHEN** a component calls `await fetch_port.fetch("/")` during SSR
@@ -73,6 +78,13 @@ Page routes (routes that have a corresponding `Component` registered via `app.ro
 - **AND** `"/api/users"` is not in the blocked paths list
 - **THEN** the fetch SHALL proceed through the ASGI app normally
 - **AND** the response SHALL contain the API endpoint's data
+
+#### Scenario: Page route with dynamic segments blocks all concrete paths
+- **WHEN** `app.routes` includes `("/users/:id", UserPage, ...)`
+- **AND** path parameters are available during SSG route enumeration
+- **THEN** both `"/users/42"` and `"/users/99"` SHALL be added to the blocked paths set
+- **AND** `ServerFetchPort.fetch("/users/42")` SHALL return 500
+- **AND** `ServerFetchPort.fetch("/users/not-in-routes")` SHALL match the dynamic pattern and return 500
 
 ### Requirement: ServerFetchPort shall resolve self-site URLs against base_url
 

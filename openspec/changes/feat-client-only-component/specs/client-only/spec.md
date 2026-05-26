@@ -69,12 +69,13 @@ When `ClientOnlyElement` is rendered in the browser environment (`ENVIRONMENT ==
 
 ### Requirement: ClientOnly shall replace fallback with children during hydration
 
-When `ClientOnlyElement._hydrate_node()` is called in the browser, the server-rendered fallback DOM nodes SHALL be replaced with the actual children content. This ensures seamless transition from SSR fallback to interactive browser content without visible layout shift or content mismatch.
+When `ClientOnlyElement._hydrate_node()` is called in the browser, the server-rendered fallback DOM nodes SHALL be replaced with the actual children content. Because `_render()` is async (per `feat/async-rendering-pipeline`), `_hydrate_node()` SHALL NOT call `child._render()` directly — that would produce an un-awaited coroutine. Instead, `_hydrate_node()` SHALL generate the children, set up their DOM references, and schedule the async rendering via `asyncio.ensure_future(self._render())`. The fallback nodes SHALL be removed from the DOM and the children content SHALL render in their place, ensuring seamless transition from SSR fallback to interactive browser content without visible layout shift or content mismatch.
 
 #### Scenario: Hydrating a ClientOnly element
 - **WHEN** a page containing `ClientOnly(fallback=html.P({}, "Loading..."), children=lambda: InteractiveChart())` is hydrated in the browser
 - **THEN** the `<p>Loading...</p>` fallback node SHALL be removed from the DOM
-- **AND** the `InteractiveChart()` content SHALL be rendered in its place
+- **AND** `ClientOnlyElement._hydrate_node()` SHALL generate the children and schedule async rendering via `asyncio.ensure_future(self._render())`
+- **AND** the `InteractiveChart()` content SHALL be rendered asynchronously in its place
 - **AND** no hydration mismatch warning or error SHALL occur
 
 #### Scenario: Hydrating a ClientOnly element without fallback
