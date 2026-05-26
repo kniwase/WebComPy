@@ -212,8 +212,18 @@ After completing an OpenSpec proposal or implementation, delegate to the `ci-rev
 
 - **Post-Proposal Review**: After creating all artifacts (proposal, design, specs, tasks), use `ci-review` to verify consistency across artifacts, check for spec violations, and ensure requirements are testable.
 - **Post-Implementation Review**: After all tasks are completed, use `ci-review` to review the diff against relevant specs and verify no "SHALL" requirements were broken.
+- **Pre-Push Review**: Before pushing the branch to remote, use `ci-review` for a final review of the complete diff to catch any issues before CI runs.
 
 The `ci-review` agent uses the file→spec mapping table in AGENTS.md to classify changed files and reads corresponding specs as a checklist. It will produce a review with 🔴 High / 🟡 Medium / 🔵 Note categorization.
+
+### Pre-Push Verification
+
+Before pushing a branch to remote, run these verification steps in order:
+
+1. **Local CI Checks** — Delegate to `ci-local` agent to run lint, typecheck, and unit tests. This catches failures before they hit CI.
+2. **Code Review** — Delegate to `ci-review` agent for a spec-driven review of the complete diff.
+
+These steps help identify issues early, reducing CI cycle time and avoiding blocking failures in the PR pipeline.
 
 ### Change Lifecycle and Git Policy
 
