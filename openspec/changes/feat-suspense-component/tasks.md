@@ -11,7 +11,7 @@
 
 ## 2. Add suspense() generator function
 
-- [ ] 2.1 Add `suspense()` function to `webcompy/elements/generators.py` with parameters: `fallback`, `children`, `error_fallback=None`, `timeout=30.0`
+- [ ] 2.1 Add `suspense()` function to `webcompy/elements/generators.py` with parameters: `fallback`, `children`, `error_fallback=None`, `timeout=10.0`
 - [ ] 2.2 Add `SuspenseElement` import to `webcompy/elements/generators.py`
 - [ ] 2.3 Add `Suspense` export to `webcompy/elements/__init__.py`
 

@@ -59,7 +59,7 @@ Self-site requests SHALL be routed through `httpx.ASGITransport` wrapping the ap
 
 ### Requirement: ServerFetchPort shall block page routes during SSR
 
-Page routes (endpoints that return HTML) SHALL be blocked during self-site fetch to prevent infinite recursion. When a blocked path is requested, `ServerFetchPort` SHALL return a `Response` with `status_code=500` and a descriptive error message.
+Page routes (routes that have a corresponding `Component` registered via `app.routes`) SHALL be blocked during self-site fetch to prevent infinite recursion. Blocked paths SHALL be derived from `app.routes` — any route tuple `(path, page_component, *_rest)` where `page_component` is not `None` SHALL be considered a page route. Dynamic route segments (e.g., `/users/:id`) SHALL be converted to concrete paths using their path parameters before being added to the blocked paths set. Routes without path parameters that have dynamic segments SHALL be included as-is using the literal route pattern string (e.g., `/users/:id`). When a blocked path is requested, `ServerFetchPort` SHALL return a `Response` with `status_code=500` and a descriptive error message.
 
 #### Scenario: Fetching a blocked page route
 - **WHEN** a component calls `await fetch_port.fetch("/")` during SSR

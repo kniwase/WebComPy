@@ -10,16 +10,16 @@
 
 - [ ] 2.1 Change `generate_html()` in `webcompy/cli/_html.py` from `def` to `async def`. The return type remains `str` but the function is now a coroutine. No logic changes inside the function body — this is a signature change only. The async rendering pipeline (from `feat/async-rendering-pipeline`) will later add `await` calls inside this function.
 - [ ] 2.2 Update `_server.py:send_html()` — change from sync `HTMLResponse(html_generator())` to `async def send_html()` with `html = await html_generator(); return HTMLResponse(html)`. Update the history-mode handler (lines 299-310) and the hash-mode pre-rendering (lines 314-316).
-- [ ] 2.3 Update hash-mode pre-rendering in `_server.py` — the `with app.di_scope: html = html_generator()` block becomes `with app.di_scope: html = await html_generator()`. This requires `create_asgi_app()` to be async (see Task 4).
+- [ ] 2.3 Update hash-mode pre-rendering in `_server.py` — extract the `with app.di_scope: html = html_generator()` block into a separate async function `_pre_render_hash_mode_html(app)` that awaits `html_generator()` and caches the result. `create_asgi_app()` remains synchronous and returns an ASGI app that reads the cached HTML in the hash-mode handler.
 - [ ] 2.4 Update `webcompy/testing/_asgi.py:create_test_asgi_app()` — since `html_generator` is now async, update the test ASGI handler to await it. Verify that `httpx.ASGITransport`-based tests still pass.
 - [ ] 2.5 Run lint and type check to verify all callers of `generate_html()` are updated
 
-## 3. Make create_asgi_app() async and add mode parameter
+## 3. Add mode parameter to create_asgi_app()
 
-- [ ] 3.1 Change `create_asgi_app()` from `def` to `async def` in `_server.py`. The function needs to be async because hash-mode pre-rendering now awaits `html_generator()`.
-- [ ] 3.2 Add `mode: Literal["dev", "ssg"] = "dev"` parameter to `create_asgi_app()`. When `mode="ssg"`: skip SSE reload route, skip dev-mode cache headers, force `build_config.server.dev = False`.
-- [ ] 3.3 Update `run_server()` in `_server.py` to `await create_asgi_app(app, build_config)`. Since `run_server()` is called from the CLI, wrap with `asyncio.run()` or restructure to use the async version.
-- [ ] 3.4 Update the CLI entry point in `webcompy/cli/__main__.py` for the `start` command — ensure `run_server()` works with the async `create_asgi_app()`. Note: `uvicorn.run()` manages its own event loop, so the app creation happens before `uvicorn.run()`. Use `asyncio.run()` to get the ASGI app, then pass it to `uvicorn.run()`.
+- [ ] 3.1 Add `mode: Literal["dev", "ssg"] = "dev"` parameter to `create_asgi_app()`. When `mode="ssg"`: skip SSE reload route, skip dev-mode cache headers, force `build_config.server.dev = False`. `create_asgi_app()` remains `def` (synchronous) — uvicorn.run() expects a synchronous app factory.
+- [ ] 3.2 For hash-mode apps, add `_pre_render_hash_mode_html(app)` as a separate async function. It enters `app.di_scope`, sets the path to `/`, awaits `html_generator()`, and stores the cached HTML. `create_asgi_app()` returns a handler that reads the cached HTML.
+- [ ] 3.3 Update `run_server()` in `_server.py` — call `create_asgi_app()` synchronously. For hash-mode, call `asyncio.run(_pre_render_hash_mode_html(app))` after creation.
+- [ ] 3.4 Update the CLI entry point in `webcompy/cli/__main__.py` for the `start` command — no change needed, `run_server()` remains synchronous and passes the ASGI app to `uvicorn.run()`.
 - [ ] 3.5 Add unit tests for `mode="ssg"` — verify that SSE route is excluded, dev cache headers are absent, and `build_config.server.dev` is forced to `False`
 
 ## 4. Restructure generate_static_site() to use ASGITransport

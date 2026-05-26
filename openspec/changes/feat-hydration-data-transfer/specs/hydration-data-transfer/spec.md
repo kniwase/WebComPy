@@ -157,6 +157,15 @@ During browser initialization, `AsyncResult` instances SHALL check the transfer 
 - **THEN** the stale entry SHALL be silently ignored
 - **AND** no warning SHALL be logged (stale entries are expected during development when component trees change)
 
+#### Scenario: SSR renders Suspense fallback, browser renders children
+- **WHEN** a component inside `Suspense(fallback=..., children=lambda: AsyncDataComponent())` is rendered during SSR
+- **AND** the async data does not resolve within the timeout, so fallback is rendered instead
+- **THEN** the component's `_component_id` SHALL NOT appear in the SSR component tree (the fallback subtree replaces it)
+- **AND** the `async_results` section of the transfer payload SHALL NOT contain an entry for that component
+- **WHEN** browser hydration renders `children` instead of `fallback`
+- **THEN** the component's `_component_id` SHALL be generated from its position in the browser-side tree
+- **AND** the component SHALL follow the normal `PENDING` → `LOADING` → `SUCCESS/ERROR` lifecycle (no transfer match because no SSR entry exists)
+
 ### Requirement: The transfer payload shall be read during browser initialization
 
 `app.run()` SHALL read the transfer payload from the DOM before executing component setups. The payload SHALL be parsed and stored in a location accessible to `AsyncResult` and `BrowserFetchPort` for restoration.

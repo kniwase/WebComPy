@@ -87,9 +87,9 @@ async def _render(self):
         on_before_rendering()
     await super()._render()
     on_after_rendering = self._property["on_after_rendering"]
-    app = _active_app_context.get()
-    if app is not None and app._defer_depth > 0:
-        app._deferred_callbacks.append(on_after_rendering)
+    render_ctx = _active_app_context.get()
+    if render_ctx is not None and render_ctx._defer_depth > 0:
+        render_ctx._deferred_callbacks.append(on_after_rendering)
     else:
         if iscoroutinefunction(on_after_rendering):
             await on_after_rendering()

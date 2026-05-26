@@ -186,3 +186,18 @@ Write end-to-end tests that verify the full SSR→browser data transfer flow:
 These tests use the existing E2E test infrastructure (Playwright + `webcompy inspect`).
 
 **Files created:** E2E test script for hydration data transfer
+
+---
+
+## Task 9: Suspense hydration integration
+
+**Estimated time:** 1 hour
+
+Suspense hydration (`SuspenseElement._hydrate_node()`) depends on the transfer payload to determine whether children async data was resolved during SSR. The `feat-suspense-component` change owns the Suspense hydration logic, but this change must provide the API for Suspense to query the transfer payload.
+
+- [ ] 9.1 Add `HYDRATION_DATA_KEY` to `webcompy/di/_keys.py` as `InjectKey[dict]` for the transfer payload's `async_results` section. This key is provided by `app.run()` during browser initialization and injected by `AsyncResult` (Task 3) and `BrowserFetchPort` (Task 4).
+- [ ] 9.2 Add `has_resolved_data(component_id: str) -> bool` helper to the hydration module — checks whether the transfer payload contains a resolved `AsyncResult` entry for the given component ID. This is the API that `SuspenseElement._hydrate_node()` uses to decide whether to immediately render children or keep fallback and schedule async resolution.
+- [ ] 9.3 Document that `SuspenseElement._hydrate_node()` in `feat-suspense-component` calls `has_resolved_data()` to gate hydration behavior: if resolved, render children immediately; if not, render fallback and schedule async resolution.
+- [ ] 9.4 Write unit test: Suspense integration — verify `has_resolved_data()` returns `True` for a component ID in the payload, `False` when not present, and `False` when the payload is missing.
+
+**Files modified:** `webcompy/di/_keys.py`, `webcompy/hydration/`

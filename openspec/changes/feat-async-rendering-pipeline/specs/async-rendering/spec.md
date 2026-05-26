@@ -12,6 +12,8 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 
 `ElementAbstract._render()`, `ElementWithChildren._render()`, `DynamicElement._render()`, `RepeatElement._render()`, `SwitchElement._render()`, `Component._render()`, and `AppDocumentRoot._render()` SHALL be `async def` methods. All callers of these methods SHALL `await` them. The `_mount_node()` method SHALL remain synchronous since DOM operations are not async.
 
+`_hydrate_node()` SHALL remain synchronous in this change. Async component setup (`_pending_async_template`) is NOT resolved during hydration — resolution happens during the first async `_render()` after hydration completes. In the browser, components that were pre-resolved during SSR receive their state from the hydration data transfer payload (per `feat-hydration-data-transfer`), so async setup does not need to re-execute. Components without transfer data proceed through the normal async lifecycle during `_render()`, after DOM adoption is complete.
+
 #### Scenario: Rendering a component in the browser
 - **WHEN** `app.run()` is called in the browser
 - **THEN** the async render pipeline SHALL be scheduled via `asyncio.ensure_future(self._root._render())`
@@ -66,6 +68,14 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 - **AND** the other sibling children SHALL complete normally
 - **AND** the first exception encountered SHALL be re-raised after all siblings complete
 - **AND** the DOM SHALL NOT be left in a partially rendered state — the exception prevents the parent mount from finalizing
+
+#### Scenario: One child raises after siblings already mounted
+- **WHEN** `asyncio.gather()` completes and sibling A and sibling B have rendered successfully and mounted their DOM nodes
+- **AND** sibling C's `_render()` raises an exception
+- **THEN** the exception SHALL be collected and re-raised after all siblings complete
+- **AND** the parent's `_render()` SHALL propagate the exception
+- **AND** the parent's caller (e.g., `AppDocumentRoot` or higher-level element) SHALL handle cleanup by removing all mounted child nodes
+- **AND** no partially rendered sibling nodes SHALL remain orphaned in the DOM
 
 ### Requirement: Lifecycle hooks shall support async callables
 
