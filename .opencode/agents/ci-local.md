@@ -4,11 +4,11 @@ mode: subagent
 temperature: 0.1
 permission:
   bash:
-    "ruff check*": allow
-    "ruff format --check*": allow
-    "pyright*": allow
-    "python -m pytest*": allow
-    "python -m webcompy generate*": allow
+    "uv run ruff check*": allow
+    "uv run ruff format --check*": allow
+    "uv run pyright*": allow
+    "uv run python -m pytest*": allow
+    "uv run python -m webcompy generate*": allow
     "npx @fission-ai/openspec*": allow
     "git status": allow
     "git diff*": allow
