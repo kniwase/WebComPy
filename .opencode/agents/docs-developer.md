@@ -1,4 +1,5 @@
 ---
+name: docs-developer
 description: Generates and maintains the documentation site under docs_app/
 mode: subagent
 temperature: 0.2
@@ -7,8 +8,8 @@ permission:
     "docs_app/*": allow
     ".workspace/*": allow
   bash:
-    "python -m webcompy generate*": allow
-    "python -m webcompy start*": allow
+    "uv run python -m webcompy generate*": allow
+    "uv run python -m webcompy start*": allow
 ---
 
 You are working on the WebComPy documentation site. Only modify files in `docs_app/`. Never edit `docs/` directly as it is generated output.

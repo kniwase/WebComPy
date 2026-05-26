@@ -1,4 +1,5 @@
 ---
+name: browser-developer
 description: Analyzes and modifies browser-side runtime code (reactive, elements, router, browser API)
 mode: subagent
 temperature: 0.1

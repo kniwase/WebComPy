@@ -8,7 +8,7 @@ permission:
     ".workspace/*": allow
   bash:
     "*": ask
-    "python -m webcompy *": allow
+    "uv run python -m webcompy *": allow
     "git status": allow
     "git diff*": allow
     "git log*": allow

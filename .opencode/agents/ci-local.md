@@ -1,4 +1,5 @@
 ---
+name: ci-local
 description: Runs CI-equivalent checks locally before pushing (lint, typecheck, test, generate, openspec)
 mode: subagent
 temperature: 0.1

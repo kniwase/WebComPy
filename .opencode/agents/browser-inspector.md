@@ -1,4 +1,5 @@
 ---
+name: browser-inspector
 description: Inspects and verifies WebComPy applications in a browser using webcompy inspect CLI commands
 mode: both
 temperature: 0.1
@@ -7,7 +8,7 @@ permission:
     ".tmp/*": allow
     ".workspace/*": allow
   bash:
-    "python -m webcompy inspect*": allow
+    "uv run python -m webcompy inspect*": allow
     "rm .tmp/webcompy-inspect/*": allow
     "rm .workspace/screenshots/*": allow
     "rm .workspace/inspector/*": allow

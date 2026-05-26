@@ -1,4 +1,5 @@
 ---
+name: server-developer
 description: Analyzes and modifies server-side code (CLI, dev server, static site generator)
 mode: subagent
 temperature: 0.1
