@@ -1,7 +1,7 @@
 ---
 name: browser-inspector
 description: Inspects and verifies WebComPy applications in a browser using webcompy inspect CLI commands
-mode: both
+mode: all
 temperature: 0.1
 permission:
   edit:

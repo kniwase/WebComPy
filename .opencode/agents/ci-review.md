@@ -1,7 +1,7 @@
 ---
 name: ci-review
 description: Automated CI code reviewer — runs in GitHub Actions to review pull request diffs
-mode: both
+mode: all
 permission:
   edit:
     "*": deny

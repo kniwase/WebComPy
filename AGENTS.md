@@ -228,7 +228,7 @@ WebComPy uses OpenSpec for spec-driven development. Specs define **what the fram
 
 ### Code Review Integration
 
-After completing an OpenSpec proposal or implementation, delegate to the `ci-review` agent (mode: both) for a spec-driven review:
+After completing an OpenSpec proposal or implementation, delegate to the `ci-review` agent (mode: all) for a spec-driven review:
 
 - **Post-Proposal Review**: After creating all artifacts (proposal, design, specs, tasks), use `ci-review` to verify consistency across artifacts, check for spec violations, and ensure requirements are testable.
 - **Post-Implementation Review**: After all tasks are completed, use `ci-review` to review the diff against relevant specs and verify no "SHALL" requirements were broken.
