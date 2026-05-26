@@ -37,6 +37,8 @@ A component definition decorated with `@define_component` SHALL be `async def`. 
 
 When a component definition is `async def`, initialization SHALL be split into two phases: (1) during `__init__()`, the coroutine is stored in `self._pending_async_template` and `__init_component()` is skipped; (2) during the first `_render()`, the coroutine is awaited, the template is resolved, and `__init_component()` is called to finish initialization.
 
+The coroutine SHALL be set on `self._pending_async_template` during `__init__()` so that it is **observable before `_render()` is called**. This allows `SuspenseElement` to detect pending async operations via tree traversal before any rendering begins. When a component is wrapped in a `Suspense` boundary, `SuspenseElement._render()` owns the resolution — it traverses the tree, collects pending coroutines, awaits them, and then calls `Component._render()` after resolution. `Component._render()` checks whether it is being resolved by a Suspense ancestor (via a context flag) and skips the await step when it is.
+
 #### Scenario: Async component initialization deferred to render
 - **WHEN** an async component is created via `MyComponent(props)`
 - **THEN** `self._pending_async_template` SHALL contain the unresolved coroutine
@@ -45,16 +47,43 @@ When a component definition is `async def`, initialization SHALL be split into t
 
 #### Scenario: Async component resolved during render
 - **WHEN** `_render()` is called on an async component with `self._pending_async_template` set
+- **AND** the component is NOT wrapped inside a `Suspense` boundary
 - **THEN** the coroutine SHALL be awaited to obtain the resolved template
 - **AND** `self._pending_async_template` SHALL be set to `None`
 - **AND** `self.__init_component()` SHALL be called with the resolved template
 - **AND** the component SHALL then proceed with normal async rendering (lifecycle hooks, child rendering)
+
+#### Scenario: Async component under Suspense boundary
+- **WHEN** an async component with `self._pending_async_template` set is a descendant of a `SuspenseElement`
+- **THEN** `SuspenseElement._render()` SHALL detect the pending state via tree traversal of `_pending_async_template`
+- **AND** `Component._render()` SHALL NOT await `_pending_async_template` when the component is flagged as being resolved by a Suspense boundary
+- **AND** `SuspenseElement._render()` SHALL handle the await, then call `Component._render()` after resolution
+- **AND** fallback SHALL be shown while `_pending_async_template` is pending and observable
 
 #### Scenario: Async component renders only once
 - **WHEN** `_render()` is called on an already-resolved async component (second+ render, e.g., after a reactive update)
 - **THEN** `self._pending_async_template` SHALL be `None`
 - **AND** the component SHALL skip the two-phase init block
 - **AND** the component SHALL proceed directly to normal rendering
+
+### Requirement: Async component resolution shall be observable and Suspense-aware
+
+The `_pending_async_template` coroutine SHALL be set on the component during `__init__()` so it is observable via tree traversal **before any `_render()` is called**. When a component is wrapped in a `Suspense` boundary, `SuspenseElement._render()` SHALL own the resolution by traversing the element tree, collecting all pending `_pending_async_template` coroutines, awaiting them via `asyncio.gather()`, and then calling `Component._render()` on each resolved component. `Component._render()` SHALL detect whether it is being resolved by a Suspense ancestor and skip the await when `_pending_async_template` is already `None`.
+
+#### Scenario: Suspense boundary resolves async children before Component._render()
+- **WHEN** an async component is a descendant of `SuspenseElement`
+- **AND** `SuspenseElement._render()` is called
+- **THEN** Suspense SHALL traverse the tree to find all `Component._pending_async_template` coroutines
+- **AND** Suspense SHALL `await asyncio.gather(*coroutines)` to resolve them in parallel
+- **AND** after resolution, Suspense SHALL call `Component._render()` on each resolved component
+- **AND** `Component._render()` SHALL find `_pending_async_template` is already `None` and skip the await
+- **AND** fallback SHALL be replaced with children content
+
+#### Scenario: Async component without Suspense resolves in own _render()
+- **WHEN** an async component is NOT wrapped in a `Suspense` boundary
+- **THEN** `Component._render()` SHALL await `_pending_async_template` directly
+- **AND** `_pending_async_template` SHALL be set to `None` after resolution
+- **AND** `__init_component()` SHALL be called with the resolved template
 
 ### Requirement: ComponentProperty template shall be nullable
 

@@ -26,6 +26,25 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 - **WHEN** existing code calls `await element._render()` on an element that performs no async operations
 - **THEN** the behavior SHALL be identical to the previous synchronous `_render()` call
 
+### Requirement: Sync-only leaf elements shall inherit a default no-op async _render()
+
+`Element._render()` (the base class inherited by `TextElement`, `VoidElement`, `InputElement`, and other sync-only leaf elements) SHALL be `async def` but SHALL have a default implementation with no `await` points — it SHALL call `await self._mount_node()` which returns immediately. Custom user elements that override `_render()` SHALL follow the same pattern: if their `_render()` contains no async operations, `async def _render(self)` with no `await` points is valid Python and SHALL work correctly. This is not a breaking change — calling `await element._render()` on a coroutine with no `await` points behaves identically to a synchronous call.
+
+#### Scenario: TextElement._render() remains sync internally
+- **WHEN** `TextElement._render()` is called as `await text._render()`
+- **THEN** the method SHALL be `async def` but SHALL contain zero `await` expressions
+- **AND** the text node SHALL be mounted to the DOM identically to the pre-async behavior
+
+#### Scenario: VoidElement._render() remains sync internally
+- **WHEN** `VoidElement._render()` (e.g., `<br>`, `<img>`) is called
+- **THEN** SHALL complete without performing any actual async I/O
+- **AND** the element SHALL be mounted correctly
+
+#### Scenario: User-defined sync element overrides _render()
+- **WHEN** a developer subclasses `ElementWithChildren` and overrides `_render()` as `async def` with no await points
+- **THEN** calling `await element._render()` SHALL work identically to a sync override
+- **AND** no special migration steps SHALL be required
+
 ### Requirement: Sibling children shall render in parallel via asyncio.gather()
 
 `ElementWithChildren._render()` and `AppDocumentRoot._render()` SHALL use `asyncio.gather()` to render all child elements concurrently. Each child's `_render()` SHALL be scheduled as a separate coroutine. This enables future I/O-bound parallelism during SSG and structural clarity for the async pipeline.

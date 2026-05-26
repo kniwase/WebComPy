@@ -39,6 +39,20 @@ The payload JSON object SHALL include a `__webcompy_transfer_version__` field wi
 - **WHEN** the transfer payload has a `__webcompy_transfer_version__` value that is not recognized by the deserializer
 - **THEN** the payload SHALL be ignored entirely
 - **AND** hydration SHALL proceed without transfer data (components will re-fetch)
+- **AND** a warning SHALL be logged indicating the unrecognized schema version
+
+#### Scenario: Missing version field
+- **WHEN** the transfer payload does not contain a `__webcompy_transfer_version__` field
+- **THEN** the payload SHALL be ignored entirely (treated as incompatible schema)
+- **AND** hydration SHALL proceed without transfer data
+- **AND** a warning SHALL be logged indicating the missing schema version
+
+#### Scenario: Version matches but partial payload corruption
+- **WHEN** the transfer payload has a valid `__webcompy_transfer_version__` but individual entries are malformed (e.g., `async_results` entry has wrong shape)
+- **THEN** the malformed entry SHALL be silently skipped
+- **AND** valid entries SHALL still be restored
+- **AND** a warning SHALL be logged with the malformed entry key
+- **AND** components associated with skipped entries SHALL follow the normal lifecycle (re-fetch, no crash)
 
 ### Requirement: The transfer payload shall serialize FetchPort response caches
 
@@ -171,20 +185,37 @@ During browser initialization, `AsyncResult` instances SHALL check the transfer 
 - **THEN** it SHALL return a dict mapping URLs to `{"status_code": int, "headers": dict, "body": str}` entries
 - **AND** external URL responses SHALL NOT be included (only self-site fetches are cached for transfer)
 
-### Requirement: The transfer payload shall only include JSON-serializable data
+### Requirement: The transfer payload shall support extended types via tagged encoding
 
-Only JSON-serializable types (str, int, float, bool, None, list, dict) SHALL be included in the transfer payload. Non-serializable data SHALL be silently excluded.
+The serialization SHALL support `datetime.datetime`, `datetime.date`, `bytes`, and nested dict/list structures beyond the basic JSON types (`str`, `int`, `float`, `bool`, `None`, `list`, `dict`). These extended types SHALL be encoded with type tags as follows:
 
-#### Scenario: AsyncResult data is JSON-serializable
-- **WHEN** an `AsyncResult` resolved with data `{"name": "Alice", "age": 30, "active": true}`
-- **THEN** the data SHALL be included in the `async_results` section as-is
+- **`datetime.datetime`**: Encoded as a dict with `__datetime__` tag containing an ISO 8601 string. When parsed, SHALL reconstruct the original `datetime.datetime` object with microsecond precision and UTC timezone.
+- **`datetime.date`**: Encoded as a dict with `__date__` tag containing an ISO 8601 date string (`YYYY-MM-DD`). When parsed, SHALL reconstruct the original `datetime.date` object.
+- **`bytes`**: Encoded as a dict with `__bytes__` tag containing a base64-encoded string. When parsed, SHALL reconstruct the original `bytes` object.
+- **Nested dict/list**: Standard JSON dict/list serialization with extended type tags applied recursively at any nesting depth.
 
-#### Scenario: AsyncResult data contains non-serializable types
-- **WHEN** an `AsyncResult` resolved with a custom Python object (e.g., `datetime.date(2024, 1, 1)`)
-- **THEN** the entry SHALL be excluded from the `async_results` section
-- **AND** a warning SHALL be logged
+#### Scenario: Serializing datetime.datetime
+- **WHEN** an `AsyncResult` resolves with data containing `{"created_at": datetime.datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc)}`
+- **THEN** the serialized payload SHALL contain `"created_at": {"__datetime__": "2024-01-15T10:30:00+00:00"}`
+- **AND** after deserialization, `created_at` SHALL be a `datetime.datetime` object equal to the original
 
-#### Scenario: FetchPort response body is always a string
-- **WHEN** a fetch response body is collected for transfer
-- **THEN** the body SHALL be stored as a string (the raw response text)
-- **AND** the string SHALL be JSON-serializable by definition
+#### Scenario: Serializing datetime.date
+- **WHEN** an `AsyncResult` resolves with data containing `{"event_date": datetime.date(2024, 3, 20)}`
+- **THEN** the serialized payload SHALL contain `"event_date": {"__date__": "2024-03-20"}`
+- **AND** after deserialization, `event_date` SHALL be a `datetime.date` object equal to the original
+
+#### Scenario: Serializing bytes
+- **WHEN** an `AsyncResult` resolves with data containing `{"file_hash": b"\x01\x02\x03"}`
+- **THEN** the serialized payload SHALL contain `"file_hash": {"__bytes__": "AQID"}`
+- **AND** after deserialization, `file_hash` SHALL be a `bytes` object equal to the original
+
+#### Scenario: Serializing nested structures with extended types
+- **WHEN** an `AsyncResult` resolves with `{"items": [{"updated": datetime.datetime(...)}, {"name": "static"}]}`
+- **THEN** `"{"updated": {"__datetime__": "..."}}` SHALL appear at the correct nested path
+- **AND** `"{"name": "static"}` SHALL remain as a plain dict
+- **AND** both SHALL be at the correct indices in the `items` list
+
+#### Scenario: Unknown type tag during deserialization
+- **WHEN** the transfer payload contains an unrecognized type tag (e.g., `{"__custom__": "value"}`)
+- **THEN** the dict SHALL be left as-is without tag removal (passed through as a plain dict)
+- **AND** a warning SHALL be logged indicating the unknown type tag

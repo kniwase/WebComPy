@@ -35,8 +35,8 @@ If the children subtree does not contain any async component setups, `Suspense` 
 In the server environment (during static site generation or server-side rendering), `Suspense._render()` SHALL await the completion of async operations in the children subtree before rendering. If the async operations complete within the timeout, the final HTML SHALL include the children content (no fallback). If the timeout is exceeded, fallback content SHALL be rendered instead.
 
 #### Scenario: SSR with async data that resolves within timeout
-- **WHEN** `Suspense` is rendered during SSG with `timeout=30` (default)
-- **AND** the children's async operations complete within 30 seconds
+- **WHEN** `Suspense` is rendered during SSG with `timeout=10` (default)
+- **AND** the children's async operations complete within 10 seconds
 - **THEN** the generated HTML SHALL contain the children content
 - **AND** no fallback content SHALL appear in the HTML
 
@@ -70,9 +70,9 @@ In the browser environment, `Suspense._render()` SHALL first render fallback con
 - **AND** `FailingComponent`'s async setup raises an exception
 - **THEN** the fallback content SHALL remain displayed
 - **AND** the exception SHALL be logged as a warning
-
 ### Requirement: Suspense shall accept a configurable timeout
-`Suspense` SHALL accept an optional `timeout` parameter (a `float` in seconds, default 30.0). This timeout applies to the server environment only — it determines how long `_render()` waits for async children before falling back. In the browser, the timeout has no effect (the fallback is shown indefinitely until children resolve or fail).
+
+`Suspense` SHALL accept an optional `timeout` parameter (a `float` in seconds, default 10.0). This timeout applies to the server environment only — it determines how long `_render()` waits for async children before falling back. In the browser, the timeout has no effect (the fallback is shown indefinitely until children resolve or fail).
 
 #### Scenario: Custom timeout for slow data sources
 - **WHEN** a developer provides `Suspense(fallback=..., children=lambda: SlowComponent(), timeout=60.0)`

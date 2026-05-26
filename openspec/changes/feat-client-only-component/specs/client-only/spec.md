@@ -28,6 +28,30 @@ When `ClientOnlyElement` is rendered in a server environment (`ENVIRONMENT != "p
 - **THEN** `ExpensiveComponent()` SHALL NOT be instantiated
 - **AND** no side effects from the children generator SHALL occur
 
+### Requirement: ClientOnly shall not execute children component __init__ on the server
+
+When `ClientOnlyElement` is rendered in a server environment, the `children` generator function SHALL NOT be called at all — not even to create `Component` instances. This means `Component.__init__()` SHALL NOT execute for any component defined inside a `ClientOnly` boundary during SSR/SSG. This prevents browser-only imports, DOM API calls, and PyScript-specific code from being triggered during static site generation.
+
+#### Scenario: ClientOnly block with browser-only imports
+- **WHEN** a developer writes:
+  ```python
+  ClientOnly(
+      fallback=html.P({}, "Chart loading..."),
+      children=lambda: MyChartComponent(props)
+  )
+  ```
+- **AND** `MyChartComponent.__init__()` imports or references a PyScript-only module
+- **AND** the page is rendered during SSG
+- **THEN** `MyChartComponent.__init__()` SHALL NOT be executed
+- **AND** no ImportError or NameError SHALL occur
+- **AND** only the fallback content SHALL appear in the generated HTML
+
+#### Scenario: ClientOnly block with inline browser-only setup
+- **WHEN** a developer writes `ClientOnly(children=lambda: html.CANVAS({}, "content"))` during SSG
+- **AND** `html.CANVAS` may reference browser-only module code
+- **THEN** the `lambda` SHALL NOT be called on the server
+- **AND** the canvas element SHALL NOT be part of the SSR output
+
 ### Requirement: ClientOnly shall render children in the browser environment
 
 When `ClientOnlyElement` is rendered in the browser environment (`ENVIRONMENT == "pyscript"`), the `children` generator SHALL be called and its output rendered. The `fallback` content SHALL NOT be rendered.

@@ -32,6 +32,10 @@ This change depends on `feat/async-rendering-pipeline` because `ServerFetchPort.
 ### Modified Capabilities
 - `port-abstraction`: `FetchPort` ABC gains `is_self_site_url()` method.
 
+## Dependencies
+
+- **Requires** `feat/async-rendering-pipeline` — `ServerFetchPort.fetch()` is an async method that can only be called during the async `_render` phase.
+
 ## Impact
 
 - `webcompy/ports/_fetch.py` — ABC change (new method).
