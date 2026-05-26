@@ -23,36 +23,10 @@
   "watcher": {
     "ignore": ["docs/**", ".git/**", "__pycache__/**", "*.pyc"]
   },
-  "agent": {
-    "webcompy-docs": {
-      "description": "Generates and maintains the documentation site under docs_app/",
-      "mode": "subagent",
-      "prompt": "You are working on the WebComPy documentation site. Only modify files in docs_app/. Never edit docs/ directly as it is generated output.",
-      "permission": {
-        "edit": "ask"
-      }
-    },
-    "browser-runtime": {
-      "description": "Analyzes and modifies code that runs in the PyScript/browser environment (reactive, components, elements, router)",
-      "mode": "subagent",
-      "prompt": "You are working on browser-side WebComPy code that runs via PyScript/Emscripten. Remember: no standard library modules are available at runtime; browser APIs are accessed through js module. The reactive system must work without server-side Python."
-    },
-    "server-runtime": {
-      "description": "Analyzes and modifies server-side code (CLI, dev server, static site generator)",
-      "mode": "subagent",
-      "prompt": "You are working on server-side WebComPy code (CLI tools, Starlette dev server, static site generator). This code runs in standard Python with uvicorn, aiofiles, etc."
-    }
-  },
-  "mcp": {
-    "playwright": {
-      "type": "local",
-      "command": ["npx", "@playwright/mcp@0.0.70", "--isolated", "--console-level=debug", "--browser", "chromium", "--headless"],
-      "enabled": true
-    }
-  },
+  "agent": {},
   "command": {
     "dev": {
-      "template": "Start the WebComPy development server. Run `uv run python -m webcompy start --dev` from the project root (default port 8080). Requires Node.js/npx for Playwright MCP. The server serves the docs_app app at http://localhost:8080/. Once the server is running, use Playwright MCP tools to navigate to the URL.",
+      "template": "Start the WebComPy development server. Run `uv run python -m webcompy start --dev` from the project root (default port 8080). The server serves the docs_app app at http://localhost:8080/.",
       "description": "Start dev server"
     },
     "generate-docs": {
