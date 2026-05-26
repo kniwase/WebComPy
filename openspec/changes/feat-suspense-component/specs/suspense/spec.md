@@ -121,7 +121,14 @@ Suspense SHALL own the resolution: when it detects pending `_pending_async_templ
 
 ### Requirement: Suspense shall replace fallback with children during hydration
 
-When `SuspenseElement._hydrate_node()` is called in the browser, the server-rendered fallback DOM nodes SHALL be replaced with the actual children content. The Suspense SHALL check the hydration data transfer payload to determine whether children async data was resolved during SSR: if the transfer payload contains resolved data for the Suspense's children, `_hydrate_node()` SHALL immediately render children; if no transfer data is present or the children's async setup is still unresolved, `_hydrate_node()` SHALL keep the fallback displayed, schedule async children resolution, and swap to children content when the async operations complete.
+When `SuspenseElement._hydrate_node()` is called in the browser, the server-rendered fallback DOM nodes SHALL be replaced with the actual children content. `_hydrate_node()` SHALL access the transfer payload **synchronously** via DI (`inject(HYDRATION_DATA_KEY)`) to determine whether children async data was pre-resolved during SSR. The DI-provided `HYDRATION_DATA_KEY` injection SHALL be available during the sync hydration phase because `app.run()` provides it before `create_render_context()` completes (per `feat-hydration-data-transfer`). If the transfer payload contains resolved `AsyncResult` data for the Suspense's children (checked via `has_resolved_data()` from the hydration module), `_hydrate_node()` SHALL synchronously mark the children's `_pending_async_template` as resolved (set to `None` and restore template from the cached component setup output in the transfer payload), then immediately render children. If no transfer data is present or the children's async setup is still unresolved, `_hydrate_node()` SHALL keep the fallback displayed, schedule async children resolution, and swap to children content when the async operations complete.
+
+#### Scenario: Hydrating _hydrate_node() accesses transfer data synchronously via DI
+- **WHEN** `SuspenseElement._hydrate_node()` is called during browser hydration
+- **THEN** the transfer payload SHALL be accessed synchronously via `inject(HYDRATION_DATA_KEY)`
+- **AND** `has_resolved_data(component_id)` SHALL be called synchronously to check whether children data was pre-resolved
+- **AND** no `await` SHALL occur during `_hydrate_node()` execution (hydration remains synchronous)
+- **AND** if data is pre-resolved, `_pending_async_template` SHALL be resolved synchronously from the cached template in the transfer payload
 
 #### Scenario: Hydrating a Suspense element with already-resolved data
 - **WHEN** a page containing `Suspense(fallback=..., children=lambda: DataComponent())` is hydrated in the browser
@@ -136,13 +143,16 @@ When `SuspenseElement._hydrate_node()` is called in the browser, the server-rend
 - **AND** fallback SHALL remain displayed until children resolve
 - **AND** fallback SHALL be replaced with children content when ready
 
-### Requirement: Suspense shall be usable with useAsyncResult
-`Suspense` and `useAsyncResult` SHALL be compatible and complementary. A component using `useAsyncResult` can be wrapped in `Suspense` for declarative fallback. In this case, `Suspense` detects the async operation started by `useAsyncResult` and shows fallback until it completes.
+### Requirement: Suspense shall be usable with useAsyncResult via async component setup
 
-#### Scenario: Suspense wrapping a useAsyncResult component
-- **WHEN** a developer wraps a component that uses `useAsyncResult` in `Suspense`
-- **THEN** `Suspense` SHALL show fallback while `useAsyncResult` is in `LOADING` state
-- **AND** `Suspense` SHALL swap to children when `useAsyncResult` transitions to `SUCCESS` or `ERROR`
+A component that uses `useAsyncResult` SHALL be defined as an async component (`async def`) and `await` the `AsyncResult` resolution during its setup function. This causes `_pending_async_template` to be set on the component, making it detectable by `Suspense` via tree traversal. `Suspense` SHALL show fallback while the `AsyncResult` is in a loading state (because `_pending_async_template` is not yet resolved), and SHALL swap to children when the `AsyncResult` transitions to `SUCCESS` or `ERROR` (because `_pending_async_template` becomes `None` after resolution). A sync component using `useAsyncResult` without `await` in its setup SHALL NOT set `_pending_async_template` and SHALL NOT be detected by `Suspense` — `switch()` with the `AsyncResult` loading state SHALL be used instead for fine-grained control within that component.
+
+#### Scenario: Suspense wrapping an async component that uses useAsyncResult
+- **WHEN** a developer wraps an async component that `await`s `useAsyncResult` in `Suspense`
+- **THEN** `Suspense` SHALL detect the `_pending_async_template` set during the component's `__init__()`
+- **AND** `Suspense` SHALL show fallback while the async setup (including `useAsyncResult` resolution) is in progress
+- **AND** when the async setup completes (after `await useAsyncResult` resolves), `_pending_async_template` SHALL be `None`
+- **AND** `Suspense` SHALL swap fallback to children content
 
 ### Requirement: Suspense shall properly clean up on removal
 When a `Suspense` element is removed from the DOM (e.g., due to a route change or conditional rendering), any pending async operations in its children subtree SHALL be cancelled. Signal callbacks registered by `Suspense` SHALL be cleaned up via `consumer_destroy()`.

@@ -86,7 +86,22 @@ The `_pending_async_template` coroutine SHALL be set on the component during `__
 - **AND** `_pending_async_template` SHALL be set to `None` after resolution
 - **AND** `__init_component()` SHALL be called with the resolved template
 
-### Requirement: ComponentProperty template shall be nullable
+### Requirement: _pending_async_template observability window is safe for tree traversal
+
+Between `__init__()` and the first `_render()`, the component is in an uninitialized state where `_tag_name`, `_attrs`, and `_children` are their `ElementBase` defaults (not yet set by `__init_component()`). Tree traversal code that detects pending async operations (e.g., `SuspenseElement` collecting coroutines) SHALL only read `_pending_async_template` and SHALL NOT access `_tag_name`, `_attrs`, `_children`, or `_property["template"]` on components with `_pending_async_template is not None`. Code accessing these fields during the observability window SHALL first check `_pending_async_template is None` as a guard.
+
+#### Scenario: Suspense traversal during uninitialized window
+- **WHEN** `SuspenseElement` traverses the element tree to detect pending async operations
+- **AND** it encounters a component with `_pending_async_template is not None`
+- **THEN** it SHALL collect the coroutine from `_pending_async_template`
+- **AND** it SHALL NOT read `_tag_name`, `_attrs`, `_children`, or `_property["template"]`
+- **AND** the traversal SHALL NOT raise `AttributeError` or `TypeError` due to uninitialized fields
+
+#### Scenario: Non-Suspense traversal during uninitialized window
+- **WHEN** any traversal code accesses `_tag_name`, `_attrs`, or `_children` on a component
+- **AND** that component has `_pending_async_template is not None`
+- **THEN** the accessed values SHALL be the `ElementBase` defaults (empty values)
+- **AND** the code SHALL guard against uninitialized state by checking `_pending_async_template is None` before interpreting template-dependent fields
 
 The `ComponentProperty` TypedDict SHALL type `template` as `ElementChildren | None`. When `None`, the component is in the unresolved async state. The value SHALL be resolved to `ElementChildren` before `__init_component()` is called.
 

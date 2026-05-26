@@ -66,15 +66,10 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 - **AND** one child's `_render()` raises an unexpected exception
 - **THEN** the exception SHALL be captured as a return value (not propagated to cancel sibling tasks)
 - **AND** the other sibling children SHALL complete normally
-- **AND** the first exception encountered SHALL be re-raised after all siblings complete
-- **AND** the DOM SHALL NOT be left in a partially rendered state — the exception prevents the parent mount from finalizing
-
-#### Scenario: One child raises after siblings already mounted
-- **WHEN** `asyncio.gather()` completes and sibling A and sibling B have rendered successfully and mounted their DOM nodes
-- **AND** sibling C's `_render()` raises an exception
-- **THEN** the exception SHALL be collected and re-raised after all siblings complete
-- **AND** the parent's `_render()` SHALL propagate the exception
-- **AND** the parent's caller (e.g., `AppDocumentRoot` or higher-level element) SHALL handle cleanup by removing all mounted child nodes
+- **AND** after all siblings complete, the first exception encountered SHALL be re-raised
+- **AND** `ElementWithChildren._render()` SHALL catch the re-raised exception
+- **AND** it SHALL call `_remove_element()` on each successfully rendered child to clean up their DOM nodes
+- **AND** it SHALL re-raise the exception to its caller
 - **AND** no partially rendered sibling nodes SHALL remain orphaned in the DOM
 
 ### Requirement: Lifecycle hooks shall support async callables
