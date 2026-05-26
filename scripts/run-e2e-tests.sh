@@ -128,9 +128,6 @@ _build_run_tasks() {
     fi
 
     local modes=("${SERVING_MODES[@]}")
-    if [[ "$group_name" == docs-* ]]; then
-      modes=("static")
-    fi
     if [ -n "$SERVING_MODE_FILTER" ]; then
       if [[ ! " ${modes[*]} " =~ " ${SERVING_MODE_FILTER} " ]]; then
         continue

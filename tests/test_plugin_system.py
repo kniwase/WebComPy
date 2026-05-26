@@ -133,8 +133,12 @@ class TestPluginManager:
             pm.init_all()
             from webcompy.di import inject
 
-            with test_app.app.di_scope:
+            ctx = test_app.app.create_render_context()
+            try:
+                pm.init_render_context(ctx)
                 assert inject("my_key") == "my_value"
+            finally:
+                ctx.dispose()
         finally:
             delattr(test_module, "ProviderPlugin")
 
@@ -205,15 +209,16 @@ class TestGenerateHtmlWithPluginScripts:
         test_module.PluginForHtml = PluginForHtml
         try:
             test_app = _TestApp(plugins=["tests.test_plugin_system:PluginForHtml"])
-            with test_app.app.di_scope:
-                html_str = generate_html(
-                    test_app.app,
-                    app_package_name="test_pkg",
-                    dev_mode=False,
-                    prerender=False,
-                    app_version="0.0.0",
-                    wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
-                )
+            ctx = test_app.app.create_render_context()
+            html_str = generate_html(
+                ctx,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=False,
+                app_version="0.0.0",
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
+            ctx.dispose()
             assert "https://example.com/plugin.js" in html_str
             assert "location.search.includes('debug')" in html_str
         finally:

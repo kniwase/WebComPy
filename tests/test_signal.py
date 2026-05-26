@@ -1,14 +1,14 @@
 import pytest
 
 from webcompy.signal import Computed, ReactiveDict, ReactiveList, Signal, readonly
-from webcompy.signal._graph import consumer_destroy, reset_graph_state
+from webcompy.signal._graph import consumer_destroy, set_active_consumer
 
 
 @pytest.fixture(autouse=True)
 def reset_reactive_state():
-    reset_graph_state()
+    set_active_consumer(None)
     yield
-    reset_graph_state()
+    set_active_consumer(None)
 
 
 class TestReactive:

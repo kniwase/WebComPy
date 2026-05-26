@@ -7,6 +7,7 @@ from webcompy.plugin._plugin import WebComPyPlugin, WebComPyPluginException
 
 if TYPE_CHECKING:
     from webcompy.app._app import WebComPyApp
+    from webcompy.app._render_context import RenderContext
 
 
 class PluginManager:
@@ -34,16 +35,20 @@ class PluginManager:
 
     def init_all(self) -> None:
         for plugin_cls in self._plugin_classes:
-            for key, value in plugin_cls.get_providers().items():
-                self._app.di_scope.provide(key, value)
-        for plugin_cls in self._plugin_classes:
             instance = plugin_cls()
             instance.on_app_init(self._app)
             self._plugin_instances.append(instance)
 
-    def call_on_app_ready(self, app: WebComPyApp) -> None:
+    def init_render_context(self, ctx: RenderContext) -> None:
+        for plugin_cls in self._plugin_classes:
+            for key, value in plugin_cls.get_providers().items():
+                ctx.di_scope.provide(key, value)
         for instance in self._plugin_instances:
-            instance.on_app_ready(app)
+            instance.on_render_context_init(ctx)
+
+    def call_on_app_ready(self, ctx: RenderContext) -> None:
+        for instance in self._plugin_instances:
+            instance.on_app_ready(ctx)
 
     @property
     def scripts(self) -> list[PluginScript]:

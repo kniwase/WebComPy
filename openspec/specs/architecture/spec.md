@@ -11,17 +11,25 @@ From a developer's perspective, this means writing Python once and having it wor
 ## Requirements
 
 ### Requirement: The framework shall operate in two environments from a single codebase
-The same Python source code SHALL execute correctly both in the browser (via PyScript/Emscripten) and on the server (standard CPython). In the browser, the framework manipulates the DOM directly and responds to user interaction. On the server, it generates HTML strings for static site generation. No application code should need to change between environments.
+The same Python source code SHALL execute correctly both in the browser (via PyScript/Emscripten) and on the server (standard CPython). In the browser, the framework manipulates the DOM directly and responds to user interaction. On the server, it generates HTML strings for SSR and static site generation. No application code should need to change between environments. The rendering context differs between environments: the browser creates a single long-lived `RenderContext`, while the server creates and disposes a `RenderContext` per request for SSR and per route for SSG.
 
 #### Scenario: Rendering a component in the browser
 - **WHEN** a component with Signal-based state and a template is rendered in the browser
-- **THEN** the component SHALL create and manage real DOM nodes
+- **THEN** the component SHALL create and manage real DOM nodes via a single `RenderContext`
 - **AND** signal updates SHALL modify those DOM nodes directly
 
-#### Scenario: Rendering the same component on the server
-- **WHEN** the same component is rendered during static site generation
-- **THEN** the component SHALL produce an HTML string
+#### Scenario: Rendering the same component on the server via SSR
+- **WHEN** the same component is rendered during server-side rendering
+- **THEN** a fresh `RenderContext` SHALL be created for the request
+- **AND** the component SHALL produce an HTML string
 - **AND** no DOM manipulation SHALL be attempted
+- **AND** `RenderContext.dispose()` SHALL be called after rendering
+
+#### Scenario: Rendering the same component during SSG
+- **WHEN** the same component is rendered during static site generation
+- **THEN** a `RenderContext` SHALL be created for each route
+- **AND** `RenderContext.dispose()` SHALL be called after each route is rendered
+- **AND** no state from one route SHALL leak into the next route
 
 ### Requirement: Browser API access shall be gated by environment detection
 The `browser` object SHALL be `None` on the server and a proxy to the full browser API in the browser. All code that uses browser APIs SHALL check `if browser:` before accessing them, and SHALL raise clear errors when browser APIs are unavailable on the server.
@@ -32,7 +40,7 @@ The `browser` object SHALL be `None` on the server and a proxy to the full brows
 - **AND** server-side code (SSG, configuration) SHALL not crash due to missing browser APIs
 
 ### Requirement: The application entry point shall connect all subsystems
-`WebComPyApp` SHALL serve as the single entry point that wires together the root component, the router, and the reactive head management system via `HeadElement`. It SHALL own its configuration (`AppConfig`), state (`HeadPropsStore`, `ComponentStore`, `HeadElement`, DI scope), and the browser entry point (`run`). Server-side and SSG entry points SHALL be module-level functions (`create_asgi_app`, `run_server`, `generate_static_site`) that accept a `WebComPyApp` instance and optional `ServerConfig`/`GenerateConfig` dataclasses. Developers SHALL only need to provide a root component and optionally a router and config — the framework handles all internal wiring. `WebComPyApp` SHALL create a root `DIScope` and provide framework-internal services (Router, ComponentStore, HeadProps) into it. `HeadElement` SHALL manage the `<head>` DOM element or HTML output declaratively, replacing the previous imperative `AppDocumentRoot` head methods. Module-level globals like `_root_di_scope` and `_default_component_store` SHALL NOT be used as the *primary* mechanism for app-scoped state. A module-level fallback reference (`_app_di_scope`, `_app_instance`) MAY exist for environments where `ContextVar` propagation is unreliable (e.g., PyScript/Emscripten), but these fallbacks hold a reference to only one app at a time. Full multi-app isolation is therefore only guaranteed in server-side contexts where `ContextVar` bindings persist reliably. Server-side and SSG entry points SHALL enter the app's DI scope for the duration of any operation that needs DI resolution (HTML generation, route rendering, etc.). There is no conversion between `AppConfig` and any other config type.
+`WebComPyApp` SHALL serve as the immutable definition holder that wires together the root component, the router, the reactive head management system via `HeadElement`, and the configuration. It SHALL NOT hold mutable rendering state — all mutable state SHALL belong to `RenderContext`. `WebComPyApp` SHALL provide a `create_render_context(path="")` method that creates a fresh `RenderContext` with all request-scoped state (DI scope, ComponentStore, HeadElement, Router). In the browser, `app.run()` SHALL create a single `RenderContext` internally. On the server, each SSR request SHALL create and dispose its own `RenderContext`. `HeadElement` SHALL manage the `<head>` DOM element or HTML output declaratively. Module-level fallback references (`_app_di_scope`, `_app_instance`) MAY still exist for browser environments where `ContextVar` propagation is unreliable. The `_active_app_context` ContextVar SHALL reference the `RenderContext` instance, not the `WebComPyApp`. `start_defer_after_rendering()` and `end_defer_after_rendering()` SHALL delegate to `RenderContext._defer_depth` and `RenderContext._deferred_callbacks` via `_active_app_context` or the fallback. Server-side and SSG entry points SHALL be module-level functions (`create_asgi_app`, `run_server`, `generate_static_site`) that accept a `WebComPyApp` instance and optional `ServerConfig`/`GenerateConfig` dataclasses. Developers SHALL only need to provide a root component and optionally a router and config — the framework handles all internal wiring. There is no conversion between `AppConfig` and any other config type.
 
 #### Scenario: Creating a minimal application with config
 - **WHEN** a developer writes `app = WebComPyApp(root_component=MyApp, config=AppConfig(base_url="/app/"))`
@@ -74,10 +82,17 @@ The `browser` object SHALL be `None` on the server and a proxy to the full brows
 ### Requirement: Multiple WebComPy applications shall coexist without interference
 Each `WebComPyApp` instance SHALL have its own DI scope. Global singletons SHALL NOT be used for app-scoped state, enabling multiple WebComPy applications on the same page.
 
-#### Scenario: Two apps on the same page
-- **WHEN** two `WebComPyApp` instances are created with different root components
-- **THEN** each app SHALL have its own Router, ComponentStore, and DI scope
+#### Scenario: Two apps on the same page (browser)
+- **WHEN** two `WebComPyApp` instances are created with different root components in the browser
+- **THEN** each app SHALL create its own `RenderContext` via `create_render_context()`
+- **AND** each `RenderContext` SHALL have its own Router, ComponentStore, and DI scope
 - **AND** components in one app SHALL NOT see DI values from the other
+
+#### Scenario: Concurrent SSR requests to the same app (server)
+- **WHEN** multiple HTTP requests arrive at a server using `create_asgi_app(app)`
+- **THEN** each request SHALL create a new `RenderContext` via `app.create_render_context(path)`
+- **AND** each `RenderContext` SHALL have completely independent mutable state
+- **AND** disposing one `RenderContext` SHALL NOT affect any other `RenderContext`
 
 ### Requirement: The project structure shall be discoverable by convention
 A WebComPy project SHALL follow a specific directory layout. The CLI SHALL discover the app instance using `webcompy_config.py` (which contains `app_import_path` and `app_config`) or the `--app` CLI flag. Configuration files can be placed at the project root or inside the app package directory. When `--app` is provided, the CLI derives the package from the import path and searches for `webcompy_server_config.py` in that package first, then falls back to the project root. The `webcompy_server_config.py` file is optional and contains server/SSG-only settings (`server_config`, `generate_config`).

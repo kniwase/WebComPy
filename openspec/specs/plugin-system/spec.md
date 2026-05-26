@@ -77,13 +77,23 @@ A `PluginManager` class SHALL be provided that discovers plugins from import pat
 
 ### Requirement: Plugin lifecycle shall support on_app_ready hook
 
-`WebComPyPlugin` SHALL provide an `on_app_ready(self, app)` hook, called from `app.run()` before the first render. This gives plugins access to the DOM mount point and browser APIs.
+`WebComPyPlugin` SHALL provide an `on_app_ready(self, ctx)` hook, called from `app.run()` before the first render. This gives plugins access to the DOM mount point and browser APIs via the `RenderContext`. This is a breaking change from the original `on_app_ready(self, app)` signature (WebComPy is pre-stable software).
 
 #### Scenario: Debug toolbar initialization
-- **WHEN** a plugin defines `on_app_ready(self, app)`
+- **WHEN** a plugin defines `on_app_ready(self, ctx)`
 - **AND** `app.run()` is called in the browser
-- **THEN** `on_app_ready` SHALL be called with the `app` instance
-- **AND** the hook SHALL have access to `browser.document` for DOM manipulation
+- **THEN** `on_app_ready` SHALL be called with the `RenderContext` instance
+- **AND** the hook SHALL have access to browser DOM APIs via `ctx.di_scope`
+
+### Requirement: Plugin lifecycle shall support per-request initialization
+
+`WebComPyPlugin` SHALL provide an `on_render_context_init(self, ctx)` hook, called for each `RenderContext` creation. On the server, this is called per request. In the browser, it is called once during `app.run()`.
+
+#### Scenario: Plugin with per-request DI provider
+- **WHEN** a plugin defines `on_render_context_init(self, ctx)` and calls `ctx.di_scope.provide(my_key, my_value)`
+- **AND** multiple SSR requests are processed concurrently
+- **THEN** each request SHALL have its own DI provider value
+- **AND** values from one request SHALL NOT leak to another request
 
 ### Requirement: PluginManager and WebComPyPlugin shall be exported in the public API
 

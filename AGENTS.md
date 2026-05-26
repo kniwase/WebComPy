@@ -277,7 +277,7 @@ When working on the codebase (developing, reviewing, or refactoring), always rea
 | `webcompy/ports/_server/` | `openspec/specs/virtual-dom/spec.md` |
 | `webcompy/plugin/` | `openspec/specs/plugin-system/spec.md`, `openspec/specs/plugin-script/spec.md` |
 | `webcompy/di/` | `openspec/specs/di-scope/spec.md`, `openspec/specs/di-injection/spec.md`, `openspec/specs/dependency-resolver/spec.md` |
-| `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md`, `openspec/specs/scoped-css-incremental/spec.md` |
+| `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md`, `openspec/specs/render-context/spec.md`, `openspec/specs/scoped-css-incremental/spec.md` |
 | `webcompy/ajax/`, `webcompy/aio/` | `openspec/specs/async/spec.md` |
 | `webcompy/cli/` | `openspec/specs/cli/spec.md`, `openspec/specs/project-config/spec.md`, `openspec/specs/config-separation/spec.md`, `openspec/specs/inspect-cli/spec.md` |
 | `webcompy/testing/` | `openspec/specs/testing-module/spec.md` |
