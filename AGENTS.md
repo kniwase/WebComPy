@@ -178,6 +178,26 @@ The `webcompy inspect` command provides programmatic browser interaction for deb
 
 ## Agent Behavior Rules (CRITICAL)
 
+### Task Delegation (Recommended)
+
+When working on implementation tasks, **actively delegate to specialized subagents** rather than handling everything yourself. This is the recommended approach for WebComPy development because:
+
+- Each agent has deep domain knowledge (reactive system, CLI, components, etc.)
+- Delegation reduces context window pressure and improves quality
+- Multiple subagents can work in parallel for faster completion
+- Each agent reads relevant OpenSpec specs before making changes
+
+**Delegation examples:**
+- Reactive system changes → `@browser-developer`
+- CLI or server changes → `@server-developer`
+- UI component development → `@component-developer`
+- docs_app changes → `@docs-developer`
+- Browser verification needed → `@browser-inspector`
+- Local CI checks before push → `@ci-local`
+- Code review needed → `@ci-review`
+
+All agents have Handoff Rules defined in their `.opencode/agents/*.md` files documenting when to delegate to other agents.
+
 **DO NOT execute any action unless explicitly instructed by the user.** This includes, but is not limited to:
 - `git commit`, `git push`, `git rebase`, or any git mutation
 - Creating a pull request
