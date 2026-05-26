@@ -117,9 +117,25 @@ During browser initialization, `BrowserFetchPort` SHALL read the transfer payloa
 - **THEN** subsequent calls to `fetch_port.fetch("/api/users")` SHALL also return from cache
 - **AND** the cache entry SHALL persist for the lifetime of the `BrowserFetchPort` instance
 
+### Requirement: Component IDs shall be deterministically generated for transfer matching
+
+Component SHALL be assigned a deterministic `_component_id` based on the component's position in the element tree: the component type name, the depth in the tree, and the 0-indexed position among siblings at that depth. This hierarchical path SHALL produce the same ID when the same component tree is rendered on the server (SSR) and the browser (hydration), enabling reliable matching of `async_results` entries in the transfer payload to the correct `AsyncResult` instances.
+
+#### Scenario: Same component tree produces same IDs on server and browser
+- **WHEN** a component tree is rendered during SSR, producing component IDs for `AsyncResult` entries
+- **AND** the same component tree is rendered during browser hydration
+- **THEN** each component's `_component_id` SHALL be identical in both environments
+- **AND** `async_results` entries in the transfer payload SHALL match the correct `AsyncResult` instances
+
+#### Scenario: Component removal changes sibling indices for remaining components
+- **WHEN** a component tree has 3 siblings at depth 2 (indices 0, 1, 2)
+- **AND** on the browser side, sibling at index 1 is conditionally removed
+- **THEN** the sibling at index 2 SHALL now have a different `_component_id` than in the server-side tree
+- **AND** its `AsyncResult` SHALL NOT match the server-side entry (gracefully falls back to normal lifecycle)
+
 ### Requirement: AsyncResult shall restore state from transfer payload
 
-During browser initialization, `AsyncResult` instances SHALL check the transfer payload for matching component IDs. If a match is found with `state` equal to `"success"`, the `AsyncResult` SHALL restore directly to `SUCCESS` state with the transferred data, bypassing the `PENDING` → `LOADING` → `SUCCESS` lifecycle.
+During browser initialization, `AsyncResult` instances SHALL check the transfer payload for entry matching their owning component's deterministic `_component_id`. If a match is found with `state` equal to `"success"`, the `AsyncResult` SHALL restore directly to `SUCCESS` state with the transferred data, bypassing the `PENDING` → `LOADING` → `SUCCESS` lifecycle.
 
 #### Scenario: AsyncResult restored from transfer payload
 - **WHEN** a component with ID `"my-component-abc123"` is initialized in the browser

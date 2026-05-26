@@ -47,7 +47,7 @@ In the server environment (during static site generation or server-side renderin
 - **AND** a warning SHALL be logged indicating the timeout was exceeded
 
 ### Requirement: Suspense shall show fallback then swap in browser environment
-In the browser environment, `Suspense._render()` SHALL first render fallback content for immediate display, then schedule the async children resolution. When the async operations complete, `Suspense` SHALL replace the fallback with the actual children using `_patch_children()`.
+In the browser environment, `Suspense._render()` SHALL first render fallback content for immediate display, then schedule the async children resolution. When the async operations complete, `Suspense` SHALL replace the fallback with the actual children by removing the fallback DOM nodes via the existing `_remove_element()` mechanism and rendering the children content in their place, following the same pattern as `SwitchElement._refresh()`.
 
 #### Scenario: Browser Suspense with async data
 - **WHEN** `Suspense` is rendered in the browser
@@ -102,9 +102,11 @@ When multiple `Suspense` elements are siblings in the element tree, each SHALL i
 - **THEN** `UsersList` content SHALL appear after 1 second
 - **AND** `PostsList` fallback SHALL remain for 3 seconds, then swap to content
 
-### Requirement: Suspense shall detect async pending state via tree traversal
+### Requirement: Suspense shall detect and resolve async pending state via _pending_async_template tree traversal
 
-`SuspenseElement` SHALL detect whether its children subtree has pending async operations by traversing the element tree and checking for unresolved `Component._pending_async_template` instances. When such instances are found, the subtree is considered "loading." When all `_pending_async_template` instances in the subtree have been resolved (`None`), the subtree is considered "ready."
+`SuspenseElement` SHALL detect whether its children subtree has pending async operations by traversing the element tree and checking for unresolved `Component._pending_async_template` instances (as defined by `feat-async-component-setup`). When such instances are found, the subtree is considered "loading." When all `_pending_async_template` instances in the subtree have been resolved (`None`), the subtree is considered "ready."
+
+Suspense SHALL own the resolution: when it detects pending `_pending_async_template` coroutines, it SHALL collect them via tree traversal, `await asyncio.gather(*coroutines)` to resolve them in parallel, then call `Component._render()` on each resolved component. `Component._render()` SHALL detect that `_pending_async_template` is already `None` (because Suspense already resolved it) and skip the await step. This ownership model ensures Suspense shows fallback while the coroutines are pending and observable, and swaps to children after resolution.
 
 #### Scenario: Detecting an async child component
 - **WHEN** a `Suspense` wraps a component whose `_pending_async_template` is set (not yet resolved)
@@ -119,7 +121,7 @@ When multiple `Suspense` elements are siblings in the element tree, each SHALL i
 
 ### Requirement: Suspense shall replace fallback with children during hydration
 
-When `SuspenseElement._hydrate_node()` is called in the browser, the server-rendered fallback DOM nodes SHALL be replaced with the actual children content. If children's async setup is still pending during hydration, fallback SHALL remain displayed until the setup completes, then children SHALL replace the fallback.
+When `SuspenseElement._hydrate_node()` is called in the browser, the server-rendered fallback DOM nodes SHALL be replaced with the actual children content. The Suspense SHALL check the hydration data transfer payload to determine whether children async data was resolved during SSR: if the transfer payload contains resolved data for the Suspense's children, `_hydrate_node()` SHALL immediately render children; if no transfer data is present or the children's async setup is still unresolved, `_hydrate_node()` SHALL keep the fallback displayed, schedule async children resolution, and swap to children content when the async operations complete.
 
 #### Scenario: Hydrating a Suspense element with already-resolved data
 - **WHEN** a page containing `Suspense(fallback=..., children=lambda: DataComponent())` is hydrated in the browser

@@ -67,7 +67,7 @@ Modify `webcompy/aio/_async_result.py` to support state restoration from the tra
   - If the component ID is found in the transfer payload `async_results` with `state == "success"`, call `_restore_from_transfer(data)` instead of scheduling execution
   - If not found, proceed with normal `PENDING` → `LOADING` → `SUCCESS/ERROR` lifecycle
 
-The transfer payload needs to be accessible during component setup. Add a module-level `_transfer_payload` variable (or use DI) that is set during `app.run()` initialization and cleared after all restorations are complete.
+The transfer payload needs to be accessible during component setup. Use the DI system (`provide()`/`inject()`) with a new `InjectKey` (e.g., `HYDRATION_DATA_KEY`) scoped to the app's root DI scope during `app.run()` initialization. The key SHALL be provided once at startup and injected by `AsyncResult` and `BrowserFetchPort` during component initialization. This avoids introducing a module-level global, consistent with the framework invariant against `_root_di_scope`-style singletons.
 
 **Files modified:** `webcompy/aio/_async_result.py`, `webcompy/aio/__init__.py`, possibly `webcompy/components/_component.py` (for component ID access during setup)
 

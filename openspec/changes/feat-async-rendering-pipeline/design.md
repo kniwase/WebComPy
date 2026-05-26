@@ -101,12 +101,14 @@ async def _render(self):
 
 ### Decision 5: `AppDocumentRoot._render()` becomes async
 
-**Chosen**:
+**Chosen** (pseudo-code showing the pattern; `_active_app_context` SHALL reference the `RenderContext` instance when SSR context is active, per `architecture` spec):
 
 ```python
 async def _render(self):
     token = _active_di_scope.set(self._di_scope)
     app_token = _active_app_context.set(self._app) if self._app else None
+    # In SSR environments, _active_app_context references the RenderContext;
+    # in the browser, it falls back to the WebComPyApp for deferred callback access.
     try:
         on_before = self._property["on_before_rendering"]
         if iscoroutinefunction(on_before):

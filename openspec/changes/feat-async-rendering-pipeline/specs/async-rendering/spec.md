@@ -59,6 +59,14 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 - **THEN** DOM node indices (`_node_idx`) SHALL be assigned before rendering begins
 - **AND** the final DOM order SHALL match the children list order regardless of completion order
 
+#### Scenario: One child raises during sibling rendering
+- **WHEN** `asyncio.gather(*tasks, return_exceptions=True)` is used
+- **AND** one child's `_render()` raises an unexpected exception
+- **THEN** the exception SHALL be captured as a return value (not propagated to cancel sibling tasks)
+- **AND** the other sibling children SHALL complete normally
+- **AND** the first exception encountered SHALL be re-raised after all siblings complete
+- **AND** the DOM SHALL NOT be left in a partially rendered state — the exception prevents the parent mount from finalizing
+
 ### Requirement: Lifecycle hooks shall support async callables
 
 `on_before_rendering` and `on_after_rendering` hooks SHALL accept both synchronous and asynchronous callables. `Component._render()` SHALL use `inspect.iscoroutinefunction()` to detect async hooks and `await` them. Synchronous hooks SHALL be called directly without wrapping.
