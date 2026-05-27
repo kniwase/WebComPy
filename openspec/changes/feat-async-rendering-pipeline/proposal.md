@@ -19,7 +19,6 @@ This change converts the entire rendering pipeline from synchronous to async, en
 - **`SwitchElement._refresh()` → `async def _refresh(self, *args):`** — Async refresh with deferred after-rendering callbacks.
 - **`RepeatElement._refresh()` → `async def _refresh(self, *args):`** — Async refresh for list reconciliation.
 - **`Component._render()` → `async def _render(self):`** — Awaits async lifecycle hooks and parent render.
-- **`Component.__setup()` → async-aware** — Detects `async` component definitions via `inspect.iscoroutinefunction()` and awaits them.
 - **`on_before_rendering`/`on_after_rendering` → async-aware** — Detects async callables via `inspect.iscoroutinefunction()` and awaits them.
 - **`ComponentProperty` type update** — `on_before_rendering` and `on_after_rendering` fields typed as `Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]`.
 - **`Context.on_before_rendering()`/`Context.on_after_rendering()`** — Accept both sync and async callables.

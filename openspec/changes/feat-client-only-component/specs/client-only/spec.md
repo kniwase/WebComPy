@@ -76,6 +76,7 @@ When `ClientOnlyElement._hydrate_node()` is called in the browser, the server-re
 - **THEN** the `<p>Loading...</p>` fallback node SHALL be removed from the DOM
 - **AND** `ClientOnlyElement._hydrate_node()` SHALL generate the children and schedule async rendering via `asyncio.ensure_future(self._render())`
 - **AND** the `InteractiveChart()` content SHALL be rendered asynchronously in its place
+- **AND** if `self._render()` raises during this async rendering, the error SHALL be logged via the framework's error reporting mechanism and the fallback SHALL NOT be restored (the DOM may be in a transitional state)
 - **AND** no hydration mismatch warning or error SHALL occur
 
 #### Scenario: Hydrating a ClientOnly element without fallback

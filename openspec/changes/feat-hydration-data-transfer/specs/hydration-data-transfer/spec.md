@@ -128,6 +128,7 @@ The `_component_id` SHALL be stored as a separate field (`_component_id: str | N
 - **AND** the same component tree is rendered during browser hydration
 - **THEN** each component's `_component_id` SHALL be identical in both environments
 - **AND** `async_results` entries in the transfer payload SHALL match the correct `AsyncResult` instances
+- **AND** this stability is guaranteed by the hydration contract — `_hydrate_node()` adopts existing prerendered nodes, so the component tree structure in the browser matches the server exactly
 
 #### Scenario: _component_id is computed during _render() not __init__()
 - **WHEN** a `Component` is instantiated (before `_render()`)

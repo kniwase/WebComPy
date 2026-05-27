@@ -71,7 +71,8 @@ This is a behavioral change from the current sequential rendering pipeline. With
 - **AND** after all siblings complete, the first exception encountered SHALL be re-raised
 - **AND** `ElementWithChildren._render()` SHALL catch the re-raised exception
 - **AND** it SHALL call `_remove_element()` on each successfully rendered child to clean up their DOM nodes
-- **AND** it SHALL re-raise the exception to its caller
+- **AND** `_remove_element()` on each child SHALL trigger the full destruction lifecycle: effect scope disposal, `on_before_destroy` hooks, and DI scope cleanup
+- **AND** after cleanup, the exception SHALL be re-raised to its caller
 - **AND** no partially rendered sibling nodes SHALL remain orphaned in the DOM
 
 ### Requirement: Lifecycle hooks shall support async callables

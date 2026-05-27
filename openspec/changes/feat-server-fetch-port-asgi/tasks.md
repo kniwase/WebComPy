@@ -1,7 +1,7 @@
 - [ ] **Task 1**: Add `is_self_site_url()` method to `FetchPort` ABC
-  - Add `is_self_site_url(url: str) -> bool` abstract method to `FetchPort` in `webcompy/ports/_fetch.py`
+  - Add `is_self_site_url(url: str) -> bool` **non-abstract** method to `FetchPort` in `webcompy/ports/_fetch.py` with a default implementation returning `False`
   - URLs starting with `/` or `.` are self-site; all others are external
-  - Add default implementation in `FetchPort` (non-abstract) that returns `False` for browser (browser always fetches externally)
+  - `BrowserFetchPort` inherits the default `False` (browser always fetches externally); `ServerFetchPort` overrides to return `True` for self-site URLs
   - Estimated: 30 min
 
 - [ ] **Task 2**: Rewrite `ServerFetchPort` with dual-client architecture

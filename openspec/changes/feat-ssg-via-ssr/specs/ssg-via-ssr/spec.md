@@ -55,7 +55,9 @@ The `send_html()` route handler in `_server.py` SHALL be `async def send_html()`
 
 ### Requirement: Per-route RenderContext lifecycle shall be guaranteed during SSG
 
-When `generate_static_site()` fetches each route via `httpx.ASGITransport`, the ASGI handler SHALL create a fresh `RenderContext` for each request and SHALL call `RenderContext.dispose()` after the HTML is generated. If a route fetch raises an exception, `dispose()` SHALL still be called via `try/finally` to prevent resource leaks (DI scopes, component stores, etc.).
+When `generate_static_site()` fetches each route via `httpx.ASGITransport`, the ASGI request goes through the same `send_html()` handler used by the dev server. This handler already creates a fresh `RenderContext` for each request via `app.create_render_context(path)` in a `try/finally` block and SHALL call `RenderContext.dispose()` in the `finally` block. ASGITransport requests SHALL go through the same handler, so per-route disposal is already guaranteed by the existing handler logic — no additional SSG-specific disposal code is needed.
+
+If a route fetch raises an exception, `dispose()` SHALL still be called via the `finally` block in `send_html()` to prevent resource leaks (DI scopes, component stores, etc.).
 
 #### Scenario: RenderContext is disposed after successful route rendering
 - **WHEN** a route `/about` is fetched via ASGITransport during SSG
