@@ -60,5 +60,5 @@ This change converts the entire rendering pipeline from synchronous to async, en
 ## Impact
 
 - **Affected modules**: `webcompy/elements/types/` (all element type modules), `webcompy/components/` (component, hooks, libs), `webcompy/app/` (root component, app), `webcompy/cli/` (html, generate, server), `webcompy/aio/` (async utilities)
-- **Breaking**: `generate_html()` changes from sync to async — all callers must `await` it. This affects `webcompy/cli/_generate.py` and `webcompy/cli/_server.py`.
+- **Breaking**: `generate_html()` changes from sync to async — internal function in `webcompy/cli/_html.py` with no public consumers. Only callers to update are `webcompy/cli/_generate.py` and `webcompy/cli/_server.py`. All public-facing entry points (`webcompy start`, `webcompy generate`, `create_asgi_app()`) remain callable as documented.
 - **Backward compatible**: Sync component definitions and lifecycle hooks continue to work without modification. The `inspect.iscoroutinefunction()` check transparently handles both sync and async callables.

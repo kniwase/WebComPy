@@ -25,10 +25,11 @@
 ## 4. Restructure generate_static_site() to use ASGITransport
 
 - [ ] 4.1 Change `generate_static_site()` from `def` to `async def` in `_generate.py`. The function now creates an ASGI app via `create_asgi_app()` and fetches routes via `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))`.
-- [ ] 4.2 Implement the SSG route-fetching logic: for history-mode apps, iterate `app.routes`, compute expanded paths (handling `path_params`), fetch each via `client.get()`, and write HTML to `dist/{path}/index.html`. For hash-mode apps, fetch the root route and write to `dist/index.html`. For 404, set a special path and write `dist/404.html`.
-- [ ] 4.3 Remove the old direct `html_generator()` call path from `_generate.py`. The `html_generator` partial is no longer created in `_generate.py` — it's handled by `create_asgi_app()`.
-- [ ] 4.4 Update the CLI entry point for `generate` command in `webcompy/cli/__main__.py` — call `asyncio.run(generate_static_site())` instead of calling it synchronously.
-- [ ] 4.5 Keep the dist directory creation, `.nojekyll`, `CNAME`, static file copying, and wheel/asset file writing in `_generate.py` — these are file-system operations that happen before or after the ASGI fetches.
+- [ ] 4.2 After `create_asgi_app(app, build_config, mode="ssg")` returns, call `ServerFetchPort.configure(asgi_app, blocked_paths)` before creating the `httpx.AsyncClient`. This is a dependency ordering constraint from `feat-server-fetch-port-asgi`: the fetch port must be configured before any route is fetched. Blocked paths SHALL be derived from `app.routes` (page routes with non-None component entries).
+- [ ] 4.3 Implement the SSG route-fetching logic: for history-mode apps, iterate `app.routes`, compute expanded paths (handling `path_params`), fetch each via `client.get()`, and write HTML to `dist/{path}/index.html`. For hash-mode apps, fetch the root route and write to `dist/index.html`. For 404, set a special path and write `dist/404.html`.
+- [ ] 4.4 Remove the old direct `html_generator()` call path from `_generate.py`. The `html_generator` partial is no longer created in `_generate.py` — it's handled by `create_asgi_app()`.
+- [ ] 4.5 Update the CLI entry point for `generate` command in `webcompy/cli/__main__.py` — call `asyncio.run(generate_static_site())` instead of calling it synchronously.
+- [ ] 4.6 Keep the dist directory creation, `.nojekyll`, `CNAME`, static file copying, and wheel/asset file writing in `_generate.py` — these are file-system operations that happen before or after the ASGI fetches.
 
 ## 5. Integration and verification
 

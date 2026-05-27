@@ -30,7 +30,7 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 
 ### Requirement: Sync-only leaf elements shall inherit a default no-op async _render()
 
-`Element._render()` (the base class inherited by `TextElement`, `VoidElement`, `InputElement`, and other sync-only leaf elements) SHALL be `async def` but SHALL have a default implementation with no `await` points — it SHALL call `await self._mount_node()` which returns immediately. Custom user elements that override `_render()` SHALL follow the same pattern: if their `_render()` contains no async operations, `async def _render(self)` with no `await` points is valid Python and SHALL work correctly. This is not a breaking change — calling `await element._render()` on a coroutine with no `await` points behaves identically to a synchronous call.
+`Element._render()` (the base class inherited by `TextElement`, `VoidElement`, `InputElement`, and other sync-only leaf elements) SHALL be `async def` but SHALL have a default implementation with no `await` points. `_mount_node()` is called synchronously (not awaited) since it remains a sync method. The `async def` signature makes the method a coroutine that resolves immediately, so callers can `await` it without change. This is valid Python — an `async def` method with no `await` expressions returns a coroutine that completes on first `await`. The spec explicitly notes: leaf elements' `_render()` SHALL NOT `await self._mount_node()` because `_mount_node()` is synchronous and awaiting a non-coroutine would cause a TypeError. Custom user elements that override `_render()` SHALL follow the same pattern: if their `_render()` contains no async operations, `async def _render(self)` with no `await` points is valid Python and SHALL work correctly. This is not a breaking change — calling `await element._render()` on a coroutine with no `await` points behaves identically to a synchronous call.
 
 #### Scenario: TextElement._render() remains sync internally
 - **WHEN** `TextElement._render()` is called as `await text._render()`
@@ -72,6 +72,8 @@ This is a behavioral change from the current sequential rendering pipeline. With
 - **AND** `ElementWithChildren._render()` SHALL catch the re-raised exception
 - **AND** it SHALL call `_remove_element()` on each successfully rendered child to clean up their DOM nodes
 - **AND** `_remove_element()` on each child SHALL trigger the full destruction lifecycle: effect scope disposal, `on_before_destroy` hooks, and DI scope cleanup
+- **AND** if `_remove_element()` itself raises during cleanup of a sibling, the exception SHALL be logged via `report_error()` and cleanup SHALL continue for remaining siblings
+- **AND** the originally re-raised exception from the failing child SHALL take priority over cleanup errors
 - **AND** after cleanup, the exception SHALL be re-raised to its caller
 - **AND** no partially rendered sibling nodes SHALL remain orphaned in the DOM
 

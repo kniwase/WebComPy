@@ -92,6 +92,13 @@ For nested `Suspense` boundaries, each Suspense SHALL provide its own scope of `
 - **AND** after the inner Suspense completes, its scope SHALL be disposed
 - **AND** components in the outer Suspense (outside the inner one) SHALL see the outer scope's `True` value
 
+#### Scenario: Suspense DI scope is disposed on element removal before async resolution completes
+- **WHEN** a `Suspense` element is removed from the DOM (e.g., via route change) while browser-side async resolution is still in progress
+- **THEN** the pending `asyncio.Task` SHALL be cancelled via `task.cancel()`
+- **AND** the DI scope with `SUSPENSE_RESOLVING_KEY=True` SHALL be disposed in the Suspense's `_remove_element()` method
+- **AND** after cancellation, the `_resolve()` callback SHALL NOT execute (the task is cancelled)
+- **AND** no `inject()` calls from the cancelled task SHALL attempt to access the disposed scope
+
 #### Scenario: Suspense boundary resolves async children before Component._render()
 - **WHEN** an async component is a descendant of `SuspenseElement`
 - **AND** `SuspenseElement._render()` is called
@@ -164,10 +171,13 @@ The active component context, effect scope, and DI scope SHALL be set up synchro
 
 If the `await self._pending_async_template` in `_render()` raises, the exception SHALL propagate through the async `_render()` chain. The effect scope and DI scope SHALL already be cleaned up (closed in `__setup__`'s `finally` block). The component SHALL remain uninitialized.
 
+`_remove_element()` SHALL only be called if `__init_component()` was invoked before the failure. If `_pending_async_template` resolution fails before `__init_component()` was called, the component has no mounted DOM nodes and no initialized state — the component SHALL be removed from its parent's children list without calling `_remove_element()`, since there is nothing to clean up.
+
 #### Scenario: Async setup raises an exception
 - **WHEN** an async component's setup function raises (e.g., `await fetch()` throws)
 - **THEN** the `try/except` block in `Component._render()` SHALL catch the exception
-- **AND** `self._remove_element()` SHALL be called to clean up any partially mounted DOM nodes
+- **AND** if `__init_component()` was already called (e.g., failure happened after template resolution), `self._remove_element()` SHALL be called to clean up mounted DOM nodes
+- **AND** if the failure occurred before `__init_component()` was called, the component SHALL be removed from its parent's children list without calling `_remove_element()` (no DOM nodes were mounted)
 - **AND** the exception SHALL propagate to the caller of `_render()` for parent-level error handling
 - **AND** the effect scope SHALL be disposed (from `__setup__`'s `finally`)
 - **AND** the DI child scope SHALL be disposed (from `__setup__`'s `finally`)

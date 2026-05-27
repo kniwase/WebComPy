@@ -179,6 +179,13 @@ During browser initialization, `AsyncResult` instances SHALL check the transfer 
 - **AND** if incompatible, the entry SHALL be silently skipped and the component SHALL follow the normal lifecycle
 - **AND** a `UserWarning` SHALL be logged indicating the type mismatch
 
+#### Scenario: SSR resolves Suspense children within timeout — browser hydration matches component IDs
+- **WHEN** a `Suspense` boundary resolves during SSR (children rendered, not fallback)
+- **AND** the children's `_component_id` values are included in the transfer payload
+- **THEN** during browser hydration, the same component tree SHALL produce the same `_component_id` values
+- **AND** `AsyncResult` restoration SHALL succeed for components inside the resolved Suspense boundary
+- **AND** the async function SHALL NOT be re-executed in the browser
+
 #### Scenario: SSR renders Suspense fallback, browser renders children
 - **WHEN** a component inside `Suspense(fallback=..., children=lambda: AsyncDataComponent())` is rendered during SSR
 - **AND** the async data does not resolve within the timeout, so fallback is rendered instead
@@ -190,7 +197,7 @@ During browser initialization, `AsyncResult` instances SHALL check the transfer 
 
 ### Requirement: The transfer payload shall be read during browser initialization
 
-`app.run()` SHALL read the transfer payload from the DOM before executing component setups. The payload SHALL be parsed and stored in a location accessible to `AsyncResult` and `BrowserFetchPort` for restoration.
+`app.run()` SHALL read the transfer payload from the DOM before executing component setups. The parsed payload SHALL be provided into the root DI scope via `provide(HYDRATION_DATA_KEY, payload)` before any component setup begins. This makes the payload accessible to `inject(HYDRATION_DATA_KEY)` calls during both component initialization and hydration phases. `AsyncResult` restoration and `BrowserFetchPort` cache population SHALL read from this DI-provided payload.
 
 #### Scenario: Reading the payload during app.run()
 - **WHEN** `app.run()` is called in the browser
