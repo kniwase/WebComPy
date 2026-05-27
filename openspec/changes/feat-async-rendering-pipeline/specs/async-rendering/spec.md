@@ -98,8 +98,8 @@ This is a behavioral change from the current sequential rendering pipeline. With
 
 #### Scenario: Async on_after_rendering during route navigation
 - **WHEN** an async `on_after_rendering` hook is deferred via `start_defer_after_rendering()`
-- **THEN** the async hook SHALL be scheduled via the host port's `schedule_macro_task()` mechanism
-- **AND** `aio_run()` SHALL be used to execute the async hook
+- **THEN** the hook SHALL be scheduled via the host port's `schedule_macro_task()` mechanism, which wraps it as `lambda: aio_run(async_hook())` — `aio_run()` internally calls `asyncio.ensure_future()` (browser) or `loop.create_task()` (server)
+- **AND** the `schedule_macro_task()` + `aio_run()` pair ensures the hook runs asynchronously within the event loop after the current synchronous execution finishes
 
 ### Requirement: Context shall accept async lifecycle hooks
 

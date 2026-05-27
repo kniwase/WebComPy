@@ -186,14 +186,15 @@ During browser initialization, `AsyncResult` instances SHALL check the transfer 
 - **AND** `AsyncResult` restoration SHALL succeed for components inside the resolved Suspense boundary
 - **AND** the async function SHALL NOT be re-executed in the browser
 
-#### Scenario: SSR renders Suspense fallback, browser renders children
+#### Scenario: SSR renders Suspense fallback, browser renders children — component IDs differ
 - **WHEN** a component inside `Suspense(fallback=..., children=lambda: AsyncDataComponent())` is rendered during SSR
 - **AND** the async data does not resolve within the timeout, so fallback is rendered instead
 - **THEN** the component's `_component_id` SHALL NOT appear in the SSR component tree (the fallback subtree replaces it)
 - **AND** the `async_results` section of the transfer payload SHALL NOT contain an entry for that component
 - **WHEN** browser hydration renders `children` instead of `fallback`
 - **THEN** the component's `_component_id` SHALL be generated from its position in the browser-side tree
-- **AND** the component SHALL follow the normal `PENDING` → `LOADING` → `SUCCESS/ERROR` lifecycle (no transfer match because no SSR entry exists)
+- **AND** this `_component_id` SHALL differ from what it would have been during SSR (the component tree structures are different: fallback subtree during SSR, children subtree during browser hydration)
+- **AND** the component SHALL follow the normal `PENDING` → `LOADING` → `SUCCESS/ERROR` lifecycle (no transfer match because the SSR tree never contained this component)
 
 ### Requirement: The transfer payload shall be read during browser initialization
 

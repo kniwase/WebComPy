@@ -96,7 +96,8 @@ For nested `Suspense` boundaries, each Suspense SHALL provide its own scope of `
 - **WHEN** a `Suspense` element is removed from the DOM (e.g., via route change) while browser-side async resolution is still in progress
 - **THEN** the pending `asyncio.Task` SHALL be cancelled via `task.cancel()`
 - **AND** the DI scope with `SUSPENSE_RESOLVING_KEY=True` SHALL be disposed in the Suspense's `_remove_element()` method
-- **AND** after cancellation, the `_resolve()` callback SHALL NOT execute (the task is cancelled)
+- **AND** `_remove_element()` SHALL await the cancelled task (via `await task` wrapped in `try/except asyncio.CancelledError`) to ensure the task has fully terminated before disposing the scope
+- **AND** the `_resolve()` callback SHALL check a `self._disposed` flag on the Suspense element before accessing the DI scope, and abort immediately if the element has been disposed
 - **AND** no `inject()` calls from the cancelled task SHALL attempt to access the disposed scope
 
 #### Scenario: Suspense boundary resolves async children before Component._render()

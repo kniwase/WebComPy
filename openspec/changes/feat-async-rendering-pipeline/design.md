@@ -41,7 +41,7 @@ This synchronous design prevents:
 
 **Rationale**: This is the foundational change. Making `_render()` async allows every render step to `await` async operations (component setup, lifecycle hooks, child rendering). The alternative — keeping `_render()` sync and wrapping async calls with `asyncio.run()` at each call site — would break the event loop in both Emscripten (where the PyScript runtime manages the loop) and CPython (where `asyncio.run()` creates a new loop).
 
-**Key change**: The base method signature changes from `def _render(self):` to `async def _render(self):`. This propagates to every subclass.
+**Key change**: The base method signature changes from `def _render(self):` to `async def _render(self):`. This propagates to every subclass. `_mount_node()` remains synchronous and is NOT awaited — async leaf elements call `_mount_node()` directly within their `async def _render(self)` with no `await` points.
 
 ### Decision 2: `ElementWithChildren._render()` uses `asyncio.gather()` for sibling parallelism
 
