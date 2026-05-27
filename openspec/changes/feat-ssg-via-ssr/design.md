@@ -38,12 +38,16 @@ The `feat/async-rendering-pipeline` change makes `generate_html()` return `Await
 ```python
 async def generate_static_site(app: WebComPyApp | None = None):
     # ... resolve build_config ...
-    asgi_app = create_asgi_app(app, build_config, mode="ssg")
+    # Copy build_config in SSG mode to avoid mutating user-provided config
+    ssg_build_config = copy.copy(build_config)
+    ssg_build_config.server.dev = False
+    asgi_app = create_asgi_app(app, ssg_build_config, mode="ssg")
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=asgi_app),
         base_url="http://test",
     ) as client:
         if app.router_mode == "history" and app.routes:
+            # app.routes is list of (path: str, matcher: Callable, component: type, config: dict, page_info: dict) tuples
             for path, _, _, _, page in app.routes:
                 paths = (
                     {path.format(**params) for params in path_params}

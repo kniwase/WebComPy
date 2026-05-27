@@ -80,7 +80,7 @@ async def _render(self):
 
 **Chosen**: During hydration in the browser, `ClientOnlyElement._hydrate_node()` generates the children, sets up their DOM references, and schedules async rendering via `asyncio.ensure_future(self._render())`. This is the same approach used by `SwitchElement` when branches change. `_hydrate_node()` does NOT call `child._render()` directly because `_render()` is now `async def` — calling it without `await` would produce an un-awaited coroutine.
 
-**Rationale**: The server renders fallback content. When the browser loads, it must replace that fallback with the actual browser-only content. The `_hydrate_node()` method is the right place for this because it's called during the hydration phase of `AppDocumentRoot._render()`. Scheduling `self._render()` via `asyncio.ensure_future()` ensures the async children rendering runs on the event loop without blocking the synchronous hydration phase.
+**Rationale**: The server renders fallback content. When the browser loads, it must replace that fallback with the actual browser-only content. The `_hydrate_node()` method is the right place for this because it's called during the hydration phase of `AppDocumentRoot._render()`. Scheduling `self._render()` via `asyncio.ensure_future()` ensures the async children rendering runs on the event loop without blocking the synchronous hydration phase. The returned task is stored in `self._render_task` so that `_remove_element()` can cancel it if the element is destroyed before rendering completes, preventing errors from operating on detached DOM nodes.
 
 ```python
 def _hydrate_node(self):
@@ -89,7 +89,7 @@ def _hydrate_node(self):
         self._children = children
         for c_idx, child in enumerate(self._children):
             child._node_idx = self._node_idx + c_idx
-        asyncio.ensure_future(self._render())
+        self._render_task = asyncio.ensure_future(self._render())
     else:
         children = self._generate_fallback()
         self._children = children

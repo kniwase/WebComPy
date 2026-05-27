@@ -54,11 +54,14 @@ async def _render(self):
     if (node := self._get_node()) is not None:
         for _ in range(node.childNodes.length - self._children_length):
             node.childNodes[-1].remove()
-    if errors := [r for r in results if isinstance(r, BaseException)]:
+    if errors := [r for r in results if isinstance(r, Exception)]:
+        if len(errors) > 1:
+            for err in errors[1:]:
+                report_error(err)  # Log sibling errors before re-raising first
         raise errors[0]  # Re-raise the first exception after all siblings complete
 ```
 
-**Rationale**: In the synchronous version, children are rendered sequentially. With async rendering, `asyncio.gather(return_exceptions=True)` allows sibling children to render concurrently without cancelling siblings if one raises. Exceptions are collected and the first is re-raised after all siblings complete, preventing the DOM from being left in a partially rendered state. In the browser (Emscripten), `asyncio.gather()` still executes coroutines cooperatively on a single thread, so there are no race conditions on the DOM. On the server (SSG), this enables future I/O-bound parallelism.
+**Rationale**: In the synchronous version, children are rendered sequentially. With async rendering, `asyncio.gather(return_exceptions=True)` allows sibling children to render concurrently without cancelling siblings if one raises. Exceptions are filtered to `Exception` (not `BaseException`, to avoid catching `KeyboardInterrupt` and `SystemExit`). The first exception is re-raised after all siblings complete; sibling errors are logged via `report_error()` before re-raising, preserving debug context. This prevents the DOM from being left in a partially rendered state.
 
 **Trade-off**: `asyncio.gather()` does not guarantee ordering of coroutine start, but it does guarantee ordering of results. Since DOM child indices are pre-assigned (`_node_idx`) and mounting uses `insertBefore` at specific positions, rendering order is determined by `_node_idx`, not execution order. This means sibling parallelism is safe.
 
