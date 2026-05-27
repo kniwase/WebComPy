@@ -50,18 +50,28 @@ This synchronous design prevents:
 ```python
 async def _render(self):
     await super()._render()
+    # Pre-assign _node_idx before concurrent rendering
+    for c_idx, child in enumerate(self._children):
+        child._node_idx = self._node_idx + c_idx
     results = await asyncio.gather(*[child._render() for child in self._children], return_exceptions=True)
-    if (node := self._get_node()) is not None:
-        for _ in range(node.childNodes.length - self._children_length):
-            node.childNodes[-1].remove()
     if errors := [r for r in results if isinstance(r, Exception)]:
         if len(errors) > 1:
             for err in errors[1:]:
                 report_error(err)  # Log sibling errors before re-raising first
-        raise errors[0]  # Re-raise the first exception after all siblings complete
+        # Cleanup: remove elements for all successfully rendered children
+        for i, r in enumerate(results):
+            if not isinstance(r, Exception):
+                try:
+                    self._children[i]._remove_element()
+                except Exception as cleanup_err:
+                    report_error(cleanup_err)
+        raise errors[0]  # Re-raise the first exception after cleanup
+    if (node := self._get_node()) is not None:
+        for _ in range(node.childNodes.length - self._children_length):
+            node.childNodes[-1].remove()
 ```
 
-**Rationale**: In the synchronous version, children are rendered sequentially. With async rendering, `asyncio.gather(return_exceptions=True)` allows sibling children to render concurrently without cancelling siblings if one raises. Exceptions are filtered to `Exception` (not `BaseException`, to avoid catching `KeyboardInterrupt` and `SystemExit`). The first exception is re-raised after all siblings complete; sibling errors are logged via `report_error()` before re-raising, preserving debug context. This prevents the DOM from being left in a partially rendered state.
+**Rationale**: In the synchronous version, children are rendered sequentially. With async rendering, `asyncio.gather(return_exceptions=True)` allows sibling children to render concurrently without cancelling siblings if one raises. Exceptions are filtered to `Exception` (not `BaseException`, to avoid catching `KeyboardInterrupt` and `SystemExit`). After all siblings complete, successfully rendered children have `_remove_element()` called to clean up their DOM nodes (triggering full destruction lifecycle: effect scope disposal, `on_before_destroy` hooks, DI scope cleanup), then the first exception is re-raised. Sibling errors beyond the first are logged via `report_error()` before cleanup, preserving debug context. This prevents the DOM from being left in a partially rendered state.
 
 **Trade-off**: `asyncio.gather()` does not guarantee ordering of coroutine start, but it does guarantee ordering of results. Since DOM child indices are pre-assigned (`_node_idx`) and mounting uses `insertBefore` at specific positions, rendering order is determined by `_node_idx`, not execution order. This means sibling parallelism is safe.
 

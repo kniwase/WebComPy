@@ -81,11 +81,12 @@ This behavioral change means side effects from all siblings execute even when on
 - **AND** after cleanup, the exception SHALL be re-raised to its caller
 - **AND** no partially rendered sibling nodes SHALL remain orphaned in the DOM
 
-#### Scenario: _active_consumer ContextVar isolation across asyncio.gather() siblings
+#### Scenario: _active_consumer and _active_di_scope ContextVar isolation across asyncio.gather() siblings
 - **WHEN** sibling children are rendered via `asyncio.gather()`
-- **AND** one sibling modifies `_active_consumer` during its `_render()`
+- **AND** one sibling modifies `_active_consumer` or `_active_di_scope` during its `_render()` (e.g., a `SuspenseElement` providing `SUSPENSE_RESOLVING_KEY` via DI scope)
 - **THEN** the ContextVar change SHALL NOT leak to other sibling tasks — each task gets a snapshot at task creation time
-- **AND** in PyScript (where ContextVar fallback uses shared globals), the framework SHALL manually reset `_active_consumer` before each sibling task to ensure isolation
+- **AND** in PyScript (where ContextVar fallback uses shared globals), the framework SHALL manually reset `_active_consumer` and `_active_di_scope` before each sibling task to ensure isolation
+- **AND** sibling coroutines SHALL NOT interfere with each other's signal dependency tracking (`_active_consumer`) or DI scope resolution (`_active_di_scope`)
 
 ### Requirement: Lifecycle hooks shall support async callables
 

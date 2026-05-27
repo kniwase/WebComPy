@@ -10,6 +10,7 @@
 - [ ] 2.3 Add `import asyncio` to `_base.py`
 - [ ] 2.4 Update `ElementWithChildren._hydrate_node()` — change the `for child in self._children: child._hydrate_node()` loop to a sync loop (hydration is not async in this change)
 - [ ] 2.5 Document that `_hydrate_node()` callers may encounter children with no matching prerendered nodes. These un-hydrated children need async `_render()` scheduling, which is handled by downstream changes: `feat-client-only-component` (ClientOnly._hydrate_node() schedules `asyncio.ensure_future(self._render())`) and `feat-suspense-component` (Suspense._hydrate_node() schedules async resolution). The foundational async-rendering-pipeline change does NOT modify `_hydrate_node()` to schedule async rendering — it keeps hydration synchronous.
+- [ ] 2.6 Implement PyScript ContextVar isolation for `asyncio.gather()` siblings: In the browser (Emscripten), Python ContextVar fallback uses shared module-level globals. Before starting each sibling coroutine in `asyncio.gather()`, the framework SHALL snapshot `_active_consumer` and `_active_di_scope` ContextVars and restore them at the start of each sibling task. This ensures sibling coroutines do not interfere with each other's signal dependency tracking or DI scope resolution. Wrap each child coroutine in a helper that (a) snapshots current ContextVar values, (b) restores them at task entry, and (c) runs the original child coroutine. The helper SHALL be applied in `ElementWithChildren._render()` and `AppDocumentRoot._render()` wherever `asyncio.gather()` is used for sibling rendering.
 
 ## 3. Convert DynamicElement._render() to async
 
@@ -74,14 +75,18 @@
 - [ ] 10.4 Update `html_generator()` calls in `generate_html()` to `await html_generator()` — but since `html_generator` is a `functools.partial` wrapping `generate_html`, this needs careful handling. Actually, `html_generator` in `_generate.py` and `_server.py` wraps `generate_html` via `functools.partial`. Update these call sites.
 - [ ] 10.5 Add `import asyncio` to `_html.py`
 
-## 11. Update generate_static_site() for async generate_html()
+## 11. Update generate_static_site() for async generate_html() — WILL BE SUPERSEDED BY feat-ssg-via-ssr
+
+> **Note**: This task section will be completely reworked by `feat/ssg-via-ssr` which restructures both `_generate.py` and `_server.py` to route through the ASGI app. Implement only a minimal async wrapper here (add `asyncio.run()` at the CLI entry point) and defer full refactoring to `feat-ssg-via-ssr`.
 
 - [ ] 11.1 Change `generate_static_site()` to `async def generate_static_site(app=None):` in `webcompy/cli/_generate.py`
 - [ ] 11.2 Update all `html_generator()` calls to `await html_generator()` (since `html_generator` wraps `generate_html` which is now async)
 - [ ] 11.3 Update the CLI entry point: wrap `generate_static_site()` call in `asyncio.run()`
 - [ ] 11.4 Add `import asyncio` to `_generate.py`
 
-## 12. Update dev server for async generate_html()
+## 12. Update dev server for async generate_html() — WILL BE SUPERSEDED BY feat-ssg-via-ssr
+
+> **Note**: Same as Task 11 — the dev server restructuring in `feat/ssg-via-ssr` will replace these changes. Implement only minimal async wrapping here.
 
 - [ ] 12.1 In `webcompy/cli/_server.py`, update `send_html` handler to `await html_generator()` since `generate_html` is now async
 - [ ] 12.2 Update the `html_generator = partial(generate_html, ...)` — `generate_html` is now async, so `html_generator()` returns a coroutine. Call sites must `await html_generator()`
