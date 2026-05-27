@@ -79,12 +79,18 @@ Page routes (routes that have a corresponding `Component` registered via `app.ro
 - **THEN** the fetch SHALL proceed through the ASGI app normally
 - **AND** the response SHALL contain the API endpoint's data
 
-#### Scenario: Page route with dynamic segments blocks all concrete paths
-- **WHEN** `app.routes` includes `("/users/:id", UserPage, ...)`
-- **AND** path parameters are available during SSG route enumeration
-- **THEN** both `"/users/42"` and `"/users/99"` SHALL be added to the blocked paths set
-- **AND** `ServerFetchPort.fetch("/users/42")` SHALL return 500
-- **AND** `ServerFetchPort.fetch("/users/not-in-routes")` SHALL match the dynamic pattern and return 500
+#### Scenario: Dynamic route blocks all concrete paths via prefix matching
+- **WHEN** the blocked path set contains the literal pattern `"/users/:id"` (from a route `("/users/:id", UserPage, ...)` without available path parameters)
+- **AND** a component calls `ServerFetchPort.fetch("/users/42")` during SSR
+- **THEN** the blocked path check SHALL match the prefix `/users/` (up to and including the segment delimiter after the pattern's last concrete literal) and return 500
+- **AND** a request to `"/users/42/edit"` SHALL NOT match `"/users/:id"` (it has more segments than the pattern)
+- **AND** a request to `"/api/users"` SHALL NOT match (prefix does not start with `/users/`)
+
+#### Scenario: Dynamic route with available path parameters uses concrete paths
+- **WHEN** the blocked path set contains concrete paths `{"/users/42", "/users/99"}` (from enumerated route parameters during SSG)
+- **AND** a component calls `ServerFetchPort.fetch("/users/42")` during SSR
+- **THEN** the exact match SHALL return 500
+- **AND** a request to `"/users/999"` SHALL NOT match (not in the set), and the ASGI app SHALL process it normally (returning whatever the route handler returns for unmatched paths)
 
 ### Requirement: ServerFetchPort shall resolve self-site URLs against base_url
 

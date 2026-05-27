@@ -164,12 +164,13 @@ A component that uses `useAsyncResult` SHALL be defined as an async component (`
 - **AND** `Suspense` SHALL swap fallback to children content
 
 ### Requirement: Suspense shall properly clean up on removal
-When a `Suspense` element is removed from the DOM (e.g., due to a route change or conditional rendering), any pending async operations in its children subtree SHALL be cancelled. Signal callbacks registered by `Suspense` SHALL be cleaned up via `consumer_destroy()`.
+When a `Suspense` element is removed from the DOM (e.g., due to a route change or conditional rendering), any pending async operations in its children subtree SHALL be cancelled. Any `asyncio.Task` instances created by `Suspense._render()` for browser-side async resolution SHALL be cancelled via `task.cancel()`. Signal callbacks registered by `Suspense` SHALL be cleaned up via `consumer_destroy()`.
 
 #### Scenario: Navigating away from a Suspense boundary
 - **WHEN** a `Suspense` element is inside a `switch()` conditional
 - **AND** the condition changes, causing the `Suspense` to be removed
 - **THEN** any pending async operations for that Suspense's children SHALL be cancelled
+- **AND** any `asyncio.Task` instances created by `Suspense._render()` SHALL be cancelled via `task.cancel()`
 - **AND** signal callbacks SHALL be cleaned up
 
 ### Requirement: Suspense shall be a DynamicElement

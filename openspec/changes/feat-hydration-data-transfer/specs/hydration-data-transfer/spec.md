@@ -171,6 +171,13 @@ During browser initialization, `AsyncResult` instances SHALL check the transfer 
 - **THEN** the stale entry SHALL be silently ignored
 - **AND** no warning SHALL be logged (stale entries are expected during development when component trees change)
 
+#### Scenario: Different component at same tree position in browser vs SSR
+- **WHEN** component `ComponentA` renders at position `"MyPage/1/0"` during SSR and its `AsyncResult` data is included in the transfer payload
+- **AND** a different component `ComponentB` renders at the same position `"MyPage/1/0"` during browser hydration (e.g., due to conditional rendering)
+- **THEN** `_restore_from_transfer()` SHALL validate that the transferred data type is compatible with `ComponentB`'s expected `AsyncResult` type
+- **AND** if incompatible, the entry SHALL be silently skipped and the component SHALL follow the normal lifecycle
+- **AND** a `UserWarning` SHALL be logged indicating the type mismatch
+
 #### Scenario: SSR renders Suspense fallback, browser renders children
 - **WHEN** a component inside `Suspense(fallback=..., children=lambda: AsyncDataComponent())` is rendered during SSR
 - **AND** the async data does not resolve within the timeout, so fallback is rendered instead

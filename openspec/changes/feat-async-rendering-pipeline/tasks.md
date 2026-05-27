@@ -9,6 +9,7 @@
 - [ ] 2.2 Replace sequential `for child in self._children: child._render()` with `await asyncio.gather(*[child._render() for child in self._children])`
 - [ ] 2.3 Add `import asyncio` to `_base.py`
 - [ ] 2.4 Update `ElementWithChildren._hydrate_node()` — change the `for child in self._children: child._hydrate_node()` loop to a sync loop (hydration is not async in this change)
+- [ ] 2.5 Document that `_hydrate_node()` callers may encounter children with no matching prerendered nodes. These un-hydrated children need async `_render()` scheduling, which is handled by downstream changes: `feat-client-only-component` (ClientOnly._hydrate_node() schedules `asyncio.ensure_future(self._render())`) and `feat-suspense-component` (Suspense._hydrate_node() schedules async resolution). The foundational async-rendering-pipeline change does NOT modify `_hydrate_node()` to schedule async rendering — it keeps hydration synchronous.
 
 ## 3. Convert DynamicElement._render() to async
 

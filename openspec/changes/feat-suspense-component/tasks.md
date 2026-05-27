@@ -17,9 +17,11 @@
 
 ## 3. Integrate async setup detection
 
-- [ ] 3.1 Add async pending tracking to `Component.__setup()` — set a flag on the component when the setup function is async, so `Suspense` can detect pending async operations
-- [ ] 3.2 Add a mechanism for `Suspense` to query whether its children subtree has pending async operations (e.g., traverse children looking for components with the async pending flag)
-- [ ] 3.3 Ensure async task references are accessible so `Suspense` can `await` them in SSR/SSG and cancel them on removal
+> **Depends on `feat-async-component-setup`** — the `_pending_async_template` field is defined by that change. Tasks here focus only on Suspense-specific code that reads and acts on that field.
+
+- [ ] 3.1 In `SuspenseElement.__init__()`, traverse the children subtree and check each element's `_pending_async_template` (introduced by `feat-async-component-setup`). Store references to components with non-None `_pending_async_template` for later resolution by `Suspense._render()`.
+- [ ] 3.2 Implement tree traversal in `SuspenseElement._render()` that collects all unresolved `Component._pending_async_template` coroutines from the subtree. Use the traversal guard rule from `feat-async-component-setup`: only read `_pending_async_template`; do NOT access `_tag_name`, `_attrs`, or `_children` on components where `_pending_async_template is not None`.
+- [ ] 3.3 After collecting coroutines, `Suspense` owns the resolution: `await asyncio.gather(*coroutines)`, set each component's resolved template via `__init_component()`, and clear `_pending_async_template` to `None`. Provide `SUSPENSE_RESOLVING_KEY=True` in the DI scope so child Components skip their own resolution block.
 
 ## 4. Server-side rendering integration
 

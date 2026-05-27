@@ -15,12 +15,12 @@ This change adds a data transfer mechanism that serializes server-side state int
 - Serialize `FetchPort` response caches into the HTML payload
 - Restore `AsyncResult` states during browser hydration, skipping re-execution
 - Restore `FetchPort` response cache during browser hydration, skipping duplicate network requests
-- Restore Signal values computed during SSR to prevent flash-of-default-content
 - Include a version field in the payload for forward compatibility
 - HTML-escape and JSON-validate the payload to prevent XSS
 - Only include data that was actually fetched/resolved during SSR (not all possible data)
 
 **Non-Goals:**
+- Restoring Signal values (non-AsyncResult) — this is deferred to a follow-up change
 - Streaming SSR (data transfer is a single payload)
 - Client-to-server data transfer
 - Payload compression
@@ -129,4 +129,4 @@ The `async_results` section only includes entries where `state` is `SUCCESS`. `P
 
 1. Should `ERROR` state `AsyncResult` entries be transferred? (Current decision: No, only `SUCCESS` states are transferred. Can be added later.)
 2. Should the payload be placed in `<head>` or at the end of `<body>`? (Current decision: End of `<body>`, before the PyScript bootstrap `<script>`, so it doesn't block initial HTML parsing.)
-3. Should Signal values (non-AsyncResult) be transferred? (Current decision: Only `AsyncResult` states and `FetchPort` responses are transferred in this change. Signal value restoration can be added as a follow-up if flash-of-default-content is a significant issue.)
+3. **Future: Signal value restoration** — Signal values (non-AsyncResult) are NOT transferred in this change. Only `AsyncResult` states and `FetchPort` responses are transferred. Signal value restoration can be added as a follow-up if flash-of-default-content is a significant issue.

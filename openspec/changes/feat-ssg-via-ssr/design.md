@@ -245,6 +245,6 @@ def create_asgi_app(app, build_config, mode="dev"):  # synchronous
 ## Risks / Trade-offs
 
 - **ASGITransport overhead**: Creating an ASGI app and making HTTP requests for SSG is slightly more complex than direct `html_generator()` calls. However, the overhead is negligible compared to dependency resolution and wheel building, and the benefit (output parity) far outweighs the cost.
-- **async create_asgi_app()**: Making `create_asgi_app()` async is a minor API change. Existing code that calls `create_asgi_app(app, build_config)` must now `await` it. The only callers are `run_server()` and `generate_static_site()`, both of which are entry points that can manage the event loop.
+- **Pre-rendering hash-mode HTML**: For hash-mode apps, `_pre_render_hash_mode_html(app)` must be called after `create_asgi_app()` returns but before the server starts. The ordering dependency (create ASGI app → configure ServerFetchPort → pre-render → start server) must be maintained to ensure self-site fetch requests during pre-rendering work correctly.
 - **httpx dependency for SSG**: `httpx` is already a project dependency (used by `ServerFetchPort`), so no new dependency is introduced.
 - **Blocked paths during SSR**: When `ServerFetchPort` makes a fetch request during SSR, and the fetch target is a page route served by the same ASGI app, infinite recursion could occur. The `feat/server-fetch-port-asgi` change handles this by returning 500 for page routes when the request comes from `ServerFetchPort`.

@@ -63,7 +63,7 @@ class ClientOnlyElement(DynamicElement):
 **Rationale**: Even calling the children generator function could trigger side effects: signal creation, DI scope changes, or async fetch scheduling. The entire point of `ClientOnly` is to avoid these costs on the server. This contrasts with `switch()`, which evaluates all branch generators to determine which branch matches.
 
 ```python
-def _render(self):
+async def _render(self):
     if self._is_client:
         children = self._generate_children(self._children_generator)
     else:
@@ -72,27 +72,25 @@ def _render(self):
     parent_node = self._parent._get_node()
     for c_idx, child in enumerate(self._children):
         child._node_idx = self._node_idx + c_idx
-        child._render()
+        await child._render()
     _position_element_nodes(self, parent_node, self._node_idx)
 ```
 
 ### Decision 3: Hydration replaces fallback with actual children
 
-**Chosen**: During hydration in the browser, `ClientOnlyElement._hydrate_node()` replaces the server-rendered fallback DOM nodes with the actual children. This is the same approach used by `SwitchElement` when branches change: old children are removed via `_remove_element()` and new children are rendered.
+**Chosen**: During hydration in the browser, `ClientOnlyElement._hydrate_node()` generates the children, sets up their DOM references, and schedules async rendering via `asyncio.ensure_future(self._render())`. This is the same approach used by `SwitchElement` when branches change. `_hydrate_node()` does NOT call `child._render()` directly because `_render()` is now `async def` — calling it without `await` would produce an un-awaited coroutine.
 
-**Rationale**: The server renders fallback content. When the browser loads, it must replace that fallback with the actual browser-only content. The `_hydrate_node()` method is the right place for this because it's called during the hydration phase of `AppDocumentRoot._render()`.
+**Rationale**: The server renders fallback content. When the browser loads, it must replace that fallback with the actual browser-only content. The `_hydrate_node()` method is the right place for this because it's called during the hydration phase of `AppDocumentRoot._render()`. Scheduling `self._render()` via `asyncio.ensure_future()` ensures the async children rendering runs on the event loop without blocking the synchronous hydration phase.
 
 ```python
 def _hydrate_node(self):
     if self._is_client:
-        # Browser: render actual children, replacing the fallback
         children = self._generate_children(self._children_generator)
         self._children = children
         for c_idx, child in enumerate(self._children):
             child._node_idx = self._node_idx + c_idx
-            child._render()
+        asyncio.ensure_future(self._render())
     else:
-        # Server (shouldn't normally be called): render fallback
         children = self._generate_fallback()
         self._children = children
         for c_idx, child in enumerate(self._children):
