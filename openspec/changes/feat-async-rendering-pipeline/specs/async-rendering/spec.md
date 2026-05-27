@@ -14,6 +14,8 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 
 `_hydrate_node()` SHALL remain synchronous in this change. Async component setup (`_pending_async_template`) is NOT resolved during hydration — resolution happens during the first async `_render()` after hydration completes. In the browser, components that were pre-resolved during SSR receive their state from the hydration data transfer payload (per `feat-hydration-data-transfer`), so async setup does not need to re-execute. Components without transfer data proceed through the normal async lifecycle during `_render()`, after DOM adoption is complete.
 
+`_hydrate_node()` is only called during browser hydration — SSR never calls `_hydrate_node()` because it directly renders components via `await _render()`. When downstream changes (`feat-client-only-component`, `feat-suspense-component`) schedule async rendering inside `_hydrate_node()` via `asyncio.ensure_future(self._render())`, this is browser-only behavior. The browser event loop is always running when `_hydrate_node()` executes, so `asyncio.ensure_future()` is always safe.
+
 #### Scenario: Rendering a component in the browser
 - **WHEN** `app.run()` is called in the browser
 - **THEN** the async render pipeline SHALL be scheduled via `asyncio.ensure_future(self._root._render())`
@@ -68,7 +70,7 @@ This is a behavioral change from the current sequential rendering pipeline. With
 - **AND** one child's `_render()` raises an unexpected exception
 - **THEN** the exception SHALL be captured as a return value (not propagated to cancel sibling tasks)
 - **AND** the other sibling children SHALL complete normally
-- **AND** after all siblings complete, the first exception encountered SHALL be re-raised
+- **AND** after all siblings complete, the first exception in child order (the exception at the lowest index in the results list, not chronological order) SHALL be re-raised
 - **AND** `ElementWithChildren._render()` SHALL catch the re-raised exception
 - **AND** it SHALL call `_remove_element()` on each successfully rendered child to clean up their DOM nodes
 - **AND** `_remove_element()` on each child SHALL trigger the full destruction lifecycle: effect scope disposal, `on_before_destroy` hooks, and DI scope cleanup

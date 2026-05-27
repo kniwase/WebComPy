@@ -94,11 +94,10 @@ For nested `Suspense` boundaries, each Suspense SHALL provide its own scope of `
 
 #### Scenario: Suspense DI scope is disposed on element removal before async resolution completes
 - **WHEN** a `Suspense` element is removed from the DOM (e.g., via route change) while browser-side async resolution is still in progress
-- **THEN** the pending `asyncio.Task` SHALL be cancelled via `task.cancel()`
-- **AND** the DI scope with `SUSPENSE_RESOLVING_KEY=True` SHALL be disposed in the Suspense's `_remove_element()` method
-- **AND** `_remove_element()` SHALL await the cancelled task (via `await task` wrapped in `try/except asyncio.CancelledError`) to ensure the task has fully terminated before disposing the scope
-- **AND** the `_resolve()` callback SHALL check a `self._disposed` flag on the Suspense element before accessing the DI scope, and abort immediately if the element has been disposed
-- **AND** no `inject()` calls from the cancelled task SHALL attempt to access the disposed scope
+- **THEN** `_remove_element()` SHALL cancel the pending `asyncio.Task` via `task.cancel()` FIRST
+- **AND** `_remove_element()` SHALL await the cancelled task (via `await task` wrapped in `try/except asyncio.CancelledError`) to ensure the task has fully terminated BEFORE disposing the scope
+- **AND** only after the task is confirmed terminated, the DI scope with `SUSPENSE_RESOLVING_KEY=True` SHALL be disposed
+- **AND** this ordering (cancel → await → dispose) guarantees the `_resolve()` callback cannot be executing when the scope is disposed
 
 #### Scenario: Suspense boundary resolves async children before Component._render()
 - **WHEN** an async component is a descendant of `SuspenseElement`
@@ -133,7 +132,7 @@ Between `__init__()` and the first `_render()`, the component is in an uninitial
 - **THEN** the accessed values SHALL be the `ElementBase` defaults (empty values)
 - **AND** the code SHALL guard against uninitialized state by checking `_pending_async_template is None` before interpreting template-dependent fields
 
-The `ComponentProperty` TypedDict SHALL type `template` as `ElementChildren | None`. When `None`, the component is in the unresolved async state. The value SHALL be resolved to `ElementChildren` before `__init_component()` is called.
+The `ComponentProperty` TypedDict SHALL type `template` as `ElementChildren | None`. When `None`, the component is in the unresolved async state. The value SHALL be resolved to `ElementChildren` before `__init_component()` is called. Sync components (those without `_pending_async_template`) always have `template` as `ElementChildren` (never `None`). Consumers that are only reached after `_render()` has completed (e.g., lifecycle hooks, child rendering loops) can safely assume `template is not None` — the `None` state is only observable during the brief window between `__init__()` and the first `_render()` for async components.
 
 #### Scenario: ComponentProperty with None template
 - **WHEN** an async component is created

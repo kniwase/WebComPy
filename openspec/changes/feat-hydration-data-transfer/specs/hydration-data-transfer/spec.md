@@ -150,7 +150,9 @@ The `_component_id` SHALL be stored as a separate field (`_component_id: str | N
 
 ### Requirement: AsyncResult shall restore state from transfer payload
 
-During browser initialization, `AsyncResult` instances SHALL check the transfer payload for entry matching their owning component's deterministic `_component_id`. If a match is found with `state` equal to `"success"`, the `AsyncResult` SHALL restore directly to `SUCCESS` state with the transferred data, bypassing the `PENDING` → `LOADING` → `SUCCESS` lifecycle.
+During browser initialization, `AsyncResult` instances SHALL check the transfer payload for entry matching their owning component's deterministic `_component_id`. Because `_component_id` is computed during `_render()` (not `__init__()`), `useAsyncResult` called during component setup cannot immediately look up the transfer payload by component ID. Instead, the `AsyncResult` SHALL store a reference to the owning component instance and read `_component_id` lazily — the first access to `_component_id` (during the initial `_render()`) SHALL trigger the transfer payload lookup. Alternatively, if `_component_id` is not yet available, `AsyncResult` SHALL defer restoration until the ID is computed.
+
+If a match is found with `state` equal to `"success"`, the `AsyncResult` SHALL restore directly to `SUCCESS` state with the transferred data, bypassing the `PENDING` → `LOADING` → `SUCCESS` lifecycle.
 
 #### Scenario: AsyncResult restored from transfer payload
 - **WHEN** a component with ID `"my-component-abc123"` is initialized in the browser
