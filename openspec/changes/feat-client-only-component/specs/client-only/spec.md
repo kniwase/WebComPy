@@ -77,6 +77,7 @@ When `ClientOnlyElement._hydrate_node()` is called in the browser, the server-re
 - **AND** `ClientOnlyElement._hydrate_node()` SHALL generate the children and schedule async rendering via `asyncio.ensure_future(self._render())`
 - **AND** the `InteractiveChart()` content SHALL be rendered asynchronously in its place
 - **AND** if `self._render()` raises during this async rendering, the error SHALL be logged via the framework's error reporting mechanism and the fallback SHALL NOT be restored (the DOM may be in a transitional state)
+- **AND** if the `ClientOnly` element is removed from the DOM before the async render completes, `_remove_element()` SHALL cancel the stored `self._render_task` (per `feat-client-only-component` design Decision 3) and dispose any partially rendered child nodes via `_remove_element()` on each successfully rendered child
 - **AND** no hydration mismatch warning or error SHALL occur
 
 #### Scenario: Hydrating a ClientOnly element without fallback

@@ -55,6 +55,8 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 
 This is a behavioral change from the current sequential rendering pipeline. With sync rendering, children are processed one by one and an exception in child N aborts rendering immediately (children N+1 are never rendered). With `asyncio.gather(return_exceptions=True)`, ALL children render regardless of individual failures — after completion, the first exception is re-raised and `ElementWithChildren._render()` cleans up successfully rendered children via `_remove_element()` before re-raising. In the browser, `asyncio.gather()` provides structural clarity but not true parallelism; the parallel rendering benefit applies to SSG (CPython) only.
 
+This behavioral change means side effects from all siblings execute even when one sibling raises — developers who relied on sequential short-circuit semantics (where an error in child N prevents child N+1 from executing) must update their code. The `_remove_element()` cleanup undoes DOM and lifecycle state, but any non-component side effects (modifying global state, writing to external systems) that occurred in siblings after the failing one will persist.
+
 #### Scenario: Rendering multiple sibling children
 - **WHEN** `ElementWithChildren._render()` is called with 3 children
 - **THEN** `asyncio.gather(child1._render(), child2._render(), child3._render())` SHALL be awaited
@@ -78,6 +80,12 @@ This is a behavioral change from the current sequential rendering pipeline. With
 - **AND** the originally re-raised exception from the failing child SHALL take priority over cleanup errors
 - **AND** after cleanup, the exception SHALL be re-raised to its caller
 - **AND** no partially rendered sibling nodes SHALL remain orphaned in the DOM
+
+#### Scenario: _active_consumer ContextVar isolation across asyncio.gather() siblings
+- **WHEN** sibling children are rendered via `asyncio.gather()`
+- **AND** one sibling modifies `_active_consumer` during its `_render()`
+- **THEN** the ContextVar change SHALL NOT leak to other sibling tasks — each task gets a snapshot at task creation time
+- **AND** in PyScript (where ContextVar fallback uses shared globals), the framework SHALL manually reset `_active_consumer` before each sibling task to ensure isolation
 
 ### Requirement: Lifecycle hooks shall support async callables
 

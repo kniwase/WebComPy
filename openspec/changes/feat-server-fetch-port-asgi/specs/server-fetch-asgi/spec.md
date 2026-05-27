@@ -10,7 +10,7 @@ Enable WebComPy components to fetch data from their own application's API endpoi
 
 `FetchPort` SHALL provide a non-abstract `is_self_site_url(url)` method with a default implementation returning `False`. This ensures backward compatibility with existing `FetchPort` implementations (including `BrowserFetchPort` and custom ports) that don't need self-site routing. URLs starting with `/` (absolute path) or `.` (relative path) SHALL be classified as self-site. All other URLs SHALL be classified as external.
 
-Relative URLs starting with `.` SHALL be resolved against `base_url` root, not the current route path. For example, with `base_url="/myapp/"`, a fetch to `./api/data` resolves to `/myapp/api/data`.
+Relative URLs starting with `.` SHALL be resolved against `base_url` root, not the current route path. For example, with `base_url="/myapp/"`, a fetch to `./api/data` resolves to `/myapp/api/data`. This is deliberately non-standard — standard RFC 3986 relative URL resolution would resolve `./api/data` against the current route path (e.g., from `/myapp/users/42` to `/myapp/users/api/data`). WebComPy overrides this because SSG/SSR has no concept of a "current route" during rendering. Developers who need route-relative resolution SHALL use absolute paths starting with `/`.
 
 #### Scenario: Classifying an absolute path URL
 - **WHEN** `fetch_port.is_self_site_url("/api/users")` is called
@@ -82,8 +82,9 @@ Page routes (routes that have a corresponding `Component` registered via `app.ro
 #### Scenario: Dynamic route blocks all concrete paths via prefix matching
 - **WHEN** the blocked path set contains the literal pattern `"/users/:id"` (from a route `("/users/:id", UserPage, ...)` without available path parameters)
 - **AND** a component calls `ServerFetchPort.fetch("/users/42")` during SSR
-- **THEN** the blocked path check SHALL match the prefix `/users/` (up to and including the segment delimiter after the pattern's last concrete literal) and return 500
-- **AND** a request to `"/users/42/edit"` SHALL NOT match `"/users/:id"` (it has more segments than the pattern)
+- **THEN** the blocked path check SHALL use **segment-count-aware prefix matching**: the pattern `/users/:id` blocks any path that starts with `/users/` AND has exactly the same number of URL segments as the pattern (2 segments for `/users/:id`). `/users/42` SHALL return 500
+- **AND** a request to `"/users/42/edit"` (3 segments) SHALL NOT match `"/users/:id"` (2 segments)
+- **AND** a multi-segment pattern like `"/users/:id/posts/:postId"` (4 segments) SHALL block `"/users/42/posts/99"` (4 segments, prefix match) but NOT `"/users/42"` (2 segments) or `"/users/42/posts/99/comments/1"` (5 segments)
 - **AND** a request to `"/api/users"` SHALL NOT match (prefix does not start with `/users/`)
 
 #### Scenario: Dynamic route with available path parameters uses concrete paths

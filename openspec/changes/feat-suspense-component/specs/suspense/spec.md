@@ -94,6 +94,8 @@ When the SSR timeout expires, pending async operations SHALL be cancelled via `a
 ### Requirement: Sibling Suspense boundaries shall resolve independently and in parallel
 When multiple `Suspense` elements are siblings in the element tree, each SHALL independently manage its own loading state. Their async operations SHALL run concurrently via `asyncio.gather()`. Each Suspense boundary SHALL swap from fallback to children as its own async operations complete, without waiting for sibling Suspense boundaries.
 
+In the browser environment, if a Suspense boundary is re-rendered (e.g., due to a signal change in an ancestor) while its async resolution is still in progress, the pending resolution SHALL be cancelled — the old `asyncio.Task` SHALL be cancelled, the old DI scope with `SUSPENSE_RESOLVING_KEY` SHALL be disposed, and a new `_render()` call SHALL start fresh. This prevents concurrent scope nesting and ensures each render cycle owns its own resolution state.
+
 #### Scenario: Two sibling Suspense elements loading different data
 - **WHEN** a developer renders two `Suspense` elements side by side:
   ```python
@@ -112,6 +114,8 @@ When multiple `Suspense` elements are siblings in the element tree, each SHALL i
 `SuspenseElement` SHALL detect whether its children subtree has pending async operations by traversing the element tree and checking for unresolved `Component._pending_async_template` instances (as defined by `feat-async-component-setup`). When such instances are found, the subtree is considered "loading." When all `_pending_async_template` instances in the subtree have been resolved (`None`), the subtree is considered "ready."
 
 Suspense SHALL own the resolution: when it detects pending `_pending_async_template` coroutines, it SHALL collect them via tree traversal, `await asyncio.gather(*coroutines)` to resolve them in parallel, then call `Component._render()` on each resolved component. `Component._render()` SHALL detect that `_pending_async_template` is already `None` (because Suspense already resolved it) and skip the await step. This ownership model ensures Suspense shows fallback while the coroutines are pending and observable, and swaps to children after resolution.
+
+Suspense tree traversal SHALL descend through all element types, not just `Component`. For container elements (`ElementWithChildren`, `SwitchElement`, `RepeatElement`), Suspense SHALL iterate `self._children` to find nested elements. For uninitialized async `Component` instances, `_children` contains `ElementBase` defaults (empty per `feat-async-component-setup`), so the traversal naturally finds no nested children. Suspense SHALL use a `_collect_pending_coroutines(element) -> list[Coroutine]` traversal method that recursively visits children of container elements and collects `_pending_async_template` from `Component` instances. This method SHALL NOT access `_tag_name`, `_attrs`, or `_property["template"]` on uninitialized components, consistent with the observability window guard rule.
 
 #### Scenario: Detecting an async child component
 - **WHEN** a `Suspense` wraps a component whose `_pending_async_template` is set (not yet resolved)

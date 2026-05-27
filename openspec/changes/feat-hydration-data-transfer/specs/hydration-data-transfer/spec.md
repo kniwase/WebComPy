@@ -119,9 +119,11 @@ During browser initialization, `BrowserFetchPort` SHALL read the transfer payloa
 
 ### Requirement: Component IDs shall be deterministically generated for transfer matching
 
-Component SHALL be assigned a deterministic `_component_id` at render time (during `_render()`) based on the component's position in the render tree. The `_component_id` is separate from the existing `_instance_id` (which is a UUID for instance identity) and is recomputed on each render to match the server-side tree structure. The `_component_id` formula SHALL be: `"<type_name>/<depth>/<sibling_index>"` where `type_name` is the component's class name, `depth` is the nesting level (0-indexed from root), and `sibling_index` is the 0-indexed position among siblings at that depth within the same parent. This hierarchical path SHALL produce the same ID when the same component tree is rendered on the server (SSR) and the browser (hydration), enabling reliable matching of `async_results` entries in the transfer payload to the correct `AsyncResult` instances.
+Component SHALL be assigned a deterministic `_component_id` at render time (during `_render()`) based on the component's position in the render tree. The `_component_id` is separate from the existing `_instance_id` (which is a UUID for instance identity) and is recomputed on each render to match the server-side tree structure. The `_component_id` formula SHALL be: `"<parent_id>/<type_name>/<sibling_index>"` where `parent_id` is the parent element's `_component_id` (or `"root"` for top-level components), `type_name` is the component's class name, and `sibling_index` is the 0-indexed position among siblings of the same parent. This forms a path through the component tree that is globally unique. For example, a component `MyPage` at the root with a child `DataCard` at sibling index 0 and a nested `AsyncBadge` at sibling index 1 would produce: `"root/MyPage/0"`, `"root/MyPage/0/DataCard/0"`, and `"root/MyPage/0/DataCard/0/AsyncBadge/1"`.
 
-The `_component_id` SHALL be stored as a separate field (`_component_id: str | None`) on the `Component` class, distinct from `_instance_id`. It SHALL be computed during `_render()` (not `__init__()`) because the render tree position is only known once the component is placed in the tree. The ID is recomputed on each render cycle, so it reflects the current tree position. If the tree structure differs between SSR and browser hydration (e.g., conditional rendering, Suspense fallback changes), component IDs may not match, and `AsyncResult` transfer SHALL gracefully fall back to the normal lifecycle.
+The `_component_id` SHALL be stored as a separate field (`_component_id: str | None`) on the `Component` class, distinct from `_instance_id`. It SHALL be computed during `_render()` (not `__init__()`) because the render tree position is only known once the component is placed in the tree. The ID is recomputed on each render cycle, so it reflects the current tree position.
+
+**Transfer payload matching is best-effort, not guaranteed.** If the component tree structure differs between SSR and browser hydration (e.g., conditional rendering, Suspense fallback changes, `ClientOnly` boundary differences), component IDs will not match, and `AsyncResult` transfer SHALL gracefully fall back to the normal lifecycle. In particular, when a `Suspense` boundary renders fallback during SSR (because of timeout), **zero** descendant component IDs will match during browser hydration — the entire subtree has different structure. This is expected and documented: developers whose async data requires transfer to the browser SHALL ensure the SSR timeout is sufficient to resolve within the time budget, or accept that async state will be re-fetched in the browser.
 
 #### Scenario: Same component tree produces same IDs on server and browser
 - **WHEN** a component tree is rendered during SSR, producing component IDs for `AsyncResult` entries
@@ -139,7 +141,7 @@ The `_component_id` SHALL be stored as a separate field (`_component_id: str | N
 #### Scenario: _component_id differs from _instance_id
 - **WHEN** a component is instantiated
 - **THEN** `_instance_id` SHALL be a UUID (random, unique per instance)
-- **AND** `_component_id` SHALL be a deterministic path-based string (e.g., `"MyPage/1/0"`)
+- **AND** `_component_id` SHALL be a deterministic path-based string (e.g., `"root/MyPage/0/DataCard/0"`)
 - **AND** `_component_id` SHALL be recomputed on each render while `_instance_id` SHALL remain stable for the instance lifetime
 
 #### Scenario: Component removal changes sibling indices for remaining components
@@ -150,9 +152,11 @@ The `_component_id` SHALL be stored as a separate field (`_component_id: str | N
 
 ### Requirement: AsyncResult shall restore state from transfer payload
 
-During browser initialization, `AsyncResult` instances SHALL check the transfer payload for entry matching their owning component's deterministic `_component_id`. Because `_component_id` is computed during `_render()` (not `__init__()`), `useAsyncResult` called during component setup cannot immediately look up the transfer payload by component ID. Instead, the `AsyncResult` SHALL store a reference to the owning component instance and read `_component_id` lazily — the first access to `_component_id` (during the initial `_render()`) SHALL trigger the transfer payload lookup. Alternatively, if `_component_id` is not yet available, `AsyncResult` SHALL defer restoration until the ID is computed.
+During browser initialization, `AsyncResult` instances SHALL check the transfer payload for entry matching their owning component's deterministic `_component_id`. Because `_component_id` is computed during `_render()` (not `__init__()`), `useAsyncResult` called during component setup cannot immediately look up the transfer payload by component ID. To solve this timing problem: `AsyncResult` SHALL delay scheduling the async function until `_render()` time rather than executing during setup. During setup, `AsyncResult` SHALL store a reference to the owning component instance. At the start of `_render()`, `_component_id` is computed, `AsyncResult` looks up the transfer payload, and:
+- If a match is found: `AsyncResult` SHALL restore directly to `SUCCESS` state from the transfer payload, and the async function SHALL NOT be scheduled.
+- If no match: `AsyncResult` SHALL schedule the async function for execution as normal.
 
-If a match is found with `state` equal to `"success"`, the `AsyncResult` SHALL restore directly to `SUCCESS` state with the transferred data, bypassing the `PENDING` → `LOADING` → `SUCCESS` lifecycle.
+The async function SHALL NOT be scheduled during `__init__()` or `__setup__()` — it SHALL be deferred until `_render()` when `_component_id` is available. This ensures the transfer payload check happens before any async execution begins, eliminating the need to cancel in-progress async operations.
 
 #### Scenario: AsyncResult restored from transfer payload
 - **WHEN** a component with ID `"my-component-abc123"` is initialized in the browser
