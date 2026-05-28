@@ -12,6 +12,7 @@ from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import html
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements._head import HeadElement
+from webcompy.elements.types._base import _handle_gather_results
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
@@ -116,8 +117,6 @@ class AppDocumentRoot(Component):
                     *(child._render() for child in self._children),
                     return_exceptions=True,
                 )
-            from webcompy.elements.types._base import _handle_gather_results
-
             _handle_gather_results(self._children, results)
 
             on_after = self._property["on_after_rendering"]
