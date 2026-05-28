@@ -106,6 +106,10 @@ def _make_signal_callback(callback):
         def wrapper(*args, **kwargs):
             aio_run(_safe_callback(*args, **kwargs))
 
+        # copy_context() captures the caller's ContextVar snapshot. In PyScript
+        # the module-level fallback variables (_active_consumer, _active_di_scope)
+        # are normal globals, so they are automatically included in the context
+        # closure without needing explicit snapshot/restore like gather() does.
         _captured_ctx = contextvars.copy_context()
 
         def _context_preserving_wrapper(*args, **kwargs):

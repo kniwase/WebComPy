@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from inspect import iscoroutinefunction
 from operator import truth
 from typing import Any, TypeAlias, cast
 
@@ -93,6 +94,10 @@ class SwitchElement(DynamicElement):
         if should_defer:
             deferred = end_defer_after_rendering()
             for callback in deferred:
+                if iscoroutinefunction(callback):
+                    from webcompy.aio._aio import _make_signal_callback
+
+                    callback = _make_signal_callback(callback)
                 inject(HOST_PORT_KEY).schedule_macro_task(callback)
         self._parent._re_index_children(False)
 

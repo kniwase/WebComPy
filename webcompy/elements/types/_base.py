@@ -18,6 +18,24 @@ from webcompy.signal._graph import get_active_consumer, set_active_consumer
 from webcompy.utils._environment import ENVIRONMENT
 
 
+def _handle_gather_results(children: list[ElementAbstract], results: list[Any]) -> None:
+    """Process asyncio.gather return_exceptions=True results.
+
+    Log secondary errors, clean up successful siblings, and raise the first error.
+    """
+    errors = [r for r in results if isinstance(r, Exception)]
+    if errors:
+        for err in errors[1:]:
+            logging.error(err)
+        for i, r in enumerate(results):
+            if not isinstance(r, Exception):
+                try:
+                    children[i]._remove_element()
+                except Exception as cleanup_err:
+                    logging.error(cleanup_err)
+        raise errors[0]
+
+
 class ElementWithChildren(ElementAbstract):
     _tag_name: HtmlTags
     _attrs: dict[str, AttrValue] = {}  # noqa: RUF012
@@ -62,17 +80,7 @@ class ElementWithChildren(ElementAbstract):
                 *(child._render() for child in self._children),
                 return_exceptions=True,
             )
-        errors = [r for r in results if isinstance(r, Exception)]
-        if errors:
-            for err in errors[1:]:
-                logging.error(err)
-            for i, r in enumerate(results):
-                if not isinstance(r, Exception):
-                    try:
-                        self._children[i]._remove_element()
-                    except Exception as cleanup_err:
-                        logging.error(cleanup_err)
-            raise errors[0]
+        _handle_gather_results(self._children, results)
         if (node := self._get_node()) is not None and not self._preserve_children:
             for _ in range(node.childNodes.length - self._children_length):
                 node.childNodes[-1].remove()
