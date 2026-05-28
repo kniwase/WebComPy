@@ -112,4 +112,8 @@ def _make_signal_callback(callback):
             _captured_ctx.run(wrapper, *args, **kwargs)
 
         return _context_preserving_wrapper
+    # Sync callbacks are invoked directly by the signal system in the current
+    # execution context, so they naturally inherit the caller's ContextVar state.
+    # Only async callbacks need context preservation because aio_run() schedules
+    # them across context boundaries.
     return callback

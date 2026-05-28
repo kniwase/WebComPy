@@ -19,20 +19,18 @@ if TYPE_CHECKING:
 
 
 class TestRendererResult:
-    __slots__ = ("_component", "_instance", "_parent_node", "_scope", "_scope_token")
+    __slots__ = ("_component", "_instance", "_parent_node", "_scope")
 
     def __init__(
         self,
         component: ComponentGenerator,
         instance: object,
         parent_node: VirtualDOMNode,
-        scope_token: object,
         scope: DIScope,
     ) -> None:
         self._component = component
         self._instance = instance
         self._parent_node = parent_node
-        self._scope_token = scope_token
         self._scope = scope
 
     @property
@@ -96,7 +94,9 @@ class TestRenderer:
             scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
             scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
 
-            scope_token = _active_di_scope.set(scope)
+            # Set ContextVar in the copy_context() snapshot; it does not affect
+            # the caller's context, so no reset() is needed.
+            _active_di_scope.set(scope)
 
             root_node = VirtualDOMNode("div")
             root_node.__webcompy_node__ = False
@@ -123,7 +123,7 @@ class TestRenderer:
             instance._node_idx = 0
             await instance._render()
 
-            return TestRendererResult(component, instance, root_node, scope_token, scope)
+            return TestRendererResult(component, instance, root_node, scope)
 
         ctx = contextvars.copy_context()
         return ctx.run(asyncio.run, _render_async())

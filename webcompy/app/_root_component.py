@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, TypedDict
 
@@ -107,9 +108,26 @@ class AppDocumentRoot(Component):
                         _active_di_scope.set(_snap_di_scope)
                     return await child._render()
 
-                await asyncio.gather(*(_child_render(child) for child in self._children))
+                results = await asyncio.gather(
+                    *(_child_render(child) for child in self._children),
+                    return_exceptions=True,
+                )
             else:
-                await asyncio.gather(*(child._render() for child in self._children))
+                results = await asyncio.gather(
+                    *(child._render() for child in self._children),
+                    return_exceptions=True,
+                )
+            errors = [r for r in results if isinstance(r, Exception)]
+            if errors:
+                for err in errors[1:]:
+                    logging.error(err)
+                for i, r in enumerate(results):
+                    if not isinstance(r, Exception):
+                        try:
+                            self._children[i]._remove_element()
+                        except Exception as cleanup_err:
+                            logging.error(cleanup_err)
+                raise errors[0]
 
             on_after = self._property["on_after_rendering"]
             if iscoroutinefunction(on_after):
