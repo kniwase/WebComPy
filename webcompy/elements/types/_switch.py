@@ -58,7 +58,7 @@ class SwitchElement(DynamicElement):
             await self._refresh()
         if not self._signal_activated:
             self._signal_activated = True
-            from webcompy.aio import _make_signal_callback
+            from webcompy.aio._aio import _make_signal_callback
 
             if isinstance(self._cases, SignalBase):
                 self._add_callback_node(self._cases.on_after_updating(_make_signal_callback(self._refresh)))
@@ -99,7 +99,7 @@ class SwitchElement(DynamicElement):
     def _on_set_parent(self):
         if not self._signal_activated:
             self._signal_activated = True
-            from webcompy.aio import _make_signal_callback
+            from webcompy.aio._aio import _make_signal_callback
 
             if isinstance(self._cases, SignalBase):
                 self._add_callback_node(self._cases.on_after_updating(_make_signal_callback(self._refresh)))

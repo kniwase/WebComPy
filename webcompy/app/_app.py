@@ -236,11 +236,7 @@ class WebComPyApp:
         self._record_phase("run_start")
         import asyncio
 
-        from webcompy.components._component import _active_app_context, _set_app_instance
-
         ctx = self.create_render_context()
-        _active_app_context.set(ctx)
-        _set_app_instance(ctx)
         self._plugin_manager.call_on_app_ready(ctx)
         ctx._root._selector = self._config.selector
         asyncio.ensure_future(ctx._root._render())  # noqa: RUF006

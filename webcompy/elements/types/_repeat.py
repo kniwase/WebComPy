@@ -137,7 +137,7 @@ class RepeatElement(DynamicElement):
         await self._refresh()
         if not self._signal_activated:
             self._signal_activated = True
-            from webcompy.aio import _make_signal_callback
+            from webcompy.aio._aio import _make_signal_callback
 
             self._add_callback_node(self._sequence.on_after_updating(_make_signal_callback(self._refresh)))
 

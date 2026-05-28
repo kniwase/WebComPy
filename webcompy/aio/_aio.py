@@ -97,11 +97,14 @@ class AsyncWrapper(Generic[T]):
 def _make_signal_callback(callback):
     if iscoroutinefunction(callback):
 
-        def wrapper(*args, **kwargs):
+        async def _safe_callback(*args, **kwargs):
             try:
-                aio_run(callback(*args, **kwargs))
+                await callback(*args, **kwargs)
             except Exception as err:
                 _log_error(err)
+
+        def wrapper(*args, **kwargs):
+            aio_run(_safe_callback(*args, **kwargs))
 
         _captured_ctx = contextvars.copy_context()
 

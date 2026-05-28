@@ -1,7 +1,7 @@
 import asyncio
 
 from tests.conftest import FakeDOMNode
-from webcompy.aio import _make_signal_callback
+from webcompy.aio._aio import _make_signal_callback
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._text import TextElement

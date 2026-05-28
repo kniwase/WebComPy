@@ -63,7 +63,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
             children=self._generate_children(),
         )
         if isinstance(self._to, SignalBase):
-            from webcompy.aio import _make_signal_callback
+            from webcompy.aio._aio import _make_signal_callback
 
             self._add_callback_node(self._to.on_after_updating(_make_signal_callback(self._refresh)))
 
