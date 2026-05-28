@@ -23,6 +23,8 @@ class FakeRootElement(Element):
 
 
 def _render_with_fake_browser(element):
+    import asyncio
+
     scope = DIScope()
     scope.provide(DOM_PORT_KEY, FakeBrowserDOMPort())
     scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
@@ -51,7 +53,7 @@ def _render_with_fake_browser(element):
 
         element._parent = _DummyParent(root_node)
         element._node_idx = 0
-        element._render()
+        asyncio.run(element._render())
         if root_node.childNodes.length > 0:
             return root_node.childNodes[0]
         return None
@@ -60,6 +62,8 @@ def _render_with_fake_browser(element):
 
 
 def _render_with_server(element):
+    import asyncio
+
     port = ServerDOMPort()
     scope = DIScope()
     scope.provide(DOM_PORT_KEY, port)
@@ -89,7 +93,7 @@ def _render_with_server(element):
 
         element._parent = _DummyParent(root_node)
         element._node_idx = 0
-        element._render()
+        asyncio.run(element._render())
         if root_node.childNodes.length > 0:
             return root_node.childNodes[0]
         return None

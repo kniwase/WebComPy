@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, TypedDict
 
 from webcompy.components._component import Component, HeadPropsStore
@@ -14,6 +16,7 @@ from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
 from webcompy.signal import Computed
+from webcompy.signal._graph import get_active_consumer, set_active_consumer
 from webcompy.utils import ENVIRONMENT
 
 if TYPE_CHECKING:
@@ -79,23 +82,45 @@ class AppDocumentRoot(Component):
     def render(self):
         return self._render
 
-    def _render(self):
+    async def _render(self):
         token = _active_di_scope.set(self._di_scope)
         try:
-            self._property["on_before_rendering"]()
+            on_before = self._property["on_before_rendering"]
+            if iscoroutinefunction(on_before):
+                await on_before()
+            else:
+                on_before()
             self._mount_node()
             if self._app and self._app._hydrate and not self.__hydrated:
                 self.__hydrated = True
                 for child in self._children:
                     child._hydrate_node()
-            for child in self._children:
-                child._render()
-            self._property["on_after_rendering"]()
+
+            _snap_consumer = get_active_consumer()
+            _snap_di_scope = _active_di_scope.get(None)
+
+            if ENVIRONMENT == "pyscript":
+
+                async def _child_render(child):
+                    set_active_consumer(_snap_consumer)
+                    if _snap_di_scope is not None:
+                        _active_di_scope.set(_snap_di_scope)
+                    return await child._render()
+
+                await asyncio.gather(*(_child_render(child) for child in self._children))
+            else:
+                await asyncio.gather(*(child._render() for child in self._children))
+
+            on_after = self._property["on_after_rendering"]
+            if iscoroutinefunction(on_after):
+                await on_after()
+            else:
+                on_after()
             if self._app:
                 self._app._record_phase("run_done")
             if ENVIRONMENT == "pyscript":
                 _dom = inject(DOM_PORT_KEY)
-                self._head_element._render()
+                await self._head_element._render()
                 if self.__loading:
                     self.__loading = False
                     selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")

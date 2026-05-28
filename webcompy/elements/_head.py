@@ -100,7 +100,7 @@ class HeadElement(ElementWithChildren):
             "script": self._scripts_head,
         }
 
-    def _render(self):
+    async def _render(self):
         from webcompy.di import inject
         from webcompy.di._keys import _COMPONENT_STORE_KEY
         from webcompy.ports._keys import DOM_PORT_KEY

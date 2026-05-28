@@ -1,3 +1,4 @@
+import asyncio
 from typing import Protocol
 from unittest.mock import MagicMock
 
@@ -155,7 +156,7 @@ class TestElementRenderHtml:
         try:
             el._parent = _DummyParent(root_node)
             el._node_idx = 0
-            el._render()
+            asyncio.run(el._render())
             root_child = root_node.childNodes[0] if root_node.childNodes.length > 0 else None
             if root_child is None:
                 return ""

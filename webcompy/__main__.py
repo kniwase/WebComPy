@@ -1,3 +1,4 @@
+import asyncio
 import sys
 
 from webcompy.cli._argparser import get_params
@@ -9,7 +10,6 @@ from webcompy.cli._server import run_server
 
 
 def main():
-    # inspect uses its own nested ArgumentParser, so it must bypass get_params()
     if len(sys.argv) > 1 and sys.argv[1] == "inspect":
         run_inspect()
         return
@@ -18,7 +18,7 @@ def main():
     if command == "start":
         run_server()
     elif command == "generate":
-        generate_static_site()
+        asyncio.run(generate_static_site())
     elif command == "init":
         init_project()
     elif command == "lock":

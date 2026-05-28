@@ -32,7 +32,7 @@ class ElementAbstract(SignalReceivable):
     def _parent(self, parent: ElementAbstract):
         self.__parent = parent
 
-    def _render(self):
+    async def _render(self):
         self._mount_node()
 
     def _mount_node(self):

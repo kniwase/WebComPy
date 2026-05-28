@@ -1,3 +1,4 @@
+import asyncio
 import json
 import re
 
@@ -295,13 +296,15 @@ class TestHtmlAttrsInSsgOutput:
         app = _make_app()
         ctx = app.create_render_context()
         ctx.set_html_attr("data-theme", "dark")
-        html_str = generate_html(
-            ctx,
-            app_package_name="test_pkg",
-            dev_mode=False,
-            prerender=False,
-            app_version="0.0.0",
-            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        html_str = asyncio.run(
+            generate_html(
+                ctx,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=False,
+                app_version="0.0.0",
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
         )
         ctx.dispose()
         assert '<html data-theme="dark">' in html_str
@@ -311,13 +314,15 @@ class TestHtmlAttrsInSsgOutput:
         ctx = app.create_render_context()
         ctx.set_html_attr("lang", "ja")
         ctx.set_html_attr("class", "dark")
-        html_str = generate_html(
-            ctx,
-            app_package_name="test_pkg",
-            dev_mode=False,
-            prerender=False,
-            app_version="0.0.0",
-            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        html_str = asyncio.run(
+            generate_html(
+                ctx,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=False,
+                app_version="0.0.0",
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
         )
         ctx.dispose()
         assert '<html lang="ja" class="dark">' in html_str or '<html class="dark" lang="ja">' in html_str
@@ -329,13 +334,15 @@ class TestHtmlAttrsInSsgOutput:
         ctx = app.create_render_context()
         theme = Signal("light")
         ctx.set_html_attr("class", computed(lambda: theme.value))
-        html_str = generate_html(
-            ctx,
-            app_package_name="test_pkg",
-            dev_mode=False,
-            prerender=False,
-            app_version="0.0.0",
-            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        html_str = asyncio.run(
+            generate_html(
+                ctx,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=False,
+                app_version="0.0.0",
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
         )
         ctx.dispose()
         assert '<html class="light">' in html_str

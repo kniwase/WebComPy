@@ -73,6 +73,8 @@ class TestOnSetParent:
         assert len(sw._callback_nodes) > 0
 
     def test_render_creates_children(self, fake_browser_full):
+        import asyncio
+
         from tests.conftest import FakeDOMNode
         from webcompy.elements.types._element import Element
 
@@ -87,6 +89,6 @@ class TestOnSetParent:
         parent._mounted = True
         sw._parent = parent
         sw._node_idx = 0
-        sw._render()
+        asyncio.run(sw._render())
         assert len(sw._children) == 1
         assert sw._rendered_idx == 0

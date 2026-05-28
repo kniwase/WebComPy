@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from tests.conftest import FakeDOMNode
 from webcompy.elements.types._dynamic import _is_patchable, _patch_children, _reposition_node
 from webcompy.elements.types._element import Element
@@ -423,7 +425,7 @@ class TestSwitchElementRefreshPatching:
 
     def test_refresh_patches_matching_tags(self, fake_browser_full):
         sw, _cond = self._setup_switch()
-        sw._render()
+        asyncio.run(sw._render())
         assert len(sw._children) == 1
         assert sw._children[0]._tag_name == "span"
 
@@ -438,7 +440,7 @@ class TestSwitchElementRefreshPatching:
         for c_idx, child in enumerate(sw._children):
             child._node_idx = sw._node_idx + c_idx
             if not child._mounted:
-                child._render()
+                asyncio.run(child._render())
 
         assert len(sw._children) == 1
         assert sw._children[0]._tag_name == "span"
@@ -446,7 +448,7 @@ class TestSwitchElementRefreshPatching:
 
     def test_refresh_first_render_patches_same_case(self, fake_browser_full):
         sw, _cond = self._setup_switch()
-        sw._render()
+        asyncio.run(sw._render())
         assert len(sw._children) == 1
         assert sw._children[0]._tag_name == "span"
 
@@ -459,7 +461,7 @@ class TestSwitchElementRefreshPatching:
         for c_idx, child in enumerate(sw._children):
             child._node_idx = sw._node_idx + c_idx
             if not child._mounted:
-                child._render()
+                asyncio.run(child._render())
 
         assert len(sw._children) == 1
         assert sw._children[0]._tag_name == "span"
@@ -467,7 +469,7 @@ class TestSwitchElementRefreshPatching:
 
     def test_refresh_replaces_non_matching_tags(self, fake_browser_full):
         sw, cond = self._setup_switch()
-        sw._render()
+        asyncio.run(sw._render())
         assert len(sw._children) == 1
         assert sw._children[0]._tag_name == "span"
 
@@ -489,7 +491,7 @@ class TestSwitchElementRefreshPatching:
         parent2._mounted = True
         sw2._parent = parent2
         sw2._node_idx = 0
-        sw2._render()
+        asyncio.run(sw2._render())
 
         cond1.value = False
         cond2.value = True
@@ -500,7 +502,7 @@ class TestSwitchElementRefreshPatching:
 
     def test_refresh_first_render_has_no_old_children_simple(self, fake_browser_full):
         sw, _cond = self._setup_switch(True)
-        sw._render()
+        asyncio.run(sw._render())
 
         assert len(sw._children) == 1
         assert sw._children[0]._mounted is True

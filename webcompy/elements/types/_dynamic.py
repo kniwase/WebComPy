@@ -21,12 +21,12 @@ class DynamicElement(ElementWithChildren):
     def _get_node(self) -> DOMNode:
         return self._parent._get_node()
 
-    def _render(self):
+    async def _render(self):
         parent_node = self._parent._get_node()
         for c_idx, child in enumerate(self._children):
             child._node_idx = self._node_idx + c_idx
             if child._mounted is None:
-                child._render()
+                await child._render()
         _position_element_nodes(self, parent_node, self._node_idx)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
@@ -46,7 +46,7 @@ class DynamicElement(ElementWithChildren):
             child._node_idx = idx
             idx += child._node_count
             if not child._mounted:
-                child._render()
+                child._render()  # type: ignore[unused-coroutine]
 
     @property
     def _parent(self) -> ElementWithChildren:

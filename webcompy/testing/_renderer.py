@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextvars
 from typing import TYPE_CHECKING
 
 from webcompy.di._scope import DIScope, _active_di_scope
@@ -74,7 +76,6 @@ class TestRendererResult:
 
     def close(self) -> None:
         self._scope.dispose()
-        _active_di_scope.reset(self._scope_token)  # type: ignore[arg-type]
 
 
 class TestRenderer:
@@ -84,43 +85,48 @@ class TestRenderer:
         *,
         parent_scope: DIScope | None = None,
     ) -> TestRendererResult:
-        from webcompy.components._component import HeadPropsStore
-        from webcompy.di._keys import _HEAD_PROPS_KEY
 
-        scope = DIScope(parent=parent_scope)
-        scope.provide(DOM_PORT_KEY, FakeBrowserDOMPort())
-        scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
-        scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
-        scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+        async def _render_async() -> TestRendererResult:
+            from webcompy.components._component import HeadPropsStore
+            from webcompy.di._keys import _HEAD_PROPS_KEY
 
-        scope_token = _active_di_scope.set(scope)
+            scope = DIScope(parent=parent_scope)
+            scope.provide(DOM_PORT_KEY, FakeBrowserDOMPort())
+            scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
+            scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
+            scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
 
-        root_node = VirtualDOMNode("div")
-        root_node.__webcompy_node__ = False
-        root_node.__webcompy_prerendered_node__ = True
+            scope_token = _active_di_scope.set(scope)
 
-        class _DummyParent:
-            def __init__(self, node):
-                self._node = node
+            root_node = VirtualDOMNode("div")
+            root_node.__webcompy_node__ = False
+            root_node.__webcompy_prerendered_node__ = True
 
-            def _get_node(self):
-                return self._node
+            class _DummyParent:
+                def __init__(self, node):
+                    self._node = node
 
-            def _get_belonging_component(self):
-                return ""
+                def _get_node(self):
+                    return self._node
 
-            def _get_belonging_components(self):
-                return ()
+                def _get_belonging_component(self):
+                    return ""
 
-            def _re_index_children(self, recursive):
-                pass
+                def _get_belonging_components(self):
+                    return ()
 
-        instance = component(None)
-        instance._parent = _DummyParent(root_node)  # type: ignore[assignment]
-        instance._node_idx = 0
-        instance._render()
+                def _re_index_children(self, recursive):
+                    pass
 
-        return TestRendererResult(component, instance, root_node, scope_token, scope)
+            instance = component(None)
+            instance._parent = _DummyParent(root_node)  # type: ignore[assignment]
+            instance._node_idx = 0
+            await instance._render()
+
+            return TestRendererResult(component, instance, root_node, scope_token, scope)
+
+        ctx = contextvars.copy_context()
+        return ctx.run(asyncio.run, _render_async())
 
 
 def _dfs_first(node: VirtualDOMNode, tag: str) -> VirtualDOMNode | None:

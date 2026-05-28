@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from typing import (
     Any,
     Generic,
@@ -36,9 +36,9 @@ class Context(Generic[PropsType]):
     __slots: dict[str, NodeGenerator]
     __props: PropsType
 
-    __on_before_rendering: Callable[[], Any] | None
-    __on_after_rendering: Callable[[], Any] | None
-    __on_before_destroy: Callable[[], Any] | None
+    __on_before_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
+    __on_after_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
+    __on_before_destroy: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
 
     __title_getter: Callable[[], str]
     __meta_getter: Callable[[], dict[str, dict[str, str]]]
@@ -83,13 +83,13 @@ class Context(Generic[PropsType]):
             logging.warning(f"Componet '{self._component_name}' is not given a slot named '{name}'")
             return None
 
-    def on_before_rendering(self, func: Callable[[], Any]) -> None:
+    def on_before_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
         self.__on_before_rendering = func
 
-    def on_after_rendering(self, func: Callable[[], Any]) -> None:
+    def on_after_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
         self.__on_after_rendering = func
 
-    def on_before_destroy(self, func: Callable[[], Any]) -> None:
+    def on_before_destroy(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
         self.__on_before_destroy = func
 
     def get_title(self) -> str:
@@ -130,11 +130,11 @@ class ComponentContext(Protocol[PropsType]):
         fallback: NodeGenerator | None = None,
     ) -> ElementChildren: ...
 
-    def on_before_rendering(self, func: Callable[[], Any]) -> None: ...
+    def on_before_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
 
-    def on_after_rendering(self, func: Callable[[], Any]) -> None: ...
+    def on_after_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
 
-    def on_before_destroy(self, func: Callable[[], Any]) -> None: ...
+    def on_before_destroy(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
 
     def get_title(self) -> str: ...
 
@@ -152,9 +152,9 @@ class ComponentProperty(TypedDict):
     component_id: str
     component_name: str
     template: ElementChildren
-    on_before_rendering: Callable[[], None]
-    on_after_rendering: Callable[[], None]
-    on_before_destroy: Callable[[], None]
+    on_before_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
+    on_after_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
+    on_before_destroy: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
 
 
 def generate_id(component_name: str) -> str:

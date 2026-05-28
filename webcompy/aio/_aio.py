@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 from collections.abc import Callable, Coroutine
+from inspect import iscoroutinefunction
 from re import compile as re_compile
 from re import escape as re_escape
 from traceback import TracebackException
@@ -90,3 +92,21 @@ class AsyncWrapper(Generic[T]):
             resolve_async(async_callable(*args, **kwargs), self.resolver, self.error)
 
         return inner
+
+
+def _make_signal_callback(callback):
+    if iscoroutinefunction(callback):
+
+        def wrapper(*args, **kwargs):
+            try:
+                aio_run(callback(*args, **kwargs))
+            except Exception as err:
+                _log_error(err)
+
+        _captured_ctx = contextvars.copy_context()
+
+        def _context_preserving_wrapper(*args, **kwargs):
+            _captured_ctx.run(wrapper, *args, **kwargs)
+
+        return _context_preserving_wrapper
+    return callback

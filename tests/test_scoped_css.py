@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 
 import pytest
@@ -97,7 +98,7 @@ class TestHeadElementBrowserPath:
         token = _active_di_scope.set(scope)
         try:
             head_element = HeadElement(head_props)
-            head_element._render()
+            asyncio.run(head_element._render())
 
             head_el = port.query_selector("head")
             assert head_el is not None
@@ -141,7 +142,7 @@ class TestHeadElementBrowserPath:
         token = _active_di_scope.set(scope)
         try:
             head_element = HeadElement(head_props)
-            head_element._render()
+            asyncio.run(head_element._render())
 
             head_el = port.query_selector("head")
             assert head_el is not None
@@ -184,7 +185,7 @@ class TestHeadElementBrowserPath:
         token = _active_di_scope.set(scope)
         try:
             head_element = HeadElement(head_props)
-            head_element._render()
+            asyncio.run(head_element._render())
 
             head_el = port.query_selector("head")
             assert head_el is not None
@@ -221,13 +222,13 @@ class TestHeadElementBrowserPath:
         token = _active_di_scope.set(scope)
         try:
             head_element = HeadElement(head_props)
-            head_element._render()
+            asyncio.run(head_element._render())
 
             head_el = port.query_selector("head")
             styles = _find_all_children_by_tag(head_el, "style")
             initial_count = len(styles)
 
-            head_element._render()
+            asyncio.run(head_element._render())
 
             head_el = port.query_selector("head")
             styles = _find_all_children_by_tag(head_el, "style")
@@ -264,7 +265,7 @@ class TestHeadElementBrowserPath:
         token = _active_di_scope.set(scope)
         try:
             head_element = HeadElement(head_props)
-            head_element._render()
+            asyncio.run(head_element._render())
 
             head_el = port.query_selector("head")
             assert _find_child_by_id(head_el, "webcompy-scoped-styles") is None

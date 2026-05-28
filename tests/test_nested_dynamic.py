@@ -1,3 +1,5 @@
+import asyncio
+
 from tests.conftest import FakeDOMNode
 from webcompy.elements.types._dynamic import _position_element_nodes
 from webcompy.elements.types._element import Element
@@ -38,7 +40,7 @@ class TestGetNodeAncestorTraversal:
         sw._parent = parent
         sw._node_idx = 0
         sw._on_set_parent()
-        sw._refresh()
+        asyncio.run(sw._refresh())
         assert inner._parent is parent
         assert inner._get_node() is parent._get_node()
 
@@ -67,7 +69,7 @@ class TestSwitchInsideRepeat:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._refresh()
+        asyncio.run(rep._refresh())
         assert len(rep._children) == 2
 
     def test_repeat_inside_switch_on_set_parent(self, fake_browser_full):
@@ -81,7 +83,7 @@ class TestSwitchInsideRepeat:
         sw._parent = parent
         sw._node_idx = 0
         sw._on_set_parent()
-        sw._refresh()
+        asyncio.run(sw._refresh())
         assert len(sw._children) == 1
         assert isinstance(sw._children[0], RepeatElement)
 
@@ -94,7 +96,7 @@ class TestSwitchInsideRepeat:
         sw._parent = parent
         sw._node_idx = 0
         sw._on_set_parent()
-        sw._refresh()
+        asyncio.run(sw._refresh())
         assert isinstance(sw._children[0], RepeatElement)
 
 
@@ -107,11 +109,11 @@ class TestNestedDynamicElementCleanup:
         parent = _make_parent()
         sw._parent = parent
         sw._node_idx = 0
-        sw._refresh()
+        asyncio.run(sw._refresh())
         original_repeat_callbacks = len(inner_rep._callback_nodes)
         assert original_repeat_callbacks > 0
         cond.value = False
-        sw._refresh()
+        asyncio.run(sw._refresh())
         assert len(sw._children) == 0
 
     def test_repeat_removal_cleans_up_switch(self, fake_browser_full):
@@ -124,10 +126,10 @@ class TestNestedDynamicElementCleanup:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._refresh()
+        asyncio.run(rep._refresh())
         assert len(rep._children) == 1
         rl.clear()
-        rep._refresh()
+        asyncio.run(rep._refresh())
         assert len(rep._children) == 0
 
 
@@ -148,7 +150,7 @@ class TestPositionElementNodes:
         rep = RepeatElement(rl, lambda x: TextElement(x))
         rep._parent = parent
         rep._node_idx = 0
-        rep._refresh()
+        asyncio.run(rep._refresh())
         parent_node = parent._get_node()
         result_idx = _position_element_nodes(rep, parent_node, 0)
         assert result_idx == 1
@@ -163,7 +165,7 @@ class TestRenderHTMLWithNesting:
         parent = _make_parent()
         sw._parent = parent
         sw._node_idx = 0
-        sw._refresh()
+        asyncio.run(sw._refresh())
         assert sw._children is not None
         assert len(sw._children) > 0
 
@@ -190,7 +192,7 @@ class TestNodeCountWithNesting:
         parent = _make_parent()
         sw._parent = parent
         sw._node_idx = 0
-        sw._refresh()
+        asyncio.run(sw._refresh())
         assert sw._node_count == 3
 
     def test_nested_dynamic_node_count(self):

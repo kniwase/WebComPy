@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from tests.conftest import MockHistoryPort
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import PluginScript, WebComPyAppConfig
@@ -210,13 +212,15 @@ class TestGenerateHtmlWithPluginScripts:
         try:
             test_app = _TestApp(plugins=["tests.test_plugin_system:PluginForHtml"])
             ctx = test_app.app.create_render_context()
-            html_str = generate_html(
-                ctx,
-                app_package_name="test_pkg",
-                dev_mode=False,
-                prerender=False,
-                app_version="0.0.0",
-                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            html_str = asyncio.run(
+                generate_html(
+                    ctx,
+                    app_package_name="test_pkg",
+                    dev_mode=False,
+                    prerender=False,
+                    app_version="0.0.0",
+                    wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+                )
             )
             ctx.dispose()
             assert "https://example.com/plugin.js" in html_str

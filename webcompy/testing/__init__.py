@@ -5,7 +5,9 @@ from webcompy.testing._app import mock_app_run
 from webcompy.testing._asgi import (
     create_test_asgi_app,
     format_html,
-    render_app_html,
+)
+from webcompy.testing._asgi import (
+    render_app_html_sync as render_app_html,
 )
 from webcompy.testing._dom import FakeDOMNode
 from webcompy.testing._ports import (

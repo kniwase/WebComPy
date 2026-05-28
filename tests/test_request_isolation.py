@@ -22,26 +22,30 @@ class TestRequestIsolation:
         ctx1 = app.create_render_context("/page-a")
         ctx1.set_title("Page A")
         ctx1.append_link({"rel": "stylesheet", "href": "/a.css"})
-        html1 = generate_html(
-            ctx1,
-            app_package_name="test_pkg",
-            dev_mode=False,
-            prerender=True,
-            app_version="0.0.0",
-            wheel_filename="test.whl",
+        html1 = asyncio.run(
+            generate_html(
+                ctx1,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=True,
+                app_version="0.0.0",
+                wheel_filename="test.whl",
+            )
         )
         ctx1.dispose()
 
         ctx2 = app.create_render_context("/page-b")
         ctx2.set_title("Page B")
         ctx2.append_link({"rel": "stylesheet", "href": "/b.css"})
-        html2 = generate_html(
-            ctx2,
-            app_package_name="test_pkg",
-            dev_mode=False,
-            prerender=True,
-            app_version="0.0.0",
-            wheel_filename="test.whl",
+        html2 = asyncio.run(
+            generate_html(
+                ctx2,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=True,
+                app_version="0.0.0",
+                wheel_filename="test.whl",
+            )
         )
         ctx2.dispose()
 

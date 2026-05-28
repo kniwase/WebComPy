@@ -234,6 +234,8 @@ class WebComPyApp:
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("app.run() can only be called in a browser environment.")
         self._record_phase("run_start")
+        import asyncio
+
         from webcompy.components._component import _active_app_context, _set_app_instance
 
         ctx = self.create_render_context()
@@ -241,4 +243,4 @@ class WebComPyApp:
         _set_app_instance(ctx)
         self._plugin_manager.call_on_app_ready(ctx)
         ctx._root._selector = self._config.selector
-        ctx._root.render()
+        asyncio.ensure_future(ctx._root._render())  # noqa: RUF006

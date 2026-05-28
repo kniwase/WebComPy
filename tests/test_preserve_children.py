@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from tests.conftest import FakeDOMNode
 from webcompy.elements.types._dynamic import _patch_children
 from webcompy.elements.types._element import Element
@@ -41,7 +43,7 @@ class TestMountNodeDetachedRecovery:
         assert node.parentNode is None
         assert parent_node.childNodes.length == 0
 
-        el._render()
+        asyncio.run(el._render())
 
         assert el._mounted is True
         assert node.parentNode is parent_node
@@ -66,7 +68,7 @@ class TestMountNodeDetachedRecovery:
         assert node.parentNode is None
         assert text_el._mounted is True
 
-        text_el._render()
+        asyncio.run(text_el._render())
 
         assert node.parentNode is parent_node
         assert parent_node.childNodes.length == 1
@@ -81,7 +83,7 @@ class TestMountNodeDetachedRecovery:
         el._mounted = True
         assert node.parentNode is parent_node
 
-        el._render()
+        asyncio.run(el._render())
 
         assert el._mounted is True
         assert node.parentNode is parent_node
@@ -95,7 +97,7 @@ class TestMountNodeDetachedRecovery:
         el._mounted = None
         assert parent_node.childNodes.length == 0
 
-        el._render()
+        asyncio.run(el._render())
 
         assert el._mounted is True
         assert node.parentNode is parent_node
@@ -123,7 +125,7 @@ class TestPreserveChildrenRender:
 
         assert node.childNodes.length == 3
 
-        el._render()
+        asyncio.run(el._render())
 
         assert node.childNodes.length == 3
 
@@ -138,7 +140,7 @@ class TestPreserveChildrenRender:
 
         assert node.childNodes.length == 3
 
-        el._render()
+        asyncio.run(el._render())
 
         assert node.childNodes.length == 0
 
@@ -164,7 +166,7 @@ class TestPreserveChildrenRender:
         assert node.childNodes.length == 2
         assert el._children_length == 1
 
-        el._render()
+        asyncio.run(el._render())
 
         assert node.childNodes.length == 2
         assert external in [node.childNodes[i] for i in range(node.childNodes.length)]
@@ -292,7 +294,7 @@ class TestSwitchElementPreserveExternalNodes:
 
         _patch_children([old_inner], [new_inner])
 
-        new_inner._render()
+        asyncio.run(new_inner._render())
 
         assert old_text_node.parentNode is old_inner_node
         assert ext_span in [old_inner_node.childNodes[i] for i in range(old_inner_node.childNodes.length)]

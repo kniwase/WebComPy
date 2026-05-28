@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from webcompy.app._config import PluginScript, WebComPyAppConfig
 from webcompy.cli._html import generate_html
 
@@ -21,7 +23,7 @@ def _make_app(**config_kwargs):
 
 def _generate_html(app, **kwargs):
     ctx = app.create_render_context()
-    html = generate_html(ctx, **kwargs)
+    html = asyncio.run(generate_html(ctx, **kwargs))
     ctx.dispose()
     return html
 
@@ -165,13 +167,15 @@ class TestGenerateHtmlWithPluginScripts:
         app = _make_app()
         ctx = app.create_render_context()
         ctx.append_script({"type": "text/javascript", "src": "https://example.com/analytics.js"})
-        html_str = generate_html(
-            ctx,
-            app_package_name="test_pkg",
-            dev_mode=False,
-            prerender=False,
-            app_version="0.0.0",
-            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        html_str = asyncio.run(
+            generate_html(
+                ctx,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=False,
+                app_version="0.0.0",
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
         )
         ctx.dispose()
         assert "https://example.com/analytics.js" in html_str

@@ -22,14 +22,20 @@ def format_html(html: str) -> str:
     return str(soup)
 
 
-def render_app_html(app: WebComPyApp, path: str = "/", **kwargs: Any) -> str:
+async def render_app_html(app: WebComPyApp, path: str = "/", **kwargs: Any) -> str:
     from webcompy.cli._html import generate_html
 
     ctx = app.create_render_context(path)
     try:
-        return generate_html(ctx, **kwargs)
+        return await generate_html(ctx, **kwargs)
     finally:
         ctx.dispose()
+
+
+def render_app_html_sync(app: WebComPyApp, path: str = "/", **kwargs: Any) -> str:
+    import asyncio
+
+    return asyncio.run(render_app_html(app, path, **kwargs))
 
 
 def create_test_asgi_app(app: WebComPyApp) -> ASGIApp:
@@ -40,7 +46,7 @@ def create_test_asgi_app(app: WebComPyApp) -> ASGIApp:
             path: str = request.path_params.get("path", "")
             ctx = app.create_render_context(path.strip("/"))
             try:
-                html = _HtmlElement("div", {}, ctx._root).render_html()
+                html = await _HtmlElement("div", {}, ctx._root).render_html()
                 return HTMLResponse(html)
             finally:
                 ctx.dispose()
@@ -51,7 +57,7 @@ def create_test_asgi_app(app: WebComPyApp) -> ASGIApp:
         async def _send_html_static(_: Request) -> HTMLResponse:
             ctx = app.create_render_context("/")
             try:
-                html = _HtmlElement("div", {}, ctx._root).render_html()
+                html = await _HtmlElement("div", {}, ctx._root).render_html()
                 return HTMLResponse(html)
             finally:
                 ctx.dispose()

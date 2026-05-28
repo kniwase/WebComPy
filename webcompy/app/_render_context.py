@@ -156,10 +156,10 @@ class RenderContext:
         self._check_disposed()
         self._di_scope.provide(key, value)
 
-    def render_html(self, **kwargs: Any) -> str:
+    async def render_html(self, **kwargs: Any) -> str:
         from webcompy.cli._html import generate_html
 
-        return generate_html(self, **kwargs)
+        return await generate_html(self, **kwargs)
 
     def dispose(self) -> None:
         if self._disposed:

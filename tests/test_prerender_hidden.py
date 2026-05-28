@@ -1,3 +1,4 @@
+import asyncio
 import re
 
 from webcompy.app._app import WebComPyApp
@@ -24,13 +25,15 @@ class TestPrerenderHiddenAttribute:
     def test_prerender_output_has_no_hidden(self):
         app = _make_app()
         ctx = app.create_render_context()
-        html = generate_html(
-            ctx,
-            app_package_name="test_pkg",
-            dev_mode=False,
-            prerender=True,
-            app_version="0.0.0",
-            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        html = asyncio.run(
+            generate_html(
+                ctx,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=True,
+                app_version="0.0.0",
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
         )
         ctx.dispose()
         match = re.search(r'<div id="webcompy-app"[^>]*>', html)
@@ -41,13 +44,15 @@ class TestPrerenderHiddenAttribute:
     def test_non_prerender_output_has_hidden(self):
         app = _make_app()
         ctx = app.create_render_context()
-        html = generate_html(
-            ctx,
-            app_package_name="test_pkg",
-            dev_mode=False,
-            prerender=False,
-            app_version="0.0.0",
-            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        html = asyncio.run(
+            generate_html(
+                ctx,
+                app_package_name="test_pkg",
+                dev_mode=False,
+                prerender=False,
+                app_version="0.0.0",
+                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+            )
         )
         ctx.dispose()
         match = re.search(r'<div id="webcompy-app"[^>]*>', html)

@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+import asyncio
 import json
 import re
 
@@ -25,7 +24,7 @@ def _make_app(**config_kwargs):
 
 def _generate_html(app, **kwargs):
     ctx = app.create_render_context()
-    html = generate_html(ctx, **kwargs)
+    html = asyncio.run(generate_html(ctx, **kwargs))
     ctx.dispose()
     return html
 

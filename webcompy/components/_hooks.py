@@ -17,7 +17,7 @@ _active_effect_scope: ContextVar[EffectScope | None] = ContextVar("_active_effec
 T = TypeVar("T")
 
 
-def on_before_rendering(func: Callable[[], Any]) -> Callable[[], Any]:
+def on_before_rendering(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> Callable[[], Any]:
     try:
         ctx = _active_component_context.get()
     except LookupError as err:
@@ -26,7 +26,7 @@ def on_before_rendering(func: Callable[[], Any]) -> Callable[[], Any]:
     return func
 
 
-def on_after_rendering(func: Callable[[], Any]) -> Callable[[], Any]:
+def on_after_rendering(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> Callable[[], Any]:
     try:
         ctx = _active_component_context.get()
     except LookupError as err:
@@ -35,7 +35,7 @@ def on_after_rendering(func: Callable[[], Any]) -> Callable[[], Any]:
     return func
 
 
-def on_before_destroy(func: Callable[[], Any]) -> Callable[[], Any]:
+def on_before_destroy(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> Callable[[], Any]:
     try:
         ctx = _active_component_context.get()
     except LookupError as err:
