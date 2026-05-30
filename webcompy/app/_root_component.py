@@ -95,7 +95,7 @@ class AppDocumentRoot(Component):
             if self._app and self._app._hydrate and not self.__hydrated:
                 self.__hydrated = True
                 for child in self._children:
-                    child._hydrate_node()
+                    await child._hydrate_node()
 
             _snap_consumer = get_active_consumer()
             _snap_di_scope = _active_di_scope.get(None)

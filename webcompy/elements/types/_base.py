@@ -85,11 +85,11 @@ class ElementWithChildren(ElementAbstract):
             for _ in range(node.childNodes.length - self._children_length):
                 node.childNodes[-1].remove()
 
-    def _hydrate_node(self):
-        result = super()._hydrate_node()
+    async def _hydrate_node(self):
+        result = await super()._hydrate_node()
         self._re_index_children()
         for child in self._children:
-            child._hydrate_node()
+            await child._hydrate_node()
         if (node := self._get_node()) is not None and not self._preserve_children:
             for _ in range(node.childNodes.length - self._children_length):
                 node.childNodes[-1].remove()

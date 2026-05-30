@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from tests.conftest import FakeDOMNode
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.elements.types._element import Element
@@ -138,7 +140,8 @@ class TestTextElementAdoptNode:
 
 
 class TestHydrateNode:
-    def test_hydrate_node_adopts_prerendered_matching(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_hydrate_node_adopts_prerendered_matching(self, fake_browser_full):
         parent = FakeRootElement("div", {}, {}, None, None)
         parent._node_cache = FakeDOMNode("div")
         parent._mounted = True
@@ -149,23 +152,25 @@ class TestHydrateNode:
         el = Element("span", {"class": "test"}, {}, None, None)
         el._parent = parent
         el._node_idx = 0
-        result = el._hydrate_node()
+        result = await el._hydrate_node()
         assert result is existing_node
         assert el._mounted is True
         assert el._node_cache is existing_node
 
-    def test_hydrate_node_falls_back_to_init_when_no_existing(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_hydrate_node_falls_back_to_init_when_no_existing(self, fake_browser_full):
         parent = FakeRootElement("div", {}, {}, None, None)
         parent._node_cache = FakeDOMNode("div")
         parent._mounted = True
         el = Element("span", {"class": "test"}, {}, None, None)
         el._parent = parent
         el._node_idx = 0
-        result = el._hydrate_node()
+        result = await el._hydrate_node()
         assert result is not None
         assert result.__webcompy_node__ is True
 
-    def test_hydrate_node_falls_back_when_tag_mismatch(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_hydrate_node_falls_back_when_tag_mismatch(self, fake_browser_full):
         parent = FakeRootElement("div", {}, {}, None, None)
         parent._node_cache = FakeDOMNode("div")
         parent._mounted = True
@@ -176,11 +181,12 @@ class TestHydrateNode:
         el = Element("span", {}, {}, None, None)
         el._parent = parent
         el._node_idx = 0
-        result = el._hydrate_node()
+        result = await el._hydrate_node()
         assert result is not existing_node
         assert result.__webcompy_node__ is True
 
-    def test_hydrate_node_text_element_adopts(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_hydrate_node_text_element_adopts(self, fake_browser_full):
         parent = FakeRootElement("div", {}, {}, None, None)
         parent._node_cache = FakeDOMNode("div")
         parent._mounted = True
@@ -191,13 +197,14 @@ class TestHydrateNode:
         text_el = TextElement("hello")
         text_el._parent = parent
         text_el._node_idx = 0
-        result = text_el._hydrate_node()
+        result = await text_el._hydrate_node()
         assert result is existing_node
         assert text_el._mounted is True
 
 
 class TestHydrateNodeIdx:
-    def test_element_with_children_hydrate_sets_node_idx(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_element_with_children_hydrate_sets_node_idx(self, fake_browser_full):
         from webcompy.signal import Signal
 
         text_value = Signal("hello")
@@ -215,11 +222,12 @@ class TestHydrateNodeIdx:
         for child in el._children:
             if hasattr(child, "_node_idx"):
                 del child._node_idx
-        el._hydrate_node()
+        await el._hydrate_node()
 
         assert hasattr(el._children[0], "_node_idx")
 
-    def test_element_with_children_hydrate_re_indexes_correctly(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_element_with_children_hydrate_re_indexes_correctly(self, fake_browser_full):
         from webcompy.signal import Signal
 
         text_a = Signal("aaa")
@@ -239,12 +247,13 @@ class TestHydrateNodeIdx:
         for child in el._children:
             if hasattr(child, "_node_idx"):
                 del child._node_idx
-        el._hydrate_node()
+        await el._hydrate_node()
 
         assert el._children[0]._node_idx == 0
         assert el._children[1]._node_idx == 1
 
-    def test_dynamic_element_hydrate_sets_node_idx_before_render(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_dynamic_element_hydrate_sets_node_idx_before_render(self, fake_browser_full):
         from webcompy.elements.types._switch import SwitchElement
         from webcompy.signal import Signal
 
@@ -266,7 +275,7 @@ class TestHydrateNodeIdx:
             if hasattr(child, "_node_idx"):
                 del child._node_idx
 
-        sw._hydrate_node()
+        await sw._hydrate_node()
 
         for child in sw._children:
             assert hasattr(child, "_node_idx"), f"child {child} missing _node_idx after _hydrate_node"
