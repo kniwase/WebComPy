@@ -14,5 +14,7 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
     else:
         import nest_asyncio
 
-        nest_asyncio.apply(loop)
+        if not getattr(loop, "_nest_asyncio_patched", False):
+            nest_asyncio.apply(loop)
+            loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
         return loop.run_until_complete(coro)

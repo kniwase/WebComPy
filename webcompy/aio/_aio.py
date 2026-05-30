@@ -94,7 +94,7 @@ class AsyncWrapper(Generic[T]):
         return inner
 
 
-def _make_signal_callback(callback):
+def _make_signal_callback(callback: Callable[..., Any]) -> Callable[..., None]:
     if iscoroutinefunction(callback):
 
         async def _safe_callback(*args, **kwargs):

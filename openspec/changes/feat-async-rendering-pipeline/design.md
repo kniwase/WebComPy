@@ -288,7 +288,7 @@ def on_after_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[An
 ### Decision 13: Test suite uses pytest-asyncio instead of asyncio.run()
 
 **Chosen**:
-- Add `pytest-asyncio` to dev dependencies in `pyproject.toml`
+- Add `pytest-asyncio` and `nest-asyncio` to dev dependencies in `pyproject.toml`
 - Configure `asyncio_mode = "auto"` in `[tool.pytest.ini_options]`
 - Convert all test functions that call async code to `async def`
 - Replace all `asyncio.run()` calls in tests with `await`
@@ -301,6 +301,7 @@ def on_after_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[An
 ```python
 # run_sync() helper for test utilities
 import asyncio
+import nest_asyncio
 from typing import TypeVar
 
 T = TypeVar("T")
@@ -312,6 +313,9 @@ def run_sync(coro) -> T:
     except RuntimeError:
         return asyncio.run(coro)
     else:
+        if not getattr(loop, "_nest_asyncio_patched", False):
+            nest_asyncio.apply(loop)
+            loop._nest_asyncio_patched = True
         return loop.run_until_complete(coro)
 ```
 
