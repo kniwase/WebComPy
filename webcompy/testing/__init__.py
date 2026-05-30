@@ -18,6 +18,7 @@ from webcompy.testing._ports import (
 )
 from webcompy.testing._renderer import TestRenderer, TestRendererResult
 from webcompy.testing._scope import create_test_app
+from webcompy.testing._utils import run_sync
 
 __all__ = [
     "FakeBrowserDOMPort",
@@ -33,4 +34,5 @@ __all__ = [
     "format_html",
     "mock_app_run",
     "render_app_html",
+    "run_sync",
 ]

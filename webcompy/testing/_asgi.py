@@ -6,8 +6,8 @@ from starlette.applications import Starlette
 from starlette.responses import HTMLResponse
 from starlette.routing import Route
 
-from webcompy.aio._utils import run_sync
 from webcompy.cli._html import _HtmlElement
+from webcompy.testing._utils import run_sync
 
 if TYPE_CHECKING:
     from starlette.requests import Request

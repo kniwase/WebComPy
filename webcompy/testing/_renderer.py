@@ -3,7 +3,6 @@ from __future__ import annotations
 import contextvars
 from typing import TYPE_CHECKING
 
-from webcompy.aio._utils import run_sync
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
 from webcompy.ports._server._virtual_dom import VirtualDOMNode
@@ -13,6 +12,7 @@ from webcompy.testing._ports import (
     FakeBrowserFFIPort,
     FakeBrowserHostPort,
 )
+from webcompy.testing._utils import run_sync
 
 if TYPE_CHECKING:
     from webcompy.components._generator import ComponentGenerator

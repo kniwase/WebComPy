@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from webcompy.aio._utils import run_sync
 from webcompy.app._config import PluginScript, WebComPyAppConfig
 from webcompy.cli._html import generate_html
+from webcompy.testing._utils import run_sync
 
 
 def _make_app(**config_kwargs):

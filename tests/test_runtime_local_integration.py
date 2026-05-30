@@ -1,11 +1,11 @@
 import json
 import re
 
-from webcompy.aio._utils import run_sync
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.cli._html import generate_html
 from webcompy.components._generator import define_component
+from webcompy.testing._utils import run_sync
 
 
 @define_component

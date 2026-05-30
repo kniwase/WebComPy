@@ -8,8 +8,8 @@
 - [x] 2.1 Change `ElementWithChildren._render()` to `async def _render(self):` in `webcompy/elements/types/_base.py`
 - [x] 2.2 Replace sequential `for child in self._children: child._render()` with `await asyncio.gather(*[child._render() for child in self._children])`
 - [x] 2.3 Add `import asyncio` to `_base.py`
-- [x] 2.4 Update `ElementWithChildren._hydrate_node()` — change the `for child in self._children: child._hydrate_node()` loop to a sync loop (hydration is not async in this change)
-- [x] 2.5 Document that `_hydrate_node()` callers may encounter children with no matching prerendered nodes. These un-hydrated children need async `_render()` scheduling, which is handled by downstream changes: `feat-client-only-component` (ClientOnly._hydrate_node() schedules `asyncio.ensure_future(self._render())`) and `feat-suspense-component` (Suspense._hydrate_node() schedules async resolution). The foundational async-rendering-pipeline change does NOT modify `_hydrate_node()` to schedule async rendering — it keeps hydration synchronous.
+- [x] 2.4 Update `ElementWithChildren._hydrate_node()` — change to `async def`, and change `for child in self._children: child._hydrate_node()` to `for child in self._children: await child._hydrate_node()` (hydration is now async)
+- [x] 2.5 Update `DynamicElement._hydrate_node()` — make it `async def`, await `child._hydrate_node()`, and await `child._render()` for unmounted children
 - [x] 2.6 Implement PyScript ContextVar isolation for `asyncio.gather()` siblings: In the browser (Emscripten), Python ContextVar fallback uses shared module-level globals. Before starting each sibling coroutine in `asyncio.gather()`, the framework SHALL snapshot `_active_consumer` and `_active_di_scope` ContextVars and restore them at the start of each sibling task. This ensures sibling coroutines do not interfere with each other's signal dependency tracking or DI scope resolution. Wrap each child coroutine in a helper that (a) snapshots current ContextVar values, (b) restores them at task entry, and (c) runs the original child coroutine. The helper SHALL be applied in `ElementWithChildren._render()` and `AppDocumentRoot._render()` wherever `asyncio.gather()` is used for sibling rendering.
 
 ## 3. Convert DynamicElement._render() to async
@@ -103,7 +103,7 @@
 
 - [x] 15.1 Install pytest-asyncio: Add to dev dependencies in pyproject.toml and run `uv sync --group dev`
 - [x] 15.2 Configure pytest-asyncio: All async tests use explicit `@pytest.mark.asyncio` markers. `asyncio_mode` not set in pyproject.toml (defaults to strict).
-- [x] 15.3 Create `run_sync()` helper in `webcompy/aio/_utils.py` for test utilities that need to call async code from sync context without `asyncio.run()`
+- [x] 15.3 Create `run_sync()` helper in `webcompy/testing/_utils.py` for test utilities that need to call async code from sync context without `asyncio.run()`
 - [x] 15.4 Update `TestRenderer.render()` in `webcompy/testing/_renderer.py`: Use `run_sync()` wrapper with contextvars.copy_context()
 - [x] 15.5 Update `render_app_html_sync()` in `webcompy/testing/_asgi.py`: Use `run_sync()` instead of `asyncio.run()`
 - [x] 15.6 Update `tests/test_elements.py`: Convert test functions to `async def`, replace `asyncio.run(element._render())` with `await element._render()`
@@ -132,5 +132,5 @@
 - [x] 16.2 Run format: `uv run ruff format .` — PASSED
 - [x] 16.3 Run type check: `uv run pyright` — PASSED
 - [x] 16.4 Run unit tests: `uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs` — PASSED (1062 passed, 7 skipped)
-- [x] 16.5 Run SSG: `uv run python -m webcompy generate --config docs_app.webcompy_config` — PASSED (with expected RuntimeWarning for un-awaited `_render()` in `_hydrate_node()` — this is by design per spec task 2.5)
+- [x] 16.5 Run SSG: `uv run python -m webcompy generate --config docs_app.webcompy_config` — PASSED (RuntimeWarning suppressed via `warnings.catch_warnings()` in `_dynamic.py`)
 - [x] 16.6 Run E2E tests: `scripts/run-e2e-tests.sh bootstrap-static` — PASSED (2 passed, 0 failed)

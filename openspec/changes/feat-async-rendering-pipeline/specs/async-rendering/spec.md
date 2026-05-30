@@ -12,9 +12,7 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 
 `ElementAbstract._render()`, `ElementWithChildren._render()`, `DynamicElement._render()`, `RepeatElement._render()`, `SwitchElement._render()`, `Component._render()`, and `AppDocumentRoot._render()` SHALL be `async def` methods. All callers of these methods SHALL `await` them. The `_mount_node()` method SHALL remain synchronous since DOM operations are not async.
 
-`_hydrate_node()` SHALL remain synchronous in this change. Async component setup (`_pending_async_template`) is NOT resolved during hydration — resolution happens during the first async `_render()` after hydration completes. In the browser, components that were pre-resolved during SSR receive their state from the hydration data transfer payload (per `feat-hydration-data-transfer`), so async setup does not need to re-execute. Components without transfer data proceed through the normal async lifecycle during `_render()`, after DOM adoption is complete.
-
-`_hydrate_node()` is only called during browser hydration — SSR never calls `_hydrate_node()` because it directly renders components via `await _render()`. When downstream changes (`feat-client-only-component`, `feat-suspense-component`) schedule async rendering inside `_hydrate_node()` via `asyncio.ensure_future(self._render())`, this is browser-only behavior. The browser event loop is always running when `_hydrate_node()` executes, so `asyncio.ensure_future()` is always safe.
+ `_hydrate_node()` SHALL become async in this change. `ElementAbstract._hydrate_node()`, `ElementWithChildren._hydrate_node()`, and `DynamicElement._hydrate_node()` SHALL be `async def` methods. All internal callers SHALL `await` them. `DynamicElement._hydrate_node()` SHALL `await child._render()` for unmounted children instead of calling `child._render()` synchronously (which would produce an un-awaited coroutine and a RuntimeWarning).
 
 #### Scenario: Rendering a component in the browser
 - **WHEN** `app.run()` is called in the browser
@@ -76,7 +74,7 @@ This behavioral change means side effects from all siblings execute even when on
 - **AND** `ElementWithChildren._render()` SHALL catch the re-raised exception
 - **AND** it SHALL call `_remove_element()` on each successfully rendered child to clean up their DOM nodes
 - **AND** `_remove_element()` on each child SHALL trigger the full destruction lifecycle: effect scope disposal, `on_before_destroy` hooks, and DI scope cleanup
-- **AND** if `_remove_element()` itself raises during cleanup of a sibling, the exception SHALL be logged via `report_error()` and cleanup SHALL continue for remaining siblings
+- **AND** if `_remove_element()` itself raises during cleanup of a sibling, the exception SHALL be logged via `logging.error()` and cleanup SHALL continue for remaining siblings
 - **AND** the originally re-raised exception from the failing child SHALL take priority over cleanup errors
 - **AND** after cleanup, the exception SHALL be re-raised to its caller
 - **AND** no partially rendered sibling nodes SHALL remain orphaned in the DOM
@@ -186,7 +184,7 @@ In the browser (PyScript) environment, `app.run()` SHALL schedule the async rend
 
 ### Requirement: Signal callbacks shall support async callables
 
-When an async callable is registered as a signal callback via `SignalBase.on_after_updating()`, the signal system SHALL schedule the callback via `aio_run()` (which uses `asyncio.ensure_future()` in the browser or `loop.create_task()` on the server). A utility function `_make_signal_callback()` SHALL wrap async callables for transparent scheduling. If an async signal callback raises an exception, the error SHALL be logged via the framework's error reporting mechanism (`webcompy.exception.report_error()`) and SHALL NOT crash the application.
+When an async callable is registered as a signal callback via `SignalBase.on_after_updating()`, the signal system SHALL schedule the callback via `aio_run()` (which uses `asyncio.ensure_future()` in the browser or `loop.create_task()` on the server). A utility function `_make_signal_callback()` SHALL wrap async callables for transparent scheduling. If an async signal callback raises an exception, the error SHALL be logged via the framework's logging mechanism (`logging.error()`) and SHALL NOT crash the application.
 
 #### Scenario: Registering an async _refresh() as a signal callback
 - **WHEN** `RepeatElement._refresh()` is `async def` and registered via `self._sequence.on_after_updating(self._refresh)`
@@ -209,7 +207,7 @@ When an async callable is registered as a signal callback via `SignalBase.on_aft
 
 ### Requirement: Tests shall use pytest-asyncio for async test execution
 
-The WebComPy test suite SHALL use `pytest-asyncio` for testing async rendering methods. Test functions that invoke async code SHALL be declared as `async def` and use `await` instead of `asyncio.run()`. `pytest-asyncio` SHALL be configured with `asyncio_mode = "auto"` in `pyproject.toml` so that `async def` test functions are automatically detected without requiring `@pytest.mark.asyncio` decorators.
+The WebComPy test suite SHALL use `pytest-asyncio` for testing async rendering methods. Test functions that invoke async code SHALL be declared as `async def` and use `await` instead of `asyncio.run()`. All `async def` test functions SHALL be marked with an explicit `@pytest.mark.asyncio` decorator. `asyncio_mode` SHALL NOT be set in `pyproject.toml` (defaults to strict mode, requiring explicit markers).
 
 Test utility functions (e.g., `TestRenderer.render()`, `render_app_html_sync()`) that provide a synchronous interface for test code SHALL use a `run_sync()` helper instead of `asyncio.run()`. The `run_sync()` helper SHALL detect whether it is already inside a running event loop and, if so, use `asyncio.get_event_loop().run_until_complete()` or an equivalent mechanism instead of `asyncio.run()`.
 
