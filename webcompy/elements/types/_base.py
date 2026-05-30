@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
-from webcompy import logging
-from webcompy.di._scope import _active_di_scope
 from webcompy.elements.typealias._element_property import (
     AttrValue,
     ElementChildren,
@@ -14,26 +11,6 @@ from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._text import TextElement
 from webcompy.signal._base import SignalBase
-from webcompy.signal._graph import get_active_consumer, set_active_consumer
-from webcompy.utils._environment import ENVIRONMENT
-
-
-def _handle_gather_results(children: list[ElementAbstract], results: list[Any]) -> None:
-    """Process asyncio.gather return_exceptions=True results.
-
-    Log secondary errors, clean up successful siblings, and raise the first error.
-    """
-    errors = [r for r in results if isinstance(r, Exception)]
-    if errors:
-        for err in errors[1:]:
-            logging.error(err)
-        for i, r in enumerate(results):
-            if not isinstance(r, Exception):
-                try:
-                    children[i]._remove_element()
-                except Exception as cleanup_err:
-                    logging.error(cleanup_err)
-        raise errors[0]
 
 
 class ElementWithChildren(ElementAbstract):
@@ -60,27 +37,7 @@ class ElementWithChildren(ElementAbstract):
         await super()._render()
         for c_idx, child in enumerate(self._children):
             child._node_idx = self._node_idx + c_idx
-
-        if ENVIRONMENT == "pyscript":
-            _snap_consumer = get_active_consumer()
-            _snap_di_scope = _active_di_scope.get(None)
-
-            async def _child_render(child):
-                set_active_consumer(_snap_consumer)
-                if _snap_di_scope is not None:
-                    _active_di_scope.set(_snap_di_scope)
-                return await child._render()
-
-            results = await asyncio.gather(
-                *(_child_render(child) for child in self._children),
-                return_exceptions=True,
-            )
-        else:
-            results = await asyncio.gather(
-                *(child._render() for child in self._children),
-                return_exceptions=True,
-            )
-        _handle_gather_results(self._children, results)
+            await child._render()
         if (node := self._get_node()) is not None and not self._preserve_children:
             for _ in range(node.childNodes.length - self._children_length):
                 node.childNodes[-1].remove()

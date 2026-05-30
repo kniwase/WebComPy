@@ -47,44 +47,38 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 - **THEN** calling `await element._render()` SHALL work identically to a sync override
 - **AND** no special migration steps SHALL be required
 
-### Requirement: Sibling children shall render in parallel via asyncio.gather()
+### Requirement: Sibling children shall render sequentially
 
-`ElementWithChildren._render()` and `AppDocumentRoot._render()` SHALL use `asyncio.gather()` to render all child elements concurrently. Each child's `_render()` SHALL be scheduled as a separate coroutine. This enables future I/O-bound parallelism during SSG and structural clarity for the async pipeline.
+`ElementWithChildren._render()` and `AppDocumentRoot._render()` SHALL render child elements sequentially using `for child in self._children: await child._render()`. Each child's `_render()` SHALL be awaited before the next child begins. This preserves the DOM ordering guarantees of the pre-async pipeline and avoids race conditions in DOM manipulation.
 
-This is a behavioral change from the current sequential rendering pipeline. With sync rendering, children are processed one by one and an exception in child N aborts rendering immediately (children N+1 are never rendered). With `asyncio.gather(return_exceptions=True)`, ALL children render regardless of individual failures — after completion, the first exception is re-raised and `ElementWithChildren._render()` cleans up successfully rendered children via `_remove_element()` before re-raising. In the browser, `asyncio.gather()` provides structural clarity but not true parallelism; the parallel rendering benefit applies to SSG (CPython) only.
+This is a behavioral match to the current sequential rendering pipeline. With sync rendering, children are processed one by one and an exception in child N aborts rendering immediately (children N+1 are never rendered). The async pipeline preserves this exact behavior: `await child._render()` for each child in order, and an exception aborts the sequence immediately without rendering subsequent children.
 
-This behavioral change means side effects from all siblings execute even when one sibling raises — developers who relied on sequential short-circuit semantics (where an error in child N prevents child N+1 from executing) must update their code. The `_remove_element()` cleanup undoes DOM and lifecycle state, but any non-component side effects (modifying global state, writing to external systems) that occurred in siblings after the failing one will persist.
+> **Future enhancement**: Parallel rendering via `asyncio.gather()` is identified as a future performance optimization. It will require careful DOM ordering guarantees, atomic cleanup of failed siblings, and ContextVar isolation across concurrent tasks. See the "Future Work" section.
 
 #### Scenario: Rendering multiple sibling children
 - **WHEN** `ElementWithChildren._render()` is called with 3 children
-- **THEN** `asyncio.gather(child1._render(), child2._render(), child3._render())` SHALL be awaited
-- **AND** all 3 children SHALL complete rendering before the parent continues
+- **THEN** `await child1._render()` SHALL be called first
+- **AND** after child1 completes, `await child2._render()` SHALL be called
+- **AND** after child2 completes, `await child3._render()` SHALL be called
+- **AND** the parent SHALL continue only after all 3 children complete
 
 #### Scenario: Sibling rendering preserves DOM order
-- **WHEN** children are rendered via `asyncio.gather()`
-- **THEN** DOM node indices (`_node_idx`) SHALL be assigned before rendering begins
-- **AND** the final DOM order SHALL match the children list order regardless of completion order
+- **WHEN** children are rendered sequentially
+- **THEN** DOM node indices (`_node_idx`) SHALL be assigned before each child renders
+- **AND** the final DOM order SHALL match the children list order exactly
 
 #### Scenario: One child raises during sibling rendering
-- **WHEN** `asyncio.gather(*tasks, return_exceptions=True)` is used
-- **AND** one child's `_render()` raises an unexpected exception
-- **THEN** the exception SHALL be captured as a return value (not propagated to cancel sibling tasks)
-- **AND** the other sibling children SHALL complete normally
-- **AND** after all siblings complete, the first exception in child order (the exception at the lowest index in the results list, not chronological order) SHALL be re-raised
-- **AND** `ElementWithChildren._render()` SHALL catch the re-raised exception
-- **AND** it SHALL call `_remove_element()` on each successfully rendered child to clean up their DOM nodes
-- **AND** `_remove_element()` on each child SHALL trigger the full destruction lifecycle: effect scope disposal, `on_before_destroy` hooks, and DI scope cleanup
-- **AND** if `_remove_element()` itself raises during cleanup of a sibling, the exception SHALL be logged via `logging.error()` and cleanup SHALL continue for remaining siblings
-- **AND** the originally re-raised exception from the failing child SHALL take priority over cleanup errors
-- **AND** after cleanup, the exception SHALL be re-raised to its caller
-- **AND** no partially rendered sibling nodes SHALL remain orphaned in the DOM
+- **WHEN** one child's `_render()` raises an unexpected exception during sequential rendering
+- **THEN** the exception SHALL propagate immediately via the `await`
+- **AND** subsequent children SHALL NOT be rendered (sequential short-circuit semantics)
+- **AND** the exception SHALL be re-raised to the caller
+- **AND** any previously rendered siblings SHALL remain in the DOM (no cleanup needed since no siblings were rendered after the failing one)
 
-#### Scenario: _active_consumer and _active_di_scope ContextVar isolation across asyncio.gather() siblings
-- **WHEN** sibling children are rendered via `asyncio.gather()`
-- **AND** one sibling modifies `_active_consumer` or `_active_di_scope` during its `_render()` (e.g., a `SuspenseElement` providing `SUSPENSE_RESOLVING_KEY` via DI scope)
-- **THEN** the ContextVar change SHALL NOT leak to other sibling tasks — each task gets a snapshot at task creation time
-- **AND** in PyScript (where ContextVar fallback uses shared globals), the framework SHALL manually reset `_active_consumer` and `_active_di_scope` before each sibling task to ensure isolation
-- **AND** sibling coroutines SHALL NOT interfere with each other's signal dependency tracking (`_active_consumer`) or DI scope resolution (`_active_di_scope`)
+#### Scenario: _active_consumer and _active_di_scope ContextVar preservation during sequential rendering
+- **WHEN** children are rendered sequentially
+- **THEN** each child's `_render()` SHALL inherit the parent's ContextVar state naturally via the single `await` chain
+- **AND** no manual ContextVar snapshot/restore SHALL be needed for sequential rendering
+- **AND** ContextVar state SHALL NOT leak between siblings because siblings execute one at a time
 
 ### Requirement: Lifecycle hooks shall support async callables
 
@@ -226,3 +220,17 @@ Test utility functions (e.g., `TestRenderer.render()`, `render_app_html_sync()`)
 - **WHEN** `uv run python -m pytest tests/` is executed
 - **THEN** all unit tests SHALL pass without `asyncio.run()` related errors
 - **AND** the test execution time SHALL not increase significantly compared to the sync pipeline
+
+## Future Work
+
+### Parallel Sibling Rendering
+
+Sequential rendering of sibling children is correct and safe but does not exploit the async pipeline's potential for I/O-bound parallelism. A future enhancement may introduce `asyncio.gather()` for sibling rendering with the following prerequisites:
+
+1. **DOM ordering guarantees**: Even with concurrent execution, DOM node indices must be pre-assigned (`_node_idx`) and `insertBefore` calls must use deterministic positions.
+2. **Atomic cleanup**: When one sibling raises, all successfully rendered siblings must be atomically removed via `_remove_element()` before the exception propagates. Cleanup errors must be logged and not block continued cleanup.
+3. **ContextVar isolation**: In PyScript, `_active_consumer` and `_active_di_scope` must be manually snapshotted and restored per task because PyScript's ContextVar fallback uses shared module-level globals. CPython handles ContextVar isolation natively.
+4. **Behavioral compatibility**: The change from sequential short-circuit to all-siblings-execute semantics is a behavioral difference that must be documented. Developers relying on sequential side-effect ordering may need updates.
+5. **Testing**: Dedicated tests for parallel rendering scenarios (concurrent siblings, error cleanup, ContextVar isolation) must be added before enabling.
+
+This enhancement is deferred until the above concerns are fully addressed and tested.

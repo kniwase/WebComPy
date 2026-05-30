@@ -42,37 +42,26 @@ This synchronous design prevents:
 
 **Key change**: The base method signature changes from `def _render(self):` to `async def _render(self):`. This propagates to every subclass. `_mount_node()` remains synchronous and is NOT awaited — async leaf elements call `_mount_node()` directly within their `async def _render(self)` with no `await` points.
 
-### Decision 2: `ElementWithChildren._render()` uses `asyncio.gather()` for sibling parallelism
+### Decision 2: `ElementWithChildren._render()` renders siblings sequentially
 
 **Chosen**: Change `ElementWithChildren._render()` to:
 
 ```python
 async def _render(self):
     await super()._render()
-    # Pre-assign _node_idx before concurrent rendering
     for c_idx, child in enumerate(self._children):
         child._node_idx = self._node_idx + c_idx
-    results = await asyncio.gather(*[child._render() for child in self._children], return_exceptions=True)
-    if errors := [r for r in results if isinstance(r, Exception)]:
-        if len(errors) > 1:
-            for err in errors[1:]:
-                logging.error(err)  # Log sibling errors before re-raising first
-        # Cleanup: remove elements for all successfully rendered children
-        for i, r in enumerate(results):
-            if not isinstance(r, Exception):
-                try:
-                    self._children[i]._remove_element()
-                except Exception as cleanup_err:
-                    logging.error(cleanup_err)
-        raise errors[0]  # Re-raise the first exception after cleanup
+        await child._render()
     if (node := self._get_node()) is not None:
         for _ in range(node.childNodes.length - self._children_length):
             node.childNodes[-1].remove()
 ```
 
-**Rationale**: In the synchronous version, children are rendered sequentially. With async rendering, `asyncio.gather(return_exceptions=True)` allows sibling children to render concurrently without cancelling siblings if one raises. Exceptions are filtered to `Exception` (not `BaseException`, to avoid catching `KeyboardInterrupt` and `SystemExit`). After all siblings complete, successfully rendered children have `_remove_element()` called to clean up their DOM nodes (triggering full destruction lifecycle: effect scope disposal, `on_before_destroy` hooks, DI scope cleanup), then the first exception is re-raised. Sibling errors beyond the first are logged via `logging.error()` before cleanup, preserving debug context. This prevents the DOM from being left in a partially rendered state.
+**Rationale**: Sequential rendering via `for child in children: await child._render()` preserves the exact DOM ordering guarantees of the pre-async pipeline. Each child is fully rendered before the next begins, ensuring deterministic DOM state. This avoids race conditions that can occur when multiple coroutines manipulate the DOM concurrently.
 
-**Trade-off**: `asyncio.gather()` does not guarantee ordering of coroutine start, but it does guarantee ordering of results. Since DOM child indices are pre-assigned (`_node_idx`) and mounting uses `insertBefore` at specific positions, rendering order is determined by `_node_idx`, not execution order. This means sibling parallelism is safe.
+In the browser (PyScript), there is no true parallelism anyway — all DOM operations happen on the main thread. The structural benefit of `asyncio.gather()` (concurrent coroutine scheduling) does not translate to actual performance gain for DOM-bound rendering. Sequential rendering is simpler, safer, and behaviorally identical to the sync pipeline.
+
+**Trade-off**: I/O-bound parallelism during SSG is not exploited. For example, if two sibling components both fetch data during `on_before_rendering`, they cannot fetch concurrently. This is a deliberate limitation for this change. Future work may introduce `asyncio.gather()` with proper DOM ordering guarantees, atomic cleanup, and ContextVar isolation.
 
 ### Decision 3: Async component definitions deferred to separate change
 

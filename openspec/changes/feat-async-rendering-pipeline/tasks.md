@@ -3,14 +3,14 @@
 - [x] 1.1 Change `ElementAbstract._render()` from `def _render(self):` to `async def _render(self):` in `webcompy/elements/types/_abstract.py`
 - [x] 1.2 Update `ElementAbstract._render()` body to remain `self._mount_node()` (sync, no await needed since `_mount_node()` stays sync)
 
-## 2. Convert ElementWithChildren._render() to async with asyncio.gather()
+## 2. Convert ElementWithChildren._render() to async (sequential)
 
 - [x] 2.1 Change `ElementWithChildren._render()` to `async def _render(self):` in `webcompy/elements/types/_base.py`
-- [x] 2.2 Replace sequential `for child in self._children: child._render()` with `await asyncio.gather(*[child._render() for child in self._children])`
+- [x] 2.2 Replace sequential `for child in self._children: child._render()` with `for child in self._children: await child._render()` (sequential rendering, matching pre-async behavior)
 - [x] 2.3 Add `import asyncio` to `_base.py`
 - [x] 2.4 Update `ElementWithChildren._hydrate_node()` — change to `async def`, and change `for child in self._children: child._hydrate_node()` to `for child in self._children: await child._hydrate_node()` (hydration is now async)
 - [x] 2.5 Update `DynamicElement._hydrate_node()` — make it `async def`, await `child._hydrate_node()`, and await `child._render()` for unmounted children
-- [x] 2.6 Implement PyScript ContextVar isolation for `asyncio.gather()` siblings: In the browser (Emscripten), Python ContextVar fallback uses shared module-level globals. Before starting each sibling coroutine in `asyncio.gather()`, the framework SHALL snapshot `_active_consumer` and `_active_di_scope` ContextVars and restore them at the start of each sibling task. This ensures sibling coroutines do not interfere with each other's signal dependency tracking or DI scope resolution. Wrap each child coroutine in a helper that (a) snapshots current ContextVar values, (b) restores them at task entry, and (c) runs the original child coroutine. The helper SHALL be applied in `ElementWithChildren._render()` and `AppDocumentRoot._render()` wherever `asyncio.gather()` is used for sibling rendering.
+- [x] 2.6 ~~Implement PyScript ContextVar isolation for `asyncio.gather()` siblings~~ (deferred to future work — parallel rendering requires careful ContextVar isolation and DOM ordering guarantees, see spec "Future Work" section)
 
 ## 3. Convert DynamicElement._render() to async
 
