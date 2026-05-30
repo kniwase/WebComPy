@@ -206,3 +206,25 @@ When an async callable is registered as a signal callback via `SignalBase.on_aft
 - **WHEN** `_HtmlElement.render_html()` is called during `generate_html()`
 - **THEN** `await self._render()` SHALL be called
 - **AND** the rendered HTML string SHALL be returned
+
+### Requirement: Tests shall use pytest-asyncio for async test execution
+
+The WebComPy test suite SHALL use `pytest-asyncio` for testing async rendering methods. Test functions that invoke async code SHALL be declared as `async def` and use `await` instead of `asyncio.run()`. `pytest-asyncio` SHALL be configured with `asyncio_mode = "auto"` in `pyproject.toml` so that `async def` test functions are automatically detected without requiring `@pytest.mark.asyncio` decorators.
+
+Test utility functions (e.g., `TestRenderer.render()`, `render_app_html_sync()`) that provide a synchronous interface for test code SHALL use a `run_sync()` helper instead of `asyncio.run()`. The `run_sync()` helper SHALL detect whether it is already inside a running event loop and, if so, use `asyncio.get_event_loop().run_until_complete()` or an equivalent mechanism instead of `asyncio.run()`.
+
+#### Scenario: Testing an element's _render() method
+- **WHEN** a test calls `await element._render()` inside an `async def` test function
+- **THEN** `pytest-asyncio` SHALL execute the coroutine correctly
+- **AND** the test SHALL not raise `RuntimeError: asyncio.run() cannot be called from a running event loop`
+
+#### Scenario: Using TestRenderer in async tests
+- **WHEN** a test calls `TestRenderer.render(component)` inside an `async def` test function
+- **THEN** the test utility SHALL transparently execute the component's async `_render()`
+- **AND** the test SHALL receive a `TestRendererResult` synchronously
+- **AND** the utility SHALL work correctly regardless of whether pytest-asyncio's event loop is active
+
+#### Scenario: Running the full test suite
+- **WHEN** `uv run python -m pytest tests/` is executed
+- **THEN** all unit tests SHALL pass without `asyncio.run()` related errors
+- **AND** the test execution time SHALL not increase significantly compared to the sync pipeline

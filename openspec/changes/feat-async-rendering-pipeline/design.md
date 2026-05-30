@@ -31,7 +31,6 @@ This synchronous design prevents:
 - Per-route async data fetching during SSG (separate change)
 - Changing the signal system to be async-aware
 - Making `_mount_node()` async (it remains sync — only DOM operations)
-- Changing the testing module for async rendering (separate change)
 
 ## Decisions
 
@@ -286,9 +285,66 @@ def on_after_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[An
 
 **Rationale**: `aio_run()` already provides the infrastructure for scheduling async work. The `_make_signal_callback()` utility is a thin wrapper that uses `aio_run()` for async callbacks.
 
+### Decision 13: Test suite uses pytest-asyncio instead of asyncio.run()
+
+**Chosen**:
+- Add `pytest-asyncio` to dev dependencies in `pyproject.toml`
+- Configure `asyncio_mode = "auto"` in `[tool.pytest.ini_options]`
+- Convert all test functions that call async code to `async def`
+- Replace all `asyncio.run()` calls in tests with `await`
+- Add a `run_sync()` helper for test utilities that need sync interfaces (e.g., `TestRenderer.render()`, `render_app_html_sync()`)
+
+**Rationale**: `pytest` creates and manages its own event loop for test execution. Calling `asyncio.run()` inside a test raises `RuntimeError: asyncio.run() cannot be called from a running event loop`. The solution is to use `pytest-asyncio`, which provides an event loop per test and allows `async def` test functions to use `await` directly.
+
+**Implementation details**:
+
+```python
+# run_sync() helper for test utilities
+import asyncio
+from typing import TypeVar
+
+T = TypeVar("T")
+
+def run_sync(coro) -> T:
+    """Run a coroutine, handling nested event loops from pytest-asyncio."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    else:
+        return loop.run_until_complete(coro)
+```
+
+```python
+# Updated TestRenderer.render() uses run_sync()
+class TestRenderer:
+    @staticmethod
+    def render(component, **kwargs):
+        async def _render_async():
+            # ... existing async logic ...
+            await instance._render()
+            return TestRendererResult(...)
+        
+        return run_sync(_render_async())
+```
+
+```python
+# Updated test function - async def instead of def
+async def test_element_render():
+    el = SomeElement()
+    await el._render()  # No asyncio.run() needed
+    assert el._mounted is not None
+```
+
+**Risks/Trade-offs**:
+- All 69 `asyncio.run()` calls across 20 test files must be updated. This is a large but mechanical change.
+- `pytest-asyncio` adds a dependency, but it's a standard testing tool for Python async code.
+- The `run_sync()` helper must be carefully designed to avoid infinite recursion or event loop conflicts.
+
 ## Risks / Trade-offs
 
 - **Breaking change for `generate_html()` callers**: All code that calls `generate_html()` must now `await` it. This affects `_generate.py` and `_server.py` but is limited to the CLI layer.
 - **`asyncio.gather()` in Emscripten**: PyScript's `asyncio` implementation handles `asyncio.gather()` correctly for cooperative multitasking. Since all DOM operations happen on the main thread and there's no true parallelism, sibling parallelism provides structural clarity but not performance benefit in the browser.
 - **Signal callback adaptation**: Wrapping async `_refresh()` callbacks with `_make_signal_callback()` adds a small overhead per signal update. This is negligible for typical applications.
 - **`Component.__init__` remains synchronous**: Async component definitions are not supported in this change. The component setup function must return an `ElementChildren` synchronously. This is a deliberate scope limitation — async component definitions will be added in a follow-up change.
+- **Test migration effort**: Converting 20 test files with 69 `asyncio.run()` calls to `await` is a mechanical but time-consuming task. Mistakes during conversion could introduce subtle test failures.
