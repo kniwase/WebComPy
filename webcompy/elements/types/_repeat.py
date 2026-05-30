@@ -83,6 +83,8 @@ class RepeatElement(DynamicElement):
         self._key_to_child = {}
         self._children_keys = []
         self._signal_activated = False
+        self._is_refreshing = False
+        self._needs_refresh = False
         super().__init__()
 
     def _call_template(self, v: Any, k: str | int) -> ElementChildren:
@@ -142,21 +144,31 @@ class RepeatElement(DynamicElement):
             self._add_callback_node(self._sequence.on_after_updating(_make_signal_callback(self._refresh)))
 
     async def _refresh(self, *args: Any):
-        parent_node = self._parent._get_node()
-        if not parent_node:
-            raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
-        if self._has_key and self._signal_activated and self._children_keys:
-            await self._reconcile_children()
-        else:
-            for _ in range(len(self._children)):
-                self._children.pop(-1)._remove_element()
-            self._children = self._generate_children()
-            for c_idx, child in enumerate(self._children):
-                child._node_idx = self._node_idx + c_idx
-                await child._render()
-            if self._has_key:
-                self._populate_key_map()
-        self._parent._re_index_children(False)
+        if self._is_refreshing:
+            self._needs_refresh = True
+            return
+        self._is_refreshing = True
+        try:
+            parent_node = self._parent._get_node()
+            if not parent_node:
+                raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
+            if self._has_key and self._signal_activated and self._children_keys:
+                await self._reconcile_children()
+            else:
+                for _ in range(len(self._children)):
+                    self._children.pop(-1)._remove_element()
+                self._children = self._generate_children()
+                for c_idx, child in enumerate(self._children):
+                    child._node_idx = self._node_idx + c_idx
+                    await child._render()
+                if self._has_key:
+                    self._populate_key_map()
+            self._parent._re_index_children(False)
+        finally:
+            self._is_refreshing = False
+            if self._needs_refresh:
+                self._needs_refresh = False
+                await self._refresh()
 
     async def _reconcile_children(self):
         items = self._iter_items()

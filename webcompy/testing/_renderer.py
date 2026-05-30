@@ -126,7 +126,9 @@ class TestRenderer:
             return TestRendererResult(component, instance, root_node, scope)
 
         ctx = contextvars.copy_context()
-        return ctx.run(run_sync, _render_async())
+        result = ctx.run(run_sync, _render_async())
+        _active_di_scope.set(result._scope)
+        return result
 
 
 def _dfs_first(node: VirtualDOMNode, tag: str) -> VirtualDOMNode | None:

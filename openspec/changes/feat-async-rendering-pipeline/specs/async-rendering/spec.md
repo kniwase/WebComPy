@@ -178,12 +178,15 @@ In the browser (PyScript) environment, `app.run()` SHALL schedule the async rend
 
 ### Requirement: Signal callbacks shall support async callables
 
-When an async callable is registered as a signal callback via `SignalBase.on_after_updating()`, the signal system SHALL schedule the callback via `aio_run()` (which uses `asyncio.ensure_future()` in the browser or `loop.create_task()` on the server). A utility function `_make_signal_callback()` SHALL wrap async callables for transparent scheduling. If an async signal callback raises an exception, the error SHALL be logged via the framework's logging mechanism (`logging.error()`) and SHALL NOT crash the application.
+When an async callable is registered as a signal callback via `SignalBase.on_after_updating()`, the signal system SHALL execute the callback synchronously and block until completion. A utility function `_make_signal_callback()` SHALL wrap async callables for transparent execution. If an async signal callback raises an exception, the error SHALL be logged via the framework's logging mechanism (`logging.error()`) and SHALL NOT crash the application.
+
+This synchronous execution ensures that signal-driven DOM updates (e.g., `RepeatElement._refresh()`, `SwitchElement._refresh()`) complete atomically before any subsequent code runs, preventing race conditions and duplicate DOM elements that would occur with fire-and-forget scheduling.
 
 #### Scenario: Registering an async _refresh() as a signal callback
 - **WHEN** `RepeatElement._refresh()` is `async def` and registered via `self._sequence.on_after_updating(self._refresh)`
-- **THEN** `_make_signal_callback(self._refresh)` SHALL wrap it as a sync callable that calls `aio_run(self._refresh(*args))`
+- **THEN** `_make_signal_callback(self._refresh)` SHALL wrap it as a sync callable that executes the coroutine to completion using `run_sync()` semantics (identical to `webcompy.testing._utils.run_sync()`)
 - **AND** the signal system SHALL invoke the wrapped callback normally
+- **AND** the callback SHALL complete before the signal setter returns
 
 #### Scenario: Registering a sync _refresh() as a signal callback
 - **WHEN** a sync `_refresh()` method is registered as a signal callback
@@ -234,3 +237,15 @@ Sequential rendering of sibling children is correct and safe but does not exploi
 5. **Testing**: Dedicated tests for parallel rendering scenarios (concurrent siblings, error cleanup, ContextVar isolation) must be added before enabling.
 
 This enhancement is deferred until the above concerns are fully addressed and tested.
+
+### Rendering Queue for Signal-Driven Updates
+
+The current approach executes async signal callbacks synchronously (blocking until completion via `run_sync()` semantics). While this prevents race conditions and duplicate DOM elements, it blocks the event loop during callback execution. A future enhancement may introduce a rendering queue that batches and serializes signal-driven updates:
+
+1. **Queue mechanism**: When a signal updates, instead of immediately executing the callback, enqueue the update request.
+2. **Batch processing**: Process the queue at the end of the current event loop tick (via `schedule_macro_task()`), applying all pending updates in order.
+3. **Deduplication**: If the same signal updates multiple times in one tick, only process the latest value (intermediate values are skipped).
+4. **Atomic render cycles**: Each queued update triggers a single render cycle that completes before the next update begins.
+5. **Benefits**: Prevents event loop blocking during individual callbacks while maintaining deterministic render ordering.
+
+This enhancement is deferred until the async rendering pipeline is stable and the duplicate DOM element issue is fully resolved.

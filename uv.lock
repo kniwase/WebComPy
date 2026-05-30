@@ -1148,6 +1148,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
     { name = "httpx" },
+    { name = "nest-asyncio" },
     { name = "sse-starlette" },
     { name = "starlette" },
     { name = "uvicorn" },
@@ -1176,6 +1177,7 @@ docs = [
 requires-dist = [
     { name = "aiofiles" },
     { name = "httpx" },
+    { name = "nest-asyncio", specifier = ">=1.6.0" },
     { name = "sse-starlette" },
     { name = "starlette" },
     { name = "uvicorn" },

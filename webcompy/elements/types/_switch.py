@@ -32,6 +32,8 @@ class SwitchElement(DynamicElement):
         self._default = default
         self._signal_activated = False
         self._rendered_idx = None
+        self._is_refreshing = False
+        self._needs_refresh = False
         super().__init__()
 
     def _select_generator(self) -> tuple[int, Callable[[], ElementChildren]]:
@@ -69,37 +71,47 @@ class SwitchElement(DynamicElement):
                         self._add_callback_node(cond.on_after_updating(_make_signal_callback(self._refresh)))
 
     async def _refresh(self, *args: Any):
-        idx, generator = self._select_generator()
-        if idx == self._rendered_idx:
-            if self._children and all(child._mounted is None for child in self._children):
-                parent_node = self._parent._get_node()
-                for c_idx, child in enumerate(self._children):
-                    child._node_idx = self._node_idx + c_idx
-                    await child._render()
-                _position_element_nodes(self, parent_node, self._node_idx)
+        if self._is_refreshing:
+            self._needs_refresh = True
             return
-        parent_node = self._parent._get_node()
-        if not parent_node:
-            raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
-        self._rendered_idx = idx
-        new_children = self._generate_children(generator)
-        old_children = self._children
-        self._children = _patch_children(old_children, new_children, self._node_idx)
-        should_defer = self._signal_activated
-        if should_defer:
-            start_defer_after_rendering()
-        for c_idx, child in enumerate(self._children):
-            child._node_idx = self._node_idx + c_idx
-            await child._render()
-        if should_defer:
-            deferred = end_defer_after_rendering()
-            for callback in deferred:
-                if iscoroutinefunction(callback):
-                    from webcompy.aio._aio import _make_signal_callback
+        self._is_refreshing = True
+        try:
+            idx, generator = self._select_generator()
+            if idx == self._rendered_idx:
+                if self._children and all(child._mounted is None for child in self._children):
+                    parent_node = self._parent._get_node()
+                    for c_idx, child in enumerate(self._children):
+                        child._node_idx = self._node_idx + c_idx
+                        await child._render()
+                    _position_element_nodes(self, parent_node, self._node_idx)
+                return
+            parent_node = self._parent._get_node()
+            if not parent_node:
+                raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
+            self._rendered_idx = idx
+            new_children = self._generate_children(generator)
+            old_children = self._children
+            self._children = _patch_children(old_children, new_children, self._node_idx)
+            should_defer = self._signal_activated
+            if should_defer:
+                start_defer_after_rendering()
+            for c_idx, child in enumerate(self._children):
+                child._node_idx = self._node_idx + c_idx
+                await child._render()
+            if should_defer:
+                deferred = end_defer_after_rendering()
+                for callback in deferred:
+                    if iscoroutinefunction(callback):
+                        from webcompy.aio._aio import _make_signal_callback
 
-                    callback = _make_signal_callback(callback)
-                inject(HOST_PORT_KEY).schedule_macro_task(callback)
-        self._parent._re_index_children(False)
+                        callback = _make_signal_callback(callback)
+                    inject(HOST_PORT_KEY).schedule_macro_task(callback)
+            self._parent._re_index_children(False)
+        finally:
+            self._is_refreshing = False
+            if self._needs_refresh:
+                self._needs_refresh = False
+                await self._refresh()
 
     def _on_set_parent(self):
         if not self._signal_activated:

@@ -199,23 +199,43 @@ async def _refresh(self, *args):
 
 **Rationale**: Since `_render()` is now async, `_refresh()` must also be async to await it. The signal callback mechanism (`on_after_updating(self._refresh)`) needs to handle both sync and async callbacks. The `SignalBase.on_after_updating()` mechanism already wraps callbacks — we need to ensure it handles async callbacks correctly.
 
-**Signal callback adaptation**: `SignalBase.on_after_updating()` registers a callback that is called when a signal updates. Currently, `_refresh` is passed directly. With async `_refresh`, the callback is a coroutine function. The signal system needs to detect this and schedule it appropriately:
-
-- In the browser: Use `asyncio.ensure_future()` to schedule the async callback
-- On the server: Use `aio_run()` from `webcompy/aio/_aio.py`
-
-We add an `_async_callback_wrapper` utility that wraps an async callback for use with the signal system:
+**Signal callback adaptation**: `SignalBase.on_after_updating()` registers a callback that is called synchronously when a signal updates. With async `_refresh`, the callback is a coroutine function. The signal system needs to detect this and execute it to completion before returning, ensuring DOM updates are atomic:
 
 ```python
 def _make_signal_callback(callback):
     if iscoroutinefunction(callback):
-        def wrapper(*args, **kwargs):
-            aio_run(callback(*args, **kwargs))
-        return wrapper
+        async def _safe_callback(*args, **kwargs):
+            try:
+                await callback(*args, **kwargs)
+            except Exception as err:
+                _log_error(err)
+        
+        def _sync_wrapper(*args, **kwargs):
+            coro = _safe_callback(*args, **kwargs)
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                try:
+                    asyncio.run(coro)
+                except Exception as err:
+                    _log_error(err)
+            else:
+                import nest_asyncio
+                if not getattr(loop, "_nest_asyncio_patched", False):
+                    nest_asyncio.apply(loop)
+                    loop._nest_asyncio_patched = True
+                try:
+                    loop.run_until_complete(coro)
+                except Exception as err:
+                    _log_error(err)
+        
+        return _sync_wrapper
     return callback
 ```
 
-This ensures backward compatibility: sync callbacks continue to work directly, while async callbacks are scheduled via the event loop.
+**Why synchronous execution**: Fire-and-forget scheduling (via `aio_run()` / `ensure_future()`) allows multiple signal-driven renders to interleave, causing race conditions in DOM manipulation. By executing async callbacks synchronously (blocking until completion), each signal update completes its full render cycle before the next update begins. This matches the pre-async behavior where signal callbacks were synchronous and executed atomically.
+
+This ensures backward compatibility: sync callbacks continue to work directly, while async callbacks are transparently executed to completion before the signal setter returns.
 
 ### Decision 9: `DynamicElement._render()` becomes async
 

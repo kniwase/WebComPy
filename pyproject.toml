@@ -25,6 +25,7 @@ dependencies = [
     "uvicorn",
     "aiofiles",
     "httpx",
+    "nest-asyncio>=1.6.0",
 ]
 
 [project.urls]

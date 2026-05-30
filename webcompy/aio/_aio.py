@@ -103,21 +103,56 @@ def _make_signal_callback(callback: Callable[..., Any]) -> Callable[..., None]:
             except Exception as err:
                 _log_error(err)
 
-        def wrapper(*args, **kwargs):
-            aio_run(_safe_callback(*args, **kwargs))
+        if ENVIRONMENT == "pyscript":
+            # Browser: nest-asyncio is not available, use fire-and-forget.
+            # The _is_refreshing guard in RepeatElement/SwitchElement prevents
+            # concurrent _refresh() executions.
 
-        # copy_context() captures the caller's ContextVar snapshot. In PyScript
-        # the module-level fallback variables (_active_consumer, _active_di_scope)
-        # are normal globals, so they are automatically included in the context
-        # closure without needing explicit snapshot/restore like gather() does.
-        _captured_ctx = contextvars.copy_context()
+            def _wrapper(*args, **kwargs):
+                aio_run(_safe_callback(*args, **kwargs))
 
-        def _context_preserving_wrapper(*args, **kwargs):
-            _captured_ctx.run(wrapper, *args, **kwargs)
+            return _wrapper
+        else:
+            # Server/Test: synchronous execution with ContextVar preservation
+            # for proper DI scope access.
 
-        return _context_preserving_wrapper
-    # Sync callbacks are invoked directly by the signal system in the current
-    # execution context, so they naturally inherit the caller's ContextVar state.
-    # Only async callbacks need context preservation because aio_run() schedules
-    # them across context boundaries.
+            def _sync_wrapper(*args, **kwargs):
+                coro = _safe_callback(*args, **kwargs)
+                _captured_ctx = contextvars.copy_context()
+
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        # No event loop at all (rare)
+                        try:
+                            asyncio.run(coro)
+                        except Exception as err:
+                            _log_error(err)
+                    else:
+                        import nest_asyncio
+
+                        if not getattr(loop, "_nest_asyncio_patched", False):
+                            nest_asyncio.apply(loop)
+                            loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
+                        try:
+                            task = loop.create_task(coro, context=_captured_ctx)
+                            loop.run_until_complete(task)
+                        except Exception as err:
+                            _log_error(err)
+                else:
+                    import nest_asyncio
+
+                    if not getattr(loop, "_nest_asyncio_patched", False):
+                        nest_asyncio.apply(loop)
+                        loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
+                    try:
+                        task = loop.create_task(coro, context=_captured_ctx)
+                        loop.run_until_complete(task)
+                    except Exception as err:
+                        _log_error(err)
+
+            return _sync_wrapper
     return callback
