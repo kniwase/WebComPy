@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import contextvars
 from typing import TYPE_CHECKING
 
+from webcompy.aio._utils import run_sync
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
 from webcompy.ports._server._virtual_dom import VirtualDOMNode
@@ -126,7 +126,7 @@ class TestRenderer:
             return TestRendererResult(component, instance, root_node, scope)
 
         ctx = contextvars.copy_context()
-        return ctx.run(asyncio.run, _render_async())
+        return ctx.run(run_sync, _render_async())
 
 
 def _dfs_first(node: VirtualDOMNode, tag: str) -> VirtualDOMNode | None:

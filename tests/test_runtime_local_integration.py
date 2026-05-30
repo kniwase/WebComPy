@@ -1,7 +1,7 @@
-import asyncio
 import json
 import re
 
+from webcompy.aio._utils import run_sync
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.cli._html import generate_html
@@ -24,9 +24,10 @@ def _make_app(**config_kwargs):
 
 def _generate_html(app, **kwargs):
     ctx = app.create_render_context()
-    html = asyncio.run(generate_html(ctx, **kwargs))
-    ctx.dispose()
-    return html
+    try:
+        return run_sync(generate_html(ctx, **kwargs))
+    finally:
+        ctx.dispose()
 
 
 def _extract_py_config(html_str: str) -> dict:

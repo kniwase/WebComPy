@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import sys
 
 import pytest
@@ -76,7 +75,8 @@ class TestScopedCssSSGOutput:
 
 
 class TestHeadElementBrowserPath:
-    def test_hidden_rule_injected_into_head(self, monkeypatch):
+    @pytest.mark.asyncio
+    async def test_hidden_rule_injected_into_head(self, monkeypatch):
         monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
 
         from webcompy.components._component import HeadPropsStore
@@ -98,7 +98,7 @@ class TestHeadElementBrowserPath:
         token = _active_di_scope.set(scope)
         try:
             head_element = HeadElement(head_props)
-            asyncio.run(head_element._render())
+            await head_element._render()
 
             head_el = port.query_selector("head")
             assert head_el is not None
@@ -109,7 +109,8 @@ class TestHeadElementBrowserPath:
         finally:
             _active_di_scope.reset(token)
 
-    def test_per_component_styles_injected(self, monkeypatch):
+    @pytest.mark.asyncio
+    async def test_per_component_styles_injected(self, monkeypatch):
         monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
 
         from webcompy.components._component import HeadPropsStore
@@ -142,7 +143,7 @@ class TestHeadElementBrowserPath:
         token = _active_di_scope.set(scope)
         try:
             head_element = HeadElement(head_props)
-            asyncio.run(head_element._render())
+            await head_element._render()
 
             head_el = port.query_selector("head")
             assert head_el is not None
@@ -157,7 +158,8 @@ class TestHeadElementBrowserPath:
         finally:
             _active_di_scope.reset(token)
 
-    def test_no_style_for_empty_scoped_style(self, monkeypatch):
+    @pytest.mark.asyncio
+    async def test_no_style_for_empty_scoped_style(self, monkeypatch):
         monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
 
         from webcompy.components._component import HeadPropsStore
@@ -185,7 +187,7 @@ class TestHeadElementBrowserPath:
         token = _active_di_scope.set(scope)
         try:
             head_element = HeadElement(head_props)
-            asyncio.run(head_element._render())
+            await head_element._render()
 
             head_el = port.query_selector("head")
             assert head_el is not None
@@ -193,7 +195,8 @@ class TestHeadElementBrowserPath:
         finally:
             _active_di_scope.reset(token)
 
-    def test_reconcile_idempotent_no_duplicates(self, monkeypatch):
+    @pytest.mark.asyncio
+    async def test_reconcile_idempotent_no_duplicates(self, monkeypatch):
         monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
 
         from webcompy.components._component import HeadPropsStore
@@ -222,13 +225,13 @@ class TestHeadElementBrowserPath:
         token = _active_di_scope.set(scope)
         try:
             head_element = HeadElement(head_props)
-            asyncio.run(head_element._render())
+            await head_element._render()
 
             head_el = port.query_selector("head")
             styles = _find_all_children_by_tag(head_el, "style")
             initial_count = len(styles)
 
-            asyncio.run(head_element._render())
+            await head_element._render()
 
             head_el = port.query_selector("head")
             styles = _find_all_children_by_tag(head_el, "style")
@@ -236,7 +239,8 @@ class TestHeadElementBrowserPath:
         finally:
             _active_di_scope.reset(token)
 
-    def test_noop_when_not_pyscript(self, monkeypatch):
+    @pytest.mark.asyncio
+    async def test_noop_when_not_pyscript(self, monkeypatch):
         monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "server")
 
         from webcompy.components._component import HeadPropsStore
@@ -265,7 +269,7 @@ class TestHeadElementBrowserPath:
         token = _active_di_scope.set(scope)
         try:
             head_element = HeadElement(head_props)
-            asyncio.run(head_element._render())
+            await head_element._render()
 
             head_el = port.query_selector("head")
             assert _find_child_by_id(head_el, "webcompy-scoped-styles") is None

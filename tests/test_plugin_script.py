@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import asyncio
+import pytest
 
+from webcompy.aio._utils import run_sync
 from webcompy.app._config import PluginScript, WebComPyAppConfig
 from webcompy.cli._html import generate_html
 
@@ -23,9 +24,10 @@ def _make_app(**config_kwargs):
 
 def _generate_html(app, **kwargs):
     ctx = app.create_render_context()
-    html = asyncio.run(generate_html(ctx, **kwargs))
-    ctx.dispose()
-    return html
+    try:
+        return run_sync(generate_html(ctx, **kwargs))
+    finally:
+        ctx.dispose()
 
 
 class TestPluginScript:
@@ -163,19 +165,18 @@ class TestGenerateHtmlWithPluginScripts:
         assert "createElement" not in html_str
         assert "onload" not in html_str
 
-    def test_existing_append_script_still_works(self):
+    @pytest.mark.asyncio
+    async def test_existing_append_script_still_works(self):
         app = _make_app()
         ctx = app.create_render_context()
         ctx.append_script({"type": "text/javascript", "src": "https://example.com/analytics.js"})
-        html_str = asyncio.run(
-            generate_html(
-                ctx,
-                app_package_name="test_pkg",
-                dev_mode=False,
-                prerender=False,
-                app_version="0.0.0",
-                wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
-            )
+        html_str = await generate_html(
+            ctx,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=False,
+            app_version="0.0.0",
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         ctx.dispose()
         assert "https://example.com/analytics.js" in html_str

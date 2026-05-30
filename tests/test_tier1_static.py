@@ -1,4 +1,3 @@
-import asyncio
 import sys
 
 import httpx
@@ -24,7 +23,8 @@ def _client(app):
     return _get
 
 
-def test_switch_default_state():
+@pytest.mark.asyncio
+async def test_switch_default_state():
     from my_app.pages.switch_test import SwitchPage
 
     from webcompy.app import WebComPyApp, WebComPyAppConfig
@@ -33,14 +33,15 @@ def test_switch_default_state():
     router = Router({"path": "/switch", "component": SwitchPage}, mode="history")
     app = WebComPyApp(root_component=SwitchPage, router=router, config=WebComPyAppConfig(base_url="/"))
     get = _client(app)
-    resp = asyncio.run(get("/switch"))
+    resp = await get("/switch")
     assert resp.status_code == 200
     assert "switch-on" in resp.text
     assert "switch-off" not in resp.text
     assert "on" in resp.text
 
 
-def test_repeat_initial_empty():
+@pytest.mark.asyncio
+async def test_repeat_initial_empty():
     from my_app.pages.repeat import RepeatPage
 
     from webcompy.app import WebComPyApp, WebComPyAppConfig
@@ -49,13 +50,14 @@ def test_repeat_initial_empty():
     router = Router({"path": "/repeat", "component": RepeatPage}, mode="history")
     app = WebComPyApp(root_component=RepeatPage, router=router, config=WebComPyAppConfig(base_url="/"))
     get = _client(app)
-    resp = asyncio.run(get("/repeat"))
+    resp = await get("/repeat")
     assert resp.status_code == 200
     assert "repeat-page" in resp.text
     assert "<li" not in resp.text
 
 
-def test_keyed_repeat_initial_empty():
+@pytest.mark.asyncio
+async def test_keyed_repeat_initial_empty():
     from my_app.pages.keyed_repeat import KeyedRepeatPage
 
     from webcompy.app import WebComPyApp, WebComPyAppConfig
@@ -64,13 +66,14 @@ def test_keyed_repeat_initial_empty():
     router = Router({"path": "/keyed-repeat", "component": KeyedRepeatPage}, mode="history")
     app = WebComPyApp(root_component=KeyedRepeatPage, router=router, config=WebComPyAppConfig(base_url="/"))
     get = _client(app)
-    resp = asyncio.run(get("/keyed-repeat"))
+    resp = await get("/keyed-repeat")
     assert resp.status_code == 200
     assert "keyed-repeat-page" in resp.text
     assert "<li" not in resp.text
 
 
-def test_dict_repeat_initial_empty():
+@pytest.mark.asyncio
+async def test_dict_repeat_initial_empty():
     from my_app.pages.dict_repeat import DictRepeatPage
 
     from webcompy.app import WebComPyApp, WebComPyAppConfig
@@ -79,13 +82,14 @@ def test_dict_repeat_initial_empty():
     router = Router({"path": "/dict-repeat", "component": DictRepeatPage}, mode="history")
     app = WebComPyApp(root_component=DictRepeatPage, router=router, config=WebComPyAppConfig(base_url="/"))
     get = _client(app)
-    resp = asyncio.run(get("/dict-repeat"))
+    resp = await get("/dict-repeat")
     assert resp.status_code == 200
     assert "dict-repeat-page" in resp.text
     assert "<li" not in resp.text
 
 
-def test_nested_repeat_in_switch_initial_list_view():
+@pytest.mark.asyncio
+async def test_nested_repeat_in_switch_initial_list_view():
     from my_app.pages.nested_dynamic import NestedDynamicPage
 
     from webcompy.app import WebComPyApp, WebComPyAppConfig
@@ -94,7 +98,7 @@ def test_nested_repeat_in_switch_initial_list_view():
     router = Router({"path": "/nested-dynamic", "component": NestedDynamicPage}, mode="history")
     app = WebComPyApp(root_component=NestedDynamicPage, router=router, config=WebComPyAppConfig(base_url="/"))
     get = _client(app)
-    resp = asyncio.run(get("/nested-dynamic"))
+    resp = await get("/nested-dynamic")
     assert resp.status_code == 200
     assert "nested-dynamic-page" in resp.text
     assert "list-view" in resp.text

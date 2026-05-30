@@ -6,6 +6,7 @@ from starlette.applications import Starlette
 from starlette.responses import HTMLResponse
 from starlette.routing import Route
 
+from webcompy.aio._utils import run_sync
 from webcompy.cli._html import _HtmlElement
 
 if TYPE_CHECKING:
@@ -33,9 +34,7 @@ async def render_app_html(app: WebComPyApp, path: str = "/", **kwargs: Any) -> s
 
 
 def render_app_html_sync(app: WebComPyApp, path: str = "/", **kwargs: Any) -> str:
-    import asyncio
-
-    return asyncio.run(render_app_html(app, path, **kwargs))
+    return run_sync(render_app_html(app, path, **kwargs))
 
 
 def create_test_asgi_app(app: WebComPyApp) -> ASGIApp:

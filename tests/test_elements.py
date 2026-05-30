@@ -1,6 +1,7 @@
-import asyncio
 from typing import Protocol
 from unittest.mock import MagicMock
+
+import pytest
 
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements._dom_objs import DOMEvent, DOMNode
@@ -128,7 +129,7 @@ class TestGenerators:
 
 
 class TestElementRenderHtml:
-    def _render_element_html(self, el):
+    async def _render_element_html(self, el):
         port = ServerDOMPort()
         root_node = port.create_element("div")
         root_node.__webcompy_node__ = False
@@ -156,7 +157,7 @@ class TestElementRenderHtml:
         try:
             el._parent = _DummyParent(root_node)
             el._node_idx = 0
-            asyncio.run(el._render())
+            await el._render()
             root_child = root_node.childNodes[0] if root_node.childNodes.length > 0 else None
             if root_child is None:
                 return ""
@@ -164,23 +165,27 @@ class TestElementRenderHtml:
         finally:
             _active_di_scope.reset(token)
 
-    def test_render_simple_element(self):
+    @pytest.mark.asyncio
+    async def test_render_simple_element(self):
         el = create_element("div", {"class": "container"})
-        html = self._render_element_html(el)
+        html = await self._render_element_html(el)
         assert "div" in html
         assert "container" in html
 
-    def test_render_with_children(self):
+    @pytest.mark.asyncio
+    async def test_render_with_children(self):
         el = create_element("p", {}, TextElement("hello"))
-        html = self._render_element_html(el)
+        html = await self._render_element_html(el)
         assert "hello" in html
 
-    def test_render_boolean_attr(self):
+    @pytest.mark.asyncio
+    async def test_render_boolean_attr(self):
         el = create_element("input", {"disabled": True})
-        html = self._render_element_html(el)
+        html = await self._render_element_html(el)
         assert "disabled" in html
 
-    def test_render_false_attr_omitted(self):
+    @pytest.mark.asyncio
+    async def test_render_false_attr_omitted(self):
         el = create_element("input", {"disabled": False})
-        html = self._render_element_html(el)
+        html = await self._render_element_html(el)
         assert "disabled" not in html

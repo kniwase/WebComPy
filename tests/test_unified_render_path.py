@@ -22,8 +22,7 @@ class FakeRootElement(Element):
     _get_belonging_components = lambda self: ()
 
 
-def _render_with_fake_browser(element):
-    import asyncio
+async def _render_with_fake_browser(element):
 
     scope = DIScope()
     scope.provide(DOM_PORT_KEY, FakeBrowserDOMPort())
@@ -53,7 +52,7 @@ def _render_with_fake_browser(element):
 
         element._parent = _DummyParent(root_node)
         element._node_idx = 0
-        asyncio.run(element._render())
+        await element._render()
         if root_node.childNodes.length > 0:
             return root_node.childNodes[0]
         return None
@@ -61,8 +60,7 @@ def _render_with_fake_browser(element):
         _active_di_scope.reset(token)
 
 
-def _render_with_server(element):
-    import asyncio
+async def _render_with_server(element):
 
     port = ServerDOMPort()
     scope = DIScope()
@@ -93,7 +91,7 @@ def _render_with_server(element):
 
         element._parent = _DummyParent(root_node)
         element._node_idx = 0
-        asyncio.run(element._render())
+        await element._render()
         if root_node.childNodes.length > 0:
             return root_node.childNodes[0]
         return None
@@ -120,34 +118,37 @@ def _extract_node_info(node, *, is_virtual=False):
 
 
 class TestUnifiedRenderPath:
-    def test_simple_div(self):
+    @pytest.mark.asyncio
+    async def test_simple_div(self):
         el = FakeRootElement("div", {"class": "test"}, {}, None, None)
-        fake_node = _render_with_fake_browser(el)
+        fake_node = await _render_with_fake_browser(el)
         server_el = FakeRootElement("div", {"class": "test"}, {}, None, None)
-        virtual_node = _render_with_server(server_el)
+        virtual_node = await _render_with_server(server_el)
         fake_info = _extract_node_info(fake_node)
         virtual_info = _extract_node_info(virtual_node, is_virtual=True)
         assert fake_info["nodeName"] == virtual_info["nodeName"]
         assert fake_info["attributes"] == virtual_info["attributes"]
 
-    def test_text_child(self):
+    @pytest.mark.asyncio
+    async def test_text_child(self):
         el = FakeRootElement("p", {}, {}, None, [TextElement("hello")])
-        fake_node = _render_with_fake_browser(el)
+        fake_node = await _render_with_fake_browser(el)
         server_el = FakeRootElement("p", {}, {}, None, [TextElement("hello")])
-        virtual_node = _render_with_server(server_el)
+        virtual_node = await _render_with_server(server_el)
         fake_info = _extract_node_info(fake_node)
         virtual_info = _extract_node_info(virtual_node, is_virtual=True)
         assert fake_info["nodeName"] == virtual_info["nodeName"]
         assert len(fake_info["children"]) == len(virtual_info["children"])
         assert fake_info["children"][0]["textContent"] == virtual_info["children"][0]["textContent"]
 
-    def test_nested_elements(self):
+    @pytest.mark.asyncio
+    async def test_nested_elements(self):
         child = FakeRootElement("span", {"id": "inner"}, {}, None, None)
         el = FakeRootElement("div", {"class": "outer"}, {}, None, [child])
-        fake_node = _render_with_fake_browser(el)
+        fake_node = await _render_with_fake_browser(el)
         server_child = FakeRootElement("span", {"id": "inner"}, {}, None, None)
         server_el = FakeRootElement("div", {"class": "outer"}, {}, None, [server_child])
-        virtual_node = _render_with_server(server_el)
+        virtual_node = await _render_with_server(server_el)
         fake_info = _extract_node_info(fake_node)
         virtual_info = _extract_node_info(virtual_node, is_virtual=True)
         assert fake_info["nodeName"] == virtual_info["nodeName"]
@@ -156,20 +157,22 @@ class TestUnifiedRenderPath:
         assert fake_info["children"][0]["nodeName"] == virtual_info["children"][0]["nodeName"]
         assert fake_info["children"][0]["attributes"]["id"] == virtual_info["children"][0]["attributes"]["id"]
 
-    def test_element_with_event_handler(self):
+    @pytest.mark.asyncio
+    async def test_element_with_event_handler(self):
         el = FakeRootElement("button", {}, {"click": lambda e: None}, None, None)
-        fake_node = _render_with_fake_browser(el)
+        fake_node = await _render_with_fake_browser(el)
         server_el = FakeRootElement("button", {}, {"click": lambda e: None}, None, None)
-        virtual_node = _render_with_server(server_el)
+        virtual_node = await _render_with_server(server_el)
         fake_info = _extract_node_info(fake_node)
         virtual_info = _extract_node_info(virtual_node, is_virtual=True)
         assert fake_info["nodeName"] == virtual_info["nodeName"]
         assert any(et == "click" for et, _ in fake_node._event_listeners)
         assert any(et == "click" for et, _ in virtual_node._event_listeners)
 
-    def test_server_render_produces_valid_html(self):
+    @pytest.mark.asyncio
+    async def test_server_render_produces_valid_html(self):
         server_el = FakeRootElement("div", {"class": "container"}, {}, None, [TextElement("hello")])
-        virtual_node = _render_with_server(server_el)
+        virtual_node = await _render_with_server(server_el)
         port = ServerDOMPort()
         html = port.render_html(virtual_node)
         assert html == '<div class="container">hello</div>'

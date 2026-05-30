@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio
+import pytest
 
 from tests.conftest import FakeDOMNode
 from webcompy.elements.types._dynamic import _patch_children
@@ -34,7 +34,8 @@ def _make_element_with_parent(tag="div"):
 
 
 class TestMountNodeDetachedRecovery:
-    def test_mount_node_reinserts_detached_node(self):
+    @pytest.mark.asyncio
+    async def test_mount_node_reinserts_detached_node(self):
         el, parent = _make_element_with_parent("span")
         parent_node = parent._get_node()
         node = FakeDOMNode("span", text_content="hello")
@@ -43,14 +44,15 @@ class TestMountNodeDetachedRecovery:
         assert node.parentNode is None
         assert parent_node.childNodes.length == 0
 
-        asyncio.run(el._render())
+        await el._render()
 
         assert el._mounted is True
         assert node.parentNode is parent_node
         assert parent_node.childNodes.length == 1
         assert parent_node.childNodes[0] is node
 
-    def test_mount_node_reinserts_text_node_detached_by_external_code(self):
+    @pytest.mark.asyncio
+    async def test_mount_node_reinserts_text_node_detached_by_external_code(self):
         parent = FakeRootElement()
         parent._node_cache = FakeDOMNode("div")
         parent._mounted = True
@@ -68,13 +70,14 @@ class TestMountNodeDetachedRecovery:
         assert node.parentNode is None
         assert text_el._mounted is True
 
-        asyncio.run(text_el._render())
+        await text_el._render()
 
         assert node.parentNode is parent_node
         assert parent_node.childNodes.length == 1
         assert parent_node.childNodes[0] is node
 
-    def test_mount_node_does_not_affect_normal_mounted_node(self):
+    @pytest.mark.asyncio
+    async def test_mount_node_does_not_affect_normal_mounted_node(self):
         el, parent = _make_element_with_parent("span")
         parent_node = parent._get_node()
         node = FakeDOMNode("span")
@@ -83,13 +86,14 @@ class TestMountNodeDetachedRecovery:
         el._mounted = True
         assert node.parentNode is parent_node
 
-        asyncio.run(el._render())
+        await el._render()
 
         assert el._mounted is True
         assert node.parentNode is parent_node
         assert parent_node.childNodes.length == 1
 
-    def test_mount_node_skips_when_not_mounted(self):
+    @pytest.mark.asyncio
+    async def test_mount_node_skips_when_not_mounted(self):
         el, parent = _make_element_with_parent("span")
         parent_node = parent._get_node()
         node = FakeDOMNode("span")
@@ -97,7 +101,7 @@ class TestMountNodeDetachedRecovery:
         el._mounted = None
         assert parent_node.childNodes.length == 0
 
-        asyncio.run(el._render())
+        await el._render()
 
         assert el._mounted is True
         assert node.parentNode is parent_node
@@ -114,7 +118,8 @@ class TestPreserveChildrenRender:
         el._mounted = True
         return el, node
 
-    def test_preserve_children_skips_cleanup(self):
+    @pytest.mark.asyncio
+    async def test_preserve_children_skips_cleanup(self):
         el, node = self._make_element("code")
         el._preserve_children = True
 
@@ -125,11 +130,12 @@ class TestPreserveChildrenRender:
 
         assert node.childNodes.length == 3
 
-        asyncio.run(el._render())
+        await el._render()
 
         assert node.childNodes.length == 3
 
-    def test_without_preserve_children_cleans_up(self):
+    @pytest.mark.asyncio
+    async def test_without_preserve_children_cleans_up(self):
         el, node = self._make_element("code")
         el._preserve_children = False
 
@@ -140,11 +146,12 @@ class TestPreserveChildrenRender:
 
         assert node.childNodes.length == 3
 
-        asyncio.run(el._render())
+        await el._render()
 
         assert node.childNodes.length == 0
 
-    def test_preserve_children_with_mixed_children(self):
+    @pytest.mark.asyncio
+    async def test_preserve_children_with_mixed_children(self):
         el, node = self._make_element("code")
         el._preserve_children = True
 
@@ -166,7 +173,7 @@ class TestPreserveChildrenRender:
         assert node.childNodes.length == 2
         assert el._children_length == 1
 
-        asyncio.run(el._render())
+        await el._render()
 
         assert node.childNodes.length == 2
         assert external in [node.childNodes[i] for i in range(node.childNodes.length)]
@@ -242,7 +249,8 @@ class TestPreserveChildrenHydrate:
 
 
 class TestSwitchElementPreserveExternalNodes:
-    def test_patch_preserves_external_nodes_and_reinserts_text(self):
+    @pytest.mark.asyncio
+    async def test_patch_preserves_external_nodes_and_reinserts_text(self):
         old_inner = Element("div", {}, {}, None, None, preserve_children=True)
         old_inner._event_handlers_added = {}
 
@@ -294,7 +302,7 @@ class TestSwitchElementPreserveExternalNodes:
 
         _patch_children([old_inner], [new_inner])
 
-        asyncio.run(new_inner._render())
+        await new_inner._render()
 
         assert old_text_node.parentNode is old_inner_node
         assert ext_span in [old_inner_node.childNodes[i] for i in range(old_inner_node.childNodes.length)]

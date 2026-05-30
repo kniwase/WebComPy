@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from webcompy.components._generator import define_component
 from webcompy.testing import create_test_app
 
@@ -14,7 +16,8 @@ def _IsolationRoot(context):
 
 
 class TestRequestIsolation:
-    def test_contexts_produce_independent_html(self):
+    @pytest.mark.asyncio
+    async def test_contexts_produce_independent_html(self):
         from webcompy.cli._html import generate_html
 
         app = create_test_app(root_component=_IsolationRoot)
@@ -22,30 +25,26 @@ class TestRequestIsolation:
         ctx1 = app.create_render_context("/page-a")
         ctx1.set_title("Page A")
         ctx1.append_link({"rel": "stylesheet", "href": "/a.css"})
-        html1 = asyncio.run(
-            generate_html(
-                ctx1,
-                app_package_name="test_pkg",
-                dev_mode=False,
-                prerender=True,
-                app_version="0.0.0",
-                wheel_filename="test.whl",
-            )
+        html1 = await generate_html(
+            ctx1,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            app_version="0.0.0",
+            wheel_filename="test.whl",
         )
         ctx1.dispose()
 
         ctx2 = app.create_render_context("/page-b")
         ctx2.set_title("Page B")
         ctx2.append_link({"rel": "stylesheet", "href": "/b.css"})
-        html2 = asyncio.run(
-            generate_html(
-                ctx2,
-                app_package_name="test_pkg",
-                dev_mode=False,
-                prerender=True,
-                app_version="0.0.0",
-                wheel_filename="test.whl",
-            )
+        html2 = await generate_html(
+            ctx2,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            app_version="0.0.0",
+            wheel_filename="test.whl",
         )
         ctx2.dispose()
 
@@ -98,7 +97,8 @@ class TestRequestIsolation:
             assert ctx.head["title"].value == f"Page {i}"
             ctx.dispose()
 
-    def test_app_proxy_properties_not_corrupted_by_concurrent_contexts(self):
+    @pytest.mark.asyncio
+    async def test_app_proxy_properties_not_corrupted_by_concurrent_contexts(self):
         app = create_test_app(root_component=_IsolationRoot)
 
         async def _with_context(path, lang):
@@ -120,7 +120,7 @@ class TestRequestIsolation:
             )
             assert set(results) == {"ja", "en", "fr"}
 
-        asyncio.run(_main())
+        await _main()
 
     def test_create_render_context_not_corrupted_by_sequential_dispose(self):
         app = create_test_app(root_component=_IsolationRoot)
