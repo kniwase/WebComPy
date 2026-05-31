@@ -110,10 +110,6 @@ async def _render(self):
 async def _render(self):
     token = _active_di_scope.set(self._di_scope)
     render_ctx_token = _active_app_context.set(self._render_context) if self._render_context else None
-    # _active_app_context always references the RenderContext (per render-context/spec.md).
-    # In the browser, ContextVar bindings may be lost in JS→Python callbacks;
-    # the fallback for those scenarios uses _app_instance_global (per architecture/spec.md),
-    # not _active_app_context.
     try:
         on_before = self._property["on_before_rendering"]
         if iscoroutinefunction(on_before):
@@ -125,7 +121,8 @@ async def _render(self):
             self.__hydrated = True
             for child in self._children:
                 await child._hydrate_node()
-        await asyncio.gather(*[child._render() for child in self._children])
+        for child in self._children:
+            await child._render()
         on_after = self._property["on_after_rendering"]
         if iscoroutinefunction(on_after):
             await on_after()
@@ -139,7 +136,15 @@ async def _render(self):
             _active_di_scope.reset(token)
 ```
 
-**Rationale**: `AppDocumentRoot._render()` is the top of the render tree. Making it async and using `asyncio.gather()` for child rendering enables parallelism. The DI scope and app context management are preserved.
+**Rationale**: `AppDocumentRoot._render()` is the top of the render tree. Making it async and using sequential child rendering enables parallelism. The DI scope and app context management are preserved.
+
+**Critical**: The `_hydrate_node()` call MUST remain inside the `if self._app and self._app._hydrate` guard block. Moving it outside (unconditionally calling `_hydrate_node()` on every render) causes duplicate DOM nodes because:
+1. In non-hydrate mode, `_hydrate_node()` creates floating `_node_cache` entries that are never attached to the DOM
+2. These orphan nodes still register signal callbacks (attribute updaters, text updaters)
+3. On signal change, callbacks fire on orphan nodes with `parentNode=None`, producing incorrect output (e.g., `_update_text` on a detached text node)
+4. The real render pass creates properly attached nodes, but the orphan nodes' callbacks race with the real nodes'
+
+This bug is a regression from the async conversion — the original code correctly guarded `_hydrate_node()` inside the `if self._app._hydrate` block. The async conversion inadvertently moved the `for child in self._children: await child._hydrate_node()` call outside the if block.
 
 ### Decision 6: `generate_html()` becomes async
 
@@ -187,55 +192,109 @@ def run(self) -> None:
 
 **Rationale**: In the browser (PyScript), the event loop is already running. `asyncio.ensure_future()` schedules the async render as a task on the existing loop. This is the standard pattern for starting async work from synchronous code in an already-running event loop.
 
-### Decision 8: `SwitchElement._refresh()` and `RepeatElement._refresh()` become async
+### Decision 8: Unified browser callback scheduler for signal-driven updates
 
-**Chosen**: Both `_refresh()` methods become async to support awaiting `_render()` calls on children:
+**Chosen**: In the browser environment, all signal callbacks (both sync functions like `_update_text` and async coroutines like `_refresh`) are dispatched through a single unified scheduler (`_BrowserCallbackScheduler`). The scheduler batches all callbacks from one signal propagation wave and executes them sequentially in a single async task (next microtick).
 
-```python
-async def _refresh(self, *args):
-    # ... same logic, but child._render() is awaited ...
-    await asyncio.gather(*[child._render() for child in self._children])
+In server/test environments, signal callbacks continue to execute synchronously (unbatched) for backward compatibility.
+
+**Why a unified scheduler**: The previous approach had two execution layers — synchronous callbacks (`_update_text`, attribute updaters) executed immediately, while async callbacks (`_refresh`, `_reconcile_children`) were scheduled via `aio_run()` (fire-and-forget). This interleaving caused execution order bugs:
+
+```
+signal change → [sync] _update_text("off") on detached node
+              → [async scheduled] SwitchElement._refresh() → creates new DOM tree
+              → new TextElement never gets updated
 ```
 
-**Rationale**: Since `_render()` is now async, `_refresh()` must also be async to await it. The signal callback mechanism (`on_after_updating(self._refresh)`) needs to handle both sync and async callbacks. The `SignalBase.on_after_updating()` mechanism already wraps callbacks — we need to ensure it handles async callbacks correctly.
+The unified scheduler eliminates this split by routing ALL callbacks through the same enqueue→flush pipeline:
 
-**Signal callback adaptation**: `SignalBase.on_after_updating()` registers a callback that is called synchronously when a signal updates. With async `_refresh`, the callback is a coroutine function. The signal system needs to detect this and execute it to completion before returning, ensuring DOM updates are atomic:
+```
+signal change → enqueue(_update_text, "off")
+              → enqueue(_refresh)
+              → [next microtick] flush:
+                  1. _update_text("off") → updates old node (still in DOM)
+                  2. _refresh() → destroys old node, creates new DOM tree
+                  3. new TextElement reads current signal value → correct ✅
+```
+
+**Implementation**:
 
 ```python
-def _make_signal_callback(callback):
-    if iscoroutinefunction(callback):
-        async def _safe_callback(*args, **kwargs):
-            try:
-                await callback(*args, **kwargs)
-            except Exception as err:
-                _log_error(err)
-        
-        def _sync_wrapper(*args, **kwargs):
-            coro = _safe_callback(*args, **kwargs)
+# webcompy/aio/_aio.py
+class _BrowserCallbackScheduler:
+    _queue: list[tuple[Callable, Any]]
+    _flushing = False
+
+    @classmethod
+    def enqueue(cls, callback, value):
+        cls._queue.append((callback, value))
+        if not cls._flushing:
+            cls._flushing = True
+            asyncio.ensure_future(cls._flush())
+
+    @classmethod
+    async def _flush(cls):
+        while cls._queue:
+            batch = cls._queue
+            cls._queue = []
+            for callback, value in batch:
+                try:
+                    if iscoroutinefunction(callback):
+                        await callback(value)
+                    else:
+                        callback(value)
+                except Exception as err:
+                    _log_error(err)
+                await asyncio.sleep(0)
+        cls._flushing = False
+```
+
+```python
+# webcompy/signal/_base.py — CallbackConsumerNode._on_marked_dirty()
+def _on_marked_dirty(self) -> None:
+    if self._is_before:
+        return
+    from webcompy.signal._computed import Computed
+    old_version = self._producer.version
+    producer_update_value_version(self._producer)
+    self.dirty = False
+    if isinstance(self._producer, Computed) and self._producer.version <= old_version:
+        return
+    if ENVIRONMENT == "pyscript":
+        from webcompy.aio._aio import _BrowserCallbackScheduler
+        _BrowserCallbackScheduler.enqueue(self._callback, self._producer._value)
+    else:
+        if iscoroutinefunction(self._callback):
+            coro = self._callback(self._producer._value)
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
-                try:
-                    asyncio.run(coro)
-                except Exception as err:
-                    _log_error(err)
+                asyncio.run(coro)
             else:
                 import nest_asyncio
                 if not getattr(loop, "_nest_asyncio_patched", False):
                     nest_asyncio.apply(loop)
                     loop._nest_asyncio_patched = True
-                try:
-                    loop.run_until_complete(coro)
-                except Exception as err:
-                    _log_error(err)
-        
-        return _sync_wrapper
-    return callback
+                loop.run_until_complete(coro)
+        else:
+            self._callback(self._producer._value)
 ```
 
-**Why synchronous execution**: Fire-and-forget scheduling (via `aio_run()` / `ensure_future()`) allows multiple signal-driven renders to interleave, causing race conditions in DOM manipulation. By executing async callbacks synchronously (blocking until completion), each signal update completes its full render cycle before the next update begins. This matches the pre-async behavior where signal callbacks were synchronous and executed atomically.
+**What this replaces**: The `_make_signal_callback()` wrapper is removed. `RepeatElement._refresh` and `SwitchElement._refresh` register directly as `self._sequence.on_after_updating(self._refresh)` (no wrapper). All callbacks — sync `_update_text` and async `_refresh` alike — go through the scheduler.
 
-This ensures backward compatibility: sync callbacks continue to work directly, while async callbacks are transparently executed to completion before the signal setter returns.
+**Comparison to other frameworks**:
+
+| Framework | Approach | WebComPy Equivalent |
+|-----------|----------|---------------------|
+| Vue 3 | `queueJob()` + `Promise.then(flushJobs)` | `_BrowserCallbackScheduler.enqueue()` + `ensure_future(flush)` |
+| Svelte | `dirty_components` + `Promise.then(flush)` | Same pattern |
+| SolidJS | Synchronous execution (batch() defers effects) | WebComPy uses async batching for browser, sync for server/test |
+
+The `asyncio.sleep(0)` between callbacks during flush ensures that if one callback triggers a new signal change (cascading), the resulting callbacks are enqueued and processed in the same flush pass (via the `while cls._queue` loop). This matches Svelte's `do...while` pattern for cascading updates.
+
+**Why not synchronous execution in browser**: `nest-asyncio` is not available in PyScript/Emscripten. Using `loop.run_until_complete()` to synchronously await async `_refresh()` callbacks would crash the browser. Asynchronous scheduling is the only option.
+
+**Risk**: Delay between signal change and DOM update. The first callback from a batch executes on the next microtick (via `ensure_future`). The `asyncio.sleep(0)` yields between callbacks mean multi-callback batches may take multiple event loop ticks to fully process. This is consistent with Vue/Svelte's approach and is not perceptible to users (browser paints are batched at 60fps). All callbacks from one flush cycle complete before the next paint frame.
 
 ### Decision 9: `DynamicElement._render()` becomes async
 
@@ -288,11 +347,11 @@ def on_after_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[An
 
 **Rationale**: Since `generate_html()` is now async, all callers must await it. The CLI entry point wraps the call in `asyncio.run()`. The dev server handler can await directly since it's already async.
 
-### Decision 12: `_aio.py` async rendering support
+### Decision 12: Browser callback scheduler in `_aio.py`
 
-**Chosen**: No changes needed to `_aio.py` for this change. The existing `aio_run()` function already handles scheduling async work in both environments. The `_make_signal_callback()` wrapper (from Decision 8) uses `aio_run()` internally.
+**Chosen**: Add `_BrowserCallbackScheduler` class to `webcompy/aio/_aio.py` that provides `enqueue(callback, value)` and `_flush()` methods. The scheduler batches all callbacks from one signal propagation wave and executes them in order within a single async task. The `_make_signal_callback()` utility is removed — all callbacks (sync and async) go through the scheduler.
 
-**Rationale**: `aio_run()` already provides the infrastructure for scheduling async work. The `_make_signal_callback()` utility is a thin wrapper that uses `aio_run()` for async callbacks.
+**Rationale**: See Decision 8 for the detailed rationale. The scheduler replaces the fire-and-forget `_make_signal_callback` wrapper with a deterministic enqueue→flush pipeline that preserves callback execution order.
 
 ### Decision 13: Test suite uses pytest-asyncio instead of asyncio.run()
 

@@ -134,3 +134,34 @@
 - [x] 16.4 Run unit tests: `uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs` — PASSED (1062 passed, 7 skipped)
 - [x] 16.5 Run SSG: `uv run python -m webcompy generate --config docs_app.webcompy_config` — PASSED (RuntimeWarning suppressed via `warnings.catch_warnings()` in `_dynamic.py`)
 - [x] 16.6 Run E2E tests: `scripts/run-e2e-tests.sh bootstrap-static` — PASSED (2 passed, 0 failed)
+
+## 17. Fix hydration guard regression in AppDocumentRoot._render()
+
+- [ ] 17.1 Move `await child._hydrate_node()` back inside the `if self._app and self._app._hydrate` guard block in `webcompy/app/_root_component.py`
+
+## 18. Implement unified browser callback scheduler
+
+- [ ] 18.1 Add `_BrowserCallbackScheduler` class to `webcompy/aio/_aio.py` with `enqueue(callback, value)` and `_flush()` methods. `_flush()` SHALL use `iscoroutinefunction()` to detect async callbacks and `await` them. Sync callbacks SHALL be called directly.
+- [ ] 18.2 Update `CallbackConsumerNode._on_marked_dirty()` in `webcompy/signal/_base.py`: in browser (`ENVIRONMENT == "pyscript"`), call `_BrowserCallbackScheduler.enqueue()` instead of directly invoking `self._callback(self._producer._value)`.
+- [ ] 18.3 In `webcompy/elements/types/_repeat.py`: remove `_make_signal_callback` import and wrapper; register `self._refresh` directly as `self._sequence.on_after_updating(self._refresh)` (scheduler dispatches both sync and async callbacks).
+- [ ] 18.4 In `webcompy/elements/types/_switch.py`: remove `_make_signal_callback` import and wrapper from `_render()`, `_refresh()`, and `_on_set_parent()`; register `self._refresh` directly.
+- [ ] 18.5 Remove `_make_signal_callback()` from `webcompy/aio/_aio.py` and its export from `webcompy/aio/__init__.py`.
+- [ ] 18.6 Remove `_is_refreshing` / `_needs_refresh` guards from `RepeatElement._refresh()` and `SwitchElement._refresh()` — the unified scheduler ensures callbacks never interleave, making the reentrancy guard unnecessary
+- [ ] 18.7 In `_on_marked_dirty()` (server/test path): when `iscoroutinefunction(self._callback)` is True, execute the coroutine to completion using `nest_asyncio.apply()` + `loop.run_until_complete()` (or `asyncio.run()` if no running loop). This replaces the removed `_make_signal_callback()` and ensures async `_refresh()` callbacks complete before the signal setter returns.
+
+## 19. Remove debug logging
+
+- [ ] 19.1 Remove all `print("[DEBUG ...]")` statements from `webcompy/aio/_aio.py`
+- [ ] 19.2 Remove all `print("[DEBUG ...]")` statements from `webcompy/signal/_base.py`
+- [ ] 19.3 Remove all `print("[DEBUG ...]")` statements from `webcompy/elements/types/_text.py`
+- [ ] 19.4 Remove all `print("[DEBUG ...]")` statements from `webcompy/elements/types/_repeat.py`
+- [ ] 19.5 Remove all `print("[DEBUG ...]")` statements from `webcompy/elements/types/_switch.py`
+
+## 20. Verification
+
+- [ ] 20.1 Run lint: `uv run ruff check .`
+- [ ] 20.2 Run format: `uv run ruff format .`
+- [ ] 20.3 Run type check: `uv run pyright`
+- [ ] 20.4 Run unit tests: `uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs`
+- [ ] 20.5 Run SSG: `uv run python -m webcompy generate --config docs_app.webcompy_config`
+- [ ] 20.6 Run E2E tests (reactive-lists + dynamic-control): `scripts/run-e2e-tests.sh reactive-lists dynamic-control --console-level=error`

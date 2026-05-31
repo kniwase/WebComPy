@@ -164,34 +164,63 @@ In the browser (PyScript) environment, `app.run()` SHALL schedule the async rend
 
 ### Requirement: Dynamic element refresh shall be async
 
-`RepeatElement._refresh()` and `SwitchElement._refresh()` SHALL be `async def` methods. Their signal callback registrations SHALL wrap async callbacks with a scheduling utility (`aio_run()`) so that the signal system can invoke them correctly.
+`RepeatElement._refresh()` and `SwitchElement._refresh()` SHALL be `async def` methods. In the browser, signal callback registrations (e.g., `self._sequence.on_after_updating(self._refresh)`) register the coroutine function directly — the unified browser callback scheduler (`_BrowserCallbackScheduler`) handles dispatching async callbacks. In server/test environments, async signal callbacks SHALL execute synchronously via `run_sync()` semantics.
 
 #### Scenario: RepeatElement refresh triggered by signal update
-- **WHEN** a `ReactiveList` value changes and `RepeatElement._refresh()` is triggered
-- **THEN** the async `_refresh()` SHALL be scheduled via `aio_run()` from the signal callback
+- **WHEN** a `ReactiveList` value changes and `RepeatElement._refresh()` is triggered via the browser callback scheduler
+- **THEN** the `_refresh()` coroutine SHALL be enqueued and executed in order with other callbacks
 - **AND** child rendering SHALL be awaited correctly
 
 #### Scenario: SwitchElement refresh triggered by signal update
-- **WHEN** a `Signal` value changes and `SwitchElement._refresh()` is triggered
-- **THEN** the async `_refresh()` SHALL be scheduled via `aio_run()` from the signal callback
+- **WHEN** a `Signal` value changes and `SwitchElement._refresh()` is triggered via the browser callback scheduler
+- **THEN** the `_refresh()` coroutine SHALL be enqueued and executed in order with other callbacks
 - **AND** deferred `on_after_rendering` callbacks SHALL be scheduled correctly
 
-### Requirement: Signal callbacks shall support async callables
+### Requirement: All signal callbacks shall route through a unified browser scheduler
 
-When an async callable is registered as a signal callback via `SignalBase.on_after_updating()`, the signal system SHALL execute the callback synchronously and block until completion. A utility function `_make_signal_callback()` SHALL wrap async callables for transparent execution. If an async signal callback raises an exception, the error SHALL be logged via the framework's logging mechanism (`logging.error()`) and SHALL NOT crash the application.
+In the browser environment (PyScript), ALL signal callbacks — both synchronous functions (e.g., `_update_text`, attribute updaters) and asynchronous coroutines (e.g., `_refresh`, `_reconcile_children`) — SHALL be dispatched through a single `_BrowserCallbackScheduler`. The scheduler SHALL:
 
-This synchronous execution ensures that signal-driven DOM updates (e.g., `RepeatElement._refresh()`, `SwitchElement._refresh()`) complete atomically before any subsequent code runs, preventing race conditions and duplicate DOM elements that would occur with fire-and-forget scheduling.
+1. Enqueue all callbacks from one signal propagation wave into a single batch
+2. Execute callbacks sequentially in enqueue order within a single async task (next microtick)
+3. Handle cascading signal changes (signal change triggered during callback execution) via a `while` loop that continues processing until the queue is empty
+4. Yield control (`await asyncio.sleep(0)`) between callbacks so new enqueuements from cascading changes can be picked up
 
-#### Scenario: Registering an async _refresh() as a signal callback
-- **WHEN** `RepeatElement._refresh()` is `async def` and registered via `self._sequence.on_after_updating(self._refresh)`
-- **THEN** `_make_signal_callback(self._refresh)` SHALL wrap it as a sync callable that executes the coroutine to completion using `run_sync()` semantics (identical to `webcompy.testing._utils.run_sync()`)
-- **AND** the signal system SHALL invoke the wrapped callback normally
-- **AND** the callback SHALL complete before the signal setter returns
+In server and test environments, signal callbacks SHALL continue to execute synchronously (unbatched) for backward compatibility and nest-asyncio support.
 
-#### Scenario: Registering a sync _refresh() as a signal callback
-- **WHEN** a sync `_refresh()` method is registered as a signal callback
-- **THEN** `_make_signal_callback()` SHALL return the callback unchanged
-- **AND** the behavior SHALL be identical to the pre-async pipeline
+The `_make_signal_callback()` wrapper SHALL be removed. Callback registration SHALL use `signal.on_after_updating(callback)` directly without wrapping.
+
+#### Scenario: Browser signal callback execution order
+- **WHEN** a `Signal` changes and propagates to multiple consumers (e.g., a text element and a SwitchElement)
+- **THEN** the `_update_text` callback and `_refresh` callback SHALL be enqueued in signal-graph traversal order
+- **AND** both callbacks SHALL execute sequentially in the same async task
+- **AND** DOM mutations from earlier callbacks SHALL be visible to later callbacks
+
+#### Scenario: Cascading signal changes during browser callback execution
+- **WHEN** a callback modifies a signal value during its execution (cascading change)
+- **THEN** new callbacks from the cascading change SHALL be enqueued
+- **AND** the scheduler's `while` loop SHALL detect new queue entries and continue processing
+- **AND** the scheduler SHALL eventually stop when the queue is empty
+
+#### Scenario: Server-side signal callbacks remain synchronous
+- **WHEN** a signal changes in a server/test environment
+- **THEN** callbacks SHALL execute immediately and synchronously (unbatched)
+- **AND** async callbacks SHALL execute to completion before the signal setter returns (via `run_sync()` semantics with `nest-asyncio`)
+
+### Requirement: AppDocumentRoot._render() shall guard hydration behind the _hydrate flag
+
+`AppDocumentRoot._render()` SHALL call `child._hydrate_node()` ONLY when the app is in hydration mode (`self._app._hydrate` is `True`) and has not yet hydrated (`not self.__hydrated`). The `_hydrate_node()` calls SHALL remain inside the `if self._app and self._app._hydrate and not self.__hydrated:` guard block.
+
+Calling `_hydrate_node()` unconditionally (outside the guard) causes duplicate DOM nodes in non-hydrate (production) mode because `_hydrate_node()` creates `_node_cache` entries that register signal callbacks but are never attached to the DOM.
+
+#### Scenario: Production mode rendering (non-hydrate)
+- **WHEN** `AppDocumentRoot._render()` runs in production mode (`self._app._hydrate` is `False`)
+- **THEN** `_hydrate_node()` SHALL NOT be called on any child
+- **AND** children SHALL render via `child._render()` only
+
+#### Scenario: Hydration mode rendering
+- **WHEN** `AppDocumentRoot._render()` runs in hydration mode (`self._app._hydrate` is `True`) and has not hydrated yet
+- **THEN** `child._hydrate_node()` SHALL be called for each child before `child._render()`
+- **AND** `self.__hydrated` SHALL be set to `True`
 
 ### Requirement: _HtmlElement.render_html() shall be async
 
@@ -224,6 +253,10 @@ Test utility functions (e.g., `TestRenderer.render()`, `render_app_html_sync()`)
 - **THEN** all unit tests SHALL pass without `asyncio.run()` related errors
 - **AND** the test execution time SHALL not increase significantly compared to the sync pipeline
 
+## MODIFIED Requirements
+
+_No existing requirements are modified. All changes are additive._
+
 ## Future Work
 
 ### Parallel Sibling Rendering
@@ -237,15 +270,3 @@ Sequential rendering of sibling children is correct and safe but does not exploi
 5. **Testing**: Dedicated tests for parallel rendering scenarios (concurrent siblings, error cleanup, ContextVar isolation) must be added before enabling.
 
 This enhancement is deferred until the above concerns are fully addressed and tested.
-
-### Rendering Queue for Signal-Driven Updates
-
-The current approach executes async signal callbacks synchronously (blocking until completion via `run_sync()` semantics). While this prevents race conditions and duplicate DOM elements, it blocks the event loop during callback execution. A future enhancement may introduce a rendering queue that batches and serializes signal-driven updates:
-
-1. **Queue mechanism**: When a signal updates, instead of immediately executing the callback, enqueue the update request.
-2. **Batch processing**: Process the queue at the end of the current event loop tick (via `schedule_macro_task()`), applying all pending updates in order.
-3. **Deduplication**: If the same signal updates multiple times in one tick, only process the latest value (intermediate values are skipped).
-4. **Atomic render cycles**: Each queued update triggers a single render cycle that completes before the next update begins.
-5. **Benefits**: Prevents event loop blocking during individual callbacks while maintaining deterministic render ordering.
-
-This enhancement is deferred until the async rendering pipeline is stable and the duplicate DOM element issue is fully resolved.
