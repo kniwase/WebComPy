@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections.abc import Callable
 from functools import wraps
+from inspect import iscoroutinefunction
 from typing import Any, Generic, ParamSpec, TypeVar, cast, final
 
 from webcompy.signal._graph import (
@@ -23,6 +24,7 @@ T = TypeVar("T")
 class CallbackConsumerNode(SignalNode, _CallbackMixin):
     _callback: Callable[[Any], Any]
     _is_before: bool
+    _is_async: bool
     _producer: SignalNode
 
     def __init__(
@@ -34,6 +36,7 @@ class CallbackConsumerNode(SignalNode, _CallbackMixin):
         super().__init__()
         self._callback = callback
         self._is_before = is_before
+        self._is_async = iscoroutinefunction(callback)
         self._producer = producer
         self.consumer_is_always_live = True
         producer_add_live_consumer(producer, self)
@@ -44,7 +47,7 @@ class CallbackConsumerNode(SignalNode, _CallbackMixin):
     def producer_recompute_value(self) -> None:
         self.dirty = False
 
-    def _on_marked_dirty(self) -> None:
+    def _dispatch(self) -> None:
         if self._is_before:
             return
         from webcompy.signal._computed import Computed
@@ -54,7 +57,12 @@ class CallbackConsumerNode(SignalNode, _CallbackMixin):
         self.dirty = False
         if isinstance(self._producer, Computed) and self._producer.version <= old_version:
             return
-        self._callback(self._producer._value)
+        if self._is_async:
+            from webcompy.aio._aio import _resolve_async_callback
+
+            _resolve_async_callback(self._callback, self._producer._value)
+        else:
+            self._callback(self._producer._value)
 
     def notify(self, value: Any) -> None:
         self._callback(value)

@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import contextvars
 from collections.abc import Callable, Coroutine
-from inspect import iscoroutinefunction
 from re import compile as re_compile
 from re import escape as re_escape
 from traceback import TracebackException
@@ -94,65 +92,24 @@ class AsyncWrapper(Generic[T]):
         return inner
 
 
-def _make_signal_callback(callback: Callable[..., Any]) -> Callable[..., None]:
-    if iscoroutinefunction(callback):
+def _resolve_async_callback(callback: Callable[..., Any], value: Any) -> None:
+    async def _safe():
+        try:
+            await callback(value)
+        except Exception as err:
+            _log_error(err)
 
-        async def _safe_callback(*args, **kwargs):
-            try:
-                await callback(*args, **kwargs)
-            except Exception as err:
-                _log_error(err)
-
-        if ENVIRONMENT == "pyscript":
-            # Browser: nest-asyncio is not available, use fire-and-forget.
-            # The _is_refreshing guard in RepeatElement/SwitchElement prevents
-            # concurrent _refresh() executions.
-
-            def _wrapper(*args, **kwargs):
-                aio_run(_safe_callback(*args, **kwargs))
-
-            return _wrapper
+    if ENVIRONMENT == "pyscript":
+        aio_run(_safe())
+    else:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(_safe())
         else:
-            # Server/Test: synchronous execution with ContextVar preservation
-            # for proper DI scope access.
+            import nest_asyncio
 
-            def _sync_wrapper(*args, **kwargs):
-                coro = _safe_callback(*args, **kwargs)
-                _captured_ctx = contextvars.copy_context()
-
-                try:
-                    loop = asyncio.get_running_loop()
-                except RuntimeError:
-                    try:
-                        loop = asyncio.get_event_loop()
-                    except RuntimeError:
-                        # No event loop at all (rare)
-                        try:
-                            asyncio.run(coro)
-                        except Exception as err:
-                            _log_error(err)
-                    else:
-                        import nest_asyncio
-
-                        if not getattr(loop, "_nest_asyncio_patched", False):
-                            nest_asyncio.apply(loop)
-                            loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
-                        try:
-                            task = loop.create_task(coro, context=_captured_ctx)
-                            loop.run_until_complete(task)
-                        except Exception as err:
-                            _log_error(err)
-                else:
-                    import nest_asyncio
-
-                    if not getattr(loop, "_nest_asyncio_patched", False):
-                        nest_asyncio.apply(loop)
-                        loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
-                    try:
-                        task = loop.create_task(coro, context=_captured_ctx)
-                        loop.run_until_complete(task)
-                    except Exception as err:
-                        _log_error(err)
-
-            return _sync_wrapper
-    return callback
+            if not getattr(loop, "_nest_asyncio_patched", False):
+                nest_asyncio.apply(loop)
+                loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
+            loop.run_until_complete(_safe())

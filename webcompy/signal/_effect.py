@@ -75,7 +75,7 @@ class EffectNode(SignalNode, _CallbackMixin):
     def producer_recompute_value(self) -> None:
         self.dirty = False
 
-    def _on_marked_dirty(self) -> None:
+    def _dispatch(self) -> None:
         _schedule_effect(self)
 
 
