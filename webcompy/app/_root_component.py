@@ -91,8 +91,8 @@ class AppDocumentRoot(Component):
             self._mount_node()
             if self._app and self._app._hydrate and not self.__hydrated:
                 self.__hydrated = True
-            for child in self._children:
-                await child._hydrate_node()
+                for child in self._children:
+                    await child._hydrate_node()
 
             for child in self._children:
                 await child._render()
