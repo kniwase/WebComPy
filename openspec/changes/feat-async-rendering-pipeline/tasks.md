@@ -137,25 +137,28 @@
 
 ## 17. Fix hydration guard regression in AppDocumentRoot._render()
 
-- [ ] 17.1 Move `await child._hydrate_node()` back inside the `if self._app and self._app._hydrate` guard block in `webcompy/app/_root_component.py`
+- [x] 17.1 Move `await child._hydrate_node()` back inside the `if self._app and self._app._hydrate` guard block in `webcompy/app/_root_component.py`
 
-## 18. Implement unified browser callback scheduler
+## 18. Implement async dispatch with `_is_async` flag and `_resolve_async_callback`
 
-- [ ] 18.1 Add `_BrowserCallbackScheduler` class to `webcompy/aio/_aio.py` with `enqueue(callback, value)` and `_flush()` methods. `_flush()` SHALL use `iscoroutinefunction()` to detect async callbacks and `await` them. Sync callbacks SHALL be called directly.
-- [ ] 18.2 Update `CallbackConsumerNode._on_marked_dirty()` in `webcompy/signal/_base.py`: in browser (`ENVIRONMENT == "pyscript"`), call `_BrowserCallbackScheduler.enqueue()` instead of directly invoking `self._callback(self._producer._value)`.
-- [ ] 18.3 In `webcompy/elements/types/_repeat.py`: remove `_make_signal_callback` import and wrapper; register `self._refresh` directly as `self._sequence.on_after_updating(self._refresh)` (scheduler dispatches both sync and async callbacks).
-- [ ] 18.4 In `webcompy/elements/types/_switch.py`: remove `_make_signal_callback` import and wrapper from `_render()`, `_refresh()`, and `_on_set_parent()`; register `self._refresh` directly.
-- [ ] 18.5 Remove `_make_signal_callback()` from `webcompy/aio/_aio.py` and its export from `webcompy/aio/__init__.py`.
-- [ ] 18.6 Remove `_is_refreshing` / `_needs_refresh` guards from `RepeatElement._refresh()` and `SwitchElement._refresh()` — the unified scheduler ensures callbacks never interleave, making the reentrancy guard unnecessary
-- [ ] 18.7 In `_on_marked_dirty()` (server/test path): when `iscoroutinefunction(self._callback)` is True, execute the coroutine to completion using `nest_asyncio.apply()` + `loop.run_until_complete()` (or `asyncio.run()` if no running loop). This replaces the removed `_make_signal_callback()` and ensures async `_refresh()` callbacks complete before the signal setter returns.
+- [ ] 18.1 Add `_resolve_async_callback(callback, value)` to `webcompy/aio/_aio.py`: encapsulates all environment-specific async callback execution (fire-and-forget in browser via `aio_run()`, synchronous in server/test via `nest-asyncio` + `loop.run_until_complete()`). Handles `_safe()` wrapper with error logging.
+- [ ] 18.2 In `CallbackConsumerNode.__init__()` in `webcompy/signal/_base.py`: add `self._is_async = iscoroutinefunction(callback)` flag evaluated once at construction time.
+- [ ] 18.3 Rename `_on_marked_dirty` → `_dispatch` in `webcompy/signal/_base.py` (`CallbackConsumerNode`), `webcompy/signal/_graph.py` (`_CallbackMixin` abstract + `consumer._dispatch()` call), and `webcompy/signal/_effect.py` (`EffectNode`).
+- [ ] 18.4 In `CallbackConsumerNode._dispatch()`: check `self._is_async` flag. If True, delegate to `_resolve_async_callback()`. If False, call `self._callback(self._producer._value)` directly. Remove `ENVIRONMENT` import from `_base.py`.
+- [ ] 18.5 In `webcompy/elements/types/_repeat.py`: remove `_make_signal_callback` import; register `self._refresh` directly as `self._sequence.on_after_updating(self._refresh)`.
+- [ ] 18.6 In `webcompy/elements/types/_switch.py`: remove `_make_signal_callback` import from `_render()`, `_refresh()`, and `_on_set_parent()`; register `self._refresh` directly.
+- [ ] 18.7 Remove `_make_signal_callback()` from `webcompy/aio/_aio.py` and its export from `webcompy/aio/__init__.py`.
+- [ ] 18.8 Remove `_is_refreshing` / `_needs_refresh` guards from `RepeatElement._refresh()` and `SwitchElement._refresh()`.
+- [ ] 18.9 Remove `_make_signal_callback` import from `webcompy/router/_link.py` and replace with direct `on_after_updating(self._refresh)` registration.
+- [ ] 18.10 Remove `_make_signal_callback` import and all 14 usages from `tests/test_keyed_repeat.py`; use direct `rep._refresh` instead.
 
 ## 19. Remove debug logging
 
-- [ ] 19.1 Remove all `print("[DEBUG ...]")` statements from `webcompy/aio/_aio.py`
-- [ ] 19.2 Remove all `print("[DEBUG ...]")` statements from `webcompy/signal/_base.py`
-- [ ] 19.3 Remove all `print("[DEBUG ...]")` statements from `webcompy/elements/types/_text.py`
-- [ ] 19.4 Remove all `print("[DEBUG ...]")` statements from `webcompy/elements/types/_repeat.py`
-- [ ] 19.5 Remove all `print("[DEBUG ...]")` statements from `webcompy/elements/types/_switch.py`
+- [x] 19.1 Remove all `print("[DEBUG ...]")` statements from `webcompy/aio/_aio.py`
+- [x] 19.2 Remove all `print("[DEBUG ...]")` statements from `webcompy/signal/_base.py`
+- [x] 19.3 Remove all `print("[DEBUG ...]")` statements from `webcompy/elements/types/_text.py`
+- [x] 19.4 Remove all `print("[DEBUG ...]")` statements from `webcompy/elements/types/_repeat.py`
+- [x] 19.5 Remove all `print("[DEBUG ...]")` statements from `webcompy/elements/types/_switch.py`
 
 ## 20. Verification
 

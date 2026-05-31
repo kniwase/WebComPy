@@ -164,47 +164,45 @@ In the browser (PyScript) environment, `app.run()` SHALL schedule the async rend
 
 ### Requirement: Dynamic element refresh shall be async
 
-`RepeatElement._refresh()` and `SwitchElement._refresh()` SHALL be `async def` methods. In the browser, signal callback registrations (e.g., `self._sequence.on_after_updating(self._refresh)`) register the coroutine function directly — the unified browser callback scheduler (`_BrowserCallbackScheduler`) handles dispatching async callbacks. In server/test environments, async signal callbacks SHALL execute synchronously via `run_sync()` semantics.
+`RepeatElement._refresh()` and `SwitchElement._refresh()` SHALL be `async def` methods. Signal callback registrations (e.g., `self._sequence.on_after_updating(self._refresh)`) SHALL register the coroutine function directly without wrapping. `CallbackConsumerNode._dispatch()` SHALL check the `_is_async` flag set at construction time and, if True, delegate to `_resolve_async_callback()` from `webcompy.aio._aio`.
 
 #### Scenario: RepeatElement refresh triggered by signal update
-- **WHEN** a `ReactiveList` value changes and `RepeatElement._refresh()` is triggered via the browser callback scheduler
-- **THEN** the `_refresh()` coroutine SHALL be enqueued and executed in order with other callbacks
+- **WHEN** a `ReactiveList` value changes and `RepeatElement._refresh()` is triggered
+- **THEN** `_dispatch()` SHALL check `self._is_async` and delegate to `_resolve_async_callback()`
 - **AND** child rendering SHALL be awaited correctly
 
 #### Scenario: SwitchElement refresh triggered by signal update
-- **WHEN** a `Signal` value changes and `SwitchElement._refresh()` is triggered via the browser callback scheduler
-- **THEN** the `_refresh()` coroutine SHALL be enqueued and executed in order with other callbacks
+- **WHEN** a `Signal` value changes and `SwitchElement._refresh()` is triggered
+- **THEN** `_dispatch()` SHALL check `self._is_async` and delegate to `_resolve_async_callback()`
 - **AND** deferred `on_after_rendering` callbacks SHALL be scheduled correctly
 
-### Requirement: All signal callbacks shall route through a unified browser scheduler
+### Requirement: `_dispatch()` shall execute callbacks inline with an async flag
 
-In the browser environment (PyScript), ALL signal callbacks — both synchronous functions (e.g., `_update_text`, attribute updaters) and asynchronous coroutines (e.g., `_refresh`, `_reconcile_children`) — SHALL be dispatched through a single `_BrowserCallbackScheduler`. The scheduler SHALL:
+`CallbackConsumerNode._dispatch()` (renamed from `_on_marked_dirty`) SHALL use a `_is_async: bool` flag set in `__init__` via `iscoroutinefunction(self._callback)` to determine execution mode:
 
-1. Enqueue all callbacks from one signal propagation wave into a single batch
-2. Execute callbacks sequentially in enqueue order within a single async task (next microtick)
-3. Handle cascading signal changes (signal change triggered during callback execution) via a `while` loop that continues processing until the queue is empty
-4. Yield control (`await asyncio.sleep(0)`) between callbacks so new enqueuements from cascading changes can be picked up
+- **`_is_async = False`** (sync callbacks e.g. `_update_text`, attribute updaters): SHALL call `self._callback(self._producer._value)` directly and synchronously
+- **`_is_async = True`** (async callbacks e.g. `_refresh`, `_reconcile_children`): SHALL delegate to `_resolve_async_callback()` from `webcompy.aio._aio`
 
-In server and test environments, signal callbacks SHALL continue to execute synchronously (unbatched) for backward compatibility and nest-asyncio support.
+The signal layer (`webcompy/signal/_base.py`) SHALL NOT import `ENVIRONMENT`. All environment-specific behavior SHALL be encapsulated in `_resolve_async_callback()` within `webcompy/aio/_aio.py`.
 
 The `_make_signal_callback()` wrapper SHALL be removed. Callback registration SHALL use `signal.on_after_updating(callback)` directly without wrapping.
 
-#### Scenario: Browser signal callback execution order
-- **WHEN** a `Signal` changes and propagates to multiple consumers (e.g., a text element and a SwitchElement)
-- **THEN** the `_update_text` callback and `_refresh` callback SHALL be enqueued in signal-graph traversal order
-- **AND** both callbacks SHALL execute sequentially in the same async task
-- **AND** DOM mutations from earlier callbacks SHALL be visible to later callbacks
+#### Scenario: Sync callback executes inline during signal propagation
+- **WHEN** a signal changes and a sync callback (e.g., `_update_text`) is registered via `on_after_updating`
+- **THEN** `_dispatch()` SHALL detect `_is_async = False` and call `self._callback(self._producer._value)` directly
+- **AND** the DOM SHALL be updated before the signal setter returns
 
-#### Scenario: Cascading signal changes during browser callback execution
+#### Scenario: Async callback delegated to `_resolve_async_callback`
+- **WHEN** a signal changes and an async callback (e.g., `_refresh`) is registered
+- **THEN** `_dispatch()` SHALL detect `_is_async = True` and call `_resolve_async_callback(self._callback, self._producer._value)`
+- **AND** in browser, `_resolve_async_callback` SHALL dispatch via `aio_run()` (fire-and-forget)
+- **AND** in server/test, `_resolve_async_callback` SHALL execute the coroutine to completion synchronously via `nest-asyncio`
+
+#### Scenario: Cascading signal changes during callback execution
 - **WHEN** a callback modifies a signal value during its execution (cascading change)
-- **THEN** new callbacks from the cascading change SHALL be enqueued
-- **AND** the scheduler's `while` loop SHALL detect new queue entries and continue processing
-- **AND** the scheduler SHALL eventually stop when the queue is empty
-
-#### Scenario: Server-side signal callbacks remain synchronous
-- **WHEN** a signal changes in a server/test environment
-- **THEN** callbacks SHALL execute immediately and synchronously (unbatched)
-- **AND** async callbacks SHALL execute to completion before the signal setter returns (via `run_sync()` semantics with `nest-asyncio`)
+- **THEN** `producer_notify_consumers()` SHALL propagate normally through the signal graph
+- **AND** new `_dispatch()` invocations SHALL execute inline during the same signal propagation wave
+- **AND** this SHALL work correctly for both sync and async callbacks
 
 ### Requirement: AppDocumentRoot._render() shall guard hydration behind the _hydrate flag
 
