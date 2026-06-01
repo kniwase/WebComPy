@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import contextvars
 from typing import TYPE_CHECKING
 
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class TestRendererResult:
-    __slots__ = ("_component", "_instance", "_parent_node", "_scope")
+    __slots__ = ("_component", "_di_token", "_instance", "_parent_node", "_scope")
 
     def __init__(
         self,
@@ -27,11 +28,13 @@ class TestRendererResult:
         instance: object,
         parent_node: VirtualDOMNode,
         scope: DIScope,
+        di_token: contextvars.Token | None = None,
     ) -> None:
         self._component = component
         self._instance = instance
         self._parent_node = parent_node
         self._scope = scope
+        self._di_token = di_token
 
     @property
     def _root_node(self) -> VirtualDOMNode:
@@ -74,6 +77,9 @@ class TestRendererResult:
 
     def close(self) -> None:
         self._scope.dispose()
+        if self._di_token is not None:
+            with contextlib.suppress(ValueError, LookupError):
+                _active_di_scope.reset(self._di_token)
 
 
 class TestRenderer:
@@ -127,8 +133,14 @@ class TestRenderer:
 
         ctx = contextvars.copy_context()
         result = ctx.run(run_sync, _render_async())
-        _active_di_scope.set(result._scope)
-        return result
+        token = _active_di_scope.set(result._scope)
+        return TestRendererResult(
+            result._component,
+            result._instance,
+            result._parent_node,
+            result._scope,
+            token,
+        )
 
 
 def _dfs_first(node: VirtualDOMNode, tag: str) -> VirtualDOMNode | None:

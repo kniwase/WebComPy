@@ -13,7 +13,7 @@ On the server side, `generate_html()` calls `_HtmlElement.render_html()` which c
 This synchronous design prevents:
 1. Async component setup functions (e.g., `@define_component async def MyComponent(context): ...`)
 2. Async lifecycle hooks (`on_before_rendering`, `on_after_rendering`)
-3. Sibling parallel rendering (children rendered concurrently via `asyncio.gather()`)
+3. Async child rendering (awaiting `child._render()` mid-tree)
 4. Future async SSR capabilities (per-route data fetching, streaming)
 
 ## Goals / Non-Goals
@@ -22,7 +22,7 @@ This synchronous design prevents:
 - Convert the entire rendering pipeline to async
 - Support async component definitions transparently (sync still works)
 - Support async lifecycle hooks transparently (sync still works)
-- Enable sibling parallel rendering via `asyncio.gather()`
+- Render sibling children sequentially via `for child in self._children: await child._render()` (matches pre-async behavior)
 - Make `generate_html()` async
 - Update `app.run()` to schedule async render
 - Maintain full backward compatibility with existing sync code
@@ -31,6 +31,7 @@ This synchronous design prevents:
 - Per-route async data fetching during SSG (separate change)
 - Changing the signal system to be async-aware
 - Making `_mount_node()` async (it remains sync — only DOM operations)
+- Sibling parallel rendering via `asyncio.gather()` (deferred to future work; see "Future Work" section in spec)
 
 ## Decisions
 

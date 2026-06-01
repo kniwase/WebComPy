@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 from abc import abstractmethod
 from contextlib import suppress
 
+from webcompy import logging
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._base import ElementWithChildren
@@ -46,12 +48,8 @@ class DynamicElement(ElementWithChildren):
             child._node_idx = idx
             idx += child._node_count
             if not child._mounted:
-                # TODO: child._render() is async but _hydrate_node() is sync.
-                # This is intentional per feat-async-rendering-pipeline spec:
-                # "_hydrate_node() SHALL remain synchronous in this change".
-                # Downstream changes (feat-client-only-component, feat-suspense-component)
-                # will make hydration async via asyncio.ensure_future(child._render()).
-                child._render()  # type: ignore[unused-coroutine]
+                task = asyncio.ensure_future(child._render())
+                task.add_done_callback(lambda t: logging.error(t.exception()) if t.exception() else None)
 
     @property
     def _parent(self) -> ElementWithChildren:

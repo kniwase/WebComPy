@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The rendering pipeline supports async component definitions, async lifecycle hooks, and sibling parallel rendering. When a component definition, lifecycle hook, or child rendering involves an async operation, the pipeline awaits it. Existing synchronous code continues to work without modification — `inspect.iscoroutinefunction()` transparently detects async callables and awaits them, while sync callables execute directly.
+The rendering pipeline supports async component definitions, async lifecycle hooks, and async child rendering. Sibling children are still rendered sequentially to preserve DOM ordering and short-circuit semantics (see the "Sibling children shall render sequentially" requirement below). When a component definition, lifecycle hook, or child rendering involves an async operation, the pipeline awaits it. Existing synchronous code continues to work without modification — `inspect.iscoroutinefunction()` transparently detects async callables and awaits them, while sync callables execute directly.
 
 This enables future async SSR capabilities (per-route data fetching, streaming) and allows developers to use `async def` lifecycle hooks for I/O-bound operations (API calls, async resource loading) without blocking the event loop.
 
@@ -12,7 +12,7 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 
 `ElementAbstract._render()`, `ElementWithChildren._render()`, `DynamicElement._render()`, `RepeatElement._render()`, `SwitchElement._render()`, `Component._render()`, and `AppDocumentRoot._render()` SHALL be `async def` methods. All callers of these methods SHALL `await` them. The `_mount_node()` method SHALL remain synchronous since DOM operations are not async.
 
- `_hydrate_node()` SHALL become async in this change. `ElementAbstract._hydrate_node()`, `ElementWithChildren._hydrate_node()`, and `DynamicElement._hydrate_node()` SHALL be `async def` methods. All internal callers SHALL `await` them. `DynamicElement._hydrate_node()` SHALL `await child._render()` for unmounted children instead of calling `child._render()` synchronously (which would produce an un-awaited coroutine and a RuntimeWarning).
+ `_hydrate_node()` SHALL remain synchronous in this change. `ElementAbstract._hydrate_node()`, `ElementWithChildren._hydrate_node()`, and `DynamicElement._hydrate_node()` SHALL be `def` methods. All `_hydrate_node()` callers SHALL call them directly (no `await`). `DynamicElement._hydrate_node()` SHALL use `asyncio.ensure_future(child._render())` to schedule the async render of unmounted children, attaching a done callback that logs exceptions via `webcompy.logging.error`. This eliminates the `RuntimeWarning: coroutine ... was never awaited` and ensures async render errors surface in the log. Making `_hydrate_node()` async was attempted during this change's development but caused an E2E regression on the `/reactive` and `/switch` pages; downstream changes (e.g. `feat-client-only-component`, `feat-suspense-component`) may revisit full async hydration with proper support.
 
 #### Scenario: Rendering a component in the browser
 - **WHEN** `app.run()` is called in the browser

@@ -141,16 +141,16 @@
 
 ## 18. Implement async dispatch with `_is_async` flag and `_resolve_async_callback`
 
-- [ ] 18.1 Add `_resolve_async_callback(callback, value)` to `webcompy/aio/_aio.py`: encapsulates all environment-specific async callback execution (fire-and-forget in browser via `aio_run()`, synchronous in server/test via `nest-asyncio` + `loop.run_until_complete()`). Handles `_safe()` wrapper with error logging.
-- [ ] 18.2 In `CallbackConsumerNode.__init__()` in `webcompy/signal/_base.py`: add `self._is_async = iscoroutinefunction(callback)` flag evaluated once at construction time.
-- [ ] 18.3 Rename `_on_marked_dirty` → `_dispatch` in `webcompy/signal/_base.py` (`CallbackConsumerNode`), `webcompy/signal/_graph.py` (`_CallbackMixin` abstract + `consumer._dispatch()` call), and `webcompy/signal/_effect.py` (`EffectNode`).
-- [ ] 18.4 In `CallbackConsumerNode._dispatch()`: check `self._is_async` flag. If True, delegate to `_resolve_async_callback()`. If False, call `self._callback(self._producer._value)` directly. Remove `ENVIRONMENT` import from `_base.py`.
-- [ ] 18.5 In `webcompy/elements/types/_repeat.py`: remove `_make_signal_callback` import; register `self._refresh` directly as `self._sequence.on_after_updating(self._refresh)`.
-- [ ] 18.6 In `webcompy/elements/types/_switch.py`: remove `_make_signal_callback` import from `_render()`, `_refresh()`, and `_on_set_parent()`; register `self._refresh` directly.
-- [ ] 18.7 Remove `_make_signal_callback()` from `webcompy/aio/_aio.py` and its export from `webcompy/aio/__init__.py`.
-- [ ] 18.8 Remove `_is_refreshing` / `_needs_refresh` guards from `RepeatElement._refresh()` and `SwitchElement._refresh()`.
-- [ ] 18.9 Remove `_make_signal_callback` import from `webcompy/router/_link.py` and replace with direct `on_after_updating(self._refresh)` registration.
-- [ ] 18.10 Remove `_make_signal_callback` import and all 14 usages from `tests/test_keyed_repeat.py`; use direct `rep._refresh` instead.
+- [x] 18.1 Add `_resolve_async_callback(callback, value)` to `webcompy/aio/_aio.py`: encapsulates all environment-specific async callback execution (fire-and-forget in browser via `aio_run()`, synchronous in server/test via `nest-asyncio` + `loop.run_until_complete()`). Handles `_safe()` wrapper with error logging.
+- [x] 18.2 In `CallbackConsumerNode.__init__()` in `webcompy/signal/_base.py`: add `self._is_async = iscoroutinefunction(callback)` flag evaluated once at construction time.
+- [x] 18.3 Rename `_on_marked_dirty` → `_dispatch` in `webcompy/signal/_base.py` (`CallbackConsumerNode`), `webcompy/signal/_graph.py` (`_CallbackMixin` abstract + `consumer._dispatch()` call), and `webcompy/signal/_effect.py` (`EffectNode`).
+- [x] 18.4 In `CallbackConsumerNode._dispatch()`: check `self._is_async` flag. If True, delegate to `_resolve_async_callback()`. If False, call `self._callback(self._producer._value)` directly. Remove `ENVIRONMENT` import from `_base.py`.
+- [x] 18.5 In `webcompy/elements/types/_repeat.py`: remove `_make_signal_callback` import; register `self._refresh` directly as `self._sequence.on_after_updating(self._refresh)`.
+- [x] 18.6 In `webcompy/elements/types/_switch.py`: remove `_make_signal_callback` import from `_render()`, `_refresh()`, and `_on_set_parent()`; register `self._refresh` directly.
+- [x] 18.7 Remove `_make_signal_callback()` from `webcompy/aio/_aio.py` and its export from `webcompy/aio/__init__.py`.
+- [x] 18.8 Remove `_is_refreshing` / `_needs_refresh` guards from `RepeatElement._refresh()` and `SwitchElement._refresh()`.
+- [x] 18.9 Remove `_make_signal_callback` import from `webcompy/router/_link.py` and replace with direct `on_after_updating(self._refresh)` registration.
+- [x] 18.10 Remove `_make_signal_callback` import and all 14 usages from `tests/test_keyed_repeat.py`; use direct `rep._refresh` instead.
 
 ## 19. Remove debug logging
 
@@ -162,9 +162,25 @@
 
 ## 20. Verification
 
-- [ ] 20.1 Run lint: `uv run ruff check .`
-- [ ] 20.2 Run format: `uv run ruff format .`
-- [ ] 20.3 Run type check: `uv run pyright`
-- [ ] 20.4 Run unit tests: `uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs`
-- [ ] 20.5 Run SSG: `uv run python -m webcompy generate --config docs_app.webcompy_config`
-- [ ] 20.6 Run E2E tests (reactive-lists + dynamic-control): `scripts/run-e2e-tests.sh reactive-lists dynamic-control --console-level=error`
+- [x] 20.1 Run lint: `uv run ruff check .`
+- [x] 20.2 Run format: `uv run ruff format .`
+- [x] 20.3 Run type check: `uv run pyright`
+- [x] 20.4 Run unit tests: `uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs`
+- [x] 20.5 Run SSG: `uv run python -m webcompy generate --config docs_app.webcompy_config`
+- [x] 20.6 Run E2E tests (reactive-lists + dynamic-control): `scripts/run-e2e-tests.sh reactive-lists dynamic-control --console-level=error`
+
+## 21. Replace asyncio.gather() with sequential rendering in _render()
+
+- [x] 21.1 Remove `import asyncio` and the `_handle_gather_results()` helper from `webcompy/elements/types/_base.py`. Replace the `asyncio.gather(...)` block in `ElementWithChildren._render()` with `for child in self._children: await child._render()`. Remove the PyScript ContextVar snapshot/restore block (no longer needed for sequential rendering).
+- [x] 21.2 Remove `import asyncio`, `_handle_gather_results` import, and `get_active_consumer`/`set_active_consumer` imports from `webcompy/app/_root_component.py`. Replace the `asyncio.gather(...)` block in `AppDocumentRoot._render()` with `for child in self._children: await child._render()`. Remove the PyScript ContextVar snapshot/restore block.
+- [x] 21.3 In `webcompy/elements/types/_dynamic.py`: replace `child._render()  # type: ignore[unused-coroutine]` in `DynamicElement._hydrate_node()` with `asyncio.ensure_future(child._render())` plus a done callback that logs exceptions via `webcompy.logging.error`. This eliminates the `RuntimeWarning: coroutine ... was never awaited` and ensures async render errors surface in the log.
+
+## 22. Fix TestRendererResult ContextVar leak
+
+- [x] 22.1 In `webcompy/testing/_renderer.py`: save the `contextvars.Token` returned by `_active_di_scope.set(result._scope)` in `TestRenderer.render()`. Pass the token into `TestRendererResult.__init__()` (new optional `di_token` parameter, default `None`). In `TestRendererResult.close()`, call `self._scope.dispose()` followed by `_active_di_scope.reset(self._di_token)` guarded by a try/except for `ValueError`/`LookupError` (raised when called outside the original context).
+- [x] 22.2 Update the internal call site in `_render_async()` (L132) to pass the existing 4 positional args; the optional `di_token` defaults to `None` so backward compatibility is preserved.
+
+## 23. Update spec.md to reflect synchronous _hydrate_node() and removed gather
+
+- [x] 23.1 In `specs/async-rendering/spec.md` L15: replace "`_hydrate_node()` SHALL become async" with "`_hydrate_node()` SHALL remain synchronous in this change". Update the L15 second sentence to "All `_hydrate_node()` callers SHALL call them directly (no `await`). `DynamicElement._hydrate_node()` SHALL use `asyncio.ensure_future(child._render())` to schedule the async render of unmounted children, attaching a done callback to log exceptions via `webcompy.logging.error`."
+- [x] 23.2 No spec.md change needed for "Sibling children shall render sequentially" (L50-56) — that requirement was already correct; the gather code was the bug.
