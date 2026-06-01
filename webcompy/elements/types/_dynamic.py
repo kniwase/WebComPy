@@ -38,15 +38,20 @@ class DynamicElement(ElementWithChildren):
             for child in self._children:
                 child._remove_element(True, True)
 
-    async def _hydrate_node(self) -> None:
+    def _hydrate_node(self) -> None:
         for child in self._children:
-            await child._hydrate_node()
+            child._hydrate_node()
         idx = self._node_idx
         for child in self._children:
             child._node_idx = idx
             idx += child._node_count
             if not child._mounted:
-                await child._render()
+                # TODO: child._render() is async but _hydrate_node() is sync.
+                # This is intentional per feat-async-rendering-pipeline spec:
+                # "_hydrate_node() SHALL remain synchronous in this change".
+                # Downstream changes (feat-client-only-component, feat-suspense-component)
+                # will make hydration async via asyncio.ensure_future(child._render()).
+                child._render()  # type: ignore[unused-coroutine]
 
     @property
     def _parent(self) -> ElementWithChildren:

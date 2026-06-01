@@ -73,7 +73,7 @@ class ElementAbstract(SignalReceivable):
     def _init_new_node(self, node: DOMNode) -> None:
         node.__webcompy_node__ = True
 
-    async def _hydrate_node(self) -> DOMNode | None:
+    def _hydrate_node(self) -> DOMNode | None:
         existing = self._get_existing_node()
         if (
             existing

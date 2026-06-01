@@ -181,8 +181,7 @@ class TestPreserveChildrenRender:
 
 
 class TestPreserveChildrenHydrate:
-    @pytest.mark.asyncio
-    async def test_hydrate_respects_preserve_children(self, fake_browser_full):
+    def test_hydrate_respects_preserve_children(self, fake_browser_full):
         from webcompy.elements.generators import create_element
 
         el = create_element("code", {}, None)
@@ -211,12 +210,11 @@ class TestPreserveChildrenHydrate:
         span.__webcompy_prerendered_node__ = True
         prerendered.appendChild(span)
 
-        await el._hydrate_node()
+        el._hydrate_node()
 
         assert prerendered.childNodes.length == 1
 
-    @pytest.mark.asyncio
-    async def test_hydrate_without_preserve_children_cleans_up(self, fake_browser_full):
+    def test_hydrate_without_preserve_children_cleans_up(self, fake_browser_full):
         from webcompy.elements.generators import create_element
 
         el = create_element("code", {}, None)
@@ -245,7 +243,7 @@ class TestPreserveChildrenHydrate:
         span.__webcompy_prerendered_node__ = True
         prerendered.appendChild(span)
 
-        await el._hydrate_node()
+        el._hydrate_node()
 
         assert prerendered.childNodes.length == 0
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, TypedDict
 
@@ -11,10 +12,12 @@ from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import html
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements._head import HeadElement
+from webcompy.elements.types._base import _handle_gather_results
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
 from webcompy.signal import Computed
+from webcompy.signal._graph import get_active_consumer, set_active_consumer
 from webcompy.utils import ENVIRONMENT
 
 if TYPE_CHECKING:
@@ -92,10 +95,29 @@ class AppDocumentRoot(Component):
             if self._app and self._app._hydrate and not self.__hydrated:
                 self.__hydrated = True
                 for child in self._children:
-                    await child._hydrate_node()
+                    child._hydrate_node()
 
-            for child in self._children:
-                await child._render()
+            _snap_consumer = get_active_consumer()
+            _snap_di_scope = _active_di_scope.get(None)
+
+            if ENVIRONMENT == "pyscript":
+
+                async def _child_render(child):
+                    set_active_consumer(_snap_consumer)
+                    if _snap_di_scope is not None:
+                        _active_di_scope.set(_snap_di_scope)
+                    return await child._render()
+
+                results = await asyncio.gather(
+                    *(_child_render(child) for child in self._children),
+                    return_exceptions=True,
+                )
+            else:
+                results = await asyncio.gather(
+                    *(child._render() for child in self._children),
+                    return_exceptions=True,
+                )
+            _handle_gather_results(self._children, results)
 
             on_after = self._property["on_after_rendering"]
             if iscoroutinefunction(on_after):
