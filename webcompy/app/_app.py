@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, Literal
 
+from webcompy.aio import resolve_async
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.components import ComponentGenerator
 from webcompy.exception import WebComPyException
@@ -234,9 +235,7 @@ class WebComPyApp:
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("app.run() can only be called in a browser environment.")
         self._record_phase("run_start")
-        import asyncio
-
         ctx = self.create_render_context()
         self._plugin_manager.call_on_app_ready(ctx)
         ctx._root._selector = self._config.selector
-        asyncio.ensure_future(ctx._root._render())  # noqa: RUF006
+        resolve_async(ctx._root._render())

@@ -169,18 +169,34 @@
 - [x] 20.5 Run SSG: `uv run python -m webcompy generate --config docs_app.webcompy_config`
 - [x] 20.6 Run E2E tests (reactive-lists + dynamic-control): `scripts/run-e2e-tests.sh reactive-lists dynamic-control --console-level=error`
 
-## 21. Replace asyncio.gather() with sequential rendering in _render()
+## 21. Replace asyncio.gather() with sequential rendering in _render() (commit c766721)
+
+> **Note**: This section was added in commit `c766721` to address code review feedback that the original async pipeline used `asyncio.gather()`, violating the spec's "Sibling children shall render sequentially" requirement. All tasks are completed in that commit.
 
 - [x] 21.1 Remove `import asyncio` and the `_handle_gather_results()` helper from `webcompy/elements/types/_base.py`. Replace the `asyncio.gather(...)` block in `ElementWithChildren._render()` with `for child in self._children: await child._render()`. Remove the PyScript ContextVar snapshot/restore block (no longer needed for sequential rendering).
 - [x] 21.2 Remove `import asyncio`, `_handle_gather_results` import, and `get_active_consumer`/`set_active_consumer` imports from `webcompy/app/_root_component.py`. Replace the `asyncio.gather(...)` block in `AppDocumentRoot._render()` with `for child in self._children: await child._render()`. Remove the PyScript ContextVar snapshot/restore block.
 - [x] 21.3 In `webcompy/elements/types/_dynamic.py`: replace `child._render()  # type: ignore[unused-coroutine]` in `DynamicElement._hydrate_node()` with `asyncio.ensure_future(child._render())` plus a done callback that logs exceptions via `webcompy.logging.error`. This eliminates the `RuntimeWarning: coroutine ... was never awaited` and ensures async render errors surface in the log.
 
-## 22. Fix TestRendererResult ContextVar leak
+## 22. Fix TestRendererResult ContextVar leak (commit c766721)
+
+> **Note**: This section was added in commit `c766721` to address code review feedback that `_active_di_scope.set()` in the caller's context was never reset, leaking the disposed scope. All tasks are completed in that commit.
 
 - [x] 22.1 In `webcompy/testing/_renderer.py`: save the `contextvars.Token` returned by `_active_di_scope.set(result._scope)` in `TestRenderer.render()`. Pass the token into `TestRendererResult.__init__()` (new optional `di_token` parameter, default `None`). In `TestRendererResult.close()`, call `self._scope.dispose()` followed by `_active_di_scope.reset(self._di_token)` guarded by a try/except for `ValueError`/`LookupError` (raised when called outside the original context).
 - [x] 22.2 Update the internal call site in `_render_async()` (L132) to pass the existing 4 positional args; the optional `di_token` defaults to `None` so backward compatibility is preserved.
 
-## 23. Update spec.md to reflect synchronous _hydrate_node() and removed gather
+## 23. Update spec.md to reflect synchronous _hydrate_node() and removed gather (commit c766721)
+
+> **Note**: This section was added in commit `c766721` to bring spec.md in line with the gathered→sequential refactor and the empirical finding that `_hydrate_node()` async caused an E2E regression. All tasks are completed in that commit.
 
 - [x] 23.1 In `specs/async-rendering/spec.md` L15: replace "`_hydrate_node()` SHALL become async" with "`_hydrate_node()` SHALL remain synchronous in this change". Update the L15 second sentence to "All `_hydrate_node()` callers SHALL call them directly (no `await`). `DynamicElement._hydrate_node()` SHALL use `asyncio.ensure_future(child._render())` to schedule the async render of unmounted children, attaching a done callback to log exceptions via `webcompy.logging.error`."
 - [x] 23.2 No spec.md change needed for "Sibling children shall render sequentially" (L50-56) — that requirement was already correct; the gather code was the bug.
+
+## 24. Address remaining review feedback (commit pending)
+
+> **Note**: This section was added to address minor review items from the post-c766721 review: `app.run()` exception handling, `ensure_future` task lifecycle, `TestRenderer` double construction, cross-context logging, and design.md wording.
+
+- [x] 24.1 In `webcompy/app/_app.py`: replace `asyncio.ensure_future(ctx._root._render())  # noqa: RUF006` with `resolve_async(ctx._root._render())`. `resolve_async` wraps the coroutine with `try/except` and logs errors via `_log_error`, so async hook exceptions surface in the log instead of being silently dropped.
+- [x] 24.2 In `webcompy/elements/types/_dynamic.py`: introduce `DynamicElement._pending_render_tasks: list[asyncio.Task[Any]]` initialized in `__init__`. In `_hydrate_node`, append the scheduled task to this list (and remove it via the done callback). In `_remove_element`, cancel any in-flight tasks and clear the list. This ensures async renders do not run against torn-down DOM.
+- [x] 24.3 In `webcompy/testing/_renderer.py`: refactor `TestRenderer.render()` to construct `TestRendererResult` exactly once, by returning a tuple `(instance, root_node, scope)` from `_render_async()` and building the result outside the copied context. The two prior construction sites (L132 inside `_render_async`, L137 outside) are merged into a single one (L143).
+- [x] 24.4 In `webcompy/testing/_renderer.py`: replace `contextlib.suppress(ValueError, LookupError)` with an explicit `try/except` that logs a `logging.warning(...)` explaining the cross-context situation. Helps debugging when `close()` is called from a different context.
+- [x] 24.5 In `openspec/changes/feat-async-rendering-pipeline/design.md`: correct the misleading "enables parallelism" wording at L140 and the obsolete "`asyncio.gather()` in Emscripten" risk paragraph at L383. Sibling parallelism is intentionally NOT enabled in this change; it is deferred to future work.

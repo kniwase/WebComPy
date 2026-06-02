@@ -137,7 +137,7 @@ async def _render(self):
             _active_di_scope.reset(token)
 ```
 
-**Rationale**: `AppDocumentRoot._render()` is the top of the render tree. Making it async and using sequential child rendering enables parallelism. The DI scope and app context management are preserved.
+**Rationale**: `AppDocumentRoot._render()` is the top of the render tree. Making it async and using sequential child rendering enables future async SSR (per-route data fetching, streaming) and async lifecycle hooks. The DI scope and app context management are preserved. Sibling parallel rendering is intentionally NOT enabled in this change — it is deferred to future work and requires the prereqs listed in the spec's "Future Work" section (DOM ordering, atomic cleanup, ContextVar isolation).
 
 **Critical**: The `_hydrate_node()` call MUST remain inside the `if self._app and self._app._hydrate` guard block. Moving it outside (unconditionally calling `_hydrate_node()` on every render) causes duplicate DOM nodes because:
 1. In non-hydrate mode, `_hydrate_node()` creates floating `_node_cache` entries that are never attached to the DOM
@@ -380,7 +380,7 @@ async def test_element_render():
 ## Risks / Trade-offs
 
 - **Breaking change for `generate_html()` callers**: All code that calls `generate_html()` must now `await` it. This affects `_generate.py` and `_server.py` but is limited to the CLI layer.
-- **`asyncio.gather()` in Emscripten**: PyScript's `asyncio` implementation handles `asyncio.gather()` correctly for cooperative multitasking. Since all DOM operations happen on the main thread and there's no true parallelism, sibling parallelism provides structural clarity but not performance benefit in the browser.
+- **Sibling parallelism is NOT enabled in this change**: An earlier draft used `asyncio.gather(return_exceptions=True)` for sibling rendering, but this was found to violate the spec's "Sibling children shall render sequentially" requirement (DOM ordering, short-circuit semantics). Sibling `asyncio.gather()` is therefore deferred to future work, with the prereqs (DOM ordering guarantees, atomic cleanup, ContextVar isolation) tracked in the spec's "Future Work" section.
 - **Signal callback adaptation**: `_on_marked_dirty` renamed to `_dispatch` with an `_is_async` flag set at construction time. Async callbacks delegate to `_resolve_async_callback()` in `_aio.py` (fire-and-forget in browser, synchronous in server/test). This adds negligible overhead.
 - **`Component.__init__` remains synchronous**: Async component definitions are not supported in this change. The component setup function must return an `ElementChildren` synchronously. This is a deliberate scope limitation — async component definitions will be added in a follow-up change.
 - **Test migration effort**: Converting 20 test files with 69 `asyncio.run()` calls to `await` is a mechanical but time-consuming task. Mistakes during conversion could introduce subtle test failures.

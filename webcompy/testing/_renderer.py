@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import contextlib
 import contextvars
 from typing import TYPE_CHECKING
 
+from webcompy import logging
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
 from webcompy.ports._server._virtual_dom import VirtualDOMNode
@@ -78,8 +78,14 @@ class TestRendererResult:
     def close(self) -> None:
         self._scope.dispose()
         if self._di_token is not None:
-            with contextlib.suppress(ValueError, LookupError):
+            try:
                 _active_di_scope.reset(self._di_token)
+            except (ValueError, LookupError) as err:
+                logging.warning(
+                    "TestRendererResult.close() called from a different context "
+                    "than render(); DI scope token cannot be reset: %s",
+                    err,
+                )
 
 
 class TestRenderer:
@@ -90,7 +96,7 @@ class TestRenderer:
         parent_scope: DIScope | None = None,
     ) -> TestRendererResult:
 
-        async def _render_async() -> TestRendererResult:
+        async def _render_async() -> tuple[object, VirtualDOMNode, DIScope]:
             from webcompy.components._component import HeadPropsStore
             from webcompy.di._keys import _HEAD_PROPS_KEY
 
@@ -100,8 +106,6 @@ class TestRenderer:
             scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
             scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
 
-            # Set ContextVar in the copy_context() snapshot; it does not affect
-            # the caller's context, so no reset() is needed.
             _active_di_scope.set(scope)
 
             root_node = VirtualDOMNode("div")
@@ -129,18 +133,12 @@ class TestRenderer:
             instance._node_idx = 0
             await instance._render()
 
-            return TestRendererResult(component, instance, root_node, scope)
+            return instance, root_node, scope
 
         ctx = contextvars.copy_context()
-        result = ctx.run(run_sync, _render_async())
-        token = _active_di_scope.set(result._scope)
-        return TestRendererResult(
-            result._component,
-            result._instance,
-            result._parent_node,
-            result._scope,
-            token,
-        )
+        instance, root_node, scope = ctx.run(run_sync, _render_async())
+        di_token = _active_di_scope.set(scope)
+        return TestRendererResult(component, instance, root_node, scope, di_token)
 
 
 def _dfs_first(node: VirtualDOMNode, tag: str) -> VirtualDOMNode | None:

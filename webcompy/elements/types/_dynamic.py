@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from abc import abstractmethod
 from contextlib import suppress
+from typing import Any
 
 from webcompy import logging
 from webcompy.elements._dom_objs import DOMNode
@@ -15,6 +16,10 @@ from webcompy.signal._graph import consumer_destroy
 
 class DynamicElement(ElementWithChildren):
     __parent: ElementWithChildren
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._pending_render_tasks: list[asyncio.Task[Any]] = []
 
     @property
     def _node_count(self) -> int:
@@ -32,6 +37,10 @@ class DynamicElement(ElementWithChildren):
         _position_element_nodes(self, parent_node, self._node_idx)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
+        for task in self._pending_render_tasks:
+            if not task.done():
+                task.cancel()
+        self._pending_render_tasks.clear()
         for callback_node in self._callback_nodes:
             consumer_destroy(callback_node)
         self._clear_node_cache(False)
@@ -49,7 +58,13 @@ class DynamicElement(ElementWithChildren):
             idx += child._node_count
             if not child._mounted:
                 task = asyncio.ensure_future(child._render())
-                task.add_done_callback(lambda t: logging.error(t.exception()) if t.exception() else None)
+                self._pending_render_tasks.append(task)
+                task.add_done_callback(
+                    lambda t: (
+                        self._pending_render_tasks.remove(t) if t in self._pending_render_tasks else None,
+                        logging.error(t.exception()) if t.exception() else None,
+                    )
+                )
 
     @property
     def _parent(self) -> ElementWithChildren:
