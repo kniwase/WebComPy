@@ -321,7 +321,7 @@ def on_after_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[An
 
 **Chosen**:
 - Add `pytest-asyncio` and `nest-asyncio` to dev dependencies in `pyproject.toml`
-- Configure `asyncio_mode = "auto"` in `[tool.pytest.ini_options]`
+- `asyncio_mode` SHALL NOT be set in `pyproject.toml` (defaults to strict mode, requiring explicit `@pytest.mark.asyncio` on each async test)
 - Convert all test functions that call async code to `async def`
 - Replace all `asyncio.run()` calls in tests with `await`
 - Add a `run_sync()` helper for test utilities that need sync interfaces (e.g., `TestRenderer.render()`, `render_app_html_sync()`)
@@ -377,10 +377,63 @@ async def test_element_render():
 - `pytest-asyncio` adds a dependency, but it's a standard testing tool for Python async code.
 - The `run_sync()` helper must be carefully designed to avoid infinite recursion or event loop conflicts.
 
+### Decision 13: Sync wrapper for signal-triggered dynamic element refresh
+
+**Problem**: `RepeatElement._refresh()` and `SwitchElement._refresh()` are `async def` methods. When registered as signal callbacks via `on_after_updating(_refresh)`, `CallbackConsumerNode._dispatch()` detects `_is_async = True` and delegates to `_resolve_async_callback()`. In the browser (PyScript), this uses `aio_run()` → `asyncio.ensure_future()`, which does not guarantee the refresh task executes before the caller's next synchronous statement. This caused E2E failures where `del data[key]` → signal dispatch → fire-and-forget → DOM not updated when the test immediately checked visibility.
+
+**Chosen**: Register a sync wrapper method (e.g., `_refresh_sync`) as the signal callback instead of the raw async `_refresh`. The wrapper executes the async `_refresh` synchronously via `loop.run_until_complete()`:
+
+```python
+def _refresh_sync(self, *args: Any):
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(self._refresh(*args))
+    else:
+        loop.run_until_complete(self._refresh(*args))
+```
+
+The `_render()` method (which calls `_refresh` for the initial render path) continues to use `await self._refresh()` — it is already in an async context and the `await` is correct there.
+
+**Rationale**:
+- `_refresh_sync` is a sync method (`def`), so `iscoroutinefunction(_refresh_sync)` returns `False`. `_dispatch()` treats it as a sync callback and calls it directly (no `_resolve_async_callback`).
+- `loop.run_until_complete()` works natively in PyScript/Pyodide without `nest_asyncio.apply()`, unlike CPython's event loop which requires it for nesting.
+- The initial render path (`_render` → `await _refresh()`) is unaffected — it was already correctly async.
+
+**Trade-off**: `_refresh_sync` uses `loop.run_until_complete()` which blocks the event loop. This is acceptable because:
+- Signal-triggered refreshes are short (DOM manipulation, no I/O)
+- The alternative (fire-and-forget) caused observable DOM staleness
+- User-level async callbacks (e.g., async lifecycle hooks) are unaffected — they still use the fire-and-forget path
+
+### Decision 14: Strict `is None` check in `_get_node()` to prevent stale PyProxy triggers
+
+**Problem**: `ElementAbstract._get_node()` used `if not self._node_cache:` to check whether to initialize a new DOM node. In PyScript, a `PyProxy` wrapping a valid DOM element may evaluate as falsy in a boolean context when the proxy is "stale" (e.g., its underlying element was detached from the DOM). This triggered `_init_node()`, which created a new detached DOM element (a "ghost") and replaced `_node_cache`. The original element remained in the DOM without a Python reference, making `_remove_element()` a no-op and causing orphaned DOM nodes.
+
+**Chosen**: Change `if not self._node_cache:` to `if self._node_cache is None:` in `_get_node()`. This ensures only an actual `None` cache (explicitly cleared by `_clear_node_cache()` or initialization) triggers `_init_node()`. A falsy-but-not-None PyProxy is returned as-is.
+
+**Rationale**: The `_node_cache` is explicitly set to `None` on initialization and cleared via `_clear_node_cache()`. It should never be a falsy non-None value. The strict identity check is both safer and more performant (no `__bool__` call on the proxy).
+
+### Decision 15: Fallback orphaned child removal after reconcile
+
+**Problem**: When `_remove_element()` fails to remove a DOM node (due to Decision 14's stale proxy issue), the orphaned child remains in the parent element after the reconcile completes. This causes DOM state inconsistency (e.g., 3 `<li>` elements in a `<ul>` that should have 1).
+
+**Chosen**: After `_reconcile_children()` completes its removal loop, check the parent element's child count against the expected count (sum of `new_children`'s `_node_count` values) and remove any trailing children that exceed expectations:
+
+```python
+if parent_node and not newly_created:
+    expected = sum(c._node_count for c in new_children)
+    while parent_node.childNodes.length > expected:
+        parent_node.childNodes[-1].remove()
+```
+
+This runs only when no newly created children exist (to avoid race conditions with pending renders).
+
+**Rationale**: The trailing-child removal is a safety net. In normal operation, `_remove_element()` correctly removes DOM nodes and the cleanup is a no-op. When a stale proxy prevents removal, the cleanup ensures DOM consistency without relying on proxy health.
+
 ## Risks / Trade-offs
 
 - **Breaking change for `generate_html()` callers**: All code that calls `generate_html()` must now `await` it. This affects `_generate.py` and `_server.py` but is limited to the CLI layer.
 - **Sibling parallelism is NOT enabled in this change**: An earlier draft used `asyncio.gather(return_exceptions=True)` for sibling rendering, but this was found to violate the spec's "Sibling children shall render sequentially" requirement (DOM ordering, short-circuit semantics). Sibling `asyncio.gather()` is therefore deferred to future work, with the prereqs (DOM ordering guarantees, atomic cleanup, ContextVar isolation) tracked in the spec's "Future Work" section.
-- **Signal callback adaptation**: `_on_marked_dirty` renamed to `_dispatch` with an `_is_async` flag set at construction time. Async callbacks delegate to `_resolve_async_callback()` in `_aio.py` (fire-and-forget in browser, synchronous in server/test). This adds negligible overhead.
+- **Signal callback adaptation**: `_on_marked_dirty` renamed to `_dispatch` with an `_is_async` flag set at construction time. For `RepeatElement` and `SwitchElement`, the signal callback is a sync wrapper (`_refresh_sync`) that runs the async `_refresh` inline via `loop.run_until_complete()`. This ensures signal-triggered DOM updates complete synchronously in the browser (PyScript's `asyncio.ensure_future` does not guarantee timely task execution for fire-and-forget callbacks). User-defined async callbacks still use the fire-and-forget path via `_resolve_async_callback()`.
 - **`Component.__init__` remains synchronous**: Async component definitions are not supported in this change. The component setup function must return an `ElementChildren` synchronously. This is a deliberate scope limitation — async component definitions will be added in a follow-up change.
 - **Test migration effort**: Converting 20 test files with 69 `asyncio.run()` calls to `await` is a mechanical but time-consuming task. Mistakes during conversion could introduce subtle test failures.

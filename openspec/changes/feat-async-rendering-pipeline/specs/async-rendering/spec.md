@@ -162,18 +162,38 @@ In the browser (PyScript) environment, `app.run()` SHALL schedule the async rend
 - **WHEN** `app.run()` is called in a non-PyScript environment
 - **THEN** a `WebComPyException` SHALL be raised (unchanged behavior)
 
-### Requirement: Dynamic element refresh shall be async
+### Requirement: Dynamic element refresh shall be async with a sync signal wrapper
 
-`RepeatElement._refresh()` and `SwitchElement._refresh()` SHALL be `async def` methods. Signal callback registrations (e.g., `self._sequence.on_after_updating(self._refresh)`) SHALL register the coroutine function directly without wrapping. `CallbackConsumerNode._dispatch()` SHALL check the `_is_async` flag set at construction time and, if True, delegate to `_resolve_async_callback()` from `webcompy.aio._aio`.
+`RepeatElement._refresh()` and `SwitchElement._refresh()` SHALL be `async def` methods. Signal callback registration SHALL use a sync wrapper method (e.g., `_refresh_sync`) instead of registering the async `_refresh` directly. The sync wrapper SHALL execute the async `_refresh` inline via `loop.run_until_complete()`.
+
+The rationale: in PyScript (browser), `asyncio.ensure_future()` for async signal callbacks does not guarantee task execution before the caller's next synchronous statement. By registering a sync wrapper, `CallbackConsumerNode._dispatch()` treats the callback as synchronous (`_is_async = False`), calls it directly, and `loop.run_until_complete()` ensures the refresh completes before the signal setter returns.
+
+The sync wrapper SHALL use the following pattern:
+```python
+def _refresh_sync(self, *args: Any):
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(self._refresh(*args))
+    else:
+        loop.run_until_complete(self._refresh(*args))
+```
+
+This SHALL NOT use `nest_asyncio.apply()` — in PyScript/Pyodide, the event loop supports `run_until_complete()` natively without nesting patches.
+
+`RepeatElement._render()` and `SwitchElement._render()` SHALL continue to call `await self._refresh()` for the initial render path (where the caller is already in an async context).
 
 #### Scenario: RepeatElement refresh triggered by signal update
-- **WHEN** a `ReactiveList` value changes and `RepeatElement._refresh()` is triggered
-- **THEN** `_dispatch()` SHALL check `self._is_async` and delegate to `_resolve_async_callback()`
-- **AND** child rendering SHALL be awaited correctly
+- **WHEN** a `ReactiveList` value changes and `RepeatElement._refresh()` is triggered via the sync wrapper (`_refresh_sync`)
+- **THEN** `_dispatch()` SHALL detect `_is_async = False` (because the wrapper is a sync method) and call it directly
+- **AND** `_refresh_sync` SHALL execute `self._refresh()` to completion via `loop.run_until_complete()`
+- **AND** child rendering and DOM updates SHALL complete before the signal setter returns
 
 #### Scenario: SwitchElement refresh triggered by signal update
-- **WHEN** a `Signal` value changes and `SwitchElement._refresh()` is triggered
-- **THEN** `_dispatch()` SHALL check `self._is_async` and delegate to `_resolve_async_callback()`
+- **WHEN** a `Signal` value changes and `SwitchElement._refresh()` is triggered via the sync wrapper (`_refresh_sync`)
+- **THEN** `_dispatch()` SHALL detect `_is_async = False` and call the wrapper directly
+- **AND** `_refresh_sync` SHALL execute `self._refresh()` to completion via `loop.run_until_complete()`
 - **AND** deferred `on_after_rendering` callbacks SHALL be scheduled correctly
 
 ### Requirement: `_dispatch()` shall execute callbacks inline with an async flag
@@ -193,10 +213,11 @@ The `_make_signal_callback()` wrapper SHALL be removed. Callback registration SH
 - **AND** the DOM SHALL be updated before the signal setter returns
 
 #### Scenario: Async callback delegated to `_resolve_async_callback`
-- **WHEN** a signal changes and an async callback (e.g., `_refresh`) is registered
+- **WHEN** a signal changes and an async callback (e.g., a user-defined async hook) is registered
 - **THEN** `_dispatch()` SHALL detect `_is_async = True` and call `_resolve_async_callback(self._callback, self._producer._value)`
-- **AND** in browser, `_resolve_async_callback` SHALL dispatch via `aio_run()` (fire-and-forget)
+- **AND** in browser, `_resolve_async_callback` SHALL dispatch via `aio_run()` (fire-and-forget, intended for user-level async callbacks that do not need synchronous DOM updates)
 - **AND** in server/test, `_resolve_async_callback` SHALL execute the coroutine to completion synchronously via `nest-asyncio`
+- **AND** for dynamic element refresh (`RepeatElement`, `SwitchElement`), the signal callback SHALL be the sync wrapper (`_refresh_sync`) instead of the raw async `_refresh`, so `_is_async = False` and the refresh executes synchronously
 
 #### Scenario: Cascading signal changes during callback execution
 - **WHEN** a callback modifies a signal value during its execution (cascading change)
@@ -220,7 +241,35 @@ Calling `_hydrate_node()` unconditionally (outside the guard) causes duplicate D
 - **THEN** `child._hydrate_node()` SHALL be called for each child before `child._render()`
 - **AND** `self.__hydrated` SHALL be set to `True`
 
-### Requirement: _HtmlElement.render_html() shall be async
+### Requirement: _get_node() shall use strict is-None check for node cache
+
+`ElementAbstract._get_node()` SHALL use `if self._node_cache is None:` (strict identity check) rather than `if not self._node_cache:` (truthiness check) to determine whether to initialize a new DOM node. This prevents stale PyScript PyProxy objects (which may evaluate as falsy even when alive) from triggering unnecessary `_init_node()` calls that create detached ghost DOM elements.
+
+When a stale proxy triggers `_init_node()`, a new DOM element is created but never attached to the parent. The original element remains in the DOM without a Python reference, making it impossible to remove via `_remove_element()`.
+
+#### Scenario: PyScript proxy returns falsy for a valid DOM element
+- **WHEN** `_get_node()` is called and `_node_cache` is a PyProxy wrapping a valid DOM element that evaluates as falsy in a boolean context
+- **THEN** `if self._node_cache is None:` SHALL be False (the proxy is not None)
+- **AND** the cached node SHALL be returned without calling `_init_node()`
+- **AND** the DOM element SHALL NOT be replaced with a detached ghost element
+
+### Requirement: Reconcile shall remove orphaned DOM nodes by count
+
+`RepeatElement._reconcile_children()` SHALL, after the removal loop, check the parent element's child count against the expected count and remove any trailing children that exceed expectations. This provides a fallback when `_remove_element()` fails to remove a DOM node (e.g., due to a stale `_node_cache` proxy).
+
+The cleanup SHALL use:
+```python
+expected = sum(c._node_count for c in new_children)
+while parent_node.childNodes.length > expected:
+    parent_node.childNodes[-1].remove()
+```
+
+This SHALL only run when no newly created children exist (i.e., `not newly_created`) to avoid accidentally removing children that are about to be rendered.
+
+#### Scenario: Orphaned LI remains after reconcile
+- **WHEN** `_reconcile_children()` removes a key but `_remove_element()` fails to remove the corresponding `<li>` from the parent `<ul>`
+- **THEN** the trailing-child cleanup SHALL remove the orphaned `<li>` from the `<ul>` by comparing expected child count against actual
+- **AND** the DOM SHALL match the expected state after reconcile completes
 
 `_HtmlElement.render_html()` SHALL be an `async def` method that awaits `self._render()`. This propagates the async pipeline to the SSG layer.
 

@@ -191,7 +191,7 @@
 - [x] 23.1 In `specs/async-rendering/spec.md` L15: replace "`_hydrate_node()` SHALL become async" with "`_hydrate_node()` SHALL remain synchronous in this change". Update the L15 second sentence to "All `_hydrate_node()` callers SHALL call them directly (no `await`). `DynamicElement._hydrate_node()` SHALL use `asyncio.ensure_future(child._render())` to schedule the async render of unmounted children, attaching a done callback to log exceptions via `webcompy.logging.error`."
 - [x] 23.2 No spec.md change needed for "Sibling children shall render sequentially" (L50-56) — that requirement was already correct; the gather code was the bug.
 
-## 24. Address remaining review feedback (commit pending)
+## 24. Address remaining review feedback (committed as fb7ec76)
 
 > **Note**: This section was added to address minor review items from the post-c766721 review: `app.run()` exception handling, `ensure_future` task lifecycle, `TestRenderer` double construction, cross-context logging, and design.md wording.
 
@@ -200,3 +200,13 @@
 - [x] 24.3 In `webcompy/testing/_renderer.py`: refactor `TestRenderer.render()` to construct `TestRendererResult` exactly once, by returning a tuple `(instance, root_node, scope)` from `_render_async()` and building the result outside the copied context. The two prior construction sites (L132 inside `_render_async`, L137 outside) are merged into a single one (L143).
 - [x] 24.4 In `webcompy/testing/_renderer.py`: replace `contextlib.suppress(ValueError, LookupError)` with an explicit `try/except` that logs a `logging.warning(...)` explaining the cross-context situation. Helps debugging when `close()` is called from a different context.
 - [x] 24.5 In `openspec/changes/feat-async-rendering-pipeline/design.md`: correct the misleading "enables parallelism" wording at L140 and the obsolete "`asyncio.gather()` in Emscripten" risk paragraph at L383. Sibling parallelism is intentionally NOT enabled in this change; it is deferred to future work.
+
+## 25. Fix signal-triggered refresh synchrony and PyProxy stale-cache issue (committed as 491d762)
+
+> **Note**: This section addresses the root cause of E2E test failures (`test_todo_add_item`, `test_todo_remove_done_items`) in the `docs-demos` group. Two issues were found: (1) async signal callbacks in PyScript are fire-and-forget and never run before the caller's next synchronous statement; (2) `_get_node()` used `if not self._node_cache:` which triggers `_init_node()` on stale PyProxies, creating ghost elements and making `_remove_element()` a no-op.
+
+- [x] 25.1 In `webcompy/elements/types/_abstract.py`: change `if not self._node_cache:` to `if self._node_cache is None:` in `_get_node()`. Prevents stale PyProxy (falsy but not None) from triggering `_init_node()`.
+- [x] 25.2 In `webcompy/elements/types/_repeat.py`: add `_refresh_sync(self, *args)` method that calls `self._refresh(*args)` synchronously via `loop.run_until_complete()`. Register `_refresh_sync` instead of `_refresh` as the signal callback, so `_dispatch()` treats it as sync (`_is_async = False`).
+- [x] 25.3 In `webcompy/elements/types/_repeat.py`: after `_reconcile_children()` completes, remove trailing `<li>` elements from `<ul>` that exceed the expected child count. This provides a safety net when `_remove_element()` fails (due to stale proxy).
+- [x] 25.4 In `webcompy/elements/types/_switch.py`: add the same `_refresh_sync` wrapper and register it as the signal callback instead of `_refresh`.
+- [x] 25.5 Verification: all unit tests pass (1066), E2E core groups pass (8/8), E2E docs-demos pass (2/2), E2E docs-fetch pass (2/2).
