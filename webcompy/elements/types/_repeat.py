@@ -137,7 +137,17 @@ class RepeatElement(DynamicElement):
         await self._refresh()
         if not self._signal_activated:
             self._signal_activated = True
-            self._add_callback_node(self._sequence.on_after_updating(self._refresh))
+            self._add_callback_node(self._sequence.on_after_updating(self._refresh_sync))
+
+    def _refresh_sync(self, *args: Any):
+        import asyncio
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self._refresh(*args))
+        else:
+            loop.run_until_complete(self._refresh(*args))
 
     async def _refresh(self, *args: Any):
         parent_node = self._parent._get_node()
@@ -219,6 +229,11 @@ class RepeatElement(DynamicElement):
         self._children = new_children
         self._children_keys = new_keys
         self._key_to_child = new_key_to_child
+
+        if parent_node and not newly_created:
+            expected = sum(c._node_count for c in new_children)
+            while parent_node.childNodes.length > expected:
+                parent_node.childNodes[-1].remove()
 
 
 class MultiLineTextElement(RepeatElement):

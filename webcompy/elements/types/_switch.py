@@ -60,11 +60,21 @@ class SwitchElement(DynamicElement):
         if not self._signal_activated:
             self._signal_activated = True
             if isinstance(self._cases, SignalBase):
-                self._add_callback_node(self._cases.on_after_updating(self._refresh))
+                self._add_callback_node(self._cases.on_after_updating(self._refresh_sync))
             else:
                 for cond, _ in self._cases:
                     if isinstance(cond, SignalBase):
-                        self._add_callback_node(cond.on_after_updating(self._refresh))
+                        self._add_callback_node(cond.on_after_updating(self._refresh_sync))
+
+    def _refresh_sync(self, *args: Any):
+        import asyncio
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self._refresh(*args))
+        else:
+            loop.run_until_complete(self._refresh(*args))
 
     async def _refresh(self, *args: Any):
         idx, generator = self._select_generator()

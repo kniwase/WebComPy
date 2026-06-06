@@ -122,7 +122,7 @@ class ElementAbstract(SignalReceivable):
         return 1
 
     def _get_node(self) -> DOMNode:
-        if not self._node_cache:
+        if self._node_cache is None:
             self._node_cache = self._init_node()
         return self._node_cache
 
