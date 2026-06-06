@@ -208,5 +208,14 @@
 - [x] 25.1 In `webcompy/elements/types/_abstract.py`: change `if not self._node_cache:` to `if self._node_cache is None:` in `_get_node()`. Prevents stale PyProxy (falsy but not None) from triggering `_init_node()`.
 - [x] 25.2 In `webcompy/elements/types/_repeat.py`: add `_refresh_sync(self, *args)` method that calls `self._refresh(*args)` synchronously via `loop.run_until_complete()`. Register `_refresh_sync` instead of `_refresh` as the signal callback, so `_dispatch()` treats it as sync (`_is_async = False`).
 - [x] 25.3 In `webcompy/elements/types/_repeat.py`: after `_reconcile_children()` completes, remove trailing `<li>` elements from `<ul>` that exceed the expected child count. This provides a safety net when `_remove_element()` fails (due to stale proxy).
-- [x] 25.4 In `webcompy/elements/types/_switch.py`: add the same `_refresh_sync` wrapper and register it as the signal callback instead of `_refresh`.
+- [x] 25.4 In `webcompy/elements/types/_switch.py`: add the same `_refresh_sync` wrapper. Register `_refresh_sync` in `_render()` (L63, L67), but NOT yet in `_on_set_parent()` (see section 26).
 - [x] 25.5 Verification: all unit tests pass (1066), E2E core groups pass (8/8), E2E docs-demos pass (2/2), E2E docs-fetch pass (2/2).
+
+## 26. Fix SwitchElement._on_set_parent() and test code review findings (committed alongside this tasks.md update)
+
+> **Note**: Code review found a critical bug: `SwitchElement._on_set_parent()` registered `self._refresh` (raw async) instead of `self._refresh_sync` as the signal callback. When `_on_set_parent()` runs before `_render()`, it sets `_signal_activated = True`, causing `_render()` to skip callback registration. The async `_refresh` then goes through the fire-and-forget path in the browser, losing sync DOM update guarantees. Additionally, `test_keyed_repeat.py` registered `rep._refresh` directly instead of `rep._refresh_sync` for signal callbacks, covering a different code path than production.
+
+- [x] 26.1 In `webcompy/elements/types/_switch.py`: change `_on_set_parent()` to register `self._refresh_sync` instead of `self._refresh` on both code paths (direct `SignalBase` case and per-condition case). This ensures all signal callback registration paths for `SwitchElement` use the sync wrapper.
+- [x] 26.2 In `tests/test_keyed_repeat.py`: change all 13 occurrences of `on_after_updating(rep._refresh)` to `on_after_updating(rep._refresh_sync)`. This ensures test signal callbacks exercise the same `_refresh_sync` code path as production.
+- [x] 26.3 In spec.md: add new scenario "All code paths for dynamic element callback registration use `_refresh_sync`" documenting that `SwitchElement._on_set_parent()` MUST also use `_refresh_sync`.
+- [x] 26.4 Verification: lint, typecheck, and unit tests pass.

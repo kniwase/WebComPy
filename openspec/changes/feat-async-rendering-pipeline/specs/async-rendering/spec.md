@@ -172,15 +172,23 @@ The sync wrapper SHALL use the following pattern:
 ```python
 def _refresh_sync(self, *args: Any):
     import asyncio
+    from webcompy.utils._environment import ENVIRONMENT
+
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
         asyncio.run(self._refresh(*args))
     else:
+        if ENVIRONMENT != "pyscript":
+            import nest_asyncio
+
+            if not getattr(loop, "_nest_asyncio_patched", False):
+                nest_asyncio.apply(loop)
+                loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
         loop.run_until_complete(self._refresh(*args))
 ```
 
-This SHALL NOT use `nest_asyncio.apply()` — in PyScript/Pyodide, the event loop supports `run_until_complete()` natively without nesting patches.
+This SHALL NOT use `nest_asyncio.apply()` in PyScript — in PyScript/Pyodide, the event loop supports `run_until_complete()` natively without nesting patches. In CPython (server/test), `nest_asyncio.apply()` SHALL be used conditionally to allow nested `run_until_complete()` calls.
 
 `RepeatElement._render()` and `SwitchElement._render()` SHALL continue to call `await self._refresh()` for the initial render path (where the caller is already in an async context).
 
@@ -195,6 +203,14 @@ This SHALL NOT use `nest_asyncio.apply()` — in PyScript/Pyodide, the event loo
 - **THEN** `_dispatch()` SHALL detect `_is_async = False` and call the wrapper directly
 - **AND** `_refresh_sync` SHALL execute `self._refresh()` to completion via `loop.run_until_complete()`
 - **AND** deferred `on_after_rendering` callbacks SHALL be scheduled correctly
+
+#### Scenario: All code paths for dynamic element callback registration use `_refresh_sync`
+- **WHEN** `SwitchElement._on_set_parent()` registers a signal callback
+- **THEN** it SHALL register `self._refresh_sync`, not `self._refresh`, to ensure the signal callback is treated as synchronous
+- **AND** this SHALL hold for both `isinstance(self._cases, SignalBase)` and the per-condition registration paths
+- **WHEN** `SwitchElement._render()` registers a signal callback
+- **THEN** it SHALL also register `self._refresh_sync` (same as `_on_set_parent`)
+- **AND** both paths SHALL set `_signal_activated = True` before registering, preventing double registration regardless of which path executes first
 
 ### Requirement: `_dispatch()` shall execute callbacks inline with an async flag
 

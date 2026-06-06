@@ -385,11 +385,20 @@ async def test_element_render():
 
 ```python
 def _refresh_sync(self, *args: Any):
+    import asyncio
+    from webcompy.utils._environment import ENVIRONMENT
+
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
         asyncio.run(self._refresh(*args))
     else:
+        if ENVIRONMENT != "pyscript":
+            import nest_asyncio
+
+            if not getattr(loop, "_nest_asyncio_patched", False):
+                nest_asyncio.apply(loop)
+                loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
         loop.run_until_complete(self._refresh(*args))
 ```
 
@@ -397,7 +406,7 @@ The `_render()` method (which calls `_refresh` for the initial render path) cont
 
 **Rationale**:
 - `_refresh_sync` is a sync method (`def`), so `iscoroutinefunction(_refresh_sync)` returns `False`. `_dispatch()` treats it as a sync callback and calls it directly (no `_resolve_async_callback`).
-- `loop.run_until_complete()` works natively in PyScript/Pyodide without `nest_asyncio.apply()`, unlike CPython's event loop which requires it for nesting.
+- `loop.run_until_complete()` works natively in PyScript/Pyodide without `nest_asyncio.apply()`. In CPython (server/test), `nest_asyncio.apply()` is conditionally applied to allow nested `run_until_complete()` from within a running event loop (pytest-asyncio).
 - The initial render path (`_render` → `await _refresh()`) is unaffected — it was already correctly async.
 
 **Trade-off**: `_refresh_sync` uses `loop.run_until_complete()` which blocks the event loop. This is acceptable because:
