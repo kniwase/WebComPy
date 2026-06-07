@@ -34,7 +34,8 @@ class HeadElement(ElementWithChildren):
                 if title is not None:
                     inject(DOM_PORT_KEY).set_title(title)
 
-            head_props.title.on_after_updating(updte_title)
+            consumer = head_props.title.on_after_updating(updte_title)
+            self._callback_consumers["__title__"] = consumer
 
     @property
     def _node_count(self) -> int:

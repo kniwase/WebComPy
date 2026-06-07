@@ -20,6 +20,7 @@ class DynamicElement(ElementWithChildren):
     def __init__(self) -> None:
         super().__init__()
         self._pending_render_tasks: list[asyncio.Task[Any]] = []
+        self._hydrated = False
 
     @property
     def _node_count(self) -> int:
@@ -32,8 +33,9 @@ class DynamicElement(ElementWithChildren):
         parent_node = self._parent._get_node()
         for c_idx, child in enumerate(self._children):
             child._node_idx = self._node_idx + c_idx
-            if child._mounted is None:
+            if child._mounted is None and not self._hydrated:
                 await child._render()
+        self._hydrated = False
         _position_element_nodes(self, parent_node, self._node_idx)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
@@ -50,6 +52,7 @@ class DynamicElement(ElementWithChildren):
                 child._remove_element(True, True)
 
     def _hydrate_node(self) -> None:
+        self._hydrated = True
         for child in self._children:
             child._hydrate_node()
         idx = self._node_idx

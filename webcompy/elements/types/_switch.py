@@ -115,6 +115,7 @@ class SwitchElement(DynamicElement):
 
                     callback = lambda cb=callback: aio_run(cb())
                 inject(HOST_PORT_KEY).schedule_macro_task(callback)
+        _position_element_nodes(self, parent_node, self._node_idx)
         self._parent._re_index_children(False)
 
     def _on_set_parent(self):
