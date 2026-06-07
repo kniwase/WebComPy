@@ -121,8 +121,8 @@ class SwitchElement(DynamicElement):
         if not self._signal_activated:
             self._signal_activated = True
             if isinstance(self._cases, SignalBase):
-                self._add_callback_node(self._cases.on_after_updating(self._refresh_sync))
+                self._add_callback_node(self._cases.on_after_updating(self._refresh))
             else:
                 for cond, _ in self._cases:
                     if isinstance(cond, SignalBase):  # type: ignore
-                        self._add_callback_node(cond.on_after_updating(self._refresh_sync))
+                        self._add_callback_node(cond.on_after_updating(self._refresh))

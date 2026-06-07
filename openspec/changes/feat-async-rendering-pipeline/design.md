@@ -377,11 +377,19 @@ async def test_element_render():
 - `pytest-asyncio` adds a dependency, but it's a standard testing tool for Python async code.
 - The `run_sync()` helper must be carefully designed to avoid infinite recursion or event loop conflicts.
 
-### Decision 13: Sync wrapper for signal-triggered dynamic element refresh
+### Decision 13: Sync wrapper for signal-triggered dynamic element refresh (in _render() only)
 
-**Problem**: `RepeatElement._refresh()` and `SwitchElement._refresh()` are `async def` methods. When registered as signal callbacks via `on_after_updating(_refresh)`, `CallbackConsumerNode._dispatch()` detects `_is_async = True` and delegates to `_resolve_async_callback()`. In the browser (PyScript), this uses `aio_run()` → `asyncio.ensure_future()`, which does not guarantee the refresh task executes before the caller's next synchronous statement. This caused E2E failures where `del data[key]` → signal dispatch → fire-and-forget → DOM not updated when the test immediately checked visibility.
+**Problem**: `RepeatElement._refresh()` and `SwitchElement._refresh()` are `async def` methods. When registered as signal callbacks via `on_after_updating(_refresh)`, `CallbackConsumerNode._dispatch()` detects `_is_async = True` and delegates to `_resolve_async_callback()`. In the browser (PyScript), this uses `aio_run()` → `asyncio.ensure_future()`, which does not guarantee the refresh task executes before the caller's next synchronous statement.
 
-**Chosen**: Register a sync wrapper method (e.g., `_refresh_sync`) as the signal callback instead of the raw async `_refresh`. The wrapper executes the async `_refresh` synchronously via `loop.run_until_complete()`:
+For dynamic elements created via `_on_set_parent()` (during component construction), this fire-and-forget path is actually safe, because synchronous signal propagation (Computed re-evaluation → text element `_update_text`) completes before async callbacks are dispatched. The repeat element case (where fire-and-forget was problematic) is handled differently — see the trailing-child cleanup in Decision 15.
+
+For dynamic element callbacks registered from `_render()`, the sync wrapper (`_refresh_sync`) is used. The `_render()` path is async itself, so using `_refresh_sync` as the signal callback ensures DOM updates complete synchronously after the initial render.
+
+**Chosen**: 
+- `_on_set_parent()` (runs during synchronous construction): register async `_refresh` directly. In browser, this goes through fire-and-forget (`aio_run()`); in server/test, through `_resolve_async_callback()` with `nest_asyncio` + `run_until_complete()`.
+- `_render()` (runs in async context): register `_refresh_sync` (sync wrapper with `loop.run_until_complete()`). This path is a fallback — normally `_on_set_parent()` runs first and sets `_signal_activated = True`, preventing `_render()` from re-registering.
+
+The `_refresh_sync` wrapper pattern:
 
 ```python
 def _refresh_sync(self, *args: Any):
@@ -408,11 +416,9 @@ The `_render()` method (which calls `_refresh` for the initial render path) cont
 - `_refresh_sync` is a sync method (`def`), so `iscoroutinefunction(_refresh_sync)` returns `False`. `_dispatch()` treats it as a sync callback and calls it directly (no `_resolve_async_callback`).
 - `loop.run_until_complete()` works natively in PyScript/Pyodide without `nest_asyncio.apply()`. In CPython (server/test), `nest_asyncio.apply()` is conditionally applied to allow nested `run_until_complete()` from within a running event loop (pytest-asyncio).
 - The initial render path (`_render` → `await _refresh()`) is unaffected — it was already correctly async.
+- `_on_set_parent()` MUST NOT use `_refresh_sync`. Using `loop.run_until_complete()` from within synchronous signal propagation (`producer_notify_consumers` → `_dispatch`) in PyScript interferes with the synchronous callback chain (Computed → text element `_update_text`), preventing dependent callbacks from executing before the signal setter returns. This was confirmed empirically: switching `_on_set_parent()` from `_refresh` to `_refresh_sync` caused `test_switch_toggle` to fail on `main`-based code.
 
-**Trade-off**: `_refresh_sync` uses `loop.run_until_complete()` which blocks the event loop. This is acceptable because:
-- Signal-triggered refreshes are short (DOM manipulation, no I/O)
-- The alternative (fire-and-forget) caused observable DOM staleness
-- User-level async callbacks (e.g., async lifecycle hooks) are unaffected — they still use the fire-and-forget path
+**Trade-off**: `_refresh_sync` uses `loop.run_until_complete()` which blocks the event loop. This is acceptable when registered from `_render()`. For `_on_set_parent()` (the common code path), the async fire-and-forget path is safe because synchronous signal propagation completes before async callbacks are dispatched — the SwitchElement DOM update does not need to complete synchronously for dependent DOM state (like `flag-state` computed text) to be correct.
 
 ### Decision 14: Strict `is None` check in `_get_node()` to prevent stale PyProxy triggers
 

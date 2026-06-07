@@ -162,11 +162,19 @@ In the browser (PyScript) environment, `app.run()` SHALL schedule the async rend
 - **WHEN** `app.run()` is called in a non-PyScript environment
 - **THEN** a `WebComPyException` SHALL be raised (unchanged behavior)
 
-### Requirement: Dynamic element refresh shall be async with a sync signal wrapper
+### Requirement: Dynamic element refresh shall be async with a sync signal wrapper in _render() only
 
-`RepeatElement._refresh()` and `SwitchElement._refresh()` SHALL be `async def` methods. Signal callback registration SHALL use a sync wrapper method (e.g., `_refresh_sync`) instead of registering the async `_refresh` directly. The sync wrapper SHALL execute the async `_refresh` inline via `loop.run_until_complete()`.
+`RepeatElement._refresh()` and `SwitchElement._refresh()` SHALL be `async def` methods.
 
-The rationale: in PyScript (browser), `asyncio.ensure_future()` for async signal callbacks does not guarantee task execution before the caller's next synchronous statement. By registering a sync wrapper, `CallbackConsumerNode._dispatch()` treats the callback as synchronous (`_is_async = False`), calls it directly, and `loop.run_until_complete()` ensures the refresh completes before the signal setter returns.
+Signal callback registration SHALL use a sync wrapper method (`_refresh_sync`) ONLY when registered from `_render()`. When registered from `_on_set_parent()` (which runs during element construction, before `_render()`), the raw async `_refresh` SHALL be used instead. This is because:
+
+- `_render()` registers the callback in an async context (`async def _render()`), so the callback registration is intentional and the sync wrapper ensures synchronous DOM updates.
+- `_on_set_parent()` runs during component construction (synchronous context). Using the sync wrapper (`_refresh_sync`) with `loop.run_until_complete()` in PyScript interferes with the synchronous signal propagation context — specifically, it can prevent dependent synchronous callbacks (e.g., `Computed` → text element `_update_text`) from executing before the signal setter returns.
+
+The fire-and-forget path for `_on_set_parent()` is safe because:
+1. Signal propagation is synchronous: `producer_notify_consumers()` iterates consumers in insertion order
+2. Synchronous callbacks (e.g., `Computed` re-evaluation → `_update_text`) complete before async callbacks are dispatched
+3. The `_refresh` async callback is dispatched via `_resolve_async_callback()` → in PyScript, `aio_run()` → `ensure_future()` (fire-and-forget); in server/test, `nest_asyncio` + `run_until_complete()`
 
 The sync wrapper SHALL use the following pattern:
 ```python
@@ -198,19 +206,22 @@ This SHALL NOT use `nest_asyncio.apply()` in PyScript — in PyScript/Pyodide, t
 - **AND** `_refresh_sync` SHALL execute `self._refresh()` to completion via `loop.run_until_complete()`
 - **AND** child rendering and DOM updates SHALL complete before the signal setter returns
 
-#### Scenario: SwitchElement refresh triggered by signal update
-- **WHEN** a `Signal` value changes and `SwitchElement._refresh()` is triggered via the sync wrapper (`_refresh_sync`)
-- **THEN** `_dispatch()` SHALL detect `_is_async = False` and call the wrapper directly
-- **AND** `_refresh_sync` SHALL execute `self._refresh()` to completion via `loop.run_until_complete()`
-- **AND** deferred `on_after_rendering` callbacks SHALL be scheduled correctly
+#### Scenario: SwitchElement refresh triggered by signal update (via `_on_set_parent`)
+- **WHEN** a `Signal` value changes and `SwitchElement._refresh()` is registered via `_refresh` (async) in `_on_set_parent()`
+- **THEN** `_dispatch()` SHALL detect `_is_async = True` and delegate to `_resolve_async_callback()`
+- **AND** in browser, `_resolve_async_callback` SHALL dispatch `_refresh` via `aio_run()` (fire-and-forget)
+- **AND** in server/test, `_resolve_async_callback` SHALL execute `_refresh` synchronously via `nest_asyncio` + `run_until_complete()`
+- **AND** deferred `on_after_rendering` callbacks SHALL be scheduled correctly regardless of environment
+- **AND** synchronous dependent callbacks (e.g., `Computed` re-evaluation, text element updates) SHALL complete before the async refresh is dispatched, ensuring DOM consistency
 
-#### Scenario: All code paths for dynamic element callback registration use `_refresh_sync`
+#### Scenario: Dynamic element callback registration differs by code path
 - **WHEN** `SwitchElement._on_set_parent()` registers a signal callback
-- **THEN** it SHALL register `self._refresh_sync`, not `self._refresh`, to ensure the signal callback is treated as synchronous
+- **THEN** it SHALL register `self._refresh` (async), not `_refresh_sync`, because `_on_set_parent()` runs synchronously during construction and using `_refresh_sync` would cause `loop.run_until_complete()` to interfere with PyScript's synchronous signal propagation context
 - **AND** this SHALL hold for both `isinstance(self._cases, SignalBase)` and the per-condition registration paths
 - **WHEN** `SwitchElement._render()` registers a signal callback
-- **THEN** it SHALL also register `self._refresh_sync` (same as `_on_set_parent`)
+- **THEN** it SHALL register `self._refresh_sync` (sync wrapper), because `_render()` is itself async and the sync wrapper ensures DOM updates complete synchronously
 - **AND** both paths SHALL set `_signal_activated = True` before registering, preventing double registration regardless of which path executes first
+- **AND** since `_on_set_parent()` runs during element construction (before `_render()`), `_render()` normally finds `_signal_activated` already True and skips registration — the `_render()` registration path exists mainly for dynamic elements where `_on_set_parent()` may not have run
 
 ### Requirement: `_dispatch()` shall execute callbacks inline with an async flag
 
@@ -233,7 +244,7 @@ The `_make_signal_callback()` wrapper SHALL be removed. Callback registration SH
 - **THEN** `_dispatch()` SHALL detect `_is_async = True` and call `_resolve_async_callback(self._callback, self._producer._value)`
 - **AND** in browser, `_resolve_async_callback` SHALL dispatch via `aio_run()` (fire-and-forget, intended for user-level async callbacks that do not need synchronous DOM updates)
 - **AND** in server/test, `_resolve_async_callback` SHALL execute the coroutine to completion synchronously via `nest-asyncio`
-- **AND** for dynamic element refresh (`RepeatElement`, `SwitchElement`), the signal callback SHALL be the sync wrapper (`_refresh_sync`) instead of the raw async `_refresh`, so `_is_async = False` and the refresh executes synchronously
+- **AND** for dynamic element refresh (`RepeatElement`, `SwitchElement`), the signal callback SHALL be the sync wrapper (`_refresh_sync`) when registered from `_render()`, or the async `_refresh` when registered from `_on_set_parent()`. The `_render()` path uses the sync wrapper for sync DOM updates; the `_on_set_parent()` path uses the async callback because: (a) it runs during synchronous construction, and (b) synchronous dependent callbacks (computed → text element) complete before the async callback is dispatched.
 
 #### Scenario: Cascading signal changes during callback execution
 - **WHEN** a callback modifies a signal value during its execution (cascading change)
