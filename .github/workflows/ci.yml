@@ -530,7 +530,7 @@ jobs:
         timeout-minutes: 30
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_JSON }}
+          OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_CONTENT }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           OPENCODE_API_URL: ${{ secrets.OPENCODE_API_URL }}
           OPENCODE_MODEL: ${{ secrets.OPENCODE_MODEL }}
