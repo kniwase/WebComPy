@@ -1,4 +1,5 @@
 name: CI
+run-name: "Review #${{ github.event.pull_request.number }}"
 
 on:
   pull_request:
@@ -215,6 +216,7 @@ jobs:
           path: ci-e2e-results.log
 
   review:
+    name: AI Code Review
     if: success()
     needs: [openspec, openspec-check, lint, typecheck, generate, test, e2e-matrix]
     runs-on: ubuntu-latest
