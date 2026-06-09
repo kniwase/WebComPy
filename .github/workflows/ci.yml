@@ -648,21 +648,21 @@ jobs:
           # Extract sections from review-output.md
           extract() {
             awk -v s="$1" '
-              $0 ~ "^### " { flag = (index($0, s) > 0) ? 1 : 0; next }
+              $0 ~ "^### " { flag = ($0 ~ "^### .*" s "$") ? 1 : 0; next }
               flag && $0 !~ "^---$" { print }
             ' .tmp/review-output.md
           }
 
-          extract_headings() {
+          extract_bullets() {
             awk -v s="$1" '
-              $0 ~ "^### " { flag = (index($0, s) > 0) ? 1 : 0; next }
+              $0 ~ "^### " { flag = ($0 ~ "^### .*" s "$") ? 1 : 0; next }
               flag && /^- / { print }
             ' .tmp/review-output.md
           }
 
           SUMMARY=$(extract "Summary of Changes")
           ASSESSMENT=$(extract "Overall Assessment")
-          WHATSGOOD_HEADING=$(extract_headings "What's Good")
+          WHATSGOOD_HEADING=$(extract_bullets "What's Good")
           ACTIONS_FULL=$(extract "Action Items")
           CHANGE_SUMMARY=$(extract "Change Summary")
           VERDICT=$(extract "Verdict")
@@ -675,43 +675,56 @@ jobs:
               printf '%s\n' "# 🟢 Code Review: Approved" >> .tmp/digest-body.txt
               printf '%s\n' "---" >> .tmp/digest-body.txt
               printf '%s\n' "" >> .tmp/digest-body.txt
-              printf '%s\n' "### 📋 Summary of Changes" >> .tmp/digest-body.txt
-              printf '%s\n' "$SUMMARY" >> .tmp/digest-body.txt
-              printf '%s\n' "" >> .tmp/digest-body.txt
-              printf '%s\n' "### 💬 Overall Assessment" >> .tmp/digest-body.txt
-              printf '%s\n' "$ASSESSMENT" >> .tmp/digest-body.txt
-              printf '%s\n' "" >> .tmp/digest-body.txt
-              printf '%s\n' "### 🟢 What's Good" >> .tmp/digest-body.txt
-              printf '%s\n' "$WHATSGOOD_HEADING" >> .tmp/digest-body.txt
+              if [ -n "$SUMMARY" ]; then
+                printf '%s\n' "### 📋 Summary of Changes" >> .tmp/digest-body.txt
+                printf '%s\n' "$SUMMARY" >> .tmp/digest-body.txt
+                printf '%s\n' "" >> .tmp/digest-body.txt
+              fi
+              if [ -n "$ASSESSMENT" ]; then
+                printf '%s\n' "### 💬 Overall Assessment" >> .tmp/digest-body.txt
+                printf '%s\n' "$ASSESSMENT" >> .tmp/digest-body.txt
+                printf '%s\n' "" >> .tmp/digest-body.txt
+              fi
+              if [ -n "$WHATSGOOD_HEADING" ]; then
+                printf '%s\n' "### 🟢 What's Good" >> .tmp/digest-body.txt
+                printf '%s\n' "$WHATSGOOD_HEADING" >> .tmp/digest-body.txt
+              fi
               if [ -n "$CHANGE_SUMMARY" ]; then
                 printf '%s\n' "" >> .tmp/digest-body.txt
                 printf '%s\n' "### 💡 Change Summary" >> .tmp/digest-body.txt
                 printf '%s\n' "$CHANGE_SUMMARY" >> .tmp/digest-body.txt
               fi
-              printf '%s\n' "" >> .tmp/digest-body.txt
-              printf '%s\n' "### ✅ Verdict" >> .tmp/digest-body.txt
-              printf '%s\n' "$VERDICT" >> .tmp/digest-body.txt
+              if [ -n "$VERDICT" ]; then
+                printf '%s\n' "" >> .tmp/digest-body.txt
+                printf '%s\n' "### ✅ Verdict" >> .tmp/digest-body.txt
+                printf '%s\n' "$VERDICT" >> .tmp/digest-body.txt
+              fi
             elif [ "$result" = "changes_requested" ]; then
               printf '%s\n' "# 🟡 Code Review: Changes Requested" >> .tmp/digest-body.txt
               printf '%s\n' "---" >> .tmp/digest-body.txt
               printf '%s\n' "" >> .tmp/digest-body.txt
-              printf '%s\n' "### 📋 Summary of Changes" >> .tmp/digest-body.txt
-              printf '%s\n' "$SUMMARY" >> .tmp/digest-body.txt
-              printf '%s\n' "" >> .tmp/digest-body.txt
-              printf '%s\n' "### 💬 Overall Assessment" >> .tmp/digest-body.txt
-              printf '%s\n' "$ASSESSMENT" >> .tmp/digest-body.txt
-              if [ -n "$ACTIONS_FULL" ]; then
+              if [ -n "$SUMMARY" ]; then
+                printf '%s\n' "### 📋 Summary of Changes" >> .tmp/digest-body.txt
+                printf '%s\n' "$SUMMARY" >> .tmp/digest-body.txt
                 printf '%s\n' "" >> .tmp/digest-body.txt
+              fi
+              if [ -n "$ASSESSMENT" ]; then
+                printf '%s\n' "### 💬 Overall Assessment" >> .tmp/digest-body.txt
+                printf '%s\n' "$ASSESSMENT" >> .tmp/digest-body.txt
+                printf '%s\n' "" >> .tmp/digest-body.txt
+              fi
+              if [ -n "$ACTIONS_FULL" ]; then
                 printf '%s\n' "### 📌 Action Items" >> .tmp/digest-body.txt
                 printf '%s\n' "$ACTIONS_FULL" >> .tmp/digest-body.txt
               fi
-              printf '%s\n' "" >> .tmp/digest-body.txt
-              printf '%s\n' "### ✅ Verdict" >> .tmp/digest-body.txt
-              printf '%s\n' "$VERDICT" >> .tmp/digest-body.txt
+              if [ -n "$VERDICT" ]; then
+                printf '%s\n' "" >> .tmp/digest-body.txt
+                printf '%s\n' "### ✅ Verdict" >> .tmp/digest-body.txt
+                printf '%s\n' "$VERDICT" >> .tmp/digest-body.txt
+              fi
             else
               cp .tmp/review-output.md .tmp/digest-body.txt
             fi
-            printf '\n<!-- REVIEW_RESULT: %s -->\n<!-- REVIEWED_AT: %s -->' "$result" "$SHA" >> .tmp/digest-body.txt
           }
 
           build_digest "$REVIEW_RESULT"
@@ -729,9 +742,10 @@ jobs:
             [ "$OLD_RESULT" = "approved" ] && OLD_BADGE="🟢 Approved"
 
             # Fold old comment into <details>
+            OLD_BODY_ESCAPED=$(echo "$OLD_BODY" | sed 's|</details>|\&lt;/details&gt;|g')
             FOLDED="<details><summary>Review history (${OLD_BADGE})</summary>
 
-            ${OLD_BODY}
+            ${OLD_BODY_ESCAPED}
 
             </details>"
             echo "$FOLDED" | jq -Rs '{body: .}' \
@@ -742,6 +756,9 @@ jobs:
 
             printf '\n\n### Review History\n- %s — %s' "$OLD_SHA" "$OLD_BADGE" >> .tmp/digest-body.txt
           fi
+
+          # Append markers after history (must be end of file)
+          printf '\n<!-- REVIEW_RESULT: %s -->\n<!-- REVIEWED_AT: %s -->' "$REVIEW_RESULT" "$SHA" >> .tmp/digest-body.txt
 
           # Post digest comment and capture ID
           COMMENT_ID=$(cat .tmp/digest-body.txt \
