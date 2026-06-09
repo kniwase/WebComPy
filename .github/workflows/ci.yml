@@ -754,21 +754,36 @@ jobs:
             OLD_RESULT=$(echo "$OLD_BODY" | grep -oP '<!-- REVIEW_RESULT: \K(approved|changes_requested)' | head -1)
             OLD_BADGE="🟡 Changes requested"
             [ "$OLD_RESULT" = "approved" ] && OLD_BADGE="🟢 Approved"
+            OLD_URL="https://github.com/$REPO/pull/$PR_NUMBER#issuecomment-$EXISTING_ID"
 
-            # Fold old comment into <details>
-            OLD_BODY_ESCAPED=$(echo "$OLD_BODY" | sed 's|</details>|\&lt;/details&gt;|g')
-            FOLDED="<details><summary>Review history (${OLD_BADGE})</summary>
+            # Extract previous history from old comment to carry forward
+            PREV_HISTORY=$(echo "$OLD_BODY" | awk '/^### Review History/{found=1; next} found && /^<!-- /{exit} found{print}')
+            NEW_ENTRY="- ${OLD_SHA:0:8} — ${OLD_BADGE} [Review digest](${OLD_URL})"
+
+            if [ -n "$PREV_HISTORY" ]; then
+              HISTORY_SECTION="${NEW_ENTRY}"$'\n'"${PREV_HISTORY}"
+            else
+              HISTORY_SECTION="${NEW_ENTRY}"
+            fi
+
+            # Fold old comment into <details> (skip if already folded)
+            if echo "$OLD_BODY" | grep -q '^<details>'; then
+              FOLDED_BODY="$OLD_BODY"
+            else
+              OLD_BODY_ESCAPED=$(echo "$OLD_BODY" | sed 's|</details>|\&lt;/details&gt;|g')
+              FOLDED_BODY="<details><summary>Review history (${OLD_BADGE})</summary>
 
             ${OLD_BODY_ESCAPED}
 
             </details>"
-            echo "$FOLDED" | jq -Rs '{body: .}' \
+            fi
+            echo "$FOLDED_BODY" | jq -Rs '{body: .}' \
               | gh api "repos/$REPO/issues/comments/$EXISTING_ID" \
                 --method PATCH \
                 --input - \
                 --silent
 
-            printf '\n\n### Review History\n- %s — %s' "$OLD_SHA" "$OLD_BADGE" >> .tmp/digest-body.txt
+            printf '\n\n### Review History\n%s' "$HISTORY_SECTION" >> .tmp/digest-body.txt
           fi
 
           # Append markers (must be end of file)
