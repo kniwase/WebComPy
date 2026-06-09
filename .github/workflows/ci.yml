@@ -668,6 +668,7 @@ jobs:
           SUMMARY=$(extract "Summary of Changes")
           ASSESSMENT=$(extract "Overall Assessment")
           WHATSGOOD_HEADING=$(extract_bullets "What's Good")
+          ACTIONS_HEADING=$(extract_bullets "Action Items")
           ACTIONS_FULL=$(extract "Action Items")
           CHANGE_SUMMARY=$(extract "Change Summary")
           VERDICT=$(extract "Verdict")
@@ -694,6 +695,11 @@ jobs:
               if [ -n "$WHATSGOOD_HEADING" ]; then
                 printf '%s\n' "### 🟢 What's Good" >> .tmp/digest-body.txt
                 printf '%s\n' "$WHATSGOOD_HEADING" >> .tmp/digest-body.txt
+              fi
+              if [ -n "$ACTIONS_HEADING" ]; then
+                printf '%s\n' "" >> .tmp/digest-body.txt
+                printf '%s\n' "### 📌 Action Items" >> .tmp/digest-body.txt
+                printf '%s\n' "$ACTIONS_HEADING" >> .tmp/digest-body.txt
               fi
               if [ -n "$CHANGE_SUMMARY" ]; then
                 printf '%s\n' "" >> .tmp/digest-body.txt
