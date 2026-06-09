@@ -460,13 +460,6 @@ jobs:
       - name: Ensure scratch directory exists
         run: mkdir -p .tmp
 
-      - name: Configure OpenCode
-        env:
-          OPENCODE_CONFIG_JSON: ${{ secrets.OPENCODE_CONFIG_JSON }}
-        run: |
-          printf '%s\n' "$OPENCODE_CONFIG_JSON" > .tmp/opencode-ci.json
-          echo "OPENCODE_CONFIG=.tmp/opencode-ci.json" >> "$GITHUB_ENV"
-
       - name: Fetch PR context
         env:
           GH_TOKEN: ${{ github.token }}
@@ -537,8 +530,10 @@ jobs:
         timeout-minutes: 30
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          OPENCODE_CONFIG_CONTENT: ${{ secrets.OPENCODE_CONFIG_JSON }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           OPENCODE_API_URL: ${{ secrets.OPENCODE_API_URL }}
+          OPENCODE_MODEL: ${{ secrets.OPENCODE_MODEL }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -eo pipefail
