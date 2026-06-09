@@ -62,12 +62,16 @@ class DynamicElement(ElementWithChildren):
             if not child._mounted:
                 task = asyncio.ensure_future(child._render())
                 self._pending_render_tasks.append(task)
-                task.add_done_callback(
-                    lambda t: (
-                        self._pending_render_tasks.remove(t) if t in self._pending_render_tasks else None,
-                        logging.error(t.exception()) if t.exception() else None,
-                    )
-                )
+                task.add_done_callback(self._on_hydrate_render_done)
+
+    def _on_hydrate_render_done(self, task: asyncio.Task) -> None:
+        if task in self._pending_render_tasks:
+            self._pending_render_tasks.remove(task)
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc:
+            logging.error(exc)
 
     @property
     def _parent(self) -> ElementWithChildren:
