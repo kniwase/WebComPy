@@ -679,6 +679,8 @@ jobs:
             if [ "$result" = "approved" ]; then
               printf '%s\n' "## 🟢 Code Review: Approved" >> .tmp/digest-body.txt
               printf '%s\n' "" >> .tmp/digest-body.txt
+              printf '%s\n' "📊 [Full review output]($SUMMARY_URL)" >> .tmp/digest-body.txt
+              printf '%s\n' "" >> .tmp/digest-body.txt
               if [ -n "$SUMMARY" ]; then
                 printf '%s\n' "### 📋 Summary of Changes" >> .tmp/digest-body.txt
                 printf '%s\n' "$SUMMARY" >> .tmp/digest-body.txt
@@ -706,6 +708,8 @@ jobs:
             elif [ "$result" = "changes_requested" ]; then
               printf '%s\n' "## 🟡 Code Review: Changes Requested" >> .tmp/digest-body.txt
               printf '%s\n' "" >> .tmp/digest-body.txt
+              printf '%s\n' "📊 [Full review output]($SUMMARY_URL)" >> .tmp/digest-body.txt
+              printf '%s\n' "" >> .tmp/digest-body.txt
               if [ -n "$SUMMARY" ]; then
                 printf '%s\n' "### 📋 Summary of Changes" >> .tmp/digest-body.txt
                 printf '%s\n' "$SUMMARY" >> .tmp/digest-body.txt
@@ -730,6 +734,7 @@ jobs:
             fi
           }
 
+          SUMMARY_URL="https://github.com/$REPO/actions/runs/$RUN_ID?pr=$PR_NUMBER"
           build_digest "$REVIEW_RESULT"
 
           # Handle history accumulation
@@ -760,9 +765,7 @@ jobs:
             printf '\n\n### Review History\n- %s — %s' "$OLD_SHA" "$OLD_BADGE" >> .tmp/digest-body.txt
           fi
 
-          # Append summary URL and markers (must be end of file)
-          SUMMARY_URL="https://github.com/$REPO/actions/runs/$RUN_ID?pr=$PR_NUMBER"
-          printf '%s\n' "" "---" "" "📊 [Full review output]($SUMMARY_URL)" "" >> .tmp/digest-body.txt
+          # Append markers (must be end of file)
           printf '<!-- REVIEW_RESULT: %s -->\n<!-- REVIEWED_AT: %s -->' "$REVIEW_RESULT" "$SHA" >> .tmp/digest-body.txt
 
           # Post digest comment and capture ID
