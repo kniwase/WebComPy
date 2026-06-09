@@ -621,12 +621,24 @@ jobs:
             exit 1
           fi
 
+      - name: Output review summary
+        if: always() && steps.opencode-review.outcome != 'cancelled'
+        run: |
+          if [ -s .tmp/review-output.md ]; then
+            {
+              echo "## AI Code Review"
+              echo ""
+              cat .tmp/review-output.md
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Post review output as comment
         if: always() && steps.opencode-review.outcome != 'cancelled'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           set -eo pipefail
           if [ ! -s .tmp/review-output.md ]; then
@@ -665,8 +677,7 @@ jobs:
             local result="$1"
             : > .tmp/digest-body.txt
             if [ "$result" = "approved" ]; then
-              printf '%s\n' "# 🟢 Code Review: Approved" >> .tmp/digest-body.txt
-              printf '%s\n' "---" >> .tmp/digest-body.txt
+              printf '%s\n' "## 🟢 Code Review: Approved" >> .tmp/digest-body.txt
               printf '%s\n' "" >> .tmp/digest-body.txt
               if [ -n "$SUMMARY" ]; then
                 printf '%s\n' "### 📋 Summary of Changes" >> .tmp/digest-body.txt
@@ -693,8 +704,7 @@ jobs:
                 printf '%s\n' "$VERDICT" >> .tmp/digest-body.txt
               fi
             elif [ "$result" = "changes_requested" ]; then
-              printf '%s\n' "# 🟡 Code Review: Changes Requested" >> .tmp/digest-body.txt
-              printf '%s\n' "---" >> .tmp/digest-body.txt
+              printf '%s\n' "## 🟡 Code Review: Changes Requested" >> .tmp/digest-body.txt
               printf '%s\n' "" >> .tmp/digest-body.txt
               if [ -n "$SUMMARY" ]; then
                 printf '%s\n' "### 📋 Summary of Changes" >> .tmp/digest-body.txt
@@ -750,8 +760,10 @@ jobs:
             printf '\n\n### Review History\n- %s — %s' "$OLD_SHA" "$OLD_BADGE" >> .tmp/digest-body.txt
           fi
 
-          # Append markers after history (must be end of file)
-          printf '\n<!-- REVIEW_RESULT: %s -->\n<!-- REVIEWED_AT: %s -->' "$REVIEW_RESULT" "$SHA" >> .tmp/digest-body.txt
+          # Append summary URL and markers (must be end of file)
+          SUMMARY_URL="https://github.com/$REPO/actions/runs/$RUN_ID?pr=$PR_NUMBER"
+          printf '%s\n' "" "---" "" "📊 [Full review output]($SUMMARY_URL)" "" >> .tmp/digest-body.txt
+          printf '<!-- REVIEW_RESULT: %s -->\n<!-- REVIEWED_AT: %s -->' "$REVIEW_RESULT" "$SHA" >> .tmp/digest-body.txt
 
           # Post digest comment and capture ID
           COMMENT_ID=$(cat .tmp/digest-body.txt \
