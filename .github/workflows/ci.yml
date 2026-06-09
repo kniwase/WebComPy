@@ -800,19 +800,11 @@ jobs:
           DIGEST_LINK="📋 [Review digest](https://github.com/$REPO/pull/$PR_NUMBER#issuecomment-$COMMENT_ID)"
 
           if echo "$COMMENT_BODY" | grep -q "<!-- REVIEW_RESULT: changes_requested -->"; then
-            gh pr review $PR_NUMBER --request-changes --body \
-              "## 🟡 Code Review: Changes Requested
-
-${DIGEST_LINK}
-
-OpenCode review identified issues that should be addressed before merging."
+            BODY_CHANGES="## 🟡 Code Review: Changes Requested"
+            gh pr review $PR_NUMBER --request-changes --body "$(printf '%s\n' "$BODY_CHANGES" '' "${DIGEST_LINK}" '' 'OpenCode review identified issues that should be addressed before merging.')"
             echo "::error::Review requests changes - merge blocked"
             exit 1
           else
-            gh pr review $PR_NUMBER --approve --body \
-              "## 🟢 Code Review: Approved
-
-${DIGEST_LINK}
-
-OpenCode review completed, no blocking issues found."
+            BODY_APPROVED="## 🟢 Code Review: Approved"
+            gh pr review $PR_NUMBER --approve --body "$(printf '%s\n' "$BODY_APPROVED" '' "${DIGEST_LINK}" '' 'OpenCode review completed, no blocking issues found.')"
           fi
