@@ -658,21 +658,21 @@ jobs:
           # Extract sections from review-output.md
           extract() {
             awk -v s="$1" '
-              $0 ~ "^### " { flag = ($0 ~ s) ? 1 : 0; next }
+              $0 ~ "^### " { flag = (index($0, s) > 0) ? 1 : 0; next }
               flag && $0 !~ "^---$" { print }
             ' .tmp/review-output.md
           }
 
           extract_headings() {
             awk -v s="$1" '
-              $0 ~ "^### " { flag = ($0 ~ s) ? 1 : 0; next }
+              $0 ~ "^### " { flag = (index($0, s) > 0) ? 1 : 0; next }
               flag && /^- / { print }
             ' .tmp/review-output.md
           }
 
           SUMMARY=$(extract "Summary of Changes")
           ASSESSMENT=$(extract "Overall Assessment")
-          WHATSGOOD_HEADING=$(extract_headings "What.s Good")
+          WHATSGOOD_HEADING=$(extract_headings "What's Good")
           ACTIONS_FULL=$(extract "Action Items")
           ACTIONS_HEADING=$(extract_headings "Action Items")
           CHANGE_SUMMARY=$(extract "Change Summary")
@@ -686,8 +686,6 @@ jobs:
               # 🟢 Code Review: Approved
 
               ---
-
-
 
               ### 📋 Summary of Changes
               ${SUMMARY}
@@ -806,7 +804,7 @@ DIGEST_EOF
           COMMENT_BODY=$(gh api repos/$REPO/issues/comments/$COMMENT_ID --jq '.body')
           DIGEST_LINK="📋 [Review digest](https://github.com/$REPO/pull/$PR_NUMBER#issuecomment-$COMMENT_ID)"
 
-          if echo "$COMMENT_BODY" | grep -q "REVIEW_RESULT: changes_requested"; then
+          if echo "$COMMENT_BODY" | grep -q "<!-- REVIEW_RESULT: changes_requested -->"; then
             gh pr review $PR_NUMBER --request-changes --body \
               "## 🟡 Code Review: Changes Requested
 
