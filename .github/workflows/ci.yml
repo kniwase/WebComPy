@@ -760,9 +760,7 @@ jobs:
             printf '\n\n### Review History\n- %s — %s' "$OLD_SHA" "$OLD_BADGE" >> .tmp/digest-body.txt
           fi
 
-          # Append summary URL and markers (must be end of file)
-          SUMMARY_URL="https://github.com/$REPO/actions/runs/$RUN_ID?pr=$PR_NUMBER"
-          printf '%s\n' "" "---" "" "📊 [Full review output]($SUMMARY_URL)" "" >> .tmp/digest-body.txt
+          # Append markers (must be end of file)
           printf '<!-- REVIEW_RESULT: %s -->\n<!-- REVIEWED_AT: %s -->' "$REVIEW_RESULT" "$SHA" >> .tmp/digest-body.txt
 
           # Post digest comment and capture ID
@@ -781,6 +779,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
           REVIEW_OUTCOME: ${{ steps.opencode-review.outcome }}
         run: |
           COMMENT_ID="${COMMENT_ID:-}"
@@ -803,13 +802,15 @@ jobs:
 
           COMMENT_BODY=$(gh api repos/$REPO/issues/comments/$COMMENT_ID --jq '.body')
           DIGEST_LINK="📋 [Review digest](https://github.com/$REPO/pull/$PR_NUMBER#issuecomment-$COMMENT_ID)"
+          SUMMARY_URL="https://github.com/$REPO/actions/runs/$RUN_ID?pr=$PR_NUMBER"
+          FULL_LINK="📊 [Full review output]($SUMMARY_URL)"
 
           if echo "$COMMENT_BODY" | grep -q "<!-- REVIEW_RESULT: changes_requested -->"; then
             BODY_CHANGES="## 🟡 Code Review: Changes Requested"
-            gh pr review $PR_NUMBER --request-changes --body "$(printf '%s\n' "$BODY_CHANGES" '' "${DIGEST_LINK}" '' 'OpenCode review identified issues that should be addressed before merging.')"
+            gh pr review $PR_NUMBER --request-changes --body "$(printf '%s\n' "$BODY_CHANGES" '' "${DIGEST_LINK}" "${FULL_LINK}" '' 'OpenCode review identified issues that should be addressed before merging.')"
             echo "::error::Review requests changes - merge blocked"
             exit 1
           else
             BODY_APPROVED="## 🟢 Code Review: Approved"
-            gh pr review $PR_NUMBER --approve --body "$(printf '%s\n' "$BODY_APPROVED" '' "${DIGEST_LINK}" '' 'OpenCode review completed, no blocking issues found.')"
+            gh pr review $PR_NUMBER --approve --body "$(printf '%s\n' "$BODY_APPROVED" '' "${DIGEST_LINK}" "${FULL_LINK}" '' 'OpenCode review completed, no blocking issues found.')"
           fi
