@@ -539,7 +539,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           OPENCODE_API_URL: ${{ secrets.OPENCODE_API_URL }}
-          OPENCODE_MODEL: ${{ secrets.OPENCODE_MODEL }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -eo pipefail
@@ -608,7 +607,6 @@ jobs:
             fi
 
             opencode run \
-              --model "$OPENCODE_MODEL" \
               --agent ci-review \
               "${FILES[@]}" \
               --title "PR #$PR_NUMBER Review" \
