@@ -130,6 +130,10 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# OpenCode local config
+/opencode.json
+/opencode.jsonc
+
 # Temporary directory for opencode
 **/.tmp/*
 !**/.tmp/.gitkeep

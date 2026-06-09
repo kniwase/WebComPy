@@ -453,10 +453,17 @@ jobs:
         run: git checkout -- . && git clean -fd
 
       - name: Install OpenCode
-        run: npm install -g opencode-ai@v1.15.0
+        run: npm install -g opencode-ai@v1.16.2
 
       - name: Ensure scratch directory exists
         run: mkdir -p .tmp
+
+      - name: Configure OpenCode
+        env:
+          OPENCODE_CONFIG_JSON: ${{ secrets.OPENCODE_CONFIG_JSON }}
+        run: |
+          printf '%s\n' "$OPENCODE_CONFIG_JSON" > .tmp/opencode-ci.json
+          echo "OPENCODE_CONFIG=.tmp/opencode-ci.json" >> "$GITHUB_ENV"
 
       - name: Fetch PR context
         env:
@@ -540,9 +547,9 @@ jobs:
         timeout-minutes: 30
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          OPENAI_COMPAT_API_KEY: ${{ secrets.OPENAI_COMPAT_API_KEY }}
-          OPENAI_COMPAT_BASE_URL: ${{ secrets.OPENAI_COMPAT_BASE_URL }}
-          OPENAI_COMPAT_MODEL: ${{ secrets.OPENAI_COMPAT_MODEL }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENCODE_API_URL: ${{ secrets.OPENCODE_API_URL }}
+          OPENCODE_MODEL: ${{ secrets.OPENCODE_MODEL }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -eo pipefail
@@ -611,7 +618,7 @@ jobs:
             fi
 
             opencode run \
-              --model "openai-compat/$OPENAI_COMPAT_MODEL" \
+              --model "$OPENCODE_MODEL" \
               --agent ci-review \
               "${FILES[@]}" \
               --title "PR #$PR_NUMBER Review" \

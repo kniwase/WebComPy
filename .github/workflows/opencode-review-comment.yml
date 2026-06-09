@@ -36,17 +36,28 @@ jobs:
           fi
           echo "is_pr=true" >> $GITHUB_OUTPUT
 
+      - name: Ensure scratch directory exists
+        if: steps.check-pr.outputs.is_pr == 'true'
+        run: mkdir -p .tmp
+
+      - name: Write OpenCode config
+        if: steps.check-pr.outputs.is_pr == 'true'
+        env:
+          OPENCODE_CONFIG_JSON: ${{ secrets.OPENCODE_CONFIG_JSON }}
+        run: |
+          printf '%s\n' "$OPENCODE_CONFIG_JSON" > .tmp/opencode-ci.json
+          echo "OPENCODE_CONFIG=.tmp/opencode-ci.json" >> "$GITHUB_ENV"
+
       - name: Run OpenCode Review
         if: steps.check-pr.outputs.is_pr == 'true'
         id: opencode-review
         uses: anomalyco/opencode/github@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_COMPAT_API_KEY: ${{ secrets.OPENAI_COMPAT_API_KEY }}
-          OPENAI_COMPAT_BASE_URL: ${{ secrets.OPENAI_COMPAT_BASE_URL }}
-          OPENAI_COMPAT_MODEL: ${{ secrets.OPENAI_COMPAT_MODEL }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENCODE_API_URL: ${{ secrets.OPENCODE_API_URL }}
         with:
-          model: openai-compat/${{ secrets.OPENAI_COMPAT_MODEL }}
+          model: ${{ secrets.OPENCODE_MODEL }}
           agent: review
           use_github_token: true
           prompt: |
