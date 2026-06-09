@@ -537,7 +537,7 @@ jobs:
           RUN_ID: ${{ github.run_id }}
         run: |
           JOB_ID=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" \
-            --jq '.jobs[] | select(.name == "review") | .id // empty')
+            --jq '.jobs[] | select(.name == "${{ github.job }}") | .id // empty')
           if [ -n "$JOB_ID" ]; then
             echo "JOB_ID=$JOB_ID" >> $GITHUB_ENV
           fi
@@ -556,45 +556,45 @@ jobs:
 
           MAX_ATTEMPTS=2
           attempt=0
-           PROMPT="Review this pull request as a WebComPy-specialized reviewer. Three context files are attached:
-           - .tmp/pr-diff.txt — full diff against the merge base (lockfiles excluded)
-           - .tmp/pr-diff-since-last.txt — incremental diff since the last CI review (or a note if unavailable)
-           - .tmp/pr-context.txt — PR title, description, and human comments for context
-           CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
-           Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases, spec violations).
+          PROMPT="Review this pull request as a WebComPy-specialized reviewer. Three context files are attached:
+          - .tmp/pr-diff.txt — full diff against the merge base (lockfiles excluded)
+          - .tmp/pr-diff-since-last.txt — incremental diff since the last CI review (or a note if unavailable)
+          - .tmp/pr-context.txt — PR title, description, and human comments for context
+          CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
+          Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases, spec violations).
 
-           SPEC-DRIVEN REVIEW: Classify changed files by subsystem and read the corresponding \`openspec/specs/\` before reviewing. Always start with \`openspec/specs/overview/spec.md\` and \`openspec/specs/architecture/spec.md\`. Then read subsystem specs as specified in your agent configuration. Use specs as a checklist — verify no \"SHALL\" requirement is violated.
+          SPEC-DRIVEN REVIEW: Classify changed files by subsystem and read the corresponding \`openspec/specs/\` before reviewing. Always start with \`openspec/specs/overview/spec.md\` and \`openspec/specs/architecture/spec.md\`. Then read subsystem specs as specified in your agent configuration. Use specs as a checklist — verify no \"SHALL\" requirement is violated.
 
-           .tmp/ and .workspace/ are your scratch workspace — you may write files there for intermediate work.
+          .tmp/ and .workspace/ are your scratch workspace — you may write files there for intermediate work.
 
-           When you have completed your review, write ONLY the final review to .tmp/review-output.md.
-           Follow the review template format specified in your agent configuration.
-           Do NOT write your research process, tool calls, or file reads — only the final review.
+          When you have completed your review, write ONLY the final review to .tmp/review-output.md.
+          Follow the review template format specified in your agent configuration.
+          Do NOT write your research process, tool calls, or file reads — only the final review.
 
-           IMPORTANT — Template rules:
-           - The \`💡 Change Summary\` section SHALL only appear when the verdict is \`approved\`.
-           - When the verdict is \`changes_requested\`, omit the \`💡 Change Summary\` section entirely.
-           - With \`changes_requested\`, the section order is: Summary of Changes → Overall Assessment → What's Good → Action Items → Verdict
+          IMPORTANT — Template rules:
+          - The \`💡 Change Summary\` section SHALL only appear when the verdict is \`approved\`.
+          - When the verdict is \`changes_requested\`, omit the \`💡 Change Summary\` section entirely.
+          - With \`changes_requested\`, the section order is: Summary of Changes → Overall Assessment → What's Good → Action Items → Verdict
 
-           After writing, re-read .tmp/review-output.md and self-review your review:
-           - Verify all claims are backed by the actual diff
-           - Check for formatting issues, typos, or unclear language
-           - Confirm the \`<!-- REVIEW_RESULT: ... -->\` marker is present and correct
-           - If you find any issues, rewrite the file with corrections
+          After writing, re-read .tmp/review-output.md and self-review your review:
+          - Verify all claims are backed by the actual diff
+          - Check for formatting issues, typos, or unclear language
+          - Confirm the \`<!-- REVIEW_RESULT: ... -->\` marker is present and correct
+          - If you find any issues, rewrite the file with corrections
 
-           CRITICAL — OUTPUT INSTRUCTIONS (read twice):
-           Your review is NOT complete until you have called the Write tool
-           to save your final review to .tmp/review-output.md.
-           Writing to stdout is NOT sufficient — the file MUST exist on disk.
-           If .tmp/review-output.md does not exist when you finish, your work
-           will be discarded and the review step will fail.
+          CRITICAL — OUTPUT INSTRUCTIONS (read twice):
+          Your review is NOT complete until you have called the Write tool
+          to save your final review to .tmp/review-output.md.
+          Writing to stdout is NOT sufficient — the file MUST exist on disk.
+          If .tmp/review-output.md does not exist when you finish, your work
+          will be discarded and the review step will fail.
 
-           STEP-BY-STEP:
-           1. Analyze the diff and write your review
-           2. Call Write tool: filePath=.tmp/review-output.md, content=<your review>
-           3. Call Read tool on .tmp/review-output.md to verify it was written correctly
-           4. Confirm the last line matches \`<!-- REVIEW_RESULT: approved -->\` or \`<!-- REVIEW_RESULT: changes_requested -->\`
-           5. Only then are you truly done — do not stop before step 4"
+          STEP-BY-STEP:
+          1. Analyze the diff and write your review
+          2. Call Write tool: filePath=.tmp/review-output.md, content=<your review>
+          3. Call Read tool on .tmp/review-output.md to verify it was written correctly
+          4. Confirm the last line matches \`<!-- REVIEW_RESULT: approved -->\` or \`<!-- REVIEW_RESULT: changes_requested -->\`
+          5. Only then are you truly done — do not stop before step 4"
 
            _review_ok() {
              [ -s .tmp/review-output.md ] || return 1
@@ -610,7 +610,7 @@ jobs:
              FILES=(--file .tmp/pr-diff.txt --file .tmp/pr-diff-since-last.txt --file .tmp/pr-context.txt --file .tmp/ci-results.txt)
              if [ $attempt -gt 1 ]; then
                FILES+=(--file .tmp/review-raw-output.log)
-              RETRY_MSG="
+               RETRY_MSG="
 
           RETRY ATTEMPT: The previous run completed without writing .tmp/review-output.md.
           Your analysis from the previous attempt is in .tmp/review-raw-output.log — recover it.
