@@ -532,18 +532,6 @@ jobs:
             echo "# No REVIEWED_AT marker found in previous bot comments." > .tmp/pr-diff-since-last.txt
           fi
 
-      - name: Get job summary URL
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          RUN_ID: ${{ github.run_id }}
-        run: |
-          JOB_ID=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" \
-            --jq '.jobs[] | select(.name == "${{ github.job }}") | .id // empty')
-          if [ -n "$JOB_ID" ]; then
-            echo "JOB_ID=$JOB_ID" >> $GITHUB_ENV
-          fi
-
       - name: Run OpenCode Review
         id: opencode-review
         timeout-minutes: 30
@@ -676,62 +664,50 @@ jobs:
           ASSESSMENT=$(extract "Overall Assessment")
           WHATSGOOD_HEADING=$(extract_headings "What's Good")
           ACTIONS_FULL=$(extract "Action Items")
-          ACTIONS_HEADING=$(extract_headings "Action Items")
           CHANGE_SUMMARY=$(extract "Change Summary")
           VERDICT=$(extract "Verdict")
 
           # Build digest body based on result
           build_digest() {
             local result="$1"
+            : > .tmp/digest-body.txt
             if [ "$result" = "approved" ]; then
-              cat > .tmp/digest-body.txt <<-DIGEST_EOF
-              # 🟢 Code Review: Approved
-
-              ---
-
-              ### 📋 Summary of Changes
-              ${SUMMARY}
-
-              ### 💬 Overall Assessment
-              ${ASSESSMENT}
-
-              ### 🟢 What's Good
-              ${WHATSGOOD_HEADING}
-
-DIGEST_EOF
+              printf '%s\n' "# 🟢 Code Review: Approved" >> .tmp/digest-body.txt
+              printf '%s\n' "---" >> .tmp/digest-body.txt
+              printf '%s\n' "" >> .tmp/digest-body.txt
+              printf '%s\n' "### 📋 Summary of Changes" >> .tmp/digest-body.txt
+              printf '%s\n' "$SUMMARY" >> .tmp/digest-body.txt
+              printf '%s\n' "" >> .tmp/digest-body.txt
+              printf '%s\n' "### 💬 Overall Assessment" >> .tmp/digest-body.txt
+              printf '%s\n' "$ASSESSMENT" >> .tmp/digest-body.txt
+              printf '%s\n' "" >> .tmp/digest-body.txt
+              printf '%s\n' "### 🟢 What's Good" >> .tmp/digest-body.txt
+              printf '%s\n' "$WHATSGOOD_HEADING" >> .tmp/digest-body.txt
               if [ -n "$CHANGE_SUMMARY" ]; then
-                echo "" >> .tmp/digest-body.txt
-                echo "### 💡 Change Summary" >> .tmp/digest-body.txt
-                echo "$CHANGE_SUMMARY" >> .tmp/digest-body.txt
+                printf '%s\n' "" >> .tmp/digest-body.txt
+                printf '%s\n' "### 💡 Change Summary" >> .tmp/digest-body.txt
+                printf '%s\n' "$CHANGE_SUMMARY" >> .tmp/digest-body.txt
               fi
-              cat >> .tmp/digest-body.txt <<-DIGEST_EOF
-
-              ### ✅ Verdict
-              ${VERDICT}
-DIGEST_EOF
+              printf '%s\n' "" >> .tmp/digest-body.txt
+              printf '%s\n' "### ✅ Verdict" >> .tmp/digest-body.txt
+              printf '%s\n' "$VERDICT" >> .tmp/digest-body.txt
             elif [ "$result" = "changes_requested" ]; then
-              cat > .tmp/digest-body.txt <<-DIGEST_EOF
-              # 🟡 Code Review: Changes Requested
-
-              ---
-
-              ### 📋 Summary of Changes
-              ${SUMMARY}
-
-              ### 💬 Overall Assessment
-              ${ASSESSMENT}
-
-DIGEST_EOF
+              printf '%s\n' "# 🟡 Code Review: Changes Requested" >> .tmp/digest-body.txt
+              printf '%s\n' "---" >> .tmp/digest-body.txt
+              printf '%s\n' "" >> .tmp/digest-body.txt
+              printf '%s\n' "### 📋 Summary of Changes" >> .tmp/digest-body.txt
+              printf '%s\n' "$SUMMARY" >> .tmp/digest-body.txt
+              printf '%s\n' "" >> .tmp/digest-body.txt
+              printf '%s\n' "### 💬 Overall Assessment" >> .tmp/digest-body.txt
+              printf '%s\n' "$ASSESSMENT" >> .tmp/digest-body.txt
               if [ -n "$ACTIONS_FULL" ]; then
-                echo "" >> .tmp/digest-body.txt
-                echo "### 📌 Action Items" >> .tmp/digest-body.txt
-                echo "$ACTIONS_FULL" >> .tmp/digest-body.txt
+                printf '%s\n' "" >> .tmp/digest-body.txt
+                printf '%s\n' "### 📌 Action Items" >> .tmp/digest-body.txt
+                printf '%s\n' "$ACTIONS_FULL" >> .tmp/digest-body.txt
               fi
-              cat >> .tmp/digest-body.txt <<-DIGEST_EOF
-
-              ### ✅ Verdict
-              ${VERDICT}
-DIGEST_EOF
+              printf '%s\n' "" >> .tmp/digest-body.txt
+              printf '%s\n' "### ✅ Verdict" >> .tmp/digest-body.txt
+              printf '%s\n' "$VERDICT" >> .tmp/digest-body.txt
             else
               cp .tmp/review-output.md .tmp/digest-body.txt
             fi
