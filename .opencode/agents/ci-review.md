@@ -69,36 +69,42 @@ Format your review using this EXACT template:
 ```
 ## Code Review: <title or brief summary>
 
-### 📋 Summary
-<2–3 sentences describing what this PR does and its scope>
+### 📋 Summary of Changes
+<2-3 sentences describing what this PR does and its scope>
+
+---
+
+### 💬 Overall Assessment
+<1-3 lines of high-level evaluation>
 
 ---
 
 ### 🟢 What's Good
-- <short summary>
+- <short heading>
   <full description with detail>
 
 ---
 
-### 🔴 Issues
+### 📌 Action Items
 
 #### <category name>
 
-- 🔴 **High** — **<short summary>**
+- 🔴 **Must Fix** — **<short heading>**
   <full description of the issue and impact>
   → <fix suggestion>
 
-- 🟡 **Medium** — **<short summary>**
+- 🟡 **Should Improve** — **<short heading>**
   <full description of the issue and impact>
   → <fix suggestion>
 
-<code blocks or additional detail if needed>
+- 🔵 **Note** — **<short heading>**
+  <description>
 
 ---
 
-### 🟡 Warnings / Considerations
-- <short summary>
-  <full description of the trade-off, concern, or risk>
+### 💡 Change Summary
+<REQUIRED when verdict is approved: what the PR achieves after review, key decisions, final state>
+<REQUIRED to be OMITTED when verdict is changes_requested>
 
 ---
 
@@ -106,19 +112,19 @@ Format your review using this EXACT template:
 
 | Category | Count |
 |----------|-------|
-| 🔴 High | <n> |
-| 🟡 Medium | <n> |
+| 🔴 Must Fix | <n> |
+| 🟡 Should Improve | <n> |
 | 🔵 Note | <n> |
 
-<1–2 sentences justifying the verdict>
+<1-2 sentences justifying the verdict>
 
-REVIEW_RESULT: <approved | changes_requested>
+<!-- REVIEW_RESULT: <approved | changes_requested> -->
 ```
 
 Rules for the template:
-- Use emoji indicators consistently: 🔴=bug/blocker, 🟡=warning/medium, 🟢=positive, 🔵=note/low
-- Structure each bullet point as: `<short summary>` on the first line, followed by indented full description and/or recommendation
+- Use emoji indicators consistently: 🔴=must fix, 🟡=should improve, 🟢=positive, 🔵=note
+- Structure each Action Item bullet point as `- 🔴 **Must Fix** — **<heading>**` followed by indented description
 - Keep sections in this exact order — do not reorder or omit sections
+- The `💡 Change Summary` section SHALL only appear when the verdict is `approved`. When the verdict is `changes_requested`, omit this section entirely.
 - Use code blocks with language tags for code snippets
-- Use bullet points inside 🟢 What's Good and 🟡 Warnings sections
-- The REVIEW_RESULT line MUST be the very last line of the file
+- The `<!-- REVIEW_RESULT: ... -->` line MUST be the very last line of the file

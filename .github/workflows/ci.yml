@@ -458,11 +458,36 @@ jobs:
       - name: Ensure scratch directory exists
         run: mkdir -p .tmp
 
+      - name: Fetch PR context
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          PR_DATA=$(gh api "repos/$REPO/pulls/$PR_NUMBER")
+          TITLE=$(echo "$PR_DATA" | jq -r '.title')
+          BODY=$(echo "$PR_DATA" | jq -r '.body // ""')
+          {
+            echo "## PR #${PR_NUMBER}: ${TITLE}"
+            echo ""
+            echo "### Description"
+            echo ""
+            echo "${BODY}"
+            echo ""
+            echo "### Human Comments"
+            echo ""
+            gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" \
+              --jq '.[] | select(.user.type != "Bot") | "**@\(.user.login)**: \(.body)\n"'
+          } > .tmp/pr-context.txt
+
       - name: Fetch PR diff
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: gh pr diff $PR_NUMBER > .tmp/pr-diff.txt
+        run: |
+          gh pr diff $PR_NUMBER \
+            | awk '/^diff --git /{in_skip=0} /^diff --git .*(uv\.lock|package-lock\.json)$/{in_skip=1} !in_skip' \
+            > .tmp/pr-diff.txt
 
       - name: Write CI results to file
         env:
@@ -487,7 +512,7 @@ jobs:
           LAST_SHA=$(echo "$REVIEWED_AT_COMMENT" | sed -n 's/.*REVIEWED_AT: \([a-f0-9]\{40\}\).*/\1/p' | head -1)
           if [ -n "$LAST_SHA" ] && git cat-file -e "$LAST_SHA" 2>/dev/null; then
             if git merge-base --is-ancestor "$LAST_SHA" HEAD 2>/dev/null; then
-              git diff "$LAST_SHA"..HEAD > .tmp/pr-diff-since-last.txt
+              git diff "$LAST_SHA"..HEAD -- ':!uv.lock' ':!package-lock.json' > .tmp/pr-diff-since-last.txt
               echo "Incremental diff generated from $LAST_SHA"
             else
               echo "# Incremental diff unavailable: branch was rebased or merged with main since last review." > .tmp/pr-diff-since-last.txt
@@ -496,6 +521,18 @@ jobs:
             fi
           else
             echo "# No REVIEWED_AT marker found in previous bot comments." > .tmp/pr-diff-since-last.txt
+          fi
+
+      - name: Get job summary URL
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          JOB_ID=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" \
+            --jq '.jobs[] | select(.name == "review") | .id // empty')
+          if [ -n "$JOB_ID" ]; then
+            echo "JOB_ID=$JOB_ID" >> $GITHUB_ENV
           fi
 
       - name: Run OpenCode Review
@@ -512,54 +549,60 @@ jobs:
 
           MAX_ATTEMPTS=2
           attempt=0
-          PROMPT="Review this pull request as a WebComPy-specialized reviewer. Two diff files are attached:
-          - .tmp/pr-diff.txt — full diff against the merge base
-          - .tmp/pr-diff-since-last.txt — incremental diff since the last CI review (or a note if unavailable)
-          CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
-          Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases, spec violations).
+           PROMPT="Review this pull request as a WebComPy-specialized reviewer. Three context files are attached:
+           - .tmp/pr-diff.txt — full diff against the merge base (lockfiles excluded)
+           - .tmp/pr-diff-since-last.txt — incremental diff since the last CI review (or a note if unavailable)
+           - .tmp/pr-context.txt — PR title, description, and human comments for context
+           CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
+           Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases, spec violations).
 
-          SPEC-DRIVEN REVIEW: Classify changed files by subsystem and read the corresponding \`openspec/specs/\` before reviewing. Always start with \`openspec/specs/overview/spec.md\` and \`openspec/specs/architecture/spec.md\`. Then read subsystem specs as specified in your agent configuration. Use specs as a checklist — verify no \"SHALL\" requirement is violated.
+           SPEC-DRIVEN REVIEW: Classify changed files by subsystem and read the corresponding \`openspec/specs/\` before reviewing. Always start with \`openspec/specs/overview/spec.md\` and \`openspec/specs/architecture/spec.md\`. Then read subsystem specs as specified in your agent configuration. Use specs as a checklist — verify no \"SHALL\" requirement is violated.
 
-          .tmp/ and .workspace/ are your scratch workspace — you may write files there for intermediate work.
+           .tmp/ and .workspace/ are your scratch workspace — you may write files there for intermediate work.
 
-          When you have completed your review, write ONLY the final review to .tmp/review-output.md.
-          Follow the review template format specified in your agent configuration.
-          Do NOT write your research process, tool calls, or file reads — only the final review.
+           When you have completed your review, write ONLY the final review to .tmp/review-output.md.
+           Follow the review template format specified in your agent configuration.
+           Do NOT write your research process, tool calls, or file reads — only the final review.
 
-          After writing, re-read .tmp/review-output.md and self-review your review:
-          - Verify all claims are backed by the actual diff
-          - Check for formatting issues, typos, or unclear language
-          - Confirm the REVIEW_RESULT marker is present and correct
-          - If you find any issues, rewrite the file with corrections
+           IMPORTANT — Template rules:
+           - The \`💡 Change Summary\` section SHALL only appear when the verdict is \`approved\`.
+           - When the verdict is \`changes_requested\`, omit the \`💡 Change Summary\` section entirely.
+           - With \`changes_requested\`, the section order is: Summary of Changes → Overall Assessment → What's Good → Action Items → Verdict
 
-          CRITICAL — OUTPUT INSTRUCTIONS (read twice):
-          Your review is NOT complete until you have called the Write tool
-          to save your final review to .tmp/review-output.md.
-          Writing to stdout is NOT sufficient — the file MUST exist on disk.
-          If .tmp/review-output.md does not exist when you finish, your work
-          will be discarded and the review step will fail.
+           After writing, re-read .tmp/review-output.md and self-review your review:
+           - Verify all claims are backed by the actual diff
+           - Check for formatting issues, typos, or unclear language
+           - Confirm the \`<!-- REVIEW_RESULT: ... -->\` marker is present and correct
+           - If you find any issues, rewrite the file with corrections
 
-          STEP-BY-STEP:
-          1. Analyze the diff and write your review
-          2. Call Write tool: filePath=.tmp/review-output.md, content=<your review>
-          3. Call Read tool on .tmp/review-output.md to verify it was written correctly
-          4. Confirm the last line is exactly REVIEW_RESULT: approved or REVIEW_RESULT: changes_requested
-          5. Only then are you truly done — do not stop before step 4"
+           CRITICAL — OUTPUT INSTRUCTIONS (read twice):
+           Your review is NOT complete until you have called the Write tool
+           to save your final review to .tmp/review-output.md.
+           Writing to stdout is NOT sufficient — the file MUST exist on disk.
+           If .tmp/review-output.md does not exist when you finish, your work
+           will be discarded and the review step will fail.
 
-          _review_ok() {
-            [ -s .tmp/review-output.md ] || return 1
-            local last
-            last=$(grep -v '^[[:space:]]*$' .tmp/review-output.md | tail -n 1)
-            [ "$last" = "REVIEW_RESULT: approved" ] || [ "$last" = "REVIEW_RESULT: changes_requested" ]
-          }
+           STEP-BY-STEP:
+           1. Analyze the diff and write your review
+           2. Call Write tool: filePath=.tmp/review-output.md, content=<your review>
+           3. Call Read tool on .tmp/review-output.md to verify it was written correctly
+           4. Confirm the last line matches \`<!-- REVIEW_RESULT: approved -->\` or \`<!-- REVIEW_RESULT: changes_requested -->\`
+           5. Only then are you truly done — do not stop before step 4"
 
-          while [ $attempt -lt $MAX_ATTEMPTS ]; do
-            attempt=$((attempt + 1))
+           _review_ok() {
+             [ -s .tmp/review-output.md ] || return 1
+             local last
+             last=$(grep -v '^[[:space:]]*$' .tmp/review-output.md | tail -n 1)
+             [ "$last" = "<!-- REVIEW_RESULT: approved -->" ] || [ "$last" = "<!-- REVIEW_RESULT: changes_requested -->" ]
+           }
 
-            RETRY_MSG=""
-            FILES=(--file .tmp/pr-diff.txt --file .tmp/pr-diff-since-last.txt)
-            if [ $attempt -gt 1 ]; then
-              FILES+=(--file .tmp/review-raw-output.log)
+           while [ $attempt -lt $MAX_ATTEMPTS ]; do
+             attempt=$((attempt + 1))
+
+             RETRY_MSG=""
+             FILES=(--file .tmp/pr-diff.txt --file .tmp/pr-diff-since-last.txt --file .tmp/pr-context.txt --file .tmp/ci-results.txt)
+             if [ $attempt -gt 1 ]; then
+               FILES+=(--file .tmp/review-raw-output.log)
               RETRY_MSG="
 
           RETRY ATTEMPT: The previous run completed without writing .tmp/review-output.md.
@@ -600,17 +643,132 @@ jobs:
             echo "Review output is empty, skipping comment post."
             exit 0
           fi
+
           SHA=$(git rev-parse HEAD)
-          jq -Rs --argjson limit 60000 --arg sha "$SHA" \
-            '{body: (
-              (. | if length > $limit then .[:$limit] + "\n\n[truncated]" else . end)
-              + "\n\nREVIEWED_AT: " + $sha
-            )}' \
-            .tmp/review-output.md \
+          REVIEW_RESULT=$(grep -oP '<!-- REVIEW_RESULT: \K(approved|changes_requested)' .tmp/review-output.md | head -1)
+          REVIEW_RESULT=${REVIEW_RESULT:-unknown}
+
+          # Extract sections from review-output.md
+          extract() {
+            awk -v s="$1" '
+              $0 ~ "^### " { flag = ($0 ~ s) ? 1 : 0; next }
+              flag && $0 !~ "^---$" { print }
+            ' .tmp/review-output.md
+          }
+
+          extract_headings() {
+            awk -v s="$1" '
+              $0 ~ "^### " { flag = ($0 ~ s) ? 1 : 0; next }
+              flag && /^- / { print }
+            ' .tmp/review-output.md
+          }
+
+          SUMMARY=$(extract "Summary of Changes")
+          ASSESSMENT=$(extract "Overall Assessment")
+          WHATSGOOD_HEADING=$(extract_headings "What.s Good")
+          ACTIONS_FULL=$(extract "Action Items")
+          ACTIONS_HEADING=$(extract_headings "Action Items")
+          CHANGE_SUMMARY=$(extract "Change Summary")
+          VERDICT=$(extract "Verdict")
+
+          # Build digest body based on result
+          build_digest() {
+            local result="$1"
+            if [ "$result" = "approved" ]; then
+              cat > .tmp/digest-body.txt <<-DIGEST_EOF
+              # 🟢 Code Review: Approved
+
+              ---
+
+
+
+              ### 📋 Summary of Changes
+              ${SUMMARY}
+
+              ### 💬 Overall Assessment
+              ${ASSESSMENT}
+
+              ### 🟢 What's Good
+              ${WHATSGOOD_HEADING}
+
+DIGEST_EOF
+              if [ -n "$CHANGE_SUMMARY" ]; then
+                echo "" >> .tmp/digest-body.txt
+                echo "### 💡 Change Summary" >> .tmp/digest-body.txt
+                echo "$CHANGE_SUMMARY" >> .tmp/digest-body.txt
+              fi
+              cat >> .tmp/digest-body.txt <<-DIGEST_EOF
+
+              ### ✅ Verdict
+              ${VERDICT}
+DIGEST_EOF
+            elif [ "$result" = "changes_requested" ]; then
+              cat > .tmp/digest-body.txt <<-DIGEST_EOF
+              # 🟡 Code Review: Changes Requested
+
+              ---
+
+              ### 📋 Summary of Changes
+              ${SUMMARY}
+
+              ### 💬 Overall Assessment
+              ${ASSESSMENT}
+
+DIGEST_EOF
+              if [ -n "$ACTIONS_FULL" ]; then
+                echo "" >> .tmp/digest-body.txt
+                echo "### 📌 Action Items" >> .tmp/digest-body.txt
+                echo "$ACTIONS_FULL" >> .tmp/digest-body.txt
+              fi
+              cat >> .tmp/digest-body.txt <<-DIGEST_EOF
+
+              ### ✅ Verdict
+              ${VERDICT}
+DIGEST_EOF
+            else
+              cp .tmp/review-output.md .tmp/digest-body.txt
+            fi
+            printf '\n<!-- REVIEW_RESULT: %s -->\n<!-- REVIEWED_AT: %s -->' "$result" "$SHA" >> .tmp/digest-body.txt
+          }
+
+          build_digest "$REVIEW_RESULT"
+
+          # Handle history accumulation
+          EXISTING_COMMENT=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" \
+            --jq '[.[] | select(.user.login == "github-actions[bot]") | select(.body | test("REVIEW_RESULT:")) | {id: .id, body: .body}] | last // empty')
+          EXISTING_ID=$(echo "$EXISTING_COMMENT" | jq -r '.id // empty')
+
+          if [ -n "$EXISTING_ID" ]; then
+            OLD_BODY=$(echo "$EXISTING_COMMENT" | jq -r '.body')
+            OLD_SHA=$(echo "$OLD_BODY" | sed -n 's/.*REVIEWED_AT: \([a-f0-9]\{40\}\).*/\1/p' | head -1)
+            OLD_RESULT=$(echo "$OLD_BODY" | grep -oP '<!-- REVIEW_RESULT: \K(approved|changes_requested)' | head -1)
+            OLD_BADGE="🟡 Changes requested"
+            [ "$OLD_RESULT" = "approved" ] && OLD_BADGE="🟢 Approved"
+
+            # Fold old comment into <details>
+            FOLDED="<details><summary>Review history (${OLD_BADGE})</summary>
+
+            ${OLD_BODY}
+
+            </details>"
+            echo "$FOLDED" | jq -Rs '{body: .}' \
+              | gh api "repos/$REPO/issues/comments/$EXISTING_ID" \
+                --method PATCH \
+                --input - \
+                --silent
+
+            printf '\n\n### Review History\n- %s — %s' "$OLD_SHA" "$OLD_BADGE" >> .tmp/digest-body.txt
+          fi
+
+          # Post digest comment and capture ID
+          COMMENT_ID=$(cat .tmp/digest-body.txt \
+            | jq -Rs --argjson limit 60000 \
+              '{body: (. | if length > $limit then .[:$limit] + "\n\n[truncated]" else . end)}' \
             | gh api "repos/$REPO/issues/$PR_NUMBER/comments" \
               --method POST \
               --input - \
-              --silent
+              --jq '.id')
+          echo "COMMENT_ID=$COMMENT_ID" >> "$GITHUB_ENV"
 
       - name: Submit PR review based on result
         if: always() && steps.opencode-review.outcome != 'cancelled'
@@ -620,8 +778,11 @@ jobs:
           REPO: ${{ github.repository }}
           REVIEW_OUTCOME: ${{ steps.opencode-review.outcome }}
         run: |
-          COMMENT_ID=$(gh api repos/$REPO/issues/$PR_NUMBER/comments \
-            --jq '[.[] | select(.user.login == "github-actions[bot]") | select(.body | test("REVIEW_RESULT:")) | .id] | last // empty')
+          COMMENT_ID="${COMMENT_ID:-}"
+          if [ -z "$COMMENT_ID" ]; then
+            COMMENT_ID=$(gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              --jq '[.[] | select(.user.login == "github-actions[bot]") | select(.body | test("REVIEW_RESULT:")) | .id] | last // empty')
+          fi
 
           if [ -z "$COMMENT_ID" ]; then
             if [ "$REVIEW_OUTCOME" = "failure" ]; then
@@ -636,11 +797,22 @@ jobs:
           fi
 
           COMMENT_BODY=$(gh api repos/$REPO/issues/comments/$COMMENT_ID --jq '.body')
+          DIGEST_LINK="📋 [Review digest](https://github.com/$REPO/pull/$PR_NUMBER#issuecomment-$COMMENT_ID)"
 
           if echo "$COMMENT_BODY" | grep -q "REVIEW_RESULT: changes_requested"; then
-            gh pr review $PR_NUMBER --request-changes --body "OpenCode review found issues that should be addressed before merging."
+            gh pr review $PR_NUMBER --request-changes --body \
+              "## 🟡 Code Review: Changes Requested
+
+${DIGEST_LINK}
+
+OpenCode review identified issues that should be addressed before merging."
             echo "::error::Review requests changes - merge blocked"
             exit 1
           else
-            gh pr review $PR_NUMBER --approve --body "OpenCode review completed, no blocking issues found."
+            gh pr review $PR_NUMBER --approve --body \
+              "## 🟢 Code Review: Approved
+
+${DIGEST_LINK}
+
+OpenCode review completed, no blocking issues found."
           fi
