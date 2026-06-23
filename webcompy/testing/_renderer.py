@@ -81,7 +81,7 @@ class TestRendererResult:
             try:
                 _active_di_scope.reset(self._di_token)
             except (ValueError, LookupError) as err:
-                logging.warn(
+                logging.warning(
                     "TestRendererResult.close() called from a different context "
                     "than render(); DI scope token cannot be reset: %s",
                     err,

@@ -65,13 +65,15 @@ class DynamicElement(ElementWithChildren):
                 task.add_done_callback(self._on_hydrate_render_done)
 
     def _on_hydrate_render_done(self, task: asyncio.Task) -> None:
-        if task in self._pending_render_tasks:
-            self._pending_render_tasks.remove(task)
-        if task.cancelled():
-            return
-        exc = task.exception()
-        if exc:
-            logging.error(exc)
+        try:
+            if task.cancelled():
+                return
+            exc = task.exception()
+            if exc:
+                logging.error(exc)
+        finally:
+            if task in self._pending_render_tasks:
+                self._pending_render_tasks.remove(task)
 
     @property
     def _parent(self) -> ElementWithChildren:
@@ -101,10 +103,10 @@ def _reposition_node(element: ElementAbstract, new_index: int) -> None:
     if node is None:
         return
     parent = node.parentNode
-    if not parent and not isinstance(element, DynamicElement):
+    if parent is None and not isinstance(element, DynamicElement):
         with suppress(AttributeError):
             parent = element._parent._get_node()
-    if not parent:
+    if parent is None or not parent:
         return
     if new_index < parent.childNodes.length:
         target = parent.childNodes[new_index]

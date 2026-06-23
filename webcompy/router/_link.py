@@ -105,7 +105,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                         state = params
                     else:
                         state = None
-                        logging.warn(
+                        logging.warning(
                             "Argument 'params' of RouterLink should be a Signal Object of json-serializable dict."
                         )
                 context.window.history.pushState(state, None, href)

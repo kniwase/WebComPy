@@ -38,5 +38,9 @@ def warn(*values: Any):
     _handler.warn(_convert_msg(values))
 
 
+def warning(*values: Any):
+    _handler.warn(_convert_msg(values))
+
+
 def error(*values: Any):
     _handler.error(_convert_msg(values))
