@@ -73,8 +73,7 @@ In the browser (PyScript), there is no true parallelism anyway — all DOM opera
 This change delivers:
 1. Making `_render()` async across the entire pipeline
 2. Supporting async lifecycle hooks
-3. Sibling parallel rendering
-4. Making `generate_html()` async
+3. Making `generate_html()` async
 
 ### Decision 4: Async lifecycle hooks via `inspect.iscoroutinefunction()`
 
@@ -282,6 +281,8 @@ async def _render(self):
 
 **Rationale**: `DynamicElement._render()` calls `child._render()` which is now async. The sequential rendering within `DynamicElement` (assigning `_node_idx` before rendering) is preserved.
 
+The same `_position_element_nodes` call SHALL also be present in `SwitchElement._refresh()` after rendering new children (following `_patch_children()`, deferred callback execution, and child rendering). This ensures that after a switch case change, all child DOM nodes are repositioned at the correct index in the parent, preventing DOM ordering inconsistencies that can arise when `_patch_children()` removes/replaces some children without repositioning the remaining ones.
+
 ### Decision 10: `ComponentProperty` type update
 
 **Chosen**: Update `ComponentProperty` TypedDict to accept both sync and async lifecycle hooks:
@@ -452,3 +453,50 @@ This runs only when no newly created children exist (to avoid race conditions wi
 - **Signal callback adaptation**: `_on_marked_dirty` renamed to `_dispatch` with an `_is_async` flag set at construction time. For `RepeatElement` and `SwitchElement`, the signal callback is a sync wrapper (`_refresh_sync`) that runs the async `_refresh` inline via `loop.run_until_complete()`. This ensures signal-triggered DOM updates complete synchronously in the browser (PyScript's `asyncio.ensure_future` does not guarantee timely task execution for fire-and-forget callbacks). User-defined async callbacks still use the fire-and-forget path via `_resolve_async_callback()`.
 - **`Component.__init__` remains synchronous**: Async component definitions are not supported in this change. The component setup function must return an `ElementChildren` synchronously. This is a deliberate scope limitation — async component definitions will be added in a follow-up change.
 - **Test migration effort**: Converting 20 test files with 69 `asyncio.run()` calls to `await` is a mechanical but time-consuming task. Mistakes during conversion could introduce subtle test failures.
+
+## Open Issues Discovered Post-Completion
+
+These were surfaced while reviewing the foundational change against the dependent in-progress changes (`feat-async-component-setup`, `feat-suspense-component`). They do not invalidate the foundation but should be addressed by, or coordinated with, those dependent changes.
+
+### Open Issue A: `nest_asyncio` duplicated across three call sites
+
+The conditional `nest_asyncio.apply(loop)` + `loop._nest_asyncio_patched` monkey-patch pattern is duplicated in:
+
+1. `webcompy/aio/_aio.py:_resolve_async_callback()` (server/test path)
+2. `webcompy/elements/types/_switch.py:_refresh_sync`
+3. `webcompy/elements/types/_repeat.py:_refresh_sync`
+
+This is a DRY violation and uses `nest_asyncio` (originally a test escape hatch) as a permanent architectural element, with `type: ignore` monkey-patching of a private loop attribute.
+
+**Recommended follow-up** (tracked as a task in a future change or `feat-async-component-setup`): extract a single helper `webcompy/aio/_aio.py:_run_in_active_loop(coro)` that encapsulates the "no loop → `asyncio.run`; running loop → conditional `nest_asyncio.apply` + `run_until_complete`" decision. Both `_refresh_sync` implementations and `_resolve_async_callback` should delegate to it. Longer-term, pytest-asyncio full adoption should eliminate the test-side nesting motivation; server SSR keeps the helper only because `generate_html` runs inside the ASGI event loop and is also called from `loop.run_until_complete` test utilities inside `run_sync`.
+
+### Open Issue B: Hydration double-render risk between `_hydrate_node` and `await child._render()`
+
+`DynamicElement._hydrate_node()` (sync) schedules `asyncio.ensure_future(child._render())` for unmounted children, attaching a done callback that logs exceptions. The parent (`AppDocumentRoot._render()` / enclosing `_render()`) then runs `for child in self._children: await child._render()`. The combination means a hydrated-but-unmounted child may have both a scheduled render task and an inline `await child._render()` in flight for the same element.
+
+Today this is held stable by:
+- The `if self._app and self._app._hydrate and not self.__hydrated:` guard in `AppDocumentRoot._render()` (Decision 5 / spec requirement "AppDocumentRoot._render() shall guard hydration behind the _hydrate flag").
+- `_dynamic.py` setting `_hydrated = False` at the end of `_render()` so subsequent call into `_render()` re-renders rather than relies on the scheduled task.
+
+The recent fix commits (`04f722a` "address Medium review findings — hydration double-render, node position asymmetry, callback leak" and `83db473` "revert _hydrate_node() async to sync, resolving E2E regression") indicate this area is still settling. The guard relies on subtle flag ordering.
+
+**Recommended follow-up** (tracked by `feat-client-only-component` / `feat-suspense-component` or a dedicated consolidation change): introduce an explicit `_hydration_pending` flag set when `_hydrate_node` schedules a render task, checked at the top of `_render()` to short-circuit (cancel the scheduled task or skip the inline render). This replaces the flag-ordering coupling with a single explicit dedup point. Any change there requires re-running the `/reactive` and `/switch` E2E pages, which is what motivated the original `83db473` revert.
+
+### Open Issue C: Root render error visibility
+
+`app.run()` schedules the root render via `resolve_async(self._root._render())`. `resolve_async`'s default `on_error=_log_error` means a raised async exception IS logged (via `webcompy.logging.error` with a cleaned traceback) — it is not swallowed silently. However, no user-visible error boundary is rendered: a top-level async setup failure that is not wrapped in a `Suspense` boundary surfaces only in the browser console / server logs.
+
+This is fine as a baseline ("uncaught errors are logged"), but the `feat-suspense-component` D9 design now relies on this default-log behavior for the "no enclosing Suspense" case. The contract that SHOULD be documented/spec'd is:
+
+> When an async render exception propagates to the root without an enclosing `SuspenseElement` (or future equivalent error boundary), the framework SHALL log the exception via the `resolve_async` default `on_error` hook AND SHALL NOT crash the running event loop. Surfacing a user-visible fallback is left to the developer via `Suspense` with `error_fallback`.
+
+Treat this not as a gap to fix here, but as a contract to **codify** in `async-rendering/spec.md` (next Open Issue D) and to make explicit in `feat-suspense-component` / `feat-async-component-setup` exceptions sections. A future enhancement may add a default root-level error boundary; it is out of scope for these changes.
+
+### Open Issue D: Async vs sync callback execution semantics differ across environments
+
+`_resolve_async_callback()` (and therefore `CallbackConsumerNode._dispatch` via the `_is_async` flag) executes async callbacks differently per environment:
+
+- **Browser (PyScript)**: `aio_run()` → `asyncio.ensure_future()` (fire-and-forget). Async callbacks do NOT necessarily complete before the next synchronous statement after the signal setter returns. This is intentional for UI responsiveness.
+- **Server / test (CPython)**: `nest_asyncio` + `loop.run_until_complete()` — async callbacks complete synchronously before the signal setter returns. This is intentional for SSG/SSR output determinism.
+
+This divergence is a deliberate design choice (the foundation made it), but the contract is implicit. It should be made explicit in the `async-rendering` spec so dependent changes (`feat-suspense-component`, SSG / data transfer) reason against a written guarantee, not an emergent behavior. The added Requirement is in this change's `specs/async-rendering/spec.md` (see the "Async signal callbacks execute environment-dependently" requirement).

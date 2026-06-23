@@ -2,7 +2,7 @@
 
 ## Why
 
-After `feat/async-rendering-pipeline`, the rendering pipeline is async: `_render()` is `async def`, lifecycle hooks support async, `generate_html()` is async, and children render in parallel via `asyncio.gather()`. However, `Component.__setup()` remains synchronous — component definitions must return `ElementChildren` synchronously. Python's `__init__` cannot be `async`, so resolving async component definitions requires a two-phase initialization strategy.
+After `feat/async-rendering-pipeline`, the rendering pipeline is async: `_render()` is `async def`, lifecycle hooks support async, `generate_html()` is async, and sibling children render **sequentially** via `for child in children: await child._render()` (sibling parallel rendering via `asyncio.gather()` is explicitly **deferred** and tracked as future work in the `async-rendering` spec's "Future Work" section). However, `Component.__setup()` remains synchronous — component definitions must return `ElementChildren` synchronously. Python's `__init__` cannot be `async`, so resolving async component definitions requires a two-phase initialization strategy.
 
 This change enables async component definitions:
 
@@ -23,6 +23,9 @@ The `await` in the setup function executes on the event loop during the async `_
 - **`FuncComponentDef` type** — Broadened to accept `Callable[[...], Coroutine[Any, Any, ElementChildren]]`.
 - **`define_component` decorator** — Broadened to accept async callables.
 - **`ComponentProperty` type** — `template` field broadened to `ElementChildren | None` for the unresolved state.
+- **Foundation validation spike** — Adds a prerequisite spike task verifying the foundational `_refresh_sync` mechanism does not block or deadlock when a dynamic element's subtree contains async component definitions (see tasks section 0 and design Decision 6).
+- **Two-tier refresh coordination with dynamic elements** — When `RepeatElement` / `SwitchElement` subtrees contain async components, signal-triggered refresh SHALL NOT block the event loop inside `_refresh_sync`. The structural patch (`_patch_children`, `_position_element_nodes`) stays sync; the async content resolution is delegated to the enclosing `SuspenseElement` (design Decision 6). Registration logic in `_render()` SHALL re-check the subtree for async components and fall back to the async `_refresh` path when detected.
+- **Async setup exception contract** — Exceptions from `await self._pending_async_template` propagate up the `await` chain and are caught by the closest enclosing `SuspenseElement` (rendering `error_fallback`); if none encloses the failure, the root render's `resolve_async` default `on_error` hook logs the exception (design Decision 7).
 
 ## Capabilities
 

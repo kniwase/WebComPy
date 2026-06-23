@@ -58,7 +58,7 @@
 
 - [x] 8.1 Change `AppDocumentRoot._render()` to `async def _render(self):` in `webcompy/app/_root_component.py`
 - [x] 8.2 Update `on_before_rendering` and `on_after_rendering` calls to use `iscoroutinefunction()` detection and `await` when async
-- [x] 8.3 Replace `for child in self._children: child._render()` with `await asyncio.gather(*[child._render() for child in self._children])`
+- [x] 8.3 Replace `for child in self._children: child._render()` with `await asyncio.gather(*[child._render() for child in self._children])` (reverted in commit c766721 — sibling parallel rendering deferred to future work; sequential `await` iteration used instead)
 - [x] 8.4 Update `AppDocumentRoot.render` property — it currently returns `self._render`, which is now an async method. Ensure the property returns the coroutine function correctly for `app.run()` to schedule it
 - [x] 8.5 Add `import asyncio` and `from inspect import iscoroutinefunction` to `_root_component.py`
 
@@ -198,8 +198,9 @@
 - [x] 24.1 In `webcompy/app/_app.py`: replace `asyncio.ensure_future(ctx._root._render())  # noqa: RUF006` with `resolve_async(ctx._root._render())`. `resolve_async` wraps the coroutine with `try/except` and logs errors via `_log_error`, so async hook exceptions surface in the log instead of being silently dropped.
 - [x] 24.2 In `webcompy/elements/types/_dynamic.py`: introduce `DynamicElement._pending_render_tasks: list[asyncio.Task[Any]]` initialized in `__init__`. In `_hydrate_node`, append the scheduled task to this list (and remove it via the done callback). In `_remove_element`, cancel any in-flight tasks and clear the list. This ensures async renders do not run against torn-down DOM.
 - [x] 24.3 In `webcompy/testing/_renderer.py`: refactor `TestRenderer.render()` to construct `TestRendererResult` exactly once, by returning a tuple `(instance, root_node, scope)` from `_render_async()` and building the result outside the copied context. The two prior construction sites (L132 inside `_render_async`, L137 outside) are merged into a single one (L143).
-- [x] 24.4 In `webcompy/testing/_renderer.py`: replace `contextlib.suppress(ValueError, LookupError)` with an explicit `try/except` that logs a `logging.warning(...)` explaining the cross-context situation. Helps debugging when `close()` is called from a different context.
+- [x] 24.4 In `webcompy/testing/_renderer.py`: replace `contextlib.suppress(ValueError, LookupError)` with an explicit `try/except` that logs a `logging.warn(...)` explaining the cross-context situation. Helps debugging when `close()` is called from a different context.
 - [x] 24.5 In `openspec/changes/feat-async-rendering-pipeline/design.md`: correct the misleading "enables parallelism" wording at L140 and the obsolete "`asyncio.gather()` in Emscripten" risk paragraph at L383. Sibling parallelism is intentionally NOT enabled in this change; it is deferred to future work.
+- [x] 24.6 In `webcompy/logging.py`: add `warning()` alias for `warn()` to follow Python standard library convention. Update `webcompy/testing/_renderer.py` and `webcompy/router/_link.py` to use `logging.warning()` instead of `logging.warn()`. Add `_position_element_nodes` rationale to `design.md` Decision 9 for the `SwitchElement._refresh()` call.
 
 ## 25. Fix signal-triggered refresh synchrony and PyProxy stale-cache issue (committed as 491d762)
 

@@ -11,7 +11,7 @@ Developers need a `Suspense` component that:
 1. **Shows fallback while children are loading** — Renders placeholder content (e.g., "Loading...") when children's async setup is in progress.
 2. **Swaps to children when complete** — Automatically replaces fallback with actual content once all async operations in the children tree resolve.
 3. **Waits for children in SSR/SSG** — On the server, awaits children completion (with a configurable timeout) so the final HTML includes the data.
-4. **Enables parallel data fetching** — Sibling `Suspense` boundaries allow independent sections of the page to load in parallel via `asyncio.gather`.
+4. **Enables parallel data fetching within a boundary** — A single `Suspense` boundary resolves its own async children concurrently via `asyncio.gather(*coroutines)`. Parallel fetching across **sibling** `Suspense` boundaries is **not** provided by this change: sibling boundaries remain sequential per the foundational `async-rendering` spec, and sibling-level `gather` is deferred to the same future work that lifts the foundation's sibling-render parallelism restriction (see design D7).
 
 ## What Changes
 
@@ -38,10 +38,12 @@ Developers need a `Suspense` component that:
 
 - Data fetching primitives (use `useAsyncResult` or direct `HttpClient` calls inside components).
 - Nested `Suspense` boundaries with independent loading states (supported by design but not a primary focus).
+- **Parallel fetching across sibling `Suspense` boundaries** — Sibling `Suspense` elements render sequentially per the foundational `async-rendering` spec. Sibling-level `asyncio.gather` is deferred to the same future work that lifts the foundation's sequential sibling rendering restriction (prerequisites: DOM ordering guarantees, atomic cleanup, ContextVar isolation — see foundation `async-rendering` spec "Future Work → Parallel Sibling Rendering"). This change delivers concurrency only **within** a single boundary (its own async children via `gather`).
 - Streaming SSR (rendering partial HTML as sections resolve).
 - Changing `useAsyncResult` behavior (it remains fire-and-forget; `Suspense` is complementary).
 - Caching or deduplication of async operations (separate concern).
 - Client-side transition animations between fallback and children.
+- A built-in root-level error boundary. Uncaught async setup exceptions (no enclosing `Suspense`) are logged via the root render's `resolve_async` `on_error` hook; making them user-visible without an explicit `Suspense` boundary is out of scope here.
 
 ## Dependency
 

@@ -1,3 +1,12 @@
+## 0. Foundation validation spike
+
+> Prerequisite for the rest of this change. Validates that the foundational `_refresh_sync` mechanism in `feat/async-rendering-pipeline` does not deadlock or block the event loop once async component setup is in play.
+
+- [ ] 0.1 Build a minimal PoC: a `@define_component async def DataComponent(context): data = await fetch("/api/x"); return html.DIV(...)` placed inside a `repeat()` whose sequence signal updates during SSG.
+- [ ] 0.2 Confirm that a signal-triggered `RepeatElement._refresh()` whose subtree contains the async component does NOT block the event loop (no user I/O is awaited inside `_refresh_sync`'s `run_until_complete`) — record the observed behavior.
+- [ ] 0.3 If any block/deadlock is observed, document with a reproducer before continuing — this defines the exact behavior to fix in the two-tier refresh work (Decision 6).
+- [ ] 0.4 Confirm `app.run()`'s root render via `resolve_async(... _render())` still logs a raised async exception via the default `on_error=_log_error` hook, and that no swallow-without-log path is introduced.
+
 ## 1. Update types and decorator
 
 - [ ] 1.1 In `webcompy/components/_libs.py`, update `ComponentProperty["template"]` type from `ElementChildren` to `ElementChildren | None`
@@ -33,6 +42,16 @@
           self.__init_component(property)
   ```
 - [ ] 4.2 Verify that after this block, the existing lifecycle hook and `super()._render()` logic runs as normal
+
+## 4b. Dynamic-element async refresh fallback (Decision 6)
+
+> Goal: prevent `_refresh_sync` from blocking the event loop on a subtree that turns out to contain async components (Decision 6 / Foundation Open Issue A).
+
+- [ ] 4b.1 In `webcompy/elements/types/_repeat.py` and `webcompy/elements/types/_switch.py`, add a helper (e.g. `_subtree_has_async_setup(element) -> bool`) that walks the element's current/generated children and returns `True` if any `Component` has `_pending_async_template is not None`.
+- [ ] 4b.2 In `RepeatElement._render()` and `SwitchElement._render()` where the signal callback is registered, choose `self._refresh_sync` only when `_subtree_has_async_setup(self) is False`; otherwise register the async `self._refresh` (fire-and-forget via existing `_resolve_async_callback` path) so the enclosing `SuspenseElement` owns async resolution.
+- [ ] 4b.3 Keep `_on_set_parent()` registration unchanged (still `self._refresh` async, per foundation Decision 13).
+- [ ] 4b.4 Ensure `_signal_activated` is still set before either registration path, so double-registration is still impossible.
+- [ ] 4b.5 Add a unit test that triggers a signal update on a `repeat()` whose subtree contains an async component definition and asserts that the event loop is NOT blocked (the refresh does NOT call `loop.run_until_complete` on user async code) — fallback/slot resolution is delegated to the enclosing `Suspense`.
 
 ## 5. Verification
 

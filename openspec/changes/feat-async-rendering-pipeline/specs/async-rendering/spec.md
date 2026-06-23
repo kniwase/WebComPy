@@ -12,11 +12,11 @@ This enables future async SSR capabilities (per-route data fetching, streaming) 
 
 `ElementAbstract._render()`, `ElementWithChildren._render()`, `DynamicElement._render()`, `RepeatElement._render()`, `SwitchElement._render()`, `Component._render()`, and `AppDocumentRoot._render()` SHALL be `async def` methods. All callers of these methods SHALL `await` them. The `_mount_node()` method SHALL remain synchronous since DOM operations are not async.
 
- `_hydrate_node()` SHALL remain synchronous in this change. `ElementAbstract._hydrate_node()`, `ElementWithChildren._hydrate_node()`, and `DynamicElement._hydrate_node()` SHALL be `def` methods. All `_hydrate_node()` callers SHALL call them directly (no `await`). `DynamicElement._hydrate_node()` SHALL use `asyncio.ensure_future(child._render())` to schedule the async render of unmounted children, attaching a done callback that logs exceptions via `webcompy.logging.error`. This eliminates the `RuntimeWarning: coroutine ... was never awaited` and ensures async render errors surface in the log. Making `_hydrate_node()` async was attempted during this change's development but caused an E2E regression on the `/reactive` and `/switch` pages; downstream changes (e.g. `feat-client-only-component`, `feat-suspense-component`) may revisit full async hydration with proper support.
+`_hydrate_node()` SHALL remain synchronous in this change. `ElementAbstract._hydrate_node()`, `ElementWithChildren._hydrate_node()`, and `DynamicElement._hydrate_node()` SHALL be `def` methods. All `_hydrate_node()` callers SHALL call them directly (no `await`). `DynamicElement._hydrate_node()` SHALL use `asyncio.ensure_future(child._render())` to schedule the async render of unmounted children, attaching a done callback that logs exceptions via `webcompy.logging.error`. This eliminates the `RuntimeWarning: coroutine ... was never awaited` and ensures async render errors surface in the log. Making `_hydrate_node()` async was attempted during this change's development but caused an E2E regression on the `/reactive` and `/switch` pages; downstream changes (e.g. `feat-client-only-component`, `feat-suspense-component`) may revisit full async hydration with proper support.
 
 #### Scenario: Rendering a component in the browser
 - **WHEN** `app.run()` is called in the browser
-- **THEN** the async render pipeline SHALL be scheduled via `asyncio.ensure_future(self._root._render())`
+- **THEN** the async render pipeline SHALL be scheduled via `resolve_async(ctx._root._render())`
 - **AND** the component tree SHALL render correctly as before
 
 #### Scenario: Rendering a component during SSG
@@ -151,11 +151,11 @@ The `ComponentProperty` TypedDict SHALL type `on_before_rendering`, `on_after_re
 
 ### Requirement: app.run() shall schedule the async render
 
-In the browser (PyScript) environment, `app.run()` SHALL schedule the async render via `asyncio.ensure_future(self._root._render())`. This SHALL NOT block the event loop. The loading indicator removal and profile recording SHALL happen within the async render pipeline.
+In the browser (PyScript) environment, `app.run()` SHALL schedule the async render via `resolve_async(ctx._root._render())`. This SHALL NOT block the event loop. The loading indicator removal and profile recording SHALL happen within the async render pipeline.
 
 #### Scenario: Running an app in the browser
 - **WHEN** `app.run()` is called in a PyScript environment
-- **THEN** `asyncio.ensure_future(self._root._render())` SHALL be called
+- **THEN** `resolve_async(ctx._root._render())` SHALL be called
 - **AND** the application SHALL render and mount into the DOM correctly
 
 #### Scenario: Calling run() in a non-browser environment
@@ -326,6 +326,36 @@ Test utility functions (e.g., `TestRenderer.render()`, `render_app_html_sync()`)
 - **WHEN** `uv run python -m pytest tests/` is executed
 - **THEN** all unit tests SHALL pass without `asyncio.run()` related errors
 - **AND** the test execution time SHALL not increase significantly compared to the sync pipeline
+
+### Requirement: Async signal callbacks shall execute with environment-dependent semantics
+
+When a signal update triggers a callback registered via `on_after_updating` whose callable is an `async def` (i.e. `CallbackConsumerNode._is_async` is `True`), `_dispatch()` SHALL delegate execution to `_resolve_async_callback()` in `webcompy/aio/_aio.py`. The execution semantics of `_resolve_async_callback()` SHALL differ by environment in a documented, intentional way:
+
+- **Browser (PyScript)**: async callbacks SHALL be dispatched fire-and-forget via `aio_run()` → `asyncio.ensure_future()`. Async callbacks are NOT guaranteed to complete before the next synchronous statement after the signal setter returns. This is intentional — the browser prioritizes UI responsiveness over completion ordering for user-level async callbacks.
+- **Server / test (CPython)**: async callbacks SHALL be executed to completion synchronously via `nest_asyncio` + `loop.run_until_complete()` before the signal setter returns. This is intentional — SSG/SSR and tests need deterministic, in-order completion so that HTML output and assertions are reproducible.
+
+This divergence is a deliberate design decision, not a bug. Dependent changes (e.g. SSG/SSR via `feat-ssg-via-ssr`, data transfer via `feat-hydration-data-transfer`, `Suspense` via `feat-suspense-component`) SHALL rely on this written contract rather than an emergent behavior.
+
+`_refresh_sync` (the sync wrapper used by `RepeatElement` / `SwitchElement` when registered from `_render()`) is NOT an async callback from `_dispatch()`'s viewpoint — `iscoroutinefunction(_refresh_sync)` is `False`, so `_dispatch()` calls it directly and synchronously regardless of environment. The environment-dependent path above applies only to genuinely async callbacks (user-defined async hooks, and the raw `async _refresh` registered from `_on_set_parent()`).
+
+#### Scenario: Async user hook triggered by a signal in the browser
+- **WHEN** a developer registers `@on_after_updating async def hook(v): ...` on a signal, and the signal's value changes in the browser
+- **THEN** `_dispatch()` SHALL detect `_is_async = True` and call `_resolve_async_callback(self._callback, self._producer._value)`
+- **AND** the browser SHALL dispatch the hook fire-and-forget via `aio_run()` → `asyncio.ensure_future()`
+- **AND** the hook MAY complete after the signal setter has returned
+- **AND** synchronous dependent callbacks (e.g. `Computed` re-evaluation → `_update_text`) SHALL still complete before the signal setter returns (because sync callbacks execute first during `producer_notify_consumers`)
+
+#### Scenario: Async user hook triggered by a signal during SSG
+- **WHEN** the same hook is triggered during `generate_html()` / `generate_static_site()`
+- **THEN** the server SHALL execute the hook to completion synchronously via `nest_asyncio` + `loop.run_until_complete()`
+- **AND** the hook SHALL complete before the signal setter returns
+- **AND** the resulting HTML SHALL reflect any DOM mutations the hook performed, deterministically
+
+#### Scenario: `_refresh_sync` is treated as a sync callback regardless of environment
+- **WHEN** a signal updates and the registered callback is `_refresh_sync` (a sync `def`)
+- **THEN** `_dispatch()` SHALL detect `_is_async = False` and call `_refresh_sync(...)` directly
+- **AND** `_refresh_sync` SHALL internally run `self._refresh(...)` to completion via `loop.run_until_complete()` in both environments (browser uses native `run_until_complete`; server/test uses `nest_asyncio`-patched `run_until_complete`)
+- **AND** the DOM update SHALL complete before the signal setter returns in both environments
 
 ## MODIFIED Requirements
 

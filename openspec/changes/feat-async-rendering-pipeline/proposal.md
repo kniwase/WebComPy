@@ -9,12 +9,12 @@ The current rendering pipeline is entirely synchronous: `ElementAbstract._render
 3. **Sibling parallelism** — Children in `ElementWithChildren._render()` are rendered sequentially, with no opportunity for concurrent I/O or computation.
 4. **Future async SSR** — Server-side rendering with async data fetching (e.g., per-route API calls during SSG) requires the pipeline itself to be async.
 
-This change converts the entire rendering pipeline from synchronous to async, enabling async component definitions, async lifecycle hooks, and sibling parallel rendering — while maintaining full backward compatibility with existing sync code.
+This change converts the entire rendering pipeline from synchronous to async, enabling async lifecycle hooks — while maintaining full backward compatibility with existing sync code. Async component definitions and sibling parallel rendering are out of scope for this change and will be addressed in follow-up changes.
 
 ## What Changes
 
-- **`ElementAbstract._render()` → `async def _render(self):`** — Base render method becomes async; calls `await self._mount_node()`.
-- **`ElementWithChildren._render()` → `async def _render(self):`** — Uses `asyncio.gather()` for parallel child rendering instead of sequential iteration.
+- **`ElementAbstract._render()` → `async def _render(self):`** — Base render method becomes async; calls `self._mount_node()` synchronously (not awaited) within the async method.
+- **`ElementWithChildren._render()` → `async def _render(self):`** — Uses sequential `await` iteration for child rendering.
 - **`DynamicElement._render()` → `async def _render(self):`** — Async render for `SwitchElement`/`RepeatElement`.
 - **`SwitchElement._refresh()` → `async def _refresh(self, *args):`** — Async refresh with deferred after-rendering callbacks.
 - **`RepeatElement._refresh()` → `async def _refresh(self, *args):`** — Async refresh for list reconciliation.
@@ -24,24 +24,24 @@ This change converts the entire rendering pipeline from synchronous to async, en
 - **`Context.on_before_rendering()`/`Context.on_after_rendering()`** — Accept both sync and async callables.
 - **`AppDocumentRoot._render()` → `async def _render(self):`** — Async render with DI scope management.
 - **`generate_html()` → `async def generate_html(...)`** — Returns `Awaitable[str]`.
-- **`app.run()` uses `asyncio.ensure_future`** — Browser entry point schedules async render.
+- **`app.run()` uses `resolve_async`** — Browser entry point schedules async render.
 - **`_aio_run_browser()` / `_aio_run_server()`** — Updated to support async rendering.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `async-rendering`: The rendering pipeline supports async component definitions, async lifecycle hooks, and sibling parallel rendering. Existing sync components and hooks continue to work without modification.
+- `async-rendering`: The rendering pipeline supports async lifecycle hooks. Existing sync components and hooks continue to work without modification.
 
 ### Modified Capabilities
 
-- `components`: Component setup functions may be `async def`. Lifecycle hooks (`on_before_rendering`, `on_after_rendering`) may be async callables.
-- `app-lifecycle`: `app.run()` schedules the async render via `asyncio.ensure_future`. `generate_html()` is now async and must be awaited.
+- `components`: Lifecycle hooks (`on_before_rendering`, `on_after_rendering`) may be async callables.
+- `app-lifecycle`: `app.run()` schedules the async render via `resolve_async`. `generate_html()` is now async and must be awaited.
 - `architecture`: The rendering pipeline is async in both environments, enabling future async SSR patterns.
 
 ## Known Issues Addressed
 
-- **No async component definitions** — Currently `@define_component async def MyComponent(context): ...` silently ignores the coroutine return. After this change, async component definitions are fully supported.
+- **No async component definitions** — Currently `@define_component async def MyComponent(context): ...` silently ignores the coroutine return. This change lays the groundwork but does not implement async component definitions (tracked in `feat/async-component-setup`).
 - **No async lifecycle hooks** — Currently `@on_after_rendering async def hook(): ...` silently ignores the coroutine. After this change, async hooks are awaited.
 
 ## Non-goals
@@ -49,7 +49,7 @@ This change converts the entire rendering pipeline from synchronous to async, en
 - **Async component definitions** — `async def` component setup functions are not supported in this change. They will be implemented in `feat/async-component-setup`.
 - Per-route async data fetching during SSG (separate change: `feat/ssg-via-ssr`).
 - Changing the signal system to be async-aware.
-- Changing `DynamicElement._refresh()` to use `asyncio.gather()` for sibling parallelism (the current sequential behavior within `SwitchElement._refresh()` is preserved for correctness).
+- Changing `ElementWithChildren._render()` to use `asyncio.gather()` for sibling parallelism (the current sequential behavior is preserved for correctness and will be addressed in a follow-up change).
 - Modifying the `TestRenderer` or testing module (the testing module will need a separate update to support async rendering).
 - Making `_mount_node()` async (it remains synchronous — only `_render()` becomes async).
 
