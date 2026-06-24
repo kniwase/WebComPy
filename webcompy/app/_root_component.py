@@ -89,7 +89,7 @@ class AppDocumentRoot(Component):
             else:
                 on_before()
             self._mount_node()
-            if self._app and self._app._hydrate and not self.__hydrated:
+            if ENVIRONMENT == "pyscript" and self._app and self._app._hydrate and not self.__hydrated:
                 self.__hydrated = True
                 for child in self._children:
                     child._hydrate_node()
