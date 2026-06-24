@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, Literal
 
+from webcompy.aio import resolve_async
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.components import ComponentGenerator
 from webcompy.exception import WebComPyException
@@ -28,7 +29,7 @@ class WebComPyApp:
     ) -> None:
         self._config = config or WebComPyAppConfig()
         self._profile = self._config.profile
-        self._hydrate = self._config.hydrate
+        self._hydrate = self._config.hydrate and ENVIRONMENT == "pyscript"
         self._render_context_cv = ContextVar(f"_render_context_cv_{id(self)}", default=None)
         self._root_component_def = root_component
         self._router = router
@@ -234,11 +235,7 @@ class WebComPyApp:
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("app.run() can only be called in a browser environment.")
         self._record_phase("run_start")
-        from webcompy.components._component import _active_app_context, _set_app_instance
-
         ctx = self.create_render_context()
-        _active_app_context.set(ctx)
-        _set_app_instance(ctx)
         self._plugin_manager.call_on_app_ready(ctx)
         ctx._root._selector = self._config.selector
-        ctx._root.render()
+        resolve_async(ctx._root._render())

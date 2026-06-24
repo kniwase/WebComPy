@@ -287,7 +287,7 @@ class TestAppConfigHydrate:
 
 
 class TestWebComPyAppHydrate:
-    def test_app_hydrate_default_true(self):
+    def test_app_hydrate_forced_false_in_non_pyscript_with_default_config(self):
         from webcompy.app._app import WebComPyApp
         from webcompy.components._generator import define_component
         from webcompy.elements import html
@@ -297,9 +297,9 @@ class TestWebComPyAppHydrate:
             return html.DIV({}, "hello")
 
         app = WebComPyApp(root_component=HydrateRoot1)
-        assert app._hydrate is True
+        assert app._hydrate is False
 
-    def test_app_hydrate_explicit_false(self):
+    def test_app_hydrate_forced_false_in_non_pyscript_with_explicit_true(self):
         from webcompy.app._app import WebComPyApp
         from webcompy.components._generator import define_component
         from webcompy.elements import html
@@ -308,8 +308,9 @@ class TestWebComPyAppHydrate:
         def HydrateRoot2(context):
             return html.DIV({}, "hello")
 
-        app = WebComPyApp(root_component=HydrateRoot2)
-        assert app._hydrate is True
+        config = WebComPyAppConfig(hydrate=True)
+        app = WebComPyApp(root_component=HydrateRoot2, config=config)
+        assert app._hydrate is False
 
     def test_app_hydrate_from_config(self):
         from webcompy.app._app import WebComPyApp

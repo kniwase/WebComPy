@@ -133,30 +133,48 @@ class RepeatElement(DynamicElement):
             )
         )
 
-    def _render(self):
-        self._refresh()
+    async def _render(self):
+        await self._refresh()
         if not self._signal_activated:
             self._signal_activated = True
-            self._add_callback_node(self._sequence.on_after_updating(self._refresh))
+            self._add_callback_node(self._sequence.on_after_updating(self._refresh_sync))
 
-    def _refresh(self, *args: Any):
+    def _refresh_sync(self, *args: Any):
+        import asyncio
+
+        from webcompy.utils._environment import ENVIRONMENT
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self._refresh(*args))
+        else:
+            if ENVIRONMENT != "pyscript":
+                import nest_asyncio
+
+                if not getattr(loop, "_nest_asyncio_patched", False):
+                    nest_asyncio.apply(loop)
+                    loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
+            loop.run_until_complete(self._refresh(*args))
+
+    async def _refresh(self, *args: Any):
         parent_node = self._parent._get_node()
         if not parent_node:
             raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
         if self._has_key and self._signal_activated and self._children_keys:
-            self._reconcile_children()
+            await self._reconcile_children()
         else:
             for _ in range(len(self._children)):
                 self._children.pop(-1)._remove_element()
             self._children = self._generate_children()
             for c_idx, child in enumerate(self._children):
                 child._node_idx = self._node_idx + c_idx
-                child._render()
+                await child._render()
             if self._has_key:
                 self._populate_key_map()
         self._parent._re_index_children(False)
 
-    def _reconcile_children(self):
+    async def _reconcile_children(self):
         items = self._iter_items()
         new_keys: list[str | int] = [k for _, k in items]
 
@@ -210,15 +228,20 @@ class RepeatElement(DynamicElement):
 
         for c_idx, child in enumerate(new_children):
             if c_idx in newly_created:
-                child._render()
+                await child._render()
             elif isinstance(child, DynamicElement):
                 pass
             elif child._node_cache is None:
-                child._render()
+                await child._render()
 
         self._children = new_children
         self._children_keys = new_keys
         self._key_to_child = new_key_to_child
+
+        if parent_node and not newly_created:
+            expected = sum(c._node_count for c in new_children)
+            while parent_node.childNodes.length > expected:
+                parent_node.childNodes[-1].remove()
 
 
 class MultiLineTextElement(RepeatElement):

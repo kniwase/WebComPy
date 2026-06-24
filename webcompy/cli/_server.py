@@ -304,7 +304,7 @@ def create_asgi_app(
             if is_matched or "text/html" in accept_types:
                 ctx = app.create_render_context(requested_path)
                 try:
-                    return HTMLResponse(html_generator(ctx))
+                    return HTMLResponse(await html_generator(ctx))
                 finally:
                     ctx.dispose()
             else:
@@ -312,12 +312,13 @@ def create_asgi_app(
 
         html_route = Route("/{path:path}", send_html)
     else:
-        ctx = app.create_render_context("/")
-        html = html_generator(ctx)
-        ctx.dispose()
 
-        async def send_html(_: Request):  # type: ignore
-            return HTMLResponse(html)
+        async def send_html(request: Request):  # type: ignore
+            ctx = app.create_render_context("/")
+            try:
+                return HTMLResponse(await html_generator(ctx))
+            finally:
+                ctx.dispose()
 
         html_route = Route("/", send_html)
 

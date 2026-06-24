@@ -34,7 +34,8 @@ class HeadElement(ElementWithChildren):
                 if title is not None:
                     inject(DOM_PORT_KEY).set_title(title)
 
-            head_props.title.on_after_updating(updte_title)
+            consumer = head_props.title.on_after_updating(updte_title)
+            self._callback_consumers["__title__"] = consumer
 
     @property
     def _node_count(self) -> int:
@@ -100,7 +101,7 @@ class HeadElement(ElementWithChildren):
             "script": self._scripts_head,
         }
 
-    def _render(self):
+    async def _render(self):
         from webcompy.di import inject
         from webcompy.di._keys import _COMPONENT_STORE_KEY
         from webcompy.ports._keys import DOM_PORT_KEY

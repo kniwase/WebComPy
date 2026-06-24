@@ -62,7 +62,7 @@ class SignalNode:
 
 
 class _CallbackMixin:
-    def _on_marked_dirty(self) -> None:
+    def _dispatch(self) -> None:
         raise NotImplementedError
 
 
@@ -155,7 +155,7 @@ def producer_mark_clean(producer: SignalNode) -> None:
 def consumer_mark_dirty(consumer: SignalNode) -> None:
     producer_notify_consumers(consumer)
     if isinstance(consumer, _CallbackMixin):
-        consumer._on_marked_dirty()
+        consumer._dispatch()
 
 
 def consumer_poll_producers_for_change(consumer: SignalNode) -> bool:

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 from abc import abstractmethod
 from contextlib import suppress
+from typing import Any
 
+from webcompy import logging
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._base import ElementWithChildren
@@ -14,6 +17,11 @@ from webcompy.signal._graph import consumer_destroy
 class DynamicElement(ElementWithChildren):
     __parent: ElementWithChildren
 
+    def __init__(self) -> None:
+        super().__init__()
+        self._pending_render_tasks: list[asyncio.Task[Any]] = []
+        self._hydrated = False
+
     @property
     def _node_count(self) -> int:
         return sum(child._node_count for child in self._children)
@@ -21,15 +29,20 @@ class DynamicElement(ElementWithChildren):
     def _get_node(self) -> DOMNode:
         return self._parent._get_node()
 
-    def _render(self):
+    async def _render(self):
         parent_node = self._parent._get_node()
         for c_idx, child in enumerate(self._children):
             child._node_idx = self._node_idx + c_idx
-            if child._mounted is None:
-                child._render()
+            if child._mounted is None and not self._hydrated:
+                await child._render()
+        self._hydrated = False
         _position_element_nodes(self, parent_node, self._node_idx)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
+        for task in self._pending_render_tasks:
+            if not task.done():
+                task.cancel()
+        self._pending_render_tasks.clear()
         for callback_node in self._callback_nodes:
             consumer_destroy(callback_node)
         self._clear_node_cache(False)
@@ -39,6 +52,7 @@ class DynamicElement(ElementWithChildren):
                 child._remove_element(True, True)
 
     def _hydrate_node(self) -> None:
+        self._hydrated = True
         for child in self._children:
             child._hydrate_node()
         idx = self._node_idx
@@ -46,7 +60,20 @@ class DynamicElement(ElementWithChildren):
             child._node_idx = idx
             idx += child._node_count
             if not child._mounted:
-                child._render()
+                task = asyncio.ensure_future(child._render())
+                self._pending_render_tasks.append(task)
+                task.add_done_callback(self._on_hydrate_render_done)
+
+    def _on_hydrate_render_done(self, task: asyncio.Task) -> None:
+        try:
+            if task.cancelled():
+                return
+            exc = task.exception()
+            if exc:
+                logging.error(exc)
+        finally:
+            if task in self._pending_render_tasks:
+                self._pending_render_tasks.remove(task)
 
     @property
     def _parent(self) -> ElementWithChildren:
@@ -76,10 +103,10 @@ def _reposition_node(element: ElementAbstract, new_index: int) -> None:
     if node is None:
         return
     parent = node.parentNode
-    if not parent and not isinstance(element, DynamicElement):
+    if parent is None and not isinstance(element, DynamicElement):
         with suppress(AttributeError):
             parent = element._parent._get_node()
-    if not parent:
+    if parent is None or not parent:
         return
     if new_index < parent.childNodes.length:
         target = parent.childNodes[new_index]

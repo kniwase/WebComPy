@@ -34,7 +34,7 @@ from webcompy.cli._wheel_builder import (
 from webcompy.cli.config._build_config import WebComPyBuildConfig
 
 
-def generate_static_site(app: WebComPyApp | None = None):
+async def generate_static_site(app: WebComPyApp | None = None):
     _, args = get_params()
     if app is None:
         build_config = discover_config(args.get("config"))
@@ -289,20 +289,20 @@ def generate_static_site(app: WebComPyApp | None = None):
                     if not (path_dir := dist_dir / path).exists():
                         os.makedirs(path_dir)
                     ctx = app.create_render_context(path)
-                    html = generate_html(ctx, **_generate_kwargs)  # type: ignore[arg-type]
+                    html = await generate_html(ctx, **_generate_kwargs)  # type: ignore[arg-type]
                     ctx.dispose()
                     html_path = path_dir / "index.html"
                     html_path.open("w", encoding="utf8").write(html)
                     print(html_path)
             ctx = app.create_render_context("//:404://")
-            html = generate_html(ctx, **_generate_kwargs)  # type: ignore[arg-type]
+            html = await generate_html(ctx, **_generate_kwargs)  # type: ignore[arg-type]
             ctx.dispose()
             html_path = dist_dir / "404.html"
             html_path.open("w", encoding="utf8").write(html)
             print(html_path)
         else:
             ctx = app.create_render_context("/")
-            html = generate_html(ctx, **_generate_kwargs)  # type: ignore[arg-type]
+            html = await generate_html(ctx, **_generate_kwargs)  # type: ignore[arg-type]
             ctx.dispose()
             html_path = dist_dir / "index.html"
             html_path.open("w", encoding="utf8").write(html)

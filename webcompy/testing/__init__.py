@@ -5,7 +5,9 @@ from webcompy.testing._app import mock_app_run
 from webcompy.testing._asgi import (
     create_test_asgi_app,
     format_html,
-    render_app_html,
+)
+from webcompy.testing._asgi import (
+    render_app_html_sync as render_app_html,
 )
 from webcompy.testing._dom import FakeDOMNode
 from webcompy.testing._ports import (
@@ -16,6 +18,7 @@ from webcompy.testing._ports import (
 )
 from webcompy.testing._renderer import TestRenderer, TestRendererResult
 from webcompy.testing._scope import create_test_app
+from webcompy.testing._utils import run_sync
 
 __all__ = [
     "FakeBrowserDOMPort",
@@ -31,4 +34,5 @@ __all__ = [
     "format_html",
     "mock_app_run",
     "render_app_html",
+    "run_sync",
 ]

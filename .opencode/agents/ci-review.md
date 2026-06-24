@@ -68,6 +68,16 @@ Watch for these WebComPy-specific issues that generic reviewers miss:
 
 **Lifecycle Ordering**: `on_after_rendering` during route navigation (`SwitchElement._refresh()`) must be deferred, not synchronous in the callback chain. Component setup must restore `_active_di_scope` ContextVar on exit.
 
+**Async Rendering Pipeline**: All `*_render()` methods (element/component/root) are `async def` and MUST be `await`ed; `_mount_node()` stays synchronous. Sibling children render sequentially via `for child in children: await child._render()` — parallel `asyncio.gather()` is explicitly deferred (see `async-rendering` spec "Future Work"). Lifecycle hooks may be `async def`; `Component._render()` detects them via `iscoroutinefunction()` and awaits. `generate_html()` and `generate_static_site()` are `async def` — callers MUST `await`. Browser `app.run()` schedules the render via `resolve_async(...)` (NOT raw `asyncio.ensure_future`), so uncaught exceptions flow to the `_log_error` `on_error` hook.
+
+**Async Signal Callback Execution**: When a registered signal callback is `async def`, `_dispatch()` delegates to `_resolve_async_callback()` which is environment-dependent BY DESIGN: in browser (PyScript) the callback is fire-and-forget (`asyncio.ensure_future`); on server/test (CPython) it runs to completion synchronously via `nest_asyncio` + `loop.run_until_complete`. This divergence is intentional (browser prioritizes responsiveness; server prioritizes SSG determinism) and is part of the contract, not a bug.
+
+**Async Dynamic Element Refresh**: `RepeatElement._refresh()` and `SwitchElement._refresh()` are `async def`. The sync wrapper `_refresh_sync` (used when the signal callback is registered from `_render()`) calls `loop.run_until_complete()` — this is intentional to make DOM updates complete before the signal setter returns, but it means `_refresh` must NOT await user async I/O on its path. The raw async `_refresh` (registered from `_on_set_parent()`) goes through `_resolve_async_callback` and is fire-and-forget in browser, synchronous on server. `_signal_activated` flag prevents double-registration between the two paths.
+
+**Hydration Guard**: `AppDocumentRoot._render()` MUST call `child._hydrate_node()` ONLY inside the `if self._app and self._app._hydrate and not self.__hydrated:` guard block. Calling it unconditionally creates orphaned DOM nodes. `DynamicElement._hydrate_node()` schedules `asyncio.ensure_future(child._render())` for unmounted children and MUST track those tasks in `_pending_render_tasks`; `_remove_element()` MUST cancel them.
+
+**Node Cache Strict is-None Check**: `_get_node()` MUST use `if self._node_cache is None:` (not truthiness) — stale PyScript PyProxy objects can evaluate falsy even when wrapping valid DOM nodes. `_reposition_node()` uses `if parent is None or not parent:` for the same reason.
+
 **DI Scope Rules**: `provide()` lazily creates a child DI scope. `inject()` traverses the chain upward — closest scope wins. Component destruction must dispose its DI child scope.
 
 **Hydration**: `_hydrate_node()` adopts existing prerendered nodes, never creates new ones. Attributes only written if different from prerendered values.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, TypedDict
 
 from webcompy.components._component import Component, HeadPropsStore
@@ -79,23 +80,33 @@ class AppDocumentRoot(Component):
     def render(self):
         return self._render
 
-    def _render(self):
+    async def _render(self):
         token = _active_di_scope.set(self._di_scope)
         try:
-            self._property["on_before_rendering"]()
+            on_before = self._property["on_before_rendering"]
+            if iscoroutinefunction(on_before):
+                await on_before()
+            else:
+                on_before()
             self._mount_node()
             if self._app and self._app._hydrate and not self.__hydrated:
                 self.__hydrated = True
                 for child in self._children:
                     child._hydrate_node()
+
             for child in self._children:
-                child._render()
-            self._property["on_after_rendering"]()
+                await child._render()
+
+            on_after = self._property["on_after_rendering"]
+            if iscoroutinefunction(on_after):
+                await on_after()
+            else:
+                on_after()
             if self._app:
                 self._app._record_phase("run_done")
             if ENVIRONMENT == "pyscript":
                 _dom = inject(DOM_PORT_KEY)
-                self._head_element._render()
+                await self._head_element._render()
                 if self.__loading:
                     self.__loading = False
                     selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")

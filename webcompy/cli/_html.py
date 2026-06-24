@@ -53,7 +53,7 @@ class _HtmlElement(Element):
             children,
         )
 
-    def render_html(self):
+    async def render_html(self):
         port = inject(DOM_PORT_KEY)
         root_node = port.create_element("div")
         root_node.__webcompy_node__ = False
@@ -61,7 +61,7 @@ class _HtmlElement(Element):
         self._parent = cast("ElementWithChildren", _DummyParent(root_node))
         self._node_idx = 0
         self._clear_node_cache()
-        self._render()
+        await self._render()
         root_child = root_node.childNodes[0] if root_node.childNodes.length > 0 else None
         if root_child is None:
             return ""
@@ -175,7 +175,7 @@ def _render_plugin_script(ps: PluginScript) -> _HtmlElement:
     return _HtmlElement("script", {}, "\n".join(js_parts))
 
 
-def generate_html(
+async def generate_html(
     ctx: RenderContext,
     app_package_name: str,
     dev_mode: bool,
@@ -191,7 +191,7 @@ def generate_html(
     token = _active_app_context.set(ctx)
     _set_app_instance(ctx)
     try:
-        return _generate_html_impl(
+        return await _generate_html_impl(
             ctx,
             app_package_name,
             dev_mode,
@@ -209,7 +209,7 @@ def generate_html(
         _set_app_instance(None)
 
 
-def _generate_html_impl(
+async def _generate_html_impl(
     ctx: RenderContext,
     app_package_name: str,
     dev_mode: bool,
@@ -307,28 +307,30 @@ def _generate_html_impl(
 
     head_content_html = ctx._root._head_element.get_head_content_html()
 
-    html_output = "<!doctype html>" + _HtmlElement(
-        "html",
-        ctx._root.html_attrs,
-        _HtmlElement(
-            "head",
-            {},
-            _HtmlElement("base", {"href": ctx.config.base_url}),
+    html_output = "<!doctype html>" + (
+        await _HtmlElement(
+            "html",
+            ctx._root.html_attrs,
             _HtmlElement(
-                "link",
-                {"rel": "stylesheet", "href": core_css_url},
+                "head",
+                {},
+                _HtmlElement("base", {"href": ctx.config.base_url}),
+                _HtmlElement(
+                    "link",
+                    {"rel": "stylesheet", "href": core_css_url},
+                ),
+                *_load_scripts(scripts_head),
+                *plugin_head_scripts,
             ),
-            *_load_scripts(scripts_head),
-            *plugin_head_scripts,
-        ),
-        _HtmlElement(
-            "body",
-            {},
-            _Loadscreen(),
-            app_root,
-            *_load_scripts(scripts_body),
-            *plugin_body_scripts,
-        ),
-    ).render_html().replace("</body>", f"{app_loader_html}</body>")
+            _HtmlElement(
+                "body",
+                {},
+                _Loadscreen(),
+                app_root,
+                *_load_scripts(scripts_body),
+                *plugin_body_scripts,
+            ),
+        ).render_html()
+    ).replace("</body>", f"{app_loader_html}</body>")
 
     return html_output.replace("<head>", f"<head>\n{head_content_html}", 1)

@@ -269,16 +269,16 @@ When working on the codebase (developing, reviewing, or refactoring), always rea
 | Changed files | Specs to read |
 |---|---|---|
 | `webcompy/signal/` | `openspec/specs/reactive/spec.md`, `openspec/specs/effect/spec.md` |
-| `webcompy/components/` | `openspec/specs/components/spec.md`, `openspec/specs/composables/spec.md` |
-| `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md`, `openspec/specs/head-vdom/spec.md`, `openspec/specs/element-preserve-children/spec.md` |
+| `webcompy/components/` | `openspec/specs/components/spec.md`, `openspec/specs/composables/spec.md`, `openspec/specs/async-rendering/spec.md` |
+| `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md`, `openspec/specs/head-vdom/spec.md`, `openspec/specs/element-preserve-children/spec.md`, `openspec/specs/async-rendering/spec.md` |
 | `webcompy/router/` | `openspec/specs/router/spec.md`, `openspec/specs/router-hooks/spec.md` |
 | `webcompy/_browser/` | `openspec/specs/browser-api/spec.md` |
 | `webcompy/ports/` | `openspec/specs/port-abstraction/spec.md` |
 | `webcompy/ports/_server/` | `openspec/specs/virtual-dom/spec.md` |
 | `webcompy/plugin/` | `openspec/specs/plugin-system/spec.md`, `openspec/specs/plugin-script/spec.md` |
 | `webcompy/di/` | `openspec/specs/di-scope/spec.md`, `openspec/specs/di-injection/spec.md`, `openspec/specs/dependency-resolver/spec.md` |
-| `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md`, `openspec/specs/render-context/spec.md`, `openspec/specs/scoped-css-incremental/spec.md` |
-| `webcompy/ajax/`, `webcompy/aio/` | `openspec/specs/async/spec.md` |
+| `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md`, `openspec/specs/render-context/spec.md`, `openspec/specs/scoped-css-incremental/spec.md`, `openspec/specs/async-rendering/spec.md` |
+| `webcompy/ajax/`, `webcompy/aio/` | `openspec/specs/async/spec.md`, `openspec/specs/async-rendering/spec.md` |
 | `webcompy/cli/` | `openspec/specs/cli/spec.md`, `openspec/specs/project-config/spec.md`, `openspec/specs/config-separation/spec.md`, `openspec/specs/inspect-cli/spec.md` |
 | `webcompy/testing/` | `openspec/specs/testing-module/spec.md` |
 
@@ -340,6 +340,7 @@ This ensures all agents — development and review alike — share current knowl
 | `port-abstraction` | Typed, injectable port ABCs (DOM, FFI, fetch, cookie, history) replacing monolithic `browser` |
 | `virtual-dom` | Server-side virtual DOM tree (VirtualDOMNode, VirtualDOMEvent, render_html) for SSG and testing |
 | `async` | Async operations, HTTP client integration |
+| `async-rendering` | Async rendering pipeline: `async def _render()`, async lifecycle hooks, async component setup, sequential sibling rendering, environment-dependent async signal callback semantics |
 | `di-scope` | Resolution boundary and lifecycle for DI values, hierarchy mirroring component tree |
 | `di-injection` | Provide/inject pattern for scoped dependency resolution, replacing global singletons |
 | `dependency-resolver` | Classification of app dependencies for browser deployment (CDN vs local bundling) |

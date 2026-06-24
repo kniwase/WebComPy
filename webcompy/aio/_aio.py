@@ -90,3 +90,26 @@ class AsyncWrapper(Generic[T]):
             resolve_async(async_callable(*args, **kwargs), self.resolver, self.error)
 
         return inner
+
+
+def _resolve_async_callback(callback: Callable[..., Any], value: Any) -> None:
+    async def _safe():
+        try:
+            await callback(value)
+        except Exception as err:
+            _log_error(err)
+
+    if ENVIRONMENT == "pyscript":
+        aio_run(_safe())
+    else:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(_safe())
+        else:
+            import nest_asyncio
+
+            if not getattr(loop, "_nest_asyncio_patched", False):
+                nest_asyncio.apply(loop)
+                loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
+            loop.run_until_complete(_safe())

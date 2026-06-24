@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from contextvars import ContextVar
+from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeAlias, TypeGuard
 from uuid import UUID, uuid4
 
@@ -168,15 +169,23 @@ class Component(ElementBase):
         self._init_children(node._children)
         self._property = property
 
-    def _render(self):
-        self._property["on_before_rendering"]()
-        super()._render()
-        after_rendering = self._property["on_after_rendering"]
+    async def _render(self):
+        # [async-component-setup] Resolve pending async template if present
+        on_before = self._property["on_before_rendering"]
+        if iscoroutinefunction(on_before):
+            await on_before()
+        else:
+            on_before()
+        await super()._render()
+        on_after = self._property["on_after_rendering"]
         app = _active_app_context.get() or _get_app_instance()
         if app is not None and app._defer_depth > 0:
-            app._deferred_callbacks.append(after_rendering)
+            app._deferred_callbacks.append(on_after)
         else:
-            after_rendering()
+            if iscoroutinefunction(on_after):
+                await on_after()
+            else:
+                on_after()
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         if self._head_props is not None:

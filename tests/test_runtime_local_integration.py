@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 import re
 
@@ -7,6 +5,7 @@ from webcompy.app._app import WebComPyApp
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.cli._html import generate_html
 from webcompy.components._generator import define_component
+from webcompy.testing._utils import run_sync
 
 
 @define_component
@@ -25,9 +24,10 @@ def _make_app(**config_kwargs):
 
 def _generate_html(app, **kwargs):
     ctx = app.create_render_context()
-    html = generate_html(ctx, **kwargs)
-    ctx.dispose()
-    return html
+    try:
+        return run_sync(generate_html(ctx, **kwargs))
+    finally:
+        ctx.dispose()
 
 
 def _extract_py_config(html_str: str) -> dict:

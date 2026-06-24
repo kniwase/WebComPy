@@ -48,6 +48,9 @@
 - [ ] 6.7 Test error fallback rendering on async failure
 - [ ] 6.8 Test cleanup on element removal (signal callbacks destroyed, async tasks cancelled)
 - [ ] 6.9 Test sibling Suspense elements resolve independently
+- [ ] 6.9a Test that when an async child setup raises and an `error_fallback` is provided, the error fallback is rendered in place (D9); pending async state is cleared and no other async tasks leak.
+- [ ] 6.9b Test that when an async child setup raises and NO `error_fallback` is provided, the exception propagates out of `SuspenseElement._render()` and is NOT swallowed (logged by the root render `on_error` hook in tests via a captured logger).
+- [ ] 6.9c Test that when a sibling Suspense polyline raises, a non-enclosing sibling element's render is unaffected short-circuit semantics (the exception propagates per foundation "One child raises during sibling rendering" without `ElementWithChildren._render()` wrapping it in try/except).
 - [ ] 6.10 Test `suspense()` generator function creates correct `SuspenseElement`
 
 ## 7. Spec updates and documentation

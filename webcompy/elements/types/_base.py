@@ -33,10 +33,12 @@ class ElementWithChildren(ElementAbstract):
     def _parent(self, parent: ElementWithChildren):  # type: ignore
         self.__parent = parent
 
-    def _render(self):
-        super()._render()
+    async def _render(self):
+        await super()._render()
+        for c_idx, child in enumerate(self._children):
+            child._node_idx = self._node_idx + c_idx
         for child in self._children:
-            child._render()
+            await child._render()
         if (node := self._get_node()) is not None and not self._preserve_children:
             for _ in range(node.childNodes.length - self._children_length):
                 node.childNodes[-1].remove()

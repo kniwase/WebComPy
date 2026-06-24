@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import pathlib
@@ -8,6 +9,8 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 from argparse import ArgumentParser, Namespace
 from typing import TYPE_CHECKING, Any
 
@@ -108,7 +111,7 @@ def _is_process_running(pid: int) -> bool:
 
 def _verify_process_identity(pid: int, port: int) -> bool:
     cmdline = _get_process_cmdline(pid)
-    if cmdline and "webcompy" in cmdline and "start" in cmdline:
+    if cmdline and (("webcompy" in cmdline and "start" in cmdline) or ("http.server" in cmdline)):
         return True
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -140,24 +143,81 @@ def _get_process_cmdline(pid: int) -> str | None:
     return None
 
 
+def _wait_for_http(url: str, timeout: float = 10.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=1) as resp:
+                if 200 <= resp.status < 500:
+                    return True
+        except (urllib.error.URLError, OSError):
+            pass
+        time.sleep(0.2)
+    return False
+
+
 def cmd_serve(args: Namespace) -> None:
     from webcompy.cli._exception import WebComPyCliException
     from webcompy.cli._utils import discover_config
 
+    source: str = args.source
     config_path: str | None = args.config
     dev: bool = args.dev
     port: int = args.port if args.port is not None else 0
     runtime_serving: str | None = args.runtime_serving
-
-    try:
-        discover_config(config_path)
-    except WebComPyCliException as e:
-        _write_json_error(str(e))
-        sys.exit(1)
-    actual_config_path = config_path
+    dist_path: str | None = args.dist
 
     if port == 0:
         port = _find_free_port()
+
+    if source == "app":
+        if dist_path is not None:
+            _write_json_error("--dist is only valid with --source=ssg")
+            sys.exit(1)
+        try:
+            discover_config(config_path)
+        except WebComPyCliException as e:
+            _write_json_error(str(e))
+            sys.exit(1)
+        actual_config_path = config_path
+        cmd: list[str] = [
+            sys.executable,
+            "-m",
+            "webcompy",
+            "start",
+            "--port",
+            str(port),
+        ]
+        if config_path:
+            cmd.extend(["--config", config_path])
+        if dev:
+            cmd.append("--dev")
+        if runtime_serving:
+            cmd.extend(["--runtime-serving", runtime_serving])
+        server_kind = "app"
+    else:
+        if runtime_serving is not None or dev:
+            _write_json_error("--dev and --runtime-serving are only valid with --source=app")
+            sys.exit(1)
+        if dist_path is None:
+            _write_json_error("--dist is required when --source=ssg")
+            sys.exit(1)
+        dist_dir = pathlib.Path(dist_path).resolve()
+        if not dist_dir.is_dir():
+            _write_json_error(f"--dist path is not a directory: {dist_path}")
+            sys.exit(1)
+        actual_config_path = None
+        cmd = [
+            sys.executable,
+            "-m",
+            "http.server",
+            "--bind",
+            "127.0.0.1",
+            "--directory",
+            str(dist_dir),
+            str(port),
+        ]
+        server_kind = "ssg"
 
     existing_pid = _read_pid_file(port)
     if existing_pid is not None:
@@ -166,21 +226,6 @@ def cmd_serve(args: Namespace) -> None:
             _write_json_error(f"Port {port} is already in use by process {existing_pid_val}")
             sys.exit(1)
         _remove_pid_file(port)
-
-    cmd: list[str] = [
-        sys.executable,
-        "-m",
-        "webcompy",
-        "start",
-        "--port",
-        str(port),
-    ]
-    if config_path:
-        cmd.extend(["--config", config_path])
-    if dev:
-        cmd.append("--dev")
-    if runtime_serving:
-        cmd.extend(["--runtime-serving", runtime_serving])
 
     log_file_path = PID_DIR / f"{port}.log"
     _ensure_pid_dir()
@@ -195,8 +240,23 @@ def cmd_serve(args: Namespace) -> None:
         log_file.close()
 
     url = f"http://localhost:{port}/"
+    try:
+        if not _wait_for_http(url, timeout=10.0):
+            with contextlib.suppress(ProcessLookupError):
+                proc.terminate()
+            with contextlib.suppress(ProcessLookupError):
+                proc.wait(timeout=2)
+            _write_json_error(f"Server failed to respond on {url} within 10 seconds")
+            sys.exit(1)
+    except Exception:
+        with contextlib.suppress(ProcessLookupError):
+            proc.terminate()
+        with contextlib.suppress(ProcessLookupError):
+            proc.wait(timeout=2)
+        raise
+
     _write_pid_file(port, proc.pid, url, actual_config_path)
-    _write_json({"port": port, "url": url, "pid": proc.pid})
+    _write_json({"port": port, "url": url, "pid": proc.pid, "source": server_kind})
 
 
 def cmd_stop(args: Namespace) -> None:
@@ -234,8 +294,6 @@ def cmd_stop(args: Namespace) -> None:
         time.sleep(0.1)
 
     if _is_process_running(pid):
-        import contextlib
-
         with contextlib.suppress(ProcessLookupError):
             os.kill(pid, signal.SIGKILL)
 
@@ -561,10 +619,32 @@ def get_inspect_parser() -> ArgumentParser:
     subparsers = parser.add_subparsers(dest="inspect_command")
 
     serve_parser = subparsers.add_parser("serve", help="Launch a WebComPy app server")
-    serve_parser.add_argument("--config", type=str, help="Python import path for config module")
-    serve_parser.add_argument("--dev", action="store_true", help="Enable hot-reload mode")
+    serve_parser.add_argument(
+        "--source",
+        choices=["app", "ssg"],
+        default="app",
+        help=(
+            "What to serve: 'app' launches the WebComPy app server (default), "
+            "'ssg' serves a pre-generated static site from a directory"
+        ),
+    )
+    serve_parser.add_argument(
+        "--dist",
+        type=str,
+        default=None,
+        help="Path to the SSG output directory (required when --source=ssg)",
+    )
+    serve_parser.add_argument(
+        "--config", type=str, help="Python import path for config module (used with --source=app)"
+    )
+    serve_parser.add_argument("--dev", action="store_true", help="Enable hot-reload mode (used with --source=app)")
     serve_parser.add_argument("--port", type=int, default=None, help="Port number (0 for auto-detect)")
-    serve_parser.add_argument("--runtime-serving", choices=["cdn", "local"], default=None, help="Runtime serving mode")
+    serve_parser.add_argument(
+        "--runtime-serving",
+        choices=["cdn", "local"],
+        default=None,
+        help="Runtime serving mode (used with --source=app)",
+    )
     serve_parser.set_defaults(func=cmd_serve)
 
     stop_parser = subparsers.add_parser("stop", help="Stop a running WebComPy app server")

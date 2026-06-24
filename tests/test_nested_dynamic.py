@@ -1,3 +1,5 @@
+import pytest
+
 from tests.conftest import FakeDOMNode
 from webcompy.elements.types._dynamic import _position_element_nodes
 from webcompy.elements.types._element import Element
@@ -29,7 +31,8 @@ class TestGetNodeAncestorTraversal:
         sw._on_set_parent()
         assert sw._get_node() is parent._get_node()
 
-    def test_nested_dynamic_gets_grandparent_node(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_nested_dynamic_gets_grandparent_node(self, fake_browser_full):
         parent = _make_parent()
         cond = Signal(True)
         rl = ReactiveList(["a", "b"])
@@ -38,7 +41,7 @@ class TestGetNodeAncestorTraversal:
         sw._parent = parent
         sw._node_idx = 0
         sw._on_set_parent()
-        sw._refresh()
+        await sw._refresh()
         assert inner._parent is parent
         assert inner._get_node() is parent._get_node()
 
@@ -61,16 +64,18 @@ class TestSwitchInsideRepeat:
         for child in rep._children:
             assert isinstance(child, SwitchElement)
 
-    def test_switch_inside_repeat_rendering(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_switch_inside_repeat_rendering(self, fake_browser_full):
         rl = ReactiveList(["a", "b"])
         rep = RepeatElement(rl, lambda item: TextElement(item))
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._refresh()
+        await rep._refresh()
         assert len(rep._children) == 2
 
-    def test_repeat_inside_switch_on_set_parent(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_repeat_inside_switch_on_set_parent(self, fake_browser_full):
         from webcompy.elements.types._switch import SwitchElement
 
         cond = Signal(True)
@@ -81,11 +86,12 @@ class TestSwitchInsideRepeat:
         sw._parent = parent
         sw._node_idx = 0
         sw._on_set_parent()
-        sw._refresh()
+        await sw._refresh()
         assert len(sw._children) == 1
         assert isinstance(sw._children[0], RepeatElement)
 
-    def test_repeat_inside_switch_no_nesting_exception(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_repeat_inside_switch_no_nesting_exception(self, fake_browser_full):
         cond = Signal(True)
         rl = ReactiveList(["x"])
         inner_rep = RepeatElement(rl, lambda item: TextElement(item))
@@ -94,12 +100,13 @@ class TestSwitchInsideRepeat:
         sw._parent = parent
         sw._node_idx = 0
         sw._on_set_parent()
-        sw._refresh()
+        await sw._refresh()
         assert isinstance(sw._children[0], RepeatElement)
 
 
 class TestNestedDynamicElementCleanup:
-    def test_switch_removal_cleans_up_nested_repeat_callbacks(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_switch_removal_cleans_up_nested_repeat_callbacks(self, fake_browser_full):
         cond = Signal(True)
         rl = ReactiveList(["a", "b"])
         inner_rep = RepeatElement(rl, lambda item: TextElement(item))
@@ -107,14 +114,15 @@ class TestNestedDynamicElementCleanup:
         parent = _make_parent()
         sw._parent = parent
         sw._node_idx = 0
-        sw._refresh()
+        await sw._refresh()
         original_repeat_callbacks = len(inner_rep._callback_nodes)
         assert original_repeat_callbacks > 0
         cond.value = False
-        sw._refresh()
+        await sw._refresh()
         assert len(sw._children) == 0
 
-    def test_repeat_removal_cleans_up_switch(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_repeat_removal_cleans_up_switch(self, fake_browser_full):
         rl = ReactiveList(["a"])
         sw = SwitchElement(
             [(Signal(True), lambda: TextElement("on"))],
@@ -124,10 +132,10 @@ class TestNestedDynamicElementCleanup:
         parent = _make_parent()
         rep._parent = parent
         rep._node_idx = 0
-        rep._refresh()
+        await rep._refresh()
         assert len(rep._children) == 1
         rl.clear()
-        rep._refresh()
+        await rep._refresh()
         assert len(rep._children) == 0
 
 
@@ -142,20 +150,22 @@ class TestPositionElementNodes:
         result_idx = _position_element_nodes(child, parent_node, 0)
         assert result_idx == 1
 
-    def test_position_dynamic_element_recursive(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_position_dynamic_element_recursive(self, fake_browser_full):
         parent = _make_parent()
         rl = ReactiveList(["a"])
         rep = RepeatElement(rl, lambda x: TextElement(x))
         rep._parent = parent
         rep._node_idx = 0
-        rep._refresh()
+        await rep._refresh()
         parent_node = parent._get_node()
         result_idx = _position_element_nodes(rep, parent_node, 0)
         assert result_idx == 1
 
 
 class TestRenderHTMLWithNesting:
-    def test_repeat_inside_switch_rendering(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_repeat_inside_switch_rendering(self, fake_browser_full):
         cond = Signal(True)
         rl = ReactiveList(["hello", "world"])
         inner_rep = RepeatElement(rl, lambda item: TextElement(item))
@@ -163,7 +173,7 @@ class TestRenderHTMLWithNesting:
         parent = _make_parent()
         sw._parent = parent
         sw._node_idx = 0
-        sw._refresh()
+        await sw._refresh()
         assert sw._children is not None
         assert len(sw._children) > 0
 
@@ -182,7 +192,8 @@ class TestRenderHTMLWithNesting:
 
 
 class TestNodeCountWithNesting:
-    def test_switch_node_count_sums_children(self, fake_browser_full):
+    @pytest.mark.asyncio
+    async def test_switch_node_count_sums_children(self, fake_browser_full):
         rl = ReactiveList(["a", "b", "c"])
         inner_rep = RepeatElement(rl, lambda item: TextElement(item))
         cond = Signal(True)
@@ -190,7 +201,7 @@ class TestNodeCountWithNesting:
         parent = _make_parent()
         sw._parent = parent
         sw._node_idx = 0
-        sw._refresh()
+        await sw._refresh()
         assert sw._node_count == 3
 
     def test_nested_dynamic_node_count(self):

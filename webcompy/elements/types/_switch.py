@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from inspect import iscoroutinefunction
 from operator import truth
 from typing import Any, TypeAlias, cast
 
@@ -47,32 +48,50 @@ class SwitchElement(DynamicElement):
         ele = self._create_child_element(self._parent, None, generator())
         return [ele] if ele is not None else []
 
-    def _render(self):
+    async def _render(self):
         if self._children and all(child._mounted is None for child in self._children):
             parent_node = self._parent._get_node()
             for c_idx, child in enumerate(self._children):
                 child._node_idx = self._node_idx + c_idx
-                child._render()
+                await child._render()
             _position_element_nodes(self, parent_node, self._node_idx)
         else:
-            self._refresh()
+            await self._refresh()
         if not self._signal_activated:
             self._signal_activated = True
             if isinstance(self._cases, SignalBase):
-                self._add_callback_node(self._cases.on_after_updating(self._refresh))
+                self._add_callback_node(self._cases.on_after_updating(self._refresh_sync))
             else:
                 for cond, _ in self._cases:
-                    if isinstance(cond, SignalBase):  # type: ignore
-                        self._add_callback_node(cond.on_after_updating(self._refresh))
+                    if isinstance(cond, SignalBase):
+                        self._add_callback_node(cond.on_after_updating(self._refresh_sync))
 
-    def _refresh(self, *args: Any):
+    def _refresh_sync(self, *args: Any):
+        import asyncio
+
+        from webcompy.utils._environment import ENVIRONMENT
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self._refresh(*args))
+        else:
+            if ENVIRONMENT != "pyscript":
+                import nest_asyncio
+
+                if not getattr(loop, "_nest_asyncio_patched", False):
+                    nest_asyncio.apply(loop)
+                    loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
+            loop.run_until_complete(self._refresh(*args))
+
+    async def _refresh(self, *args: Any):
         idx, generator = self._select_generator()
         if idx == self._rendered_idx:
             if self._children and all(child._mounted is None for child in self._children):
                 parent_node = self._parent._get_node()
                 for c_idx, child in enumerate(self._children):
                     child._node_idx = self._node_idx + c_idx
-                    child._render()
+                    await child._render()
                 _position_element_nodes(self, parent_node, self._node_idx)
             return
         parent_node = self._parent._get_node()
@@ -87,11 +106,16 @@ class SwitchElement(DynamicElement):
             start_defer_after_rendering()
         for c_idx, child in enumerate(self._children):
             child._node_idx = self._node_idx + c_idx
-            child._render()
+            await child._render()
         if should_defer:
             deferred = end_defer_after_rendering()
             for callback in deferred:
+                if iscoroutinefunction(callback):
+                    from webcompy.aio._aio import aio_run
+
+                    callback = lambda cb=callback: aio_run(cb())
                 inject(HOST_PORT_KEY).schedule_macro_task(callback)
+        _position_element_nodes(self, parent_node, self._node_idx)
         self._parent._re_index_children(False)
 
     def _on_set_parent(self):

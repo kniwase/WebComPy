@@ -65,11 +65,11 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         if isinstance(self._to, SignalBase):
             self._add_callback_node(self._to.on_after_updating(self._refresh))
 
-    def _refresh(self, *_: Any):
+    async def _refresh(self, *_: Any):
         self._attrs = self._generate_attrs()
         self._event_handlers = {"click": self._on_click, "mouseenter": self._on_mouseenter}
         self._init_children(self._generate_children())
-        self._render()
+        await self._render()
 
     def _generate_children(self) -> list[ElementChildren]:
         return cast("list[ElementChildren]", self._text)
@@ -105,7 +105,7 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
                         state = params
                     else:
                         state = None
-                        logging.warn(
+                        logging.warning(
                             "Argument 'params' of RouterLink should be a Signal Object of json-serializable dict."
                         )
                 context.window.history.pushState(state, None, href)

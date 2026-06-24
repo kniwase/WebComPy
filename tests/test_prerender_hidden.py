@@ -1,5 +1,7 @@
 import re
 
+import pytest
+
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.cli._html import generate_html
@@ -21,10 +23,11 @@ def _make_app():
 
 
 class TestPrerenderHiddenAttribute:
-    def test_prerender_output_has_no_hidden(self):
+    @pytest.mark.asyncio
+    async def test_prerender_output_has_no_hidden(self):
         app = _make_app()
         ctx = app.create_render_context()
-        html = generate_html(
+        html = await generate_html(
             ctx,
             app_package_name="test_pkg",
             dev_mode=False,
@@ -38,10 +41,11 @@ class TestPrerenderHiddenAttribute:
         tag = match.group()
         assert "hidden" not in tag
 
-    def test_non_prerender_output_has_hidden(self):
+    @pytest.mark.asyncio
+    async def test_non_prerender_output_has_hidden(self):
         app = _make_app()
         ctx = app.create_render_context()
-        html = generate_html(
+        html = await generate_html(
             ctx,
             app_package_name="test_pkg",
             dev_mode=False,
