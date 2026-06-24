@@ -29,7 +29,7 @@ class WebComPyApp:
     ) -> None:
         self._config = config or WebComPyAppConfig()
         self._profile = self._config.profile
-        self._hydrate = self._config.hydrate
+        self._hydrate = self._config.hydrate and ENVIRONMENT == "pyscript"
         self._render_context_cv = ContextVar(f"_render_context_cv_{id(self)}", default=None)
         self._root_component_def = root_component
         self._router = router
