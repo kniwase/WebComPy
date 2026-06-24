@@ -1,4 +1,5 @@
 import pytest
+from playwright.sync_api import expect
 
 from tests.e2e_docs.conftest import _wait_for_demo_iframe, _wait_for_pyscript_init
 
@@ -6,7 +7,7 @@ from tests.e2e_docs.conftest import _wait_for_demo_iframe, _wait_for_pyscript_in
 @pytest.mark.e2e
 def test_home_page_heading(docs_app_page, assert_no_console_errors):
     heading = docs_app_page.get_by_role("heading", name="What is WebComPy")
-    assert heading.is_visible()
+    expect(heading).to_be_visible()
 
 
 @pytest.mark.e2e
@@ -23,7 +24,7 @@ def test_home_spa_navigation_to_helloworld(docs_app_page, assert_no_console_erro
     assert "/sample/helloworld" in docs_app_page.url
     frame = _wait_for_demo_iframe(docs_app_page, "helloworld")
     heading = frame.get_by_role("heading", name="Hello WebComPy!")
-    assert heading.is_visible()
+    expect(heading).to_be_visible()
 
 
 @pytest.mark.e2e
@@ -33,7 +34,7 @@ def test_home_spa_navigation_back_from_helloworld(docs_page_on, assert_no_consol
     home_link.click()
     assert page.url.endswith("/") or page.url == page.url.rstrip("/") + "/"
     heading = page.get_by_role("heading", name="What is WebComPy")
-    assert heading.is_visible()
+    expect(heading).to_be_visible()
 
 
 @pytest.mark.e2e

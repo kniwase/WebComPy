@@ -223,26 +223,6 @@ This SHALL NOT use `nest_asyncio.apply()` in PyScript — in PyScript/Pyodide, t
 - **AND** both paths SHALL set `_signal_activated = True` before registering, preventing double registration regardless of which path executes first
 - **AND** since `_on_set_parent()` runs during element construction (before `_render()`), `_render()` normally finds `_signal_activated` already True and skips registration — the `_render()` registration path exists mainly for dynamic elements where `_on_set_parent()` may not have run
 
-### Requirement: RouterView shall use synchronous refresh from _on_set_parent
-
-`RouterView` SHALL use a `_RouterSwitchElement` (a `SwitchElement` subclass) that registers `_refresh_sync` (the sync wrapper) from `_on_set_parent()` instead of the raw async `_refresh`. This is an exception to the general rule in the "Dynamic element refresh" requirement above, which keeps `_on_set_parent()` on async `_refresh` to avoid blocking sibling sync consumers. `RouterView`'s signal graph is a simple 1:1 chain (`history.value` → `__cases__` → `SwitchElement` callback) with no sibling sync consumers on the same signal, so blocking the event loop via `loop.run_until_complete()` is safe.
-
-This ensures that route-change-triggered DOM updates complete before the signal setter returns, restoring the pre-async behavior where clicking a `RouterLink` immediately renders the new route's content.
-
-#### Scenario: Clicking a RouterLink synchronously renders the new route
-- **WHEN** a user clicks a `RouterLink` in the browser
-- **THEN** `RouterLink._on_click` calls `router.__set_path__` which updates `history.value`
-- **AND** the `history.value` signal notifies the `__cases__` Computed
-- **AND** the `__cases__` Computed notifies the `_RouterSwitchElement` callback
-- **AND** the callback (`_refresh_sync`) SHALL execute `self._refresh(...)` to completion via `loop.run_until_complete()`
-- **AND** the new route's DOM content SHALL be rendered before the signal setter returns
-- **AND** the click handler returns with the DOM already updated
-
-#### Scenario: RouterView does not interfere with other signal consumers
-- **WHEN** `_refresh_sync` blocks the event loop via `loop.run_until_complete()`
-- **THEN** no sibling sync consumers on `history.value` or `__cases__` SHALL be starved
-- **AND** this is guaranteed because `history.value` → `__cases__` → `SwitchElement` is a 1:1 chain with no competing sync callbacks
-
 ### Requirement: `_dispatch()` shall execute callbacks inline with an async flag
 
 `CallbackConsumerNode._dispatch()` (renamed from `_on_marked_dirty`) SHALL use a `_is_async: bool` flag set in `__init__` via `iscoroutinefunction(self._callback)` to determine execution mode:

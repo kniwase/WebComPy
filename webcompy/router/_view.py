@@ -5,19 +5,6 @@ from webcompy.di._exceptions import InjectionError
 from webcompy.di._keys import _ROUTER_KEY
 from webcompy.elements.types._dynamic import DynamicElement
 from webcompy.elements.types._switch import SwitchElement
-from webcompy.signal._base import SignalBase
-
-
-class _RouterSwitchElement(SwitchElement):
-    def _on_set_parent(self):
-        if not self._signal_activated:
-            self._signal_activated = True
-            if isinstance(self._cases, SignalBase):
-                self._add_callback_node(self._cases.on_after_updating(self._refresh_sync))
-            else:
-                for cond, _ in self._cases:
-                    if isinstance(cond, SignalBase):
-                        self._add_callback_node(cond.on_after_updating(self._refresh_sync))
 
 
 class RouterView(DynamicElement):
@@ -27,7 +14,7 @@ class RouterView(DynamicElement):
         except InjectionError:
             raise RuntimeError("'Router' instance is not provided via DI.") from None
         self._router = router
-        self._switch = _RouterSwitchElement(router.__cases__, router.__default__)
+        self._switch = SwitchElement(router.__cases__, router.__default__)
         super().__init__()
 
     def _on_set_parent(self):
