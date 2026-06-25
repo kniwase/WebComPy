@@ -1,0 +1,33 @@
+.code-block {
+  background-color: var(--color-bg-code);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  padding: var(--space-4);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.code-block code {
+  background-color: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+}
+
+.tok-kw { color: var(--tok-kw); }
+.tok-str { color: var(--tok-str); }
+.tok-num { color: var(--tok-num); }
+.tok-comment { color: var(--tok-comment); }
+.tok-fn { color: var(--tok-fn); }
+.tok-builtin { color: var(--tok-builtin); }
+.tok-decorator { color: var(--tok-decorator); }
+.tok-op { color: var(--tok-op); }
+.tok-punct { color: var(--tok-punct); }
+.tok-ident { color: var(--tok-ident); }
+
+@scope (.code-block) to (.code-block *) {
+  .tok-comment { font-style: italic; }
+}

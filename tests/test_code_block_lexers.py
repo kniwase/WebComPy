@@ -1,0 +1,156 @@
+from __future__ import annotations
+
+import pytest
+
+from webcompy.ui.code_block._tokens import Token, TokenType
+from webcompy.ui.code_block.lexers._bash import BashLexer
+from webcompy.ui.code_block.lexers._python import PythonLexer
+from webcompy.ui.code_block.lexers._registry import (
+    LexerNotFoundError,
+    get_lexer,
+    list_lexers,
+    register_builtin_lexers,
+    register_lexer,
+)
+from webcompy.ui.code_block.lexers._toml import TomlLexer
+
+
+@pytest.fixture(autouse=True)
+def _reset_registry() -> None:
+    from webcompy.ui.code_block.lexers import _registry
+
+    _registry._REGISTRY.clear()
+
+
+def test_python_lexer_tokenizes_keyword() -> None:
+    lexer = PythonLexer()
+    tokens = list(lexer.tokenize("def foo(): pass"))
+    types = [t.type for t in tokens]
+    assert TokenType.KEYWORD in types
+    assert TokenType.FUNCTION in types
+    assert any(t.type == TokenType.KEYWORD and t.value == "def" for t in tokens)
+
+
+def test_python_lexer_tokenizes_string_and_comment() -> None:
+    lexer = PythonLexer()
+    code = 'x = "hello"  # greet'
+    tokens = list(lexer.tokenize(code))
+    assert any(t.type == TokenType.STRING and '"hello"' in t.value for t in tokens)
+    assert any(t.type == TokenType.COMMENT and "# greet" in t.value for t in tokens)
+
+
+def test_python_lexer_tokenizes_number() -> None:
+    lexer = PythonLexer()
+    tokens = list(lexer.tokenize("count = 42"))
+    assert any(t.type == TokenType.NUMBER and t.value == "42" for t in tokens)
+
+
+def test_python_lexer_tokenizes_decorator() -> None:
+    lexer = PythonLexer()
+    tokens = list(lexer.tokenize("@property\ndef x(self): pass"))
+    assert any(t.type == TokenType.DECORATOR and t.value == "property" for t in tokens)
+
+
+def test_python_lexer_handles_invalid_input_gracefully() -> None:
+    lexer = PythonLexer()
+    tokens = list(lexer.tokenize("def !!!"))
+    assert tokens
+    assert all(isinstance(t, Token) for t in tokens)
+
+
+def test_bash_lexer_tokenizes_keyword_and_string() -> None:
+    lexer = BashLexer()
+    tokens = list(lexer.tokenize('if [ "$x" = "y" ]; then echo ok; fi'))
+    types = [t.type for t in tokens]
+    assert TokenType.KEYWORD in types
+    assert TokenType.STRING in types
+    assert TokenType.BUILTIN in types
+
+
+def test_bash_lexer_tokenizes_variable() -> None:
+    lexer = BashLexer()
+    tokens = list(lexer.tokenize("echo $HOME"))
+    assert any(t.type == TokenType.DECORATOR and "$HOME" in t.value for t in tokens)
+
+
+def test_bash_lexer_tokenizes_comment() -> None:
+    lexer = BashLexer()
+    tokens = list(lexer.tokenize("# this is a comment\necho hi"))
+    assert any(t.type == TokenType.COMMENT and t.value.startswith("#") for t in tokens)
+
+
+def test_bash_lexer_empty_input() -> None:
+    lexer = BashLexer()
+    assert list(lexer.tokenize("")) == []
+
+
+def test_toml_lexer_tokenizes_section_and_key() -> None:
+    lexer = TomlLexer()
+    code = '[package]\nname = "webcompy"\nversion = "0.1.0"\n'
+    tokens = list(lexer.tokenize(code))
+    types = [t.type for t in tokens]
+    assert TokenType.KEYWORD in types
+    assert TokenType.STRING in types
+    assert TokenType.OPERATOR in types
+
+
+def test_toml_lexer_tokenizes_boolean() -> None:
+    lexer = TomlLexer()
+    tokens = list(lexer.tokenize("debug = true"))
+    assert any(t.type == TokenType.KEYWORD and t.value == "true" for t in tokens)
+
+
+def test_toml_lexer_tokenizes_number() -> None:
+    lexer = TomlLexer()
+    tokens = list(lexer.tokenize("port = 8080"))
+    assert any(t.type == TokenType.NUMBER and t.value == "8080" for t in tokens)
+
+
+def test_toml_lexer_tokenizes_comment() -> None:
+    lexer = TomlLexer()
+    tokens = list(lexer.tokenize("# top-level comment\nname = 'x'"))
+    assert any(t.type == TokenType.COMMENT for t in tokens)
+
+
+def test_registry_register_and_get_by_name() -> None:
+    lexer = PythonLexer()
+    register_lexer(lexer)
+    assert get_lexer("python") is lexer
+
+
+def test_registry_get_by_alias() -> None:
+    register_lexer(PythonLexer())
+    assert isinstance(get_lexer("py"), PythonLexer)
+
+
+def test_registry_get_by_file_extension() -> None:
+    register_lexer(PythonLexer())
+    assert isinstance(get_lexer(".py"), PythonLexer)
+
+
+def test_registry_unknown_raises() -> None:
+    register_builtin_lexers()
+    with pytest.raises(LexerNotFoundError):
+        get_lexer("nonexistent-language")
+
+
+def test_registry_list_lexers_returns_unique() -> None:
+    register_builtin_lexers()
+    names = [info.name for info in list_lexers()]
+    assert names == sorted(set(names))
+    assert "python" in names
+    assert "bash" in names
+    assert "toml" in names
+
+
+def test_registry_register_builtin_idempotent() -> None:
+    register_builtin_lexers()
+    first = get_lexer("python")
+    register_builtin_lexers()
+    second = get_lexer("python")
+    assert first is second
+
+
+def test_registry_register_non_lexer_raises() -> None:
+    with pytest.raises(TypeError):
+        register_lexer("not a lexer")  # type: ignore[arg-type]

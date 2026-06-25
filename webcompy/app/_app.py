@@ -93,10 +93,15 @@ class WebComPyApp:
         else:
             print(output)
 
-    def create_render_context(self, path: str | None = None) -> RenderContext:
+    def create_render_context(
+        self,
+        path: str | None = None,
+        *,
+        initial_theme: Any = None,
+    ) -> RenderContext:
         from webcompy.app._render_context import RenderContext
 
-        ctx = RenderContext(self, path)
+        ctx = RenderContext(self, path, initial_theme=initial_theme)
         self._render_context_cv.set(ctx)
         return ctx
 

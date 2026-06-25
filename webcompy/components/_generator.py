@@ -205,7 +205,10 @@ class ComponentGenerator(Generic[PropsType]):
                 parts.append(f"{stripped} {{ {' '.join(inner_parts)} }}")
             else:
                 parts.append(_generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", style_dict)))
-        return " ".join(parts)
+        body = " ".join(parts)
+        if not body.strip():
+            return ""
+        return f"@layer webcompy-scope {{ {body} }}"
 
     def _process_at_rule_inner(self, style_dict: StyleDict, cid: str) -> list[str]:
         inner_parts: list[str] = []

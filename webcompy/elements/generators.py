@@ -20,7 +20,7 @@ from webcompy.elements.types._element import Element, ElementBase
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._repeat import MultiLineTextElement, RepeatElement
 from webcompy.elements.types._switch import SwitchElement
-from webcompy.elements.types._text import NewLine, TextElement
+from webcompy.elements.types._text import NewLine, RawHTMLElement, TextElement
 from webcompy.signal import SignalBase
 
 T = TypeVar("T")
@@ -129,6 +129,10 @@ def text(text: str | SignalBase[Any], enable_multiline: bool = True):
         return MultiLineTextElement(text)
     else:
         return TextElement(text)
+
+
+def raw_html(html: str | SignalBase[Any], *, wrapper: str = "span") -> RawHTMLElement:
+    return RawHTMLElement(html, wrapper=wrapper)
 
 
 def break_line():

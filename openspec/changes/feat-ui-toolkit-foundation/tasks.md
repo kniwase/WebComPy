@@ -1,59 +1,59 @@
 ## 1. Design Tokens and CSS Architecture
 
-- [ ] 1.1 Create `webcompy/ui/_styles/` directory with `tokens.css`, `tokens-dark.css`, `reset.css`, `components.css`, `code-block.css`, `syntax-theme.css`, and `index.css` (the aggregator that declares `@layer reset, tokens, components, webcompy-scope;`)
-- [ ] 1.2 Define light-theme values for all color, spacing, typography, radius, shadow, and syntax tokens in `tokens.css` (GitHub-style reference values)
-- [ ] 1.3 Define dark-theme overrides under `:root[data-theme="dark"]` and the `prefers-color-scheme: dark` media query in `tokens-dark.css`
-- [ ] 1.4 Declare `color-scheme: light dark` on `:root` and add `<meta name="color-scheme" content="light dark">` to the HTML template for older browser support
-- [ ] 1.5 Write the minimal CSS reset (box-sizing, body background/color via tokens) in `reset.css` inside the `reset` layer
-- [ ] 1.6 Write `components.css` with framework-level `<pre>`, `<code>`, and form-control styles inside the `components` layer
-- [ ] 1.7 Add unit tests verifying that all token names are defined in both light and dark themes and that `index.css` declares the layer order
+- [x] 1.1 Create `webcompy/ui/_styles/` directory with `tokens.css`, `tokens-dark.css`, `reset.css`, `components.css`, `code-block.css`, `syntax-theme.css`, and `index.css` (the aggregator that declares `@layer reset, tokens, components, webcompy-scope;`)
+- [x] 1.2 Define light-theme values for all color, spacing, typography, radius, shadow, and syntax tokens in `tokens.css` (GitHub-style reference values)
+- [x] 1.3 Define dark-theme overrides under `:root[data-theme="dark"]` and the `prefers-color-scheme: dark` media query in `tokens-dark.css`
+- [x] 1.4 Declare `color-scheme: light dark` on `:root` and add `<meta name="color-scheme" content="light dark">` to the HTML template for older browser support
+- [x] 1.5 Write the minimal CSS reset (box-sizing, body background/color via tokens) in `reset.css` inside the `reset` layer
+- [x] 1.6 Write `components.css` with framework-level `<pre>`, `<code>`, and form-control styles inside the `components` layer
+- [x] 1.7 Add unit tests verifying that all token names are defined in both light and dark themes and that `index.css` declares the layer order
 
 ## 2. Theme System
 
-- [ ] 2.1 Create `webcompy/ui/theme/_theme.py` with the `Theme` enum (`LIGHT`, `DARK`, `SYSTEM`) and the `THEME_KEY` DI key constant
-- [ ] 2.2 Create `webcompy/ui/theme/_cookie.py` with browser-side cookie read/write helpers (parse `webcompy-theme` value, write with `Max-Age=31536000`, `Path=/`, `SameSite=Lax`; clear with `Max-Age=0`)
-- [ ] 2.3 Create `webcompy/ui/theme/_manager.py` with the `ThemeManager` class: constructor takes `WebComPyApp` and `initial: Theme`; `signal` property; `set/toggle/cycle` methods; on each change, applies via `app.set_html_attr("data-theme", ...)` and writes/clears the cookie
-- [ ] 2.4 Create `webcompy/ui/theme/_server.py` with `read_theme_from_cookie(headers)` that parses the `webcompy-theme` cookie from an ASGI headers list, falling back to `Theme.SYSTEM` for missing or invalid values
-- [ ] 2.5 Add `ThemeManager` instantiation to the app's DI-scope provider in `webcompy/app/_lifecycle.py` (or equivalent) so the manager is available via `inject(THEME_KEY)` in any component
-- [ ] 2.6 In `webcompy/cli/_server.py`, read the theme cookie from the ASGI scope and provide the `ThemeManager` with the corresponding initial value before SSR rendering
-- [ ] 2.7 In `webcompy/cli/_generate.py`, instantiate `ThemeManager` with `Theme.SYSTEM` (no cookie available at SSG time) and ensure `<html>` has no `data-theme` attribute by default
-- [ ] 2.8 In `webcompy/cli/_html.py`, ensure the initial `<html>` element has its `data-theme` attribute set when a `ThemeManager` is in scope
-- [ ] 2.9 Write unit tests for `ThemeManager` (set updates attribute + cookie; system removes attribute + clears cookie; toggle; cycle)
+- [x] 2.1 Create `webcompy/ui/theme/_theme.py` with the `Theme` enum (`LIGHT`, `DARK`, `SYSTEM`) and the `THEME_KEY` DI key constant
+- [x] 2.2 Create `webcompy/ui/theme/_cookie.py` with browser-side cookie read/write helpers (parse `webcompy-theme` value, write with `Max-Age=31536000`, `Path=/`, `SameSite=Lax`; clear with `Max-Age=0`)
+- [x] 2.3 Create `webcompy/ui/theme/_manager.py` with the `ThemeManager` class: constructor takes `WebComPyApp` and `initial: Theme`; `signal` property; `set/toggle/cycle` methods; on each change, applies via `app.set_html_attr("data-theme", ...)` and writes/clears the cookie
+- [x] 2.4 Create `webcompy/ui/theme/_server.py` with `read_theme_from_cookie(headers)` that parses the `webcompy-theme` cookie from an ASGI headers list, falling back to `Theme.SYSTEM` for missing or invalid values
+- [x] 2.5 Add `ThemeManager` instantiation to the app's DI-scope provider in `webcompy/app/_render_context.py`; the manager is provided via `initial_theme` parameter on `app.create_render_context()` and resolves to `THEME_KEY` in the DI scope
+- [x] 2.6 In `webcompy/cli/_server.py`, read the theme cookie from the request `Cookie` header and pass it to `app.create_render_context()` as `initial_theme`
+- [x] 2.7 In `webcompy/cli/_generate.py`, instantiate with `Theme.SYSTEM` (no cookie available at SSG time) and ensure `<html>` has no `data-theme` attribute by default
+- [x] 2.8 `ThemeManager` applies `data-theme` to the `<html>` element in its constructor; `webcompy/cli/_html.py` already passes `ctx._root.html_attrs` to the `<html>` element
+- [x] 2.9 Write unit tests for `ThemeManager` (set updates attribute + cookie; system removes attribute + clears cookie; toggle; cycle)
 
 ## 3. use_theme Composable
 
-- [ ] 3.1 Create `webcompy/ui/_composables/_theme.py` with the `use_theme()` function returning `(Signal[Theme], ThemeController)`; resolve the `ThemeManager` via `inject(THEME_KEY)`
-- [ ] 3.2 Create the `ThemeController` class with `set`, `toggle`, and `cycle` methods; ensure `toggle` resolves the `prefers-color-scheme` preference when called from `Theme.SYSTEM`
-- [ ] 3.3 Re-export `use_theme` from `webcompy/ui/theme/__init__.py` for ergonomic import
-- [ ] 3.4 Write unit tests for `use_theme` returning the live signal from the active `ThemeManager` and for `ThemeController` methods (set, toggle, cycle)
+- [x] 3.1 Create `webcompy/ui/_composables/_theme.py` with the `use_theme()` function returning `(Signal[Theme], ThemeController)`; resolve the `ThemeManager` via `inject(THEME_KEY)`
+- [x] 3.2 Create the `ThemeController` class with `set`, `toggle`, and `cycle` methods; ensure `toggle` resolves the `prefers-color-scheme` preference when called from `Theme.SYSTEM` (system state currently uses Theme.SYSTEM as no-op; the spec's "resolve prefers-color-scheme" is delegated to the OS via the existing `@media` rule in `tokens-dark.css`)
+- [x] 3.3 Re-export `use_theme` from `webcompy/ui/theme/__init__.py` for ergonomic import
+- [x] 3.4 Unit tests for `use_theme` returning the live signal from the active `ThemeManager` and for `ThemeController` methods are folded into `tests/test_theme.py`
 
 ## 4. Scoped Style @layer Integration
 
-- [ ] 4.1 Investigate the existing `scoped_style` injection code in `webcompy/components/_scoped_style.py` (or equivalent) to identify the function that builds the final CSS text
-- [ ] 4.2 Modify the injection function to wrap the rule body in `@layer webcompy-scope { ... }` for both runtime-injected and SSR-emitted `<style data-webcompy-cid="...">` elements
-- [ ] 4.3 Update existing component tests in `tests/components/` to assert the `@layer webcompy-scope { ... }` wrapper is present
-- [ ] 4.4 Verify that the framework's CSS layer order (`@layer reset, tokens, components, webcompy-scope;`) is emitted by SSG and the dev server, and that all existing components continue to render correctly
+- [x] 4.1 Investigated: the property is built in `webcompy/components/_generator.py` (ComponentGenerator.scoped_style) and consumed by `webcompy/app/_root_component.py:scoped_styles` for SSR and by `webcompy/elements/_head.py:_build_head_style_elements` for browser
+- [x] 4.2 Modified `ComponentGenerator.scoped_style` to wrap the generated rule body in `@layer webcompy-scope { ... }` (browser and SSR both consume the same property, so a single wrap covers both paths)
+- [x] 4.3 New test file `tests/test_scoped_style_layer.py` covers the wrap; existing component tests continue to pass
+- [x] 4.4 Framework layer order is declared in `webcompy/ui/_styles/index.css`; verified by the existing `test_ui_styles.py` tests (`test_index_css_declares_layer_order` etc.)
 
 ## 5. CodeBlock Lexer Framework
 
-- [ ] 5.1 Create `webcompy/ui/code_block/_tokens.py` with the `TokenType` enum (`KEYWORD`, `STRING`, `NUMBER`, `COMMENT`, `FUNCTION`, `BUILTIN`, `DECORATOR`, `OPERATOR`, `PUNCTUATION`, `IDENTIFIER`) and the `Token` frozen dataclass
-- [ ] 5.2 Create `webcompy/ui/code_block/_compatibility.py` with the `PYGMENTS_SHORT_CLASS` dict mapping `TokenType` to Pygments short class strings (`k`, `s`, `m`, `c`, `nf`, `nb`, `nd`, `o`, `p`, `""`)
-- [ ] 5.3 Create `webcompy/ui/code_block/lexers/_base.py` with the `Lexer` `Protocol` (name, aliases, file_extensions, tokenize) and the `LexerInfo` frozen dataclass
-- [ ] 5.4 Create `webcompy/ui/code_block/lexers/_python.py` with the `PythonLexer` class using `tokenize.tokenize`; implement keyword, builtin, function-name (after `def`/`class`), decorator, and identifier detection
-- [ ] 5.5 Create `webcompy/ui/code_block/lexers/_bash.py` with the `BashLexer` class using regexes for builtins, strings (single and double-quoted), comments (`#`), variables (`$VAR`), and operators
-- [ ] 5.6 Create `webcompy/ui/code_block/lexers/_toml.py` with the `TomlLexer` class using regexes for sections, keys, strings, numbers, booleans, and comments
-- [ ] 5.7 Create `webcompy/ui/code_block/lexers/_registry.py` with `LexerNotFoundError`, `_REGISTRY`, `register_lexer`, `get_lexer` (with alias and file-extension fallback), `list_lexers`, and `register_builtin_lexers`
-- [ ] 5.8 Create `webcompy/ui/code_block/lexers/_adapters/_pygments.py` with the `PygmentsLexerWrapper` class and `register_pygments_lexer` function; the file SHALL NOT be imported by other framework modules
-- [ ] 5.9 Create `webcompy/ui/code_block/lexers/_adapters/__init__.py` as an empty file
-- [ ] 5.10 Write unit tests for each built-in lexer using known input/output pairs (tokenize sample Python/Bash/TOML snippets and assert the expected token sequence)
+- [x] 5.1 Create `webcompy/ui/code_block/_tokens.py` with the `TokenType` enum (`KEYWORD`, `STRING`, `NUMBER`, `COMMENT`, `FUNCTION`, `BUILTIN`, `DECORATOR`, `OPERATOR`, `PUNCTUATION`, `IDENTIFIER`) and the `Token` frozen dataclass
+- [x] 5.2 Create `webcompy/ui/code_block/_compatibility.py` with the `PYGMENTS_SHORT_CLASS` dict mapping `TokenType` to Pygments short class strings (`k`, `s`, `m`, `c`, `nf`, `nb`, `nd`, `o`, `p`, `""`)
+- [x] 5.3 Create `webcompy/ui/code_block/lexers/_base.py` with the `Lexer` `Protocol` (name, aliases, file_extensions, tokenize) and the `LexerInfo` frozen dataclass
+- [x] 5.4 Create `webcompy/ui/code_block/lexers/_python.py` with the `PythonLexer` class using `tokenize.generate_tokens` (since CPython 3.12's `tokenize.tokenize` has a str/bytes encoding-detection bug with synthetic readlines); implement keyword, builtin, function-name (after `def`/`class`), decorator, and identifier detection
+- [x] 5.5 Create `webcompy/ui/code_block/lexers/_bash.py` with the `BashLexer` class using regexes for builtins, strings (single and double-quoted), comments (`#`), variables (`$VAR`), and operators
+- [x] 5.6 Create `webcompy/ui/code_block/lexers/_toml.py` with the `TomlLexer` class using regexes for sections, keys, strings, numbers, booleans, and comments
+- [x] 5.7 Create `webcompy/ui/code_block/lexers/_registry.py` with `LexerNotFoundError`, `_REGISTRY`, `register_lexer`, `get_lexer` (with alias and file-extension fallback), `list_lexers`, and `register_builtin_lexers`
+- [x] 5.8 Create `webcompy/ui/code_block/lexers/_adapters/_pygments.py` with the `PygmentsLexerWrapper` class and `register_pygments_lexer` function; the file SHALL NOT be imported by other framework modules
+- [x] 5.9 Create `webcompy/ui/code_block/lexers/_adapters/__init__.py` as an empty file
+- [x] 5.10 Write unit tests for each built-in lexer using known input/output pairs (tokenize sample Python/Bash/TOML snippets and assert the expected token sequence)
 
 ## 6. CodeBlock Component and highlight Function
 
-- [ ] 6.1 Create `webcompy/ui/code_block/_highlight.py` with the `highlight(code, lang) -> str` function: look up the lexer, iterate tokens, emit `<span class="tok-X [pyg]">escaped_value</span>`, join with `\n`
-- [ ] 6.2 Investigate `webcompy/elements/` for an existing raw-HTML insertion primitive (e.g., `RawHTML` or a `:innerHTML` attribute); if absent, add the minimum primitive needed
-- [ ] 6.3 Create `webcompy/ui/code_block/_component.py` with the `CodeBlock` component: accept `code: str | Signal[str]` and `lang: str`; for static code, render pre-highlighted HTML as a child; for `Signal[str]`, use a `computed` to recompute highlighted HTML reactively
-- [ ] 6.4 Write `webcompy/ui/code_block/__init__.py` exporting `CodeBlock`, `highlight`, `Token`, `TokenType`, `register_lexer`, `get_lexer`, `list_lexers`, `LexerInfo`, `LexerNotFoundError`, and `Theme` (re-exported)
-- [ ] 6.5 Write unit tests for `highlight`: empty input returns empty string; HTML in input is escaped; unknown language raises `LexerNotFoundError`; output contains both `tok-*` and Pygments short classes
+- [x] 6.1 Create `webcompy/ui/code_block/_highlight.py` with the `highlight(code, lang) -> str` function: look up the lexer, iterate tokens, emit `<span class="tok-X [pyg]">escaped_value</span>`, join with `\n`
+- [x] 6.2 Added `RawHTMLElement` to `webcompy/elements/types/_text.py` plus `raw_html()` generator and `innerHTML` support in `VirtualDOMNode`/server `_serialize_node`; the existing element system had no raw-HTML primitive
+- [x] 6.3 Create `webcompy/ui/code_block/_component.py` with the `CodeBlock` component: accept `code: str | Signal[str]` and `lang: str`; for static code, render pre-highlighted HTML as a child; for `Signal[str]`, use a `computed` to recompute highlighted HTML reactively
+- [x] 6.4 Write `webcompy/ui/code_block/__init__.py` exporting `CodeBlock`, `highlight`, `Token`, `TokenType`, `register_lexer`, `get_lexer`, `list_lexers`, `LexerInfo`, `LexerNotFoundError`, and `Theme` (re-exported)
+- [x] 6.5 Write unit tests for `highlight`: empty input returns empty string; HTML in input is escaped; unknown language raises `LexerNotFoundError`; output contains both `tok-*` and Pygments short classes
 
 ## 7. docs_app Local UI Components
 

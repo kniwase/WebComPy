@@ -7,6 +7,7 @@ from operator import truth
 from re import compile as re_compile
 from re import escape as re_escape
 from tempfile import TemporaryDirectory
+from typing import Any
 
 import aiofiles
 import uvicorn
@@ -51,6 +52,7 @@ from webcompy.cli._wheel_builder import (
     make_webcompy_app_package,
 )
 from webcompy.cli.config._build_config import WebComPyBuildConfig
+from webcompy.ui.theme._server import read_theme_from_cookie
 
 
 def create_asgi_app(
@@ -302,7 +304,9 @@ def create_asgi_app(
             routes = r if (r := app.routes) else []
             is_matched = truth(tuple(filter(lambda r: r[1](requested_path), routes)))
             if is_matched or "text/html" in accept_types:
-                ctx = app.create_render_context(requested_path)
+                cookie_header = request.headers.get("cookie", "")
+                initial_theme = _read_initial_theme(cookie_header)
+                ctx = app.create_render_context(requested_path, initial_theme=initial_theme)
                 try:
                     return HTMLResponse(await html_generator(ctx))
                 finally:
@@ -314,7 +318,9 @@ def create_asgi_app(
     else:
 
         async def send_html(request: Request):  # type: ignore
-            ctx = app.create_render_context("/")
+            cookie_header = request.headers.get("cookie", "")
+            initial_theme = _read_initial_theme(cookie_header)
+            ctx = app.create_render_context("/", initial_theme=initial_theme)
             try:
                 return HTMLResponse(await html_generator(ctx))
             finally:
@@ -346,6 +352,12 @@ def create_asgi_app(
     ]
 
     return Starlette(routes=routes)
+
+
+def _read_initial_theme(cookie_header: str) -> Any:
+    if not cookie_header:
+        return None
+    return read_theme_from_cookie({"cookie": cookie_header})
 
 
 def run_server(app: WebComPyApp | None = None):
