@@ -265,6 +265,14 @@ async def generate_static_site(app: WebComPyApp | None = None):
                 shutil.copy2(src_path, dst)
                 print(dst)
 
+        from webcompy.ui._styles import get_styles_files
+
+        framework_ui_dir = dist_dir / "_webcompy-ui"
+        framework_ui_dir.mkdir(exist_ok=True)
+        for filename, content in get_styles_files().items():
+            (framework_ui_dir / filename).write_bytes(content)
+        print(framework_ui_dir)
+
         _generate_kwargs: dict[str, object] = dict(
             app_package_name=build_config.app_package_path.name,
             dev_mode=False,

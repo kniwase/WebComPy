@@ -318,6 +318,10 @@ async def _generate_html_impl(
                 _HtmlElement("meta", {"name": "color-scheme", "content": "light dark"}),
                 _HtmlElement(
                     "link",
+                    {"rel": "stylesheet", "href": f"{base_url}_webcompy-ui/index.css"},
+                ),
+                _HtmlElement(
+                    "link",
                     {"rel": "stylesheet", "href": core_css_url},
                 ),
                 *_load_scripts(scripts_head),

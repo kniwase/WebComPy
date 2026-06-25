@@ -70,7 +70,7 @@ def _collect_package_files(
                 arc_path = str(filepath.relative_to(parent)).replace(os.sep, "/")
                 if arc_path in seen:
                     continue
-                if filename.endswith((".py", ".pyi")) or filename == "py.typed":
+                if filename.endswith((".py", ".pyi", ".css")) or filename == "py.typed":
                     seen.add(arc_path)
                     files.append((filepath, arc_path))
         if package_data and pkg in package_data:

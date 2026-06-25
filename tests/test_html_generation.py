@@ -155,12 +155,17 @@ def _extract_script_src(html_str: str) -> str | None:
     return match.group(1) if match else None
 
 
-def _extract_css_href(html_str: str) -> str | None:
-    match = re.search(r'<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"', html_str)
-    if match:
-        return match.group(1)
-    match = re.search(r'<link[^>]+href="([^"]+)"[^>]+rel="stylesheet"', html_str)
-    return match.group(1) if match else None
+def _extract_css_href(html_str: str, *, name: str = "core.css") -> str | None:
+    matches = re.findall(r'<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"', html_str)
+    matches += re.findall(r'<link[^>]+href="([^"]+)"[^>]+rel="stylesheet"', html_str)
+    for href in matches:
+        if href.endswith(name):
+            return href
+    return matches[0] if matches else None
+
+
+def _extract_framework_ui_css_href(html_str: str) -> str | None:
+    return _extract_css_href(html_str, name="index.css")
 
 
 class TestGenerateHtmlRuntimeLocalServing:

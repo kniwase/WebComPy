@@ -277,6 +277,21 @@ def create_asgi_app(
 
         static_file_routes.append(Route("/" + relative_path, send_file))
 
+    from webcompy.ui._styles import get_styles_file
+
+    async def send_framework_ui_css(request: Request):
+        filename: str = request.path_params.get("filename", "")  # type: ignore
+        if "/" in filename or "\\" in filename or filename.startswith("."):
+            raise HTTPException(404)
+        content = get_styles_file(filename)
+        if content is None:
+            raise HTTPException(404)
+        return Response(content, media_type="text/css")
+
+    framework_ui_routes: list[Route] = [
+        Route("/_webcompy-ui/{filename:path}", send_framework_ui_css),
+    ]
+
     html_generator = partial(
         generate_html,
         app_package_name=build_config.app_package_path.name,
@@ -347,6 +362,7 @@ def create_asgi_app(
         app_package_files_route,
         *wasm_asset_routes,
         *runtime_asset_routes,
+        *framework_ui_routes,
         *static_file_routes,
         html_route,
     ]

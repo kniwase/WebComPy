@@ -7,6 +7,7 @@
 - [x] 1.5 Write the minimal CSS reset (box-sizing, body background/color via tokens) in `reset.css` inside the `reset` layer
 - [x] 1.6 Write `components.css` with framework-level `<pre>`, `<code>`, and form-control styles inside the `components` layer
 - [x] 1.7 Add unit tests verifying that all token names are defined in both light and dark themes and that `index.css` declares the layer order
+- [x] 1.8 Bundle the framework CSS into the framework wheel by extending `_collect_package_files` to include `.css` files, expose the files via `webcompy/ui/_styles/__init__.py: get_styles_files()` (backed by `importlib.resources`), serve them from the dev server at `/_webcompy-ui/{filename}`, copy them to `dist/_webcompy-ui/` during SSG, and auto-inject a `<link rel="stylesheet">` in `<head>` so applications pick up the framework's design tokens, theme variables, reset, and CodeBlock styles with zero configuration
 
 ## 2. Theme System
 
