@@ -120,18 +120,19 @@ class RenderContext:
 
         app._plugin_manager.init_render_context(self)
 
-        if self._initial_theme is not None:
-            from webcompy.ui.theme._manager import ThemeManager
-            from webcompy.ui.theme._theme import THEME_KEY, Theme
+        from webcompy.ui.theme._manager import ThemeManager
+        from webcompy.ui.theme._theme import THEME_KEY, Theme
 
-            theme_value = self._initial_theme
-            if not isinstance(theme_value, Theme):
-                try:
-                    theme_value = Theme(str(theme_value).lower())
-                except ValueError:
-                    theme_value = Theme.SYSTEM
-            manager = ThemeManager(self._app, theme_value)
-            self._di_scope.provide(THEME_KEY, manager)
+        theme_value = self._initial_theme
+        if theme_value is None:
+            theme_value = Theme.SYSTEM
+        if not isinstance(theme_value, Theme):
+            try:
+                theme_value = Theme(str(theme_value).lower())
+            except ValueError:
+                theme_value = Theme.SYSTEM
+        manager = ThemeManager(self._app, theme_value)
+        self._di_scope.provide(THEME_KEY, manager)
 
         self._record_phase("imports_done")
 

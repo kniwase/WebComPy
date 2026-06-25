@@ -58,39 +58,39 @@
 
 ## 7. docs_app Local UI Components
 
-- [ ] 7.1 Create `docs_app/components/ui.py` with five `@define_component` functions: `InlineCode`, `Card`, `Section`, `Link`, `Button`
-- [ ] 7.2 Add `scoped_style` to `docs_app/components/ui.py` that defines `.ui-inline-code`, `.ui-card`, `.ui-section`, `.ui-section-heading`, `.ui-section-body`, `.ui-link`, `.ui-button`, `.ui-button-primary`, `.ui-button-danger` using `var(--*)` tokens only
-- [ ] 7.3 Create `docs_app/static/styles/tokens.css` and `docs_app/static/styles/components.css` mirroring the framework's design tokens (for standalone development without the framework CSS being served)
-- [ ] 7.4 Update `docs_app/app.py` to remove all Bootstrap and highlight.js links and scripts, and add `<link rel="stylesheet">` tags for the new static CSS files
+- [x] 7.1 Create `docs_app/components/ui.py` with five `@define_component` functions: `InlineCode`, `Card`, `Section`, `Link`, `Button`
+- [x] 7.2 Add `scoped_style` to `docs_app/components/ui.py` that defines `.ui-inline-code`, `.ui-card`, `.ui-section`, `.ui-section-heading`, `.ui-section-body`, `.ui-link`, `.ui-button`, `.ui-button-primary`, `.ui-button-danger` using `var(--*)` tokens only
+- [x] 7.3 Create `docs_app/static/styles/tokens.css` and `docs_app/static/styles/components.css` mirroring the framework's design tokens (for standalone development without the framework CSS being served)
+- [x] 7.4 Update `docs_app/app.py` to remove all Bootstrap and highlight.js links and scripts, and add `<link rel="stylesheet">` tags for the new static CSS files
 
 ## 8. docs_app Navigation and Theme Toggle
 
-- [ ] 8.1 Create `docs_app/components/theme_toggle.py` with a `ThemeToggle` component that uses `use_theme()` and renders a button with `aria-label`, `role="switch"`, and `aria-checked` based on the current theme
-- [ ] 8.2 Rewrite `docs_app/components/navigation.py` `scoped_style` to use only `var(--*)` references; preserve the existing dropdown and mobile-menu behavior
-- [ ] 8.3 Add the `ThemeToggle` to the rendered navbar in `docs_app/components/navigation.py`
-- [ ] 8.4 Verify the navigation still passes the existing component tests after the rewrite
+- [x] 8.1 Create `docs_app/components/theme_toggle.py` with a `ThemeToggle` component that uses `use_theme()` and renders a button with `aria-label`, `role="switch"`, and `aria-checked` based on the current theme
+- [x] 8.2 Rewrite `docs_app/components/navigation.py` `scoped_style` to use only `var(--*)` references; preserve the existing dropdown and mobile-menu behavior
+- [x] 8.3 Add the `ThemeToggle` to the rendered navbar in `docs_app/components/navigation.py`
+- [x] 8.4 Verify the navigation still passes the existing component tests after the rewrite
 
 ## 9. docs_app Template and Page Migration
 
-- [ ] 9.1 Rewrite `docs_app/templates/home.py` `scoped_style` to use only `var(--*)` references
-- [ ] 9.2 Replace inline `<code>` elements, class-string repetition, and ad-hoc section markup in `templates/home.py` with the new `InlineCode`, `Card`, and `Section` components
-- [ ] 9.3 Rewrite `docs_app/pages/not_found.py` to use design-token-based styles via the new local components
-- [ ] 9.4 Update `docs_app/components/demo_display.py` to use `CodeBlock` from `webcompy.ui.code_block` instead of the existing `SyntaxHighlighting`
-- [ ] 9.5 Replace `docs_app/components/syntax_highlighting.py` with a thin wrapper around `CodeBlock` (preserving the existing API for any other callers)
-- [ ] 9.6 Update `docs_app/router.py` and any other docs_app file that imports `SyntaxHighlighting` to import from the new wrapper or directly from `webcompy.ui.code_block`
+- [x] 9.1 Rewrite `docs_app/templates/home.py` `scoped_style` to use only `var(--*)` references
+- [x] 9.2 Replace inline `<code>` elements, class-string repetition, and ad-hoc section markup in `templates/home.py` with the new `InlineCode`, `Card`, and `Section` components
+- [x] 9.3 Rewrite `docs_app/pages/not_found.py` to use design-token-based styles via the new local components
+- [x] 9.4 Update `docs_app/components/demo_display.py` to use `CodeBlock` from `webcompy.ui.code_block` instead of the existing `SyntaxHighlighting`
+- [x] 9.5 Replace `docs_app/components/syntax_highlighting.py` with a thin wrapper around `CodeBlock` (preserving the existing API for any other callers)
+- [x] 9.6 Update `docs_app/router.py` and any other docs_app file that imports `SyntaxHighlighting` to import from the new wrapper or directly from `webcompy.ui.code_block`
 
 ## 10. Verification
 
-- [ ] 10.1 Run `uv run pytest` and ensure all unit tests pass (including the new tests for tokens, theme system, use_theme, lexers, highlight, and CodeBlock)
-- [ ] 10.2 Run `uv run pyright` and resolve any type errors
-- [ ] 10.3 Run `uv run ruff check .` and `uv run ruff format .` and resolve any lint or format issues
-- [ ] 10.4 Manually start the dev server with `uv run python -m webcompy start --dev --app docs_app.bootstrap:app` and verify: (a) the page loads with the OS-preference theme (or the cookie-persisted theme), (b) the `ThemeToggle` button cycles through light/dark/system, (c) code blocks render with syntax highlighting, (d) no console errors and no external network requests in the Network tab
-- [ ] 10.5 Generate a static site with `uv run python -m webcompy generate --app docs_app.bootstrap:app` and verify: (a) all CSS files are present in the output, (b) no external CDN references remain in the rendered HTML, (c) the `<html>` element has the correct `data-theme` attribute based on a request with a `webcompy-theme` cookie
-- [ ] 10.6 Run any existing E2E tests (or update them) to confirm the new docs_app markup matches the expected selectors
+- [x] 10.1 Run `uv run pytest` and ensure all unit tests pass (including the new tests for tokens, theme system, use_theme, lexers, highlight, and CodeBlock)
+- [x] 10.2 Run `uv run pyright` and resolve any type errors
+- [x] 10.3 Run `uv run ruff check .` and `uv run ruff format .` and resolve any lint or format issues
+- [x] 10.4 Manually start the dev server with `uv run python -m webcompy start --dev --app docs_app.bootstrap:app` and verify: (a) the page loads with the OS-preference theme (or the cookie-persisted theme), (b) the `ThemeToggle` button cycles through light/dark/system, (c) code blocks render with syntax highlighting, (d) no console errors and no external network requests in the Network tab
+- [x] 10.5 Generate a static site with `uv run python -m webcompy generate --app docs_app.bootstrap:app` and verify: (a) all CSS files are present in the output, (b) no external CDN references remain in the rendered HTML, (c) the `<html>` element has the correct `data-theme` attribute based on a request with a `webcompy-theme` cookie
+- [x] 10.6 Run any existing E2E tests (or update them) to confirm the new docs_app markup matches the expected selectors
 
 ## 11. Process and Documentation
 
-- [ ] 11.1 Update `.opencode/agents/ci-review.md` to add a "Framework Friction Signals" review checklist category: runtime CSS generation, repeated class strings, FOUC tolerance, `<html>` selectors in scoped CSS, DOM re-injection hacks
-- [ ] 11.2 Mark `openspec/changes/feat-docs-tailwind-modernization/proposal.md` as superseded with a note pointing to `feat-ui-toolkit-foundation`
-- [ ] 11.3 Add a short docs section (in `docs_app/pages/` or as a `README.md` under `webcompy/ui/`) describing how to register a custom `Lexer` and how to opt into Pygments
-- [ ] 11.4 Add a CHANGELOG entry under `CHANGELOG.md` (or equivalent) describing the framework API additions (`webcompy.ui.theme`, `webcompy.ui.code_block`, `use_theme()`) and the breaking change to `scoped_style` (now wrapped in `@layer webcompy-scope`)
+- [x] 11.1 Update `.opencode/agents/ci-review.md` to add a "Framework Friction Signals" review checklist category: runtime CSS generation, repeated class strings, FOUC tolerance, `<html>` selectors in scoped CSS, DOM re-injection hacks
+- [x] 11.2 Mark `openspec/changes/feat-docs-tailwind-modernization/proposal.md` as superseded with a note pointing to `feat-ui-toolkit-foundation`
+- [x] 11.3 Add a short docs section (in `docs_app/pages/` or as a `README.md` under `webcompy/ui/`) describing how to register a custom `Lexer` and how to opt into Pygments
+- [x] 11.4 Add a CHANGELOG entry under `CHANGELOG.md` (or equivalent) describing the framework API additions (`webcompy.ui.theme`, `webcompy.ui.code_block`, `use_theme()`) and the breaking change to `scoped_style` (now wrapped in `@layer webcompy-scope`)

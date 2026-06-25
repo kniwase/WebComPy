@@ -112,11 +112,11 @@ class TestCollectPackageFiles:
         data_dir = pkg / "data"
         data_dir.mkdir()
         (data_dir / "cities.json").write_text("[]")
-        (data_dir / "style.css").write_text("body{}")
+        (data_dir / "config.toml").write_text("")
         files = _collect_package_files(pkg, ["myapp"], {"myapp": ["data/*.json"]})
         arcs = {arc for _, arc in files}
         assert "myapp/data/cities.json" in arcs
-        assert "myapp/data/style.css" not in arcs
+        assert "myapp/data/config.toml" not in arcs
 
     def test_no_package_data(self, tmp_path):
         pkg = tmp_path / "myapp"
