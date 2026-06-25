@@ -55,7 +55,8 @@ The dual-class output (`.tok-kw k`) means Pygments stylesheets work without any 
 The `Theme` enum is `light`, `dark`, or `system`. `system` defers to the OS preference via `@media (prefers-color-scheme: dark)` in the framework's `tokens-dark.css`. The browser-side state is stored in a `webcompy-theme` cookie (1-year lifetime, `Path=/`, `SameSite=Lax`).
 
 ```python
-from webcompy.ui.theme import use_theme
+from webcompy.ui._composables import use_theme
+from webcompy.ui.theme import Theme
 
 def MyComponent():
     signal, controller = use_theme()
