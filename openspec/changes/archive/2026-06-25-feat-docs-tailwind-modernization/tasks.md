@@ -1,3 +1,5 @@
+> **Status: Superseded.** This task list is **superseded by [`feat-ui-toolkit-foundation`](../feat-ui-toolkit-foundation/tasks.md)**. The tasks below are not actionable; they are retained as a historical record of the abandoned Tailwind approach.
+
 - [ ] **Task 1**: Download and place Tailwind CSS and highlight.js assets
   - Download `https://cdn.tailwindcss.com` to `static/tailwindcss.js`
   - Download highlight.js `github.min.css` (light theme) and `github-dark-dimmed.min.css` (dark theme) to `static/highlightjs/`

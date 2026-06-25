@@ -1,5 +1,7 @@
 # Tailwind CSS Integration
 
+> **Status: Superseded.** This spec is **superseded by the `design-tokens` and `css-architecture` specs in [`feat-ui-toolkit-foundation`](../../feat-ui-toolkit-foundation/specs/)**. The requirements below describe an abandoned approach and are retained for historical reference.
+
 ## Purpose
 
 Enable WebComPy applications to use Tailwind CSS utility classes for styling. This includes CDN-based usage with local asset management for standalone/offline support, and demonstrates how Tailwind can coexist with WebComPy's `scoped_style` feature.

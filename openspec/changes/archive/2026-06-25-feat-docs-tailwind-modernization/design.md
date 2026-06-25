@@ -1,3 +1,9 @@
+## Status: Superseded
+
+This design is **superseded by [`feat-ui-toolkit-foundation`](../feat-ui-toolkit-foundation/design.md)**. See the proposal's supersession notice for the rationale. The content below is retained as a historical record of the abandoned approach.
+
+---
+
 ## Context
 
 The docs_app serves as both the documentation site and the primary demonstration of WebComPy's capabilities. Its current design uses Bootstrap 5 CSS with custom `scoped_style` CSS-in-Python. While functional, this appears dated compared to modern documentation sites like GitHub Docs, VitePress, or Astro Starlight.

@@ -1,5 +1,7 @@
 # Theme Switching
 
+> **Status: Superseded.** This spec is **superseded by the `theme-system`, `design-tokens`, and `ui-composables` specs in [`feat-ui-toolkit-foundation`](../../feat-ui-toolkit-foundation/specs/)**. The requirements below describe an abandoned approach (Tailwind's `darkMode: 'class'` strategy with `app.set_html_attr`) and are retained for historical reference.
+
 ## Purpose
 
 Provide runtime light/dark theme switching for WebComPy applications. This enables users to toggle between themes manually, which is essential for documentation sites and applications that want to offer visual preference control.

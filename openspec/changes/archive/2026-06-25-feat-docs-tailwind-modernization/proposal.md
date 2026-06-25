@@ -1,3 +1,9 @@
+## Status: Superseded
+
+This change is **superseded by [`feat-ui-toolkit-foundation`](../feat-ui-toolkit-foundation/proposal.md)**. A retrospective of an exploratory spike implementation in another worktree identified that Tailwind CSS's runtime-CSS-generation model and class-string-based design conflict with WebComPy's component model, SSR/SSG-first design, and `scoped_style` primitive. The replacement change pivots to a Web-standards-only design (CSS custom properties, `@layer`, `prefers-color-scheme`, a 3-state `Theme` enum, a pluggable `Lexer` protocol with self-implemented lexers, and a `CodeBlock` component) and is captured in the superseding change. The artifacts in this directory are retained as a historical record of the abandoned approach.
+
+---
+
 ## Why
 
 The docs_app currently uses Bootstrap 5 CSS with custom `scoped_style` CSS-in-Python for styling. To modernize the documentation site's appearance, prepare for future UI component library development, and align with current frontend best practices, we want to migrate to Tailwind CSS. This enables rapid utility-first styling, built-in responsive design, and easy dark mode implementation. Additionally, we want to add a GitHub-like design with light/dark theme switching, and manage highlight.js themes locally for standalone/offline support.
