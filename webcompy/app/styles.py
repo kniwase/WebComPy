@@ -68,9 +68,9 @@ def reactive_style(selector: str, vars: VarsMapping) -> Computed[str]:
     items = list(vars.items())
 
     def _render() -> str:
-        body = "\n  ".join(f"{name}: {_resolve_value(v)};" for name, v in items)
         if not items:
-            return f"{selector} {{}}"
+            return ""
+        body = "\n  ".join(f"{name}: {_resolve_value(v)};" for name, v in items)
         return f"{selector} {{\n  {body}\n}}"
 
     return _Computed(_render)

@@ -133,6 +133,33 @@ class Context(Generic[PropsType]):
         style._bind(self._generator._id)
         self._generator._reactive_styles.append(style)
 
+        from webcompy.utils import ENVIRONMENT
+
+        if ENVIRONMENT == "pyscript":
+            from webcompy.components._hooks import on_before_destroy
+            from webcompy.di import inject
+            from webcompy.ports._keys import DOM_PORT_KEY
+            from webcompy.signal._graph import consumer_destroy
+
+            idx = len(self._generator._reactive_styles) - 1
+            attr_value = f"{self._generator._id}-{idx}"
+            css_computed = style._css_computed
+            if css_computed is None:
+                raise WebComPyException("ReactiveScopedStyle is not bound; _bind() should have been called")
+
+            def _update_text_content(v: str, _attr: str = attr_value) -> None:
+                _dom = inject(DOM_PORT_KEY)
+                el = _dom.query_selector(f'style[data-webcompy-cid-rx="{_attr}"]')
+                if el is not None:
+                    el.textContent = v
+
+            subscription = css_computed.on_after_updating(_update_text_content)
+
+            def _dispose_subscription() -> None:
+                consumer_destroy(subscription)
+
+            on_before_destroy(_dispose_subscription)
+
     def __get_lifecyclehooks__(self) -> _Lifecyclehooks:
         hooks: _Lifecyclehooks = {}
         if self.__on_before_rendering:

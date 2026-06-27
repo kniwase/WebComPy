@@ -47,21 +47,43 @@ class TestReactiveStyleHelper:
         sig.value = "second"
         assert "--x: second" in cs.value
 
+    def test_empty_vars_returns_empty_string(self):
+        assert reactive_style(":root", {}).value == ""
+
+    def test_callable_returning_empty_string(self):
+        def _get():
+            return ""
+
+        result = reactive_style(":root", {"--x": _get}).value
+        assert "--x" in result
+        assert ";" in result
+
 
 class TestReactiveBlockHelper:
     def test_static_string(self):
         result = reactive_block("body", "color: red;").value
         assert result == "body {\ncolor: red;\n}"
 
-    def test_signal_value(self):
+    def test_signal_value_is_wrapped_verbatim(self):
         sig = Signal("red")
         result = reactive_block("body", sig).value
-        assert "color: red" not in result
+        assert "color:" not in result
         assert result == "body {\nred\n}"
 
     def test_callable_value(self):
         result = reactive_block("body", lambda: "color: blue;").value
         assert result == "body {\ncolor: blue;\n}"
+
+    def test_signal_change_triggers_recompute(self):
+        sig = Signal("first")
+        cb = reactive_block("body", sig)
+        assert "first" in cb.value
+        sig.value = "second"
+        assert "second" in cb.value
+
+    def test_empty_string_content(self):
+        result = reactive_block("body", "").value
+        assert result == "body {\n\n}"
 
 
 class TestHeadElementAppStyle:
@@ -240,10 +262,18 @@ class TestHeadElementAppStyle:
             cs = reactive_style(":root", {"--x": sig})
             head_element.append_style(cs)
 
+            consumer_count_before = _count_consumers(cs)
+            assert consumer_count_before == 1
             assert len(head_element._style_callbacks) == 1
 
             head_element._cleanup_consumers()
+
             assert len(head_element._style_callbacks) == 0
+            consumer_count_after = _count_consumers(cs)
+            assert consumer_count_after == 0
+
+            sig.value = "red"
+            assert _count_consumers(cs) == 0
         finally:
             _active_di_scope.reset(token)
 
@@ -254,3 +284,12 @@ def _find_child_by_tag_attr(node, tag, attr_name, attr_value):
         if child.nodeName == tag.upper() and child.getAttribute(attr_name) == attr_value:
             return child
     return None
+
+
+def _count_consumers(producer: object) -> int:
+    count = 0
+    edge = getattr(producer, "consumers", None)
+    while edge is not None:
+        count += 1
+        edge = edge.next_consumer
+    return count

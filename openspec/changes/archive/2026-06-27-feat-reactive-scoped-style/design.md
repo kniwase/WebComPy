@@ -96,9 +96,32 @@ The method lives on `ComponentContext` (already passed to every component setup 
 
 The `<style>` element's `textContent` is set to the new CSS string. This is faster than `innerHTML`, avoids HTML-parser overhead, and matches the convention used elsewhere in `HeadElement`.
 
-### Decision 7: Subscription cleanup is tied to the component lifecycle
+### Decision 7: Subscription cleanup is per-instance, registered in `on_before_destroy`
 
-`Component._remove_element()` and `Component._detach_from_node()` both call `on_before_destroy()`. The reactive style's `CallbackConsumerNode` is registered with the component's effect scope (via the `EffectScope` already created in `__setup()`), so it is automatically disposed when the component is destroyed. No manual cleanup is required.
+`use_reactive_scoped_style` is called from the component setup, so the
+component's `Context` is active. The method creates a per-call
+`CallbackConsumerNode` via `style._css_computed.on_after_updating(...)`
+and immediately registers a cleanup with `on_before_destroy(...)` that
+calls `consumer_destroy(...)` on the node.
+
+`Component._remove_element()` and `Component._detach_from_node()` both
+trigger the `on_before_destroy` hooks via the lifecycle path established
+in `Component.__setup()`'s `on_before_destroy_with_scope_cleanup`. So
+when the component is removed from the DOM, the `CallbackConsumerNode`
+is disposed and subsequent signal changes do not fire the dead
+callback.
+
+The subscription is per-instance: each call to `use_reactive_scoped_style`
+(once per component setup invocation) creates its own consumer. For
+multi-instance components, multiple consumers attach to the same
+`_css_computed`; the `<style>` element lookup inside the callback uses
+`data-webcompy-cid-rx="{cid}-{index}"` which is stable across instances,
+so all consumers update the same DOM element idempotently.
+
+The original concern about "no manual cleanup" was based on the false
+assumption that `CallbackConsumerNode` is part of the component's
+`EffectScope`. It is not: `EffectScope` only manages `EffectNode`s.
+Explicit per-call disposal is the correct cleanup model.
 
 ### Decision 8: SSR initial value uses the current `Computed` value
 

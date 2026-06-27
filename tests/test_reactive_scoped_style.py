@@ -159,6 +159,51 @@ class TestGeneratorReactiveStylesTracking:
         assert gen._reactive_styles == [style]
         assert style._cid == gen._id
 
+    def test_subscription_disposed_on_before_destroy(self, monkeypatch):
+        monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
+
+        from webcompy.components._hooks import _active_component_context
+        from webcompy.components._libs import Context
+        from webcompy.di._scope import DIScope
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy.testing._ports import FakeBrowserDOMPort
+
+        gen = ComponentGenerator("DestroyComp", _noop)
+        style = reactive_scoped_style(lambda: {".x": {"color": "blue"}})
+        context = Context(
+            None,
+            {},
+            "DestroyComp",
+            lambda: "",
+            lambda: {},
+            lambda _: None,
+            lambda _, __: None,
+            generator=gen,
+        )
+
+        port = FakeBrowserDOMPort()
+        scope = DIScope()
+        scope.provide(DOM_PORT_KEY, port)
+
+        di_token = _active_component_context.set(context)  # type: ignore[arg-type]
+        from webcompy.di._scope import _active_di_scope
+
+        di_scope_token = _active_di_scope.set(scope)
+        try:
+            context.use_reactive_scoped_style(style)
+            consumer_count_before = _count_consumers(style._css_computed)
+            assert consumer_count_before == 1
+
+            hooks = context.__get_lifecyclehooks__()
+            assert "on_before_destroy" in hooks
+            hooks["on_before_destroy"]()
+
+            consumer_count_after = _count_consumers(style._css_computed)
+            assert consumer_count_after == 0
+        finally:
+            _active_di_scope.reset(di_scope_token)
+            _active_component_context.reset(di_token)
+
     def test_use_outside_generator_raises(self):
         from webcompy.components._libs import Context
 
@@ -254,6 +299,8 @@ class TestHeadElementBrowserPath:
         monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
 
         from webcompy.components._component import HeadPropsStore
+        from webcompy.components._hooks import _active_component_context
+        from webcompy.components._libs import Context
         from webcompy.di._keys import _COMPONENT_STORE_KEY
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
@@ -263,8 +310,17 @@ class TestHeadElementBrowserPath:
         gen = ComponentGenerator("SigComp", _noop)
         color = Signal("blue")
         style = reactive_scoped_style(lambda: {".dyn": {"color": color.value}})
-        style._bind(gen._id)
-        gen._reactive_styles.append(style)
+
+        context = Context(
+            None,
+            {},
+            "SigComp",
+            lambda: "",
+            lambda: {},
+            lambda _: None,
+            lambda _, __: None,
+            generator=gen,
+        )
 
         port = FakeBrowserDOMPort()
         store = ComponentStore()
@@ -275,8 +331,11 @@ class TestHeadElementBrowserPath:
         scope.provide(DOM_PORT_KEY, port)
         scope.provide(_COMPONENT_STORE_KEY, store)
 
-        token = _active_di_scope.set(scope)
+        di_token = _active_di_scope.set(scope)
+        ctx_token = _active_component_context.set(context)
         try:
+            context.use_reactive_scoped_style(style)
+
             head_element = HeadElement(head_props)
             await head_element._render()
 
@@ -290,7 +349,8 @@ class TestHeadElementBrowserPath:
 
             assert "color: red" in (rx_el.textContent or "")
         finally:
-            _active_di_scope.reset(token)
+            _active_component_context.reset(ctx_token)
+            _active_di_scope.reset(di_token)
 
 
 class TestHeadElementSSRPath:
@@ -335,3 +395,12 @@ def _find_child_by_tag_attr(node, tag, attr_name, attr_value):
         if child.nodeName == tag.upper() and child.getAttribute(attr_name) == attr_value:
             return child
     return None
+
+
+def _count_consumers(producer: object) -> int:
+    count = 0
+    edge = getattr(producer, "consumers", None)
+    while edge is not None:
+        count += 1
+        edge = edge.next_consumer
+    return count

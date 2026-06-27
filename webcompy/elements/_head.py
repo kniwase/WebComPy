@@ -179,7 +179,6 @@ class HeadElement(ElementWithChildren):
                     el.setAttribute("data-webcompy-cid-rx", attr_value)
                     el.textContent = rx_style.render_css(cid)
                     head_el.appendChild(el)
-                    rx_style.css_computed.on_after_updating(lambda v, _el=el: setattr(_el, "textContent", v))
                 else:
                     existing.textContent = rx_style.render_css(cid)
 
