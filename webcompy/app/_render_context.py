@@ -131,7 +131,7 @@ class RenderContext:
                 theme_value = Theme(str(theme_value).lower())
             except ValueError:
                 theme_value = Theme.SYSTEM
-        manager = ThemeManager(self._app, theme_value)
+        manager = ThemeManager(self._app, self, theme_value)
         self._di_scope.provide(THEME_KEY, manager)
 
         self._record_phase("imports_done")

@@ -71,7 +71,7 @@ def test_theme_manager_set_updates_attr() -> None:
     from webcompy.ui.theme._manager import ThemeManager
 
     app = FakeApp()
-    manager = ThemeManager(app, Theme.SYSTEM)
+    manager = ThemeManager(app, app, Theme.SYSTEM)
     manager.set(Theme.DARK)
     assert app.html_attrs.get("data-theme") == "dark"
 
@@ -80,7 +80,7 @@ def test_theme_manager_system_removes_attr() -> None:
     from webcompy.ui.theme._manager import ThemeManager
 
     app = FakeApp()
-    manager = ThemeManager(app, Theme.DARK)
+    manager = ThemeManager(app, app, Theme.DARK)
     assert app.html_attrs.get("data-theme") == "dark"
     manager.set(Theme.SYSTEM)
     assert "data-theme" not in app.html_attrs
@@ -91,7 +91,7 @@ def test_theme_manager_initial_applies_attr() -> None:
     from webcompy.ui.theme._manager import ThemeManager
 
     app = FakeApp()
-    ThemeManager(app, Theme.LIGHT)
+    ThemeManager(app, app, Theme.LIGHT)
     assert app.html_attrs.get("data-theme") == "light"
 
 
@@ -99,7 +99,7 @@ def test_theme_manager_signal_reactive() -> None:
     from webcompy.ui.theme._manager import ThemeManager
 
     app = FakeApp()
-    manager = ThemeManager(app, Theme.LIGHT)
+    manager = ThemeManager(app, app, Theme.LIGHT)
     captured: list[Theme] = []
     manager.signal.on_after_updating(lambda v: captured.append(v))
     manager.set(Theme.DARK)
@@ -110,7 +110,7 @@ def test_theme_manager_cycle() -> None:
     from webcompy.ui.theme._manager import ThemeManager
 
     app = FakeApp()
-    manager = ThemeManager(app, Theme.LIGHT)
+    manager = ThemeManager(app, app, Theme.LIGHT)
     manager.cycle()
     assert manager.value is Theme.DARK
     manager.cycle()
@@ -123,7 +123,7 @@ def test_theme_manager_toggle_flips_light_dark() -> None:
     from webcompy.ui.theme._manager import ThemeManager
 
     app = FakeApp()
-    manager = ThemeManager(app, Theme.LIGHT)
+    manager = ThemeManager(app, app, Theme.LIGHT)
     manager.toggle()
     assert manager.value is Theme.DARK
     manager.toggle()
@@ -134,7 +134,7 @@ def test_theme_manager_normalizes_string_initial() -> None:
     from webcompy.ui.theme._manager import ThemeManager
 
     app = FakeApp()
-    manager = ThemeManager(app, "DARK")
+    manager = ThemeManager(app, app, "DARK")
     assert manager.value is Theme.DARK
 
 
@@ -145,7 +145,7 @@ def test_use_theme_returns_signal_and_controller() -> None:
     from webcompy.ui.theme._theme import THEME_KEY
 
     app = FakeApp()
-    manager = ThemeManager(app, Theme.LIGHT)
+    manager = ThemeManager(app, app, Theme.LIGHT)
     scope = DIScope()
     scope.provide(THEME_KEY, manager)
     with scope:
@@ -169,7 +169,7 @@ def test_theme_controller_methods_delegate() -> None:
     from webcompy.ui.theme._manager import ThemeManager
 
     app = FakeApp()
-    manager = ThemeManager(app, Theme.LIGHT)
+    manager = ThemeManager(app, app, Theme.LIGHT)
     controller = ThemeController(manager)
     controller.set(Theme.DARK)
     assert manager.value is Theme.DARK
@@ -177,3 +177,50 @@ def test_theme_controller_methods_delegate() -> None:
     assert manager.value is Theme.LIGHT
     controller.cycle()
     assert manager.value is Theme.DARK
+
+
+def test_theme_manager_does_not_use_contextvar_for_set_html_attr() -> None:
+    """ThemeManager must call the render context directly, not via the app's
+    ContextVar-based set_html_attr, because the click handler runs outside the
+    ContextVar's context and the ContextVar lookup would return None.
+    """
+    from webcompy.ui.theme._manager import ThemeManager
+
+    class CountingApp:
+        def __init__(self) -> None:
+            self.set_calls = 0
+            self.remove_calls = 0
+
+        def set_html_attr(self, key: str, value: object) -> None:
+            self.set_calls += 1
+
+        def remove_html_attr(self, key: str) -> None:
+            self.remove_calls += 1
+
+    class RenderCtx:
+        def __init__(self) -> None:
+            self.set_calls = 0
+            self.remove_calls = 0
+
+        def set_html_attr(self, key: str, value: object) -> None:
+            self.set_calls += 1
+
+        def remove_html_attr(self, key: str) -> None:
+            self.remove_calls += 1
+
+    app = CountingApp()
+    ctx = RenderCtx()
+    manager = ThemeManager(app, ctx, Theme.SYSTEM)
+
+    ctx_remove_calls_before = ctx.remove_calls
+    ctx_set_calls_before = ctx.set_calls
+    app_remove_calls_before = app.remove_calls
+    app_set_calls_before = app.set_calls
+
+    manager.set(Theme.DARK)
+    assert ctx.set_calls - ctx_set_calls_before == 1
+    assert app.set_calls - app_set_calls_before == 0
+
+    manager.set(Theme.SYSTEM)
+    assert ctx.remove_calls - ctx_remove_calls_before == 1
+    assert app.remove_calls - app_remove_calls_before == 0

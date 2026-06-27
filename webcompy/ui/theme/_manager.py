@@ -14,8 +14,9 @@ if TYPE_CHECKING:
 
 
 class ThemeManager:
-    def __init__(self, app: WebComPyApp, initial: Theme) -> None:
+    def __init__(self, app: WebComPyApp, render_context: Any, initial: Theme) -> None:
         self._app = app
+        self._render_context = render_context
         self._signal: Signal[Theme] = Signal(_normalize_initial(initial))
         self._apply_to_html(self._signal.value)
 
@@ -54,10 +55,10 @@ class ThemeManager:
     def _apply_to_html(self, theme: Theme) -> None:
         if theme is Theme.SYSTEM:
             with contextlib.suppress(Exception):
-                self._app.remove_html_attr("data-theme")
+                self._render_context.remove_html_attr("data-theme")
         else:
             with contextlib.suppress(Exception):
-                self._app.set_html_attr("data-theme", theme.value)
+                self._render_context.set_html_attr("data-theme", theme.value)
 
 
 def _normalize_initial(initial: Any) -> Theme:

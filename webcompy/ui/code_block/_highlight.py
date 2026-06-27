@@ -21,7 +21,7 @@ def _render_tokens(tokens: list[Token]) -> str:
     out: list[str] = []
     for token in tokens:
         out.append(_render_token(token))
-    return "\n".join(out)
+    return "".join(out)
 
 
 def _render_token(token: Token) -> str:
