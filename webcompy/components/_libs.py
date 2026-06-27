@@ -4,6 +4,7 @@ import hashlib
 import logging
 from collections.abc import Callable, Coroutine
 from typing import (
+    TYPE_CHECKING,
     Any,
     Generic,
     Literal,
@@ -20,6 +21,11 @@ from webcompy.exception import WebComPyException
 
 class WebComPyComponentException(WebComPyException):
     pass
+
+
+if TYPE_CHECKING:
+    from webcompy.components._generator import ComponentGenerator
+    from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
 
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
@@ -54,6 +60,7 @@ class Context(Generic[PropsType]):
         meta_getter: Callable[[], dict[str, dict[str, str]]],
         title_setter: Callable[[str], None],
         meta_setter: Callable[[str, dict[str, str]], None],
+        generator: ComponentGenerator[PropsType] | None = None,
     ) -> None:
         self.__props = props
         self.__slots = slots
@@ -65,6 +72,7 @@ class Context(Generic[PropsType]):
         self.__meta_getter = meta_getter
         self.__title_setter = title_setter
         self.__meta_setter = meta_setter
+        self._generator = generator
 
     @property
     def props(self) -> PropsType:
@@ -109,6 +117,22 @@ class Context(Generic[PropsType]):
 
         _provide(key, value)
 
+    def use_reactive_scoped_style(self, style: ReactiveScopedStyle) -> None:
+        if self._generator is None:
+            raise WebComPyException(
+                "use_reactive_scoped_style() must be called from inside a @define_component "
+                "setup function; the current Context has no associated ComponentGenerator"
+            )
+        from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
+
+        if not isinstance(style, ReactiveScopedStyle):
+            raise WebComPyException(
+                "use_reactive_scoped_style() expects a ReactiveScopedStyle instance; "
+                "create one via reactive_scoped_style(func) before passing it"
+            )
+        style._bind(self._generator._id)
+        self._generator._reactive_styles.append(style)
+
     def __get_lifecyclehooks__(self) -> _Lifecyclehooks:
         hooks: _Lifecyclehooks = {}
         if self.__on_before_rendering:
@@ -145,6 +169,8 @@ class ComponentContext(Protocol[PropsType]):
     def set_meta(self, key: str, attributes: dict[str, str]) -> None: ...
 
     def provide(self, key: object, value: Any) -> None: ...
+
+    def use_reactive_scoped_style(self, style: ReactiveScopedStyle) -> None: ...
 
 
 @final

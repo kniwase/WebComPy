@@ -58,9 +58,10 @@ def test_required_files_exist() -> None:
 
 def test_index_css_declares_layer_order() -> None:
     css = _css_text("index.css")
-    assert re.search(r"@layer\s+reset,\s*tokens,\s*components,\s*webcompy-scope\s*;", css), (
-        "index.css must declare '@layer reset, tokens, components, webcompy-scope;' once"
-    )
+    assert re.search(
+        r"@layer\s+reset,\s*tokens,\s*components,\s*webcompy-scope,\s*webcompy-dynamic\s*;",
+        css,
+    ), "index.css must declare '@layer reset, tokens, components, webcompy-scope, webcompy-dynamic;' once"
 
 
 def test_tokens_light_defined_for_every_color_token() -> None:

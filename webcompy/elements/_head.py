@@ -12,6 +12,16 @@ if TYPE_CHECKING:
     from webcompy.signal._base import CallbackConsumerNode
 
 
+def _wrap_in_layer(content: str) -> str:
+    return f"@layer webcompy-dynamic {{ {content} }}"
+
+
+def _resolve_content(content: str | Computed[str]) -> str:
+    if isinstance(content, Computed):
+        return content.value
+    return content
+
+
 class HeadElement(ElementWithChildren):
     __parent: ElementWithChildren
 
@@ -20,6 +30,8 @@ class HeadElement(ElementWithChildren):
         self._head_props = head_props
         self._links: list[dict[str, str]] = []
         self._scripts_head: list[tuple[dict[str, str], str | None]] = []
+        self._styles: list[str | Computed[str]] = []
+        self._style_callbacks: dict[int, CallbackConsumerNode] = {}
         self._html_attrs: dict[str, str | Computed[str]] = {}
         self._callback_consumers: dict[str, CallbackConsumerNode] = {}
         self._app_meta_id = uuid4()
@@ -71,6 +83,33 @@ class HeadElement(ElementWithChildren):
         script: str | None = None,
     ):
         self._scripts_head.append((attributes, script))
+
+    def append_style(self, content: str | Computed[str]) -> None:
+        idx = len(self._styles)
+        self._styles.append(content)
+        if isinstance(content, Computed):
+            from webcompy.utils import ENVIRONMENT
+
+            if ENVIRONMENT == "pyscript":
+                from webcompy.di import inject
+                from webcompy.ports._keys import DOM_PORT_KEY
+
+                def _subscribe_callback(v: str, _idx: int = idx) -> None:
+                    _dom = inject(DOM_PORT_KEY)
+                    head_el = _dom.query_selector("head")
+                    if head_el is None:
+                        return
+                    sel = f'style[data-webcompy-dynamic="{_idx}"]'
+                    el = _dom.query_selector(sel)
+                    if el is None:
+                        el = _dom.create_element("style")
+                        el.setAttribute("data-webcompy-dynamic", str(_idx))
+                        el.textContent = _wrap_in_layer(v)
+                        head_el.appendChild(el)
+                    else:
+                        el.textContent = _wrap_in_layer(v)
+
+                self._style_callbacks[idx] = content.on_after_updating(_subscribe_callback)
 
     def set_head(self, head):
         self.set_title(head.get("title", ""))
@@ -131,6 +170,31 @@ class HeadElement(ElementWithChildren):
                 el.textContent = css
                 head_el.appendChild(el)
 
+            for idx, rx_style in enumerate(getattr(gen, "_reactive_styles", [])):
+                attr_value = f"{cid}-{idx}"
+                selector_attr = f'style[data-webcompy-cid-rx="{attr_value}"]'
+                existing = _dom.query_selector(selector_attr)
+                if existing is None:
+                    el = _dom.create_element("style")
+                    el.setAttribute("data-webcompy-cid-rx", attr_value)
+                    el.textContent = rx_style.render_css(cid)
+                    head_el.appendChild(el)
+                    rx_style.css_computed.on_after_updating(lambda v, _el=el: setattr(_el, "textContent", v))
+                else:
+                    existing.textContent = rx_style.render_css(cid)
+
+        for idx, content in enumerate(self._styles):
+            selector_attr = f'style[data-webcompy-dynamic="{idx}"]'
+            existing = _dom.query_selector(selector_attr)
+            wrapped = _wrap_in_layer(_resolve_content(content))
+            if existing is None:
+                el = _dom.create_element("style")
+                el.setAttribute("data-webcompy-dynamic", str(idx))
+                el.textContent = wrapped
+                head_el.appendChild(el)
+            else:
+                existing.textContent = wrapped
+
         self._reconcile_html_attrs(_dom)
 
     def _reconcile_html_attrs(self, _dom):
@@ -190,6 +254,9 @@ class HeadElement(ElementWithChildren):
         for consumer in self._callback_consumers.values():
             consumer_destroy(consumer)
         self._callback_consumers.clear()
+        for consumer in self._style_callbacks.values():
+            consumer_destroy(consumer)
+        self._style_callbacks.clear()
 
     @property
     def html_attrs(self) -> dict[str, str]:
@@ -230,6 +297,19 @@ class HeadElement(ElementWithChildren):
                 el.setAttribute("data-webcompy-cid", cid)
                 el.textContent = css
                 parts.append(port.render_html(el))
+
+            for idx, rx_style in enumerate(getattr(gen, "_reactive_styles", [])):
+                attr_value = f"{cid}-{idx}"
+                el = port.create_element("style")
+                el.setAttribute("data-webcompy-cid-rx", attr_value)
+                el.textContent = rx_style.render_css(cid)
+                parts.append(port.render_html(el))
+
+        for idx, content in enumerate(self._styles):
+            el = port.create_element("style")
+            el.setAttribute("data-webcompy-dynamic", str(idx))
+            el.textContent = _wrap_in_layer(_resolve_content(content))
+            parts.append(port.render_html(el))
 
         for attrs in sorted(self._links, key=lambda a: a.get("href", "")):
             el = port.create_element("link")

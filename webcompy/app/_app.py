@@ -13,6 +13,7 @@ from webcompy.utils import ENVIRONMENT
 
 if TYPE_CHECKING:
     from webcompy.app._render_context import RenderContext
+    from webcompy.signal._computed import Computed
 
 
 class WebComPyApp:
@@ -228,6 +229,13 @@ class WebComPyApp:
         if ctx is not None:
             return ctx.remove_html_attr(key)
         self._deferred_ops.append(("remove_html_attr", (key,), {}))
+
+    def append_style(self, content: str | Computed[str]) -> None:
+        ctx = self._render_context_cv.get()
+        if ctx is not None:
+            ctx.append_style(content)
+            return
+        self._deferred_ops.append(("append_style", (content,), {}))
 
     @property
     def html_attrs(self):

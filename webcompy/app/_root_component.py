@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from inspect import iscoroutinefunction
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from webcompy.components._component import Component, HeadPropsStore
 from webcompy.components._generator import ComponentGenerator
@@ -217,6 +217,9 @@ class AppDocumentRoot(Component):
             self._scripts.append((attributes, script))
         else:
             self._head_element.append_script(attributes, script)
+
+    def append_style(self, content: Any) -> None:
+        self._head_element.append_style(content)
 
     def set_head(self, head: Head):
         self._head_element.set_head(head)

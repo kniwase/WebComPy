@@ -252,6 +252,10 @@ class RenderContext:
         self._check_disposed()
         return self._root.append_script(attributes, script, in_head)
 
+    def append_style(self, content: Any) -> None:
+        self._check_disposed()
+        return self._root.append_style(content)
+
     def set_head(self, head: Any) -> None:
         self._check_disposed()
         return self._root.set_head(head)

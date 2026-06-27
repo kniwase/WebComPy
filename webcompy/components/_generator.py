@@ -13,6 +13,7 @@ from typing import (
 
 from webcompy.components._component import Component
 from webcompy.components._libs import ComponentContext, NodeGenerator, WebComPyComponentException, generate_id
+from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
 from webcompy.elements.typealias._element_property import ElementChildren
 
 _camel_to_kebab_pattern: Final = re_compile("((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))")
@@ -130,6 +131,7 @@ class ComponentGenerator(Generic[PropsType]):
         component_def: FuncComponentDef[PropsType],
     ) -> None:
         self._style = {}
+        self._reactive_styles: list[ReactiveScopedStyle] = []
         self._component_def = component_def
         self._name: str = name
         self._cid = generate_id(name)
@@ -184,7 +186,12 @@ class ComponentGenerator(Generic[PropsType]):
         *,
         slots: dict[str, NodeGenerator] | None = None,
     ):
-        return Component(self._component_def, props, {**slots} if slots else {})
+        return Component(
+            self._component_def,
+            props,
+            {**slots} if slots else {},
+            generator=self,
+        )
 
     @property
     def scoped_style(self) -> str:
