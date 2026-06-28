@@ -18,6 +18,8 @@ class ThemeManager:
         self._app = app
         self._render_context = render_context
         self._signal: Signal[Theme] = Signal(_normalize_initial(initial))
+
+    def apply_to_html(self) -> None:
         self._apply_to_html(self._signal.value)
 
     @property

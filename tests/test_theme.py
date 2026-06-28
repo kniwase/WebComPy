@@ -81,6 +81,7 @@ def test_theme_manager_system_removes_attr() -> None:
 
     app = FakeApp()
     manager = ThemeManager(app, app, Theme.DARK)
+    manager.apply_to_html()
     assert app.html_attrs.get("data-theme") == "dark"
     manager.set(Theme.SYSTEM)
     assert "data-theme" not in app.html_attrs
@@ -91,8 +92,23 @@ def test_theme_manager_initial_applies_attr() -> None:
     from webcompy.ui.theme._manager import ThemeManager
 
     app = FakeApp()
-    ThemeManager(app, app, Theme.LIGHT)
+    manager = ThemeManager(app, app, Theme.LIGHT)
+    manager.apply_to_html()
     assert app.html_attrs.get("data-theme") == "light"
+
+
+def test_theme_manager_init_does_not_apply_to_html() -> None:
+    """ThemeManager.__init__ must NOT call _apply_to_html. The render
+    context invokes apply_to_html() AFTER the root component is created,
+    so that components rendered during root setup can already resolve
+    use_theme() from the DI scope, and so that the root is available
+    to forward set_html_attr / remove_html_attr calls.
+    """
+    from webcompy.ui.theme._manager import ThemeManager
+
+    app = FakeApp()
+    ThemeManager(app, app, Theme.LIGHT)
+    assert "data-theme" not in app.html_attrs
 
 
 def test_theme_manager_signal_reactive() -> None:
@@ -211,6 +227,7 @@ def test_theme_manager_does_not_use_contextvar_for_set_html_attr() -> None:
     app = CountingApp()
     ctx = RenderCtx()
     manager = ThemeManager(app, ctx, Theme.SYSTEM)
+    manager.apply_to_html()
 
     ctx_remove_calls_before = ctx.remove_calls
     ctx_set_calls_before = ctx.set_calls

@@ -125,7 +125,12 @@ class RenderContext:
 
         theme_value = self._initial_theme
         if theme_value is None:
-            theme_value = Theme.SYSTEM
+            if ENVIRONMENT == "pyscript":
+                from webcompy.ui.theme._cookie import read_theme_cookie_value
+
+                theme_value = read_theme_cookie_value()
+            if theme_value is None:
+                theme_value = Theme.SYSTEM
         if not isinstance(theme_value, Theme):
             try:
                 theme_value = Theme(str(theme_value).lower())
@@ -144,6 +149,7 @@ class RenderContext:
             self._di_scope,
             app=self._app,
         )
+        manager.apply_to_html()
 
         app._apply_deferred_ops(self)
 
