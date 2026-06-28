@@ -9,7 +9,7 @@ from ...components.demo_display import DemoDisplay
 def MatplotlibSamplePage(context: ComponentContext[RouterContext]):
     context.set_title("Matplotlib Sample - WebCompy Demo")
     return html.DIV(
-        {"class": "container"},
+        {"class": "page-container"},
         DemoDisplay(
             {
                 "title": "Matplotlib Sample",

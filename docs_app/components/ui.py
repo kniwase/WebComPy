@@ -124,6 +124,7 @@ Card.scoped_style = {
         "border-radius": "var(--radius-md)",
         "box-shadow": "var(--shadow-sm)",
         "overflow": "hidden",
+        "margin": "var(--space-5) 0",
     },
     ".ui-card-header": {
         "padding": "var(--space-3) var(--space-4)",

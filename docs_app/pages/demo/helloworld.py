@@ -9,6 +9,6 @@ from ...components.demo_display import DemoDisplay
 def HelloWorldPage(context: ComponentContext[RouterContext]):
     context.set_title("HelloWorld - WebCompy Demo")
     return html.DIV(
-        {"class": "container"},
+        {"class": "page-container"},
         DemoDisplay({"title": "HelloWorld", "app_name": "helloworld", "demo_path": "/_demos/helloworld/app.py"}),
     )
