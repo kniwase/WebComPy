@@ -12,10 +12,6 @@ if TYPE_CHECKING:
     from webcompy.signal._base import CallbackConsumerNode
 
 
-def _wrap_in_layer(content: str) -> str:
-    return content
-
-
 def _resolve_content(content: str | Computed[str]) -> str:
     if isinstance(content, Computed):
         return content.value
@@ -104,10 +100,10 @@ class HeadElement(ElementWithChildren):
                     if el is None:
                         el = _dom.create_element("style")
                         el.setAttribute("data-webcompy-dynamic", str(_idx))
-                        el.textContent = _wrap_in_layer(v)
+                        el.textContent = v
                         head_el.appendChild(el)
                     else:
-                        el.textContent = _wrap_in_layer(v)
+                        el.textContent = v
 
                 self._style_callbacks[idx] = content.on_after_updating(_subscribe_callback)
 
@@ -185,14 +181,14 @@ class HeadElement(ElementWithChildren):
         for idx, content in enumerate(self._styles):
             selector_attr = f'style[data-webcompy-dynamic="{idx}"]'
             existing = _dom.query_selector(selector_attr)
-            wrapped = _wrap_in_layer(_resolve_content(content))
+            resolved = _resolve_content(content)
             if existing is None:
                 el = _dom.create_element("style")
                 el.setAttribute("data-webcompy-dynamic", str(idx))
-                el.textContent = wrapped
+                el.textContent = resolved
                 head_el.appendChild(el)
             else:
-                existing.textContent = wrapped
+                existing.textContent = resolved
 
         self._reconcile_html_attrs(_dom)
 
@@ -307,7 +303,7 @@ class HeadElement(ElementWithChildren):
         for idx, content in enumerate(self._styles):
             el = port.create_element("style")
             el.setAttribute("data-webcompy-dynamic", str(idx))
-            el.textContent = _wrap_in_layer(_resolve_content(content))
+            el.textContent = _resolve_content(content)
             parts.append(port.render_html(el))
 
         for attrs in sorted(self._links, key=lambda a: a.get("href", "")):

@@ -159,6 +159,27 @@ class TestGeneratorReactiveStylesTracking:
         assert gen._reactive_styles == [style]
         assert style._cid == gen._id
 
+    def test_double_registration_with_same_style_instance_is_noop(self):
+        from webcompy.components._libs import Context
+
+        gen = ComponentGenerator("DedupComp", _noop)
+        style = reactive_scoped_style(lambda: {".x": {"color": "red"}})
+        context = Context(
+            None,
+            {},
+            "DedupComp",
+            lambda: "",
+            lambda: {},
+            lambda _: None,
+            lambda _, __: None,
+            generator=gen,
+        )
+        context.use_reactive_scoped_style(style)
+        context.use_reactive_scoped_style(style)
+        context.use_reactive_scoped_style(style)
+        assert gen._reactive_styles == [style]
+        assert gen._reactive_styles.count(style) == 1
+
     def test_subscription_disposed_on_before_destroy(self, monkeypatch):
         monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
 

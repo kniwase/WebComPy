@@ -79,7 +79,8 @@ def test_tokens_light_defined_for_every_color_token() -> None:
 
 def test_dark_tokens_defined_in_python() -> None:
     """Dark theme tokens are now in Python (webcompy/ui/theme/_tokens.py)
-    so the reactive style system can inject them via @layer webcompy-dynamic.
+    so the reactive style system can inject them at runtime (unlayered,
+    with !important on individual declarations to win over static tokens).
     """
     from webcompy.ui.theme._tokens import DARK_TOKENS
 

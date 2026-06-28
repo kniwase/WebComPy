@@ -33,11 +33,11 @@ class ThemeManager:
         return self._signal.value
 
     def register_style(self) -> None:
-        """Register the reactive theme CSS with the render context.
+        """Register the reactive theme CSS with the app.
 
-        Must be called AFTER the AppDocumentRoot is created, because
-        the head element is part of the root. The render context's
-        ``_root`` attribute is None until the root is constructed.
+        The reactive style is queued via ``app.append_style``; if the
+        head element has not been built yet, the registration is held
+        in ``_deferred_ops`` and replayed once the head is available.
         """
         self._app.append_style(self._css)
 

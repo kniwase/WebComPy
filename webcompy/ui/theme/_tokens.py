@@ -1,15 +1,16 @@
 """Theme design tokens (color, shadow) for WebComPy's UI toolkit.
 
-These values mirror the static tokens in ``webcompy/ui/_styles/tokens.css`` and
-``webcompy/ui/_styles/tokens-dark.css`` and are used by ``ThemeManager`` to
-inject per-theme CSS custom properties via the reactive style primitive
-(``app.append_style(reactive_block(...))``) at runtime.
+These values mirror the static tokens in ``webcompy/ui/_styles/tokens.css``
+and are used by ``ThemeManager`` to inject per-theme CSS custom properties
+via the reactive style primitive (``app.append_style(reactive_block(...))``)
+at runtime.
 
-The reactive style is wrapped in ``@layer webcompy-dynamic`` (added by
-``feat-reactive-app-style``), so it wins over the static ``@layer tokens``
-defaults from ``tokens.css``. This lets a single source of truth
-(``tokens.css``) define the light defaults while theme signals override
-them reactively.
+The reactive style is emitted unlayered (per the ``app-styles`` spec), so it
+wins over the static ``@layer tokens`` defaults from ``tokens.css``. This lets
+a single source of truth (``tokens.css``) define the light defaults while
+theme signals override them reactively. ``render_tokens_css(important=True)``
+appends ``!important`` to individual declarations to reliably override
+unlayered application CSS that may also reference the same tokens.
 
 If a new token is added, add it to BOTH ``tokens.css`` AND ``LIGHT_TOKENS``
 (``DARK_TOKENS`` is generated from overrides).

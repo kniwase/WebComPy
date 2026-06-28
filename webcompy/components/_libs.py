@@ -130,6 +130,10 @@ class Context(Generic[PropsType]):
                 "use_reactive_scoped_style() expects a ReactiveScopedStyle instance; "
                 "create one via reactive_scoped_style(func) before passing it"
             )
+
+        if style._cid == self._generator._id:
+            return
+
         style._bind(self._generator._id)
         self._generator._reactive_styles.append(style)
 
