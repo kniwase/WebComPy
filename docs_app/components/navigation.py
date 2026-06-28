@@ -292,11 +292,9 @@ Navbar.scoped_style = {
         },
         " .navbar-nav": {
             "display": "none",
-            "order": "3",
-            "width": "100%",
         },
         " .navbar-nav.open": {
-            "display": "block",
+            "display": "contents",
         },
         " .navbar-list": {
             "flex-direction": "column",
