@@ -122,7 +122,7 @@ class PythonLexer:
 
             if tok_type in (_py_tokenize.ENCODING, _py_token.NEWLINE, _py_token.NL, _py_token.INDENT, _py_token.DEDENT):
                 pending_decorator = False
-                if value and value.strip():
+                if value:
                     yield Token(TokenType.IDENTIFIER, value)
                 continue
 

@@ -57,6 +57,34 @@ def test_python_lexer_handles_invalid_input_gracefully() -> None:
     assert all(isinstance(t, Token) for t in tokens)
 
 
+def test_python_lexer_preserves_newlines_between_statements() -> None:
+    lexer = PythonLexer()
+    code = "# header\nimport os\nx = 1\n"
+    tokens = list(lexer.tokenize(code))
+    newline_tokens = [t for t in tokens if t.value == "\n" and t.type == TokenType.IDENTIFIER]
+    assert len(newline_tokens) == 3
+
+
+def test_python_lexer_preserves_newline_after_comment() -> None:
+    lexer = PythonLexer()
+    tokens = list(lexer.tokenize("# webcompy_config.py\nimport app.app as a\n"))
+    values = [t.value for t in tokens]
+    comment_idx = values.index("# webcompy_config.py")
+    assert values[comment_idx + 1] == "\n"
+
+
+def test_highlight_preserves_newlines_for_python_multiline() -> None:
+    from webcompy.ui.code_block._highlight import highlight
+
+    register_lexer(PythonLexer())
+    code = "# webcompy_config.py\nimport app.app as a\n"
+    rendered = highlight(code, "python")
+    newline_count = rendered.count("\n")
+    assert newline_count >= 2
+    assert "# webcompy_config.py" in rendered
+    assert "import" in rendered
+
+
 def test_bash_lexer_tokenizes_keyword_and_string() -> None:
     lexer = BashLexer()
     tokens = list(lexer.tokenize('if [ "$x" = "y" ]; then echo ok; fi'))
