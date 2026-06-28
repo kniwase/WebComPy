@@ -5,12 +5,11 @@ from pathlib import Path
 from webcompy.ui._styles import get_styles_file, get_styles_files
 
 
-def test_get_styles_files_returns_all_seven() -> None:
+def test_get_styles_files_returns_all_six() -> None:
     files = get_styles_files()
     assert set(files.keys()) == {
         "index.css",
         "tokens.css",
-        "tokens-dark.css",
         "reset.css",
         "components.css",
         "code-block.css",

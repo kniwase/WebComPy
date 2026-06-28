@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 from typing import TYPE_CHECKING, Any
 
 from webcompy.signal import Signal
@@ -18,9 +17,9 @@ class ThemeManager:
         self._app = app
         self._render_context = render_context
         self._signal: Signal[Theme] = Signal(_normalize_initial(initial))
+        from webcompy.signal import Computed
 
-    def apply_to_html(self) -> None:
-        self._apply_to_html(self._signal.value)
+        self._css = Computed(self._build_theme_css)
 
     @property
     def signal(self) -> Signal[Theme]:
@@ -30,10 +29,18 @@ class ThemeManager:
     def value(self) -> Theme:
         return self._signal.value
 
+    def register_style(self) -> None:
+        """Register the reactive theme CSS with the render context.
+
+        Must be called AFTER the AppDocumentRoot is created, because
+        the head element is part of the root. The render context's
+        ``_root`` attribute is None until the root is constructed.
+        """
+        self._app.append_style(self._css)
+
     def set(self, theme: Theme) -> None:
         self._signal.value = theme
         write_theme_cookie_value(theme)
-        self._apply_to_html(theme)
 
     def toggle(self) -> None:
         self.set(self._resolved_toggle_target())
@@ -54,13 +61,16 @@ class ThemeManager:
             return Theme.DARK if current is Theme.LIGHT else Theme.LIGHT
         return _system_prefers_dark()
 
-    def _apply_to_html(self, theme: Theme) -> None:
-        if theme is Theme.SYSTEM:
-            with contextlib.suppress(Exception):
-                self._render_context.remove_html_attr("data-theme")
-        else:
-            with contextlib.suppress(Exception):
-                self._render_context.set_html_attr("data-theme", theme.value)
+    def _build_theme_css(self) -> str:
+        from webcompy.ui.theme._tokens import DARK_TOKENS, render_tokens_css
+
+        theme = self._signal.value
+        dark_body = render_tokens_css(DARK_TOKENS, important=True)
+        if theme is Theme.LIGHT:
+            return ""
+        if theme is Theme.DARK:
+            return f":root {{\n  {dark_body}\n}}"
+        return f"@media (prefers-color-scheme: dark) {{\n  :root {{\n    {dark_body}\n  }}\n}}"
 
 
 def _normalize_initial(initial: Any) -> Theme:

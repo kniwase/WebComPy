@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 def _wrap_in_layer(content: str) -> str:
-    return f"@layer webcompy-dynamic {{ {content} }}"
+    return content
 
 
 def _resolve_content(content: str | Computed[str]) -> str:

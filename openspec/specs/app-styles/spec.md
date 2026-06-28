@@ -22,13 +22,13 @@ TBD - created by archiving change feat-reactive-app-style. Update Purpose after 
 - **THEN** three `<style data-webcompy-dynamic>` elements SHALL be emitted, with `id` values `0`, `1`, `2`
 - **AND** updates to one SHALL NOT affect the others
 
-### Requirement: Dynamic styles shall be wrapped in @layer webcompy-dynamic
+### Requirement: Dynamic styles are emitted unlayered
 
-The framework SHALL wrap the content of each `<style data-webcompy-dynamic>` element in `@layer webcompy-dynamic { ... }` so that dynamic styles have higher cascade priority than `tokens`, `components`, and `webcompy-scope` while remaining inside the explicit layer system.
+The framework SHALL emit `<style data-webcompy-dynamic="{id}">` elements whose textContent is the user-supplied content without an outer `@layer` wrapping. Emitting dynamic styles unlayered lets them win over any layered framework CSS in the cascade. Users who need to override unlayered application CSS can append `!important` to the relevant declarations.
 
-#### Scenario: Rendered style is wrapped
+#### Scenario: Rendered style is unlayered
 - **WHEN** `app.append_style(":root { --x: red; }")` is called
-- **THEN** the emitted `<style data-webcompy-dynamic="0">` element SHALL contain `@layer webcompy-dynamic { :root { --x: red; } }`
+- **THEN** the emitted `<style data-webcompy-dynamic="0">` element SHALL contain `:root { --x: red; }` directly (no surrounding `@layer webcompy-dynamic { ... }` wrapper)
 
 ### Requirement: Reactive styles shall update the DOM on computed change
 

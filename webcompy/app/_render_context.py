@@ -149,7 +149,7 @@ class RenderContext:
             self._di_scope,
             app=self._app,
         )
-        manager.apply_to_html()
+        manager.register_style()
 
         app._apply_deferred_ops(self)
 

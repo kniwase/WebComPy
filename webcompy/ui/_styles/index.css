@@ -1,7 +1,6 @@
-@layer reset, tokens, components, webcompy-scope, webcompy-dynamic;
+@layer reset, tokens, components, webcompy-scope;
 
 @import url("./tokens.css");
-@import url("./tokens-dark.css");
 @import url("./reset.css");
 @import url("./components.css");
 @import url("./code-block.css");

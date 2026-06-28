@@ -108,7 +108,6 @@ class TestHeadElementAppStyle:
             html = head_element.get_head_content_html()
             assert 'data-webcompy-dynamic="0"' in html
             assert ".my-class { color: red; }" in html
-            assert "@layer webcompy-dynamic" in html
         finally:
             _active_di_scope.reset(token)
 
@@ -134,7 +133,6 @@ class TestHeadElementAppStyle:
             head_element.append_style(cs)
             html = head_element.get_head_content_html()
             assert "--color: blue" in html
-            assert "@layer webcompy-dynamic" in html
 
             sig.value = "red"
             html = head_element.get_head_content_html()
@@ -199,7 +197,6 @@ class TestHeadElementAppStyle:
             assert head_el is not None
             dyn_el = _find_child_by_tag_attr(head_el, "style", "data-webcompy-dynamic", "0")
             assert dyn_el is not None
-            assert "@layer webcompy-dynamic" in (dyn_el.textContent or "")
             assert ".dyn" in (dyn_el.textContent or "")
         finally:
             _active_di_scope.reset(token)

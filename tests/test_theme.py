@@ -49,6 +49,76 @@ def test_read_theme_from_cookie_handles_list_headers() -> None:
     assert read_theme_from_cookie(headers) is Theme.DARK
 
 
+def test_dark_tokens_match_legacy_tokens_dark_css() -> None:
+    """The Python DARK_TOKENS dict must match the values that were
+    previously in tokens-dark.css. If a token is added to one, it must
+    be added to the other.
+    """
+    from webcompy.ui.theme._tokens import DARK_TOKENS, LIGHT_TOKENS
+
+    expected = {
+        "--color-bg": "#0d1117",
+        "--color-bg-elevated": "#161b22",
+        "--color-bg-code": "#161b22",
+        "--color-bg-card": "#161b22",
+        "--color-fg": "#e6edf3",
+        "--color-fg-muted": "#8d96a0",
+        "--color-fg-subtle": "#6e7681",
+        "--color-link": "#4493f8",
+        "--color-link-hover": "#58a6ff",
+        "--color-accent": "#4493f8",
+        "--color-border": "#30363d",
+        "--color-border-muted": "#21262d",
+        "--color-success": "#3fb950",
+        "--color-danger": "#f85149",
+        "--color-warning": "#d29922",
+        "--shadow-sm": "0 1px 0 rgba(0, 0, 0, 0.4)",
+        "--shadow-md": "0 3px 6px rgba(0, 0, 0, 0.45)",
+        "--tok-kw": "#ff7b72",
+        "--tok-str": "#a5d6ff",
+        "--tok-num": "#79c0ff",
+        "--tok-comment": "#8b949e",
+        "--tok-fn": "#d2a8ff",
+        "--tok-builtin": "#ffa657",
+        "--tok-decorator": "#ffa657",
+        "--tok-op": "#e6edf3",
+        "--tok-punct": "#e6edf3",
+        "--tok-ident": "#e6edf3",
+    }
+    assert expected == DARK_TOKENS
+
+    light_expected = {
+        "--color-bg": "#ffffff",
+        "--color-bg-elevated": "#f6f8fa",
+        "--color-bg-code": "#f6f8fa",
+        "--color-bg-card": "#ffffff",
+        "--color-fg": "#1f2328",
+        "--color-fg-muted": "#57606a",
+        "--color-fg-subtle": "#6e7781",
+        "--color-link": "#0969da",
+        "--color-link-hover": "#0550ae",
+        "--color-accent": "#0969da",
+        "--color-border": "#d0d7de",
+        "--color-border-muted": "#d8dee4",
+        "--color-success": "#1a7f37",
+        "--color-danger": "#d1242f",
+        "--color-warning": "#9a6700",
+        "--shadow-sm": "0 1px 0 rgba(31, 35, 40, 0.04)",
+        "--shadow-md": "0 3px 6px rgba(140, 149, 159, 0.15)",
+        "--tok-kw": "#cf222e",
+        "--tok-str": "#0a3069",
+        "--tok-num": "#0550ae",
+        "--tok-comment": "#6e7781",
+        "--tok-fn": "#8250df",
+        "--tok-builtin": "#953800",
+        "--tok-decorator": "#953800",
+        "--tok-op": "#1f2328",
+        "--tok-punct": "#1f2328",
+        "--tok-ident": "#1f2328",
+    }
+    assert light_expected == LIGHT_TOKENS
+
+
 def test_read_theme_from_cookie_handles_lowercase_header_keys() -> None:
     headers = {"Cookie": f"{THEME_COOKIE_NAME}=light"}
     assert read_theme_from_cookie(headers) is Theme.LIGHT
@@ -58,6 +128,7 @@ class FakeApp:
     def __init__(self) -> None:
         self.html_attrs: dict[str, str] = {}
         self._removed: list[str] = []
+        self.styles: list[object] = []
 
     def set_html_attr(self, key: str, value: object) -> None:
         self.html_attrs[key] = str(value)
@@ -66,49 +137,83 @@ class FakeApp:
         self._removed.append(key)
         self.html_attrs.pop(key, None)
 
+    def append_style(self, content: object) -> None:
+        self.styles.append(content)
 
-def test_theme_manager_set_updates_attr() -> None:
+
+def test_theme_manager_register_reactive_style_after_root() -> None:
+    """ThemeManager.__init__ does NOT register the style directly. The
+    render context calls ``register_style()`` AFTER the AppDocumentRoot
+    is created, because the head element is part of the root.
+    """
     from webcompy.ui.theme._manager import ThemeManager
 
-    app = FakeApp()
+    class FakeAppWithStyles:
+        def __init__(self) -> None:
+            self.styles: list[object] = []
+
+        def append_style(self, content: object) -> None:
+            self.styles.append(content)
+
+    app = FakeAppWithStyles()
     manager = ThemeManager(app, app, Theme.SYSTEM)
-    manager.set(Theme.DARK)
-    assert app.html_attrs.get("data-theme") == "dark"
+    assert len(app.styles) == 0
+    manager.register_style()
+    assert len(app.styles) == 1
 
 
-def test_theme_manager_system_removes_attr() -> None:
+def test_theme_manager_light_emits_empty_css() -> None:
+    from webcompy.ui.theme._manager import ThemeManager
+
+    class FakeApp:
+        def __init__(self) -> None:
+            self.content = None
+
+        def append_style(self, content: object) -> None:
+            self.content = content
+
+    app = FakeApp()
+    manager = ThemeManager(app, app, Theme.LIGHT)
+    assert manager._build_theme_css() == ""
+
+
+def test_theme_manager_dark_emits_root_with_dark_tokens() -> None:
     from webcompy.ui.theme._manager import ThemeManager
 
     app = FakeApp()
     manager = ThemeManager(app, app, Theme.DARK)
-    manager.apply_to_html()
-    assert app.html_attrs.get("data-theme") == "dark"
-    manager.set(Theme.SYSTEM)
-    assert "data-theme" not in app.html_attrs
-    assert "data-theme" in app._removed
+    css = manager._build_theme_css()
+    assert css.startswith(":root {")
+    assert "--color-bg: #0d1117" in css
+    assert "--color-fg: #e6edf3" in css
 
 
-def test_theme_manager_initial_applies_attr() -> None:
+def test_theme_manager_system_emits_prefers_color_scheme_dark() -> None:
     from webcompy.ui.theme._manager import ThemeManager
+
+    app = FakeApp()
+    manager = ThemeManager(app, app, Theme.SYSTEM)
+    css = manager._build_theme_css()
+    assert "@media (prefers-color-scheme: dark)" in css
+    assert ":root" in css
+    assert "--color-bg: #0d1117" in css
+
+
+def test_theme_manager_set_updates_reactive_computed() -> None:
+    from webcompy.ui.theme._manager import ThemeManager
+
+    class FakeApp:
+        def __init__(self) -> None:
+            self.content = None
+
+        def append_style(self, content: object) -> None:
+            self.content = content
 
     app = FakeApp()
     manager = ThemeManager(app, app, Theme.LIGHT)
-    manager.apply_to_html()
-    assert app.html_attrs.get("data-theme") == "light"
-
-
-def test_theme_manager_init_does_not_apply_to_html() -> None:
-    """ThemeManager.__init__ must NOT call _apply_to_html. The render
-    context invokes apply_to_html() AFTER the root component is created,
-    so that components rendered during root setup can already resolve
-    use_theme() from the DI scope, and so that the root is available
-    to forward set_html_attr / remove_html_attr calls.
-    """
-    from webcompy.ui.theme._manager import ThemeManager
-
-    app = FakeApp()
-    ThemeManager(app, app, Theme.LIGHT)
-    assert "data-theme" not in app.html_attrs
+    manager.set(Theme.DARK)
+    css = manager._build_theme_css()
+    assert "--color-bg: #0d1117" in css
 
 
 def test_theme_manager_signal_reactive() -> None:
@@ -193,51 +298,3 @@ def test_theme_controller_methods_delegate() -> None:
     assert manager.value is Theme.LIGHT
     controller.cycle()
     assert manager.value is Theme.DARK
-
-
-def test_theme_manager_does_not_use_contextvar_for_set_html_attr() -> None:
-    """ThemeManager must call the render context directly, not via the app's
-    ContextVar-based set_html_attr, because the click handler runs outside the
-    ContextVar's context and the ContextVar lookup would return None.
-    """
-    from webcompy.ui.theme._manager import ThemeManager
-
-    class CountingApp:
-        def __init__(self) -> None:
-            self.set_calls = 0
-            self.remove_calls = 0
-
-        def set_html_attr(self, key: str, value: object) -> None:
-            self.set_calls += 1
-
-        def remove_html_attr(self, key: str) -> None:
-            self.remove_calls += 1
-
-    class RenderCtx:
-        def __init__(self) -> None:
-            self.set_calls = 0
-            self.remove_calls = 0
-
-        def set_html_attr(self, key: str, value: object) -> None:
-            self.set_calls += 1
-
-        def remove_html_attr(self, key: str) -> None:
-            self.remove_calls += 1
-
-    app = CountingApp()
-    ctx = RenderCtx()
-    manager = ThemeManager(app, ctx, Theme.SYSTEM)
-    manager.apply_to_html()
-
-    ctx_remove_calls_before = ctx.remove_calls
-    ctx_set_calls_before = ctx.set_calls
-    app_remove_calls_before = app.remove_calls
-    app_set_calls_before = app.set_calls
-
-    manager.set(Theme.DARK)
-    assert ctx.set_calls - ctx_set_calls_before == 1
-    assert app.set_calls - app_set_calls_before == 0
-
-    manager.set(Theme.SYSTEM)
-    assert ctx.remove_calls - ctx_remove_calls_before == 1
-    assert app.remove_calls - app_remove_calls_before == 0

@@ -45,7 +45,6 @@ def _css_text(name: str) -> str:
 def test_required_files_exist() -> None:
     expected = [
         "tokens.css",
-        "tokens-dark.css",
         "reset.css",
         "components.css",
         "code-block.css",
@@ -59,9 +58,17 @@ def test_required_files_exist() -> None:
 def test_index_css_declares_layer_order() -> None:
     css = _css_text("index.css")
     assert re.search(
-        r"@layer\s+reset,\s*tokens,\s*components,\s*webcompy-scope,\s*webcompy-dynamic\s*;",
+        r"@layer\s+reset,\s*tokens,\s*components,\s*webcompy-scope\s*;",
         css,
-    ), "index.css must declare '@layer reset, tokens, components, webcompy-scope, webcompy-dynamic;' once"
+    ), "index.css must declare '@layer reset, tokens, components, webcompy-scope;' once"
+
+
+def test_index_css_does_not_import_tokens_dark() -> None:
+    css = _css_text("index.css")
+    assert "tokens-dark" not in css, (
+        "tokens-dark.css was removed; dark theme tokens are now applied "
+        "via app.append_style(reactive_block(...)) at runtime"
+    )
 
 
 def test_tokens_light_defined_for_every_color_token() -> None:
@@ -70,22 +77,14 @@ def test_tokens_light_defined_for_every_color_token() -> None:
         assert f"--{token}" in css, f"Light theme missing token --{token}"
 
 
-def test_tokens_dark_defined_for_every_color_token() -> None:
-    css = _css_text("tokens-dark.css")
+def test_dark_tokens_defined_in_python() -> None:
+    """Dark theme tokens are now in Python (webcompy/ui/theme/_tokens.py)
+    so the reactive style system can inject them via @layer webcompy-dynamic.
+    """
+    from webcompy.ui.theme._tokens import DARK_TOKENS
+
     for token in COLOR_TOKENS + SYNTAX_TOKENS:
-        assert f"--{token}" in css, f"Dark theme missing token --{token}"
-
-
-def test_tokens_dark_selector_targets_data_theme_dark() -> None:
-    css = _css_text("tokens-dark.css")
-    assert ':root[data-theme="dark"]' in css, 'tokens-dark.css must define :root[data-theme="dark"] selector'
-
-
-def test_tokens_dark_includes_system_preference_fallback() -> None:
-    css = _css_text("tokens-dark.css")
-    assert "prefers-color-scheme: dark" in css, (
-        "tokens-dark.css must include @media (prefers-color-scheme: dark) for system mode"
-    )
+        assert f"--{token}" in DARK_TOKENS, f"Dark theme missing token --{token} in webcompy/ui/theme/_tokens.py"
 
 
 def test_tokens_declares_color_scheme_on_root() -> None:
