@@ -3,11 +3,12 @@ run-name: "Review #${{ github.event.pull_request.number }}"
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
 
 jobs:
   openspec:
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +19,7 @@ jobs:
       - run: npx @fission-ai/openspec@latest validate --changes
 
   openspec-check:
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,7 +57,7 @@ jobs:
           done
 
   lint:
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -81,7 +82,7 @@ jobs:
             ci-lint-format.log
 
   typecheck:
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -100,7 +101,7 @@ jobs:
           path: ci-typecheck-pyright.log
 
   generate:
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -115,7 +116,7 @@ jobs:
           if-no-files-found: error
 
   test:
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -141,7 +142,7 @@ jobs:
           path: ci-test-results.log
 
   e2e-matrix:
-    if: ${{ !failure() && !cancelled() && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
+    if: ${{ !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     needs: [lint, typecheck, generate, test]
     runs-on: ubuntu-latest
     defaults:
@@ -223,7 +224,7 @@ jobs:
 
   review:
     name: AI Code Review
-    if: ${{ success() && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
+    if: ${{ success() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     needs: [openspec, openspec-check, lint, typecheck, generate, test, e2e-matrix]
     runs-on: ubuntu-latest
     timeout-minutes: 30
