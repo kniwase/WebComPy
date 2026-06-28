@@ -1,5 +1,6 @@
 from typing import TypedDict
 
+from webcompy.components import ComponentContext, define_component
 from webcompy.elements import create_element, raw_html
 from webcompy.signal import SignalBase, computed
 from webcompy.ui.code_block import highlight
@@ -36,7 +37,9 @@ def _code_block(lang: str, html_body: str):
     )
 
 
-def SyntaxHighlighting(props: SyntaxHighlightingProps):
+@define_component
+def SyntaxHighlighting(context: ComponentContext[SyntaxHighlightingProps]):
+    props = context.props or {}
     initial_code = props.get("code", "")
     lang = props.get("lang", "text")
 
