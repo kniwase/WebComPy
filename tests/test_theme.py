@@ -261,7 +261,7 @@ def test_theme_manager_normalizes_string_initial() -> None:
 
 def test_use_theme_returns_signal_and_controller() -> None:
     from webcompy.di import DIScope
-    from webcompy.ui._composables._theme import use_theme
+    from webcompy.ui.theme import use_theme
     from webcompy.ui.theme._manager import ThemeManager
     from webcompy.ui.theme._theme import THEME_KEY
 
@@ -278,7 +278,7 @@ def test_use_theme_returns_signal_and_controller() -> None:
 
 def test_use_theme_raises_without_manager() -> None:
     from webcompy.di import DIScope
-    from webcompy.ui._composables._theme import use_theme
+    from webcompy.ui.theme import use_theme
 
     scope = DIScope()
     with scope, pytest.raises(LookupError):
@@ -286,7 +286,7 @@ def test_use_theme_raises_without_manager() -> None:
 
 
 def test_theme_controller_methods_delegate() -> None:
-    from webcompy.ui._composables._theme_controller import ThemeController
+    from webcompy.ui.composables._theme_controller import ThemeController
     from webcompy.ui.theme._manager import ThemeManager
 
     app = FakeApp()
@@ -298,3 +298,93 @@ def test_theme_controller_methods_delegate() -> None:
     assert manager.value is Theme.LIGHT
     controller.cycle()
     assert manager.value is Theme.DARK
+
+
+class _FakeMediaQueryPort:
+    def __init__(self, prefers_dark: bool) -> None:
+        self._prefers_dark = prefers_dark
+        self.calls = 0
+
+    def prefers_dark(self) -> bool:
+        self.calls += 1
+        return self._prefers_dark
+
+
+def _mocked_media_query_scope(
+    prefers_dark: bool,
+) -> tuple[_FakeMediaQueryPort, object]:
+    from webcompy.di import DIScope
+    from webcompy.ports._keys import MEDIA_QUERY_PORT_KEY
+
+    port = _FakeMediaQueryPort(prefers_dark)
+    scope = DIScope()
+    scope.provide(MEDIA_QUERY_PORT_KEY, port)
+    return port, scope
+
+
+def test_system_preferred_theme_returns_dark_when_port_prefers_dark() -> None:
+    from webcompy.ui.theme._manager import _system_preferred_theme
+
+    port, scope = _mocked_media_query_scope(prefers_dark=True)
+    with scope:
+        result = _system_preferred_theme()
+    assert result is Theme.DARK
+    assert port.calls == 1
+
+
+def test_system_preferred_theme_returns_light_when_port_prefers_light() -> None:
+    from webcompy.ui.theme._manager import _system_preferred_theme
+
+    _port, scope = _mocked_media_query_scope(prefers_dark=False)
+    with scope:
+        result = _system_preferred_theme()
+    assert result is Theme.LIGHT
+
+
+def test_system_preferred_theme_defaults_to_light_when_no_port() -> None:
+    from webcompy.di import DIScope
+    from webcompy.ui.theme._manager import _system_preferred_theme
+
+    scope = DIScope()
+    with scope:
+        result = _system_preferred_theme()
+    assert result is Theme.LIGHT
+
+
+def test_toggle_from_system_with_dark_pref_goes_to_light() -> None:
+    from webcompy.ui.theme._manager import ThemeManager
+    from webcompy.ui.theme._theme import THEME_KEY
+
+    app = FakeApp()
+    manager = ThemeManager(app, app, Theme.SYSTEM)
+    _port, scope = _mocked_media_query_scope(prefers_dark=True)
+    scope.provide(THEME_KEY, manager)
+    with scope:
+        manager.toggle()
+    assert manager.value is Theme.LIGHT
+
+
+def test_toggle_from_system_with_light_pref_goes_to_dark() -> None:
+    from webcompy.ui.theme._manager import ThemeManager
+    from webcompy.ui.theme._theme import THEME_KEY
+
+    app = FakeApp()
+    manager = ThemeManager(app, app, Theme.SYSTEM)
+    _port, scope = _mocked_media_query_scope(prefers_dark=False)
+    scope.provide(THEME_KEY, manager)
+    with scope:
+        manager.toggle()
+    assert manager.value is Theme.DARK
+
+
+def test_toggle_from_system_does_not_stay_on_system() -> None:
+    from webcompy.ui.theme._manager import ThemeManager
+    from webcompy.ui.theme._theme import THEME_KEY
+
+    app = FakeApp()
+    manager = ThemeManager(app, app, Theme.SYSTEM)
+    _port, scope = _mocked_media_query_scope(prefers_dark=False)
+    scope.provide(THEME_KEY, manager)
+    with scope:
+        manager.toggle()
+    assert manager.value is not Theme.SYSTEM

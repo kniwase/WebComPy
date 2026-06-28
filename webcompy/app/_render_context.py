@@ -78,6 +78,7 @@ class RenderContext:
             from webcompy.ports._browser._ffi import BrowserFFIPort
             from webcompy.ports._browser._history import BrowserHistoryPort
             from webcompy.ports._browser._host import BrowserHostPort
+            from webcompy.ports._browser._media_query import BrowserMediaQueryPort
             from webcompy.ports._keys import (
                 COOKIE_PORT_KEY,
                 DOM_PORT_KEY,
@@ -85,6 +86,7 @@ class RenderContext:
                 FFI_PORT_KEY,
                 HISTORY_PORT_KEY,
                 HOST_PORT_KEY,
+                MEDIA_QUERY_PORT_KEY,
             )
 
             self._di_scope.provide(COOKIE_PORT_KEY, BrowserCookiePort())
@@ -93,6 +95,7 @@ class RenderContext:
             self._di_scope.provide(FFI_PORT_KEY, BrowserFFIPort())
             self._di_scope.provide(HISTORY_PORT_KEY, BrowserHistoryPort(mode=router_mode))
             self._di_scope.provide(HOST_PORT_KEY, BrowserHostPort())
+            self._di_scope.provide(MEDIA_QUERY_PORT_KEY, BrowserMediaQueryPort())
         else:
             from webcompy.ports._keys import (
                 COOKIE_PORT_KEY,
@@ -101,6 +104,7 @@ class RenderContext:
                 FFI_PORT_KEY,
                 HISTORY_PORT_KEY,
                 HOST_PORT_KEY,
+                MEDIA_QUERY_PORT_KEY,
             )
             from webcompy.ports._server._cookie import ServerCookiePort
             from webcompy.ports._server._dom import ServerDOMPort
@@ -108,6 +112,7 @@ class RenderContext:
             from webcompy.ports._server._ffi import ServerFFIPort
             from webcompy.ports._server._history import ServerHistoryPort
             from webcompy.ports._server._host import ServerHostPort
+            from webcompy.ports._server._media_query import ServerMediaQueryPort
 
             self._di_scope.provide(COOKIE_PORT_KEY, ServerCookiePort())
             self._di_scope.provide(DOM_PORT_KEY, ServerDOMPort())
@@ -115,6 +120,7 @@ class RenderContext:
             self._di_scope.provide(FFI_PORT_KEY, ServerFFIPort())
             self._di_scope.provide(HISTORY_PORT_KEY, ServerHistoryPort(mode=router_mode))
             self._di_scope.provide(HOST_PORT_KEY, ServerHostPort())
+            self._di_scope.provide(MEDIA_QUERY_PORT_KEY, ServerMediaQueryPort())
 
         _register_deferred_components()
 

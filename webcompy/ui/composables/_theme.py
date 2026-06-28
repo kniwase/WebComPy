@@ -1,13 +1,19 @@
 from __future__ import annotations
 
-from webcompy.di import inject
-from webcompy.signal import Signal
-from webcompy.ui._composables._theme_controller import ThemeController
-from webcompy.ui.theme._manager import ThemeManager
-from webcompy.ui.theme._theme import THEME_KEY, Theme
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from webcompy.signal import Signal
+    from webcompy.ui.composables._theme_controller import ThemeController
+    from webcompy.ui.theme._theme import Theme
 
 
 def use_theme() -> tuple[Signal[Theme], ThemeController]:
+    from webcompy.di import inject
+    from webcompy.ui.composables._theme_controller import ThemeController
+    from webcompy.ui.theme._manager import ThemeManager
+    from webcompy.ui.theme._theme import THEME_KEY
+
     manager = inject(THEME_KEY, default=None)
     if manager is None:
         raise LookupError(
@@ -18,10 +24,4 @@ def use_theme() -> tuple[Signal[Theme], ThemeController]:
     return manager.signal, ThemeController(manager)
 
 
-__all__ = [
-    "THEME_KEY",
-    "Theme",
-    "ThemeController",
-    "ThemeManager",
-    "use_theme",
-]
+__all__ = ["use_theme"]

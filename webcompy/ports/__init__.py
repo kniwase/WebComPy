@@ -11,7 +11,9 @@ from webcompy.ports._keys import (
     FFI_PORT_KEY,
     HISTORY_PORT_KEY,
     HOST_PORT_KEY,
+    MEDIA_QUERY_PORT_KEY,
 )
+from webcompy.ports._media_query import MediaQueryPort
 
 __all__ = [
     "COOKIE_PORT_KEY",
@@ -20,6 +22,7 @@ __all__ = [
     "FFI_PORT_KEY",
     "HISTORY_PORT_KEY",
     "HOST_PORT_KEY",
+    "MEDIA_QUERY_PORT_KEY",
     "CookiePort",
     "DOMNode",
     "DOMNodeList",
@@ -28,4 +31,5 @@ __all__ = [
     "FetchPort",
     "HistoryPort",
     "HostPort",
+    "MediaQueryPort",
 ]

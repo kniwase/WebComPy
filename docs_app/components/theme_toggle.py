@@ -1,8 +1,7 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 from webcompy.signal import computed
-from webcompy.ui._composables import use_theme
-from webcompy.ui.theme import Theme
+from webcompy.ui.theme import Theme, use_theme
 
 
 @define_component

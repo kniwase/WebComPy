@@ -11,7 +11,6 @@ _STYLES_PACKAGE = "webcompy.ui._styles"
 _STYLES_FILES: tuple[str, ...] = (
     "index.css",
     "tokens.css",
-    "tokens-dark.css",
     "reset.css",
     "components.css",
     "code-block.css",

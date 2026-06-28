@@ -11,15 +11,14 @@ from webcompy.ui.code_block.lexers._registry import (
     list_lexers,
     register_builtin_lexers,
     register_lexer,
+    reset_lexer_registry,
 )
 from webcompy.ui.code_block.lexers._toml import TomlLexer
 
 
 @pytest.fixture(autouse=True)
 def _reset_registry() -> None:
-    from webcompy.ui.code_block.lexers import _registry
-
-    _registry._REGISTRY.clear()
+    reset_lexer_registry()
 
 
 def test_python_lexer_tokenizes_keyword() -> None:
@@ -154,3 +153,63 @@ def test_registry_register_builtin_idempotent() -> None:
 def test_registry_register_non_lexer_raises() -> None:
     with pytest.raises(TypeError):
         register_lexer("not a lexer")  # type: ignore[arg-type]
+
+
+def test_registry_register_duplicate_raises_value_error() -> None:
+    register_lexer(PythonLexer())
+    with pytest.raises(ValueError, match="already registered"):
+        register_lexer(PythonLexer())
+
+
+def test_registry_register_duplicate_with_override_succeeds() -> None:
+    original = PythonLexer()
+    replacement = PythonLexer()
+    register_lexer(original)
+    register_lexer(replacement, override=True)
+    assert get_lexer("python") is replacement
+
+
+def test_registry_register_stores_source() -> None:
+    register_lexer(PythonLexer(), source="pygments:python")
+    info = next(i for i in list_lexers() if i.name == "python")
+    assert info.source == "pygments:python"
+
+
+def test_registry_register_default_source_is_custom() -> None:
+    register_lexer(PythonLexer())
+    info = next(i for i in list_lexers() if i.name == "python")
+    assert info.source == "custom"
+
+
+def test_registry_builtin_lexers_have_builtin_source() -> None:
+    register_builtin_lexers()
+    sources = {info.name: info.source for info in list_lexers()}
+    assert sources["python"] == "builtin"
+    assert sources["bash"] == "builtin"
+    assert sources["toml"] == "builtin"
+
+
+def test_lexer_info_has_source_field() -> None:
+    from webcompy.ui.code_block.lexers._base import LexerInfo
+
+    fields = LexerInfo.__dataclass_fields__
+    assert "source" in fields
+    assert "name" in fields
+    assert "aliases" in fields
+    assert "file_extensions" in fields
+
+
+def test_registry_unknown_error_message_lists_available_lexers() -> None:
+    register_builtin_lexers()
+    with pytest.raises(LexerNotFoundError) as excinfo:
+        get_lexer("nonexistent-language")
+    message = str(excinfo.value)
+    assert "python" in message
+    assert "bash" in message
+    assert "toml" in message
+
+
+def test_registry_rejects_invalid_source_kwarg() -> None:
+    """register_lexer must accept ``source`` only as a keyword argument."""
+    with pytest.raises(TypeError):
+        register_lexer(PythonLexer(), "pygments:python")  # type: ignore[misc]

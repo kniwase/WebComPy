@@ -12,6 +12,7 @@ class LexerInfo:
     name: str
     aliases: tuple[str, ...]
     file_extensions: tuple[str, ...]
+    source: str
 
 
 @runtime_checkable

@@ -119,3 +119,15 @@ def test_syntax_theme_includes_pygments_short_aliases() -> None:
     css = _css_text("syntax-theme.css")
     for token in SYNTAX_TOKENS:
         assert f".{token}" in css, f"syntax-theme.css should style .{token}"
+
+
+def test_tokens_dark_css_removed_from_styles_registry() -> None:
+    """``tokens-dark.css`` was removed when dark tokens were moved to
+    Python in the reactive theme migration. The ``_STYLES_FILES`` allowlist
+    must no longer mention it, and the file must not exist on disk.
+    """
+    from webcompy.ui._styles import _STYLES_FILES, get_styles_file
+
+    assert "tokens-dark.css" not in _STYLES_FILES
+    assert get_styles_file("tokens-dark.css") is None
+    assert not (STYLES_DIR / "tokens-dark.css").exists()

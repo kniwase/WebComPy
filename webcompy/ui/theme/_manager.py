@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from webcompy.di import inject
+from webcompy.exception import WebComPyException
+from webcompy.ports._keys import MEDIA_QUERY_PORT_KEY
 from webcompy.signal import Signal
 from webcompy.ui.theme._cookie import (
     write_theme_cookie_value,
@@ -59,7 +62,8 @@ class ThemeManager:
         current = self._signal.value
         if current is not Theme.SYSTEM:
             return Theme.DARK if current is Theme.LIGHT else Theme.LIGHT
-        return _system_prefers_dark()
+        preferred = _system_preferred_theme()
+        return Theme.LIGHT if preferred is Theme.DARK else Theme.DARK
 
     def _build_theme_css(self) -> str:
         from webcompy.ui.theme._tokens import DARK_TOKENS, render_tokens_css
@@ -84,5 +88,10 @@ def _normalize_initial(initial: Any) -> Theme:
     return Theme.SYSTEM
 
 
-def _system_prefers_dark() -> Theme:
-    return Theme.SYSTEM
+def _system_preferred_theme() -> Theme:
+    port = inject(MEDIA_QUERY_PORT_KEY, default=None)
+    if port is None:
+        return Theme.LIGHT
+    if not hasattr(port, "prefers_dark"):
+        raise WebComPyException("MEDIA_QUERY_PORT_KEY resolved to an object that does not implement prefers_dark()")
+    return Theme.DARK if port.prefers_dark() else Theme.LIGHT
