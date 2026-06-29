@@ -274,6 +274,75 @@ class TestHeadElementAppStyle:
         finally:
             _active_di_scope.reset(token)
 
+    def test_cleanup_removes_orphaned_style_elements(self, monkeypatch):
+        """Regression test for PR #178 sixth-round review: when the render
+        context is disposed, ``_cleanup_consumers`` MUST also remove any
+        ``<style data-webcompy-cid>`` and ``<style data-webcompy-cid-rx>``
+        elements that the head element emitted. Without this, the elements
+        accumulate in the document <head> across app lifecycle events
+        (re-renders, navigation, theme toggles that trigger re-renders)."""
+        monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
+
+        import asyncio
+
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import (
+            ComponentGenerator,
+            ComponentStore,
+        )
+        from webcompy.components._reactive_scoped_style import (
+            reactive_scoped_style,
+        )
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.elements._head import HeadElement
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy.testing._ports import FakeBrowserDOMPort
+
+        port = FakeBrowserDOMPort()
+        head_props = HeadPropsStore()
+        store = ComponentStore()
+
+        def _noop(_: object) -> None:
+            pass
+
+        gen_static = ComponentGenerator("StaticCid", _noop)
+        gen_static._style = {".x": {"color": "red"}}
+        store.add_component("StaticCid", gen_static)
+
+        gen_rx = ComponentGenerator("ReactiveCid", _noop)
+        rx_style = reactive_scoped_style(lambda: {".y": {"color": "blue"}})
+        rx_style._bind(gen_rx._id)
+        gen_rx._reactive_styles.append(rx_style)
+        store.add_component("ReactiveCid", gen_rx)
+
+        scope = DIScope()
+        scope.provide(DOM_PORT_KEY, port)
+        scope.provide(_COMPONENT_STORE_KEY, store)
+        token = _active_di_scope.set(scope)
+        try:
+            head_element = HeadElement(head_props)
+            asyncio.run(head_element._render())
+
+            head_el = port.query_selector("head")
+            assert head_el is not None
+            cid_static_el = _find_child_by_tag_attr(head_el, "style", "data-webcompy-cid", gen_static._id)
+            assert cid_static_el is not None
+            cid_rx_attr = f"{gen_rx._id}-0"
+            cid_rx_el = _find_child_by_tag_attr(head_el, "style", "data-webcompy-cid-rx", cid_rx_attr)
+            assert cid_rx_el is not None
+
+            head_element._cleanup_consumers()
+
+            head_el = port.query_selector("head")
+            assert head_el is not None
+            cid_static_after = _find_child_by_tag_attr(head_el, "style", "data-webcompy-cid", gen_static._id)
+            assert cid_static_after is None
+            cid_rx_after = _find_child_by_tag_attr(head_el, "style", "data-webcompy-cid-rx", cid_rx_attr)
+            assert cid_rx_after is None
+        finally:
+            _active_di_scope.reset(token)
+
     def test_dynamic_style_callback_resolves_dom_at_registration(self, monkeypatch):
         """Regression test for PR #178 review: the _subscribe_callback
         registered by ``append_style`` MUST resolve the DOM port once at

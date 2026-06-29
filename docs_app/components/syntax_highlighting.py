@@ -1,9 +1,8 @@
 from typing import TypedDict
 
 from webcompy.components import ComponentContext, define_component
-from webcompy.elements import create_element, raw_html
-from webcompy.signal import SignalBase, computed
-from webcompy.ui.code_block import highlight
+from webcompy.signal import SignalBase
+from webcompy.ui.code_block import CodeBlock
 from webcompy.utils import strip_multiline_text
 
 
@@ -12,43 +11,27 @@ class SyntaxHighlightingProps(TypedDict, total=False):
     lang: str
 
 
-def _resolve_code(code_signal: SignalBase[str]) -> str:
-    value = code_signal.value
-    if isinstance(value, str):
-        return value
-    return str(value)
-
-
 def _strip_code(value: str) -> str:
     if not value:
         return value
     return strip_multiline_text(value).strip()
 
 
-def _code_block(lang: str, html_body: str):
-    return create_element(
-        "pre",
-        {"class": "code-block"},
-        create_element(
-            "code",
-            {"class": f"language-{lang}"},
-            raw_html(html_body),
-        ),
-    )
-
-
 @define_component
 def SyntaxHighlighting(context: ComponentContext[SyntaxHighlightingProps]):
+    """Thin wrapper around ``CodeBlock`` that pre-processes the ``code``
+    prop with ``strip_multiline_text().strip()`` so the docs-app template
+    literal can be written with its natural indentation. All actual
+    rendering logic lives in ``CodeBlock`` to avoid drift between the
+    two implementations.
+
+    See ``webcompy/ui/code_block/_component.py`` for the canonical
+    component.
+    """
     props = context.props or {}
     initial_code = props.get("code", "")
     lang = props.get("lang", "text")
 
-    if isinstance(initial_code, SignalBase):
-        code_signal: SignalBase[str] = initial_code
-        highlighted = computed(lambda: highlight(_strip_code(_resolve_code(code_signal)), lang))
-        return _code_block(lang, highlighted)
-
-    return _code_block(
-        lang,
-        highlight(_strip_code(str(initial_code)), lang),
-    )
+    if isinstance(initial_code, str):
+        return CodeBlock({"code": _strip_code(initial_code), "lang": lang})
+    return CodeBlock({"code": initial_code, "lang": lang})

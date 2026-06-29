@@ -243,6 +243,7 @@ class HeadElement(ElementWithChildren):
 
     def _cleanup_consumers(self):
         from webcompy.signal._graph import consumer_destroy
+        from webcompy.utils import ENVIRONMENT
 
         for consumer in self._callback_consumers.values():
             consumer_destroy(consumer)
@@ -250,6 +251,37 @@ class HeadElement(ElementWithChildren):
         for consumer in self._style_callbacks.values():
             consumer_destroy(consumer)
         self._style_callbacks.clear()
+
+        if ENVIRONMENT == "pyscript":
+            self._remove_emitted_style_elements()
+
+    def _remove_emitted_style_elements(self) -> None:
+        """Remove all <style data-webcompy-cid> and
+        <style data-webcompy-cid-rx> elements that this head element
+        emitted into the document <head>. Called on render-context
+        disposal to prevent orphaned style elements from accumulating
+        across app lifecycle events (re-render, navigation, etc.)."""
+        from webcompy.di import inject
+        from webcompy.ports._keys import DOM_PORT_KEY
+
+        _dom = inject(DOM_PORT_KEY, default=None)
+        if _dom is None:
+            return
+        head_el = _dom.query_selector("head")
+        if head_el is None:
+            return
+
+        to_remove: list[DOMNode] = []
+        for i in range(head_el.childNodes.length):
+            child = head_el.childNodes[i]
+            if child.nodeName != "STYLE":
+                continue
+            attr = child.getAttribute("data-webcompy-cid")
+            attr_rx = child.getAttribute("data-webcompy-cid-rx")
+            if attr is not None or attr_rx is not None:
+                to_remove.append(child)
+        for el in to_remove:
+            el.remove()
 
     @property
     def html_attrs(self) -> dict[str, str]:
