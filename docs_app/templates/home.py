@@ -1,8 +1,17 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
+from webcompy.ui.code_block import CodeBlock
+from webcompy.utils import strip_multiline_text
 
-from ..components.syntax_highlighting import SyntaxHighlighting
 from ..components.ui import InlineCode, Section
+
+
+def _code(code: str) -> str:
+    """Pre-process Python triple-quoted string literal so that the leading
+    indentation introduced by the template does not appear in the rendered
+    output. Equivalent to the old SyntaxHighlighting wrapper's
+    ``_strip_code`` helper."""
+    return strip_multiline_text(code).strip()
 
 
 @define_component
@@ -37,15 +46,17 @@ def Home(_: ComponentContext[None]):
                     "Create a new project and set up dependencies using ",
                     html.STRONG({}, "uv"),
                     ".",
-                    SyntaxHighlighting(
+                    CodeBlock(
                         {
                             "lang": "bash",
-                            "code": """
+                            "code": _code(
+                                """
                                 mkdir webcompy-project && cd webcompy-project
                                 uv init
                                 uv add webcompy
                                 uv run python -m webcompy init
-                            """,
+                                """
+                            ),
                         }
                     ),
                     "Add browser dependencies to ",
@@ -53,13 +64,15 @@ def Home(_: ComponentContext[None]):
                     " in ",
                     InlineCode({"text": "pyproject.toml"}),
                     ":",
-                    SyntaxHighlighting(
+                    CodeBlock(
                         {
                             "lang": "toml",
-                            "code": """
+                            "code": _code(
+                                """
                                 [project.optional-dependencies]
                                 browser = ["numpy", "matplotlib"]
-                            """,
+                                """
+                            ),
                         }
                     ),
                     "Configure ",
@@ -67,10 +80,11 @@ def Home(_: ComponentContext[None]):
                     " with ",
                     InlineCode({"text": "LockfileSyncConfig"}),
                     ":",
-                    SyntaxHighlighting(
+                    CodeBlock(
                         {
                             "lang": "python",
-                            "code": """
+                            "code": _code(
+                                """
                             # webcompy_config.py
                             import app.app as app_module
                             from webcompy.cli.config import WebComPyBuildConfig, LockfileSyncConfig
@@ -81,17 +95,20 @@ def Home(_: ComponentContext[None]):
                                 dependencies_from="browser",
                                 lockfile_sync_config=LockfileSyncConfig(sync_group="browser"),
                             )
-                        """,
+                            """
+                            ),
                         }
                     ),
                     "Generate the lock file and start the dev server:",
-                    SyntaxHighlighting(
+                    CodeBlock(
                         {
                             "lang": "bash",
-                            "code": """
+                            "code": _code(
+                                """
                                 uv run python -m webcompy lock
                                 uv run python -m webcompy start --dev
-                            """,
+                                """
+                            ),
                         }
                     ),
                 )
@@ -105,15 +122,17 @@ def Home(_: ComponentContext[None]):
                     "If you prefer ",
                     html.STRONG({}, "Poetry"),
                     ", use the following setup:",
-                    SyntaxHighlighting(
+                    CodeBlock(
                         {
                             "lang": "bash",
-                            "code": """
+                            "code": _code(
+                                """
                                 mkdir webcompy-project && cd webcompy-project
                                 poetry new webcompy-project && cd webcompy-project
                                 poetry add webcompy
                                 poetry run python -m webcompy init
-                            """,
+                                """
+                            ),
                         }
                     ),
                     "Add browser dependencies to ",
@@ -125,13 +144,15 @@ def Home(_: ComponentContext[None]):
                     "Then configure ",
                     InlineCode({"text": "webcompy_config.py"}),
                     " as shown above, and run:",
-                    SyntaxHighlighting(
+                    CodeBlock(
                         {
                             "lang": "bash",
-                            "code": """
+                            "code": _code(
+                                """
                                 poetry run python -m webcompy lock
                                 poetry run python -m webcompy start --dev
-                            """,
+                                """
+                            ),
                         }
                     ),
                     html.EM(
