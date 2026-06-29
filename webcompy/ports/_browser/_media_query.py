@@ -14,6 +14,4 @@ class BrowserMediaQueryPort(MediaQueryPort):
         self._browser = _raw_browser
 
     def prefers_dark(self) -> bool:
-        match_media = self._browser.window.matchMedia
-        mql = match_media("(prefers-color-scheme: dark)")
-        return bool(mql.matches)
+        return bool(self._browser.window.matchMedia("(prefers-color-scheme: dark)").matches)

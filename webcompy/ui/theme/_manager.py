@@ -43,7 +43,17 @@ class ThemeManager:
 
     def set(self, theme: Theme) -> None:
         self._signal.value = theme
-        write_theme_cookie_value(theme)
+        if self._is_persist_enabled():
+            write_theme_cookie_value(theme)
+
+    def _is_persist_enabled(self) -> bool:
+        config = getattr(self._app, "_config", None)
+        if config is None:
+            return True
+        theme_cfg = getattr(config, "theme", None)
+        if theme_cfg is None:
+            return True
+        return bool(theme_cfg.get("persist", True))
 
     def toggle(self) -> None:
         self.set(self._resolved_toggle_target())

@@ -136,7 +136,11 @@ class RenderContext:
 
                 theme_value = read_theme_cookie_value()
             if theme_value is None:
-                theme_value = Theme.SYSTEM
+                config_theme = self._config.theme
+                if config_theme is not None and "default" in config_theme:
+                    theme_value = Theme(config_theme["default"])
+                else:
+                    theme_value = Theme.SYSTEM
         if not isinstance(theme_value, Theme):
             try:
                 theme_value = Theme(str(theme_value).lower())

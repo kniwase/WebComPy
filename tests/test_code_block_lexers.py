@@ -97,7 +97,13 @@ def test_bash_lexer_tokenizes_keyword_and_string() -> None:
 def test_bash_lexer_tokenizes_variable() -> None:
     lexer = BashLexer()
     tokens = list(lexer.tokenize("echo $HOME"))
-    assert any(t.type == TokenType.DECORATOR and "$HOME" in t.value for t in tokens)
+    assert any(t.type == TokenType.IDENTIFIER and t.value == "HOME" for t in tokens)
+
+
+def test_bash_lexer_tokenizes_braced_variable() -> None:
+    lexer = BashLexer()
+    tokens = list(lexer.tokenize("echo ${PATH}"))
+    assert any(t.type == TokenType.IDENTIFIER and t.value == "PATH" for t in tokens)
 
 
 def test_bash_lexer_tokenizes_comment() -> None:

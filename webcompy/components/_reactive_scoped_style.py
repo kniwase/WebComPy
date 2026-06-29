@@ -61,20 +61,26 @@ if TYPE_CHECKING:
 ReactiveScopedStyleFunc: TypeAlias = Callable[[], "StyleDict"]
 
 
-def _get_helpers():
-    from webcompy.components._generator import (
-        _classify_nested_key,
-        _generate_css_recursive,
-        _process_style_declaration,
-        _scope_combinator_selector,
-    )
+_HELPERS_CACHE: tuple | None = None
 
-    return (
-        _classify_nested_key,
-        _generate_css_recursive,
-        _process_style_declaration,
-        _scope_combinator_selector,
-    )
+
+def _get_helpers():
+    global _HELPERS_CACHE
+    if _HELPERS_CACHE is None:
+        from webcompy.components._generator import (
+            _classify_nested_key,
+            _generate_css_recursive,
+            _process_style_declaration,
+            _scope_combinator_selector,
+        )
+
+        _HELPERS_CACHE = (
+            _classify_nested_key,
+            _generate_css_recursive,
+            _process_style_declaration,
+            _scope_combinator_selector,
+        )
+    return _HELPERS_CACHE
 
 
 class ReactiveScopedStyle:

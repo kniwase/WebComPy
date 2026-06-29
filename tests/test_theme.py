@@ -388,3 +388,61 @@ def test_toggle_from_system_does_not_stay_on_system() -> None:
     with scope:
         manager.toggle()
     assert manager.value is not Theme.SYSTEM
+
+
+class _AppWithConfig(FakeApp):
+    def __init__(self, theme: dict | None) -> None:
+        super().__init__()
+        from webcompy.app._config import WebComPyAppConfig
+
+        self._config = WebComPyAppConfig(theme=theme)
+
+
+def test_set_writes_cookie_when_persist_enabled_by_default(monkeypatch) -> None:
+    from webcompy.di import DIScope
+    from webcompy.ports._keys import COOKIE_PORT_KEY
+    from webcompy.ui.theme._manager import ThemeManager
+    from webcompy.ui.theme._theme import THEME_KEY
+
+    calls: list[tuple[str, str]] = []
+
+    class _CookiePort:
+        def set(self, name: str, value: str, **kwargs: object) -> None:
+            calls.append((name, value))
+
+        def delete(self, name: str, **kwargs: object) -> None:
+            calls.append((name, ""))
+
+    app = _AppWithConfig(theme=None)
+    manager = ThemeManager(app, app, Theme.SYSTEM)
+    scope = DIScope()
+    scope.provide(THEME_KEY, manager)
+    scope.provide(COOKIE_PORT_KEY, _CookiePort())
+    with scope:
+        manager.set(Theme.DARK)
+    assert (THEME_COOKIE_NAME, "dark") in calls
+
+
+def test_set_skips_cookie_when_persist_false(monkeypatch) -> None:
+    from webcompy.di import DIScope
+    from webcompy.ports._keys import COOKIE_PORT_KEY
+    from webcompy.ui.theme._manager import ThemeManager
+    from webcompy.ui.theme._theme import THEME_KEY
+
+    calls: list[tuple[str, str]] = []
+
+    class _CookiePort:
+        def set(self, name: str, value: str, **kwargs: object) -> None:
+            calls.append((name, value))
+
+        def delete(self, name: str, **kwargs: object) -> None:
+            calls.append((name, ""))
+
+    app = _AppWithConfig(theme={"default": "light", "persist": False})
+    manager = ThemeManager(app, app, Theme.LIGHT)
+    scope = DIScope()
+    scope.provide(THEME_KEY, manager)
+    scope.provide(COOKIE_PORT_KEY, _CookiePort())
+    with scope:
+        manager.set(Theme.DARK)
+    assert calls == []
