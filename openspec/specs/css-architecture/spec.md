@@ -5,13 +5,19 @@ TBD - created by archiving change feat-ui-toolkit-foundation. Update Purpose aft
 ## Requirements
 ### Requirement: The framework SHALL declare a fixed CSS `@layer` order
 
-The framework SHALL declare, in a single CSS file (`webcompy/ui/_styles/index.css` or equivalent), the cascade order `@layer reset, tokens, components, webcompy-scope;`. This declaration SHALL appear exactly once in the page output, before any rule that uses one of these layers.
+The framework SHALL declare, in a single CSS file (`webcompy/ui/_styles/index.css` or equivalent), the cascade order `@layer reset, tokens, components, webcompy-scope;`. This declaration SHALL appear exactly once in the page output, before any rule that uses one of these layers. The layer list is intentionally minimal: dynamic app-level styles (see `openspec/specs/app-styles/spec.md`) and scoped component CSS injected as `<style data-webcompy-cid="...">` for `reactive_scoped_style` instances (rendered as `<style data-webcompy-cid-rx="...">`) SHALL be emitted **unlayered** and therefore win over every layered rule without `!important`.
 
 #### Scenario: Layer order is fixed
 
 - **WHEN** a page is rendered with the framework's default CSS
 - **THEN** the rendered CSS SHALL contain `@layer reset, tokens, components, webcompy-scope;` as a top-level declaration
 - **AND** no application CSS SHALL be able to reorder these layers (later layer declarations with the same names SHALL merge, not replace)
+
+#### Scenario: Dynamic and reactive styles are not in the layer list
+
+- **WHEN** a component uses `app.append_style(...)` or `reactive_scoped_style(...)` to inject style at runtime
+- **THEN** the emitted `<style>` element SHALL NOT be wrapped in any `@layer ... { ... }` block
+- **AND** those rules SHALL override every layered framework rule without `!important`
 
 ### Requirement: The framework SHALL wrap all `scoped_style` rules in `@layer webcompy-scope`
 

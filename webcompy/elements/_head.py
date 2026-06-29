@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from webcompy.elements._dom_objs import DOMNode
@@ -90,8 +90,9 @@ class HeadElement(ElementWithChildren):
                 from webcompy.di import inject
                 from webcompy.ports._keys import DOM_PORT_KEY
 
-                def _subscribe_callback(v: str, _idx: int = idx) -> None:
-                    _dom = inject(DOM_PORT_KEY)
+                _dom = inject(DOM_PORT_KEY)
+
+                def _subscribe_callback(v: str, _dom: Any = _dom, _idx: int = idx) -> None:
                     head_el = _dom.query_selector("head")
                     if head_el is None:
                         return

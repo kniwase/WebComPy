@@ -70,7 +70,7 @@ class PygmentsLexerWrapper:
             for src, target in _MAP:
                 if pygtok in src:
                     yield Token(target, value)
-                break
+                    break
 
     def __call__(self, code: str) -> Iterable[Token]:
         return self.tokenize(code)

@@ -99,3 +99,37 @@ def test_token_is_immutable() -> None:
         token.type = TokenType.STRING  # type: ignore[misc]
     with pytest.raises((AttributeError, dataclasses.FrozenInstanceError)):
         token.value = "else"  # type: ignore[misc]
+
+
+class _FakePygmentsLexer:
+    name = "fake"
+    aliases = ("fake",)
+    filenames: tuple[str, ...] = ()
+
+    def get_tokens(self, code: str):
+        from pygments.token import Keyword, Name, String
+
+        return [
+            ("def", Keyword),
+            (" ", Name),
+            ("f", Name.Function),
+            ('"', String),
+            ("hi", String),
+        ]
+
+
+def test_pygments_adapter_break_is_under_if() -> None:
+    """The Pygments adapter's inner loop must break only when the
+    ``if pygtok in src:`` condition matches. Regression test for the
+    unconditional-break bug flagged by the PR #178 review."""
+    from webcompy.ui.code_block.lexers._adapters._pygments import (
+        PygmentsLexerWrapper,
+    )
+
+    wrapper = PygmentsLexerWrapper(_FakePygmentsLexer())
+    tokens = list(wrapper.tokenize('def f"hi"'))
+    types = [(t.type, t.value) for t in tokens]
+    assert (TokenType.KEYWORD, "def") in types
+    assert any(t.type == TokenType.FUNCTION and t.value == "f" for t in tokens)
+    assert any(t.type == TokenType.STRING and t.value == "hi" for t in tokens)
+    assert all(t.type is not TokenType.KEYWORD for t in tokens if t.value == "hi")

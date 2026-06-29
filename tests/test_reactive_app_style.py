@@ -274,6 +274,39 @@ class TestHeadElementAppStyle:
         finally:
             _active_di_scope.reset(token)
 
+    def test_dynamic_style_callback_resolves_dom_at_registration(self, monkeypatch):
+        """Regression test for PR #178 review: the _subscribe_callback
+        registered by ``append_style`` MUST resolve the DOM port once at
+        registration time (not on every signal update) so that a late
+        callback firing after the render context is disposed does not
+        raise ``InjectionError``."""
+        monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
+
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.elements._head import HeadElement
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy.testing._ports import FakeBrowserDOMPort
+
+        port = FakeBrowserDOMPort()
+        head_props = HeadPropsStore()
+        scope = DIScope()
+        scope.provide(DOM_PORT_KEY, port)
+        scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+        token = _active_di_scope.set(scope)
+        try:
+            head_element = HeadElement(head_props)
+            sig = Signal("blue")
+            cs = reactive_style(":root", {"--x": sig})
+            head_element.append_style(cs)
+        finally:
+            _active_di_scope.reset(token)
+
+        assert len(head_element._style_callbacks) == 1
+        sig.value = "red"
+
 
 def _find_child_by_tag_attr(node, tag, attr_name, attr_value):
     for i in range(node.childNodes.length):
