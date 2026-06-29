@@ -321,7 +321,11 @@ def create_asgi_app(
             if is_matched or "text/html" in accept_types:
                 cookie_header = request.headers.get("cookie", "")
                 initial_theme = _read_initial_theme(cookie_header)
-                ctx = app.create_render_context(requested_path, initial_theme=initial_theme)
+                ctx = app.create_render_context(
+                    requested_path,
+                    initial_theme=initial_theme,
+                    cookie_header=cookie_header,
+                )
                 try:
                     return HTMLResponse(await html_generator(ctx))
                 finally:
@@ -335,7 +339,11 @@ def create_asgi_app(
         async def send_html(request: Request):  # type: ignore
             cookie_header = request.headers.get("cookie", "")
             initial_theme = _read_initial_theme(cookie_header)
-            ctx = app.create_render_context("/", initial_theme=initial_theme)
+            ctx = app.create_render_context(
+                "/",
+                initial_theme=initial_theme,
+                cookie_header=cookie_header,
+            )
             try:
                 return HTMLResponse(await html_generator(ctx))
             finally:

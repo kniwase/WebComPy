@@ -96,15 +96,10 @@ class HeadElement(ElementWithChildren):
                     head_el = _dom.query_selector("head")
                     if head_el is None:
                         return
-                    sel = f'style[data-webcompy-dynamic="{_idx}"]'
-                    el = _dom.query_selector(sel)
+                    el = _dom.query_selector(f'style[data-webcompy-dynamic="{_idx}"]')
                     if el is None:
-                        el = _dom.create_element("style")
-                        el.setAttribute("data-webcompy-dynamic", str(_idx))
-                        el.textContent = v
-                        head_el.appendChild(el)
-                    else:
-                        el.textContent = v
+                        return
+                    el.textContent = v
 
                 self._style_callbacks[idx] = content.on_after_updating(_subscribe_callback)
 

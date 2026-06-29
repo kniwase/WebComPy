@@ -34,6 +34,7 @@ class RenderContext:
         path: str | None = None,
         *,
         initial_theme: Any = None,
+        cookie_header: str | None = None,
     ) -> None:
         self._app = app
         self._config = app._config
@@ -43,6 +44,7 @@ class RenderContext:
         self._defer_depth: int = 0
         self._deferred_callbacks: list = []
         self._initial_theme = initial_theme
+        self._cookie_header = cookie_header or ""
 
         self._record_phase("init_start")
 
@@ -114,7 +116,7 @@ class RenderContext:
             from webcompy.ports._server._host import ServerHostPort
             from webcompy.ports._server._media_query import ServerMediaQueryPort
 
-            self._di_scope.provide(COOKIE_PORT_KEY, ServerCookiePort())
+            self._di_scope.provide(COOKIE_PORT_KEY, ServerCookiePort(self._cookie_header))
             self._di_scope.provide(DOM_PORT_KEY, ServerDOMPort())
             self._di_scope.provide(FETCH_PORT_KEY, ServerFetchPort())
             self._di_scope.provide(FFI_PORT_KEY, ServerFFIPort())

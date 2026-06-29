@@ -99,10 +99,16 @@ class WebComPyApp:
         path: str | None = None,
         *,
         initial_theme: Any = None,
+        cookie_header: str | None = None,
     ) -> RenderContext:
         from webcompy.app._render_context import RenderContext
 
-        ctx = RenderContext(self, path, initial_theme=initial_theme)
+        ctx = RenderContext(
+            self,
+            path,
+            initial_theme=initial_theme,
+            cookie_header=cookie_header,
+        )
         self._render_context_cv.set(ctx)
         return ctx
 
