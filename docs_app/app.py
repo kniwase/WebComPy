@@ -35,10 +35,6 @@ app.set_head(
         "link": [
             {
                 "rel": "stylesheet",
-                "href": "/styles/tokens.css",
-            },
-            {
-                "rel": "stylesheet",
                 "href": "/styles/components.css",
             },
         ],

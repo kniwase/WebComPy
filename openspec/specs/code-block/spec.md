@@ -30,10 +30,14 @@ The framework SHALL provide a `webcompy.ui.code_block.highlight(code: str, lang:
 - **THEN** the function SHALL return an HTML string containing token spans
 - **AND** any `<`, `>`, `&`, and quote characters in the input SHALL be HTML-escaped
 
-#### Scenario: Unknown language raises an error
+#### Scenario: Unknown language falls back to a single tok-ident span
 
 - **WHEN** `highlight(code, "nonexistent-language")` is called
-- **THEN** the function SHALL raise a `LexerNotFoundError` with a message that lists the available languages
+- **THEN** the function SHALL return a single `<span class="tok-ident">` element containing the code HTML-escaped
+- **AND** the function SHALL NOT raise `LexerNotFoundError`
+- **AND** the fallback SHALL also apply when a registered lexer returns no tokens for the given code
+
+This graceful fallback prevents an unknown `lang` from crashing the entire page render. The `LexerNotFoundError` exception is still raised by `get_lexer` for callers that need to surface the error programmatically; `highlight` is the user-facing convenience that opts into the fallback.
 
 ### Requirement: The framework SHALL emit dual class names for Pygments compatibility
 
