@@ -1,3 +1,16 @@
+/* This file is intentionally unlayered (it is loaded via a <link> tag
+   in docs_app/app.py, outside the framework's @layer cascade). It
+   duplicates the light-mode token values from
+   webcompy/ui/_styles/tokens.css so that the docs site can still render
+   if the framework CSS link fails to load (e.g. when this file is
+   served as a static asset by a separate CDN or during offline testing).
+
+   The :root[data-theme="dark"] block below is a fallback for environments
+   where the framework's ThemeManager (which uses a reactive
+   <style data-webcompy-dynamic> element instead of a data-theme
+   attribute) is not in effect. With the framework active, dark mode is
+   applied via the dynamic style and this block never matches. */
+
 :root {
   --color-bg: #ffffff;
   --color-bg-elevated: #f6f8fa;

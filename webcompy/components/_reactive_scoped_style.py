@@ -88,6 +88,9 @@ class ReactiveScopedStyle:
     _cid: str | None
     _dict_computed: Computed[Any] | None
     _css_computed: Computed[str] | None
+    _ref_count: int
+    _subscription: Any | None
+    _removed: bool
 
     def __init__(self, func: ReactiveScopedStyleFunc) -> None:
         if iscoroutinefunction(func):
@@ -98,6 +101,9 @@ class ReactiveScopedStyle:
         self._cid = None
         self._dict_computed = None
         self._css_computed = None
+        self._ref_count = 0
+        self._subscription = None
+        self._removed = False
 
     def _bind(self, cid: str) -> None:
         if self._cid is not None:
@@ -110,6 +116,33 @@ class ReactiveScopedStyle:
         self._cid = cid
         self._dict_computed = Computed(self._func)
         self._css_computed = Computed(lambda: self.render_css(self._cid or ""))
+
+    def increment_ref(self) -> int:
+        self._ref_count += 1
+        return self._ref_count
+
+    def decrement_ref(self) -> int:
+        if self._ref_count > 0:
+            self._ref_count -= 1
+        return self._ref_count
+
+    @property
+    def ref_count(self) -> int:
+        return self._ref_count
+
+    @property
+    def subscription(self) -> Any | None:
+        return self._subscription
+
+    def set_subscription(self, subscription: Any) -> None:
+        self._subscription = subscription
+
+    def mark_removed(self) -> None:
+        self._removed = True
+
+    @property
+    def is_removed(self) -> bool:
+        return self._removed
 
     @property
     def dict_computed(self) -> Computed[Any]:

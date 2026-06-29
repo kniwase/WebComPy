@@ -4,17 +4,24 @@ import html as html_module
 
 from webcompy.ui.code_block._compatibility import PYGMENTS_SHORT_CLASS
 from webcompy.ui.code_block._tokens import Token
-from webcompy.ui.code_block.lexers._registry import get_lexer
+from webcompy.ui.code_block.lexers._registry import LexerNotFoundError, get_lexer
 
 
 def highlight(code: str, lang: str) -> str:
     if not code:
         return ""
-    lexer = get_lexer(lang)
+    try:
+        lexer = get_lexer(lang)
+    except LexerNotFoundError:
+        return _render_raw(code)
     tokens: list[Token] = list(lexer.tokenize(code))
     if not tokens:
-        return ""
+        return _render_raw(code)
     return _render_tokens(tokens)
+
+
+def _render_raw(code: str) -> str:
+    return f'<span class="tok-ident">{html_module.escape(code)}</span>'
 
 
 def _render_tokens(tokens: list[Token]) -> str:

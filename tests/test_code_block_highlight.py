@@ -10,7 +10,6 @@ from webcompy.ui.code_block import (
     highlight,
 )
 from webcompy.ui.code_block.lexers._registry import (
-    LexerNotFoundError,
     register_builtin_lexers,
 )
 
@@ -30,9 +29,29 @@ def test_highlight_escapes_html_in_input() -> None:
     assert "&lt;script&gt;" in out
 
 
-def test_highlight_unknown_language_raises() -> None:
-    with pytest.raises(LexerNotFoundError):
-        highlight("x = 1", "nonexistent-language")
+def test_highlight_unknown_language_falls_back_to_raw() -> None:
+    """Unknown languages MUST render as a single ``<span class="tok-ident">``
+    with the code HTML-escaped, instead of raising ``LexerNotFoundError``.
+
+    This is a regression test for PR #178 fifth-round review: the CodeBlock
+    component used to propagate the lookup error to the caller, which
+    crashed the entire page on the first unknown ``lang`` value."""
+    out = highlight("x = 1", "nonexistent-language")
+    assert out == '<span class="tok-ident">x = 1</span>'
+
+
+def test_highlight_html_escapes_unknown_language_code() -> None:
+    out = highlight("<script>alert(1)</script>", "nope")
+    assert "<script>" not in out
+    assert "&lt;script&gt;" in out
+    assert "tok-ident" in out
+
+
+def test_highlight_unknown_language_empty_returns_empty() -> None:
+    """Empty code MUST still return empty even for unknown languages,
+    so the early-return in highlight() takes precedence over the
+    fallback path."""
+    assert highlight("", "nonexistent") == ""
 
 
 def test_highlight_includes_tok_class() -> None:

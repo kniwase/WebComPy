@@ -163,6 +163,8 @@ class HeadElement(ElementWithChildren):
                 head_el.appendChild(el)
 
             for idx, rx_style in enumerate(getattr(gen, "_reactive_styles", [])):
+                if getattr(rx_style, "is_removed", False):
+                    continue
                 attr_value = f"{cid}-{idx}"
                 selector_attr = f'style[data-webcompy-cid-rx="{attr_value}"]'
                 existing = _dom.query_selector(selector_attr)
@@ -290,6 +292,8 @@ class HeadElement(ElementWithChildren):
                 parts.append(port.render_html(el))
 
             for idx, rx_style in enumerate(getattr(gen, "_reactive_styles", [])):
+                if getattr(rx_style, "is_removed", False):
+                    continue
                 attr_value = f"{cid}-{idx}"
                 el = port.create_element("style")
                 el.setAttribute("data-webcompy-cid-rx", attr_value)

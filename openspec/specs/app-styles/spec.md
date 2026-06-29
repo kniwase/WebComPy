@@ -2,6 +2,9 @@
 
 ## Purpose
 TBD - created by archiving change feat-reactive-app-style. Update Purpose after archive.
+Note: This spec is the source of truth for the dynamic-style contract; see
+`openspec/specs/css-architecture/spec.md` for the `@layer` cascade order and
+the rule that dynamic styles are intentionally unlayered.
 ## Requirements
 ### Requirement: app.append_style shall accept a string or Computed[str]
 

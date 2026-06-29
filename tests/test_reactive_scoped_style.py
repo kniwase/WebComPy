@@ -225,6 +225,84 @@ class TestGeneratorReactiveStylesTracking:
             _active_di_scope.reset(di_scope_token)
             _active_component_context.reset(di_token)
 
+    def test_multi_instance_shares_subscription_with_ref_count(self, monkeypatch):
+        """Regression test for PR #178 fifth-round review: when the SAME
+        ReactiveScopedStyle instance is used by multiple component instances
+        of the same component, the DOM subscription MUST be created once and
+        kept alive until the LAST instance's on_before_destroy hook fires.
+
+        Previously, the second instance's call to use_reactive_scoped_style
+        short-circuited at 'if style._cid == self._generator._id: return',
+        which meant the second instance never registered its dispose hook.
+        The first instance being destroyed would then dispose the
+        subscription, leaving the second instance with no live updates."""
+        monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
+
+        from webcompy.components._hooks import _active_component_context
+        from webcompy.components._libs import Context
+        from webcompy.di._scope import DIScope
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy.testing._ports import FakeBrowserDOMPort
+
+        gen = ComponentGenerator("MultiInstance", _noop)
+        style = reactive_scoped_style(lambda: {".x": {"color": "blue"}})
+
+        def _make_context() -> object:
+            return Context(
+                None,
+                {},
+                "MultiInstance",
+                lambda: "",
+                lambda: {},
+                lambda _: None,
+                lambda _, __: None,
+                generator=gen,
+            )
+
+        port = FakeBrowserDOMPort()
+        scope = DIScope()
+        scope.provide(DOM_PORT_KEY, port)
+
+        from webcompy.di._scope import _active_di_scope
+
+        di_scope_token = _active_di_scope.set(scope)
+        try:
+            ctx_a = _make_context()
+            token_a = _active_component_context.set(ctx_a)  # type: ignore[arg-type]
+            try:
+                ctx_a.use_reactive_scoped_style(style)  # type: ignore[attr-defined]
+                assert style.ref_count == 1
+            finally:
+                _active_component_context.reset(token_a)
+
+            ctx_b = _make_context()
+            token_b = _active_component_context.set(ctx_b)  # type: ignore[arg-type]
+            try:
+                ctx_b.use_reactive_scoped_style(style)  # type: ignore[attr-defined]
+                assert style.ref_count == 2
+            finally:
+                _active_component_context.reset(token_b)
+
+            consumer_count = _count_consumers(style._css_computed)
+            assert consumer_count == 1
+
+            hooks_a = ctx_a.__get_lifecyclehooks__()  # type: ignore[attr-defined]
+            hooks_b = ctx_b.__get_lifecyclehooks__()  # type: ignore[attr-defined]
+            assert "on_before_destroy" in hooks_a
+            assert "on_before_destroy" in hooks_b
+
+            hooks_a["on_before_destroy"]()
+            assert style.ref_count == 1
+            consumer_count_mid = _count_consumers(style._css_computed)
+            assert consumer_count_mid == 1
+
+            hooks_b["on_before_destroy"]()
+            assert style.ref_count == 0
+            consumer_count_end = _count_consumers(style._css_computed)
+            assert consumer_count_end == 0
+        finally:
+            _active_di_scope.reset(di_scope_token)
+
     def test_use_outside_generator_raises(self):
         from webcompy.components._libs import Context
 
@@ -257,6 +335,110 @@ class TestGeneratorReactiveStylesTracking:
         )
         with pytest.raises(WebComPyException, match="ReactiveScopedStyle"):
             context.use_reactive_scoped_style("not a style")  # type: ignore[arg-type]
+
+    def test_remove_reactive_scoped_style(self, monkeypatch):
+        """``remove_reactive_scoped_style`` MUST drop the style from the
+        generator's ``_reactive_styles`` list and dispose the DOM
+        subscription if no other instance is using the style. The
+        ``is_removed`` flag MUST be set so the head element skip path
+        can omit the style from the rendered <style data-webcompy-cid-rx>
+        elements."""
+        monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
+
+        from webcompy.components._hooks import _active_component_context
+        from webcompy.components._libs import Context
+        from webcompy.di._scope import DIScope
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy.testing._ports import FakeBrowserDOMPort
+
+        gen = ComponentGenerator("Removeable", _noop)
+        style = reactive_scoped_style(lambda: {".x": {"color": "blue"}})
+        context = Context(
+            None,
+            {},
+            "Removeable",
+            lambda: "",
+            lambda: {},
+            lambda _: None,
+            lambda _, __: None,
+            generator=gen,
+        )
+
+        port = FakeBrowserDOMPort()
+        scope = DIScope()
+        scope.provide(DOM_PORT_KEY, port)
+
+        from webcompy.di._scope import _active_di_scope
+
+        di_scope_token = _active_di_scope.set(scope)
+        ctx_token = _active_component_context.set(context)  # type: ignore[arg-type]
+        try:
+            context.use_reactive_scoped_style(style)
+            assert style in gen._reactive_styles
+            assert style.ref_count == 1
+            assert style.subscription is not None
+
+            context.remove_reactive_scoped_style(style)
+            assert style not in gen._reactive_styles
+            assert style.ref_count == 0
+            assert style.subscription is None
+            assert style.is_removed is True
+        finally:
+            _active_component_context.reset(ctx_token)
+            _active_di_scope.reset(di_scope_token)
+
+    def test_remove_unregistered_style_is_noop(self):
+        from webcompy.components._libs import Context
+
+        gen = ComponentGenerator("Unregistered", _noop)
+        context = Context(
+            None,
+            {},
+            "Unregistered",
+            lambda: "",
+            lambda: {},
+            lambda _: None,
+            lambda _, __: None,
+            generator=gen,
+        )
+        style = reactive_scoped_style(lambda: {".x": {"color": "red"}})
+        style._bind(gen._id)
+        context.remove_reactive_scoped_style(style)
+        assert style.ref_count == 0
+        assert style.subscription is None
+
+    def test_remove_outside_generator_raises(self):
+        from webcompy.components._libs import Context
+
+        context = Context(
+            None,
+            {},
+            "NoGen",
+            lambda: "",
+            lambda: {},
+            lambda _: None,
+            lambda _, __: None,
+        )
+        style = reactive_scoped_style(lambda: {".x": {"color": "red"}})
+        with pytest.raises(WebComPyException, match="@define_component"):
+            context.remove_reactive_scoped_style(style)
+
+    def test_remove_rejects_non_reactive_scoped_style(self):
+        from webcompy.components._libs import Context
+
+        gen = ComponentGenerator("Rejects", _noop)
+        context = Context(
+            None,
+            {},
+            "Rejects",
+            lambda: "",
+            lambda: {},
+            lambda _: None,
+            lambda _, __: None,
+            generator=gen,
+        )
+        with pytest.raises(WebComPyException, match="ReactiveScopedStyle"):
+            context.remove_reactive_scoped_style("not a style")  # type: ignore[misc]
 
 
 class TestGeneratorReactiveStylesIntegration:
