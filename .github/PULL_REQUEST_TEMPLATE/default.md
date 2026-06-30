@@ -32,7 +32,6 @@
 - [ ] OpenSpec change is archived (if applicable)
 - [ ] Tests added/updated for changed code
 - [ ] E2E tests pass (if UI-affecting change)
-- [ ] CHANGELOG.md updated
 - [ ] Dual environment verified (browser + server)
 - [ ] No new module-level globals introduced (use DI instead)
 - [ ] `webcompy generate` produces correct output (if SSG-visible)

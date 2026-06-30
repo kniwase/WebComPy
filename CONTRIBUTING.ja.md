@@ -193,8 +193,6 @@ Co-Authored-By: opencode <noreply@opencode.ai>
 - コード内コメント禁止（明示的に要求された場合を除く）
 - コンポーネントクラスは `@component_template`、`@on_before_rendering` を使用
 - リアクティブ値は `Reactive`、`Computed`、`ReactiveList`、`ReactiveDict` で定義
-- 一時ファイルは `.workspace/` または `.tmp/` 配下（`/tmp` は使用不可）
-
 重要な不変条件（デュアル環境アーキテクチャ、DI スコープルール、リアクティブ契約など）については
 [AGENTS.md](AGENTS.md#framework-invariants)（英語）を参照してください。
 

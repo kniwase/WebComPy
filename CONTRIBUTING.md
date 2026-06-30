@@ -189,8 +189,6 @@ The `Co-Authored-By` footer is required on every commit.
 - No comments in code unless explicitly requested
 - Component classes use `@component_template`, `@on_before_rendering`
 - Reactive values defined via `Reactive`, `Computed`, `ReactiveList`, `ReactiveDict`
-- Temporary files under `.workspace/` or `.tmp/` (never `/tmp`)
-
 See [AGENTS.md](AGENTS.md#framework-invariants) for critical invariants
 (dual-environment architecture, DI scope rules, reactive contracts, etc.).
 

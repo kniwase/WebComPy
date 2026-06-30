@@ -134,9 +134,8 @@ cython_debug/
 /opencode.json
 /opencode.jsonc
 
-# Temporary directory for opencode
-**/.tmp/*
-!**/.tmp/.gitkeep
+# Temporary directory
+**/.tmp/
 
 # Generated docs site
 /docs/
@@ -148,12 +147,14 @@ docs_app/dist/
 # WebComPy lock files
 webcompy-lock.json
 
+# Python version (developer-managed)
+.python-version
+
 # Playwright MCP
 .playwright-mcp/
 
-# Workspace directory for development artifacts (tracked via .gitkeep)
-.workspace/*
-!.workspace/.gitkeep
+# Workspace directory for development artifacts
+.workspace/
 
 # Browser test screenshots and recordings (root only, allow in static/)
 /*.png

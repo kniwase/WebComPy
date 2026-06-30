@@ -37,7 +37,6 @@ Before modifying server-side code, read the relevant specs to ensure compliance:
 
 - Server-only imports: uvicorn, starlette, aiofiles must NOT be imported in browser code paths
 - Use `discover_config()` for configuration resolution
-- Temporary files go under `.tmp/` or `.workspace/`, never `/tmp`
 
 ## Handoff Rules
 
