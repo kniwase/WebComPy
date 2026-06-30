@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       has-code-changes: ${{ steps.check.outputs.has-code-changes }}
+      has-generate-changes: ${{ steps.check.outputs.has-generate-changes }}
+      has-e2e-changes: ${{ steps.check.outputs.has-e2e-changes }}
+      has-workflow-changes: ${{ steps.check.outputs.has-workflow-changes }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -18,8 +21,14 @@ jobs:
       - id: check
         run: |
           CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD)
-          CODE=$(echo "$CHANGED" | grep -v '^openspec/' | grep -v '^$' || true)
+          CODE=$(echo "$CHANGED" | grep -E '^(webcompy/|pyproject\.toml|uv\.lock)' || true)
           echo "has-code-changes=$([ -n "$CODE" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          GENERATE=$(echo "$CHANGED" | grep -E '^(webcompy/|docs_app/|pyproject\.toml)' || true)
+          echo "has-generate-changes=$([ -n "$GENERATE" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          E2E=$(echo "$CHANGED" | grep -E '^(tests/|scripts/run-e2e-tests\.sh)' || true)
+          echo "has-e2e-changes=$([ -n "$E2E" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          WORKFLOW=$(echo "$CHANGED" | grep -E '^\.github/workflows/' || true)
+          echo "has-workflow-changes=$([ -n "$WORKFLOW" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   openspec:
     if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
@@ -72,7 +81,7 @@ jobs:
 
   lint:
     needs: [detect-scope]
-    if: ${{ needs.detect-scope.outputs.has-code-changes == 'true' && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
+    if: ${{ (needs.detect-scope.outputs.has-code-changes == 'true' || needs.detect-scope.outputs.has-generate-changes == 'true' || needs.detect-scope.outputs.has-workflow-changes == 'true') && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -118,7 +127,7 @@ jobs:
 
   generate:
     needs: [detect-scope]
-    if: ${{ needs.detect-scope.outputs.has-code-changes == 'true' && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
+    if: ${{ (needs.detect-scope.outputs.has-code-changes == 'true' || needs.detect-scope.outputs.has-generate-changes == 'true') && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -160,7 +169,7 @@ jobs:
           path: ci-test-results.log
 
   e2e-matrix:
-    if: ${{ needs.detect-scope.outputs.has-code-changes == 'true' && !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
+    if: ${{ (needs.detect-scope.outputs.has-code-changes == 'true' || needs.detect-scope.outputs.has-e2e-changes == 'true') && !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     needs: [detect-scope, lint, typecheck, generate, test]
     runs-on: ubuntu-latest
     defaults:
@@ -519,18 +528,34 @@ jobs:
       - name: Write scope context
         id: scope-context
         run: |
-          if [ "${{ needs.detect-scope.outputs.has-code-changes }}" = "false" ]; then
+          if [ "${{ needs.detect-scope.outputs.has-code-changes }}" = "false" ] && \
+             [ "${{ needs.detect-scope.outputs.has-generate-changes }}" = "false" ] && \
+             [ "${{ needs.detect-scope.outputs.has-e2e-changes }}" = "false" ] && \
+             [ "${{ needs.detect-scope.outputs.has-workflow-changes }}" = "false" ]; then
             {
-              echo "This PR contains only OpenSpec proposal artifacts."
-              echo "No implementation code is included."
+              echo "This PR contains only documentation or OpenSpec artifacts."
+              echo "No code, generate, E2E, or workflow changes are included."
               echo "Focus review on:"
-              echo "- Design correctness and completeness"
-              echo "- Spec consistency with existing specs"
-              echo "- Task clarity and feasibility"
-              echo "- Non-goals vs scope alignment"
+              if echo "${{ github.event.pull_request.title }}" | grep -qi "openspec"; then
+                echo "- Design correctness and completeness"
+                echo "- Spec consistency with existing specs"
+                echo "- Task clarity and feasibility"
+                echo "- Non-goals vs scope alignment"
+              else
+                echo "- Documentation accuracy and clarity"
+                echo "- Consistency with existing docs"
+              fi
             } > .tmp/scope-context.txt
           else
-            echo "Code-change PR — no special scope context." > .tmp/scope-context.txt
+            {
+              echo "Code-change PR — standard code review."
+              echo ""
+              echo "Changed scopes:"
+              [ "${{ needs.detect-scope.outputs.has-code-changes }}" = "true" ] && echo "- Code (webcompy/ + deps)"
+              [ "${{ needs.detect-scope.outputs.has-generate-changes }}" = "true" ] && echo "- Generate (docs_app/)"
+              [ "${{ needs.detect-scope.outputs.has-e2e-changes }}" = "true" ] && echo "- E2E (tests/ + scripts)"
+              [ "${{ needs.detect-scope.outputs.has-workflow-changes }}" = "true" ] && echo "- Workflow (.github/workflows/)"
+            } > .tmp/scope-context.txt
           fi
 
       - name: Write CI results to file
