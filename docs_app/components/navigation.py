@@ -7,6 +7,8 @@ from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router import RouterLink
 from webcompy.signal import Signal, computed
 
+from .theme_toggle import ThemeToggle
+
 
 class _SubPage(TypedDict):
     title: str
@@ -35,7 +37,6 @@ def Navbar(context: ComponentContext[list[Page]]):
     def _toggle(idx: int, ev: Any):
         if hasattr(ev, "stopPropagation"):
             ev.stopPropagation()
-        # Close all other dropdowns (exclusive display)
         for other_idx, state in _open_states.items():
             if other_idx != idx:
                 state.value = False
@@ -100,10 +101,11 @@ def Navbar(context: ComponentContext[list[Page]]):
                 for sub in page["children"]
             )
             return html.LI(
-                {},
+                {"class": "navbar-item-dropdown"},
                 html.A(
                     {
                         "id": f"{menu_id}-toggle",
+                        "class": "navbar-dropdown-toggle",
                         "aria-expanded": computed(lambda idx=idx: "true" if _is_open(idx) else "false"),
                         "aria-haspopup": "true",
                         "aria-controls": menu_id,
@@ -114,6 +116,7 @@ def Navbar(context: ComponentContext[list[Page]]):
                 html.UL(
                     {
                         "id": menu_id,
+                        "class": "navbar-dropdown",
                         "role": "menu",
                         "style": computed(lambda idx=idx: f"display: {'block' if _is_open(idx) else 'none'};"),
                     },
@@ -123,7 +126,7 @@ def Navbar(context: ComponentContext[list[Page]]):
             )
         if "to" in page:
             return html.LI(
-                {},
+                {"class": "navbar-item"},
                 RouterLink(
                     to=page["to"],
                     text=[page["title"]],
@@ -133,46 +136,51 @@ def Navbar(context: ComponentContext[list[Page]]):
         return None
 
     return html.NAV(
-        {},
+        {"class": "navbar"},
         html.DIV(
-            {},
-            html.SPAN({}, "WebComPy"),
-            html.BUTTON(
-                {
-                    "type": "button",
-                    "aria-controls": "navbarNav",
-                    "aria-expanded": computed(lambda: "true" if _mobile_open.value else "false"),
-                    "aria-label": "Toggle navigation",
-                    "@click": _toggle_mobile,
-                },
-                html.SPAN({}, "☰"),
-            ),
+            {"class": "navbar-inner"},
+            html.SPAN({"class": "navbar-brand"}, "WebComPy"),
             html.DIV(
-                {
-                    "id": "navbarNav",
-                    "class": computed(lambda: "open" if _mobile_open.value else ""),
-                },
-                html.UL(
-                    {},
-                    *tuple(_generate_navitem(page, idx) for idx, page in enumerate(context.props)),
+                {"class": "navbar-right"},
+                html.DIV(
+                    {
+                        "id": "navbarNav",
+                        "class": computed(lambda: "navbar-nav open" if _mobile_open.value else "navbar-nav"),
+                    },
+                    html.UL(
+                        {"class": "navbar-list"},
+                        *tuple(_generate_navitem(page, idx) for idx, page in enumerate(context.props)),
+                    ),
                 ),
+                html.BUTTON(
+                    {
+                        "type": "button",
+                        "class": "navbar-mobile-toggle",
+                        "aria-controls": "navbarNav",
+                        "aria-expanded": computed(lambda: "true" if _mobile_open.value else "false"),
+                        "aria-label": "Toggle navigation",
+                        "@click": _toggle_mobile,
+                    },
+                    html.SPAN({}, "☰"),
+                ),
+                ThemeToggle(None),
             ),
         ),
     )
 
 
 Navbar.scoped_style = {
-    " nav": {
+    " .navbar": {
         "display": "flex",
         "align-items": "center",
         "justify-content": "space-between",
-        "padding": "0.75rem 1.5rem",
-        "background-color": "#ffffff",
-        "border-bottom": "1px solid #e1e4e8",
-        "box-shadow": "0 1px 3px rgba(0,0,0,0.05)",
+        "padding": "var(--space-3) var(--space-5)",
+        "background-color": "var(--color-bg)",
+        "border-bottom": "1px solid var(--color-border)",
+        "box-shadow": "var(--shadow-sm)",
         "position": "relative",
     },
-    " nav div": {
+    " .navbar-inner": {
         "display": "flex",
         "align-items": "center",
         "justify-content": "space-between",
@@ -180,132 +188,140 @@ Navbar.scoped_style = {
         "max-width": "1200px",
         "margin": "0 auto",
     },
-    " nav span": {
-        "font-size": "1.35rem",
+    " .navbar-brand": {
+        "font-size": "var(--font-size-xl)",
         "font-weight": "700",
-        "color": "#24292f",
-        "margin-right": "2rem",
+        "color": "var(--color-fg)",
+        "margin-right": "var(--space-6)",
         "letter-spacing": "-0.02em",
     },
-    " nav button": {
+    " .navbar-right": {
+        "display": "flex",
+        "align-items": "center",
+        "gap": "var(--space-3)",
+        "margin-left": "auto",
+    },
+    " .navbar-mobile-toggle": {
         "display": "none",
         "background": "none",
-        "border": "1px solid #d0d7de",
-        "border-radius": "6px",
-        "padding": "0.5rem",
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-sm)",
+        "padding": "var(--space-2)",
         "width": "2.5rem",
         "height": "2.5rem",
-        "font-size": "1.25rem",
+        "font-size": "var(--font-size-lg)",
         "cursor": "pointer",
-        "color": "#24292f",
+        "color": "var(--color-fg)",
         "transition": "background-color 0.2s ease",
         "text-align": "center",
         "line-height": "1",
     },
-    " nav button:hover": {
-        "background-color": "#f3f4f6",
+    " .navbar-mobile-toggle:hover": {
+        "background-color": "var(--color-bg-elevated)",
     },
-    " nav ul": {
+    " .navbar-list": {
         "display": "flex",
         "list-style": "none",
         "margin": "0",
         "padding": "0",
-        "gap": "0.25rem",
+        "gap": "var(--space-1)",
         "align-items": "center",
     },
-    " nav li": {
+    " .navbar-item": {
         "position": "relative",
     },
-    " nav li a, nav li a[class]": {
+    " .navbar-item-dropdown": {
+        "position": "relative",
+    },
+    " .navbar-list a": {
         "display": "block",
-        "padding": "0.5rem 0.875rem",
+        "padding": "var(--space-2)",
         "text-decoration": "none",
-        "color": "#24292f",
-        "font-size": "0.9rem",
+        "color": "var(--color-fg)",
+        "font-size": "var(--font-size-base)",
         "font-weight": "500",
         "cursor": "pointer",
-        "border-radius": "6px",
+        "border-radius": "var(--radius-sm)",
         "transition": "background-color 0.15s ease, color 0.15s ease",
     },
-    " nav li a:hover": {
-        "background-color": "#f3f4f6",
-        "color": "#000000",
+    " .navbar-list a:hover": {
+        "background-color": "var(--color-bg-elevated)",
+        "color": "var(--color-fg)",
     },
-    " nav li a[aria-expanded='true']": {
-        "background-color": "#f3f4f6",
+    " .navbar-list a[aria-expanded='true']": {
+        "background-color": "var(--color-bg-elevated)",
     },
-    " nav li ul": {
+    " .navbar-dropdown": {
         "position": "absolute",
-        "top": "calc(100% + 4px)",
+        "top": "calc(100% + var(--space-1))",
         "left": "0",
-        "background-color": "#ffffff",
-        "border": "1px solid #d0d7de",
-        "border-radius": "8px",
+        "background-color": "var(--color-bg)",
+        "border": "1px solid var(--color-border)",
+        "border-radius": "var(--radius-md)",
         "min-width": "12rem",
-        "padding": "0.5rem 0",
+        "padding": "var(--space-2) 0",
         "list-style": "none",
         "z-index": "1000",
-        "box-shadow": "0 4px 12px rgba(0,0,0,0.1)",
+        "box-shadow": "var(--shadow-md)",
     },
-    " nav li ul li a": {
-        "padding": "0.5rem 1rem",
-        "font-size": "0.85rem",
+    " .navbar-dropdown a": {
+        "padding": "var(--space-2) var(--space-4)",
+        "font-size": "var(--font-size-sm)",
         "border-radius": "0",
     },
-    " nav li ul li a:hover": {
-        "background-color": "#f6f8fa",
+    " .navbar-dropdown a:hover": {
+        "background-color": "var(--color-bg-elevated)",
     },
-    " nav li ul hr": {
-        "margin": "0.5rem 0",
+    " .navbar-dropdown hr": {
+        "margin": "var(--space-2) 0",
         "border": "0",
-        "border-top": "1px solid #e1e4e8",
+        "border-top": "1px solid var(--color-border)",
     },
     " @media (max-width: 768px)": {
-        " nav div": {
+        " .navbar-inner": {
             "flex-wrap": "wrap",
         },
-        " nav span": {
+        " .navbar-brand": {
             "order": "1",
         },
-        " nav button": {
-            "display": "block",
+        " .navbar-right": {
             "order": "2",
-            "margin-left": "auto",
         },
-        " #navbarNav": {
-            "display": "none",
-            "order": "3",
-            "width": "100%",
-        },
-        " #navbarNav.open": {
+        " .navbar-mobile-toggle": {
             "display": "block",
         },
-        " nav ul": {
+        " .navbar-nav": {
+            "display": "none",
+        },
+        " .navbar-nav.open": {
+            "display": "contents",
+        },
+        " .navbar-list": {
             "flex-direction": "column",
             "position": "absolute",
             "top": "calc(100% + 1px)",
             "left": "0",
             "right": "0",
-            "background-color": "#ffffff",
-            "border-bottom": "1px solid #e1e4e8",
-            "border-top": "1px solid #e1e4e8",
-            "padding": "0.75rem 1.5rem",
+            "background-color": "var(--color-bg)",
+            "border-bottom": "1px solid var(--color-border)",
+            "border-top": "1px solid var(--color-border)",
+            "padding": "var(--space-3) var(--space-5)",
             "gap": "0",
-            "box-shadow": "0 4px 12px rgba(0,0,0,0.08)",
+            "box-shadow": "var(--shadow-md)",
             "z-index": "999",
         },
-        " nav li": {
+        " .navbar-item,  .navbar-item-dropdown": {
             "width": "100%",
         },
-        " nav li a, nav li a[class]": {
-            "padding": "0.75rem 0",
+        " .navbar-list a": {
+            "padding": "var(--space-3) 0",
             "border-radius": "0",
         },
-        " nav li ul": {
+        " .navbar-dropdown": {
             "position": "static",
             "border": "none",
             "box-shadow": "none",
-            "padding-left": "1rem",
+            "padding-left": "var(--space-4)",
             "min-width": "auto",
         },
     },

@@ -5,9 +5,10 @@ from webcompy.ajax import HttpClient
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 from webcompy.signal import Signal
+from webcompy.ui.code_block import CodeBlock
 from webcompy.utils import strip_multiline_text
 
-from .syntax_highlighting import SyntaxHighlighting
+from .ui import Card
 
 
 class DemoComponentProps(TypedDict):
@@ -39,44 +40,35 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
 
     return html.DIV(
         {"class": "demo-display-root"},
-        html.DIV(
-            {"class": "card"},
-            html.DIV(
-                {"class": "card-body"},
-                html.H5({"class": "card-title"}, context.props["title"]),
-                html.DIV(
-                    {"class": "card"},
-                    html.DIV(
-                        {"class": "card-body"},
-                        html.IFRAME(
-                            {
-                                "src": f"/_demos/standard.html?app={context.props['app_name']}",
-                                "style": "width:100%; border:none; min-height:400px;",
-                            }
-                        ),
-                    ),
-                ),
-                html.BR(),
-                html.DIV(
-                    {"class": "card"},
-                    html.DIV({"class": "card-header"}, "Code"),
-                    html.DIV(
-                        {"class": "card-body"},
-                        SyntaxHighlighting({"code": source_code, "lang": "python"}),
-                    ),
-                ),
-            ),
+        html.H3({"class": "demo-display-title"}, context.props["title"]),
+        Card(
+            {"title": "Demo"},
+            slots={
+                "default": lambda: html.IFRAME(
+                    {
+                        "src": f"/_demos/standard.html?app={context.props['app_name']}",
+                        "style": "width:100%; border:none; min-height:400px;",
+                    }
+                )
+            },
+        ),
+        Card(
+            {"title": "Code"},
+            slots={"default": lambda: CodeBlock({"code": source_code, "lang": "python"})},
         ),
     )
 
 
 DemoDisplay.scoped_style = {
     ".demo-display-root": {
-        "padding-top": "1rem",
+        "padding-top": "var(--space-3)",
     },
-    ".card-title": {
-        "padding-bottom": "8px",
-        "border-bottom": "1px solid #dee2e6",
-        "margin-bottom": "16px",
+    ".demo-display-title": {
+        "padding-bottom": "var(--space-2)",
+        "border-bottom": "1px solid var(--color-border)",
+        "margin-bottom": "var(--space-4)",
+        "font-size": "var(--font-size-xl)",
+        "font-weight": "600",
+        "color": "var(--color-fg)",
     },
 }

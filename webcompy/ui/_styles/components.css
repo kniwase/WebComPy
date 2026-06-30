@@ -1,0 +1,54 @@
+@layer components {
+  a {
+    color: var(--color-link);
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: var(--color-link-hover);
+    text-decoration: underline;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  pre,
+  code,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+    font-size: 0.95em;
+  }
+
+  pre {
+    background-color: var(--color-bg-code);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    padding: var(--space-4);
+    margin: 0;
+  }
+
+  pre > code {
+    background-color: transparent;
+    border: 0;
+    padding: 0;
+  }
+
+  code {
+    background-color: var(--color-bg-code);
+    border-radius: var(--radius-sm);
+    padding: 0.125em 0.25em;
+  }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--color-border);
+    margin: var(--space-5) 0;
+  }
+}

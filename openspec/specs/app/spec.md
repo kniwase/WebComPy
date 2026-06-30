@@ -5,9 +5,7 @@
 Bootstrapping is the process by which a WebComPy application comes to life. It bridges the gap between the developer's component definitions and the running application in the browser: connecting the root component to the DOM, initializing the router if one exists, setting up reactive head management, and removing the loading screen once the app is ready.
 
 On the server side, bootstrapping enables static site generation — rendering the component tree to HTML strings that can be served without browser execution.
-
 ## Requirements
-
 ### Requirement: The application entry point shall connect a root component to the DOM
 `WebComPyApp` SHALL accept a root component, optional router, and optional `AppConfig`, and create an application root that renders the component. `WebComPyApp` SHALL expose a `router` property returning the current `Router` instance (or `None` if no router is configured). During initialization, `WebComPyApp` SHALL create a `PluginManager` and initialize plugins specified in `AppConfig.plugins` before creating the `AppDocumentRoot`. The `run(selector)` method SHALL be the browser entry point, accepting a CSS selector (default `"#webcompy-app"`). `run()` SHALL call `on_app_ready(app)` on all initialized plugins before the first render. `on_app_ready` SHALL NOT be called during SSG. `HeadElement` SHALL manage the document `<head>` DOM element or HTML output declaratively, replacing the previous imperative `AppDocumentRoot` head methods. Forwarded properties (`routes`, `router_mode`, `set_path`, `head`, `scoped_styles`, `scripts`, `set_title`, `set_meta`, `append_link`, `append_script`, `set_head`, `update_head`) SHALL provide direct access to `AppDocumentRoot` functionality.
 
@@ -104,3 +102,17 @@ The CLI SHALL render the application to HTML strings for each route, including P
 - **AND** the HTML SHALL include `<script>` tags for PyScript and package configuration
 - **AND** a loading screen SHALL be shown until PyScript finishes initialization
 - **AND** the PyScript bootstrap code SHALL call `app.run()`
+
+### Requirement: WebComPyApp shall provide append_style
+
+The framework SHALL provide `WebComPyApp.append_style(content: str | Computed[str])` method. The method SHALL register a CSS style string or reactive computed with the head element. The method SHALL be callable from the active render context OR be deferred if called outside (matching the existing `append_link` and `append_script` semantics).
+
+#### Scenario: Calling append_style with the active context
+- **WHEN** `app.append_style(content)` is called while a render context is active
+- **THEN** the framework SHALL delegate to the render context's `append_style`
+
+#### Scenario: Calling append_style without an active context
+- **WHEN** `app.append_style(content)` is called before `create_render_context()`
+- **THEN** the framework SHALL append the call to `_deferred_ops`
+- **AND** the call SHALL be applied when `create_render_context()` runs
+

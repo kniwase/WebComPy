@@ -267,9 +267,11 @@ These steps help identify issues early, reducing CI cycle time and avoiding bloc
 When working on the codebase (developing, reviewing, or refactoring), always read the relevant specs based on the files you touch. Start with `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md`, then read the subsystem specs:
 
 | Changed files | Specs to read |
-|---|---|---|
+|---|---|
 | `webcompy/signal/` | `openspec/specs/reactive/spec.md`, `openspec/specs/effect/spec.md` |
-| `webcompy/components/` | `openspec/specs/components/spec.md`, `openspec/specs/composables/spec.md`, `openspec/specs/async-rendering/spec.md` |
+| `webcompy/components/` | `openspec/specs/components/spec.md`, `openspec/specs/composables/spec.md`, `openspec/specs/async-rendering/spec.md`, `openspec/specs/reactive-scoped-style/spec.md` |
+| `webcompy/app/` | `openspec/specs/app/spec.md`, `openspec/specs/app-lifecycle/spec.md`, `openspec/specs/app-config/spec.md`, `openspec/specs/render-context/spec.md`, `openspec/specs/scoped-css-incremental/spec.md`, `openspec/specs/async-rendering/spec.md`, `openspec/specs/app-styles/spec.md` |
+| `webcompy/ui/_styles/` | `openspec/specs/css-architecture/spec.md` |
 | `webcompy/elements/` | `openspec/specs/elements/spec.md`, `openspec/specs/list-reconciliation/spec.md`, `openspec/specs/nested-dynamic-element/spec.md`, `openspec/specs/dict-repeat-overload/spec.md`, `openspec/specs/head-vdom/spec.md`, `openspec/specs/element-preserve-children/spec.md`, `openspec/specs/async-rendering/spec.md` |
 | `webcompy/router/` | `openspec/specs/router/spec.md`, `openspec/specs/router-hooks/spec.md` |
 | `webcompy/_browser/` | `openspec/specs/browser-api/spec.md` |
@@ -358,6 +360,8 @@ This ensures all agents — development and review alike — share current knowl
 | `demo-iframe-isolation` | Isolated iframe PyScript contexts for demos with on-demand dependency loading |
 | `inspect-cli` | CLI tool for launching, inspecting, and verifying WebComPy applications in a browser |
 | `scoped-css-incremental` | Per-component `<style data-webcompy-cid="...">` injection with idempotent incremental reconciliation |
+| `reactive-scoped-style` | Per-component reactive scoped style (`reactive_scoped_style(func)` + `context.use_reactive_scoped_style`) that updates a dedicated `<style data-webcompy-cid-rx>` element on signal change |
+| `app-styles` | App-level reactive style injection via `app.append_style(content)` and helpers `reactive_style(selector, vars_dict)` / `reactive_block(selector, content)`; rendered into `<style data-webcompy-dynamic>` wrapped in `@layer webcompy-dynamic` |
 | `testing-module` | TestRenderer, fake ports, and scope helpers for browserless component rendering tests |
 
 ## Git Conventions

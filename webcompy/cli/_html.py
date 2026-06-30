@@ -315,6 +315,11 @@ async def _generate_html_impl(
                 "head",
                 {},
                 _HtmlElement("base", {"href": ctx.config.base_url}),
+                _HtmlElement("meta", {"name": "color-scheme", "content": "light dark"}),
+                _HtmlElement(
+                    "link",
+                    {"rel": "stylesheet", "href": f"{base_url}_webcompy-ui/index.css"},
+                ),
                 _HtmlElement(
                     "link",
                     {"rel": "stylesheet", "href": core_css_url},

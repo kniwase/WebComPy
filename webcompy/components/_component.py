@@ -16,6 +16,7 @@ from webcompy.signal import ReactiveDict, computed_property
 
 if TYPE_CHECKING:
     from webcompy.app._render_context import RenderContext
+    from webcompy.components._generator import ComponentGenerator
 
 _active_app_context: ContextVar[RenderContext | None] = ContextVar("_active_app_context", default=None)
 
@@ -78,6 +79,7 @@ class Component(ElementBase):
         component_def: FuncComponentDef,
         props: Any,
         slots: dict[str, Callable[[], ElementChildren]],
+        generator: ComponentGenerator[Any] | None = None,
     ) -> None:
         self._instance_id = uuid4()
         self._attrs = {}
@@ -85,6 +87,7 @@ class Component(ElementBase):
         self._ref = None
         self._children = []
         self._head_props: HeadPropsStore | None = None
+        self._generator = generator
         super().__init__()
         self.__init_component(self.__setup(component_def, props, slots))
 
@@ -110,6 +113,7 @@ class Component(ElementBase):
             lambda: head_props.head_meta.value,
             self._set_title,
             self._set_meta,
+            generator=self._generator,
         )
         token = _active_component_context.set(context)
         scope = create_effect_scope()

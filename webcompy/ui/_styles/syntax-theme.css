@@ -1,0 +1,25 @@
+pre.code-block,
+.code-block {
+  background-color: var(--color-bg-code);
+}
+
+pre.code-block .tok-kw,
+.code-block .tok-kw { color: var(--tok-kw); }
+pre.code-block .tok-str,
+.code-block .tok-str { color: var(--tok-str); }
+pre.code-block .tok-num,
+.code-block .tok-num { color: var(--tok-num); }
+pre.code-block .tok-comment,
+.code-block .tok-comment { color: var(--tok-comment); font-style: italic; }
+pre.code-block .tok-fn,
+.code-block .tok-fn { color: var(--tok-fn); }
+pre.code-block .tok-builtin,
+.code-block .tok-builtin { color: var(--tok-builtin); }
+pre.code-block .tok-decorator,
+.code-block .tok-decorator { color: var(--tok-decorator); }
+pre.code-block .tok-op,
+.code-block .tok-op { color: var(--tok-op); }
+pre.code-block .tok-punct,
+.code-block .tok-punct { color: var(--tok-punct); }
+pre.code-block .tok-ident,
+.code-block .tok-ident { color: var(--tok-ident); }

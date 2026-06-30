@@ -55,9 +55,43 @@ class TestWebComPyAppConfig:
         config = WebComPyAppConfig()
         assert config.hydrate is True
 
-    def test_hydrate_false(self):
+    def test_hydrate_disabled(self):
         config = WebComPyAppConfig(hydrate=False)
         assert config.hydrate is False
+
+    def test_theme_default_is_none(self):
+        config = WebComPyAppConfig()
+        assert config.theme is None
+
+    def test_theme_default_only_uses_system(self):
+        config = WebComPyAppConfig(theme={"default": "dark"})
+        assert config.theme == {"default": "dark", "persist": True}
+
+    def test_theme_persist_false(self):
+        config = WebComPyAppConfig(theme={"default": "light", "persist": False})
+        assert config.theme == {"default": "light", "persist": False}
+
+    def test_theme_default_system_when_omitted(self):
+        config = WebComPyAppConfig(theme={"persist": False})
+        assert config.theme == {"default": "system", "persist": False}
+
+    def test_theme_invalid_default_raises(self):
+        import pytest
+
+        with pytest.raises(ValueError, match="theme\\['default'\\]"):
+            WebComPyAppConfig(theme={"default": "purple"})
+
+    def test_theme_invalid_persist_raises(self):
+        import pytest
+
+        with pytest.raises(TypeError, match="theme\\['persist'\\]"):
+            WebComPyAppConfig(theme={"persist": "yes"})
+
+    def test_theme_must_be_dict(self):
+        import pytest
+
+        with pytest.raises(TypeError, match="theme must be a dict"):
+            WebComPyAppConfig(theme="not a dict")
 
 
 class TestWebComPyBuildConfig:

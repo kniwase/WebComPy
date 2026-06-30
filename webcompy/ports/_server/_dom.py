@@ -73,6 +73,9 @@ def _serialize_node(node: DOMNode) -> str:
     attrs_str = _serialize_attrs(node)
     if tag_lower in _VOID_ELEMENTS:
         return f"<{tag_lower}{attrs_str}>"
+    inner_html = getattr(node, "innerHTML", None)
+    if inner_html is not None:
+        return f"<{tag_lower}{attrs_str}>{inner_html}</{tag_lower}>"
     children_html = "".join(_serialize_node(node.childNodes[i]) for i in range(node.childNodes.length))
     return f"<{tag_lower}{attrs_str}>{children_html}</{tag_lower}>"
 

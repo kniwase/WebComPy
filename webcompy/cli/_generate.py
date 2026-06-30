@@ -265,6 +265,14 @@ async def generate_static_site(app: WebComPyApp | None = None):
                 shutil.copy2(src_path, dst)
                 print(dst)
 
+        from webcompy.ui._styles import get_styles_files
+
+        framework_ui_dir = dist_dir / "_webcompy-ui"
+        framework_ui_dir.mkdir(exist_ok=True)
+        for filename, content in get_styles_files().items():
+            (framework_ui_dir / filename).write_bytes(content)
+        print(framework_ui_dir)
+
         _generate_kwargs: dict[str, object] = dict(
             app_package_name=build_config.app_package_path.name,
             dev_mode=False,
@@ -288,20 +296,20 @@ async def generate_static_site(app: WebComPyApp | None = None):
                 for path in paths:
                     if not (path_dir := dist_dir / path).exists():
                         os.makedirs(path_dir)
-                    ctx = app.create_render_context(path)
+                    ctx = app.create_render_context(path, initial_theme="system")
                     html = await generate_html(ctx, **_generate_kwargs)  # type: ignore[arg-type]
                     ctx.dispose()
                     html_path = path_dir / "index.html"
                     html_path.open("w", encoding="utf8").write(html)
                     print(html_path)
-            ctx = app.create_render_context("//:404://")
+            ctx = app.create_render_context("//:404://", initial_theme="system")
             html = await generate_html(ctx, **_generate_kwargs)  # type: ignore[arg-type]
             ctx.dispose()
             html_path = dist_dir / "404.html"
             html_path.open("w", encoding="utf8").write(html)
             print(html_path)
         else:
-            ctx = app.create_render_context("/")
+            ctx = app.create_render_context("/", initial_theme="system")
             html = await generate_html(ctx, **_generate_kwargs)  # type: ignore[arg-type]
             ctx.dispose()
             html_path = dist_dir / "index.html"

@@ -94,6 +94,14 @@ Watch for these WebComPy-specific issues that generic reviewers miss:
 
 **Inspect CLI Independence**: `inspect` subcommand bypasses `get_params()` and uses its own nested `ArgumentParser` via early `sys.argv[1]` intercept in `__main__.py`. Browser commands require Playwright (checked lazily per-command, not at import). Server management uses PID files under `.tmp/webcompy-inspect/`.
 
+**Framework Friction Signals** (from the `feat-ui-tailwind-modernization` retrospective): watch for these patterns that conflict with WebComPy's architecture. Each appearance is a 🔴 Must Fix signal indicating the design should be reconsidered before merging.
+
+- **Runtime CSS generation** (e.g., Tailwind CDN scanning the DOM at runtime): conflicts with WebComPy's SSR/SSG-first design. Static CSS files only.
+- **Repeated class strings** across components (5+ identical hand-written class strings): indicates a missing local UI component that should be extracted. Look for `card`, `btn`, `inline-code`, `panel` patterns.
+- **FOUC tolerance** in any new component: code-highlighters running client-side after first paint are a known signal. The `CodeBlock` component MUST highlight at render time.
+- **`<html>` selectors in `scoped_style`**: `scoped_style` CID machinery only targets elements rendered through the component tree. `<html>` and `<body>` are document roots and cannot be scoped. Theme state MUST live in framework-provided `:root[data-theme]` CSS.
+- **DOM re-injection hacks** (`<script>` re-injection to refresh assets after route changes, manual `parentNode.appendChild` on every render): indicate the design assumes runtime CSS generation. Reject and propose a static-CSS alternative.
+
 ## General Review Perspectives
 
 Consider these cross-cutting concerns for every review. Flag relevant findings as Action Items in the review.

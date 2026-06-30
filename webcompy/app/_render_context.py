@@ -28,7 +28,14 @@ class RenderContext:
     _component_store: ComponentStore
     _router: Router | None
 
-    def __init__(self, app: WebComPyApp, path: str | None = None) -> None:
+    def __init__(
+        self,
+        app: WebComPyApp,
+        path: str | None = None,
+        *,
+        initial_theme: Any = None,
+        cookie_header: str | None = None,
+    ) -> None:
         self._app = app
         self._config = app._config
         self._profile = app._profile
@@ -36,6 +43,8 @@ class RenderContext:
         self._profile_data: dict[str, float] = {}
         self._defer_depth: int = 0
         self._deferred_callbacks: list = []
+        self._initial_theme = initial_theme
+        self._cookie_header = cookie_header or ""
 
         self._record_phase("init_start")
 
@@ -71,6 +80,7 @@ class RenderContext:
             from webcompy.ports._browser._ffi import BrowserFFIPort
             from webcompy.ports._browser._history import BrowserHistoryPort
             from webcompy.ports._browser._host import BrowserHostPort
+            from webcompy.ports._browser._media_query import BrowserMediaQueryPort
             from webcompy.ports._keys import (
                 COOKIE_PORT_KEY,
                 DOM_PORT_KEY,
@@ -78,6 +88,7 @@ class RenderContext:
                 FFI_PORT_KEY,
                 HISTORY_PORT_KEY,
                 HOST_PORT_KEY,
+                MEDIA_QUERY_PORT_KEY,
             )
 
             self._di_scope.provide(COOKIE_PORT_KEY, BrowserCookiePort())
@@ -86,6 +97,7 @@ class RenderContext:
             self._di_scope.provide(FFI_PORT_KEY, BrowserFFIPort())
             self._di_scope.provide(HISTORY_PORT_KEY, BrowserHistoryPort(mode=router_mode))
             self._di_scope.provide(HOST_PORT_KEY, BrowserHostPort())
+            self._di_scope.provide(MEDIA_QUERY_PORT_KEY, BrowserMediaQueryPort())
         else:
             from webcompy.ports._keys import (
                 COOKIE_PORT_KEY,
@@ -94,6 +106,7 @@ class RenderContext:
                 FFI_PORT_KEY,
                 HISTORY_PORT_KEY,
                 HOST_PORT_KEY,
+                MEDIA_QUERY_PORT_KEY,
             )
             from webcompy.ports._server._cookie import ServerCookiePort
             from webcompy.ports._server._dom import ServerDOMPort
@@ -101,17 +114,42 @@ class RenderContext:
             from webcompy.ports._server._ffi import ServerFFIPort
             from webcompy.ports._server._history import ServerHistoryPort
             from webcompy.ports._server._host import ServerHostPort
+            from webcompy.ports._server._media_query import ServerMediaQueryPort
 
-            self._di_scope.provide(COOKIE_PORT_KEY, ServerCookiePort())
+            self._di_scope.provide(COOKIE_PORT_KEY, ServerCookiePort(self._cookie_header))
             self._di_scope.provide(DOM_PORT_KEY, ServerDOMPort())
             self._di_scope.provide(FETCH_PORT_KEY, ServerFetchPort())
             self._di_scope.provide(FFI_PORT_KEY, ServerFFIPort())
             self._di_scope.provide(HISTORY_PORT_KEY, ServerHistoryPort(mode=router_mode))
             self._di_scope.provide(HOST_PORT_KEY, ServerHostPort())
+            self._di_scope.provide(MEDIA_QUERY_PORT_KEY, ServerMediaQueryPort())
 
         _register_deferred_components()
 
         app._plugin_manager.init_render_context(self)
+
+        from webcompy.ui.theme._manager import ThemeManager
+        from webcompy.ui.theme._theme import THEME_KEY, Theme
+
+        theme_value = self._initial_theme
+        if theme_value is None:
+            if ENVIRONMENT == "pyscript":
+                from webcompy.ui.theme._cookie import read_theme_cookie_value
+
+                theme_value = read_theme_cookie_value()
+            if theme_value is None:
+                config_theme = self._config.theme
+                if config_theme is not None and "default" in config_theme:
+                    theme_value = Theme(config_theme["default"])
+                else:
+                    theme_value = Theme.SYSTEM
+        if not isinstance(theme_value, Theme):
+            try:
+                theme_value = Theme(str(theme_value).lower())
+            except ValueError:
+                theme_value = Theme.SYSTEM
+        manager = ThemeManager(self._app, self, theme_value)
+        self._di_scope.provide(THEME_KEY, manager)
 
         self._record_phase("imports_done")
 
@@ -123,6 +161,7 @@ class RenderContext:
             self._di_scope,
             app=self._app,
         )
+        manager.register_style()
 
         app._apply_deferred_ops(self)
 
@@ -230,6 +269,10 @@ class RenderContext:
     ) -> None:
         self._check_disposed()
         return self._root.append_script(attributes, script, in_head)
+
+    def append_style(self, content: Any) -> None:
+        self._check_disposed()
+        return self._root.append_style(content)
 
     def set_head(self, head: Any) -> None:
         self._check_disposed()

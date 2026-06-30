@@ -4,6 +4,7 @@ import hashlib
 import logging
 from collections.abc import Callable, Coroutine
 from typing import (
+    TYPE_CHECKING,
     Any,
     Generic,
     Literal,
@@ -20,6 +21,11 @@ from webcompy.exception import WebComPyException
 
 class WebComPyComponentException(WebComPyException):
     pass
+
+
+if TYPE_CHECKING:
+    from webcompy.components._generator import ComponentGenerator
+    from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
 
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
@@ -54,6 +60,7 @@ class Context(Generic[PropsType]):
         meta_getter: Callable[[], dict[str, dict[str, str]]],
         title_setter: Callable[[str], None],
         meta_setter: Callable[[str, dict[str, str]], None],
+        generator: ComponentGenerator[PropsType] | None = None,
     ) -> None:
         self.__props = props
         self.__slots = slots
@@ -65,6 +72,7 @@ class Context(Generic[PropsType]):
         self.__meta_getter = meta_getter
         self.__title_setter = title_setter
         self.__meta_setter = meta_setter
+        self._generator = generator
 
     @property
     def props(self) -> PropsType:
@@ -109,6 +117,97 @@ class Context(Generic[PropsType]):
 
         _provide(key, value)
 
+    def use_reactive_scoped_style(self, style: ReactiveScopedStyle) -> None:
+        if self._generator is None:
+            raise WebComPyException(
+                "use_reactive_scoped_style() must be called from inside a @define_component "
+                "setup function; the current Context has no associated ComponentGenerator"
+            )
+        from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
+
+        if not isinstance(style, ReactiveScopedStyle):
+            raise WebComPyException(
+                "use_reactive_scoped_style() expects a ReactiveScopedStyle instance; "
+                "create one via reactive_scoped_style(func) before passing it"
+            )
+
+        is_first_use = style not in self._generator._reactive_styles
+        if is_first_use:
+            style._bind(self._generator._id)
+            self._generator._reactive_styles.append(style)
+
+        from webcompy.utils import ENVIRONMENT
+
+        if ENVIRONMENT == "pyscript":
+            from webcompy.components._hooks import on_before_destroy
+            from webcompy.di import inject
+            from webcompy.ports._keys import DOM_PORT_KEY
+            from webcompy.signal._graph import consumer_destroy
+
+            def _release_one_ref() -> None:
+                style.decrement_ref()
+                if style.ref_count == 0 and style.subscription is not None:
+                    consumer_destroy(style.subscription)
+                    style.set_subscription(None)
+
+            on_before_destroy(_release_one_ref)
+
+            if is_first_use:
+                idx = len(self._generator._reactive_styles) - 1
+                attr_value = f"{self._generator._id}-{idx}"
+                css_computed = style._css_computed
+                if css_computed is None:
+                    raise WebComPyException("ReactiveScopedStyle is not bound; _bind() should have been called")
+
+                def _update_text_content(v: str, _attr: str = attr_value) -> None:
+                    _dom = inject(DOM_PORT_KEY)
+                    el = _dom.query_selector(f'style[data-webcompy-cid-rx="{_attr}"]')
+                    if el is not None:
+                        el.textContent = v
+
+                subscription = css_computed.on_after_updating(_update_text_content)
+                style.set_subscription(subscription)
+
+            style.increment_ref()
+
+    def remove_reactive_scoped_style(self, style: ReactiveScopedStyle) -> None:
+        """Remove a previously-registered reactive scoped style.
+
+        The style is removed from the generator's ``_reactive_styles`` list
+        and its reference count is decremented. If the reference count
+        reaches zero (no other instance is using the style), the DOM
+        subscription is disposed and will no longer fire on signal changes.
+
+        Note: any ``<style data-webcompy-cid-rx="...">`` element that was
+        already emitted to the DOM is left in place. The next full
+        head-element render pass is responsible for reconciling (removing)
+        elements whose corresponding style has been removed.
+        """
+        if self._generator is None:
+            raise WebComPyException(
+                "remove_reactive_scoped_style() must be called from inside a @define_component "
+                "setup function; the current Context has no associated ComponentGenerator"
+            )
+        from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
+
+        if not isinstance(style, ReactiveScopedStyle):
+            raise WebComPyException(
+                "remove_reactive_scoped_style() expects a ReactiveScopedStyle instance; "
+                "create one via reactive_scoped_style(func) before passing it"
+            )
+
+        if style not in self._generator._reactive_styles:
+            return
+
+        style.mark_removed()
+        self._generator._reactive_styles.remove(style)
+        style.decrement_ref()
+        if style.ref_count == 0 and style.subscription is not None:
+            from webcompy.signal._graph import consumer_destroy
+
+            consumer_destroy(style.subscription)
+            style.set_subscription(None)
+
     def __get_lifecyclehooks__(self) -> _Lifecyclehooks:
         hooks: _Lifecyclehooks = {}
         if self.__on_before_rendering:
@@ -145,6 +244,10 @@ class ComponentContext(Protocol[PropsType]):
     def set_meta(self, key: str, attributes: dict[str, str]) -> None: ...
 
     def provide(self, key: object, value: Any) -> None: ...
+
+    def use_reactive_scoped_style(self, style: ReactiveScopedStyle) -> None: ...
+
+    def remove_reactive_scoped_style(self, style: ReactiveScopedStyle) -> None: ...
 
 
 @final

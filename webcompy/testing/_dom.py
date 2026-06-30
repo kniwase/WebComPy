@@ -43,6 +43,14 @@ class FakeDOMNode(VirtualDOMNode):
         else:
             super().__setattr__(name, value)
 
+    def __getattribute__(self, name: str) -> object:
+        if name == "innerHTML":
+            try:
+                return object.__getattribute__(self, "_innerHTML")
+            except AttributeError:
+                return None
+        return object.__getattribute__(self, name)
+
     def __getattr__(self, name: str) -> object:
         if name.startswith("_VirtualDOMNode__"):
             raise AttributeError(name)

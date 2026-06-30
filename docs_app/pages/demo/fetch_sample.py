@@ -9,7 +9,7 @@ from ...components.demo_display import DemoDisplay
 def FetchSamplePage(context: ComponentContext[RouterContext]):
     context.set_title("Fetch Sample - WebCompy Demo")
     return html.DIV(
-        {"class": "container"},
+        {"class": "page-container"},
         DemoDisplay(
             {
                 "title": "Fetch Sample",

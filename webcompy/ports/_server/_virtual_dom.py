@@ -86,6 +86,7 @@ class VirtualDOMNode:
         self._webcompy_node: bool = True
         self._webcompy_prerendered_node: bool = False
         self._dom_properties: dict[str, Any] = {}
+        self._innerHTML: str | None = None
 
     @property
     def __webcompy_node__(self) -> bool:
@@ -246,6 +247,9 @@ class VirtualDOMNode:
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __setattr__(self, name: str, value: Any) -> None:
+        if name == "innerHTML":
+            object.__setattr__(self, "_innerHTML", value)
+            return
         if name.startswith("_") or name in {
             "nodeName",
             "nodeType",
@@ -261,6 +265,11 @@ class VirtualDOMNode:
             object.__setattr__(self, name, value)
         else:
             self._dom_properties[name] = value
+
+    def __getattribute__(self, name: str) -> Any:
+        if name == "innerHTML":
+            return object.__getattribute__(self, "_innerHTML")
+        return object.__getattribute__(self, name)
 
 
 def _as_virtual(node: DOMNode) -> VirtualDOMNode:

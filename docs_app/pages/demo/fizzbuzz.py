@@ -9,6 +9,6 @@ from ...components.demo_display import DemoDisplay
 def FizzbuzzPage(context: ComponentContext[RouterContext]):
     context.set_title("FizzBuzz - WebCompy Demo")
     return html.DIV(
-        {"class": "container"},
+        {"class": "page-container"},
         DemoDisplay({"title": "FizzBuzz", "app_name": "fizzbuzz", "demo_path": "/_demos/fizzbuzz/app.py"}),
     )

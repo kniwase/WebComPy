@@ -5,16 +5,22 @@
 Composables are reusable stateful logic functions that encapsulate signal state and lifecycle behavior for use inside function-style component setup functions. They provide a composable alternative to class inheritance for sharing logic across components. Instead of extending a base class, a component calls composable functions during setup, and the returned signal values integrate with the component's template and lifecycle.
 
 WebComPy provides built-in composables (`useAsyncResult`, `useAsync`) for common async patterns, and standalone lifecycle decorators (`@on_before_rendering`, `@on_after_rendering`, `@on_before_destroy`) that register hooks implicitly via context variables.
-
 ## Requirements
-
 ### Requirement: Composables shall be reusable stateful logic functions
-Composables SHALL be plain Python functions (or function calls) that encapsulate signal state and lifecycle logic for use inside function-style component setup functions. They SHALL be callable inside a `@define_component` setup function and return values that integrate with the signal system (Signal, Computed, AsyncResult, etc.).
+
+Composables SHALL be plain Python functions (or function calls) that encapsulate signal state and lifecycle logic for use inside function-style component setup functions. They SHALL be callable inside a `@define_component` setup function and return values that integrate with the signal system (Signal, Computed, AsyncResult, etc.). WebComPy provides built-in composables (`useAsyncResult`, `useAsync`, and `use_theme`) for common patterns, and standalone lifecycle decorators (`@on_before_rendering`, `@on_after_rendering`, `@on_before_destroy`) that register hooks implicitly via context variables.
 
 #### Scenario: Using a composable inside a component
+
 - **WHEN** a developer calls a composable function inside a `@define_component` setup function
 - **THEN** the returned signal values SHALL be usable in the component's template
 - **AND** any lifecycle hooks registered by the composable SHALL fire at the correct times
+
+#### Scenario: Using use_theme inside a component
+
+- **WHEN** a developer calls `use_theme()` inside a `@define_component` setup function
+- **THEN** the returned `Signal[Theme]` SHALL be usable in the component's template (e.g., to render a theme-aware label)
+- **AND** the returned `ThemeController` SHALL be usable in event handlers (e.g., `@click` callbacks)
 
 ### Requirement: Standalone lifecycle hooks shall register without explicit context
 `@on_before_rendering`, `@on_after_rendering`, and `@on_before_destroy` SHALL be module-level decorators that register lifecycle hooks using the active component context from `contextvars.ContextVar`. They SHALL NOT require an explicit `context` parameter.
@@ -165,3 +171,54 @@ A composable function SHALL create `Signal`, `Computed`, and/or `effect` instanc
 - **WHEN** a composable is called outside any effect scope (e.g., in a standalone script)
 - **THEN** effects created by the composable SHALL still function
 - **BUT** cleanup SHALL be the caller's responsibility via explicit `scope.dispose()` or manual `consumer_destroy()`
+
+### Requirement: use_theme shall return a Signal and ThemeController pair for theme manipulation
+
+The framework SHALL provide a `webcompy.ui.composables.use_theme` (also re-exported from `webcompy.ui.theme`) composable function. When called inside a component's setup function, it SHALL return a `(Signal[Theme], ThemeController)` tuple where the signal reflects the current theme state of the active `ThemeManager` and the controller exposes `set(theme)`, `toggle()`, and `cycle()` methods.
+
+#### Scenario: Reading the current theme from a component
+
+- **WHEN** a developer writes `theme, controller = use_theme()` inside a `@define_component` setup function
+- **THEN** `theme.value` SHALL return the current `Theme` value
+- **AND** the value SHALL update reactively when the `ThemeManager`'s signal changes
+- **AND** calling `controller.set(Theme.DARK)` SHALL update both the signal and the `<html>` `data-theme` attribute
+
+#### Scenario: Calling use_theme outside a component setup
+
+- **WHEN** `use_theme()` is called outside of a component setup function
+- **THEN** the framework SHALL raise a `LookupError` with a message indicating that `use_theme` must be called inside a component setup context
+
+### Requirement: use_theme shall integrate with the framework's DI scope
+
+`use_theme()` SHALL resolve the active `ThemeManager` from the application DI scope. The same `ThemeManager` instance SHALL be returned to all components within the same app, ensuring consistent theme state across the app.
+
+#### Scenario: Two components share the same ThemeManager
+
+- **WHEN** component A calls `use_theme()` and component B calls `use_theme()` in the same app
+- **THEN** both calls SHALL return signals bound to the same `ThemeManager`
+- **AND** updating the theme from component A SHALL be visible in component B's signal
+
+### Requirement: use_theme shall be importable from the public `webcompy.ui.theme` and `webcompy.ui.composables` paths
+
+`use_theme` SHALL be importable from both `webcompy.ui.theme` and `webcompy.ui.composables`. Both import paths SHALL refer to the same function object. The function body SHALL declare its framework dependencies (the active `ThemeManager` and friends) via lazy imports inside the function body to avoid the circular import that arises from the public re-export chain.
+
+The previously private `webcompy.ui._composables` module path SHALL NOT be part of the public API; user code that imports from it will fail because the module is removed.
+
+#### Scenario: Importing use_theme from webcompy.ui.theme
+- **WHEN** a developer writes `from webcompy.ui.theme import use_theme`
+- **THEN** the import SHALL succeed
+- **AND** the imported `use_theme` SHALL be callable
+
+#### Scenario: Importing use_theme from webcompy.ui.composables
+- **WHEN** a developer writes `from webcompy.ui.composables import use_theme`
+- **THEN** the import SHALL succeed
+- **AND** the imported `use_theme` SHALL be callable
+
+#### Scenario: Both public import paths refer to the same function
+- **WHEN** a developer imports `use_theme` from both `webcompy.ui.theme` and `webcompy.ui.composables`
+- **THEN** the two imported objects SHALL be the same callable
+
+#### Scenario: Private underscore path is not part of the public API
+- **WHEN** a developer writes `from webcompy.ui._composables import use_theme`
+- **THEN** the import SHALL fail (the module is not part of the public API)
+

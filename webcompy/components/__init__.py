@@ -16,18 +16,24 @@ from webcompy.components._libs import (
     ComponentProperty,
     WebComPyComponentException,
 )
+from webcompy.components._reactive_scoped_style import (
+    ReactiveScopedStyle,
+    reactive_scoped_style,
+)
 
 __all__ = [
     "Component",
     "ComponentContext",
     "ComponentGenerator",
     "ComponentProperty",
+    "ReactiveScopedStyle",
     "WebComPyComponentException",
     "_active_component_context",
     "define_component",
     "on_after_rendering",
     "on_before_destroy",
     "on_before_rendering",
+    "reactive_scoped_style",
     "useAsync",
     "useAsyncResult",
 ]

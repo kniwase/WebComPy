@@ -88,3 +88,59 @@ class TextElement(ElementAbstract):
         node = self._get_node()
         if node:
             node.textContent = new_text if isinstance(new_text, str) else str(new_text)
+
+
+class RawHTMLElement(ElementAbstract):
+    def __init__(self, html: str | SignalBase[Any], *, wrapper: str = "span") -> None:
+        self._html = html
+        self._wrapper = wrapper
+        super().__init__()
+        if isinstance(self._html, SignalBase):
+            self._add_callback_node(self._html.on_after_updating(self._update_html))
+
+    def _adopt_node(self, node: DOMNode) -> None:
+        self._node_cache = node
+        self._mounted = True
+        node.__webcompy_node__ = True
+        self._apply_html(node)
+
+    def _node_matches_existing(self, existing: DOMNode) -> bool:
+        return existing.nodeName.lower() == self._wrapper
+
+    def _init_node(self) -> DOMNode:
+        existing_node = self._get_existing_node()
+        if existing_node:
+            if (
+                getattr(existing_node, "__webcompy_prerendered_node__", False)
+                and existing_node.nodeName.lower() == self._wrapper
+            ):
+                self._adopt_node(existing_node)
+                return existing_node
+            else:
+                existing_node.remove()
+        node = self._create_node()
+        self._init_new_node(node)
+        return node
+
+    def _create_node(self) -> DOMNode:
+        node = inject(DOM_PORT_KEY).create_element(self._wrapper)
+        self._apply_html(node)
+        return node
+
+    def _apply_html(self, node: DOMNode) -> None:
+        value = self._get_html()
+        if hasattr(node, "innerHTML"):
+            node.innerHTML = value
+        else:
+            node.textContent = value
+
+    def _get_html(self) -> str:
+        if isinstance(self._html, SignalBase):
+            value = self._html.value
+            return value if isinstance(value, str) else str(value)
+        return self._html
+
+    def _update_html(self, _new_html: Any) -> None:
+        node = self._get_node()
+        if node:
+            self._apply_html(node)
