@@ -1,0 +1,43 @@
+name: Feature Request
+description: Suggest an idea or enhancement for WebComPy
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature!
+        Major features go through the [OpenSpec workflow](CONTRIBUTING.md#the-development-workflow)
+        for structured proposal, design, and implementation planning.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem would this feature solve? What use case does it address?
+      placeholder: |
+        When building X, I need to do Y but currently have to work around it because...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like this to work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What workarounds or alternative approaches have you considered?
+
+  - type: checkboxes
+    id: openspec
+    attributes:
+      label: OpenSpec Proposal
+      description: Formalizing this feature through the OpenSpec workflow helps align design, specs, and tasks before implementation starts.
+      options:
+        - label: I can help create an OpenSpec proposal for this feature

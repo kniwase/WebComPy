@@ -1,0 +1,88 @@
+name: Bug Report
+description: Report a bug to help us improve WebComPy
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Where does the bug occur?
+      options:
+        - Browser (PyScript runtime)
+        - Server (CLI / dev server / SSG)
+        - Both
+    validations:
+      required: true
+
+  - type: input
+    id: webcompy-version
+    attributes:
+      label: WebComPy Version
+      placeholder: e.g., 0.8.0
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version
+      placeholder: e.g., 3.12
+    validations:
+      required: true
+
+  - type: input
+    id: browser-version
+    attributes:
+      label: Browser (if applicable)
+      description: Browser name and version where the bug occurs
+      placeholder: e.g., Chrome 125, Firefox 128
+
+  - type: input
+    id: pyscript-version
+    attributes:
+      label: PyScript / Pyodide Version (if applicable)
+      placeholder: e.g., PyScript 2024.11.1, Pyodide 0.26.0
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Clear steps to reproduce the bug
+      placeholder: |
+        1. Create a component with ...
+        2. Call ...
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen?
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happens?
+
+  - type: textarea
+    id: relevant-spec
+    attributes:
+      label: Relevant Spec (optional)
+      description: If you know which OpenSpec spec might be affected, link to it
+      placeholder: e.g., openspec/specs/reactive/spec.md
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console Logs / Screenshots
+      description: Paste console output, error messages, or attach screenshots
+      placeholder: Paste logs here (browser console, server stdout, etc.)

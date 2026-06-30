@@ -7,6 +7,20 @@ on:
     branches: [main]
 
 jobs:
+  detect-scope:
+    runs-on: ubuntu-latest
+    outputs:
+      has-code-changes: ${{ steps.check.outputs.has-code-changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: check
+        run: |
+          CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD)
+          CODE=$(echo "$CHANGED" | grep -v '^openspec/' | grep -v '^$' || true)
+          echo "has-code-changes=$([ -n "$CODE" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
   openspec:
     if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
@@ -57,7 +71,8 @@ jobs:
           done
 
   lint:
-    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
+    needs: [detect-scope]
+    if: ${{ needs.detect-scope.outputs.has-code-changes == 'true' && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -82,7 +97,8 @@ jobs:
             ci-lint-format.log
 
   typecheck:
-    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
+    needs: [detect-scope]
+    if: ${{ needs.detect-scope.outputs.has-code-changes == 'true' && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -101,7 +117,8 @@ jobs:
           path: ci-typecheck-pyright.log
 
   generate:
-    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
+    needs: [detect-scope]
+    if: ${{ needs.detect-scope.outputs.has-code-changes == 'true' && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -116,7 +133,8 @@ jobs:
           if-no-files-found: error
 
   test:
-    if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
+    needs: [detect-scope]
+    if: ${{ needs.detect-scope.outputs.has-code-changes == 'true' && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -142,8 +160,8 @@ jobs:
           path: ci-test-results.log
 
   e2e-matrix:
-    if: ${{ !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
-    needs: [lint, typecheck, generate, test]
+    if: ${{ needs.detect-scope.outputs.has-code-changes == 'true' && !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
+    needs: [detect-scope, lint, typecheck, generate, test]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -225,7 +243,7 @@ jobs:
   review:
     name: AI Code Review
     if: ${{ success() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
-    needs: [openspec, openspec-check, lint, typecheck, generate, test, e2e-matrix]
+    needs: [detect-scope, openspec, openspec-check, lint, typecheck, generate, test, e2e-matrix]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
@@ -498,6 +516,23 @@ jobs:
             | awk '/^diff --git /{in_skip=0} /^diff --git .*(uv\.lock|package-lock\.json)$/{in_skip=1} !in_skip' \
             > .tmp/pr-diff.txt
 
+      - name: Write scope context
+        id: scope-context
+        run: |
+          if [ "${{ needs.detect-scope.outputs.has-code-changes }}" = "false" ]; then
+            cat > .tmp/scope-context.txt <<'SCOPE_EOF'
+This PR contains only OpenSpec proposal artifacts.
+No implementation code is included.
+Focus review on:
+- Design correctness and completeness
+- Spec consistency with existing specs
+- Task clarity and feasibility
+- Non-goals vs scope alignment
+SCOPE_EOF
+          else
+            echo "Code-change PR — no special scope context." > .tmp/scope-context.txt
+          fi
+
       - name: Write CI results to file
         env:
           CI_RESULTS: ${{ env.CI_RESULTS }}
@@ -598,7 +633,7 @@ jobs:
              attempt=$((attempt + 1))
 
              RETRY_MSG=""
-             FILES=(--file .tmp/pr-diff.txt --file .tmp/pr-diff-since-last.txt --file .tmp/pr-context.txt --file .tmp/ci-results.txt)
+              FILES=(--file .tmp/pr-diff.txt --file .tmp/pr-diff-since-last.txt --file .tmp/pr-context.txt --file .tmp/ci-results.txt --file .tmp/scope-context.txt)
              if [ $attempt -gt 1 ]; then
                FILES+=(--file .tmp/review-raw-output.log)
                RETRY_MSG="
