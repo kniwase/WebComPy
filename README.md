@@ -41,10 +41,10 @@ poetry run python -m webcompy start --dev
 
 ### pip
 ```
+mkdir my-project && cd my-project
 pip install webcompy
-webcompy init my-project
-cd my-project
-webcompy start --dev
+python -m webcompy init
+python -m webcompy start --dev
 ```
 
 > Note: `uv init` creates a stub `hello.py` that can be deleted after running `webcompy init`.
@@ -54,7 +54,7 @@ then access [http://127.0.0.1:8080/](http://127.0.0.1:8080/)
 For static site generation:
 
 ```
-webcompy generate
+python -m webcompy generate
 ```
 
 ## Documents and Demos
