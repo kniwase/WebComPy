@@ -25,39 +25,22 @@
 
 ## はじめ方
 
-### uv（推奨）
-```
-uv init my-project && cd my-project
-uv add webcompy
-uv run python -m webcompy init
-uv run python -m webcompy start --dev
-```
-
-### poetry
-```
-poetry new my-project && cd my-project
-poetry add webcompy
-poetry run python -m webcompy init
-poetry run python -m webcompy start --dev
-```
-
-### pip
-```
+```bash
 pip install webcompy
 webcompy init my-project
 cd my-project
 webcompy start --dev
 ```
 
-> 注: `uv init` は `hello.py` を作成します。`webcompy init` 実行後に削除して構いません。
-
 その後 [http://127.0.0.1:8080/](http://127.0.0.1:8080/) にアクセスしてください。
 
 静的サイトを生成する場合:
 
-```
+```bash
 webcompy generate
 ```
+
+> 開発環境のセットアップ（uv sync、lint、テスト）については [CONTRIBUTING.ja.md](CONTRIBUTING.ja.md) を参照してください。
 
 ## ドキュメントとデモ
 
