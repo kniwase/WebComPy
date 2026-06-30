@@ -5,10 +5,11 @@ import pytest
 from tests.conftest import MockHistoryPort
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import PluginScript, WebComPyAppConfig
-from webcompy.cli._html import generate_html
 from webcompy.plugin._manager import PluginManager
 from webcompy.plugin._plugin import WebComPyPlugin, WebComPyPluginException
 from webcompy.router._router import Router
+from webcompy_server import configure_server_context
+from webcompy_server._html import generate_html
 
 
 class _TestApp:
@@ -22,6 +23,7 @@ class _TestApp:
 
         config = WebComPyAppConfig(plugins=plugins or [])
         self.app = WebComPyApp(root_component=_TestRoot, config=config)
+        configure_server_context(self.app)
 
 
 class TestWebComPyPlugin:

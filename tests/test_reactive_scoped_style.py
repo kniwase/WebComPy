@@ -187,7 +187,7 @@ class TestGeneratorReactiveStylesTracking:
         from webcompy.components._libs import Context
         from webcompy.di._scope import DIScope
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         gen = ComponentGenerator("DestroyComp", _noop)
         style = reactive_scoped_style(lambda: {".x": {"color": "blue"}})
@@ -242,7 +242,7 @@ class TestGeneratorReactiveStylesTracking:
         from webcompy.components._libs import Context
         from webcompy.di._scope import DIScope
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         gen = ComponentGenerator("MultiInstance", _noop)
         style = reactive_scoped_style(lambda: {".x": {"color": "blue"}})
@@ -349,7 +349,7 @@ class TestGeneratorReactiveStylesTracking:
         from webcompy.components._libs import Context
         from webcompy.di._scope import DIScope
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         gen = ComponentGenerator("Removeable", _noop)
         style = reactive_scoped_style(lambda: {".x": {"color": "blue"}})
@@ -466,7 +466,7 @@ class TestHeadElementBrowserPath:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         gen = ComponentGenerator("RxComp", _noop)
         style = reactive_scoped_style(lambda: {".dyn": {"color": "red"}})
@@ -508,7 +508,7 @@ class TestHeadElementBrowserPath:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         gen = ComponentGenerator("SigComp", _noop)
         color = Signal("blue")
@@ -565,7 +565,7 @@ class TestHeadElementSSRPath:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.ports._server._dom import ServerDOMPort
+        from webcompy_server.ports._dom import ServerDOMPort
 
         gen = ComponentGenerator("SsrComp", _noop)
         style = reactive_scoped_style(lambda: {".dyn": {"color": "red"}})

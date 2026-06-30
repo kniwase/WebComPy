@@ -1,15 +1,12 @@
 import hashlib
-import pathlib
 import re
 import zipfile
 
-from webcompy.cli._wheel_builder import (
+from webcompy_cli._wheel_builder import (
     _assets_to_package_data,
     _collect_package_files,
     _discover_packages,
-    _filter_excluded_subpackages,
     _generate_assets_registry,
-    _is_browser_excluded,
     _normalize_name,
     _sha256_b64,
     _write_metadata,
@@ -473,66 +470,6 @@ class TestMakeWebcompyAppPackageWithAssets:
             assert "myapp/_assets_registry.py" not in names
 
 
-class TestFilterExcludedSubpackages:
-    def test_excludes_specified_subpackages(self):
-        packages = ["webcompy", "webcompy.cli", "webcompy.cli._server", "webcompy.app", "webcompy.elements"]
-        result = _filter_excluded_subpackages(packages, {"webcompy.cli"})
-        assert "webcompy" in result
-        assert "webcompy.cli" not in result
-        assert "webcompy.cli._server" not in result
-        assert "webcompy.app" in result
-        assert "webcompy.elements" in result
-
-    def test_excludes_dotted_path_pattern(self):
-        packages = [
-            "webcompy",
-            "webcompy.ports",
-            "webcompy.ports._dom",
-            "webcompy.ports._server",
-            "webcompy.ports._server._cookie",
-            "webcompy.app",
-        ]
-        result = _filter_excluded_subpackages(packages, {"webcompy.ports._server"})
-        assert "webcompy" in result
-        assert "webcompy.ports" in result
-        assert "webcompy.ports._dom" in result
-        assert "webcompy.ports._server" not in result
-        assert "webcompy.ports._server._cookie" not in result
-        assert "webcompy.app" in result
-
-    def test_no_exclude_returns_all(self):
-        packages = ["webcompy", "webcompy.cli", "webcompy.app"]
-        result = _filter_excluded_subpackages(packages, set())
-        assert result == packages
-
-    def test_different_top_level(self):
-        packages = ["myapp", "myapp.cli", "myapp.views"]
-        result = _filter_excluded_subpackages(packages, {"myapp.cli"})
-        assert "myapp" in result
-        assert "myapp.cli" not in result
-        assert "myapp.views" in result
-
-
-class TestIsBrowserExcluded:
-    def test_single_part_match(self):
-        assert _is_browser_excluded("webcompy/cli/__init__.py", {"webcompy.cli"}) is True
-
-    def test_single_part_no_match(self):
-        assert _is_browser_excluded("webcompy/app/__init__.py", {"webcompy.cli"}) is False
-
-    def test_multi_part_match(self):
-        assert _is_browser_excluded("webcompy/ports/_server/_cookie.py", {"webcompy.ports._server"}) is True
-
-    def test_multi_part_partial_no_match(self):
-        assert _is_browser_excluded("webcompy/ports/_dom.py", {"webcompy.ports._server"}) is False
-
-    def test_multi_part_child_match(self):
-        assert _is_browser_excluded("webcompy/ports/_server/_cookie.py", {"webcompy.ports._server"}) is True
-
-    def test_different_top_level(self):
-        assert _is_browser_excluded("myapp/cli/something.py", {"webcompy.cli"}) is False
-
-
 class TestContentHashWheel:
     def test_filename_contains_sha_hash(self, tmp_path):
         webcompy_pkg = tmp_path / "webcompy"
@@ -613,8 +550,8 @@ class TestContentHashWheel:
             assert dist_info_dirs.pop().startswith("myapp-0+sha.")
 
 
-class TestMakeWebcompyAppPackageExcludesCli:
-    def test_excludes_cli_directory(self, tmp_path):
+class TestMakeWebcompyAppPackageDoesNotExcludeCli:
+    def test_includes_cli_directory(self, tmp_path):
         webcompy_pkg = tmp_path / "webcompy"
         webcompy_pkg.mkdir()
         (webcompy_pkg / "__init__.py").write_text("")
@@ -641,10 +578,8 @@ class TestMakeWebcompyAppPackageExcludesCli:
             names = zf.namelist()
             assert "webcompy/__init__.py" in names
             assert "webcompy/app/__init__.py" in names
-            cli_files = [n for n in names if n.startswith("webcompy/cli/")]
-            assert len(cli_files) == 0
-            assert "webcompy/cli/__init__.py" not in names
-            assert "webcompy/cli/_server.py" not in names
+            assert "webcompy/cli/__init__.py" in names
+            assert "webcompy/cli/_server.py" in names
 
     def test_content_hash_filename(self, tmp_path):
         webcompy_pkg = tmp_path / "webcompy"
@@ -664,7 +599,7 @@ class TestMakeWebcompyAppPackageExcludesCli:
         )
         assert re.match(r"myapp-0\+sha\.[0-9a-f]{8}-py3-none-any\.whl", result.name)
 
-    def test_top_level_excludes_cli(self, tmp_path):
+    def test_top_level_includes_cli(self, tmp_path):
         webcompy_pkg = tmp_path / "webcompy"
         webcompy_pkg.mkdir()
         (webcompy_pkg / "__init__.py").write_text("")
@@ -815,14 +750,16 @@ class TestMakeBrowserWebcompyWheel:
         (webcompy / "cli" / "server.py").write_text("# server-only")
         return webcompy
 
-    def test_excludes_cli(self, tmp_path):
+    def test_contains_all_source_files(self, tmp_path):
         webcompy = self._create_package(tmp_path)
         dest = tmp_path / "dist"
         dest.mkdir()
         result = make_browser_webcompy_wheel(webcompy, dest, "0.0.1")
         with zipfile.ZipFile(result) as zf:
             names = zf.namelist()
-            assert not any("cli" in pathlib.Path(n).parts for n in names)
+            # All source files are included (no Browser-only exclude logic)
+            assert "webcompy/cli/__init__.py" in names
+            assert "webcompy/cli/server.py" in names
 
     def test_contains_framework(self, tmp_path):
         webcompy = self._create_package(tmp_path)

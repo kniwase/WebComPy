@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from webcompy.cli._utils import ensure_webcompy_modules_dir
+from webcompy_cli._utils import ensure_webcompy_modules_dir
 
 
 def test_ensure_webcompy_modules_dir_creates_directory_and_gitignore(tmp_path):

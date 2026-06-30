@@ -106,7 +106,7 @@ class TestElementNoBrowser:
     def test_init_node_works_with_server_dom_port(self):
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.ports._server._dom import ServerDOMPort
+        from webcompy_server.ports._dom import ServerDOMPort
 
         port = ServerDOMPort()
         scope = DIScope()
@@ -133,7 +133,7 @@ class TestElementNoBrowser:
     def test_text_init_node_works_with_server_dom_port(self):
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.ports._server._dom import ServerDOMPort
+        from webcompy_server.ports._dom import ServerDOMPort
 
         port = ServerDOMPort()
         scope = DIScope()
@@ -160,7 +160,7 @@ class TestElementNoBrowser:
     def test_newline_init_node_works_with_server_dom_port(self):
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.ports._server._dom import ServerDOMPort
+        from webcompy_server.ports._dom import ServerDOMPort
 
         port = ServerDOMPort()
         scope = DIScope()
@@ -210,7 +210,7 @@ class TestTextElementWithBrowser:
     def test_text_update_without_browser(self):
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.ports._server._dom import ServerDOMPort
+        from webcompy_server.ports._dom import ServerDOMPort
 
         port = ServerDOMPort()
         scope = DIScope()

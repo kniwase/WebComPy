@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from webcompy.app._config import WebComPyAppConfig
-from webcompy.cli.config._build_config import WebComPyBuildConfig
-from webcompy.cli.config._server_config import LockfileSyncConfig, WebComPyServerConfig
+from webcompy_cli.config._build_config import WebComPyBuildConfig
+from webcompy_cli.config._server_config import LockfileSyncConfig, WebComPyServerConfig
 
 
 class TestWebComPyAppConfig:

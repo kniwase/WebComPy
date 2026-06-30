@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from webcompy.components._generator import define_component
-from webcompy.testing import create_test_app
+from webcompy_testing import create_test_app
 
 
 @define_component

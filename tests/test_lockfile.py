@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from webcompy.cli._lockfile import (
+from webcompy_cli._lockfile import (
     Lockfile,
     PurePythonPackageEntry,
     RuntimeAssetEntry,
@@ -459,7 +459,7 @@ class TestLockfileRuntimeServing:
 class TestGenerateLockfileRuntimeAssets:
     def test_runtime_local_populates_urls(self, tmp_path):
 
-        from webcompy.cli._lockfile import generate_lockfile
+        from webcompy_cli._lockfile import generate_lockfile
 
         modules_dir = tmp_path / ".webcompy_modules"
         lockfile, _errors, _warnings = generate_lockfile(
@@ -478,7 +478,7 @@ class TestGenerateLockfileRuntimeAssets:
         assert lockfile.runtime_assets["pyodide.mjs"].sha256 is None
 
     def test_runtime_cdn_no_runtime_assets(self, tmp_path):
-        from webcompy.cli._lockfile import generate_lockfile
+        from webcompy_cli._lockfile import generate_lockfile
 
         modules_dir = tmp_path / ".webcompy_modules"
         lockfile, _errors, _warnings = generate_lockfile(

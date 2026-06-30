@@ -3,7 +3,7 @@ from __future__ import annotations
 import zipfile
 from pathlib import Path
 
-from webcompy.cli._wheel_builder import _collect_package_files, _discover_packages
+from webcompy_cli._wheel_builder import _collect_package_files, _discover_packages
 
 
 def test_collect_package_files_includes_css() -> None:
@@ -34,7 +34,7 @@ def test_collect_package_files_still_includes_py_typed() -> None:
 
 
 def test_browser_wheel_contains_css(tmp_path: Path) -> None:
-    from webcompy.cli._wheel_builder import make_browser_webcompy_wheel
+    from webcompy_cli._wheel_builder import make_browser_webcompy_wheel
 
     pkg_dir = Path(__file__).resolve().parent.parent / "webcompy"
     wheel_path = make_browser_webcompy_wheel(pkg_dir, tmp_path, "0.0.0-test")

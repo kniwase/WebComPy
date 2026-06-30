@@ -5,7 +5,7 @@ import zipfile
 
 import pytest
 
-from webcompy.cli._lockfile import LOCKFILE_NAME, load_lockfile
+from webcompy_cli._lockfile import LOCKFILE_NAME, load_lockfile
 
 E2E_DIR = pathlib.Path(__file__).parent
 
@@ -59,8 +59,8 @@ class TestBundledDepsWheel:
         _, wheel_file, _ = static_site
         with zipfile.ZipFile(wheel_file) as zf:
             names = zf.namelist()
-            cli_files = [n for n in names if n.startswith("webcompy/cli/")]
-            assert len(cli_files) == 0, f"Wheel contains webcompy/cli/ files: {cli_files[:5]}"
+            cli_files = [n for n in names if n.startswith("webcompy_cli/")]
+            assert len(cli_files) == 0, f"Wheel contains webcompy_cli/ files: {cli_files[:5]}"
 
     def test_wheel_top_level_includes_bundled_deps(self, static_site):
         _, wheel_file, _ = static_site

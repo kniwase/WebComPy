@@ -5,12 +5,15 @@ import pytest
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.ports._keys import COOKIE_PORT_KEY
-from webcompy.ports._server._cookie import ServerCookiePort
+from webcompy_server import configure_server_context
+from webcompy_server.ports._cookie import ServerCookiePort
 
 
 @pytest.fixture
 def app() -> WebComPyApp:
-    return WebComPyApp(root_component=lambda _: None, config=WebComPyAppConfig())
+    app = WebComPyApp(root_component=lambda _: None, config=WebComPyAppConfig())
+    configure_server_context(app)
+    return app
 
 
 class TestRenderContextCookieHeader:

@@ -2,8 +2,8 @@ import sys
 
 import pytest
 
-from webcompy.ports._server._virtual_dom import VirtualDOMEvent
-from webcompy.testing import TestRenderer
+from webcompy_server.ports import VirtualDOMEvent
+from webcompy_testing import TestRenderer
 
 E2E_DIR = __import__("pathlib").Path(__file__).parent.parent / "tests" / "e2e"
 
@@ -272,7 +272,7 @@ def test_di_inject_from_app_level():
     from my_app.pages.di_test import DiInjectPage
 
     from webcompy.app import WebComPyApp, WebComPyAppConfig
-    from webcompy.testing import TestRenderer
+    from webcompy_testing import TestRenderer
 
     app = WebComPyApp(root_component=DiInjectPage, config=WebComPyAppConfig(base_url="/"))
     app._di_scope.provide(AppThemeKey, "app-dark-theme")

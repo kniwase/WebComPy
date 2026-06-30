@@ -94,7 +94,7 @@ class TestHeadElementAppStyle:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.ports._server._dom import ServerDOMPort
+        from webcompy_server.ports._dom import ServerDOMPort
 
         port = ServerDOMPort()
         head_props = HeadPropsStore()
@@ -118,7 +118,7 @@ class TestHeadElementAppStyle:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.ports._server._dom import ServerDOMPort
+        from webcompy_server.ports._dom import ServerDOMPort
 
         port = ServerDOMPort()
         head_props = HeadPropsStore()
@@ -147,7 +147,7 @@ class TestHeadElementAppStyle:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.ports._server._dom import ServerDOMPort
+        from webcompy_server.ports._dom import ServerDOMPort
 
         port = ServerDOMPort()
         head_props = HeadPropsStore()
@@ -180,7 +180,7 @@ class TestHeadElementAppStyle:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         head_props = HeadPropsStore()
@@ -211,7 +211,7 @@ class TestHeadElementAppStyle:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         head_props = HeadPropsStore()
@@ -245,7 +245,7 @@ class TestHeadElementAppStyle:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         head_props = HeadPropsStore()
@@ -297,7 +297,7 @@ class TestHeadElementAppStyle:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         head_props = HeadPropsStore()
@@ -357,7 +357,7 @@ class TestHeadElementAppStyle:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         head_props = HeadPropsStore()

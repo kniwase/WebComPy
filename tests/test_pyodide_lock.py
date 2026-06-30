@@ -1,7 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
-from webcompy.cli._pyodide_lock import (
+from webcompy_cli._pyodide_lock import (
     PyodideLockFetchError,
     fetch_pyodide_lock,
     get_pyodide_version,

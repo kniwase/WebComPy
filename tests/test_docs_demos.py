@@ -7,8 +7,8 @@ from webcompy.app._app import WebComPyApp
 from webcompy.di._scope import DIScope
 from webcompy.ports._fetch import Response
 from webcompy.ports._keys import FETCH_PORT_KEY
-from webcompy.ports._server._virtual_dom import VirtualDOMEvent
-from webcompy.testing import FakeFetchPort, TestRenderer, mock_app_run
+from webcompy_server.ports import VirtualDOMEvent
+from webcompy_testing import FakeFetchPort, TestRenderer, mock_app_run
 
 DOCS_APP_DIR = Path(__file__).parent.parent / "docs_app"
 

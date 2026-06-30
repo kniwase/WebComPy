@@ -3,6 +3,7 @@ from unittest.mock import patch
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.components._generator import define_component
+from webcompy_server import configure_server_context
 
 
 @define_component
@@ -17,6 +18,7 @@ def _make_app(**kwargs):
 
 
 def _make_ctx(app, **kwargs):
+    configure_server_context(app)
     return app.create_render_context(**kwargs)
 
 

@@ -5,7 +5,7 @@ import zipfile
 
 import pytest
 
-from webcompy.cli._lockfile import LOCKFILE_NAME, load_lockfile
+from webcompy_cli._lockfile import LOCKFILE_NAME, load_lockfile
 
 E2E_DIR = pathlib.Path(__file__).parent / "e2e"
 

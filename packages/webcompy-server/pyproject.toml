@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "webcompy-server"
+version = "0.0.13"
+description = "WebComPy server-side rendering and HTML generation"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+    { name = "Kento Niwase", email = "kento.niwase@gmail.com" },
+]
+keywords = ["browser", "frontend", "framework", "server"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "webcompy",
+    "httpx",
+]
+
+[project.urls]
+Homepage = "https://github.com/kniwase/WebComPy"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/webcompy_server"]

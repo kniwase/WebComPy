@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from webcompy.cli._console_types import ConsoleMessage
+from webcompy_cli._console_types import ConsoleMessage
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page

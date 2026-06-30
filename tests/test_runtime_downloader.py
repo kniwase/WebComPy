@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from webcompy.cli._runtime_downloader import (
+from webcompy_cli._runtime_downloader import (
     PYODIDE_RUNTIME_ASSETS,
     RuntimeDownloadError,
     download_pyscript_bundle,
@@ -80,7 +80,7 @@ class TestDownloadPyscriptBundle:
         modules_dir = tmp_path / ".webcompy_modules"
 
         with patch(
-            "webcompy.cli._runtime_downloader._download_file",
+            "webcompy_cli._runtime_downloader._download_file",
             side_effect=_make_bundle_and_pyodide_mock(),
         ):
             results = download_pyscript_bundle("2026.3.1", modules_dir)
@@ -102,7 +102,7 @@ class TestDownloadPyscriptBundle:
         modules_dir = tmp_path / ".webcompy_modules"
 
         with patch(
-            "webcompy.cli._runtime_downloader._download_file",
+            "webcompy_cli._runtime_downloader._download_file",
             side_effect=_make_bundle_and_pyodide_mock(),
         ):
             results = download_pyscript_bundle("2026.3.1", modules_dir)
@@ -121,11 +121,11 @@ class TestDownloadPyscriptBundle:
             download_counts["total"] += 1
             return _make_bundle_and_pyodide_mock()(url, dest)
 
-        with patch("webcompy.cli._runtime_downloader._download_file", side_effect=counting_mock):
+        with patch("webcompy_cli._runtime_downloader._download_file", side_effect=counting_mock):
             download_pyscript_bundle("2026.3.1", modules_dir)
             first_count = download_counts["total"]
 
-        with patch("webcompy.cli._runtime_downloader._download_file", side_effect=counting_mock):
+        with patch("webcompy_cli._runtime_downloader._download_file", side_effect=counting_mock):
             download_pyscript_bundle("2026.3.1", modules_dir)
             second_count = download_counts["total"] - first_count
 
@@ -135,7 +135,7 @@ class TestDownloadPyscriptBundle:
         modules_dir = tmp_path / ".webcompy_modules"
 
         with patch(
-            "webcompy.cli._runtime_downloader._download_file",
+            "webcompy_cli._runtime_downloader._download_file",
             side_effect=_make_bundle_and_pyodide_mock(),
         ):
             download_pyscript_bundle("2026.3.1", modules_dir)
@@ -151,7 +151,7 @@ class TestDownloadRuntimeAssets:
         modules_dir = tmp_path / ".webcompy_modules"
 
         with patch(
-            "webcompy.cli._runtime_downloader._download_file",
+            "webcompy_cli._runtime_downloader._download_file",
             side_effect=_make_bundle_and_pyodide_mock(),
         ):
             results = download_runtime_assets(pyodide_version, pyscript_version, modules_dir)
@@ -171,7 +171,7 @@ class TestDownloadRuntimeAssets:
         dest_dir = tmp_path / "output"
 
         with patch(
-            "webcompy.cli._runtime_downloader._download_file",
+            "webcompy_cli._runtime_downloader._download_file",
             side_effect=_make_bundle_and_pyodide_mock(),
         ):
             results = download_runtime_assets(pyodide_version, pyscript_version, modules_dir, dest_dir)
@@ -193,11 +193,11 @@ class TestDownloadRuntimeAssets:
             download_counts["total"] += 1
             return _make_bundle_and_pyodide_mock()(url, dest)
 
-        with patch("webcompy.cli._runtime_downloader._download_file", side_effect=counting_mock):
+        with patch("webcompy_cli._runtime_downloader._download_file", side_effect=counting_mock):
             download_runtime_assets(pyodide_version, pyscript_version, modules_dir)
             first_count = download_counts["total"]
 
-        with patch("webcompy.cli._runtime_downloader._download_file", side_effect=counting_mock):
+        with patch("webcompy_cli._runtime_downloader._download_file", side_effect=counting_mock):
             download_runtime_assets(pyodide_version, pyscript_version, modules_dir)
             second_count = download_counts["total"] - first_count
 
@@ -209,7 +209,7 @@ class TestDownloadRuntimeAssets:
         modules_dir = tmp_path / ".webcompy_modules"
 
         with patch(
-            "webcompy.cli._runtime_downloader._download_file",
+            "webcompy_cli._runtime_downloader._download_file",
             side_effect=_make_bundle_and_pyodide_mock(),
         ):
             results = download_runtime_assets(pyodide_version, pyscript_version, modules_dir)
@@ -227,7 +227,7 @@ class TestDownloadRuntimeAssets:
 
         with (
             patch(
-                "webcompy.cli._runtime_downloader._download_file",
+                "webcompy_cli._runtime_downloader._download_file",
                 side_effect=RuntimeDownloadError("Failed to download: network error"),
             ),
             pytest.raises(RuntimeDownloadError),

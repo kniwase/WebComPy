@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from webcompy.ports._server._virtual_dom import VirtualDOMEvent, VirtualDOMNode
+from webcompy_server.ports import VirtualDOMEvent, VirtualDOMNode
 
 
 class TestVirtualDOMNodeConstruction:

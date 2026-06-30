@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 from webcompy.components._generator import define_component
-from webcompy.testing import create_test_app
+from webcompy_testing import create_test_app
 
 
 @define_component
@@ -18,7 +18,7 @@ def _IsolationRoot(context):
 class TestRequestIsolation:
     @pytest.mark.asyncio
     async def test_contexts_produce_independent_html(self):
-        from webcompy.cli._html import generate_html
+        from webcompy_server._html import generate_html
 
         app = create_test_app(root_component=_IsolationRoot)
 
