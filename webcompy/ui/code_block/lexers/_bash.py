@@ -133,8 +133,7 @@ class BashLexer:
             elif kind in ("string_dq", "string_sq"):
                 yield Token(TokenType.STRING, value)
             elif kind == "variable":
-                name = value[2:-1] if value.startswith("${") and value.endswith("}") else value[1:]
-                yield Token(TokenType.IDENTIFIER, name)
+                yield Token(TokenType.IDENTIFIER, value)
             elif kind == "number":
                 yield Token(TokenType.NUMBER, value)
             elif kind == "word":

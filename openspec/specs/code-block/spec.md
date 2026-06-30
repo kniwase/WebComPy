@@ -119,7 +119,9 @@ The framework SHALL ship three built-in lexers that are registered automatically
 #### Scenario: Bash code is tokenized with regex
 
 - **WHEN** `BashLexer().tokenize("echo $VAR")` is called
-- **THEN** the tokens SHALL include `Token(TokenType.BUILTIN, "echo")` and `Token(TokenType.IDENTIFIER, "VAR")`
+- **THEN** the tokens SHALL include `Token(TokenType.BUILTIN, "echo")` and `Token(TokenType.IDENTIFIER, "$VAR")`
+
+The `$` prefix is preserved in the token value so the rendered HTML faithfully displays the variable syntax (`echo $HOME`, not `echo HOME`). For braced variables, the full `${NAME}` form is preserved (`Token(TokenType.IDENTIFIER, "${PATH}")`).
 
 #### Scenario: TOML code is tokenized with regex
 

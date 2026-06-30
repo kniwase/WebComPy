@@ -242,8 +242,12 @@ class HeadElement(ElementWithChildren):
                 html_el.removeAttribute(key)
 
     def _cleanup_consumers(self):
-        from webcompy.signal._graph import consumer_destroy
         from webcompy.utils import ENVIRONMENT
+
+        if ENVIRONMENT != "pyscript":
+            return
+
+        from webcompy.signal._graph import consumer_destroy
 
         for consumer in self._callback_consumers.values():
             consumer_destroy(consumer)
@@ -251,9 +255,7 @@ class HeadElement(ElementWithChildren):
         for consumer in self._style_callbacks.values():
             consumer_destroy(consumer)
         self._style_callbacks.clear()
-
-        if ENVIRONMENT == "pyscript":
-            self._remove_emitted_style_elements()
+        self._remove_emitted_style_elements()
 
     def _remove_emitted_style_elements(self) -> None:
         """Remove all <style data-webcompy-cid> and
