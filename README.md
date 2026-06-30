@@ -1,32 +1,62 @@
 # WebComPy
 
 ## What is WebComPy
-[WebComPy](https://github.com/kniwase/WebComPy) is Python frontend framework for [PyScript](https://github.com/pyscript/pyscript), which has following features.
+[WebComPy](https://github.com/kniwase/WebComPy) is a Python frontend framework for [PyScript](https://github.com/pyscript/pyscript). It brings a reactive component model to the browser — entirely in Python.
 
-- Component-based declarative rendering
-- Automatic DOM refreshing
-- Built-in router
-- CLI tool (Project template, Build-in HTTP server, Static Site Generator)
-- Type Annotation
+### Features
+
+- **Component-based declarative rendering** — Define UI components as pure Python functions with `@define_component`
+- **Reactive state management** — `Signal`, `Computed`, `ReactiveList`, `ReactiveDict` with automatic DOM diffing
+- **Built-in router** — History and hash mode routing with path parameters
+- **Dependency Injection** — `provide()` / `inject()` pattern for scoped services
+- **Async rendering pipeline** — `async` lifecycle hooks, `AsyncResult`, composable async data fetching
+- **HTTP Client** — Browser-native fetch wrapper with async/await
+- **Plugin system** — Extend apps via `WebComPyPlugin` base class
+- **UI Toolkit** — Theme system (light/dark), `CodeBlock` component, CSS design tokens
+- **Testing module** — `TestRenderer` and fake ports for browserless component testing
+- **Inspector CLI** — Screenshot, console log, DOM query, click, and navigation in headless browser
+- **CLI tools** — Project scaffolding (`init`), dev server (`start`), Static Site Generator (`generate`)
+- **Type annotations** — Full type hints with `.pyi` stubs
 
 ## Get started
+
+### uv (recommended)
 ```
-uv init webcompy-project        # create a new project directory
-cd webcompy-project
-uv add webcompy                 # install webcompy from PyPI
-uv run python -m webcompy init  # scaffold WebComPy project files
+uv init my-project && cd my-project
+uv add webcompy
+uv run python -m webcompy init
 uv run python -m webcompy start --dev
-uv run python -m webcompy generate  # for generating static site
+```
+
+### poetry
+```
+poetry new my-project && cd my-project
+poetry add webcompy
+poetry run python -m webcompy init
+poetry run python -m webcompy start --dev
+```
+
+### pip
+```
+pip install webcompy
+webcompy init my-project
+cd my-project
+webcompy start --dev
 ```
 
 > Note: `uv init` creates a stub `hello.py` that can be deleted after running `webcompy init`.
 
 then access [http://127.0.0.1:8080/](http://127.0.0.1:8080/)
 
+For static site generation:
+
+```
+webcompy generate
+```
+
 ## Documents and Demos
 - [webcompy.net](https://webcompy.net/)
-    * [Source Codes](https://github.com/kniwase/WebComPy/tree/main/docs_app/)
-    * [Generated Files](https://github.com/kniwase/WebComPy/tree/main/docs/)
+    * [Source codes](https://github.com/kniwase/WebComPy/tree/main/docs_app/)
 
 ## Sample Code
 ```python
@@ -148,14 +178,8 @@ def Fizzbuzz(context: ComponentContext[RouterContext]):
 
 ## Contributing
 
-See [AGENTS.md](AGENTS.md) for development setup, tooling, and coding conventions.
-
-## ToDo
-- Add Plugin System
-- UI Skeleton Components (layout, navigation, and responsive scaffolding utilities)
-- RPC Support (browser-to-server remote procedure calls via PyScript)
-- Cloudflare Deployment (static site + Python Workers for RPC)
-- PWA Support (offline-capable mobile apps built entirely in Python)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow, AI agent usage, and PR process.
+For detailed technical reference (commands, invariants, spec mapping), see [AGENTS.md](AGENTS.md).
 
 ## License
 This project is licensed under the MIT License, see the LICENSE.txt file for details.
