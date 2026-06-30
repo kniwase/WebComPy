@@ -3,27 +3,29 @@
 [![en](https://img.shields.io/badge/lang-en-red.svg)](README.md)
 [![ja](https://img.shields.io/badge/lang-ja-green.svg)](README.ja.md)
 
-## What is WebComPy
-[WebComPy](https://github.com/kniwase/WebComPy) is a Python frontend framework for [PyScript](https://github.com/pyscript/pyscript). It brings a reactive component model to the browser — entirely in Python.
+## WebComPy とは
 
-### Features
+[WebComPy](https://github.com/kniwase/WebComPy) は [PyScript](https://github.com/pyscript/pyscript) のための Python フロントエンドフレームワークです。
+リアクティブなコンポーネントモデルをブラウザ上で — すべて Python で — 実現します。
 
-- **Component-based declarative rendering** — Define UI components as pure Python functions with `@define_component`
-- **Reactive state management** — `Signal`, `Computed`, `ReactiveList`, `ReactiveDict` with automatic DOM diffing
-- **Built-in router** — History and hash mode routing with path parameters
-- **Dependency Injection** — `provide()` / `inject()` pattern for scoped services
-- **Async rendering pipeline** — `async` lifecycle hooks, `AsyncResult`, composable async data fetching
-- **HTTP Client** — Browser-native fetch wrapper with async/await
-- **Plugin system** — Extend apps via `WebComPyPlugin` base class
-- **UI Toolkit** — Theme system (light/dark), `CodeBlock` component, CSS design tokens
-- **Testing module** — `TestRenderer` and fake ports for browserless component testing
-- **Inspector CLI** — Screenshot, console log, DOM query, click, and navigation in headless browser
-- **CLI tools** — Project scaffolding (`init`), dev server (`start`), Static Site Generator (`generate`)
-- **Type annotations** — Full type hints with `.pyi` stubs
+### 機能
 
-## Get started
+- **コンポーネントベースの宣言的レンダリング** — `@define_component` で UI コンポーネントを純粋な Python 関数として定義
+- **リアクティブな状態管理** — `Signal`、`Computed`、`ReactiveList`、`ReactiveDict` による自動 DOM 差分更新
+- **ビルトインルーター** — History モード / Hash モード、パスパラメータ対応
+- **依存性注入** — `provide()` / `inject()` パターンによるスコープ付きサービス管理
+- **非同期レンダリングパイプライン** — `async` ライフサイクルフック、`AsyncResult`、コンポーザブルな非同期データ取得
+- **HTTP クライアント** — ブラウザネイティブ fetch の async/await ラッパー
+- **プラグインシステム** — `WebComPyPlugin` 基底クラスによる機能拡張
+- **UI ツールキット** — テーマシステム（ライト/ダーク）、`CodeBlock` コンポーネント、CSS デザイントークン
+- **テストモジュール** — `TestRenderer` とフェイクポートによるブラウザレスコンポーネントテスト
+- **インスペクタ CLI** — ヘッドレスブラウザでのスクリーンショット、コンソールログ、DOM クエリ、クリック、ナビゲーション
+- **CLI ツール** — プロジェクトスキャフォールディング (`init`)、開発サーバー (`start`)、静的サイトジェネレーター (`generate`)
+- **型アノテーション** — `.pyi` スタブによる完全な型ヒント
 
-### uv (recommended)
+## はじめ方
+
+### uv（推奨）
 ```
 uv init my-project && cd my-project
 uv add webcompy
@@ -47,21 +49,23 @@ cd my-project
 webcompy start --dev
 ```
 
-> Note: `uv init` creates a stub `hello.py` that can be deleted after running `webcompy init`.
+> 注: `uv init` は `hello.py` を作成します。`webcompy init` 実行後に削除して構いません。
 
-then access [http://127.0.0.1:8080/](http://127.0.0.1:8080/)
+その後 [http://127.0.0.1:8080/](http://127.0.0.1:8080/) にアクセスしてください。
 
-For static site generation:
+静的サイトを生成する場合:
 
 ```
 webcompy generate
 ```
 
-## Documents and Demos
-- [webcompy.net](https://webcompy.net/)
-    * [Source codes](https://github.com/kniwase/WebComPy/tree/main/docs_app/)
+## ドキュメントとデモ
 
-## Sample Code
+- [webcompy.net](https://webcompy.net/)
+    * [ソースコード](https://github.com/kniwase/WebComPy/tree/main/docs_app/)
+
+## サンプルコード
+
 ```python
 from webcompy.signal import Signal, computed
 from webcompy.elements import html, repeat, switch, DOMEvent
@@ -176,13 +180,13 @@ def Fizzbuzz(context: ComponentContext[RouterContext]):
             ),
         ),
     )
-
 ```
 
-## Contributing
+## コントリビューション
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow, AI agent usage, and PR process.
-For detailed technical reference (commands, invariants, spec mapping), see [AGENTS.md](AGENTS.md).
+開発ワークフロー、AI エージェントの使い方、PR プロセスについては [CONTRIBUTING.ja.md](CONTRIBUTING.ja.md) を参照してください。
+コマンドや技術規約の詳細は [AGENTS.md](AGENTS.md)（英語）を参照してください。
 
-## License
-This project is licensed under the MIT License, see the LICENSE.txt file for details.
+## ライセンス
+
+このプロジェクトは MIT ライセンスの下で提供されます。詳細は LICENSE.txt を参照してください。

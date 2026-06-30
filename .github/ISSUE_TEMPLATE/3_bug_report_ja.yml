@@ -1,0 +1,88 @@
+name: バグ報告 (Bug Report)
+description: バグを报告して WebComPy の改善にご協力ください
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        バグ報告ありがとうございます。日本語での報告も歓迎します。
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 環境 (Environment)
+      description: バグが発生した環境を選択してください
+      options:
+        - ブラウザ (Browser / PyScript)
+        - サーバー (Server / CLI / SSG)
+        - 両方 (Both)
+    validations:
+      required: true
+
+  - type: input
+    id: webcompy-version
+    attributes:
+      label: WebComPy バージョン
+      placeholder: 例: 0.8.0
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python バージョン
+      placeholder: 例: 3.12
+    validations:
+      required: true
+
+  - type: input
+    id: browser-version
+    attributes:
+      label: ブラウザ (該当する場合)
+      description: バグが発生したブラウザとバージョン
+      placeholder: 例: Chrome 125, Firefox 128
+
+  - type: input
+    id: pyscript-version
+    attributes:
+      label: PyScript / Pyodide バージョン (該当する場合)
+      placeholder: 例: PyScript 2024.11.1, Pyodide 0.26.0
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: 再現手順 (Steps to Reproduce)
+      description: バグを再現するための明確な手順を記載してください
+      placeholder: |
+        1. コンポーネントを作成し ...
+        2. 関数を呼び出すと ...
+        3. エラーが発生する
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動作 (Expected Behavior)
+      description: 本来どう動作すべきか
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の動作 (Actual Behavior)
+      description: 実際にどう動作したか
+
+  - type: textarea
+    id: relevant-spec
+    attributes:
+      label: 関連スペック (任意)
+      description: 影響を受けると思われる OpenSpec スペックがあればリンクを記載
+      placeholder: 例: openspec/specs/reactive/spec.md
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: コンソールログ / スクリーンショット
+      description: コンソール出力、エラーメッセージ、スクリーンショットなどを貼り付けてください
+      placeholder: ブラウザのコンソールやサーバーの標準出力などをここに貼り付け
