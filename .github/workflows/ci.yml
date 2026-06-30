@@ -520,15 +520,15 @@ jobs:
         id: scope-context
         run: |
           if [ "${{ needs.detect-scope.outputs.has-code-changes }}" = "false" ]; then
-            cat > .tmp/scope-context.txt <<'SCOPE_EOF'
-This PR contains only OpenSpec proposal artifacts.
-No implementation code is included.
-Focus review on:
-- Design correctness and completeness
-- Spec consistency with existing specs
-- Task clarity and feasibility
-- Non-goals vs scope alignment
-SCOPE_EOF
+            {
+              echo "This PR contains only OpenSpec proposal artifacts."
+              echo "No implementation code is included."
+              echo "Focus review on:"
+              echo "- Design correctness and completeness"
+              echo "- Spec consistency with existing specs"
+              echo "- Task clarity and feasibility"
+              echo "- Non-goals vs scope alignment"
+            } > .tmp/scope-context.txt
           else
             echo "Code-change PR — no special scope context." > .tmp/scope-context.txt
           fi
