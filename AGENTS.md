@@ -71,8 +71,6 @@ uv run python -m webcompy inspect navigate <url> "/path" [--wait-for "#page"]   
 uv run python -m webcompy inspect verify <url> --expect "h1=Title"                      # Assertions
 ```
 
-Screenshots go to `.workspace/screenshots/`. Inspector artifacts go to `.workspace/inspector/` or `.tmp/inspector/`. Never use `/tmp`.
-
 ## CI Pipeline
 
 | Check | Description |
@@ -93,7 +91,6 @@ are skipped — only OpenSpec validation and AI review run.
 
 - Python 3.12+ (aligned with latest PyScript/Pyodide runtime)
 - Package management with `uv` — use `uv add <package>` to add dependencies, `uv lock` to update lockfile
-- Temporary files MUST be placed under `.workspace/` or `.tmp/` — never `/tmp`
 - Type annotations throughout (package includes `py.typed` marker and `.pyi` stubs)
 - No comments in code unless explicitly requested
 - Component classes use decorators: `@component_template`, `@on_before_rendering`
