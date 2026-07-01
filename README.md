@@ -90,6 +90,16 @@ python -m webcompy start --dev       # launch dev server with hot-reload
 python -m webcompy generate          # build static site
 ```
 
+**poetry**
+
+```bash
+poetry new my-project && cd my-project
+poetry add webcompy-cli
+poetry run python -m webcompy init   # create project structure
+poetry run python -m webcompy start --dev  # launch dev server with hot-reload
+poetry run python -m webcompy generate     # build static site
+```
+
 ### Testing
 
 ```bash
