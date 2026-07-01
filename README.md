@@ -80,16 +80,6 @@ uv run python -m webcompy start --dev # launch dev server with hot-reload
 uv run python -m webcompy generate   # build static site
 ```
 
-**pip**
-
-```bash
-mkdir my-project && cd my-project
-pip install webcompy-cli
-python -m webcompy init              # create project structure
-python -m webcompy start --dev       # launch dev server with hot-reload
-python -m webcompy generate          # build static site
-```
-
 **poetry**
 
 ```bash
@@ -98,6 +88,16 @@ poetry add webcompy-cli
 poetry run python -m webcompy init   # create project structure
 poetry run python -m webcompy start --dev  # launch dev server with hot-reload
 poetry run python -m webcompy generate     # build static site
+```
+
+**pip**
+
+```bash
+mkdir my-project && cd my-project
+pip install webcompy-cli
+python -m webcompy init              # create project structure
+python -m webcompy start --dev       # launch dev server with hot-reload
+python -m webcompy generate          # build static site
 ```
 
 ### Testing
