@@ -26,6 +26,20 @@ cd WebComPy
 uv sync
 ```
 
+The project is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/)
+with four packages under `packages/`:
+- `packages/webcompy/` — Core browser runtime (zero external deps)
+- `packages/webcompy-server/` — Server-side rendering
+- `packages/webcompy-cli/` — CLI tools (dev server, SSG, project init)
+- `packages/webcompy-testing/` — Testing utilities
+
+To build a wheel for an individual package (e.g., for PyScript):
+
+```bash
+uv build --package webcompy
+uv build --package webcompy-server
+```
+
 Install Playwright for E2E tests (if needed):
 
 ```bash
