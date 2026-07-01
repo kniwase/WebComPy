@@ -94,10 +94,10 @@
 - [x] 9.1 Run `uv run ruff check .` from workspace root — all packages lint clean
 - [x] 9.2 Run `uv run pyright` from workspace root — type checking passes
 - [x] 9.3 Run `uv run python -m pytest tests/ --tb=short` — unit tests pass (note: some tests create `RenderContext` directly and may need updates for the ABC hierarchy)
-- [ ] 9.4 Run `uv run python -m webcompy start --dev --app docs_app.bootstrap:app` — dev server starts
-- [ ] 9.5 Run `uv run python -m webcompy generate --app docs_app.bootstrap:app` — SSG produces output
+- [x] 9.4 Run `uv run python -m webcompy start --dev --app docs_app.bootstrap:app` — dev server starts
+- [x] 9.5 Run `uv run python -m webcompy generate --app docs_app.bootstrap:app` — SSG produces output
 - [x] 9.6 E2E tests: core 20/20 passed, docs 8/8 passed (fixed PYTHONPATH in conftest.py)
-- [ ] 9.7 Verify `pip install packages/webcompy` installs only core (no starlette, uvicorn, etc.)
-- [ ] 9.8 Verify `pip install packages/webcompy[full]` installs all four packages
+- [x] 9.7 Verify `pip install packages/webcompy` installs only core (no starlette, uvicorn, etc.)
+- [x] 9.8 ~~Verify `pip install packages/webcompy[full]` installs all four packages~~ (skip: sub-packages not yet published to PyPI; workspace `uv sync` confirmed working)
 - [x] 9.9 Verify `from webcompy.cli.config import WebComPyBuildConfig` works via shim with deprecation warning
 - [x] 9.10 Verify `from webcompy.testing import TestRenderer` works via shim with deprecation warning
