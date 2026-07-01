@@ -6,7 +6,6 @@ build-backend = "hatchling.build"
 name = "webcompy"
 version = "0.0.13"
 description = "Python frontend framework which works on Browser"
-readme = "../../README.md"
 license = "MIT"
 requires-python = ">=3.12"
 authors = [
