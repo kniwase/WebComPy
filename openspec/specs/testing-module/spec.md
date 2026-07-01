@@ -124,6 +124,20 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **THEN** the returned string SHALL be the full SSR HTML for the `/about` route
 - **AND** the `RenderContext` SHALL have been properly disposed after generation
 
+### ADDED: webcompy.testing shall provide a run_sync helper for calling async code from sync contexts
+
+`run_sync(coro)` SHALL execute an async coroutine from a synchronous context. It SHALL detect whether an event loop is already running in the current thread. If no loop is running, it SHALL use `asyncio.run(coro)`. If a loop IS running, it SHALL use `nest_asyncio.apply(loop)` (patching the loop to allow re-entrant `run_until_complete`) and then `loop.run_until_complete(coro)`. This SHALL enable test utilities like `TestRenderer.render()` and `render_app_html()` to expose synchronous APIs while internally using async rendering.
+
+#### Scenario: run_sync creates a new event loop when none is running
+- **WHEN** `result = run_sync(async_fn())` is called outside any async context
+- **THEN** `asyncio.run(coro)` SHALL be used internally
+- **AND** the coroutine's return value SHALL be returned
+
+#### Scenario: run_sync patches a running loop with nest_asyncio
+- **WHEN** `run_sync(async_fn())` is called inside a running event loop (e.g., inside a `pytest-asyncio` test)
+- **THEN** `nest_asyncio.apply()` SHALL be called on the current loop
+- **AND** `loop.run_until_complete(coro)` SHALL be used
+
 ### MODIFIED: create_test_asgi_app shall provide a lightweight Starlette ASGI app for httpx-based SSR testing
 
 `create_test_asgi_app(app)` SHALL return a Starlette ASGI app with a catch-all route (`{path:path}` in history mode, `/` in hash mode) that, on each request, calls `app.create_render_context(path)` to create an isolated `RenderContext`, generates SSR HTML via `_HtmlElement("div", {}, ctx._root).render_html()`, calls `ctx.dispose()` in a `finally` block, and returns `HTMLResponse(html_string)`. `_HtmlElement` is imported from `webcompy_server._html` (formerly `webcompy.ports._server._html`). It SHALL skip all heavy build steps: dependency resolution, wheel building, WASM downloading, runtime asset downloading, and static file serving. It SHALL be usable with `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))` to test the full SSR pipeline — routing, RenderContext, DI scope, `AppDocumentRoot`, and HTML page generation — without a browser.
@@ -209,7 +223,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 After the package split, `webcompy_testing` (PEP 660-compliant namespace) SHALL be the canonical package for testing utilities. `webcompy.testing` SHALL be a legacy shim module that re-exports all public APIs from `webcompy_testing` for backward compatibility.
 
 #### Scenario: Importing from the canonical package
-- **WHEN** a developer writes `from webcompy_testing import TestRenderer, FakeDOMNode, create_test_app, render_app_html, create_test_asgi_app`
+- **WHEN** a developer writes `from webcompy_testing import TestRenderer, FakeDOMNode, create_test_app, render_app_html, create_test_asgi_app, run_sync`
 - **THEN** all imports SHALL succeed
 
 #### Scenario: Legacy import shim works

@@ -198,7 +198,7 @@ and testing module requirements.
 When modifying code, read the relevant specs from `openspec/specs/`:
 
 | Changed files | Specs to read |
-|---|---|---|
+|---|---|
 | `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md` |
 | `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md` |
 | `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md` |
