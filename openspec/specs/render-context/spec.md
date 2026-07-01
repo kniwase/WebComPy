@@ -4,22 +4,24 @@
 
 The render context provides request-scoped state isolation for server-side rendering. Each SSR request operates on a completely fresh `RenderContext` instance, ensuring no mutable state leaks between concurrent requests. In the browser, a single `RenderContext` is created and lives for the entire page session. This eliminates data contamination, unbounded memory growth, and security vulnerabilities caused by shared mutable state across requests.
 
+In the refactored package structure, `RenderContext` becomes an ABC (Abstract Base Class) with two concrete subclasses: `BrowserRenderContext` and `ServerRenderContext`. Port provisioning is handled by the `_register_ports()` abstract method, not by a direct `if/else` on `ENVIRONMENT`. `ServerRenderContext` provides `render_html()` implementation; `BrowserRenderContext` raises an error. See the `render-context-abc` capability for the full ABC specification.
+
 ## Requirements
 
-### Requirement: RenderContext shall isolate all mutable rendering state per request
+### MODIFIED: RenderContext shall isolate all mutable rendering state per request
 
-A `RenderContext` class SHALL hold all mutable runtime state needed for a single rendering operation: DI scope, Router instance, AppDocumentRoot, HeadPropsStore, Server ports, Signal graph state, and deferred rendering state. Each `RenderContext` instance SHALL be completely independent — no mutable state SHALL be shared between instances.
+A `RenderContext` ABC SHALL hold all mutable runtime state needed for a single rendering operation: DI scope, Router instance, AppDocumentRoot, HeadPropsStore, ports (browser or server), Signal graph state, and deferred rendering state. Two concrete subclasses exist: `BrowserRenderContext` (for browser/PyScript environments) and `ServerRenderContext` (for server/SSR environments). Each `RenderContext` instance SHALL be completely independent — no mutable state SHALL be shared between instances.
 
 #### Scenario: Creating a RenderContext for an SSR request
 - **WHEN** `app.create_render_context(path="/users/42")` is called on the server
-- **THEN** a new `RenderContext` SHALL be created with a fresh DI scope, fresh Router, fresh AppDocumentRoot, fresh HeadPropsStore, fresh Server ports, and reset Signal graph state
+- **THEN** a new `ServerRenderContext` SHALL be created with a fresh DI scope, fresh Router, fresh AppDocumentRoot, fresh HeadPropsStore, fresh Server ports, and reset Signal graph state
 - **AND** the Router SHALL be initialized to the given path
 - **AND** no mutable state from any previous `RenderContext` SHALL be present
 
 #### Scenario: Creating a RenderContext for the browser
 - **WHEN** `app.run()` is called in the browser
-- **THEN** a single `RenderContext` SHALL be created internally via `create_render_context()`
-- **AND** the `RenderContext` SHALL remain active for the entire browser session
+- **THEN** a single `BrowserRenderContext` SHALL be created internally via `create_render_context()`
+- **AND** the `BrowserRenderContext` SHALL remain active for the entire browser session
 - **AND** `app.run()` behavior SHALL be unchanged from the user's perspective
 
 #### Scenario: Concurrent SSR requests are isolated
@@ -29,9 +31,9 @@ A `RenderContext` class SHALL hold all mutable runtime state needed for a single
 - **AND** rendering `/page-a` SHALL NOT affect the output of `/page-b`
 - **AND** no shared mutable state SHALL cause data contamination between the two requests
 
-### Requirement: RenderContext shall support disposal of all request-scoped resources
+### MODIFIED: RenderContext shall support disposal of all request-scoped resources
 
-`RenderContext` SHALL provide a `dispose()` method that cleans up all request-scoped resources: DI scope child disposal, EffectScope disposal, Signal graph state reset, and removal of circular references that would prevent garbage collection.
+`RenderContext` SHALL provide a `dispose()` method that cleans up all request-scoped resources: DI scope child disposal, EffectScope disposal, Signal graph state reset, and removal of circular references that would prevent garbage collection. Disposal behavior is identical for both `BrowserRenderContext` and `ServerRenderContext`.
 
 #### Scenario: Disposing a RenderContext after SSR rendering
 - **WHEN** `ctx = app.create_render_context(path)` then `ctx.render_html(...)` then `ctx.dispose()` is called on the server
@@ -41,13 +43,13 @@ A `RenderContext` class SHALL hold all mutable runtime state needed for a single
 - **AND** no circular references that prevent garbage collection SHALL remain
 
 #### Scenario: Disposing a RenderContext is not required in the browser
-- **WHEN** `app.run()` creates a `RenderContext` in the browser
+- **WHEN** `app.run()` creates a `BrowserRenderContext` in the browser
 - **THEN** `dispose()` SHALL NOT be called automatically
 - **AND** the `RenderContext` SHALL remain active for the browser session lifetime
 
-### Requirement: RenderContext shall render HTML on the server
+### MODIFIED: RenderContext shall render HTML on the server
 
-`RenderContext` SHALL provide a `render_html()` method that generates complete HTML output for the current route, including head elements, styles, scripts, and the component tree.
+`ServerRenderContext` SHALL provide a `render_html()` method that generates complete HTML output for the current route, including head elements, styles, scripts, and the component tree. `BrowserRenderContext.render_html()` SHALL raise an error (HTML rendering is a server-side concern).
 
 #### Scenario: Rendering HTML for a history-mode route
 - **WHEN** `ctx = app.create_render_context(path="/users/42")` and `ctx.render_html(...)` is called
@@ -60,9 +62,13 @@ A `RenderContext` class SHALL hold all mutable runtime state needed for a single
 - **THEN** the rendered HTML SHALL use the root path `/` as the initial route
 - **AND** the same HTML SHALL be produced for every request (since hash-mode uses client-side routing)
 
-### Requirement: WebComPyApp shall retain only immutable definitions
+#### Scenario: BrowserRenderContext.render_html raises error
+- **WHEN** `BrowserRenderContext.render_html()` is called
+- **THEN** an error SHALL be raised (HTML rendering is not available in browser context)
 
-After refactoring, `WebComPyApp` SHALL hold only configuration, component definitions, router definitions, plugin classes, and other data that does not change between requests. All mutable runtime state SHALL be moved to `RenderContext`.
+### MODIFIED: WebComPyApp shall retain only immutable definitions
+
+After refactoring, `WebComPyApp` SHALL hold only configuration, component definitions, router definitions, plugin classes, and other data that does not change between requests. All mutable runtime state SHALL be moved to `RenderContext` (and its concrete subclasses). `WebComPyApp._render_context_class` SHALL accept injection (DI-based override), defaulting to `BrowserRenderContext` or `ServerRenderContext` based on environment.
 
 #### Scenario: WebComPyApp immutability across requests
 - **WHEN** `app.create_render_context(path="/a")` and `app.create_render_context(path="/b")` are called sequentially on the same `WebComPyApp`
@@ -73,10 +79,11 @@ After refactoring, `WebComPyApp` SHALL hold only configuration, component defini
 
 #### Scenario: Creating a WebComPyApp does not create rendering state
 - **WHEN** `app = WebComPyApp(root_component=..., router=..., config=...)` is called
-- **THEN** the app SHALL NOT create a DI scope, Router instance, AppDocumentRoot, or Server ports
-- **AND** the app SHALL only store immutable definitions needed to create `RenderContext` instances
+- **THEN** the app SHALL NOT create a DI scope, Router instance, AppDocumentRoot, or ports
+- **THEN** the app SHALL only store immutable definitions needed to create `RenderContext` instances
+- **AND** `app._render_context_class` SHALL be determined (with DI injection support)
 
-### Requirement: New elements shall default to RenderContext scope
+### MODIFIED: New elements shall default to RenderContext scope
 
 When adding new elements to the framework, if it is uncertain whether an element should belong to `WebComPyApp` (immutable, shared) or `RenderContext` (request-scoped, isolated), the element SHALL be placed in `RenderContext`. This design principle errs on the side of safety against cross-request vulnerabilities.
 
@@ -85,13 +92,13 @@ When adding new elements to the framework, if it is uncertain whether an element
 - **AND** it is unclear whether the attribute should be on `WebComPyApp` or `RenderContext`
 - **THEN** the attribute SHALL be placed on `RenderContext`
 
-### Requirement: RenderContext shall integrate with the testing module
+### MODIFIED: RenderContext shall integrate with the testing module
 
-The `webcompy.testing` module SHALL leverage `app.create_render_context()` for SSR test isolation. `create_test_asgi_app()` SHALL create a fresh `RenderContext` per request and dispose it after rendering. `render_app_html()` SHALL be a convenience function that wraps the full `create_render_context → generate_html → dispose` pipeline. `create_browser_scope()` and `create_server_scope()` are removed — port provisioning is handled automatically by `RenderContext.__init__`. `create_test_app()` SHALL use `__dataclass_fields__` for config override filtering to correctly handle dataclass fields with `default_factory`.
+The `webcompy.testing` module (shim to `webcompy_testing`) SHALL leverage `app.create_render_context()` for SSR test isolation. `create_test_asgi_app()` SHALL create a fresh `RenderContext` per request and dispose it after rendering. `render_app_html()` SHALL be a convenience function that wraps the full `create_render_context → generate_html → dispose` pipeline. `create_browser_scope()` and `create_server_scope()` are removed — port provisioning is handled automatically by `RenderContext._register_ports()` based on the concrete subclass type. `create_test_app()` SHALL use `__dataclass_fields__` for config override filtering to correctly handle dataclass fields with `default_factory`.
 
 #### Scenario: Testing SSR with RenderContext-based isolation
 - **WHEN** `app = create_test_app(root_component=MyRoot)` and `ctx = app.create_render_context("/path")` is called in a test
-- **THEN** port provisioning (server or browser) SHALL be handled automatically by `RenderContext.__init__`
+- **THEN** port provisioning (server or browser) SHALL be handled automatically by `RenderContext._register_ports()` based on the render context subclass
 - **AND** the test SHALL NOT need to manually create DI scopes or wire ports
 
 #### Scenario: render_app_html convenience function
@@ -103,7 +110,7 @@ The `webcompy.testing` module SHALL leverage `app.create_render_context()` for S
 - **THEN** `create_browser_scope` and `create_server_scope` SHALL NOT be importable
 - **AND** `create_test_app` SHALL remain as the primary helper for creating reusable `WebComPyApp` instances
 
-### Requirement: Signal graph globals shall use ContextVar for async safety
+### MODIFIED: Signal graph globals shall use ContextVar for async safety
 
 `_active_consumer` and `_in_notification_phase` in `_graph.py` SHALL be converted from module-level globals to `ContextVar`s, with module-level fallback globals (`_active_consumer_global`, `_in_notification_phase_global`) for PyScript environments where `ContextVar` propagation is unreliable across JS→Python callbacks. All read/write access SHALL check `ContextVar` first and fall back to the global when ContextVar is unset. `_epoch` SHALL remain a module-level global that grows monotonically and is never reset — Python integers have unlimited precision so overflow is not a concern. `reset_graph_state()` SHALL be removed; the disposal of signal graph resources is handled by `consumer_destroy()` called from DI scope and effect scope disposal, combined with ContextVar-based isolation for transient computation state.
 
@@ -125,3 +132,35 @@ The `webcompy.testing` module SHALL leverage `app.create_render_context()` for S
 - **AND** the `ContextVar` for `_active_consumer` is unset (PyScript does not propagate ContextVars across JS→Python boundaries)
 - **THEN** the accessor function SHALL fall back to the module-level global `_active_consumer_global`
 - **AND** signal dependency tracking SHALL work correctly despite the ContextVar being unset
+
+### ADDED: RenderContext is an ABC with BrowserRenderContext and ServerRenderContext subclasses
+
+`RenderContext` SHALL be an abstract base class (ABC) that defines the common interface and shared logic for both browser and server rendering. `BrowserRenderContext` SHALL be the concrete subclass for browser/PyScript environments. `ServerRenderContext` SHALL be the concrete subclass for server/SSR environments. The `_register_ports()` abstract method SHALL be implemented by each concrete subclass to provision the appropriate ports for its environment.
+
+#### Scenario: RenderContext ABC defines shared interface
+- **WHEN** a developer inspects the `RenderContext` class hierarchy
+- **THEN** `RenderContext` SHALL have the `@abstractmethod` decorator on `_register_ports()` only; `render_html()` SHALL be a concrete `async def` method on the base class that raises `WebComPyException`
+- **AND** `BrowserRenderContext` SHALL inherit `render_html()` from the base (no override needed)
+- **AND** `ServerRenderContext` SHALL override `render_html()` with an `async def` implementation using `webcompy_server._html.generate_html`
+
+#### Scenario: Port provisioning via _register_ports()
+- **WHEN** `BrowserRenderContext._register_ports()` is called
+- **THEN** `BrowserDOMPort()`, `BrowserFFIPort()`, `BrowserFetchPort()`, `BrowserHistoryPort()` SHALL be registered in the DI scope
+
+#### Scenario: ServerRenderContext provides render_html
+- **WHEN** `ServerRenderContext.render_html(...)` is called
+- **THEN** it SHALL return a complete HTML string generated via `webcompy_server._html.generate_html()`
+
+#### Scenario: WebComPyApp._render_context_class supports DI injection
+- **WHEN** a test or custom application needs a different RenderContext type
+- **AND** it uses DI to provide a `_render_context_class` value
+- **THEN** `app.create_render_context()` SHALL use the injected class instead of the default
+
+### ADDED: configure_server_context must be called before server-side rendering
+
+Before `ServerRenderContext` can produce HTML, `configure_server_context(app)` SHALL be called to wire up server-specific imports and configuration. This function is provided by `webcompy_server` and SHALL be called as part of the server bootstrap sequence.
+
+#### Scenario: configure_server_context wires server dependencies
+- **WHEN** `configure_server_context(app)` is called from `webcompy_server`
+- **THEN** the server environment SHALL be properly configured for HTML generation
+- **AND** subsequent calls to `app.create_render_context(path).render_html(...)` SHALL succeed
