@@ -2,42 +2,14 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[project]
-name = "webcompy"
-version = "0.0.13"
-description = "Python frontend framework which works on Browser"
-readme = "README.md"
-license = "MIT"
-requires-python = ">=3.12"
-authors = [
-    { name = "Kento Niwase", email = "kento.niwase@gmail.com" },
-]
-keywords = ["browser", "frontend", "framework", "front-end", "client-side"]
-classifiers = [
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
-dependencies = [
-    "starlette",
-    "sse-starlette",
-    "uvicorn",
-    "aiofiles",
-    "httpx",
-    "nest-asyncio>=1.6.0",
-]
+[tool.uv.workspace]
+members = ["packages/*"]
 
-[project.urls]
-Homepage = "https://github.com/kniwase/WebComPy"
-
-[tool.hatch.build.targets.wheel]
-packages = ["webcompy"]
-
-[tool.hatch.build.targets.wheel.shared-data]
-
-[tool.hatch.build]
-exclude = ["docs_app", "docs", "template"]
+[tool.uv.sources]
+webcompy = { workspace = true }
+webcompy-server = { workspace = true }
+webcompy-cli = { workspace = true }
+webcompy-testing = { workspace = true }
 
 [tool.ruff]
 target-version = "py312"
@@ -45,31 +17,31 @@ line-length = 120
 
 [tool.ruff.lint]
 select = [
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings
-    "F",    # pyflakes
-    "I",    # isort
-    "UP",   # pyupgrade
-    "B",    # flake8-bugbear
-    "SIM",  # flake8-simplify
-    "TCH",  # flake8-type-checking
-    "RUF",  # ruff-specific rules
+    "E",
+    "W",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "SIM",
+    "TCH",
+    "RUF",
 ]
 ignore = [
-    "E501",   # line too long (handled by formatter)
-    "UP046",  # Generic class with multiple TypeVars - PEP 695 migration is too invasive
-    "UP040",  # Non-PEP695 type alias - breaks TypeAlias subclassing
-    "UP047",  # Non-PEP695 generic function - migration is too invasive
-    "E731",   # lambda assignment - intentional in many places
-    "TC001",  # typing-only first-party import - too many false positives with __future__ annotations
-    "TC003",  # typing-only standard-library import - too many false positives with __future__ annotations
+    "E501",
+    "UP046",
+    "UP040",
+    "UP047",
+    "E731",
+    "TC001",
+    "TC003",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["webcompy"]
+known-first-party = ["webcompy", "webcompy_server", "webcompy_cli", "webcompy_testing"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -87,16 +59,18 @@ exclude = [
     "docs/**",
     "docs_app/**",
     "tests/**",
-    "webcompy/cli/template_data/**",
     "**/node_modules/**",
     ".venv/**",
 ]
 include = [
-    "webcompy",
+    "packages/webcompy/src/webcompy",
+    "packages/webcompy-server/src/webcompy_server",
+    "packages/webcompy-cli/src/webcompy_cli",
+    "packages/webcompy-testing/src/webcompy_testing",
     "docs_app",
     "tests",
 ]
-stubPath = "webcompy/ports"
+stubPath = "packages/webcompy/src/webcompy/ports"
 
 [dependency-groups]
 dev = [
@@ -113,8 +87,6 @@ dev = [
     "ruff>=0.15.10",
 ]
 docs = [
-    # Pyodide 0.28.0 ships matplotlib 3.10.3; >=3.9.0,<4 ensures compatibility with numpy==2.2.5
     "matplotlib>=3.9.0,<4",
-    # Pinned to match Pyodide 0.28.0 version (required by dev server for docs_app)
     "numpy==2.2.5",
 ]

@@ -6,7 +6,7 @@ from tests.conftest import FakeDOMNode
 from webcompy.elements.types._dynamic import _patch_children
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._text import TextElement
-from webcompy.ports._server._virtual_dom import VirtualDOMNode
+from webcompy_server.ports import VirtualDOMNode
 
 
 class FakeRootElement(Element):

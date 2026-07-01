@@ -6,11 +6,13 @@ WebComPy uses a `DOMNode` Protocol to abstract DOM operations. In the browser, `
 
 The virtual tree can be serialized to HTML for static site generation and inspected in tests to verify exact DOM structure. Events can be created via `DOMPort.create_event()` and dispatched on `VirtualDOMNode` to simulate user interactions for component behavior testing.
 
+In the refactored package structure, `VirtualDOMNode`, `VirtualDOMEvent`, and `ServerDOMPort` have moved from `webcompy/ports/_server/_virtual_dom.py` to `webcompy_server/ports/_virtual_dom.py`. All import paths change from `webcompy.ports._server._virtual_dom` to `webcompy_server.ports`. All behavior stays exactly the same.
+
 ## Requirements
 
-### Requirement: VirtualDOMNode shall satisfy the DOMNode Protocol
+### MODIFIED: VirtualDOMNode shall satisfy the DOMNode Protocol
 
-`VirtualDOMNode` SHALL be a concrete class that satisfies the `DOMNode` Protocol. It SHALL store tag name, attributes, children, event listeners, text content, and `__webcompy_node__` marker in Python data structures without any browser API access.
+`VirtualDOMNode` SHALL be a concrete class that satisfies the `DOMNode` Protocol. It SHALL store tag name, attributes, children, event listeners, text content, and `__webcompy_node__` marker in Python data structures without any browser API access. The class SHALL be importable from `webcompy_server.ports` (formerly `webcompy.ports._server._virtual_dom`).
 
 #### Scenario: Creating a virtual element node
 - **WHEN** `ServerDOMPort.create_element("div")` is called
@@ -24,7 +26,7 @@ The virtual tree can be serialized to HTML for static site generation and inspec
 - **AND** `textContent == "hello"`
 - **AND** `nodeType == 3` (text node)
 
-### Requirement: VirtualDOMNode tree operations shall match DOM semantics
+### MODIFIED: VirtualDOMNode tree operations shall match DOM semantics
 
 `VirtualDOMNode.appendChild(child)` SHALL append `child` to the node's children list. `insertBefore(new, ref)` SHALL insert `new` before `ref` in the children list. `replaceChild(new, old)` SHALL replace `old` with `new` at the same position. `removeChild(child)` SHALL remove `child` from the children list by identity. `remove()` SHALL remove the node from its parent's children. `childNodes` SHALL return the list of child nodes.
 
@@ -50,7 +52,7 @@ The virtual tree can be serialized to HTML for static site generation and inspec
 - **WHEN** `child.remove()` is called
 - **THEN** `child` SHALL be removed from its parent's `childNodes`
 
-### Requirement: VirtualDOMNode shall store attributes and events
+### MODIFIED: VirtualDOMNode shall store attributes and events
 
 `VirtualDOMNode.setAttribute(name, value)` SHALL store the attribute. `getAttribute(name)` SHALL return the stored value or `None`. `removeAttribute(name)` SHALL remove it. `hasAttribute(name)` SHALL return `True` if stored. `getAttributeNames()` SHALL return all stored attribute names.
 
@@ -68,9 +70,9 @@ The virtual tree can be serialized to HTML for static site generation and inspec
 - **WHEN** `node.removeEventListener("click", handler)` is called
 - **THEN** the handler SHALL no longer be recorded
 
-### Requirement: VirtualDOMEvent shall satisfy the DOMEvent Protocol
+### MODIFIED: VirtualDOMEvent shall satisfy the DOMEvent Protocol
 
-`VirtualDOMEvent` SHALL be a concrete class satisfying the `DOMEvent` Protocol defined in `webcompy/ports/_dom.py` (moved from `webcompy/elements/_dom_objs.py`). It SHALL provide `type`, `bubbles`, `cancelable`, `target`, `currentTarget`, `defaultPrevented`, `eventPhase`, `timeStamp`, `preventDefault()`, and `stopPropagation()`. It SHALL live in `webcompy/ports/_server/_virtual_dom.py` alongside `VirtualDOMNode`.
+`VirtualDOMEvent` SHALL be a concrete class satisfying the `DOMEvent` Protocol defined in `webcompy/ports/_dom.py`. It SHALL provide `type`, `bubbles`, `cancelable`, `target`, `currentTarget`, `defaultPrevented`, `eventPhase`, `timeStamp`, `preventDefault()`, and `stopPropagation()`. It SHALL live in `webcompy_server/ports/_virtual_dom.py` (formerly `webcompy/ports/_server/_virtual_dom.py`) alongside `VirtualDOMNode`.
 
 #### Scenario: Constructing a VirtualDOMEvent
 - **WHEN** `VirtualDOMEvent("click")` is created
@@ -98,7 +100,7 @@ The virtual tree can be serialized to HTML for static site generation and inspec
 - **WHEN** `event.stopPropagation()` is called during `dispatchEvent` handler execution
 - **THEN** further ancestor traversal SHALL be stopped
 
-### Requirement: VirtualDOMNode.dispatchEvent() shall implement standard event propagation
+### MODIFIED: VirtualDOMNode.dispatchEvent() shall implement standard event propagation
 
 `VirtualDOMNode.dispatchEvent(event: DOMEvent) -> bool` SHALL execute the at-target phase followed by the bubbling phase (if `event.bubbles` is `True`). During the at-target phase, `event.eventPhase` SHALL be `2` (AT_TARGET) and `event.target` and `event.currentTarget` SHALL both reference the dispatch target. Handlers registered via `addEventListener` with matching `event.type` SHALL be invoked synchronously. During the bubbling phase, `event.eventPhase` SHALL be `3` (BUBBLING) and `event.currentTarget` SHALL reference each ancestor. Propagation SHALL stop if `event.stopPropagation()` is called. The return value SHALL be `False` if `event.defaultPrevented` is `True` after all handlers have run, `True` otherwise. The capturing phase SHALL NOT be implemented (WebComPy event handlers always use `False` for `useCapture`).
 
@@ -136,9 +138,9 @@ The virtual tree can be serialized to HTML for static site generation and inspec
 - **AND** `result = node.dispatchEvent(event)` is called
 - **THEN** `result` SHALL be `True`
 
-### Requirement: ServerDOMPort.render_html() shall serialize VirtualDOMNode trees to HTML
+### MODIFIED: ServerDOMPort.render_html() shall serialize VirtualDOMNode trees to HTML
 
-`ServerDOMPort.render_html(node: DOMNode) -> str` SHALL traverse a virtual DOM tree and produce a valid HTML string. Attributes SHALL be HTML-escaped. Text content SHALL be HTML-escaped. Void elements (br, hr, img, input, link, meta, etc.) SHALL be self-closing. The output SHALL match the element system's expected HTML structure.
+`ServerDOMPort.render_html(node: DOMNode) -> str` SHALL traverse a virtual DOM tree and produce a valid HTML string. Attributes SHALL be HTML-escaped. Text content SHALL be HTML-escaped. Void elements (br, hr, img, input, link, meta, etc.) SHALL be self-closing. The output SHALL match the element system's expected HTML structure. `ServerDOMPort` is importable from `webcompy_server.ports` (formerly `webcompy.ports._server._dom`).
 
 #### Scenario: Serializing a simple element tree
 - **WHEN** `ServerDOMPort.render_html(root)` is called on a virtual tree with `div > h1("Hello")`
@@ -157,7 +159,7 @@ The virtual tree can be serialized to HTML for static site generation and inspec
 - **THEN** `render_html()` SHALL escape `<`, `>`, `&`, `"` characters
 - **AND** the output SHALL NOT contain executable HTML
 
-### Requirement: VirtualDOMNode shall not require FFI proxy wrapping
+### MODIFIED: VirtualDOMNode shall not require FFI proxy wrapping
 
 Event handlers stored on `VirtualDOMNode` SHALL be plain Python callables without FFI proxy wrapping. `ServerFFIPort.create_proxy(handler)` SHALL return `handler` directly. `ServerFFIPort.destroy_proxy()` SHALL be a no-op.
 
@@ -165,3 +167,16 @@ Event handlers stored on `VirtualDOMNode` SHALL be plain Python callables withou
 - **WHEN** `node.addEventListener("click", my_handler)` is called on a `VirtualDOMNode`
 - **THEN** `my_handler` SHALL be stored as-is without `create_proxy` wrapping
 - **AND** the handler SHALL be inspectable in tests
+
+### ADDED: VirtualDOMNode and VirtualDOMEvent shall be importable from webcompy_server.ports
+
+`VirtualDOMNode`, `VirtualDOMEvent`, and `ServerDOMPort` SHALL be importable directly from `webcompy_server.ports`. The module file lives at `webcompy_server/ports/_virtual_dom.py`.
+
+#### Scenario: Importing VirtualDOMNode from new path
+- **WHEN** a developer writes `from webcompy_server.ports import VirtualDOMNode, VirtualDOMEvent`
+- **THEN** the import SHALL succeed
+- **AND** the objects SHALL be the same as those previously available at `webcompy.ports._server._virtual_dom`
+
+#### Scenario: Importing ServerDOMPort from new path
+- **WHEN** a developer writes `from webcompy_server.ports._dom import ServerDOMPort`
+- **THEN** the import SHALL succeed

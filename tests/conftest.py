@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from webcompy.ports._history import HistoryPort
-from webcompy.testing import (
+from webcompy_testing import (
     FakeBrowserDOMPort,
     FakeBrowserFFIPort,
     FakeBrowserHostPort,
@@ -223,9 +223,9 @@ def fake_browser_full(monkeypatch, reset_di_scope):
 def server_di_scope():
     from webcompy.di._scope import DIScope, _active_di_scope
     from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
-    from webcompy.ports._server._dom import ServerDOMPort
-    from webcompy.ports._server._ffi import ServerFFIPort
-    from webcompy.ports._server._host import ServerHostPort
+    from webcompy_server.ports._dom import ServerDOMPort
+    from webcompy_server.ports._ffi import ServerFFIPort
+    from webcompy_server.ports._host import ServerHostPort
 
     scope = DIScope()
     scope.provide(DOM_PORT_KEY, ServerDOMPort())

@@ -4,8 +4,9 @@ import pytest
 
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import WebComPyAppConfig
-from webcompy.cli._html import generate_html
 from webcompy.components._generator import define_component
+from webcompy_server import configure_server_context
+from webcompy_server._html import generate_html
 
 
 @define_component
@@ -16,10 +17,12 @@ def _PrerenderTestRoot(context):
 
 
 def _make_app():
-    return WebComPyApp(
+    app = WebComPyApp(
         root_component=_PrerenderTestRoot,
         config=WebComPyAppConfig(),
     )
+    configure_server_context(app)
+    return app
 
 
 class TestPrerenderHiddenAttribute:

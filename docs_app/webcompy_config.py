@@ -1,5 +1,5 @@
 import docs_app.app as app_module
-from webcompy.cli.config import LockfileSyncConfig, WebComPyBuildConfig, WebComPyServerConfig
+from webcompy_cli.config import LockfileSyncConfig, WebComPyBuildConfig, WebComPyServerConfig
 
 config = WebComPyBuildConfig(
     app_module,

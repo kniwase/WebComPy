@@ -90,7 +90,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss:
 
 **Head VDOM**: Head content SHALL be managed via `HeadElement` (extends `ElementWithChildren`), not through imperative `AppDocumentRoot` methods. `_render()` SHALL reconcile scoped CSS styles in browser, SHALL be a no-op on server. `HeadElement.get_link_elements_html()` and `get_script_elements_html()` SHALL produce HTML fragments. `HeadElement.set_html_attr()`/`get_html_attrs()` SHALL manage `<html>` element attributes.
 
-**Testing Module**: `FakeBrowserDOMPort` SHALL extend `ServerDOMPort` (not directly implement `DOMPort`). It SHALL maintain an internal document tree (`_html`/`_head`/`_body`) enabling `query_selector()` and `get_element_by_id()` lookups. `FakeDOMNode` SHALL extend `VirtualDOMNode`. All files under `webcompy.testing` SHALL be excluded from browser-targeted wheels.
+**Testing Module**: `FakeBrowserDOMPort` SHALL extend `ServerDOMPort` (not directly implement `DOMPort`). It SHALL maintain an internal document tree (`_html`/`_head`/`_body`) enabling `query_selector()` and `get_element_by_id()` lookups. `FakeDOMNode` SHALL extend `VirtualDOMNode`. The `webcompy-testing` package is a separate package not included in the browser wheel — exclusions are structural, not convention-driven.
 
 **Inspect CLI Independence**: `inspect` subcommand bypasses `get_params()` and uses its own nested `ArgumentParser` via early `sys.argv[1]` intercept in `__main__.py`. Browser commands require Playwright (checked lazily per-command, not at import). Server management uses PID files under `.tmp/webcompy-inspect/`.
 

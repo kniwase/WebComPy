@@ -13,8 +13,8 @@ from webcompy.elements.types._element import Element
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._text import TextElement
 from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
-from webcompy.ports._server._dom import ServerDOMPort
-from webcompy.ports._server._virtual_dom import VirtualDOMNode
+from webcompy_server.ports import VirtualDOMNode
+from webcompy_server.ports._dom import ServerDOMPort
 
 
 class FakeRootElement(Element):

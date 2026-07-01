@@ -25,6 +25,20 @@ cd WebComPy
 uv sync
 ```
 
+このプロジェクトは [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/)
+構成で、`packages/` 以下に4つのパッケージがあります:
+- `packages/webcompy/` — コアブラウザランタイム（外部依存ゼロ）
+- `packages/webcompy-server/` — サーバーサイドレンダリング
+- `packages/webcompy-cli/` — CLIツール（開発サーバー、SSG、プロジェクト生成）
+- `packages/webcompy-testing/` — テストユーティリティ
+
+個別パッケージのwheelをビルドする場合（例: PyScript用）:
+
+```bash
+uv build --package webcompy
+uv build --package webcompy-server
+```
+
 E2E テストに Playwright が必要な場合（任意）:
 
 ```bash

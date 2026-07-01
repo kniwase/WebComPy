@@ -2,6 +2,33 @@ version = 1
 revision = 3
 requires-python = ">=3.12"
 
+[manifest]
+members = [
+    "webcompy",
+    "webcompy-cli",
+    "webcompy-server",
+    "webcompy-testing",
+]
+
+[manifest.dependency-groups]
+dev = [
+    { name = "beautifulsoup4", specifier = ">=4.14.1" },
+    { name = "nest-asyncio", specifier = ">=1.6.0" },
+    { name = "nodeenv", specifier = ">=1.10.0" },
+    { name = "playwright", specifier = ">=1.58.0" },
+    { name = "pre-commit", specifier = ">=4.5.1" },
+    { name = "pyright", specifier = ">=1.1.408" },
+    { name = "pytest", specifier = ">=9.0.3" },
+    { name = "pytest-asyncio", specifier = ">=0.26.0" },
+    { name = "pytest-cov", specifier = ">=7.1.0" },
+    { name = "pytest-playwright", specifier = ">=0.7.2" },
+    { name = "ruff", specifier = ">=0.15.10" },
+]
+docs = [
+    { name = "matplotlib", specifier = ">=3.9.0,<4" },
+    { name = "numpy", specifier = "==2.2.5" },
+]
+
 [[package]]
 name = "aiofiles"
 version = "25.1.0"
@@ -1144,60 +1171,99 @@ wheels = [
 [[package]]
 name = "webcompy"
 version = "0.0.13"
-source = { editable = "." }
+source = { editable = "packages/webcompy" }
+
+[package.optional-dependencies]
+cli = [
+    { name = "webcompy-cli" },
+]
+full = [
+    { name = "webcompy-cli" },
+    { name = "webcompy-server" },
+    { name = "webcompy-testing" },
+]
+server = [
+    { name = "webcompy-server" },
+]
+testing = [
+    { name = "webcompy-testing" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "webcompy-cli", marker = "extra == 'cli'", editable = "packages/webcompy-cli" },
+    { name = "webcompy-cli", marker = "extra == 'full'", editable = "packages/webcompy-cli" },
+    { name = "webcompy-server", marker = "extra == 'full'", editable = "packages/webcompy-server" },
+    { name = "webcompy-server", marker = "extra == 'server'", editable = "packages/webcompy-server" },
+    { name = "webcompy-testing", marker = "extra == 'full'", editable = "packages/webcompy-testing" },
+    { name = "webcompy-testing", marker = "extra == 'testing'", editable = "packages/webcompy-testing" },
+]
+provides-extras = ["server", "cli", "testing", "full"]
+
+[[package]]
+name = "webcompy-cli"
+version = "0.0.13"
+source = { editable = "packages/webcompy-cli" }
 dependencies = [
     { name = "aiofiles" },
-    { name = "httpx" },
-    { name = "nest-asyncio" },
     { name = "sse-starlette" },
     { name = "starlette" },
     { name = "uvicorn" },
+    { name = "webcompy" },
+    { name = "webcompy-server" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "beautifulsoup4" },
-    { name = "nest-asyncio" },
-    { name = "nodeenv" },
+[package.optional-dependencies]
+inspect = [
     { name = "playwright" },
-    { name = "pre-commit" },
-    { name = "pyright" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-playwright" },
-    { name = "ruff" },
 ]
-docs = [
-    { name = "matplotlib" },
-    { name = "numpy" },
+lock = [
+    { name = "packaging" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiofiles" },
-    { name = "httpx" },
-    { name = "nest-asyncio", specifier = ">=1.6.0" },
+    { name = "packaging", marker = "extra == 'lock'" },
+    { name = "playwright", marker = "extra == 'inspect'" },
     { name = "sse-starlette" },
     { name = "starlette" },
     { name = "uvicorn" },
+    { name = "webcompy", editable = "packages/webcompy" },
+    { name = "webcompy-server", editable = "packages/webcompy-server" },
+]
+provides-extras = ["inspect", "lock"]
+
+[[package]]
+name = "webcompy-server"
+version = "0.0.13"
+source = { editable = "packages/webcompy-server" }
+dependencies = [
+    { name = "httpx" },
+    { name = "webcompy" },
 ]
 
-[package.metadata.requires-dev]
-dev = [
-    { name = "beautifulsoup4", specifier = ">=4.14.1" },
-    { name = "nest-asyncio", specifier = ">=1.6.0" },
-    { name = "nodeenv", specifier = ">=1.10.0" },
-    { name = "playwright", specifier = ">=1.58.0" },
-    { name = "pre-commit", specifier = ">=4.5.1" },
-    { name = "pyright", specifier = ">=1.1.408" },
-    { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-asyncio", specifier = ">=0.26.0" },
-    { name = "pytest-cov", specifier = ">=7.1.0" },
-    { name = "pytest-playwright", specifier = ">=0.7.2" },
-    { name = "ruff", specifier = ">=0.15.10" },
+[package.metadata]
+requires-dist = [
+    { name = "httpx" },
+    { name = "webcompy", editable = "packages/webcompy" },
 ]
-docs = [
-    { name = "matplotlib", specifier = ">=3.9.0,<4" },
-    { name = "numpy", specifier = "==2.2.5" },
+
+[[package]]
+name = "webcompy-testing"
+version = "0.0.13"
+source = { editable = "packages/webcompy-testing" }
+dependencies = [
+    { name = "beautifulsoup4" },
+    { name = "starlette" },
+    { name = "webcompy" },
+    { name = "webcompy-server" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "beautifulsoup4" },
+    { name = "starlette" },
+    { name = "webcompy", editable = "packages/webcompy" },
+    { name = "webcompy-server", editable = "packages/webcompy-server" },
 ]

@@ -3,23 +3,26 @@ from __future__ import annotations
 import pytest
 
 from webcompy.app._config import PluginScript, WebComPyAppConfig
-from webcompy.cli._html import generate_html
-from webcompy.testing._utils import run_sync
+from webcompy_server._html import generate_html
+from webcompy_testing._utils import run_sync
 
 
 def _make_app(**config_kwargs):
     from webcompy.app import WebComPyApp
     from webcompy.components._generator import define_component
     from webcompy.elements import html
+    from webcompy_server import configure_server_context
 
     @define_component
     def _TestRoot(context):
         return html.DIV({}, "test")
 
-    return WebComPyApp(
+    app = WebComPyApp(
         root_component=_TestRoot,
         config=WebComPyAppConfig(**config_kwargs),
     )
+    configure_server_context(app)
+    return app
 
 
 def _generate_html(app, **kwargs):

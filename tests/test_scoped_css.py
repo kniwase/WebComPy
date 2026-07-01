@@ -18,7 +18,7 @@ class TestScopedCssSSGOutput:
 
         from webcompy.app import WebComPyApp, WebComPyAppConfig
         from webcompy.router import Router
-        from webcompy.testing import render_app_html
+        from webcompy_testing import render_app_html
 
         router = Router({"path": "/scoped", "component": ScopedStylePage}, mode="history")
         app = WebComPyApp(root_component=ScopedStylePage, router=router, config=WebComPyAppConfig(base_url="/"))
@@ -38,7 +38,7 @@ class TestScopedCssSSGOutput:
 
         from webcompy.app import WebComPyApp, WebComPyAppConfig
         from webcompy.router import Router
-        from webcompy.testing import render_app_html
+        from webcompy_testing import render_app_html
 
         router = Router({"path": "/scoped", "component": ScopedStylePage}, mode="history")
         app = WebComPyApp(root_component=ScopedStylePage, router=router, config=WebComPyAppConfig(base_url="/"))
@@ -58,7 +58,7 @@ class TestScopedCssSSGOutput:
 
         from webcompy.app import WebComPyApp, WebComPyAppConfig
         from webcompy.router import Router
-        from webcompy.testing import render_app_html
+        from webcompy_testing import render_app_html
 
         router = Router({"path": "/", "component": HomePage}, mode="history")
         app = WebComPyApp(root_component=HomePage, router=router, config=WebComPyAppConfig(base_url="/"))
@@ -85,7 +85,7 @@ class TestHeadElementBrowserPath:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         store = ComponentStore()
@@ -119,7 +119,7 @@ class TestHeadElementBrowserPath:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         def _noop(ctx):
             pass
@@ -168,7 +168,7 @@ class TestHeadElementBrowserPath:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         def _noop(ctx):
             pass
@@ -205,7 +205,7 @@ class TestHeadElementBrowserPath:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         def _noop(ctx):
             pass
@@ -249,7 +249,7 @@ class TestHeadElementBrowserPath:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements._head import HeadElement
         from webcompy.ports._keys import DOM_PORT_KEY
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         def _noop(ctx):
             pass
@@ -279,7 +279,7 @@ class TestHeadElementBrowserPath:
 
 class TestFakeBrowserDOMPortExtended:
     def test_query_selector_head(self):
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         result = port.query_selector("head")
@@ -287,7 +287,7 @@ class TestFakeBrowserDOMPortExtended:
         assert result.nodeName == "HEAD"
 
     def test_query_selector_body(self):
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         result = port.query_selector("body")
@@ -295,14 +295,14 @@ class TestFakeBrowserDOMPortExtended:
         assert result.nodeName == "BODY"
 
     def test_query_selector_nonexistent(self):
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         result = port.query_selector("footer")
         assert result is None
 
     def test_get_element_by_id(self):
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         head = port.query_selector("head")
@@ -315,14 +315,14 @@ class TestFakeBrowserDOMPortExtended:
         assert result.getAttribute("id") == "test-id"
 
     def test_get_element_by_id_not_found(self):
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         result = port.get_element_by_id("nonexistent")
         assert result is None
 
     def test_query_selector_attribute(self):
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         head = port.query_selector("head")
@@ -335,7 +335,7 @@ class TestFakeBrowserDOMPortExtended:
         assert result.getAttribute("data-webcompy-cid") == "abc123"
 
     def test_append_child_persists(self):
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         head = port.query_selector("head")
@@ -347,7 +347,7 @@ class TestFakeBrowserDOMPortExtended:
         assert len(divs) == 1
 
     def test_inherits_render_html(self):
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         div = port.create_element("div")
@@ -357,7 +357,7 @@ class TestFakeBrowserDOMPortExtended:
         assert '<div class="test">hello</div>' in html
 
     def test_create_element_returns_fake_dom_node(self):
-        from webcompy.testing._ports import FakeBrowserDOMPort
+        from webcompy_testing._ports import FakeBrowserDOMPort
 
         port = FakeBrowserDOMPort()
         el = port.create_element("span")

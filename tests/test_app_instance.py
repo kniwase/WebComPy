@@ -7,6 +7,7 @@ from webcompy.app._app import WebComPyApp
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.components._generator import define_component
 from webcompy.router import Router
+from webcompy_server import configure_server_context
 
 
 @define_component
@@ -17,7 +18,9 @@ def DummyRoot(context):
 
 
 def _make_app(**kwargs):
-    return WebComPyApp(root_component=DummyRoot, **kwargs)
+    app = WebComPyApp(root_component=DummyRoot, **kwargs)
+    configure_server_context(app)
+    return app
 
 
 class TestWebComPyAppConfig:

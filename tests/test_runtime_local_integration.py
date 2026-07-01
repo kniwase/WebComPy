@@ -3,9 +3,10 @@ import re
 
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import WebComPyAppConfig
-from webcompy.cli._html import generate_html
 from webcompy.components._generator import define_component
-from webcompy.testing._utils import run_sync
+from webcompy_server import configure_server_context
+from webcompy_server._html import generate_html
+from webcompy_testing._utils import run_sync
 
 
 @define_component
@@ -16,10 +17,12 @@ def _TestRoot(context):
 
 
 def _make_app(**config_kwargs):
-    return WebComPyApp(
+    app = WebComPyApp(
         root_component=_TestRoot,
         config=WebComPyAppConfig(**config_kwargs),
     )
+    configure_server_context(app)
+    return app
 
 
 def _generate_html(app, **kwargs):

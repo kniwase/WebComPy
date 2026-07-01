@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from webcompy.cli._dependency_resolver import (
+from webcompy_cli._dependency_resolver import (
     PackageKind,
     _classify_from_pyodide_lock,
     _find_package_dir,

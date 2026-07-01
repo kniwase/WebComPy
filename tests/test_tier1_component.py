@@ -12,7 +12,7 @@ def _add_e2e_path(monkeypatch):
 
 
 def _client(app):
-    from webcompy.testing import create_test_asgi_app
+    from webcompy_testing import create_test_asgi_app
 
     asgi = create_test_asgi_app(app)
 

@@ -1,6 +1,6 @@
 import my_app.app as app_module
 
-from webcompy.cli.config import WebComPyBuildConfig, WebComPyServerConfig
+from webcompy_cli.config import WebComPyBuildConfig, WebComPyServerConfig
 
 config = WebComPyBuildConfig(
     app_module,

@@ -1,4 +1,4 @@
-from webcompy.cli.config._build_config import _UNSET, WebComPyBuildConfig
+from webcompy_cli.config._build_config import _UNSET, WebComPyBuildConfig
 
 
 class _FakeModule:

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from webcompy.ports._server._dom import ServerDOMPort
-from webcompy.ports._server._virtual_dom import VirtualDOMNode
+from webcompy_server.ports import VirtualDOMNode
+from webcompy_server.ports._dom import ServerDOMPort
 
 
 class TestServerDOMPortRenderHtml:
@@ -179,7 +179,7 @@ class TestVirtualDOMNodeDomProperties:
             _ = node.nonexistent_property
 
     def test_dom_properties_not_serialized_to_html(self):
-        from webcompy.ports._server._dom import ServerDOMPort
+        from webcompy_server.ports._dom import ServerDOMPort
 
         node = VirtualDOMNode("input")
         node.setAttribute("type", "text")

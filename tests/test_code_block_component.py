@@ -7,13 +7,13 @@ import pytest
 from webcompy.di import DIScope
 from webcompy.di._scope import _active_di_scope
 from webcompy.ports._keys import DOM_PORT_KEY
-from webcompy.testing._ports import FakeBrowserDOMPort
 from webcompy.ui.code_block._component import CodeBlock
 from webcompy.ui.code_block._highlight import highlight
 from webcompy.ui.code_block.lexers._registry import (
     register_builtin_lexers,
     reset_lexer_registry,
 )
+from webcompy_testing._ports import FakeBrowserDOMPort
 
 
 @pytest.fixture(autouse=True)

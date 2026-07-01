@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from webcompy.cli._pyodide_downloader import (
+from webcompy_cli._pyodide_downloader import (
     PyodideDownloadError,
     _sha256_of_file,
     download_pyodide_wheel,
@@ -49,7 +49,7 @@ class TestDownloadPyodideWheel:
         wheel_path.write_bytes(content)
 
         fake_download = b"corrupted data"
-        with patch("webcompy.cli._pyodide_downloader.urllib.request.urlopen") as mock_urlopen:
+        with patch("webcompy_cli._pyodide_downloader.urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.return_value.__enter__ = lambda s: s
             mock_urlopen.return_value.__exit__ = lambda s, *a: None
             mock_urlopen.return_value.read.return_value = fake_download
@@ -62,7 +62,7 @@ class TestDownloadPyodideWheel:
 
         modules_dir = tmp_path / ".webcompy_modules"
 
-        with patch("webcompy.cli._pyodide_downloader.urllib.request.urlopen") as mock_urlopen:
+        with patch("webcompy_cli._pyodide_downloader.urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.side_effect = urllib.error.URLError("network error")
 
             with pytest.raises(PyodideDownloadError, match="Failed to download"):
@@ -73,7 +73,7 @@ class TestDownloadPyodideWheel:
         expected_sha256 = hashlib.sha256(content).hexdigest()
         modules_dir = tmp_path / ".webcompy_modules"
 
-        with patch("webcompy.cli._pyodide_downloader.urllib.request.urlopen") as mock_urlopen:
+        with patch("webcompy_cli._pyodide_downloader.urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.return_value.__enter__ = lambda s: s
             mock_urlopen.return_value.__exit__ = lambda s, *a: None
             mock_urlopen.return_value.read.return_value = content

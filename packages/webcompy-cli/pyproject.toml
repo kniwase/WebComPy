@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "webcompy-cli"
+version = "0.0.13"
+description = "WebComPy CLI tools (dev server, SSG, project init)"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+    { name = "Kento Niwase", email = "kento.niwase@gmail.com" },
+]
+keywords = ["browser", "frontend", "framework", "cli"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "webcompy",
+    "webcompy-server",
+    "starlette",
+    "uvicorn",
+    "sse-starlette",
+    "aiofiles",
+]
+
+[project.optional-dependencies]
+inspect = ["playwright"]
+lock = ["packaging"]
+
+[project.urls]
+Homepage = "https://github.com/kniwase/WebComPy"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/webcompy_cli"]

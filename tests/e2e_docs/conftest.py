@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from webcompy.cli._console_types import ConsoleMessage
+from webcompy_cli._console_types import ConsoleMessage
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page
@@ -176,7 +176,7 @@ def _wait_for_demo_iframe(page: Page, app_name: str):
 @pytest.fixture(scope="session")
 def docs_prod_server():
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(DOCS_APP_DIR) + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(PROJECT_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
 
     log_file = SERVER_LOG.open("w")
     proc = subprocess.Popen(
@@ -245,7 +245,7 @@ def docs_static_site():
     TMP_DIR.mkdir(parents=True)
 
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(DOCS_APP_DIR) + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(PROJECT_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
 
     dist_dir = TMP_DIR / "dist"
 

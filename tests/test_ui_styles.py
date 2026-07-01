@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-STYLES_DIR = Path(__file__).resolve().parent.parent / "webcompy" / "ui" / "_styles"
+STYLES_DIR = Path(__file__).resolve().parent.parent / "packages" / "webcompy" / "src" / "webcompy" / "ui" / "_styles"
 
 
 COLOR_TOKENS = [

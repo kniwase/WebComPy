@@ -16,45 +16,94 @@
 - **HTTP Client** — Browser-native fetch wrapper with async/await
 - **Plugin system** — Extend apps via `WebComPyPlugin` base class
 - **UI Toolkit** — Theme system (light/dark), `CodeBlock` component, CSS design tokens
-- **Testing module** — `TestRenderer` and fake ports for browserless component testing
+- **Testing module** — `TestRenderer` and fake ports for browserless component testing — requires `webcompy-testing`
 - **Inspector CLI** — Screenshot, console log, DOM query, click, and navigation in headless browser
-- **CLI tools** — Project scaffolding (`init`), dev server (`start`), Static Site Generator (`generate`)
+- **CLI tools** — Project scaffolding (`init`), dev server (`start`), Static Site Generator (`generate`) — requires `webcompy-cli`
 - **Type annotations** — Full type hints with `.pyi` stubs
 
 ## Get started
 
-### uv (recommended)
+### Use in PyScript
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <script
+    type="module"
+    src="https://pyscript.net/releases/2026.3.1/core.js">
+  </script>
+</head>
+<body>
+  <py-config>
+    packages = ["webcompy"]
+  </py-config>
+  <py-script>
+    from webcompy.signal import Signal
+    from webcompy.elements import html
+    from webcompy.app import WebComPyApp
+    from webcompy.components import define_component, ComponentContext
+
+    @define_component
+    def Counter(context: ComponentContext[None]):
+        count = Signal(0)
+
+        def increment(ev):
+            count.value += 1
+
+        return html.DIV(
+            {},
+            html.P({}, "Count: ", count),
+            html.BUTTON({"@click": increment}, "+1"),
+        )
+
+    app = WebComPyApp(root_component=Counter)
+    app.run()
+  </py-script>
+</body>
+</html>
 ```
+
+Serve the file with any HTTP server and open it in a browser.
+No Python installation required on your machine — PyScript runs entirely in the browser.
+
+### Develop with the CLI
+
+**uv (recommended)**
+
+```bash
 uv init my-project && cd my-project
-uv add webcompy
-uv run python -m webcompy init
-uv run python -m webcompy start --dev
+uv add webcompy-cli
+uv run python -m webcompy init       # create project structure
+uv run python -m webcompy start --dev # launch dev server with hot-reload
+uv run python -m webcompy generate   # build static site
 ```
 
-### poetry
-```
+**poetry**
+
+```bash
 poetry new my-project && cd my-project
-poetry add webcompy
-poetry run python -m webcompy init
-poetry run python -m webcompy start --dev
+poetry add webcompy-cli
+poetry run python -m webcompy init   # create project structure
+poetry run python -m webcompy start --dev  # launch dev server with hot-reload
+poetry run python -m webcompy generate     # build static site
 ```
 
-### pip
-```
+**pip**
+
+```bash
 mkdir my-project && cd my-project
-pip install webcompy
-python -m webcompy init
-python -m webcompy start --dev
+pip install webcompy-cli
+python -m webcompy init              # create project structure
+python -m webcompy start --dev       # launch dev server with hot-reload
+python -m webcompy generate          # build static site
 ```
 
-> Note: `uv init` creates a stub `hello.py` that can be deleted after running `webcompy init`.
+### Testing
 
-then access [http://127.0.0.1:8080/](http://127.0.0.1:8080/)
-
-For static site generation:
-
-```
-python -m webcompy generate
+```bash
+pip install webcompy-testing
 ```
 
 ## Documents and Demos

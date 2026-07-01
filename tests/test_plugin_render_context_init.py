@@ -7,7 +7,8 @@ from webcompy.app._config import WebComPyAppConfig
 from webcompy.components._generator import define_component
 from webcompy.plugin._manager import PluginManager
 from webcompy.plugin._plugin import WebComPyPlugin
-from webcompy.testing import create_test_app
+from webcompy_server import configure_server_context
+from webcompy_testing import create_test_app
 
 
 @define_component
@@ -60,6 +61,7 @@ class TestPluginRenderContextInit:
             root_component=_PluginTestRoot,
             config=WebComPyAppConfig(),
         )
+        configure_server_context(app)
         pm = PluginManager(app)
 
         test_module = sys.modules[__name__]

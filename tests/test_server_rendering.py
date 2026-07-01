@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from webcompy.components._generator import define_component
 from webcompy.signal import ReactiveList, Signal
-from webcompy.testing import create_test_app, render_app_html
+from webcompy_testing import create_test_app, render_app_html
 
 
 @define_component

@@ -3,9 +3,9 @@ from unittest.mock import patch
 
 import pytest
 
-from webcompy.cli._exception import WebComPyCliException
-from webcompy.cli._lockfile import Lockfile, PurePythonPackageEntry, WasmPackageEntry
-from webcompy.cli._lockfile_sync import (
+from webcompy_cli._exception import WebComPyCliException
+from webcompy_cli._lockfile import Lockfile, PurePythonPackageEntry, WasmPackageEntry
+from webcompy_cli._lockfile_sync import (
     discover_project_root,
     discover_requirements_path,
     export_requirements,
@@ -16,8 +16,8 @@ from webcompy.cli._lockfile_sync import (
     sync_from_pyproject_toml,
     sync_from_requirements_txt,
 )
-from webcompy.cli.config._build_config import WebComPyBuildConfig
-from webcompy.cli.config._server_config import LockfileSyncConfig
+from webcompy_cli.config._build_config import WebComPyBuildConfig
+from webcompy_cli.config._server_config import LockfileSyncConfig
 
 
 class TestDiscoverProjectRoot:
@@ -194,7 +194,7 @@ class TestRecordRequirementsPath:
         (tmp_path / "project" / "pyproject.toml").write_text("[project]\n")
         config_path = app_dir / "webcompy_config.py"
         config_path.write_text(
-            "from webcompy.cli.config._build_config import WebComPyBuildConfig\n\n"
+            "from webcompy_cli.config._build_config import WebComPyBuildConfig\n\n"
             "config = WebComPyBuildConfig(app_module=None)\n",
             encoding="utf-8",
         )
@@ -208,8 +208,8 @@ class TestRecordRequirementsPath:
         (tmp_path / "project" / "pyproject.toml").write_text("[project]\n")
         config_path = app_dir / "webcompy_config.py"
         original = (
-            "from webcompy.cli.config._build_config import WebComPyBuildConfig\n"
-            "from webcompy.cli.config._server_config import LockfileSyncConfig\n\n"
+            "from webcompy_cli.config._build_config import WebComPyBuildConfig\n"
+            "from webcompy_cli.config._server_config import LockfileSyncConfig\n\n"
             "config = WebComPyBuildConfig(app_module=None,\n"
             "    lockfile_sync_config=LockfileSyncConfig(sync_group='browser'))\n"
         )
@@ -360,8 +360,8 @@ class TestInstallRequirements:
         lockfile = _make_lockfile()
         path = tmp_path / "requirements.txt"
         with (
-            patch("webcompy.cli._lockfile_sync.shutil.which", return_value="/usr/bin/uv"),
-            patch("webcompy.cli._lockfile_sync.subprocess.run") as mock_run,
+            patch("webcompy_cli._lockfile_sync.shutil.which", return_value="/usr/bin/uv"),
+            patch("webcompy_cli._lockfile_sync.subprocess.run") as mock_run,
         ):
             mock_run.return_value = types.SimpleNamespace(returncode=0)
             install_requirements(lockfile, path)
@@ -375,8 +375,8 @@ class TestInstallRequirements:
         lockfile = _make_lockfile()
         path = tmp_path / "requirements.txt"
         with (
-            patch("webcompy.cli._lockfile_sync.shutil.which", return_value=None),
-            patch("webcompy.cli._lockfile_sync.subprocess.run") as mock_run,
+            patch("webcompy_cli._lockfile_sync.shutil.which", return_value=None),
+            patch("webcompy_cli._lockfile_sync.subprocess.run") as mock_run,
         ):
             mock_run.return_value = types.SimpleNamespace(returncode=0)
             install_requirements(lockfile, path)
@@ -389,8 +389,8 @@ class TestInstallRequirements:
         lockfile = _make_lockfile()
         path = tmp_path / "requirements.txt"
         with (
-            patch("webcompy.cli._lockfile_sync.shutil.which", return_value="/usr/bin/uv"),
-            patch("webcompy.cli._lockfile_sync.subprocess.run") as mock_run,
+            patch("webcompy_cli._lockfile_sync.shutil.which", return_value="/usr/bin/uv"),
+            patch("webcompy_cli._lockfile_sync.subprocess.run") as mock_run,
             pytest.raises(SystemExit) as exc_info,
         ):
             mock_run.return_value = types.SimpleNamespace(returncode=1)
@@ -410,9 +410,9 @@ class TestInstallRequirements:
             return types.SimpleNamespace(returncode=0)
 
         with (
-            patch("webcompy.cli._lockfile_sync.export_requirements", side_effect=mock_export),
-            patch("webcompy.cli._lockfile_sync.subprocess.run", side_effect=mock_run_fn),
-            patch("webcompy.cli._lockfile_sync.shutil.which", return_value="/usr/bin/uv"),
+            patch("webcompy_cli._lockfile_sync.export_requirements", side_effect=mock_export),
+            patch("webcompy_cli._lockfile_sync.subprocess.run", side_effect=mock_run_fn),
+            patch("webcompy_cli._lockfile_sync.shutil.which", return_value="/usr/bin/uv"),
         ):
             install_requirements(lockfile, path)
         assert call_order == ["export", "install"]
@@ -441,7 +441,7 @@ class TestResolveDependencies:
             app_module=_FakeModule(app_dir),
             dependencies=None,
         )
-        with patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path):
+        with patch("webcompy_cli._lockfile_sync.discover_project_root", return_value=tmp_path):
             resolve_dependencies(build_config)
         assert build_config.dependencies == ["flask", "click"]
 
@@ -458,7 +458,7 @@ class TestResolveDependencies:
             dependencies=None,
             dependencies_from="browser",
         )
-        with patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path):
+        with patch("webcompy_cli._lockfile_sync.discover_project_root", return_value=tmp_path):
             resolve_dependencies(build_config)
         assert build_config.dependencies == ["numpy", "matplotlib"]
 
@@ -486,7 +486,7 @@ class TestResolveDependencies:
             dependencies_from="dev",
         )
         with (
-            patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path),
+            patch("webcompy_cli._lockfile_sync.discover_project_root", return_value=tmp_path),
             pytest.raises(WebComPyCliException, match="dev"),
         ):
             resolve_dependencies(build_config)
@@ -503,7 +503,7 @@ class TestResolveDependencies:
             app_module=_FakeModule(app_dir),
             dependencies=None,
         )
-        with patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path):
+        with patch("webcompy_cli._lockfile_sync.discover_project_root", return_value=tmp_path):
             resolve_dependencies(build_config)
         assert build_config.dependencies == ["flask", "numpy"]
 
@@ -521,7 +521,7 @@ class TestResolveDependencies:
             dependencies_from="browser",
             lockfile_sync_config=LockfileSyncConfig(sync_group="deps"),
         )
-        with patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path):
+        with patch("webcompy_cli._lockfile_sync.discover_project_root", return_value=tmp_path):
             resolve_dependencies(build_config)
         captured = capsys.readouterr()
         assert "differs from" in captured.err
@@ -531,7 +531,7 @@ class TestLockArgParser:
     def test_export_flag(self):
         import sys
 
-        from webcompy.cli._argparser import get_params
+        from webcompy_cli._argparser import get_params
 
         original_argv = sys.argv
         sys.argv = ["webcompy", "lock", "--export"]
@@ -547,7 +547,7 @@ class TestLockArgParser:
     def test_sync_flag(self):
         import sys
 
-        from webcompy.cli._argparser import get_params
+        from webcompy_cli._argparser import get_params
 
         original_argv = sys.argv
         sys.argv = ["webcompy", "lock", "--sync"]
@@ -563,7 +563,7 @@ class TestLockArgParser:
     def test_install_flag(self):
         import sys
 
-        from webcompy.cli._argparser import get_params
+        from webcompy_cli._argparser import get_params
 
         original_argv = sys.argv
         sys.argv = ["webcompy", "lock", "--install"]
@@ -579,7 +579,7 @@ class TestLockArgParser:
     def test_no_flags(self):
         import sys
 
-        from webcompy.cli._argparser import get_params
+        from webcompy_cli._argparser import get_params
 
         original_argv = sys.argv
         sys.argv = ["webcompy", "lock"]
@@ -595,7 +595,7 @@ class TestLockArgParser:
     def test_mutually_exclusive_flags(self):
         import sys
 
-        from webcompy.cli._argparser import get_params
+        from webcompy_cli._argparser import get_params
 
         for combo in [["--export", "--sync"], ["--export", "--install"], ["--sync", "--install"]]:
             original_argv = sys.argv
