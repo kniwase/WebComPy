@@ -18,45 +18,71 @@
 - **HTTP クライアント** — ブラウザネイティブ fetch の async/await ラッパー
 - **プラグインシステム** — `WebComPyPlugin` 基底クラスによる機能拡張
 - **UI ツールキット** — テーマシステム（ライト/ダーク）、`CodeBlock` コンポーネント、CSS デザイントークン
-- **テストモジュール** — `TestRenderer` とフェイクポートによるブラウザレスコンポーネントテスト
+- **テストモジュール** — `TestRenderer` とフェイクポートによるブラウザレスコンポーネントテスト — `webcompy-testing` が必要
 - **インスペクタ CLI** — ヘッドレスブラウザでのスクリーンショット、コンソールログ、DOM クエリ、クリック、ナビゲーション
-- **CLI ツール** — プロジェクトスキャフォールディング (`init`)、開発サーバー (`start`)、静的サイトジェネレーター (`generate`)
+- **CLI ツール** — プロジェクトスキャフォールディング (`init`)、開発サーバー (`start`)、静的サイトジェネレーター (`generate`) — `webcompy-cli` が必要
 - **型アノテーション** — `.pyi` スタブによる完全な型ヒント
 
 ## はじめ方
 
-### uv（推奨）
-```
-uv init my-project && cd my-project
-uv add webcompy
-uv run python -m webcompy init
-uv run python -m webcompy start --dev
+### PyScript で使う
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <script
+    type="module"
+    src="https://pyscript.net/releases/2026.3.1/core.js">
+  </script>
+</head>
+<body>
+  <py-config>
+    packages = ["webcompy"]
+  </py-config>
+  <py-script>
+    from webcompy.signal import Signal
+    from webcompy.elements import html
+    from webcompy.app import WebComPyApp
+    from webcompy.components import define_component, ComponentContext
+
+    @define_component
+    def Counter(context: ComponentContext[None]):
+        count = Signal(0)
+
+        def increment(ev):
+            count.value += 1
+
+        return html.DIV(
+            {},
+            html.P({}, "Count: ", count),
+            html.BUTTON({"@click": increment}, "+1"),
+        )
+
+    app = WebComPyApp(root_component=Counter)
+    app.run()
+  </py-script>
+</body>
+</html>
 ```
 
-### poetry
-```
-poetry new my-project && cd my-project
-poetry add webcompy
-poetry run python -m webcompy init
-poetry run python -m webcompy start --dev
-```
+任意の HTTP サーバーでファイルを配信し、ブラウザで開いてください。
+マシンに Python のインストールは不要です — PyScript がブラウザ上で全てを実行します。
 
-### pip
-```
-mkdir my-project && cd my-project
-pip install webcompy
+### CLI で開発する
+
+```bash
+pip install webcompy-cli
 python -m webcompy init
 python -m webcompy start --dev
-```
-
-> 注: `uv init` は `hello.py` を作成します。`webcompy init` 実行後に削除して構いません。
-
-その後 [http://127.0.0.1:8080/](http://127.0.0.1:8080/) にアクセスしてください。
-
-静的サイトを生成する場合:
-
-```
 python -m webcompy generate
+```
+
+### テスト
+
+```bash
+pip install webcompy-testing
 ```
 
 ## ドキュメントとデモ
