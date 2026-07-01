@@ -11,6 +11,7 @@ def InOutSample(context: ComponentContext[RouterContext]):
     text = Signal("")
 
     def on_input(ev: DOMEvent):
+        assert ev.target is not None
         text.value = ev.target.value
 
     return html.DIV(
