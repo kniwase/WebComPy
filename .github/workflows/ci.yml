@@ -21,9 +21,9 @@ jobs:
       - id: check
         run: |
           CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD)
-          CODE=$(echo "$CHANGED" | grep -E '^(webcompy/|pyproject\.toml|uv\.lock)' || true)
+          CODE=$(echo "$CHANGED" | grep -E '^(packages/|pyproject\.toml|uv\.lock)' || true)
           echo "has-code-changes=$([ -n "$CODE" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          GENERATE=$(echo "$CHANGED" | grep -E '^(webcompy/|docs_app/|pyproject\.toml)' || true)
+          GENERATE=$(echo "$CHANGED" | grep -E '^(packages/|docs_app/|pyproject\.toml)' || true)
           echo "has-generate-changes=$([ -n "$GENERATE" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           E2E=$(echo "$CHANGED" | grep -E '^(tests/|scripts/run-e2e-tests\.sh)' || true)
           echo "has-e2e-changes=$([ -n "$E2E" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
@@ -155,7 +155,7 @@ jobs:
           uv-sync-args: --all-groups
       - name: Run unit tests
         run: |
-          uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs --cov=webcompy --cov-report=xml --cov-report=term-missing 2>&1 | tee ci-test-results.log
+          uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs --cov=webcompy --cov=webcompy_server --cov=webcompy_cli --cov=webcompy_testing --cov-report=xml --cov-report=term-missing 2>&1 | tee ci-test-results.log
           exit "${PIPESTATUS[0]}"
       - uses: actions/upload-artifact@v4
         if: always()
@@ -551,7 +551,7 @@ jobs:
               echo "Code-change PR — standard code review."
               echo ""
               echo "Changed scopes:"
-              [ "${{ needs.detect-scope.outputs.has-code-changes }}" = "true" ] && echo "- Code (webcompy/ + deps)"
+              [ "${{ needs.detect-scope.outputs.has-code-changes }}" = "true" ] && echo "- Code (packages/ + deps)"
               [ "${{ needs.detect-scope.outputs.has-generate-changes }}" = "true" ] && echo "- Generate (docs_app/)"
               [ "${{ needs.detect-scope.outputs.has-e2e-changes }}" = "true" ] && echo "- E2E (tests/ + scripts)"
               [ "${{ needs.detect-scope.outputs.has-workflow-changes }}" = "true" ] && echo "- Workflow (.github/workflows/)"

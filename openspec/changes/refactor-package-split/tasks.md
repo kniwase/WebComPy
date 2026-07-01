@@ -72,8 +72,8 @@
 - [x] 7.2 Update `pyright` config: adjust `include`/`exclude` for new package layout
 - [x] 7.3 Update `ruff` config: adjust `known-first-party` for new package names
 - [x] 7.4 Update `pytest` config: adjust `testpaths` for new layout
-- [ ] 7.5 Update `.github/workflows/ci.yml`: adjust paths, install commands, and matrix for multi-package
-- [ ] 7.6 Update `.opencode/agents/ci-review.md` if any framework invariants changed
+- [x] 7.5 Update `.github/workflows/ci.yml`: adjust paths, install commands, and matrix for multi-package
+- [x] 7.6 Update `.opencode/agents/ci-review.md` if any framework invariants changed
 
 ## 8. README, CONTRIBUTING, and Documentation Updates
 
@@ -81,23 +81,23 @@
 - [x] 8.2 Update `README.ja.md`: same changes in Japanese
 - [x] 8.3 Update `CONTRIBUTING.md`: development setup references uv workspace; quick commands updated for workspace structure
 - [x] 8.4 Update `CONTRIBUTING.ja.md`: same changes as CONTRIBUTING.md in Japanese
-- [ ] 8.5 Update `AGENTS.md`:
+- [x] 8.5 Update `AGENTS.md`:
     - Project Structure: show `packages/` layout with 4 sub-packages; update path references
     - File→Spec Mapping: add rows for `webcompy_server/ports/`, `webcompy_cli/`, `webcompy_testing/`
     - Dual-Environment note: "single codebase" guarantee narrowed to `webcompy` core
-- [ ] 8.6 Update `docs_app/` imports and config to use new packages
-- [ ] 8.7 Update `scripts/run-e2e-tests.sh` for new package structure
+- [x] 8.6 Update `docs_app/` imports and config to use new packages
+- [x] 8.7 Update `scripts/run-e2e-tests.sh` for new package structure
 - [x] 8.8 Run `uv lock` from workspace root to generate lockfile
 
 ## 9. Verification
 
-- [ ] 9.1 Run `uv run ruff check .` from workspace root — all packages lint clean
-- [ ] 9.2 Run `uv run pyright` from workspace root — type checking passes
-- [ ] 9.3 Run `uv run python -m pytest tests/ --tb=short` — unit tests pass (note: some tests create `RenderContext` directly and may need updates for the ABC hierarchy)
+- [x] 9.1 Run `uv run ruff check .` from workspace root — all packages lint clean
+- [x] 9.2 Run `uv run pyright` from workspace root — type checking passes
+- [x] 9.3 Run `uv run python -m pytest tests/ --tb=short` — unit tests pass (note: some tests create `RenderContext` directly and may need updates for the ABC hierarchy)
 - [ ] 9.4 Run `uv run python -m webcompy start --dev --app docs_app.bootstrap:app` — dev server starts
 - [ ] 9.5 Run `uv run python -m webcompy generate --app docs_app.bootstrap:app` — SSG produces output
 - [ ] 9.6 Run `scripts/run-e2e-tests.sh` — E2E tests pass
 - [ ] 9.7 Verify `pip install packages/webcompy` installs only core (no starlette, uvicorn, etc.)
 - [ ] 9.8 Verify `pip install packages/webcompy[full]` installs all four packages
-- [ ] 9.9 Verify `from webcompy.cli.config import WebComPyBuildConfig` works via shim with deprecation warning
-- [ ] 9.10 Verify `from webcompy.testing import TestRenderer` works via shim with deprecation warning
+- [x] 9.9 Verify `from webcompy.cli.config import WebComPyBuildConfig` works via shim with deprecation warning
+- [x] 9.10 Verify `from webcompy.testing import TestRenderer` works via shim with deprecation warning

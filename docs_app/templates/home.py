@@ -87,7 +87,7 @@ def Home(_: ComponentContext[None]):
                                 """
                             # webcompy_config.py
                             import app.app as app_module
-                            from webcompy.cli.config import WebComPyBuildConfig, LockfileSyncConfig
+                            from webcompy_cli.config import WebComPyBuildConfig, LockfileSyncConfig
 
                             config = WebComPyBuildConfig(
                                 app_module,
