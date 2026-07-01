@@ -360,8 +360,8 @@ class TestInstallRequirements:
         lockfile = _make_lockfile()
         path = tmp_path / "requirements.txt"
         with (
-            patch("webcompy.cli._lockfile_sync.shutil.which", return_value="/usr/bin/uv"),
-            patch("webcompy.cli._lockfile_sync.subprocess.run") as mock_run,
+            patch("webcompy_cli._lockfile_sync.shutil.which", return_value="/usr/bin/uv"),
+            patch("webcompy_cli._lockfile_sync.subprocess.run") as mock_run,
         ):
             mock_run.return_value = types.SimpleNamespace(returncode=0)
             install_requirements(lockfile, path)
@@ -375,8 +375,8 @@ class TestInstallRequirements:
         lockfile = _make_lockfile()
         path = tmp_path / "requirements.txt"
         with (
-            patch("webcompy.cli._lockfile_sync.shutil.which", return_value=None),
-            patch("webcompy.cli._lockfile_sync.subprocess.run") as mock_run,
+            patch("webcompy_cli._lockfile_sync.shutil.which", return_value=None),
+            patch("webcompy_cli._lockfile_sync.subprocess.run") as mock_run,
         ):
             mock_run.return_value = types.SimpleNamespace(returncode=0)
             install_requirements(lockfile, path)
@@ -389,8 +389,8 @@ class TestInstallRequirements:
         lockfile = _make_lockfile()
         path = tmp_path / "requirements.txt"
         with (
-            patch("webcompy.cli._lockfile_sync.shutil.which", return_value="/usr/bin/uv"),
-            patch("webcompy.cli._lockfile_sync.subprocess.run") as mock_run,
+            patch("webcompy_cli._lockfile_sync.shutil.which", return_value="/usr/bin/uv"),
+            patch("webcompy_cli._lockfile_sync.subprocess.run") as mock_run,
             pytest.raises(SystemExit) as exc_info,
         ):
             mock_run.return_value = types.SimpleNamespace(returncode=1)
@@ -410,9 +410,9 @@ class TestInstallRequirements:
             return types.SimpleNamespace(returncode=0)
 
         with (
-            patch("webcompy.cli._lockfile_sync.export_requirements", side_effect=mock_export),
-            patch("webcompy.cli._lockfile_sync.subprocess.run", side_effect=mock_run_fn),
-            patch("webcompy.cli._lockfile_sync.shutil.which", return_value="/usr/bin/uv"),
+            patch("webcompy_cli._lockfile_sync.export_requirements", side_effect=mock_export),
+            patch("webcompy_cli._lockfile_sync.subprocess.run", side_effect=mock_run_fn),
+            patch("webcompy_cli._lockfile_sync.shutil.which", return_value="/usr/bin/uv"),
         ):
             install_requirements(lockfile, path)
         assert call_order == ["export", "install"]
@@ -441,7 +441,7 @@ class TestResolveDependencies:
             app_module=_FakeModule(app_dir),
             dependencies=None,
         )
-        with patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path):
+        with patch("webcompy_cli._lockfile_sync.discover_project_root", return_value=tmp_path):
             resolve_dependencies(build_config)
         assert build_config.dependencies == ["flask", "click"]
 
@@ -458,7 +458,7 @@ class TestResolveDependencies:
             dependencies=None,
             dependencies_from="browser",
         )
-        with patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path):
+        with patch("webcompy_cli._lockfile_sync.discover_project_root", return_value=tmp_path):
             resolve_dependencies(build_config)
         assert build_config.dependencies == ["numpy", "matplotlib"]
 
@@ -486,7 +486,7 @@ class TestResolveDependencies:
             dependencies_from="dev",
         )
         with (
-            patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path),
+            patch("webcompy_cli._lockfile_sync.discover_project_root", return_value=tmp_path),
             pytest.raises(WebComPyCliException, match="dev"),
         ):
             resolve_dependencies(build_config)
@@ -503,7 +503,7 @@ class TestResolveDependencies:
             app_module=_FakeModule(app_dir),
             dependencies=None,
         )
-        with patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path):
+        with patch("webcompy_cli._lockfile_sync.discover_project_root", return_value=tmp_path):
             resolve_dependencies(build_config)
         assert build_config.dependencies == ["flask", "numpy"]
 
@@ -521,7 +521,7 @@ class TestResolveDependencies:
             dependencies_from="browser",
             lockfile_sync_config=LockfileSyncConfig(sync_group="deps"),
         )
-        with patch("webcompy.cli._lockfile_sync.discover_project_root", return_value=tmp_path):
+        with patch("webcompy_cli._lockfile_sync.discover_project_root", return_value=tmp_path):
             resolve_dependencies(build_config)
         captured = capsys.readouterr()
         assert "differs from" in captured.err

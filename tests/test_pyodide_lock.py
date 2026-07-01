@@ -29,7 +29,7 @@ class TestFetchPyodideLock:
         cached_path.parent.mkdir(parents=True, exist_ok=True)
         cached_path.write_text(json.dumps(lock_data), encoding="utf-8")
 
-        with patch("webcompy.cli._pyodide_lock.urllib.request.urlopen") as mock_urlopen:
+        with patch("webcompy_cli._pyodide_lock.urllib.request.urlopen") as mock_urlopen:
             result = fetch_pyodide_lock("0.29.3", modules_dir)
             mock_urlopen.assert_not_called()
 
@@ -46,7 +46,7 @@ class TestFetchPyodideLock:
         mock_response.__enter__ = MagicMock(return_value=mock_response)
         mock_response.__exit__ = MagicMock(return_value=False)
 
-        with patch("webcompy.cli._pyodide_lock.urllib.request.urlopen", return_value=mock_response):
+        with patch("webcompy_cli._pyodide_lock.urllib.request.urlopen", return_value=mock_response):
             result = fetch_pyodide_lock("0.29.3", modules_dir)
 
         assert result is not None
@@ -59,7 +59,7 @@ class TestFetchPyodideLock:
 
         import urllib.error
 
-        with patch("webcompy.cli._pyodide_lock.urllib.request.urlopen", side_effect=urllib.error.URLError("fail")):
+        with patch("webcompy_cli._pyodide_lock.urllib.request.urlopen", side_effect=urllib.error.URLError("fail")):
             try:
                 fetch_pyodide_lock("0.99.0", modules_dir)
                 raise AssertionError("Should have raised PyodideLockFetchError")
@@ -75,7 +75,7 @@ class TestFetchPyodideLock:
 
         import urllib.error
 
-        with patch("webcompy.cli._pyodide_lock.urllib.request.urlopen", side_effect=urllib.error.URLError("fail")):
+        with patch("webcompy_cli._pyodide_lock.urllib.request.urlopen", side_effect=urllib.error.URLError("fail")):
             result = fetch_pyodide_lock("0.29.3", modules_dir)
 
         assert result is not None

@@ -106,7 +106,10 @@ class TestBundledDepsWheel:
         with zipfile.ZipFile(wheel_file) as zf:
             names = zf.namelist()
             cli_files = [n for n in names if n.startswith("webcompy/cli/")]
-            assert len(cli_files) == 0
+            # backward-compat shims (cli/__init__.py + cli/config/__init__.py) are expected
+            assert len(cli_files) == 2
+            assert "webcompy/cli/__init__.py" in cli_files
+            assert "webcompy/cli/config/__init__.py" in cli_files
 
     def test_wheel_top_level_includes_bundled_deps(self, static_site):
         _, wheel_file, _ = static_site

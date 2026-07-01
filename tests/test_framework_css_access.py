@@ -19,7 +19,7 @@ def test_get_styles_files_returns_all_six() -> None:
 
 def test_get_styles_files_content_matches_source() -> None:
     files = get_styles_files()
-    src_dir = Path(__file__).resolve().parent.parent / "webcompy" / "ui" / "_styles"
+    src_dir = Path(__file__).resolve().parent.parent / "packages" / "webcompy" / "src" / "webcompy" / "ui" / "_styles"
     for name, content in files.items():
         expected = (src_dir / name).read_bytes()
         assert content == expected, f"Content mismatch for {name}"
