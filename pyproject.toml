@@ -59,7 +59,6 @@ exclude = [
     "docs/**",
     "docs_app/**",
     "tests/**",
-    "**/template_data/**",
     "**/node_modules/**",
     ".venv/**",
 ]
