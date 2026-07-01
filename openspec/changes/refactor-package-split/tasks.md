@@ -96,7 +96,7 @@
 - [x] 9.3 Run `uv run python -m pytest tests/ --tb=short` — unit tests pass (note: some tests create `RenderContext` directly and may need updates for the ABC hierarchy)
 - [ ] 9.4 Run `uv run python -m webcompy start --dev --app docs_app.bootstrap:app` — dev server starts
 - [ ] 9.5 Run `uv run python -m webcompy generate --app docs_app.bootstrap:app` — SSG produces output
-- [ ] 9.6 Run `scripts/run-e2e-tests.sh` — E2E tests pass
+- [x] 9.6 E2E tests: core 20/20 passed, docs 8/8 passed (fixed PYTHONPATH in conftest.py)
 - [ ] 9.7 Verify `pip install packages/webcompy` installs only core (no starlette, uvicorn, etc.)
 - [ ] 9.8 Verify `pip install packages/webcompy[full]` installs all four packages
 - [x] 9.9 Verify `from webcompy.cli.config import WebComPyBuildConfig` works via shim with deprecation warning
