@@ -70,11 +70,24 @@ No Python installation required on your machine — PyScript runs entirely in th
 
 ### Develop with the CLI
 
+**uv (recommended)**
+
 ```bash
+uv init my-project && cd my-project
+uv add webcompy-cli
+uv run python -m webcompy init       # create project structure
+uv run python -m webcompy start --dev # launch dev server with hot-reload
+uv run python -m webcompy generate   # build static site
+```
+
+**pip**
+
+```bash
+mkdir my-project && cd my-project
 pip install webcompy-cli
-python -m webcompy init
-python -m webcompy start --dev
-python -m webcompy generate
+python -m webcompy init              # create project structure
+python -m webcompy start --dev       # launch dev server with hot-reload
+python -m webcompy generate          # build static site
 ```
 
 ### Testing

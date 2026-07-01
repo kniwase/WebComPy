@@ -72,11 +72,24 @@
 
 ### CLI で開発する
 
+**uv（推奨）**
+
 ```bash
+uv init my-project && cd my-project
+uv add webcompy-cli
+uv run python -m webcompy init       # プロジェクト構成を作成
+uv run python -m webcompy start --dev # 開発サーバー起動（ホットリロード）
+uv run python -m webcompy generate   # 静的サイトを生成
+```
+
+**pip**
+
+```bash
+mkdir my-project && cd my-project
 pip install webcompy-cli
-python -m webcompy init
-python -m webcompy start --dev
-python -m webcompy generate
+python -m webcompy init              # プロジェクト構成を作成
+python -m webcompy start --dev       # 開発サーバー起動（ホットリロード）
+python -m webcompy generate          # 静的サイトを生成
 ```
 
 ### テスト
