@@ -120,9 +120,9 @@ class ServerRenderContext(RenderContext):
 - DI-based factory (`inject(RENDER_CONTEXT_FACTORY)(app, path)`): Rejected. Circular — `RenderContext` creates the DI scope, so it can't be created by one.
 - `WebComPyApp` subclassing: Rejected. Too invasive for user-facing API.
 
-### Decision 4: `render_html()` stays on `RenderContext` as overridable async method
+### Decision 4: `render_html()` stays on base `RenderContext` as overridable async method
 
-`render_html()` is `async def` (introduced by #177 async rendering pipeline, then reverted to sync in #178 — our implementation targets the sync base with async override). `BrowserRenderContext.render_html()` raises `WebComPyException`. `ServerRenderContext` provides `async def` implementation using `webcompy_server._html.generate_html`.
+`render_html()` is `async def` on the base `RenderContext` class, raising `WebComPyException` by default. `BrowserRenderContext` inherits this raising implementation (no override needed). `ServerRenderContext` overrides with `async def` using `webcompy_server._html.generate_html`.
 
 **Rationale:** `render_html()` is the primary API used by both CLI (`_server.py`, `_generate.py`) and testing (`_asgi.py`). Keeping it on `RenderContext` preserves the existing calling convention. The lazy import of `webcompy.cli._html` in core is removed.
 
@@ -130,22 +130,51 @@ class ServerRenderContext(RenderContext):
 
 ```python
 # webcompy/__main__.py (core)
-try:
-    from webcompy_cli._argparser import main as _cli_main
-    _cli_main()
-except ImportError:
-    print("webcompy-cli is not installed. Install with: pip install webcompy[cli]", file=sys.stderr)
-    sys.exit(1)
+def main():
+    try:
+        from webcompy_cli._argparser import get_params
+        from webcompy_cli._generate import generate_static_site
+        from webcompy_cli._init_project import init_project
+        from webcompy_cli._inspect import run_inspect
+        from webcompy_cli._lock import lock_command
+        from webcompy_cli._server import run_server
+    except ImportError:
+        print("webcompy-cli is not installed. Install with: pip install webcompy[cli]", file=sys.stderr)
+        sys.exit(1)
+
+    if len(sys.argv) > 1 and sys.argv[1] == "inspect":
+        run_inspect()
+        return
+
+    import asyncio
+
+    command, _ = get_params()
+    if command == "start":
+        run_server()
+    elif command == "generate":
+        asyncio.run(generate_static_site())
+    elif command == "init":
+        init_project()
+    elif command == "lock":
+        lock_command()
 ```
 
 **Rationale:** `python -m webcompy start` is the documented entry point. Preserving it avoids breaking all existing documentation and muscle memory. `python -m webcompy_cli start` also works as an alternative.
 
 ### Decision 6: Backward-compatible import shims for config and testing
 
-**Config shim** (`webcompy/cli/config/__init__.py` keeps re-exporting):
+**Config shim** (`webcompy/cli/config/__init__.py` keeps re-exporting with deprecation warning):
 
 ```python
 # webcompy/cli/config/__init__.py (shim, kept in core)
+import warnings
+
+warnings.warn(
+    "Importing from webcompy.cli.config is deprecated. Use 'from webcompy_cli.config import ...' instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
 try:
     from webcompy_cli.config import WebComPyBuildConfig, WebComPyServerConfig, LockfileSyncConfig
 except ImportError:
@@ -154,10 +183,18 @@ except ImportError:
     LockfileSyncConfig = None  # type: ignore
 ```
 
-**Testing shim** (`webcompy/testing/__init__.py` keeps re-exporting):
+**Testing shim** (`webcompy/testing/__init__.py` keeps re-exporting with deprecation warning):
 
 ```python
 # webcompy/testing/__init__.py (shim, kept in core)
+import warnings
+
+warnings.warn(
+    "Importing from webcompy.testing is deprecated. Use 'from webcompy_testing import ...' instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
 try:
     from webcompy_testing import (
         TestRenderer, TestRendererResult, FakeDOMNode,

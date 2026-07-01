@@ -63,7 +63,7 @@
 - [x] 6.1 Update `webcompy/__main__.py`: delegate to `webcompy_cli._argparser.main` with error message if `webcompy-cli` not installed
 - [x] 6.2 Create `webcompy/cli/config/__init__.py` shim: re-export from `webcompy_cli.config` with deprecation warning
 - [x] 6.3 Create `webcompy/testing/__init__.py` shim: re-export from `webcompy_testing` with deprecation warning
-- [x] 6.4 Keep empty `webcompy/cli/__init__.py` and `webcompy/ports/_server/__init__.py` stubs that warn and re-export from new packages
+- [x] 6.4 Keep `webcompy/cli/__init__.py` and `webcompy/ports/_server/__init__.py` as docstring stubs (no deprecation warning needed — these were never public import paths)
 - [x] 6.5 Update `webcompy/__init__.py`: remove conditional `cli` import (`if ENVIRONMENT == "other"`); import shim stubs instead
 
 ## 7. Configuration and CI Updates

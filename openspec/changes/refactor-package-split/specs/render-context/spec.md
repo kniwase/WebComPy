@@ -139,8 +139,9 @@ The `webcompy.testing` module (shim to `webcompy_testing`) SHALL leverage `app.c
 
 #### Scenario: RenderContext ABC defines shared interface
 - **WHEN** a developer inspects the `RenderContext` class hierarchy
-- **THEN** `RenderContext` SHALL have the `@abstractmethod` decorator on `_register_ports()` and `render_html()`
-- **AND** `BrowserRenderContext` and `ServerRenderContext` SHALL be concrete subclasses implementing all abstract methods
+- **THEN** `RenderContext` SHALL have the `@abstractmethod` decorator on `_register_ports()` only; `render_html()` SHALL be a concrete `async def` method on the base class that raises `WebComPyException`
+- **AND** `BrowserRenderContext` SHALL inherit `render_html()` from the base (no override needed)
+- **AND** `ServerRenderContext` SHALL override `render_html()` with an `async def` implementation using `webcompy_server._html.generate_html`
 
 #### Scenario: Port provisioning via _register_ports()
 - **WHEN** `BrowserRenderContext._register_ports()` is called
