@@ -254,7 +254,7 @@ class ComponentContext(Protocol[PropsType]):
 class ComponentProperty(TypedDict):
     component_id: str
     component_name: str
-    template: ElementChildren
+    template: ElementChildren | None
     on_before_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
     on_after_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
     on_before_destroy: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from re import compile as re_compile
 from typing import (
     Any,
@@ -44,7 +44,10 @@ class ComponentStore:
 
 
 PropsType = TypeVar("PropsType")
-FuncComponentDef: TypeAlias = Callable[[ComponentContext[PropsType]], ElementChildren]
+FuncComponentDef: TypeAlias = (
+    Callable[[ComponentContext[PropsType]], ElementChildren]
+    | Callable[[ComponentContext[PropsType]], Coroutine[Any, Any, ElementChildren]]
+)
 
 StyleDeclaration: TypeAlias = str | dict[str, "StyleDeclaration"]
 StyleDict: TypeAlias = dict[str, StyleDeclaration]
@@ -269,7 +272,8 @@ class ComponentGenerator(Generic[PropsType]):
 
 
 def define_component(
-    setup: Callable[[ComponentContext[PropsType]], ElementChildren],
+    setup: Callable[[ComponentContext[PropsType]], ElementChildren]
+    | Callable[[ComponentContext[PropsType]], Coroutine[Any, Any, ElementChildren]],
 ) -> ComponentGenerator[PropsType]:
     setup.__webcompy_component_definition__ = True
     return ComponentGenerator(setup.__name__, setup)

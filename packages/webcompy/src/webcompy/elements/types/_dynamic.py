@@ -14,6 +14,18 @@ from webcompy.elements.types._text import TextElement
 from webcompy.signal._graph import consumer_destroy
 
 
+def _subtree_has_async_setup(element: ElementAbstract) -> bool:
+    from webcompy.components._component import Component
+
+    if isinstance(element, Component) and element._pending_async_template is not None:
+        return True
+    if isinstance(element, ElementWithChildren):
+        for child in element._children:
+            if _subtree_has_async_setup(child):
+                return True
+    return False
+
+
 class DynamicElement(ElementWithChildren):
     __parent: ElementWithChildren
 

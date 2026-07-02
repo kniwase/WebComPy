@@ -7,7 +7,7 @@ from typing import Any, TypeVar, overload
 
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
-from webcompy.elements.types._dynamic import DynamicElement, _position_element_nodes
+from webcompy.elements.types._dynamic import DynamicElement, _position_element_nodes, _subtree_has_async_setup
 from webcompy.elements.types._text import NewLine
 from webcompy.exception import WebComPyException
 from webcompy.signal import SignalBase, computed
@@ -134,10 +134,12 @@ class RepeatElement(DynamicElement):
         )
 
     async def _render(self):
+        has_async = bool(self._children) and _subtree_has_async_setup(self)
         await self._refresh()
         if not self._signal_activated:
             self._signal_activated = True
-            self._add_callback_node(self._sequence.on_after_updating(self._refresh_sync))
+            callback = self._refresh if has_async else self._refresh_sync
+            self._add_callback_node(self._sequence.on_after_updating(callback))
 
     def _refresh_sync(self, *args: Any):
         import asyncio

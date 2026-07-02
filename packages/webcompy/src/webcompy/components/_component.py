@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from contextvars import ContextVar
 from inspect import iscoroutinefunction
-from typing import TYPE_CHECKING, Any, TypeAlias, TypeGuard
+from typing import TYPE_CHECKING, Any, TypeAlias, TypeGuard, cast
 from uuid import UUID, uuid4
 
 from webcompy.components._hooks import _active_component_context
@@ -50,7 +50,9 @@ def end_defer_after_rendering() -> list[Callable[[], None]]:
     return []
 
 
-FuncComponentDef: TypeAlias = Callable[[Context[Any]], ElementChildren]
+FuncComponentDef: TypeAlias = (
+    Callable[[Context[Any]], ElementChildren] | Callable[[Context[Any]], Coroutine[Any, Any, ElementChildren]]
+)
 
 
 def _is_function_style_component_def(obj: Any) -> TypeGuard[FuncComponentDef]:
@@ -88,8 +90,11 @@ class Component(ElementBase):
         self._children = []
         self._head_props: HeadPropsStore | None = None
         self._generator = generator
+        self._pending_async_template: Coroutine[Any, Any, ElementChildren] | None = None
         super().__init__()
-        self.__init_component(self.__setup(component_def, props, slots))
+        property = self.__setup(component_def, props, slots)
+        if self._pending_async_template is None:
+            self.__init_component(property)
 
     def __setup(
         self,
@@ -128,7 +133,12 @@ class Component(ElementBase):
             existing_children_count = len(parent_di_scope._children)
 
         try:
-            template = component_def(context)
+            if iscoroutinefunction(component_def):
+                coro = component_def(context)
+                self._pending_async_template = coro
+                template: ElementChildren | None = None
+            else:
+                template = cast("ElementChildren", component_def(context))
         finally:
             _active_component_context.reset(token)
             _active_effect_scope.reset(scope_token)
@@ -174,7 +184,16 @@ class Component(ElementBase):
         self._property = property
 
     async def _render(self):
-        # [async-component-setup] Resolve pending async template if present
+        if self._pending_async_template is not None:
+            from webcompy.di import inject
+            from webcompy.di._keys import SUSPENSE_RESOLVING_KEY
+
+            if not inject(SUSPENSE_RESOLVING_KEY, default=False):
+                template = await self._pending_async_template
+                self._pending_async_template = None
+                property = self._property
+                property["template"] = template
+                self.__init_component(property)
         on_before = self._property["on_before_rendering"]
         if iscoroutinefunction(on_before):
             await on_before()
