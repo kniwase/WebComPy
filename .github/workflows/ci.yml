@@ -558,11 +558,19 @@ jobs:
               echo "Code-change PR — standard code review."
               echo ""
               echo "Changed scopes:"
-              [ "${{ needs.detect-scope.outputs.has-code-changes }}" = "true" ] && echo "- Code (packages/ + deps)"
-              [ "${{ needs.detect-scope.outputs.has-generate-changes }}" = "true" ] && echo "- Generate (docs_app/)"
-              [ "${{ needs.detect-scope.outputs.has-e2e-changes }}" = "true" ] && echo "- E2E (tests/ + scripts)"
-              [ "${{ needs.detect-scope.outputs.has-workflow-changes }}" = "true" ] && echo "- Workflow (.github/workflows/)"
+              if [ "${{ needs.detect-scope.outputs.has-code-changes }}" = "true" ]; then echo "- Code (packages/ + deps)"; fi
+              if [ "${{ needs.detect-scope.outputs.has-generate-changes }}" = "true" ]; then echo "- Generate (docs_app/)"; fi
+              if [ "${{ needs.detect-scope.outputs.has-e2e-changes }}" = "true" ]; then echo "- E2E (tests/ + scripts)"; fi
+              if [ "${{ needs.detect-scope.outputs.has-workflow-changes }}" = "true" ]; then echo "- Workflow (.github/workflows/)"; fi
             } > .tmp/scope-context.txt
+          fi
+
+      - name: Validate scope context
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ ! -s .tmp/scope-context.txt ]; then
+            echo "::warning::scope-context.txt is missing or empty — preparation step failed before OpenCode review could run. This is NOT a review result; the OpenCode review agent was never invoked."
           fi
 
       - name: Write CI results to file
@@ -681,6 +689,7 @@ jobs:
               --title "PR #$PR_NUMBER Review" \
               "$PROMPT$RETRY_MSG" \
               2>&1 | tee .tmp/review-raw-output.log || true
+            [ $attempt -eq 1 ] && cp .tmp/review-raw-output.log .tmp/review-raw-output-init.log
 
             if _review_ok; then
               echo "::notice::Review output written on attempt $attempt"

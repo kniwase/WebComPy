@@ -200,7 +200,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | Changed files | Specs to read |
 |---|---|
 | `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md` |
-| `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md` |
+| `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md` |
 | `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md` |
 | `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md` |
@@ -300,6 +300,7 @@ When specs are added, modified, or removed, update:
 | `port-abstraction` | Typed, injectable port ABCs replacing monolithic `browser` |
 | `virtual-dom` | Server-side virtual DOM tree for SSG and testing |
 | `async` | Async operations, HTTP client integration |
+| `async-component-setup` | Async component definition support via two-phase initialization during `_render()` |
 | `async-rendering` | Async rendering pipeline, async lifecycle hooks, sequential sibling rendering |
 | `di-scope` | Resolution boundary and lifecycle for DI values |
 | `di-injection` | Provide/inject pattern for scoped dependency resolution |

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from contextvars import ContextVar
 from inspect import iscoroutinefunction
-from typing import TYPE_CHECKING, Any, TypeAlias, TypeGuard
+from typing import TYPE_CHECKING, Any, TypeAlias, TypeGuard, cast
 from uuid import UUID, uuid4
 
 from webcompy.components._hooks import _active_component_context
@@ -50,7 +50,9 @@ def end_defer_after_rendering() -> list[Callable[[], None]]:
     return []
 
 
-FuncComponentDef: TypeAlias = Callable[[Context[Any]], ElementChildren]
+FuncComponentDef: TypeAlias = (
+    Callable[[Context[Any]], ElementChildren] | Callable[[Context[Any]], Coroutine[Any, Any, ElementChildren]]
+)
 
 
 def _is_function_style_component_def(obj: Any) -> TypeGuard[FuncComponentDef]:
@@ -88,8 +90,12 @@ class Component(ElementBase):
         self._children = []
         self._head_props: HeadPropsStore | None = None
         self._generator = generator
+        self._pending_async_template: Coroutine[Any, Any, ElementChildren] | None = None
         super().__init__()
-        self.__init_component(self.__setup(component_def, props, slots))
+        property = self.__setup(component_def, props, slots)
+        self._property = property
+        if self._pending_async_template is None:
+            self.__init_component(property)
 
     def __setup(
         self,
@@ -128,7 +134,12 @@ class Component(ElementBase):
             existing_children_count = len(parent_di_scope._children)
 
         try:
-            template = component_def(context)
+            if iscoroutinefunction(component_def):
+                coro = component_def(context)
+                self._pending_async_template = coro
+                template: ElementChildren | None = None
+            else:
+                template = cast("ElementChildren", component_def(context))
         finally:
             _active_component_context.reset(token)
             _active_effect_scope.reset(scope_token)
@@ -173,8 +184,37 @@ class Component(ElementBase):
         self._init_children(node._children)
         self._property = property
 
+    def _cleanup_pending_async(self):
+        self._pending_async_template = None
+        self._property["on_before_destroy"]()
+        for cb in self._callback_nodes:
+            from webcompy.signal._graph import consumer_destroy
+
+            consumer_destroy(cb)
+        self._callback_nodes.clear()
+        self.__purge_signal_members__()
+
     async def _render(self):
-        # [async-component-setup] Resolve pending async template if present
+        if self._pending_async_template is not None:
+            from webcompy.di import inject
+            from webcompy.di._keys import SUSPENSE_RESOLVING_KEY
+
+            if not inject(SUSPENSE_RESOLVING_KEY, default=False):
+                try:
+                    template = await self._pending_async_template
+                except Exception:
+                    self._cleanup_pending_async()
+                    try:
+                        parent = self._parent
+                    except AttributeError:
+                        parent = None
+                    if parent is not None and self in parent._children:
+                        parent._children.remove(self)
+                    raise
+                self._pending_async_template = None
+                property = self._property
+                property["template"] = template
+                self.__init_component(property)
         on_before = self._property["on_before_rendering"]
         if iscoroutinefunction(on_before):
             await on_before()
@@ -192,6 +232,9 @@ class Component(ElementBase):
                 on_after()
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
+        if self._pending_async_template is not None:
+            self._cleanup_pending_async()
+            return
         if self._head_props is not None:
             if self._instance_id in self._head_props.titles:
                 del self._head_props.titles[self._instance_id]
@@ -201,6 +244,9 @@ class Component(ElementBase):
         super()._remove_element(recursive, remove_node)
 
     def _detach_from_node(self) -> None:
+        if self._pending_async_template is not None:
+            self._cleanup_pending_async()
+            return
         if self._head_props is not None:
             if self._instance_id in self._head_props.titles:
                 del self._head_props.titles[self._instance_id]

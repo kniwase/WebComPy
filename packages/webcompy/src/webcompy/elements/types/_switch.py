@@ -9,7 +9,12 @@ from webcompy.components._component import end_defer_after_rendering, start_defe
 from webcompy.di import inject
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
-from webcompy.elements.types._dynamic import DynamicElement, _patch_children, _position_element_nodes
+from webcompy.elements.types._dynamic import (
+    DynamicElement,
+    _patch_children,
+    _position_element_nodes,
+    _subtree_has_async_setup,
+)
 from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY
 from webcompy.signal._base import SignalBase
@@ -49,6 +54,7 @@ class SwitchElement(DynamicElement):
         return [ele] if ele is not None else []
 
     async def _render(self):
+        has_async = bool(self._children) and _subtree_has_async_setup(self)
         if self._children and all(child._mounted is None for child in self._children):
             parent_node = self._parent._get_node()
             for c_idx, child in enumerate(self._children):
@@ -59,12 +65,13 @@ class SwitchElement(DynamicElement):
             await self._refresh()
         if not self._signal_activated:
             self._signal_activated = True
+            callback = self._refresh if has_async else self._refresh_sync
             if isinstance(self._cases, SignalBase):
-                self._add_callback_node(self._cases.on_after_updating(self._refresh_sync))
+                self._add_callback_node(self._cases.on_after_updating(callback))
             else:
                 for cond, _ in self._cases:
                     if isinstance(cond, SignalBase):
-                        self._add_callback_node(cond.on_after_updating(self._refresh_sync))
+                        self._add_callback_node(cond.on_after_updating(callback))
 
     def _refresh_sync(self, *args: Any):
         import asyncio
