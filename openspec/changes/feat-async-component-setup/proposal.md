@@ -56,6 +56,6 @@ None directly from the known issues list. This is a new capability.
 
 ## Impact
 
-- **Affected modules**: `webcompy/components/_component.py`, `webcompy/components/_libs.py`, `webcompy/components/_generator.py`
+- **Affected modules**: `packages/webcompy/src/webcompy/components/_component.py`, `packages/webcompy/src/webcompy/components/_libs.py`, `packages/webcompy/src/webcompy/components/_generator.py`
 - **Backward compatible**: Sync component definitions work without modification. `inspect.iscoroutinefunction()` transparently detects async definitions and diverts to the two-phase init path.
 - **No CLI or server changes**: The async pipeline is already in place. Async setup just integrates into it.
