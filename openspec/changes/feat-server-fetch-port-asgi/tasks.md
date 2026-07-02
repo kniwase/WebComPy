@@ -1,11 +1,11 @@
 - [ ] **Task 1**: Add `is_self_site_url()` method to `FetchPort` ABC
-  - Add `is_self_site_url(url: str) -> bool` **non-abstract** method to `FetchPort` in `webcompy/ports/_fetch.py` with a default implementation returning `False`
+  - Add `is_self_site_url(url: str) -> bool` **non-abstract** method to `FetchPort` in `packages/webcompy/src/webcompy/ports/_fetch.py` with a default implementation returning `False`
   - URLs starting with `/` or `.` are self-site; all others are external
   - `BrowserFetchPort` inherits the default `False` (browser always fetches externally); `ServerFetchPort` overrides to return `True` for self-site URLs
   - Estimated: 30 min
 
 - [ ] **Task 2**: Rewrite `ServerFetchPort` with dual-client architecture
-  - In `webcompy/ports/_server/_fetch.py`:
+  - In `packages/webcompy-server/src/webcompy_server/ports/_fetch.py`:
     - Keep `_external_client = httpx.AsyncClient()` for external URLs
     - Add `_self_site_client: httpx.AsyncClient | None = None` (created by `configure()`)
     - Add `_asgi_app: ASGIApp | None = None`, `_blocked_paths: list[str]`, `_base_url: str = "/"`
@@ -22,13 +22,13 @@
   - Estimated: 1.5 hours
 
 - [ ] **Task 3**: Expose `ServerFetchPort` from `WebComPyApp` and configure base_url
-  - In `webcompy/app/_app.py`:
+  - In `packages/webcompy/src/webcompy/app/_app.py`:
     - After creating `ServerFetchPort` in the server branch, store a reference to it (e.g., `self._server_fetch_port = server_fetch_port`)
     - Add a method or property to configure the fetch port's base_url from `app.config.base_url`
   - Estimated: 45 min
 
 - [ ] **Task 4**: Configure `ServerFetchPort` in `create_asgi_app()`
-  - In `webcompy/cli/_server.py`:
+  - In `packages/webcompy-cli/src/webcompy_cli/_server.py`:
     - After `Starlette` app creation, extract `ServerFetchPort` from `app.di_scope`
     - Determine blocked paths from `app.routes` (page routes that return HTML)
     - Call `server_fetch_port.configure(asgi, blocked_paths)` with the Starlette app and blocked paths
@@ -36,7 +36,7 @@
   - Estimated: 1 hour
 
 - [ ] **Task 5**: Configure `ServerFetchPort` in `generate_static_site()`
-  - In `webcompy/cli/_generate.py`:
+  - In `packages/webcompy-cli/src/webcompy_cli/_generate.py`:
     - Create a temporary ASGI app via `create_asgi_app()` (or a lightweight equivalent)
     - Extract `ServerFetchPort` from `app.di_scope`
     - Determine blocked paths from `app.routes`

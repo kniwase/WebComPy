@@ -12,17 +12,17 @@ This change depends on `feat/async-rendering-pipeline` because `ServerFetchPort.
 
 ## What Changes
 
-- **`webcompy/ports/_fetch.py`** — Add `is_self_site_url(url)` method to `FetchPort` ABC for URL classification.
-- **`webcompy/ports/_server/_fetch.py`** — Major changes to `ServerFetchPort`:
+- **`packages/webcompy/src/webcompy/ports/_fetch.py`** — Add `is_self_site_url(url)` method to `FetchPort` ABC for URL classification.
+- **`packages/webcompy-server/src/webcompy_server/ports/_fetch.py`** — Major changes to `ServerFetchPort`:
   - Add `configure(asgi_app, blocked_paths)` method for lazy initialization after ASGI app creation.
   - Add self-site URL detection: URLs starting with `/` or `.` are treated as self-site.
   - Route self-site requests through `httpx.ASGITransport` wrapping the app's ASGI app.
   - Return 500 for blocked paths (page routes that return HTML) to prevent infinite recursion.
   - Keep external URL handling via normal `httpx.AsyncClient`.
   - Add `close()` cleanup for both clients.
-- **`webcompy/app/_app.py`** — Retrieve `ServerFetchPort` from DI scope after initialization for later configuration.
-- **`webcompy/cli/_server.py`** — Call `ServerFetchPort.configure(asgi_app, blocked_paths)` after ASGI app creation.
-- **`webcompy/cli/_generate.py`** — Call `ServerFetchPort.configure(asgi_app, blocked_paths)` during SSG with a temporary ASGI app.
+- **`packages/webcompy/src/webcompy/app/_app.py`** — Retrieve `ServerFetchPort` from DI scope after initialization for later configuration.
+- **`packages/webcompy-cli/src/webcompy_cli/_server.py`** — Call `ServerFetchPort.configure(asgi_app, blocked_paths)` after ASGI app creation.
+- **`packages/webcompy-cli/src/webcompy_cli/_generate.py`** — Call `ServerFetchPort.configure(asgi_app, blocked_paths)` during SSG with a temporary ASGI app.
 
 ## Capabilities
 
@@ -38,11 +38,11 @@ This change depends on `feat/async-rendering-pipeline` because `ServerFetchPort.
 
 ## Impact
 
-- `webcompy/ports/_fetch.py` — ABC change (new method).
-- `webcompy/ports/_server/_fetch.py` — Major rewrite of `ServerFetchPort`.
-- `webcompy/app/_app.py` — Minor change to expose `ServerFetchPort` reference.
-- `webcompy/cli/_server.py` — Add configuration call after ASGI app creation.
-- `webcompy/cli/_generate.py` — Add ASGI app creation and `ServerFetchPort` configuration for SSG.
+- `packages/webcompy/src/webcompy/ports/_fetch.py` — ABC change (new method).
+- `packages/webcompy-server/src/webcompy_server/ports/_fetch.py` — Major rewrite of `ServerFetchPort`.
+- `packages/webcompy/src/webcompy/app/_app.py` — Minor change to expose `ServerFetchPort` reference.
+- `packages/webcompy-cli/src/webcompy_cli/_server.py` — Add configuration call after ASGI app creation.
+- `packages/webcompy-cli/src/webcompy_cli/_generate.py` — Add ASGI app creation and `ServerFetchPort` configuration for SSG.
 - No browser-side changes.
 - No breaking changes to existing external-fetch behavior.
 
