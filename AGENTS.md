@@ -238,6 +238,10 @@ Co-Authored-By: opencode <noreply@opencode.ai>
 
 The `Co-Authored-By` footer is required on every commit.
 
+### PR Body
+
+When creating a PR, the body MUST follow the template in `.github/PULL_REQUEST_TEMPLATE/`. Read the template before writing the PR body and fill ALL sections.
+
 ### Change Conventions (OpenSpec)
 
 - Change names use `<type>-<short-description>` (hyphen separator, e.g., `feat-list-reconciliation`)
