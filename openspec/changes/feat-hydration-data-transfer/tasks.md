@@ -5,9 +5,9 @@
 **Estimated time:** 1.5 hours
 
 Create the `webcompy/hydration/` package with:
-- `webcompy/hydration/__init__.py` — Public API exports
-- `webcompy/hydration/_payload.py` — `TransferPayload` dataclass, `TRANSFER_VERSION`, `TransferFetchEntry`, `TransferAsyncResultEntry`, `serialize_payload()` and `deserialize_payload()` functions
-- `webcompy/hydration/_collect.py` — `collect_transfer_data()` function that gathers `AsyncResult` states and `FetchPort` response cache from the component tree
+- `packages/webcompy/src/webcompy/hydration/__init__.py` — Public API exports
+- `packages/webcompy/src/webcompy/hydration/_payload.py` — `TransferPayload` dataclass, `TRANSFER_VERSION`, `TransferFetchEntry`, `TransferAsyncResultEntry`, `serialize_payload()` and `deserialize_payload()` functions
+- `packages/webcompy/src/webcompy/hydration/_collect.py` — `collect_transfer_data()` function that gathers `AsyncResult` states and `FetchPort` response cache from the component tree
 
 The payload schema:
 ```python
@@ -31,7 +31,7 @@ class TransferPayload:
 
 `serialize_payload()` produces HTML-escaped JSON string. `deserialize_payload()` parses JSON, validates version, and returns `TransferPayload | None` (None on parse error or version mismatch).
 
-**Files created:** `webcompy/hydration/__init__.py`, `webcompy/hydration/_payload.py`, `webcompy/hydration/_collect.py`
+**Files created:** `packages/webcompy/src/webcompy/hydration/__init__.py`, `packages/webcompy/src/webcompy/hydration/_payload.py`, `packages/webcompy/src/webcompy/hydration/_collect.py`
 
 ---
 
@@ -39,7 +39,7 @@ class TransferPayload:
 
 **Estimated time:** 1.5 hours
 
-Modify `webcompy/ports/_server/_fetch.py` to add an internal response cache for self-site fetch requests:
+Modify `packages/webcompy-server/src/webcompy_server/ports/_fetch.py` to add an internal response cache for self-site fetch requests:
 
 - Add `_response_cache: dict[str, Response]` to `ServerFetchPort.__init__()`
 - In `fetch()`, after a successful self-site request, cache the response keyed by URL (for GET) or by `f"{method}:{url}:{body}"` for non-GET requests
@@ -48,7 +48,7 @@ Modify `webcompy/ports/_server/_fetch.py` to add an internal response cache for 
 - Add `clear_cache()` method for cleanup between SSR renders
 - Only cache responses from self-site URLs (those classified by `is_self_site_url()`)
 
-**Files modified:** `webcompy/ports/_server/_fetch.py`, `webcompy/ports/_fetch.py` (add `is_self_site_url()` to `FetchPort` ABC — this may already exist from `feat/server-fetch-port-asgi`)
+**Files modified:** `packages/webcompy-server/src/webcompy_server/ports/_fetch.py`, `packages/webcompy/src/webcompy/ports/_fetch.py` (add `is_self_site_url()` to `FetchPort` ABC — this may already exist from `feat/server-fetch-port-asgi`)
 
 ---
 
@@ -56,7 +56,7 @@ Modify `webcompy/ports/_server/_fetch.py` to add an internal response cache for 
 
 **Estimated time:** 2 hours
 
-Modify `webcompy/aio/_async_result.py` to support state restoration from the transfer payload:
+Modify `packages/webcompy/src/webcompy/aio/_async_result.py` to support state restoration from the transfer payload:
 
 - Add `_restore_from_transfer(data: Any)` method to `AsyncResult` that:
   - Sets `_state.value = AsyncState.SUCCESS`
@@ -69,7 +69,7 @@ Modify `webcompy/aio/_async_result.py` to support state restoration from the tra
 
 The transfer payload needs to be accessible during component setup. Use the DI system (`provide()`/`inject()`) with a new `InjectKey` (e.g., `HYDRATION_DATA_KEY`) scoped to the app's root DI scope during `app.run()` initialization. The key SHALL be provided once at startup and injected by `AsyncResult` and `BrowserFetchPort` during component initialization. This avoids introducing a module-level global, consistent with the framework invariant against `_root_di_scope`-style singletons.
 
-**Files modified:** `webcompy/aio/_async_result.py`, `webcompy/aio/__init__.py`, possibly `webcompy/components/_component.py` (for component ID access during setup)
+**Files modified:** `packages/webcompy/src/webcompy/aio/_async_result.py`, `packages/webcompy/src/webcompy/aio/__init__.py`, possibly `packages/webcompy/src/webcompy/components/_component.py` (for component ID access during setup)
 
 ---
 
@@ -77,7 +77,7 @@ The transfer payload needs to be accessible during component setup. Use the DI s
 
 **Estimated time:** 1.5 hours
 
-Modify `webcompy/ports/_browser/_fetch.py` to populate an internal response cache from the transfer payload:
+Modify `packages/webcompy/src/webcompy/ports/_browser/_fetch.py` to populate an internal response cache from the transfer payload:
 
 - Add `_response_cache: dict[str, Response]` to `BrowserFetchPort.__init__()`
 - Add `populate_from_transfer(data: dict[str, dict])` method that converts transfer payload `fetches` entries into `Response` objects and stores them in `_response_cache`
@@ -86,7 +86,7 @@ Modify `webcompy/ports/_browser/_fetch.py` to populate an internal response cach
 - Cache entries persist for the lifetime of the `BrowserFetchPort` instance (no eviction)
 - Add a key generation helper that matches `ServerFetchPort`'s key format for non-GET requests
 
-**Files modified:** `webcompy/ports/_browser/_fetch.py`
+**Files modified:** `packages/webcompy/src/webcompy/ports/_browser/_fetch.py`
 
 ---
 
@@ -94,7 +94,7 @@ Modify `webcompy/ports/_browser/_fetch.py` to populate an internal response cach
 
 **Estimated time:** 1.5 hours
 
-Modify `webcompy/cli/_html.py` and `webcompy/app/_app.py` to inject the transfer payload into the HTML output:
+Modify `packages/webcompy-server/src/webcompy_server/_html.py` and `packages/webcompy/src/webcompy/app/_app.py` to inject the transfer payload into the HTML output:
 
 - In `WebComPyApp` (or `AppDocumentRoot`), add a method `_collect_transfer_data() -> dict` that:
   - Retrieves `ServerFetchPort` from DI scope
@@ -108,7 +108,7 @@ Modify `webcompy/cli/_html.py` and `webcompy/app/_app.py` to inject the transfer
   - Insert it into the HTML output before the PyScript bootstrap `<script>` tag
 - If `generate_html()` is called without an app (e.g., prerender=False), inject an empty payload
 
-**Files modified:** `webcompy/cli/_html.py`, `webcompy/app/_app.py`, `webcompy/app/_root_component.py`
+**Files modified:** `packages/webcompy-server/src/webcompy_server/_html.py`, `packages/webcompy/src/webcompy/app/_app.py`, `packages/webcompy/src/webcompy/app/_root_component.py`
 
 ---
 
@@ -116,7 +116,7 @@ Modify `webcompy/cli/_html.py` and `webcompy/app/_app.py` to inject the transfer
 
 **Estimated time:** 2 hours
 
-Modify `webcompy/app/_root_component.py` and `webcompy/app/_app.py` to restore transfer data during `app.run()`:
+Modify `packages/webcompy/src/webcompy/app/_root_component.py` and `packages/webcompy/src/webcompy/app/_app.py` to restore transfer data during `app.run()`:
 
 - In `app.run()`, before the first render:
   - Locate the `<script type="application/json" id="__webcompy_data__">` element in the DOM
@@ -129,7 +129,7 @@ Modify `webcompy/app/_root_component.py` and `webcompy/app/_app.py` to restore t
 - During component setup, `useAsyncResult` checks the transfer payload for a matching component ID
 - After all component restorations, clear the `async_results` reference
 
-**Files modified:** `webcompy/app/_app.py`, `webcompy/app/_root_component.py`, `webcompy/aio/_async_result.py` (integration with component IDs)
+**Files modified:** `packages/webcompy/src/webcompy/app/_app.py`, `packages/webcompy/src/webcompy/app/_root_component.py`, `packages/webcompy/src/webcompy/aio/_async_result.py` (integration with component IDs)
 
 ---
 
@@ -195,9 +195,9 @@ These tests use the existing E2E test infrastructure (Playwright + `webcompy ins
 
 Suspense hydration (`SuspenseElement._hydrate_node()`) depends on the transfer payload to determine whether children async data was resolved during SSR. The `feat-suspense-component` change owns the Suspense hydration logic, but this change must provide the API for Suspense to query the transfer payload.
 
-- [ ] 9.1 Add `HYDRATION_DATA_KEY` to `webcompy/di/_keys.py` as `InjectKey[dict]` for the transfer payload's `async_results` section. This key is provided by `app.run()` during browser initialization and injected by `AsyncResult` (Task 3) and `BrowserFetchPort` (Task 4).
+- [ ] 9.1 Add `HYDRATION_DATA_KEY` to `packages/webcompy/src/webcompy/di/_keys.py` as `InjectKey[dict]` for the transfer payload's `async_results` section. This key is provided by `app.run()` during browser initialization and injected by `AsyncResult` (Task 3) and `BrowserFetchPort` (Task 4).
 - [ ] 9.2 Add `has_resolved_data(component_id: str) -> bool` helper to the hydration module — checks whether the transfer payload contains a resolved `AsyncResult` entry for the given component ID. This is the API that `SuspenseElement._hydrate_node()` uses to decide whether to immediately render children or keep fallback and schedule async resolution.
 - [ ] 9.3 Document that `SuspenseElement._hydrate_node()` in `feat-suspense-component` calls `has_resolved_data()` to gate hydration behavior: if resolved, render children immediately; if not, render fallback and schedule async resolution.
 - [ ] 9.4 Write unit test: Suspense integration — verify `has_resolved_data()` returns `True` for a component ID in the payload, `False` when not present, and `False` when the payload is missing.
 
-**Files modified:** `webcompy/di/_keys.py`, `webcompy/hydration/`
+**Files modified:** `packages/webcompy/src/webcompy/di/_keys.py`, `packages/webcompy/src/webcompy/hydration/`

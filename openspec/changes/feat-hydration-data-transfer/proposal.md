@@ -15,11 +15,11 @@ With the `feat/async-rendering-pipeline` change making the rendering pipeline as
 ## What Changes
 
 - **NEW** `webcompy/hydration/` module — Transfer payload serialization/deserialization, payload schema definition, and hydration data restoration logic.
-- **NEW** Transfer payload injection in `webcompy/cli/_html.py` — After async SSR rendering, collect all resolved `AsyncResult` states and `FetchPort` response caches, serialize them into a `<script type="application/json" id="__webcompy_data__">` tag appended to the HTML output.
-- **MODIFIED** `webcompy/aio/_async_result.py` — `AsyncResult` gains a `_restore_from_transfer()` method that accepts pre-resolved data and transitions directly to `SUCCESS` state without re-executing the async function. `useAsyncResult` checks the transfer payload before scheduling execution.
-- **MODIFIED** `webcompy/ports/_browser/_fetch.py` — `BrowserFetchPort` reads the transfer payload during initialization and returns cached responses for URLs present in the payload, avoiding duplicate network requests.
-- **MODIFIED** `webcompy/ports/_server/_fetch.py` — `ServerFetchPort` caches response data during SSR for inclusion in the transfer payload.
-- **MODIFIED** `webcompy/app/_root_component.py` — After SSR rendering, collect transfer data from `AsyncResult` instances and `FetchPort` response cache. During browser hydration, restore `AsyncResult` states and populate `BrowserFetchPort` cache from the transfer payload.
+- **NEW** Transfer payload injection in `packages/webcompy-server/src/webcompy_server/_html.py` — After async SSR rendering, collect all resolved `AsyncResult` states and `FetchPort` response caches, serialize them into a `<script type="application/json" id="__webcompy_data__">` tag appended to the HTML output.
+- **MODIFIED** `packages/webcompy/src/webcompy/aio/_async_result.py` — `AsyncResult` gains a `_restore_from_transfer()` method that accepts pre-resolved data and transitions directly to `SUCCESS` state without re-executing the async function. `useAsyncResult` checks the transfer payload before scheduling execution.
+- **MODIFIED** `packages/webcompy/src/webcompy/ports/_browser/_fetch.py` — `BrowserFetchPort` reads the transfer payload during initialization and returns cached responses for URLs present in the payload, avoiding duplicate network requests.
+- **MODIFIED** `packages/webcompy-server/src/webcompy_server/ports/_fetch.py` — `ServerFetchPort` caches response data during SSR for inclusion in the transfer payload.
+- **MODIFIED** `packages/webcompy/src/webcompy/app/_root_component.py` — After SSR rendering, collect transfer data from `AsyncResult` instances and `FetchPort` response cache. During browser hydration, restore `AsyncResult` states and populate `BrowserFetchPort` cache from the transfer payload.
 
 ## Capabilities
 
@@ -61,6 +61,6 @@ With the `feat/async-rendering-pipeline` change making the rendering pipeline as
 
 ## Impact
 
-- **Affected modules**: `webcompy/hydration/` (new), `webcompy/cli/_html.py` (payload injection), `webcompy/aio/_async_result.py` (state restoration), `webcompy/ports/_browser/_fetch.py` (cache from payload), `webcompy/ports/_server/_fetch.py` (response caching), `webcompy/app/_root_component.py` (data collection and restoration)
+- **Affected modules**: `packages/webcompy/src/webcompy/hydration/` (new), `packages/webcompy-server/src/webcompy_server/_html.py` (payload injection), `packages/webcompy/src/webcompy/aio/_async_result.py` (state restoration), `packages/webcompy/src/webcompy/ports/_browser/_fetch.py` (cache from payload), `packages/webcompy-server/src/webcompy_server/ports/_fetch.py` (response caching), `packages/webcompy/src/webcompy/app/_root_component.py` (data collection and restoration)
 - **Breaking**: None — the transfer payload is additive; existing apps without async data fetching work unchanged.
 - **Testing**: Unit tests for payload serialization/deserialization, `AsyncResult` state restoration, `BrowserFetchPort` cache hit, and `ServerFetchPort` response caching. E2E tests for full SSR→browser data transfer flow.
