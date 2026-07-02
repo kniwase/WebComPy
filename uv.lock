@@ -1240,12 +1240,14 @@ version = "0.0.13"
 source = { editable = "packages/webcompy-server" }
 dependencies = [
     { name = "httpx" },
+    { name = "nest-asyncio" },
     { name = "webcompy" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "httpx" },
+    { name = "nest-asyncio", specifier = ">=1.6.0" },
     { name = "webcompy", editable = "packages/webcompy" },
 ]
 
