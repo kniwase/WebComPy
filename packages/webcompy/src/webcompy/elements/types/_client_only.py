@@ -35,18 +35,15 @@ class ClientOnlyElement(DynamicElement):
 
     async def _render(self):
         if not self._children:
-            if self._is_client:
-                children = self._generate_children(self._children_generator)
-            else:
-                children = self._generate_fallback()
+            children = (
+                self._generate_children(self._children_generator) if self._is_client else self._generate_fallback()
+            )
             self._children = children
         await super()._render()
 
     def _hydrate_node(self):
-        if self._is_client:
-            children = self._generate_children(self._children_generator)
-            self._children = children
-        else:
-            children = self._generate_fallback()
-            self._children = children
+        children = self._generate_children(self._children_generator) if self._is_client else self._generate_fallback()
+        self._children = children
+        for c_idx, child in enumerate(self._children):
+            child._node_idx = self._node_idx + c_idx
         super()._hydrate_node()
