@@ -184,6 +184,16 @@ class Component(ElementBase):
         self._init_children(node._children)
         self._property = property
 
+    def _cleanup_pending_async(self):
+        self._pending_async_template = None
+        self._property["on_before_destroy"]()
+        for cb in self._callback_nodes:
+            from webcompy.signal._graph import consumer_destroy
+
+            consumer_destroy(cb)
+        self._callback_nodes.clear()
+        self.__purge_signal_members__()
+
     async def _render(self):
         if self._pending_async_template is not None:
             from webcompy.di import inject
@@ -192,15 +202,8 @@ class Component(ElementBase):
             if not inject(SUSPENSE_RESOLVING_KEY, default=False):
                 try:
                     template = await self._pending_async_template
-                except BaseException:
-                    self._pending_async_template = None
-                    self._property["on_before_destroy"]()
-                    for cb in self._callback_nodes:
-                        from webcompy.signal._graph import consumer_destroy
-
-                        consumer_destroy(cb)
-                    self._callback_nodes.clear()
-                    self.__purge_signal_members__()
+                except Exception:
+                    self._cleanup_pending_async()
                     try:
                         parent = self._parent
                     except AttributeError:
@@ -230,14 +233,7 @@ class Component(ElementBase):
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         if self._pending_async_template is not None:
-            self._pending_async_template = None
-            self._property["on_before_destroy"]()
-            for callback_node in self._callback_nodes:
-                from webcompy.signal._graph import consumer_destroy
-
-                consumer_destroy(callback_node)
-            self._callback_nodes.clear()
-            self.__purge_signal_members__()
+            self._cleanup_pending_async()
             return
         if self._head_props is not None:
             if self._instance_id in self._head_props.titles:
@@ -249,14 +245,7 @@ class Component(ElementBase):
 
     def _detach_from_node(self) -> None:
         if self._pending_async_template is not None:
-            self._pending_async_template = None
-            self._property["on_before_destroy"]()
-            for cb in self._callback_nodes:
-                from webcompy.signal._graph import consumer_destroy
-
-                consumer_destroy(cb)
-            self._callback_nodes.clear()
-            self.__purge_signal_members__()
+            self._cleanup_pending_async()
             return
         if self._head_props is not None:
             if self._instance_id in self._head_props.titles:
