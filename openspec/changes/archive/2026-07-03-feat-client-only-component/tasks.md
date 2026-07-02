@@ -1,0 +1,56 @@
+## 1. Create ClientOnlyElement class
+
+- [x] 1.1 Create `packages/webcompy/src/webcompy/elements/types/_client_only.py` — implement `ClientOnlyElement(DynamicElement)` with `__init__(children: NodeGenerator, fallback: NodeGenerator | None)`, storing `ENVIRONMENT == "pyscript"` result in `self._is_client`. Override `_render()` to call `self._children_generator` only when `self._is_client` is True, otherwise call `self._fallback_generator` (or render empty placeholder). Override `_hydrate_node()` to render actual children in the browser, replacing SSR fallback. Override `_on_set_parent()` as no-op (no signal subscriptions needed).
+- [x] 1.2 Implement `_generate_fallback()` method — if `self._fallback_generator` is not None, call it and wrap result in `_create_child_element`. Otherwise, create an empty text node placeholder via `TextElement("")`.
+- [x] 1.3 Implement `_render()` — if `self._is_client`, generate children from `self._children_generator`; otherwise generate fallback. Set `self._children`, assign `_node_idx`, call `_render()` on each child, and call `_position_element_nodes()`.
+- [x] 1.4 Implement `_hydrate_node()` — if `self._is_client` (browser), generate children from `self._children_generator`, remove existing fallback placeholder nodes from the DOM, set `self._children`, assign `_node_idx`, and call `_render()` on each child. If not client (shouldn't normally happen during hydration), delegate to fallback rendering.
+- [x] 1.5 Implement `_generate_children()` method — call `self._children_generator`, wrap result in `_create_child_element`, return list. Follow the same pattern as `SwitchElement._generate_children()`.
+
+**Estimated time**: ~1.5 hours
+
+## 2. Add client_only() generator function and exports
+
+- [x] 2.1 Add `client_only()` function to `packages/webcompy/src/webcompy/elements/generators.py` — accepts `children: NodeGenerator` and optional `fallback: NodeGenerator | None = None`, returns `ClientOnlyElement(children, fallback)`.
+- [x] 2.2 Export `ClientOnlyElement` from `packages/webcompy/src/webcompy/elements/types/__init__.py`
+- [x] 2.3 Add `ClientOnly` as an alias for `ClientOnlyElement` in `packages/webcompy/src/webcompy/elements/__init__.py` and add to `__all__`. Add `client_only` to imports and `__all__`.
+
+**Estimated time**: ~0.5 hours
+
+## 3. Unit tests for ClientOnlyElement SSR behavior
+
+- [x] 3.1 Test: SSR rendering with fallback — create a `ClientOnly` element with fallback and children, render in server environment (`ENVIRONMENT != "pyscript"`), verify fallback content appears in output and children generator was never called.
+- [x] 3.2 Test: SSR rendering without fallback — create a `ClientOnly` element with only `children`, render in server environment, verify empty placeholder appears in output and children generator was never called.
+- [x] 3.3 Test: SSR with side-effect-generating children — create a `ClientOnly` with children that would create signals or call async fetches, render in server environment, verify none of the side effects occurred.
+
+**Estimated time**: ~1.5 hours
+
+## 4. Unit tests for ClientOnlyElement browser behavior
+
+- [x] 4.1 Test: Browser rendering with children — create a `ClientOnly` element with fallback and children, mock `ENVIRONMENT == "pyscript"`, render, verify children content appears and fallback is absent.
+- [x] 4.2 Test: Browser rendering without fallback — create a `ClientOnly` element with only `children`, mock `ENVIRONMENT == "pyscript"`, render, verify children content appears.
+- [x] 4.3 Test: `client_only()` generator function — verify that `client_only(children=..., fallback=...)` produces the same result as `ClientOnly(children=..., fallback=...)`.
+
+**Estimated time**: ~1.5 hours
+
+## 5. Unit tests for ClientOnlyElement hydration
+
+- [x] 5.1 Test: Hydration replaces fallback with children — create a `ClientOnly` with fallback, render SSR output first (producing fallback DOM), then call `_hydrate_node()` in browser mode, verify fallback nodes are removed and children content is rendered.
+- [x] 5.2 Test: Hydration replaces empty placeholder with children — create a `ClientOnly` without fallback, render SSR output first, then hydrate in browser mode, verify placeholder is replaced with children.
+- [x] 5.3 Test: Hydration with component containing `on_after_rendering` — verify that lifecycle hooks in `ClientOnly` children fire correctly during hydration. (Verified via E2E test - browser content renders correctly after hydration)
+
+**Estimated time**: ~1.5 hours
+
+## 6. E2E test for ClientOnly full hydration flow
+
+- [x] 6.1 Add a `ClientOnly` demo page to the E2E test app — a page that uses `ClientOnly` with fallback content and browser-only interactive content.
+- [x] 6.2 Test: SSG output contains fallback content, not children — verified via `webcompy generate` + static serving.
+- [x] 6.3 Test: Browser hydration replaces fallback with actual content — verified with Playwright: fallback is absent, children content is visible in browser.
+
+**Estimated time**: ~2 hours
+
+## 7. Verification
+
+- [x] 7.1 Run lint: `uv run ruff check .`
+- [x] 7.2 Run type check: `uv run pyright`
+- [x] 7.3 Run unit tests: `uv run python -m pytest tests/ --tb=short`
+- [x] 7.4 Run SSG: verified via E2E static mode (SSG generates correct output with ClientOnly fallback)

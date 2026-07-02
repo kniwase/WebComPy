@@ -4,6 +4,7 @@ from webcompy.elements._dom_objs import DOMEvent, DOMNode
 from webcompy.elements._head import HeadElement
 from webcompy.elements.generators import (
     break_line,
+    client_only,
     create_element,
     event,
     noderef,
@@ -12,13 +13,18 @@ from webcompy.elements.generators import (
     switch,
     text,
 )
+from webcompy.elements.types._client_only import ClientOnlyElement
+
+ClientOnly = ClientOnlyElement
 
 __all__ = [
+    "ClientOnly",
     "DOMEvent",
     "DOMNode",
     "DomNodeRef",
     "HeadElement",
     "break_line",
+    "client_only",
     "create_element",
     "event",
     "html",
