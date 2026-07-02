@@ -246,3 +246,86 @@ class TestSwitchElementAsyncRefreshRegistration:
             await asyncio.sleep(0)
 
             assert len(refresh_sync_called) == 0, "_refresh_sync should NOT be called when subtree has async setup"
+
+
+class TestFoundationValidationSpike:
+    @pytest.mark.asyncio
+    async def test_async_component_in_repeat_signal_update_does_not_block(self, fake_browser_full, monkeypatch):
+        from webcompy.components._generator import define_component
+        from webcompy.elements import html
+        from webcompy.elements.types._repeat import RepeatElement
+        from webcompy.signal import ReactiveList
+
+        @define_component
+        async def DataComponent(context):
+            data = "Alice"
+            return html.DIV({}, str(data))
+
+        with _component_di_scope():
+            rl = ReactiveList(["item1"])
+
+            rep = RepeatElement(rl, lambda x: DataComponent(x))
+            root_fake = FakeDOMNode("div")
+            parent = FakeParent("div", {}, {}, None, None)
+            parent._node_cache = root_fake
+            parent._mounted = True
+            rep._parent = parent
+            rep._node_idx = 0
+
+            refresh_sync_called = []
+            original_refresh_sync = rep._refresh_sync
+
+            def tracking_refresh_sync(*args, **kwargs):
+                refresh_sync_called.append(True)
+                return original_refresh_sync(*args, **kwargs)
+
+            monkeypatch.setattr(rep, "_refresh_sync", tracking_refresh_sync)
+
+            await rep._render()
+
+            rl.append("item2")
+            import asyncio
+
+            await asyncio.sleep(0)
+
+            assert len(refresh_sync_called) == 0, (
+                "Signal-triggered RepeatElement._refresh() whose subtree contains "
+                "an async component must NOT block the event loop"
+            )
+
+    @pytest.mark.asyncio
+    async def test_async_setup_exception_propagates_not_swallowed(self, fake_browser_full):
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore, define_component
+        from webcompy.di import _pending_di_parent
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.elements import html
+
+        @define_component
+        async def FailingComponent(context):
+            msg = "async-setup-failure"
+            return html.DIV({}, msg)
+
+        store = ComponentStore()
+        head_props = HeadPropsStore()
+        scope = DIScope()
+        scope.provide(_COMPONENT_STORE_KEY, store)
+        scope.provide(_HEAD_PROPS_KEY, head_props)
+        di_token = _active_di_scope.set(scope)
+        pending_token = _pending_di_parent.set(scope)
+        try:
+            cmp = FailingComponent(None)
+            assert cmp._pending_async_template is not None
+
+            cmp._pending_async_template = _raise_value_error()
+            with pytest.raises(ValueError, match="async-setup-error"):
+                await cmp._render()
+        finally:
+            _active_di_scope.reset(di_token)
+            _pending_di_parent.reset(pending_token)
+            scope.dispose()
+
+
+async def _raise_value_error():
+    raise ValueError("async-setup-error")

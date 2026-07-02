@@ -2,10 +2,10 @@
 
 > Prerequisite for the rest of this change. Validates that the foundational `_refresh_sync` mechanism in `feat/async-rendering-pipeline` does not deadlock or block the event loop once async component setup is in play.
 
-- [ ] 0.1 Build a minimal PoC: a `@define_component async def DataComponent(context): data = await fetch("/api/x"); return html.DIV(...)` placed inside a `repeat()` whose sequence signal updates during SSG.
-- [ ] 0.2 Confirm that a signal-triggered `RepeatElement._refresh()` whose subtree contains the async component does NOT block the event loop (no user I/O is awaited inside `_refresh_sync`'s `run_until_complete`) — record the observed behavior.
-- [ ] 0.3 If any block/deadlock is observed, document with a reproducer before continuing — this defines the exact behavior to fix in the two-tier refresh work (Decision 6).
-- [ ] 0.4 Confirm `app.run()`'s root render via `resolve_async(... _render())` still logs a raised async exception via the default `on_error=_log_error` hook, and that no swallow-without-log path is introduced.
+- [x] 0.1 Build a minimal PoC: a `@define_component async def DataComponent(context): data = await fetch("/api/x"); return html.DIV(...)` placed inside a `repeat()` whose sequence signal updates during SSG.
+- [x] 0.2 Confirm that a signal-triggered `RepeatElement._refresh()` whose subtree contains the async component does NOT block the event loop (no user I/O is awaited inside `_refresh_sync`'s `run_until_complete`) — recorded in `test_async_component_in_repeat_signal_update_does_not_block`.
+- [x] 0.3 If any block/deadlock is observed, document with a reproducer before continuing — no block/deadlock observed (async refresh is used when subtree has async setup).
+- [x] 0.4 Confirm `app.run()`'s root render via `resolve_async(... _render())` still logs a raised async exception via the default `on_error=_log_error` hook, and that no swallow-without-log path is introduced — verified in `test_async_setup_exception_propagates_not_swallowed`.
 
 ## 1. Update types and decorator
 
@@ -55,9 +55,9 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Run lint: `uv run ruff check .`
-- [ ] 5.2 Run format: `uv run ruff format .`
-- [ ] 5.3 Run type check: `uv run pyright`
-- [ ] 5.4 Run unit tests: `uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs`
-- [ ] 5.5 Run SSG: `uv run python -m webcompy generate --app docs_app.bootstrap:app`
-- [ ] 5.6 Run E2E tests: `scripts/run-e2e-tests.sh bootstrap-static`
+- [x] 5.1 Run lint: `uv run ruff check .` — passed
+- [x] 5.2 Run format: `uv run ruff format .` — passed
+- [x] 5.3 Run type check: `uv run pyright` — 0 errors
+- [x] 5.4 Run unit tests: `uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs` — 1270 passed
+- [x] 5.5 Run SSG: `uv run python -m webcompy generate --app docs_app.bootstrap:app`
+- [x] 5.6 Run E2E tests: `scripts/run-e2e-tests.sh bootstrap-static` — 2/2 passed (all groups including docs-home, docs-fetch: 26/26 passed)

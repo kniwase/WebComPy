@@ -93,6 +93,7 @@ class Component(ElementBase):
         self._pending_async_template: Coroutine[Any, Any, ElementChildren] | None = None
         super().__init__()
         property = self.__setup(component_def, props, slots)
+        self._property = property
         if self._pending_async_template is None:
             self.__init_component(property)
 
@@ -211,6 +212,16 @@ class Component(ElementBase):
                 on_after()
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
+        if self._pending_async_template is not None:
+            self._pending_async_template = None
+            self._property["on_before_destroy"]()
+            for callback_node in self._callback_nodes:
+                from webcompy.signal._graph import consumer_destroy
+
+                consumer_destroy(callback_node)
+            self._callback_nodes.clear()
+            self.__purge_signal_members__()
+            return
         if self._head_props is not None:
             if self._instance_id in self._head_props.titles:
                 del self._head_props.titles[self._instance_id]
@@ -220,6 +231,16 @@ class Component(ElementBase):
         super()._remove_element(recursive, remove_node)
 
     def _detach_from_node(self) -> None:
+        if self._pending_async_template is not None:
+            self._pending_async_template = None
+            self._property["on_before_destroy"]()
+            for cb in self._callback_nodes:
+                from webcompy.signal._graph import consumer_destroy
+
+                consumer_destroy(cb)
+            self._callback_nodes.clear()
+            self.__purge_signal_members__()
+            return
         if self._head_props is not None:
             if self._instance_id in self._head_props.titles:
                 del self._head_props.titles[self._instance_id]
@@ -229,7 +250,9 @@ class Component(ElementBase):
         super()._detach_from_node()
 
     def _get_belonging_component(self):
-        return self._property["component_id"]
+        if hasattr(self, "_property"):
+            return self._property["component_id"]
+        return ""
 
     def _get_belonging_components(self) -> tuple[Component, ...]:
         return (*self._parent._get_belonging_components(), self)
