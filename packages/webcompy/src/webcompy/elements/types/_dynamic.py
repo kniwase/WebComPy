@@ -19,7 +19,7 @@ def _subtree_has_async_setup(element: ElementAbstract) -> bool:
 
     if isinstance(element, Component) and element._pending_async_template is not None:
         return True
-    if isinstance(element, ElementWithChildren):
+    if isinstance(element, (ElementWithChildren, Component)):
         for child in element._children:
             if _subtree_has_async_setup(child):
                 return True

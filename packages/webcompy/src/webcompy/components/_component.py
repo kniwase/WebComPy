@@ -190,7 +190,24 @@ class Component(ElementBase):
             from webcompy.di._keys import SUSPENSE_RESOLVING_KEY
 
             if not inject(SUSPENSE_RESOLVING_KEY, default=False):
-                template = await self._pending_async_template
+                try:
+                    template = await self._pending_async_template
+                except BaseException:
+                    self._pending_async_template = None
+                    self._property["on_before_destroy"]()
+                    for cb in self._callback_nodes:
+                        from webcompy.signal._graph import consumer_destroy
+
+                        consumer_destroy(cb)
+                    self._callback_nodes.clear()
+                    self.__purge_signal_members__()
+                    try:
+                        parent = self._parent
+                    except AttributeError:
+                        parent = None
+                    if parent is not None and self in parent._children:
+                        parent._children.remove(self)
+                    raise
                 self._pending_async_template = None
                 property = self._property
                 property["template"] = template
@@ -250,9 +267,7 @@ class Component(ElementBase):
         super()._detach_from_node()
 
     def _get_belonging_component(self):
-        if hasattr(self, "_property"):
-            return self._property["component_id"]
-        return ""
+        return self._property["component_id"]
 
     def _get_belonging_components(self) -> tuple[Component, ...]:
         return (*self._parent._get_belonging_components(), self)

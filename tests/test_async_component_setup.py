@@ -114,6 +114,34 @@ class TestSubtreeHasAsyncSetup:
             outer._children = [inner]
             assert _subtree_has_async_setup(outer) is True
 
+    def test_sync_component_wrapping_async_child_returns_true(self, fake_browser_full):
+        from webcompy.components._generator import define_component
+        from webcompy.elements import html
+
+        @define_component
+        def AsyncCmp(context):
+            return html.DIV({}, "async")
+
+        @define_component
+        def SyncWrapper(context):
+            return html.DIV({}, "sync")
+
+        with _component_di_scope():
+            async_cmp = AsyncCmp(None)
+            async_cmp._pending_async_template = _make_pending_coro()
+            wrapper = _make_sync_component_with_children([async_cmp])
+            assert _subtree_has_async_setup(wrapper) is True
+
+
+def _make_sync_component_with_children(children):
+    from webcompy.components._component import Component
+
+    cmp = object.__new__(Component)
+    cmp._children = children
+    cmp._pending_async_template = None
+    cmp._callback_nodes = []
+    return cmp
+
 
 class TestRepeatElementAsyncRefreshRegistration:
     @pytest.mark.asyncio
@@ -318,9 +346,52 @@ class TestFoundationValidationSpike:
             cmp = FailingComponent(None)
             assert cmp._pending_async_template is not None
 
+            parent = Element("div", {}, {}, None, None)
+            parent._children = [cmp]
+            cmp._parent = parent
+
             cmp._pending_async_template = _raise_value_error()
             with pytest.raises(ValueError, match="async-setup-error"):
                 await cmp._render()
+
+            assert cmp not in parent._children, "component should be removed from parent after failed async setup"
+            assert cmp._pending_async_template is None, "_pending_async_template should be cleared on failure"
+            assert len(cmp._callback_nodes) == 0, "callback nodes should be cleaned up on failure"
+        finally:
+            _active_di_scope.reset(di_token)
+            _pending_di_parent.reset(pending_token)
+            scope.dispose()
+
+    @pytest.mark.asyncio
+    async def test_async_setup_exception_cleans_up_signal_graph(self, fake_browser_full):
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore, define_component
+        from webcompy.di import _pending_di_parent
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.elements import html
+
+        @define_component
+        async def FailingComponent(context):
+            msg = "async-setup-failure"
+            return html.DIV({}, msg)
+
+        store = ComponentStore()
+        head_props = HeadPropsStore()
+        scope = DIScope()
+        scope.provide(_COMPONENT_STORE_KEY, store)
+        scope.provide(_HEAD_PROPS_KEY, head_props)
+        di_token = _active_di_scope.set(scope)
+        pending_token = _pending_di_parent.set(scope)
+        try:
+            cmp = FailingComponent(None)
+            assert cmp._pending_async_template is not None
+
+            cmp._pending_async_template = _raise_value_error()
+            with pytest.raises(ValueError, match="async-setup-error"):
+                await cmp._render()
+
+            assert cmp._property["on_before_destroy"]() is None, "on_before_destroy should not raise after cleanup"
         finally:
             _active_di_scope.reset(di_token)
             _pending_di_parent.reset(pending_token)
