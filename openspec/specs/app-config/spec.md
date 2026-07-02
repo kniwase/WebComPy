@@ -127,6 +127,27 @@ The framework SHALL provide `WebComPyAppConfig`, `WebComPyBuildConfig`, and `Web
 - **WHEN** a developer creates `WebComPyApp(root_component=Root, config=WebComPyAppConfig(), profile=True)`
 - **THEN** a `TypeError` SHALL be raised
 
+### MODIFIED: hydrate config field is effective only in the pyscript environment
+The `hydrate` field of `WebComPyAppConfig` SHALL be effective only when the framework runs in the `pyscript` environment. `WebComPyApp.__init__` SHALL compute `self._hydrate = self._config.hydrate and ENVIRONMENT == "pyscript"`. In the `pyscript` environment, `self._hydrate` SHALL equal the user-supplied config value. In any other environment, `self._hydrate` SHALL be `False` regardless of the user-supplied config value.
+
+#### Scenario: `hydrate=True` in pyscript environment
+- **WHEN** the framework runs in `pyscript` and the developer configures `WebComPyAppConfig(hydrate=True)` (or accepts the default)
+- **THEN** `WebComPyApp._hydrate` SHALL be `True`
+- **AND** `AppDocumentRoot._render()` SHALL call `child._hydrate_node()` and adopt prerendered DOM nodes in the browser
+
+#### Scenario: `hydrate=True` in server environment (SSG / dev server SSR)
+- **WHEN** the framework runs in a non-`pyscript` environment (e.g. `webcompy generate`, `webcompy start` SSR handler) and the developer configures `WebComPyAppConfig(hydrate=True)` (or accepts the default)
+- **THEN** `WebComPyApp._hydrate` SHALL be `False`
+- **AND** `AppDocumentRoot._render()` SHALL skip the `child._hydrate_node()` recursion
+- **AND** all children SHALL be rendered via the synchronous `for child in self._children: await child._render()` path
+- **AND** the generated HTML SHALL contain the full subtree content (e.g. `HomePage` DIV's children are non-empty in SSG output)
+
+#### Scenario: `hydrate=False` in pyscript environment
+- **WHEN** the framework runs in `pyscript` and the developer configures `WebComPyAppConfig(hydrate=False)`
+- **THEN** `WebComPyApp._hydrate` SHALL be `False`
+- **AND** `AppDocumentRoot._render()` SHALL skip the `child._hydrate_node()` recursion
+- **AND** the browser re-renders the entire DOM from scratch
+
 ### MODIFIED: SSR/SSG generated HTML shall use selector from config
 The SSR and SSG HTML generators SHALL use `app.config.selector` to determine the mount div ID. The generated `<div>` element SHALL use the ID from the selector (without the `#` prefix).
 

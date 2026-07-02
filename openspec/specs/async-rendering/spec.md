@@ -268,6 +268,16 @@ Calling `_hydrate_node()` unconditionally (outside the guard) causes duplicate D
 - **THEN** `child._hydrate_node()` SHALL be called for each child before `child._render()`
 - **AND** `self.__hydrated` SHALL be set to `True`
 
+### MODIFIED: Non-pyscript rendering uses the await chain only
+In non-pyscript environments, the entire server-side rendering SHALL proceed through the `await` chain. Fire-and-forget `asyncio.ensure_future()` calls SHALL NOT be used for the initial render because the event loop is single-shot and exits as soon as `await generate_html(...)` returns. Any child whose render is scheduled as a fire-and-forget task SHALL NOT complete before `RenderContext.dispose()` runs in non-pyscript environments.
+
+The single render path in non-pyscript environments SHALL be the synchronous `for child in self._children: await child._render()` chain in `AppDocumentRoot._render()`. This is achieved by `WebComPyApp.__init__` forcing `self._hydrate = False` in non-pyscript environments, which makes the existing `if self._app and self._app._hydrate and not self.__hydrated:` guard evaluate `False` and skip the `_hydrate_node()` recursion (whose `asyncio.ensure_future(child._render())` calls would otherwise leak past `ctx.dispose()`).
+
+#### Scenario: No fire-and-forget render in SSR/SSG
+- **WHEN** the framework runs in a non-`pyscript` environment and `AppDocumentRoot._render()` executes
+- **THEN** `asyncio.ensure_future(child._render())` SHALL NOT be called for any child
+- **AND** the await chain SHALL complete all child renders before returning
+
 ### Requirement: _get_node() shall use strict is-None check for node cache
 
 `ElementAbstract._get_node()` SHALL use `if self._node_cache is None:` (strict identity check) rather than `if not self._node_cache:` (truthiness check) to determine whether to initialize a new DOM node. This prevents stale PyScript PyProxy objects (which may evaluate as falsy even when alive) from triggering unnecessary `_init_node()` calls that create detached ghost DOM elements.
