@@ -230,7 +230,7 @@ This SHALL NOT use `nest_asyncio.apply()` in PyScript — in PyScript/Pyodide, t
 - **`_is_async = False`** (sync callbacks e.g. `_update_text`, attribute updaters): SHALL call `self._callback(self._producer._value)` directly and synchronously
 - **`_is_async = True`** (async callbacks e.g. `_refresh`, `_reconcile_children`): SHALL delegate to `_resolve_async_callback()` from `webcompy.aio._aio`
 
-The signal layer (`webcompy/signal/_base.py`) SHALL NOT import `ENVIRONMENT`. All environment-specific behavior SHALL be encapsulated in `_resolve_async_callback()` within `webcompy/aio/_aio.py`.
+The signal layer (`packages/webcompy/src/webcompy/signal/_base.py`) SHALL NOT import `ENVIRONMENT`. All environment-specific behavior SHALL be encapsulated in `_resolve_async_callback()` within `packages/webcompy/src/webcompy/aio/_aio.py`.
 
 The `_make_signal_callback()` wrapper SHALL be removed. Callback registration SHALL use `signal.on_after_updating(callback)` directly without wrapping.
 
@@ -329,7 +329,7 @@ Test utility functions (e.g., `TestRenderer.render()`, `render_app_html_sync()`)
 
 ### Requirement: Async signal callbacks shall execute with environment-dependent semantics
 
-When a signal update triggers a callback registered via `on_after_updating` whose callable is an `async def` (i.e. `CallbackConsumerNode._is_async` is `True`), `_dispatch()` SHALL delegate execution to `_resolve_async_callback()` in `webcompy/aio/_aio.py`. The execution semantics of `_resolve_async_callback()` SHALL differ by environment in a documented, intentional way:
+When a signal update triggers a callback registered via `on_after_updating` whose callable is an `async def` (i.e. `CallbackConsumerNode._is_async` is `True`), `_dispatch()` SHALL delegate execution to `_resolve_async_callback()` in `packages/webcompy/src/webcompy/aio/_aio.py`. The execution semantics of `_resolve_async_callback()` SHALL differ by environment in a documented, intentional way:
 
 - **Browser (PyScript)**: async callbacks SHALL be dispatched fire-and-forget via `aio_run()` → `asyncio.ensure_future()`. Async callbacks are NOT guaranteed to complete before the next synchronous statement after the signal setter returns. This is intentional — the browser prioritizes UI responsiveness over completion ordering for user-level async callbacks.
 - **Server / test (CPython)**: async callbacks SHALL be executed to completion synchronously via `nest_asyncio` + `loop.run_until_complete()` before the signal setter returns. This is intentional — SSG/SSR and tests need deterministic, in-order completion so that HTML output and assertions are reproducible.

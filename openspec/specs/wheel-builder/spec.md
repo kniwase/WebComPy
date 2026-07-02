@@ -4,12 +4,12 @@
 
 The wheel builder produces PEP 427-compliant Python wheels for browser deployment without depending on setuptools or wheel. It supports bundling the webcompy framework and user application into a single wheel, including non-Python asset files with runtime lookup via `load_asset`. This eliminates the `SetuptoolsDeprecationWarning` and reduces browser load overhead.
 
-In the refactored package structure, the wheel builder moves to `webcompy_cli._wheel_builder` (formerly `webcompy/cli/_wheel_builder.py`). The browser wheel now contains only the `webcompy` core package — `webcompy_cli`, `webcompy_server`, and `webcompy_testing` are separate packages and do not need explicit exclusion. The `_BROWSER_ONLY_EXCLUDE` mechanism is no longer necessary.
+In the refactored package structure, the wheel builder moves to `webcompy_cli._wheel_builder` (formerly `packages/webcompy-cli/src/webcompy_cli/_wheel_builder.py`). The browser wheel now contains only the `webcompy` core package — `webcompy_cli`, `webcompy_server`, and `webcompy_testing` are separate packages and do not need explicit exclusion. The `_BROWSER_ONLY_EXCLUDE` mechanism is no longer necessary.
 
 ## Requirements
 
 ### MODIFIED: The wheel builder shall produce PEP 427-compliant wheels without setuptools
-All wheels produced by the builder SHALL be valid PEP 427 `.whl` files. The builder SHALL NOT depend on `setuptools`, `distutils`, or `wheel`. The builder module SHALL live at `webcompy_cli/_wheel_builder.py` (formerly `webcompy/cli/_wheel_builder.py`). Each wheel SHALL contain a `.dist-info/` directory with `METADATA`, `WHEEL`, `top_level.txt`, and `RECORD` files. The `RECORD` file SHALL list every file with its `sha256` hash (URL-safe base64, no padding) and size. The `.dist-info/WHEEL` SHALL include `Wheel-Version: 1.0`, `Root-Is-Purelib: true`, and `Tag: py3-none-any`.
+All wheels produced by the builder SHALL be valid PEP 427 `.whl` files. The builder SHALL NOT depend on `setuptools`, `distutils`, or `wheel`. The builder module SHALL live at `packages/webcompy-cli/src/webcompy_cli/_wheel_builder.py` (formerly `webcompy/cli/_wheel_builder.py`). Each wheel SHALL contain a `.dist-info/` directory with `METADATA`, `WHEEL`, `top_level.txt`, and `RECORD` files. The `RECORD` file SHALL list every file with its `sha256` hash (URL-safe base64, no padding) and size. The `.dist-info/WHEEL` SHALL include `Wheel-Version: 1.0`, `Root-Is-Purelib: true`, and `Tag: py3-none-any`.
 
 #### Scenario: Building a wheel with no setuptools dependency
 - **WHEN** the wheel builder module is imported

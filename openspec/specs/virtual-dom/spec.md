@@ -6,7 +6,7 @@ WebComPy uses a `DOMNode` Protocol to abstract DOM operations. In the browser, `
 
 The virtual tree can be serialized to HTML for static site generation and inspected in tests to verify exact DOM structure. Events can be created via `DOMPort.create_event()` and dispatched on `VirtualDOMNode` to simulate user interactions for component behavior testing.
 
-In the refactored package structure, `VirtualDOMNode`, `VirtualDOMEvent`, and `ServerDOMPort` have moved from `webcompy/ports/_server/_virtual_dom.py` to `webcompy_server/ports/_virtual_dom.py`. All import paths change from `webcompy.ports._server._virtual_dom` to `webcompy_server.ports`. All behavior stays exactly the same.
+In the refactored package structure, `VirtualDOMNode`, `VirtualDOMEvent`, and `ServerDOMPort` have moved from `packages/webcompy/src/webcompy/ports/_server/_virtual_dom.py` to `packages/webcompy-server/src/webcompy_server/ports/_virtual_dom.py`. All import paths change from `webcompy.ports._server._virtual_dom` to `webcompy_server.ports`. All behavior stays exactly the same.
 
 ## Requirements
 
@@ -72,7 +72,7 @@ In the refactored package structure, `VirtualDOMNode`, `VirtualDOMEvent`, and `S
 
 ### MODIFIED: VirtualDOMEvent shall satisfy the DOMEvent Protocol
 
-`VirtualDOMEvent` SHALL be a concrete class satisfying the `DOMEvent` Protocol defined in `webcompy/ports/_dom.py`. It SHALL provide `type`, `bubbles`, `cancelable`, `target`, `currentTarget`, `defaultPrevented`, `eventPhase`, `timeStamp`, `preventDefault()`, and `stopPropagation()`. It SHALL live in `webcompy_server/ports/_virtual_dom.py` (formerly `webcompy/ports/_server/_virtual_dom.py`) alongside `VirtualDOMNode`.
+`VirtualDOMEvent` SHALL be a concrete class satisfying the `DOMEvent` Protocol defined in `packages/webcompy/src/webcompy/ports/_dom.py`. It SHALL provide `type`, `bubbles`, `cancelable`, `target`, `currentTarget`, `defaultPrevented`, `eventPhase`, `timeStamp`, `preventDefault()`, and `stopPropagation()`. It SHALL live in `packages/webcompy-server/src/webcompy_server/ports/_virtual_dom.py` (formerly `packages/webcompy/src/webcompy/ports/_server/_virtual_dom.py`) alongside `VirtualDOMNode`.
 
 #### Scenario: Constructing a VirtualDOMEvent
 - **WHEN** `VirtualDOMEvent("click")` is created

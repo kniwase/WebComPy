@@ -130,7 +130,7 @@ The `$` prefix is preserved in the token value so the rendered HTML faithfully d
 
 ### Requirement: The framework SHALL provide a Pygments adapter skeleton
 
-The framework SHALL provide a file at `webcompy/ui/code_block/lexers/_adapters/_pygments.py` containing a `PygmentsLexerWrapper` class and a `register_pygments_lexer(name)` function. The file SHALL NOT be imported by any other framework module. Adopting Pygments SHALL be a deliberate opt-in by the application.
+The framework SHALL provide a file at `packages/webcompy/src/webcompy/ui/code_block/lexers/_adapters/_pygments.py` containing a `PygmentsLexerWrapper` class and a `register_pygments_lexer(name)` function. The file SHALL NOT be imported by any other framework module. Adopting Pygments SHALL be a deliberate opt-in by the application.
 
 #### Scenario: Pygments is not a hard dependency
 

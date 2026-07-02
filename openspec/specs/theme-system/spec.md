@@ -47,7 +47,7 @@ The framework SHALL provide a `webcompy.ui.theme.ThemeManager` class that owns a
 
 ### Requirement: The framework SHALL resolve the initial theme from a cookie on the server
 
-The framework's CLI server (`webcompy/cli/_server.py`) SHALL read the `webcompy-theme` cookie from the incoming request, parse its value as `Theme`, and pass it as `initial_theme` to `app.create_render_context()`. The `RenderContext` SHALL create the `ThemeManager` with that initial value so the server-rendered HTML includes the correct `<style data-webcompy-dynamic>` element on first paint.
+The framework's CLI server (`packages/webcompy-cli/src/webcompy_cli/_server.py`) SHALL read the `webcompy-theme` cookie from the incoming request, parse its value as `Theme`, and pass it as `initial_theme` to `app.create_render_context()`. The `RenderContext` SHALL create the `ThemeManager` with that initial value so the server-rendered HTML includes the correct `<style data-webcompy-dynamic>` element on first paint.
 
 #### Scenario: Server reads cookie for SSR
 

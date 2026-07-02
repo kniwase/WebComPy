@@ -210,7 +210,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### REMOVED: webcompy.testing shall not be bundled into browser wheels
 
-~~The `"webcompy.testing"` pattern SHALL be added to `_BROWSER_ONLY_EXCLUDE` in `webcompy/cli/_wheel_builder.py`. All submodules under `webcompy.testing` SHALL be excluded from browser-targeted wheels.~~
+~~The `"webcompy.testing"` pattern SHALL be added to `_BROWSER_ONLY_EXCLUDE` in `packages/webcompy-cli/src/webcompy_cli/_wheel_builder.py`. All submodules under `webcompy.testing` SHALL be excluded from browser-targeted wheels.~~
 
 **Reason for removal:** With the package split, `webcompy_testing` is a physically separate package. It does not need to be explicitly excluded from browser wheels because browser wheel building operates on the `webcompy` core package only. `_BROWSER_ONLY_EXCLUDE` is no longer needed.
 

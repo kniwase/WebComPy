@@ -80,4 +80,4 @@ The `PluginScript` class SHALL be exported from `webcompy.app` so that developer
 #### Scenario: Importing PluginScript
 - **WHEN** a developer writes `from webcompy.app import PluginScript`
 - **THEN** the import SHALL succeed
-- **AND** `PluginScript` SHALL be the dataclass defined in `webcompy/app/_config.py`
+- **AND** `PluginScript` SHALL be the dataclass defined in `packages/webcompy/src/webcompy/app/_config.py`

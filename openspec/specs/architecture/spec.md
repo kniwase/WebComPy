@@ -32,7 +32,7 @@ The same Python source code in the `webcompy` core package SHALL execute correct
 - **AND** no state from one route SHALL leak into the next route
 
 ### Requirement: Browser API access shall be gated by environment detection
-The `browser` object SHALL be `None` on the server and a proxy to the full browser API in the browser. All code that uses browser APIs SHALL check `if browser:` before accessing them, and SHALL raise clear errors when browser APIs are unavailable on the server. The `browser` object (from `webcompy/ports/_browser/_raw.py`) remains in the `webcompy` core package.
+The `browser` object SHALL be `None` on the server and a proxy to the full browser API in the browser. All code that uses browser APIs SHALL check `if browser:` before accessing them, and SHALL raise clear errors when browser APIs are unavailable on the server. The `browser` object (from `packages/webcompy/src/webcompy/ports/_browser/_raw.py`) remains in the `webcompy` core package.
 
 #### Scenario: Writing environment-safe component code
 - **WHEN** a developer writes a component that uses browser APIs
