@@ -489,3 +489,132 @@ The `Suspense` class is also exported for direct use (matching
 4. Future: Signal value restoration — Signal values (non-AsyncResult) are
    NOT transferred. Only `AsyncResult` and `FetchPort` responses. Signal
    value restoration can be added as a follow-up.
+
+## Implementation Order and Risk Assessment
+
+This change is the largest of the seven changes in the async SSR pipeline
+rollout. It depends on three preceding changes and itself is a prerequisite
+for the final CLI unification change. The order below must be preserved.
+
+### Dependency Graph (post-merge)
+
+```
+async-rendering-pipeline (#177) ✓
+    │
+    ├─► feat-server-fetch-port-asgi  (9 tasks)        ★★☆ low risk
+    │
+    ├─► feat-async-component-setup   (28 tasks)       ★★★ medium risk
+    │   └─ Task 0 spike: validate _refresh_sync does not
+    │      block the event loop on async subtrees (MUST
+    │      complete before the rest of this change)
+    │
+    ├─► feat-client-only-component   (24 tasks)       ★★☆ low risk
+    │
+    ├─► feat-suspense-and-hydration-data-transfer    ★★★★ high risk
+    │   └─ requires async-rendering-pipeline ✓
+    │   └─ requires feat-async-component-setup (_pending_async_template)
+    │   └─ requires feat-server-fetch-port-asgi (response cache source)
+    │   └─ requires feat-ssg-via-ssr (async generate_html)
+    │
+    └─► feat-ssg-via-ssr             (29 tasks)       ★★★★ high risk
+        └─ requires async-rendering-pipeline ✓
+        └─ requires feat-server-fetch-port-asgi
+```
+
+### Recommended Implementation Sequence
+
+| # | Change | Tasks | Est. effort | Why this order |
+|---|--------|-------|-------------|----------------|
+| 1 | `feat-server-fetch-port-asgi` | 9 | 1–2 days | Self-contained foundation; provides the response cache that Hydration Data Transfer depends on. |
+| 2 | `feat-async-component-setup` | 28 | 2–3 days | Required by Suspense+Hydration. Task 0 spike must validate `_refresh_sync` behavior first. |
+| 3 | `feat-client-only-component` | 24 | 1–2 days | Independent of #2 — can run in parallel if a contributor is available. |
+| 4 | `feat-suspense-and-hydration-data-transfer` | 63 | 4–6 days | **This change.** Section 1 (API surface) MUST be implemented first; Sections 2–6 (transfer) follow; Section 7 (Suspense element) last. |
+| 5 | `feat-ssg-via-ssr` | 29 | 3–5 days | Final CLI unification; requires async `generate_html` and the `ServerFetchPort` configured for self-site fetching. |
+
+Total: 153 tasks, 11–18 days sequentially (8–14 days if #3 runs parallel
+to #2).
+
+### Risk Factors Specific to This Change
+
+- **Largest in scope**: 63 tasks across the core `webcompy` package and
+  `webcompy-server` package. Cross-package coordination requires care
+  with the import direction (`webcompy-cli` → `webcompy-server` →
+  `webcompy`).
+- **9-section structure**: Section 1 (API surface: `HYDRATION_DATA_KEY`,
+  `has_resolved_data()`, `TransferPayload` schema) is a prerequisite for
+  every other section. Strictly sequential implementation of sections
+  reduces merge conflicts.
+- **DI scope lifecycle**: `SUSPENSE_RESOLVING_KEY` is provided with value
+  `True` during `SuspenseElement._render()`. In the browser, the scope
+  must persist until the `_resolve()` callback completes (the scope is
+  entered in `_render()` and disposed in `_resolve()`'s `finally` block
+  after fallback→children swap). See D9.
+- **XSS risk in payload injection**: The transfer payload is JSON-
+  serialized and HTML-escaped before embedding in a `<script
+  type="application/json">` tag. The escaping must be correct; unit
+  tests must cover special characters (`<`, `>`, `&`, `"`).
+- **Sequential sibling Suspense (constraint, not a bug)**: Per the
+  `async-rendering` foundation, sibling `Suspense` boundaries render
+  sequentially. Within a single boundary, async children resolve
+  concurrently via `asyncio.gather()`. This matches the foundation's
+  sibling-rendering rule and the documented future-work on parallel
+  sibling rendering.
+
+### Newly Discovered Issues (from rollout prep)
+
+1. **Task 0 spike in `feat-async-component-setup`**: The `_refresh_sync`
+   mechanism (introduced in `feat-async-rendering-pipeline`) calls
+   `loop.run_until_complete(self._refresh(*args))`. Once async component
+   definitions land, a dynamic element's subtree may contain components
+   whose setup is `async def`. If `_refresh_sync` blocks on user I/O,
+   the event loop stalls. The spec acknowledges this in
+   `feat-async-component-setup` Decision 6; the spike must complete
+   first.
+
+2. **Section 1 ordering within this change**: Implementation must
+   follow the 9 sections in order. Section 1 (API surface) is a
+   prerequisite for Sections 2–6 (transfer mechanism), which are a
+   prerequisite for Section 7 (Suspense element). Tests for Section 1
+   must pass before Section 2 begins.
+
+3. **Workspace split interaction**: This change touches files in both
+   the `webcompy` core package and the `webcompy-server` package.
+   The path audit confirmed all referenced paths in the proposals,
+   tasks, and main specs have been updated for the post-#182 four-
+   package layout. CI workflow (`.github/workflows/ci.yml`) is already
+   up to date.
+
+### Per-Change Risk Reference (5 changes in the rollout)
+
+| Change | Risk | Key concern |
+|--------|------|-------------|
+| `feat-server-fetch-port-asgi` | ★★☆ | Recursion protection (500 on page routes); `httpx.ASGITransport` middleware bypass. |
+| `feat-async-component-setup` | ★★★ | `_refresh_sync` blocking; two-phase init observability window. |
+| `feat-client-only-component` | ★★☆ | Zero-side-effect guarantee on server; hydration timing. |
+| **This change** | ★★★★ | Largest scope; cross-package; DI scope lifecycle; XSS. |
+| `feat-ssg-via-ssr` | ★★★★ | Full CLI pipeline restructure; SSG/SSR output parity. |
+
+### Pre-Implementation Checklist
+
+Before beginning Phase 5 implementation:
+
+- [ ] Confirm no PRs in flight depend on the 4-package workspace split
+      other than this rollout
+- [ ] Confirm CI is green on the current branch (`feat/async-ssr-pipeline-rollout`)
+- [ ] Run `uv run pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs`
+      to confirm the existing test suite is green before adding new code
+- [ ] Verify the docs_app baseline SSG build (`uv run python -m webcompy generate
+      --app docs_app.bootstrap:app`) is green as the comparison point for the
+      `feat-ssg-via-ssr` change
+
+### Per-Change Archival Checklist (for each Phase 5 change)
+
+- [ ] `npx @fission-ai/openspec@latest validate --specs` passes
+- [ ] `uv run ruff check .` passes
+- [ ] `uv run pyright` passes
+- [ ] `uv run python -m pytest tests/ --tb=short` passes
+- [ ] `uv run python -m webcompy generate --app docs_app.bootstrap:app` succeeds
+- [ ] `scripts/run-e2e-tests.sh --serving-mode=static` passes
+- [ ] `scripts/run-e2e-tests.sh --serving-mode=prod` passes
+- [ ] delta spec synced to main specs (via `openspec-sync-specs` agent)
+- [ ] change archived (via `openspec archive <name> --skip-specs -y`)
