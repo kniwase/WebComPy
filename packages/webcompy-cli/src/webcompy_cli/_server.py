@@ -377,7 +377,14 @@ def create_asgi_app(
         html_route,
     ]
 
-    return Starlette(routes=routes)
+    asgi = Starlette(routes=routes)
+
+    fetch_port = app._server_fetch_port
+    if fetch_port is not None:
+        blocked_paths = [route[0] for route in (app.routes or []) if route[3] is not None]
+        fetch_port.configure(asgi, blocked_paths, base_url=app.config.base_url)
+
+    return asgi
 
 
 def _read_initial_theme(cookie_header: str) -> Any:

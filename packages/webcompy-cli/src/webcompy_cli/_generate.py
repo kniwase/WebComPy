@@ -4,6 +4,8 @@ import shutil
 import sys
 from tempfile import TemporaryDirectory
 
+from starlette.applications import Starlette
+
 from webcompy.app._app import WebComPyApp
 from webcompy_cli._argparser import get_params
 from webcompy_cli._lockfile import (
@@ -274,6 +276,12 @@ async def generate_static_site(app: WebComPyApp | None = None):
         for filename, content in get_styles_files().items():
             (framework_ui_dir / filename).write_bytes(content)
         print(framework_ui_dir)
+
+        fetch_port = app._server_fetch_port
+        if fetch_port is not None:
+            asgi_app = Starlette(routes=[])
+            blocked_paths = [route[0] for route in (app.routes or []) if route[3] is not None]
+            fetch_port.configure(asgi_app, blocked_paths, base_url=app.config.base_url)
 
         _generate_kwargs: dict[str, object] = dict(
             app_package_name=build_config.app_package_path.name,
