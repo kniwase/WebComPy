@@ -1,3 +1,4 @@
+import asyncio
 import importlib.util
 from pathlib import Path
 
@@ -170,7 +171,8 @@ def test_todo_remove_done_items():
             assert any("Create WebComPy project" in (item.textContent or "") for item in items)
 
 
-def test_fetch_page_loads():
+@pytest.mark.asyncio
+async def test_fetch_page_loads():
     sample_json = (DOCS_APP_DIR / "static" / "_demos" / "fetch_sample" / "sample.json").read_text()
     scope = DIScope()
     scope.provide(
@@ -192,6 +194,11 @@ def test_fetch_page_loads():
         from static._demos.fetch_sample.app import App
 
         with TestRenderer.render(App, parent_scope=scope) as result:
+            # Yield to the event loop so that fire-and-forget async tasks
+            # scheduled via resolve_async / _aio_run_server during
+            # on_after_rendering have a chance to complete before we
+            # assert the rendered output.
+            await asyncio.sleep(0)
             html = result.to_html()
             assert "User Data" in html
             assert "Alice" in html
