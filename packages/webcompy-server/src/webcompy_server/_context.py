@@ -27,7 +27,8 @@ class ServerRenderContext(RenderContext):
         router_mode = self._router.__mode__ if self._router else "history"
         self._di_scope.provide(COOKIE_PORT_KEY, ServerCookiePort(self._cookie_header))
         self._di_scope.provide(DOM_PORT_KEY, ServerDOMPort())
-        self._di_scope.provide(FETCH_PORT_KEY, ServerFetchPort())
+        fetch_port = self._app._server_fetch_port or ServerFetchPort()
+        self._di_scope.provide(FETCH_PORT_KEY, fetch_port)
         self._di_scope.provide(FFI_PORT_KEY, ServerFFIPort())
         self._di_scope.provide(HISTORY_PORT_KEY, ServerHistoryPort(mode=router_mode))
         self._di_scope.provide(HOST_PORT_KEY, ServerHostPort())

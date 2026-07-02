@@ -44,3 +44,12 @@ class FetchPort(ABC):
             A ``Response`` object with text, headers, and status.
         """
         ...
+
+    def is_self_site_url(self, url: str) -> bool:
+        """Return whether *url* is a self-site URL (relative to the same application).
+
+        The default implementation returns ``False`` for all URLs.
+        Subclasses (e.g. ``ServerFetchPort``) override this to return
+        ``True`` for URLs starting with ``/`` or ``.``.
+        """
+        return False

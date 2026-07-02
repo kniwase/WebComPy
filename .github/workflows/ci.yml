@@ -496,7 +496,7 @@ jobs:
         run: git checkout -- . && git clean -fd
 
       - name: Install OpenCode
-        run: npm install -g opencode-ai@v1.16.2
+        run: npm install -g opencode-ai@v1.17.13
 
       - name: Ensure scratch directory exists
         run: mkdir -p .tmp

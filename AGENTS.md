@@ -206,7 +206,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md` |
 | `webcompy/ports/` | `port-abstraction/spec.md` |
-| `webcompy_server/ports/` | `virtual-dom/spec.md` |
+| `webcompy_server/ports/` | `virtual-dom/spec.md`, `server-fetch-asgi/spec.md` |
 | `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md` |
 | `webcompy/di/` | `di-scope/spec.md`, `di-injection/spec.md`, `dependency-resolver/spec.md` |
 | `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md` |
@@ -237,6 +237,10 @@ Co-Authored-By: opencode <noreply@opencode.ai>
 ```
 
 The `Co-Authored-By` footer is required on every commit.
+
+### PR Body
+
+When creating a PR, the body MUST follow the template in `.github/PULL_REQUEST_TEMPLATE/`. Read the template before writing the PR body and fill ALL sections.
 
 ### Change Conventions (OpenSpec)
 
@@ -317,6 +321,7 @@ When specs are added, modified, or removed, update:
 | `reactive-scoped-style` | Per-component reactive scoped style via dedicated style element |
 | `app-styles` | App-level reactive style injection via `@layer webcompy-dynamic` |
 | `testing-module` | TestRenderer, fake ports, scope helpers for browserless testing |
+| `server-fetch-asgi` | Self-site fetch via ASGI transport during SSR/SSG, page-route blocking |
 
 ## Language Rules
 
