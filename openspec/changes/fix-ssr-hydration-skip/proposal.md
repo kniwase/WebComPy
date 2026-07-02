@@ -57,7 +57,7 @@ These alternatives are documented for future planning; this change takes the min
 
 ## Impact
 
-- **Affected modules**: `webcompy/app/_app.py` (1-line change), `webcompy/app/_root_component.py` (no change), `webcompy/elements/types/_dynamic.py` (no change)
+- **Affected modules**: `packages/webcompy/src/webcompy/app/_app.py` (1-line change), `packages/webcompy/src/webcompy/app/_root_component.py` (no change), `packages/webcompy/src/webcompy/elements/types/_dynamic.py` (no change)
 - **Affected specs**: `app-config`, `app-lifecycle`, `async-rendering`
 - **Backward compatible**: All existing user code continues to work. The `hydrate=True` config field is honored in the browser; in the server it has no effect (but also no negative impact — the SSG and dev server output is now correct).
 - **Testing**: Existing E2E tests (`docs-home` group) verify `What is WebComPy` heading is visible in the SSG output. New E2E assertion confirms the `HomePage` DIV's children are non-empty in the SSG-generated HTML (pre-fix the DIV was `<div webcompy-component="HomePage" webcompy-cid-...=""></div>`).

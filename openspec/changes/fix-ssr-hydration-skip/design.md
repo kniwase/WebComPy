@@ -27,7 +27,7 @@ In a browser event loop the tasks eventually complete. In SSR/SSG, `ctx.dispose(
 
 ## Implementation
 
-The change is a single-line update to `webcompy/app/_app.py`:
+The change is a single-line update to `packages/webcompy/src/webcompy/app/_app.py`:
 
 ```python
 # Before
@@ -40,10 +40,10 @@ self._hydrate = self._config.hydrate and ENVIRONMENT == "pyscript"
 The existing `if self._app and self._app._hydrate and not self.__hydrated:` guard in `AppDocumentRoot._render()` is unchanged. In non-pyscript environments the guard evaluates `False` and the await chain renders the subtree synchronously.
 
 No changes to:
-- `webcompy/app/_root_component.py`
-- `webcompy/elements/types/_dynamic.py`
-- `webcompy/elements/types/_base.py`
-- `webcompy/elements/types/_abstract.py`
+- `packages/webcompy/src/webcompy/app/_root_component.py`
+- `packages/webcompy/src/webcompy/elements/types/_dynamic.py`
+- `packages/webcompy/src/webcompy/elements/types/_base.py`
+- `packages/webcompy/src/webcompy/elements/types/_abstract.py`
 - The browser-side render path (`app.run()`)
 
 ## Future refactor opportunities (deferred)
