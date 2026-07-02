@@ -133,7 +133,7 @@ async def send_html(_: Request):
 
 ### Decision 4: Shared setup logic — _resolve_build_artifacts()
 
-**Chosen**: Extract the duplicated dependency resolution, lockfile handling, WASM/runtime asset management, and wheel building logic into `_resolve_build_artifacts()` in a new module `webcompy/cli/_build.py`. Both `_generate.py` and `_server.py` call this function.
+**Chosen**: Extract the duplicated dependency resolution, lockfile handling, WASM/runtime asset management, and wheel building logic into `_resolve_build_artifacts()` in a new module `packages/webcompy-cli/src/webcompy_cli/_build.py`. Both `_generate.py` and `_server.py` call this function.
 
 ```python
 @dataclass
@@ -198,7 +198,7 @@ In SSG mode:
 **Chosen**: `generate_static_site()` becomes `async def generate_static_site()` internally. The CLI entry point wraps it with `asyncio.run()`.
 
 ```python
-# webcompy/cli/_generate.py
+# packages/webcompy-cli/src/webcompy_cli/_generate.py
 async def generate_static_site(app: WebComPyApp | None = None):
     _, args = get_params()
     # ... build_config resolution ...
@@ -212,7 +212,7 @@ async def generate_static_site(app: WebComPyApp | None = None):
 ```
 
 ```python
-# webcompy/cli/__main__.py (CLI entry point)
+# packages/webcompy-cli/src/webcompy_cli/__main__.py (CLI entry point)
 # When "generate" subcommand is selected:
 asyncio.run(generate_static_site())
 ```
