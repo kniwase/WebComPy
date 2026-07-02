@@ -1,7 +1,7 @@
 ## 1. Update `WebComPyApp.__init__` to force `_hydrate=False` in non-pyscript environments
 
-- [ ] 1.1 In `webcompy/app/_app.py`, change `self._hydrate = self._config.hydrate` to `self._hydrate = self._config.hydrate and ENVIRONMENT == "pyscript"`
-- [ ] 1.2 Verify `ENVIRONMENT` is already imported at the top of `webcompy/app/_app.py` (`from webcompy.utils import ENVIRONMENT`)
+- [ ] 1.1 In `packages/webcompy/src/webcompy/app/_app.py`, change `self._hydrate = self._config.hydrate` to `self._hydrate = self._config.hydrate and ENVIRONMENT == "pyscript"`
+- [ ] 1.2 Verify `ENVIRONMENT` is already imported at the top of `packages/webcompy/src/webcompy/app/_app.py` (`from webcompy.utils import ENVIRONMENT`)
 - [ ] 1.3 Confirm `WebComPyAppConfig` still accepts `hydrate` field (no change to config dataclass)
 
 ## 2. Verify `AppDocumentRoot._render()` guard works as expected
@@ -27,7 +27,7 @@
 
 ## 5. Commit and push
 
-- [ ] 5.1 `git add openspec/changes/fix-ssr-hydration-skip/ webcompy/app/_app.py`
+- [ ] 5.1 `git add openspec/changes/fix-ssr-hydration-skip/ packages/webcompy/src/webcompy/app/_app.py`
 - [ ] 5.2 Verify `git diff --cached` shows only the expected files
 - [ ] 5.3 `git commit -m "fix: disable hydration in non-pyscript environments for complete SSR/SSG render"`
 - [ ] 5.4 Verify pre-commit hooks (ruff / pyright) pass on the commit

@@ -9,14 +9,14 @@
 
 ## 1. Update types and decorator
 
-- [ ] 1.1 In `webcompy/components/_libs.py`, update `ComponentProperty["template"]` type from `ElementChildren` to `ElementChildren | None`
-- [ ] 1.2 In `webcompy/components/_component.py`, update `FuncComponentDef` type alias to accept `Callable[[Context[Any]], Coroutine[Any, Any, ElementChildren]]` in addition to the sync variant
-- [ ] 1.3 In `webcompy/components/_generator.py`, update `define_component` parameter type to accept async callables (`Callable[[...], ElementChildren] | Callable[[...], Coroutine[Any, Any, ElementChildren]]`)
-- [ ] 1.4 In `webcompy/components/_generator.py`, update `FuncComponentDef` type alias to match the broader type from `_component.py`
+- [ ] 1.1 In `packages/webcompy/src/webcompy/components/_libs.py`, update `ComponentProperty["template"]` type from `ElementChildren` to `ElementChildren | None`
+- [ ] 1.2 In `packages/webcompy/src/webcompy/components/_component.py`, update `FuncComponentDef` type alias to accept `Callable[[Context[Any]], Coroutine[Any, Any, ElementChildren]]` in addition to the sync variant
+- [ ] 1.3 In `packages/webcompy/src/webcompy/components/_generator.py`, update `define_component` parameter type to accept async callables (`Callable[[...], ElementChildren] | Callable[[...], Coroutine[Any, Any, ElementChildren]]`)
+- [ ] 1.4 In `packages/webcompy/src/webcompy/components/_generator.py`, update `FuncComponentDef` type alias to match the broader type from `_component.py`
 
 ## 2. Modify Component.__init__ and __setup
 
-- [ ] 2.1 In `webcompy/components/_component.py`, add `self._pending_async_template: Coroutine[Any, Any, ElementChildren] | None = None` to `Component.__init__()`
+- [ ] 2.1 In `packages/webcompy/src/webcompy/components/_component.py`, add `self._pending_async_template: Coroutine[Any, Any, ElementChildren] | None = None` to `Component.__init__()`
 - [ ] 2.2 Add `from collections.abc import Coroutine` and `from inspect import iscoroutinefunction` imports to `_component.py`
 - [ ] 2.3 In `Component.__setup__()`, before calling `component_def(context)`, check `iscoroutinefunction(component_def)`:
   - If async: call `component_def(context)` to get the coroutine, store in `self._pending_async_template`, set `template = None`
@@ -25,8 +25,8 @@
 
 ## 3. Define SUSPENSE_RESOLVING_KEY
 
-- [ ] 3.1 Add `SUSPENSE_RESOLVING_KEY: InjectKey[bool]` to `webcompy/di/_keys.py`
-- [ ] 3.2 Export `SUSPENSE_RESOLVING_KEY` from `webcompy/di/__init__.py`
+- [ ] 3.1 Add `SUSPENSE_RESOLVING_KEY: InjectKey[bool]` to `packages/webcompy/src/webcompy/di/_keys.py`
+- [ ] 3.2 Export `SUSPENSE_RESOLVING_KEY` from `packages/webcompy/src/webcompy/di/__init__.py`
 - [ ] 3.3 The key semantics are: when `True` (provided by `SuspenseElement._render()`), `Component._render()` skips `_pending_async_template` resolution because Suspense owns it; when `False` or absent, Component resolves it directly.
 
 ## 4. Modify Component._render
@@ -47,7 +47,7 @@
 
 > Goal: prevent `_refresh_sync` from blocking the event loop on a subtree that turns out to contain async components (Decision 6 / Foundation Open Issue A).
 
-- [ ] 4b.1 In `webcompy/elements/types/_repeat.py` and `webcompy/elements/types/_switch.py`, add a helper (e.g. `_subtree_has_async_setup(element) -> bool`) that walks the element's current/generated children and returns `True` if any `Component` has `_pending_async_template is not None`.
+- [ ] 4b.1 In `packages/webcompy/src/webcompy/elements/types/_repeat.py` and `packages/webcompy/src/webcompy/elements/types/_switch.py`, add a helper (e.g. `_subtree_has_async_setup(element) -> bool`) that walks the element's current/generated children and returns `True` if any `Component` has `_pending_async_template is not None`.
 - [ ] 4b.2 In `RepeatElement._render()` and `SwitchElement._render()` where the signal callback is registered, choose `self._refresh_sync` only when `_subtree_has_async_setup(self) is False`; otherwise register the async `self._refresh` (fire-and-forget via existing `_resolve_async_callback` path) so the enclosing `SuspenseElement` owns async resolution.
 - [ ] 4b.3 Keep `_on_set_parent()` registration unchanged (still `self._refresh` async, per foundation Decision 13).
 - [ ] 4b.4 Ensure `_signal_activated` is still set before either registration path, so double-registration is still impossible.

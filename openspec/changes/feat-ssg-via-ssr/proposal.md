@@ -44,7 +44,7 @@ The upcoming `feat/async-rendering-pipeline` change makes `generate_html()` retu
 
 ## Impact
 
-- **Affected modules**: `webcompy/cli/_generate.py` (major restructure), `webcompy/cli/_server.py` (async SSR handler, shared setup extraction), `webcompy/cli/_html.py` (async `generate_html()`), `webcompy/app/_app.py` (integration with async rendering)
+- **Affected modules**: `packages/webcompy-cli/src/webcompy_cli/_generate.py` (major restructure), `packages/webcompy-cli/src/webcompy_cli/_server.py` (async SSR handler, shared setup extraction), `packages/webcompy-server/src/webcompy_server/_html.py` (async `generate_html()`), `packages/webcompy/src/webcompy/app/_app.py` (integration with async rendering)
 - **Affected specs**: `cli`, `architecture`, `app-lifecycle`, `app-config`
 - **Breaking**: `generate_html()` signature changes from sync to async — internal API, not public
 - **Testing**: Existing SSG tests should pass unchanged (output is identical); new unit tests for `_resolve_build_artifacts()` and async SSR pipeline

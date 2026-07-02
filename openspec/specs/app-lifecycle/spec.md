@@ -71,6 +71,20 @@ In the browser (PyScript) environment, `app.run(selector)` SHALL mount and rende
 - **WHEN** a developer calls `app.run("#nonexistent")` and no element matches
 - **THEN** a `WebComPyException` SHALL be raised indicating the mount point was not found
 
+### MODIFIED: SSR/SSG render path skips hydration
+`AppDocumentRoot._render()` SHALL NOT call `child._hydrate_node()` when running in a non-`pyscript` environment. The existing `if self._app and self._app._hydrate and not self.__hydrated:` guard SHALL evaluate `False` in non-pyscript environments because `app._hydrate` is forced to `False` in `WebComPyApp.__init__`. The subsequent `for child in self._children: await child._render()` loop SHALL be the sole render path server-side, and its `await` chain SHALL complete before the caller of `generate_html` proceeds.
+
+#### Scenario: SSG output contains routed page content
+- **WHEN** `webcompy generate` produces an HTML file for a route that has a Component child (e.g. `HomePage` inside `RouterView`)
+- **THEN** the generated HTML SHALL contain the full component subtree
+- **AND** the routed component's DIV SHALL have non-empty children (e.g. `<div webcompy-component="HomePage">...child elements...</div>`)
+- **AND** `Component.__init__` for the routed component SHALL execute while the `RenderContext._di_scope` is still active
+
+#### Scenario: Dev server SSR response contains routed page content
+- **WHEN** a client requests a route from the dev server (`webcompy start`) and the route has a Component child (e.g. `HomePage` inside `RouterView`)
+- **THEN** the HTTP response HTML SHALL contain the full component subtree
+- **AND** the routed component's DIV SHALL have non-empty children
+
 ### Requirement: The application shall create a RenderContext per request on the server
 On the server, `app.create_render_context(path)` SHALL create a fresh `RenderContext` for each SSR request. The `RenderContext` SHALL own all mutable rendering state: DI scope, Router, AppDocumentRoot, HeadPropsStore, Signal graph state, and deferred rendering state. After rendering, `RenderContext.dispose()` SHALL clean up all request-scoped resources. In the browser, `app.run()` SHALL internally create a single long-lived `RenderContext`.
 

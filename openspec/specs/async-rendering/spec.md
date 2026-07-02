@@ -230,7 +230,7 @@ This SHALL NOT use `nest_asyncio.apply()` in PyScript — in PyScript/Pyodide, t
 - **`_is_async = False`** (sync callbacks e.g. `_update_text`, attribute updaters): SHALL call `self._callback(self._producer._value)` directly and synchronously
 - **`_is_async = True`** (async callbacks e.g. `_refresh`, `_reconcile_children`): SHALL delegate to `_resolve_async_callback()` from `webcompy.aio._aio`
 
-The signal layer (`webcompy/signal/_base.py`) SHALL NOT import `ENVIRONMENT`. All environment-specific behavior SHALL be encapsulated in `_resolve_async_callback()` within `webcompy/aio/_aio.py`.
+The signal layer (`packages/webcompy/src/webcompy/signal/_base.py`) SHALL NOT import `ENVIRONMENT`. All environment-specific behavior SHALL be encapsulated in `_resolve_async_callback()` within `packages/webcompy/src/webcompy/aio/_aio.py`.
 
 The `_make_signal_callback()` wrapper SHALL be removed. Callback registration SHALL use `signal.on_after_updating(callback)` directly without wrapping.
 
@@ -267,6 +267,16 @@ Calling `_hydrate_node()` unconditionally (outside the guard) causes duplicate D
 - **WHEN** `AppDocumentRoot._render()` runs in hydration mode (`self._app._hydrate` is `True`) and has not hydrated yet
 - **THEN** `child._hydrate_node()` SHALL be called for each child before `child._render()`
 - **AND** `self.__hydrated` SHALL be set to `True`
+
+### MODIFIED: Non-pyscript rendering uses the await chain only
+In non-pyscript environments, the entire server-side rendering SHALL proceed through the `await` chain. Fire-and-forget `asyncio.ensure_future()` calls SHALL NOT be used for the initial render because the event loop is single-shot and exits as soon as `await generate_html(...)` returns. Any child whose render is scheduled as a fire-and-forget task SHALL NOT complete before `RenderContext.dispose()` runs in non-pyscript environments.
+
+The single render path in non-pyscript environments SHALL be the synchronous `for child in self._children: await child._render()` chain in `AppDocumentRoot._render()`. This is achieved by `WebComPyApp.__init__` forcing `self._hydrate = False` in non-pyscript environments, which makes the existing `if self._app and self._app._hydrate and not self.__hydrated:` guard evaluate `False` and skip the `_hydrate_node()` recursion (whose `asyncio.ensure_future(child._render())` calls would otherwise leak past `ctx.dispose()`).
+
+#### Scenario: No fire-and-forget render in SSR/SSG
+- **WHEN** the framework runs in a non-`pyscript` environment and `AppDocumentRoot._render()` executes
+- **THEN** `asyncio.ensure_future(child._render())` SHALL NOT be called for any child
+- **AND** the await chain SHALL complete all child renders before returning
 
 ### Requirement: _get_node() shall use strict is-None check for node cache
 
@@ -329,7 +339,7 @@ Test utility functions (e.g., `TestRenderer.render()`, `render_app_html_sync()`)
 
 ### Requirement: Async signal callbacks shall execute with environment-dependent semantics
 
-When a signal update triggers a callback registered via `on_after_updating` whose callable is an `async def` (i.e. `CallbackConsumerNode._is_async` is `True`), `_dispatch()` SHALL delegate execution to `_resolve_async_callback()` in `webcompy/aio/_aio.py`. The execution semantics of `_resolve_async_callback()` SHALL differ by environment in a documented, intentional way:
+When a signal update triggers a callback registered via `on_after_updating` whose callable is an `async def` (i.e. `CallbackConsumerNode._is_async` is `True`), `_dispatch()` SHALL delegate execution to `_resolve_async_callback()` in `packages/webcompy/src/webcompy/aio/_aio.py`. The execution semantics of `_resolve_async_callback()` SHALL differ by environment in a documented, intentional way:
 
 - **Browser (PyScript)**: async callbacks SHALL be dispatched fire-and-forget via `aio_run()` → `asyncio.ensure_future()`. Async callbacks are NOT guaranteed to complete before the next synchronous statement after the signal setter returns. This is intentional — the browser prioritizes UI responsiveness over completion ordering for user-level async callbacks.
 - **Server / test (CPython)**: async callbacks SHALL be executed to completion synchronously via `nest_asyncio` + `loop.run_until_complete()` before the signal setter returns. This is intentional — SSG/SSR and tests need deterministic, in-order completion so that HTML output and assertions are reproducible.

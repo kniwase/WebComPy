@@ -22,7 +22,7 @@ The `_register_ports()` abstract method on `RenderContext` SHALL be the single e
 
 ### Requirement: DI keys shall remain in core
 
-All seven `InjectKey` constants (`DOM_PORT_KEY`, `FFI_PORT_KEY`, `FETCH_PORT_KEY`, `COOKIE_PORT_KEY`, `HISTORY_PORT_KEY`, `HOST_PORT_KEY`, `MEDIA_QUERY_PORT_KEY`) SHALL remain in `webcompy/ports/_keys.py`. Server and testing packages SHALL import these keys from core.
+All seven `InjectKey` constants (`DOM_PORT_KEY`, `FFI_PORT_KEY`, `FETCH_PORT_KEY`, `COOKIE_PORT_KEY`, `HISTORY_PORT_KEY`, `HOST_PORT_KEY`, `MEDIA_QUERY_PORT_KEY`) SHALL remain in `packages/webcompy/src/webcompy/ports/_keys.py`. Server and testing packages SHALL import these keys from core.
 
 #### Scenario: Keys importable from core
 - **WHEN** a developer writes `from webcompy.ports._keys import DOM_PORT_KEY`

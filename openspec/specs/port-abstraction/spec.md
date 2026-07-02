@@ -142,7 +142,7 @@ Existing ports already demonstrate this principle:
 - **THEN** the operation SHALL work on both `BrowserDOMNode` (delegates to native JS) and `VirtualDOMNode` (synchronous Python handler invocation)
 
 ### Requirement: DOMEvent Protocol shall live in ports/_dom.py
-The `DOMEvent` Protocol SHALL be moved from `webcompy/elements/_dom_objs.py` to `webcompy/ports/_dom.py`. `webcompy/elements/_dom_objs.py` SHALL re-export it for backwards compatibility. The Protocol SHALL define `type`, `bubbles`, `cancelable`, `target`, `currentTarget`, `defaultPrevented`, `eventPhase`, `timeStamp`, `preventDefault()`, and `stopPropagation()`.
+The `DOMEvent` Protocol SHALL be moved from `packages/webcompy/src/webcompy/elements/_dom_objs.py` to `packages/webcompy/src/webcompy/ports/_dom.py`. `packages/webcompy/src/webcompy/elements/_dom_objs.py` SHALL re-export it for backwards compatibility. The Protocol SHALL define `type`, `bubbles`, `cancelable`, `target`, `currentTarget`, `defaultPrevented`, `eventPhase`, `timeStamp`, `preventDefault()`, and `stopPropagation()`.
 
 #### Scenario: DOMEvent is importable from ports._dom
 - **WHEN** `from webcompy.ports._dom import DOMEvent` is executed
