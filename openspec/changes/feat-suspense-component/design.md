@@ -170,10 +170,10 @@ Suspense(
 
 ### New Files
 
-- `webcompy/elements/types/_suspense.py` — `SuspenseElement` class extending `DynamicElement`
+- `packages/webcompy/src/webcompy/elements/types/_suspense.py` — `SuspenseElement` class extending `DynamicElement`
 
 ### Modified Files
 
-- `webcompy/elements/generators.py` — Add `suspense()` generator function
-- `webcompy/elements/__init__.py` — Export `Suspense`
-- `webcompy/components/_component.py` — Add async setup tracking integration
+- `packages/webcompy/src/webcompy/elements/generators.py` — Add `suspense()` generator function
+- `packages/webcompy/src/webcompy/elements/__init__.py` — Export `Suspense`
+- `packages/webcompy/src/webcompy/components/_component.py` — Add async setup tracking integration

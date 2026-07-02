@@ -1,6 +1,6 @@
 ## 1. Create SuspenseElement class
 
-- [ ] 1.1 Create `webcompy/elements/types/_suspense.py` with `SuspenseElement` class extending `DynamicElement`
+- [ ] 1.1 Create `packages/webcompy/src/webcompy/elements/types/_suspense.py` with `SuspenseElement` class extending `DynamicElement`
 - [ ] 1.2 Implement `__init__` accepting `fallback`, `children`, `error_fallback`, and `timeout` parameters
 - [ ] 1.3 Implement `_on_set_parent()` to register signal callbacks
 - [ ] 1.4 Implement `_render()` with dual behavior: server environment awaits async children (with timeout), browser environment renders fallback first then swaps
@@ -11,9 +11,9 @@
 
 ## 2. Add suspense() generator function
 
-- [ ] 2.1 Add `suspense()` function to `webcompy/elements/generators.py` with parameters: `fallback`, `children`, `error_fallback=None`, `timeout=10.0`
-- [ ] 2.2 Add `SuspenseElement` import to `webcompy/elements/generators.py`
-- [ ] 2.3 Add `Suspense` export to `webcompy/elements/__init__.py`
+- [ ] 2.1 Add `suspense()` function to `packages/webcompy/src/webcompy/elements/generators.py` with parameters: `fallback`, `children`, `error_fallback=None`, `timeout=10.0`
+- [ ] 2.2 Add `SuspenseElement` import to `packages/webcompy/src/webcompy/elements/generators.py`
+- [ ] 2.3 Add `Suspense` export to `packages/webcompy/src/webcompy/elements/__init__.py`
 
 ## 3. Integrate async setup detection
 
@@ -56,5 +56,5 @@
 ## 7. Spec updates and documentation
 
 - [ ] 7.1 Update `openspec/specs/elements/spec.md` to reference the Suspense element type
-- [ ] 7.2 Update `.opencode/agents/ci-review.md` file→spec mapping to include `webcompy/elements/types/_suspense.py` → `suspense` spec
+- [ ] 7.2 Update `.opencode/agents/ci-review.md` file→spec mapping to include `packages/webcompy/src/webcompy/elements/types/_suspense.py` → `suspense` spec
 - [ ] 7.3 Update `openspec/specs/async/spec.md` to mention `Suspense` as a complementary approach to `useAsyncResult`

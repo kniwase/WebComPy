@@ -15,10 +15,10 @@ Developers need a `Suspense` component that:
 
 ## What Changes
 
-- **NEW** `Suspense` element class in `webcompy/elements/types/_suspense.py` — A `DynamicElement` that controls when children generators are evaluated, showing fallback during async loading and children after completion.
-- **NEW** `suspense()` generator function in `webcompy/elements/generators.py` — Factory function accepting `fallback`, `children`, `error_fallback`, and `timeout` parameters.
-- **MODIFIED** `webcompy/elements/__init__.py` — Export `Suspense`.
-- **MODIFIED** `webcompy/components/_component.py` — Integration with async setup detection so `Suspense` knows when its children subtree has pending async operations.
+- **NEW** `Suspense` element class in `packages/webcompy/src/webcompy/elements/types/_suspense.py` — A `DynamicElement` that controls when children generators are evaluated, showing fallback during async loading and children after completion.
+- **NEW** `suspense()` generator function in `packages/webcompy/src/webcompy/elements/generators.py` — Factory function accepting `fallback`, `children`, `error_fallback`, and `timeout` parameters.
+- **MODIFIED** `packages/webcompy/src/webcompy/elements/__init__.py` — Export `Suspense`.
+- **MODIFIED** `packages/webcompy/src/webcompy/components/_component.py` — Integration with async setup detection so `Suspense` knows when its children subtree has pending async operations.
 
 ## Capabilities
 
@@ -53,6 +53,6 @@ Developers need a `Suspense` component that:
 
 ## Impact
 
-- **Affected modules**: `webcompy/elements/types/` (new `_suspense.py`), `webcompy/elements/generators.py` (new `suspense()` function), `webcompy/elements/__init__.py` (export), `webcompy/components/_component.py` (async setup detection integration)
+- **Affected modules**: `packages/webcompy/src/webcompy/elements/types/` (new `_suspense.py`), `packages/webcompy/src/webcompy/elements/generators.py` (new `suspense()` function), `packages/webcompy/src/webcompy/elements/__init__.py` (export), `packages/webcompy/src/webcompy/components/_component.py` (async setup detection integration)
 - **Breaking**: None — `Suspense` is a new addition, not a modification of existing APIs.
 - **Testing**: Unit tests for `Suspense` rendering in both environments, E2E tests for async data loading with fallback display.
