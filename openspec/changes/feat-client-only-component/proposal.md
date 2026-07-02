@@ -12,9 +12,9 @@ A `ClientOnly` element gives developers a declarative, zero-cost abstraction: th
 ## What Changes
 
 - **NEW** `ClientOnly` DynamicElement — renders `fallback` during SSR/SSG and `children` in the browser
-- **NEW** `client_only` generator function in `webcompy/elements/generators.py` — factory API matching `switch`/`repeat` pattern
-- **UPDATED** `webcompy/elements/__init__.py` — export `ClientOnly`
-- **UPDATED** `webcompy/elements/types/__init__.py` — export `ClientOnlyElement`
+- **NEW** `client_only` generator function in `packages/webcompy/src/webcompy/elements/generators.py` — factory API matching `switch`/`repeat` pattern
+- **UPDATED** `packages/webcompy/src/webcompy/elements/__init__.py` — export `ClientOnly`
+- **UPDATED** `packages/webcompy/src/webcompy/elements/types/__init__.py` — export `ClientOnlyElement`
 - **UPDATED** Hydration handling — `ClientOnlyElement._hydrate_node()` replaces fallback DOM nodes with actual children during browser hydration
 
 ## Capabilities
@@ -48,6 +48,6 @@ A `ClientOnly` element gives developers a declarative, zero-cost abstraction: th
 
 ## Impact
 
-- **Affected modules**: `webcompy/elements/types/_client_only.py` (new), `webcompy/elements/types/__init__.py`, `webcompy/elements/generators.py`, `webcompy/elements/__init__.py`, `webcompy/app/_root_component.py` (hydration)
+- **Affected modules**: `packages/webcompy/src/webcompy/elements/types/_client_only.py` (new), `packages/webcompy/src/webcompy/elements/types/__init__.py`, `packages/webcompy/src/webcompy/elements/generators.py`, `packages/webcompy/src/webcompy/elements/__init__.py`, `packages/webcompy/src/webcompy/app/_root_component.py` (hydration)
 - **Breaking**: None. `ClientOnly` is an additive feature. Existing components and elements work unchanged.
 - **Testing**: Unit tests for SSR rendering (fallback only, children generator not called), browser rendering (children only, fallback not rendered), and hydration (fallback → children replacement). E2E test for full hydration flow.

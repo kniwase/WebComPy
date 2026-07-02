@@ -1,6 +1,6 @@
 ## 1. Create ClientOnlyElement class
 
-- [ ] 1.1 Create `webcompy/elements/types/_client_only.py` — implement `ClientOnlyElement(DynamicElement)` with `__init__(children: NodeGenerator, fallback: NodeGenerator | None)`, storing `ENVIRONMENT == "pyscript"` result in `self._is_client`. Override `_render()` to call `self._children_generator` only when `self._is_client` is True, otherwise call `self._fallback_generator` (or render empty placeholder). Override `_hydrate_node()` to render actual children in the browser, replacing SSR fallback. Override `_on_set_parent()` as no-op (no signal subscriptions needed).
+- [ ] 1.1 Create `packages/webcompy/src/webcompy/elements/types/_client_only.py` — implement `ClientOnlyElement(DynamicElement)` with `__init__(children: NodeGenerator, fallback: NodeGenerator | None)`, storing `ENVIRONMENT == "pyscript"` result in `self._is_client`. Override `_render()` to call `self._children_generator` only when `self._is_client` is True, otherwise call `self._fallback_generator` (or render empty placeholder). Override `_hydrate_node()` to render actual children in the browser, replacing SSR fallback. Override `_on_set_parent()` as no-op (no signal subscriptions needed).
 - [ ] 1.2 Implement `_generate_fallback()` method — if `self._fallback_generator` is not None, call it and wrap result in `_create_child_element`. Otherwise, create an empty text node placeholder via `TextElement("")`.
 - [ ] 1.3 Implement `_render()` — if `self._is_client`, generate children from `self._children_generator`; otherwise generate fallback. Set `self._children`, assign `_node_idx`, call `_render()` on each child, and call `_position_element_nodes()`.
 - [ ] 1.4 Implement `_hydrate_node()` — if `self._is_client` (browser), generate children from `self._children_generator`, remove existing fallback placeholder nodes from the DOM, set `self._children`, assign `_node_idx`, and call `_render()` on each child. If not client (shouldn't normally happen during hydration), delegate to fallback rendering.
@@ -10,9 +10,9 @@
 
 ## 2. Add client_only() generator function and exports
 
-- [ ] 2.1 Add `client_only()` function to `webcompy/elements/generators.py` — accepts `children: NodeGenerator` and optional `fallback: NodeGenerator | None = None`, returns `ClientOnlyElement(children, fallback)`.
-- [ ] 2.2 Export `ClientOnlyElement` from `webcompy/elements/types/__init__.py`
-- [ ] 2.3 Add `ClientOnly` as an alias for `ClientOnlyElement` in `webcompy/elements/__init__.py` and add to `__all__`. Add `client_only` to imports and `__all__`.
+- [ ] 2.1 Add `client_only()` function to `packages/webcompy/src/webcompy/elements/generators.py` — accepts `children: NodeGenerator` and optional `fallback: NodeGenerator | None = None`, returns `ClientOnlyElement(children, fallback)`.
+- [ ] 2.2 Export `ClientOnlyElement` from `packages/webcompy/src/webcompy/elements/types/__init__.py`
+- [ ] 2.3 Add `ClientOnly` as an alias for `ClientOnlyElement` in `packages/webcompy/src/webcompy/elements/__init__.py` and add to `__all__`. Add `client_only` to imports and `__all__`.
 
 **Estimated time**: ~0.5 hours
 
