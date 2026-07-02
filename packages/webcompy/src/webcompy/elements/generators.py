@@ -16,6 +16,7 @@ from webcompy.elements.typealias._element_property import (
     EventHandler,
 )
 from webcompy.elements.typealias._html_tag_names import HtmlTags
+from webcompy.elements.types._client_only import ClientOnlyElement
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._repeat import MultiLineTextElement, RepeatElement
@@ -122,6 +123,13 @@ def switch(
         [(case["case"], case["generator"]) for case in cases],
         default,
     )
+
+
+def client_only(
+    children: Callable[[], ElementChildren],
+    fallback: Callable[[], ElementChildren] | None = None,
+) -> ClientOnlyElement:
+    return ClientOnlyElement(children, fallback)
 
 
 def text(text: str | SignalBase[Any], enable_multiline: bool = True):
