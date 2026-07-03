@@ -162,13 +162,6 @@ class SuspenseElement(DynamicElement):
             if scope is not None:
                 scope.__exit__(None, None, None)
 
-    def _resolve(self, new_children: list[ElementAbstract]) -> None:
-        old_children = self._children
-        self._children = _patch_children(old_children, new_children, self._node_idx)
-        self._resolved = True
-        parent_node = self._parent._get_node()
-        _position_element_nodes(self, parent_node, self._node_idx)
-
     def _handle_error(self, error: Exception) -> None:
         if self._error_fallback_generator is not None:
             error_fallback = self._generate_children(self._error_fallback_generator)

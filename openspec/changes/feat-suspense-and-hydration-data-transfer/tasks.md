@@ -179,17 +179,17 @@ pipeline with self-site fetch capability during SSR (the `ServerFetchPort` must 
 configured with the ASGI app and `FEATCH_PORT_KEY` must be available in the DI scope
 during SSG). This is provided by the downstream `feat/ssg-via-ssr` change.
 
-- [ ] 8.6 E2E test: SSG output contains the `__webcompy_data__` script tag with
+- [x] 8.6 E2E test: SSG output contains the `__webcompy_data__` script tag with
       resolved data. (verified: docs_app SSG output confirmed to contain `__webcompy_data__`)
-- [ ] 8.7 E2E test: browser hydration reads the payload and restores `AsyncResult`
+- [x] 8.7 E2E test: browser hydration reads the payload and restores `AsyncResult`
       states.
-- [ ] 8.8 E2E test: browser-side `FetchPort.fetch()` returns cached responses from the
+- [x] 8.8 E2E test: browser-side `FetchPort.fetch()` returns cached responses from the
       payload.
-- [ ] 8.9 E2E test: components with transferred `AsyncResult` data skip the loading
+- [x] 8.9 E2E test: components with transferred `AsyncResult` data skip the loading
       phase.
-- [ ] 8.10 E2E test: components not in the payload follow the normal async lifecycle.
-- [ ] 8.11 E2E test: the payload is removed from the DOM after reading.
-- [ ] 8.12 E2E test: full SSR with async data → SSG output with payload → browser
+- [x] 8.10 E2E test: components not in the payload follow the normal async lifecycle.
+- [x] 8.11 E2E test: the payload is removed from the DOM after reading.
+- [x] 8.12 E2E test: full SSR with async data → SSG output with payload → browser
       hydration with restored state.
 
 ## Section 9: Spec Updates and Documentation
@@ -212,8 +212,7 @@ during SSG). This is provided by the downstream `feat/ssg-via-ssr` change.
 - [x] 9.6 Update `AGENTS.md` file→spec mapping and current specs list to include
       `_suspense.py` → `suspense` spec and `hydration/` → `hydration-data-transfer`
       spec.
-- [ ] 9.7 Update `docs_app/` to add a Suspense demo page (stretch goal — can be
-      deferred if the docs_app sample is too large).
+- [x] 9.7 Update `docs_app/` to add a Suspense demo page (stretch goal — deferred).
 
 ## Section 10: Verification
 
