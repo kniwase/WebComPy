@@ -46,8 +46,10 @@ class SuspenseElement(DynamicElement):
 
     def _collect_pending_coroutines(
         self,
+        children: list[ElementAbstract] | None = None,
     ) -> list[tuple[Component, Coroutine[Any, Any, Any]]]:
         pairs: list[tuple[Component, Coroutine[Any, Any, Any]]] = []
+        source = children if children is not None else self._children
 
         def _walk(element: ElementAbstract) -> None:
             if isinstance(element, Component) and element._pending_async_template is not None:
@@ -56,7 +58,7 @@ class SuspenseElement(DynamicElement):
                 for child in element._children:
                     _walk(child)
 
-        for child in self._children:
+        for child in source:
             _walk(child)
         return pairs
 
@@ -70,7 +72,7 @@ class SuspenseElement(DynamicElement):
                 continue
             component._pending_async_template = None
             component._property["template"] = result
-            component.__init_component(component._property)
+            component._Component__init_component(component._property)
 
     async def _render(self):
         if not self._children:
@@ -137,7 +139,7 @@ class SuspenseElement(DynamicElement):
             scope.__enter__()
         try:
             children = self._generate_children(self._children_generator)
-            pairs = self._collect_pending_coroutines()
+            pairs = self._collect_pending_coroutines(children)
             if pairs:
                 coroutines = [coro for _, coro in pairs]
                 results = await asyncio.gather(*coroutines, return_exceptions=True)
@@ -146,6 +148,10 @@ class SuspenseElement(DynamicElement):
                         raise result
                 self._resolve_component_templates(pairs, [r for r in results if not isinstance(r, Exception)])
             self._resolve(children)
+            for c_idx, child in enumerate(self._children):
+                child._node_idx = self._node_idx + c_idx
+                if child._mounted is None:
+                    await child._render()
         except Exception as e:
             self._handle_error(e)
         finally:

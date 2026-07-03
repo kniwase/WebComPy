@@ -22,6 +22,7 @@ def Root(_: ComponentContext[None]):
                     {}, RouterLink(to="/scoped-style", text=["ScopedStyle"], attrs={"data-testid": "nav-scoped-style"})
                 ),
                 html.LI({}, RouterLink(to="/async-nav", text=["AsyncNav"], attrs={"data-testid": "nav-async-nav"})),
+                html.LI({}, RouterLink(to="/suspense", text=["Suspense"], attrs={"data-testid": "nav-suspense"})),
                 html.LI({}, RouterLink(to="/di-provide", text=["DI"], attrs={"data-testid": "nav-di"})),
             ),
         ),
