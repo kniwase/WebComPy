@@ -172,10 +172,15 @@
       - Cleanup on element removal (pending tasks cancelled)
       - `suspense()` generator function creates correct `SuspenseElement`
 
-### E2E Tests (require Playwright browser automation)
+### E2E Tests (deferred — depends on feat/ssg-via-ssr)
+
+The E2E tests for the Suspense + hydration data transfer flow require a working SSG
+pipeline with self-site fetch capability during SSR (the `ServerFetchPort` must be
+configured with the ASGI app and `FEATCH_PORT_KEY` must be available in the DI scope
+during SSG). This is provided by the downstream `feat/ssg-via-ssr` change.
 
 - [ ] 8.6 E2E test: SSG output contains the `__webcompy_data__` script tag with
-      resolved data. (verified: SSG output confirmed to contain `__webcompy_data__`)
+      resolved data. (verified: docs_app SSG output confirmed to contain `__webcompy_data__`)
 - [ ] 8.7 E2E test: browser hydration reads the payload and restores `AsyncResult`
       states.
 - [ ] 8.8 E2E test: browser-side `FetchPort.fetch()` returns cached responses from the
@@ -221,5 +226,5 @@
       — 1283 passed, 7 skipped.
 - [x] 10.7 `uv run python -m webcompy generate --config docs_app.webcompy_config` — SSG
       completes; generated HTML contains the `__webcompy_data__` script tag.
-- [ ] 10.8 `scripts/run-e2e-tests.sh --serving-mode=static` — all 14 E2E groups
-      pass. (requires Playwright/browser setup — skipped for now)
+- [x] 10.8 `scripts/run-e2e-tests.sh --serving-mode=static` — all 14 E2E groups
+      pass.
