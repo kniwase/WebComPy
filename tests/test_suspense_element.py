@@ -110,15 +110,25 @@ class TestSuspenseElement:
 
         parent = _DummyParent()
 
-        async def async_content(_ctx):
+        async def _dummy_coro():
             await asyncio.sleep(0)
             return html.DIV({}, "resolved")
 
-        async_content.__webcompy_component_definition__ = True
+        def children_generator():
+            from webcompy.components._component import Component
+
+            mock_component = MagicMock(spec=Component)
+            mock_component._pending_async_template = _dummy_coro()
+            mock_component._property = {"component_id": "test-cmp"}
+            mock_component._children = []
+            mock_component._node_idx = 0
+            mock_component._mounted = None
+            mock_component._parent = parent
+            return html.DIV({}, mock_component)
 
         el = SuspenseElement(
             fallback=lambda: html.P({}, "loading..."),
-            children=lambda: html.DIV({}, async_content(MagicMock())),
+            children=children_generator,
         )
         el._parent = parent
         el._node_idx = 0

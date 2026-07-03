@@ -124,6 +124,12 @@ class SuspenseElement(DynamicElement):
                 scope.__exit__(None, None, None)
 
     async def _browser_render(self):
+        children = self._generate_children(self._children_generator)
+        pairs = self._collect_pending_coroutines(children)
+        if not pairs:
+            self._children = children
+            self._resolved = True
+            return
         fallback = self._generate_fallback()
         self._children = fallback
         self._resolved = False
