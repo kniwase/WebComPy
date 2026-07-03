@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextvars import ContextVar
+from logging import getLogger
 from typing import TYPE_CHECKING, Any, Literal
 
 from webcompy.aio import resolve_async
@@ -18,6 +19,8 @@ from webcompy.utils import ENVIRONMENT
 if TYPE_CHECKING:
     from webcompy.app._render_context import RenderContext
     from webcompy.signal._computed import Computed
+
+_logger = getLogger(__name__)
 
 
 class WebComPyApp:
@@ -275,9 +278,10 @@ class WebComPyApp:
                     if fetch_port is not None and hasattr(fetch_port, "populate_from_transfer"):
                         fetch_port.populate_from_transfer(payload.fetches)
                     ctx.di_scope.provide(HYDRATION_DATA_KEY, payload.async_results)
+            except Exception as e:
+                _logger.warning("Failed to restore hydration data payload: %s", e)
+            finally:
                 data_el.remove()
-            except Exception:
-                pass
 
         ctx._root._selector = self._config.selector
         resolve_async(ctx._root._render())
