@@ -242,7 +242,7 @@ The `Co-Authored-By` footer is required on every commit.
 
 ### PR Body
 
-When creating a PR, the body MUST follow the template in `.github/PULL_REQUEST_TEMPLATE/`. Read the template before writing the PR body and fill ALL sections.
+When creating a PR, the body MUST follow the template in `.github/PULL_REQUEST_TEMPLATE.md`. Read the template before writing the PR body and fill ALL sections.
 
 ### Change Conventions (OpenSpec)
 
