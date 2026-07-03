@@ -142,6 +142,8 @@ class ServerFetchPort(FetchPort):
     def get_transfer_data(self) -> dict[str, TransferFetchEntry]:
         result: dict[str, TransferFetchEntry] = {}
         for key, response in self._response_cache.items():
+            if not self.is_self_site_url(key):
+                continue
             result[key] = TransferFetchEntry(
                 status_code=response.status_code,
                 headers=response.headers,

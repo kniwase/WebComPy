@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+from logging import getLogger
 from typing import TYPE_CHECKING, Any
 
 from webcompy.components._component import Component
 from webcompy.di import inject
 from webcompy.hydration._payload import TransferAsyncResultEntry, TransferFetchEntry, TransferPayload
+from webcompy.ports._keys import FETCH_PORT_KEY
 
 if TYPE_CHECKING:
     from webcompy.aio._async_result import AsyncResult
     from webcompy.app._root_component import AppDocumentRoot
+
+_logger = getLogger(__name__)
 
 
 def collect_transfer_data(root: AppDocumentRoot) -> TransferPayload:
@@ -17,7 +21,7 @@ def collect_transfer_data(root: AppDocumentRoot) -> TransferPayload:
     fetches: dict[str, TransferFetchEntry] = {}
     async_results: dict[str, TransferAsyncResultEntry] = {}
 
-    fetch_port = inject("FetchPort", default=None)
+    fetch_port = inject(FETCH_PORT_KEY, default=None)
     if fetch_port is not None and hasattr(fetch_port, "get_transfer_data"):
         fetches = fetch_port.get_transfer_data()
 

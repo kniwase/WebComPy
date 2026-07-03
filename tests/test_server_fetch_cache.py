@@ -157,4 +157,4 @@ class TestServerFetchCache:
 
         data = port.get_transfer_data()
         assert "/self/api" in data
-        assert "https://external.com/api" in data
+        assert "https://external.com/api" not in data
