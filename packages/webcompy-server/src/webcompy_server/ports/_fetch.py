@@ -76,6 +76,14 @@ class ServerFetchPort(FetchPort):
             return url
         return f"{method}:{url}:{body or ''}"
 
+    @staticmethod
+    def _extract_url_from_cache_key(key: str) -> str:
+        for method in ("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"):
+            prefix = f"{method}:"
+            if key.startswith(prefix):
+                return key[len(prefix) :].rsplit(":", 1)[0]
+        return key
+
     async def fetch(
         self,
         url: str,
@@ -142,7 +150,8 @@ class ServerFetchPort(FetchPort):
     def get_transfer_data(self) -> dict[str, TransferFetchEntry]:
         result: dict[str, TransferFetchEntry] = {}
         for key, response in self._response_cache.items():
-            if not self.is_self_site_url(key):
+            url = self._extract_url_from_cache_key(key)
+            if not self.is_self_site_url(url):
                 continue
             result[key] = TransferFetchEntry(
                 status_code=response.status_code,

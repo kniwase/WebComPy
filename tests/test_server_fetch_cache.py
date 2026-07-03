@@ -158,3 +158,23 @@ class TestServerFetchCache:
         data = port.get_transfer_data()
         assert "/self/api" in data
         assert "https://external.com/api" not in data
+
+    @pytest.mark.asyncio
+    async def test_get_transfer_data_includes_non_get(self):
+        posted_data = None
+
+        async def post_handler(request):
+            nonlocal posted_data
+            posted_data = await request.json()
+            return JSONResponse({"received": posted_data})
+
+        app = Starlette(routes=[Route("/api/data", endpoint=post_handler, methods=["POST"])])
+        port = ServerFetchPort()
+        port.configure(app, blocked_paths=[])
+
+        await port.fetch("/api/data", method="POST", body='{"key": "val"}')
+
+        data = port.get_transfer_data()
+        post_key = 'POST:/api/data:{"key": "val"}'
+        assert post_key in data
+        assert data[post_key].status_code == 200

@@ -146,7 +146,7 @@ class SuspenseElement(DynamicElement):
                 for _idx, result in enumerate(results):
                     if isinstance(result, Exception):
                         raise result
-                self._resolve_component_templates(pairs, [r for r in results if not isinstance(r, Exception)])
+                self._resolve_component_templates(pairs, results)
             old_children = self._children
             self._children = _patch_children(old_children, children, self._node_idx)
             self._resolved = True
@@ -157,21 +157,26 @@ class SuspenseElement(DynamicElement):
             _position_element_nodes(self, parent_node, self._node_idx)
             self._parent._re_index_children(False)
         except Exception as e:
-            self._handle_error(e)
+            await self._handle_error(e)
         finally:
             if scope is not None:
                 scope.__exit__(None, None, None)
 
-    def _handle_error(self, error: Exception) -> None:
+    async def _handle_error(self, error: Exception) -> None:
         if self._error_fallback_generator is not None:
             error_fallback = self._generate_children(self._error_fallback_generator)
             old_children = self._children
             self._children = _patch_children(old_children, error_fallback, self._node_idx)
             self._resolved = True
+            for c_idx, child in enumerate(self._children):
+                child._node_idx = self._node_idx + c_idx
+                await child._render()
             parent_node = self._parent._get_node()
             _position_element_nodes(self, parent_node, self._node_idx)
+            self._parent._re_index_children(False)
         else:
-            _logger.warning("Suspense child async raised without error_fallback: %s", error)
+            _logger.error("Suspense child async raised without error_fallback: %s", error)
+            raise error
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         for task in self._pending_tasks:
