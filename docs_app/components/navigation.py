@@ -254,7 +254,7 @@ Navbar.scoped_style = {
     " .navbar-dropdown": {
         "position": "absolute",
         "top": "calc(100% + var(--space-1))",
-        "left": "0",
+        "right": "0",
         "background-color": "var(--color-bg)",
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-md)",
