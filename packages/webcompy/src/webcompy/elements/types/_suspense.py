@@ -147,11 +147,15 @@ class SuspenseElement(DynamicElement):
                     if isinstance(result, Exception):
                         raise result
                 self._resolve_component_templates(pairs, [r for r in results if not isinstance(r, Exception)])
-            self._resolve(children)
+            old_children = self._children
+            self._children = _patch_children(old_children, children, self._node_idx)
+            self._resolved = True
             for c_idx, child in enumerate(self._children):
                 child._node_idx = self._node_idx + c_idx
-                if child._mounted is None:
-                    await child._render()
+                await child._render()
+            parent_node = self._parent._get_node()
+            _position_element_nodes(self, parent_node, self._node_idx)
+            self._parent._re_index_children(False)
         except Exception as e:
             self._handle_error(e)
         finally:
