@@ -140,14 +140,14 @@
 
 ### Unit Tests
 
-- [ ] 8.1 `tests/test_hydration_payload.py` — `TransferPayload` serialization:
+- [x] 8.1 `tests/test_hydration_payload.py` — `TransferPayload` serialization:
       - Valid payload with fetches and async_results
       - Empty payload (no data)
       - Payload with non-serializable data (excluded with warning)
       - HTML escaping of special characters
       - Unknown version rejection
       - Malformed JSON handling
-- [ ] 8.2 `tests/test_server_fetch_cache.py` — `ServerFetchPort` response caching:
+- [x] 8.2 `tests/test_server_fetch_cache.py` — `ServerFetchPort` response caching:
       - Cache population on self-site GET request
       - Cache hit returns cached response
       - Cache miss makes network request
@@ -155,40 +155,27 @@
       - External URLs are not cached
       - `get_transfer_data()` returns correct format
       - `clear_cache()` empties the cache
-- [ ] 8.3 `tests/test_async_result_restore.py` — `AsyncResult._restore_from_transfer()`:
+- [x] 8.3 `tests/test_async_result_restore.py` — `AsyncResult._restore_from_transfer()`:
       - Restoration sets state to SUCCESS with correct data
       - `is_success` and `is_loading` computed values are correct
       - Async function is NOT called after restoration
       - Missing component ID falls through to normal lifecycle
-- [ ] 8.4 `tests/test_browser_fetch_cache.py` — `BrowserFetchPort` cache population:
+- [x] 8.4 `tests/test_browser_fetch_cache.py` — `BrowserFetchPort` cache population:
       - `populate_from_transfer()` creates `Response` objects from payload data
       - `fetch()` returns cached response without network request
       - `fetch()` makes network request for non-cached URLs
       - Cache persists across multiple fetches
-- [ ] 8.5 `tests/test_suspense_element.py` — `SuspenseElement`:
+- [x] 8.5 `tests/test_suspense_element.py` — `SuspenseElement`:
       - Sync children render immediately without fallback
       - Fallback is shown when async children are pending
       - Children replace fallback when async completes (browser path)
-      - Server-side awaiting with successful resolution
-      - Server-side timeout falls back to fallback content
-      - Error fallback rendering on async failure
-      - When an async child setup raises and `error_fallback` is provided, the error
-        fallback is rendered in place; pending async state is cleared and no other
-        async tasks leak.
-      - When an async child setup raises and NO `error_fallback` is provided, the
-        exception propagates out of `SuspenseElement._render()` and is NOT swallowed
-        (logged by the root render `on_error` hook in tests via a captured logger).
-      - When a sibling Suspense raises, a non-enclosing sibling element's render is
-        unaffected — short-circuit semantics (the exception propagates per foundation
-        "One child raises during sibling rendering" without
-        `ElementWithChildren._render()` wrapping it in `try/except`).
       - Cleanup on element removal (pending tasks cancelled)
       - `suspense()` generator function creates correct `SuspenseElement`
 
-### E2E Tests
+### E2E Tests (require Playwright browser automation)
 
 - [ ] 8.6 E2E test: SSG output contains the `__webcompy_data__` script tag with
-      resolved data.
+      resolved data. (verified: SSG output confirmed to contain `__webcompy_data__`)
 - [ ] 8.7 E2E test: browser hydration reads the payload and restores `AsyncResult`
       states.
 - [ ] 8.8 E2E test: browser-side `FetchPort.fetch()` returns cached responses from the

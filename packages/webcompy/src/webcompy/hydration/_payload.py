@@ -81,7 +81,8 @@ def serialize_payload(payload: TransferPayload) -> str:
 
 def deserialize_payload(text: str) -> TransferPayload | None:
     try:
-        raw = json.loads(text)
+        unescaped = html_module.unescape(text)
+        raw = json.loads(unescaped)
     except (json.JSONDecodeError, ValueError):
         return None
     if not isinstance(raw, dict):
