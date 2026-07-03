@@ -36,7 +36,7 @@ Read `.tmp/pr-diff.txt` from the beginning (offset 0). Read through the entire d
 
 Read `.tmp/pr-context.txt` for the PR title, description, and human comments. Understand the intent and background. Read `.tmp/ci-results.txt` for CI results — trust these results and do NOT re-verify lint, typecheck, or test failures.
 
-Then read `.github/PULL_REQUEST_TEMPLATE/default.md` (and `openspec-proposal.md` if the PR is an OpenSpec proposal). Verify that every section defined in the template is present in the PR description. Missing or empty sections are a violation to report in Step 7.
+Then read `.github/PULL_REQUEST_TEMPLATE.md`. Verify that every section defined in the template is present in the PR description. Missing or empty sections are a violation to report in Step 7.
 
 ### Step 4: Read corresponding specs
 

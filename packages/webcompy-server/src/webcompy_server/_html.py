@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html as html_module
 import json
+from logging import getLogger
 from typing import TYPE_CHECKING, TypeAlias, cast
 
 from webcompy.app._config import PluginScript
@@ -14,6 +15,8 @@ from webcompy.ports._keys import DOM_PORT_KEY
 
 if TYPE_CHECKING:
     from webcompy.app._render_context import RenderContext
+
+_logger = getLogger(__name__)
 
 Scripts: TypeAlias = list[tuple[dict[str, str], str | None]]
 
@@ -336,6 +339,17 @@ async def _generate_html_impl(
                 *plugin_body_scripts,
             ),
         ).render_html()
-    ).replace("</body>", f"{app_loader_html}</body>")
+    )
+
+    if prerender and ctx._root is not None:
+        try:
+            payload_json = ctx._root._collect_transfer_data()
+            data_script = f'<script type="application/json" id="__webcompy_data__">{payload_json}</script>'
+            html_output = html_output.replace("</body>", f"{data_script}\n{app_loader_html}</body>")
+        except Exception as e:
+            _logger.warning("Failed to inject hydration data payload: %s", e)
+            html_output = html_output.replace("</body>", f"{app_loader_html}</body>")
+    else:
+        html_output = html_output.replace("</body>", f"{app_loader_html}</body>")
 
     return html_output.replace("<head>", f"<head>\n{head_content_html}", 1)

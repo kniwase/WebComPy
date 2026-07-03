@@ -24,7 +24,7 @@ body:
     id: webcompy-version
     attributes:
       label: WebComPy バージョン
-      placeholder: 例: 0.8.0
+      placeholder: "例: 0.8.0"
     validations:
       required: true
 
@@ -32,7 +32,7 @@ body:
     id: python-version
     attributes:
       label: Python バージョン
-      placeholder: 例: 3.12
+      placeholder: "例: 3.12"
     validations:
       required: true
 
@@ -41,13 +41,13 @@ body:
     attributes:
       label: ブラウザ (該当する場合)
       description: バグが発生したブラウザとバージョン
-      placeholder: 例: Chrome 125, Firefox 128
+      placeholder: "例: Chrome 125, Firefox 128"
 
   - type: input
     id: pyscript-version
     attributes:
       label: PyScript / Pyodide バージョン (該当する場合)
-      placeholder: 例: PyScript 2024.11.1, Pyodide 0.26.0
+      placeholder: "例: PyScript 2024.11.1, Pyodide 0.26.0"
 
   - type: textarea
     id: steps-to-reproduce
@@ -78,7 +78,7 @@ body:
     attributes:
       label: 関連スペック (任意)
       description: 影響を受けると思われる OpenSpec スペックがあればリンクを記載
-      placeholder: 例: openspec/specs/reactive/spec.md
+      placeholder: "例: openspec/specs/reactive/spec.md"
 
   - type: textarea
     id: logs

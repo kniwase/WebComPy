@@ -16,6 +16,7 @@ from .pages.not_found import NotFound
 from .pages.repeat import RepeatPage
 from .pages.scoped_style import ScopedStylePage
 from .pages.signal import ReactivePage
+from .pages.suspense_test import SuspensePage
 from .pages.switch_test import SwitchPage
 
 router = Router(
@@ -32,6 +33,7 @@ router = Router(
     {"path": "/lifecycle", "component": LifecyclePage},
     {"path": "/scoped-style", "component": ScopedStylePage},
     {"path": "/async-nav", "component": AsyncNavPage},
+    {"path": "/suspense", "component": SuspensePage},
     {"path": "/client-only", "component": ClientOnlyPage},
     {"path": "/bundled-deps", "component": BundledDepsPage},
     {"path": "/di-provide", "component": DiProviderWrapper},

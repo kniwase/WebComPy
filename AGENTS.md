@@ -202,7 +202,9 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md` |
 | `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md` |
 | `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md` |
-| `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md` |
+| `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md`, `suspense/spec.md` |
+| `webcompy/elements/types/_suspense.py` | `suspense/spec.md` |
+| `webcompy/hydration/` | `hydration-data-transfer/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md` |
 | `webcompy/ports/` | `port-abstraction/spec.md` |
@@ -240,7 +242,7 @@ The `Co-Authored-By` footer is required on every commit.
 
 ### PR Body
 
-When creating a PR, the body MUST follow the template in `.github/PULL_REQUEST_TEMPLATE/`. Read the template before writing the PR body and fill ALL sections.
+When creating a PR, the body MUST follow the template in `.github/PULL_REQUEST_TEMPLATE.md`. Read the template before writing the PR body and fill ALL sections.
 
 ### Change Conventions (OpenSpec)
 
@@ -324,6 +326,8 @@ When specs are added, modified, or removed, update:
 | `app-styles` | App-level reactive style injection via `@layer webcompy-dynamic` |
 | `testing-module` | TestRenderer, fake ports, scope helpers for browserless testing |
 | `server-fetch-asgi` | Self-site fetch via ASGI transport during SSR/SSG, page-route blocking |
+| `suspense` | Declarative async boundary showing fallback while children load, with SSR awaiting and hydration integration |
+| `hydration-data-transfer` | Server-to-browser data transfer for `AsyncResult` states and `FetchPort` response caches via payload injection |
 
 ## Language Rules
 

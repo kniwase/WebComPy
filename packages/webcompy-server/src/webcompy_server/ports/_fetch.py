@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 from webcompy.exception import WebComPyException
+from webcompy.hydration._payload import TransferFetchEntry
 from webcompy.ports._fetch import FetchPort, Response
 
 if TYPE_CHECKING:
@@ -19,6 +20,7 @@ class ServerFetchPort(FetchPort):
         self._asgi_app: ASGIApp | None = None
         self._blocked_paths: list[str] = []
         self._base_url: str = "/"
+        self._response_cache: dict[str, Response] = {}
 
     def is_self_site_url(self, url: str) -> bool:
         if url.startswith("//"):
@@ -69,6 +71,19 @@ class ServerFetchPort(FetchPort):
                 return True
         return False
 
+    def _cache_key(self, url: str, method: str, body: str | None = None) -> str:
+        if method == "GET":
+            return url
+        return f"{method}:{url}:{body or ''}"
+
+    @staticmethod
+    def _extract_url_from_cache_key(key: str) -> str:
+        for method in ("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"):
+            prefix = f"{method}:"
+            if key.startswith(prefix):
+                return key[len(prefix) :].rsplit(":", 1)[0]
+        return key
+
     async def fetch(
         self,
         url: str,
@@ -97,6 +112,9 @@ class ServerFetchPort(FetchPort):
             )
 
         resolved_path = self._resolve_self_site_path(url)
+        cache_key = self._cache_key(resolved_path, method, body)
+        if cache_key in self._response_cache:
+            return self._response_cache[cache_key]
 
         if self._is_blocked(resolved_path):
             return Response(
@@ -119,13 +137,31 @@ class ServerFetchPort(FetchPort):
             headers=headers,
             content=body,
         )
-        return Response(
+        response = Response(
             text=res.text,
             headers=dict(res.headers),
             status_code=res.status_code,
             status_text=res.reason_phrase,
             ok=res.is_success,
         )
+        self._response_cache[cache_key] = response
+        return response
+
+    def get_transfer_data(self) -> dict[str, TransferFetchEntry]:
+        result: dict[str, TransferFetchEntry] = {}
+        for key, response in self._response_cache.items():
+            url = self._extract_url_from_cache_key(key)
+            if not self.is_self_site_url(url):
+                continue
+            result[key] = TransferFetchEntry(
+                status_code=response.status_code,
+                headers=response.headers,
+                body=response.text,
+            )
+        return result
+
+    def clear_cache(self) -> None:
+        self._response_cache.clear()
 
     async def close(self) -> None:
         await self._external_client.aclose()

@@ -91,6 +91,7 @@ class Component(ElementBase):
         self._head_props: HeadPropsStore | None = None
         self._generator = generator
         self._pending_async_template: Coroutine[Any, Any, ElementChildren] | None = None
+        self._async_results: list = []
         super().__init__()
         property = self.__setup(component_def, props, slots)
         self._property = property
@@ -145,6 +146,8 @@ class Component(ElementBase):
             _active_effect_scope.reset(scope_token)
             if pending_token is not None:
                 _pending_di_parent.reset(pending_token)
+
+        self._async_results = list(context._async_results)
 
         child_di_scope: DIScope | None = None
         if parent_di_scope is not None and len(parent_di_scope._children) > existing_children_count:

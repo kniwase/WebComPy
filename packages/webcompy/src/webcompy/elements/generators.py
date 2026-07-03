@@ -20,6 +20,7 @@ from webcompy.elements.types._client_only import ClientOnlyElement
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._repeat import MultiLineTextElement, RepeatElement
+from webcompy.elements.types._suspense import SuspenseElement
 from webcompy.elements.types._switch import SwitchElement
 from webcompy.elements.types._text import NewLine, RawHTMLElement, TextElement
 from webcompy.signal import SignalBase
@@ -122,6 +123,21 @@ def switch(
     return SwitchElement(
         [(case["case"], case["generator"]) for case in cases],
         default,
+    )
+
+
+def suspense(
+    *,
+    fallback: NodeGenerator,
+    children: NodeGenerator,
+    error_fallback: NodeGenerator | None = None,
+    timeout: float = 10.0,
+) -> SuspenseElement:
+    return SuspenseElement(
+        fallback=fallback,
+        children=children,
+        error_fallback=error_fallback,
+        timeout=timeout,
     )
 
 

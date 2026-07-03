@@ -10,12 +10,15 @@ from webcompy.elements.generators import (
     noderef,
     raw_html,
     repeat,
+    suspense,
     switch,
     text,
 )
 from webcompy.elements.types._client_only import ClientOnlyElement
+from webcompy.elements.types._suspense import SuspenseElement
 
 ClientOnly = ClientOnlyElement
+Suspense = SuspenseElement
 
 __all__ = [
     "ClientOnly",
@@ -23,6 +26,7 @@ __all__ = [
     "DOMNode",
     "DomNodeRef",
     "HeadElement",
+    "Suspense",
     "break_line",
     "client_only",
     "create_element",
@@ -31,6 +35,7 @@ __all__ = [
     "noderef",
     "raw_html",
     "repeat",
+    "suspense",
     "switch",
     "text",
     "typealias",

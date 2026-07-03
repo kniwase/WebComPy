@@ -369,6 +369,12 @@ This divergence is a deliberate design decision, not a bug. Dependent changes (e
 
 ## Future Work
 
+### SUSPENSE_RESOLVING_KEY Contract
+
+`SUSPENSE_RESOLVING_KEY: InjectKey[bool]` is provided with value `True` by `SuspenseElement._render()` (scoped to the Suspense subtree) and absent or `False` in all other contexts. When `SUSPENSE_RESOLVING_KEY` is `True`, `Component._render()` skips the `_pending_async_template` resolution block — Suspense is responsible for resolving it. When the key is absent, `Component._render()` awaits `_pending_async_template` directly (the normal case for components not wrapped in a Suspense boundary). Sibling `Suspense` elements render sequentially per the existing sibling-rendering rule.
+
+### Parallel Sibling Rendering
+
 ### Parallel Sibling Rendering
 
 Sequential rendering of sibling children is correct and safe but does not exploit the async pipeline's potential for I/O-bound parallelism. A future enhancement may introduce `asyncio.gather()` for sibling rendering with the following prerequisites:
