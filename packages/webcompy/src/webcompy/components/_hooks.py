@@ -61,6 +61,7 @@ def useAsyncResult(
         ctx = None
 
     if ctx is not None:
+        ctx._async_results.append(result)
         component_id = generate_id(ctx._component_name)
         hydration_data = inject(HYDRATION_DATA_KEY, default=None)
         if hydration_data is not None and component_id in hydration_data:

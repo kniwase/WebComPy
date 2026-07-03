@@ -133,7 +133,7 @@ The result: components with transferred data skip the `LOADING` phase entirely o
 
 ### Requirement: use_async_result shall check the transfer payload first
 
-`use_async_result` SHALL consult `HYDRATION_DATA_KEY` via `inject(HYDRATION_DATA_KEY, default={})` before scheduling async execution. If the component ID (the component's tree-position path identifier, `component._tree_path_id`) is found in the payload with `state == "success"`, the function SHALL call `_restore_from_transfer(data)` and skip execution. If not found, the function SHALL proceed with the normal `PENDING → LOADING → SUCCESS/ERROR` lifecycle.
+`use_async_result` SHALL consult `HYDRATION_DATA_KEY` via `inject(HYDRATION_DATA_KEY, default=None)` before scheduling async execution. If a component ID (generated via `generate_id(component_name)`) is found in the payload with `state == "success"`, the function SHALL call `_restore_from_transfer(data)` and skip execution. If not found, the function SHALL proceed with the normal `PENDING → LOADING → SUCCESS/ERROR` lifecycle.
 
 #### Scenario: use_async_result restores from payload
 - **WHEN** `use_async_result` is called inside a component setup function
@@ -192,7 +192,7 @@ The result: components with transferred data skip the `LOADING` phase entirely o
 
 ### Requirement: AppDocumentRoot shall collect transfer data
 
-`AppDocumentRoot` (or `WebComPyApp`) SHALL provide a `_collect_transfer_data() -> TransferPayload` method that retrieves `ServerFetchPort` from the DI scope, calls `server_fetch_port.get_transfer_data()`, and iterates over `ComponentStore.components` to find `AsyncResult` instances in `SUCCESS` state with a `component_id` matching the instance's `_tree_path_id`.
+`AppDocumentRoot` (or `WebComPyApp`) SHALL provide a `_collect_transfer_data() -> TransferPayload` method that retrieves `ServerFetchPort` from the DI scope, calls `server_fetch_port.get_transfer_data()`, and walks the rendered component tree to collect `AsyncResult` instances from each component's `_async_results` list (populated by `use_async_result` during setup) that are in `SUCCESS` state.
 
 #### Scenario: Transfer data is collected after SSR render
 - **WHEN** `_collect_transfer_data()` is called after a successful SSR render

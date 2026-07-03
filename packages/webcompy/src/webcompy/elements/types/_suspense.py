@@ -67,9 +67,7 @@ class SuspenseElement(DynamicElement):
         pairs: list[tuple[Component, Coroutine[Any, Any, Any]]],
         results: list[Any],
     ) -> None:
-        for (component, _), result in zip(pairs, results, strict=False):
-            if isinstance(result, Exception):
-                continue
+        for (component, _), result in zip(pairs, results, strict=True):
             component._pending_async_template = None
             component._property["template"] = result
             component._Component__init_component(component._property)
@@ -133,19 +131,21 @@ class SuspenseElement(DynamicElement):
         fallback = self._generate_fallback()
         self._children = fallback
         self._resolved = False
-        task = asyncio.ensure_future(self._browser_resolve())
+        task = asyncio.ensure_future(self._browser_resolve(children, pairs))
         self._pending_tasks.append(task)
         task.add_done_callback(lambda t: self._pending_tasks.remove(t) if t in self._pending_tasks else None)
 
-    async def _browser_resolve(self):
+    async def _browser_resolve(self, children=None, pairs=None):
         original_scope = _active_di_scope.get(None)
         scope = original_scope.create_child() if original_scope is not None else None
         if scope is not None:
             scope.provide(SUSPENSE_RESOLVING_KEY, True)
             scope.__enter__()
         try:
-            children = self._generate_children(self._children_generator)
-            pairs = self._collect_pending_coroutines(children)
+            if children is None:
+                children = self._generate_children(self._children_generator)
+            if pairs is None:
+                pairs = self._collect_pending_coroutines(children)
             if pairs:
                 coroutines = [coro for _, coro in pairs]
                 results = await asyncio.gather(*coroutines, return_exceptions=True)

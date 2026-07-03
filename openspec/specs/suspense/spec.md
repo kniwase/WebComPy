@@ -62,7 +62,11 @@ In the pyscript (browser) environment, `SuspenseElement._render()` SHALL first c
 
 ### Requirement: Suspense shall catch async exceptions and render error_fallback
 
-`SuspenseElement._render()` SHALL wrap the `await asyncio.gather(*coroutines)` call in a `try/except`. If an exception is raised and `error_fallback` is provided, `_handle_error()` SHALL render `error_fallback` via `_patch_children()`. If `error_fallback` is not provided, the exception SHALL propagate to the caller per the foundation's sequential short-circuit semantics. The foundation's `ElementWithChildren._render()` and `DynamicElement._refresh()` loops SHALL NOT have a general `try/except` — adding one would conflict with sequential short-circuit semantics.
+`SuspenseElement._render()` SHALL wrap the `await asyncio.gather(*coroutines)` call in a `try/except`. If an exception is raised and `error_fallback` is provided:
+- In server (SSR/SSG) environments, the error_fallback SHALL be rendered inline by setting `self._children` directly.
+- In browser (pyscript) environments, the error SHALL be delegated to `_handle_error()` which SHALL render `error_fallback` via `_patch_children()`, position nodes, invoke `child._render()`, and clean up pending state.
+
+If `error_fallback` is not provided in either environment, the exception SHALL propagate to the caller per the foundation's sequential short-circuit semantics. The foundation's `ElementWithChildren._render()` and `DynamicElement._refresh()` loops SHALL NOT have a general `try/except` — adding one would conflict with sequential short-circuit semantics.
 
 #### Scenario: Async child raises with error_fallback provided
 - **WHEN** an async child setup raises an exception and `error_fallback` is provided to the enclosing `SuspenseElement`

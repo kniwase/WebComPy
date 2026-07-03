@@ -73,6 +73,7 @@ class Context(Generic[PropsType]):
         self.__title_setter = title_setter
         self.__meta_setter = meta_setter
         self._generator = generator
+        self._async_results: list = []
 
     @property
     def props(self) -> PropsType:

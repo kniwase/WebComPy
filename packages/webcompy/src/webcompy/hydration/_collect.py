@@ -57,30 +57,4 @@ def _walk_component_async_results(root: Any):
 
 
 def _find_async_results_in_component(component: Component) -> list[AsyncResult]:
-    from webcompy.aio._async_result import AsyncResult
-
-    results: list[AsyncResult] = []
-
-    def _walk(obj: Any) -> None:
-        if isinstance(obj, AsyncResult):
-            results.append(obj)
-            return
-        if isinstance(obj, dict):
-            for v in obj.values():
-                _walk(v)
-        elif isinstance(obj, (list, tuple)):
-            for item in obj:
-                _walk(item)
-        elif hasattr(obj, "__dict__"):
-            for attr_name in dir(obj):
-                try:
-                    attr_val = getattr(obj, attr_name)
-                except Exception:
-                    continue
-                if isinstance(attr_val, AsyncResult):
-                    results.append(attr_val)
-
-    template = component._property.get("template")
-    if template is not None:
-        _walk(template)
-    return results
+    return list(component._async_results)
