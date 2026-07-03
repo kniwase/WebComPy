@@ -8,7 +8,7 @@ The system does not use virtual DOM diffing. Instead, it takes a direct approach
 
 **What WebComPy does not yet provide:** WebComPy's `repeat` now supports key-based reconciliation and dict-based rendering for efficient DOM updates. Conditional branches (`switch`) reuse DOM nodes when branches share structure via patching, but complete subtree replacement still occurs when branch structures differ entirely.
 
-`Suspense` is a `DynamicElement` (like `SwitchElement` and `RepeatElement`) that provides a declarative async boundary. It shows fallback content while children are loading and swaps to real content on completion. See the `suspense` delta spec for details.
+`Suspense` is a `DynamicElement` (like `SwitchElement` and `RepeatElement`) that provides a declarative async boundary. It shows fallback content while children are loading and swaps to real content on completion. See the `suspense` spec for details.
 
 ## Requirements
 
