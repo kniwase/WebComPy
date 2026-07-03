@@ -6,8 +6,12 @@ from typing import TYPE_CHECKING, Any, Literal
 from webcompy.aio import resolve_async
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.components import ComponentGenerator
+from webcompy.di import inject
+from webcompy.di._keys import HYDRATION_DATA_KEY
 from webcompy.exception import WebComPyException
+from webcompy.hydration._payload import deserialize_payload
 from webcompy.plugin._manager import PluginManager
+from webcompy.ports._keys import DOM_PORT_KEY, FETCH_PORT_KEY
 from webcompy.router import Router
 from webcompy.utils import ENVIRONMENT
 
@@ -260,5 +264,20 @@ class WebComPyApp:
         self._record_phase("run_start")
         ctx = self.create_render_context()
         self._plugin_manager.call_on_app_ready(ctx)
+
+        dom_port = inject(DOM_PORT_KEY, default=None)
+        data_el = dom_port.query_selector("#__webcompy_data__") if dom_port is not None else None
+        if data_el is not None:
+            try:
+                payload = deserialize_payload(str(data_el.textContent))
+                if payload is not None:
+                    fetch_port = inject(FETCH_PORT_KEY, default=None)
+                    if fetch_port is not None and hasattr(fetch_port, "populate_from_transfer"):
+                        fetch_port.populate_from_transfer(payload.fetches)
+                    ctx.di_scope.provide(HYDRATION_DATA_KEY, payload.async_results)
+                data_el.remove()
+            except Exception:
+                pass
+
         ctx._root._selector = self._config.selector
         resolve_async(ctx._root._render())

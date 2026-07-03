@@ -11,6 +11,8 @@ from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import html
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements._head import HeadElement
+from webcompy.hydration._collect import collect_transfer_data
+from webcompy.hydration._payload import serialize_payload
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
@@ -234,3 +236,7 @@ class AppDocumentRoot(Component):
     @property
     def scripts(self):
         return self._scripts
+
+    def _collect_transfer_data(self) -> str:
+        payload = collect_transfer_data(self)
+        return serialize_payload(payload)

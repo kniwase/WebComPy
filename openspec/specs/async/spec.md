@@ -6,7 +6,7 @@ Web applications frequently need to perform asynchronous operations: fetching da
 
 WebComPy provides `useAsyncResult` for structured reactive async state with loading/error/success predicates, `useAsync` for fire-and-forget async operations, `AsyncResult` as a standalone async state container, and `HttpClient` for making HTTP requests from the browser. Together, these enable developers to work with asynchronous data using the same patterns as synchronous reactive state.
 
-**What WebComPy does not yet provide:** `HttpClient` only works in the browser — there is no server-side request capability for SSG data fetching.
+`Suspense` is a complementary approach — a declarative async boundary that shows fallback content while children load and swaps to real content when complete. In SSR, `Suspense` awaits children (with a configurable timeout) so resolved data appears in the output HTML. During hydration, `AsyncResult` states are restored from a transfer payload, eliminating duplicate fetches and the flash of loading states. See the `suspense` delta spec for details.
 
 ## Requirements
 

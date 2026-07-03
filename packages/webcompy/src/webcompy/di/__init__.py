@@ -5,7 +5,7 @@ from typing import Any
 
 from webcompy.di._exceptions import InjectionError
 from webcompy.di._key import InjectKey
-from webcompy.di._keys import SUSPENSE_RESOLVING_KEY
+from webcompy.di._keys import HYDRATION_DATA_KEY, SUSPENSE_RESOLVING_KEY
 from webcompy.di._scope import _MISSING, DIScope, _active_di_scope, _get_app_di_scope
 
 _pending_di_parent: ContextVar[DIScope | None] = ContextVar("_pending_di_parent", default=None)
@@ -50,6 +50,7 @@ def inject(key: object, default: Any = _MISSING) -> Any:
 
 
 __all__ = [
+    "HYDRATION_DATA_KEY",
     "SUSPENSE_RESOLVING_KEY",
     "DIScope",
     "InjectKey",

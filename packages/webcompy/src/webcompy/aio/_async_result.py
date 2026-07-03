@@ -47,6 +47,11 @@ class AsyncResult(Generic[T]):
     def error(self) -> Signal[Exception | None]:
         return self._error
 
+    def _restore_from_transfer(self, data: Any) -> None:
+        self._state.value = AsyncState.SUCCESS
+        self._data.value = data
+        self._error.value = None
+
     def refetch(self, *_: Any) -> None:
         self._state.value = AsyncState.LOADING
         aio_run(self._execute())

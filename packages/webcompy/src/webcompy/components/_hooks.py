@@ -6,7 +6,9 @@ from typing import Any, TypeVar
 
 from webcompy.aio._aio import AsyncWrapper
 from webcompy.aio._async_result import AsyncResult
-from webcompy.components._libs import Context
+from webcompy.components._libs import Context, generate_id
+from webcompy.di import inject
+from webcompy.di._keys import HYDRATION_DATA_KEY
 from webcompy.signal._base import CallbackConsumerNode, SignalBase
 from webcompy.signal._effect import EffectScope
 from webcompy.signal._graph import consumer_destroy
@@ -52,6 +54,20 @@ def useAsyncResult(
     watch: Iterable[SignalBase[Any]] = (),
 ) -> AsyncResult[T]:
     result = AsyncResult(func, default=default)
+
+    try:
+        ctx = _active_component_context.get()
+    except LookupError:
+        ctx = None
+
+    if ctx is not None:
+        component_id = generate_id(ctx._component_name)
+        hydration_data = inject(HYDRATION_DATA_KEY, default=None)
+        if hydration_data is not None and component_id in hydration_data:
+            entry = hydration_data[component_id]
+            if isinstance(entry, dict) and entry.get("state") == "success":
+                result._restore_from_transfer(entry.get("data"))
+                return result
 
     if immediate:
         on_after_rendering(result.refetch)
