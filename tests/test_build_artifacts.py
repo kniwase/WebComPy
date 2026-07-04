@@ -95,9 +95,9 @@ class TestCreateAsgiAppMode:
         ):
             from webcompy_cli._server import create_asgi_app
 
-            asgi = create_asgi_app(app, build_config, mode="prod")
+            serving = create_asgi_app(app, build_config, mode="prod")
 
-        route_paths = [r.path for r in asgi.routes]
+        route_paths = [r.path for r in serving.asgi.routes]
         assert "/_webcompy_reload" not in route_paths, "SSE route should be excluded in prod mode"
 
     def test_prod_mode_sets_dev_false(self):
@@ -134,9 +134,9 @@ class TestCreateAsgiAppMode:
         ):
             from webcompy_cli._server import create_asgi_app
 
-            asgi = create_asgi_app(app, build_config, mode="dev")
+            serving = create_asgi_app(app, build_config, mode="dev")
 
-        route_paths = [r.path for r in asgi.routes]
+        route_paths = [r.path for r in serving.asgi.routes]
         assert "/_webcompy_reload" in route_paths, "SSE route should be included in dev mode"
 
     def test_dev_mode_sets_dev_true(self):
@@ -174,7 +174,7 @@ class TestCreateAsgiAppMode:
         ):
             from webcompy_cli._server import create_asgi_app
 
-            asgi = create_asgi_app(app, build_config)
+            serving = create_asgi_app(app, build_config)
 
-        route_paths = [r.path for r in asgi.routes]
+        route_paths = [r.path for r in serving.asgi.routes]
         assert "/_webcompy_reload" not in route_paths, "default mode should exclude SSE (prod)"

@@ -123,17 +123,21 @@ async def generate_static_site(app: WebComPyApp | None = None):
         # Create ASGI app in SSG mode and fetch routes via ASGITransport
         # Note: create_asgi_app() internally configures ServerFetchPort,
         # so no separate configure() call is needed here.
-        asgi_app = create_asgi_app(app, build_config, mode="prod")
+        serving = create_asgi_app(app, build_config, mode="prod")
 
         base_url_path = app.config.base_url.strip("/")
+        url_prefix = f"/{base_url_path}" if base_url_path else ""
+
+        if app.router_mode == "history" and app.routes:
+            for _, _, _, _, page in app.routes:
+                if hasattr(page, "_preload"):
+                    page._preload()
+
         async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=asgi_app),
+            transport=httpx.ASGITransport(app=serving.asgi),
             base_url="http://test",
         ) as client:
             if app.router_mode == "history" and app.routes:
-                for _, _, _, _, page in app.routes:
-                    if hasattr(page, "_preload"):
-                        page._preload()
                 for p, _, _, _, page in app.routes:
                     paths = (
                         {p.format(**params) for params in path_params}
@@ -141,21 +145,21 @@ async def generate_static_site(app: WebComPyApp | None = None):
                         else {p}
                     )
                     for path in paths:
-                        response = await client.get(f"/{base_url_path}/{path}")
+                        response = await client.get(f"{url_prefix}/{path}")
                         if not (path_dir := dist_dir / path).exists():
                             os.makedirs(path_dir)
                         html_path = path_dir / "index.html"
                         html_path.open("w", encoding="utf8").write(response.text)
                         print(html_path)
                 response = await client.get(
-                    f"/{base_url_path}/_webcompy_404",
+                    f"{url_prefix}/_webcompy_404",
                     headers={"Accept": "text/html"},
                 )
                 html_path = dist_dir / "404.html"
                 html_path.open("w", encoding="utf8").write(response.text)
                 print(html_path)
             else:
-                response = await client.get(f"/{base_url_path}/")
+                response = await client.get(f"{url_prefix}/")
                 html_path = dist_dir / "index.html"
                 html_path.open("w", encoding="utf8").write(response.text)
                 print(html_path)

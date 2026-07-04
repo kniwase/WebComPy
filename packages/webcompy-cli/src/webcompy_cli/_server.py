@@ -27,12 +27,28 @@ from webcompy_cli.config._build_config import WebComPyBuildConfig
 from webcompy_server._html import generate_html
 
 
+class _ServingApp:
+    asgi: ASGIApp
+    html_generator: partial[Any]
+    hash_cache: list[str]
+
+    def __init__(
+        self,
+        asgi: ASGIApp,
+        html_generator: partial[Any],
+        hash_cache: list[str],
+    ) -> None:
+        self.asgi = asgi
+        self.html_generator = html_generator
+        self.hash_cache = hash_cache
+
+
 def create_asgi_app(
     app: WebComPyApp,
     build_config: WebComPyBuildConfig,
     *,
     mode: Literal["prod", "dev"] = "prod",
-) -> ASGIApp:
+) -> _ServingApp:
     build_config.server.dev = mode == "dev"
     artifacts = resolve_build_artifacts(app, build_config, dev_mode=build_config.server.dev)
 
@@ -207,16 +223,12 @@ def create_asgi_app(
 
     asgi = Starlette(routes=routes)
 
-    # Store pre-render metadata on the ASGI app for hash-mode startup pre-rendering
-    asgi._hash_cache = _hash_cache
-    asgi._html_generator = html_generator
-
     fetch_port = app._server_fetch_port
     if fetch_port is not None:
         blocked_paths = [route[0] for route in (app.routes or []) if route[3] is not None]
         fetch_port.configure(asgi, blocked_paths, base_url=app.config.base_url)
 
-    return asgi
+    return _ServingApp(asgi=asgi, html_generator=html_generator, hash_cache=_hash_cache)
 
 
 async def _pre_render_hash_mode_html(
@@ -283,9 +295,9 @@ def run_server(app: WebComPyApp | None = None):
     port = args.get("port") or build_config.server.port
     assert app is not None
     mode = "dev" if args.get("dev") else "prod"
-    asgi = create_asgi_app(app, build_config, mode=mode)
+    serving = create_asgi_app(app, build_config, mode=mode)
 
     if app.router_mode != "history":
-        asyncio.run(_pre_render_hash_mode_html(app, asgi._html_generator, asgi._hash_cache))
+        asyncio.run(_pre_render_hash_mode_html(app, serving.html_generator, serving.hash_cache))
 
-    uvicorn.run(asgi, host="0.0.0.0", port=port, reload=build_config.server.dev)
+    uvicorn.run(serving.asgi, host="0.0.0.0", port=port, reload=build_config.server.dev)
