@@ -34,9 +34,10 @@ def create_asgi_app(
     mode: Literal["prod", "dev"] = "prod",
 ) -> ASGIApp:
     build_config.server.dev = mode == "dev"
-
-    build_config.server = build_config.server
     artifacts = resolve_build_artifacts(app, build_config, dev_mode=build_config.server.dev)
+
+    if artifacts.cdn_temp_dir_obj is not None:
+        artifacts.cdn_temp_dir_obj.__exit__(None, None, None)
     base_url = app.config.base_url
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + base_url.strip("/"))).sub,
@@ -64,7 +65,7 @@ def create_asgi_app(
 
     wasm_asset_routes: list[Route] = []
     wasm_asset_files = artifacts.wasm_asset_files
-    if wasm_asset_files is not None:
+    if wasm_asset_files is not None:  # wasm_asset_files is set only when wasm_serving == "local"
 
         async def send_wasm_asset(request: Request):
             filename: str = request.path_params.get("filename", "")  # type: ignore
@@ -78,7 +79,7 @@ def create_asgi_app(
 
     runtime_asset_routes: list[Route] = []
     runtime_asset_files = artifacts.runtime_asset_files
-    if runtime_asset_files is not None:
+    if runtime_asset_files is not None:  # runtime_asset_files is set only when runtime_serving == "local"
 
         async def send_runtime_asset(request: Request):
             filename: str = request.path_params.get("filename", "")  # type: ignore
