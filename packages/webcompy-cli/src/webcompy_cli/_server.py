@@ -20,7 +20,7 @@ from starlette.types import ASGIApp
 from webcompy.app._app import WebComPyApp
 from webcompy.ui.theme._server import read_theme_from_cookie
 from webcompy_cli._argparser import get_params
-from webcompy_cli._build import resolve_build_artifacts
+from webcompy_cli._build import BuildArtifacts, resolve_build_artifacts
 from webcompy_cli._static_files import get_static_files
 from webcompy_cli._utils import discover_config
 from webcompy_cli.config._build_config import WebComPyBuildConfig
@@ -31,16 +31,19 @@ class _ServingApp:
     asgi: ASGIApp
     html_generator: partial[Any]
     hash_cache: list[str]
+    artifacts: BuildArtifacts
 
     def __init__(
         self,
         asgi: ASGIApp,
         html_generator: partial[Any],
         hash_cache: list[str],
+        artifacts: BuildArtifacts,
     ) -> None:
         self.asgi = asgi
         self.html_generator = html_generator
         self.hash_cache = hash_cache
+        self.artifacts = artifacts
 
 
 def create_asgi_app(
@@ -142,7 +145,6 @@ def create_asgi_app(
         app_package_name=build_config.app_package_path.name,
         dev_mode=artifacts.dev_mode,
         prerender=True,
-        app_version=artifacts.app_version,
         wheel_filename=artifacts.wheel_filename,
         pyodide_package_names=artifacts.pyodide_package_names,
         wasm_local_urls=artifacts.wasm_local_urls,
@@ -228,7 +230,7 @@ def create_asgi_app(
         blocked_paths = [route[0] for route in (app.routes or []) if route[3] is not None]
         fetch_port.configure(asgi, blocked_paths, base_url=app.config.base_url)
 
-    return _ServingApp(asgi=asgi, html_generator=html_generator, hash_cache=_hash_cache)
+    return _ServingApp(asgi=asgi, html_generator=html_generator, hash_cache=_hash_cache, artifacts=artifacts)
 
 
 async def _pre_render_hash_mode_html(

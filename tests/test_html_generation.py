@@ -37,7 +37,6 @@ class TestGenerateHtmlDefaultMode:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             pyodide_package_names=["numpy", "matplotlib"],
         )
@@ -52,7 +51,6 @@ class TestGenerateHtmlDefaultMode:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         config = _extract_py_config(html_str)
@@ -71,7 +69,6 @@ class TestGenerateHtmlWasmLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             pyodide_package_names=["numpy", "matplotlib"],
             wasm_local_urls=wasm_local_urls,
@@ -92,7 +89,6 @@ class TestGenerateHtmlWasmLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             pyodide_package_names=["numpy", "httpx"],
             wasm_local_urls=wasm_local_urls,
@@ -108,7 +104,6 @@ class TestGenerateHtmlWasmLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             lockfile_url="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide-lock.json",
         )
@@ -122,7 +117,6 @@ class TestGenerateHtmlWasmLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             lockfile_url="/_webcompy-assets/pyodide/pyodide-lock.json",
         )
@@ -139,7 +133,6 @@ class TestGenerateHtmlWasmLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             pyodide_package_names=["numpy"],
             wasm_local_urls=wasm_local_urls,
@@ -176,7 +169,6 @@ class TestGenerateHtmlRuntimeLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             runtime_serving="local",
         )
@@ -190,7 +182,6 @@ class TestGenerateHtmlRuntimeLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             runtime_serving="local",
         )
@@ -204,7 +195,6 @@ class TestGenerateHtmlRuntimeLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             runtime_serving="local",
         )
@@ -219,7 +209,6 @@ class TestGenerateHtmlRuntimeLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             runtime_serving="cdn",
         )
@@ -234,7 +223,6 @@ class TestGenerateHtmlRuntimeLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             runtime_serving="cdn",
         )
@@ -250,7 +238,6 @@ class TestGenerateHtmlRuntimeLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             runtime_serving="local",
         )
@@ -269,7 +256,6 @@ class TestGenerateHtmlRuntimeLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             runtime_serving="local",
             lockfile_url="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide-lock.json",
@@ -285,7 +271,6 @@ class TestGenerateHtmlRuntimeLocalServing:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             runtime_serving="cdn",
             lockfile_url="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide-lock.json",
@@ -308,7 +293,6 @@ class TestHtmlAttrsInSsgOutput:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         ctx.dispose()
@@ -325,7 +309,6 @@ class TestHtmlAttrsInSsgOutput:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         ctx.dispose()
@@ -344,7 +327,6 @@ class TestHtmlAttrsInSsgOutput:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         ctx.dispose()

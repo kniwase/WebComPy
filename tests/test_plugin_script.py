@@ -78,7 +78,6 @@ class TestGenerateHtmlWithPluginScripts:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         assert '<script type="text/javascript" src="https://example.com/lib.js"></script>' in html_str
@@ -98,7 +97,6 @@ class TestGenerateHtmlWithPluginScripts:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         assert "console.log('hello')" in html_str
@@ -118,7 +116,6 @@ class TestGenerateHtmlWithPluginScripts:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         assert "URLSearchParams(location.search).get('debug')" in html_str
@@ -140,7 +137,6 @@ class TestGenerateHtmlWithPluginScripts:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         assert "initDebug()" in html_str
@@ -161,7 +157,6 @@ class TestGenerateHtmlWithPluginScripts:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         assert "console.log('debug mode')" in html_str
@@ -178,7 +173,6 @@ class TestGenerateHtmlWithPluginScripts:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         ctx.dispose()
@@ -199,7 +193,6 @@ class TestGenerateHtmlWithPluginScripts:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         head_section = html_str.split("<body>")[0]
@@ -220,7 +213,6 @@ class TestGenerateHtmlWithPluginScripts:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         body_section = html_str.split("<body>")[1]
@@ -244,7 +236,6 @@ class TestGenerateHtmlWithPluginScripts:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         assert html_str.count("(function(){") == 2
@@ -265,7 +256,6 @@ class TestGenerateHtmlWithPluginScripts:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         head_section = html_str.split("<body>")[0]
@@ -285,7 +275,6 @@ class TestGenerateHtmlWithPluginScripts:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         body_section = html_str.split("<body>")[1]
@@ -305,7 +294,6 @@ class TestGenerateHtmlWithPluginScripts:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
         assert "onload" not in html_str

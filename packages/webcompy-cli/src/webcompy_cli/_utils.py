@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pathlib
-from datetime import datetime
 from importlib import import_module
 
 from webcompy_cli._exception import WebComPyCliException
@@ -54,9 +53,4 @@ def ensure_webcompy_modules_dir(modules_dir: pathlib.Path) -> None:
 def generate_app_version(app_version: str | None = None) -> str:
     if app_version is not None:
         return app_version
-    now = datetime.now()
-    return "{}.{}.{}".format(
-        now.strftime("%y"),
-        now.strftime("%j"),
-        (int(now.strftime("%H")) * 60 + int(now.strftime("%M"))) * 60 + int(now.strftime("%S")),
-    )
+    return "0.0.0"

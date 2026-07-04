@@ -26,7 +26,6 @@ def test_framework_ui_css_link_present_default_base_url() -> None:
         app_package_name="test_pkg",
         dev_mode=False,
         prerender=True,
-        app_version="0.0.0",
         wheel_filename="test_pkg-0.0.0-py3-none-any.whl",
         runtime_serving="cdn",
     )
@@ -40,7 +39,6 @@ def test_framework_ui_css_link_uses_base_url() -> None:
         app_package_name="test_pkg",
         dev_mode=False,
         prerender=True,
-        app_version="0.0.0",
         wheel_filename="test_pkg-0.0.0-py3-none-any.whl",
         runtime_serving="cdn",
     )
@@ -54,7 +52,6 @@ def test_framework_ui_css_link_is_loaded_before_core_css() -> None:
         app_package_name="test_pkg",
         dev_mode=False,
         prerender=True,
-        app_version="0.0.0",
         wheel_filename="test_pkg-0.0.0-py3-none-any.whl",
         runtime_serving="cdn",
     )
@@ -72,7 +69,6 @@ def test_framework_ui_link_is_in_head() -> None:
         app_package_name="test_pkg",
         dev_mode=False,
         prerender=True,
-        app_version="0.0.0",
         wheel_filename="test_pkg-0.0.0-py3-none-any.whl",
         runtime_serving="cdn",
     )
@@ -88,7 +84,6 @@ def test_color_scheme_meta_tag_present() -> None:
         app_package_name="test_pkg",
         dev_mode=False,
         prerender=True,
-        app_version="0.0.0",
         wheel_filename="test_pkg-0.0.0-py3-none-any.whl",
         runtime_serving="cdn",
     )

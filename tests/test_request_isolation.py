@@ -30,7 +30,6 @@ class TestRequestIsolation:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=True,
-            app_version="0.0.0",
             wheel_filename="test.whl",
         )
         ctx1.dispose()
@@ -43,7 +42,6 @@ class TestRequestIsolation:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=True,
-            app_version="0.0.0",
             wheel_filename="test.whl",
         )
         ctx2.dispose()
