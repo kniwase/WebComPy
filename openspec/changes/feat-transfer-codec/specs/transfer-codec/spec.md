@@ -59,7 +59,14 @@ The codec SHALL include built-in type handlers for the following types: `datetim
 #### Scenario: Encoding a dataclass instance
 - **WHEN** `encode(UserProfile(name="Alice", age=30))` is called where `UserProfile` is a dataclass in module `myapp.models`
 - **THEN** the type tag SHALL be `"dataclass"` and the value SHALL include the module name, class name, and field dict
-- **AND** `decode(result)` SHALL reconstruct a `UserProfile` instance via `importlib.import_module` and `cls(**fields)`
+- **AND** each field value SHALL be encoded via the codec's recursive `encode()` (using `dataclasses.fields()`, NOT `dataclasses.asdict()`)
+- **AND** `decode(result)` SHALL reconstruct a `UserProfile` instance via `importlib.import_module` and `cls(**decoded_fields)` where each field value is decoded recursively
+
+#### Scenario: Encoding a nested dataclass preserves type fidelity
+- **WHEN** `encode(User(name="Alice", address=Address(city="NYC")))` is called where both `User` and `Address` are dataclasses
+- **THEN** the `address` field value SHALL be a type-tagged dict (`{"__webcompy_type__": "dataclass", ...}`), NOT a plain dict
+- **AND** `decode(result)` SHALL reconstruct the `User` instance with `address` as an `Address` instance (not a dict)
+- **AND** the encoder SHALL NOT use `dataclasses.asdict()` (which recursively strips type information from nested dataclasses)
 
 #### Scenario: Encoding bytes
 - **WHEN** `encode(b"hello")` is called

@@ -190,4 +190,9 @@ No special handling needed — their `_value` is a plain list/dict that the code
 
 2. **Should the `signals` section be optional in the payload?** Yes — payloads without Signals (e.g., components with no `self`-assigned Signals) produce an empty `signals: {}` section. This is harmless and keeps the schema uniform.
 
-3. **What about Signals created in `on_before_rendering` hooks?** These hooks run after setup. If they assign Signals to `self`, the `__setattr__` captures them. However, collection happens after the full render, so these Signals' final values are captured. This should work correctly.
+3. **What about Signals created in `on_before_rendering` hooks?** These hooks run after setup but before template evaluation. There are two phases to consider:
+
+   - **Collection (SSR side):** Collection happens after the full render (after `await_pending`), so Signals created or mutated in `on_before_rendering` hooks have their final values captured correctly.
+   - **Restoration (browser side):** Restoration happens after `__setup()` / `__init_component()` completes and **before** `on_before_rendering` hooks execute. If a Signal is first created (assigned to `self`) inside an `on_before_rendering` hook, it does not yet exist at restoration time, so its value cannot be restored on the **first** hydration cycle. The hook runs with the Signal at its default value. On **subsequent** hydration cycles (navigations within the SPA), the Signal exists and its transferred value is available.
+
+   **Limitation to document:** Signals first created in `on_before_rendering` hooks are captured for transfer, but on the initial hydration their transferred values are not restored (the Signal does not exist yet at restoration time). They behave correctly on subsequent navigations. Developers who need server-computed values available immediately in such hooks should create the Signal in `__setup()` instead.

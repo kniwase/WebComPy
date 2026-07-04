@@ -14,7 +14,7 @@
 - [ ] 2.6 Implement `enum.Enum` handler — encode as `{"module": ..., "name": ..., "value": ...}`, decode via `importlib.import_module(module).Name(value)`
 - [ ] 2.7 Implement `bytes` handler — encode via `base64.b64encode()`, decode via `base64.b64decode()`
 - [ ] 2.8 Implement `decimal.Decimal` handler — encode as string, decode via `Decimal(str)`
-- [ ] 2.9 Implement `dataclass` instance handler — encode via `dataclasses.asdict()` plus module/name metadata, decode via `importlib.import_module(module).Name(**fields)`
+- [ ] 2.9 Implement `dataclass` instance handler — encode via `dataclasses.fields()` with per-field recursive `encode()` (NOT `asdict()`, which strips nested type info), plus module/name metadata; decode via `importlib.import_module(module).Name(**{k: decode(v) for k, v in fields.items()})`
 - [ ] 2.10 Implement `tuple` handler — encode as list with `"tuple"` tag, decode via `tuple()`
 - [ ] 2.11 Implement `pathlib.Path` handler — encode as string, decode via `Path(str)`
 - [ ] 2.12 Implement `uuid.UUID` handler — encode as string, decode via `UUID(str)`
@@ -46,6 +46,7 @@
 
 - [ ] 7.1 Test round-trip encode/decode for each Layer 1 type (datetime, date, time, set, frozenset, enum, bytes, Decimal, dataclass, tuple, Path, UUID)
 - [ ] 7.2 Test nested structures (dict containing set containing datetime, etc.) round-trip correctly
+- [ ] 7.2a Test nested dataclass round-trip: a dataclass field whose value is another dataclass instance SHALL preserve the inner type tag through encode/decode (verify `asdict()` is NOT used)
 - [ ] 7.3 Test circular reference detection (dict containing self-reference) drops the value with warning
 - [ ] 7.4 Test Layer 2 plugin registration and precedence over Layer 1
 - [ ] 7.5 Test reserved-key violation detection (user dict with `__webcompy_type__`) emits warning

@@ -125,8 +125,21 @@ For `dataclass` and `enum` types, the encoder stores the fully-qualified module 
 ```
 
 The decoder uses `importlib.import_module(module)` to retrieve the class, then reconstructs:
-- dataclass: `cls(**fields)`
+- dataclass: `cls(**{k: decode(v) for k, v in fields.items()})` — each field value is decoded recursively before being passed to the constructor
 - enum: `cls(value)` (lookup by value)
+
+**Critical: nested dataclass fidelity.** The encoder MUST NOT use `dataclasses.asdict()`, because `asdict()` recursively converts nested dataclass instances to plain dicts before the codec's `encode()` can process them. A dataclass like `User(name="Alice", address=Address(city="NYC"))` would lose the `Address` type tag if `asdict()` were used. Instead, the encoder SHALL use `dataclasses.fields(instance)` and call `encode()` on each field value individually, so nested dataclasses (and any other non-JSON-native field types) are type-tagged correctly:
+
+```python
+fields = {f.name: encode(getattr(instance, f.name)) for f in dataclasses.fields(instance)}
+```
+
+The decoder SHALL apply `decode()` to each field value before passing them to the constructor, so nested type tags are reconstructed:
+
+```python
+decoded_fields = {k: decode(v) for k, v in fields.items()}
+instance = cls(**decoded_fields)
+```
 
 **Key assumption:** The app code is bundled into the browser wheel via PyScript. The same modules exist on both server and browser. `importlib.import_module()` must work under PyScript — this is a **validation spike** (see Risks).
 

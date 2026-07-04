@@ -32,7 +32,7 @@
 - **WHEN** `deserialize_payload(text)` receives a JSON string containing `"__webcompy_compressed__": true`
 - **THEN** the `"data"` field SHALL be base64-decoded
 - **AND** the result SHALL be gzip-decompressed via `zlib.decompress()`
-- **AND` the decompressed string SHALL be JSON-parsed
+- **AND** the decompressed string SHALL be JSON-parsed
 - **AND** the resulting `TransferPayload` SHALL be returned
 
 #### Scenario: Deserializing an uncompressed payload (backward compatibility)

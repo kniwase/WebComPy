@@ -16,3 +16,12 @@ During browser hydration, `Component._render()` SHALL call signal value restorat
 - **AND** the transfer payload does not contain an entry for the component's ID
 - **THEN** Signals SHALL retain their default values from setup
 - **AND** no restoration SHALL occur
+
+#### Scenario: Signals first created in on_before_rendering are not restored on initial hydration
+- **WHEN** a component creates a Signal inside an `on_before_rendering` hook (not in `__setup__()`)
+- **AND** the transfer payload contains a value for that Signal's attribute name
+- **THEN** on the initial hydration cycle, restoration SHALL run before `on_before_rendering`, so the Signal does not yet exist in `__signal_members__`
+- **AND** the restoration for that attribute name SHALL be skipped (best-effort, no error)
+- **AND** the hook SHALL execute with the Signal at its default value
+- **AND** on subsequent navigation-based hydration cycles, the Signal SHALL exist and its transferred value SHALL be restored
+- **AND** developers who need server-computed values available in hooks SHOULD create the Signal in `__setup()` instead
