@@ -212,7 +212,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md` |
 | `webcompy/di/` | `di-scope/spec.md`, `di-injection/spec.md`, `dependency-resolver/spec.md` |
 | `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md` |
-| `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md` |
+| `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
 
@@ -328,6 +328,7 @@ When specs are added, modified, or removed, update:
 | `server-fetch-asgi` | Self-site fetch via ASGI transport during SSR/SSG, page-route blocking |
 | `suspense` | Declarative async boundary showing fallback while children load, with SSR awaiting and hydration integration |
 | `hydration-data-transfer` | Server-to-browser data transfer for `AsyncResult` states and `FetchPort` response caches via payload injection |
+| `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
 
 ## Language Rules
 

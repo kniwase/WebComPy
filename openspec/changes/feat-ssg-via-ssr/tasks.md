@@ -16,11 +16,11 @@
 
 ## 3. Add prod/dev mode parameter to create_asgi_app()
 
-- [ ] 3.1 Change `mode` parameter type from `Literal["dev", "ssg"]` to `Literal["prod", "dev"]` with default `"prod"`. When `mode="dev"`: set `build_config.server.dev = True`, include SSE reload route, set dev-mode cache headers. When `mode="prod"`: set `build_config.server.dev = False`, exclude SSE reload route, exclude dev cache headers. `create_asgi_app()` remains `def` (synchronous).
-- [ ] 3.2 Update `run_server()` — select mode based on `--dev` CLI flag (`"dev"` if present, `"prod"` otherwise). Do not manipulate `build_config.server.dev` directly before calling `create_asgi_app()`. Read `build_config.server.dev` after `create_asgi_app()` returns for `uvicorn.run(reload=...)`.
-- [ ] 3.3 Update `generate_static_site()` — call `create_asgi_app(app, build_config, mode="prod")` instead of `mode="ssg"`.
+- [x] 3.1 Change `mode` parameter type from `Literal["dev", "ssg"]` to `Literal["prod", "dev"]` with default `"prod"`. When `mode="dev"`: set `build_config.server.dev = True`, include SSE reload route, set dev-mode cache headers. When `mode="prod"`: set `build_config.server.dev = False`, exclude SSE reload route, exclude dev cache headers. `create_asgi_app()` remains `def` (synchronous).
+- [x] 3.2 Update `run_server()` — select mode based on `--dev` CLI flag (`"dev"` if present, `"prod"` otherwise). Do not manipulate `build_config.server.dev` directly before calling `create_asgi_app()`. Read `build_config.server.dev` after `create_asgi_app()` returns for `uvicorn.run(reload=...)`.
+- [x] 3.3 Update `generate_static_site()` — call `create_asgi_app(app, build_config, mode="prod")` instead of `mode="ssg"`.
 - [x] 3.4 Update hash-mode pre-rendering — `_pre_render_hash_mode_html()` and hash-mode handler in `create_asgi_app()` remain unchanged (mode parameter only affects SSE and cache headers, not hash-mode behavior).
-- [ ] 3.5 Update unit tests for mode parameter — verify that `mode="dev"` includes SSE route, `mode="prod"` excludes SSE route, and `build_config.server.dev` is set correctly by each mode.
+- [x] 3.5 Update unit tests for mode parameter — verify that `mode="dev"` includes SSE route, `mode="prod"` excludes SSE route, and `build_config.server.dev` is set correctly by each mode.
 - [x] 3.6 CLI entry point — no change needed, `run_server()` remains synchronous and passes the ASGI app to `uvicorn.run()`.
 
 ## 4. Restructure generate_static_site() to use ASGITransport
@@ -39,6 +39,6 @@
 - [x] 5.3 Run existing dev server tests to verify `create_asgi_app()` still works for dev mode
 - [x] 5.4 Run lint: `uv run ruff check .` ✓
 - [x] 5.5 Run type check: `uv run pyright` ✓ (0 errors)
-- [x] 5.6 Run unit tests: `uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs` ✓ (1331 passed, 7 skipped)
+- [x] 5.6 Run unit tests: `uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs` ✓ (1338 passed, 7 skipped)
 - [x] 5.7 Run E2E tests: `scripts/run-e2e-tests.sh` to verify no regressions ✓ (all groups passed)
 - [x] 5.8 Generate the docs site: `uv run python -m webcompy generate --config docs_app.webcompy_config` and verify output matches expected structure ✓
