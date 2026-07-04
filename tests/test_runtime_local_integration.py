@@ -47,7 +47,6 @@ class TestRuntimeLocalHtmlIntegration:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             runtime_serving="local",
             pyodide_package_names=["numpy"],
@@ -66,7 +65,6 @@ class TestRuntimeLocalHtmlIntegration:
             app_package_name="test_pkg",
             dev_mode=False,
             prerender=False,
-            app_version="0.0.0",
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             runtime_serving="local",
         )

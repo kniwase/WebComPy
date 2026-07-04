@@ -1,13 +1,11 @@
 import asyncio
 import mimetypes
-import pathlib
 import sys
 from functools import partial
 from operator import truth
 from re import compile as re_compile
 from re import escape as re_escape
-from tempfile import TemporaryDirectory
-from typing import Any
+from typing import Any, Literal
 
 import aiofiles
 import uvicorn
@@ -22,216 +20,60 @@ from starlette.types import ASGIApp
 from webcompy.app._app import WebComPyApp
 from webcompy.ui.theme._server import read_theme_from_cookie
 from webcompy_cli._argparser import get_params
-from webcompy_cli._lockfile import (
-    LOCKFILE_NAME,
-    get_bundled_deps,
-    get_cdn_pure_python_package_names,
-    get_wasm_package_names,
-    resolve_lockfile,
-    validate_local_environment,
-    verify_and_update_runtime_assets,
-)
-from webcompy_cli._lockfile_sync import resolve_dependencies
-from webcompy_cli._pyodide_downloader import (
-    PyodideDownloadError,
-    download_pyodide_wheel,
-    download_wasm_wheels,
-    extract_wheel,
-)
-from webcompy_cli._pyodide_lock import PYODIDE_LOCK_URL_TEMPLATE
-from webcompy_cli._runtime_downloader import RuntimeDownloadError, download_runtime_assets
+from webcompy_cli._build import BuildArtifacts, resolve_build_artifacts
 from webcompy_cli._static_files import get_static_files
-from webcompy_cli._utils import (
-    discover_config,
-    ensure_webcompy_modules_dir,
-    generate_app_version,
-    get_webcompy_packge_dir,
-)
-from webcompy_cli._wheel_builder import (
-    make_browser_webcompy_wheel,
-    make_webcompy_app_package,
-)
+from webcompy_cli._utils import discover_config
 from webcompy_cli.config._build_config import WebComPyBuildConfig
-from webcompy_server import configure_server_context
-from webcompy_server._html import PYSCRIPT_VERSION, generate_html
+from webcompy_server._html import generate_html
+
+
+class _ServingApp:
+    asgi: ASGIApp
+    html_generator: partial[Any]
+    hash_cache: list[str]
+    artifacts: BuildArtifacts
+
+    def __init__(
+        self,
+        asgi: ASGIApp,
+        html_generator: partial[Any],
+        hash_cache: list[str],
+        artifacts: BuildArtifacts,
+    ) -> None:
+        self.asgi = asgi
+        self.html_generator = html_generator
+        self.hash_cache = hash_cache
+        self.artifacts = artifacts
 
 
 def create_asgi_app(
     app: WebComPyApp,
     build_config: WebComPyBuildConfig,
-) -> ASGIApp:
-    build_config.server = build_config.server
-    configure_server_context(app)
+    *,
+    mode: Literal["prod", "dev"] = "prod",
+) -> _ServingApp:
+    build_config.server.dev = mode == "dev"
+    artifacts = resolve_build_artifacts(app, build_config, dev_mode=build_config.server.dev)
 
-    modules_dir = build_config.app_package_path / ".webcompy_modules"
-    ensure_webcompy_modules_dir(modules_dir)
-    resolve_dependencies(build_config)
-    assert build_config.dependencies is not None
-
-    lockfile, lockfile_errors, lockfile_warnings = resolve_lockfile(
-        build_config.dependencies,
-        PYSCRIPT_VERSION,
-        build_config.app_package_path / LOCKFILE_NAME,
-        modules_dir,
-        wasm_serving=build_config.wasm_serving or "cdn",
-        runtime_serving=build_config.runtime_serving or "cdn",
-        standalone=build_config.standalone,
+    base_url = app.config.base_url
+    base_url_stripper = partial(
+        re_compile("^" + re_escape("/" + base_url.strip("/"))).sub,
+        "",
     )
-    for warning in lockfile_warnings:
-        print(f"Warning: {warning}", file=sys.stderr, flush=True)
-    for err in lockfile_errors:
-        print(f"Error: {err}", file=sys.stderr, flush=True)
 
-    if lockfile is not None:
-        env_errors, env_warnings = validate_local_environment(lockfile, serve_all_deps=build_config.serve_all_deps)
-        for warning in env_warnings:
-            print(f"Warning: {warning}", file=sys.stderr, flush=True)
-        for err in env_errors:
-            print(f"Error: {err}", file=sys.stderr, flush=True)
-        lockfile_errors.extend(env_errors)
-
-    if lockfile_errors:
-        print("Build failed due to lock file errors. Fix the above issues and try again.", file=sys.stderr)
-        sys.exit(1)
-
-    resolved_wasm_serving = build_config.wasm_serving or "cdn"
-
-    bundled_deps = get_bundled_deps(lockfile, serve_all_deps=build_config.serve_all_deps)
-    wasm_package_names = get_wasm_package_names(lockfile)
-
-    wasm_local_urls: dict[str, str] | None = None
-    lockfile_url: str | None = None
-    wasm_asset_files: dict[str, pathlib.Path] = {}
-    if resolved_wasm_serving == "local" and lockfile is not None:
-        pyodide_version = lockfile.pyodide_version
-        lockfile_url = PYODIDE_LOCK_URL_TEMPLATE.format(version=pyodide_version)
-
-        downloaded_paths = download_wasm_wheels(lockfile, modules_dir)
-        base_url = app.config.base_url
-        wasm_local_urls = {}
-        for name, entry in lockfile.wasm_packages.items():
-            if entry.file_name and entry.sha256:
-                wasm_local_urls[name] = f"{base_url}_webcompy-assets/packages/{entry.file_name}"
-                if name in downloaded_paths:
-                    wasm_asset_files[entry.file_name] = downloaded_paths[name]
-
-    resolved_runtime_serving = build_config.runtime_serving or "cdn"
-
-    runtime_asset_files: dict[str, pathlib.Path] = {}
-    if resolved_runtime_serving == "local":
-        try:
-            runtime_results = download_runtime_assets(
-                lockfile.pyodide_version if lockfile else "0.29.3",
-                PYSCRIPT_VERSION,
-                modules_dir,
-                lock_file=lockfile,
-            )
-            if lockfile is not None:
-                verify_and_update_runtime_assets(
-                    runtime_results,
-                    lockfile,
-                    PYSCRIPT_VERSION,
-                    build_config.app_package_path / LOCKFILE_NAME,
-                )
-            for rel_path, (asset_path, _sha256) in runtime_results.items():
-                runtime_asset_files[rel_path] = asset_path
-        except RuntimeDownloadError as e:
-            print(f"Error: {e}", file=sys.stderr)
-            sys.exit(1)
-        lockfile_url = None
-
-    cdn_pure_python_names: list[str] = []
-    cdn_extracted_deps: list[tuple[str, pathlib.Path]] = []
-    cdn_temp_dir_obj = None
-    if not build_config.serve_all_deps:
-        cdn_pure_python_names = get_cdn_pure_python_package_names(lockfile)
-    elif lockfile is not None:
-        for name, entry in lockfile.pure_python_packages.items():
-            if entry.in_pyodide_cdn and entry.pyodide_file_name and entry.pyodide_sha256:
-                try:
-                    wheel_path = download_pyodide_wheel(
-                        entry.pyodide_file_name,
-                        lockfile.pyodide_version,
-                        entry.pyodide_sha256,
-                        modules_dir,
-                    )
-                except PyodideDownloadError as e:
-                    print(f"Error: {e}", file=sys.stderr)
-                    sys.exit(1)
-                if cdn_temp_dir_obj is None:
-                    cdn_temp_dir_obj = TemporaryDirectory()
-                    cdn_temp_dir_obj.__enter__()
-                extract_dest = pathlib.Path(cdn_temp_dir_obj.name) / name
-                extract_dest.mkdir(parents=True, exist_ok=True)
-                extracted = extract_wheel(wheel_path, extract_dest)
-                cdn_extracted_deps.extend(extracted)
-
-    if cdn_temp_dir_obj is not None:
-        cdn_temp_dir_obj.__exit__(None, None, None)
-
-    all_bundled_deps = bundled_deps + cdn_extracted_deps
-
-    app_version = generate_app_version(build_config.version)
-    wheel_mode = build_config.wheel_mode
-
-    with TemporaryDirectory() as temp:
-        temp_path = pathlib.Path(temp)
-        if wheel_mode == "split":
-            fw_wheel = make_browser_webcompy_wheel(
-                get_webcompy_packge_dir(),
-                temp_path,
-                app_version,
-            )
-            app_wheel_path = make_webcompy_app_package(
-                temp_path,
-                get_webcompy_packge_dir(),
-                build_config.app_package_path,
-                app_version,
-                build_config.assets,
-                bundled_deps=all_bundled_deps or None,
-                skip_webcompy=True,
-            )
-            app_wheel_filename = app_wheel_path.name
-            fw_wheel_filename = fw_wheel.name
+    async def send_app_package_file(request: Request):
+        filename: str = request.path_params.get("filename", "")  # type: ignore
+        if artifacts.app_package_files and filename in artifacts.app_package_files:
+            content, media_type = artifacts.app_package_files[filename]
+            headers: dict[str, str] = {}
+            if artifacts.dev_mode:
+                if artifacts.fw_wheel_filename and filename == artifacts.fw_wheel_filename:
+                    headers["Cache-Control"] = "max-age=86400, must-revalidate"
+                else:
+                    headers["Cache-Control"] = "no-cache"
+            return Response(content, media_type=media_type, headers=headers)
         else:
-            app_wheel_path = make_webcompy_app_package(
-                temp_path,
-                get_webcompy_packge_dir(),
-                build_config.app_package_path,
-                app_version,
-                build_config.assets,
-                bundled_deps=all_bundled_deps or None,
-            )
-            app_wheel_filename = app_wheel_path.name
-            fw_wheel_filename = ""
-
-        app_package_files: dict[str, tuple[bytes, str]] = {
-            p.name: (
-                p.open("rb").read(),
-                t if (t := mimetypes.guess_type(str(p))[0]) else "application/octet-stream",
-            )
-            for p in temp_path.iterdir()
-        }
-
-        async def send_app_package_file(request: Request):
-            filename: str = request.path_params.get("filename", "")  # type: ignore
-            if filename in app_package_files:
-                content, media_type = app_package_files[filename]
-                headers: dict[str, str] = {}
-                if build_config.server.dev:
-                    if fw_wheel_filename and filename == fw_wheel_filename:
-                        headers["Cache-Control"] = "max-age=86400, must-revalidate"
-                    else:
-                        headers["Cache-Control"] = "no-cache"
-                return Response(content, media_type=media_type, headers=headers)
-            else:
-                raise HTTPException(404)
-
-        extra_wheel_filenames: list[str] | None = None
-        if wheel_mode == "split":
-            extra_wheel_filenames = sorted(
-                f.name for f in temp_path.iterdir() if f.name.endswith(".whl") and f.name != app_wheel_filename
-            )
+            raise HTTPException(404)
 
     app_package_files_route = Route(
         "/_webcompy-app-package/{filename:path}",
@@ -239,7 +81,8 @@ def create_asgi_app(
     )
 
     wasm_asset_routes: list[Route] = []
-    if resolved_wasm_serving == "local" and wasm_asset_files:
+    wasm_asset_files = artifacts.wasm_asset_files
+    if wasm_asset_files is not None:  # wasm_asset_files is set only when wasm_serving == "local"
 
         async def send_wasm_asset(request: Request):
             filename: str = request.path_params.get("filename", "")  # type: ignore
@@ -252,7 +95,8 @@ def create_asgi_app(
         wasm_asset_routes.append(Route("/_webcompy-assets/packages/{filename:path}", send_wasm_asset))
 
     runtime_asset_routes: list[Route] = []
-    if resolved_runtime_serving == "local" and runtime_asset_files:
+    runtime_asset_files = artifacts.runtime_asset_files
+    if runtime_asset_files is not None:  # runtime_asset_files is set only when runtime_serving == "local"
 
         async def send_runtime_asset(request: Request):
             filename: str = request.path_params.get("filename", "")  # type: ignore
@@ -297,20 +141,18 @@ def create_asgi_app(
     html_generator = partial(
         generate_html,
         app_package_name=build_config.app_package_path.name,
-        dev_mode=build_config.server.dev,
+        dev_mode=artifacts.dev_mode,
         prerender=True,
-        app_version=app_version,
-        wheel_filename=app_wheel_filename,
-        pyodide_package_names=wasm_package_names + cdn_pure_python_names,
-        wasm_local_urls=wasm_local_urls or None,
-        lockfile_url=lockfile_url,
-        runtime_serving=resolved_runtime_serving,
-        extra_wheel_filenames=extra_wheel_filenames,
+        wheel_filename=artifacts.wheel_filename,
+        pyodide_package_names=artifacts.pyodide_package_names,
+        wasm_local_urls=artifacts.wasm_local_urls,
+        lockfile_url=artifacts.lockfile_url,
+        runtime_serving=artifacts.runtime_serving,
+        extra_wheel_filenames=artifacts.extra_wheel_filenames,
     )
-    base_url_stripper = partial(
-        re_compile("^" + re_escape("/" + app.config.base_url.strip("/"))).sub,
-        "",
-    )
+
+    # Mutable cache for hash-mode pre-rendered HTML
+    _hash_cache: list[str] = []
 
     if app.router_mode == "history" and app.routes:
 
@@ -339,6 +181,8 @@ def create_asgi_app(
     else:
 
         async def send_html(request: Request):  # type: ignore
+            if _hash_cache:
+                return HTMLResponse(_hash_cache[0])
             cookie_header = request.headers.get("cookie", "")
             initial_theme = _read_initial_theme(cookie_header)
             ctx = app.create_render_context(
@@ -384,7 +228,20 @@ def create_asgi_app(
         blocked_paths = [route[0] for route in (app.routes or []) if route[3] is not None]
         fetch_port.configure(asgi, blocked_paths, base_url=app.config.base_url)
 
-    return asgi
+    return _ServingApp(asgi=asgi, html_generator=html_generator, hash_cache=_hash_cache, artifacts=artifacts)
+
+
+async def _pre_render_hash_mode_html(
+    app: WebComPyApp,
+    html_generator: partial,
+    hash_cache: list[str],
+) -> None:
+    ctx = app.create_render_context("/")
+    try:
+        html = await html_generator(ctx)
+        hash_cache.append(html)
+    finally:
+        ctx.dispose()
 
 
 def _read_initial_theme(cookie_header: str) -> Any:
@@ -416,8 +273,6 @@ def run_server(app: WebComPyApp | None = None):
             app_module.app = app
         build_config = WebComPyBuildConfig(app_module)
 
-    if args.get("dev"):
-        build_config.server.dev = True
     serve_all_deps = args.get("serve_all_deps")
     if serve_all_deps is not None:
         build_config.serve_all_deps = serve_all_deps
@@ -439,5 +294,10 @@ def run_server(app: WebComPyApp | None = None):
 
     port = args.get("port") or build_config.server.port
     assert app is not None
-    asgi = create_asgi_app(app, build_config)
-    uvicorn.run(asgi, host="0.0.0.0", port=port, reload=build_config.server.dev)
+    mode = "dev" if args.get("dev") else "prod"
+    serving = create_asgi_app(app, build_config, mode=mode)
+
+    if app.router_mode != "history":
+        asyncio.run(_pre_render_hash_mode_html(app, serving.html_generator, serving.hash_cache))
+
+    uvicorn.run(serving.asgi, host="0.0.0.0", port=port, reload=build_config.server.dev)

@@ -9,6 +9,7 @@ from webcompy.aio._async_result import AsyncResult
 from webcompy.components._libs import Context, generate_id
 from webcompy.di import inject
 from webcompy.di._keys import HYDRATION_DATA_KEY
+from webcompy.hydration._payload import TransferAsyncResultEntry
 from webcompy.signal._base import CallbackConsumerNode, SignalBase
 from webcompy.signal._effect import EffectScope
 from webcompy.signal._graph import consumer_destroy
@@ -66,8 +67,8 @@ def useAsyncResult(
         hydration_data = inject(HYDRATION_DATA_KEY, default=None)
         if hydration_data is not None and component_id in hydration_data:
             entry = hydration_data[component_id]
-            if isinstance(entry, dict) and entry.get("state") == "success":
-                result._restore_from_transfer(entry.get("data"))
+            if isinstance(entry, TransferAsyncResultEntry) and entry.state == "success":
+                result._restore_from_transfer(entry.data)
                 return result
 
     if immediate:

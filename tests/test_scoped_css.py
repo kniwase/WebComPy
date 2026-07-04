@@ -28,7 +28,6 @@ class TestScopedCssSSGOutput:
             app_package_name="test",
             dev_mode=False,
             prerender=True,
-            app_version="0+sha.test",
             wheel_filename="test-0+sha.test-py3-none-any.whl",
         )
         assert 'data-webcompy-cid="' in html_str
@@ -48,7 +47,6 @@ class TestScopedCssSSGOutput:
             app_package_name="test",
             dev_mode=False,
             prerender=True,
-            app_version="0+sha.test",
             wheel_filename="test-0+sha.test-py3-none-any.whl",
         )
         assert "*[hidden]{display: none;}" in html_str
@@ -68,7 +66,6 @@ class TestScopedCssSSGOutput:
             app_package_name="test",
             dev_mode=False,
             prerender=True,
-            app_version="0+sha.test",
             wheel_filename="test-0+sha.test-py3-none-any.whl",
         )
         assert 'data-webcompy-cid="' not in html_str
