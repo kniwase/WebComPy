@@ -39,7 +39,9 @@ The framework SHALL provide an `AsyncSchedulerPort` abstract base class that cen
 
 #### Scenario: Server drains all pending tasks
 - **WHEN** `ServerAsyncSchedulerPort.await_pending()` is called
-- **THEN** all tasks in `_registry` SHALL be awaited via `asyncio.gather`
+- **THEN** a snapshot of `_registry` SHALL be taken via `list(self._registry)` before iteration
+- **AND** the snapshot tasks SHALL be awaited via `asyncio.gather`
+- **AND** concurrent `done_callback` removals SHALL NOT cause iteration errors (the snapshot is independent of the live list)
 - **AND** tasks that complete during the gather SHALL be removed from `_registry`
 - **AND** after `await_pending()` returns, `_registry` SHALL be empty
 
@@ -48,7 +50,8 @@ The framework SHALL provide an `AsyncSchedulerPort` abstract base class that cen
 - **AND** `await_pending()` is called
 - **THEN** `await_pending()` SHALL re-check the registry after the initial gather completes
 - **AND** if newly added tasks exist, they SHALL be gathered in a subsequent iteration
-- **AND** this loop SHALL continue until the registry is empty or a maximum iteration guard is reached
+- **AND** this loop SHALL continue until the registry is empty or a maximum iteration guard of 20 is reached
+- **AND** when the guard is reached, a warning SHALL be logged indicating a possible recursive scheduling bug
 
 ### Requirement: aio_run shall delegate to AsyncSchedulerPort when a DI scope is active
 

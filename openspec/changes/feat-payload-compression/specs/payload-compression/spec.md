@@ -51,9 +51,14 @@ The compression and decompression logic SHALL use only `zlib`, `base64`, and `js
 
 ### Requirement: The compression envelope shall preserve the transfer version
 
-The compression envelope SHALL include the `"__webcompy_transfer_version__"` field at the top level (alongside `"__webcompy_compressed__"` and `"data"`). This allows version-based logic to proceed after decompression without needing to parse the compressed data first.
+The compression envelope SHALL include the `"__webcompy_transfer_version__"` field at the top level (alongside `"__webcompy_compressed__"` and `"data"`). This field is **informational/diagnostic** — it allows version inspection without decompression. The **authoritative** version is the one inside the decompressed JSON. If the two disagree, the inner (decompressed) version SHALL take precedence and the envelope version SHALL be treated as a stale cache. The serializer SHALL keep both in sync at serialization time.
 
 #### Scenario: Envelope contains version field
 - **WHEN** a compressed payload is produced
 - **THEN** the envelope SHALL contain `"__webcompy_transfer_version__"` with the correct version number
 - **AND** after decompression, the inner JSON SHALL also contain the version (for consistency)
+
+#### Scenario: Inner version is authoritative on mismatch
+- **WHEN** the envelope's `"__webcompy_transfer_version__"` differs from the decompressed JSON's version
+- **THEN** the inner (decompressed) version SHALL be treated as authoritative
+- **AND** the envelope version SHALL be treated as informational only

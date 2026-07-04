@@ -102,9 +102,26 @@ All five fire-and-forget sites route through `AsyncSchedulerPort`. This includes
 
 The `ServerAsyncSchedulerPort` instance is created per `RenderContext` and provisioned in the context's DI scope. Its internal `_registry: list[asyncio.Task]` is therefore per-request, not shared across concurrent SSR requests.
 
+**Concurrent modification guard:** Task `done_callback`s remove completed tasks from `_registry`. If a callback fires while `await_pending()` is iterating `_registry`, the list mutates during iteration, risking `RuntimeError: list changed size during iteration` or missed tasks. The implementation SHALL snapshot the registry before iteration:
+
+```python
+async def await_pending(self):
+    iteration = 0
+    while self._registry:
+        tasks = list(self._registry)  # snapshot — callbacks may mutate _registry concurrently
+        await asyncio.gather(*tasks, return_exceptions=True)
+        iteration += 1
+        if iteration > 20:
+            logging.warning("await_pending exceeded 20 drain iterations; "
+                            "possible recursive scheduling bug")
+            break
+```
+
+The `list(self._registry)` snapshot copies references at iteration start; concurrent `done_callback` removals affect the live list, not the snapshot. The snapshot approach is preferred over locking because `done_callback`s run synchronously on the event loop (not from another thread), and `await` points yield control — so a `deque` with locks would add complexity without benefit in the single-threaded asyncio model.
+
 **Alternatives considered:**
 - **Module-global registry** (single list shared across all requests): Simpler, but concurrent SSR requests would interleave tasks, and `await_pending()` for one request would await another request's tasks. Rejected — breaks request isolation.
-- **Registry on `RenderContext` directly** (not on the port): Requires the port to reach into the context. Coupling the port to a specific context type breaks port abstraction. Rejected.
+- **`collections.deque` with locks**: Over-engineered for single-threaded asyncio. The snapshot approach is simpler and sufficient.
 
 **Rationale:** The port owns its registry. Per-instance = per-request. The DI scope provides isolation naturally.
 
@@ -169,7 +186,7 @@ This matches the existing fake-port pattern in `webcompy_testing/_ports.py`.
 
 - **[Performance overhead of registry bookkeeping]** → Mitigation: The registry is a simple list append/remove. `await_pending()` gathers only the remaining tasks. For typical renders with 0-5 scheduled tasks, overhead is negligible.
 
-- **[Deadlock if a scheduled task schedules another task]** → Mitigation: `await_pending()` should handle this by re-checking for newly added tasks after the initial gather. Implementation: loop until the registry is empty (with a maximum iteration guard to prevent infinite loops from buggy recursive scheduling).
+- **[Deadlock if a scheduled task schedules another task]** → Mitigation: `await_pending()` should handle this by re-checking for newly added tasks after the initial gather. Implementation: loop until the registry is empty (with a maximum iteration guard of 20 and a warning log at the limit to surface genuine recursive-scheduling bugs early).
 
 - **[Browser behavior change]** → Mitigation: `BrowserAsyncSchedulerPort.schedule()` wraps the exact same `ensure_future` call. No behavioral change on browser. Existing E2E tests (`/reactive`, `/switch`, `/suspense` pages) verify no regression.
 

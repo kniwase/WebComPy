@@ -187,7 +187,7 @@ Lists are encoded as plain JSON arrays (no tag).
 
 ## Risks / Trade-offs
 
-- **[importlib under PyScript]** → Mitigation: Validation spike before full implementation. Use `webcompy inspect` CLI to test `importlib.import_module("myapp.models")` in a PyScript context. If importlib is unavailable, dataclass/enum reconstruction falls back to dict representation with a warning.
+- **[importlib under PyScript]** → Mitigation: Validation spike before full implementation. Use `webcompy inspect` CLI to test `importlib.import_module("myapp.models")` in a PyScript context. If importlib is unavailable, dataclass/enum reconstruction falls back to dict representation with a warning. **Fallback architecture:** If the validation spike reveals that `importlib.import_module()` cannot reliably import arbitrary bundled modules under Pyodide (Pyodide has known limitations on dynamic imports for packages not pre-loaded), the decoder SHALL fall back to a **bundle-time class registry**: the framework collects `{fully_qualified_name: cls}` mappings at wheel-build time (via import scanning) and the decoder looks up the class in the registry instead of calling `importlib.import_module()`. This registry would be populated by the wheel builder and shipped as part of the browser bundle. The encoder schema (module + name) is identical either way, so the fallback is transparent to the payload format.
 
 - **[Payload size increase from type tags]** → Mitigation: Type tags are only added for non-JSON-native values. Plain JSON values (the majority of typical payloads) are unchanged. For large data, `feat-payload-compression` addresses size at a higher layer.
 

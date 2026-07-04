@@ -162,6 +162,8 @@ The `signals` section is added to `TransferPayload`. The `__webcompy_transfer_ve
 - Version 1: ignores `signals` section (forward compatibility — a v1 browser skips unknown sections).
 - Version 2: parses `signals` section.
 
+**Version negotiation strategy (explicit):** The current `_payload.py` uses a strict equality check (`version != _SUPPORTED_VERSION`). This change shifts from strict equality to an **accept-list**. `_SUPPORTED_VERSION` becomes `_SUPPORTED_VERSIONS = {1, 2}`, and `deserialize_payload()` accepts any version in the set. Version 1 payloads default `TransferPayload.signals` to an empty dict `{}`. This allows old payloads (generated before Signal transfer landed) to decode correctly alongside new ones. The accept-list pattern (rather than a range) is intentional — it forces explicit acknowledgment when a new version is introduced, preventing accidental acceptance of future unknown versions.
+
 ### D7: ReactiveList and ReactiveDict serialization
 
 `ReactiveList` and `ReactiveDict` extend `SignalBase` and store their value in `_value` (a list or dict). They are collected and restored the same way as `Signal`:

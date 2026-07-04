@@ -12,7 +12,7 @@
 ## 3. Server Implementation
 
 - [ ] 3.1 Create `packages/webcompy-server/src/webcompy_server/ports/_async_scheduler.py` with `ServerAsyncSchedulerPort(AsyncSchedulerPort)` — `schedule()` uses `loop.create_task` and appends to `_registry`; `await_pending()` gathers all registry tasks with recursive re-check loop
-- [ ] 3.2 Implement the recursive drain loop in `await_pending()`: gather, check for newly added tasks, repeat until empty (with a maximum iteration guard, e.g., 100, to prevent infinite loops from buggy recursive scheduling)
+- [ ] 3.2 Implement the recursive drain loop in `await_pending()`: snapshot via `list(self._registry)`, gather, check for newly added tasks, repeat until empty (maximum iteration guard of 20, with warning log at the limit)
 - [ ] 3.3 Add a `done_callback` to each created task that removes it from `_registry` upon completion (so `await_pending` doesn't await already-finished tasks)
 
 ## 4. Testing Fake Port
@@ -30,7 +30,7 @@
 - [ ] 6.1 Refactor `_aio_run_browser` and `_aio_run_server` in `packages/webcompy/src/webcompy/aio/_aio.py` to attempt `inject(ASYNC_SCHEDULER_PORT_KEY)` at call time
 - [ ] 6.2 Implement the fallback path: if `InjectionError` is raised, create the task directly (`ensure_future` / `create_task`) and log a warning
 - [ ] 6.3 Keep the `_aio_run_browser_tasks` / `_aio_run_server_tasks` lists for GC safety in the fallback path, or remove them if the port handles GC (decide based on whether the fallback path still needs them)
-- [ ] 6.4 Remove the now-unused `_aio_run_server_tasks` list if the port's registry supersedes it (verify no other code references it)
+- [ ] 6.4 Remove the `_aio_run_server_tasks` module-level list — the port's registry supersedes it. After removal, grep to confirm no remaining references to `_aio_run_server_tasks` (this is a required step, not conditional: the design's central purpose is to eliminate the fire-and-forget pattern)
 
 ## 7. Element/Component Integration
 
@@ -46,12 +46,12 @@
 
 ## 9. ServerFetchPort Cleanup
 
-- [ ] 9.1 Refactor `ServerFetchPort.close()` to make cleanup tasks awaitable — either route through `AsyncSchedulerPort` or make `close()` / add `aclose()` async and have `ctx.dispose()` await it explicitly
+- [ ] 9.1 Make `ServerFetchPort.close()` an `async def` (or add an `aclose()` async variant) and have `ctx.dispose()` await it explicitly — per design D6, this is the chosen approach (not routing through `AsyncSchedulerPort`, because `close()` runs during teardown after `await_pending()`)
 
 ## 10. Documentation and Invariant
 
 - [ ] 10.1 Document the `app._hydrate` guard rationale in `WebComPyApp.__init__` as defense-in-depth (the scheduler port is the primary guarantee)
-- [ ] 10.2 Add the "No bare asyncio scheduling outside AsyncSchedulerPort" invariant to `.opencode/agents/ci-review.md` Critical Framework Invariants section
+- [ ] 10.2 Add the "No bare asyncio scheduling outside AsyncSchedulerPort" invariant to `.opencode/agents/ci-review.md` Critical Framework Invariants section — update AFTER this proposal is approved, BEFORE the implementation PR (requires coordination with the ci-review agent configuration)
 - [ ] 10.3 Update the File → Spec Mapping table in `AGENTS.md` to include `async-scheduler` spec for affected modules
 
 ## 11. Unit Tests
