@@ -31,10 +31,9 @@ def create_asgi_app(
     app: WebComPyApp,
     build_config: WebComPyBuildConfig,
     *,
-    mode: Literal["dev", "ssg"] = "dev",
+    mode: Literal["prod", "dev"] = "prod",
 ) -> ASGIApp:
-    if mode == "ssg":
-        build_config.server.dev = False
+    build_config.server.dev = mode == "dev"
 
     build_config.server = build_config.server
     artifacts = resolve_build_artifacts(app, build_config, dev_mode=build_config.server.dev)
@@ -261,8 +260,6 @@ def run_server(app: WebComPyApp | None = None):
             app_module.app = app
         build_config = WebComPyBuildConfig(app_module)
 
-    if args.get("dev"):
-        build_config.server.dev = True
     serve_all_deps = args.get("serve_all_deps")
     if serve_all_deps is not None:
         build_config.serve_all_deps = serve_all_deps
@@ -284,7 +281,8 @@ def run_server(app: WebComPyApp | None = None):
 
     port = args.get("port") or build_config.server.port
     assert app is not None
-    asgi = create_asgi_app(app, build_config, mode="dev")
+    mode = "dev" if args.get("dev") else "prod"
+    asgi = create_asgi_app(app, build_config, mode=mode)
 
     if app.router_mode != "history":
         asyncio.run(_pre_render_hash_mode_html(app, asgi._html_generator, asgi._hash_cache))

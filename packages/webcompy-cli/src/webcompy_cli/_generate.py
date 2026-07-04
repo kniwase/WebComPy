@@ -123,7 +123,7 @@ async def generate_static_site(app: WebComPyApp | None = None):
         # Create ASGI app in SSG mode and fetch routes via ASGITransport
         # Note: create_asgi_app() internally configures ServerFetchPort,
         # so no separate configure() call is needed here.
-        asgi_app = create_asgi_app(app, build_config, mode="ssg")
+        asgi_app = create_asgi_app(app, build_config, mode="prod")
 
         base_url_path = app.config.base_url.strip("/")
         async with httpx.AsyncClient(

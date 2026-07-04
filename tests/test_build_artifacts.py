@@ -55,7 +55,7 @@ class TestBuildArtifactsDataclass:
         assert artifacts.dev_mode is True
 
 
-class TestCreateAsgiAppModeSsg:
+class TestCreateAsgiAppMode:
     def _make_minimal_app(self) -> WebComPyApp:
         @define_component
         def _Root(context):
@@ -80,7 +80,7 @@ class TestCreateAsgiAppModeSsg:
         build_config.static_files_dir = "static"
         return build_config
 
-    def test_ssg_mode_excludes_sse_route(self):
+    def test_prod_mode_excludes_sse_route(self):
         app = self._make_minimal_app()
         build_config = self._make_fake_build_config()
         artifacts = BuildArtifacts(
@@ -95,12 +95,12 @@ class TestCreateAsgiAppModeSsg:
         ):
             from webcompy_cli._server import create_asgi_app
 
-            asgi = create_asgi_app(app, build_config, mode="ssg")
+            asgi = create_asgi_app(app, build_config, mode="prod")
 
         route_paths = [r.path for r in asgi.routes]
-        assert "/_webcompy_reload" not in route_paths, "SSE route should be excluded in SSG mode"
+        assert "/_webcompy_reload" not in route_paths, "SSE route should be excluded in prod mode"
 
-    def test_ssg_mode_forces_dev_false(self):
+    def test_prod_mode_sets_dev_false(self):
         app = self._make_minimal_app()
         build_config = self._make_fake_build_config()
         artifacts = BuildArtifacts(
@@ -115,9 +115,9 @@ class TestCreateAsgiAppModeSsg:
         ):
             from webcompy_cli._server import create_asgi_app
 
-            create_asgi_app(app, build_config, mode="ssg")
+            create_asgi_app(app, build_config, mode="prod")
 
-        assert build_config.server.dev is False, "SSG mode should force dev=False"
+        assert build_config.server.dev is False, "prod mode should set server.dev=False"
 
     def test_dev_mode_includes_sse_route(self):
         app = self._make_minimal_app()
@@ -138,3 +138,43 @@ class TestCreateAsgiAppModeSsg:
 
         route_paths = [r.path for r in asgi.routes]
         assert "/_webcompy_reload" in route_paths, "SSE route should be included in dev mode"
+
+    def test_dev_mode_sets_dev_true(self):
+        app = self._make_minimal_app()
+        build_config = self._make_fake_build_config()
+        build_config.server.dev = False  # start with False
+        artifacts = BuildArtifacts(
+            app_version="test-version",
+            wheel_filename="test.whl",
+            app_package_files={"test.whl": (b"content", "application/zip")},
+        )
+
+        with (
+            patch("webcompy_cli._server.resolve_build_artifacts", return_value=artifacts),
+            patch("webcompy_cli._server.get_static_files", return_value=()),
+        ):
+            from webcompy_cli._server import create_asgi_app
+
+            create_asgi_app(app, build_config, mode="dev")
+
+        assert build_config.server.dev is True, "dev mode should set server.dev=True"
+
+    def test_default_mode_is_prod(self):
+        app = self._make_minimal_app()
+        build_config = self._make_fake_build_config()
+        artifacts = BuildArtifacts(
+            app_version="test-version",
+            wheel_filename="test.whl",
+            app_package_files={"test.whl": (b"content", "application/zip")},
+        )
+
+        with (
+            patch("webcompy_cli._server.resolve_build_artifacts", return_value=artifacts),
+            patch("webcompy_cli._server.get_static_files", return_value=()),
+        ):
+            from webcompy_cli._server import create_asgi_app
+
+            asgi = create_asgi_app(app, build_config)
+
+        route_paths = [r.path for r in asgi.routes]
+        assert "/_webcompy_reload" not in route_paths, "default mode should exclude SSE (prod)"

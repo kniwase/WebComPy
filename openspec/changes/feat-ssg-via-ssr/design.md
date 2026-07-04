@@ -4,7 +4,7 @@
 
 WebComPy has two server-side code paths that produce HTML:
 
-1. **Dev server** (`_server.py`): Creates a Starlette ASGI app with routes for wheel files, static files, WASM assets, runtime assets, SSE reload, and an HTML catch-all route. Each request enters `app.di_scope`, sets the path, and calls `html_generator()`.
+1. **Dev/prod server** (`_server.py`): Creates a Starlette ASGI app with routes for wheel files, static files, WASM assets, runtime assets, SSE reload (dev only), and an HTML catch-all route. Each request enters `app.di_scope`, sets the path, and calls `html_generator()`.
 
 2. **SSG pipeline** (`_generate.py`): `generate_static_site()` resolves dependencies, builds wheels, downloads assets, creates an `html_generator` partial, then iterates routes and writes HTML files directly.
 
@@ -18,8 +18,8 @@ The `feat/async-rendering-pipeline` change makes `generate_html()` return `Await
 - Restructure SSG to create an ASGI app and fetch routes via `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))`
 - Make `send_html()` and `generate_html()` async
 - Extract shared setup logic into `_resolve_build_artifacts()` to eliminate duplication
-- Support both dev mode and SSG mode in `create_asgi_app()`
-- Maintain identical HTML output between dev server and SSG
+- Support both dev mode and prod mode in `create_asgi_app()` via a single `mode` parameter
+- Maintain identical HTML output between dev server, prod server, and SSG
 
 **Non-Goals:**
 - Incremental or partial SSG
@@ -31,23 +31,20 @@ The `feat/async-rendering-pipeline` change makes `generate_html()` return `Await
 
 ### Decision 1: SSG = SSR + ASGITransport
 
-**Chosen**: `generate_static_site()` creates an ASGI app via `create_asgi_app()` (with SSG mode), then uses `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))` to fetch each route and write the response HTML to disk.
+**Chosen**: `generate_static_site()` creates an ASGI app via `create_asgi_app()` (with `mode="prod"`), then uses `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))` to fetch each route and write the response HTML to disk.
 
-**Key ordering constraint**: `ServerFetchPort.configure()` MUST be called after `create_asgi_app()` returns and BEFORE any route is fetched. This ensures self-site fetch requests during SSR are routed through the ASGI app. The call site is immediately after `create_asgi_app()` and before the `httpx.AsyncClient` context manager block.
+**Key ordering constraint**: `ServerFetchPort.configure()` MUST be called after `create_asgi_app()` returns and BEFORE any route is fetched. This ensures self-site fetch requests during SSR are routed through the ASGI app. The call site is immediately after `create_asgi_app()` and before the `httpx.AsyncClient` context manager block. Note: `create_asgi_app()` already configures `ServerFetchPort` internally, so no separate configure() call is needed in `generate_static_site()`.
 
 ```python
 async def generate_static_site(app: WebComPyApp | None = None):
     # ... resolve build_config ...
-    # Copy build_config in SSG mode to avoid mutating user-provided config
-    ssg_build_config = copy.copy(build_config)
-    ssg_build_config.server.dev = False
-    asgi_app = create_asgi_app(app, ssg_build_config, mode="ssg")
+    artifacts = resolve_build_artifacts(app, build_config, dist_dir=dist_dir)
+    asgi_app = create_asgi_app(app, build_config, mode="prod")
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=asgi_app),
         base_url="http://test",
     ) as client:
         if app.router_mode == "history" and app.routes:
-            # app.routes is list of (path: str, matcher: Callable, component: type, config: dict, page_info: dict) tuples
             for path, _, _, _, page in app.routes:
                 paths = (
                     {path.format(**params) for params in path_params}
@@ -59,16 +56,16 @@ async def generate_static_site(app: WebComPyApp | None = None):
                     html = response.text
                     # ... write html to dist_dir / route_path / index.html ...
             # 404 page
-            response = await client.get(f"/{app.config.base_url.strip('/')}///:404://")
+            response = await client.get(f"/{app.config.base_url.strip('/')}/_webcompy_404")
             # ... write 404.html ...
         else:
             response = await client.get(f"/{app.config.base_url.strip('/')}/")
             # ... write index.html ...
 ```
 
-**Rationale**: Using ASGITransport means SSG exercises the exact same code path as the dev server: route matching, DI scope entry, path setting, and HTML generation. This eliminates output divergence. The `base_url` is included in the URL so that `base_url_stripper` in the handler processes correctly.
+**Rationale**: Using ASGITransport means SSG exercises the exact same code path as the dev/prod server: route matching, DI scope entry, path setting, and HTML generation. This eliminates output divergence. The `base_url` is included in the URL so that `base_url_stripper` in the handler processes correctly.
 
-**Trade-offs**: ASGITransport adds httpx as a runtime dependency for SSG, but httpx is already a dependency (used by `ServerFetchPort`). The overhead of creating an ASGI app and making HTTP requests is minimal compared to wheel building and dependency resolution.
+**Trade-offs**: ASGITransport adds httpx as a runtime dependency for SSG, but httpx is already a dependency (used by `ServerFetchPort`). The overhead of creating an ASGI app and making HTTP requests is minimal compared to dependency resolution and wheel building.
 
 ### Decision 2: generate_html() becomes async
 
@@ -76,7 +73,7 @@ async def generate_static_site(app: WebComPyApp | None = None):
 
 ```python
 async def generate_html(
-    app: WebComPyApp,
+    ctx: RenderContext,
     app_package_name: str,
     dev_mode: bool,
     prerender: bool,
@@ -120,7 +117,7 @@ async def send_html(request: Request):
 For hash mode (pre-rendered once at startup):
 
 ```python
-# Pre-render at startup
+# Pre-render at startup (called after create_asgi_app() returns)
 with app.di_scope:
     app.set_path("/")
     html = await html_generator()
@@ -145,14 +142,13 @@ class BuildArtifacts:
     wasm_local_urls: dict[str, str] | None
     lockfile_url: str | None
     runtime_serving: str
-    # For dev server: in-memory file maps
+    # For dev/prod server: in-memory file maps
     app_package_files: dict[str, tuple[bytes, str]] | None
     wasm_asset_files: dict[str, pathlib.Path] | None
     runtime_asset_files: dict[str, pathlib.Path] | None
-    static_file_routes: list[tuple[str, pathlib.Path, str]] | None
     # For SSG: dist directory path
     dist_dir: pathlib.Path | None
-    # Dev mode flag
+    # Dev mode flag (mirrors build_config.server.dev)
     dev_mode: bool
 
 def resolve_build_artifacts(
@@ -166,58 +162,53 @@ def resolve_build_artifacts(
     # ... shared logic from both _generate.py and _server.py ...
 ```
 
-**Rationale**: The current duplication between `_generate.py` (lines 38-283) and `_server.py` (lines 56-291) is ~200 lines of nearly identical code. Extracting it eliminates bugs from divergence and simplifies future changes. The `dev_mode` and `dist_dir` parameters control whether the function produces in-memory file maps (dev server) or writes to disk (SSG).
+**Rationale**: The current duplication between `_generate.py` (lines 38-283) and `_server.py` (lines 56-291) is ~200 lines of nearly identical code. Extracting it eliminates bugs from divergence and simplifies future changes. The `dev_mode` and `dist_dir` parameters control whether the function produces in-memory file maps (dev/prod server) or writes to disk (SSG).
 
 **What stays in each module**:
 - `_server.py`: Route creation, Starlette app assembly, `send_html()`, SSE endpoint
 - `_generate.py`: Dist directory creation, `.nojekyll`/`CNAME` writing, ASGITransport fetching, file writing
 - `_build.py`: Dependency resolution, lockfile, WASM/runtime assets, wheel building
 
-### Decision 5: create_asgi_app() mode parameter
+### Decision 5: create_asgi_app() mode parameter — prod/dev
 
-**Chosen**: Add a `mode` parameter to `create_asgi_app()` with values `"dev"` (default) and `"ssg"`. In SSG mode, the SSE reload endpoint and dev-only cache headers are excluded.
+**Chosen**: Add a `mode` parameter to `create_asgi_app()` with values `"prod"` (default) and `"dev"`. The mode determines all dev-vs-prod behavior of the ASGI app, including `build_config.server.dev`.
 
 ```python
 def create_asgi_app(
     app: WebComPyApp,
     build_config: WebComPyBuildConfig,
     *,
-    mode: Literal["dev", "ssg"] = "dev",
+    mode: Literal["prod", "dev"] = "prod",
 ) -> ASGIApp:
 ```
 
-In SSG mode:
-- No `/_webcompy_reload` SSE endpoint
-- No dev-mode cache headers on wheel files
-- `build_config.server.dev` is forced to `False`
+Behavior by mode:
 
-**Rationale**: SSG doesn't need live reload or dev-mode cache headers. The mode parameter avoids creating a separate ASGI app constructor for SSG.
+| Mode | server.dev | SSE reload | Dev cache headers | Use case |
+|---|---|---|---|---|
+| `"prod"` | `False` | Excluded | Excluded | Production server (`webcompy start`), SSG (`webcompy generate`) |
+| `"dev"` | `True` | Included | Included | Dev server (`webcompy start --dev`) |
 
-### Decision 6: generate_static_site() becomes async with asyncio.run() wrapper
+The `build_config.server.dev` attribute is set by `create_asgi_app()` based on the mode. Callers do not set it independently — the mode is the single source of truth for dev/prod behavior. `uvicorn.run()` reads `build_config.server.dev` post-creation to decide whether to enable file-watching reload.
 
-**Chosen**: `generate_static_site()` becomes `async def generate_static_site()` internally. The CLI entry point wraps it with `asyncio.run()`.
+**Rationale**: Previously the code had two overlapping control mechanisms — `build_config.server.dev` and a separate purpose-built mode — that could conflict. Unifying them under a single `mode` parameter eliminates ambiguity. The `"prod"` mode is the default because the common case is serving without hot reload. The `"dev"` mode is explicitly requested via the `--dev` CLI flag. SSG naturally uses `mode="prod"` since it does not need SSE or dev cache headers. The returned `ASGIApp` is a standard Starlette instance and can be passed to any ASGI server (uvicorn, gunicorn + uvicorn worker, hypercorn, etc.).
+
+### Decision 6: run_server() delegates mode selection to CLI
+
+**Chosen**: `run_server()` selects the `mode` argument for `create_asgi_app()` based on the `--dev` CLI flag. No direct manipulation of `build_config.server.dev` occurs before calling `create_asgi_app()`.
 
 ```python
-# packages/webcompy-cli/src/webcompy_cli/_generate.py
-async def generate_static_site(app: WebComPyApp | None = None):
+# packages/webcompy-cli/src/webcompy_cli/_server.py
+def run_server(app: WebComPyApp | None = None):
     _, args = get_params()
     # ... build_config resolution ...
-    artifacts = resolve_build_artifacts(app, build_config, dist_dir=dist_dir)
-    asgi_app = create_asgi_app(app, build_config, mode="ssg")
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=asgi_app),
-        base_url="http://test",
-    ) as client:
-        # ... fetch routes and write HTML ...
+    mode = "dev" if args.get("dev") else "prod"
+    asgi = create_asgi_app(app, build_config, mode=mode)
+    # build_config.server.dev is now set by create_asgi_app()
+    uvicorn.run(asgi, host="0.0.0.0", port=port, reload=build_config.server.dev)
 ```
 
-```python
-# packages/webcompy-cli/src/webcompy_cli/__main__.py (CLI entry point)
-# When "generate" subcommand is selected:
-asyncio.run(generate_static_site())
-```
-
-**Rationale**: `asyncio.run()` is the standard way to run async code from a synchronous entry point. Since `generate_static_site()` is called from the CLI (which is synchronous), we need this wrapper. The function remains callable from Python code via `await generate_static_site(app)` or `asyncio.run(generate_static_site(app))`.
+**Rationale**: Keeping mode selection in `run_server()` rather than in `create_asgi_app()` maintains the synchronous CLI entry point. `uvicorn.run()` is asynchronous internally but accepts a synchronous ASGI factory. `build_config.server.dev` is read after `create_asgi_app()` returns to configure uvicorn's file-watching reload.
 
 ### Decision 7: Hash mode SSR — async pre-render with caching, separate from create_asgi_app()
 
@@ -229,7 +220,7 @@ with app.di_scope:
     app.set_path("/")
     cached_html = await html_generator()  # Pre-render once
 
-def create_asgi_app(app, build_config, mode="dev"):  # synchronous
+def create_asgi_app(app, build_config, mode="prod"):  # synchronous
     if app.router_mode == "hash":
         html = None  # Will be set after async pre-render
         async def send_html(_: Request):

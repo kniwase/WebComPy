@@ -2,16 +2,24 @@
 
 ## Purpose
 
-Static site generation and the dev server currently use separate code paths to produce HTML, leading to duplicated setup logic and potential output divergence. By restructuring SSG to reuse the ASGI app (SSR pipeline), we ensure identical HTML output, eliminate code duplication, and enable async rendering in the SSR pipeline.
+Static site generation and the dev/prod server currently use separate code paths to produce HTML, leading to duplicated setup logic and potential output divergence. By restructuring SSG to reuse the ASGI app (SSR pipeline), we ensure identical HTML output, eliminate code duplication, and enable async rendering in the SSR pipeline.
+
+Three serving modes produce HTML through the same `create_asgi_app()` → `send_html()` → `generate_html()` pipeline:
+
+| Mode | CLI invocation | Hot reload | SSE | Purpose |
+|---|---|---|---|---|
+| Dev server | `webcompy start --dev` | Yes | Included | Development |
+| Prod server | `webcompy start` | No | Excluded | Production |
+| SSG | `webcompy generate` | No | Excluded | Static export |
 
 ## ADDED Requirements
 
 ### Requirement: generate_static_site() shall use ASGITransport to produce static HTML
-`generate_static_site()` SHALL create an ASGI app via `create_asgi_app()` and fetch each route using `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))`. The response HTML for each route SHALL be written to the appropriate file in the dist directory. This ensures SSG output is identical to dev server output.
+`generate_static_site()` SHALL create an ASGI app via `create_asgi_app(mode="prod")` and fetch each route using `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))`. The response HTML for each route SHALL be written to the appropriate file in the dist directory. This ensures SSG output is identical to dev/prod server output.
 
 #### Scenario: Generating a static site for a history-mode app
 - **WHEN** `generate_static_site(app)` is called for an app with `router_mode="history"` and multiple routes
-- **THEN** an ASGI app SHALL be created with `mode="ssg"`
+- **THEN** an ASGI app SHALL be created with `mode="prod"`
 - **AND** each route SHALL be fetched via `httpx.AsyncClient` with `ASGITransport`
 - **AND** the response HTML for each route SHALL be written to `dist/{path}/index.html`
 - **AND** a 404 page SHALL be generated for unmatched paths
@@ -21,9 +29,9 @@ Static site generation and the dev server currently use separate code paths to p
 - **THEN** the root route `/` SHALL be fetched via `httpx.AsyncClient` with `ASGITransport`
 - **AND** the response HTML SHALL be written to `dist/index.html`
 
-#### Scenario: SSG output matches dev server output
-- **WHEN** the same `WebComPyApp` is served via the dev server and generated via SSG
-- **THEN** the HTML produced for each route SHALL be identical between dev server and SSG
+#### Scenario: SSG output matches server output
+- **WHEN** the same `WebComPyApp` is served via the dev/prod server and generated via SSG
+- **THEN** the HTML produced for each route SHALL be identical between server and SSG
 - **AND** the same DI scope, path resolution, and rendering pipeline SHALL be exercised in both cases
 
 ### Requirement: generate_html() shall be async (provided by async-rendering-pipeline)
@@ -55,7 +63,7 @@ The `send_html()` route handler in `_server.py` SHALL be `async def send_html()`
 
 ### Requirement: Per-route RenderContext lifecycle shall be guaranteed during SSG
 
-When `generate_static_site()` fetches each route via `httpx.ASGITransport`, the ASGI request goes through the same `send_html()` handler used by the dev server. This handler already creates a fresh `RenderContext` for each request via `app.create_render_context(path)` in a `try/finally` block and SHALL call `RenderContext.dispose()` in the `finally` block. ASGITransport requests SHALL go through the same handler, so per-route disposal is already guaranteed by the existing handler logic — no additional SSG-specific disposal code is needed.
+When `generate_static_site()` fetches each route via `httpx.ASGITransport`, the ASGI request goes through the same `send_html()` handler used by the dev/prod server. This handler already creates a fresh `RenderContext` for each request via `app.create_render_context(path)` in a `try/finally` block and SHALL call `RenderContext.dispose()` in the `finally` block. ASGITransport requests SHALL go through the same handler, so per-route disposal is already guaranteed by the existing handler logic — no additional SSG-specific disposal code is needed.
 
 If a route fetch raises an exception, `dispose()` SHALL still be called via the `finally` block in `send_html()` to prevent resource leaks (DI scopes, component stores, etc.).
 
@@ -75,8 +83,8 @@ If a route fetch raises an exception, `dispose()` SHALL still be called via the 
 ### Requirement: Shared setup logic shall be extracted into _resolve_build_artifacts()
 Dependency resolution, lockfile handling, WASM/runtime asset management, and wheel building logic SHALL be extracted from `_generate.py` and `_server.py` into a shared `_resolve_build_artifacts()` function. Both modules SHALL call this function instead of duplicating the logic.
 
-#### Scenario: Dev server uses shared setup
-- **WHEN** `create_asgi_app()` is called for dev mode
+#### Scenario: Dev/prod server uses shared setup
+- **WHEN** `create_asgi_app()` is called
 - **THEN** it SHALL call `resolve_build_artifacts()` to obtain build artifacts
 - **AND** use those artifacts to create the ASGI app routes
 
@@ -86,21 +94,27 @@ Dependency resolution, lockfile handling, WASM/runtime asset management, and whe
 - **AND** use those artifacts to create the ASGI app via `create_asgi_app()`
 
 #### Scenario: Build artifacts dataclass contains all resolved data
-- **THEN** `BuildArtifacts` SHALL include `app_version`, `wheel_filename`, `extra_wheel_filenames`, `pyodide_package_names`, `wasm_local_urls`, `lockfile_url`, `runtime_serving`, and mode-specific fields (in-memory file maps for dev, dist directory for SSG)
+- **THEN** `BuildArtifacts` SHALL include `app_version`, `wheel_filename`, `extra_wheel_filenames`, `pyodide_package_names`, `wasm_local_urls`, `lockfile_url`, `runtime_serving`, and mode-specific fields (in-memory file maps for dev/prod, dist directory for SSG)
 
-### Requirement: create_asgi_app() shall accept a mode parameter
-`create_asgi_app()` SHALL accept a `mode` parameter with values `"dev"` (default) and `"ssg"`. In SSG mode, dev-only features SHALL be excluded.
+### Requirement: create_asgi_app() shall accept a prod/dev mode parameter
+`create_asgi_app()` SHALL accept a `mode` parameter with values `"prod"` (default) and `"dev"`. The mode SHALL be the single source of truth for dev-vs-prod behavior: it SHALL set `build_config.server.dev`, control SSE endpoint inclusion, and control dev-mode cache headers.
 
 #### Scenario: Creating an ASGI app for dev mode
 - **WHEN** `create_asgi_app(app, build_config, mode="dev")` is called
-- **THEN** the SSE reload endpoint `/_webcompy_reload` SHALL be included
+- **THEN** `build_config.server.dev` SHALL be set to `True`
+- **AND** the SSE reload endpoint `/_webcompy_reload` SHALL be included
 - **AND** dev-mode cache headers SHALL be set on wheel files
 
-#### Scenario: Creating an ASGI app for SSG mode
-- **WHEN** `create_asgi_app(app, build_config, mode="ssg")` is called
-- **THEN** the SSE reload endpoint SHALL NOT be included
+#### Scenario: Creating an ASGI app for prod mode
+- **WHEN** `create_asgi_app(app, build_config, mode="prod")` is called
+- **THEN** `build_config.server.dev` SHALL be set to `False`
+- **AND** the SSE reload endpoint SHALL NOT be included
 - **AND** dev-mode cache headers SHALL NOT be set on wheel files
-- **AND** `build_config.server.dev` SHALL be forced to `False`
+
+#### Scenario: Creating an ASGI app with default mode
+- **WHEN** `create_asgi_app(app, build_config)` is called without specifying a mode
+- **THEN** it SHALL behave identically to `mode="prod"`
+- **AND** `build_config.server.dev` SHALL be `False`
 
 ### Requirement: create_asgi_app() shall remain synchronous; hash-mode pre-rendering shall be a separate step
 
@@ -119,9 +133,11 @@ Dependency resolution, lockfile handling, WASM/runtime asset management, and whe
 #### Scenario: Calling create_asgi_app() from run_server()
 - **WHEN** `run_server()` needs to create the ASGI app
 - **THEN** it SHALL call `create_asgi_app()` synchronously to obtain the ASGI app
+- **AND** the mode SHALL be `"dev"` if the `--dev` CLI flag is present, otherwise `"prod"`
 - **AND** for hash-mode, it SHALL call `asyncio.run(_pre_render_hash_mode_html(app))` after creation
 - **AND** the resolved ASGI app SHALL be passed to `uvicorn.run()` which expects a synchronous ASGI instance
 - **AND** `run_server()` SHALL remain a synchronous function
+- **AND** `build_config.server.dev` SHALL be read after `create_asgi_app()` returns to configure uvicorn file-watching reload
 
 #### Scenario: Hash-mode pre-rendering raises during component rendering
 - **WHEN** `_pre_render_hash_mode_html(app)` is called for a hash-mode app
