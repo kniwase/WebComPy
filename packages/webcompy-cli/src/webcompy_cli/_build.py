@@ -219,6 +219,10 @@ def resolve_build_artifacts(
 
     pyodide_package_names = wasm_package_names + cdn_pure_python_names
 
+    if cdn_temp_dir_obj is not None:
+        cdn_temp_dir_obj.__exit__(None, None, None)
+        cdn_temp_dir_obj = None
+
     return BuildArtifacts(
         app_version=app_version,
         wheel_filename=app_wheel_filename,

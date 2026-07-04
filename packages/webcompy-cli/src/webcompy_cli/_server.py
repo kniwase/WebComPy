@@ -55,8 +55,6 @@ def create_asgi_app(
     build_config.server.dev = mode == "dev"
     artifacts = resolve_build_artifacts(app, build_config, dev_mode=build_config.server.dev)
 
-    if artifacts.cdn_temp_dir_obj is not None:
-        artifacts.cdn_temp_dir_obj.__exit__(None, None, None)
     base_url = app.config.base_url
     base_url_stripper = partial(
         re_compile("^" + re_escape("/" + base_url.strip("/"))).sub,
