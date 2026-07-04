@@ -15,12 +15,13 @@ Three serving modes produce HTML through the same `create_asgi_app()` → `send_
 ## ADDED Requirements
 
 ### Requirement: generate_static_site() shall use ASGITransport to produce static HTML
-`generate_static_site()` SHALL create an ASGI app via `create_asgi_app(mode="prod")` and fetch each route using `httpx.AsyncClient(transport=ASGITransport(app=asgi_app))`. The response HTML for each route SHALL be written to the appropriate file in the dist directory. This ensures SSG output is identical to dev/prod server output.
+`generate_static_site()` SHALL call `create_asgi_app(mode="prod")` to obtain a `_ServingApp` wrapper and fetch each route using `httpx.AsyncClient(transport=ASGITransport(app=serving.asgi))`. For history-mode apps, `_preload()` SHALL be called on each page component BEFORE entering the `httpx.AsyncClient` context, as it is semantically independent of ASGITransport route fetching. The response HTML for each route SHALL be written to the appropriate file in the dist directory. This ensures SSG output is identical to dev/prod server output.
 
 #### Scenario: Generating a static site for a history-mode app
 - **WHEN** `generate_static_site(app)` is called for an app with `router_mode="history"` and multiple routes
-- **THEN** an ASGI app SHALL be created with `mode="prod"`
-- **AND** each route SHALL be fetched via `httpx.AsyncClient` with `ASGITransport`
+- **THEN** a `_ServingApp` wrapper SHALL be created via `create_asgi_app(mode="prod")`
+- **AND** `_preload()` SHALL be called on each page component before the httpx context
+- **AND** each route SHALL be fetched via `httpx.AsyncClient` with `ASGITransport(app=serving.asgi)`
 - **AND** the response HTML for each route SHALL be written to `dist/{path}/index.html`
 - **AND** a 404 page SHALL be generated for unmatched paths
 
@@ -118,24 +119,24 @@ Dependency resolution, lockfile handling, WASM/runtime asset management, and whe
 
 ### Requirement: create_asgi_app() shall remain synchronous; hash-mode pre-rendering shall be a separate step
 
-`create_asgi_app()` SHALL remain a synchronous function that returns an ASGI app. It SHALL NOT perform any async operations during construction. For hash-mode apps that need pre-rendered HTML cached at startup, a separate async function `_pre_render_hash_mode_html(app, html_generator)` SHALL be called after `create_asgi_app()` returns, producing the cached HTML that the hash-mode handler returns on every request. If `_pre_render_hash_mode_html()` raises an exception (e.g., due to a component rendering error during pre-rendering), the error SHALL propagate to the caller and the ASGI app SHALL NOT be started. This separation keeps `create_asgi_app()` usable with `uvicorn.run()` (which expects a synchronous app factory) and avoids unnecessary async complexity for the common history-mode case.
+`create_asgi_app()` SHALL remain a synchronous function that returns a `_ServingApp` wrapper. The wrapper provides `asgi` (the underlying `Starlette` ASGI instance), `html_generator`, and `hash_cache` as typed attributes. `create_asgi_app()` SHALL NOT perform any async operations during construction. For hash-mode apps that need pre-rendered HTML cached at startup, a separate async function `_pre_render_hash_mode_html(app, html_generator)` SHALL be called after `create_asgi_app()` returns, producing the cached HTML that the hash-mode handler returns on every request. If `_pre_render_hash_mode_html()` raises an exception (e.g., due to a component rendering error during pre-rendering), the error SHALL propagate to the caller and the ASGI app SHALL NOT be started. This separation keeps `create_asgi_app()` usable with `uvicorn.run()` (which expects a synchronous app factory) and avoids unnecessary async complexity for the common history-mode case.
 
 #### Scenario: Creating an ASGI app for a hash-mode app
 - **WHEN** `create_asgi_app()` is called for a hash-mode app
-- **THEN** it SHALL return a synchronous ASGI app with a handler that returns pre-cached HTML
+- **THEN** it SHALL return a `_ServingApp` wrapper whose `.asgi` contains a synchronous handler returning pre-cached HTML
 - **AND** `_pre_render_hash_mode_html(app)` SHALL be called afterward to generate and cache the HTML
 
 #### Scenario: Creating an ASGI app for a history-mode app
 - **WHEN** `create_asgi_app()` is called for a history-mode app
-- **THEN** it SHALL return a synchronous ASGI app
+- **THEN** it SHALL return a `_ServingApp` wrapper
 - **AND** no async pre-rendering SHALL be performed (each request renders dynamically)
 
 #### Scenario: Calling create_asgi_app() from run_server()
 - **WHEN** `run_server()` needs to create the ASGI app
-- **THEN** it SHALL call `create_asgi_app()` synchronously to obtain the ASGI app
+- **THEN** it SHALL call `create_asgi_app()` synchronously to obtain a `_ServingApp` wrapper
 - **AND** the mode SHALL be `"dev"` if the `--dev` CLI flag is present, otherwise `"prod"`
 - **AND** for hash-mode, it SHALL call `asyncio.run(_pre_render_hash_mode_html(app))` after creation
-- **AND** the resolved ASGI app SHALL be passed to `uvicorn.run()` which expects a synchronous ASGI instance
+- **AND** `serving.asgi` SHALL be passed to `uvicorn.run()` which expects a synchronous ASGI instance
 - **AND** `run_server()` SHALL remain a synchronous function
 - **AND** `build_config.server.dev` SHALL be read after `create_asgi_app()` returns to configure uvicorn file-watching reload
 

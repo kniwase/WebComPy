@@ -39,9 +39,21 @@ The `feat/async-rendering-pipeline` change makes `generate_html()` return `Await
 async def generate_static_site(app: WebComPyApp | None = None):
     # ... resolve build_config ...
     artifacts = resolve_build_artifacts(app, build_config, dist_dir=dist_dir)
-    asgi_app = create_asgi_app(app, build_config, mode="prod")
+
+    # _ServingApp wraps the Starlette ASGI app with typed metadata
+    serving = create_asgi_app(app, build_config, mode="prod")
+
+    base_url_path = app.config.base_url.strip("/")
+    url_prefix = f"/{base_url_path}" if base_url_path else ""
+
+    # _preload() is called before the ASGITransport context (no HTTP client needed)
+    if app.router_mode == "history" and app.routes:
+        for _, _, _, _, page in app.routes:
+            if hasattr(page, "_preload"):
+                page._preload()
+
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=asgi_app),
+        transport=httpx.ASGITransport(app=serving.asgi),
         base_url="http://test",
     ) as client:
         if app.router_mode == "history" and app.routes:
@@ -52,14 +64,14 @@ async def generate_static_site(app: WebComPyApp | None = None):
                     else {path}
                 )
                 for route_path in paths:
-                    response = await client.get(f"/{app.config.base_url.strip('/')}/{route_path}")
+                    response = await client.get(f"{url_prefix}/{route_path}")
                     html = response.text
                     # ... write html to dist_dir / route_path / index.html ...
             # 404 page
-            response = await client.get(f"/{app.config.base_url.strip('/')}/_webcompy_404")
+            response = await client.get(f"{url_prefix}/_webcompy_404")
             # ... write 404.html ...
         else:
-            response = await client.get(f"/{app.config.base_url.strip('/')}/")
+            response = await client.get(f"{url_prefix}/")
             # ... write index.html ...
 ```
 
@@ -179,7 +191,7 @@ def create_asgi_app(
     build_config: WebComPyBuildConfig,
     *,
     mode: Literal["prod", "dev"] = "prod",
-) -> ASGIApp:
+) -> _ServingApp:
 ```
 
 Behavior by mode:
@@ -191,7 +203,7 @@ Behavior by mode:
 
 The `build_config.server.dev` attribute is set by `create_asgi_app()` based on the mode. Callers do not set it independently — the mode is the single source of truth for dev/prod behavior. `uvicorn.run()` reads `build_config.server.dev` post-creation to decide whether to enable file-watching reload.
 
-**Rationale**: Previously the code had two overlapping control mechanisms — `build_config.server.dev` and a separate purpose-built mode — that could conflict. Unifying them under a single `mode` parameter eliminates ambiguity. The `"prod"` mode is the default because the common case is serving without hot reload. The `"dev"` mode is explicitly requested via the `--dev` CLI flag. SSG naturally uses `mode="prod"` since it does not need SSE or dev cache headers. The returned `ASGIApp` is a standard Starlette instance and can be passed to any ASGI server (uvicorn, gunicorn + uvicorn worker, hypercorn, etc.).
+**Rationale**: Previously the code had two overlapping control mechanisms — `build_config.server.dev` and a separate purpose-built mode — that could conflict. Unifying them under a single `mode` parameter eliminates ambiguity. The `"prod"` mode is the default because the common case is serving without hot reload. The `"dev"` mode is explicitly requested via the `--dev` CLI flag. SSG naturally uses `mode="prod"` since it does not need SSE or dev cache headers. The returned `_ServingApp` wrapper provides `asgi` (the `Starlette` instance), `html_generator`, and `hash_cache` as typed attributes. `serving.asgi` can be passed to any ASGI server (uvicorn, gunicorn + uvicorn worker, hypercorn, etc.).
 
 ### Decision 6: run_server() delegates mode selection to CLI
 
@@ -203,30 +215,40 @@ def run_server(app: WebComPyApp | None = None):
     _, args = get_params()
     # ... build_config resolution ...
     mode = "dev" if args.get("dev") else "prod"
-    asgi = create_asgi_app(app, build_config, mode=mode)
+    serving = create_asgi_app(app, build_config, mode=mode)
     # build_config.server.dev is now set by create_asgi_app()
-    uvicorn.run(asgi, host="0.0.0.0", port=port, reload=build_config.server.dev)
+    # access the underlying ASGI app via serving.asgi
+    uvicorn.run(serving.asgi, host="0.0.0.0", port=port, reload=build_config.server.dev)
 ```
 
 **Rationale**: Keeping mode selection in `run_server()` rather than in `create_asgi_app()` maintains the synchronous CLI entry point. `uvicorn.run()` is asynchronous internally but accepts a synchronous ASGI factory. `build_config.server.dev` is read after `create_asgi_app()` returns to configure uvicorn's file-watching reload.
 
 ### Decision 7: Hash mode SSR — async pre-render with caching, separate from create_asgi_app()
 
-**Chosen**: For hash mode apps (no history routing), `create_asgi_app()` remains synchronous and creates the ASGI app. A separate async function `_pre_render_hash_mode_html(app)` is called after `create_asgi_app()` returns. It enters the DI scope, sets the path to `/`, awaits `html_generator()`, and caches the result. The `send_html()` handler returns the cached HTML without awaiting on each request.
+**Chosen**: For hash mode apps (no history routing), `create_asgi_app()` remains synchronous and returns a `_ServingApp` wrapper. A separate async function `_pre_render_hash_mode_html(app, html_generator)` is called after `create_asgi_app()` returns. It enters the DI scope, creates a RenderContext at path `/`, awaits `html_generator()`, and caches the result. The `send_html()` handler returns the cached HTML without awaiting on each request.
 
 ```python
 # In _pre_render_hash_mode_html():
-with app.di_scope:
-    app.set_path("/")
-    cached_html = await html_generator()  # Pre-render once
+ctx = app.create_render_context("/")
+try:
+    html = await html_generator(ctx)
+    hash_cache.append(html)  # cached for subsequent requests
+finally:
+    ctx.dispose()
 
 def create_asgi_app(app, build_config, mode="prod"):  # synchronous
-    if app.router_mode == "hash":
-        html = None  # Will be set after async pre-render
-        async def send_html(_: Request):
-            return HTMLResponse(html)
+    # _hash_cache is a mutable list populated by _pre_render_hash_mode_html()
+    _hash_cache: list[str] = []
+    if app.router_mode == "history":
+        async def send_html(request): ...
+    else:
+        async def send_html(_):
+            if _hash_cache:
+                return HTMLResponse(_hash_cache[0])
+            # fallback: render on first request (theme fixed)
+            ...
     # ... rest ...
-    return Starlette(...)
+    return _ServingApp(asgi=Starlette(...), html_generator=..., hash_cache=_hash_cache)
 ```
 
 **Rationale**: `uvicorn.run()` expects a synchronous ASGI app factory. Making `create_asgi_app()` async forces all callers (`run_server()`, `generate_static_site()`) to use `asyncio.run()` or `await`, which is unnecessary complexity for the common history-mode case. Separating hash-mode pre-rendering into a standalone function keeps the ASGI app creation simple and synchronous.
