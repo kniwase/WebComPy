@@ -71,6 +71,6 @@ Dependency resolution, lockfile handling, WASM/runtime asset management, and whe
 - **WHEN** `_pre_render_hash_mode_html(app)` is called for a hash-mode app
 - **AND** a component raises during SSR (e.g., an async setup fails, or a blocked fetch triggers a 500)
 - **THEN** the error SHALL propagate to the caller
-- **AND** `run_server()` SHALL catch the exception and abort server startup
+- **AND** the error SHALL propagate to the caller and abort server startup
 - **AND** the ASGI app SHALL NOT be started
 - **AND** RenderContext SHALL be disposed via `finally` block before the exception propagates

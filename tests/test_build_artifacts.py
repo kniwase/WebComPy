@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from webcompy.app._app import WebComPyApp
 from webcompy.components._generator import define_component
 from webcompy_cli._build import BuildArtifacts
+from webcompy_cli._utils import generate_app_version
 from webcompy_cli.config._build_config import WebComPyBuildConfig
 from webcompy_cli.config._server_config import WebComPyServerConfig
 from webcompy_server import configure_server_context
@@ -178,3 +179,13 @@ class TestCreateAsgiAppMode:
 
         route_paths = [r.path for r in serving.asgi.routes]
         assert "/_webcompy_reload" not in route_paths, "default mode should exclude SSE (prod)"
+
+
+class TestGenerateAppVersion:
+    def test_returns_zero_version_when_none(self):
+        assert generate_app_version() == "0.0.0"
+        assert generate_app_version(None) == "0.0.0"
+
+    def test_returns_explicit_version(self):
+        assert generate_app_version("1.2.3") == "1.2.3"
+        assert generate_app_version("25.100.1") == "25.100.1"
