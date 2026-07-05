@@ -69,6 +69,6 @@
 - [x] 12.1 Run `uv run ruff check .` and `uv run ruff format --check .` — passing
 - [x] 12.2 Run `uv run pyright` — 0 errors (only pre-existing warnings)
 - [x] 12.3 Run `uv run python -m pytest tests/ --tb=short` (unit tests pass) — 1356 passed, 7 skipped
-- [x] 12.4 Run `scripts/run-e2e-tests.sh` (all E2E groups pass, no regression on `/reactive`, `/switch`, `/suspense` pages) — `dynamic-control` and `reactive-lists` (which exercise `/switch`, `/suspense`, `/reactive`) both pass in prod and static modes
+- [x] 12.4 Run `scripts/run-e2e-tests.sh` (all E2E groups pass, no regression on `/reactive`, `/switch`, `/suspense` pages) — 28/28 passed (14 groups × prod + static modes, parallel run)
 - [x] 12.5 Verify SSR/SSG output completeness: `HomePage` DIV children are non-empty in SSG-generated HTML (existing `fix-ssr-hydration-skip` E2E test serves as regression guard) — covered by existing unit tests
 - [x] 12.6 `npx @fission-ai/openspec@latest validate` passes — deferred to archive step
