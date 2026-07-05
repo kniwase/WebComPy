@@ -20,6 +20,7 @@ class TestFakeAsyncSchedulerPort:
         assert len(scheduler._coroutines) == 1
         await asyncio.sleep(0)
         assert executed == []
+        await scheduler.drain()
 
     @pytest.mark.asyncio
     async def test_drain_executes_collected_coroutines(self):

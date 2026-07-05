@@ -38,7 +38,7 @@ class WebComPyApp:
     ) -> None:
         self._config = config or WebComPyAppConfig()
         self._profile = self._config.profile
-        # Defense-in-depth: the AsyncSchedulerPort (see docs/changes/feat-async-scheduler-port/design.md)
+        # Defense-in-depth: the AsyncSchedulerPort (see openspec/changes/feat-async-scheduler-port/design.md)
         # provides the primary structural guarantee that scheduled tasks complete before the
         # render context is disposed (server implementation drains its registry via await_pending()).
         # This guard prevents hydration-related async scheduling from running on the server even
