@@ -205,7 +205,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md`, `suspense/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/elements/types/_suspense.py` | `suspense/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/elements/types/_dynamic.py` | `async-scheduler/spec.md` |
-| `webcompy/hydration/` | `hydration-data-transfer/spec.md` |
+| `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md` |
 | `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md` |
@@ -330,6 +330,7 @@ When specs are added, modified, or removed, update:
 | `server-fetch-asgi` | Self-site fetch via ASGI transport during SSR/SSG, page-route blocking |
 | `suspense` | Declarative async boundary showing fallback while children load, with SSR awaiting and hydration integration |
 | `hydration-data-transfer` | Server-to-browser data transfer for `AsyncResult` states and `FetchPort` response caches via payload injection |
+| `transfer-codec` | Layered serialization engine (encode/decode) preserving Python type fidelity across the hydration boundary via `__webcompy_`-tagged JSON |
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
 
 ## Language Rules

@@ -1,4 +1,12 @@
-## ADDED Requirements
+# Transfer Codec
+
+## Purpose
+
+The transfer codec is a layered serialization engine that extends JSON to preserve Python type information across the server-to-browser hydration boundary. Plain `json.dumps()` with a `default=str` fallback silently stringifies or drops non-JSON-native values (datetime, set, enum, dataclass, Decimal, bytes, tuple, Path, UUID), breaking hydration fidelity. The codec wraps such values in type-tagged dicts using a reserved `__webcompy_` key prefix, and reconstructs the original typed objects on the browser side.
+
+The codec is pure Python with no external dependencies, so it works in both CPython (server) and PyScript/Emscripten (browser). It is layered: Layer 0 is stdlib JSON passthrough, Layer 1 provides built-in encoders/decoders for common standard-library types, and Layer 2 exposes a plugin API (`register_type_handler`) for custom and third-party types.
+
+## Requirements
 
 ### Requirement: The codec shall provide encode and decode functions for hydration data
 
