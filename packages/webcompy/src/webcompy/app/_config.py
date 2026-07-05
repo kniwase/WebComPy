@@ -23,6 +23,7 @@ class WebComPyAppConfig:
     scripts: list[PluginScript] = field(default_factory=list)
     plugins: list[str] = field(default_factory=list)
     theme: dict | None = None
+    compression_threshold: int | None = 1024
 
     def __post_init__(self):
         stripped = self.base_url.strip("/")

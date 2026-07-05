@@ -5,7 +5,7 @@ import html as html_module
 import inspect
 import json
 import zlib
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from webcompy.aio._async_result import AsyncResult, AsyncState
 from webcompy.components._component import Component
@@ -24,6 +24,8 @@ from webcompy.hydration._payload import (
     serialize_payload,
 )
 from webcompy.ports._keys import FETCH_PORT_KEY
+
+_NO_APP = object()
 
 
 class TestTransferPayload:
@@ -245,6 +247,28 @@ class TestPayloadCompression:
         parsed = json.loads(unescaped)
         assert parsed["__webcompy_compressed__"] is True
 
+    def test_inner_version_authoritative_on_mismatch(self):
+        payload = self._large_payload()
+        original_json = json.dumps(
+            {
+                "__webcompy_transfer_version__": payload.__webcompy_transfer_version__,
+                "fetches": {},
+                "async_results": {},
+                "signals": {},
+            },
+            ensure_ascii=False,
+        )
+        compressed = zlib.compress(original_json.encode("utf-8"))
+        envelope = {
+            "__webcompy_compressed__": True,
+            "__webcompy_transfer_version__": 999,
+            "data": base64.b64encode(compressed).decode("ascii"),
+        }
+        text = html_module.escape(json.dumps(envelope, ensure_ascii=False), quote=True)
+        result = deserialize_payload(text)
+        assert result is not None
+        assert result.__webcompy_transfer_version__ == payload.__webcompy_transfer_version__
+
 
 class TestCollectTransferData:
     def _make_component(self, async_results, component_id="test-cmp"):
@@ -364,3 +388,47 @@ class TestCollectTransferData:
         finally:
             _active_di_scope.reset(token)
             scope.dispose()
+
+
+class TestCollectTransferDataCompressionThreshold:
+    def _make_root(self, compression_threshold):
+        from webcompy.app._root_component import AppDocumentRoot
+
+        root = AppDocumentRoot.__new__(AppDocumentRoot)
+        root._async_results = []
+        root._children = []
+        root._property = {"component_id": ""}
+        if compression_threshold is _NO_APP:
+            root._app = None
+        else:
+            root._app = MagicMock()
+            root._app.config.compression_threshold = compression_threshold
+        return root
+
+    def test_collect_transfer_data_reads_none_threshold_from_app_config(self):
+        root = self._make_root(None)
+        with patch("webcompy.app._root_component.serialize_payload") as serialize_mock:
+            root._collect_transfer_data()
+            serialize_mock.assert_called_once()
+            assert serialize_mock.call_args.kwargs["compression_threshold"] is None
+
+    def test_collect_transfer_data_reads_zero_threshold_from_app_config(self):
+        root = self._make_root(0)
+        with patch("webcompy.app._root_component.serialize_payload") as serialize_mock:
+            root._collect_transfer_data()
+            serialize_mock.assert_called_once()
+            assert serialize_mock.call_args.kwargs["compression_threshold"] == 0
+
+    def test_collect_transfer_data_reads_custom_threshold_from_app_config(self):
+        root = self._make_root(4096)
+        with patch("webcompy.app._root_component.serialize_payload") as serialize_mock:
+            root._collect_transfer_data()
+            serialize_mock.assert_called_once()
+            assert serialize_mock.call_args.kwargs["compression_threshold"] == 4096
+
+    def test_collect_transfer_data_uses_default_when_no_app(self):
+        root = self._make_root(_NO_APP)
+        with patch("webcompy.app._root_component.serialize_payload") as serialize_mock:
+            root._collect_transfer_data()
+            serialize_mock.assert_called_once()
+            assert serialize_mock.call_args.kwargs["compression_threshold"] == 1024

@@ -14,6 +14,7 @@ class TestWebComPyAppConfig:
         assert config.hydrate is True
         assert config.scripts == []
         assert config.plugins == []
+        assert config.compression_threshold == 1024
 
     def test_base_url_normalization_trailing_slash(self):
         config = WebComPyAppConfig(base_url="app")
@@ -62,6 +63,22 @@ class TestWebComPyAppConfig:
     def test_theme_default_is_none(self):
         config = WebComPyAppConfig()
         assert config.theme is None
+
+    def test_compression_threshold_default(self):
+        config = WebComPyAppConfig()
+        assert config.compression_threshold == 1024
+
+    def test_compression_threshold_none(self):
+        config = WebComPyAppConfig(compression_threshold=None)
+        assert config.compression_threshold is None
+
+    def test_compression_threshold_zero(self):
+        config = WebComPyAppConfig(compression_threshold=0)
+        assert config.compression_threshold == 0
+
+    def test_compression_threshold_custom(self):
+        config = WebComPyAppConfig(compression_threshold=4096)
+        assert config.compression_threshold == 4096
 
     def test_theme_default_only_uses_system(self):
         config = WebComPyAppConfig(theme={"default": "dark"})
