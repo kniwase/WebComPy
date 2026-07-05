@@ -88,6 +88,76 @@ class TestSignalReceivableKeying:
         assert "name" not in s.__signal_members__
         assert "count" in s.__signal_members__
 
+    def test_reassigning_signal_to_non_signal_removes_registry_entry(self):
+        component = Receiver()
+        original = component.count
+        component.count = "not a signal"
+        assert "count" not in component.__signal_members__
+        assert component.count == "not a signal"
+        assert original._value == 0
+
+
+class TestRestoreSignalValues:
+    def test_restores_value_directly(self):
+        component = Receiver()
+        restore_signal_values(component, {"count": 42})
+        assert component.count._value == 42
+
+    def test_restores_without_triggering_callbacks(self):
+        component = Receiver()
+        callbacks = []
+        component.count.on_after_updating(lambda v: callbacks.append(v))
+        restore_signal_values(component, {"count": 99})
+        assert callbacks == []
+        assert component.count._value == 99
+
+    def test_restores_computed_cached_value_without_recompute(self, monkeypatch):
+        component = Receiver()
+        _ = component.doubled
+        recomputed = []
+        monkeypatch.setattr(
+            component.doubled,
+            "producer_recompute_value",
+            lambda: recomputed.append(True),
+        )
+        restore_signal_values(component, {"doubled": 50})
+        assert component.doubled._value == 50
+        assert recomputed == []
+
+    def test_restores_already_decoded_values_without_redecode(self):
+        from datetime import datetime
+
+        dt = datetime(2025, 1, 1)
+        component = self._make_browser_for_typed(last_seen=None)
+        restore_signal_values(component, {"last_seen": dt})
+        assert component.last_seen._value is dt
+
+    def _make_browser_for_typed(self, **signals):
+        class _Browser(SignalReceivable):
+            pass
+
+        browser = _Browser()
+        for name, value in signals.items():
+            setattr(browser, name, Signal(value))
+        return browser
+
+    def test_missing_attr_name_is_handled_gracefully(self, caplog):
+        component = Receiver()
+        original_count = component.count._value
+        with caplog.at_level("DEBUG", logger="webcompy.hydration._restore"):
+            restore_signal_values(component, {"missing_attr": 1})
+        assert component.count._value == original_count
+
+    def test_empty_signals_data_is_noop(self):
+        component = Receiver()
+        restore_signal_values(component, {})
+        assert component.count._value == 0
+
+    def test_none_signals_data_is_noop(self):
+        component = Receiver()
+        restore_signal_values(component, None)
+        assert component.count._value == 0
+
 
 class TestCollectComponentSignals:
     def test_collects_signal_value(self):
@@ -216,51 +286,6 @@ class TestCollectTransferDataSignals:
         payload = collect_transfer_data(parent)
         assert payload.__webcompy_transfer_version__ == CURRENT_TRANSFER_VERSION
         assert payload.__webcompy_transfer_version__ == 2
-
-
-class TestRestoreSignalValues:
-    def test_restores_value_directly(self):
-        component = Receiver()
-        restore_signal_values(component, {"count": 42})
-        assert component.count._value == 42
-
-    def test_restores_without_triggering_callbacks(self):
-        component = Receiver()
-        callbacks = []
-        component.count.on_after_updating(lambda v: callbacks.append(v))
-        restore_signal_values(component, {"count": 99})
-        assert callbacks == []
-        assert component.count._value == 99
-
-    def test_restores_computed_cached_value_without_recompute(self, monkeypatch):
-        component = Receiver()
-        _ = component.doubled
-        recomputed = []
-        monkeypatch.setattr(
-            component.doubled,
-            "producer_recompute_value",
-            lambda: recomputed.append(True),
-        )
-        restore_signal_values(component, {"doubled": 50})
-        assert component.doubled._value == 50
-        assert recomputed == []
-
-    def test_missing_attr_name_is_handled_gracefully(self, caplog):
-        component = Receiver()
-        original_count = component.count._value
-        with caplog.at_level("DEBUG", logger="webcompy.hydration._restore"):
-            restore_signal_values(component, {"missing_attr": 1})
-        assert component.count._value == original_count
-
-    def test_empty_signals_data_is_noop(self):
-        component = Receiver()
-        restore_signal_values(component, {})
-        assert component.count._value == 0
-
-    def test_none_signals_data_is_noop(self):
-        component = Receiver()
-        restore_signal_values(component, None)
-        assert component.count._value == 0
 
 
 class TestPayloadVersioning:
