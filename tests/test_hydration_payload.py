@@ -42,7 +42,7 @@ class TestTransferPayload:
         assert isinstance(serialized, str)
         result = deserialize_payload(serialized)
         assert result is not None
-        assert result.__webcompy_transfer_version__ == 1
+        assert result.__webcompy_transfer_version__ == 2
         assert "/api/data" in result.fetches
         assert result.fetches["/api/data"].status_code == 200
         assert result.fetches["/api/data"].body == '{"key": "value"}'
@@ -57,7 +57,7 @@ class TestTransferPayload:
         assert result is not None
         assert result.fetches == {}
         assert result.async_results == {}
-        assert result.__webcompy_transfer_version__ == 1
+        assert result.__webcompy_transfer_version__ == 2
 
     def test_html_escaping_of_special_characters(self):
         payload = TransferPayload(
@@ -120,7 +120,7 @@ class TestTransferPayload:
 
         unescaped = html_module.unescape(serialized)
         parsed = json.loads(unescaped)
-        assert parsed["__webcompy_transfer_version__"] == 1
+        assert parsed["__webcompy_transfer_version__"] == 2
         assert "/test" in parsed["fetches"]
 
 

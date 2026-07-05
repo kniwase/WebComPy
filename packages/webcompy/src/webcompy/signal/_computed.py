@@ -76,7 +76,7 @@ def computed_property(method: Callable[[Any], V]) -> Computed[V]:
         if name not in instance.__dict__:
             _computed = Computed(lambda: method(instance))
             if isinstance(instance, SignalReceivable):
-                instance.__set_signal_member__(_computed)
+                instance.__set_signal_member__(name, _computed)
             instance.__dict__[name] = _computed
         return instance.__dict__[name]
 

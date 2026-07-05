@@ -452,7 +452,7 @@ class TestPayloadIntegration:
         assert data.name == "Alice"
         assert data.age == 30
 
-    def test_payload_version_remains_one(self):
+    def test_payload_version_is_current(self):
         payload = TransferPayload(
             async_results={
                 "cmp-1": TransferAsyncResultEntry(state="success", data={"x": 1}),
@@ -461,7 +461,7 @@ class TestPayloadIntegration:
         serialized = serialize_payload(payload)
         result = deserialize_payload(serialized)
         assert result is not None
-        assert result.__webcompy_transfer_version__ == 1
+        assert result.__webcompy_transfer_version__ == 2
 
     def test_non_serializable_value_dropped_with_warning(self, caplog):
         class NonSerializable:
@@ -505,7 +505,7 @@ class TestPayloadIntegration:
         )
         serialized = serialize_payload(payload)
         parsed = json.loads(html.unescape(serialized))
-        assert parsed["__webcompy_transfer_version__"] == 1
+        assert parsed["__webcompy_transfer_version__"] == 2
 
 
 class TestPublicApiExports:

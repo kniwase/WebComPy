@@ -41,9 +41,10 @@ class TestHydrationDataTransfer:
 
         decoded = html_module.unescape(match.group(1))
         payload = json.loads(decoded)
-        assert payload["__webcompy_transfer_version__"] == 1
+        assert payload["__webcompy_transfer_version__"] == 2
         assert "fetches" in payload
         assert "async_results" in payload
+        assert "signals" in payload
 
     def test_payload_removed_after_hydration(self, page_on):
         page = page_on("/")
