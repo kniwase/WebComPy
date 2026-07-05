@@ -1,7 +1,7 @@
 import pytest
 from playwright.sync_api import expect
 
-from tests.e2e_docs.conftest import _wait_for_demo_iframe, _wait_for_pyscript_init
+from e2e.docs.conftest import _wait_for_demo_iframe, _wait_for_pyscript_init
 
 
 @pytest.mark.e2e

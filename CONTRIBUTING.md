@@ -55,8 +55,8 @@ uv run python -m webcompy generate --app docs_app.bootstrap:app         # Static
 uv run ruff check .                                                   # Lint
 uv run ruff format .                                                   # Format
 uv run pyright                                                         # Type check
-uv run python -m pytest tests/ --tb=short                             # Unit tests
-scripts/run-e2e-tests.sh                                               # E2E tests
+uv run python -m pytest tests/ --tb=short                             # Unit tests only
+scripts/run-e2e-tests.sh                                               # E2E tests (core + docs, prod + static)
 ```
 
 See [AGENTS.md](AGENTS.md#commands-reference) for the full command reference.
@@ -225,9 +225,14 @@ See [AGENTS.md](AGENTS.md#framework-invariants) for critical invariants
 
 ### Testing
 
-- Unit tests: `uv run python -m pytest tests/ --tb=short`
-- E2E tests: `scripts/run-e2e-tests.sh`
+Unit tests and E2E tests live in physically separate directories and use distinct
+invocation paths:
+
+- Unit tests: `uv run python -m pytest tests/ --tb=short` (runs only tests under `tests/`)
+- E2E tests: `scripts/run-e2e-tests.sh` (canonical entry point; auto-sets `WEBCOMPY_RUN_E2E=1`)
 - E2E for a single group: `scripts/run-e2e-tests.sh <group-name>`
+- Direct invocation of E2E tests (`uv run pytest e2e/`) fails with `pytest.UsageError`
+  unless the `WEBCOMPY_RUN_E2E=1` environment variable is set.
 - When adding E2E test files, update both `scripts/run-e2e-tests.sh` groups
   and `.github/workflows/ci.yml`
 

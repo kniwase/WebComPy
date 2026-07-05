@@ -38,8 +38,9 @@ Execute these commands in order. Stop on the first failure unless instructed oth
 
 4. **Unit Tests (pytest)**
    ```bash
-   uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs
+   uv run python -m pytest tests/ --tb=short
    ```
+   - E2E tests (`e2e/`) are excluded by default (`testpaths = ["tests"]`); to run them locally use `scripts/run-e2e-tests.sh`
    - Note: E2E tests are skipped locally due to Playwright dependency and time cost
 
 5. **Static Site Generation (optional)**

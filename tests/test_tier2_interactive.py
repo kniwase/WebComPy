@@ -5,7 +5,7 @@ import pytest
 from webcompy_server.ports import VirtualDOMEvent
 from webcompy_testing import TestRenderer
 
-E2E_DIR = __import__("pathlib").Path(__file__).parent.parent / "tests" / "e2e"
+E2E_DIR = __import__("pathlib").Path(__file__).parent.parent.parent / "e2e" / "core"
 
 
 @pytest.fixture(autouse=True)

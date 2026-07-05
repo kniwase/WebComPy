@@ -35,24 +35,24 @@ NC='\033[0m'
 
 # Group definitions — must match .github/workflows/ci.yml e2e-matrix
 declare -A E2E_GROUPS=(
-  ["bootstrap-static"]="tests/e2e/test_bootstrap.py tests/e2e/test_static_site.py"
-  ["components"]="tests/e2e/test_client_only.py tests/e2e/test_component.py tests/e2e/test_lifecycle.py tests/e2e/test_scoped_style.py"
-  ["reactive-lists"]="tests/e2e/test_reactive.py tests/e2e/test_repeat.py tests/e2e/test_keyed_repeat.py tests/e2e/test_dict_repeat.py"
-  ["dynamic-control"]="tests/e2e/test_nested_dynamic.py tests/e2e/test_switch.py tests/e2e/test_suspense.py"
-  ["router"]="tests/e2e/test_router.py tests/e2e/test_async_nav.py"
-  ["interaction"]="tests/e2e/test_event.py tests/e2e/test_di.py"
-  ["bundled-deps"]="tests/e2e/test_bundled_deps.py tests/e2e/test_bundled_deps_browser.py"
-  ["runtime-local"]="tests/e2e/test_runtime_local.py"
-  ["standalone"]="tests/e2e/test_standalone.py"
-  ["plugin-script"]="tests/e2e/test_eruda.py"
+  ["bootstrap-static"]="e2e/core/test_bootstrap.py e2e/core/test_static_site.py"
+  ["components"]="e2e/core/test_client_only.py e2e/core/test_component.py e2e/core/test_lifecycle.py e2e/core/test_scoped_style.py"
+  ["reactive-lists"]="e2e/core/test_reactive.py e2e/core/test_repeat.py e2e/core/test_keyed_repeat.py e2e/core/test_dict_repeat.py"
+  ["dynamic-control"]="e2e/core/test_nested_dynamic.py e2e/core/test_switch.py e2e/core/test_suspense.py"
+  ["router"]="e2e/core/test_router.py e2e/core/test_async_nav.py"
+  ["interaction"]="e2e/core/test_event.py e2e/core/test_di.py"
+  ["bundled-deps"]="e2e/core/test_bundled_deps.py e2e/core/test_bundled_deps_browser.py"
+  ["runtime-local"]="e2e/core/test_runtime_local.py"
+  ["standalone"]="e2e/core/test_standalone.py"
+  ["plugin-script"]="e2e/core/test_eruda.py"
 )
 
 # Docs groups are static-only in CI
 declare -A DOCS_GROUPS=(
-  ["docs-home"]="tests/e2e_docs/test_home.py tests/e2e_docs/test_documents.py tests/e2e_docs/test_helloworld.py"
-  ["docs-demos"]="tests/e2e_docs/test_fizzbuzz.py tests/e2e_docs/test_todo.py"
-  ["docs-matplotlib"]="tests/e2e_docs/test_matplotlib.py"
-  ["docs-fetch"]="tests/e2e_docs/test_fetch.py"
+  ["docs-home"]="e2e/docs/test_home.py e2e/docs/test_documents.py e2e/docs/test_helloworld.py"
+  ["docs-demos"]="e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py"
+  ["docs-matplotlib"]="e2e/docs/test_matplotlib.py"
+  ["docs-fetch"]="e2e/docs/test_fetch.py"
 )
 
 SERVING_MODES=("prod" "static")
@@ -239,6 +239,7 @@ _run_single() {
   local start_time=$(date +%s)
 
   local env_cmd=(env)
+  env_cmd+=("WEBCOMPY_RUN_E2E=1")
   for e in "${env_extra[@]}"; do
     env_cmd+=("$e")
   done
@@ -307,6 +308,7 @@ _run_single_bg() {
   local env_console_stdout_level="${CONSOLE_LEVEL:-warning}"
 
   local env_cmd=(env)
+  env_cmd+=("WEBCOMPY_RUN_E2E=1")
   for e in "${env_args[@]}"; do
     env_cmd+=("$e")
   done
@@ -414,6 +416,7 @@ else
     fi
 
     env_cmd=(env)
+    env_cmd+=("WEBCOMPY_RUN_E2E=1")
     for e in "${env_args[@]}"; do
       env_cmd+=("$e")
     done

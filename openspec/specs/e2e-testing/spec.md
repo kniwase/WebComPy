@@ -25,7 +25,7 @@ E2E browser tests SHALL run the same assertions against both the production serv
 - **AND** each job SHALL run only the tests for the specified mode
 
 #### Scenario: Local run with default behavior
-- **WHEN** a developer runs `pytest tests/e2e/` without `--serving-mode`
+- **WHEN** a developer runs `scripts/run-e2e-tests.sh` without `--serving-mode` (or `WEBCOMPY_RUN_E2E=1 pytest e2e/core/`)
 - **THEN** pytest SHALL run each test twice: once for `prod` and once for `static`
 - **AND** both runs SHALL appear in the pytest output with mode identifiers
 
@@ -66,13 +66,13 @@ The E2E test configuration SHALL accept a `--serving-mode` pytest CLI option wit
 - **AND** the test output SHALL show `test_app_loads` (not `[static]` suffix) because parametrize is disabled
 
 ### Requirement: Docs_app E2E tests shall support the same serving mode configuration as the framework E2E tests
-The `tests/e2e_docs/` test suite SHALL support the same `--serving-mode` CLI option and parametrize pattern as the `tests/e2e/` suite (as defined in the existing `e2e-testing` spec Requirement "E2E tests shall run against both serving modes"), allowing developers to run tests against the production server, the static site, or both. When no mode is specified, tests SHALL run against both modes. When `--serving-mode=prod` or `--serving-mode=static` is provided, tests SHALL run only against the specified mode.
+The `e2e/docs/` test suite SHALL support the same `--serving-mode` CLI option and parametrize pattern as the `e2e/core/` suite (as defined in the existing `e2e-testing` spec Requirement "E2E tests shall run against both serving modes"), allowing developers to run tests against the production server, the static site, or both. When no mode is specified, tests SHALL run against both modes. When `--serving-mode=prod` or `--serving-mode=static` is provided, tests SHALL run only against the specified mode.
 
 #### Scenario: Running docs_app E2E tests with both modes
-- **WHEN** a developer runs `pytest tests/e2e_docs/` without `--serving-mode`
+- **WHEN** a developer runs `scripts/run-e2e-tests.sh docs-home` without `--serving-mode` (or `WEBCOMPY_RUN_E2E=1 pytest e2e/docs/`)
 - **THEN** each test SHALL run twice: once against the docs_app production server and once against the static site
 - **AND** both runs SHALL appear in the pytest output with mode identifiers
 
 #### Scenario: Running docs_app E2E tests in CI with a single mode
-- **WHEN** the CI workflow runs `pytest tests/e2e_docs/ --serving-mode=prod`
+- **WHEN** the CI workflow runs `scripts/run-e2e-tests.sh docs-home --serving-mode=prod`
 - **THEN** each test SHALL execute exactly once against the production server

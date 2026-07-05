@@ -25,7 +25,7 @@ jobs:
           echo "has-code-changes=$([ -n "$CODE" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           GENERATE=$(echo "$CHANGED" | grep -E '^(packages/|docs_app/|pyproject\.toml)' || true)
           echo "has-generate-changes=$([ -n "$GENERATE" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          E2E=$(echo "$CHANGED" | grep -E '^(tests/|scripts/run-e2e-tests\.sh)' || true)
+          E2E=$(echo "$CHANGED" | grep -E '^(e2e/|scripts/run-e2e-tests\.sh)' || true)
           echo "has-e2e-changes=$([ -n "$E2E" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           WORKFLOW=$(echo "$CHANGED" | grep -E '^\.github/workflows/' || true)
           echo "has-workflow-changes=$([ -n "$WORKFLOW" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
@@ -155,7 +155,7 @@ jobs:
           uv-sync-args: --all-groups
       - name: Run unit tests
         run: |
-          uv run python -m pytest tests/ --tb=short --ignore=tests/e2e --ignore=tests/e2e_docs --cov=webcompy --cov=webcompy_server --cov=webcompy_cli --cov=webcompy_testing --cov-report=xml --cov-report=term-missing 2>&1 | tee ci-test-results.log
+          uv run python -m pytest tests/ --tb=short --cov=webcompy --cov=webcompy_server --cov=webcompy_cli --cov=webcompy_testing --cov-report=xml --cov-report=term-missing 2>&1 | tee ci-test-results.log
           exit "${PIPESTATUS[0]}"
       - uses: actions/upload-artifact@v4
         if: always()
@@ -180,42 +180,42 @@ jobs:
       matrix:
         group:
           - name: bootstrap-static
-            files: tests/e2e/test_bootstrap.py tests/e2e/test_static_site.py
+            files: e2e/core/test_bootstrap.py e2e/core/test_static_site.py
           - name: components
-            files: tests/e2e/test_component.py tests/e2e/test_lifecycle.py tests/e2e/test_scoped_style.py
+            files: e2e/core/test_component.py e2e/core/test_lifecycle.py e2e/core/test_scoped_style.py
           - name: reactive-lists
-            files: tests/e2e/test_reactive.py tests/e2e/test_repeat.py tests/e2e/test_keyed_repeat.py tests/e2e/test_dict_repeat.py
+            files: e2e/core/test_reactive.py e2e/core/test_repeat.py e2e/core/test_keyed_repeat.py e2e/core/test_dict_repeat.py
           - name: dynamic-control
-            files: tests/e2e/test_nested_dynamic.py tests/e2e/test_switch.py
+            files: e2e/core/test_nested_dynamic.py e2e/core/test_switch.py
           - name: router
-            files: tests/e2e/test_router.py tests/e2e/test_async_nav.py
+            files: e2e/core/test_router.py e2e/core/test_async_nav.py
           - name: interaction
-            files: tests/e2e/test_event.py tests/e2e/test_di.py
+            files: e2e/core/test_event.py e2e/core/test_di.py
           - name: bundled-deps
-            files: tests/e2e/test_bundled_deps.py tests/e2e/test_bundled_deps_browser.py
+            files: e2e/core/test_bundled_deps.py e2e/core/test_bundled_deps_browser.py
           - name: runtime-local
-            files: tests/e2e/test_runtime_local.py
+            files: e2e/core/test_runtime_local.py
           - name: standalone
-            files: tests/e2e/test_standalone.py
+            files: e2e/core/test_standalone.py
           - name: plugin-script
-            files: tests/e2e/test_eruda.py
+            files: e2e/core/test_eruda.py
         serving_mode: [prod, static]
         include:
           - group:
               name: docs-home
-              files: tests/e2e_docs/test_home.py tests/e2e_docs/test_documents.py tests/e2e_docs/test_helloworld.py
+              files: e2e/docs/test_home.py e2e/docs/test_documents.py e2e/docs/test_helloworld.py
             serving_mode: static
           - group:
               name: docs-demos
-              files: tests/e2e_docs/test_fizzbuzz.py tests/e2e_docs/test_todo.py
+              files: e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py
             serving_mode: static
           - group:
               name: docs-matplotlib
-              files: tests/e2e_docs/test_matplotlib.py
+              files: e2e/docs/test_matplotlib.py
             serving_mode: static
           - group:
               name: docs-fetch
-              files: tests/e2e_docs/test_fetch.py
+              files: e2e/docs/test_fetch.py
             serving_mode: static
     steps:
       - uses: actions/checkout@v4
@@ -247,8 +247,8 @@ jobs:
         with:
           name: e2e-server-log-${{ matrix.group.name }}-${{ matrix.serving_mode }}
           path: |
-            tests/e2e/.e2e-server.log
-            tests/e2e_docs/.e2e-docs-server.log
+            e2e/core/.e2e-server.log
+            e2e/docs/.e2e-docs-server.log
             .tmp/e2e-test-corpus/
       - uses: actions/upload-artifact@v4
         if: always()
@@ -560,7 +560,7 @@ jobs:
               echo "Changed scopes:"
               if [ "${{ needs.detect-scope.outputs.has-code-changes }}" = "true" ]; then echo "- Code (packages/ + deps)"; fi
               if [ "${{ needs.detect-scope.outputs.has-generate-changes }}" = "true" ]; then echo "- Generate (docs_app/)"; fi
-              if [ "${{ needs.detect-scope.outputs.has-e2e-changes }}" = "true" ]; then echo "- E2E (tests/ + scripts)"; fi
+              if [ "${{ needs.detect-scope.outputs.has-e2e-changes }}" = "true" ]; then echo "- E2E (e2e/ + scripts)"; fi
               if [ "${{ needs.detect-scope.outputs.has-workflow-changes }}" = "true" ]; then echo "- Workflow (.github/workflows/)"; fi
             } > .tmp/scope-context.txt
           fi

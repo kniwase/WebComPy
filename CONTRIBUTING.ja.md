@@ -54,8 +54,8 @@ uv run python -m webcompy generate --app docs_app.bootstrap:app         # 静的
 uv run ruff check .                                                   # リンター
 uv run ruff format .                                                   # フォーマッター
 uv run pyright                                                         # 型チェック
-uv run python -m pytest tests/ --tb=short                             # ユニットテスト
-scripts/run-e2e-tests.sh                                               # E2Eテスト
+uv run python -m pytest tests/ --tb=short                             # ユニットテストのみ
+scripts/run-e2e-tests.sh                                               # E2Eテスト (core + docs, prod + static)
 ```
 
 コマンドの詳細は [AGENTS.md](AGENTS.md#commands-reference)（英語）を参照してください。
@@ -228,9 +228,14 @@ Co-Authored-By: opencode <noreply@opencode.ai>
 
 ### テスト
 
-- ユニットテスト: `uv run python -m pytest tests/ --tb=short`
-- E2E テスト: `scripts/run-e2e-tests.sh`
+ユニットテストと E2E テストは物理的に別のディレクトリに配置され、異なる
+コマンドで実行します:
+
+- ユニットテスト: `uv run python -m pytest tests/ --tb=short`（`tests/` 配下のみ実行）
+- E2E テスト: `scripts/run-e2e-tests.sh`（正規のエントリポイント。`WEBCOMPY_RUN_E2E=1` を自動設定）
 - 単一グループの E2E: `scripts/run-e2e-tests.sh <group-name>`
+- E2E テストを直接実行（`uv run pytest e2e/` など）すると、環境変数
+  `WEBCOMPY_RUN_E2E=1` 未設定時は `pytest.UsageError` で失敗します。
 - E2E テストファイルを追加したら `scripts/run-e2e-tests.sh` のグループ定義と
   `.github/workflows/ci.yml` の両方を更新してください。
 
