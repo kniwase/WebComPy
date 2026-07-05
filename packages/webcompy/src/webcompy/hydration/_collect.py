@@ -100,7 +100,7 @@ def _collect_component_signals(component: Component) -> dict[str, Any]:
             continue
         flag = _FailureFlag()
         try:
-            encoded = encode(signal._value, _flag=flag)
+            encode(signal._value, _flag=flag)
         except Exception:
             _logger.exception(
                 "Failed to encode signal value for %s.%s",
@@ -108,12 +108,12 @@ def _collect_component_signals(component: Component) -> dict[str, Any]:
                 attr_name,
             )
             continue
-        if flag.failed or encoded is None:
+        if flag.failed:
             _logger.warning(
                 "Excluding signal %s.%s: value is not encodable",
                 component._property.get("component_id", ""),
                 attr_name,
             )
             continue
-        collected[attr_name] = encoded
+        collected[attr_name] = signal._value
     return collected
