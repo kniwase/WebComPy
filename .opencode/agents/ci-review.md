@@ -86,6 +86,8 @@ Watch for these WebComPy-specific issues that generic reviewers miss:
 
 **Hydration**: `_hydrate_node()` adopts existing prerendered nodes, never creates new ones. Attributes only written if different from prerendered values.
 
+**Transfer Codec**: Hydration data is encoded exactly once — `serialize_payload()` (via `_try_serialize_value()` → `encode()`) is the single encoding point. `_collect.py` stores RAW `AsyncResult` data (`data=ar._data.value`); it MUST NOT pre-`encode()`, or type-tagged sub-values trigger spurious "Reserved key" warnings. Dataclass encoding MUST use `dataclasses.fields()` + per-field recursive `encode()` — NEVER `dataclasses.asdict()` (which strips nested type tags). The scalar passthrough in `encode()` (`isinstance(value, (bool, int, float, str))`) MUST exclude `Enum` subclasses (`and not isinstance(value, Enum)`) so `IntEnum`/`StrEnum` preserve their enum tag instead of collapsing to a bare scalar. Layer 2 custom encoder calls are wrapped in `try/except` (mirroring the decoder side) and set `_flag.failed` to preserve best-effort transfer when a plugin raises. Type tags use the reserved `__webcompy_type__`/`__webcompy_value__` keys; `__webcompy_transfer_version__` stays `1` (the codec is version-agnostic; the v2 bump is deferred to signal-value-transfer).
+
 **RouterView**: Extends `DynamicElement` — must NOT produce a wrapper `<div>` in the DOM.
 
 **Scoped CSS**: At-rules (`@media`, `@supports`) must NOT receive the `[webcompy-cid-{id}]` attribute selector.

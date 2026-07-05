@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from webcompy.di import inject
 from webcompy.di._keys import HYDRATION_DATA_KEY
+from webcompy.hydration._codec import decode, encode, register_type_handler
 
 
 def has_resolved_data(component_id: str) -> bool:
@@ -12,5 +13,8 @@ def has_resolved_data(component_id: str) -> bool:
 
 
 __all__ = [
+    "decode",
+    "encode",
     "has_resolved_data",
+    "register_type_handler",
 ]
