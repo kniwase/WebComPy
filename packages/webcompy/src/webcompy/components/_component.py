@@ -197,6 +197,22 @@ class Component(ElementBase):
         self._callback_nodes.clear()
         self.__purge_signal_members__()
 
+    def _restore_signals(self) -> None:
+        from webcompy.di import inject
+        from webcompy.di._keys import HYDRATION_SIGNAL_DATA_KEY
+        from webcompy.hydration import restore_signal_values
+
+        payload = inject(HYDRATION_SIGNAL_DATA_KEY, default=None)
+        if not payload:
+            return
+        component_id = self._property.get("component_id")
+        if not component_id:
+            return
+        signals_data = payload.get(component_id)
+        if not signals_data:
+            return
+        restore_signal_values(self, signals_data)
+
     async def _render(self):
         if self._pending_async_template is not None:
             from webcompy.di import inject
@@ -218,6 +234,7 @@ class Component(ElementBase):
                 property = self._property
                 property["template"] = template
                 self.__init_component(property)
+        self._restore_signals()
         on_before = self._property["on_before_rendering"]
         if iscoroutinefunction(on_before):
             await on_before()

@@ -8,7 +8,7 @@ from webcompy.aio import resolve_async
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.components import ComponentGenerator
 from webcompy.di import inject
-from webcompy.di._keys import HYDRATION_DATA_KEY
+from webcompy.di._keys import HYDRATION_DATA_KEY, HYDRATION_SIGNAL_DATA_KEY
 from webcompy.exception import WebComPyException
 from webcompy.hydration._payload import deserialize_payload
 from webcompy.plugin._manager import PluginManager
@@ -283,6 +283,7 @@ class WebComPyApp:
                     if fetch_port is not None and hasattr(fetch_port, "populate_from_transfer"):
                         fetch_port.populate_from_transfer(payload.fetches)
                     ctx.di_scope.provide(HYDRATION_DATA_KEY, payload.async_results)
+                    ctx.di_scope.provide(HYDRATION_SIGNAL_DATA_KEY, payload.signals)
             except Exception as e:
                 _logger.warning("Failed to restore hydration data payload: %s", e)
             finally:

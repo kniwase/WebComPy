@@ -42,14 +42,30 @@ The result: components with transferred data skip the `LOADING` phase entirely o
 - **THEN** the return value SHALL be `False`
 - **AND** no exception SHALL be raised (the default is `None`)
 
-### Requirement: TransferPayload shall define the payload schema
+### Requirement: TransferPayload shall include fetches, async_results, and signals
 
-`TransferPayload` SHALL be a dataclass defined in `packages/webcompy/src/webcompy/hydration/_payload.py` with the following fields: `__webcompy_transfer_version__: int` (default `1`), `fetches: dict[str, TransferFetchEntry]`, and `async_results: dict[str, TransferAsyncResultEntry]`. `TransferFetchEntry` SHALL be a dataclass with `status_code: int`, `headers: dict[str, str]`, and `body: str`. `TransferAsyncResultEntry` SHALL be a dataclass with `state: str` (always `"success"` in this version) and `data: Any`.
+`TransferPayload` SHALL be a dataclass defined in `packages/webcompy/src/webcompy/hydration/_payload.py` with the following fields: `__webcompy_transfer_version__: int` (default `2`), `fetches: dict[str, TransferFetchEntry]`, `async_results: dict[str, TransferAsyncResultEntry]`, and `signals: dict[str, dict[str, Any]]`. The `signals` field maps component ID to a dict of `{attr_name: encoded_value}` where encoded values are produced by `encode()` from `webcompy.hydration._codec`. `TransferFetchEntry` SHALL be a dataclass with `status_code: int`, `headers: dict[str, str]`, and `body: str`. `TransferAsyncResultEntry` SHALL be a dataclass with `state: str` (always `"success"` in this version) and `data: Any`.
+
+`deserialize_payload()` SHALL accept both version 1 payloads (treating a missing `signals` section as empty) and version 2 payloads (with the `signals` section populated). Unknown versions SHALL be rejected.
 
 #### Scenario: TransferPayload fields are exposed
 - **WHEN** a developer creates a `TransferPayload`
-- **THEN** the fields `__webcompy_transfer_version__`, `fetches`, and `async_results` SHALL be accessible as attributes
-- **AND** the default value for `__webcompy_transfer_version__` SHALL be `1`
+- **THEN** the fields `__webcompy_transfer_version__`, `fetches`, `async_results`, and `signals` SHALL be accessible as attributes
+- **AND** the default value for `__webcompy_transfer_version__` SHALL be `2`
+
+#### Scenario: Serializing a version 2 payload
+- **WHEN** `serialize_payload()` is called with a `TransferPayload` containing signals
+- **THEN** the JSON output SHALL include `"__webcompy_transfer_version__": 2`
+- **AND** the `"signals"` key SHALL be present in the output
+
+#### Scenario: Deserializing a version 2 payload
+- **WHEN** `deserialize_payload()` receives a version 2 JSON string
+- **THEN** the resulting `TransferPayload` SHALL have the `signals` dict populated from the JSON
+
+#### Scenario: Deserializing a version 1 payload (backward compatibility)
+- **WHEN** `deserialize_payload()` receives a version 1 JSON string (no `signals` key)
+- **THEN** the resulting `TransferPayload.signals` SHALL be an empty dict `{}`
+- **AND** no error SHALL be raised
 
 ### Requirement: serialize_payload shall produce HTML-escaped JSON
 
@@ -68,11 +84,16 @@ The result: components with transferred data skip the `LOADING` phase entirely o
 
 ### Requirement: deserialize_payload shall validate version and parse JSON
 
-`deserialize_payload(text: str) -> TransferPayload | None` SHALL parse the input as JSON, validate the `__webcompy_transfer_version__` field equals `1`, and return a `TransferPayload` on success or `None` on parse error, missing version, or unknown version.
+`deserialize_payload(text: str) -> TransferPayload | None` SHALL parse the input as JSON, validate the `__webcompy_transfer_version__` field against the accept-list `{1, 2}`, and return a `TransferPayload` on success or `None` on parse error, missing version, or unknown version.
 
-#### Scenario: Deserializing a valid payload
+#### Scenario: Deserializing a valid v1 payload
 - **WHEN** a valid JSON string with `__webcompy_transfer_version__: 1` is passed
 - **THEN** a `TransferPayload` SHALL be returned with the parsed fields
+- **AND** the `signals` field SHALL default to an empty dict `{}`
+
+#### Scenario: Deserializing a valid v2 payload
+- **WHEN** a valid JSON string with `__webcompy_transfer_version__: 2` is passed
+- **THEN** a `TransferPayload` SHALL be returned with `fetches`, `async_results`, and `signals` populated from the JSON
 
 #### Scenario: Deserializing an unknown version
 - **WHEN** a JSON string with `__webcompy_transfer_version__: 999` is passed
@@ -220,15 +241,18 @@ Non-serializable values that fail even the codec's extended encoders SHALL be dr
 - **WHEN** `app.run()` has read the `__webcompy_data__` script tag
 - **THEN** the script tag SHALL be removed from the DOM
 
-### Requirement: AppDocumentRoot shall collect transfer data
+### Requirement: collect_transfer_data shall collect fetches, async_results, and signals
 
-`AppDocumentRoot` (or `WebComPyApp`) SHALL provide a `_collect_transfer_data() -> TransferPayload` method that retrieves `ServerFetchPort` from the DI scope, calls `server_fetch_port.get_transfer_data()`, and walks the rendered component tree to collect `AsyncResult` instances from each component's `_async_results` list (populated by `use_async_result` during setup) that are in `SUCCESS` state.
+`collect_transfer_data(root)` SHALL traverse the component tree and populate three sections of the `TransferPayload`: `fetches` (from `FetchPort.get_transfer_data()`), `async_results` (from `Component._async_results`), and `signals` (from `Component.__signal_members__`). Signal values SHALL be encoded via `encode()` from `webcompy.hydration._codec`. Non-serializable Signal values SHALL be dropped with a warning. `AppDocumentRoot` (or `WebComPyApp`) SHALL provide a `_collect_transfer_data() -> TransferPayload` method that wraps `collect_transfer_data(self)`.
 
-#### Scenario: Transfer data is collected after SSR render
-- **WHEN** `_collect_transfer_data()` is called after a successful SSR render
-- **THEN** the returned payload SHALL contain entries for all `ServerFetchPort` self-site cache hits
-- **AND** the returned payload SHALL contain entries for all `AsyncResult` instances in `SUCCESS` state
+#### Scenario: collect_transfer_data gathers all three sections
+- **WHEN** `collect_transfer_data(root)` is called after SSR rendering
+- **THEN** the returned `TransferPayload` SHALL have `fetches`, `async_results`, and `signals` populated
+
+#### Scenario: collect_transfer_data handles components with no signals
+- **WHEN** a component has no `__signal_members__` entries
+- **THEN** that component's ID SHALL not appear in the `signals` dict (or shall map to an empty dict)
 
 ## Limitations
 
-Signal values are not transferred. Only `AsyncResult` states and `FetchPort` response caches are transferred. Application-level `Signal` values computed during SSR are not serialized. Components that derive UI state directly from `Signal` values may still experience a flash of default values during hydration. Developers SHOULD use `Suspense` or `ClientOnly` boundaries to manage the transition for Signal-derived state. Full `Signal` value transfer is deferred to a future change.
+Only `self`-assigned `Signal`, `Computed`, `ReactiveList`, and `ReactiveDict` values are transferred. Signals created as local variables in component setup (`count = Reactive(0)` without being assigned to `self`) are NOT captured by `__signal_members__` and are NOT transferred. Restored values bypass `set_value()` so downstream reactive notifications do not fire — the transferred values represent a coherent SSR snapshot that is rebuilt deterministically on the browser.

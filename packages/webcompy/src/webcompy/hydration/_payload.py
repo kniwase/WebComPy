@@ -26,12 +26,14 @@ class TransferAsyncResultEntry:
 
 @dataclass
 class TransferPayload:
-    __webcompy_transfer_version__: int = 1
+    __webcompy_transfer_version__: int = 2
     fetches: dict[str, TransferFetchEntry] = field(default_factory=dict)
     async_results: dict[str, TransferAsyncResultEntry] = field(default_factory=dict)
+    signals: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
-_SUPPORTED_VERSION = 1
+_SUPPORTED_VERSIONS: frozenset[int] = frozenset({1, 2})
+CURRENT_TRANSFER_VERSION: int = 2
 
 
 def _try_serialize_value(value: Any) -> Any:
@@ -53,7 +55,7 @@ def _to_serializable(payload: TransferPayload) -> dict[str, Any]:
             url: {
                 "status_code": entry.status_code,
                 "headers": entry.headers,
-                "body": encode(entry.body),
+                "body": entry.body,
             }
             for url, entry in payload.fetches.items()
         },
@@ -64,11 +66,26 @@ def _to_serializable(payload: TransferPayload) -> dict[str, Any]:
             }
             for cid, entry in payload.async_results.items()
         },
+        "signals": {
+            cid: {attr_name: value for attr_name, value in signals.items()} for cid, signals in payload.signals.items()
+        },
     }
 
 
 def serialize_payload(payload: TransferPayload) -> str:
     raw = _to_serializable(payload)
+    cleaned_fetches: dict[str, dict[str, Any]] = {}
+    for url, entry in raw["fetches"].items():
+        serializable_body = _try_serialize_value(entry["body"])
+        if serializable_body is None and entry["body"] is not None:
+            _logger.warning("Excluding fetch %s: body is not encodable", url)
+            continue
+        cleaned_fetches[url] = {
+            "status_code": entry["status_code"],
+            "headers": entry["headers"],
+            "body": serializable_body,
+        }
+    raw["fetches"] = cleaned_fetches
     cleaned_async_results: dict[str, dict[str, Any]] = {}
     for cid, entry in raw["async_results"].items():
         serializable_data = _try_serialize_value(entry["data"])
@@ -80,6 +97,22 @@ def serialize_payload(payload: TransferPayload) -> str:
             "data": serializable_data,
         }
     raw["async_results"] = cleaned_async_results
+    cleaned_signals: dict[str, dict[str, Any]] = {}
+    for cid, attrs in raw["signals"].items():
+        cleaned_signals[cid] = {}
+        for attr_name, raw_value in attrs.items():
+            serializable_data = _try_serialize_value(raw_value)
+            if serializable_data is None:
+                _logger.warning(
+                    "Excluding signal %s.%s: value is not encodable",
+                    cid,
+                    attr_name,
+                )
+                continue
+            cleaned_signals[cid][attr_name] = serializable_data
+        if not cleaned_signals[cid]:
+            cleaned_signals.pop(cid, None)
+    raw["signals"] = cleaned_signals
     dumped = json.dumps(raw, ensure_ascii=False)
     escaped = html_module.escape(dumped, quote=True)
     return escaped
@@ -94,11 +127,12 @@ def deserialize_payload(text: str) -> TransferPayload | None:
     if not isinstance(raw, dict):
         return None
     version = raw.get("__webcompy_transfer_version__")
-    if version != _SUPPORTED_VERSION:
+    if version not in _SUPPORTED_VERSIONS:
         return None
     raw = decode(raw)
     fetches_data = raw.get("fetches") or {}
     async_results_data = raw.get("async_results") or {}
+    signals_data = raw.get("signals") or {}
     fetches: dict[str, TransferFetchEntry] = {}
     for url, entry in fetches_data.items():
         if not isinstance(entry, dict):
@@ -116,8 +150,15 @@ def deserialize_payload(text: str) -> TransferPayload | None:
             state=entry.get("state", "success"),
             data=entry.get("data"),
         )
+    signals: dict[str, dict[str, Any]] = {}
+    if version == 2:
+        for cid, attrs in signals_data.items():
+            if not isinstance(attrs, dict):
+                continue
+            signals[cid] = {attr_name: value for attr_name, value in attrs.items()}
     return TransferPayload(
         __webcompy_transfer_version__=version,
         fetches=fetches,
         async_results=async_results,
+        signals=signals,
     )

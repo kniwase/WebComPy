@@ -199,13 +199,13 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 
 | Changed files | Specs to read |
 |---|---|
-| `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md` |
-| `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md` |
+| `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md`, `signal-value-transfer/spec.md` |
+| `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md`, `signal-value-transfer/spec.md` |
 | `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md`, `suspense/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/elements/types/_suspense.py` | `suspense/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/elements/types/_dynamic.py` | `async-scheduler/spec.md` |
-| `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md` |
+| `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md` |
 | `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md` |
@@ -330,7 +330,8 @@ When specs are added, modified, or removed, update:
 | `testing-module` | TestRenderer, fake ports, scope helpers for browserless testing |
 | `server-fetch-asgi` | Self-site fetch via ASGI transport during SSR/SSG, page-route blocking |
 | `suspense` | Declarative async boundary showing fallback while children load, with SSR awaiting and hydration integration |
-| `hydration-data-transfer` | Server-to-browser data transfer for `AsyncResult` states and `FetchPort` response caches via payload injection |
+| `hydration-data-transfer` | Server-to-browser data transfer for `AsyncResult` states, `FetchPort` response caches, and `Signal` values via versioned payload injection |
+| `signal-value-transfer` | Collection and restoration of `Signal`/`Computed`/`ReactiveList`/`ReactiveDict` values across the hydration boundary via `__signal_members__` |
 | `transfer-codec` | Layered serialization engine (encode/decode) preserving Python type fidelity across the hydration boundary via `__webcompy_`-tagged JSON |
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
 | `test-execution-paths` | Physical separation between unit (`tests/`) and E2E (`e2e/`) tests; opt-in `WEBCOMPY_RUN_E2E=1` env var gate; `scripts/run-e2e-tests.sh` canonical entry point |

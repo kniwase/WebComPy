@@ -193,7 +193,7 @@ async def generate_html(
     token = _active_app_context.set(ctx)
     _set_app_instance(ctx)
     try:
-        html_output = await _generate_html_impl(
+        html_output, app_loader_html = await _generate_html_impl(
             ctx,
             app_package_name,
             dev_mode,
@@ -207,6 +207,19 @@ async def generate_html(
         )
         scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
         await scheduler.await_pending()
+        if prerender and ctx._root is not None:
+            try:
+                payload_json = ctx._root._collect_transfer_data()
+                data_script = f'<script type="application/json" id="__webcompy_data__">{payload_json}</script>'
+                html_output = html_output.replace(
+                    "</body>",
+                    f"{data_script}\n{app_loader_html}</body>",
+                )
+            except Exception as e:
+                _logger.warning("Failed to inject hydration data payload: %s", e)
+                html_output = html_output.replace("</body>", f"{app_loader_html}</body>")
+        else:
+            html_output = html_output.replace("</body>", f"{app_loader_html}</body>")
         return html_output
     finally:
         _active_app_context.reset(token)
@@ -341,15 +354,5 @@ async def _generate_html_impl(
         ).render_html()
     )
 
-    if prerender and ctx._root is not None:
-        try:
-            payload_json = ctx._root._collect_transfer_data()
-            data_script = f'<script type="application/json" id="__webcompy_data__">{payload_json}</script>'
-            html_output = html_output.replace("</body>", f"{data_script}\n{app_loader_html}</body>")
-        except Exception as e:
-            _logger.warning("Failed to inject hydration data payload: %s", e)
-            html_output = html_output.replace("</body>", f"{app_loader_html}</body>")
-    else:
-        html_output = html_output.replace("</body>", f"{app_loader_html}</body>")
-
-    return html_output.replace("<head>", f"<head>\n{head_content_html}", 1)
+    html_output = html_output.replace("<head>", f"<head>\n{head_content_html}", 1)
+    return html_output, app_loader_html
