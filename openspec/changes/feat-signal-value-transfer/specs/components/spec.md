@@ -2,7 +2,7 @@
 
 ### Requirement: Components shall restore Signal values after setup during hydration
 
-During browser hydration, `Component._render()` SHALL call signal value restoration after `__init_component()` / `__setup()` completes and before template evaluation. The restoration SHALL read `payload.signals[component_id]` from the transfer payload (provided via `HYDRATION_DATA_KEY` DI) and restore each `(attr_name, encoded_value)` pair by decoding the value via `decode()` from `webcompy.hydration._codec` and setting `component.__signal_members__[attr_name]._value = decoded_value` directly (bypassing `set_value()`).
+During browser hydration, `Component._render()` SHALL call signal value restoration after `__init_component()` / `__setup()` completes and before template evaluation. The restoration SHALL read `payload.signals[component_id]` from the transfer payload (provided via `HYDRATION_SIGNAL_DATA_KEY` DI) and restore each `(attr_name, encoded_value)` pair by decoding the value via `decode()` from `webcompy.hydration._codec` and setting `component.__signal_members__[attr_name]._value = decoded_value` directly (bypassing `set_value()`).
 
 #### Scenario: Component restores Signal values before first render
 - **WHEN** a component is hydrated in the browser

@@ -34,9 +34,9 @@
 ## 5. Browser Restoration Integration
 
 - [x] 5.1 Modify `Component._render()` in `packages/webcompy/src/webcompy/components/_component.py` to call `restore_signal_values(self, ...)` after `__init_component()` / `__setup()` completes and before template evaluation
-- [x] 5.2 Read the component's signal data from `payload.signals.get(self._property["component_id"], {})` via `HYDRATION_DATA_KEY`
+- [x] 5.2 Read the component's signal data from `payload.signals.get(self._property["component_id"], {})` via `HYDRATION_SIGNAL_DATA_KEY`
 - [x] 5.3 Ensure restoration only runs in browser environment (or when transfer data is present)
-- [x] 5.4 Guard: if `HYDRATION_DATA_KEY` is not provided (no transfer data), skip restoration entirely
+- [x] 5.4 Guard: if `HYDRATION_SIGNAL_DATA_KEY` is not provided (no transfer data), skip restoration entirely
 
 ## 6. SSR Collection Integration
 
