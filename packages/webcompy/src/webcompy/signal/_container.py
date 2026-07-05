@@ -10,6 +10,8 @@ class SignalReceivable:
     def __setattr__(self, name: str, value: Any) -> None:
         if isinstance(value, SignalBase):
             self.__set_signal_member__(name, value)
+        elif hasattr(self, "__signal_members__"):
+            self.__signal_members__.pop(name, None)
         super().__setattr__(name, value)
 
     def __set_signal_member__(self, name: str, value: SignalBase[Any]) -> None:
