@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
+import enum
 import html as html_module
 import json
 from unittest.mock import MagicMock
@@ -24,6 +26,17 @@ from webcompy.signal import (
     computed_property,
 )
 from webcompy.signal._container import SignalReceivable
+
+
+class _CodecIntEnum(enum.IntEnum):
+    LOW = 1
+    HIGH = 10
+
+
+@dataclasses.dataclass
+class _CodecPoint:
+    x: int
+    y: int
 
 
 class Receiver(SignalReceivable):
@@ -286,3 +299,150 @@ class TestRoundTrip:
         restore_signal_values(browser, signals_data)
         assert browser.count._value == 11
         assert browser.name._value == "Carol"
+
+
+class TestCodecTypedRoundTrip:
+    def _make_browser(self, **signals):
+        class _Browser(SignalReceivable):
+            pass
+
+        browser = _Browser()
+        for name, value in signals.items():
+            setattr(browser, name, Signal(value))
+        return browser
+
+    def test_datetime_signal_round_trip(self):
+        from datetime import datetime
+
+        from webcompy.hydration import decode
+
+        dt = datetime(2025, 6, 1, 12, 30, 0)
+        child = _stub_component(
+            {"last_seen": Signal(dt)},
+            component_id="cmp-dt",
+        )
+        parent = MagicMock()
+        parent._children = [child]
+        parent._property = {"component_id": "root"}
+
+        payload = collect_transfer_data(parent)
+        serialized = serialize_payload(payload)
+        deserialized = deserialize_payload(serialized)
+        assert deserialized is not None
+        signals_data = deserialized.signals["cmp-dt"]
+
+        browser = self._make_browser(last_seen=None)
+        restore_signal_values(browser, signals_data)
+        assert browser.last_seen._value == decode(dt)
+
+    def test_int_enum_signal_round_trip(self):
+        from webcompy.hydration import decode
+
+        child = _stub_component(
+            {"priority": Signal(_CodecIntEnum.HIGH)},
+            component_id="cmp-ie",
+        )
+        parent = MagicMock()
+        parent._children = [child]
+        parent._property = {"component_id": "root"}
+
+        payload = collect_transfer_data(parent)
+        serialized = serialize_payload(payload)
+        deserialized = deserialize_payload(serialized)
+        assert deserialized is not None
+        signals_data = deserialized.signals["cmp-ie"]
+
+        browser = self._make_browser(priority=None)
+        restore_signal_values(browser, signals_data)
+        assert browser.priority._value == decode(_CodecIntEnum.HIGH)
+
+    def test_dataclass_signal_round_trip(self):
+        from webcompy.hydration import decode
+
+        pt = _CodecPoint(3, 4)
+        child = _stub_component(
+            {"origin": Signal(pt)},
+            component_id="cmp-dc",
+        )
+        parent = MagicMock()
+        parent._children = [child]
+        parent._property = {"component_id": "root"}
+
+        payload = collect_transfer_data(parent)
+        serialized = serialize_payload(payload)
+        deserialized = deserialize_payload(serialized)
+        assert deserialized is not None
+        signals_data = deserialized.signals["cmp-dc"]
+
+        browser = self._make_browser(origin=None)
+        restore_signal_values(browser, signals_data)
+        assert browser.origin._value == decode(pt)
+
+    def test_set_signal_round_trip(self):
+        from webcompy.hydration import decode
+
+        child = _stub_component(
+            {"tags": Signal({"a", "b"})},
+            component_id="cmp-set",
+        )
+        parent = MagicMock()
+        parent._children = [child]
+        parent._property = {"component_id": "root"}
+
+        payload = collect_transfer_data(parent)
+        serialized = serialize_payload(payload)
+        deserialized = deserialize_payload(serialized)
+        assert deserialized is not None
+        signals_data = deserialized.signals["cmp-set"]
+
+        browser = self._make_browser(tags=None)
+        restore_signal_values(browser, signals_data)
+        assert browser.tags._value == decode({"a", "b"})
+
+    def test_decimal_signal_round_trip(self):
+        from decimal import Decimal
+
+        from webcompy.hydration import decode
+
+        child = _stub_component(
+            {"price": Signal(Decimal("19.99"))},
+            component_id="cmp-dec",
+        )
+        parent = MagicMock()
+        parent._children = [child]
+        parent._property = {"component_id": "root"}
+
+        payload = collect_transfer_data(parent)
+        serialized = serialize_payload(payload)
+        deserialized = deserialize_payload(serialized)
+        assert deserialized is not None
+        signals_data = deserialized.signals["cmp-dec"]
+
+        browser = self._make_browser(price=None)
+        restore_signal_values(browser, signals_data)
+        assert browser.price._value == decode(Decimal("19.99"))
+
+    def test_no_reserved_key_warning_during_round_trip(self, caplog):
+        from datetime import datetime
+
+        dt = datetime(2025, 1, 1)
+        child = _stub_component(
+            {"when": Signal(dt)},
+            component_id="cmp-rk",
+        )
+        parent = MagicMock()
+        parent._children = [child]
+        parent._property = {"component_id": "root"}
+
+        with caplog.at_level("WARNING"):
+            payload = collect_transfer_data(parent)
+            serialized = serialize_payload(payload)
+
+        reserved_warnings = [msg for msg in caplog.messages if "Reserved key" in msg]
+        assert reserved_warnings == [], (
+            f"Double-encode detected — unexpected 'Reserved key' warnings: {reserved_warnings}"
+        )
+
+        deserialized = deserialize_payload(serialized)
+        assert deserialized is not None
+        assert deserialized.signals["cmp-rk"]["when"] == dt
