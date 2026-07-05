@@ -54,7 +54,7 @@ jobs:
           changes_json=$(npx @fission-ai/openspec@latest list --json 2>/dev/null)
           complete_names=$(echo "$changes_json" | jq -r '.changes[] | select(.status == "complete") | .name')
           if [ -n "$complete_names" ]; then
-            echo "::error::Completed changes must be archived before merging to main. Run /opsx-archive for:"
+            echo "::error::Completed changes must be archived before merging to main. Run the openspec-archive-change skill (or `openspec archive` CLI) for:"
             echo "$complete_names" | while read -r name; do
               echo "::error::  - $name (all tasks complete, not yet archived)"
             done

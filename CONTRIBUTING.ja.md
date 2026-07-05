@@ -68,7 +68,7 @@ WebComPy は [OpenSpec](https://github.com/fission-ai/openspec) によるスペ�
 重要な変更は以下のライフサイクルに従います。
 
 ```
-探索 → 提案 → 実装 → アーカイブ
+探索 → 提案 → 実装 → 仕様同期 → アーカイブ
 ```
 
 ### 探索（Explore）
@@ -86,35 +86,51 @@ WebComPy は [OpenSpec](https://github.com/fission-ai/openspec) によるスペ�
 
 1. **変更に名前をつける**: `<type>-<short-description>`（例: `feat-list-reconciliation`）。
    タイプは `feat`、`fix`、`refactor`、`docs`、`chore`、`test`、`perf` のいずれか。
-2. **アーティファクトを書く** `openspec/changes/<name>/` 以下に:
+2. **アーティファクトを作成する** OpenSpec スキルを使い `openspec/changes/<name>/` 以下に:
+   - `openspec-new-change` で変更ディレクトリをスキャフォールド
+   - `openspec-propose` で各アーティファクトを順に作成（または `openspec-ff-change`
+     で全アーティファクトを一度に作成）
    - `proposal.md` — 動機、スコープ、非目標、既知の課題
    - `design.md` — 技術的アプローチと設計判断
    - `specs/` — 開発者視点での振る舞い定義
    - `tasks.md` — 実装タスク（各 2 時間以内）
-3. **PR として提出する** `openspec-proposal.md` テンプレートを使用。
-   OpenSpec アーティファクトのみを含め、実装コードは含めません。
-4. **レビュー**: CI がスペック検証を実行。AI レビュアーが設計の整合性をチェックします。
+3. **アーティファクトをコミットする** `git add` と `git commit` をコミットメッセージ規約
+   （`<type>: <description>`）に従って実行。
 
-提案 PR の CI では、コード変更がないため lint/typecheck/test はスキップされ、
-OpenSpec バリデーションと AI レビューのみが実行されます。
+### 実装（Apply Changes）
 
-### 実装（Apply）
+`openspec-apply-change` スキルを使って提案のタスクを実装します。
 
-承認された提案のタスクを実装します。
+- `tasks.md` の順にタスクを進め、1 タスク 1 コミットを目安にする
+- 全タスク完了で change の status が `complete` になる
+- combined PR（プロポーザルと実装を 1 つの PR）の場合、Apply Changes は
+  同じブランチで Sync Specs より前に行う
+- プロポーザル単独 PR の場合、Apply Changes はプロポーザル PR マージ後に開始
 
-1. 提案アーティファクトを含むフィーチャーブランチから開始
-2. タスクを順に進める
-3. 各タスクは意味のあるコミットとする
-4. タスク完了後に検証を実行
+### 仕様同期（Sync Specs）
+
+実装 PR 提出前（change の status が `complete` の場合）に必ず実行:
+
+1. `openspec-sync-specs` で delta specs を `openspec/changes/<name>/specs/` から
+   メインスペック `openspec/specs/<capability>/spec.md` にマージ
+2. `openspec/specs/` 配下の変更をコミットメッセージ規約に従ってコミット
+
+プロポーザル単独 PR には適用されません（status は `in-progress` のまま）。
 
 ### アーカイブ（Archive）
 
-完了した変更を確定します。
+実装 PR 提出前（change の status が `complete` の場合）に必ず実行:
 
-1. アーティファクトを `openspec/changes/<name>/` から `openspec/changes/archive/<name>/` に移動
-2. メインスペック `openspec/specs/` を確定した要件で更新
-3. 実装を `default.md` テンプレートで PR として提出
-4. マージ後、OpenSpec 変更をアーカイブ
+1. `openspec-archive-change` で変更を `openspec/changes/<name>/` から
+   `openspec/changes/archive/YYYY-MM-DD-<name>/` に移動
+2. 移動をコミットメッセージ規約に従ってコミット
+
+CI の `openspec-check` ジョブは `complete` な変更が未アーカイブだとマージを
+ブロックするため、PR 提出前にこのステップを完了させる必要があります。
+
+プロポーザル単独 PR には適用されません（status は `in-progress` のまま）。
+
+PR 提出の mechanics については **プルリクエストプロセス** セクションを参照。
 
 ### スペック記述ガイドライン
 
@@ -222,12 +238,21 @@ Co-Authored-By: opencode <noreply@opencode.ai>
 
 ## プルリクエストプロセス
 
-### テンプレートの選択
+### PR 提出（Submit）
 
-| PR の内容 | テンプレート | 作成者 |
-|---|---|---|
-| 実装コード | `default.md` | 主に AI エージェント |
-| OpenSpec アーティファクトのみ | `openspec-proposal.md` | AI エージェントまたは人間 |
+- **テンプレート**: `.github/PULL_REQUEST_TEMPLATE.md`（すべての PR で唯一のテンプレート）
+- **PR タイトルプレフィックス**で CI の挙動が変わる:
+  - `chore:` — code check（lint、typecheck、test、E2E）をスキップ。CI は
+    OpenSpec 検証と AI レビューのみ実行。プロポーザル単独 PR に適する。
+  - `feat:`、`fix:`、`refactor:`、`docs:`、`chore:`、`test:`、`style:`、`perf:` —
+    すべてのチェックを実行。実装 PR に適する。
+- **PR の形**（プロポーザル単独か、実装と組み合わせるか）は PR 作成時点で判断:
+  - 大規模または要議論な変更 → `chore:` で先行提案し、プロポーザル PR マージ後に
+    実装 PR を出す
+  - 小規模または自己完結的な変更 → プロポーザルと実装を 1 つの PR にまとめる
+- **PR ライフサイクルのプロポーザル側**では、PR タイトルが `chore:` で始まる場合、
+  コード変更がないため CI は OpenSpec バリデーションと AI レビューのみ実行し、
+  lint/typecheck/test はスキップされる。
 
 ### プッシュ前の確認
 
@@ -236,8 +261,8 @@ Co-Authored-By: opencode <noreply@opencode.ai>
 
 ### PR のライフサイクル
 
-1. 適切なテンプレートで PR を開く
-2. CI がバリデーションとコードチェックを実行（提案 PR の場合は OpenSpec 検証のみ）
+1. `.github/PULL_REQUEST_TEMPLATE.md` を使って PR を開く
+2. CI がバリデーションと code check を実行（`chore:` PR は code check をスキップ）
 3. AI レビューが PR コメントとして結果を投稿
 4. レビュー指摘に対応
 5. すべてのチェックが通ったらマージ

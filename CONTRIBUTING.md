@@ -69,7 +69,7 @@ WebComPy uses [OpenSpec](https://github.com/fission-ai/openspec) for spec-driven
 development. All non-trivial changes go through a structured lifecycle:
 
 ```
-Explore → Propose → Apply → Archive
+Explore → Propose → Apply Changes → Sync Specs → Archive
 ```
 
 ### Explore
@@ -83,39 +83,56 @@ Investigate problems, compare approaches, clarify requirements.
 
 ### Propose
 
-Create a change proposal with design, specs, and tasks.
+Create a change proposal with design, specs, tasks.
 
 1. **Name the change**: `<type>-<short-description>` (e.g., `feat-list-reconciliation`).
    Type must be one of: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`, `perf`.
-2. **Write artifacts** under `openspec/changes/<name>/`:
+2. **Create artifacts** under `openspec/changes/<name>/` using the OpenSpec skills:
+   - `openspec-new-change` to scaffold the change directory
+   - `openspec-propose` to walk through artifact creation (or `openspec-ff-change`
+     for a single-shot flow that fills every artifact at once)
    - `proposal.md` — Motivation, scope, non-goals, known issues addressed
    - `design.md` — Technical approach and design decisions
    - `specs/` — Behavior specifications from the developer's perspective
    - `tasks.md` — Implementation tasks (each ≤2 hours)
-3. **Submit as a PR** using the `openspec-proposal.md` template.
-   Only OpenSpec artifacts are included — no implementation code.
-4. **Review**: CI runs spec validation. The AI reviewer checks design consistency.
+3. **Commit the artifacts** with `git add` and `git commit` following the
+   commit message convention (`<type>: <description>`).
 
-When creating a proposal PR, CI runs only OpenSpec validation and AI review —
-lint, typecheck, and tests are skipped because no code has changed.
+### Apply Changes
 
-### Apply
+Implement tasks from the proposal using the `openspec-apply-change` skill.
 
-Implement tasks from an approved proposal.
+- Work through `tasks.md` in order, producing one commit per task
+- The change's status becomes `complete` when all tasks are done
+- For combined PRs (proposal + implementation in one PR), Apply Changes
+  happens before Sync Specs on the same branch
+- For proposal-only PRs, Apply Changes starts after the proposal PR is merged
 
-1. Start from the feature branch containing the proposal artifacts
-2. Work through tasks in order
-3. Each task should produce a meaningful commit
-4. Run verification after each task
+### Sync Specs
+
+Required before submitting any implementation PR (when the change status is `complete`):
+
+1. Run `openspec-sync-specs` to merge delta specs from `openspec/changes/<name>/specs/`
+   into the main specs at `openspec/specs/<capability>/spec.md`.
+2. Commit the resulting changes to `openspec/specs/` following the commit message
+   convention.
+
+Not applicable for proposal-only PRs (status remains `in-progress`).
 
 ### Archive
 
-Finalize a completed change.
+Required before submitting any implementation PR (when the change status is `complete`):
 
-1. Move artifacts from `openspec/changes/<name>/` to `openspec/changes/archive/<name>/`
-2. Update main specs in `openspec/specs/` with finalized requirements
-3. Submit implementation as a PR using the `default.md` template
-4. After merge, archive the OpenSpec change
+1. Run `openspec-archive-change` to move the change from `openspec/changes/<name>/`
+   to `openspec/changes/archive/YYYY-MM-DD-<name>/`.
+2. Commit the move following the commit message convention.
+
+CI's `openspec-check` job blocks merge when a `complete` change is not archived,
+so this step must complete before PR submission.
+
+Not applicable for proposal-only PRs (status remains `in-progress`).
+
+For PR submission mechanics, see the **Pull Request Process** section.
 
 ### Spec Writing Guidelines
 
@@ -218,12 +235,23 @@ See [AGENTS.md](AGENTS.md#framework-invariants) for critical invariants
 
 ## Pull Request Process
 
-### Choosing the Right Template
+### Submit
 
-| PR contains | Template | Created by |
-|---|---|---|
-| Implementation code | `default.md` | AI agent (usually) |
-| OpenSpec artifacts only | `openspec-proposal.md` | AI agent or human |
+- **Template**: `.github/PULL_REQUEST_TEMPLATE.md` (the only template used for all PRs)
+- **PR title prefix** determines CI behavior:
+  - `chore:` — skips code checks (lint, typecheck, test, E2E); CI runs OpenSpec
+    validation and AI review only. Suitable for proposal-only PRs.
+  - `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`, `style:`, `perf:` —
+    runs all checks. Suitable for implementation PRs.
+- **PR shape** (proposal-only vs combined with implementation) is decided at
+  PR creation time:
+  - Large or contentious changes → `chore:` proposal-only PR for early review,
+    then implementation PR(s) after the proposal PR merges
+  - Small or self-contained changes → combined PR containing proposal artifacts
+    and implementation together
+- **On the proposal side of the PR Lifecycle**, CI runs only OpenSpec
+  validation and AI review when the PR title starts with `chore:` — lint,
+  typecheck, and tests are skipped because no code has changed.
 
 ### Pre-Push Verification (before pushing a branch)
 
@@ -232,8 +260,8 @@ See [AGENTS.md](AGENTS.md#framework-invariants) for critical invariants
 
 ### PR Lifecycle
 
-1. Open PR with the appropriate template
-2. CI runs validation + code checks (or just OpenSpec validation for proposal PRs)
+1. Open PR using `.github/PULL_REQUEST_TEMPLATE.md`
+2. CI runs validation + code checks (`chore:` PRs skip code checks)
 3. AI review posts results as a PR comment
 4. Address review feedback
 5. Merge when all checks pass
