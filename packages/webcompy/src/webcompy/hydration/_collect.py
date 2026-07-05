@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 
 from webcompy.components._component import Component
 from webcompy.di import inject
-from webcompy.hydration._codec import _FailureFlag, encode
 from webcompy.hydration._payload import (
     CURRENT_TRANSFER_VERSION,
     TransferAsyncResultEntry,
@@ -97,23 +96,6 @@ def _collect_component_signals(component: Component) -> dict[str, Any]:
     collected: dict[str, Any] = {}
     for attr_name, signal in members.items():
         if not isinstance(signal, SignalBase):
-            continue
-        flag = _FailureFlag()
-        try:
-            encode(signal._value, _flag=flag)
-        except Exception:
-            _logger.exception(
-                "Failed to encode signal value for %s.%s",
-                component._property.get("component_id", ""),
-                attr_name,
-            )
-            continue
-        if flag.failed:
-            _logger.warning(
-                "Excluding signal %s.%s: value is not encodable",
-                component._property.get("component_id", ""),
-                attr_name,
-            )
             continue
         collected[attr_name] = signal._value
     return collected

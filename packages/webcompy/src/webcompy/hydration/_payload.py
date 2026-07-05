@@ -55,7 +55,7 @@ def _to_serializable(payload: TransferPayload) -> dict[str, Any]:
             url: {
                 "status_code": entry.status_code,
                 "headers": entry.headers,
-                "body": encode(entry.body),
+                "body": entry.body,
             }
             for url, entry in payload.fetches.items()
         },
@@ -67,14 +67,25 @@ def _to_serializable(payload: TransferPayload) -> dict[str, Any]:
             for cid, entry in payload.async_results.items()
         },
         "signals": {
-            cid: {attr_name: encoded for attr_name, encoded in signals.items()}
-            for cid, signals in payload.signals.items()
+            cid: {attr_name: value for attr_name, value in signals.items()} for cid, signals in payload.signals.items()
         },
     }
 
 
 def serialize_payload(payload: TransferPayload) -> str:
     raw = _to_serializable(payload)
+    cleaned_fetches: dict[str, dict[str, Any]] = {}
+    for url, entry in raw["fetches"].items():
+        serializable_body = _try_serialize_value(entry["body"])
+        if serializable_body is None and entry["body"] is not None:
+            _logger.warning("Excluding fetch %s: body is not encodable", url)
+            continue
+        cleaned_fetches[url] = {
+            "status_code": entry["status_code"],
+            "headers": entry["headers"],
+            "body": serializable_body,
+        }
+    raw["fetches"] = cleaned_fetches
     cleaned_async_results: dict[str, dict[str, Any]] = {}
     for cid, entry in raw["async_results"].items():
         serializable_data = _try_serialize_value(entry["data"])
@@ -89,8 +100,8 @@ def serialize_payload(payload: TransferPayload) -> str:
     cleaned_signals: dict[str, dict[str, Any]] = {}
     for cid, attrs in raw["signals"].items():
         cleaned_signals[cid] = {}
-        for attr_name, encoded_value in attrs.items():
-            serializable_data = _try_serialize_value(encoded_value)
+        for attr_name, raw_value in attrs.items():
+            serializable_data = _try_serialize_value(raw_value)
             if serializable_data is None:
                 _logger.warning(
                     "Excluding signal %s.%s: value is not encodable",
