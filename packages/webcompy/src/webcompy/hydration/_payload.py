@@ -53,7 +53,7 @@ def _to_serializable(payload: TransferPayload) -> dict[str, Any]:
             url: {
                 "status_code": entry.status_code,
                 "headers": entry.headers,
-                "body": entry.body,
+                "body": encode(entry.body),
             }
             for url, entry in payload.fetches.items()
         },

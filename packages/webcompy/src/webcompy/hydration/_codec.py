@@ -145,7 +145,11 @@ _BUILTIN_DECODERS: dict[str, Callable[[Any], Any]] = {
 _SENTINEL = object()
 
 
-def _encode_builtin(value: Any) -> Any:
+def _encode_builtin(
+    value: Any,
+    _seen: set[int] | None = None,
+    _flag: _FailureFlag | None = None,
+) -> Any:
     if isinstance(value, datetime):
         return _tag("datetime", value.isoformat())
     if isinstance(value, date) and not isinstance(value, datetime):
@@ -153,15 +157,15 @@ def _encode_builtin(value: Any) -> Any:
     if isinstance(value, time):
         return _tag("time", value.isoformat())
     if isinstance(value, frozenset):
-        return _tag("frozenset", [encode(v) for v in value])
+        return _tag("frozenset", [encode(v, _seen, _flag) for v in value])
     if isinstance(value, set):
-        return _tag("set", [encode(v) for v in value])
+        return _tag("set", [encode(v, _seen, _flag) for v in value])
     if isinstance(value, bytes):
         return _tag("bytes", base64.b64encode(value).decode("ascii"))
     if isinstance(value, Decimal):
         return _tag("decimal", str(value))
     if isinstance(value, tuple):
-        return _tag("tuple", [encode(v) for v in value])
+        return _tag("tuple", [encode(v, _seen, _flag) for v in value])
     if isinstance(value, Path):
         return _tag("path", str(value))
     if isinstance(value, UUID):
@@ -183,7 +187,7 @@ def _encode_builtin(value: Any) -> Any:
             {
                 "module": cls.__module__,
                 "name": cls.__name__,
-                "fields": {f.name: encode(getattr(value, f.name)) for f in dataclasses.fields(value)},
+                "fields": {f.name: encode(getattr(value, f.name), _seen, _flag) for f in dataclasses.fields(value)},
             },
         )
     return _SENTINEL
@@ -235,7 +239,7 @@ def encode(
                         _flag.failed = True
                     return None
 
-        result = _encode_builtin(value)
+        result = _encode_builtin(value, _seen, _flag)
         if result is not _SENTINEL:
             return result
 

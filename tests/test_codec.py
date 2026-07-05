@@ -329,6 +329,29 @@ class TestCircularReferences:
         encoded = encode(lst)
         assert encoded == [1, 2, None]
 
+    def test_self_referential_dataclass(self, caplog):
+        @dataclasses.dataclass
+        class Node:
+            next: object = None
+
+        n = Node()
+        n.next = n
+        with caplog.at_level("WARNING"):
+            encoded = encode(n)
+        assert encoded["__webcompy_value__"]["fields"]["next"] is None
+        assert any("Circular reference" in msg for msg in caplog.messages)
+
+    def test_circular_reference_through_tuple_element(self, caplog):
+        d: dict = {"key": "val"}
+        inner = (d,)
+        d["ref"] = inner
+        with caplog.at_level("WARNING"):
+            encoded = encode(d)
+        assert encoded["key"] == "val"
+        assert encoded["ref"]["__webcompy_type__"] == "tuple"
+        assert encoded["ref"]["__webcompy_value__"] == [None]
+        assert any("Circular reference" in msg for msg in caplog.messages)
+
 
 class TestPluginAPI:
     def test_register_and_use_custom_handler(self):
@@ -522,20 +545,24 @@ class TestDecodeFailurePaths:
         encoded["__webcompy_value__"]["value"] = "purple"
         assert decode(encoded) is None
 
-    def test_decode_failure_with_custom_handler_swallows_exception(self):
+    def test_custom_handler_decoder_exception_swallowed(self, caplog):
         class Flaky:
             pass
 
-        def bad_encoder(obj):
-            raise RuntimeError("encoder boom")
+        def good_encoder(obj):
+            return {"x": 1}
 
         def bad_decoder(payload):
             raise RuntimeError("decoder boom")
 
-        register_type_handler(Flaky, bad_encoder, bad_decoder)
+        register_type_handler(Flaky, good_encoder, bad_decoder)
 
-        encoded = {"__webcompy_type__": "nonexistent", "__webcompy_value__": "x"}
-        assert decode(encoded) is None
+        type_name = _type_handlers[Flaky][0]
+        encoded = {"__webcompy_type__": type_name, "__webcompy_value__": {"x": 1}}
+        with caplog.at_level("ERROR"):
+            result = decode(encoded)
+        assert result is None
+        assert any("Failed to decode" in msg for msg in caplog.messages)
 
 
 class TestLayer2EncoderExceptionSafety:
@@ -648,4 +675,47 @@ class TestEntryGranularBestEffort:
         assert result is not None
         assert "cmp-good" in result.async_results
         assert "cmp-bad" not in result.async_results
+        assert any("Cannot encode" in m or "Excluding" in m for m in caplog.messages)
+
+    def test_nested_failure_in_dataclass_field_drops_entry(self, caplog):
+        @dataclasses.dataclass
+        class Box:
+            item: object = None
+
+        class Unencodable:
+            pass
+
+        payload = TransferPayload(
+            async_results={
+                "cmp-1": TransferAsyncResultEntry(state="success", data=Box(item=Unencodable())),
+            },
+        )
+        with caplog.at_level("WARNING"):
+            serialized = serialize_payload(payload)
+        result = deserialize_payload(serialized)
+        assert result is not None
+        assert "cmp-1" not in result.async_results
+        assert any("Cannot encode" in m or "Excluding" in m for m in caplog.messages)
+
+    def test_unencodable_element_in_set_drops_entry(self, caplog):
+        class HashableUnencodable:
+            def __hash__(self):
+                return 1
+
+            def __eq__(self, other):
+                return isinstance(other, HashableUnencodable)
+
+        payload = TransferPayload(
+            async_results={
+                "cmp-1": TransferAsyncResultEntry(
+                    state="success",
+                    data={HashableUnencodable()},
+                ),
+            },
+        )
+        with caplog.at_level("WARNING"):
+            serialized = serialize_payload(payload)
+        result = deserialize_payload(serialized)
+        assert result is not None
+        assert "cmp-1" not in result.async_results
         assert any("Cannot encode" in m or "Excluding" in m for m in caplog.messages)
