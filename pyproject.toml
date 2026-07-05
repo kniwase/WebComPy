@@ -39,6 +39,9 @@ ignore = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["e2e/core"]
+
+
 
 [tool.ruff.lint.isort]
 known-first-party = ["webcompy", "webcompy_server", "webcompy_cli", "webcompy_testing"]
@@ -59,6 +62,7 @@ exclude = [
     "docs/**",
     "docs_app/**",
     "tests/**",
+    "e2e/**",
     "**/node_modules/**",
     ".venv/**",
 ]

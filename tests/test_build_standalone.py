@@ -10,7 +10,7 @@ import pytest
 pytestmark = pytest.mark.skipif(os.environ.get("CI") == "true", reason="Requires external CDN access")
 
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent
-E2E_DIR = PROJECT_ROOT / "tests" / "e2e"
+E2E_DIR = PROJECT_ROOT / "e2e" / "core"
 TMP_DIR = PROJECT_ROOT / ".tmp" / "e2e-standalone"
 
 

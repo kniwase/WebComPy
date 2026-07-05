@@ -1,6 +1,6 @@
 import pytest
 
-from tests.e2e_docs.conftest import _wait_for_pyscript_init
+from e2e.docs.conftest import _wait_for_pyscript_init
 
 
 @pytest.mark.e2e

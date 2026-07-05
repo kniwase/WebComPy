@@ -1,3 +1,7 @@
+<!-- All PR titles and bodies MUST be written in English. -->
+
+<!-- For AI agents: see AGENTS.md (Language Rules) and CONTRIBUTING.md (PR Submission) for the full policy and rationale. -->
+
 ## Description
 
 <!-- Briefly describe what this PR changes and why. -->
@@ -29,6 +33,7 @@
 ## Checklist
 
 - [ ] Change type matches branch name prefix
+- [ ] PR title and body are written in English
 - [ ] OpenSpec change is archived (if applicable)
 - [ ] Tests added/updated for changed code
 - [ ] E2E tests pass (if UI-affecting change)

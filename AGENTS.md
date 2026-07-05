@@ -59,10 +59,10 @@ uv run ruff check .                        # Lint
 uv run ruff format .                       # Format
 uv run ruff format --check .               # Format check
 uv run pyright                             # Type check
-uv run python -m pytest tests/ --tb=short  # Unit tests
+uv run python -m pytest tests/ --tb=short  # Unit tests only (E2E tests live in e2e/, see below)
 uv run python -m pytest tests/ --tb=short --cov=webcompy --cov-report=term-missing  # With coverage
-scripts/run-e2e-tests.sh                   # All E2E tests
-scripts/run-e2e-tests.sh <group-name>      # Single E2E group
+scripts/run-e2e-tests.sh                   # All E2E tests (core + docs, prod + static)
+scripts/run-e2e-tests.sh <group-name>      # Single E2E group (e.g., components, docs-home)
 ```
 
 ### Inspect CLI
@@ -216,6 +216,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md` |
 | `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `async-scheduler/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md` |
+| `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
 
 Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md`.
@@ -332,8 +333,13 @@ When specs are added, modified, or removed, update:
 | `hydration-data-transfer` | Server-to-browser data transfer for `AsyncResult` states and `FetchPort` response caches via payload injection |
 | `transfer-codec` | Layered serialization engine (encode/decode) preserving Python type fidelity across the hydration boundary via `__webcompy_`-tagged JSON |
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
+| `test-execution-paths` | Physical separation between unit (`tests/`) and E2E (`e2e/`) tests; opt-in `WEBCOMPY_RUN_E2E=1` env var gate; `scripts/run-e2e-tests.sh` canonical entry point |
 
 ## Language Rules
 
-- All documents (proposals, designs, specs, tasks) and code comments MUST be written in English.
-- Communication with the user MUST use the language the user prefers.
+- All documents (proposals, designs, specs, tasks, PR descriptions, PR titles,
+  PR review comments, code comments) MUST be written in English.
+- Communication with the user MUST use the language the user prefers. This
+  applies to chat output, not to the deliverables above. AI agents that draft
+  PR bodies or code comments MUST produce English output regardless of the
+  chat language.

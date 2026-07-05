@@ -7,7 +7,7 @@ import pytest
 
 from webcompy_cli._lockfile import LOCKFILE_NAME, load_lockfile
 
-E2E_DIR = pathlib.Path(__file__).parent / "e2e"
+E2E_DIR = pathlib.Path(__file__).parent.parent / "e2e" / "core"
 
 _WHEEL_FILENAME_RE = re.compile(r"\w+-0\+sha\.[0-9a-f]{8}-py3-none-any\.whl")
 
