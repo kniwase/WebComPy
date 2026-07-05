@@ -118,16 +118,30 @@ class TestCollectComponentSignals:
         result = _collect_component_signals(component)
         assert result == {"settings": {"a": 1, "b": 2}}
 
-    def test_drops_non_serializable_signal_value(self, caplog):
+    def test_collect_keeps_raw_values_without_pre_check(self):
         class NonSerializable:
             pass
 
         bad = Signal(NonSerializable())
         component = _stub_component({"bad": bad, "good": Signal("ok")}, "cmp")
-        with caplog.at_level("WARNING", logger="webcompy.hydration._collect"):
-            result = _collect_component_signals(component)
-        assert "bad" not in result
+        result = _collect_component_signals(component)
+        assert "bad" in result
+        assert "good" in result
+        assert isinstance(result["bad"], NonSerializable)
         assert result["good"] == "ok"
+
+    def test_serialize_drops_non_serializable_signal_value(self, caplog):
+        class NonSerializable:
+            pass
+
+        bad = Signal(NonSerializable())
+        component = _stub_component({"bad": bad, "good": Signal("ok")}, "cmp")
+        collected = _collect_component_signals(component)
+        payload = TransferPayload(signals={"cmp": collected})
+        with caplog.at_level("WARNING", logger="webcompy.hydration._payload"):
+            serialized = serialize_payload(payload)
+        assert "bad" not in serialized
+        assert "ok" in serialized
 
     def test_empty_members_returns_empty_dict(self):
         component = _stub_component({}, "cmp")
@@ -164,7 +178,7 @@ class TestCollectTransferDataSignals:
         payload = collect_transfer_data(parent)
         assert "empty-cmp" not in payload.signals
 
-    def test_component_with_only_failing_signals_excluded(self, caplog):
+    def test_collect_keeps_component_with_non_serializable_signal(self):
         class NonSerializable:
             pass
 
@@ -175,9 +189,25 @@ class TestCollectTransferDataSignals:
         parent = MagicMock()
         parent._children = [child]
         parent._property = {"component_id": "root"}
-        with caplog.at_level("WARNING", logger="webcompy.hydration._collect"):
-            payload = collect_transfer_data(parent)
-        assert "bad-cmp" not in payload.signals
+        payload = collect_transfer_data(parent)
+        assert "bad-cmp" in payload.signals
+        assert "bad" in payload.signals["bad-cmp"]
+
+    def test_serialize_excludes_component_with_only_failing_signals(self, caplog):
+        class NonSerializable:
+            pass
+
+        child = _stub_component(
+            {"bad": Signal(NonSerializable())},
+            component_id="bad-cmp",
+        )
+        parent = MagicMock()
+        parent._children = [child]
+        parent._property = {"component_id": "root"}
+        payload = collect_transfer_data(parent)
+        with caplog.at_level("WARNING", logger="webcompy.hydration._payload"):
+            serialized = serialize_payload(payload)
+        assert "bad-cmp" not in serialized
 
     def test_version_is_current(self):
         parent = MagicMock()
