@@ -246,6 +246,10 @@ Co-Authored-By: opencode <noreply@opencode.ai>
 ### PR 提出（Submit）
 
 - **テンプレート**: `.github/PULL_REQUEST_TEMPLATE.md`（すべての PR で唯一のテンプレート）
+- **PR タイトルと本文の言語**: PR タイトルと本文（Description、Related Resources、
+  チェックリストの説明など）は `AGENTS.md` の Language Rules に従い **必ず英語で**
+  作成すること。ユーザーのチャット上の設定言語に関わらず、AI エージェントが PR を
+  ドラフトする場合は英語を出力すること。
 - **PR タイトルプレフィックス**で CI の挙動が変わる:
   - `chore:` — code check（lint、typecheck、test、E2E）をスキップ。CI は
     OpenSpec 検証と AI レビューのみ実行。プロポーザル単独 PR に適する。

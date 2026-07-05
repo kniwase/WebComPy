@@ -337,5 +337,9 @@ When specs are added, modified, or removed, update:
 
 ## Language Rules
 
-- All documents (proposals, designs, specs, tasks) and code comments MUST be written in English.
-- Communication with the user MUST use the language the user prefers.
+- All documents (proposals, designs, specs, tasks, PR descriptions, PR titles,
+  PR review comments, code comments) MUST be written in English.
+- Communication with the user MUST use the language the user prefers. This
+  applies to chat output, not to the deliverables above. AI agents that draft
+  PR bodies or code comments MUST produce English output regardless of the
+  chat language.

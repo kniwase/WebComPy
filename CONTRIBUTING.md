@@ -243,6 +243,11 @@ invocation paths:
 ### Submit
 
 - **Template**: `.github/PULL_REQUEST_TEMPLATE.md` (the only template used for all PRs)
+- **PR title and body language**: the PR title and the PR body (Description,
+  Related Resources, checklist explanations, etc.) MUST be written in English
+  per the Language Rules in `AGENTS.md`. AI agents that draft PRs (e.g.,
+  during PR preparation steps) must produce English output regardless of the
+  user's preferred chat language.
 - **PR title prefix** determines CI behavior:
   - `chore:` — skips code checks (lint, typecheck, test, E2E); CI runs OpenSpec
     validation and AI review only. Suitable for proposal-only PRs.
