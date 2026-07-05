@@ -35,7 +35,7 @@
 - [x] 5.1 Modify `_try_serialize_value()` in `packages/webcompy/src/webcompy/hydration/_payload.py` to use `encode()` instead of `json.dumps()` probing
 - [x] 5.2 Modify `serialize_payload()` to apply `encode()` to `TransferAsyncResultEntry.data` before `json.dumps()`
 - [x] 5.3 Modify `deserialize_payload()` to apply `decode()` after `json.loads()`
-- [x] 5.4 Modify `_collect.py` to pass `AsyncResult` data through `encode()` when building `TransferAsyncResultEntry`
+- [x] 5.4 `_collect.py` SHALL store raw `AsyncResult` data in `TransferAsyncResultEntry` (encoding is centralized in `serialize_payload` via `_try_serialize_value` to avoid double-encoding and spurious reserved-key warnings on type-tagged sub-values)
 - [x] 5.5 Verify `__webcompy_transfer_version__` remains `1` (the codec does not change the payload schema; version bump to 2 is deferred to `feat-signal-value-transfer`)
 
 ## 6. Validation Spike

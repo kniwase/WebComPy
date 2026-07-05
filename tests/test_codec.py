@@ -35,6 +35,16 @@ class Color(enum.Enum):
     GREEN = "green"
 
 
+class Priority(enum.IntEnum):
+    LOW = 1
+    HIGH = 10
+
+
+class Status(enum.StrEnum):
+    OK = "ok"
+    FAIL = "fail"
+
+
 @dataclasses.dataclass
 class CodecTestAddress:
     city: str
@@ -526,3 +536,116 @@ class TestDecodeFailurePaths:
 
         encoded = {"__webcompy_type__": "nonexistent", "__webcompy_value__": "x"}
         assert decode(encoded) is None
+
+
+class TestLayer2EncoderExceptionSafety:
+    def test_encoder_exception_does_not_propagate(self, caplog):
+        class BadCustom:
+            pass
+
+        def bad_encoder(obj):
+            raise RuntimeError("encoder boom")
+
+        register_type_handler(BadCustom, bad_encoder, lambda p: None)
+
+        with caplog.at_level("ERROR"):
+            result = encode(BadCustom())
+
+        assert result is None
+        assert any("Custom encoder for BadCustom failed" in msg for msg in caplog.messages)
+
+    def test_encoder_exception_marks_failure_flag(self):
+        from webcompy.hydration._codec import _FailureFlag
+
+        class BadCustom:
+            pass
+
+        def bad_encoder(obj):
+            raise RuntimeError("encoder boom")
+
+        register_type_handler(BadCustom, bad_encoder, lambda p: None)
+
+        flag = _FailureFlag()
+        result = encode(BadCustom(), _flag=flag)
+
+        assert result is None
+        assert flag.failed is True
+
+
+class TestIntEnumStrEnum:
+    def test_int_enum_preserves_type(self):
+        encoded = encode(Priority.HIGH)
+        assert encoded["__webcompy_type__"] == "enum"
+        assert encoded["__webcompy_value__"]["value"] == 10
+        decoded = decode(encoded)
+        assert isinstance(decoded, Priority)
+        assert decoded is Priority.HIGH
+
+    def test_str_enum_preserves_type(self):
+        encoded = encode(Status.OK)
+        assert encoded["__webcompy_type__"] == "enum"
+        assert encoded["__webcompy_value__"]["value"] == "ok"
+        decoded = decode(encoded)
+        assert isinstance(decoded, Status)
+        assert decoded is Status.OK
+
+
+class TestNoDoubleEncodeWarning:
+    def test_payload_serialize_does_not_warn_on_reserved_keys(self, caplog):
+        payload = TransferPayload(
+            async_results={
+                "cmp-1": TransferAsyncResultEntry(
+                    state="success",
+                    data={"when": datetime(2026, 7, 4), "name": "Alice"},
+                ),
+            },
+        )
+        with caplog.at_level("WARNING"):
+            serialized = serialize_payload(payload)
+        assert "Reserved key" not in caplog.text
+        result = deserialize_payload(serialized)
+        assert result is not None
+        assert result.async_results["cmp-1"].data["when"] == datetime(2026, 7, 4)
+
+    def test_collect_then_serialize_does_not_warn_on_reserved_keys(self, caplog):
+        async_results = {
+            "cmp-1": TransferAsyncResultEntry(
+                state="success",
+                data={"when": datetime(2026, 7, 4)},
+            ),
+        }
+
+        with caplog.at_level("WARNING"):
+            serialize_payload(
+                TransferPayload(
+                    __webcompy_transfer_version__=1,
+                    async_results=async_results,
+                )
+            )
+        assert "Reserved key" not in caplog.text
+
+
+class TestEntryGranularBestEffort:
+    def test_single_unencodable_subvalue_drops_whole_entry(self, caplog):
+        class Unencodable:
+            pass
+
+        payload = TransferPayload(
+            async_results={
+                "cmp-good": TransferAsyncResultEntry(
+                    state="success",
+                    data={"x": 1},
+                ),
+                "cmp-bad": TransferAsyncResultEntry(
+                    state="success",
+                    data={"bad": Unencodable()},
+                ),
+            },
+        )
+        with caplog.at_level("WARNING"):
+            serialized = serialize_payload(payload)
+        result = deserialize_payload(serialized)
+        assert result is not None
+        assert "cmp-good" in result.async_results
+        assert "cmp-bad" not in result.async_results
+        assert any("Cannot encode" in m or "Excluding" in m for m in caplog.messages)

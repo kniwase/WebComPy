@@ -63,9 +63,9 @@ def _decode_builtin(type_name: str, payload: Any) -> Any:
     if type_name == "uuid":
         return UUID(str(payload))
     if type_name == "enum":
-        return _reconstruct_qualified(payload, reconstruct_enum)
+        return _reconstruct_qualified(payload, _reconstruct_enum)
     if type_name == "dataclass":
-        return _reconstruct_qualified(payload, reconstruct_dataclass)
+        return _reconstruct_qualified(payload, _reconstruct_dataclass)
     _logger.warning("Unknown __webcompy_type__: %r", type_name)
     return None
 
@@ -86,7 +86,7 @@ def _resolve_class(module_name: str, class_name: str) -> type | None:
         return None
 
 
-def reconstruct_enum(cls: type, payload: Any) -> Any:
+def _reconstruct_enum(cls: type, payload: Any) -> Any:
     if not isinstance(payload, dict):
         return None
     value = payload.get("value")
@@ -97,7 +97,7 @@ def reconstruct_enum(cls: type, payload: Any) -> Any:
         return None
 
 
-def reconstruct_dataclass(cls: type, payload: Any) -> Any:
+def _reconstruct_dataclass(cls: type, payload: Any) -> Any:
     if not isinstance(payload, dict):
         return None
     fields = payload.get("fields", {})
@@ -198,7 +198,7 @@ def encode(
     _seen: set[int] | None = None,
     _flag: _FailureFlag | None = None,
 ) -> Any:
-    if value is None or isinstance(value, (bool, int, float, str)):
+    if value is None or (isinstance(value, (bool, int, float, str)) and not isinstance(value, Enum)):
         return value
 
     if _seen is None:
@@ -224,7 +224,16 @@ def encode(
 
         for cls, (type_name, encoder, _) in _type_handlers.items():
             if isinstance(value, cls):
-                return _tag(type_name, encoder(value))
+                try:
+                    return _tag(type_name, encoder(value))
+                except Exception:
+                    _logger.exception(
+                        "Custom encoder for %s failed; dropping.",
+                        cls.__name__,
+                    )
+                    if _flag is not None:
+                        _flag.failed = True
+                    return None
 
         result = _encode_builtin(value)
         if result is not _SENTINEL:
