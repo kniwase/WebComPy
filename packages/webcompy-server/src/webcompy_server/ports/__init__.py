@@ -1,3 +1,4 @@
+from webcompy_server.ports._async_scheduler import ServerAsyncSchedulerPort
 from webcompy_server.ports._cookie import ServerCookiePort
 from webcompy_server.ports._dom import ServerDOMPort
 from webcompy_server.ports._fetch import ServerFetchPort
@@ -8,6 +9,7 @@ from webcompy_server.ports._media_query import ServerMediaQueryPort
 from webcompy_server.ports._virtual_dom import VirtualDOMEvent, VirtualDOMNode
 
 __all__ = [
+    "ServerAsyncSchedulerPort",
     "ServerCookiePort",
     "ServerDOMPort",
     "ServerFFIPort",

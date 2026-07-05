@@ -13,7 +13,7 @@ This change introduces an `AsyncSchedulerPort` that becomes the single chokepoin
 - **NEW** `AsyncSchedulerPort` ABC in `packages/webcompy/src/webcompy/ports/_async_scheduler.py` — Defines `schedule(coro: Coroutine) -> asyncio.Task` and `await_pending() -> Awaitable[None]` as the unified async scheduling interface.
 - **NEW** `BrowserAsyncSchedulerPort` in `packages/webcompy/src/webcompy/ports/_browser/_async_scheduler.py` — Wraps `asyncio.ensure_future` (fire-and-forget). `await_pending()` is a no-op because the browser event loop is long-lived.
 - **NEW** `ServerAsyncSchedulerPort` in `packages/webcompy-server/src/webcompy_server/ports/_async_scheduler.py` — Creates tasks via `loop.create_task` and registers them in an internal registry. `await_pending()` gathers all registered tasks, ensuring completion before the render context is disposed.
-- **NEW** `ASYNC_SCHEDULER_PORT_KEY: InjectKey[AsyncSchedulerPort]` in `packages/webcompy/src/webcompy/di/_keys.py`.
+- **NEW** `ASYNC_SCHEDULER_PORT_KEY: InjectKey[AsyncSchedulerPort]` in `packages/webcompy/src/webcompy/ports/_keys.py`.
 - **MODIFIED** `packages/webcompy/src/webcompy/aio/_aio.py` — `_aio_run_browser` and `_aio_run_server` delegate to `AsyncSchedulerPort.schedule()` when a DI scope is active, with a fallback to direct task creation (plus a warning log) when called outside a render context.
 - **MODIFIED** `packages/webcompy/src/webcompy/elements/types/_dynamic.py` — `DynamicElement._hydrate_node()` calls `inject(ASYNC_SCHEDULER_PORT_KEY).schedule(child._render())` instead of `asyncio.ensure_future`.
 - **MODIFIED** `packages/webcompy/src/webcompy/elements/types/_suspense.py` — Both `ensure_future` call sites (`_browser_render` and `_hydrate_node`) route through `AsyncSchedulerPort.schedule()`.

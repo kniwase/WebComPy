@@ -6,11 +6,13 @@ from logging import getLogger
 from typing import Any
 
 from webcompy.components._component import Component
+from webcompy.di import inject
 from webcompy.di._keys import SUSPENSE_RESOLVING_KEY
 from webcompy.di._scope import _active_di_scope
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement, _patch_children, _position_element_nodes
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
 from webcompy.utils._environment import ENVIRONMENT
 
 _logger = getLogger(__name__)
@@ -131,7 +133,8 @@ class SuspenseElement(DynamicElement):
         fallback = self._generate_fallback()
         self._children = fallback
         self._resolved = False
-        task = asyncio.ensure_future(self._browser_resolve(children, pairs))
+        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+        task = scheduler.schedule(self._browser_resolve(children, pairs))
         self._pending_tasks.append(task)
         task.add_done_callback(lambda t: self._pending_tasks.remove(t) if t in self._pending_tasks else None)
 
@@ -229,7 +232,8 @@ class SuspenseElement(DynamicElement):
         else:
             fallback = self._generate_fallback()
             self._children = fallback
-            task = asyncio.ensure_future(self._browser_resolve())
+            scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+            task = scheduler.schedule(self._browser_resolve())
             self._pending_tasks.append(task)
             task.add_done_callback(lambda t: self._pending_tasks.remove(t) if t in self._pending_tasks else None)
         super()._hydrate_node()

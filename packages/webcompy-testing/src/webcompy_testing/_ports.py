@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import re
+from collections.abc import Coroutine
 from typing import Any
 from unittest.mock import MagicMock
 
+from webcompy.ports._async_scheduler import AsyncSchedulerPort
 from webcompy.ports._fetch import FetchPort, Response
 from webcompy.ports._ffi import FFIPort
 from webcompy.ports._host import HostPort
@@ -138,3 +141,21 @@ class FakeFetchPort(FetchPort):
         raise KeyError(
             f"No canned response registered for {method} {url}. Registered keys: {list(self._responses.keys())}"
         )
+
+
+class FakeAsyncSchedulerPort(AsyncSchedulerPort):
+    def __init__(self) -> None:
+        self._coroutines: list[Coroutine[Any, Any, Any]] = []
+
+    def schedule(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
+        self._coroutines.append(coro)
+        return asyncio.ensure_future(asyncio.sleep(0))
+
+    async def drain(self) -> None:
+        coros = self._coroutines
+        self._coroutines = []
+        if coros:
+            await asyncio.gather(*coros, return_exceptions=True)
+
+    async def await_pending(self) -> None:
+        await self.drain()

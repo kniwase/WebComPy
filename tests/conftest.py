@@ -198,7 +198,8 @@ def fake_browser_full(monkeypatch, reset_di_scope):
     import importlib
 
     from webcompy.di._scope import DIScope, _active_di_scope
-    from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
+    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
+    from webcompy_testing import FakeAsyncSchedulerPort
 
     modules_with_env: list[str] = []
     for mod_name in modules_with_env:
@@ -208,8 +209,10 @@ def fake_browser_full(monkeypatch, reset_di_scope):
     dom_port = FakeBrowserDOMPort()
     host_port = FakeBrowserHostPort()
     ffi_port = FakeBrowserFFIPort()
+    scheduler_port = FakeAsyncSchedulerPort()
 
     scope = DIScope()
+    scope.provide(ASYNC_SCHEDULER_PORT_KEY, scheduler_port)
     scope.provide(DOM_PORT_KEY, dom_port)
     scope.provide(HOST_PORT_KEY, host_port)
     scope.provide(FFI_PORT_KEY, ffi_port)
@@ -222,12 +225,14 @@ def fake_browser_full(monkeypatch, reset_di_scope):
 @pytest.fixture
 def server_di_scope():
     from webcompy.di._scope import DIScope, _active_di_scope
-    from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
+    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
+    from webcompy_server.ports._async_scheduler import ServerAsyncSchedulerPort
     from webcompy_server.ports._dom import ServerDOMPort
     from webcompy_server.ports._ffi import ServerFFIPort
     from webcompy_server.ports._host import ServerHostPort
 
     scope = DIScope()
+    scope.provide(ASYNC_SCHEDULER_PORT_KEY, ServerAsyncSchedulerPort())
     scope.provide(DOM_PORT_KEY, ServerDOMPort())
     scope.provide(HOST_PORT_KEY, ServerHostPort())
     scope.provide(FFI_PORT_KEY, ServerFFIPort())

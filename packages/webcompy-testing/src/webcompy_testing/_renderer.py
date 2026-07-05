@@ -5,10 +5,11 @@ from typing import TYPE_CHECKING
 
 from webcompy import logging
 from webcompy.di._scope import DIScope, _active_di_scope
-from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
 from webcompy_server.ports import VirtualDOMNode
 from webcompy_testing._asgi import format_html
 from webcompy_testing._ports import (
+    FakeAsyncSchedulerPort,
     FakeBrowserDOMPort,
     FakeBrowserFFIPort,
     FakeBrowserHostPort,
@@ -101,6 +102,8 @@ class TestRenderer:
             from webcompy.di._keys import _HEAD_PROPS_KEY
 
             scope = DIScope(parent=parent_scope)
+            fake_scheduler = FakeAsyncSchedulerPort()
+            scope.provide(ASYNC_SCHEDULER_PORT_KEY, fake_scheduler)
             scope.provide(DOM_PORT_KEY, FakeBrowserDOMPort())
             scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
             scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
@@ -132,6 +135,7 @@ class TestRenderer:
             instance._parent = _DummyParent(root_node)  # type: ignore[assignment]
             instance._node_idx = 0
             await instance._render()
+            await fake_scheduler.await_pending()
 
             return instance, root_node, scope
 

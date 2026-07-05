@@ -11,7 +11,7 @@ from webcompy.di import inject
 from webcompy.elements.typealias import ElementChildren
 from webcompy.elements.types import Element
 from webcompy.elements.types._base import ElementWithChildren
-from webcompy.ports._keys import DOM_PORT_KEY
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY
 
 if TYPE_CHECKING:
     from webcompy.app._render_context import RenderContext
@@ -193,7 +193,7 @@ async def generate_html(
     token = _active_app_context.set(ctx)
     _set_app_instance(ctx)
     try:
-        return await _generate_html_impl(
+        html_output = await _generate_html_impl(
             ctx,
             app_package_name,
             dev_mode,
@@ -205,6 +205,9 @@ async def generate_html(
             runtime_serving,
             extra_wheel_filenames,
         )
+        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+        await scheduler.await_pending()
+        return html_output
     finally:
         _active_app_context.reset(token)
         _set_app_instance(None)

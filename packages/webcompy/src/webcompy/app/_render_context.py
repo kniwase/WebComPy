@@ -250,6 +250,7 @@ class RenderContext(ABC):
 
 class BrowserRenderContext(RenderContext):
     def _register_ports(self) -> None:
+        from webcompy.ports._browser._async_scheduler import BrowserAsyncSchedulerPort
         from webcompy.ports._browser._cookie import BrowserCookiePort
         from webcompy.ports._browser._dom import BrowserDOMPort
         from webcompy.ports._browser._fetch import BrowserFetchPort
@@ -258,6 +259,7 @@ class BrowserRenderContext(RenderContext):
         from webcompy.ports._browser._host import BrowserHostPort
         from webcompy.ports._browser._media_query import BrowserMediaQueryPort
         from webcompy.ports._keys import (
+            ASYNC_SCHEDULER_PORT_KEY,
             COOKIE_PORT_KEY,
             DOM_PORT_KEY,
             FETCH_PORT_KEY,
@@ -268,6 +270,7 @@ class BrowserRenderContext(RenderContext):
         )
 
         router_mode = self._router.__mode__ if self._router else "history"
+        self._di_scope.provide(ASYNC_SCHEDULER_PORT_KEY, BrowserAsyncSchedulerPort())
         self._di_scope.provide(COOKIE_PORT_KEY, BrowserCookiePort())
         self._di_scope.provide(DOM_PORT_KEY, BrowserDOMPort())
         self._di_scope.provide(FETCH_PORT_KEY, BrowserFetchPort())

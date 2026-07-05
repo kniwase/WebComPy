@@ -38,6 +38,11 @@ class WebComPyApp:
     ) -> None:
         self._config = config or WebComPyAppConfig()
         self._profile = self._config.profile
+        # Defense-in-depth: the AsyncSchedulerPort (see openspec/changes/feat-async-scheduler-port/design.md)
+        # provides the primary structural guarantee that scheduled tasks complete before the
+        # render context is disposed (server implementation drains its registry via await_pending()).
+        # This guard prevents hydration-related async scheduling from running on the server even
+        # if the scheduler's drain mechanism were bypassed.
         self._hydrate = self._config.hydrate and ENVIRONMENT == "pyscript"
         self._render_context_cv = ContextVar(f"_render_context_cv_{id(self)}", default=None)
         self._root_component_def = root_component
