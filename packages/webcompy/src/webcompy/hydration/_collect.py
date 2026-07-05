@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from webcompy.components._component import Component
 from webcompy.di import inject
+from webcompy.hydration._codec import encode
 from webcompy.hydration._payload import TransferAsyncResultEntry, TransferFetchEntry, TransferPayload
 from webcompy.ports._keys import FETCH_PORT_KEY
 
@@ -31,7 +32,7 @@ def collect_transfer_data(root: AppDocumentRoot) -> TransferPayload:
             if ar._state.value == AsyncState.SUCCESS:
                 async_results[component_id] = TransferAsyncResultEntry(
                     state="success",
-                    data=ar._data.value,
+                    data=encode(ar._data.value),
                 )
 
     return TransferPayload(

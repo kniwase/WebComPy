@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from logging import getLogger
 from typing import Any
 
+from webcompy.hydration._codec import _FailureFlag, decode, encode
+
 _logger = getLogger(__name__)
 
 
@@ -32,6 +34,18 @@ class TransferPayload:
 _SUPPORTED_VERSION = 1
 
 
+def _try_serialize_value(value: Any) -> Any:
+    if value is None:
+        return None
+    flag = _FailureFlag()
+    encoded = encode(value, _flag=flag)
+    if flag.failed:
+        return None
+    if encoded is None:
+        return None
+    return encoded
+
+
 def _to_serializable(payload: TransferPayload) -> dict[str, Any]:
     return {
         "__webcompy_transfer_version__": payload.__webcompy_transfer_version__,
@@ -53,28 +67,20 @@ def _to_serializable(payload: TransferPayload) -> dict[str, Any]:
     }
 
 
-def _try_serialize_value(value: Any) -> Any:
-    try:
-        json.dumps(value)
-        return value
-    except (TypeError, ValueError):
-        return None
-
-
 def serialize_payload(payload: TransferPayload) -> str:
     raw = _to_serializable(payload)
     cleaned_async_results: dict[str, dict[str, Any]] = {}
     for cid, entry in raw["async_results"].items():
         serializable_data = _try_serialize_value(entry["data"])
         if serializable_data is None:
-            _logger.warning("Excluding async_result %s: data is not JSON-serializable", cid)
+            _logger.warning("Excluding async_result %s: data is not encodable", cid)
             continue
         cleaned_async_results[cid] = {
             "state": entry["state"],
             "data": serializable_data,
         }
     raw["async_results"] = cleaned_async_results
-    dumped = json.dumps(raw, ensure_ascii=False, default=str)
+    dumped = json.dumps(raw, ensure_ascii=False)
     escaped = html_module.escape(dumped, quote=True)
     return escaped
 
@@ -90,6 +96,7 @@ def deserialize_payload(text: str) -> TransferPayload | None:
     version = raw.get("__webcompy_transfer_version__")
     if version != _SUPPORTED_VERSION:
         return None
+    raw = decode(raw)
     fetches_data = raw.get("fetches") or {}
     async_results_data = raw.get("async_results") or {}
     fetches: dict[str, TransferFetchEntry] = {}
