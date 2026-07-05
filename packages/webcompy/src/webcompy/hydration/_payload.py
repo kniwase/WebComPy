@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import base64
 import html as html_module
 import json
+import zlib
 from dataclasses import dataclass, field
 from logging import getLogger
 from typing import Any
@@ -34,6 +36,10 @@ class TransferPayload:
 
 _SUPPORTED_VERSIONS: frozenset[int] = frozenset({1, 2})
 CURRENT_TRANSFER_VERSION: int = 2
+DEFAULT_COMPRESSION_THRESHOLD: int = 1024
+
+
+_COMPRESSED_FLAG_KEY: str = "__webcompy_compressed__"
 
 
 def _try_serialize_value(value: Any) -> Any:
@@ -72,7 +78,25 @@ def _to_serializable(payload: TransferPayload) -> dict[str, Any]:
     }
 
 
-def serialize_payload(payload: TransferPayload) -> str:
+def _maybe_compress(json_str: str, version: int, compression_threshold: int | None) -> str:
+    if compression_threshold is None or compression_threshold <= 0:
+        return json_str
+    if len(json_str.encode("utf-8")) <= compression_threshold:
+        return json_str
+    compressed = zlib.compress(json_str.encode("utf-8"))
+    encoded = base64.b64encode(compressed).decode("ascii")
+    envelope = {
+        _COMPRESSED_FLAG_KEY: True,
+        "__webcompy_transfer_version__": version,
+        "data": encoded,
+    }
+    return json.dumps(envelope, ensure_ascii=False)
+
+
+def serialize_payload(
+    payload: TransferPayload,
+    compression_threshold: int | None = DEFAULT_COMPRESSION_THRESHOLD,
+) -> str:
     raw = _to_serializable(payload)
     cleaned_fetches: dict[str, dict[str, Any]] = {}
     for url, entry in raw["fetches"].items():
@@ -114,8 +138,32 @@ def serialize_payload(payload: TransferPayload) -> str:
             cleaned_signals.pop(cid, None)
     raw["signals"] = cleaned_signals
     dumped = json.dumps(raw, ensure_ascii=False)
-    escaped = html_module.escape(dumped, quote=True)
+    serialized = _maybe_compress(dumped, payload.__webcompy_transfer_version__, compression_threshold)
+    escaped = html_module.escape(serialized, quote=True)
     return escaped
+
+
+def _decompress_raw(raw: dict[str, Any]) -> dict[str, Any] | None:
+    data = raw.get("data")
+    if not isinstance(data, str):
+        _logger.warning("Compressed payload missing 'data' field")
+        return None
+    try:
+        decoded = base64.b64decode(data)
+        decompressed = zlib.decompress(decoded)
+        json_str = decompressed.decode("utf-8")
+    except (ValueError, zlib.error, UnicodeDecodeError):
+        _logger.warning("Failed to decompress payload")
+        return None
+    try:
+        inner = json.loads(json_str)
+    except (json.JSONDecodeError, ValueError):
+        _logger.warning("Failed to parse decompressed payload")
+        return None
+    if not isinstance(inner, dict):
+        _logger.warning("Decompressed payload is not a dict")
+        return None
+    return inner
 
 
 def deserialize_payload(text: str) -> TransferPayload | None:
@@ -126,6 +174,12 @@ def deserialize_payload(text: str) -> TransferPayload | None:
         return None
     if not isinstance(raw, dict):
         return None
+    if raw.get(_COMPRESSED_FLAG_KEY) is True:
+        raw = _decompress_raw(raw)
+        if raw is None:
+            return None
+        if not isinstance(raw, dict):
+            return None
     version = raw.get("__webcompy_transfer_version__")
     if version not in _SUPPORTED_VERSIONS:
         return None
