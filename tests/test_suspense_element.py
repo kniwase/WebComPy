@@ -35,7 +35,11 @@ class _DummyParent:
 
 @pytest.fixture
 def suspense_scope():
+    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+    from webcompy_testing import FakeAsyncSchedulerPort
+
     scope = DIScope()
+    scope.provide(ASYNC_SCHEDULER_PORT_KEY, FakeAsyncSchedulerPort())
     scope.provide(DOM_PORT_KEY, FakeBrowserDOMPort())
     scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
     scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())

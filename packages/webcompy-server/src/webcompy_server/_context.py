@@ -4,6 +4,7 @@ from typing import Any
 
 from webcompy.app._render_context import RenderContext
 from webcompy.ports._keys import (
+    ASYNC_SCHEDULER_PORT_KEY,
     COOKIE_PORT_KEY,
     DOM_PORT_KEY,
     FETCH_PORT_KEY,
@@ -13,6 +14,7 @@ from webcompy.ports._keys import (
     MEDIA_QUERY_PORT_KEY,
 )
 from webcompy_server._html import generate_html
+from webcompy_server.ports._async_scheduler import ServerAsyncSchedulerPort
 from webcompy_server.ports._cookie import ServerCookiePort
 from webcompy_server.ports._dom import ServerDOMPort
 from webcompy_server.ports._fetch import ServerFetchPort
@@ -25,6 +27,11 @@ from webcompy_server.ports._media_query import ServerMediaQueryPort
 class ServerRenderContext(RenderContext):
     def _register_ports(self) -> None:
         router_mode = self._router.__mode__ if self._router else "history"
+        override_scheduler = getattr(self._app, "_test_async_scheduler_port", None)
+        if override_scheduler is not None:
+            self._di_scope.provide(ASYNC_SCHEDULER_PORT_KEY, override_scheduler)
+        else:
+            self._di_scope.provide(ASYNC_SCHEDULER_PORT_KEY, ServerAsyncSchedulerPort())
         self._di_scope.provide(COOKIE_PORT_KEY, ServerCookiePort(self._cookie_header))
         self._di_scope.provide(DOM_PORT_KEY, ServerDOMPort())
         fetch_port = self._app._server_fetch_port or ServerFetchPort()

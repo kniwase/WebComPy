@@ -11,6 +11,7 @@ from webcompy_testing._asgi import (
 )
 from webcompy_testing._dom import FakeDOMNode
 from webcompy_testing._ports import (
+    FakeAsyncSchedulerPort,
     FakeBrowserDOMPort,
     FakeBrowserFFIPort,
     FakeBrowserHostPort,
@@ -21,6 +22,7 @@ from webcompy_testing._scope import create_test_app
 from webcompy_testing._utils import run_sync
 
 __all__ = [
+    "FakeAsyncSchedulerPort",
     "FakeBrowserDOMPort",
     "FakeBrowserFFIPort",
     "FakeBrowserHostPort",

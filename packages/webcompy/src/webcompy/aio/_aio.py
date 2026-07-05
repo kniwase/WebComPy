@@ -13,25 +13,48 @@ from webcompy.utils._environment import ENVIRONMENT
 AsyncResolver: TypeAlias = Callable[[Coroutine[Any, Any, Any]], None]
 
 
-def _aio_run_browser(coro: Coroutine[Any, Any, Any]) -> None:
-    task = asyncio.ensure_future(coro)
-    _aio_run_browser_tasks.append(task)
-    task.add_done_callback(lambda t: _aio_run_browser_tasks.remove(t) if t in _aio_run_browser_tasks else None)
-
-
 _aio_run_browser_tasks: list[asyncio.Task[Any]] = []
-_aio_run_server_tasks: list[asyncio.Task[Any]] = []
+
+
+def _schedule_via_port_or_fallback(
+    coro: Coroutine[Any, Any, Any],
+    fallback: Callable[[Coroutine[Any, Any, Any]], asyncio.Task[Any] | None],
+    warning_label: str,
+) -> asyncio.Task[Any] | None:
+    from webcompy.di import InjectionError, inject
+    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+    try:
+        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+    except InjectionError:
+        logging.warning(
+            "aio_run called outside render context (%s); task may not be awaited on server",
+            warning_label,
+        )
+        return fallback(coro)
+    return scheduler.schedule(coro)
+
+
+def _aio_run_browser(coro: Coroutine[Any, Any, Any]) -> None:
+    def _fallback(c: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
+        task = asyncio.ensure_future(c)
+        _aio_run_browser_tasks.append(task)
+        task.add_done_callback(lambda t, _tasks=_aio_run_browser_tasks: _tasks.remove(t) if t in _tasks else None)
+        return task
+
+    _schedule_via_port_or_fallback(coro, _fallback, "browser")
 
 
 def _aio_run_server(coro: Coroutine[Any, Any, Any]) -> None:
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        asyncio.run(coro)
-    else:
-        task = loop.create_task(coro)
-        _aio_run_server_tasks.append(task)
-        task.add_done_callback(lambda t: _aio_run_server_tasks.remove(t) if t in _aio_run_server_tasks else None)
+    def _fallback(c: Coroutine[Any, Any, Any]) -> asyncio.Task[Any] | None:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(c)
+            return None
+        return loop.create_task(c)
+
+    _schedule_via_port_or_fallback(coro, _fallback, "server")
 
 
 aio_run: AsyncResolver = _aio_run_browser if ENVIRONMENT == "pyscript" else _aio_run_server

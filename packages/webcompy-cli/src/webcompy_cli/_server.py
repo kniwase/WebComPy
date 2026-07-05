@@ -18,6 +18,8 @@ from starlette.routing import Route
 from starlette.types import ASGIApp
 
 from webcompy.app._app import WebComPyApp
+from webcompy.di import inject
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
 from webcompy.ui.theme._server import read_theme_from_cookie
 from webcompy_cli._argparser import get_params
 from webcompy_cli._build import BuildArtifacts, resolve_build_artifacts
@@ -173,6 +175,8 @@ def create_asgi_app(
                 try:
                     return HTMLResponse(await html_generator(ctx))
                 finally:
+                    scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+                    await scheduler.await_pending()
                     ctx.dispose()
             else:
                 raise HTTPException(404)
@@ -193,6 +197,8 @@ def create_asgi_app(
             try:
                 return HTMLResponse(await html_generator(ctx))
             finally:
+                scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+                await scheduler.await_pending()
                 ctx.dispose()
 
         html_route = Route("/", send_html)

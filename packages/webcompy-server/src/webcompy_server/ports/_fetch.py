@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 from typing import TYPE_CHECKING
 
 import httpx
@@ -167,12 +166,3 @@ class ServerFetchPort(FetchPort):
         await self._external_client.aclose()
         if self._self_site_client is not None:
             await self._self_site_client.aclose()
-
-    def __del__(self) -> None:
-        import asyncio
-
-        with contextlib.suppress(RuntimeError, ImportError, ModuleNotFoundError):
-            loop = asyncio.get_running_loop()
-            task = loop.create_task(self._external_client.aclose())  # noqa: RUF006
-            if self._self_site_client is not None:
-                task = loop.create_task(self._self_site_client.aclose())  # noqa: F841, RUF006

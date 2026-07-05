@@ -1,3 +1,4 @@
+from webcompy.ports._async_scheduler import AsyncSchedulerPort
 from webcompy.ports._cookie import CookiePort
 from webcompy.ports._dom import DOMNode, DOMNodeList, DOMPort
 from webcompy.ports._fetch import FetchPort
@@ -5,6 +6,7 @@ from webcompy.ports._ffi import FFIPort
 from webcompy.ports._history import HistoryPort
 from webcompy.ports._host import HostPort
 from webcompy.ports._keys import (
+    ASYNC_SCHEDULER_PORT_KEY,
     COOKIE_PORT_KEY,
     DOM_PORT_KEY,
     FETCH_PORT_KEY,
@@ -16,6 +18,7 @@ from webcompy.ports._keys import (
 from webcompy.ports._media_query import MediaQueryPort
 
 __all__ = [
+    "ASYNC_SCHEDULER_PORT_KEY",
     "COOKIE_PORT_KEY",
     "DOM_PORT_KEY",
     "FETCH_PORT_KEY",
@@ -23,6 +26,7 @@ __all__ = [
     "HISTORY_PORT_KEY",
     "HOST_PORT_KEY",
     "MEDIA_QUERY_PORT_KEY",
+    "AsyncSchedulerPort",
     "CookiePort",
     "DOMNode",
     "DOMNodeList",

@@ -1,4 +1,5 @@
 from webcompy.di import InjectKey
+from webcompy.ports._async_scheduler import AsyncSchedulerPort
 from webcompy.ports._cookie import CookiePort
 from webcompy.ports._dom import DOMPort
 from webcompy.ports._fetch import FetchPort
@@ -14,3 +15,4 @@ COOKIE_PORT_KEY = InjectKey[CookiePort]("webcompy-port-cookie")
 HISTORY_PORT_KEY = InjectKey[HistoryPort]("webcompy-port-history")
 HOST_PORT_KEY = InjectKey[HostPort]("webcompy-port-host")
 MEDIA_QUERY_PORT_KEY = InjectKey[MediaQueryPort]("webcompy-port-media-query")
+ASYNC_SCHEDULER_PORT_KEY = InjectKey[AsyncSchedulerPort]("webcompy-port-async-scheduler")
