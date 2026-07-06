@@ -341,7 +341,7 @@ CLI flags SHALL override values from `WebComPyBuildConfig`. The following flags 
 
 - **WHEN** a developer sets `WebComPyAppConfig(theme={"default": "light", "persist": False})`
 - **AND** a user toggles the theme to `Theme.DARK` via the UI
-- **THEN** the `<html>` element SHALL be updated with `data-theme="dark"`
+- **THEN** the `<html>` element SHALL be updated to `data-theme="dark"`
 - **AND** no `webcompy-theme` cookie SHALL be written
 - **AND** on a subsequent page load, the theme SHALL return to `Theme.LIGHT`
 
