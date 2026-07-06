@@ -12,7 +12,9 @@ This change adds optional gzip compression to the transfer payload. When the ser
   - `serialize_payload()` SHALL accept a `compression_threshold: int | None` parameter (default e.g., 1024 bytes). When the serialized JSON exceeds the threshold, the payload SHALL be gzip-compressed via `zlib.compress()`, base64-encoded, and wrapped in a `{"__webcompy_compressed__": true, "data": "<base64>"}` envelope.
   - `deserialize_payload()` SHALL detect the `__webcompy_compressed__` flag, base64-decode and gzip-decompress the `data` field before JSON parsing.
   - The `__webcompy_transfer_version__` SHALL remain at the current version (compression is an orthogonal concern, signaled by the `__webcompy_compressed__` flag rather than a version bump).
-- **MODIFIED** SSR/SSG entry points that call `serialize_payload()` — Pass the `compression_threshold` from `WebComPyAppConfig` or `GenerateConfig`.
+- **MODIFIED** `packages/webcompy/src/webcompy/app/_config.py`:
+  - `WebComPyAppConfig` SHALL include a `compression_threshold: int | None = 1024` field that controls the byte-length threshold above which the SSR/SSG hydration payload is compressed.
+- **MODIFIED** SSR/SSG entry points that call `serialize_payload()` — Read the `compression_threshold` from `WebComPyAppConfig` (via `app.config.compression_threshold`) and pass it to `serialize_payload()`. The default (`1024`) preserves the original behavior; `None` or `0` disables compression entirely.
 
 ## Capabilities
 

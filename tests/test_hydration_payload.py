@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import base64
+import html as html_module
+import inspect
 import json
-from unittest.mock import MagicMock
+import zlib
+from unittest.mock import MagicMock, patch
 
 from webcompy.aio._async_result import AsyncResult, AsyncState
 from webcompy.components._component import Component
 from webcompy.di._scope import DIScope, _active_di_scope
+from webcompy.hydration import _payload as payload_module
 from webcompy.hydration._collect import (
     _find_async_results_in_component,
     _walk_component_async_results,
@@ -19,6 +24,8 @@ from webcompy.hydration._payload import (
     serialize_payload,
 )
 from webcompy.ports._keys import FETCH_PORT_KEY
+
+_NO_APP = object()
 
 
 class TestTransferPayload:
@@ -116,12 +123,151 @@ class TestTransferPayload:
             fetches={"/test": TransferFetchEntry(status_code=200, headers={}, body="ok")},
         )
         serialized = serialize_payload(payload)
-        import html as html_module
-
         unescaped = html_module.unescape(serialized)
         parsed = json.loads(unescaped)
         assert parsed["__webcompy_transfer_version__"] == 2
         assert "/test" in parsed["fetches"]
+
+
+class TestPayloadCompression:
+    def _large_payload(self) -> TransferPayload:
+        return TransferPayload(
+            fetches={
+                f"/api/items/{i}": TransferFetchEntry(
+                    status_code=200,
+                    headers={"content-type": "application/json"},
+                    body=json.dumps({"id": i, "name": "item-name-" + "x" * 200}),
+                )
+                for i in range(50)
+            },
+            async_results={
+                f"cmp-{i}": TransferAsyncResultEntry(
+                    state="success",
+                    data={"result": list(range(50)), "label": "data-" + "y" * 100},
+                )
+                for i in range(10)
+            },
+        )
+
+    def test_round_trip_preserves_all_fields(self):
+        payload = self._large_payload()
+        original_serialized = serialize_payload(payload, compression_threshold=0)
+        compressed_serialized = serialize_payload(payload, compression_threshold=1024)
+        result = deserialize_payload(compressed_serialized)
+        assert result is not None
+        assert result.__webcompy_transfer_version__ == 2
+        assert set(result.fetches.keys()) == set(payload.fetches.keys())
+        assert set(result.async_results.keys()) == set(payload.async_results.keys())
+        first_url = next(iter(payload.fetches.keys()))
+        assert result.fetches[first_url].body == payload.fetches[first_url].body
+        first_cid = next(iter(payload.async_results.keys()))
+        assert result.async_results[first_cid].data == payload.async_results[first_cid].data
+        unescaped = html_module.unescape(compressed_serialized)
+        envelope = json.loads(unescaped)
+        assert envelope["__webcompy_compressed__"] is True
+        expected_inner = json.loads(html_module.unescape(original_serialized))
+        decoded = json.loads(zlib.decompress(base64.b64decode(envelope["data"])).decode("utf-8"))
+        assert decoded == expected_inner
+
+    def test_payload_below_threshold_is_not_compressed(self):
+        payload = TransferPayload(
+            fetches={"/api/data": TransferFetchEntry(status_code=200, headers={}, body="ok")},
+        )
+        serialized = serialize_payload(payload, compression_threshold=1024)
+        unescaped = html_module.unescape(serialized)
+        parsed = json.loads(unescaped)
+        assert "__webcompy_compressed__" not in parsed
+        assert parsed["__webcompy_transfer_version__"] == 2
+        assert "/api/data" in parsed["fetches"]
+
+    def test_threshold_none_disables_compression(self):
+        payload = self._large_payload()
+        serialized = serialize_payload(payload, compression_threshold=None)
+        unescaped = html_module.unescape(serialized)
+        parsed = json.loads(unescaped)
+        assert "__webcompy_compressed__" not in parsed
+        assert parsed["__webcompy_transfer_version__"] == 2
+
+    def test_threshold_zero_disables_compression(self):
+        payload = self._large_payload()
+        serialized = serialize_payload(payload, compression_threshold=0)
+        unescaped = html_module.unescape(serialized)
+        parsed = json.loads(unescaped)
+        assert "__webcompy_compressed__" not in parsed
+        assert parsed["__webcompy_transfer_version__"] == 2
+
+    def test_backward_compatible_with_uncompressed_payload(self):
+        payload = TransferPayload(
+            fetches={"/x": TransferFetchEntry(status_code=200, headers={}, body="ok")},
+            async_results={"cmp": TransferAsyncResultEntry(state="success", data={"v": 1})},
+        )
+        uncompressed = serialize_payload(payload, compression_threshold=0)
+        result = deserialize_payload(uncompressed)
+        assert result is not None
+        assert "/x" in result.fetches
+        assert "cmp" in result.async_results
+        assert result.async_results["cmp"].data == {"v": 1}
+
+    def test_compressed_payload_is_smaller_for_signal_heavy_data(self):
+        payload = self._large_payload()
+        uncompressed = serialize_payload(payload, compression_threshold=0)
+        compressed = serialize_payload(payload, compression_threshold=1024)
+        assert len(compressed) < len(uncompressed)
+
+    def test_envelope_contains_transfer_version_at_top_level(self):
+        payload = self._large_payload()
+        serialized = serialize_payload(payload, compression_threshold=1024)
+        unescaped = html_module.unescape(serialized)
+        envelope = json.loads(unescaped)
+        assert envelope["__webcompy_compressed__"] is True
+        assert envelope["__webcompy_transfer_version__"] == 2
+        assert isinstance(envelope["data"], str)
+        inner = json.loads(zlib.decompress(base64.b64decode(envelope["data"])).decode("utf-8"))
+        assert inner["__webcompy_transfer_version__"] == 2
+
+    def test_uses_only_stdlib_for_compression(self):
+        src = inspect.getsource(payload_module)
+        assert "import zlib" in src
+        assert "import base64" in src
+        assert "brotli" not in src.lower()
+
+    def test_corrupted_compressed_payload_returns_none(self):
+        envelope = {
+            "__webcompy_compressed__": True,
+            "__webcompy_transfer_version__": 2,
+            "data": base64.b64encode(b"not-zlib-data").decode("ascii"),
+        }
+        text = html_module.escape(json.dumps(envelope, ensure_ascii=False), quote=True)
+        assert deserialize_payload(text) is None
+
+    def test_default_threshold_compresses_large_payload(self):
+        payload = self._large_payload()
+        serialized = serialize_payload(payload)
+        unescaped = html_module.unescape(serialized)
+        parsed = json.loads(unescaped)
+        assert parsed["__webcompy_compressed__"] is True
+
+    def test_inner_version_authoritative_on_mismatch(self):
+        payload = self._large_payload()
+        original_json = json.dumps(
+            {
+                "__webcompy_transfer_version__": payload.__webcompy_transfer_version__,
+                "fetches": {},
+                "async_results": {},
+                "signals": {},
+            },
+            ensure_ascii=False,
+        )
+        compressed = zlib.compress(original_json.encode("utf-8"))
+        envelope = {
+            "__webcompy_compressed__": True,
+            "__webcompy_transfer_version__": 999,
+            "data": base64.b64encode(compressed).decode("ascii"),
+        }
+        text = html_module.escape(json.dumps(envelope, ensure_ascii=False), quote=True)
+        result = deserialize_payload(text)
+        assert result is not None
+        assert result.__webcompy_transfer_version__ == payload.__webcompy_transfer_version__
 
 
 class TestCollectTransferData:
@@ -242,3 +388,47 @@ class TestCollectTransferData:
         finally:
             _active_di_scope.reset(token)
             scope.dispose()
+
+
+class TestCollectTransferDataCompressionThreshold:
+    def _make_root(self, compression_threshold):
+        from webcompy.app._root_component import AppDocumentRoot
+
+        root = AppDocumentRoot.__new__(AppDocumentRoot)
+        root._async_results = []
+        root._children = []
+        root._property = {"component_id": ""}
+        if compression_threshold is _NO_APP:
+            root._app = None
+        else:
+            root._app = MagicMock()
+            root._app.config.compression_threshold = compression_threshold
+        return root
+
+    def test_collect_transfer_data_reads_none_threshold_from_app_config(self):
+        root = self._make_root(None)
+        with patch("webcompy.app._root_component.serialize_payload") as serialize_mock:
+            root._collect_transfer_data()
+            serialize_mock.assert_called_once()
+            assert serialize_mock.call_args.kwargs["compression_threshold"] is None
+
+    def test_collect_transfer_data_reads_zero_threshold_from_app_config(self):
+        root = self._make_root(0)
+        with patch("webcompy.app._root_component.serialize_payload") as serialize_mock:
+            root._collect_transfer_data()
+            serialize_mock.assert_called_once()
+            assert serialize_mock.call_args.kwargs["compression_threshold"] == 0
+
+    def test_collect_transfer_data_reads_custom_threshold_from_app_config(self):
+        root = self._make_root(4096)
+        with patch("webcompy.app._root_component.serialize_payload") as serialize_mock:
+            root._collect_transfer_data()
+            serialize_mock.assert_called_once()
+            assert serialize_mock.call_args.kwargs["compression_threshold"] == 4096
+
+    def test_collect_transfer_data_uses_default_when_no_app(self):
+        root = self._make_root(_NO_APP)
+        with patch("webcompy.app._root_component.serialize_payload") as serialize_mock:
+            root._collect_transfer_data()
+            serialize_mock.assert_called_once()
+            assert serialize_mock.call_args.kwargs["compression_threshold"] == 1024

@@ -1,4 +1,12 @@
-## ADDED Requirements
+# Payload Compression
+
+## Purpose
+
+After the hydration data transfer feature, the SSR/SSG payload includes Signal values alongside `AsyncResult` data and `FetchPort` response caches. For stateful applications the embedded `<script type="application/json" id="__webcompy_data__">` payload can grow substantially, increasing page size and parse time.
+
+This capability adds optional gzip compression to the transfer payload. When the serialized payload exceeds a configurable byte threshold, it SHALL be gzip-compressed via the stdlib `zlib` module, base64-encoded, and marked with a `__webcompy_compressed__` flag in the payload metadata. The browser-side deserializer detects the flag and decompresses accordingly. Compression uses only stdlib modules (`zlib`, `base64`, `json`), ensuring compatibility with both CPython (server) and PyScript/Emscripten (browser) environments without external dependencies.
+
+## Requirements
 
 ### Requirement: serialize_payload shall support optional gzip compression
 
@@ -62,3 +70,18 @@ The compression envelope SHALL include the `"__webcompy_transfer_version__"` fie
 - **WHEN** the envelope's `"__webcompy_transfer_version__"` differs from the decompressed JSON's version
 - **THEN** the inner (decompressed) version SHALL be treated as authoritative
 - **AND** the envelope version SHALL be treated as informational only
+
+### Requirement: SSR/SSG shall read compression_threshold from WebComPyAppConfig
+
+SSR and SSG entry points that invoke `serialize_payload()` SHALL read `compression_threshold` from `WebComPyAppConfig` (via `app.config.compression_threshold`) and pass it to `serialize_payload()`. The default behavior SHALL match the library default (`1024`). Setting `compression_threshold=None` or `0` via config SHALL disable compression for the entire SSR/SSG output.
+
+#### Scenario: Default config applies default threshold
+- **WHEN** a developer uses `WebComPyAppConfig()` with no `compression_threshold` argument
+- **AND** SSR/SSG serializes the hydration payload
+- **THEN** `serialize_payload()` SHALL be called with `compression_threshold=1024`
+
+#### Scenario: Config None disables SSR/SSG compression
+- **WHEN** a developer uses `WebComPyAppConfig(compression_threshold=None)`
+- **AND** SSR/SSG serializes the hydration payload
+- **THEN** `serialize_payload()` SHALL be called with `compression_threshold=None`
+- **AND** the resulting HTML SHALL NOT contain a `__webcompy_compressed__` envelope
