@@ -36,3 +36,35 @@ An internal `Computed._create(fn)` classmethod SHALL bypass the warning for fram
 - **WHEN** user code calls `computed(fn)` (the old function name)
 - **THEN** a `DeprecationWarning` SHALL be emitted
 - **AND** the warning message SHALL direct users to `use_computed()`
+
+### Requirement: use_computed() shall create Computed instances with zero-argument factory
+
+The framework SHALL provide a `use_computed()` composable function importable from `webcompy` and `webcompy.signal`. It SHALL accept a zero-argument factory callable and return a `Computed[T]` instance. Unlike `use_state()`, `use_computed()` SHALL NOT participate in factory-skip transfer — Computed values always recompute from their source Signals (which ARE transferred via `use_state()`). The factory SHALL be called immediately to produce the Computed.
+
+The function SHALL use `typing.overload` to provide two typed signatures:
+1. `use_computed(factory: Callable[[], T]) -> Computed[T]` — auto-generated key (same auto-key mechanism as `use_state()`)
+2. `use_computed(key: str, factory: Callable[[], T]) -> Computed[T]` — explicit key (for debugging/identification only; key is NOT used for transfer)
+
+Internally, `use_computed()` SHALL use `Computed._create(fn)` to avoid the `DeprecationWarning`.
+
+#### Scenario: Creating a computed value with factory
+- **WHEN** a developer writes `doubled = use_computed(lambda: count.value * 2)` inside a component setup function
+- **THEN** a `Computed[int]` SHALL be returned
+- **AND** the factory SHALL be called immediately
+- **AND** the Computed SHALL re-evaluate whenever `count` changes
+
+#### Scenario: use_computed() does not transfer
+- **WHEN** `use_computed(lambda: count.value * 2)` is used during SSR
+- **THEN** the Computed value SHALL NOT be included in the transfer payload
+- **AND** on the browser, the Computed SHALL recompute from the transferred `count` source Signal
+
+#### Scenario: use_computed() outside component context
+- **WHEN** `use_computed(factory)` is called outside a component setup function
+- **THEN** the factory SHALL be called immediately
+- **AND** a `Computed` SHALL be returned
+- **AND** no error SHALL be raised
+
+#### Scenario: No warning from use_computed()
+- **WHEN** `use_computed(lambda: x.value * 2)` creates a `Computed` internally
+- **THEN** no `DeprecationWarning` SHALL be emitted
+- **AND** `Computed._create()` SHALL be used instead of `Computed()`

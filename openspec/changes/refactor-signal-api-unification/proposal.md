@@ -2,6 +2,8 @@
 
 Phase 2 (`feat-signal-composable`) introduced `use_state()` as the recommended signal creation API with `UserWarning` for `Signal()` direct construction. This change completes the API unification by escalating the deprecation level, deprecating `Computed()` class constructor, migrating `computed()` to `use_computed()`, and cleaning up internal usage.
 
+This change depends on `feat-signal-composable` (Phase 2) — it escalates the `UserWarning` introduced there and builds on the `use_*` composable pattern.
+
 ## What Changes
 
 - Escalate `Signal()` direct construction warning from `UserWarning` to `DeprecationWarning`

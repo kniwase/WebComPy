@@ -16,15 +16,18 @@
 ## 3. Migrate internal framework code — Signal
 
 - [ ] 3.1 Search for all `Signal(` direct constructor calls in `packages/webcompy/src/webcompy/` (excluding `_signal.py` itself and `_composable.py`)
-  - Known sites: `_manager.py:22`, `_async_result.py:29-31`, `_composable.py:12` (use_counter demo)
-- [ ] 3.2 For each call inside component setup context: replace with `use_state(lambda: value)` if transfer is needed
-- [ ] 3.3 For each call outside component setup: replace with `Signal._create(value)` if no transfer needed
+  - Known sites: `_manager.py:22`, `_async_result.py:29-31`, `_composable.py:12` (use_counter demo, already fixed in Phase 2 task 1.6)
+- [ ] 3.2 For each call inside component setup context (user-facing state that should transfer): replace with `use_state(lambda: value)`
+- [ ] 3.3 For each call in framework infrastructure (not user-facing, no transfer needed): replace with `Signal._create(value)`
 
 ## 4. Migrate internal framework code — Computed
 
 - [ ] 4.1 Search for all `Computed(` constructor calls in `packages/webcompy/src/webcompy/` (excluding `_computed.py` itself)
   - Known sites: `_manager.py:25`, `_reactive_scoped_style.py:117,118`
-- [ ] 4.2 Replace with `use_computed(fn)` for user-facing derivations or `Computed._create(fn)` for internal use
+- [ ] 4.2 For each call, apply the following criteria:
+  - **Inside a `@define_component` setup function** (user-facing derivation that depends on reactive state): replace with `use_computed(fn)`
+  - **Framework infrastructure** (not user-facing, not inside a component setup): replace with `Computed._create(fn)`
+  - Known sites: `_manager.py:25` (framework infra → `Computed._create`), `_reactive_scoped_style.py:117,118` (framework infra → `Computed._create`)
 - [ ] 4.3 Inside `_computed.py` itself: update `use_computed()` to use `Computed._create(fn)` internally; update `computed_property` to use `Computed._create()`
 
 ## 5. Update docs_app and examples
@@ -36,10 +39,14 @@
 
 ## 6. Sync specs
 
-- [ ] 6.1 Run `openspec sync-specs feat-signal-composable` to apply delta spec changes to base specs
-- [ ] 6.2 Manually update `openspec/specs/reactive/spec.md` — replace `Signal(value)` examples with `use_state()` and `Computed(fn)` examples with `use_computed()`
-- [ ] 6.3 Manually update `openspec/specs/signal-value-transfer/spec.md` Purpose section to reflect `use_state()` registration model (no longer "auto-tracks self attributes")
-- [ ] 6.4 Verify all spec scenarios use current API names
+- [ ] 6.1 Run `openspec sync-specs feat-signal-composable` AND `openspec sync-specs refactor-signal-api-unification` to apply all delta spec changes to base specs
+- [ ] 6.2 Manually update `openspec/specs/reactive/spec.md` (188 lines, 20+ scenarios with deprecated API patterns):
+  - [ ] 6.2a Grep for all `Signal(`, `Computed(`, `signal(`, `computed(` occurrences in the file; count and list affected scenarios
+  - [ ] 6.2b Replace `Signal(value)` examples with `use_state(lambda: value)` (or `Signal._create(value)` for internal/framework examples)
+  - [ ] 6.2c Replace `Computed(fn)` examples with `use_computed(fn)` (or `Computed._create(fn)` for internal examples)
+  - [ ] 6.2d Verify no scenario text references the deprecated constructor API after update
+- [ ] 6.3 Manually update `openspec/specs/signal-value-transfer/spec.md` — replace Purpose section's "auto-tracks every Signal instance assigned to self" with composable registration model; replace all `self.X = Reactive()` / `self.X = Signal()` patterns with `use_state()` equivalent; update restoration model from `_restore_signals()` to factory-skip
+- [ ] 6.4 Verify all spec scenarios use current API names across all synced base specs
 
 ## 7. Tests
 
@@ -49,7 +56,8 @@
 - [ ] 7.4 Write test: `use_state()` and `use_computed()` do NOT emit any warning
 - [ ] 7.5 Write test: `Signal._create()` and `Computed._create()` do NOT emit any warning
 - [ ] 7.6 Write test: `Signal[T]` / `Computed[T]` type annotation usage does NOT emit warning
-- [ ] 7.7 Run existing tests to verify no regression from internal migration
+- [ ] 7.7 Write test: `use_async_result()` and `use_theme()` composables do NOT emit `DeprecationWarning` (they use `Signal._create()` / `Computed._create()` internally)
+- [ ] 7.8 Run existing tests to verify no regression from internal migration
 
 ## 8. Lint, Type Check, and Validation
 
