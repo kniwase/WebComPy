@@ -1,32 +1,32 @@
 ## Context
 
-Phase 2 introduced `signal()` as the recommended signal creation API with `UserWarning` for `Signal()` direct construction. The framework's reactive vocabulary now has a mix of function-style and class-style APIs:
+Phase 2 introduced `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` as the recommended signal creation composables with `UserWarning` for `Signal()` direct construction. The framework's reactive vocabulary now has a mix of function-style and class-style APIs:
 
-- `signal(factory)` — function-style, transferable (Phase 2) ✓
+- `use_state(factory)` — function-style, transferable (Phase 2) ✓
 - `Signal(value)` — class-style, deprecated via `UserWarning` (Phase 2)
-- `computed(fn)` — function-style ✓
-- `Computed(fn)` — class-style (may coexist with `computed()`)
-- `Reactive` — possible alias for `Signal`
-- `ReactiveList([...])` — class-style, under investigation (Phase 3a)
-- `ReactiveDict({...})` — class-style, under investigation (Phase 3a)
+- `computed(fn)` — function-style ✓ (to be renamed `use_computed()`)
+- `Computed(fn)` — class-style (coexists with `computed()`)
+- `use_reactive_list(factory)` — function-style, transferable (Phase 2) ✓
+- `use_reactive_dict(factory)` — function-style, transferable (Phase 2) ✓
+- `ReactiveList([...])` — class-style, retained (mutation ergonomics)
+- `ReactiveDict({...})` — class-style, retained (mutation ergonomics)
 
-This change completes the migration to a unified function-style API, matching Angular's `signal()` + `computed()` vocabulary. The `Signal` and `Computed` classes remain as types (for annotations and as the runtime return type), but their constructors are deprecated.
+This change completes the migration to a unified `use_*` composable API. The `Signal` and `Computed` classes remain as types (for annotations and as the runtime return type), but their constructors are deprecated with `DeprecationWarning`.
 
 ## Goals / Non-Goals
 
 **Goals:**
 - Escalate `Signal()` deprecation from `UserWarning` to `DeprecationWarning`
-- Remove or deprecate the `Reactive` alias
-- Deprecate `Computed()` class constructor (if separate from `computed()`)
-- Migrate all internal framework code to function-style APIs
-- Update documentation, examples, and type stubs
-- Incorporate Phase 3a findings for ReactiveList/ReactiveDict if applicable
+- Deprecate `Computed()` class constructor
+- Rename `computed()` to `use_computed()` for naming consistency with `use_state()`
+- Add `Computed._create()` classmethod as internal bypass
+- Migrate all internal framework code to function-style APIs or `_create()` bypasses
+- Update documentation, examples, type stubs, and specs
 
 **Non-Goals:**
 - Removing the `Signal` / `Computed` classes (they remain as types)
-- Implementing ReactiveList/ReactiveDict removal (separate Phase 3b change)
-- Changing the `signal()` or `computed()` function signatures
-- Module-level transfer (Phase 5)
+- Deprecating `ReactiveList` / `ReactiveDict` (retained per investigation)
+- Changing `use_state()`, `use_reactive_list()`, `use_reactive_dict()` signatures
 
 ## Decisions
 
@@ -34,39 +34,47 @@ This change completes the migration to a unified function-style API, matching An
 
 **Choice**: Change `Signal.__init__` warning from `UserWarning` to `DeprecationWarning`.
 
-**Rationale**: Phase 2 used `UserWarning` because the class was not yet being removed. Phase 4 establishes the intent to eventually remove the public constructor, making `DeprecationWarning` semantically correct. `DeprecationWarning` is visible by default in Python 3.12+ (PEP 565), ensuring users see it.
+**Rationale**: Phase 2 used `UserWarning` because the class was not yet being removed. This change establishes the intent to eventually remove the public constructor, making `DeprecationWarning` semantically correct. `DeprecationWarning` is visible by default in Python 3.12+ (PEP 565), ensuring users see it.
 
-### Decision 2: Remove `Reactive` alias
+### Decision 2: Deprecate `Computed()` class constructor
 
-**Choice**: If `Reactive` is an alias for `Signal`, remove it from the public API. Users should use `signal()` for creation and `Signal[T]` for type annotations.
+**Choice**: Add `DeprecationWarning` to `Computed.__init__()`. `use_computed()` becomes the sole recommended way.
 
-**Rationale**: Having two names for the same concept (`Signal` and `Reactive`) creates confusion. `signal()` is the creation function; `Signal[T]` is the type. `Reactive` serves no purpose in the unified vocabulary.
+**Rationale**: Symmetry with `use_state()` / `Signal()`. The function-style API is cleaner and matches the unified `use_*` naming convention.
 
-**Migration**: `from webcompy.signal import Reactive` → `from webcompy.signal import Signal` (for type annotations); `Reactive(0)` → `signal(lambda: 0)` (for creation).
+### Decision 3: Rename `computed()` to `use_computed()`
 
-### Decision 3: Deprecate `Computed()` class constructor
+**Choice**: Rename the existing `computed()` function to `use_computed()`. Keep `computed` as a deprecated alias for backward compatibility.
 
-**Choice**: If `Computed(fn)` exists as a separate class constructor (distinct from `computed(fn)`), add `DeprecationWarning` to it. `computed(fn)` becomes the sole recommended way.
+**Rationale**: Naming consistency. All composables follow the `use_*` pattern: `use_state()`, `use_computed()`, `use_reactive_list()`, `use_reactive_dict()`, `use_async_result()`. The `computed()` name is the sole outlier.
 
-**Rationale**: Symmetry with `signal()` / `Signal()`. The function-style API is cleaner and matches Angular's `computed()`.
+### Decision 4: Add `Computed._create()` internal bypass
 
-### Decision 4: Internal migration strategy
+**Choice**: Add `Computed._create(fn)` classmethod that bypasses the deprecation warning, mirroring `Signal._create()`.
+
+**Rationale**: Internal framework code creates `Computed` instances in several places (`_manager.py`, `_reactive_scoped_style.py`, `styles.py`, and inside `use_computed()` itself). These need a warning-free bypass.
+
+### Decision 5: Internal migration strategy
 
 **Choice**: Migrate framework internal code in two tiers:
-1. **Transfer-required** (inside component setup): `Signal(value)` → `signal(lambda: value)` where the signal needs SSR transfer
-2. **Internal-only** (framework infrastructure, not in component setup): `Signal(value)` → `Signal._create(value)` (no transfer needed, no warning)
+1. **Transfer-required** (inside component setup): `Signal(value)` → `use_state(lambda: value)` where the signal needs SSR transfer
+2. **Internal-only** (framework infrastructure, not in component setup): `Signal(value)` → `Signal._create(value)` (no transfer needed, no warnings)
 
-**Rationale**: Not all internal Signal usages need transfer. Using `signal()` for non-transfer contexts would add unnecessary overhead (payload check, registration). `Signal._create()` remains the internal bypass.
+Similarly for `Computed`:
+1. **User-facing derivation**: `Computed(fn)` → `use_computed(fn)`
+2. **Internal-only**: `Computed(fn)` → `Computed._create(fn)`
+
+**Rationale**: Not all internal Signal usages need transfer. Using `use_state()` for non-transfer contexts would add unnecessary overhead (payload check, registration). `_create()` methods remain the internal bypass.
 
 ## Risks / Trade-offs
 
-- **[Breaking change for `Reactive` users]** Removing the `Reactive` alias breaks code that imports it. → Mitigation: provide a deprecation period (emit warning in this change, remove in a later change); document the migration.
+- **[Breaking change for `computed()` users]** Renaming `computed()` to `use_computed()` breaks code that imports it. → Mitigation: keep `computed` as a deprecated alias with `DeprecationWarning`; document the migration.
 
-- **[Computed() deprecation impact]** If user code uses `Computed(fn)` directly, they'll see warnings. → Mitigation: `computed(fn)` already exists and is the recommended path; migration is mechanical.
+- **[Computed() deprecation impact]** If user code uses `Computed(fn)` directly, they'll see warnings. → Mitigation: `use_computed()` already exists (renamed from `computed()`); migration is mechanical.
 
-- **[Phase 3a dependency]** If Phase 3a has not completed, this change cannot incorporate ReactiveList/ReactiveDict deprecation findings. → Mitigation: Phase 4 proceeds with Signal/Computed unification regardless; ReactiveList/ReactiveDict changes can be a follow-up.
+- **[Spec staleness]** Existing `reactive/spec.md` and `signal-value-transfer/spec.md` scenarios use `Signal(value)` and `Computed(fn)` patterns. → Mitigation: add `openspec sync-specs` tasks to update all deprecated patterns in specs.
 
 ## Open Questions
 
-- Should `Signal._create()` also be deprecated for external users (non-framework code)? **Tentative answer: No** — it's an internal API marked with `_` prefix; external users shouldn't use it. But we can't prevent imports.
-- Should the `Reactive` removal happen in this change or a separate change? **Tentative answer: This change** — it's part of the unification scope.
+- Should `computed` (the deprecated alias) be removed in this change or a future change? **Tentative answer: future change** — provide one release cycle of backward compatibility.
+- Should `Computed._create()` also be available for external users? **Tentative answer: No** — it's an internal API marked with `_` prefix.
