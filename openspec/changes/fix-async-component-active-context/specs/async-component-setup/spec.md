@@ -87,7 +87,7 @@ A `component_context(state: ComponentRenderState)` context manager SHALL be defi
 
 ### Requirement: Suspense SHALL activate component context during parallel coroutine resolution
 
-When `SuspenseElement._render()` collects `_pending_async_template` coroutines and resolves them via `asyncio.gather()`, each coroutine SHALL be wrapped in an async helper that activates `component_context(component._render_state)` before awaiting. This ensures each async component body executes with its own context active, even during parallel resolution. Each wrapper creates a task-local context copy (via `asyncio.ensure_future`), so concurrent coroutines do not interfere with each other's context.
+When `SuspenseElement._render()` collects `_pending_async_template` coroutines and resolves them via `asyncio.gather()`, each coroutine SHALL be wrapped in an async helper that activates `component_context(component._render_state)` before awaiting. This ensures each async component body executes with its own context active, even during parallel resolution. Each wrapper is scheduled as a task by `asyncio.gather` (which creates task-local context copies), so concurrent coroutines do not interfere with each other's context.
 
 After `asyncio.gather()` completes, `Component._render()` SHALL re-extract lifecycle hooks, `_async_results`, and `_transferable_signals` from each component's `Context`, as the body registrations occurred during the Suspense-managed resolution.
 

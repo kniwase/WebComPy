@@ -49,6 +49,7 @@ This change depends on `fix-async-component-active-context` (Phase 1) to ensure 
 ## Known Issues Addressed
 
 - `__signal_members__` is never populated for user components in function-style API → `use_state()` composable provides the registration path via `Context._transferable_signals`
+- **`BREAKING CHANGE` — Computed values are no longer collected for transfer**: Under the base `signal-value-transfer` capability, `Computed` cached values were included in the transfer payload. This change restricts collection to source signals only (`Signal`, `ReactiveList`, `ReactiveDict` created via `use_state()` / `use_reactive_list()` / `use_reactive_dict()`). The base `signal-value-transfer` scenario `Collecting Computed cached values` is updated to assert exclusion instead of inclusion. Browser-side, `Computed` instances are reconstructed from factory execution against the restored source signals, ensuring no stale derivations across the hydration boundary.
 
 ## Non-goals
 
