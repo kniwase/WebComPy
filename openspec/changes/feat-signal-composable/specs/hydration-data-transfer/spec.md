@@ -7,7 +7,7 @@
 2. Provide `payload.async_results` via `HYDRATION_DATA_KEY` in the root DI scope
 3. Provide `payload.signals` via `HYDRATION_SIGNAL_DATA_KEY` in the root DI scope
 
-The `HYDRATION_SIGNAL_DATA_KEY` SHALL be provided **before** any component creation, so that `signal()` composable calls during component setup can access the payload via `inject(HYDRATION_SIGNAL_DATA_KEY)`.
+The `HYDRATION_SIGNAL_DATA_KEY` SHALL be provided **before** any component creation, so that `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` composable calls during component setup can access the payload via `inject(HYDRATION_SIGNAL_DATA_KEY)`.
 
 If the payload is missing or invalid, the function SHALL proceed with an empty payload (all DI keys unprovided). The script element SHALL be removed from the DOM after reading.
 
@@ -30,7 +30,7 @@ If the payload is missing or invalid, the function SHALL proceed with an empty p
 - **THEN** the script tag SHALL be removed from the DOM
 
 #### Scenario: Signal data available during setup
-- **WHEN** a component's setup function calls `signal(lambda: 0)`
+- **WHEN** a component's setup function calls `use_state(lambda: 0)`
 - **AND** `HYDRATION_SIGNAL_DATA_KEY` was provided by `app.run()`
 - **THEN** `inject(HYDRATION_SIGNAL_DATA_KEY)` SHALL return the signals payload
-- **AND** `signal()` SHALL check the payload for a matching key before running the factory
+- **AND** `use_state()` SHALL check the payload for a matching key before running the factory
