@@ -24,7 +24,7 @@ The coroutine must be created in `__setup()` (not deferred to `_render()`) becau
 - Preserve the Suspense detection mechanism (`_pending_async_template` observability window)
 
 **Non-Goals:**
-- Adding the `signal()` composable (separate change)
+- Adding the `use_state()` composable (separate change)
 - Changing how Suspense detects pending async components
 - Replacing `ContextVar` with a custom context system
 - Deferring coroutine creation to `_render()` (incompatible with Suspense)

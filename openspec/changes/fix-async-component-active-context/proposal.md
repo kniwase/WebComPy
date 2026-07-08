@@ -2,10 +2,10 @@
 
 Async component setup functions (`async def` with `@define_component`) execute their body during `_render()`, not during `__setup()`. However, `_active_component_context` and `_active_effect_scope` are set and immediately reset in `__setup()` — before the async body ever runs. This causes two bugs:
 
-1. **Composables are broken in async setup**: `_active_component_context.get()` returns `None` during async body execution, so composables (`use_async_result`, future `signal()`) cannot access the component context and silently degrade.
+1. **Composables are broken in async setup**: `_active_component_context.get()` returns `None` during async body execution, so composables (`use_async_result`, future `use_state()`) cannot access the component context and silently degrade.
 2. **Lifecycle hooks are silently lost**: hooks registered inside async setup bodies (`context.on_before_rendering(fn)`) are extracted in `__setup__()` before the body executes, resulting in empty hook registrations.
 
-This fix is a prerequisite for the upcoming `signal()` composable, which relies on `_active_component_context` during setup.
+This fix is a prerequisite for the upcoming `use_state()` composable, which relies on `_active_component_context` during setup.
 
 ## What Changes
 
@@ -39,7 +39,7 @@ N/A — this fixes a newly discovered bug in async component setup. Async compon
 
 ## Non-goals
 
-- Adding the `signal()` composable (separate change: `feat-signal-composable`)
+- Adding the `use_state()` composable (separate change: `feat-signal-composable`)
 - Changing the Suspense detection mechanism (`_pending_async_template` observability window is preserved)
 - Replacing `ContextVar` with a custom context management system
 - Supporting module-level signal transfer
