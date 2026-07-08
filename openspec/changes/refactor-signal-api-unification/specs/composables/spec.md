@@ -39,7 +39,7 @@ An internal `Computed._create(fn)` classmethod SHALL bypass the warning for fram
 
 ### Requirement: use_computed() shall create Computed instances with zero-argument factory
 
-The framework SHALL provide a `use_computed()` composable function importable from `webcompy` and `webcompy.signal`. It SHALL accept a zero-argument factory callable and return a `Computed[T]` instance. Unlike `use_state()`, `use_computed()` SHALL NOT participate in factory-skip transfer — Computed values always recompute from their source Signals (which ARE transferred via `use_state()`). The factory SHALL be called immediately to produce the Computed.
+The framework SHALL provide a `use_computed()` composable function importable from `webcompy` and `webcompy.signal`. It SHALL accept a zero-argument factory callable and return a `Computed[T]` instance. Unlike `use_state()`, `use_computed()` SHALL NOT participate in factory-skip transfer — Computed values always recompute from their source Signals (which ARE transferred via `use_state()`). The factory SHALL be passed to `Computed._create()` to produce the Computed; evaluation SHALL remain lazy (the factory is stored, not invoked — it executes on first `.value` access, matching existing `Computed` behavior).
 
 The function SHALL use `typing.overload` to provide two typed signatures:
 1. `use_computed(factory: Callable[[], T]) -> Computed[T]` — auto-generated key (same auto-key mechanism as `use_state()`)
@@ -50,7 +50,8 @@ Internally, `use_computed()` SHALL use `Computed._create(fn)` to avoid the `Depr
 #### Scenario: Creating a computed value with factory
 - **WHEN** a developer writes `doubled = use_computed(lambda: count.value * 2)` inside a component setup function
 - **THEN** a `Computed[int]` SHALL be returned
-- **AND** the factory SHALL be called immediately
+- **AND** a `Computed` SHALL be created immediately (synchronously) from the factory
+- **AND** the factory SHALL NOT be invoked until `.value` is accessed (lazy evaluation)
 - **AND** the Computed SHALL re-evaluate whenever `count` changes
 
 #### Scenario: use_computed() does not transfer
@@ -60,9 +61,9 @@ Internally, `use_computed()` SHALL use `Computed._create(fn)` to avoid the `Depr
 
 #### Scenario: use_computed() outside component context
 - **WHEN** `use_computed(factory)` is called outside a component setup function
-- **THEN** the factory SHALL be called immediately
-- **AND** a `Computed` SHALL be returned
+- **THEN** a `Computed` SHALL be returned (factory passed to `Computed._create()`, evaluation remains lazy)
 - **AND** no error SHALL be raised
+- **AND** no warning SHALL be emitted (unlike `use_state()`, `use_computed()` does not participate in transfer, so no functionality is lost outside component context)
 
 #### Scenario: No warning from use_computed()
 - **WHEN** `use_computed(lambda: x.value * 2)` creates a `Computed` internally

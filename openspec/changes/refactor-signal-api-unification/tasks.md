@@ -8,8 +8,12 @@
 
 - [ ] 2.1 Add `DeprecationWarning` to `Computed.__init__` in `packages/webcompy/src/webcompy/signal/_computed.py` — message: "Computed() is deprecated. Use use_computed(factory) instead."
 - [ ] 2.2 Add `Computed._create(fn)` classmethod as internal bypass (mirrors `Signal._create()`)
-- [ ] 2.3 Rename existing `computed()` function to `use_computed()` in `_computed.py`
-- [ ] 2.4 Keep `computed` as a deprecated alias that emits `DeprecationWarning` directing to `use_computed()`
+- [ ] 2.3 Implement `use_computed()` function in `_computed.py` (more than a rename — requires new functionality):
+  - [ ] 2.3a Implement `use_computed()` with `@overload` typing (two signatures: auto-key `use_computed(factory: Callable[[], T]) -> Computed[T]` and explicit-key `use_computed(key: str, factory: Callable[[], T]) -> Computed[T]`)
+  - [ ] 2.3b Implement auto-key generation by reusing the `_auto_key()` helper from Phase 2 (`_composable.py`)
+  - [ ] 2.3c Use `Computed._create(fn)` internally to avoid `DeprecationWarning`
+  - [ ] 2.3d Ensure `use_computed()` does NOT participate in factory-skip transfer (no registration with `__signal_members__`)
+- [ ] 2.4 Keep `computed` as a deprecated alias — implement as a **wrapper function** (NOT a simple assignment) that emits `DeprecationWarning` directing to `use_computed()`, then delegates to `use_computed(fn)`
 - [ ] 2.5 Update type stubs to mark `Computed.__init__` as `@deprecated`
 - [ ] 2.6 Export `use_computed` from `webcompy/signal/__init__.py` and `webcompy/__init__.py`
 
@@ -45,6 +49,7 @@
   - [ ] 6.2b Replace `Signal(value)` examples with `use_state(lambda: value)` (or `Signal._create(value)` for internal/framework examples)
   - [ ] 6.2c Replace `Computed(fn)` examples with `use_computed(fn)` (or `Computed._create(fn)` for internal examples)
   - [ ] 6.2d Verify no scenario text references the deprecated constructor API after update
+- [ ] 6.2e Manually update `openspec/specs/composables/spec.md` — the "Basic composable with auto-cleanup" scenario (L165) uses `Signal(initial)` which will emit `DeprecationWarning` after Phase 3; replace with `use_state(lambda: initial)` or `Signal._create(initial)`
 - [ ] 6.3 Manually update `openspec/specs/signal-value-transfer/spec.md` — replace Purpose section's "auto-tracks every Signal instance assigned to self" with composable registration model; replace all `self.X = Reactive()` / `self.X = Signal()` patterns with `use_state()` equivalent; update restoration model from `_restore_signals()` to factory-skip
 - [ ] 6.4 Verify all spec scenarios use current API names across all synced base specs
 
