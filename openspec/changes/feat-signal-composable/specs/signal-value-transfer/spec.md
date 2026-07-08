@@ -4,6 +4,8 @@
 
 During SSR/SSG, after the render tree completes and `await_pending()` finishes, the framework SHALL traverse the component tree and collect Signal values from each `Component`'s `__signal_members__` registry. For each `(attr_name, signal)` pair, the Signal's `_value` SHALL be encoded via `encode()` from `webcompy.hydration._codec` and stored in the payload as `signals[component_id][attr_name] = encoded_value`. Only `Signal`, `Computed`, `ReactiveList`, and `ReactiveDict` instances (subclasses of `SignalBase`) SHALL be collected.
 
+> **BREAKING CHANGE**: Computed values are no longer collected for transfer. Only source Signals created via `use_state()` / `use_reactive_list()` / `use_reactive_dict()` are transferred. Previously (base spec), Computed cached values were included in the payload.
+
 The `__signal_members__` registry SHALL be populated by the `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` composables via `Context._transferable_signals` during component setup. The `Component.__setup()` method SHALL merge `context._transferable_signals` into `self.__signal_members__` after the setup function returns. For async components, the merge SHALL also occur after the async body resolves in `_render()` (per `fix-async-component-active-context`).
 
 #### Scenario: Collecting Signal values created via use_state() composable
@@ -84,6 +86,7 @@ The `_restore_signals()` method SHALL be **removed** from `Component._render()`.
 - **WHEN** `use_state(factory)` is called outside a component setup function (`_active_component_context` is `None`)
 - **THEN** the factory SHALL always run (no payload check)
 - **AND** the `Signal` SHALL be created without transfer registration
+- **AND** a `UserWarning` SHALL be emitted ("use_state() called outside component setup; signal will not be transferred")
 - **AND** no error SHALL be raised
 
 ### Requirement: TransferPayload shall include a signals section at version 2

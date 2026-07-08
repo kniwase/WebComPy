@@ -5,7 +5,8 @@
 - [ ] 1.3 Add `ReactiveDict._create(cls, value) -> ReactiveDict[K, V]` classmethod in `packages/webcompy/src/webcompy/signal/_dict.py` using the same bypass pattern
 - [ ] 1.4 Add `UserWarning` to `Signal.__init__()` — message: "Direct Signal() construction bypasses SSR transfer. Use use_state(factory) instead."
 - [ ] 1.5 Update all internal `Signal(value)` calls in framework code to use `Signal._create(value)` instead
-- [ ] 1.6 Write unit tests: warning emitted on direct construction, no warning from `_create()`, type annotation still works
+- [ ] 1.6 Fix `use_counter()` in `_composable.py` to use `Signal._create(initial)` instead of `Signal(initial)` — prevents `UserWarning` on every `use_counter()` call
+- [ ] 1.7 Write unit tests: warning emitted on direct construction, no warning from `_create()`, type annotation still works
 
 ## 2. Context._transferable_signals
 
@@ -20,14 +21,14 @@
 - [ ] 3.3 Implement payload check: `inject(HYDRATION_SIGNAL_DATA_KEY, default=None)`, compute `component_id = generate_id(ctx._component_name)`, look up `payload[component_id][key]`
 - [ ] 3.4 Implement factory-skip: if payload has value, `Signal._create(restored)` (skip factory); else `Signal._create(factory())`
 - [ ] 3.5 Implement registration: `ctx._transferable_signals[key] = sig` when inside component context
-- [ ] 3.6 Implement graceful degradation: when `ctx is None`, return `Signal._create(factory())` without registration
+- [ ] 3.6 Implement graceful degradation: when `ctx is None`, emit `UserWarning` ("use_state() called outside component setup; signal will not be transferred") and return `Signal._create(factory())` without registration
 
 ## 4. use_reactive_list() and use_reactive_dict() composables
 
 - [ ] 4.1 Create `use_reactive_list()` function in `_composable.py` with `@overload` typing — identical factory-skip logic to `use_state()` but creates `ReactiveList._create()` instead of `Signal._create()`
 - [ ] 4.2 Create `use_reactive_dict()` function in `_composable.py` with `@overload` typing — identical factory-skip logic but creates `ReactiveDict._create()`
 - [ ] 4.3 Both composables SHALL register in `ctx._transferable_signals` when inside component context
-- [ ] 4.4 Both composables SHALL degrade gracefully outside component context (factory runs, no registration)
+- [ ] 4.4 Both composables SHALL degrade gracefully outside component context (factory runs, `UserWarning` emitted, no registration)
 
 ## 5. Auto-key generation
 
@@ -63,7 +64,7 @@
 - [ ] 10.2 Write test: factory-skip during hydration — payload has value, factory is not called, Signal has restored value
 - [ ] 10.3 Write test: factory runs during client-side navigation (no payload)
 - [ ] 10.4 Write test: `use_state("key", factory)` uses explicit key in payload
-- [ ] 10.5 Write test: `use_state()` outside component context — factory runs, no error, no registration
+- [ ] 10.5 Write test: `use_state()` outside component context — factory runs, `UserWarning` emitted, no error, no registration
 - [ ] 10.6 Write test: auto-key uniqueness for same-line calls (column disambiguation)
 - [ ] 10.7 Write test: `Signal(0)` emits `UserWarning`, `Signal._create(0)` does not
 - [ ] 10.8 Write test: `use_reactive_list(lambda: [1,2,3])` returns `ReactiveList` with working mutation methods
@@ -72,11 +73,22 @@
 - [ ] 10.11 Write test: `use_reactive_dict()` factory-skip restores dict value during hydration
 - [ ] 10.12 Write test: `collect_transfer_data()` collects signals registered via composables through `__signal_members__`
 - [ ] 10.13 Write test: full round-trip — SSR creates signal, collects value → browser hydrates, factory skipped, value restored
-- [ ] 10.14 Run existing signal-value-transfer E2E tests to verify no regression
+- [ ] 10.14 Write test: restored value type mismatch — `Signal._create(restored)` where restored is wrong type (e.g., `list` stored in `Signal` expecting `int`) SHALL still create the Signal without runtime error (Python is dynamically typed), but the test SHALL document this as a known limitation
+- [ ] 10.15 Write test: `use_async_result()` and `use_theme()` composables do NOT emit `UserWarning` (they use `Signal._create()` / `Computed._create()` internally after migration)
+- [ ] 10.16 Write test: `use_counter()` does NOT emit `UserWarning` after migration to `Signal._create()`
+- [ ] 10.17 Run existing signal-value-transfer E2E tests to verify no regression
 
-## 11. Lint, Type Check, and Validation
+## 11. Documentation and spec sync
 
-- [ ] 11.1 Run `uv run ruff check .` and `uv run ruff format .`
-- [ ] 11.2 Run `uv run pyright` — verify `@overload` signatures pass
-- [ ] 11.3 Run `uv run python -m pytest tests/ --tb=short`
-- [ ] 11.4 Run `openspec validate feat-signal-composable`
+- [ ] 11.1 Document `use_state()` auto-key limitations in docs_app: Python 3.11+ required for column disambiguation; same-line calls share a key on older runtimes; explicit keys recommended for PyScript if `dis` is unavailable
+- [ ] 11.2 After implementation, run `openspec sync-specs feat-signal-composable` to apply delta spec changes to base specs
+- [ ] 11.3 Manually update base `openspec/specs/signal-value-transfer/spec.md` Purpose section — replace "auto-tracks every Signal instance assigned to a component's self attributes" with the composable registration model (`use_state()` → `Context._transferable_signals` → `__signal_members__`)
+- [ ] 11.4 Manually update base `openspec/specs/signal-value-transfer/spec.md` — replace all `self.count = Reactive(5)` / `self.X = Signal()` patterns in scenarios with `use_state()` equivalent; update the restoration model from `_restore_signals()` to factory-skip
+- [ ] 11.5 Verify all base spec scenarios use current API names after sync
+
+## 12. Lint, Type Check, and Validation
+
+- [ ] 12.1 Run `uv run ruff check .` and `uv run ruff format .`
+- [ ] 12.2 Run `uv run pyright` — verify `@overload` signatures pass
+- [ ] 12.3 Run `uv run python -m pytest tests/ --tb=short`
+- [ ] 12.4 Run `openspec validate feat-signal-composable`

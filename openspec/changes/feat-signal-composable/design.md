@@ -28,9 +28,11 @@ Additionally, `ReactiveList` and `ReactiveDict` provide mutation ergonomics (`ap
 
 ### Decision 1: Factory function as the sole creation API
 
-**Choice**: `use_state(factory: Callable[[], T]) -> Signal[T]` — the factory is always a callable, never a direct value.
+**Choice**: `use_state(factory: Callable[[], T]) -> Signal[T]` — the factory is always a zero-argument callable, never a direct value.
 
 **Rationale**: The factory-skip mechanism requires a callable to skip. If the user passes a direct value (`use_state(0)`), there's nothing to skip — the value is always used. By requiring a factory, the API makes the "server-only initialization" semantic explicit. This matches Nuxt's `useState(key, () => init)`.
+
+The factory MUST be a zero-argument callable (`Callable[[], T]`). Callables with arguments (e.g., `Callable[[int], T]`) SHALL be rejected at the type-checker level via `@overload` signatures and at runtime via a `TypeError` if the first argument is not callable.
 
 **Alternative considered**: Accept both `use_state(0)` and `use_state(lambda: 0)`. Rejected because `callable` check creates ambiguity when the value itself is callable.
 
@@ -72,9 +74,11 @@ Additionally, `ReactiveList` and `ReactiveDict` provide mutation ergonomics (`ap
 
 ### Decision 7: Graceful degradation outside component context
 
-**Choice**: When `_active_component_context.get(None)` returns `None` (outside setup), composables create a signal without transfer registration. No error.
+**Choice**: When `_active_component_context.get(None)` returns `None` (outside setup), composables emit a `UserWarning` ("use_state() called outside component setup; signal will not be transferred") and create a signal without transfer registration. No error is raised.
 
-**Rationale**: If composables errored outside components, users could not create module-level signals or signals in utility functions. Graceful degradation matches Vue's `ref()` and Angular's `signal()` behavior.
+**Rationale**: If composables errored outside components, users could not create module-level signals or signals in utility functions. However, silently succeeding makes SSR debugging difficult — the signal works but is never transferred. A `UserWarning` on first occurrence strikes a balance: developers are alerted during development, while production code can suppress it via `warnings.filterwarnings` when intentional (e.g., shared utility functions).
+
+This matches Vue's `ref()` and Angular's `signal()` behavior — they work outside components but don't participate in SSR transfer.
 
 ## Risks / Trade-offs
 
@@ -82,7 +86,7 @@ Additionally, `ReactiveList` and `ReactiveDict` provide mutation ergonomics (`ap
 
 - **[Factory always required]** Users must write `use_state(lambda: 0)` instead of `Signal(0)`. → Mitigation: minimal overhead; lambda is a common Python idiom; Nuxt uses the same pattern.
 
-- **[Computed not transferable]** The design follows "transfer sources, not derivations" — `use_state()` creates `Signal[T]`, not `Computed[T]`. Transferring `Computed` would cause stale values on re-evaluation. → Mitigation: document that `use_computed()` values recompute from transferred sources.
+- **[Computed not transferable]** The design follows "transfer sources, not derivations" — `use_state()` creates `Signal[T]`, not `Computed[T]`. Transferring `Computed` would cause stale values on re-evaluation. Phase 3 (`refactor-signal-api-unification`) introduces `use_computed(factory: Callable[[], T]) -> Computed[T]` as the renamed `computed()` composable. Its signature mirrors `use_state()`: zero-argument factory, auto-key or explicit key, but NO factory-skip (Computed always recomputes from transferred sources). `Computed._create(fn)` bypass method is added alongside `Signal._create()`. → Mitigation: document that `use_computed()` values recompute from transferred sources.
 
 - **[Three composables]** Users must choose between `use_state()`, `use_reactive_list()`, and `use_reactive_dict()`. → Mitigation: each has a clear purpose; naming makes intent obvious; `use_state()` is the default choice for non-collection values.
 

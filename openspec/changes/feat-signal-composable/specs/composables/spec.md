@@ -31,6 +31,7 @@ Direct value arguments (e.g., `use_state(0)`) SHALL NOT be accepted — the firs
 - **WHEN** `use_state(factory)` is called outside a component setup function
 - **THEN** the factory SHALL always run (no payload check)
 - **AND** a `Signal` SHALL be returned without transfer registration
+- **AND** a `UserWarning` SHALL be emitted ("use_state() called outside component setup; signal will not be transferred")
 - **AND** no error SHALL be raised
 
 #### Scenario: Type safety with overload
@@ -62,6 +63,7 @@ The function SHALL use `typing.overload` to provide two typed signatures:
 - **WHEN** `use_reactive_list(factory)` is called outside a component setup function
 - **THEN** the factory SHALL always run (no payload check)
 - **AND** a `ReactiveList` SHALL be returned without transfer registration
+- **AND** a `UserWarning` SHALL be emitted
 - **AND** no error SHALL be raised
 
 ### Requirement: use_reactive_dict() shall create transferable ReactiveDict instances with factory-skip
@@ -82,6 +84,7 @@ The function SHALL use `typing.overload` to provide two typed signatures:
 - **WHEN** `use_reactive_dict(factory)` is called outside a component setup function
 - **THEN** the factory SHALL always run (no payload check)
 - **AND** a `ReactiveDict` SHALL be returned without transfer registration
+- **AND** a `UserWarning` SHALL be emitted
 - **AND** no error SHALL be raised
 
 ### Requirement: Composable auto-key shall use caller source location
