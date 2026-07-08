@@ -25,6 +25,13 @@ The DI scope (`_active_di_scope`) is managed separately at the render-context le
 - **THEN** the effects SHALL be associated with the component's `EffectScope`
 - **AND** the effects SHALL be cleaned up when the component is destroyed
 
+#### Scenario: Composable-created effects tracked by component Effect scope
+- **WHEN** a composable (e.g., `use_state()`, `use_async_result()`) creates reactive effects inside an async component's body during `_render()`
+- **THEN** the effects SHALL be tracked by the component's `EffectScope` stored in `_render_state`
+- **AND** the effects SHALL be cleaned up when the component is destroyed
+- **AND** this SHALL satisfy the Effect scope requirements in `composables/spec.md`
+
+<!-- Replaces base spec Scenario: Async component with lifecycle hooks (hooks are NOT captured during __setup__() for async defs; they are re-extracted after body resolution) -->
 #### Scenario: Async component hooks registered in body are captured
 - **WHEN** an async component registers `context.on_before_rendering(fn)` inside the async body
 - **THEN** after the body resolves, `__get_lifecyclehooks__()` SHALL return the registered hook

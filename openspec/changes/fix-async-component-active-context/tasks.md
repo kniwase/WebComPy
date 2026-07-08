@@ -32,8 +32,9 @@
 - [ ] 5.3 Write a test verifying `_async_results` registered in async setup body are collected by `collect_transfer_data()`
 - [ ] 5.4 Write a test verifying async component under Suspense has context active during body execution
 - [ ] 5.5 Write a test verifying parallel Suspense resolution does not cross-contaminate component contexts
-- [ ] 5.6 Write a test verifying sync component behavior is unchanged (no regression)
-- [ ] 5.7 Run existing E2E tests for async components and Suspense to verify no regressions
+- [ ] 5.6 Write a test verifying effects created by composables (e.g. `use_state()`) inside async body are tracked by the component's EffectScope and cleaned up on destroy
+- [ ] 5.7 Write a test verifying sync component behavior is unchanged (no regression)
+- [ ] 5.8 Run existing E2E tests for async components and Suspense to verify no regressions
 
 ## 6. Lint, Type Check, and Validation
 
