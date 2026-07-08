@@ -17,29 +17,38 @@
 - [ ] 2.5 Update type stubs to mark `Computed.__init__` as `@deprecated`
 - [ ] 2.6 Export `use_computed` from `webcompy/signal/__init__.py` and `webcompy/__init__.py`
 
-## 3. Migrate internal framework code — Signal
+## 3. Migrate internal framework code and unit tests — Signal
 
-- [ ] 3.1 Search for all `Signal(` direct constructor calls in `packages/webcompy/src/webcompy/` (excluding `_signal.py` itself and `_composable.py`)
-  - Known sites: `_manager.py:22`, `_async_result.py:29-31`, `_composable.py:12` (use_counter demo, already fixed in Phase 2 task 1.6)
+- [ ] 3.1 Search for all `Signal(` direct constructor calls in `packages/webcompy/src/webcompy/` and `tests/` (excluding `_signal.py` itself and tests that explicitly assert the deprecation warning)
+  - Known framework sites: `_manager.py:22`, `_async_result.py:29-31`, `_composable.py:12` (use_counter demo, already fixed in Phase 2 task 1.6)
+  - Known test scope: existing direct `Signal(` calls in `tests/` SHALL be migrated except tests that intentionally verify direct-constructor deprecation behavior
 - [ ] 3.2 For each call inside component setup context (user-facing state that should transfer): replace with `use_state(lambda: value)`
 - [ ] 3.3 For each call in framework infrastructure (not user-facing, no transfer needed): replace with `Signal._create(value)`
+- [ ] 3.4 For existing unit tests that exercise low-level signal, element, router, or effect infrastructure directly: replace setup values with `Signal._create(value)` unless the test is specifically validating the public composable API
+- [ ] 3.5 Verify the existing test suite does not emit bulk `DeprecationWarning` output from migrated `Signal(` calls
 
-## 4. Migrate internal framework code — Computed
+## 4. Migrate internal framework code and unit tests — Computed
 
-- [ ] 4.1 Search for all `Computed(` constructor calls in `packages/webcompy/src/webcompy/` (excluding `_computed.py` itself)
-  - Known sites: `_manager.py:25`, `_reactive_scoped_style.py:117,118`
+- [ ] 4.1 Search for all `Computed(` constructor calls in `packages/webcompy/src/webcompy/` and `tests/` (excluding the `Computed` class constructor itself and tests that explicitly assert the deprecation warning)
+  - Known framework sites: `_manager.py:25`, `_reactive_scoped_style.py:117,118`, `_async_result.py:33-36`, `_computed.py:69,77`
+  - Known test scope: existing direct `Computed(` calls in `tests/` SHALL be migrated except tests that intentionally verify direct-constructor deprecation behavior
 - [ ] 4.2 For each call, apply the following criteria:
   - **Inside a `@define_component` setup function** (user-facing derivation that depends on reactive state): replace with `use_computed(fn)`
   - **Framework infrastructure** (not user-facing, not inside a component setup): replace with `Computed._create(fn)`
-  - Known sites: `_manager.py:25` (framework infra → `Computed._create`), `_reactive_scoped_style.py:117,118` (framework infra → `Computed._create`)
-- [ ] 4.3 Inside `_computed.py` itself: update `use_computed()` to use `Computed._create(fn)` internally; update `computed_property` to use `Computed._create()`
+  - Known sites: `_manager.py:25` (framework infra → `Computed._create`), `_reactive_scoped_style.py:117,118` (framework infra → `Computed._create`), `_async_result.py:33-36` (`AsyncResult.is_pending`, `is_loading`, `is_success`, `is_error` instance attributes → `Computed._create`)
+- [ ] 4.3 Inside `_computed.py` itself: update `use_computed()` to use `Computed._create(fn)` internally; update `computed_property` to use `Computed._create()`; keep `computed()` as a deprecating wrapper that delegates to `use_computed()`
+- [ ] 4.4 For existing unit tests that exercise low-level computed behavior directly: replace setup values with `Computed._create(fn)` unless the test is specifically validating the public composable API
+- [ ] 4.5 Verify the existing test suite does not emit bulk `DeprecationWarning` output from migrated `Computed(` calls
 
-## 5. Update docs_app and examples
+## 5. Update docs_app, templates, and examples
 
-- [ ] 5.1 Search docs_app for `Signal(`, `Computed(`, `computed(` direct constructor usage
-- [ ] 5.2 Replace all with `use_state()`, `use_computed()` equivalents
-- [ ] 5.3 Update any documentation text that references `Signal()` or `computed()` as a creation API
+- [ ] 5.1 Search docs_app and project templates for `Signal(`, `Computed(`, `computed(` direct constructor/function usage
+  - Known docs_app sites: `docs_app/components/navigation.py`, `docs_app/components/demo_display.py`, `docs_app/components/theme_toggle.py`, `docs_app/static/_demos/todo/app.py`, `docs_app/static/_demos/fetch_sample/app.py`, `docs_app/static/_demos/matplotlib_sample/app.py`, `docs_app/static/_demos/fizzbuzz/app.py`
+  - Known template sites: `packages/webcompy-cli/src/webcompy_cli/template_data/app/components/input.py`, `packages/webcompy-cli/src/webcompy_cli/template_data/app/components/fizzbuzz.py`
+- [ ] 5.2 Replace all application/demo state with `use_state()` and derived values with `use_computed()` equivalents
+- [ ] 5.3 Update documentation text and code snippets that reference `Signal()` or `computed()` as a creation API, including docs_app content and package docstrings
 - [ ] 5.4 Verify docs_app still renders correctly after migration
+- [ ] 5.5 Verify `webcompy init` templates no longer introduce deprecated `Signal()` or `computed()` usage
 
 ## 6. Sync specs
 
@@ -61,8 +70,8 @@
 - [ ] 7.4 Write test: `use_state()` and `use_computed()` do NOT emit any warning
 - [ ] 7.5 Write test: `Signal._create()` and `Computed._create()` do NOT emit any warning
 - [ ] 7.6 Write test: `Signal[T]` / `Computed[T]` type annotation usage does NOT emit warning
-- [ ] 7.7 Write test: `use_async_result()` and `use_theme()` composables do NOT emit `DeprecationWarning` (they use `Signal._create()` / `Computed._create()` internally)
-- [ ] 7.8 Run existing tests to verify no regression from internal migration
+- [ ] 7.7 Write test: `use_async_result()`, `use_theme()`, and `use_counter()` composables do NOT emit `DeprecationWarning` (they use `Signal._create()` / `Computed._create()` internally)
+- [ ] 7.8 Run existing tests to verify no regression from internal/test migration and no bulk `DeprecationWarning` output remains outside tests that intentionally assert deprecation behavior
 
 ## 8. Lint, Type Check, and Validation
 

@@ -47,7 +47,7 @@ An internal `Computed._create(fn)` classmethod SHALL bypass the warning for fram
 
 The framework SHALL provide a `use_computed()` composable function importable from `webcompy` and `webcompy.signal`. It SHALL accept a zero-argument factory callable and return a `Computed[T]` instance. Unlike `use_state()`, `use_computed()` SHALL NOT participate in factory-skip transfer — Computed values always recompute from their source Signals (which ARE transferred via `use_state()`).
 
-The factory SHALL be passed to `Computed._create(fn)`, which behaves identically to `Computed(fn)` except that it bypasses the `DeprecationWarning`. As with any `Computed`, the factory executes eagerly during construction to establish dependency tracking, and the resulting `Computed` re-evaluates lazily on subsequent `.value` reads after a dependency change (consistent with the `reactive` capability, "re-evaluate lazily when any of those dependencies change").
+The factory SHALL be passed to `Computed._create(fn)`, and `Computed._create(fn)` SHALL invoke it during construction while bypassing the `DeprecationWarning`. As with any `Computed`, the factory executes eagerly during construction to establish dependency tracking, and the resulting `Computed` re-evaluates lazily on subsequent `.value` reads after a dependency change (consistent with the `reactive` capability, "re-evaluate lazily when any of those dependencies change").
 
 The function SHALL use `typing.overload` to provide two typed signatures:
 1. `use_computed(factory: Callable[[], T]) -> Computed[T]` — auto-generated key (same auto-key mechanism as `use_state()`)

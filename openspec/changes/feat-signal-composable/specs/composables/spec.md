@@ -2,13 +2,13 @@
 
 ### Requirement: use_state() shall create transferable Signal instances with factory-skip
 
-The framework SHALL provide a `use_state()` composable function importable from `webcompy` and `webcompy.signal`. It SHALL accept a factory callable and return a `Signal[T]` instance. On the server (or when no hydration payload is available), the factory SHALL run to produce the initial value. On the browser during hydration, the factory SHALL be skipped if the hydration payload contains a value for this signal's key, and the `Signal` SHALL be created with the restored value.
+The framework SHALL provide a `use_state()` composable function importable from `webcompy` and `webcompy.signal`. It SHALL accept a zero-argument factory callable and return a `Signal[T]` instance. On the server (or when no hydration payload is available), the factory SHALL run to produce the initial value. On the browser during hydration, the factory SHALL be skipped if the hydration payload contains a value for this signal's key, and the `Signal` SHALL be created with the restored value.
 
 The function SHALL use `typing.overload` to provide two typed signatures:
 1. `use_state(factory: Callable[[], T]) -> Signal[T]` — auto-generated key
 2. `use_state(key: str, factory: Callable[[], T]) -> Signal[T]` — explicit key
 
-Direct value arguments (e.g., `use_state(0)`) SHALL NOT be accepted — the first argument MUST be callable.
+Direct value arguments (e.g., `use_state(0)`) SHALL NOT be accepted — the first argument MUST be callable. Callable factories that require arguments (e.g., `lambda value: value`) SHALL NOT be accepted; the factory MUST be callable with zero arguments.
 
 #### Scenario: Creating a transferable signal with factory
 - **WHEN** a developer writes `count = use_state(lambda: 0)` inside a component setup function
@@ -39,9 +39,14 @@ Direct value arguments (e.g., `use_state(0)`) SHALL NOT be accepted — the firs
 - **THEN** a type checker SHALL report a type error
 - **AND** at runtime, a `TypeError` SHALL be raised
 
+#### Scenario: Non-zero-argument factory is rejected
+- **WHEN** a developer writes `use_state(lambda value: value)`
+- **THEN** a type checker SHALL report a type error
+- **AND** at runtime, a `TypeError` SHALL be raised before transfer registration
+
 ### Requirement: use_reactive_list() shall create transferable ReactiveList instances with factory-skip
 
-The framework SHALL provide a `use_reactive_list()` composable function importable from `webcompy` and `webcompy.signal`. It SHALL accept a factory callable returning a `list[V]` and return a `ReactiveList[V]` instance. The factory-skip mechanism SHALL work identically to `use_state()`: on the server, the factory runs; on the browser during hydration, the factory is skipped if a value exists.
+The framework SHALL provide a `use_reactive_list()` composable function importable from `webcompy` and `webcompy.signal`. It SHALL accept a zero-argument factory callable returning a `list[V]` and return a `ReactiveList[V]` instance. The factory-skip mechanism SHALL work identically to `use_state()`: on the server, the factory runs; on the browser during hydration, the factory is skipped if a value exists.
 
 The function SHALL use `typing.overload` to provide two typed signatures:
 1. `use_reactive_list(factory: Callable[[], list[V]]) -> ReactiveList[V]` — auto-generated key
@@ -68,7 +73,7 @@ The function SHALL use `typing.overload` to provide two typed signatures:
 
 ### Requirement: use_reactive_dict() shall create transferable ReactiveDict instances with factory-skip
 
-The framework SHALL provide a `use_reactive_dict()` composable function importable from `webcompy` and `webcompy.signal`. It SHALL accept a factory callable returning a `dict[K, V]` and return a `ReactiveDict[K, V]` instance. The factory-skip mechanism SHALL work identically to `use_state()`.
+The framework SHALL provide a `use_reactive_dict()` composable function importable from `webcompy` and `webcompy.signal`. It SHALL accept a zero-argument factory callable returning a `dict[K, V]` and return a `ReactiveDict[K, V]` instance. The factory-skip mechanism SHALL work identically to `use_state()`.
 
 The function SHALL use `typing.overload` to provide two typed signatures:
 1. `use_reactive_dict(factory: Callable[[], dict[K, V]]) -> ReactiveDict[K, V]` — auto-generated key
@@ -89,7 +94,7 @@ The function SHALL use `typing.overload` to provide two typed signatures:
 
 ### Requirement: Composable auto-key shall use caller source location
 
-When the `key` parameter is omitted, all composables (`use_state()`, `use_reactive_list()`, `use_reactive_dict()`) SHALL generate a key from the caller's source location using `inspect.currentframe()` and `dis.get_instructions()`. The key format SHALL be `"{filename}:{start_line}:{start_col}"` (Python 3.11+ positions API). If the positions API is unavailable, the fallback format SHALL be `"{filename}:{lineno}"`. The key SHALL be stable across server and browser environments (same source file and line).
+When the `key` parameter is omitted, all composables (`use_state()`, `use_reactive_list()`, `use_reactive_dict()`) SHALL generate a key from the caller's source location using `inspect.currentframe()` and `dis.get_instructions()`. The key format SHALL be `"{filename}:{start_line}:{start_col}"` (Python 3.12+ positions API). If the positions API is unavailable, the fallback format SHALL be `"{filename}:{lineno}"`. The key SHALL be stable across server and browser environments (same source file and line).
 
 #### Scenario: Auto-key from source location
 - **WHEN** `use_state(lambda: 0)` is called at `my_component.py:10:14`

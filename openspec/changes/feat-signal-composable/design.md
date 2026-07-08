@@ -32,7 +32,7 @@ Additionally, `ReactiveList` and `ReactiveDict` provide mutation ergonomics (`ap
 
 **Rationale**: The factory-skip mechanism requires a callable to skip. If the user passes a direct value (`use_state(0)`), there's nothing to skip — the value is always used. By requiring a factory, the API makes the "server-only initialization" semantic explicit. This matches Nuxt's `useState(key, () => init)`.
 
-The factory MUST be a zero-argument callable (`Callable[[], T]`). Callables with arguments (e.g., `Callable[[int], T]`) SHALL be rejected at the type-checker level via `@overload` signatures and at runtime via a `TypeError` if the first argument is not callable.
+The factory MUST be a zero-argument callable (`Callable[[], T]`). Callables that require arguments (e.g., `Callable[[int], T]`) SHALL be rejected at the type-checker level via `@overload` signatures and at runtime by raising `TypeError` before transfer registration when the callable is not zero-argument-compatible.
 
 **Alternative considered**: Accept both `use_state(0)` and `use_state(lambda: 0)`. Rejected because `callable` check creates ambiguity when the value itself is callable.
 
@@ -66,7 +66,7 @@ The factory MUST be a zero-argument callable (`Callable[[], T]`). Callables with
 
 ### Decision 6: Auto-key via `inspect` + `dis`
 
-**Choice**: When key is omitted, generate `file:line:column` from the caller's frame using `inspect.currentframe()` and `dis.get_instructions()`.
+**Choice**: When key is omitted, generate `file:line:column` from the caller's frame using `inspect.currentframe()` and `dis.get_instructions()` with Python 3.12+ instruction position metadata.
 
 **Rationale**: Nuxt uses compiler-transformed auto-keys (file:line). WebComPy (Python) uses runtime `inspect` instead. Column number disambiguates same-line calls. Fallback to `file:line` if `dis` is unavailable (e.g., PyScript limitations).
 
