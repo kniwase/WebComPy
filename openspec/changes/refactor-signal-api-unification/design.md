@@ -78,3 +78,7 @@ Similarly for `Computed`:
 
 - Should `computed` (the deprecated alias) be removed in this change or a future change? **Tentative answer: future change** — provide one release cycle of backward compatibility.
 - Should `Computed._create()` also be available for external users? **Tentative answer: No** — it's an internal API marked with `_` prefix.
+
+## Not In Scope
+
+- **`computed_property` decorator**: This decorator is part of the class-based component API and is retained as-is. It is NOT deprecated in this change. Like the `Computed` class (which remains as a type), `computed_property` continues to work without deprecation warnings. A future change may address class-based API deprecation holistically.

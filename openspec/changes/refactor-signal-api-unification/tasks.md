@@ -54,10 +54,10 @@
 
 - [ ] 6.1 Run `openspec sync-specs feat-signal-composable` AND `openspec sync-specs refactor-signal-api-unification` to apply all delta spec changes to base specs
 - [ ] 6.2 Manually update `openspec/specs/reactive/spec.md` (188 lines, 20+ scenarios with deprecated API patterns):
-  - [ ] 6.2a Grep for all `Signal(`, `Computed(`, `signal(`, `computed(` occurrences in the file; count and list affected scenarios
-  - [ ] 6.2b Replace `Signal(value)` examples with `use_state(lambda: value)` (or `Signal._create(value)` for internal/framework examples)
-  - [ ] 6.2c Replace `Computed(fn)` examples with `use_computed(fn)` (or `Computed._create(fn)` for internal examples)
-  - [ ] 6.2d Verify no scenario text references the deprecated constructor API after update
+  - [ ] 6.2a Manually identify all affected scenarios by reading the file and noting every `Signal(`, `Computed(`, `signal(`, `computed(` occurrence (grep is a helper, not authoritative — manually verify each match is a construction site, not a type annotation or prose reference)
+  - [ ] 6.2b For each identified scenario: replace `Signal(value)` with `use_state(lambda: value)` (user-facing) or `Signal._create(value)` (internal/framework), and replace `Computed(fn)` with `use_computed(fn)` (user-facing) or `Computed._create(fn)` (internal)
+  - [ ] 6.2c Manually review each scenario after update to verify the replacement did not break prose flow or type annotation semantics
+  - [ ] 6.2d Verify no scenario text references the deprecated constructor API after update (manual review pass, not grep)
 - [ ] 6.2e Manually update `openspec/specs/composables/spec.md` — the "Basic composable with auto-cleanup" scenario (L165) uses `Signal(initial)` which will emit `DeprecationWarning` after Phase 3; replace with `use_state(lambda: initial)` or `Signal._create(initial)`
 - [ ] 6.3 Manually update `openspec/specs/signal-value-transfer/spec.md` — replace Purpose section's "auto-tracks every Signal instance assigned to self" with composable registration model; replace all `self.X = Reactive()` / `self.X = Signal()` patterns with `use_state()` equivalent; update restoration model from `_restore_signals()` to factory-skip
 - [ ] 6.4 Verify all spec scenarios use current API names across all synced base specs

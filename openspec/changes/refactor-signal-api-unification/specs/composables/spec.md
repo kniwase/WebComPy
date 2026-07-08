@@ -57,6 +57,8 @@ The function SHALL use `typing.overload` to provide two typed signatures:
 
 Internally, `use_computed()` SHALL use `Computed._create(fn)` to avoid the `DeprecationWarning`.
 
+> **Factory validation**: Unlike `use_state()`, `use_computed()` SHALL NOT validate that the factory is zero-argument-compatible at runtime. The factory is passed directly to `Computed._create(fn)`, and `Computed`'s own constructor evaluates it eagerly. If the factory requires arguments, the resulting `TypeError` from the eager evaluation propagates naturally as a Python runtime error. This asymmetry is intentional: `use_state()` validates because the factory-skip mechanism requires a callable that can be skipped, while `use_computed()` always executes its factory.
+
 #### Scenario: Creating a computed value with factory
 - **WHEN** a developer writes `doubled = use_computed(lambda: count.value * 2)` inside a component setup function
 - **THEN** a `Computed[int]` SHALL be returned

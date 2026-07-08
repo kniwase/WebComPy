@@ -53,7 +53,7 @@ The DI scope (`_active_di_scope`) is managed separately at the render-context le
 
 ### Requirement: ComponentRenderState shall bundle render-time context
 
-A `ComponentRenderState` dataclass SHALL be defined in `packages/webcompy/src/webcompy/components/_context_manager.py`. It SHALL contain `context: Context[Any]` and `effect_scope: EffectScope` fields. `Component.__setup__()` SHALL create a `ComponentRenderState` and store it on `self._render_state` for all components (sync and async). For sync components, `_render_state` SHALL be available but re-activation during `_render()` SHALL be a no-op (hooks already extracted). For async components, `_render_state` SHALL be used to re-activate context and effect scope during `_render()`.
+A `ComponentRenderState` dataclass SHALL be defined in `packages/webcompy/src/webcompy/components/_context_manager.py`. It SHALL contain `context: Context[Any]` and `effect_scope: EffectScope` fields. `Component.__setup__()` SHALL create a `ComponentRenderState` and store it on `self._render_state` for all components (sync and async). For sync components, `_render_state` SHALL be available but re-activation during `_render()` SHALL be a no-op (hooks already extracted). Sync components SHALL also use `component_context()` during `__setup__()` to ensure consistent ContextVar management, replacing the manual `set`/`reset` token pattern. For async components, `_render_state` SHALL be used to re-activate context and effect scope during `_render()`.
 
 #### Scenario: ComponentRenderState is created during setup
 - **WHEN** `Component.__setup__()` runs for any component

@@ -76,7 +76,7 @@ The factory MUST be a zero-argument callable (`Callable[[], T]`). Callables that
 
 **Choice**: When `_active_component_context.get(None)` returns `None` (outside setup), composables emit a `UserWarning` ("use_state() called outside component setup; signal will not be transferred") and create a signal without transfer registration. No error is raised.
 
-**Rationale**: If composables errored outside components, users could not create module-level signals or signals in utility functions. However, silently succeeding makes SSR debugging difficult — the signal works but is never transferred. A `UserWarning` on first occurrence strikes a balance: developers are alerted during development, while production code can suppress it via `warnings.filterwarnings` when intentional (e.g., shared utility functions).
+**Rationale**: If composables errored outside components, users could not create module-level signals or signals in utility functions. However, silently succeeding makes SSR debugging difficult — the signal works but is never transferred. A `UserWarning` on first occurrence strikes a balance: developers are alerted during development, while production code can suppress it via `warnings.filterwarnings` when intentional (e.g., shared utility functions). The "first occurrence" behavior is achieved by Python's `warnings` module default behavior — `warnings.warn(msg, UserWarning)` called repeatedly for the same message and location is only shown once by default, so no additional deduplication logic is needed.
 
 This matches Vue's `ref()` and Angular's `signal()` behavior — they work outside components but don't participate in SSR transfer.
 

@@ -39,10 +39,13 @@ Direct value arguments (e.g., `use_state(0)`) SHALL NOT be accepted — the firs
 - **THEN** a type checker SHALL report a type error
 - **AND** at runtime, a `TypeError` SHALL be raised
 
-#### Scenario: Non-zero-argument factory is rejected
+#### Scenario: Non-zero-argument factory detection is best-effort
 - **WHEN** a developer writes `use_state(lambda value: value)`
-- **THEN** a type checker SHALL report a type error
-- **AND** at runtime, a `TypeError` SHALL be raised before transfer registration
+- **THEN** a type checker SHALL report a type error (via `@overload` signatures)
+- **AND** at runtime, the framework SHALL attempt to validate the factory via `inspect.signature()`
+- **AND** if validation detects required parameters, a `UserWarning` SHALL be emitted ("Factory appears to require arguments; use a zero-argument callable")
+- **AND** if validation is inconclusive (e.g., `*args`/`**kwargs`, C extension, `functools.partial`), the framework SHALL silently proceed — the factory will fail at call time with a natural Python exception if arguments are required
+- **AND** under no circumstances SHALL a `TypeError` be raised preemptively before attempting to call the factory
 
 ### Requirement: use_reactive_list() shall create transferable ReactiveList instances with factory-skip
 
@@ -111,6 +114,12 @@ When the `key` parameter is omitted, all composables (`use_state()`, `use_reacti
 - **THEN** the fallback key format SHALL be `"{filename}:{lineno}"`
 - **AND** same-line calls SHALL share a key (user SHALL use explicit key to disambiguate)
 
+#### Scenario: Fallback with same-line collisions emits UserWarning
+- **WHEN** the `file:line` fallback is active
+- **AND** multiple composable calls on the same line lack explicit keys
+- **THEN** the second and subsequent same-line composable invocations SHALL emit a `UserWarning` ("Auto-key collision detected at {filename}:{lineno} with {previous_key}. Use an explicit key to disambiguate.")
+- **AND** the warning SHALL only be emitted once per component per collision (deduplicated via Python's `warnings` module default behavior)
+
 ### Requirement: Signal() direct construction shall emit UserWarning
 
 `Signal.__init__()` SHALL emit a `UserWarning` with the message "Direct Signal() construction bypasses SSR transfer. Use use_state(factory) instead." when called directly by user code. The `Signal` class SHALL remain as the return type of `use_state()` and for type annotations.
@@ -131,3 +140,12 @@ Internal `Signal._create(value)`, `ReactiveList._create(value)`, and `ReactiveDi
 - **WHEN** a developer writes `count: Signal[int] = use_state(lambda: 0)`
 - **THEN** the type annotation SHALL be valid
 - **AND** `Signal` SHALL remain importable from `webcompy.signal`
+
+### Requirement: Internal composables SHALL use Signal._create() to avoid warnings
+
+All framework-provided composables (`use_counter`, `use_async_result`, `use_theme`, and any future composables) SHALL use `Signal._create()` and `Computed._create()` internally when creating reactive primitives, rather than calling `Signal()` or `Computed()` directly. This ensures that users of these composables do not encounter deprecation warnings from internal framework code.
+
+#### Scenario: use_counter uses Signal._create()
+- **WHEN** a developer calls `use_counter(initial)` inside a component setup function
+- **THEN** the internal signal SHALL be created via `Signal._create(initial)` (not `Signal(initial)`)
+- **AND** no `UserWarning` SHALL be emitted

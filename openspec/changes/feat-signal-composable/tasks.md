@@ -12,7 +12,7 @@
 
 - [ ] 2.1 Add `_transferable_signals: dict[str, SignalBase[Any]]` field to `Context.__init__()` in `packages/webcompy/src/webcompy/components/_libs.py`
 - [ ] 2.2 In `Component.__setup()` (`_component.py`), after `component_def(context)` returns, merge `context._transferable_signals` into `self.__signal_members__` via `self.__set_signal_member__(key, sig)` for each entry
-- [ ] 2.3 Verify the merge also happens in the async re-extraction path (from `fix-async-component-active-context`)
+- [ ] 2.3 Integrate `_transferable_signals` merge from the async re-extraction path implemented in `fix-async-component-active-context`
 
 ## 3. use_state() composable
 
