@@ -100,6 +100,24 @@ class TestAsyncComponentLifecycleHooks:
             result._instance._remove_element()
             assert "destroy" in called
 
+    def test_async_body_framework_cleanup_runs_before_user_hook(self):
+        order = []
+
+        @define_component
+        async def AsyncHookCmp(context):
+            signal = Signal(0)
+            effect(lambda: signal.value, on_cleanup=lambda: order.append("effect"))
+
+            @on_before_destroy
+            def hook():
+                order.append("user")
+
+            return html.DIV({}, str(signal.value))
+
+        with TestRenderer.render(AsyncHookCmp) as result:
+            result._instance._remove_element()
+            assert order == ["effect", "user"]
+
 
 class TestAsyncComponentAsyncResults:
     def test_async_body_use_async_result_collected(self):

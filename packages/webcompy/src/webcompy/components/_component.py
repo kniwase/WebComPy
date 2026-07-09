@@ -233,8 +233,8 @@ class Component(ElementBase):
         framework_cleanup = self._render_state.framework_cleanup
 
         def on_before_destroy_with_scope_cleanup():
-            user_on_before_destroy()
             framework_cleanup()
+            user_on_before_destroy()
 
         self._property["on_before_destroy"] = on_before_destroy_with_scope_cleanup
         self._async_results = list(context._async_results)
