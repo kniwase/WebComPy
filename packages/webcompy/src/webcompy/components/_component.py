@@ -92,6 +92,7 @@ class Component(ElementBase):
         self._generator = generator
         self._pending_async_template: Coroutine[Any, Any, ElementChildren] | None = None
         self._async_results: list = []
+        self._async_setup_extracted: bool = False
         super().__init__()
         property = self.__setup(component_def, props, slots)
         self._property = property
@@ -160,6 +161,9 @@ class Component(ElementBase):
         self._async_results = list(context._async_results)
         for key, sig in context._transferable_signals.items():
             self.__set_signal_member__(key, sig)
+
+        if self._pending_async_template is None:
+            self._async_setup_extracted = True
 
         if parent_di_scope is not None and len(parent_di_scope._children) > existing_children_count:
             child_di_scope = parent_di_scope._children[-1]
@@ -240,6 +244,7 @@ class Component(ElementBase):
         self._async_results = list(context._async_results)
         for key, sig in context._transferable_signals.items():
             self.__set_signal_member__(key, sig)
+        self._async_setup_extracted = True
 
     async def _render(self):
         if self._pending_async_template is not None:
@@ -264,12 +269,8 @@ class Component(ElementBase):
                 property["template"] = template
                 self._refresh_async_setup_results()
                 self.__init_component(property)
-        elif self._render_state is not None:
-            from webcompy.di import inject
-            from webcompy.di._keys import SUSPENSE_RESOLVING_KEY
-
-            if inject(SUSPENSE_RESOLVING_KEY, default=False):
-                self._refresh_async_setup_results()
+        if not self._async_setup_extracted and self._render_state is not None:
+            self._refresh_async_setup_results()
         self._restore_signals()
         on_before = self._property["on_before_rendering"]
         if iscoroutinefunction(on_before):

@@ -36,9 +36,18 @@
 - [x] 5.7 Write a test verifying sync component behavior is unchanged (no regression)
 - [x] 5.8 Run existing E2E tests for async components and Suspense to verify no regressions
 
-## 6. Lint, Type Check, and Validation
+## 6. Review follow-up
 
-- [x] 6.1 Run `uv run ruff check .` and `uv run ruff format .`
-- [x] 6.2 Run `uv run pyright`
-- [x] 6.3 Run `uv run python -m pytest tests/ --tb=short`
-- [x] 6.4 Run `openspec validate fix-async-component-active-context`
+- [x] 6.1 Fix Suspense server path: call `Component._refresh_async_setup_results()` in `SuspenseElement._resolve_component_templates()` after each template resolves
+- [x] 6.2 Introduce `_async_setup_extracted` flag on `Component` to make re-extraction robust across server/browser Suspense paths without relying solely on `SUSPENSE_RESOLVING_KEY`
+- [x] 6.3 Add tests verifying Suspense async body hooks (`on_before_rendering`, `on_after_rendering`, `on_before_destroy`) fire correctly
+- [x] 6.4 Add test verifying Suspense async body `useAsyncResult` is collected in `child._async_results` and included in `collect_transfer_data()` payload
+- [x] 6.5 Update `proposal.md` and `design.md` to use `_active_scope` instead of the removed `_active_effect_scope`
+- [x] 6.6 Update `design.md` and spec delta to document `ComponentRenderState.framework_cleanup` and the `_async_setup_extracted` re-extraction strategy
+
+## 7. Lint, Type Check, and Validation
+
+- [x] 7.1 Run `uv run ruff check .` and `uv run ruff format .`
+- [x] 7.2 Run `uv run pyright`
+- [x] 7.3 Run `uv run python -m pytest tests/ --tb=short`
+- [x] 7.4 Run `openspec validate fix-async-component-active-context`

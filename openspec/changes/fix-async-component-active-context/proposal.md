@@ -1,6 +1,6 @@
 ## Why
 
-Async component setup functions (`async def` with `@define_component`) execute their body during `_render()`, not during `__setup()`. However, `_active_component_context` and `_active_effect_scope` are set and immediately reset in `__setup()` — before the async body ever runs. This causes two bugs:
+Async component setup functions (`async def` with `@define_component`) execute their body during `_render()`, not during `__setup()`. However, `_active_component_context` and `_active_scope` are set and immediately reset in `__setup()` — before the async body ever runs. This causes two bugs:
 
 1. **Composables are broken in async setup**: `_active_component_context.get()` returns `None` during async body execution, so composables (`use_async_result`, future `use_state()`) cannot access the component context and silently degrade.
 2. **Lifecycle hooks are silently lost**: hooks registered inside async setup bodies (`context.on_before_rendering(fn)`) are extracted in `__setup__()` before the body executes, resulting in empty hook registrations.
@@ -9,7 +9,7 @@ This fix is a prerequisite for the upcoming `use_state()` composable, which reli
 
 ## What Changes
 
-- Introduce a `component_context()` context manager (backed by `ContextVar`) that activates `_active_component_context` and `_active_effect_scope` in a single `with` block with guaranteed cleanup via `finally`
+- Introduce a `component_context()` context manager (backed by `ContextVar`) that activates `_active_component_context` and `_active_scope` in a single `with` block with guaranteed cleanup via `finally`
 - Introduce `ComponentRenderState` dataclass bundling `Context` and `EffectScope` for deferred re-activation
 - In `Component.__setup()`: save the `ComponentRenderState` on `self` for async components (in addition to the existing set/reset cycle needed for Suspense coroutine observability)
 - In `Component._render()`: re-activate context and effect scope via `component_context()` before awaiting `_pending_async_template`
@@ -35,7 +35,7 @@ This fix is a prerequisite for the upcoming `use_state()` composable, which reli
 
 ## Known Issues Addressed
 
-N/A — this fixes a newly discovered bug in async component setup. Async component setup functions silently lose lifecycle hooks and composable context access because `_active_component_context` and `_active_effect_scope` are reset before the coroutine body executes.
+N/A — this fixes a newly discovered bug in async component setup. Async component setup functions silently lose lifecycle hooks and composable context access because `_active_component_context` and `_active_scope` are reset before the coroutine body executes.
 
 ## Non-goals
 

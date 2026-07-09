@@ -78,6 +78,7 @@ class SuspenseElement(DynamicElement):
         for (component, _), result in zip(pairs, results, strict=True):
             component._pending_async_template = None
             component._property["template"] = result
+            component._refresh_async_setup_results()
             component._Component__init_component(component._property)
 
     async def _render(self):

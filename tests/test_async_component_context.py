@@ -194,6 +194,152 @@ class TestSuspenseAsyncContext:
             assert captured.get("A") == "ChildA"
             assert captured.get("B") == "ChildB"
 
+    def test_suspense_async_body_on_before_rendering_hook_fires(self):
+        called = []
+
+        @define_component
+        async def AsyncSuspenseChild(context):
+            await asyncio.sleep(0)
+
+            @on_before_rendering
+            def hook():
+                called.append("before")
+
+            return html.DIV({}, "child")
+
+        @define_component
+        def SuspenseWrapper(context):
+            return html.DIV(
+                {},
+                suspense(
+                    fallback=lambda: html.P({}, "loading"),
+                    children=lambda: AsyncSuspenseChild(None),
+                ),
+            )
+
+        with TestRenderer.render(SuspenseWrapper):
+            assert "before" in called
+
+    def test_suspense_async_body_on_after_rendering_hook_fires(self):
+        called = []
+
+        @define_component
+        async def AsyncSuspenseChild(context):
+            await asyncio.sleep(0)
+
+            @on_after_rendering
+            def hook():
+                called.append("after")
+
+            return html.DIV({}, "child")
+
+        @define_component
+        def SuspenseWrapper(context):
+            return html.DIV(
+                {},
+                suspense(
+                    fallback=lambda: html.P({}, "loading"),
+                    children=lambda: AsyncSuspenseChild(None),
+                ),
+            )
+
+        with TestRenderer.render(SuspenseWrapper):
+            assert "after" in called
+
+    def test_suspense_async_body_on_before_destroy_hook_fires(self):
+        called = []
+        child_holder = []
+
+        @define_component
+        async def AsyncSuspenseChild(context):
+            await asyncio.sleep(0)
+
+            @on_before_destroy
+            def hook():
+                called.append("destroy")
+
+            return html.DIV({}, "child")
+
+        @define_component
+        def SuspenseWrapper(context):
+            child = AsyncSuspenseChild(None)
+            child_holder.append(child)
+            return html.DIV(
+                {},
+                suspense(
+                    fallback=lambda: html.P({}, "loading"),
+                    children=lambda: child,
+                ),
+            )
+
+        with TestRenderer.render(SuspenseWrapper):
+            child_holder[0]._remove_element()
+            assert "destroy" in called
+
+    def test_suspense_async_body_use_async_result_collected(self):
+        child_holder = []
+
+        @define_component
+        async def AsyncResultChild(context):
+            await asyncio.sleep(0)
+            useAsyncResult(lambda: asyncio.sleep(0), immediate=False)
+            return html.DIV({}, "child")
+
+        @define_component
+        def SuspenseWrapper(context):
+            child = AsyncResultChild(None)
+            child_holder.append(child)
+            return html.DIV(
+                {},
+                suspense(
+                    fallback=lambda: html.P({}, "loading"),
+                    children=lambda: child,
+                ),
+            )
+
+        with TestRenderer.render(SuspenseWrapper):
+            assert len(child_holder[0]._async_results) == 1
+
+    def test_suspense_async_result_included_in_transfer_payload(self):
+        from webcompy.aio._async_result import AsyncState
+        from webcompy.hydration._collect import collect_transfer_data
+
+        child_holder = []
+
+        @define_component
+        async def AsyncResultChild(context):
+            await asyncio.sleep(0)
+            useAsyncResult(lambda: asyncio.sleep(0), immediate=False)
+            return html.DIV({}, "child")
+
+        @define_component
+        def SuspenseWrapper(context):
+            child = AsyncResultChild(None)
+            child_holder.append(child)
+            return html.DIV(
+                {},
+                suspense(
+                    fallback=lambda: html.P({}, "loading"),
+                    children=lambda: child,
+                ),
+            )
+
+        with TestRenderer.render(SuspenseWrapper):
+            child = child_holder[0]
+            assert len(child._async_results) == 1
+            child._async_results[0]._state.value = AsyncState.SUCCESS
+            child._async_results[0]._data.value = "transfer-data"
+
+            class _FakeRoot:
+                def __init__(self):
+                    self._children = [child]
+
+            payload = collect_transfer_data(_FakeRoot())
+            component_id = child._property.get("component_id", "")
+            assert component_id in payload.async_results
+            assert payload.async_results[component_id].state == "success"
+            assert payload.async_results[component_id].data == "transfer-data"
+
 
 class TestAsyncComponentEffectCleanup:
     def test_effect_created_in_async_body_tracked_by_scope(self):
