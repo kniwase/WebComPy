@@ -53,7 +53,7 @@ The DI scope (`_active_di_scope`) is managed separately at the render-context le
 
 ### Requirement: ComponentRenderState shall bundle render-time context
 
-A `ComponentRenderState` dataclass SHALL be defined in `packages/webcompy/src/webcompy/components/_context_manager.py`. It SHALL contain `context: Context[Any]` and `effect_scope: EffectScope` fields. `Component.__setup__()` SHALL create a `ComponentRenderState` and store it on `self._render_state` for all components (sync and async). For sync components, `_render_state` SHALL be available but re-activation during `_render()` SHALL be a no-op (hooks already extracted). Sync components SHALL also use `component_context()` during `__setup__()` to ensure consistent ContextVar management, replacing the manual `set`/`reset` token pattern. For async components, `_render_state` SHALL be used to re-activate context and effect scope during `_render()`.
+A `ComponentRenderState` dataclass SHALL be defined in `packages/webcompy/src/webcompy/components/_context_manager.py`. It SHALL contain `context: Context[Any]` and `effect_scope: EffectScope` fields. It MAY contain a `framework_cleanup: Callable[[], None]` field to centralize DI scope and EffectScope disposal. `Component.__setup__()` SHALL create a `ComponentRenderState` and store it on `self._render_state` for all components (sync and async). For sync components, `_render_state` SHALL be available but re-activation during `_render()` SHALL be a no-op (hooks already extracted). Sync components SHALL also use `component_context()` during `__setup__()` to ensure consistent ContextVar management, replacing the manual `set`/`reset` token pattern. For async components, `_render_state` SHALL be used to re-activate context and effect scope during `_render()`.
 
 #### Scenario: ComponentRenderState is created during setup
 - **WHEN** `Component.__setup__()` runs for any component
@@ -67,12 +67,12 @@ A `ComponentRenderState` dataclass SHALL be defined in `packages/webcompy/src/we
 
 ### Requirement: component_context() shall centralize ContextVar activation
 
-A `component_context(state: ComponentRenderState)` context manager SHALL be defined in `packages/webcompy/src/webcompy/components/_context_manager.py`. It SHALL activate `_active_component_context` and `_active_effect_scope` upon entry and reset them upon exit (including on exception). The context manager SHALL be used in both `__setup__()` (for sync body execution) and `_render()` (for async body re-activation). Future ContextVars that need component-scoped activation SHALL be added to this single function.
+A `component_context(state: ComponentRenderState)` context manager SHALL be defined in `packages/webcompy/src/webcompy/components/_context_manager.py`. It SHALL activate `_active_component_context` and `_active_scope` upon entry and reset them upon exit (including on exception). The context manager SHALL be used in both `__setup__()` (for sync body execution) and `_render()` (for async body re-activation). Future ContextVars that need component-scoped activation SHALL be added to this single function.
 
 #### Scenario: component_context activates and resets ContextVars
 - **WHEN** `with component_context(state):` is entered
 - **THEN** `_active_component_context.get()` SHALL return `state.context`
-- **AND** `_active_effect_scope.get()` SHALL return `state.effect_scope`
+- **AND** `_active_scope.get()` SHALL return `state.effect_scope`
 - **AND** upon exit, both SHALL be reset to their previous values
 
 #### Scenario: component_context resets on exception
@@ -89,7 +89,7 @@ A `component_context(state: ComponentRenderState)` context manager SHALL be defi
 
 When `SuspenseElement._render()` collects `_pending_async_template` coroutines and resolves them via `asyncio.gather()`, each coroutine SHALL be wrapped in an async helper that activates `component_context(component._render_state)` before awaiting. This ensures each async component body executes with its own context active, even during parallel resolution. Each wrapper is scheduled as a task by `asyncio.gather` (which creates task-local context copies), so concurrent coroutines do not interfere with each other's context.
 
-After `asyncio.gather()` completes, `Component._render()` SHALL re-extract lifecycle hooks, `_async_results`, and `_transferable_signals` from each component's `Context`, as the body registrations occurred during the Suspense-managed resolution.
+After `asyncio.gather()` completes, `SuspenseElement._resolve_component_templates()` SHALL call `Component._refresh_async_setup_results()` for each resolved component before initializing its children. This re-extracts lifecycle hooks, `_async_results`, and `_transferable_signals` from each component's `Context`, as the body registrations occurred during the Suspense-managed resolution. `Component._render()` additionally guards re-extraction via `_async_setup_extracted` so the refresh occurs regardless of whether the temporary Suspense DI scope is still active.
 
 #### Scenario: Suspense wraps coroutines with component context
 - **WHEN** `SuspenseElement._render()` resolves async component coroutines via `asyncio.gather()`
@@ -105,5 +105,5 @@ After `asyncio.gather()` completes, `Component._render()` SHALL re-extract lifec
 #### Scenario: Hooks captured after Suspense resolution
 - **WHEN** an async component inside Suspense registers hooks during body execution
 - **AND** `asyncio.gather()` completes
-- **THEN** `Component._render()` SHALL re-extract hooks from the Context
+- **THEN** `SuspenseElement._resolve_component_templates()` SHALL re-extract hooks from the Context
 - **AND** the hooks SHALL be available for the component's rendering phase
