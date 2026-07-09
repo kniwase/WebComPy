@@ -26,6 +26,7 @@ class WebComPyComponentException(WebComPyException):
 if TYPE_CHECKING:
     from webcompy.components._generator import ComponentGenerator
     from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
+    from webcompy.signal._base import SignalBase
 
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
@@ -74,6 +75,7 @@ class Context(Generic[PropsType]):
         self.__meta_setter = meta_setter
         self._generator = generator
         self._async_results: list = []
+        self._transferable_signals: dict[str, SignalBase[Any]] = {}
 
     @property
     def props(self) -> PropsType:

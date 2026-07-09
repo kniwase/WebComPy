@@ -1,4 +1,8 @@
 from webcompy.components._component import Component
+from webcompy.components._context_manager import (
+    ComponentRenderState,
+    component_context,
+)
 from webcompy.components._generator import (
     ComponentGenerator,
     define_component,
@@ -26,9 +30,11 @@ __all__ = [
     "ComponentContext",
     "ComponentGenerator",
     "ComponentProperty",
+    "ComponentRenderState",
     "ReactiveScopedStyle",
     "WebComPyComponentException",
     "_active_component_context",
+    "component_context",
     "define_component",
     "on_after_rendering",
     "on_before_destroy",

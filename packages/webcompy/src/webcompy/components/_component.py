@@ -6,7 +6,7 @@ from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeAlias, TypeGuard, cast
 from uuid import UUID, uuid4
 
-from webcompy.components._hooks import _active_component_context
+from webcompy.components._context_manager import component_context
 from webcompy.components._libs import ComponentProperty, Context, generate_id
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements.typealias._element_property import ElementChildren
@@ -104,7 +104,7 @@ class Component(ElementBase):
         props: Any,
         slots: dict[str, Callable[[], ElementChildren]],
     ) -> ComponentProperty:
-        from webcompy.components._hooks import _active_effect_scope
+        from webcompy.components._context_manager import ComponentRenderState, component_context
         from webcompy.di import _pending_di_parent, inject
         from webcompy.di._keys import _HEAD_PROPS_KEY
         from webcompy.signal._effect import create_effect_scope
@@ -122,9 +122,7 @@ class Component(ElementBase):
             self._set_meta,
             generator=self._generator,
         )
-        token = _active_component_context.set(context)
         scope = create_effect_scope()
-        scope_token = _active_effect_scope.set(scope)
 
         parent_di_scope = _active_di_scope.get(None)
         pending_token = None
@@ -134,22 +132,35 @@ class Component(ElementBase):
             pending_token = _pending_di_parent.set(parent_di_scope)
             existing_children_count = len(parent_di_scope._children)
 
+        child_di_scope: DIScope | None = None
+
+        def _framework_cleanup():
+            if child_di_scope is not None:
+                child_di_scope.dispose()
+            scope.dispose()
+
+        self._render_state = ComponentRenderState(
+            context=context,
+            effect_scope=scope,
+            framework_cleanup=_framework_cleanup,
+        )
+
         try:
-            if iscoroutinefunction(component_def):
-                coro = component_def(context)
-                self._pending_async_template = coro
-                template: ElementChildren | None = None
-            else:
-                template = cast("ElementChildren", component_def(context))
+            with component_context(self._render_state):
+                if iscoroutinefunction(component_def):
+                    coro = component_def(context)
+                    self._pending_async_template = coro
+                    template: ElementChildren | None = None
+                else:
+                    template = cast("ElementChildren", component_def(context))
         finally:
-            _active_component_context.reset(token)
-            _active_effect_scope.reset(scope_token)
             if pending_token is not None:
                 _pending_di_parent.reset(pending_token)
 
         self._async_results = list(context._async_results)
+        for key, sig in context._transferable_signals.items():
+            self.__set_signal_member__(key, sig)
 
-        child_di_scope: DIScope | None = None
         if parent_di_scope is not None and len(parent_di_scope._children) > existing_children_count:
             child_di_scope = parent_di_scope._children[-1]
 
@@ -157,9 +168,7 @@ class Component(ElementBase):
         original_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
 
         def on_before_destroy_with_scope_cleanup():
-            if child_di_scope is not None:
-                child_di_scope.dispose()
-            scope.dispose()
+            self._render_state.framework_cleanup()
             original_on_before_destroy()
 
         return {
@@ -213,6 +222,25 @@ class Component(ElementBase):
             return
         restore_signal_values(self, signals_data)
 
+    def _refresh_async_setup_results(self) -> None:
+        if self._render_state is None:
+            return
+        context = self._render_state.context
+        hooks = context.__get_lifecyclehooks__()
+        self._property["on_before_rendering"] = hooks.get("on_before_rendering", lambda: None)
+        self._property["on_after_rendering"] = hooks.get("on_after_rendering", lambda: None)
+        user_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
+        framework_cleanup = self._render_state.framework_cleanup
+
+        def on_before_destroy_with_scope_cleanup():
+            user_on_before_destroy()
+            framework_cleanup()
+
+        self._property["on_before_destroy"] = on_before_destroy_with_scope_cleanup
+        self._async_results = list(context._async_results)
+        for key, sig in context._transferable_signals.items():
+            self.__set_signal_member__(key, sig)
+
     async def _render(self):
         if self._pending_async_template is not None:
             from webcompy.di import inject
@@ -220,7 +248,8 @@ class Component(ElementBase):
 
             if not inject(SUSPENSE_RESOLVING_KEY, default=False):
                 try:
-                    template = await self._pending_async_template
+                    with component_context(self._render_state):
+                        template = await self._pending_async_template
                 except Exception:
                     self._cleanup_pending_async()
                     try:
@@ -233,7 +262,14 @@ class Component(ElementBase):
                 self._pending_async_template = None
                 property = self._property
                 property["template"] = template
+                self._refresh_async_setup_results()
                 self.__init_component(property)
+        elif self._render_state is not None:
+            from webcompy.di import inject
+            from webcompy.di._keys import SUSPENSE_RESOLVING_KEY
+
+            if inject(SUSPENSE_RESOLVING_KEY, default=False):
+                self._refresh_async_setup_results()
         self._restore_signals()
         on_before = self._property["on_before_rendering"]
         if iscoroutinefunction(on_before):
