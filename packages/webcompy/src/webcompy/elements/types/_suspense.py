@@ -19,6 +19,11 @@ from webcompy.utils._environment import ENVIRONMENT
 _logger = getLogger(__name__)
 
 
+async def _resolve_with_context(component: Component, coro: Coroutine[Any, Any, Any]) -> Any:
+    with component_context(component._render_state):
+        return await coro
+
+
 class SuspenseElement(DynamicElement):
     _resolved: bool
 
@@ -97,11 +102,6 @@ class SuspenseElement(DynamicElement):
             self._children = children
             pairs = self._collect_pending_coroutines()
             if pairs:
-
-                async def _resolve_with_context(component: Component, coro: Coroutine[Any, Any, Any]):
-                    with component_context(component._render_state):
-                        return await coro
-
                 coroutines = [_resolve_with_context(component, coro) for component, coro in pairs]
                 try:
                     results = await asyncio.wait_for(
@@ -156,11 +156,6 @@ class SuspenseElement(DynamicElement):
             if pairs is None:
                 pairs = self._collect_pending_coroutines(children)
             if pairs:
-
-                async def _resolve_with_context(component: Component, coro: Coroutine[Any, Any, Any]):
-                    with component_context(component._render_state):
-                        return await coro
-
                 coroutines = [_resolve_with_context(component, coro) for component, coro in pairs]
                 results = await asyncio.gather(*coroutines, return_exceptions=True)
                 for _idx, result in enumerate(results):

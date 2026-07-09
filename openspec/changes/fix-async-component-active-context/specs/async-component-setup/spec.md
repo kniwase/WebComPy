@@ -67,12 +67,12 @@ A `ComponentRenderState` dataclass SHALL be defined in `packages/webcompy/src/we
 
 ### Requirement: component_context() shall centralize ContextVar activation
 
-A `component_context(state: ComponentRenderState)` context manager SHALL be defined in `packages/webcompy/src/webcompy/components/_context_manager.py`. It SHALL activate `_active_component_context` and `_active_effect_scope` upon entry and reset them upon exit (including on exception). The context manager SHALL be used in both `__setup__()` (for sync body execution) and `_render()` (for async body re-activation). Future ContextVars that need component-scoped activation SHALL be added to this single function.
+A `component_context(state: ComponentRenderState)` context manager SHALL be defined in `packages/webcompy/src/webcompy/components/_context_manager.py`. It SHALL activate `_active_component_context` and `_active_scope` upon entry and reset them upon exit (including on exception). The context manager SHALL be used in both `__setup__()` (for sync body execution) and `_render()` (for async body re-activation). Future ContextVars that need component-scoped activation SHALL be added to this single function.
 
 #### Scenario: component_context activates and resets ContextVars
 - **WHEN** `with component_context(state):` is entered
 - **THEN** `_active_component_context.get()` SHALL return `state.context`
-- **AND** `_active_effect_scope.get()` SHALL return `state.effect_scope`
+- **AND** `_active_scope.get()` SHALL return `state.effect_scope`
 - **AND** upon exit, both SHALL be reset to their previous values
 
 #### Scenario: component_context resets on exception

@@ -5,7 +5,6 @@ import asyncio
 from webcompy.components._generator import define_component
 from webcompy.components._hooks import (
     _active_component_context,
-    _active_effect_scope,
     on_after_rendering,
     on_before_destroy,
     on_before_rendering,
@@ -30,18 +29,6 @@ class TestAsyncComponentContextActive:
         with TestRenderer.render(AsyncCtxCmp) as result:
             assert len(captured) == 1
             assert captured[0] is result._instance._render_state.context
-
-    def test_active_effect_scope_available_in_async_body(self):
-        captured = []
-
-        @define_component
-        async def AsyncScopeCmp(context):
-            captured.append(_active_effect_scope.get())
-            return html.DIV({}, "async")
-
-        with TestRenderer.render(AsyncScopeCmp) as result:
-            assert len(captured) == 1
-            assert captured[0] is result._instance._render_state.effect_scope
 
     def test_active_scope_available_in_async_body(self):
         captured = []

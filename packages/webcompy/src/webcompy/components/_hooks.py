@@ -11,11 +11,9 @@ from webcompy.di import inject
 from webcompy.di._keys import HYDRATION_DATA_KEY
 from webcompy.hydration._payload import TransferAsyncResultEntry
 from webcompy.signal._base import CallbackConsumerNode, SignalBase
-from webcompy.signal._effect import EffectScope
 from webcompy.signal._graph import consumer_destroy
 
 _active_component_context: ContextVar[Context[Any]] = ContextVar("_active_component_context")
-_active_effect_scope: ContextVar[EffectScope | None] = ContextVar("_active_effect_scope", default=None)
 
 T = TypeVar("T")
 
