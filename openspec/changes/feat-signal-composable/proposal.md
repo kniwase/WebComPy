@@ -1,0 +1,60 @@
+## Why
+
+The merged `feat-signal-value-transfer` relies on `__signal_members__` populated via `self.X = Signal()`, which is impossible in the current function-style component API (user setup functions receive `context`, not `self`). The signal collection path collects zero signals from any user component in any real application — the feature is effectively dead code.
+
+Additionally, the current restoration mechanism (`_restore_signals()` in `_render()`) is fragile: restored values can be overwritten by lifecycle hooks that run after restoration.
+
+This change introduces `use_state()` and related composables (`use_reactive_list()`, `use_reactive_dict()`) with a factory-skip transfer mechanism, modeled after Nuxt's `useState` and the existing `use_async_result` pattern. On the server, the factory runs to produce the initial value. On the browser during hydration, the factory is skipped and the value is restored from the hydration payload — all during setup, before lifecycle hooks run.
+
+This change depends on `fix-async-component-active-context` (Phase 1) to ensure `use_state()` works inside async component setup functions.
+
+## What Changes
+
+- Introduce `use_state(factory: Callable[[], T]) -> Signal[T]` composable with `@overload` for `(key: str, factory: Callable[[], T])` variant — the recommended way to create transferable signals
+- Introduce `use_reactive_list(factory: Callable[[], list[V]]) -> ReactiveList[V]` composable — creates transferable `ReactiveList` instances with mutation ergonomics
+- Introduce `use_reactive_dict(factory: Callable[[], dict[K, V]]) -> ReactiveDict[K, V]` composable — creates transferable `ReactiveDict` instances with mutation ergonomics
+- Factory-skip mechanism: on the server, the factory runs and produces the initial value; on the browser during hydration, composables check `HYDRATION_SIGNAL_DATA_KEY` and skip the factory if a value is found, creating the signal with the restored value directly
+- Deprecate `Signal()` direct construction with `UserWarning` (class stays as return type and internal implementation)
+- Add `Signal._create()`, `ReactiveList._create()`, `ReactiveDict._create()` classmethods as internal bypass (no warning)
+- Add `_transferable_signals: dict[str, SignalBase]` to `Context` for registration during setup
+- In `Component.__setup()`, merge `context._transferable_signals` into `self.__signal_members__` after the setup function returns (enabling existing `collect_transfer_data()` to work unchanged)
+- Remove `_restore_signals()` from `Component._render()` (restoration now happens during setup via factory-skip)
+- Auto-key generation via `inspect` + `dis` (file:line:column) with `file:line` fallback
+
+## Capabilities
+
+### New Capabilities
+
+(none)
+
+### Modified Capabilities
+
+- `signal-value-transfer`: Restoration mechanism changes from `_restore_signals()` in `_render()` to factory-skip during setup; scenarios rewritten for `use_state()` composable syntax; `HYDRATION_SIGNAL_DATA_KEY` SHALL be provided before component creation
+- `composables`: Add `use_state()`, `use_reactive_list()`, `use_reactive_dict()` composable requirements — factory-skip transfer, `@overload` typing, graceful degradation outside component context
+- `hydration-data-transfer`: `app.run()` SHALL provide `HYDRATION_SIGNAL_DATA_KEY` in the root DI scope alongside `HYDRATION_DATA_KEY`
+
+## Impact
+
+- `packages/webcompy/src/webcompy/signal/_composable.py` — `use_state()`, `use_reactive_list()`, `use_reactive_dict()` functions with `@overload` typing and auto-key generation
+- `packages/webcompy/src/webcompy/signal/__init__.py` — export `use_state`, `use_reactive_list`, `use_reactive_dict`
+- `packages/webcompy/src/webcompy/__init__.py` — re-export `use_state`, `use_reactive_list`, `use_reactive_dict`
+- `packages/webcompy/src/webcompy/signal/_signal.py` — `Signal.__init__` gains `UserWarning`; add `Signal._create()` classmethod
+- `packages/webcompy/src/webcompy/signal/_list.py` — add `ReactiveList._create()` classmethod
+- `packages/webcompy/src/webcompy/signal/_dict.py` — add `ReactiveDict._create()` classmethod
+- `packages/webcompy/src/webcompy/components/_libs.py` — `Context` gains `_transferable_signals` dict
+- `packages/webcompy/src/webcompy/components/_component.py` — `__setup()` merges `_transferable_signals`; `_render()` drops `_restore_signals()`
+- `packages/webcompy/src/webcompy/di/_keys.py` — verify `HYDRATION_SIGNAL_DATA_KEY` exists and is provided in `app.run()`
+- `packages/webcompy/src/webcompy/app/_render_context.py` or `_app.py` — provide `HYDRATION_SIGNAL_DATA_KEY` before component creation
+
+## Known Issues Addressed
+
+- `__signal_members__` is never populated for user components in function-style API → `use_state()` composable provides the registration path via `Context._transferable_signals`
+- **`BREAKING CHANGE` — Computed values are no longer collected for transfer**: Under the base `signal-value-transfer` capability, `Computed` cached values were included in the transfer payload. This change restricts collection to source signals only (`Signal`, `ReactiveList`, `ReactiveDict` created via `use_state()` / `use_reactive_list()` / `use_reactive_dict()`). The base `signal-value-transfer` scenario `Collecting Computed cached values` is updated to assert exclusion instead of inclusion. Browser-side, `Computed` instances are reconstructed from factory execution against the restored source signals, ensuring no stale derivations across the hydration boundary.
+
+## Non-goals
+
+- Deprecating the `Signal` class entirely (separate change: `refactor-signal-api-unification`)
+- Deprecating `Computed()` class constructor (separate change: `refactor-signal-api-unification`)
+- Changing the `collect_transfer_data()` collection mechanism (unchanged — still walks `__signal_members__`)
+- Changing the payload serialization format (unchanged — version 2 with `signals` section)
+- Module-level signal transfer (not pursued — use `provide`/`inject` for app-scoped state)
