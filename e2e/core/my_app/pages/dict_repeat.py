@@ -1,14 +1,14 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html, repeat
-from webcompy.signal import ReactiveDict, Signal
+from webcompy.signal import use_reactive_dict, use_state
 
 
 @define_component
 def DictRepeatPage(context: ComponentContext[None]):
     context.set_title("Dict Repeat - E2E")
 
-    data: ReactiveDict[str, str] = ReactiveDict()
-    counter = Signal(0)
+    data = use_reactive_dict(lambda: {})
+    counter = use_state(lambda: 0)
 
     def add_item(_):
         counter.value += 1

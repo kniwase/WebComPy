@@ -1,14 +1,14 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DOMEvent, html
 from webcompy.router import RouterContext
-from webcompy.signal import Signal
+from webcompy.signal import use_state
 
 
 @define_component
 def InOutSample(context: ComponentContext[RouterContext]):
     context.set_title("Text Input Sample - WebCompy Template")
 
-    text = Signal("")
+    text = use_state(lambda: "")
 
     def on_input(ev: DOMEvent):
         assert ev.target is not None

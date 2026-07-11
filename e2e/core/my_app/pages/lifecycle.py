@@ -6,15 +6,15 @@ from webcompy.components import (
     on_before_rendering,
 )
 from webcompy.elements import html
-from webcompy.signal import Signal
+from webcompy.signal import use_state
 
 
 @define_component
 def LifecyclePage(context: ComponentContext[None]):
     context.set_title("Lifecycle - E2E")
 
-    count = Signal(0)
-    render_count = Signal(0)
+    count = use_state(lambda: 0)
+    render_count = use_state(lambda: 0)
 
     @on_before_rendering
     def before_render():

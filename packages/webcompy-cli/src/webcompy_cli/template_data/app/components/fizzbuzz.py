@@ -5,7 +5,7 @@ from webcompy.components import (
 )
 from webcompy.elements import DOMEvent, html, repeat, switch
 from webcompy.router import RouterContext
-from webcompy.signal import Signal, computed
+from webcompy.signal import Signal, computed, use_state
 
 
 @define_component
@@ -55,8 +55,8 @@ FizzbuzzList.scoped_style = {
 def Fizzbuzz(context: ComponentContext[RouterContext]):
     context.set_title("FizzBuzz - WebComPy Template")
 
-    opened = Signal(True)
-    count = Signal(10)
+    opened = use_state(lambda: True)
+    count = use_state(lambda: 10)
 
     @computed
     def toggle_button_text():
@@ -105,7 +105,7 @@ def Fizzbuzz(context: ComponentContext[RouterContext]):
         switch(
             {
                 "case": opened,
-                "generator": lambda: FizzbuzzList(props=count),
+                "generator": lambda: FizzbuzzList(count),
             },
             default=lambda: html.DIV(
                 {},

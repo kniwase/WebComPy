@@ -1,15 +1,15 @@
 from webcompy.ajax import HttpClient
 from webcompy.components import ComponentContext, define_component, useAsync
 from webcompy.elements import html
-from webcompy.signal import Signal
+from webcompy.signal import use_state
 
 
 @define_component
 def AsyncNavPage(context: ComponentContext[None]):
     context.set_title("Async Nav - E2E")
 
-    message = Signal("Loading...")
-    item_count = Signal(0)
+    message = use_state(lambda: "Loading...")
+    item_count = use_state(lambda: 0)
 
     async def fetch_data():
         res = await HttpClient.get("async_nav_data.json")
