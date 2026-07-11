@@ -159,8 +159,7 @@ class Component(ElementBase):
                 _pending_di_parent.reset(pending_token)
 
         self._async_results = list(context._async_results)
-        for key, sig in context._transferable_signals.items():
-            self.__set_signal_member__(key, sig)
+        self._merge_transferables(context)
 
         if self._pending_async_template is None:
             self._async_setup_extracted = True
@@ -210,21 +209,9 @@ class Component(ElementBase):
         self._callback_nodes.clear()
         self.__purge_signal_members__()
 
-    def _restore_signals(self) -> None:
-        from webcompy.di import inject
-        from webcompy.di._keys import HYDRATION_SIGNAL_DATA_KEY
-        from webcompy.hydration import restore_signal_values
-
-        payload = inject(HYDRATION_SIGNAL_DATA_KEY, default=None)
-        if not payload:
-            return
-        component_id = self._property.get("component_id")
-        if not component_id:
-            return
-        signals_data = payload.get(component_id)
-        if not signals_data:
-            return
-        restore_signal_values(self, signals_data)
+    def _merge_transferables(self, context: Any) -> None:
+        for key, sig in context._transferable_signals.items():
+            self.__set_signal_member__(key, sig)
 
     def _refresh_async_setup_results(self) -> None:
         if self._render_state is None:
@@ -242,8 +229,7 @@ class Component(ElementBase):
 
         self._property["on_before_destroy"] = on_before_destroy_with_scope_cleanup
         self._async_results = list(context._async_results)
-        for key, sig in context._transferable_signals.items():
-            self.__set_signal_member__(key, sig)
+        self._merge_transferables(context)
         self._async_setup_extracted = True
 
     async def _render(self):
@@ -271,7 +257,6 @@ class Component(ElementBase):
                 self.__init_component(property)
         if not self._async_setup_extracted and self._render_state is not None:
             self._refresh_async_setup_results()
-        self._restore_signals()
         on_before = self._property["on_before_rendering"]
         if iscoroutinefunction(on_before):
             await on_before()

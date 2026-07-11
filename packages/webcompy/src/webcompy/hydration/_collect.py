@@ -12,6 +12,8 @@ from webcompy.hydration._payload import (
     TransferPayload,
 )
 from webcompy.ports._keys import FETCH_PORT_KEY
+from webcompy.signal._base import SignalBase
+from webcompy.signal._computed import Computed
 
 if TYPE_CHECKING:
     from webcompy.aio._async_result import AsyncResult
@@ -91,10 +93,10 @@ def _collect_component_signals(component: Component) -> dict[str, Any]:
     members = getattr(component, "__signal_members__", None)
     if not members:
         return {}
-    from webcompy.signal._base import SignalBase
-
     collected: dict[str, Any] = {}
     for attr_name, signal in members.items():
+        if isinstance(signal, Computed):
+            continue
         if not isinstance(signal, SignalBase):
             continue
         collected[attr_name] = signal._value
