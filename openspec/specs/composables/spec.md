@@ -360,8 +360,11 @@ When the `key` parameter is omitted, all composables (`use_state()`, `use_reacti
 - **THEN** the type annotation SHALL be valid
 - **AND** `Signal` SHALL remain importable from `webcompy.signal`
 
-### Requirement: use_counter does not participate in hydration transfer
+### Requirement: use_counter SHALL NOT participate in hydration transfer
 
+`use_counter` SHALL create a counter signal that is not registered with `Context._transferable_signals`. The counter state SHALL reset to `initial` on every component setup (including browser hydration) and SHALL NOT emit a `UserWarning`.
+
+#### Scenario: use_counter ignores hydration transfer
 - **WHEN** a developer calls `use_counter(initial)` inside a component setup function
 - **THEN** the counter signal SHALL NOT be registered with `Context._transferable_signals`
 - **AND** the counter state SHALL reset to `initial` on every component setup (including browser hydration)

@@ -37,6 +37,8 @@ The `__signal_members__` registry SHALL be populated by the `use_state()`, `use_
 - **AND** the Computed has been evaluated during render (cached value is 10)
 - **THEN** the payload's `signals` section SHALL NOT include the computed value (only transfer sources, not derivations)
 
+> **Note**: After `refactor-signal-api-unification` is synced, this scenario SHALL be updated to use `use_computed()` instead of `Computed()`.
+
 #### Scenario: Non-serializable Signal value is dropped with warning
 - **WHEN** a Signal holds a value that the codec cannot encode (e.g., a file handle)
 - **AND** `collect_transfer_data(root)` processes it
@@ -57,7 +59,7 @@ During browser hydration, the `use_state()`, `use_reactive_list()`, and `use_rea
 
 The restored value SHALL be the post-codec-decode Python object (deserialize_payload already applies `decode()`). No additional decoding is needed in composables.
 
-The `_restore_signals()` method SHALL NOT be called from `Component._render()`. Restoration is fully handled by the factory-skip mechanism during setup.
+The `_restore_signals()` method SHALL be **removed** from `Component._render()`. Restoration is fully handled by the factory-skip mechanism during setup.
 
 #### Scenario: Factory skip eliminates flash
 - **WHEN** a component setup calls `count = use_state(lambda: 0)` (default 0)
