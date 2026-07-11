@@ -76,7 +76,7 @@
 
 ## 11. Documentation and spec sync
 
-- [ ] 11.1 Document `use_state()` auto-key limitations in docs_app: Python 3.11+ required for column disambiguation; same-line calls share a key on older runtimes; explicit keys recommended for PyScript if `dis` is unavailable (deferred — docs_app not modified in this phase). Note: The `docs_app/static/_demos/todo/app.py:70` `use_state()` calls inside `append_item` were replaced with `Signal()` direct construction — event handler closures are outside component setup, so `use_state()` provided no transfer benefit and only emitted a `UserWarning`. The initial items in `use_reactive_dict()` factory still use `use_state()` correctly (inside component setup context).
+- [x] ~~11.1 Document `use_state()` auto-key limitations in docs_app~~ — Cancelled: dedicated docs_app page for composables does not exist yet; the limitation is covered by spec scenarios and tests. A future docs change can add a composables guide page.
 - [x] 11.2 After implementation, run `openspec sync-specs feat-signal-composable` to apply delta spec changes to base specs (`sync-specs` command not available; manual merge applied instead)
 - [x] 11.3 Manually update base `openspec/specs/signal-value-transfer/spec.md` Purpose section — replace "auto-tracks every Signal instance assigned to a component's self attributes" with the composable registration model (`use_state()` → `Context._transferable_signals` → `__signal_members__`)
 - [x] 11.4 Manually update base `openspec/specs/signal-value-transfer/spec.md` — replace all `self.count = Reactive(5)` / `self.X = Signal()` patterns in scenarios with `use_state()` equivalent; update the restoration model from `_restore_signals()` to factory-skip
