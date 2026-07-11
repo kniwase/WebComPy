@@ -8,7 +8,7 @@ from webcompy.components._hooks import (
     on_after_rendering,
     on_before_destroy,
     on_before_rendering,
-    useAsyncResult,
+    use_async_result,
 )
 from webcompy.elements import html
 from webcompy.elements.generators import suspense
@@ -110,7 +110,7 @@ class TestAsyncComponentAsyncResults:
     def test_async_body_use_async_result_collected(self):
         @define_component
         async def AsyncResultCmp(context):
-            useAsyncResult(lambda: asyncio.sleep(0), immediate=False)
+            use_async_result(lambda: asyncio.sleep(0), immediate=False)
             return html.DIV({}, "async")
 
         with TestRenderer.render(AsyncResultCmp) as result:
@@ -282,7 +282,7 @@ class TestSuspenseAsyncContext:
         @define_component
         async def AsyncResultChild(context):
             await asyncio.sleep(0)
-            useAsyncResult(lambda: asyncio.sleep(0), immediate=False)
+            use_async_result(lambda: asyncio.sleep(0), immediate=False)
             return html.DIV({}, "child")
 
         @define_component
@@ -309,7 +309,7 @@ class TestSuspenseAsyncContext:
         @define_component
         async def AsyncResultChild(context):
             await asyncio.sleep(0)
-            useAsyncResult(lambda: asyncio.sleep(0), immediate=False)
+            use_async_result(lambda: asyncio.sleep(0), immediate=False)
             return html.DIV({}, "child")
 
         @define_component

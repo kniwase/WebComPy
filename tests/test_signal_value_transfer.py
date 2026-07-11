@@ -17,7 +17,6 @@ from webcompy.hydration._payload import (
     deserialize_payload,
     serialize_payload,
 )
-from webcompy.hydration._restore import restore_signal_values
 from webcompy.signal import (
     Computed,
     ReactiveDict,
@@ -26,6 +25,7 @@ from webcompy.signal import (
     computed_property,
 )
 from webcompy.signal._container import SignalReceivable
+from webcompy_testing import restore_signal_values
 
 
 class _CodecIntEnum(enum.IntEnum):
@@ -144,7 +144,7 @@ class TestRestoreSignalValues:
     def test_missing_attr_name_is_handled_gracefully(self, caplog):
         component = Receiver()
         original_count = component.count._value
-        with caplog.at_level("DEBUG", logger="webcompy.hydration._restore"):
+        with caplog.at_level("DEBUG", logger="webcompy_testing._restore"):
             restore_signal_values(component, {"missing_attr": 1})
         assert component.count._value == original_count
 
@@ -170,13 +170,14 @@ class TestCollectComponentSignals:
         result = _collect_component_signals(component)
         assert result == {"name": "Alice"}
 
-    def test_collects_computed_cached_value(self):
+    def test_excludes_computed_cached_value(self):
         source = Signal(5)
         comp = Computed(lambda: source.value * 2)
         _ = comp.value
-        component = _stub_component({"doubled": comp}, "cmp")
+        component = _stub_component({"doubled": comp, "source": source}, "cmp")
         result = _collect_component_signals(component)
-        assert result == {"doubled": 10}
+        assert "doubled" not in result
+        assert result == {"source": 5}
 
     def test_collects_reactive_list(self):
         component = _stub_component({"items": ReactiveList([1, 2, 3])}, "cmp")

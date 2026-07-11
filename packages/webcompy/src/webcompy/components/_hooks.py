@@ -45,7 +45,7 @@ def on_before_destroy(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any,
     return func
 
 
-def useAsyncResult(
+def use_async_result(
     func: Callable[[], Coroutine[Any, Any, T]],
     *,
     default: T | None = None,
@@ -86,6 +86,21 @@ def useAsyncResult(
         on_before_destroy(cleanup)
 
     return result
+
+
+def useAsyncResult(
+    func: Callable[[], Coroutine[Any, Any, T]],
+    *,
+    default: T | None = None,
+    immediate: bool = True,
+    watch: Iterable[SignalBase[Any]] = (),
+) -> AsyncResult[T]:
+    return use_async_result(
+        func,
+        default=default,
+        immediate=immediate,
+        watch=watch,
+    )
 
 
 def useAsync(
