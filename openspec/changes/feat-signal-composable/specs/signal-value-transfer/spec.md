@@ -2,7 +2,7 @@
 
 ### Requirement: Signal values shall be collected from __signal_members__ during SSR
 
-During SSR/SSG, after the render tree completes and `await_pending()` finishes, the framework SHALL traverse the component tree and collect Signal values from each `Component`'s `__signal_members__` registry. For each `(attr_name, signal)` pair, the Signal's `_value` SHALL be encoded via `encode()` from `webcompy.hydration._codec` and stored in the payload as `signals[component_id][attr_name] = encoded_value`. Only `Signal`, `Computed`, `ReactiveList`, and `ReactiveDict` instances (subclasses of `SignalBase`) SHALL be collected.
+During SSR/SSG, after the render tree completes and `await_pending()` finishes, the framework SHALL traverse the component tree and collect Signal values from each `Component`'s `__signal_members__` registry. For each `(attr_name, signal)` pair, the Signal's `_value` SHALL be encoded via `encode()` from `webcompy.hydration._codec` and stored in the payload as `signals[component_id][attr_name] = encoded_value`. Only `Signal`, `ReactiveList`, and `ReactiveDict` instances (subclasses of `SignalBase`) SHALL be collected.
 
 > **BREAKING CHANGE**: Computed values are no longer collected for transfer. Only source Signals created via `use_state()` / `use_reactive_list()` / `use_reactive_dict()` are transferred. Previously (base spec), Computed cached values were included in the payload.
 
@@ -46,8 +46,8 @@ The `__signal_members__` registry SHALL be populated by the `use_state()`, `use_
 During browser hydration, the `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` composables SHALL check `HYDRATION_SIGNAL_DATA_KEY` (via `inject()`) during component setup, before the factory is invoked. For each composable call:
 
 1. The framework SHALL compute `component_id = generate_id(context._component_name)`.
-2. If `payload[component_id][key]` exists, the factory SHALL be **skipped** and the signal SHALL be created directly with the restored value: `Signal._create(restored_value)` (or `ReactiveList._create(restored_value)` / `ReactiveDict._create(restored_value)` for collection composables).
-3. If the key is not found (server-side, client-side navigation, or non-transferable context), the factory SHALL run: `Signal._create(factory())` (or corresponding `_create` for collection types).
+2. If `payload[component_id][key]` exists, the factory SHALL be **skipped** and the signal SHALL be created directly with the restored value: `Signal(restored_value)` (or `ReactiveList(restored_value)` / `ReactiveDict(restored_value)` for collection composables).
+3. If the key is not found (server-side, client-side navigation, or non-transferable context), the factory SHALL run: `Signal(factory())` (or corresponding constructor for collection types).
 
 The restored value SHALL be the post-codec-decode Python object (deserialize_payload already applies `decode()`). No additional decoding is needed in composables.
 
@@ -79,7 +79,7 @@ The `_restore_signals()` method SHALL be **removed** from `Component._render()`.
 - **AND** mutation methods (`append`, `pop`, etc.) SHALL work normally on the restored instance
 
 #### Scenario: Restoration does not trigger notifications
-- **WHEN** a Signal is created with a restored value via `Signal._create(restored)`
+- **WHEN** a Signal is created with a restored value via `Signal(restored)`
 - **THEN** no `on_before_updating` / `on_after_updating` callbacks SHALL fire
 - **AND** no downstream `Computed` signals SHALL recompute
 - **AND** no `CallbackConsumerNode` instances SHALL be triggered
