@@ -16,7 +16,7 @@ from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._base import ElementWithChildren
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY
-from webcompy.signal._base import SignalBase
+from webcompy.signal import SignalBase
 from webcompy.signal._graph import consumer_destroy
 
 

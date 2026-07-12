@@ -7,7 +7,8 @@ from typing import Any
 
 from webcompy.components._hooks import _active_component_context
 from webcompy.components._libs import Context
-from webcompy.signal._effect import EffectScope, _active_scope
+from webcompy.signal import EffectScope
+from webcompy.signal._effect import _active_scope
 
 
 @dataclass

@@ -32,7 +32,7 @@
 
 ## 7. Complete remaining framework import unification
 
-- [ ] 7.1 Unify remaining imports in `ports/_history.py`, `elements/_head.py`, `elements/types/_element.py`, `components/_libs.py`, `components/_hooks.py`, `components/_context_manager.py`
+- [x] 7.1 Unify remaining imports in `ports/_history.py`, `elements/_head.py`, `elements/types/_element.py`, `components/_libs.py`, `components/_hooks.py`, `components/_context_manager.py`
 
 ## 8. Extract shared _resolve_factory helper
 
