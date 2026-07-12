@@ -36,14 +36,14 @@
 
 ## 8. Extract shared _resolve_factory helper
 
-- [ ] 8.1 Add `_resolve_factory()` to `packages/webcompy/src/webcompy/signal/_composable.py`
-- [ ] 8.2 Refactor `_resolve_args()` to use `_resolve_factory()`
-- [ ] 8.3 Use `_resolve_factory()` for `use_computed()` argument validation
+- [x] 8.1 Add `_resolve_factory()` to `packages/webcompy/src/webcompy/signal/_composable.py`
+- [x] 8.2 Refactor `_resolve_args()` to use `_resolve_factory()`
+- [x] 8.3 Use `_resolve_factory()` for `use_computed()` argument validation
 
 ## 9. Fix internal docstring and constructor examples
 
-- [ ] 9.1 Fix `reactive_block()` docstring to use `Computed(...)`
-- [ ] 9.2 Use `Computed()` directly in `MultiLineTextElement.__init__`
+- [x] 9.1 Fix `reactive_block()` docstring to use `Computed(...)`
+- [x] 9.2 Use `Computed()` directly in `MultiLineTextElement.__init__`
 
 ## 10. Improve error message consistency
 

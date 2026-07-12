@@ -88,6 +88,28 @@ def _auto_key() -> AutoKey:
     return key
 
 
+def _resolve_factory(
+    factory_or_key: str | Callable[[], T],
+    maybe_factory: Callable[[], T] | None,
+    *,
+    func_name: str,
+) -> tuple[str | None, Callable[[], T]]:
+    if isinstance(factory_or_key, str):
+        if maybe_factory is None:
+            raise TypeError(
+                f"{func_name}() requires a factory callable when an explicit key is provided as the first argument"
+            )
+        return factory_or_key, maybe_factory
+    if maybe_factory is not None:
+        raise TypeError(f"{func_name}() accepts either (factory) or (key, factory); pass the factory positionally")
+    if not callable(factory_or_key):
+        raise TypeError(
+            f"{func_name}() requires a zero-argument factory callable as the "
+            f"first argument, got {type(factory_or_key).__name__}"
+        )
+    return None, factory_or_key
+
+
 def _resolve_args(
     factory_or_key: str | AutoKey | Callable[[], T],
     maybe_factory: Callable[[], T] | None,
@@ -96,21 +118,14 @@ def _resolve_args(
         if maybe_factory is None:
             raise TypeError("AutoKey passed as first argument requires explicit factory as second")
         return factory_or_key, maybe_factory
-    if isinstance(factory_or_key, str):
-        if maybe_factory is None:
-            raise TypeError("Factory callable is required when an explicit key is provided")
-        return AutoKey.from_explicit(factory_or_key), maybe_factory
-    if maybe_factory is not None:
-        raise TypeError(
-            "use_state() / use_reactive_list() / use_reactive_dict() accept either "
-            "(factory) or (key, factory); pass the factory positionally"
-        )
-    if not callable(factory_or_key):
-        raise TypeError(
-            "use_state() / use_reactive_list() / use_reactive_dict() require a zero-argument "
-            f"factory callable as the first argument, got {type(factory_or_key).__name__}"
-        )
-    return _auto_key(), factory_or_key
+    key_str, factory = _resolve_factory(
+        factory_or_key,
+        maybe_factory,
+        func_name="use_state / use_reactive_list / use_reactive_dict",
+    )
+    if key_str is not None:
+        return AutoKey.from_explicit(key_str), factory
+    return _auto_key(), factory
 
 
 def _try_resolve_payload_key(ctx: Any, key: AutoKey) -> Any:
