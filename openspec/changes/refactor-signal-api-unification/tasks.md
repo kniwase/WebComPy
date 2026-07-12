@@ -59,7 +59,7 @@
 
 ## 12. Update README
 
-- [ ] 12.1 Update `README.md` and `README.ja.md` examples to use `use_state` and `use_computed`
+- [x] 12.1 Update `README.md` and `README.ja.md` examples to use `use_state` and `use_computed`
 
 ## 13. Run validation
 
