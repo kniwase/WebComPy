@@ -2,6 +2,7 @@ from collections.abc import Callable
 from typing import Any, TypeVar
 
 from webcompy.signal._base import SignalBase
+from webcompy.signal._composable import _validate_factory
 from webcompy.signal._container import SignalReceivable
 from webcompy.signal._graph import (
     _SENTINEL,
@@ -13,6 +14,7 @@ from webcompy.signal._graph import (
 )
 
 V = TypeVar("V")
+T = TypeVar("T")
 
 
 class Computed(SignalBase[V]):
@@ -65,8 +67,23 @@ class Computed(SignalBase[V]):
         return self._value
 
 
-def computed(func: Callable[[], V]) -> Computed[V]:
-    return Computed(func)
+def use_computed(factory: Callable[[], T]) -> Computed[T]:
+    """Create a reactive Computed value.
+
+    ``use_computed()`` accepts a zero-argument factory callable and returns
+    a ``Computed[T]``.  Computed values are not included in the SSR transfer
+    payload and always recompute from their source signals on the client.
+
+    Args:
+        factory: A zero-argument factory callable.
+
+    Returns:
+        A ``Computed[T]`` whose value tracks the factory result.
+    """
+    if not callable(factory):
+        raise TypeError(f"use_computed() requires a zero-argument factory callable, got {type(factory).__name__}")
+    _validate_factory(factory)
+    return Computed(factory)
 
 
 def computed_property(method: Callable[[Any], V]) -> Computed[V]:

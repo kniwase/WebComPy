@@ -38,7 +38,6 @@ from collections.abc import Callable, Mapping
 from typing import TypeAlias
 
 from webcompy.signal import Computed, SignalBase
-from webcompy.signal._computed import Computed as _Computed
 
 ReactiveValue: TypeAlias = str | SignalBase[str] | Callable[[], str]
 VarsMapping: TypeAlias = Mapping[str, ReactiveValue]
@@ -73,7 +72,7 @@ def reactive_style(selector: str, vars: VarsMapping) -> Computed[str]:
         body = "\n  ".join(f"{name}: {_resolve_value(v)};" for name, v in items)
         return f"{selector} {{\n  {body}\n}}"
 
-    return _Computed(_render)
+    return Computed(_render)
 
 
 def reactive_block(selector: str, content: ReactiveValue) -> Computed[str]:
@@ -84,9 +83,9 @@ def reactive_block(selector: str, content: ReactiveValue) -> Computed[str]:
     string.
 
     Example:
-        >>> app.append_style(reactive_block("body", computed(lambda: f"color: {fg.value};")))
+        >>> app.append_style(reactive_block("body", Computed(lambda: f"color: {fg.value};")))
     """
-    return _Computed(lambda: f"{selector} {{\n{_resolve_value(content)}\n}}")
+    return Computed(lambda: f"{selector} {{\n{_resolve_value(content)}\n}}")
 
 
 __all__ = [

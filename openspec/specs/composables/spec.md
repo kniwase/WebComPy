@@ -22,6 +22,108 @@ Composables SHALL be plain Python functions (or function calls) that encapsulate
 - **THEN** the returned `Signal[Theme]` SHALL be usable in the component's template (e.g., to render a theme-aware label)
 - **AND** the returned `ThemeController` SHALL be usable in event handlers (e.g., `@click` callbacks)
 
+### Requirement: Signal composables shall create reactive state in component setup
+
+The framework SHALL provide `use_state()`, `use_computed()`, `use_reactive_list()`, and `use_reactive_dict()` composables for creating reactive state inside component setup functions. These composables SHALL be importable from `webcompy` top-level.
+
+`use_state()`, `use_reactive_list()`, and `use_reactive_dict()` SHALL support SSR transfer of their created values when called inside a component setup context. `use_computed()` SHALL NOT participate in transfer; `Computed` values always recompute from their source signals on the browser.
+
+`use_state()`, `use_reactive_list()`, and `use_reactive_dict()` SHALL each accept either a zero-argument factory callable or an explicit string key followed by the factory. The explicit key is the payload-match key for SSR transfer. `use_computed()` SHALL accept a zero-argument factory callable only.
+
+#### Scenario: Creating a signal with use_state()
+- **WHEN** a developer writes `count = use_state(lambda: 0)` inside a component setup function
+- **THEN** a `Signal[int]` SHALL be returned
+- **AND** the signal SHALL be registered for SSR transfer
+
+#### Scenario: Creating a computed with use_computed()
+- **WHEN** a developer writes `doubled = use_computed(lambda: count.value * 2)` inside a component setup function
+- **THEN** a `Computed[int]` SHALL be returned
+- **AND** the factory SHALL execute eagerly during construction to establish dependency tracking
+- **AND** the Computed SHALL NOT be included in the SSR transfer payload
+
+#### Scenario: Creating a reactive list with use_reactive_list()
+- **WHEN** a developer writes `items = use_reactive_list(lambda: [1, 2, 3])` inside a component setup function
+- **THEN** a `ReactiveList[int]` SHALL be returned
+- **AND** the list SHALL be registered for SSR transfer
+
+#### Scenario: Creating a reactive dict with use_reactive_dict()
+- **WHEN** a developer writes `settings = use_reactive_dict(lambda: {"theme": "dark"})` inside a component setup function
+- **THEN** a `ReactiveDict[str, str]` SHALL be returned
+- **AND** the dict SHALL be registered for SSR transfer
+
+#### Scenario: Explicit key for use_state()
+- **WHEN** a developer writes `count = use_state("count", lambda: 0)` inside a component setup function
+- **THEN** the payload-match key for SSR transfer SHALL be `"count"`
+
+#### Scenario: use_computed() outside component context
+- **WHEN** `use_computed(factory)` is called outside a component setup function
+- **THEN** a `Computed` SHALL be returned
+- **AND** no error SHALL be raised
+- **AND** no warning about the calling context SHALL be emitted (unlike `use_state()`, `use_computed()` does not emit a "called outside component setup" warning)
+
+### Requirement: Two-tier reactive creation API
+
+The framework SHALL provide a two-tier API for creating reactive state, separated by transfer needs and calling context:
+
+**Tier 1 — Public composable API** (`webcompy` top-level):
+
+- `use_state(factory)` / `use_reactive_list(factory)` / `use_reactive_dict(factory)` — transfer-capable source signals
+- `use_computed(factory)` — non-transferable derived signals
+- Intended for: component setup functions, user-facing application code
+- SSR transfer of signal values is active when called inside a component setup context
+
+**Tier 2 — Internal constructor API** (`webcompy.signal`):
+
+- `Signal(value)` / `Computed(fn)` / `ReactiveList(iterable)` / `ReactiveDict(mapping)` — no transfer, no warnings
+- Intended for: module-level global state, plugins, DI providers, third-party extensions, framework infrastructure
+- The `use_*` composables SHALL use these constructors internally to create signal instances
+
+The two tiers SHALL coexist without runtime conflicts. `Signal()` and `Computed()` constructors SHALL NOT emit `DeprecationWarning` or `UserWarning`. The separation SHALL be enforced through export surfaces (`webcompy` vs `webcompy.signal`) and documentation, not runtime penalties.
+
+#### Scenario: Composables are the primary API for component state
+- **WHEN** a developer creates state inside a `@define_component` setup function
+- **THEN** `use_state()`, `use_computed()`, `use_reactive_list()`, and `use_reactive_dict()` SHALL be importable from `webcompy`
+- **AND** these composables SHALL be the documented primary creation API
+
+#### Scenario: Signal constructors serve non-component contexts
+- **WHEN** a module creates global state at module level (`_store = Signal(default)`)
+- **THEN** the `Signal` SHALL be created without any warning
+- **AND** the module author SHALL NOT be forced to use `use_state()` which would emit "called outside component setup" warning
+- **AND** no SSR transfer SHALL occur for module-level signals (they are outside the component tree)
+
+#### Scenario: Plugins use constructors directly
+- **WHEN** a `WebComPyPlugin` implementation creates internal `Signal` or `Computed` instances
+- **THEN** the plugin SHALL use `from webcompy.signal import Signal, Computed`
+- **AND** no warning SHALL be emitted during construction
+- **AND** the plugin SHALL NOT be forced to call `use_state()` (plugin setup is outside component context)
+
+#### Scenario: DI providers hold constructor-created signals
+- **WHEN** a DI provider function (outside any component) creates a `Signal` to inject
+- **THEN** `Signal(value)` SHALL be used directly via `from webcompy.signal import Signal`
+- **AND** no warning SHALL be emitted
+
+#### Scenario: Composables use constructors internally
+- **WHEN** `use_state(lambda: 0)` is called inside a component setup
+- **THEN** the composable SHALL internally call `Signal(factory())` to create the instance
+- **AND** no warning SHALL be emitted during this internal construction
+- **AND** `use_computed(fn)` SHALL internally call `Computed(fn)`
+
+#### Scenario: Third-party extensions access constructors without penalty
+- **WHEN** a third-party library imports `Signal` or `Computed` from `webcompy.signal` and calls the constructor
+- **THEN** no deprecation or usage warning SHALL be emitted
+- **AND** the library SHALL be free to build on the internal API without fighting the framework's runtime checks
+
+#### Scenario: Framework code uses public import path for signal classes
+- **WHEN** framework code imports a name listed in `webcompy.signal.__all__` (e.g., `Signal`, `SignalBase`, `Computed`, `computed_property`)
+- **THEN** the import SHALL be from `webcompy.signal`
+- **AND** SHALL NOT use private submodule paths (e.g., `webcompy.signal._base`, `webcompy.signal._computed`)
+- **AND** SHALL NOT create `_`-prefixed aliases (e.g., `Computed as _Computed`)
+
+#### Scenario: Non-exported internal symbols may use private module paths
+- **WHEN** framework code needs an internal symbol not in `webcompy.signal.__all__` (e.g., `consumer_destroy`, `CallbackConsumerNode`, `producer_accessed`)
+- **THEN** the import MAY use the private submodule path (e.g., `from webcompy.signal._graph import consumer_destroy`)
+- **AND** the symbol SHALL NOT be added to `webcompy.signal.__all__` unless it is intended for public use
+
 ### Requirement: Standalone lifecycle hooks shall register without explicit context
 `@on_before_rendering`, `@on_after_rendering`, and `@on_before_destroy` SHALL be module-level decorators that register lifecycle hooks using the active component context from `contextvars.ContextVar`. They SHALL NOT require an explicit `context` parameter.
 

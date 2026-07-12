@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._base import ElementWithChildren
-from webcompy.signal._computed import Computed
+from webcompy.signal import Computed
 
 if TYPE_CHECKING:
     from webcompy.components._component import HeadPropsStore

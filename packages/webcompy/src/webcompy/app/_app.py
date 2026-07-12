@@ -13,7 +13,7 @@ from webcompy.utils import ENVIRONMENT
 
 if TYPE_CHECKING:
     from webcompy.app._render_context import RenderContext
-    from webcompy.signal._computed import Computed
+    from webcompy.signal import Computed
 
 
 class WebComPyApp:

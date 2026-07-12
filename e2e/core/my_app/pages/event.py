@@ -1,6 +1,6 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DomNodeRef, html
-from webcompy.signal import computed, use_state
+from webcompy.signal import use_computed, use_state
 
 
 @define_component
@@ -44,7 +44,8 @@ def EventPage(context: ComponentContext[None]):
                 },
             ),
             html.SPAN(
-                {"data-testid": "checkbox-state"}, computed(lambda: "checked" if checkbox_state.value else "unchecked")
+                {"data-testid": "checkbox-state"},
+                use_computed(lambda: "checked" if checkbox_state.value else "unchecked"),
             ),
         ),
     )

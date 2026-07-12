@@ -112,7 +112,8 @@ pip install webcompy-testing
 
 ## Sample Code
 ```python
-from webcompy.signal import Signal, computed
+from webcompy import use_computed, use_state
+from webcompy.signal import Signal
 from webcompy.elements import html, repeat, switch, DOMEvent
 from webcompy.router import RouterContext
 from webcompy.components import (
@@ -124,7 +125,7 @@ from webcompy.components import (
 
 @define_component
 def FizzbuzzList(context: ComponentContext[Signal[int]]):
-    @computed
+    @use_computed
     def fizzbuzz():
         li: list[str] = []
         for n in range(1, context.props.value + 1):
@@ -167,10 +168,10 @@ FizzbuzzList.scoped_style = {
 
 @define_component
 def Fizzbuzz(context: ComponentContext[RouterContext]):
-    opened = Signal(True)
-    count = Signal(10)
+    opened = use_state(lambda: True)
+    count = use_state(lambda: 10)
 
-    @computed
+    @use_computed
     def toggle_button_text():
         return "Hide" if opened.value else "Open"
 

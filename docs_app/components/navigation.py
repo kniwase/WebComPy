@@ -5,7 +5,7 @@ from webcompy.di import InjectionError, inject
 from webcompy.elements import html
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router import RouterLink
-from webcompy.signal import Signal, computed, use_state
+from webcompy.signal import Signal, use_computed, use_state
 
 from .theme_toggle import ThemeToggle
 
@@ -106,7 +106,7 @@ def Navbar(context: ComponentContext[list[Page]]):
                     {
                         "id": f"{menu_id}-toggle",
                         "class": "navbar-dropdown-toggle",
-                        "aria-expanded": computed(lambda idx=idx: "true" if _is_open(idx) else "false"),
+                        "aria-expanded": use_computed(lambda idx=idx: "true" if _is_open(idx) else "false"),
                         "aria-haspopup": "true",
                         "aria-controls": menu_id,
                         "@click": lambda ev: _toggle(idx, ev),
@@ -118,7 +118,7 @@ def Navbar(context: ComponentContext[list[Page]]):
                         "id": menu_id,
                         "class": "navbar-dropdown",
                         "role": "menu",
-                        "style": computed(lambda idx=idx: f"display: {'block' if _is_open(idx) else 'none'};"),
+                        "style": use_computed(lambda idx=idx: f"display: {'block' if _is_open(idx) else 'none'};"),
                     },
                     *main,
                     *items,
@@ -145,7 +145,7 @@ def Navbar(context: ComponentContext[list[Page]]):
                 html.DIV(
                     {
                         "id": "navbarNav",
-                        "class": computed(lambda: "navbar-nav open" if _mobile_open.value else "navbar-nav"),
+                        "class": use_computed(lambda: "navbar-nav open" if _mobile_open.value else "navbar-nav"),
                     },
                     html.UL(
                         {"class": "navbar-list"},
@@ -157,7 +157,7 @@ def Navbar(context: ComponentContext[list[Page]]):
                         "type": "button",
                         "class": "navbar-mobile-toggle",
                         "aria-controls": "navbarNav",
-                        "aria-expanded": computed(lambda: "true" if _mobile_open.value else "false"),
+                        "aria-expanded": use_computed(lambda: "true" if _mobile_open.value else "false"),
                         "aria-label": "Toggle navigation",
                         "@click": _toggle_mobile,
                     },

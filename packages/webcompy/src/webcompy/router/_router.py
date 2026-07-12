@@ -19,7 +19,7 @@ from webcompy.elements.types._switch import NodeGenerator
 from webcompy.ports._history import HistoryPort
 from webcompy.router._context import RouterContext, TypedRouterContext
 from webcompy.router._pages import RouterPage
-from webcompy.signal._computed import computed_property
+from webcompy.signal import computed_property
 
 RouteType: TypeAlias = tuple[
     str,

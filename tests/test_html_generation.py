@@ -316,12 +316,12 @@ class TestHtmlAttrsInSsgOutput:
 
     @pytest.mark.asyncio
     async def test_computed_html_attr_in_static_generation(self):
-        from webcompy.signal import Signal, computed
+        from webcompy.signal import Signal, use_computed
 
         app = _make_app()
         ctx = app.create_render_context()
         theme = Signal("light")
-        ctx.set_html_attr("class", computed(lambda: theme.value))
+        ctx.set_html_attr("class", use_computed(lambda: theme.value))
         html_str = await generate_html(
             ctx,
             app_package_name="test_pkg",

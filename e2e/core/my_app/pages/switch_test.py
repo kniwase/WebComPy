@@ -1,6 +1,6 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html, switch
-from webcompy.signal import computed, use_state
+from webcompy.signal import use_computed, use_state
 
 
 @define_component
@@ -16,7 +16,7 @@ def SwitchPage(context: ComponentContext[None]):
         {"data-testid": "switch-page"},
         html.H2({}, "Switch Tests"),
         html.BUTTON({"data-testid": "toggle-btn", "@click": toggle}, "Toggle"),
-        html.SPAN({"data-testid": "flag-state"}, computed(lambda: "on" if flag.value else "off")),
+        html.SPAN({"data-testid": "flag-state"}, use_computed(lambda: "on" if flag.value else "off")),
         switch(
             {
                 "case": flag,

@@ -33,11 +33,9 @@ The `__signal_members__` registry SHALL be populated by the `use_state()`, `use_
 - **THEN** the payload's `signals` section SHALL include `{component_id: {"<key>": {"theme": "dark"}}}`
 
 #### Scenario: Collecting Computed cached values
-- **WHEN** a component setup called `doubled = Computed(lambda: count.value * 2)` where `count` was set to `5`
+- **WHEN** a component setup called `doubled = use_computed(lambda: count.value * 2)` where `count` was set to `5`
 - **AND** the Computed has been evaluated during render (cached value is 10)
 - **THEN** the payload's `signals` section SHALL NOT include the computed value (only transfer sources, not derivations)
-
-> **Note**: After `refactor-signal-api-unification` is synced, this scenario SHALL be updated to use `use_computed()` instead of `Computed()`.
 
 #### Scenario: Non-serializable Signal value is dropped with warning
 - **WHEN** a Signal holds a value that the codec cannot encode (e.g., a file handle)

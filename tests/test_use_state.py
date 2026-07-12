@@ -164,8 +164,12 @@ class TestUseStateOutsideComponent:
         assert s.value == 0
 
     def test_non_callable_first_arg_raises_type_error(self):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="use_state"):
             use_state(0)
+
+    def test_str_without_factory_raises_type_error(self):
+        with pytest.raises(TypeError, match="use_state"):
+            use_state("key")  # type: ignore[call-overload]
 
 
 class TestUseStateInLifecycleHook:

@@ -4,7 +4,7 @@ from abc import abstractmethod
 from collections.abc import Callable
 from typing import Any, Literal
 
-from webcompy.signal._base import SignalBase
+from webcompy.signal import SignalBase
 from webcompy.signal._graph import producer_accessed
 
 

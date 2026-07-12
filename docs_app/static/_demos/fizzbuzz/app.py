@@ -5,7 +5,7 @@ from webcompy.components import (
     on_before_rendering,
 )
 from webcompy.elements import DOMEvent, html, repeat, switch
-from webcompy.signal import computed, use_reactive_dict, use_state
+from webcompy.signal import use_computed, use_reactive_dict, use_state
 
 
 @define_component
@@ -14,7 +14,7 @@ def App(context: ComponentContext[None]):
     fizzbuzz_dict = use_reactive_dict(lambda: {})
     _next_n = use_state(lambda: 1)
 
-    @computed
+    @use_computed
     def toggle_button_text():
         return "Hide" if opened.value else "Open"
 
@@ -57,14 +57,14 @@ def App(context: ComponentContext[None]):
             html.BUTTON(
                 {
                     "@click": add,
-                    "disabled": computed(lambda: not opened.value),
+                    "disabled": use_computed(lambda: not opened.value),
                 },
                 "Add",
             ),
             html.BUTTON(
                 {
                     "@click": pop,
-                    "disabled": computed(lambda: not opened.value),
+                    "disabled": use_computed(lambda: not opened.value),
                 },
                 "Pop",
             ),
@@ -76,7 +76,7 @@ def App(context: ComponentContext[None]):
         html.P(
             {},
             "Count: ",
-            computed(lambda: str(len(fizzbuzz_dict.value))),
+            use_computed(lambda: str(len(fizzbuzz_dict.value))),
         ),
         switch(
             {

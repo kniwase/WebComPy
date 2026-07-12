@@ -217,12 +217,12 @@ class TestHtmlAttrs:
         ctx.dispose()
 
     def test_html_attrs_with_computed(self):
-        from webcompy.signal import Signal, computed
+        from webcompy.signal import Signal, use_computed
 
         app = _make_app()
         ctx = app.create_render_context()
         theme = Signal("light")
-        app.set_html_attr("class", computed(lambda: theme.value))
+        app.set_html_attr("class", use_computed(lambda: theme.value))
         assert app.html_attrs["class"] == "light"
         theme.value = "dark"
         assert app.html_attrs["class"] == "dark"
@@ -241,12 +241,12 @@ class TestHtmlAttrs:
         ctx2.dispose()
 
     def test_remove_html_attr_removes_computed_consumer(self):
-        from webcompy.signal import Signal, computed
+        from webcompy.signal import Signal, use_computed
 
         app = _make_app()
         ctx = app.create_render_context()
         theme = Signal("light")
-        app.set_html_attr("class", computed(lambda: theme.value))
+        app.set_html_attr("class", use_computed(lambda: theme.value))
         assert "class" not in ctx._root._head_element._callback_consumers
         app.remove_html_attr("class")
         assert "class" not in ctx._root._head_element._callback_consumers
@@ -254,7 +254,7 @@ class TestHtmlAttrs:
         ctx.dispose()
 
     def test_consumer_destroy_called_when_overwriting_computed(self, monkeypatch):
-        from webcompy.signal import Signal, computed
+        from webcompy.signal import Signal, use_computed
 
         app = _make_app()
         mock_dom = MagicMock()
@@ -266,7 +266,7 @@ class TestHtmlAttrs:
         monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "pyscript")
 
         theme = Signal("light")
-        c = computed(lambda: theme.value)
+        c = use_computed(lambda: theme.value)
         app.set_html_attr("class", c)
         assert "class" in ctx._root._head_element._callback_consumers
         consumer1 = ctx._root._head_element._callback_consumers["class"]

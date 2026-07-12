@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from webcompy.app import WebComPyApp
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DOMEvent, DomNodeRef, html
-from webcompy.signal import computed, use_state
+from webcompy.signal import use_computed, use_state
 
 
 @define_component
@@ -37,7 +37,7 @@ def App(context: ComponentContext[None]):
         lambda x: np.vectorize(lambda k: (1 / (2 * k + 1)) * np.sin((2 * k + 1) * x))(np.arange(count.value)).sum()
     )
 
-    @computed
+    @use_computed
     def fig_data():
         line.set_data(x, calc_square_wave(x))
         ax.set_ylim(-2, 2)

@@ -4,7 +4,7 @@ from typing import Any, TypedDict
 
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import create_element, raw_html
-from webcompy.signal import SignalBase, computed
+from webcompy.signal import SignalBase, use_computed
 from webcompy.ui.code_block._highlight import highlight
 
 
@@ -31,7 +31,7 @@ def CodeBlock(context: ComponentContext[CodeBlockProps]) -> Any:
         )
 
     code_signal: SignalBase[str] = initial_code
-    highlighted = computed(lambda: highlight(_resolve_code(code_signal), lang))
+    highlighted = use_computed(lambda: highlight(_resolve_code(code_signal), lang))
 
     return create_element(
         "pre",

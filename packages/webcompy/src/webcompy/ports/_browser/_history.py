@@ -6,7 +6,7 @@ from typing import Any, Literal
 from webcompy.exception import WebComPyException
 from webcompy.ports._browser._raw import browser as _raw_browser
 from webcompy.ports._history import HistoryPort
-from webcompy.signal._base import SignalBase
+from webcompy.signal import SignalBase
 from webcompy.utils._environment import ENVIRONMENT
 
 

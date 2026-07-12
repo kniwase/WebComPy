@@ -3,7 +3,7 @@ import uuid
 from webcompy.app import WebComPyApp
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DOMEvent, DomNodeRef, html, repeat
-from webcompy.signal import Signal, computed, use_reactive_dict, use_state
+from webcompy.signal import Signal, use_computed, use_reactive_dict, use_state
 
 
 @define_component
@@ -27,7 +27,7 @@ def ToDoItem(context: ComponentContext[dict]):
         ),
         " ",
         html.SPAN(
-            {"style": computed(lambda: "text-decoration: line-through;" if context.props["done"].value else "")},
+            {"style": use_computed(lambda: "text-decoration: line-through;" if context.props["done"].value else "")},
             context.props["title"],
         ),
     )

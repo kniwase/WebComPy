@@ -26,7 +26,7 @@ class WebComPyComponentException(WebComPyException):
 if TYPE_CHECKING:
     from webcompy.components._generator import ComponentGenerator
     from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
-    from webcompy.signal._base import SignalBase
+    from webcompy.signal import SignalBase
 
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]

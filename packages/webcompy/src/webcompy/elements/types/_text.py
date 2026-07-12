@@ -6,7 +6,7 @@ from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.ports._keys import DOM_PORT_KEY
-from webcompy.signal._base import SignalBase
+from webcompy.signal import SignalBase
 
 
 class NewLine(ElementAbstract):

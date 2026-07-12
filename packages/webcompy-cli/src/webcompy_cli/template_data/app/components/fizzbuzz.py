@@ -5,12 +5,12 @@ from webcompy.components import (
 )
 from webcompy.elements import DOMEvent, html, repeat, switch
 from webcompy.router import RouterContext
-from webcompy.signal import Signal, computed, use_state
+from webcompy.signal import Signal, use_computed, use_state
 
 
 @define_component
 def FizzbuzzList(context: ComponentContext[Signal[int]]):
-    @computed
+    @use_computed
     def numbers():
         li: list[str] = []
         for n in range(1, context.props.value + 1):
@@ -58,7 +58,7 @@ def Fizzbuzz(context: ComponentContext[RouterContext]):
     opened = use_state(lambda: True)
     count = use_state(lambda: 10)
 
-    @computed
+    @use_computed
     def toggle_button_text():
         return "Hide" if opened.value else "Open"
 
