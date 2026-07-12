@@ -29,11 +29,6 @@
 - [x] 5.1 Search and replace old names in `packages/webcompy-cli/src/webcompy_cli/template_data/`.
 - [x] 5.2 Verify `webcompy generate` still produces valid output for `docs_app`.
 
-## 5. Update CLI templates and project scaffolding
-
-- [ ] 5.1 Search and replace old names in `packages/webcompy-cli/src/webcompy_cli/template_data/`.
-- [ ] 5.2 Verify `webcompy generate` still produces valid output for `docs_app`.
-
 ## 6. Add naming convention guidance
 
 - [x] 6.1 Add a naming convention section to `AGENTS.md` under Code Conventions: public Python functions/variables use `snake_case`, classes use `PascalCase`, constants use `UPPER_CASE`, and DOM/browser API wrappers may use `camelCase` only when mirroring standard web API names.
