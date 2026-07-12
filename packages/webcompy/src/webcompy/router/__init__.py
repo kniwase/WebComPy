@@ -1,5 +1,5 @@
 from webcompy.router._component import RoutedComponent, create_typed_route
-from webcompy.router._composables import useRouter
+from webcompy.router._composables import use_router
 from webcompy.router._context import RouterContext
 from webcompy.router._keys import RouterKey
 from webcompy.router._lazy import LazyComponentGenerator, lazy
@@ -17,5 +17,5 @@ __all__ = [
     "RouterView",
     "create_typed_route",
     "lazy",
-    "useRouter",
+    "use_router",
 ]

@@ -105,7 +105,7 @@ def Fizzbuzz(context: ComponentContext[RouterContext]):
         switch(
             {
                 "case": opened,
-                "generator": lambda: FizzbuzzList(count),
+                "generator": lambda: FizzbuzzList(props=count),
             },
             default=lambda: html.DIV(
                 {},

@@ -88,22 +88,7 @@ def use_async_result(
     return result
 
 
-def useAsyncResult(
-    func: Callable[[], Coroutine[Any, Any, T]],
-    *,
-    default: T | None = None,
-    immediate: bool = True,
-    watch: Iterable[SignalBase[Any]] = (),
-) -> AsyncResult[T]:
-    return use_async_result(
-        func,
-        default=default,
-        immediate=immediate,
-        watch=watch,
-    )
-
-
-def useAsync(
+def use_async(
     func: Callable[[], Coroutine[Any, Any, Any]],
 ) -> None:
     wrapped = AsyncWrapper()(func)

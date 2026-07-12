@@ -286,6 +286,6 @@ If the payload is missing or invalid, the function SHALL proceed with an empty p
 
 ## Limitations
 
-Only `Signal`, `ReactiveList`, and `ReactiveDict` values created via the `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` composables are transferred. Signals created outside these composables (e.g., `count = Signal(0)` directly, or `useAsyncResult` internal state) are NOT captured for transfer. The composables register created signals in `Context._transferable_signals`, which `Component.__setup()` merges into `__signal_members__` for collection by `collect_transfer_data()`.
+Only `Signal`, `ReactiveList`, and `ReactiveDict` values created via the `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` composables are transferred. Signals created outside these composables (e.g., `count = Signal(0)` directly, or `use_async_result` internal state) are NOT captured for transfer. The composables register created signals in `Context._transferable_signals`, which `Component.__setup()` merges into `__signal_members__` for collection by `collect_transfer_data()`.
 
 Restored values bypass `set_value()` so downstream reactive notifications do not fire — the transferred values represent a coherent SSR snapshot that is rebuilt deterministically on the browser.

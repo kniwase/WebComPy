@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`Suspense` is a declarative async boundary that shows fallback content while children are loading and swaps to real content when complete. It bridges the gap between WebComPy's fully async rendering pipeline (introduced in `feat/async-rendering-pipeline`) and user-facing loading UI: developers no longer need to manage `useAsyncResult` fire-and-forget patterns for server-side data fetching, and on the client they no longer see flash-of-loading for data that was already resolved during SSR.
+`Suspense` is a declarative async boundary that shows fallback content while children are loading and swaps to real content when complete. It bridges the gap between WebComPy's fully async rendering pipeline (introduced in `feat/async-rendering-pipeline`) and user-facing loading UI: developers no longer need to manage `use_async_result` fire-and-forget patterns for server-side data fetching, and on the client they no longer see flash-of-loading for data that was already resolved during SSR.
 
 `Suspense` is implemented as a `DynamicElement` (`SuspenseElement`) following the same pattern as `SwitchElement` and `RepeatElement`. A `suspense()` generator function is provided in `webcompy.elements.generators` matching the `switch()`/`repeat()` API style.
 
