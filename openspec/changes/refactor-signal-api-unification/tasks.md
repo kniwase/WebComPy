@@ -24,6 +24,7 @@
 
 - [x] 5.1 Sync `openspec/specs/reactive/spec.md`, `composables/spec.md`, `signal-value-transfer/spec.md`, `app-styles/spec.md`
 - [x] 5.2 Update `design.md` and `proposal.md`
+- [x] 5.3 Add missing Two-tier API scenarios to `openspec/specs/composables/spec.md`
 
 ## 6. Remove _Computed alias and unify signal import paths
 

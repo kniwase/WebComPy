@@ -80,10 +80,27 @@ The framework SHALL provide a two-tier API for creating reactive state, separate
 
 The two tiers SHALL coexist without runtime conflicts. `Signal()` and `Computed()` constructors SHALL NOT emit `DeprecationWarning` or `UserWarning`. The separation SHALL be enforced through export surfaces (`webcompy` vs `webcompy.signal`) and documentation, not runtime penalties.
 
+#### Scenario: Composables are the primary API for component state
+- **WHEN** a developer creates state inside a `@define_component` setup function
+- **THEN** `use_state()`, `use_computed()`, `use_reactive_list()`, and `use_reactive_dict()` SHALL be importable from `webcompy`
+- **AND** these composables SHALL be the documented primary creation API
+
 #### Scenario: Signal constructors serve non-component contexts
 - **WHEN** a module creates global state at module level (`_store = Signal(default)`)
 - **THEN** the `Signal` SHALL be created without any warning
+- **AND** the module author SHALL NOT be forced to use `use_state()` which would emit "called outside component setup" warning
 - **AND** no SSR transfer SHALL occur for module-level signals (they are outside the component tree)
+
+#### Scenario: Plugins use constructors directly
+- **WHEN** a `WebComPyPlugin` implementation creates internal `Signal` or `Computed` instances
+- **THEN** the plugin SHALL use `from webcompy.signal import Signal, Computed`
+- **AND** no warning SHALL be emitted during construction
+- **AND** the plugin SHALL NOT be forced to call `use_state()` (plugin setup is outside component context)
+
+#### Scenario: DI providers hold constructor-created signals
+- **WHEN** a DI provider function (outside any component) creates a `Signal` to inject
+- **THEN** `Signal(value)` SHALL be used directly via `from webcompy.signal import Signal`
+- **AND** no warning SHALL be emitted
 
 #### Scenario: Composables use constructors internally
 - **WHEN** `use_state(lambda: 0)` is called inside a component setup
@@ -94,6 +111,18 @@ The two tiers SHALL coexist without runtime conflicts. `Signal()` and `Computed(
 #### Scenario: Third-party extensions access constructors without penalty
 - **WHEN** a third-party library imports `Signal` or `Computed` from `webcompy.signal` and calls the constructor
 - **THEN** no deprecation or usage warning SHALL be emitted
+- **AND** the library SHALL be free to build on the internal API without fighting the framework's runtime checks
+
+#### Scenario: Framework code uses public import path for signal classes
+- **WHEN** framework code imports a name listed in `webcompy.signal.__all__` (e.g., `Signal`, `SignalBase`, `Computed`, `computed_property`)
+- **THEN** the import SHALL be from `webcompy.signal`
+- **AND** SHALL NOT use private submodule paths (e.g., `webcompy.signal._base`, `webcompy.signal._computed`)
+- **AND** SHALL NOT create `_`-prefixed aliases (e.g., `Computed as _Computed`)
+
+#### Scenario: Non-exported internal symbols may use private module paths
+- **WHEN** framework code needs an internal symbol not in `webcompy.signal.__all__` (e.g., `consumer_destroy`, `CallbackConsumerNode`, `producer_accessed`)
+- **THEN** the import MAY use the private submodule path (e.g., `from webcompy.signal._graph import consumer_destroy`)
+- **AND** the symbol SHALL NOT be added to `webcompy.signal.__all__` unless it is intended for public use
 
 ### Requirement: Standalone lifecycle hooks shall register without explicit context
 `@on_before_rendering`, `@on_after_rendering`, and `@on_before_destroy` SHALL be module-level decorators that register lifecycle hooks using the active component context from `contextvars.ContextVar`. They SHALL NOT require an explicit `context` parameter.
