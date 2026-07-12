@@ -74,6 +74,12 @@ include = [
     "docs_app",
     "tests",
 ]
+extraPaths = [
+    "packages/webcompy/src",
+    "packages/webcompy-server/src",
+    "packages/webcompy-cli/src",
+    "packages/webcompy-testing/src",
+]
 stubPath = "packages/webcompy/src/webcompy/ports"
 
 [dependency-groups]

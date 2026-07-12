@@ -1,5 +1,5 @@
 from webcompy.ajax import HttpClient
-from webcompy.components import ComponentContext, define_component, useAsync
+from webcompy.components import ComponentContext, define_component, use_async
 from webcompy.elements import html
 from webcompy.signal import use_state
 
@@ -17,7 +17,7 @@ def AsyncNavPage(context: ComponentContext[None]):
         message.value = data["message"]
         item_count.value = len(data["items"])
 
-    useAsync(fetch_data)
+    use_async(fetch_data)
 
     return html.DIV(
         {"data-testid": "async-nav-page"},

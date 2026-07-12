@@ -4,17 +4,17 @@
 
 Web applications frequently need to perform asynchronous operations: fetching data from APIs, loading resources, or running long computations. In a reactive system, these operations must integrate seamlessly — when an async operation completes, its result should flow into the reactive graph just like any synchronous state change, triggering UI updates automatically.
 
-WebComPy provides `useAsyncResult` for structured reactive async state with loading/error/success predicates, `useAsync` for fire-and-forget async operations, `AsyncResult` as a standalone async state container, and `HttpClient` for making HTTP requests from the browser. Together, these enable developers to work with asynchronous data using the same patterns as synchronous reactive state.
+WebComPy provides `use_async_result` for structured reactive async state with loading/error/success predicates, `use_async` for fire-and-forget async operations, `AsyncResult` as a standalone async state container, and `HttpClient` for making HTTP requests from the browser. Together, these enable developers to work with asynchronous data using the same patterns as synchronous reactive state.
 
 `Suspense` is a complementary approach — a declarative async boundary that shows fallback content while children load and swaps to real content when complete. In SSR, `Suspense` awaits children (with a configurable timeout) so resolved data appears in the output HTML. During hydration, `AsyncResult` states are restored from a transfer payload, eliminating duplicate fetches and the flash of loading states. See the `suspense` spec for details.
 
 ## Requirements
 
 ### Requirement: Async operations shall integrate with the reactive system
-Developers SHALL be able to create a reactive async state container that starts unresolved and automatically updates when an async operation completes, triggering UI updates like any other reactive change. The `AsyncResult` class provides a structured state machine (`AsyncState.PENDING`, `LOADING`, `SUCCESS`, `ERROR`) with typed predicates for declarative UI rendering. The `useAsyncResult` composable integrates `AsyncResult` with the component lifecycle for automatic execution and cleanup.
+Developers SHALL be able to create a reactive async state container that starts unresolved and automatically updates when an async operation completes, triggering UI updates like any other reactive change. The `AsyncResult` class provides a structured state machine (`AsyncState.PENDING`, `LOADING`, `SUCCESS`, `ERROR`) with typed predicates for declarative UI rendering. The `use_async_result` composable integrates `AsyncResult` with the component lifecycle for automatic execution and cleanup.
 
-#### Scenario: Loading data from an API on component mount with useAsyncResult
-- **WHEN** a developer calls `useAsyncResult(fetch_func)` inside a component setup
+#### Scenario: Loading data from an API on component mount with use_async_result
+- **WHEN** a developer calls `use_async_result(fetch_func)` inside a component setup
 - **THEN** `result.state` SHALL initially be `AsyncState.PENDING`
 - **AND** after rendering, `result.state` SHALL transition to `AsyncState.LOADING`
 - **WHEN** the async function resolves successfully

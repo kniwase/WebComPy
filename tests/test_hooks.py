@@ -7,8 +7,8 @@ from webcompy.components._hooks import (
     on_after_rendering,
     on_before_destroy,
     on_before_rendering,
+    use_async,
     use_async_result,
-    useAsync,
 )
 from webcompy.components._libs import Context
 from webcompy.signal import Signal
@@ -281,20 +281,6 @@ class TestUseAsyncResult:
         assert result.data.value == 42
         assert result.state.value == AsyncState.SUCCESS
 
-    def test_useAsyncResult_alias_still_works(self):
-        from webcompy.components import useAsyncResult
-
-        async def fetch():
-            return 7
-
-        def setup(ctx):
-            return useAsyncResult(fetch, default=0)
-
-        result, ctx = _with_context(setup)
-        hooks = ctx.__get_lifecyclehooks__()
-        hooks["on_after_rendering"]()
-        assert result.data.value == 7
-
     def test_use_async_result_does_not_emit_userwarning(self):
         async def fetch():
             return "result"
@@ -319,7 +305,7 @@ class TestUseAsync:
             called.append(True)
 
         def setup(ctx):
-            useAsync(my_func)
+            use_async(my_func)
 
         _, ctx = _with_context(setup)
         hooks = ctx.__get_lifecyclehooks__()
@@ -332,7 +318,7 @@ class TestUseAsync:
             called.append(True)
 
         def setup(ctx):
-            useAsync(my_func)
+            use_async(my_func)
 
         _, ctx = _with_context(setup)
         hooks = ctx.__get_lifecyclehooks__()

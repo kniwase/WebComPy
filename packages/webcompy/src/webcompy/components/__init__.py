@@ -12,9 +12,8 @@ from webcompy.components._hooks import (
     on_after_rendering,
     on_before_destroy,
     on_before_rendering,
+    use_async,
     use_async_result,
-    useAsync,
-    useAsyncResult,
 )
 from webcompy.components._libs import (
     ComponentContext,
@@ -41,7 +40,6 @@ __all__ = [
     "on_before_destroy",
     "on_before_rendering",
     "reactive_scoped_style",
-    "useAsync",
-    "useAsyncResult",
+    "use_async",
     "use_async_result",
 ]

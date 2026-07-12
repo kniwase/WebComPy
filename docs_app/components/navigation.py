@@ -26,10 +26,10 @@ class Page(_PageRequired, total=False):
 
 @define_component
 def Navbar(context: ComponentContext[list[Page]]):
-    _open_states: dict[int, Any] = {}
+    _open_states: dict[int, Signal[bool]] = {}
     _mobile_open = use_state(lambda: False)
 
-    def _get_state(idx: int):
+    def _get_state(idx: int) -> Signal[bool]:
         if idx not in _open_states:
             _open_states[idx] = Signal(False)
         return _open_states[idx]

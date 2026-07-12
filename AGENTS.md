@@ -105,6 +105,15 @@ are skipped — only OpenSpec validation and AI review run.
 - Component classes use decorators: `@component_template`, `@on_before_rendering`
 - Reactive values are defined via `Reactive`, `Computed`, `ReactiveList`, `ReactiveDict`. New transfer-capable state SHOULD be created via `use_state` / `use_reactive_list` / `use_reactive_dict` composables inside component setup so the SSR transfer path works.
 
+### Naming Conventions
+
+- Public Python functions and variables use `snake_case`.
+- Classes and exceptions use `PascalCase`.
+- Module-private names use a leading underscore (`_private_name`).
+- Constants use `UPPER_CASE`.
+- WebComPy composables follow the `use_verb` / `use_noun` pattern in `snake_case` (e.g., `use_state`, `use_router`, `use_async`, `use_async_result`).
+- DOM and browser API wrappers may use `camelCase` **only** when intentionally mirroring a standard web API name (e.g., `setAttribute`, `appendChild`, `addEventListener`). Public APIs that are not direct web-standard wrappers must use `snake_case`.
+
 ## App Instance API
 
 - `WebComPyApp` is the central application object:
