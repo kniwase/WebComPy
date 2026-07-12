@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
@@ -278,3 +279,29 @@ class BrowserRenderContext(RenderContext):
         self._di_scope.provide(HISTORY_PORT_KEY, BrowserHistoryPort(mode=router_mode))
         self._di_scope.provide(HOST_PORT_KEY, BrowserHostPort())
         self._di_scope.provide(MEDIA_QUERY_PORT_KEY, BrowserMediaQueryPort())
+
+        self._load_hydration_payload()
+
+    def _load_hydration_payload(self) -> None:
+        from webcompy.di._keys import HYDRATION_DATA_KEY, HYDRATION_SIGNAL_DATA_KEY
+        from webcompy.hydration._payload import deserialize_payload
+        from webcompy.ports._keys import DOM_PORT_KEY, FETCH_PORT_KEY
+
+        dom_port = self._di_scope.inject(DOM_PORT_KEY, default=None)
+        if dom_port is None:
+            return
+        data_el = dom_port.query_selector("#__webcompy_data__")
+        if data_el is None:
+            return
+        try:
+            payload = deserialize_payload(str(data_el.textContent))
+            if payload is not None:
+                fetch_port = self._di_scope.inject(FETCH_PORT_KEY, default=None)
+                if fetch_port is not None and hasattr(fetch_port, "populate_from_transfer"):
+                    fetch_port.populate_from_transfer(payload.fetches)
+                self._di_scope.provide(HYDRATION_DATA_KEY, payload.async_results)
+                self._di_scope.provide(HYDRATION_SIGNAL_DATA_KEY, payload.signals)
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Failed to load hydration payload: %s", exc)
+        finally:
+            data_el.remove()

@@ -1,22 +1,16 @@
 import uuid
-from typing import Any, TypedDict
 
 from webcompy.app import WebComPyApp
 from webcompy.components import ComponentContext, define_component
-from webcompy.elements import DomNodeRef, html, repeat
-from webcompy.signal import ReactiveDict, Signal, computed
-
-
-class TodoData(TypedDict):
-    title: Signal[str]
-    done: Signal[bool]
+from webcompy.elements import DOMEvent, DomNodeRef, html, repeat
+from webcompy.signal import Signal, computed, use_reactive_dict, use_state
 
 
 @define_component
-def ToDoItem(context: ComponentContext[TodoData]):
+def ToDoItem(context: ComponentContext[dict]):
     input_ref = DomNodeRef()
 
-    def on_change_state(_: Any):
+    def on_change_state(_: DOMEvent):
         context.props["done"].value = input_ref.checked
 
     return html.LI(
@@ -56,20 +50,20 @@ ToDoItem.scoped_style = {
 @define_component
 def App(_: ComponentContext[None]):
     input_ref = DomNodeRef()
-    data: ReactiveDict[str, TodoData] = ReactiveDict(
-        {
+    data = use_reactive_dict(
+        lambda: {
             str(uuid.uuid4()): {
-                "title": Signal("Try WebComPy"),
-                "done": Signal(False),
+                "title": use_state(lambda: "Try WebComPy"),
+                "done": use_state(lambda: False),
             },
             str(uuid.uuid4()): {
-                "title": Signal("Create WebComPy project"),
-                "done": Signal(False),
+                "title": use_state(lambda: "Create WebComPy project"),
+                "done": use_state(lambda: False),
             },
         }
     )
 
-    def append_item(_: Any):
+    def append_item(_: DOMEvent):
         title = input_ref.value
         if title:
             data[str(uuid.uuid4())] = {
@@ -78,7 +72,7 @@ def App(_: ComponentContext[None]):
             }
         input_ref.value = ""
 
-    def remove_done_items(_: Any):
+    def remove_done_items(_: DOMEvent):
         keys_to_remove = [k for k, v in data.value.items() if v["done"].value]
         for k in keys_to_remove:
             del data[k]

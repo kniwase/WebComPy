@@ -14,8 +14,7 @@ This change depends on `fix-async-component-active-context` (Phase 1) to ensure 
 - Introduce `use_reactive_list(factory: Callable[[], list[V]]) -> ReactiveList[V]` composable — creates transferable `ReactiveList` instances with mutation ergonomics
 - Introduce `use_reactive_dict(factory: Callable[[], dict[K, V]]) -> ReactiveDict[K, V]` composable — creates transferable `ReactiveDict` instances with mutation ergonomics
 - Factory-skip mechanism: on the server, the factory runs and produces the initial value; on the browser during hydration, composables check `HYDRATION_SIGNAL_DATA_KEY` and skip the factory if a value is found, creating the signal with the restored value directly
-- Deprecate `Signal()` direct construction with `UserWarning` (class stays as return type and internal implementation)
-- Add `Signal._create()`, `ReactiveList._create()`, `ReactiveDict._create()` classmethods as internal bypass (no warning)
+- Direct `Signal()` construction is supported without warnings — no deprecation, no `UserWarning`. Internal framework code uses standard constructors directly.
 - Add `_transferable_signals: dict[str, SignalBase]` to `Context` for registration during setup
 - In `Component.__setup()`, merge `context._transferable_signals` into `self.__signal_members__` after the setup function returns (enabling existing `collect_transfer_data()` to work unchanged)
 - Remove `_restore_signals()` from `Component._render()` (restoration now happens during setup via factory-skip)
@@ -38,9 +37,6 @@ This change depends on `fix-async-component-active-context` (Phase 1) to ensure 
 - `packages/webcompy/src/webcompy/signal/_composable.py` — `use_state()`, `use_reactive_list()`, `use_reactive_dict()` functions with `@overload` typing and auto-key generation
 - `packages/webcompy/src/webcompy/signal/__init__.py` — export `use_state`, `use_reactive_list`, `use_reactive_dict`
 - `packages/webcompy/src/webcompy/__init__.py` — re-export `use_state`, `use_reactive_list`, `use_reactive_dict`
-- `packages/webcompy/src/webcompy/signal/_signal.py` — `Signal.__init__` gains `UserWarning`; add `Signal._create()` classmethod
-- `packages/webcompy/src/webcompy/signal/_list.py` — add `ReactiveList._create()` classmethod
-- `packages/webcompy/src/webcompy/signal/_dict.py` — add `ReactiveDict._create()` classmethod
 - `packages/webcompy/src/webcompy/components/_libs.py` — `Context` gains `_transferable_signals` dict
 - `packages/webcompy/src/webcompy/components/_component.py` — `__setup()` merges `_transferable_signals`; `_render()` drops `_restore_signals()`
 - `packages/webcompy/src/webcompy/di/_keys.py` — verify `HYDRATION_SIGNAL_DATA_KEY` exists and is provided in `app.run()`

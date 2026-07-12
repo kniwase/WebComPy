@@ -17,7 +17,6 @@ Additionally, `ReactiveList` and `ReactiveDict` provide mutation ergonomics (`ap
 - Implement factory-skip: server runs factory, browser restores from payload during setup
 - Eliminate the `_restore_signals()` mechanism (superseded by factory-skip)
 - Maintain backward compatibility with `collect_transfer_data()` (unchanged collection path)
-- Deprecate `Signal()` direct construction without removing the class
 
 **Non-Goals:**
 - Deprecating the `Signal` class (it remains as the return type)
@@ -58,11 +57,11 @@ The factory MUST be a zero-argument callable (`Callable[[], T]`). Callables that
 
 **Rationale**: This mirrors the existing `use_async_result` → `context._async_results` pattern. The collection mechanism (`collect_transfer_data()` walking `__signal_members__`) stays unchanged.
 
-### Decision 5: `UserWarning` for `Signal()` direct construction
+### Decision 5: No deprecation warning for `Signal()` direct construction
 
-**Choice**: `Signal.__init__` emits `UserWarning` (not `DeprecationWarning`). Internal framework use bypasses via `Signal._create()` classmethod. Similarly, `ReactiveList._create()` and `ReactiveDict._create()` bypass warnings for their respective constructors.
+**Choice**: `Signal.__init__()` does NOT emit any warning. Direct construction is fully supported for third-party subclasses, test helpers, and dynamic construction paths. No `_create()` bypass classmethods are needed.
 
-**Rationale**: `DeprecationWarning` implies "will be removed" — but the `Signal` class stays as the return type. `UserWarning` conveys "not recommended" without implying removal. The `_create()` bypass uses `object.__new__()` + parent `__init__()` to avoid triggering the warning — this avoids the global state mutation inherent in `warnings.catch_warnings()`.
+**Rationale**: Adding a `UserWarning` to `Signal.__init__()` would penalize legitimate third-party subclasses, test helpers, and dynamic construction paths. The composable-based path (`use_state()`) is the recommended pattern for SSR transfer, but `Signal()` remains the standard constructor with no deprecation. Internal framework code uses `Signal()` directly — there is no functional difference between `Signal(value)` and a hypothetical `Signal._create(value)`, so the bypass was unnecessary.
 
 ### Decision 6: Auto-key via `inspect` + `dis`
 
@@ -86,7 +85,7 @@ This matches Vue's `ref()` and Angular's `signal()` behavior — they work outsi
 
 - **[Factory always required]** Users must write `use_state(lambda: 0)` instead of `Signal(0)`. → Mitigation: minimal overhead; lambda is a common Python idiom; Nuxt uses the same pattern.
 
-- **[Computed not transferable]** The design follows "transfer sources, not derivations" — `use_state()` creates `Signal[T]`, not `Computed[T]`. Transferring `Computed` would cause stale values on re-evaluation. Phase 3 (`refactor-signal-api-unification`) introduces `use_computed(factory: Callable[[], T]) -> Computed[T]` as the renamed `computed()` composable. Its signature mirrors `use_state()`: zero-argument factory, auto-key or explicit key, but NO factory-skip (Computed always recomputes from transferred sources). `Computed._create(fn)` bypass method is added alongside `Signal._create()`. → Mitigation: document that `use_computed()` values recompute from transferred sources.
+- **[Computed not transferable]** The design follows "transfer sources, not derivations" — `use_state()` creates `Signal[T]`, not `Computed[T]`. Transferring `Computed` would cause stale values on re-evaluation. Phase 3 (`refactor-signal-api-unification`) introduces `use_computed(factory: Callable[[], T]) -> Computed[T]` as the renamed `computed()` composable. Its signature mirrors `use_state()`: zero-argument factory, auto-key or explicit key, but NO factory-skip (Computed always recomputes from transferred sources). → Mitigation: document that `use_computed()` values recompute from transferred sources.
 
 - **[Three composables]** Users must choose between `use_state()`, `use_reactive_list()`, and `use_reactive_dict()`. → Mitigation: each has a clear purpose; naming makes intent obvious; `use_state()` is the default choice for non-collection values.
 

@@ -1,17 +1,17 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DomNodeRef, html
-from webcompy.signal import Signal, computed
+from webcompy.signal import computed, use_state
 
 
 @define_component
 def EventPage(context: ComponentContext[None]):
     context.set_title("Event - E2E")
 
-    click_count = Signal(0)
+    click_count = use_state(lambda: 0)
     input_ref = DomNodeRef()
-    input_value = Signal("")
+    input_value = use_state(lambda: "")
     checkbox_ref = DomNodeRef()
-    checkbox_state = Signal(False)
+    checkbox_state = use_state(lambda: False)
 
     def on_click(_):
         click_count.value += 1

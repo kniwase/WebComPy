@@ -12,6 +12,7 @@ from webcompy.components._hooks import (
     on_after_rendering,
     on_before_destroy,
     on_before_rendering,
+    use_async_result,
     useAsync,
     useAsyncResult,
 )
@@ -42,4 +43,5 @@ __all__ = [
     "reactive_scoped_style",
     "useAsync",
     "useAsyncResult",
+    "use_async_result",
 ]

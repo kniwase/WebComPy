@@ -1,15 +1,15 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html, repeat, switch
-from webcompy.signal import ReactiveList, Signal, computed
+from webcompy.signal import computed, use_reactive_list, use_state
 
 
 @define_component
 def NestedDynamicPage(context: ComponentContext[None]):
     context.set_title("Nested Dynamic - E2E")
 
-    view_mode = Signal("list")
-    items = ReactiveList(["Alpha", "Beta", "Gamma"])
-    counter = Signal(0)
+    view_mode = use_state(lambda: "list")
+    items = use_reactive_list(lambda: ["Alpha", "Beta", "Gamma"])
+    counter = use_state(lambda: 0)
 
     is_list = computed(lambda: view_mode.value == "list")
     is_grid = computed(lambda: view_mode.value == "grid")

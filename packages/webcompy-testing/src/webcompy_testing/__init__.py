@@ -18,6 +18,7 @@ from webcompy_testing._ports import (
     FakeFetchPort,
 )
 from webcompy_testing._renderer import TestRenderer, TestRendererResult
+from webcompy_testing._restore import restore_signal_values
 from webcompy_testing._scope import create_test_app
 from webcompy_testing._utils import run_sync
 
@@ -36,5 +37,6 @@ __all__ = [
     "format_html",
     "mock_app_run",
     "render_app_html",
+    "restore_signal_values",
     "run_sync",
 ]

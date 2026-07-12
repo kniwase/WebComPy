@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import pytest
 
 from webcompy.ui.theme._server import read_theme_from_cookie
@@ -274,6 +276,27 @@ def test_use_theme_returns_signal_and_controller() -> None:
         assert signal.value is Theme.LIGHT
         controller.set(Theme.DARK)
         assert signal.value is Theme.DARK
+
+
+def test_use_theme_does_not_emit_userwarning() -> None:
+    from webcompy.di import DIScope
+    from webcompy.ui.theme import use_theme
+    from webcompy.ui.theme._manager import ThemeManager
+    from webcompy.ui.theme._theme import THEME_KEY
+
+    app = FakeApp()
+    manager = ThemeManager(app, app, Theme.LIGHT)
+    scope = DIScope()
+    scope.provide(THEME_KEY, manager)
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        with scope:
+            signal, controller = use_theme()
+    userwarnings = [x for x in w if issubclass(x.category, UserWarning)]
+    assert len(userwarnings) == 0
+    assert signal.value is Theme.LIGHT
+    controller.set(Theme.DARK)
+    assert signal.value is Theme.DARK
 
 
 def test_use_theme_raises_without_manager() -> None:

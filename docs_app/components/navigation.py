@@ -5,7 +5,7 @@ from webcompy.di import InjectionError, inject
 from webcompy.elements import html
 from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router import RouterLink
-from webcompy.signal import Signal, computed
+from webcompy.signal import Signal, computed, use_state
 
 from .theme_toggle import ThemeToggle
 
@@ -26,10 +26,10 @@ class Page(_PageRequired, total=False):
 
 @define_component
 def Navbar(context: ComponentContext[list[Page]]):
-    _open_states: dict[int, Signal[bool]] = {}
-    _mobile_open = Signal(False)
+    _open_states: dict[int, Any] = {}
+    _mobile_open = use_state(lambda: False)
 
-    def _get_state(idx: int) -> Signal[bool]:
+    def _get_state(idx: int):
         if idx not in _open_states:
             _open_states[idx] = Signal(False)
         return _open_states[idx]

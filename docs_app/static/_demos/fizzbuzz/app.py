@@ -5,14 +5,14 @@ from webcompy.components import (
     on_before_rendering,
 )
 from webcompy.elements import DOMEvent, html, repeat, switch
-from webcompy.signal import ReactiveDict, Signal, computed
+from webcompy.signal import computed, use_reactive_dict, use_state
 
 
 @define_component
 def App(context: ComponentContext[None]):
-    opened = Signal(True)
-    fizzbuzz_dict: ReactiveDict[int, str] = ReactiveDict()
-    _next_n = Signal(1)
+    opened = use_state(lambda: True)
+    fizzbuzz_dict = use_reactive_dict(lambda: {})
+    _next_n = use_state(lambda: 1)
 
     @computed
     def toggle_button_text():

@@ -1,16 +1,16 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
-from webcompy.signal import ReactiveDict, ReactiveList, Signal, computed
+from webcompy.signal import computed, use_reactive_dict, use_reactive_list, use_state
 
 
 @define_component
 def ReactivePage(context: ComponentContext[None]):
     context.set_title("Signal - E2E")
 
-    count = Signal(0)
+    count = use_state(lambda: 0)
     doubled = computed(lambda: count.value * 2)
-    items = ReactiveList([1, 2, 3])
-    rdict = ReactiveDict({"key1": "val1"})
+    items = use_reactive_list(lambda: [1, 2, 3])
+    rdict = use_reactive_dict(lambda: {"key1": "val1"})
     item_count = computed(lambda: str(len(items.value)))
     dict_count = computed(lambda: str(len(rdict.value)))
 

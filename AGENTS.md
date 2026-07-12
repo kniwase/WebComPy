@@ -103,7 +103,7 @@ are skipped — only OpenSpec validation and AI review run.
 - Type annotations throughout (package includes `py.typed` marker and `.pyi` stubs)
 - No comments in code unless explicitly requested
 - Component classes use decorators: `@component_template`, `@on_before_rendering`
-- Reactive values are defined via `Reactive`, `Computed`, `ReactiveList`, `ReactiveDict`
+- Reactive values are defined via `Reactive`, `Computed`, `ReactiveList`, `ReactiveDict`. New transfer-capable state SHOULD be created via `use_state` / `use_reactive_list` / `use_reactive_dict` composables inside component setup so the SSR transfer path works.
 
 ## App Instance API
 
@@ -175,6 +175,14 @@ closest scope wins. Component destruction must dispose its DI child scope.
 `_hydrate_node()` adopts existing prerendered nodes, never creates new ones.
 `AppDocumentRoot._render()` MUST call `child._hydrate_node()` ONLY inside the
 `if self._app and self._app._hydrate and not self.__hydrated:` guard block.
+
+### Composable Usage
+`use_state()` / `use_reactive_list()` / `use_reactive_dict()` MUST be called from inside a
+component setup function (synchronously or inside an `await` of an async setup). They MUST
+NOT be called from event handlers, `on_after_rendering` callbacks, or any other context
+outside the initial component setup — such calls return a non-transferable Signal and emit a
+`UserWarning`. Per-row state SHOULD be lifted into a child `@define_component` rather than
+created in event handlers.
 
 ### Scoped CSS
 At-rules (`@media`, `@supports`) must NOT receive the `[webcompy-cid-{id}]` attribute

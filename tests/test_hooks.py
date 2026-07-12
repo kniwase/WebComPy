@@ -1,4 +1,5 @@
 import asyncio
+import warnings
 
 from webcompy.aio._async_result import AsyncState
 from webcompy.components._hooks import (
@@ -6,8 +7,8 @@ from webcompy.components._hooks import (
     on_after_rendering,
     on_before_destroy,
     on_before_rendering,
+    use_async_result,
     useAsync,
-    useAsyncResult,
 )
 from webcompy.components._libs import Context
 from webcompy.signal import Signal
@@ -207,7 +208,7 @@ def _with_context(fn):
 class TestUseAsyncResult:
     def test_immediate_true_registers_on_after_rendering(self):
         def setup(ctx):
-            return useAsyncResult(
+            return use_async_result(
                 lambda: asyncio.sleep(0),
                 immediate=True,
             )
@@ -218,7 +219,7 @@ class TestUseAsyncResult:
 
     def test_immediate_false_does_not_register(self):
         def setup(ctx):
-            return useAsyncResult(
+            return use_async_result(
                 lambda: asyncio.sleep(0),
                 immediate=False,
             )
@@ -236,7 +237,7 @@ class TestUseAsyncResult:
             return query.value
 
         def setup(ctx):
-            return useAsyncResult(
+            return use_async_result(
                 fetch,
                 watch=[query],
                 immediate=False,
@@ -251,7 +252,7 @@ class TestUseAsyncResult:
         query = Signal("a")
 
         def setup(ctx):
-            return useAsyncResult(
+            return use_async_result(
                 lambda: asyncio.sleep(0),
                 watch=[query],
                 immediate=False,
@@ -272,13 +273,42 @@ class TestUseAsyncResult:
             return 42
 
         def setup(ctx):
-            return useAsyncResult(fetch, default=0)
+            return use_async_result(fetch, default=0)
 
         result, ctx = _with_context(setup)
         hooks = ctx.__get_lifecyclehooks__()
         hooks["on_after_rendering"]()
         assert result.data.value == 42
         assert result.state.value == AsyncState.SUCCESS
+
+    def test_useAsyncResult_alias_still_works(self):
+        from webcompy.components import useAsyncResult
+
+        async def fetch():
+            return 7
+
+        def setup(ctx):
+            return useAsyncResult(fetch, default=0)
+
+        result, ctx = _with_context(setup)
+        hooks = ctx.__get_lifecyclehooks__()
+        hooks["on_after_rendering"]()
+        assert result.data.value == 7
+
+    def test_use_async_result_does_not_emit_userwarning(self):
+        async def fetch():
+            return "result"
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+
+            def setup(ctx):
+                return use_async_result(fetch, default=0)
+
+            result, _ = _with_context(setup)
+        userwarnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(userwarnings) == 0
+        assert result.data.value == 0
 
 
 class TestUseAsync:

@@ -1,4 +1,9 @@
 from webcompy.signal._base import Signal, SignalBase
+from webcompy.signal._composable import (
+    use_reactive_dict,
+    use_reactive_list,
+    use_state,
+)
 from webcompy.signal._computed import Computed, computed, computed_property
 from webcompy.signal._dict import DictMutation, ReactiveDict
 from webcompy.signal._effect import EffectHandle, EffectScope, effect
@@ -19,4 +24,7 @@ __all__ = [
     "computed_property",
     "effect",
     "readonly",
+    "use_reactive_dict",
+    "use_reactive_list",
+    "use_state",
 ]

@@ -388,29 +388,27 @@ The attribute is private to the framework. User code SHALL NOT rely on the inter
 - **THEN** its `_reactive_styles` list SHALL be empty
 - **AND** registering a style via `use_reactive_scoped_style` SHALL append to this list
 
-### Requirement: Components shall restore Signal values after setup during hydration
+### Requirement: Components shall restore Signal values via factory-skip during setup
 
-During browser hydration, `Component._render()` SHALL call signal value restoration after `__init_component()` / `__setup()` completes and before template evaluation. The restoration SHALL read `payload.signals[component_id]` from the transfer payload (provided via `HYDRATION_SIGNAL_DATA_KEY` DI) and restore each `(attr_name, encoded_value)` pair by decoding the value via `decode()` from `webcompy.hydration._codec` and setting `component.__signal_members__[attr_name]._value = decoded_value` directly (bypassing `set_value()`).
+During browser hydration, signal values SHALL be restored during component setup by `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` composables. Each composable SHALL check `HYDRATION_SIGNAL_DATA_KEY` (via DI injection) before invoking its factory. If a transferred value exists for the composable's key, the factory SHALL be skipped and the signal SHALL be created directly with the restored value. No separate restoration step runs in `Component._render()` — the `_restore_signals()` method has been removed.
 
-#### Scenario: Component restores Signal values before first render
+Signals created outside composables (e.g., `Signal()` in event handlers or `on_before_rendering` hooks) SHALL NOT participate in transfer and SHALL NOT be restored from the hydration payload. Components that need SSR-transferable state SHALL create their signals via `use_state()` / `use_reactive_list()` / `use_reactive_dict()` inside the setup function.
+
+#### Scenario: Factory-skip restores value before first render
 - **WHEN** a component is hydrated in the browser
-- **AND** the transfer payload contains Signal values for the component's ID
-- **THEN** after `__setup()` creates Signals with default values
-- **AND** before template evaluation reads Signal values
-- **AND** each Signal's `_value` SHALL be overwritten with the decoded transfer value
+- **AND** the hydration payload contains a value for this composable's key
+- **THEN** the composable SHALL restore the value and skip the factory
+- **AND** the restored value SHALL be available before template evaluation and `on_before_rendering` hooks
 
-#### Scenario: Component without transfer data renders with defaults
+#### Scenario: Component without transfer data runs factory
 - **WHEN** a component is hydrated
-- **AND** the transfer payload does not contain an entry for the component's ID
-- **THEN** Signals SHALL retain their default values from setup
-- **AND** no restoration SHALL occur
+- **AND** the hydration payload does not contain a value for this composable's key
+- **THEN** the composable SHALL run its factory to produce the initial value
+- **AND** the signal SHALL still be registered for future SSR transfer
 
-#### Scenario: Signals first created in on_before_rendering are not restored on initial hydration
-- **WHEN** a component creates a Signal inside an `on_before_rendering` hook (not in `__setup__()`)
-- **AND** the transfer payload contains a value for that Signal's attribute name
-- **THEN** on the initial hydration cycle, restoration SHALL run before `on_before_rendering`, so the Signal does not yet exist in `__signal_members__`
-- **AND** the restoration for that attribute name SHALL be skipped (best-effort, no error)
-- **AND** the hook SHALL execute with the Signal at its default value
-- **AND** on subsequent navigation-based hydration cycles, the Signal SHALL exist and its transferred value SHALL be restored
-- **AND** developers who need server-computed values available in hooks SHOULD create the Signal in `__setup()` instead
+#### Scenario: Signals created outside composables are not restored
+- **WHEN** a component creates a `Signal` directly (not via `use_state()` / `use_reactive_list()` / `use_reactive_dict()`)
+- **THEN** the signal SHALL NOT be registered in `_transferable_signals`
+- **AND** the signal SHALL NOT be collected for transfer
+- **AND** the signal SHALL NOT be restored from the hydration payload
 

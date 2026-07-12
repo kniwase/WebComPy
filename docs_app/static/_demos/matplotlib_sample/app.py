@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from webcompy.app import WebComPyApp
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DOMEvent, DomNodeRef, html
-from webcompy.signal import Signal, computed
+from webcompy.signal import computed, use_state
 
 
 @define_component
@@ -18,7 +18,7 @@ def App(context: ComponentContext[None]):
     x = np.linspace(-5, 5, 250)
     (line,) = ax.plot(x, np.array([0 for _ in x]))
 
-    count = Signal(15)
+    count = use_state(lambda: 15)
 
     def on_change(ev: DOMEvent):
         count.value = int(input_ref.value)

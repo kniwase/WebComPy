@@ -17,16 +17,16 @@ def restore_signal_values(
     component: Any,
     signals_data: dict[str, Any] | None,
 ) -> None:
-    """Restore signal values from a (already-decoded) transfer payload.
+    """Restore signal values for testing round-trip scenarios.
 
-    The dictionary passed in is expected to have been produced by
-    ``deserialize_payload()``, which has already run every value through
-    the codec's ``decode()``. This function therefore assigns each value
-    directly to ``signal._value`` without re-decoding, bypassing
-    ``set_value()`` to avoid triggering reactive notifications.
+    Directly assigns each value to ``signal._value`` without re-decoding
+    or triggering reactive notifications. Intended for use in test code
+    that manually constructs signal members and hydration data; not part
+    of the production hydration pipeline (which uses factory-skip via
+    ``use_state()`` / ``use_reactive_list()`` / ``use_reactive_dict()``).
 
-    Callers that construct signals_data by hand (e.g. tests) should run
-    ``decode()`` on each value before passing it in.
+    Callers that construct signals_data by hand should run ``decode()``
+    on each value before passing it in.
     """
     if not signals_data:
         return

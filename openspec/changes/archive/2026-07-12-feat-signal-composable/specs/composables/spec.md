@@ -120,32 +120,26 @@ When the `key` parameter is omitted, all composables (`use_state()`, `use_reacti
 - **THEN** the second and subsequent same-line composable invocations SHALL emit a `UserWarning` ("Auto-key collision detected at {filename}:{lineno} with {previous_key}. Use an explicit key to disambiguate.")
 - **AND** the warning SHALL only be emitted once per component per collision (deduplicated via Python's `warnings` module default behavior)
 
-### Requirement: Signal() direct construction shall emit UserWarning
+#### Scenario: Explicit key collision emits dedicated message
+- **WHEN** the same explicit key is used in two composable calls within the same component (e.g. `use_state("k", ...)` twice)
+- **THEN** the second call SHALL emit a `UserWarning` ("Duplicate explicit key 'k' in {component_name}. Use a unique key for each composable call.")
+- **AND** the message SHALL NOT suggest "Use an explicit key to disambiguate" (the user already used one)
+- **AND** the first signal's value SHALL remain registered (second call is rejected from registry)
 
-`Signal.__init__()` SHALL emit a `UserWarning` with the message "Direct Signal() construction bypasses SSR transfer. Use use_state(factory) instead." when called directly by user code. The `Signal` class SHALL remain as the return type of `use_state()` and for type annotations.
+### Requirement: Signal() direct construction is supported without UserWarning
 
-Internal `Signal._create(value)`, `ReactiveList._create(value)`, and `ReactiveDict._create(value)` classmethods SHALL bypass warnings by using `object.__new__()` + parent `__init__()`. The composables and other framework internals SHALL use these `_create()` methods exclusively.
+`Signal.__init__()` SHALL create a Signal instance normally without emitting any `UserWarning`. Third-party libraries that subclass `Signal` or call it directly SHALL NOT see any framework-issued `UserWarning`. `use_state()` is the recommended pattern for component setups that participate in SSR transfer, but `Signal()` is not deprecated and remains part of the supported public API.
 
-#### Scenario: UserWarning on direct construction
-- **WHEN** user code calls `Signal(0)` directly
-- **THEN** a `UserWarning` SHALL be emitted
+#### Scenario: Direct Signal() construction emits no warning
+- **WHEN** user code calls `Signal(0)` directly (e.g. inside a third-party subclass or test helper)
+- **THEN** no `UserWarning` SHALL be emitted
 - **AND** the `Signal` SHALL still be created and function normally
 
-#### Scenario: No warning from composables
+#### Scenario: Composables emit no warning
 - **WHEN** `use_state(lambda: 0)` creates a `Signal` internally
 - **THEN** no `UserWarning` SHALL be emitted
-- **AND** `Signal._create()` SHALL be used instead of `Signal()`
 
 #### Scenario: Signal type annotation still works
 - **WHEN** a developer writes `count: Signal[int] = use_state(lambda: 0)`
 - **THEN** the type annotation SHALL be valid
 - **AND** `Signal` SHALL remain importable from `webcompy.signal`
-
-### Requirement: Internal composables SHALL use Signal._create() to avoid warnings
-
-All framework-provided composables (`use_counter`, `use_async_result`, `use_theme`, and any future composables) SHALL use `Signal._create()` and `Computed._create()` internally when creating reactive primitives, rather than calling `Signal()` or `Computed()` directly. This ensures that users of these composables do not encounter deprecation warnings from internal framework code.
-
-#### Scenario: use_counter uses Signal._create()
-- **WHEN** a developer calls `use_counter(initial)` inside a component setup function
-- **THEN** the internal signal SHALL be created via `Signal._create(initial)` (not `Signal(initial)`)
-- **AND** no `UserWarning` SHALL be emitted

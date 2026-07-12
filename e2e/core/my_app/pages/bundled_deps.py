@@ -1,14 +1,14 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
-from webcompy.signal import Signal
+from webcompy.signal import use_state
 
 
 @define_component
 def BundledDepsPage(context: ComponentContext[None]):
     context.set_title("Bundled Deps - E2E")
 
-    aiofiles_status = Signal("pending")
-    h11_status = Signal("pending")
+    aiofiles_status = use_state(lambda: "pending")
+    h11_status = use_state(lambda: "pending")
 
     def check_aiofiles(_):
         try:

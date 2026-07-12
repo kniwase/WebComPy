@@ -4,7 +4,7 @@ from webcompy.aio import AsyncWrapper
 from webcompy.ajax import HttpClient
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
-from webcompy.signal import Signal
+from webcompy.signal import use_state
 from webcompy.ui.code_block import CodeBlock
 from webcompy.utils import strip_multiline_text
 
@@ -19,7 +19,7 @@ class DemoComponentProps(TypedDict):
 
 @define_component
 def DemoDisplay(context: ComponentContext[DemoComponentProps]):
-    source_code = Signal("")
+    source_code = use_state(lambda: "")
 
     @AsyncWrapper()
     async def load():
