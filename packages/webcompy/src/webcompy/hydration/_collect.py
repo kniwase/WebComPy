@@ -12,8 +12,7 @@ from webcompy.hydration._payload import (
     TransferPayload,
 )
 from webcompy.ports._keys import FETCH_PORT_KEY
-from webcompy.signal._base import SignalBase
-from webcompy.signal._computed import Computed
+from webcompy.signal import Computed, SignalBase
 
 if TYPE_CHECKING:
     from webcompy.aio._async_result import AsyncResult

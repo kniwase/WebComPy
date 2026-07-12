@@ -10,7 +10,7 @@ from webcompy.elements.typealias._element_property import (
 from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._text import TextElement
-from webcompy.signal._base import SignalBase
+from webcompy.signal import SignalBase
 
 
 class ElementWithChildren(ElementAbstract):

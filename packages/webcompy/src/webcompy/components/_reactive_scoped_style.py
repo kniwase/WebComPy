@@ -52,7 +52,7 @@ from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 from webcompy.components._libs import WebComPyComponentException
-from webcompy.signal._computed import Computed
+from webcompy.signal import Computed
 
 if TYPE_CHECKING:
     from webcompy.components._generator import StyleDict

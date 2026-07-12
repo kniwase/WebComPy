@@ -22,13 +22,13 @@
 
 ## 5. Update base specs and design docs
 
-- [ ] 5.1 Sync `openspec/specs/reactive/spec.md`, `composables/spec.md`, `signal-value-transfer/spec.md`, `app-styles/spec.md`
-- [ ] 5.2 Update `design.md` and `proposal.md`
+- [x] 5.1 Sync `openspec/specs/reactive/spec.md`, `composables/spec.md`, `signal-value-transfer/spec.md`, `app-styles/spec.md`
+- [x] 5.2 Update `design.md` and `proposal.md`
 
 ## 6. Remove _Computed alias and unify signal import paths
 
-- [ ] 6.1 Remove `Computed as _Computed` alias in `app/styles.py`
-- [ ] 6.2 Unify `SignalBase`, `Computed`, `computed_property` imports to `from webcompy.signal import ...`
+- [x] 6.1 Remove `Computed as _Computed` alias in `app/styles.py`
+- [x] 6.2 Unify `SignalBase`, `Computed`, `computed_property` imports to `from webcompy.signal import ...`
 
 ## 7. Complete remaining framework import unification
 

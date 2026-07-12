@@ -17,7 +17,7 @@ from webcompy.elements.types._dynamic import (
 )
 from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY
-from webcompy.signal._base import SignalBase
+from webcompy.signal import SignalBase
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
 SwitchCasesSignal: TypeAlias = list[tuple[SignalBase[Any], NodeGenerator]]
