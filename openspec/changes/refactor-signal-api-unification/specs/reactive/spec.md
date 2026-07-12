@@ -1,26 +1,32 @@
 ## MODIFIED Requirements
 
-### Requirement: Signal and Computed shall be created via function-style API
+### Requirement: Computed values shall be created via use_computed()
 
-The primary creation API for reactive primitives SHALL be function-style: `use_state(factory)` for source signals and `use_computed(factory)` for derived signals. The `Signal()` and `Computed()` class constructors SHALL emit `DeprecationWarning` when called directly by user code. The `Signal` and `Computed` classes SHALL remain as type annotations (`Signal[T]`, `Computed[T]`) and as the runtime return types of `use_state()` and `use_computed()` respectively.
+The function-style creation API for `Computed` SHALL be `use_computed(factory)`, replacing the previous `computed(factory)` function. The `Computed` class SHALL remain accessible from `webcompy.signal` as a type annotation (`Computed[T]`) and for framework internal use. `use_computed()` SHALL also be importable from `webcompy` top-level alongside `use_state()`, `use_reactive_list()`, and `use_reactive_dict()`.
 
-#### Scenario: use_state() is the primary creation API
-- **WHEN** a developer creates a reactive value
-- **THEN** `use_state(factory)` SHALL be the recommended API
-- **AND** `Signal(value)` SHALL emit `DeprecationWarning`
+#### Scenario: Creating a computed value with use_computed()
+- **WHEN** a developer writes `doubled = use_computed(lambda: count.value * 2)` inside a component setup function
+- **THEN** a `Computed[int]` SHALL be returned
+- **AND** the factory SHALL execute eagerly during construction, establishing `count` as a tracked dependency
 
-#### Scenario: use_computed() is the primary creation API
-- **WHEN** a developer creates a derived reactive value
-- **THEN** `use_computed(factory)` SHALL be the recommended API
-- **AND** `Computed(fn)` SHALL emit `DeprecationWarning`
+#### Scenario: use_computed() is importable from webcompy top-level
+- **WHEN** a developer writes `from webcompy import use_computed`
+- **THEN** `use_computed` SHALL be available
+- **AND** `computed` SHALL NOT be available from `webcompy` or `webcompy.signal`
 
-#### Scenario: Signal type annotation still works
-- **WHEN** a developer writes `count: Signal[int] = use_state(lambda: 0)`
+#### Scenario: Computed class remains for type annotations
+- **WHEN** a developer writes `doubled: Computed[int] = use_computed(lambda: count.value * 2)`
 - **THEN** the type annotation SHALL be valid
-- **AND** `Signal` SHALL remain importable from `webcompy.signal`
-- **AND** no deprecation warning SHALL be emitted for the type annotation usage
+- **AND** `Computed` SHALL remain importable from `webcompy.signal`
 
-#### Scenario: Internal framework code uses Signal._create()
-- **WHEN** framework internal code creates a Signal without transfer
-- **THEN** `Signal._create(value)` SHALL be used (no warning)
-- **AND** this SHALL NOT be part of the public API (underscore-prefixed method)
+### MODIFIED Requirement: Signal and Computed classes are internal types
+
+The `Signal` and `Computed` classes SHALL be internal implementation types accessible through `webcompy.signal`. They SHALL NOT emit runtime deprecation warnings when constructed directly. The `use_state()` and `use_computed()` composables SHALL be the public creation APIs, using `Signal()` and `Computed()` constructors internally.
+
+#### Scenario: Signal() constructor is not warned
+- **WHEN** framework internal or extension code calls `Signal(0)`
+- **THEN** the `Signal` SHALL be created without any warning
+
+#### Scenario: Computed() constructor is not warned
+- **WHEN** framework internal or extension code calls `Computed(fn)`
+- **THEN** the `Computed` SHALL be created without any warning

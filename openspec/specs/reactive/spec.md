@@ -65,6 +65,37 @@ A `Computed` SHALL evaluate a function, automatically discover which signal valu
 - **AND** `a` SHALL be removed from the computed's producer edges
 - **AND** subsequent changes to `a.value` SHALL NOT trigger recomputation
 
+### Requirement: Computed values shall be created via use_computed()
+
+The function-style creation API for `Computed` SHALL be `use_computed(factory)`. The `Computed` class SHALL remain accessible from `webcompy.signal` as a type annotation (`Computed[T]`) and for framework internal use. `use_computed()` SHALL also be importable from `webcompy` top-level alongside `use_state()`, `use_reactive_list()`, and `use_reactive_dict()`.
+
+#### Scenario: Creating a computed value with use_computed()
+- **WHEN** a developer writes `doubled = use_computed(lambda: count.value * 2)` inside a component setup function
+- **THEN** a `Computed[int]` SHALL be returned
+- **AND** the factory SHALL execute eagerly during construction, establishing `count` as a tracked dependency
+
+#### Scenario: use_computed() is importable from webcompy top-level
+- **WHEN** a developer writes `from webcompy import use_computed`
+- **THEN** `use_computed` SHALL be available
+- **AND** `computed` SHALL NOT be available from `webcompy` or `webcompy.signal`
+
+#### Scenario: Computed class remains for type annotations
+- **WHEN** a developer writes `doubled: Computed[int] = use_computed(lambda: count.value * 2)`
+- **THEN** the type annotation SHALL be valid
+- **AND** `Computed` SHALL remain importable from `webcompy.signal`
+
+### Requirement: Signal and Computed classes are internal types
+
+The `Signal` and `Computed` classes SHALL be internal implementation types accessible through `webcompy.signal`. They SHALL NOT emit runtime deprecation warnings when constructed directly. The `use_state()` and `use_computed()` composables SHALL be the public creation APIs, using `Signal()` and `Computed()` constructors internally.
+
+#### Scenario: Signal() constructor is not warned
+- **WHEN** framework internal or extension code calls `Signal(0)`
+- **THEN** the `Signal` SHALL be created without any warning
+
+#### Scenario: Computed() constructor is not warned
+- **WHEN** framework internal or extension code calls `Computed(fn)`
+- **THEN** the `Computed` SHALL be created without any warning
+
 ### Requirement: Computed properties shall cache lazily on class instances
 A `computed_property` decorated on a class SHALL create a `Computed` instance on first access and cache it in the instance's dictionary, so that the computation runs only once per instance and subsequent accesses return the cached value.
 
@@ -150,8 +181,8 @@ A `readonly()` wrapper SHALL provide a signal value that tracks the source but d
 `SignalReceivable.__signal_members__` SHALL be a `dict[str, SignalBase]` mapping attribute name to the Signal instance assigned to that attribute. `__setattr__` SHALL call `__set_signal_member__(name, value)` when the value is a `SignalBase` instance, passing the attribute name. `computed_property` SHALL register its `Computed` instances by the method name, consistent with the attribute-name keying.
 
 #### Scenario: Signal assigned to self is tracked by name
-- **WHEN** a component executes `self.count = Reactive(0)`
-- **THEN** `self.__signal_members__["count"]` SHALL reference the `Reactive` instance
+- **WHEN** a component executes `self.count = Signal(0)`
+- **THEN** `self.__signal_members__["count"]` SHALL reference the `Signal` instance
 
 #### Scenario: Computed property is tracked by name
 - **WHEN** a component has a `@computed_property` method named `doubled`
@@ -159,9 +190,9 @@ A `readonly()` wrapper SHALL provide a signal value that tracks the source but d
 - **THEN** `self.__signal_members__["doubled"]` SHALL reference the `Computed` instance
 
 #### Scenario: Reassigning a Signal attribute updates the registry
-- **WHEN** a component executes `self.count = Reactive(0)` then `self.count = Reactive(5)`
-- **THEN** `self.__signal_members__["count"]` SHALL reference the second `Reactive(5)` instance
-- **AND** the first `Reactive(0)` instance SHALL no longer be in the registry
+- **WHEN** a component executes `self.count = Signal(0)` then `self.count = Signal(5)`
+- **THEN** `self.__signal_members__["count"]` SHALL reference the second `Signal(5)` instance
+- **AND** the first `Signal(0)` instance SHALL no longer be in the registry
 
 #### Scenario: Non-Signal attributes are not tracked
 - **WHEN** a component executes `self.name = "Alice"` (a plain string)

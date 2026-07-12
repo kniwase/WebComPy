@@ -1,84 +1,131 @@
 ## Context
 
-Phase 2 introduced `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` as the recommended signal creation composables with `UserWarning` for `Signal()` direct construction. The framework's reactive vocabulary now has a mix of function-style and class-style APIs:
+Phase 2 introduced `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` as the recommended signal creation composables. The `Signal`, `Computed`, `ReactiveList`, and `ReactiveDict` classes remain accessible via `webcompy.signal` for type annotations and internal use — their constructors carry no runtime warnings.
 
-- `use_state(factory)` — function-style, transferable (Phase 2) ✓
-- `Signal(value)` — class-style, deprecated via `UserWarning` (Phase 2)
-- `computed(fn)` — function-style ✓ (to be renamed `use_computed()`)
-- `Computed(fn)` — class-style (coexists with `computed()`)
-- `use_reactive_list(factory)` — function-style, transferable (Phase 2) ✓
-- `use_reactive_dict(factory)` — function-style, transferable (Phase 2) ✓
-- `ReactiveList([...])` — class-style, retained (mutation ergonomics)
-- `ReactiveDict({...})` — class-style, retained (mutation ergonomics)
+The framework's reactive vocabulary is now:
 
-This change completes the migration to a unified `use_*` composable API. The `Signal` and `Computed` classes remain as types (for annotations and as the runtime return type), but their constructors are deprecated with `DeprecationWarning`.
+- `use_state(factory)` — function-style, transferable ✓
+- `Signal(value)` — class-style, internal (no warning) ✓
+- `use_computed(fn)` — function-style (to be renamed from `computed()`) ✓
+- `Computed(fn)` — class-style, internal (no warning) ✓
+- `use_reactive_list(factory)` — function-style, transferable ✓
+- `use_reactive_dict(factory)` — function-style, transferable ✓
+
+The sole outlier is `computed()`, which does not follow the `use_*` naming convention. Renaming it to `use_computed()` completes the unification.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Escalate `Signal()` deprecation from `UserWarning` to `DeprecationWarning`
-- Deprecate `Computed()` class constructor
-- Rename `computed()` to `use_computed()` for naming consistency with `use_state()`
-- Add `Computed._create()` classmethod as internal bypass
-- Migrate all internal framework code to function-style APIs or `_create()` bypasses
-- Update documentation, examples, type stubs, and specs
+- Rename `computed()` to `use_computed()` for naming consistency with `use_state()` etc.
+- Export `use_computed` from `webcompy` top-level (alongside `use_state`, `use_reactive_list`, `use_reactive_dict`)
+- Remove `computed` from `webcompy.signal` exports (no deprecated alias)
+- Update all internal usage, docs_app, templates, tests, and specs
 
 **Non-Goals:**
-- Removing the `Signal` / `Computed` classes (they remain as types)
-- Deprecating `ReactiveList` / `ReactiveDict` (retained per investigation)
+- Adding runtime warnings to `Signal()` or `Computed()` constructors
+- Adding `_create()` bypass methods (unnecessary without warnings)
+- Removing `Signal` / `Computed` classes from `webcompy.signal` (they remain for type annotations)
+- Deprecating `ReactiveList` / `ReactiveDict`
 - Changing `use_state()`, `use_reactive_list()`, `use_reactive_dict()` signatures
 
 ## Decisions
 
-### Decision 1: Escalate to DeprecationWarning
+### Decision 1: Rename `computed()` to `use_computed()`
 
-**Choice**: Change `Signal.__init__` warning from `UserWarning` to `DeprecationWarning`.
+**Choice**: Rename the `computed()` function in `_computed.py` to `use_computed()`. Export it from `webcompy.signal` and add to top-level `webcompy` exports. No deprecated alias.
 
-**Rationale**: Phase 2 used `UserWarning` because the class was not yet being removed. This change establishes the intent to eventually remove the public constructor, making `DeprecationWarning` semantically correct. `DeprecationWarning` is visible by default in Python 3.12+ (PEP 565), ensuring users see it.
+**Rationale**: Naming consistency. All composables follow the `use_*` pattern: `use_state()`, `use_computed()`, `use_reactive_list()`, `use_reactive_dict()`, `use_async_result()`. The `computed()` name is the sole outlier. Creating a deprecated alias adds maintenance burden with no benefit — `computed()` is a minor API surface and the migration is a simple find-and-replace.
 
-### Decision 2: Deprecate `Computed()` class constructor
+### Decision 2: No DeprecationWarning on Signal/Computed constructors
 
-**Choice**: Add `DeprecationWarning` to `Computed.__init__()`. `use_computed()` becomes the sole recommended way.
+**Choice**: Do not add warnings. `Signal` and `Computed` remain internal classes (in underscore-prefixed modules `_base.py`, `_computed.py`) accessible via `webcompy.signal`. Their constructors are used by the `use_*` composables internally and by any third-party code that needs to create instances for framework extension.
 
-**Rationale**: Symmetry with `use_state()` / `Signal()`. The function-style API is cleaner and matches the unified `use_*` naming convention.
+**Rationale**: Python's module-level privacy convention (`_module.py`) is the natural boundary. Adding runtime warnings to classes used internally by the framework creates self-inflicted noise that requires bypass mechanisms (`_create()`). The `use_*` composables ARE the public creation API — this is communicated through exports and documentation, not runtime penalties.
 
-### Decision 3: Rename `computed()` to `use_computed()`
+### Decision 3: No internal code migration
 
-**Choice**: Rename the existing `computed()` function to `use_computed()`. Keep `computed` as a deprecated alias for backward compatibility.
+**Choice**: Framework internal code that uses `Signal(value)` or `Computed(fn)` directly keeps those constructor calls as-is. No `_create()` bypass is introduced.
 
-**Rationale**: Naming consistency. All composables follow the `use_*` pattern: `use_state()`, `use_computed()`, `use_reactive_list()`, `use_reactive_dict()`, `use_async_result()`. The `computed()` name is the sole outlier.
+**Rationale**: Without runtime warnings, internal code can use the most natural API. The `use_*` composables are for user-facing code (component setup) where SSR transfer matters. Framework infrastructure code (signal manager, style system, async results) accesses `Signal`/`Computed` directly, which is fine.
 
-### Decision 4: Add `Computed._create()` internal bypass
+### Decision 4: Import path convention for signal classes
 
-**Choice**: Add `Computed._create(fn)` classmethod that bypasses the deprecation warning, mirroring `Signal._create()`.
+**Choice**: Framework code SHALL import publicly-exported signal names from `webcompy.signal` — the public package surface — not from private submodules (`webcompy.signal._base`, `webcompy.signal._computed`, etc.). `_`-prefixed aliases (e.g., `Computed as _Computed`) SHALL NOT be used. Non-exported internal symbols (`consumer_destroy`, `CallbackConsumerNode`, `producer_accessed`, etc.) MAY be imported from private submodules, as they are not available via `webcompy.signal`.
 
-**Rationale**: Internal framework code creates `Computed` instances in several places (`_manager.py`, `_reactive_scoped_style.py`, `styles.py`, and inside `use_computed()` itself). These need a warning-free bypass.
+**Rationale**: `webcompy.signal.__all__` is the canonical public surface. Using it consistently avoids confusion about which import path to use and eliminates unnecessary aliases that suggest a distinction that doesn't exist (both names refer to the same class). The `_`-prefix convention is reserved for indicating non-public symbols — using it on an alias of an already-public class is misleading.
 
-### Decision 5: Internal migration strategy
+## Usage Guidance: Composable vs Direct Constructor
 
-**Choice**: Migrate framework internal code in two tiers:
-1. **Transfer-required** (inside component setup): `Signal(value)` → `use_state(lambda: value)` where the signal needs SSR transfer
-2. **Internal-only** (framework infrastructure, not in component setup): `Signal(value)` → `Signal._create(value)` (no transfer needed, no warnings)
+```
+                    Signal / Computed creation
+                    ═══════════════════════════
 
-Similarly for `Computed`:
-1. **User-facing derivation**: `Computed(fn)` → `use_computed(fn)`
-2. **Internal-only**: `Computed(fn)` → `Computed._create(fn)`
+    ┌───────────────────────┴───────────────────────┐
+    │                                               │
+    ▼                                               ▼
+  use_state(factory)                          Signal(value)
+  use_computed(fn)                            Computed(fn)
+  use_reactive_list(factory)                  ReactiveList([...])
+  use_reactive_dict(factory)                  ReactiveDict({...})
+    │                                               │
+    ├─ SSR transfer enabled                      ├─ No warnings
+    ├─ Automatic key management                    ├─ No transfer
+    └─ Public API (under webcompy)                 └─ Via webcompy.signal
+```
 
-**Rationale**: Not all internal Signal usages need transfer. Using `use_state()` for non-transfer contexts would add unnecessary overhead (payload check, registration). `_create()` methods remain the internal bypass.
+### When to use `use_*` composables
+
+- **Component setup functions** — Create state inside the component setup. SSR transfer is enabled.
+- **User-facing application code** — Can be imported directly from `webcompy`. This is the API users should touch first.
+
+```python
+from webcompy import use_state, use_computed
+
+@define_component
+def Counter():
+    count = use_state(lambda: 0)          # ← composable
+    doubled = use_computed(lambda: count.value * 2)  # ← composable
+    ...
+```
+
+### When to use `Signal()` / `Computed()` directly
+
+- **Module-level (global) state** — State whose lifetime spans the entire application, existing outside any component.
+
+```python
+from webcompy.signal import Signal
+
+_global_counter = Signal(0)  # module-level, no component context
+
+class CounterStore:
+    def __init__(self):
+        self._count = Signal(0)
+```
+
+- **Plugins** — Internal state for `WebComPyPlugin`. Plugin setup is independent of component setup, so it is outside the `use_state()` context.
+
+- **DI providers** — Holds values injected via `provide()`. DI scopes are constructed outside component setup.
+
+- **Third-party extensions** — Libraries that depend on the framework's internal API. The `Signal` / `Computed` classes are public internal types and can be used without warnings.
+
+- **Framework infrastructure** — The framework's own internal implementation, such as the signal manager (`_manager.py`), scoped style system (`_reactive_scoped_style.py`), and `AsyncResult` internals.
+
+### Design principle
+
+The `use_*` composables are the public API for creating user-facing state that requires transfer, while `Signal()` / `Computed()` are the internal API for creating internal/infrastructure state that does not require transfer.
+
+The two are not in opposition; they are natural choices depending on context. Rather than prohibiting one side with runtime warnings, we guide the choice through the export surface (`webcompy` vs `webcompy.signal`) and documentation.
 
 ## Risks / Trade-offs
 
-- **[Breaking change for `computed()` users]** Renaming `computed()` to `use_computed()` breaks code that imports it. → Mitigation: keep `computed` as a deprecated alias with `DeprecationWarning`; document the migration.
+- **[Breaking change for `computed()` users]** Renaming without an alias breaks all existing `computed()` usage. → Mitigation: `computed()` is currently only exported from `webcompy.signal`, not from the top-level `webcompy`, so its user-facing surface is small. Mechanical find-and-replace covers all cases.
 
-- **[Computed() deprecation impact]** If user code uses `Computed(fn)` directly, they'll see warnings. → Mitigation: `use_computed()` already exists (renamed from `computed()`); migration is mechanical.
-
-- **[Spec staleness]** Existing `reactive/spec.md` and `signal-value-transfer/spec.md` scenarios use `Signal(value)` and `Computed(fn)` patterns. → Mitigation: add `openspec sync-specs` tasks to update all deprecated patterns in specs.
+- **[Spec staleness]** Existing `reactive/spec.md` scenarios use `Signal(value)` and `Computed(fn)` patterns. → Mitigation: sync-specs to update scenarios to use `use_state()` and `use_computed()` where user-facing, keeping constructor access for internal contexts.
 
 ## Open Questions
 
-- Should `computed` (the deprecated alias) be removed in this change or a future change? **Tentative answer: future change** — provide one release cycle of backward compatibility.
-- Should `Computed._create()` also be available for external users? **Tentative answer: No** — it's an internal API marked with `_` prefix.
+(none)
 
 ## Not In Scope
 
-- **`computed_property` decorator**: This decorator is part of the class-based component API and is retained as-is. It is NOT deprecated in this change. Like the `Computed` class (which remains as a type), `computed_property` continues to work without deprecation warnings. A future change may address class-based API deprecation holistically.
+- **`computed_property` decorator**: This decorator is part of the class-based component API and is retained as-is. Like the `Computed` class (which remains as a type), `computed_property` continues to work without changes. A future change may address class-based API consistency holistically.

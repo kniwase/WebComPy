@@ -73,7 +73,7 @@ The framework SHALL provide a `reactive_block(selector, content)` helper that re
 #### Scenario: Building a reactive block
 - **WHEN** a developer writes:
   ```python
-  app.append_style(reactive_block("body", computed(lambda: f"color: {fg.value};")))
+  app.append_style(reactive_block("body", Computed(lambda: f"color: {fg.value};")))
   ```
 - **THEN** the returned `Computed[str]` SHALL produce `"body {\ncolor: ...\n}"`
 - **AND** changes to `fg` SHALL trigger re-evaluation
