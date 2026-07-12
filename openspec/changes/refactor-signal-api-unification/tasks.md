@@ -47,9 +47,9 @@
 
 ## 10. Improve error message consistency
 
-- [ ] 10.1 Include `func_name` in `_resolve_factory()` error messages
-- [ ] 10.2 Fix `_resolve_args()` `func_name` formatting
-- [ ] 10.3 Add `match` assertions to error tests
+- [x] 10.1 Include `func_name` in `_resolve_factory()` error messages
+- [x] 10.2 Fix `_resolve_args()` `func_name` formatting
+- [x] 10.3 Add `match` assertions to error tests
 
 ## 11. Remove unused key parameter from use_computed()
 
