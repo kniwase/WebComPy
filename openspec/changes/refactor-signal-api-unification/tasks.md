@@ -63,8 +63,8 @@
 
 ## 13. Run validation
 
-- [ ] 13.1 Run `uv run ruff check .` and `uv run ruff format --check .`
-- [ ] 13.2 Run `uv run pyright`
-- [ ] 13.3 Run `uv run python -m pytest tests/ --tb=short`
-- [ ] 13.4 Run `uv run python -m webcompy generate`
-- [ ] 13.5 Run `openspec validate refactor-signal-api-unification`
+- [x] 13.1 Run `uv run ruff check .` and `uv run ruff format --check .`
+- [x] 13.2 Run `uv run pyright`
+- [x] 13.3 Run `uv run python -m pytest tests/ --tb=short`
+- [x] 13.4 Run `uv run python -m webcompy generate`
+- [x] 13.5 Run `openspec validate refactor-signal-api-unification`
