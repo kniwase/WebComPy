@@ -53,9 +53,9 @@
 
 ## 11. Remove unused key parameter from use_computed()
 
-- [ ] 11.1 Simplify `use_computed()` to single `Callable[[], T]` argument
-- [ ] 11.2 Remove `@overload` and `_resolve_factory` usage from `_computed.py`
-- [ ] 11.3 Update delta spec and tests accordingly
+- [x] 11.1 Simplify `use_computed()` to single `Callable[[], T]` argument
+- [x] 11.2 Remove `@overload` and `_resolve_factory` usage from `_computed.py`
+- [x] 11.3 Update delta spec and tests accordingly
 
 ## 12. Update README
 
