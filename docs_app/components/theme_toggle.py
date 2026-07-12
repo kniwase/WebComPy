@@ -1,6 +1,6 @@
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
-from webcompy.signal import computed
+from webcompy.signal import use_computed
 from webcompy.ui.theme import Theme, use_theme
 
 
@@ -8,7 +8,7 @@ from webcompy.ui.theme import Theme, use_theme
 def ThemeToggle(_: ComponentContext[None]):
     signal, controller = use_theme()
 
-    label = computed(
+    label = use_computed(
         lambda: {
             Theme.LIGHT: "Switch to dark theme",
             Theme.DARK: "Switch to system theme",
@@ -16,7 +16,7 @@ def ThemeToggle(_: ComponentContext[None]):
         }[signal.value]
     )
 
-    icon = computed(
+    icon = use_computed(
         lambda: {
             Theme.LIGHT: "☀",
             Theme.DARK: "🌙",
@@ -30,7 +30,7 @@ def ThemeToggle(_: ComponentContext[None]):
             "class": "theme-toggle",
             "aria-label": label,
             "role": "switch",
-            "aria-checked": computed(lambda: "true" if signal.value is Theme.DARK else "false"),
+            "aria-checked": use_computed(lambda: "true" if signal.value is Theme.DARK else "false"),
             "title": label,
             "@click": lambda _ev: controller.cycle(),
         },

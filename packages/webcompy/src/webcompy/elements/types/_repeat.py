@@ -10,7 +10,7 @@ from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement, _position_element_nodes, _subtree_has_async_setup
 from webcompy.elements.types._text import NewLine
 from webcompy.exception import WebComPyException
-from webcompy.signal import SignalBase, computed
+from webcompy.signal import Computed, SignalBase
 
 K = TypeVar("K", str, int)
 V = TypeVar("V")
@@ -249,7 +249,7 @@ class RepeatElement(DynamicElement):
 class MultiLineTextElement(RepeatElement):
     def __init__(self, text: str | SignalBase[Any]) -> None:
         super().__init__(
-            computed(
+            Computed(
                 lambda: list(
                     chain.from_iterable(
                         map(

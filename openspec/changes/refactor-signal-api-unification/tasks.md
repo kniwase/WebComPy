@@ -1,24 +1,24 @@
 ## 1. Rename computed() to use_computed() in core signal module
 
-- [ ] 1.1 Rename `computed(func)` to `use_computed(func)` in `packages/webcompy/src/webcompy/signal/_computed.py`
-- [ ] 1.2 Update `packages/webcompy/src/webcompy/signal/__init__.py` to export `use_computed`
-- [ ] 1.3 Add `use_computed` to `packages/webcompy/src/webcompy/__init__.py`
+- [x] 1.1 Rename `computed(func)` to `use_computed(func)` in `packages/webcompy/src/webcompy/signal/_computed.py`
+- [x] 1.2 Update `packages/webcompy/src/webcompy/signal/__init__.py` to export `use_computed`
+- [x] 1.3 Add `use_computed` to `packages/webcompy/src/webcompy/__init__.py`
 
 ## 2. Update framework internals to use use_computed
 
-- [ ] 2.1 Replace all `computed` imports and usages in `packages/webcompy/src/webcompy/`
-- [ ] 2.2 Update `packages/webcompy-server/src/`, `packages/webcompy-cli/src/`, `packages/webcompy-testing/src/`
+- [x] 2.1 Replace all `computed` imports and usages in `packages/webcompy/src/webcompy/`
+- [x] 2.2 Update `packages/webcompy-server/src/`, `packages/webcompy-cli/src/`, `packages/webcompy-testing/src/`
 
 ## 3. Update docs_app, CLI templates, and E2E apps
 
-- [ ] 3.1 Replace `computed(` usage in `docs_app/` and CLI templates
-- [ ] 3.2 Replace `computed(` usage in `e2e/` apps
-- [ ] 3.3 Verify docs_app static site generation
+- [x] 3.1 Replace `computed(` usage in `docs_app/` and CLI templates
+- [x] 3.2 Replace `computed(` usage in `e2e/` apps
+- [x] 3.3 Verify docs_app static site generation
 
 ## 4. Update unit tests
 
-- [ ] 4.1 Replace `computed(` usage in `tests/` (excluding `computed_property`)
-- [ ] 4.2 Add `tests/test_use_computed.py` covering imports, error cases, and transfer behavior
+- [x] 4.1 Replace `computed(` usage in `tests/` (excluding `computed_property`)
+- [x] 4.2 Add `tests/test_use_computed.py` covering imports, error cases, and transfer behavior
 
 ## 5. Update base specs and design docs
 
