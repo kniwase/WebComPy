@@ -15,7 +15,7 @@ jobs:
       has-e2e-changes: ${{ steps.check.outputs.has-e2e-changes }}
       has-workflow-changes: ${{ steps.check.outputs.has-workflow-changes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - id: check
@@ -34,10 +34,10 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
       - run: npx @fission-ai/openspec@latest validate --specs
       - run: npx @fission-ai/openspec@latest validate --changes
 
@@ -45,10 +45,10 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
       - name: Detect completed but unarchived changes
         run: |
           changes_json=$(npx @fission-ai/openspec@latest list --json 2>/dev/null)
@@ -87,7 +87,7 @@ jobs:
       run:
         shell: bash -eo pipefail {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-environment
       - name: Run ruff check
         run: |
@@ -113,7 +113,7 @@ jobs:
       run:
         shell: bash -eo pipefail {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-environment
       - name: Run pyright
         run: |
@@ -130,7 +130,7 @@ jobs:
     if: ${{ (needs.detect-scope.outputs.has-code-changes == 'true' || needs.detect-scope.outputs.has-generate-changes == 'true') && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-environment
         with:
           uv-sync-args: --all-groups
@@ -149,7 +149,7 @@ jobs:
       run:
         shell: bash -eo pipefail {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-environment
         with:
           uv-sync-args: --all-groups
@@ -218,14 +218,14 @@ jobs:
               files: e2e/docs/test_fetch.py
             serving_mode: static
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-environment
         with:
           uv-sync-args: "--group docs"
           playwright-install: "true"
       - name: Download docs dist artifact
         if: startsWith(matrix.group.name, 'docs-')
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: docs-dist
           path: docs_app/dist/
@@ -272,20 +272,20 @@ jobs:
       pull-requests: write
       issues: write  # required for POST/PATCH to /issues/{number}/comments via gh api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
           fetch-depth: 0
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
-          cache: true
+          enable-cache: true
 
       - run: uv sync --dev --no-group docs
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
 
       # Install OpenSpec CLI so the review agent can use it.
       # Validation is already performed by the openspec/openspec-check jobs.
@@ -293,7 +293,7 @@ jobs:
       - run: npm install -g @fission-ai/openspec@latest || true
 
       - name: Download CI result artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: ci-results/
           pattern: ci-*
