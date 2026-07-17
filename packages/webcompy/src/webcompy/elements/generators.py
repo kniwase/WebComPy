@@ -16,8 +16,9 @@ from webcompy.elements.typealias._element_property import (
     EventHandler,
 )
 from webcompy.elements.typealias._html_tag_names import HtmlTags
+from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._client_only import ClientOnlyElement
-from webcompy.elements.types._element import Element, ElementBase
+from webcompy.elements.types._element import Element
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._repeat import MultiLineTextElement, RepeatElement
 from webcompy.elements.types._suspense import SuspenseElement
@@ -63,7 +64,7 @@ def create_element(
     return Element(tag_name, attrs, events, ref, children, preserve_children=preserve)
 
 
-ChildNode: TypeAlias = ElementBase | TextElement | MultiLineTextElement | NewLine | SignalBase[Any] | str | None
+ChildNode: TypeAlias = ElementAbstract | SignalBase[Any] | str | None
 NodeGenerator: TypeAlias = Callable[[], ChildNode]
 
 
