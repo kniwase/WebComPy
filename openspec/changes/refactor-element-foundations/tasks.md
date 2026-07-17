@@ -6,12 +6,12 @@
 
 ## 2. `_refresh_sync` Common Helper Extraction
 
-- [ ] 2.1 Implement `_run_refresh_sync(refresh: Callable[..., Awaitable[None]], *args: Any) -> None` in `packages/webcompy/src/webcompy/elements/types/_dynamic.py` — extracts the nest_asyncio + loop.run_until_complete sync wrapper verbatim from `_switch.py:76-92` / `_repeat.py:144-160`
-- [ ] 2.2 Import `_run_refresh_sync` from `_dynamic` in `_switch.py`; reduce `SwitchElement._refresh_sync` to `_run_refresh_sync(self._refresh, *args)`
-- [ ] 2.3 Import `_run_refresh_sync` from `_dynamic` in `_repeat.py`; reduce `RepeatElement._refresh_sync` to `_run_refresh_sync(self._refresh, *args)`
+- [x] 2.1 Implement `_run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None` in `packages/webcompy/src/webcompy/elements/types/_dynamic.py` — extracts the nest_asyncio + loop.run_until_complete sync wrapper verbatim from `_switch.py:76-92` / `_repeat.py:144-160`
+- [x] 2.2 Import `_run_refresh_sync` from `_dynamic` in `_switch.py`; reduce `SwitchElement._refresh_sync` to `_run_refresh_sync(self._refresh, *args)`
+- [x] 2.3 Import `_run_refresh_sync` from `_dynamic` in `_repeat.py`; reduce `RepeatElement._refresh_sync` to `_run_refresh_sync(self._refresh, *args)`
 
 ## 3. Verification
 
 - [x] 3.1 Run `uv run pyright` — confirm no new type errors; existing `switch()` / `repeat()` return-type usages should become cleaner (no latent `DynamicElement` -> `ChildNode` mismatch); `_run_refresh_sync` usages type-check
 - [x] 3.2 Run `uv run ruff check .` and `uv run ruff format --check .`
-- [ ] 3.3 Run `uv run python -m pytest tests/ --tb=short` — confirm no runtime regressions from either refactor
+- [x] 3.3 Run `uv run python -m pytest tests/ --tb=short` — confirm no runtime regressions from either refactor
