@@ -59,6 +59,22 @@ When a signal value is used as an element attribute or text content, any change 
 - **AND** later increments `my_count`
 - **THEN** the text content in the DOM SHALL update to reflect the new count
 
+### Requirement: ChildNode type alias shall accept all renderable node types
+
+`ChildNode` SHALL be defined as `ElementAbstract | SignalBase[Any] | str | None`. Because `ElementAbstract` is the common root of `Element`, `Component`, `TextElement`, `NewLine`, and all `DynamicElement` subclasses (`SwitchElement`, `RepeatElement`, `MultiLineTextElement`, and future `FragmentElement`), the alias SHALL accept any renderable element node without per-type enumeration.
+
+#### Scenario: switch() result is a valid ChildNode
+- **WHEN** a `NodeGenerator` returns a `SwitchElement` (from `switch()`)
+- **THEN** the return value SHALL be a valid `ChildNode` under static type checking
+
+#### Scenario: repeat() result is a valid ChildNode
+- **WHEN** a `NodeGenerator` returns a `RepeatElement` or `MultiLineTextElement`
+- **THEN** the return value SHALL be a valid `ChildNode` under static type checking
+
+#### Scenario: Future DynamicElement types are automatically covered
+- **WHEN** a new `DynamicElement` subclass (e.g., `FragmentElement`) is introduced
+- **THEN** it SHALL be automatically valid as a `ChildNode` without requiring an edit to the type alias
+
 ### Requirement: Conditional rendering shall display one branch at a time
 The `switch` construct SHALL evaluate a series of conditions and render the template of the first matching condition. When conditions change, the previous branch SHALL be removed and the new branch SHALL be rendered. The branch template MAY return a `DynamicElement` (such as a `repeat`), and the `SwitchElement` SHALL handle it as a transparent child with no DOM node of its own. When the `SwitchElement` is refreshed due to a signal change (such as a route change), any `on_after_rendering` lifecycle hooks of newly created components SHALL be deferred until after the reactive propagation and DOM updates have completed.
 
@@ -116,6 +132,24 @@ When `key` is provided (overloads 2, 4, 5) or dict mode is used (overloads 1, 2)
 - **WHEN** a developer writes `repeat(my_dict, lambda value, key: html.LI({}, f"{key}: {value}"))`
 - **THEN** one `<li>` SHALL be rendered for each key-value pair in `my_dict`
 - **AND** dict keys SHALL be used as reconciliation identifiers for efficient DOM updates
+
+### Requirement: DynamicElement `_refresh_sync` pattern shall use a shared helper
+
+A `_run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None` helper SHALL be defined in `webcompy/elements/types/_dynamic.py`. The helper SHALL encapsulate the nest_asyncio + loop.run_until_complete sync-wrapping logic. `SwitchElement._refresh_sync` and `RepeatElement._refresh_sync` SHALL delegate to `_run_refresh_sync` instead of containing their own copies of the sync-wrapper logic.
+
+#### Scenario: SwitchElement uses shared helper
+- **WHEN** `SwitchElement._refresh_sync` is called
+- **THEN** it SHALL delegate to `_run_refresh_sync(self._refresh, *args)`
+- **AND** the runtime behavior SHALL be identical to the pre-extraction implementation
+
+#### Scenario: RepeatElement uses shared helper
+- **WHEN** `RepeatElement._refresh_sync` is called
+- **THEN** it SHALL delegate to `_run_refresh_sync(self._refresh, *args)`
+- **AND** the runtime behavior SHALL be identical to the pre-extraction implementation
+
+#### Scenario: New DynamicElement subclasses use shared helper
+- **WHEN** a new `DynamicElement` subclass (e.g., `MarkdownForElement`) requires `_refresh_sync` semantics
+- **THEN** it SHALL use `_run_refresh_sync(self._refresh, *args)` without duplicating the sync-wrapper logic
 
 ### Requirement: Pre-rendered DOM nodes shall be reused during hydration via adopt-and-hydrate
 When full hydration is enabled, elements SHALL use `_hydrate_node()` instead of `_init_node()` for prerendered nodes. `_hydrate_node()` SHALL check for an existing prerendered node and delegate to `_adopt_node()` if found, or fall back to `_init_node()` if not. This enables efficient hydration of server-rendered content. This requirement applies to all node types including `#text` nodes. During hydration, attribute values and text content SHALL only be written if they differ from the prerendered values to avoid redundant DOM operations.
