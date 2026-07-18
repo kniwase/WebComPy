@@ -47,9 +47,10 @@ Extract a module-level helper:
 
 ```python
 # _dynamic.py (new)
-from typing import Any, Awaitable, Callable
+from collections.abc import Callable, Coroutine
+from typing import Any
 
-def _run_refresh_sync(refresh: Callable[..., Awaitable[None]], *args: Any) -> None:
+def _run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None:
     import asyncio
     from webcompy.utils._environment import ENVIRONMENT
     try:

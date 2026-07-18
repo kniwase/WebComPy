@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from abc import abstractmethod
+from collections.abc import Callable, Coroutine
 from contextlib import suppress
 from typing import Any
 
@@ -26,6 +27,23 @@ def _subtree_has_async_setup(element: ElementAbstract) -> bool:
             if _subtree_has_async_setup(child):
                 return True
     return False
+
+
+def _run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None:
+    from webcompy.utils._environment import ENVIRONMENT
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(refresh(*args))
+    else:
+        if ENVIRONMENT != "pyscript":
+            import nest_asyncio
+
+            if not getattr(loop, "_nest_asyncio_patched", False):
+                nest_asyncio.apply(loop)
+                loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
+        loop.run_until_complete(refresh(*args))
 
 
 class DynamicElement(ElementWithChildren):

@@ -13,6 +13,7 @@ from webcompy.elements.types._dynamic import (
     DynamicElement,
     _patch_children,
     _position_element_nodes,
+    _run_refresh_sync,
     _subtree_has_async_setup,
 )
 from webcompy.exception import WebComPyException
@@ -74,22 +75,7 @@ class SwitchElement(DynamicElement):
                         self._add_callback_node(cond.on_after_updating(callback))
 
     def _refresh_sync(self, *args: Any):
-        import asyncio
-
-        from webcompy.utils._environment import ENVIRONMENT
-
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            asyncio.run(self._refresh(*args))
-        else:
-            if ENVIRONMENT != "pyscript":
-                import nest_asyncio
-
-                if not getattr(loop, "_nest_asyncio_patched", False):
-                    nest_asyncio.apply(loop)
-                    loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
-            loop.run_until_complete(self._refresh(*args))
+        _run_refresh_sync(self._refresh, *args)
 
     async def _refresh(self, *args: Any):
         idx, generator = self._select_generator()
