@@ -1,6 +1,6 @@
 ## 1. FragmentElement
 
-- [ ] 1.1 Implement `FragmentElement(DynamicElement)` in `packages/webcompy/src/webcompy/elements/types/_fragment.py` (constructor accepts `list[ElementAbstract]`, `_on_set_parent` is no-op). After `refactor-element-foundations`, `FragmentElement` (an `ElementAbstract` subclass) is automatically a valid `ChildNode`; no separate type-alias edit is needed.
+- [ ] 1.1 Implement `FragmentElement(DynamicElement)` in `packages/webcompy/src/webcompy/elements/types/_fragment.py` (constructor accepts `list[ElementAbstract]`, `_on_set_parent` is no-op). After `refactor-element-foundations`, `FragmentElement` (an `ElementAbstract` subclass) is automatically valid as `ElementChildren`; no separate type-alias edit is needed.
 - [ ] 1.2 Test FragmentElement rendering (single child, multiple children, zero children, nested in repeat, nested in switch)
 - [ ] 1.3 Test FragmentElement hydration: zero children (no-op), single child (child hydrated), multiple children (all hydrated in parent)
 
@@ -24,7 +24,7 @@
 - [ ] 4.2 Implement `bind_for(node: ForNode, ctx) -> ElementChildren` with Signal detection → `repeat()` + FragmentElement path vs list comprehension path
 - [ ] 4.3 Implement branch/iteration body binding with context extension (loop variable added to context)
 - [ ] 4.4 Implement FragmentElement wrapping for multi-child branches/iterations
-- [ ] 4.5 Implement dict key-value mapping for `{% for key, value in dict %}`: select `repeat()` `Callable[[V, K], ChildNode]` overload, map callback args `(value=args[0], key=args[1])` to loop variable names by position
+- [ ] 4.5 Implement dict key-value mapping for `{% for key, value in dict %}`: select `repeat()` `Callable[[V, K], ElementChildren]` overload, map callback args `(value=args[0], key=args[1])` to loop variable names by position
 - [ ] 4.6 Widen `SwitchCasesSignal` type alias in `packages/webcompy/src/webcompy/elements/types/_switch.py:23` from `list[tuple[SignalBase[Any], NodeGenerator]]` to `list[tuple[Any, NodeGenerator]]` — aligns with runtime behavior in `_select_generator()` and with `SwitchCasesSignalList` which already uses `Any`; pure type-level change
 
 ## 5. Unit Tests — Parser Control Flow

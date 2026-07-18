@@ -10,7 +10,7 @@
 
 ### Requirement: Suspense shall be a DynamicElement
 
-`SuspenseElement` SHALL extend `DynamicElement` and SHALL store a no-op `_on_set_parent()` (no signal subscriptions are required). `SuspenseElement` SHALL accept `fallback` (a `Callable[[], ChildNode]` generator), `children` (a `Callable[[], ChildNode]` generator), optional `error_fallback` (a `Callable[[], ChildNode]` generator), and optional `timeout` (a `float` in seconds, default `10.0`).
+`SuspenseElement` SHALL extend `DynamicElement` and SHALL store a no-op `_on_set_parent()` (no signal subscriptions are required). `SuspenseElement` SHALL accept `fallback` (a `Callable[[], ElementChildren]` generator), `children` (a `Callable[[], ElementChildren]` generator), optional `error_fallback` (a `Callable[[], ElementChildren]` generator), and optional `timeout` (a `float` in seconds, default `10.0`).
 
 #### Scenario: Suspense is registered as a DynamicElement
 - **WHEN** `SuspenseElement` is instantiated with `fallback`, `children`, and optional `error_fallback` / `timeout` parameters
@@ -20,7 +20,7 @@
 
 ### Requirement: Suspense children shall be lazy
 
-The `children` parameter SHALL be `Callable[[], ChildNode]` (a zero-argument function) and SHALL be invoked only when `SuspenseElement` is ready to render children. The `fallback` parameter SHALL also be `Callable[[], ChildNode]` for consistency. This lazy-evaluation pattern mirrors the `switch()` API where generators are called conditionally.
+The `children` parameter SHALL be `Callable[[], ElementChildren]` (a zero-argument function) and SHALL be invoked only when `SuspenseElement` is ready to render children. The `fallback` parameter SHALL also be `Callable[[], ElementChildren]` for consistency. This lazy-evaluation pattern mirrors the `switch()` API where generators are called conditionally.
 
 #### Scenario: Children generator is not called until Suspense is ready
 - **WHEN** `SuspenseElement.__init__(fallback, children, ...)` stores a `children` callable

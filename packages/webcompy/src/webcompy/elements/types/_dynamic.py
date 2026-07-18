@@ -30,8 +30,6 @@ def _subtree_has_async_setup(element: ElementAbstract) -> bool:
 
 
 def _run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None:
-    import asyncio
-
     from webcompy.utils._environment import ENVIRONMENT
 
     try:

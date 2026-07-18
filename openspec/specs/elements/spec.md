@@ -59,21 +59,21 @@ When a signal value is used as an element attribute or text content, any change 
 - **AND** later increments `my_count`
 - **THEN** the text content in the DOM SHALL update to reflect the new count
 
-### Requirement: ChildNode type alias shall accept all renderable node types
+### Requirement: Child node type alias shall accept all renderable node types
 
-`ChildNode` SHALL be defined as `ElementAbstract | SignalBase[Any] | str | None`. Because `ElementAbstract` is the common root of `Element`, `Component`, `TextElement`, `NewLine`, and all `DynamicElement` subclasses (`SwitchElement`, `RepeatElement`, `MultiLineTextElement`, and future `FragmentElement`), the alias SHALL accept any renderable element node without per-type enumeration.
+`ElementChildren` SHALL be defined as `ElementAbstract | SignalBase[Any] | str | None` in `webcompy/elements/typealias/_element_property.py`. It SHALL be the single child-node type alias used by `NodeGenerator`, `repeat()` templates, and element children. Because `ElementAbstract` is the common root of `Element`, `Component`, `TextElement`, `NewLine`, and all `DynamicElement` subclasses (`SwitchElement`, `RepeatElement`, `MultiLineTextElement`, and future `FragmentElement`), the alias SHALL accept any renderable element node without per-type enumeration. `webcompy/elements/generators.py` SHALL use `ElementChildren` directly for template return types and SHALL NOT maintain a separate alias.
 
-#### Scenario: switch() result is a valid ChildNode
+#### Scenario: switch() result is a valid child node
 - **WHEN** a `NodeGenerator` returns a `SwitchElement` (from `switch()`)
-- **THEN** the return value SHALL be a valid `ChildNode` under static type checking
+- **THEN** the return value SHALL be valid as `ElementChildren` under static type checking
 
-#### Scenario: repeat() result is a valid ChildNode
+#### Scenario: repeat() result is a valid child node
 - **WHEN** a `NodeGenerator` returns a `RepeatElement` or `MultiLineTextElement`
-- **THEN** the return value SHALL be a valid `ChildNode` under static type checking
+- **THEN** the return value SHALL be valid as `ElementChildren` under static type checking
 
 #### Scenario: Future DynamicElement types are automatically covered
 - **WHEN** a new `DynamicElement` subclass (e.g., `FragmentElement`) is introduced
-- **THEN** it SHALL be automatically valid as a `ChildNode` without requiring an edit to the type alias
+- **THEN** it SHALL be automatically valid as `ElementChildren` without requiring an edit to the type alias
 
 ### Requirement: Conditional rendering shall display one branch at a time
 The `switch` construct SHALL evaluate a series of conditions and render the template of the first matching condition. When conditions change, the previous branch SHALL be removed and the new branch SHALL be rendered. The branch template MAY return a `DynamicElement` (such as a `repeat`), and the `SwitchElement` SHALL handle it as a transparent child with no DOM node of its own. When the `SwitchElement` is refreshed due to a signal change (such as a route change), any `on_after_rendering` lifecycle hooks of newly created components SHALL be deferred until after the reactive propagation and DOM updates have completed.
@@ -102,11 +102,11 @@ The `switch` construct SHALL evaluate a series of conditions and render the temp
 ### Requirement: List and dict rendering shall map signal collections to element templates with type-safe overloads
 The `repeat` construct SHALL support five type-safe overload signatures:
 
-1. `repeat(ReactiveDict[K, V], template: (V,) -> ChildNode)` — dict value-only, keyed by dict keys
-2. `repeat(ReactiveDict[K, V], template: (V, K) -> ChildNode)` — dict value+key, keyed by dict keys
-3. `repeat(ReactiveList[V], template: (V,) -> ChildNode)` — list unkeyed (backward compatible, full rebuild)
-4. `repeat(ReactiveList[V], template: (V, int) -> ChildNode)` — list with index as key
-5. `repeat(ReactiveList[V], template: (V, K) -> ChildNode), key: (V) -> K)` — list with custom key function
+1. `repeat(ReactiveDict[K, V], template: (V,) -> ElementChildren)` — dict value-only, keyed by dict keys
+2. `repeat(ReactiveDict[K, V], template: (V, K) -> ElementChildren)` — dict value+key, keyed by dict keys
+3. `repeat(ReactiveList[V], template: (V,) -> ElementChildren)` — list unkeyed (backward compatible, full rebuild)
+4. `repeat(ReactiveList[V], template: (V, int) -> ElementChildren)` — list with index as key
+5. `repeat(ReactiveList[V], template: (V, K) -> ElementChildren), key: (V) -> K)` — list with custom key function
 
 When `key` is provided (overloads 2, 4, 5) or dict mode is used (overloads 1, 2), `RepeatElement` SHALL reuse existing DOM elements for items whose keys persist across mutations. When no `key` is provided and single-arg template is used (overload 3), all rendered items SHALL be removed and regenerated (full rebuild behavior).
 

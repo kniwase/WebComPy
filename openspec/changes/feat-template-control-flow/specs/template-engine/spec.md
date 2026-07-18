@@ -2,7 +2,7 @@
 
 ### Requirement: FragmentElement shall render multiple children transparently without a DOM wrapper
 
-`FragmentElement` SHALL be a `DynamicElement` subclass that has no DOM node of its own and renders its children sequentially in the parent element. After `refactor-element-foundations` (which widens `ChildNode` to `ElementAbstract`), `FragmentElement` is automatically valid as a `ChildNode` without a separate type-alias addition.
+`FragmentElement` SHALL be a `DynamicElement` subclass that has no DOM node of its own and renders its children sequentially in the parent element. After `refactor-element-foundations` (which widens the child-node type alias to `ElementAbstract`), `FragmentElement` is automatically valid as `ElementChildren` without a separate type-alias addition.
 
 #### Scenario: Fragment renders children in parent
 - **WHEN** a `FragmentElement([Element("p", {}, []), Element("span", {}, [])])` is rendered inside a `<div>`
@@ -113,6 +113,6 @@
 
 #### Scenario: Dict key-value unpacking
 - **WHEN** `{% for key, value in my_dict %}<p>{{ key }}: {{ value }}</p>{% endfor %}` is used with `my_dict` being a `ReactiveDict`
-- **THEN** `repeat()` SHALL be generated using the `Callable[[V, K], ChildNode]` overload
+- **THEN** `repeat()` SHALL be generated using the `Callable[[V, K], ElementChildren]` overload
 - **AND** both `key` and `value` SHALL be available as loop variables in the body context
 - **AND** the body SHALL update reactively when dict entries change

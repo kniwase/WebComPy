@@ -16,7 +16,6 @@ from webcompy.elements.typealias._element_property import (
     EventHandler,
 )
 from webcompy.elements.typealias._html_tag_names import HtmlTags
-from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._client_only import ClientOnlyElement
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._refference import DomNodeRef
@@ -64,49 +63,48 @@ def create_element(
     return Element(tag_name, attrs, events, ref, children, preserve_children=preserve)
 
 
-ChildNode: TypeAlias = ElementAbstract | SignalBase[Any] | str | None
-NodeGenerator: TypeAlias = Callable[[], ChildNode]
+NodeGenerator: TypeAlias = Callable[[], ElementChildren]
 
 
 @overload
 def repeat(
     sequence: SignalBase[dict[K, V]],
-    template: Callable[[V], ChildNode],
+    template: Callable[[V], ElementChildren],
 ) -> RepeatElement: ...
 
 
 @overload
 def repeat(
     sequence: SignalBase[dict[K, V]],
-    template: Callable[[V, K], ChildNode],
+    template: Callable[[V, K], ElementChildren],
 ) -> RepeatElement: ...
 
 
 @overload
 def repeat(
     sequence: SignalBase[list[V]],
-    template: Callable[[V], ChildNode],
+    template: Callable[[V], ElementChildren],
 ) -> RepeatElement: ...
 
 
 @overload
 def repeat(
     sequence: SignalBase[list[V]],
-    template: Callable[[V, int], ChildNode],
+    template: Callable[[V, int], ElementChildren],
 ) -> RepeatElement: ...
 
 
 @overload
 def repeat(
     sequence: SignalBase[list[V]],
-    template: Callable[[V, K], ChildNode],
+    template: Callable[[V, K], ElementChildren],
     key: Callable[[V], K],
 ) -> RepeatElement: ...
 
 
 def repeat(
     sequence: SignalBase[dict[K, V]] | SignalBase[list[V]],
-    template: Callable[[V], ChildNode] | Callable[[V, K], ChildNode],
+    template: Callable[[V], ElementChildren] | Callable[[V, K], ElementChildren],
     key: Callable[[V], K] | None = None,
 ) -> RepeatElement:
     return RepeatElement(sequence, template, key)  # type: ignore[arg-type]

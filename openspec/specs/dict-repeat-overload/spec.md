@@ -42,8 +42,8 @@ The `_last_mutation` attribute SHALL be an additional side-channel that does not
 
 ### Requirement: repeat() shall accept ReactiveDict with type-safe overloads
 The `repeat()` function SHALL accept a `ReactiveDict[K, V]` as its first argument, where K is `str | int`. Two overloads are provided for dict mode:
-- `repeat(dict, template)` where `template: (V,) -> ChildNode` — value only
-- `repeat(dict, template)` where `template: (V, K) -> ChildNode` — value and key
+- `repeat(dict, template)` where `template: (V,) -> ElementChildren` — value only
+- `repeat(dict, template)` where `template: (V, K) -> ElementChildren` — value and key
 
 The dict keys SHALL be used as reconciliation identifiers — no separate `key` function is needed or allowed for dict mode.
 
@@ -77,9 +77,9 @@ The dict keys SHALL be used as reconciliation identifiers — no separate `key` 
 
 ### Requirement: repeat() shall accept ReactiveList with type-safe overloads
 The `repeat()` function SHALL accept a `ReactiveList[V]` with three overloads:
-- `repeat(list, template)` where `template: (V,) -> ChildNode` — unkeyed, full rebuild on mutation
-- `repeat(list, template)` where `template: (V, int) -> ChildNode` — keyed by list index
-- `repeat(list, template, key)` where `template: (V, K) -> ChildNode` and `key: (V) -> K` — keyed by custom key function
+- `repeat(list, template)` where `template: (V,) -> ElementChildren` — unkeyed, full rebuild on mutation
+- `repeat(list, template)` where `template: (V, int) -> ElementChildren` — keyed by list index
+- `repeat(list, template, key)` where `template: (V, K) -> ElementChildren` and `key: (V) -> K` — keyed by custom key function
 
 When a `key` function is provided or list index mode is used, `RepeatElement` SHALL reuse existing DOM elements for items whose keys persist across mutations. When no `key` is provided and single-arg template is used, all rendered items SHALL be removed and regenerated (full rebuild behavior).
 
