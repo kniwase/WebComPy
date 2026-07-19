@@ -1,19 +1,19 @@
 ## 1. Module Setup
 
-- [ ] 1.1 Create `packages/webcompy/src/webcompy/template/` package directory structure with `__init__.py`
+- [x] 1.1 Create `packages/webcompy/src/webcompy/template/` package directory structure with `__init__.py`
 
 ## 2. Shared Holes Module (_holes.py)
 
-- [ ] 2.1 Create `_holes.py` module — no imports from other template modules (avoids circular dependencies)
-- [ ] 2.2 Implement `HOLE_PATTERN` regex: `\{\{\s*([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*)\s*\}\}` — first segment MUST start with letter/underscore (rejects `{{123}}` digit-first patterns as literal text)
-- [ ] 2.3 Implement `LiteralText(text: str)` and `Hole(var_path: str)` dataclasses
-- [ ] 2.4 Implement `split_text(text: str) -> list[LiteralText | Hole]` for `{{ }}` extraction from text and attribute values
-- [ ] 2.5 Implement `resolve_var(path: str, ctx: dict) -> Any` with dot-notation support (dict key access with `isinstance` check, fallback to `getattr`)
-- [ ] 2.6 Implement `resolve_holes(text: str, ctx: dict) -> str` that resolves all `{{ }}` patterns to string values (extracts `.value` from Signals, `str()` for others, `""` for `None`; used by Change 5 `css_text_template`)
+- [x] 2.1 Create `_holes.py` module — no imports from other template modules (avoids circular dependencies)
+- [x] 2.2 Implement `HOLE_PATTERN` regex: `\{\{\s*([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*)\s*\}\}` — first segment MUST start with letter/underscore (rejects `{{123}}` digit-first patterns as literal text)
+- [x] 2.3 Implement `LiteralText(text: str)` and `Hole(var_path: str)` dataclasses
+- [x] 2.4 Implement `split_text(text: str) -> list[LiteralText | Hole]` for `{{ }}` extraction from text and attribute values
+- [x] 2.5 Implement `resolve_var(path: str, ctx: dict) -> Any` with dot-notation support (dict key access with `isinstance` check, fallback to `getattr`)
+- [x] 2.6 Implement `resolve_holes(text: str, ctx: dict) -> str` that resolves all `{{ }}` patterns to string values (extracts `.value` from Signals, `str()` for others, `""` for `None`; used by Change 5 `css_text_template`)
 
 ## 3. Template AST
 
-- [ ] 3.1 Implement `_ast.py` with TemplateNode, TemplateElement, TemplateText, AttrSpec dataclasses (imports `LiteralText`, `Hole`, `split_text` from `_holes.py`)
+- [x] 3.1 Implement `_ast.py` with TemplateNode, TemplateElement, TemplateText, AttrSpec dataclasses (imports `LiteralText`, `Hole`, `split_text` from `_holes.py`)
 
 ## 4. HTML Parser (Tree Builder)
 
@@ -55,12 +55,12 @@
 
 ## 10. Unit Tests — Holes Module
 
-- [ ] 10.1 Test HOLE_PATTERN matches `{{ varname }}`, `{{ a.b.c }}` with optional whitespace
-- [ ] 10.2 Test HOLE_PATTERN rejects `{{123}}` (digit-first), `{{}}` (empty), `{{` (unclosed) — all treated as literal text
-- [ ] 10.3 Test `split_text` with literal-only text, hole-only text, mixed content, multiple holes
-- [ ] 10.4 Test `resolve_var` dict key access, object attribute access, chained paths, missing key → KeyError
-- [ ] 10.5 Test `resolve_holes` with plain strings (passthrough), Signal values (`.value` extraction), `None` → `""`
-- [ ] 10.6 Test `resolve_holes` with mixed literal and holes in CSS-style text (validates Change 5 compatibility)
+- [x] 10.1 Test HOLE_PATTERN matches `{{ varname }}`, `{{ a.b.c }}` with optional whitespace
+- [x] 10.2 Test HOLE_PATTERN rejects `{{123}}` (digit-first), `{{}}` (empty), `{{` (unclosed) — all treated as literal text
+- [x] 10.3 Test `split_text` with literal-only text, hole-only text, mixed content, multiple holes
+- [x] 10.4 Test `resolve_var` dict key access, object attribute access, chained paths, missing key → KeyError
+- [x] 10.5 Test `resolve_holes` with plain strings (passthrough), Signal values (`.value` extraction), `None` → `""`
+- [x] 10.6 Test `resolve_holes` with mixed literal and holes in CSS-style text (validates Change 5 compatibility)
 
 ## 11. Unit Tests — Parser
 
