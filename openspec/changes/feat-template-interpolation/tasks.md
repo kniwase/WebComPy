@@ -27,7 +27,7 @@
 
 ## 5. Compilation Cache
 
-- [ ] 5.1 Implement `_cache.py` with module-level `_template_cache` dict and `get_or_compile()` function (dedent → strip → cache lookup/miss → parse → store → return)
+- [x] 5.1 Implement `_cache.py` with module-level `_template_cache` dict and `get_or_compile()` function (dedent → strip → cache lookup/miss → parse → store → return)
 
 ## 6. Event Handler and Ref Binding
 
@@ -106,7 +106,7 @@
 
 ## 17. Future Enhancement — Cache Eviction
 
-- [ ] 17.1 Add eviction policy (`functools.lru_cache` or size cap) to `_template_cache` in `_cache.py` for long-running dynamic-template workloads
+- [x] 17.1 Add eviction policy (`functools.lru_cache` or size cap) to `_template_cache` in `_cache.py` for long-running dynamic-template workloads
 
 ## 18. Main Spec Generation (Archive Time)
 
