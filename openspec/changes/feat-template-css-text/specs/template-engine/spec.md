@@ -2,7 +2,7 @@
 
 ### Requirement: CSS text shall be parsed into scoped style dict structure
 
-The framework SHALL provide a `css_text(source: str | Path) -> dict[str, StyleDict]` function that parses CSS text strings into the existing `StyleDict` (nested dict) format. The parser SHALL handle all CSS constructs supported by WebComPy's scoped_style system, including selectors, combinator selectors, pseudo-classes/elements, at-rules (`@media`, `@supports`, `@container`, `@keyframes`), and nested rules. `textwrap.dedent` SHALL be applied to the source before parsing. The return type `dict[str, StyleDict]` matches the `scoped_style` setter type (`_generator.py:253`).
+The framework SHALL provide a `css_text(source: str) -> dict[str, StyleDict]` function that parses CSS text strings into the existing `StyleDict` (nested dict) format. The parser SHALL handle all CSS constructs supported by WebComPy's scoped_style system, including selectors, combinator selectors, pseudo-classes/elements, at-rules (`@media`, `@supports`, `@container`, `@keyframes`), and nested rules. `textwrap.dedent` SHALL be applied to the source before parsing. The return type `dict[str, StyleDict]` matches the `scoped_style` setter type (`_generator.py:253`).
 
 #### Scenario: Basic selectors and properties
 - **WHEN** `css_text(".btn { color: red; }")` is called
@@ -40,17 +40,15 @@ The framework SHALL provide a `css_text(source: str | Path) -> dict[str, StyleDi
 - **WHEN** `@media (max-width: 768px)` contains `:` inside parentheses
 - **THEN** the parser SHALL NOT treat the internal `:` as a property separator
 
-#### Scenario: File loading
-- **WHEN** `css_text(Path("styles/button.css"))` is called in a server environment
-- **THEN** the file SHALL be read and its content parsed as CSS text
-
-#### Scenario: File loading rejected in browser
-- **WHEN** `css_text(Path("styles/button.css"))` is called in a PyScript browser environment
-- **THEN** `WebComPyException` SHALL be raised with a message recommending inline CSS strings (inherited from Change 4's `_load_file`)
+#### Scenario: File-based CSS via load_text composition
+- **WHEN** a developer writes `css_text(await load_text("styles/button.css"))` inside an async component setup
+- **THEN** `load_text` SHALL read the file content (via `ResourcePort`) and `css_text` SHALL parse the returned string
+- **AND** on the server, the read SHALL be recorded by `ServerResourcePort` for hydration payload embedding
+- **AND** on the browser, the same `load_text` call SHALL resolve from the hydration payload (no fetch needed if the resource was read during SSR)
 
 ### Requirement: CSS text templates shall support {{ }} variable interpolation
 
-The framework SHALL provide a `css_text_template(source: str | Path, context: dict) -> Callable[[], dict[str, StyleDict]]` function. The returned factory SHALL resolve `{{ varname }}` holes from the context using `resolve_holes` (from `_holes.py`), parse the resolved CSS text to `dict[str, StyleDict]`, and be suitable for use with `reactive_scoped_style`. `ReactiveScopedStyleFunc` (`_reactive_scoped_style.py:61`) SHALL be corrected from `Callable[[], StyleDict]` to `Callable[[], dict[str, StyleDict]]` so that `css_text_template`'s return type is directly assignable. This aligns the alias with the runtime contract of `render_css()` / `_apply_scope()` which iterate `.items()` over the factory return value (selector-keyed top-level dict).
+The framework SHALL provide a `css_text_template(source: str, context: dict) -> Callable[[], dict[str, StyleDict]]` function. The returned factory SHALL resolve `{{ varname }}` holes from the context using `resolve_holes` (from `_holes.py`), parse the resolved CSS text to `dict[str, StyleDict]`, and be suitable for use with `reactive_scoped_style`. `ReactiveScopedStyleFunc` (`_reactive_scoped_style.py:61`) SHALL be corrected from `Callable[[], StyleDict]` to `Callable[[], dict[str, StyleDict]]` so that `css_text_template`'s return type is directly assignable. This aligns the alias with the runtime contract of `render_css()` / `_apply_scope()` which iterate `.items()` over the factory return value (selector-keyed top-level dict).
 
 #### Scenario: Factory resolves {{ }} before parsing
 - **WHEN** `css_text_template(".btn { color: {{ color }}; }", {"color": Signal("blue")})` returns a factory
@@ -63,10 +61,6 @@ The framework SHALL provide a `css_text_template(source: str | Path, context: di
 - **AND** a referenced Signal changes
 - **THEN** the `Computed` SHALL re-evaluate the factory, re-resolve `{{ }}`, and re-parse CSS
 - **AND** the `<style>` element SHALL update reactively
-
-#### Scenario: Factory with file source
-- **WHEN** `css_text_template(Path("styles/dynamic.css"), context)` returns a factory
-- **THEN** each factory call SHALL read the file, resolve `{{ }}`, and parse CSS
 
 ### Requirement: css_text and css_text_template shall be exported from webcompy.template
 

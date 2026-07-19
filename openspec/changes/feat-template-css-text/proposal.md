@@ -7,7 +7,7 @@ WebComPy currently requires developers to define scoped CSS as Python nested dic
 - Add a CSS text parser (`css_text`) that converts CSS text strings into the `StyleDict` format used by WebComPy's scoped_style system
 - Add `css_text_template(source, context)` that returns a factory function supporting `{{ varname }}` interpolation with reactive Signal tracking
 - Support all CSS constructs handled by WebComPy's scoped_style: selectors, combinators, pseudo-classes/elements, at-rules (`@media`, `@supports`, `@container`, `@keyframes`), and nested rules
-- Support file-based CSS loading via `Path`
+- File-based CSS loading delegated to `webcompy.resources.load_text` (async); callers compose `css_text(await load_text(path))` inside async component setup. `css_text` and `css_text_template` accept `str` only.
 - `css_text()` and `css_text_template()` provide an alternative CSS-text-based API for creating scoped styles from natural CSS syntax; the existing dict-based `scoped_style` API remains unchanged and fully supported
 - Imports `resolve_holes` / `HOLE_PATTERN` from Change 1's shared `_holes.py` module
 - No existing API changes — purely additive
@@ -25,7 +25,7 @@ _None — extends `template-engine` and `reactive-scoped-style`_
 _None_
 
 ## Non-goals
-- Direct string/Path assignment to `scoped_style` setter (must use `css_text()`)
+- Direct string assignment to `scoped_style` setter (must use `css_text()`)
 - Modification of `ReactiveScopedStyle` or `ComponentGenerator` internals
 - CSS validation/linting
 - Sass/Less/CSS-in-JS
@@ -42,6 +42,6 @@ _None_
 ## Dependencies
 
 - **Depends on**: Change 1 (template interpolation — `_holes.py` shared module with `resolve_holes` / `HOLE_PATTERN`)
-- **Depends on**: Change 4 (file loading — `_load_file` for `Path` support)
+- **Depends on**: Change 4 (`webcompy.resources.load_text` for file-based CSS loading; callers compose `css_text(await load_text(path))`)
 - **Required by**: None
 - **Recommended implementation order**: Fifth template-engine change (0 → 1 → 2 → 3 → 4 → **5** → 6 → 7)
