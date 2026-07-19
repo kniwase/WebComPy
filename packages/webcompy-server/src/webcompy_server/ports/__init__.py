@@ -6,6 +6,7 @@ from webcompy_server.ports._ffi import ServerFFIPort
 from webcompy_server.ports._history import ServerHistoryPort
 from webcompy_server.ports._host import ServerHostPort
 from webcompy_server.ports._media_query import ServerMediaQueryPort
+from webcompy_server.ports._resource import ServerResourcePort
 from webcompy_server.ports._virtual_dom import VirtualDOMEvent, VirtualDOMNode
 
 __all__ = [
@@ -17,6 +18,7 @@ __all__ = [
     "ServerHistoryPort",
     "ServerHostPort",
     "ServerMediaQueryPort",
+    "ServerResourcePort",
     "VirtualDOMEvent",
     "VirtualDOMNode",
 ]

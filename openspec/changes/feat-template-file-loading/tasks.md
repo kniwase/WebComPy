@@ -9,13 +9,13 @@
 
 ## 2. ServerResourcePort implementation
 
-- [ ] 2.1 Create `webcompy_server/ports/_resource.py` defining `class ServerResourcePort(ResourcePort)`
-- [ ] 2.2 Constructor accepts `(app_package_path: pathlib.Path, allow_list: frozenset[str])`; internalize a per-instance `recorded: dict[str, bytes]` accumulator
-- [ ] 2.3 Implement `async load_text(self, path: str) -> str`: validate membership in `allow_list`; resolve `(app_package_path / path).resolve()`; check containment inside `app_package_path` via `realpath`; read with `Path.read_text(encoding="utf-8")`; record `(path, bytes(text, "utf-8"))`; return decoded text
-- [ ] 2.4 Implement `async load_bytes(self, path: str) -> bytes`: same validation chain; read with `Path.read_bytes()`; record `(path, content)`; return content
-- [ ] 2.5 All failure paths (not in allow-list, traversal, missing file, decode error) raise `ResourceNotFoundError`
-- [ ] 2.6 Add `get_recorded_resources() -> dict[str, bytes]` returning the accumulator (used by payload generator)
-- [ ] 2.7 Add unit tests: (a) happy path text, (b) happy path bytes, (c) missing file, (d) traversal, (e) outside allow-list, (f) recorded-resources accumulator
+- [x] 2.1 Create `webcompy_server/ports/_resource.py` defining `class ServerResourcePort(ResourcePort)`
+- [x] 2.2 Constructor accepts `(app_package_path: pathlib.Path, allow_list: frozenset[str])`; internalize a per-instance `recorded: dict[str, bytes]` accumulator
+- [x] 2.3 Implement `async load_text(self, path: str) -> str`: validate membership in `allow_list`; resolve `(app_package_path / path).resolve()`; check containment inside `app_package_path` via `realpath`; read with `Path.read_text(encoding="utf-8")`; record `(path, bytes(text, "utf-8"))`; return decoded text
+- [x] 2.4 Implement `async load_bytes(self, path: str) -> bytes`: same validation chain; read with `Path.read_bytes()`; record `(path, content)`; return content
+- [x] 2.5 All failure paths (not in allow-list, traversal, missing file, decode error) raise `ResourceNotFoundError`
+- [x] 2.6 Add `get_recorded_resources() -> dict[str, bytes]` returning the accumulator (used by payload generator)
+- [x] 2.7 Add unit tests: (a) happy path text, (b) happy path bytes, (c) missing file, (d) traversal, (e) outside allow-list, (f) recorded-resources accumulator
 
 ## 3. BrowserResourcePort implementation
 
