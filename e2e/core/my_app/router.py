@@ -18,6 +18,7 @@ from .pages.scoped_style import ScopedStylePage
 from .pages.signal import ReactivePage
 from .pages.suspense_test import SuspensePage
 from .pages.switch_test import SwitchPage
+from .pages.template import TemplatePage
 
 router = Router(
     {"path": "/", "component": HomePage},
@@ -38,6 +39,7 @@ router = Router(
     {"path": "/bundled-deps", "component": BundledDepsPage},
     {"path": "/di-provide", "component": DiProviderWrapper},
     {"path": "/di-inject", "component": DiInjectPage},
+    {"path": "/template", "component": TemplatePage},
     default=NotFound,
     mode="history",
 )

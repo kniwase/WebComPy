@@ -1,4 +1,12 @@
-## ADDED Requirements
+# Template Engine
+
+## Purpose
+
+WebComPy provides an HTML template engine that parses template strings into reactive WebComPy Element trees using the stdlib `html.parser.HTMLParser`. This enables developers to define component UIs with familiar HTML syntax and `{{ varname }}` interpolation instead of the verbose Python element API (`html.DIV({...}, ...)`), while preserving the framework's reactive model — Signal references in text and attribute positions flow into the existing `TextElement` and `Computed`-valued attribute pipelines unchanged.
+
+The template engine is the foundation for a family of related capabilities (control flow, component tags, file loading, CSS text, markdown) that reuse its parser, binder, and shared `_holes.py` interpolation utilities.
+
+## Requirements
 
 ### Requirement: Template engine shall parse HTML strings into Element trees
 
@@ -135,6 +143,12 @@ HTML comments (`<!-- ... -->`) SHALL be ignored and SHALL NOT produce any nodes 
 - **WHEN** `class="card {{ cls }}"` is used with `cls` being `"active"` (plain str)
 - **THEN** the resolved attribute value SHALL be `"card active"` (static)
 
+#### Scenario: None variable in attribute hole
+- **WHEN** `class="{{ cls }}"` is used with `cls` being `None` or `Signal(None)`
+- **THEN** the attribute SHALL be rendered as the empty string `""`
+- **AND** for `Signal(None)`, a `Computed` SHALL be generated that evaluates to `""` and updates reactively
+- **AND** for `class="card {{ cls }}"` with `cls=None`, the resolved attribute SHALL be `"card "` (literal prefix preserved, hole rendered as empty)
+
 ### Requirement: Template engine shall support event handler binding
 
 `@event_name="handler_var"` attributes SHALL resolve the named callable from the context and set it as a DOM event handler.
@@ -147,6 +161,14 @@ HTML comments (`<!-- ... -->`) SHALL be ignored and SHALL NOT produce any nodes 
 - **WHEN** `@click="missing_handler"` references a name not in the context
 - **THEN** `KeyError` SHALL be raised
 
+#### Scenario: `{{ }}` interpolation in `@event` value
+- **WHEN** `@click="{{ handler }}"` references a handler name via `{{ }}` interpolation
+- **THEN** `WebComPyException` SHALL be raised at bind time with a message indicating that `{{ }}` interpolation is not supported in `@event` attributes
+
+#### Scenario: Non-callable `@event` handler value
+- **WHEN** `@click="handler_var"` resolves to a non-callable value (e.g., an integer or string)
+- **THEN** `WebComPyException` SHALL be raised at bind time with a message indicating the handler is not callable and listing the observed type
+
 ### Requirement: Template engine shall support DomNodeRef binding
 
 `:ref="ref_var"` attributes SHALL resolve the named `DomNodeRef` from the context and set it as the element's ref.
@@ -154,6 +176,10 @@ HTML comments (`<!-- ... -->`) SHALL be ignored and SHALL NOT produce any nodes 
 #### Scenario: Ref binding
 - **WHEN** `render_template('<input :ref="my_ref">', {"my_ref": DomNodeRef()})` is called
 - **THEN** the resulting `Element` SHALL have `ref=my_ref`
+
+#### Scenario: `{{ }}` interpolation in `:ref` value
+- **WHEN** `:ref="{{ ref_var }}"` references a ref name via `{{ }}` interpolation
+- **THEN** `WebComPyException` SHALL be raised at bind time with a message indicating that `{{ }}` interpolation is not supported in `:ref` attributes
 
 ### Requirement: Template engine shall accept locals() as context
 

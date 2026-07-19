@@ -20,6 +20,7 @@ Code in `webcompy/` (core), `webcompy_server/`, `webcompy_cli/`, and `webcompy_t
   - `components/` — Component system (base classes, decorators, generators)
   - `elements/` — Virtual DOM / HTML element system
   - `signal/` — Reactive state management (Reactive, Computed, ReactiveList, ReactiveDict)
+  - `template/` — HTML template engine (`render_template`, `{{ }}` interpolation, void/boolean attrs, reactive attributes via `Computed`)
   - `router/` — Client-side routing (history/hash modes)
   - `app/` — Core application class (`WebComPyApp`, `AppConfig`, `RenderContext` ABC)
   - `di/` — Dependency injection system (provide/inject, DIScope, InjectKey)
@@ -217,6 +218,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | Changed files | Specs to read |
 |---|---|
 | `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md`, `signal-value-transfer/spec.md` |
+| `webcompy/template/` | `template-engine/spec.md` |
 | `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md`, `signal-value-transfer/spec.md` |
 | `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md`, `suspense/spec.md`, `async-scheduler/spec.md` |
@@ -304,6 +306,7 @@ When specs are added, modified, or removed, update:
 | `effect` | Side-effecting functions with automatic reactive dependency tracking |
 | `components` | Component definition styles, props, slots, scoped CSS, lifecycle |
 | `composables` | Reusable stateful logic functions for function-style component setup |
+| `template-engine` | HTML template parsing and variable interpolation that produces reactive WebComPy Element trees |
 | `elements` | DOM element creation, reactive updates, conditional/list rendering |
 | `list-reconciliation` | Key-based reconciliation for efficient DOM reuse |
 | `nested-dynamic-element` | Nesting of `repeat` and `switch` at arbitrary depth |
