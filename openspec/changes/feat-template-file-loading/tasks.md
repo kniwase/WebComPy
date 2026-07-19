@@ -52,20 +52,20 @@
 
 ## 7. CLI server endpoint
 
-- [ ] 7.1 In `webcompy_cli/config/_build_config.py`: add `resources: list[str] | None = None` and `resource_exclude: list[str] | None = None`; REMOVE `assets: dict[str, str] | None` field
-- [ ] 7.2 Add `_detect_resources(app_package_path, include_patterns, exclude_patterns) -> frozenset[str]` helper in `webcompy_cli/_build.py`: walk the package directory, match patterns via `pathlib.PurePath.match`, subtract excludes, return POSIX-relative paths
-- [ ] 7.3 Default include patterns when `resources is None`: `["**/*.html", "**/*.css", "**/*.md", "**/*.svg", "**/*.txt"]`; empty list disables auto-detection
-- [ ] 7.4 Always-excluded paths: `__pycache__`, `.git`, `.webcompy_modules`, any path matching `*.pyc` / `*.tmp`
-- [ ] 7.5 In `webcompy_cli/_build.py` `resolve_build_artifacts`: compute the allow-list at startup; pass it to `_server.py` and `_generate.py` via `BuildArtifacts`
-- [ ] 7.6 In `webcompy_cli/_server.py` (`create_asgi_app`): register `GET {base_url}_webcompy-resource/{path:path}` route when `artifacts.resource_allow_list` is non-empty
-- [ ] 7.7 Endpoint handler: validate path is in allow-list (404 if not); resolve `(app_package_path / path).resolve()` and verify containment (`realpath` containment check, 403 on failure); read file; return with `Content-Type` from `mimetypes.guess_type` and `Cache-Control` per dev/prod mode
-- [ ] 7.8 Add unit tests: (a) allow-listed file is served with correct Content-Type, (b) non-allow-listed returns 404, (c) traversal returns 404/403, (d) symlink escape returns 403
+- [x] 7.1 In `webcompy_cli/config/_build_config.py`: add `resources: list[str] | None = None` and `resource_exclude: list[str] | None = None`; REMOVE `assets: dict[str, str] | None` field
+- [x] 7.2 Add `_detect_resources(app_package_path, include_patterns, exclude_patterns) -> frozenset[str]` helper in `webcompy_cli/_build.py`: walk the package directory, match patterns via `pathlib.PurePath.match`, subtract excludes, return POSIX-relative paths
+- [x] 7.3 Default include patterns when `resources is None`: `["**/*.html", "**/*.css", "**/*.md", "**/*.svg", "**/*.txt"]`; empty list disables auto-detection
+- [x] 7.4 Always-excluded paths: `__pycache__`, `.git`, `.webcompy_modules`, any path matching `*.pyc` / `*.tmp`
+- [x] 7.5 In `webcompy_cli/_build.py` `resolve_build_artifacts`: compute the allow-list at startup; pass it to `_server.py` and `_generate.py` via `BuildArtifacts`
+- [x] 7.6 In `webcompy_cli/_server.py` (`create_asgi_app`): register `GET {base_url}_webcompy-resource/{path:path}` route when `artifacts.resource_allow_list` is non-empty
+- [x] 7.7 Endpoint handler: validate path is in allow-list (404 if not); resolve `(app_package_path / path).resolve()` and verify containment (`realpath` containment check, 403 on failure); read file; return with `Content-Type` from `mimetypes.guess_type` and `Cache-Control` per dev/prod mode
+- [x] 7.8 Add unit tests: (a) allow-listed file is served with correct Content-Type, (b) non-allow-listed returns 404, (c) traversal returns 404/403, (d) symlink escape returns 403
 
 ## 8. SSG resource static copy
 
-- [ ] 8.1 In `webcompy_cli/_generate.py`: the resource-copy step runs **after** `create_asgi_app(app, build_config, mode="prod")` populates `serving.artifacts` (current line 86-87), specifically between the runtime-asset copy block end (line 111) and the framework-UI-styles block start (line 113). Walk `artifacts.resource_allow_list` and copy each file to `{dist_dir}/_webcompy-resource/{path}` via `shutil.copy2` with `dst.parent.mkdir(parents=True, exist_ok=True)`. (M7: the allow-list only becomes available after `create_asgi_app`; placing the copy alongside the other artifact-driven copies at lines 89-111 is the natural slot.)
-- [ ] 8.2 Preserve relative directory layout (parent directories auto-created via `os.makedirs`)
-- [ ] 8.3 Add test invoking `generate_static_site(app)` and verifying that allowed resources appear in `dist/_webcompy-resource/` with correct content
+- [x] 8.1 In `webcompy_cli/_generate.py`: the resource-copy step runs **after** `create_asgi_app(app, build_config, mode="prod")` populates `serving.artifacts` (current line 86-87), specifically between the runtime-asset copy block end (line 111) and the framework-UI-styles block start (line 113). Walk `artifacts.resource_allow_list` and copy each file to `{dist_dir}/_webcompy-resource/{path}` via `shutil.copy2` with `dst.parent.mkdir(parents=True, exist_ok=True)`. (M7: the allow-list only becomes available after `create_asgi_app`; placing the copy alongside the other artifact-driven copies at lines 89-111 is the natural slot.)
+- [x] 8.2 Preserve relative directory layout (parent directories auto-created via `os.makedirs`)
+- [x] 8.3 Add test invoking `generate_static_site(app)` and verifying that allowed resources appear in `dist/_webcompy-resource/` with correct content
 
 ## 9. Public helpers `webcompy.resources.load_text` / `load_bytes`
 

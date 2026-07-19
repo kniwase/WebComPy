@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from webcompy.app._config import WebComPyAppConfig
 from webcompy_cli.config._build_config import WebComPyBuildConfig
 from webcompy_cli.config._server_config import LockfileSyncConfig, WebComPyServerConfig
@@ -140,7 +142,8 @@ class TestWebComPyBuildConfig:
         mod = self._make_module(tmp_path, self._full_app_code())
         config = WebComPyBuildConfig(app_module=mod)
         assert config.dependencies is None
-        assert config.assets is None
+        assert config.resources is None
+        assert config.resource_exclude is None
         assert config.version is None
         assert config.wasm_serving == "cdn"
         assert config.runtime_serving == "cdn"
@@ -158,10 +161,15 @@ class TestWebComPyBuildConfig:
         config = WebComPyBuildConfig(app_module=mod, dependencies=["numpy", "pandas"])
         assert config.dependencies == ["numpy", "pandas"]
 
-    def test_assets(self, tmp_path):
+    def test_resources(self, tmp_path):
         mod = self._make_module(tmp_path)
-        config = WebComPyBuildConfig(app_module=mod, assets={"style.css": "/static/style.css"})
-        assert config.assets == {"style.css": "/static/style.css"}
+        config = WebComPyBuildConfig(app_module=mod, resources=["**/*.html"])
+        assert config.resources == ["**/*.html"]
+
+    def test_resource_exclude(self, tmp_path):
+        mod = self._make_module(tmp_path)
+        config = WebComPyBuildConfig(app_module=mod, resource_exclude=["**/secret.html"])
+        assert config.resource_exclude == ["**/secret.html"]
 
     def test_version_field(self, tmp_path):
         mod = self._make_module(tmp_path)
@@ -217,6 +225,13 @@ class TestWebComPyBuildConfig:
         mod = self._make_module(tmp_path)
         config = WebComPyBuildConfig(app_module=mod, wheel_mode="bundled")
         assert config.wheel_mode == "bundled"
+
+
+class TestLegacyAssetsFieldRemoved:
+    def test_assets_kwarg_raises_typeerror(self, tmp_path):
+        mod = TestWebComPyBuildConfig()._make_module(tmp_path)
+        with pytest.raises(TypeError):
+            WebComPyBuildConfig(app_module=mod, assets={"foo": "bar"})
 
 
 class TestWebComPyServerConfig:

@@ -16,7 +16,8 @@ class WebComPyBuildConfig:
     app_var: str = "app"
     dependencies: list[str] | None = None
     dependencies_from: str | None = None
-    assets: dict[str, str] | None = None
+    resources: list[str] | None = None
+    resource_exclude: list[str] | None = None
     version: str | None = None
     serve_all_deps: bool = True
     wasm_serving: Literal["cdn", "local"] | None = None

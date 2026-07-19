@@ -3,6 +3,7 @@ from __future__ import annotations
 import pathlib
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from webcompy.app._app import WebComPyApp
@@ -36,6 +37,67 @@ from webcompy_cli._wheel_builder import (
 from webcompy_cli.config._build_config import WebComPyBuildConfig
 from webcompy_server import configure_server_context
 from webcompy_server._html import PYSCRIPT_VERSION
+from webcompy_server.ports._resource import ServerResourcePort
+
+_DEFAULT_INCLUDE_PATTERNS: list[str] = [
+    "**/*.html",
+    "**/*.css",
+    "**/*.md",
+    "**/*.svg",
+    "**/*.txt",
+]
+
+_ALWAYS_EXCLUDED_NAMES: frozenset[str] = frozenset({"__pycache__", ".git", ".webcompy_modules"})
+_ALWAYS_EXCLUDED_SUFFIXES: frozenset[str] = frozenset({".pyc", ".tmp"})
+
+
+def _matches_pattern(rel_posix: str, pattern: str) -> bool:
+    """Match a POSIX-relative path against a glob pattern. ``**/`` at the
+    start is treated as "zero or more path components" (matching files at
+    any depth, including the package root); otherwise pure ``pathlib`` glob
+    semantics apply.
+    """
+    rel_path = Path(rel_posix)
+    if pattern.startswith("**/"):
+        suffix = pattern[3:]
+        # Match root-level and nested paths against the suffix only.
+        if rel_path.match(suffix):
+            return True
+        # Pathlib's ``match`` requires a directory for ``**``; allow the
+        # suffix to also match by basename via a multi-component prefix.
+        suffix_name = suffix.split("/")[-1]
+        return "/" not in suffix and rel_path.match(suffix_name)
+    return rel_path.match(pattern)
+
+
+def _detect_resources(
+    app_package_path: Path,
+    include_patterns: list[str] | None,
+    exclude_patterns: list[str] | None,
+) -> frozenset[str]:
+    """Walk ``app_package_path`` and return POSIX-relative paths whose
+    filenames match the include patterns and don't match any exclude rule.
+    """
+    if include_patterns is None:
+        include_patterns = _DEFAULT_INCLUDE_PATTERNS
+    if include_patterns == []:
+        return frozenset()
+
+    found: set[str] = set()
+    for path in app_package_path.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(app_package_path).as_posix()
+        parts = rel.split("/")
+        if _ALWAYS_EXCLUDED_NAMES.intersection(parts):
+            continue
+        if path.suffix in _ALWAYS_EXCLUDED_SUFFIXES:
+            continue
+        if exclude_patterns and any(_matches_pattern(rel, pat) for pat in exclude_patterns):
+            continue
+        if any(_matches_pattern(rel, pat) for pat in include_patterns):
+            found.add(rel)
+    return frozenset(found)
 
 
 @dataclass
@@ -51,6 +113,7 @@ class BuildArtifacts:
     app_package_files: dict[str, tuple[bytes, str]] | None = None
     wasm_asset_files: dict[str, pathlib.Path] | None = None
     runtime_asset_files: dict[str, pathlib.Path] | None = None
+    resource_allow_list: frozenset[str] | None = None
     dist_dir: pathlib.Path | None = None
     dev_mode: bool = False
     cdn_temp_dir_obj: TemporaryDirectory | None = None
@@ -63,7 +126,21 @@ def resolve_build_artifacts(
     dev_mode: bool = False,
     dist_dir: pathlib.Path | None = None,
 ) -> BuildArtifacts:
-    configure_server_context(app)
+    resource_allow_list = _detect_resources(
+        build_config.app_package_path,
+        build_config.resources,
+        build_config.resource_exclude,
+    )
+    resource_port = ServerResourcePort(
+        app_package_path=build_config.app_package_path,
+        allow_list=resource_allow_list,
+    )
+    configure_server_context(app, resource_port=resource_port)
+    print(
+        f"Detected {len(resource_allow_list)} resource file(s)",
+        file=sys.stderr,
+        flush=True,
+    )
 
     modules_dir = build_config.app_package_path / ".webcompy_modules"
     ensure_webcompy_modules_dir(modules_dir)
@@ -183,7 +260,6 @@ def resolve_build_artifacts(
                 get_webcompy_packge_dir(),
                 build_config.app_package_path,
                 app_version,
-                build_config.assets,
                 bundled_deps=all_bundled_deps or None,
                 skip_webcompy=True,
             )
@@ -195,7 +271,6 @@ def resolve_build_artifacts(
                 get_webcompy_packge_dir(),
                 build_config.app_package_path,
                 app_version,
-                build_config.assets,
                 bundled_deps=all_bundled_deps or None,
             )
             app_wheel_filename = app_wheel_path.name
@@ -235,6 +310,7 @@ def resolve_build_artifacts(
         app_package_files=app_package_files,
         wasm_asset_files=wasm_asset_files or None,
         runtime_asset_files=runtime_asset_files or None,
+        resource_allow_list=resource_allow_list,
         dist_dir=dist_dir,
         dev_mode=dev_mode,
         cdn_temp_dir_obj=cdn_temp_dir_obj,
