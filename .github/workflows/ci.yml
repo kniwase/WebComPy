@@ -168,6 +168,30 @@ jobs:
           name: ci-test-logs
           path: ci-test-results.log
 
+  wheel-smoke:
+    needs: [detect-scope]
+    if: ${{ needs.detect-scope.outputs.has-code-changes == 'true' && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-environment
+      - name: Build webcompy wheel
+        run: uv build --package webcompy 2>&1 | tee ci-wheel-build.log
+      - name: Verify template module included
+        run: |
+          if ! unzip -l dist/webcompy-*.whl | grep -q "webcompy/template/__init__.py"; then
+            echo "::error::webcompy/template/ is missing from the built wheel. Check packages/webcompy/pyproject.toml [tool.hatch.build] exclude rules — an over-broad pattern (e.g. 'template') may be stripping the module."
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-wheel-logs
+          path: ci-wheel-build.log
+
   e2e-matrix:
     if: ${{ (needs.detect-scope.outputs.has-code-changes == 'true' || needs.detect-scope.outputs.has-e2e-changes == 'true') && !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
     needs: [detect-scope, lint, typecheck, generate, test]

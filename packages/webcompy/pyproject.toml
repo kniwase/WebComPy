@@ -34,4 +34,4 @@ packages = ["src/webcompy"]
 [tool.hatch.build.targets.wheel.shared-data]
 
 [tool.hatch.build]
-exclude = ["docs_app", "docs", "template"]
+exclude = ["docs_app", "docs"]
