@@ -95,6 +95,7 @@ class ServerFetchPort(FetchPort):
             res = await self._external_client.request(method, url, headers=headers, content=body)
             return Response(
                 text=res.text,
+                content=res.content,
                 headers=dict(res.headers),
                 status_code=res.status_code,
                 status_text=res.reason_phrase,
@@ -138,6 +139,7 @@ class ServerFetchPort(FetchPort):
         )
         response = Response(
             text=res.text,
+            content=res.content,
             headers=dict(res.headers),
             status_code=res.status_code,
             status_text=res.reason_phrase,

@@ -24,9 +24,11 @@ def _make_response(
     text: str,
     status_code: int = 200,
     ok: bool | None = None,
+    content: bytes | None = None,
 ) -> Response:
     return Response(
         text=text,
+        content=content if content is not None else text.encode("utf-8"),
         headers={"content-type": "text/plain"},
         status_code=status_code,
         status_text="OK" if status_code < 400 else "Error",
@@ -96,6 +98,32 @@ class TestBrowserResourcePortEnvironment:
         assert port is not None
 
 
+class TestBrowserResourcePortValidation:
+    def test_empty_path_rejected(self):
+        port = BrowserResourcePort(base_url="/")
+        with pytest.raises(ResourceNotFoundError, match="empty path"):
+            port._validate("")
+
+    def test_absolute_path_rejected(self):
+        port = BrowserResourcePort(base_url="/")
+        with pytest.raises(ResourceNotFoundError, match="path must be relative"):
+            port._validate("/etc/passwd")
+
+    def test_traversal_rejected(self):
+        port = BrowserResourcePort(base_url="/")
+        with pytest.raises(ResourceNotFoundError, match=r"\.\."):
+            port._validate("../escape.txt")
+
+    def test_nested_traversal_rejected(self):
+        port = BrowserResourcePort(base_url="/")
+        with pytest.raises(ResourceNotFoundError, match=r"\.\."):
+            port._validate("a/../../b.html")
+
+    def test_valid_path_accepted(self):
+        port = BrowserResourcePort(base_url="/")
+        port._validate("templates/card.html")
+
+
 class TestBrowserResourcePortPayloadLookup:
     @pytest.mark.asyncio
     async def test_load_text_from_payload(self, scope_with_payload):
@@ -138,11 +166,34 @@ class TestBrowserResourcePortFetchFallback:
         assert "//" not in url.replace("://", "")
 
     @pytest.mark.asyncio
-    async def test_load_bytes_via_fetch_encodes_text_response(self, scope_with_fake_fetch):
+    async def test_load_bytes_via_fetch_uses_response_content(self, scope_with_fake_fetch):
+        """``load_bytes`` returns ``response.content`` directly, not a UTF-8
+        roundtrip through ``response.text``.
+        """
         _ = scope_with_fake_fetch
         port = BrowserResourcePort(base_url="/")
         content = await port.load_bytes("late.html")
         assert content == b"from network"
+
+    @pytest.mark.asyncio
+    async def test_load_bytes_preserves_binary_content(self):
+        """Binary content fetched via ``load_bytes`` must survive the
+        text→bytes roundtrip intact. Set up a fake fetch that returns
+        binary data in ``content`` that differs from ``text.encode()``.
+        """
+        raw = b"\x89PNG\x0d\x0a\x1a\x0a"  # PNG header
+        scope = DIScope()
+        scope.provide(RESOURCE_DATA_KEY, {})
+        fetch_port = FakeFetchPort(response=_make_response("text fallback", content=raw))
+        scope.provide(FETCH_PORT_KEY, fetch_port)
+        token = _active_di_scope.set(scope)
+        try:
+            port = BrowserResourcePort(base_url="/")
+            result = await port.load_bytes("img.png")
+            assert result == raw
+            assert result != b"text fallback"
+        finally:
+            _active_di_scope.reset(token)
 
 
 class TestBrowserResourcePortFetchFailures:

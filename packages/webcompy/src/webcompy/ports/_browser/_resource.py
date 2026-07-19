@@ -16,6 +16,15 @@ class BrowserResourcePort(ResourcePort):
             raise WebComPyException("BrowserResourcePort is only available in browser environment")
         self._base_url = base_url.rstrip("/")
 
+    def _validate(self, path: str) -> None:
+        if not path:
+            raise ResourceNotFoundError(path or "<empty>", "browser", reason="empty path")
+        if path.startswith("/"):
+            raise ResourceNotFoundError(path, "browser", reason="path must be relative")
+        segments = path.split("/")
+        if ".." in segments:
+            raise ResourceNotFoundError(path, "browser", reason="path contains '..' segments")
+
     def _resource_url(self, path: str) -> str:
         return f"{self._base_url}/_webcompy-resource/{path}"
 
@@ -45,9 +54,10 @@ class BrowserResourcePort(ResourcePort):
                 "browser",
                 reason=(f"payload miss and fetch returned HTTP {response.status_code}"),
             )
-        return response.text.encode("utf-8")
+        return response.content
 
     async def load_text(self, path: str) -> str:
+        self._validate(path)
         payload = self._decode_payload(path)
         if payload is not None:
             return payload.decode("utf-8")
@@ -55,6 +65,7 @@ class BrowserResourcePort(ResourcePort):
         return content.decode("utf-8")
 
     async def load_bytes(self, path: str) -> bytes:
+        self._validate(path)
         payload = self._decode_payload(path)
         if payload is not None:
             return payload
