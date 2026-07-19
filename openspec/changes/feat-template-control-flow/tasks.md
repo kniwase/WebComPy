@@ -58,9 +58,9 @@
 
 - [x] 8.1 Test `render_app_html_sync(app)` with a template component using `{% if %}` / `{% for %}` — verify SSR HTML contains correct branch / repeated elements
 - [x] 8.2 Test `TestRenderer.render(component)` — verify prerendered nodes from conditional and loop branches have `__webcompy_prerendered_node__` flag
-- [ ] 8.3 E2E: add a template-based demo page under `e2e/core/` with control flow using `static_site` fixture — verify (a) pre-rendered HTML matches conditional branch output, (b) hydration correctly reuses existing DOM nodes, (c) Signal change triggers `switch()` branch switch with correct DOM update
+- [x] 8.3 E2E: add a template-based demo page under `e2e/core/` with control flow using `static_site` fixture — verify (a) pre-rendered HTML matches conditional branch output, (b) hydration correctly reuses existing DOM nodes, (c) Signal change triggers `switch()` branch switch with correct DOM update
 
 ## 9. CI Review Update
 
-- [ ] 9.1 Update `.opencode/agents/ci-review.md`: add `FragmentElement` as a new `DynamicElement` subclass (no DOM node, transparent child rendering, `_is_patchable` returns False, follows `SwitchElement` lifecycle for re-render / deferred `on_after_rendering`)
-- [ ] 9.2 Update `AGENTS.md` File→Spec Mapping: `webcompy/elements/types/_fragment.py` → `elements` spec
+- [x] 9.1 Update `.opencode/agents/ci-review.md`: add `FragmentElement` as a new `DynamicElement` subclass (no DOM node, transparent child rendering, `_is_patchable` returns False, follows `SwitchElement` lifecycle for re-render / deferred `on_after_rendering`)
+- [x] 9.2 Update `AGENTS.md` File→Spec Mapping: `webcompy/elements/types/_fragment.py` → `elements` spec
