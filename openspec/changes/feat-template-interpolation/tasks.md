@@ -22,7 +22,7 @@
 - [ ] 4.3 Implement `handle_endtag` with stack matching
 - [ ] 4.4 Implement `handle_data` with `{{ }}` scanning and `split_text` integration
 - [ ] 4.5 Implement `handle_comment` to skip comments
-- [ ] 4.6 Implement `<br>` → `NewLine` special-casing and boolean attribute (`None` → `True`) handling
+- [ ] 4.6 Implement `<br>` tag preservation and boolean attribute (`None` or `""` → `True`) handling
 - [ ] 4.7 Implement `REJECTED_TAGS` check (`script`, `style`, `iframe`, `noembed`, `noframes`, `xmp`) raising `WebComPyException`
 
 ## 5. Compilation Cache
@@ -46,11 +46,11 @@
 
 - [ ] 8.1 Implement `bind_element(node: TemplateElement, ctx) -> Element` that creates `Element` instances with resolved attrs, events, ref, and recursively bound children
 - [ ] 8.2 Implement `bind_children(nodes, ctx) -> list` that dispatches TemplateText → text parts binding, TemplateElement → bind_element
-- [ ] 8.3 Implement `bind_text_part(part, ctx) -> ElementChildren` that returns `LiteralText.text` or `resolve_var(Hole.var_path, ctx)`
+- [ ] 8.3 Implement `bind_text_part(node: TemplateText, ctx) -> list[ElementChildren]` that processes all parts of a `TemplateText` node in a single call: `LiteralText` → its text, Hole → `resolve_var(Hole.var_path, ctx)` (None skipped per spec, `str`/`SignalBase`/`ElementAbstract` passed through, anything else `str()`-converted)
 
 ## 9. Shared Pipeline + Public API
 
-- [ ] 9.1 Implement `_render_nodes(source: str, context: dict) -> list[ElementAbstract]` in `template/__init__.py` as the shared internal pipeline: dedent → cache → parse → bind all root nodes without single-root validation (enables reuse by Change 6's `render_markdown`)
+- [ ] 9.1 Implement `_render_nodes(source: str, context: Mapping[str, Any] | None = None) -> list[ElementChildren]` in `template/__init__.py` as the shared internal pipeline: dedent → cache → parse → bind all root nodes without single-root validation (enables reuse by Change 6's `render_markdown`)
 - [ ] 9.2 Implement `render_template(source: str, context: dict[str, Any]) -> Element` in `__init__.py` that calls `_render_nodes` and asserts exactly one root Element
 
 ## 10. Unit Tests — Holes Module
@@ -110,4 +110,4 @@
 
 ## 18. Main Spec Generation (Archive Time)
 
-- [ ] 18.1 After all 8 changes are implemented and before the final archive, generate `openspec/specs/template-engine/spec.md` by merging the delta specs from all changes (feat-template-interpolation, feat-template-control-flow, feat-template-component-tags, feat-template-css-text, feat-template-file-loading, feat-template-markdown, feat-template-markdown-for-expansion). The main spec SHALL include all ADDED requirements from Changes 1–6, with Change 7's MODIFIED requirements superseding the corresponding Change 6 baseline requirements.
+- [ ] 18.1 Before archiving this change, sync its delta spec to `openspec/specs/template-engine/spec.md` via the standard OpenSpec archive workflow. Each template-engine change syncs its own delta incrementally; later changes' MODIFIED/REMOVED/RENAMED sections supersede the corresponding earlier requirements.
