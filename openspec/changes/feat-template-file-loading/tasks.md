@@ -1,11 +1,11 @@
 ## 1. ResourcePort ABC and exception
 
-- [ ] 1.1 Create `packages/webcompy/src/webcompy/ports/_resource.py` defining `ResourcePort(ABC)` with two abstract methods: `async def load_text(self, path: str) -> str` and `async def load_bytes(self, path: str) -> bytes`
-- [ ] 1.2 Define `ResourceNotFoundError(Exception)` in the same module — message SHALL include the resource path and the implementation context (server / browser)
-- [ ] 1.3 Add `RESOURCE_PORT_KEY = InjectKey[ResourcePort]("webcompy-port-resource")` to `webcompy/ports/_keys.py`
-- [ ] 1.4 Add `RESOURCE_DATA_KEY = InjectKey[dict[str, str]]("webcompy-resource-data")` to `webcompy/di/_keys.py` (mirrors `HYDRATION_DATA_KEY` and `HYDRATION_SIGNAL_DATA_KEY`)
-- [ ] 1.5 Deferred to archive-time spec sync (M13): the `port-abstraction/spec.md` import-surface scenario is updated when this change's delta is synced to main specs. Do **not** edit the main spec during implementation.
-- [ ] 1.6 Add unit test verifying `ResourcePort` cannot be instantiated directly (ABC enforcement)
+- [x] 1.1 Create `packages/webcompy/src/webcompy/ports/_resource.py` defining `ResourcePort(ABC)` with two abstract methods: `async def load_text(self, path: str) -> str` and `async def load_bytes(self, path: str) -> bytes`
+- [x] 1.2 Define `ResourceNotFoundError(Exception)` in the same module — message SHALL include the resource path and the implementation context (server / browser)
+- [x] 1.3 Add `RESOURCE_PORT_KEY = InjectKey[ResourcePort]("webcompy-port-resource")` to `webcompy/ports/_keys.py`
+- [x] 1.4 Add `RESOURCE_DATA_KEY = InjectKey[dict[str, str]]("webcompy-resource-data")` to `webcompy/di/_keys.py` (mirrors `HYDRATION_DATA_KEY` and `HYDRATION_SIGNAL_DATA_KEY`)
+- [x] 1.5 Deferred to archive-time spec sync (M13): the `port-abstraction/spec.md` import-surface scenario is updated when this change's delta is synced to main specs. Do **not** edit the main spec during implementation.
+- [x] 1.6 Add unit test verifying `ResourcePort` cannot be instantiated directly (ABC enforcement)
 
 ## 2. ServerResourcePort implementation
 
