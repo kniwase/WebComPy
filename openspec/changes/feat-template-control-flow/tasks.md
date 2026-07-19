@@ -6,17 +6,17 @@
 
 ## 2. Template AST — Control Flow Nodes
 
-- [ ] 2.1 Add `IfNode(branches: list[tuple[str|None, list[TemplateNode]]])` and `ForNode(loop_vars: list[str], iterable_path: str, body: list[TemplateNode])` to `_ast.py` (`loop_vars` is a list to support single variable `["item"]` and tuple unpacking `["key", "value"]`)
-- [ ] 2.2 Add `DIRECTIVE_PATTERN` regex to match `{% if %}`, `{% elif %}`, `{% else %}`, `{% endif %}`, `{% for %}`, `{% endfor %}` with variable path extraction
-- [ ] 2.3 Add `DirectiveToken` types (IfDirective, ElseDirective, EndIfDirective, ForDirective, EndForDirective) for the bracket-matching phase
+- [x] 2.1 Add `IfNode(branches: list[tuple[str|None, list[TemplateNode]]])` and `ForNode(loop_vars: list[str], iterable_path: str, body: list[TemplateNode])` to `_ast.py` (`loop_vars` is a list to support single variable `["item"]` and tuple unpacking `["key", "value"]`)
+- [x] 2.2 Add `DIRECTIVE_PATTERN` regex to match `{% if %}`, `{% elif %}`, `{% else %}`, `{% endif %}`, `{% for %}`, `{% endfor %}` with variable path extraction
+- [x] 2.3 Add `DirectiveToken` types (IfDirective, ElseDirective, EndIfDirective, ForDirective, EndForDirective) for the bracket-matching phase
 
 ## 3. Parser — {% %} Block Extraction and Bracket Matching
 
-- [ ] 3.1 Implement text node post-processing: scan `TemplateText` children for `{% %}` patterns, split into `LiteralText` and `DirectiveToken` sequences
-- [ ] 3.2 Implement bracket-matching algorithm: walk children list, match `{% if %}`→`{% endif %}`, `{% for %}`→`{% endfor %}`, group intermediate children into IfNode/ForNode. For `{% for %}`, split the left-hand side on `,` → list of loop variable names (supporting both `"item"` and `"key, value"` tuples)
-- [ ] 3.3 Handle `{% elif %}` and `{% else %}` within `{% if %}` blocks
-- [ ] 3.4 Handle nested control flow (if inside for, for inside if) via recursive application of bracket matching
-- [ ] 3.5 Raise error on malformed blocks (missing endif, missing endfor, mismatched nesting)
+- [x] 3.1 Implement text node post-processing: scan `TemplateText` children for `{% %}` patterns, split into `LiteralText` and `DirectiveToken` sequences
+- [x] 3.2 Implement bracket-matching algorithm: walk children list, match `{% if %}`→`{% endif %}`, `{% for %}`→`{% endfor %}`, group intermediate children into IfNode/ForNode. For `{% for %}`, split the left-hand side on `,` → list of loop variable names (supporting both `"item"` and `"key, value"` tuples)
+- [x] 3.3 Handle `{% elif %}` and `{% else %}` within `{% if %}` blocks
+- [x] 3.4 Handle nested control flow (if inside for, for inside if) via recursive application of bracket matching
+- [x] 3.5 Raise error on malformed blocks (missing endif, missing endfor, mismatched nesting)
 
 ## 4. Binder — Control Flow Binding
 
@@ -29,10 +29,10 @@
 
 ## 5. Unit Tests — Parser Control Flow
 
-- [ ] 5.1 Test `{% if %}` / `{% endif %}` parsing into IfNode (single branch, with elif/else)
-- [ ] 5.2 Test `{% for %}` / `{% endfor %}` parsing into ForNode
-- [ ] 5.3 Test nested control flow parsing (if in for, for in if)
-- [ ] 5.4 Test malformed block error cases
+- [x] 5.1 Test `{% if %}` / `{% endif %}` parsing into IfNode (single branch, with elif/else)
+- [x] 5.2 Test `{% for %}` / `{% endfor %}` parsing into ForNode
+- [x] 5.3 Test nested control flow parsing (if in for, for in if)
+- [x] 5.4 Test malformed block error cases
 
 ## 6. Unit Tests — Binder Control Flow
 

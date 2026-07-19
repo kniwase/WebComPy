@@ -4,6 +4,8 @@ import pytest
 
 from webcompy.exception import WebComPyException
 from webcompy.template._ast import (
+    ForNode,
+    IfNode,
     TemplateElement,
     TemplateText,
 )
@@ -254,3 +256,205 @@ class TestLenientUnknownTags:
     def test_uppercase_void(self):
         roots = _parse("<BR>")
         assert roots[0].tag_name == "br"
+
+
+class TestIfDirectiveParsing:
+    def test_simple_if(self):
+        roots = _parse("<div>{% if show %}A{% endif %}</div>")
+        div = roots[0]
+        assert len(div.children) == 1
+        if_node = div.children[0]
+        assert isinstance(if_node, IfNode)
+        assert len(if_node.branches) == 1
+        cond, body = if_node.branches[0]
+        assert cond == "show"
+        assert len(body) == 1
+        assert isinstance(body[0], TemplateText)
+        assert body[0].parts == [LiteralText("A")]
+
+    def test_if_with_surrounding_literal_text(self):
+        roots = _parse("<div>before{% if x %}IN{% endif %}after</div>")
+        div = roots[0]
+        assert len(div.children) == 3
+        assert isinstance(div.children[0], TemplateText)
+        assert div.children[0].parts == [LiteralText("before")]
+        assert isinstance(div.children[1], IfNode)
+        assert isinstance(div.children[2], TemplateText)
+        assert div.children[2].parts == [LiteralText("after")]
+
+    def test_if_with_element_body(self):
+        roots = _parse("{% if x %}<p>hi</p>{% endif %}")
+        assert len(roots) == 1
+        if_node = roots[0]
+        assert isinstance(if_node, IfNode)
+        cond, body = if_node.branches[0]
+        assert cond == "x"
+        assert len(body) == 1
+        assert isinstance(body[0], TemplateElement)
+        assert body[0].tag_name == "p"
+
+    def test_if_with_hole_in_condition_text(self):
+        roots = _parse("{% if show %}Hello {{ name }}{% endif %}")
+        if_node = roots[0]
+        assert isinstance(if_node, IfNode)
+        body = if_node.branches[0][1]
+        text = body[0]
+        assert isinstance(text, TemplateText)
+        assert text.parts == [LiteralText("Hello "), Hole("name")]
+
+    def test_if_else_chain(self):
+        roots = _parse("{% if a %}A{% else %}B{% endif %}")
+        if_node = roots[0]
+        assert isinstance(if_node, IfNode)
+        assert len(if_node.branches) == 2
+        assert if_node.branches[0][0] == "a"
+        assert if_node.branches[1][0] is None
+
+    def test_if_elif_else_chain(self):
+        roots = _parse("{% if a %}A{% elif b %}B{% else %}C{% endif %}")
+        if_node = roots[0]
+        assert isinstance(if_node, IfNode)
+        assert len(if_node.branches) == 3
+        assert if_node.branches[0][0] == "a"
+        assert if_node.branches[1][0] == "b"
+        assert if_node.branches[2][0] is None
+
+    def test_if_with_dot_notation(self):
+        roots = _parse("{% if item.visible %}A{% endif %}")
+        if_node = roots[0]
+        assert if_node.branches[0][0] == "item.visible"
+
+
+class TestForDirectiveParsing:
+    def test_simple_for(self):
+        roots = _parse("{% for item in items %}<p>{{ item }}</p>{% endfor %}")
+        assert len(roots) == 1
+        for_node = roots[0]
+        assert isinstance(for_node, ForNode)
+        assert for_node.loop_vars == ["item"]
+        assert for_node.iterable_path == "items"
+        assert len(for_node.body) == 1
+        p = for_node.body[0]
+        assert isinstance(p, TemplateElement)
+        assert p.tag_name == "p"
+
+    def test_for_with_dict_unpacking(self):
+        roots = _parse("{% for key, value in my_dict %}<p>{{ key }}: {{ value }}</p>{% endfor %}")
+        for_node = roots[0]
+        assert isinstance(for_node, ForNode)
+        assert for_node.loop_vars == ["key", "value"]
+        assert for_node.iterable_path == "my_dict"
+
+    def test_for_with_whitespace(self):
+        roots = _parse("{%   for   x   in   items   %}<p>{{ x }}</p>{%   endfor   %}")
+        for_node = roots[0]
+        assert for_node.loop_vars == ["x"]
+        assert for_node.iterable_path == "items"
+
+    def test_for_with_dot_notation(self):
+        roots = _parse("{% for post in user.posts %}<p>{{ post }}</p>{% endfor %}")
+        for_node = roots[0]
+        assert for_node.iterable_path == "user.posts"
+
+    def test_for_with_surrounding_text(self):
+        roots = _parse("<div>before{% for x in y %}<b>x</b>{% endfor %}after</div>")
+        div = roots[0]
+        assert len(div.children) == 3
+        assert isinstance(div.children[0], TemplateText)
+        assert isinstance(div.children[1], ForNode)
+        assert isinstance(div.children[2], TemplateText)
+
+
+class TestNestedControlFlowParsing:
+    def test_if_inside_for(self):
+        roots = _parse("{% for item in items %}{% if item.visible %}<li>{{ item.name }}</li>{% endif %}{% endfor %}")
+        for_node = roots[0]
+        assert isinstance(for_node, ForNode)
+        assert len(for_node.body) == 1
+        if_node = for_node.body[0]
+        assert isinstance(if_node, IfNode)
+        assert if_node.branches[0][0] == "item.visible"
+        li = if_node.branches[0][1][0]
+        assert isinstance(li, TemplateElement)
+        assert li.tag_name == "li"
+
+    def test_for_inside_if(self):
+        roots = _parse("{% if show %}<ul>{% for x in items %}<li>x</li>{% endfor %}</ul>{% endif %}")
+        if_node = roots[0]
+        assert isinstance(if_node, IfNode)
+        ul = if_node.branches[0][1][0]
+        assert isinstance(ul, TemplateElement)
+        assert ul.tag_name == "ul"
+        for_node = ul.children[0]
+        assert isinstance(for_node, ForNode)
+
+    def test_deeply_nested(self):
+        roots = _parse(
+            "<div>{% for x in xs %}{% if x.ok %}<p>{% for c in x.children %}<span>{{ c }}</span>{% endfor %}</p>{% endif %}{% endfor %}</div>"
+        )
+        div = roots[0]
+        for_node = div.children[0]
+        assert isinstance(for_node, ForNode)
+        if_node = for_node.body[0]
+        assert isinstance(if_node, IfNode)
+        p = if_node.branches[0][1][0]
+        assert isinstance(p, TemplateElement)
+        inner_for = p.children[0]
+        assert isinstance(inner_for, ForNode)
+        assert inner_for.loop_vars == ["c"]
+        assert inner_for.iterable_path == "x.children"
+
+
+class TestMalformedControlFlowParsing:
+    def test_missing_endif(self):
+        with pytest.raises(WebComPyException, match="Unclosed"):
+            _parse("{% if x %}A")
+
+    def test_missing_endfor(self):
+        with pytest.raises(WebComPyException, match="Unclosed"):
+            _parse("{% for x in y %}A")
+
+    def test_extra_endif(self):
+        with pytest.raises(WebComPyException, match="endif"):
+            _parse("A{% endif %}")
+
+    def test_extra_endfor(self):
+        with pytest.raises(WebComPyException, match="endfor"):
+            _parse("A{% endfor %}")
+
+    def test_mismatched_elif_without_if(self):
+        with pytest.raises(WebComPyException, match="elif"):
+            _parse("{% elif x %}A{% endif %}")
+
+    def test_mismatched_else_without_if(self):
+        with pytest.raises(WebComPyException, match="else"):
+            _parse("{% else %}A{% endif %}")
+
+    def test_for_endif_mismatch(self):
+        with pytest.raises(WebComPyException, match="endif"):
+            _parse("{% for x in y %}A{% endif %}")
+
+    def test_if_endfor_mismatch(self):
+        with pytest.raises(WebComPyException, match="endfor"):
+            _parse("{% if x %}A{% endfor %}")
+
+    def test_invalid_for_missing_in_separator(self):
+        with pytest.raises(WebComPyException, match="in"):
+            _parse("{% for x %}A{% endfor %}")
+
+    def test_invalid_for_empty_loop_var(self):
+        with pytest.raises(WebComPyException, match="loop variable"):
+            _parse("{% for , in items %}A{% endfor %}")
+
+
+class TestDirectivePatternEdgeCases:
+    def test_if_surrounded_by_text_with_holes(self):
+        roots = _parse("<p>a{{ x }}{% if y %}b{% endif %}c</p>")
+        p = roots[0]
+        assert len(p.children) == 3
+        first = p.children[0]
+        assert isinstance(first, TemplateText)
+        assert first.parts == [LiteralText("a"), Hole("x")]
+        assert isinstance(p.children[1], IfNode)
+        assert isinstance(p.children[2], TemplateText)
+        assert p.children[2].parts == [LiteralText("c")]
