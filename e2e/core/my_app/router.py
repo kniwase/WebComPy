@@ -19,6 +19,7 @@ from .pages.signal import ReactivePage
 from .pages.suspense_test import SuspensePage
 from .pages.switch_test import SwitchPage
 from .pages.template import TemplatePage
+from .pages.template_components import TemplateComponentsPage
 from .pages.template_control_flow import TemplateControlFlowPage
 
 router = Router(
@@ -41,6 +42,7 @@ router = Router(
     {"path": "/di-provide", "component": DiProviderWrapper},
     {"path": "/di-inject", "component": DiInjectPage},
     {"path": "/template", "component": TemplatePage},
+    {"path": "/template-components", "component": TemplateComponentsPage},
     {"path": "/template-control-flow", "component": TemplateControlFlowPage},
     default=NotFound,
     mode="history",

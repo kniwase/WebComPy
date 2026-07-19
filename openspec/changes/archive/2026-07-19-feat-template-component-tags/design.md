@@ -38,15 +38,18 @@ Tags containing hyphens (`-`) that are NOT found in ComponentStore raise an erro
 
 **Naming convention**: The `ComponentStore` is keyed by the function's `__name__` (`_generator.py:279`). The kebab→PascalCase conversion (`kebab_to_pascal("user-card")` → `"UserCard"`) only succeeds when the component definition function uses PascalCase naming (e.g., `def UserCard(ctx):`). Functions named in snake_case (e.g., `def user_card(ctx):`) will not match the converted name and cause a lookup error. This convention MUST be documented for component authors.
 
-**Hyphen detection logic**: The kebab→PascalCase conversion SHALL only be invoked when the tag name contains at least one hyphen. Tags without hyphens (e.g., `<UserCard>` in PascalCase, `<usercard>` in lowercase) SHALL be passed directly to `ComponentStore` lookup using the tag name as-is. If the lookup fails for a non-hyphenated tag, it SHALL fall back to HTML element treatment (lenient fallback), consistent with the convention that only hyphenated unknown tags raise an error.
+**Hyphen detection logic**: The kebab→PascalCase conversion SHALL only be invoked when the tag name contains at least one hyphen. Tags without hyphens (e.g., `<widget>`, `<usercard>` in lowercase) SHALL be passed directly to `ComponentStore` lookup using the lowercase tag name. If the lookup fails for a non-hyphenated tag, it SHALL fall back to HTML element treatment (lenient fallback), consistent with the convention that only hyphenated unknown tags raise an error.
 
-| Tag form | Example | Hyphen? | ComponentStore lookup | Failed lookup behavior |
+**Parser-imposed case normalization**: Python's standard `html.parser.HTMLParser` internally lowercases all tag names before dispatching them to `handle_starttag` (`html.parser` stdlib, `parse_starttag` does `match.group(1).lower()`). This change's parser reuses `HTMLParser` without modification. Concretely:
+
+| Tag form | Example | After `HTMLParser` | ComponentStore lookup | Failed lookup behavior |
 |---|---|---|---|---|
-| kebab-case | `<user-card>` | Yes | kebab→PascalCase (`UserCard`) | `WebComPyException` ("Component not found") |
-| PascalCase | `<UserCard>` | No | as-is (`UserCard`) | lenient → treated as HTML |
-| lowercase | `<usercard>` | No | as-is (`usercard`) | lenient → treated as HTML |
+| kebab-case | `<user-card>` | `user-card` | kebab→PascalCase (`UserCard`) | `WebComPyException` ("Component not found") |
+| lowercase | `<usercard>`, `<widget>` | `usercard` | as-is lowercase | lenient → treated as HTML |
 
-**Rationale**: The hyphen is the unambiguous signal that a tag is a component reference. PascalCase naming without a hyphen is ambiguous — it could be a component or a future HTML custom element (`HTMLUnknownElement`). The lenient fallback for non-hyphenated tags is the safer choice.
+The PascalCase row (`<UserCard>` → lookup `UserCard`) is intentionally **not supported** in this change: making it reachable would require replacing or wrapping Python's `HTMLParser` to bypass the lowercase normalization, which is out of scope for this MVP. Developers who need to reference a `UserCard` component SHALL use the kebab-case tag `<user-card>`.
+
+**Rationale**: The hyphen is the unambiguous signal that a tag is a component reference. PascalCase naming without a hyphen — when combined with the Python stdlib's lowercasing — would always degenerate to the lowercase row above, so documenting the kebab-only path keeps the design honest.
 
 **Tag name type casting**: When the lenient fallback creates an `Element` from a non-hyphenated tag name, it SHALL use the same `cast("HtmlTags", tag_name)` strategy as Change 1's `bind_element` (see interpolation design D6).
 
@@ -74,7 +77,7 @@ Regular (non-`:` prefixed) component attributes MAY contain `{{ }}` interpolatio
 
 **Rationale**: Consistency with HTML element attributes. Component authors receive a `Computed` prop and read `.value` to access the current interpolated string. The `resolve_attr` function in Change 1 handles both reactive and static evaluation automatically based on whether the interpolated variable is a `SignalBase`.
 
-## Risks / Trade-offs
+### Risks / Trade-offs
 
 - **[Risk] Component not found due to missing import** → Mitigation: Clear error message: `"Component 'UserCard' not found. Component tags require PascalCase component function names (e.g., <user-card> resolves to UserCard). If your component is defined with a different name, use the Python API instead. Did you forget to import it? Available: ['Navbar', ...]"`.
 - **[Risk] Name collision with future HTML elements** → Mitigation: Hyphen convention. Unknown non-hyphenated tags are lenient (future-proof).

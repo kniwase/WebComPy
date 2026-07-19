@@ -99,7 +99,11 @@ class TestRenderer:
 
         async def _render_async() -> tuple[object, VirtualDOMNode, DIScope]:
             from webcompy.components._component import HeadPropsStore
-            from webcompy.di._keys import _HEAD_PROPS_KEY
+            from webcompy.components._generator import (
+                ComponentStore,
+                _register_deferred_components,
+            )
+            from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
 
             scope = DIScope(parent=parent_scope)
             fake_scheduler = FakeAsyncSchedulerPort()
@@ -108,8 +112,10 @@ class TestRenderer:
             scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
             scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
             scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+            scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
 
             _active_di_scope.set(scope)
+            _register_deferred_components()
 
             root_node = VirtualDOMNode("div")
             root_node.__webcompy_node__ = False

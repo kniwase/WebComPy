@@ -201,9 +201,9 @@ class TestLenientUnknownTags:
         assert result._tag_name == "widget"
         assert result._children[0]._text == "text"
 
-    def test_kebab_case_tag(self):
-        result = render_template("<my-component>x</my-component>", {})
-        assert result._tag_name == "my-component"
+    def test_kebab_case_tag_raises_when_component_missing(self):
+        with pytest.raises(WebComPyException, match="MyComponent"):
+            render_template("<my-component>x</my-component>", {})
 
     def test_data_attributes(self):
         result = render_template('<div data-testid="x">y</div>', {})
@@ -408,3 +408,122 @@ class TestSwitchTruthinessSemantics:
         sw = result._children[0]
         idx, _ = sw._select_generator()
         assert idx == -1
+
+
+class TestComponentTagEndToEnd:
+    """Integration: ``render_template`` produces a rendered Component subtree."""
+
+    def test_render_template_resolves_kebab_component(self):
+        from webcompy.components._generator import (
+            ComponentGenerator,
+            ComponentStore,
+        )
+        from webcompy.elements.types._text import TextElement
+
+        captured: dict[str, object] = {}
+
+        def setup(ctx):
+            captured["title"] = ctx.props.get("title")
+            return Element("section", {}, [], None, [TextElement("ok")])
+
+        store = ComponentStore()
+        store.add_component("UserCard", ComponentGenerator("UserCard", setup))
+
+        with _store_di_scope(store):
+            result = render_template("<div><user-card title='Hi' /></div>")
+        assert captured["title"] == "Hi"
+        assert isinstance(result, Element)
+        assert result._tag_name == "div"
+        # The first child of the wrapper div is the rendered UserCard section.
+        # The binder yields a Component which has been rendered to its template
+        # Element; both share ElementBase so we assert behaviorally.
+        first_child = result._children[0]
+        assert first_child._tag_name == "section"
+
+
+def _store_di_scope(store):
+    from contextlib import contextmanager
+
+    from webcompy.components._component import HeadPropsStore
+    from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+    from webcompy.di._scope import DIScope, _active_di_scope
+
+    @contextmanager
+    def ctx():
+        head_props = HeadPropsStore()
+        parent_scope = _active_di_scope.get(None)
+        if parent_scope is not None and getattr(parent_scope, "_disposed", False):
+            parent_scope = None
+        scope = parent_scope.create_child() if parent_scope is not None else DIScope()
+        scope.provide(_COMPONENT_STORE_KEY, store)
+        scope.provide(_HEAD_PROPS_KEY, head_props)
+        token = _active_di_scope.set(scope)
+        try:
+            yield scope
+        finally:
+            _active_di_scope.reset(token)
+            scope.dispose()
+
+    return ctx()
+
+
+class TestNestedComponentTags:
+    def test_parent_template_contains_child_component_tag(self):
+        from webcompy.components._generator import (
+            ComponentGenerator,
+            ComponentStore,
+        )
+        from webcompy.elements.types._text import TextElement
+
+        def inner(ctx):
+            return Element(
+                "span",
+                {},
+                [],
+                None,
+                [TextElement(ctx.props.get("label", ""))],
+            )
+
+        store = ComponentStore()
+        store.add_component("InnerCard", ComponentGenerator("InnerCard", inner))
+
+        with _store_di_scope(store):
+            result = render_template(
+                "<div><inner-card label='hi' /></div>",
+            )
+        assert isinstance(result, Element)
+        assert result._tag_name == "div"
+        inner = result._children[0]
+        assert inner._tag_name == "span"
+        assert inner._children[0]._text == "hi"
+
+
+class TestReactivePropUpdates:
+    def test_signal_prop_changes_after_initial_render(self):
+        from webcompy.components._generator import (
+            ComponentGenerator,
+            ComponentStore,
+        )
+        from webcompy.elements.types._text import TextElement
+
+        def renderable(ctx):
+            value = ctx.props.get("value")
+            text = value.value if hasattr(value, "value") else str(value)
+            return Element("p", {}, [], None, [TextElement(text)])
+
+        store = ComponentStore()
+        store.add_component("ReactiveCount", ComponentGenerator("ReactiveCount", renderable))
+
+        sig = Signal("a")
+        with _store_di_scope(store):
+            first = render_template("<div><reactive-count :value='v' /></div>", {"v": sig})
+        assert isinstance(first, Element)
+        # The component tag renders to its template <p>; navigate into that.
+        assert first._children[0]._tag_name == "p"
+        assert first._children[0]._children[0]._text == "a"
+
+        sig.value = "b"
+        with _store_di_scope(store):
+            second = render_template("<div><reactive-count :value='v' /></div>", {"v": sig})
+        assert isinstance(second, Element)
+        assert second._children[0]._children[0]._text == "b"
