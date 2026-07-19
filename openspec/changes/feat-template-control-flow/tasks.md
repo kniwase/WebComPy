@@ -49,15 +49,15 @@
 
 ## 7. Integration Tests
 
-- [ ] 7.1 Test `render_template` with `{% if %}` and `{% for %}` end-to-end (component setup context)
-- [ ] 7.2 Test nested control flow integration (for containing if)
-- [ ] 7.3 Test multi-element scenarios with FragmentElement in switch and repeat contexts
-- [ ] 7.4 Test switch() truthiness evaluation semantics with Signal conditions
+- [x] 7.1 Test `render_template` with `{% if %}` and `{% for %}` end-to-end (component setup context)
+- [x] 7.2 Test nested control flow integration (for containing if)
+- [x] 7.3 Test multi-element scenarios with FragmentElement in switch and repeat contexts
+- [x] 7.4 Test switch() truthiness evaluation semantics with Signal conditions
 
 ## 8. SSR & Hydration
 
-- [ ] 8.1 Test `render_app_html_sync(app)` with a template component using `{% if %}` / `{% for %}` — verify SSR HTML contains correct branch / repeated elements
-- [ ] 8.2 Test `TestRenderer.render(component)` — verify prerendered nodes from conditional and loop branches have `__webcompy_prerendered_node__` flag
+- [x] 8.1 Test `render_app_html_sync(app)` with a template component using `{% if %}` / `{% for %}` — verify SSR HTML contains correct branch / repeated elements
+- [x] 8.2 Test `TestRenderer.render(component)` — verify prerendered nodes from conditional and loop branches have `__webcompy_prerendered_node__` flag
 - [ ] 8.3 E2E: add a template-based demo page under `e2e/core/` with control flow using `static_site` fixture — verify (a) pre-rendered HTML matches conditional branch output, (b) hydration correctly reuses existing DOM nodes, (c) Signal change triggers `switch()` branch switch with correct DOM update
 
 ## 9. CI Review Update
