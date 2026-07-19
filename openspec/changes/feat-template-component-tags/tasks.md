@@ -54,8 +54,8 @@
 
 ## 8. SSR & Hydration
 
-- [ ] 8.1 Test `render_app_html_sync(app)` with a component using `<user-card>` in template — verify SSR HTML includes the component's rendered output
-- [ ] 8.2 Test `TestRenderer.render()` with component tags — verify prerendered component nodes have correct `webcompy-component` attribute and `__webcompy_prerendered_node__` flags
+- [x] 8.1 Test `render_app_html_sync(app)` with a component using `<user-card>` in template — verify SSR HTML includes the component's rendered output
+- [x] 8.2 Test `TestRenderer.render()` with component tags — verify prerendered component nodes have correct `webcompy-component` attribute and `__webcompy_prerendered_node__` flags
 - [ ] 8.3 E2E: verify (a) pre-rendered HTML from `<user-card>` component tag matches expected structure, (b) hydration reuses existing component DOM nodes, (c) reactive prop changes (`:count="signal"`) propagate to the child component after hydration
 
 ## 9. CI Review Update

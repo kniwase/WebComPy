@@ -251,3 +251,56 @@ class TestTemplateControlFlowPrerenderedFlags:
             assert "<li" in html
             assert html.count("<li") == 3
             assert "a" in html and "b" in html and "c" in html
+
+
+class TestComponentTagSSR:
+    """SSR-time rendering of component tags produces the component's output."""
+
+    def test_ssr_includes_component_template_output(self):
+        @define_component
+        def GreetingCard(context):
+            name = context.props.get("name", "")
+            return render_template(f"<span data-testid='name'>Hi {name}</span>")
+
+        @define_component
+        def GreetingPage(context):
+            return render_template(
+                "<div><greeting-card name='Alice' /></div>",
+            )
+
+        app = create_test_app(root_component=GreetingPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "<span" in html_str
+        assert "Hi Alice" in html_str
+        assert 'data-testid="name"' in html_str
+
+
+class TestComponentTagTestRenderer:
+    """TestRenderer should expose component-tag-rendered DOM nodes."""
+
+    def test_component_tag_renders_into_test_renderer(self):
+        @define_component
+        def InfoBadge(context):
+            label = context.props.get("label", "")
+            return render_template(f"<span data-testid='badge'>{label}</span>")
+
+        @define_component
+        def BadgePage(context):
+            return render_template(
+                "<div><info-badge label='ready' /></div>",
+            )
+
+        with TestRenderer.render(BadgePage) as result:
+            html = result.to_html()
+            assert "<span" in html
+            assert "ready" in html
+            assert 'data-testid="badge"' in html
+            badge = result.find_by_attribute("data-testid", "badge")
+            assert badge is not None
+            assert badge.textContent == "ready"
