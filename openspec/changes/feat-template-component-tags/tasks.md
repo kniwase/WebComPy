@@ -33,18 +33,18 @@
 
 ## 6. Unit Tests
 
-- [ ] 6.1 Test component tag resolution (kebab→PascalCase lookup, successful match)
-- [ ] 6.2 Test component not found with hyphen (error with available names)
-- [ ] 6.3 Test unknown tag without hyphen (lenient HTML fallback)
-- [ ] 6.4 Test self-closing component tag
-- [ ] 6.5 Test static prop binding (string literal)
-- [ ] 6.6 Test dynamic prop binding (variable lookup, Signal preservation)
-- [ ] 6.7 Test prop name kebab→snake_case conversion
-- [ ] 6.8 Test default slot with single child
-- [ ] 6.9 Test default slot with multiple children (FragmentElement wrapping)
-- [ ] 6.10 Test empty default slot (self-closing)
-- [ ] 6.11 Test HTML tags unaffected (no component resolution for `<div>`, etc.)
-- [ ] 6.12 Test `<br>` still maps to NewLine (not component lookup)
+- [x] 6.1 Test component tag resolution (kebab→PascalCase lookup, successful match)
+- [x] 6.2 Test component not found with hyphen (error with available names)
+- [x] 6.3 Test unknown tag without hyphen (lenient HTML fallback)
+- [x] 6.4 Test self-closing component tag
+- [x] 6.5 Test static prop binding (string literal)
+- [x] 6.6 Test dynamic prop binding (variable lookup, Signal preservation)
+- [x] 6.7 Test prop name kebab→snake_case conversion
+- [x] 6.8 Test default slot with single child
+- [x] 6.9 Test default slot with multiple children (FragmentElement wrapping)
+- [x] 6.10 Test empty default slot (self-closing)
+- [x] 6.11 Test HTML tags unaffected (no component resolution for `<div>`, etc.)
+- [x] 6.12 Test `<br>` still maps to NewLine (not component lookup)
 
 ## 7. Integration Tests
 
