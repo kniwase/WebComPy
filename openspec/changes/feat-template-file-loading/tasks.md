@@ -76,14 +76,14 @@
 
 ## 10. Remove legacy `load_asset` and assets machinery
 
-- [ ] 10.1 Delete `packages/webcompy/src/webcompy/assets.py`
-- [ ] 10.2 Delete `tests/test_assets.py`
-- [ ] 10.3 From `webcompy/__init__.py` remove any import/export of `load_asset` and `AssetNotFoundError`
-- [ ] 10.4 Confirm no internal imports of `load_asset` remain (search `webcompy/`, `webcompy-cli/`, `webcompy-server/`, `webcompy-testing/`, `docs_app/`, `tests/`)
-- [ ] 10.5 In `webcompy_cli/_wheel_builder.py`: remove **three** helpers — `_generate_assets_registry` (lines 174-179), `_assets_to_package_data` (lines 153-171, becomes dead code after `assets=` removal per M12), and the `assets: dict[str, str] | None = None` parameter on `make_webcompy_app_package` (lines 300-308). Remove the `if assets:` block at lines 313-317. Also update `tests/test_wheel_builder.py`: remove import at line 9; remove or rewrite the test functions at lines 415, 423, 448, 449, 470 that exercise the removed helper (M8).
-- [ ] 10.6 In `webcompy_cli/_build.py`: stop passing `build_config.assets` to `make_webcompy_app_package`
-- [ ] 10.7 ~~Update `webcompy-cli/src/webcompy_cli/template_data/webcompy_config.py` scaffold~~ **DELETED (M9)**: confirmed the scaffold does not reference `assets`; the field was never added there. No-op.
-- [ ] 10.8 Run `grep -r "load_asset\|_assets_registry\|\.assets(" .` to confirm zero remaining references before merge
+- [x] 10.1 Delete `packages/webcompy/src/webcompy/assets.py`
+- [x] 10.2 Delete `tests/test_assets.py`
+- [x] 10.3 From `webcompy/__init__.py` remove any import/export of `load_asset` and `AssetNotFoundError`
+- [x] 10.4 Confirm no internal imports of `load_asset` remain (search `webcompy/`, `webcompy-cli/`, `webcompy-server/`, `webcompy-testing/`, `docs_app/`, `tests/`)
+- [x] 10.5 In `webcompy_cli/_wheel_builder.py`: remove **three** helpers — `_generate_assets_registry` (lines 174-179), `_assets_to_package_data` (lines 153-171, becomes dead code after `assets=` removal per M12), and the `assets: dict[str, str] | None = None` parameter on `make_webcompy_app_package` (lines 300-308). Remove the `if assets:` block at lines 313-317. Also update `tests/test_wheel_builder.py`: remove import at line 9; remove or rewrite the test functions at lines 415, 423, 448, 449, 470 that exercise the removed helper (M8).
+- [x] 10.6 In `webcompy_cli/_build.py`: stop passing `build_config.assets` to `make_webcompy_app_package`
+- [x] 10.7 ~~Update `webcompy-cli/src/webcompy_cli/template_data/webcompy_config.py` scaffold~~ **DELETED (M9)**: confirmed the scaffold does not reference `assets`; the field was never added there. No-op.
+- [x] 10.8 Run `grep -r "load_asset\|_assets_registry\|\.assets(" .` to confirm zero remaining references before merge
 
 ## 11. CI review updates
 
