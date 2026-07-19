@@ -166,14 +166,6 @@ def _restructure_directives(
             element_children = cast("_IntermediateChildren", child.children)
             new_children = _restructure_directives(element_children)
             cur_target().append(TemplateElement(tag_name=child.tag_name, attrs=child.attrs, children=new_children))
-        elif isinstance(child, IfNode):
-            new_branches = [
-                (cond, _restructure_directives(cast("_IntermediateChildren", body))) for cond, body in child.branches
-            ]
-            cur_target().append(IfNode(branches=new_branches))
-        elif isinstance(child, ForNode):
-            new_body = _restructure_directives(cast("_IntermediateChildren", child.body))
-            cur_target().append(ForNode(loop_vars=child.loop_vars, iterable_path=child.iterable_path, body=new_body))
         elif isinstance(child, IfDirective):
             if_node = IfNode(branches=[(child.condition, [])])
             cur_target().append(if_node)

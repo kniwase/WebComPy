@@ -118,13 +118,13 @@ def _to_element(child: ElementChildren) -> ElementAbstract:
 def _wrap_for_fragment(children: list[ElementChildren]) -> ElementChildren:
     """Wrap a list of ElementChildren into a single ElementChildren for switch/repeat callbacks.
 
-    * 0 children → FragmentElement([])
+    * 0 children → None
     * 1 child    → pass-through
     * multiple   → FragmentElement wrapping all as ElementAbstract
     """
     filtered = [c for c in children if c is not None]
     if not filtered:
-        return FragmentElement([])
+        return None
     if len(filtered) == 1:
         return filtered[0]
     return FragmentElement([_to_element(c) for c in filtered])
