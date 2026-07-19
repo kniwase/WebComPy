@@ -17,13 +17,13 @@
 
 ## 4. HTML Parser (Tree Builder)
 
-- [ ] 4.1 Implement `TemplateTreeBuilder(HTMLParser)` with `VOID_ELEMENTS` set and `handle_starttag` (element creation, stack push, void element exclusion)
-- [ ] 4.2 Implement `handle_startendtag` for self-closing tag syntax (`<tag />`)
-- [ ] 4.3 Implement `handle_endtag` with stack matching
-- [ ] 4.4 Implement `handle_data` with `{{ }}` scanning and `split_text` integration
-- [ ] 4.5 Implement `handle_comment` to skip comments
-- [ ] 4.6 Implement `<br>` tag preservation and boolean attribute (`None` or `""` → `True`) handling
-- [ ] 4.7 Implement `REJECTED_TAGS` check (`script`, `style`, `iframe`, `noembed`, `noframes`, `xmp`) raising `WebComPyException`
+- [x] 4.1 Implement `TemplateTreeBuilder(HTMLParser)` with `VOID_ELEMENTS` set and `handle_starttag` (element creation, stack push, void element exclusion)
+- [x] 4.2 Implement `handle_startendtag` for self-closing tag syntax (`<tag />`)
+- [x] 4.3 Implement `handle_endtag` with stack matching
+- [x] 4.4 Implement `handle_data` with `{{ }}` scanning and `split_text` integration
+- [x] 4.5 Implement `handle_comment` to skip comments
+- [x] 4.6 Implement `<br>` tag preservation and boolean attribute (`None` or `""` → `True`) handling
+- [x] 4.7 Implement `REJECTED_TAGS` check (`script`, `style`, `iframe`, `noembed`, `noframes`, `xmp`) raising `WebComPyException`
 
 ## 5. Compilation Cache
 
@@ -64,12 +64,12 @@
 
 ## 11. Unit Tests — Parser
 
-- [ ] 11.1 Test basic HTML structure parsing (nested elements, attributes, text content)
-- [ ] 11.2 Test void elements (`<br>`, `<img>`, `<input>`, `<hr>`, `<source>`, etc.) and self-closing syntax
-- [ ] 11.3 Test boolean attributes (bare `disabled`, `disabled=""`, `disabled="disabled"`)
-- [ ] 11.4 Test HTML comments (skipping, nested content)
-- [ ] 11.5 Test REJECTED_TAGS rejection (`<script>`, `<style>`, etc.)
-- [ ] 11.6 Test `{{ }}` splitting in text and attribute values (literal/hole parts)
+- [x] 11.1 Test basic HTML structure parsing (nested elements, attributes, text content)
+- [x] 11.2 Test void elements (`<br>`, `<img>`, `<input>`, `<hr>`, `<source>`, etc.) and self-closing syntax
+- [x] 11.3 Test boolean attributes (bare `disabled`, `disabled=""`, `disabled="disabled"`)
+- [x] 11.4 Test HTML comments (skipping, nested content)
+- [x] 11.5 Test REJECTED_TAGS rejection (`<script>`, `<style>`, etc.)
+- [x] 11.6 Test `{{ }}` splitting in text and attribute values (literal/hole parts)
 
 ## 12. Unit Tests — Binding
 
