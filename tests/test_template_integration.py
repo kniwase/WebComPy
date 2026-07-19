@@ -5,7 +5,7 @@ import pytest
 from webcompy.elements import DomNodeRef
 from webcompy.elements.types._element import Element
 from webcompy.exception import WebComPyException
-from webcompy.signal import Signal
+from webcompy.signal import ReactiveList, Signal
 from webcompy.template import render_template
 from webcompy.template._cache import clear_cache, get_or_compile
 from webcompy.template._parser import parse_template
@@ -236,3 +236,175 @@ class TestRefIntegration:
         ref = DomNodeRef()
         result = render_template('<input :ref="my_ref">', {"my_ref": ref})
         assert result._ref is ref
+
+
+class TestIfIntegration:
+    def test_render_template_with_reactive_if(self):
+        from webcompy.elements.types._switch import SwitchElement
+
+        sig = Signal(True)
+        result = render_template(
+            "<div>{% if show %}A{% endif %}</div>",
+            {"show": sig},
+        )
+        assert isinstance(result, Element)
+        assert len(result._children) == 1
+        assert isinstance(result._children[0], SwitchElement)
+
+    def test_render_template_with_static_if(self):
+        result = render_template(
+            "<div>{% if flag %}A{% endif %}</div>",
+            {"flag": True},
+        )
+        assert isinstance(result, Element)
+        assert len(result._children) == 1
+        text = result._children[0]
+        if hasattr(text, "_text"):
+            assert text._text == "A"
+        else:
+            assert text == "A"
+
+    def test_render_template_with_static_if_falsy(self):
+        result = render_template(
+            "<div>{% if flag %}A{% endif %}</div>",
+            {"flag": False},
+        )
+        assert isinstance(result, Element)
+        assert result._children == []
+
+    def test_render_template_with_if_else(self):
+        result = render_template(
+            "<div>{% if flag %}A{% else %}B{% endif %}</div>",
+            {"flag": False},
+        )
+        assert isinstance(result, Element)
+        first = result._children[0]
+        rendered = first._text if hasattr(first, "_text") else first
+        assert rendered == "B"
+
+
+class TestForIntegration:
+    def test_render_template_with_static_for(self):
+        result = render_template(
+            "<div>{% for item in items %}<p>{{ item }}</p>{% endfor %}</div>",
+            {"items": [1, 2, 3]},
+        )
+        assert isinstance(result, Element)
+        p_count = sum(1 for c in result._children if isinstance(c, Element) and c._tag_name == "p")
+        assert p_count == 3
+
+    def test_render_template_with_reactive_for(self):
+        from webcompy.elements.types._repeat import RepeatElement
+
+        rl = ReactiveList(["a", "b"])
+        result = render_template(
+            "<div>{% for item in items %}<p>{{ item }}</p>{% endfor %}</div>",
+            {"items": rl},
+        )
+        assert isinstance(result, Element)
+        assert any(isinstance(c, RepeatElement) for c in result._children)
+
+
+class TestNestedControlFlowIntegration:
+    def test_for_containing_if(self):
+        items_with_flag = [
+            {"name": "a", "visible": True},
+            {"name": "b", "visible": False},
+            {"name": "c", "visible": True},
+        ]
+        result = render_template(
+            "<div>{% for item in items %}{% if item.visible %}<p>{{ item.name }}</p>{% endif %}{% endfor %}</div>",
+            {"items": items_with_flag},
+        )
+        assert isinstance(result, Element)
+        p_children = [c for c in result._children if isinstance(c, Element) and c._tag_name == "p"]
+        assert len(p_children) == 2
+        rendered = [c._children[0]._text if hasattr(c._children[0], "_text") else c._children[0] for c in p_children]
+        assert "a" in rendered
+        assert "c" in rendered
+
+    def test_if_containing_for(self):
+        result = render_template(
+            "<div>{% if show %}<ul>{% for x in xs %}<li>x</li>{% endfor %}</ul>{% endif %}</div>",
+            {"show": True, "xs": [1, 2, 3]},
+        )
+        assert isinstance(result, Element)
+        ul = next((c for c in result._children if isinstance(c, Element) and c._tag_name == "ul"), None)
+        assert ul is not None
+        li_count = sum(1 for c in ul._children if isinstance(c, Element) and c._tag_name == "li")
+        assert li_count == 3
+
+
+class TestMultiElementWithFragmentInSwitch:
+    def test_multi_element_if_branch_uses_fragment(self):
+        from webcompy.elements.types._fragment import FragmentElement
+        from webcompy.elements.types._switch import SwitchElement
+
+        sig = Signal(True)
+        result = render_template(
+            "<div>{% if show %}<p>a</p><p>b</p>{% endif %}</div>",
+            {"show": sig},
+        )
+        assert isinstance(result, Element)
+        assert isinstance(result._children[0], SwitchElement)
+        sw = result._children[0]
+        generated = sw._select_generator()[1]()
+        assert isinstance(generated, FragmentElement)
+
+
+class TestMultiElementWithFragmentInRepeat:
+    def test_multi_element_for_body_uses_fragment(self):
+        from webcompy.elements.types._fragment import FragmentElement
+        from webcompy.elements.types._repeat import RepeatElement
+
+        rl = ReactiveList(["a"])
+        result = render_template(
+            "<div>{% for item in items %}<a>{{ item }}</a><b>x</b>{% endfor %}</div>",
+            {"items": rl},
+        )
+        assert isinstance(result, Element)
+        rep = next(c for c in result._children if isinstance(c, RepeatElement))
+        rep._parent = result
+        rep._on_set_parent()
+        assert len(rep._children) == 1
+        assert isinstance(rep._children[0], FragmentElement)
+
+
+class TestSwitchTruthinessSemantics:
+    def test_signal_true_switches_to_truthy(self):
+        from webcompy.elements.types._switch import SwitchElement
+
+        cond = Signal(True)
+        result = render_template(
+            "<div>{% if cond %}A{% else %}B{% endif %}</div>",
+            {"cond": cond},
+        )
+        assert isinstance(result, Element)
+        sw = result._children[0]
+        assert isinstance(sw, SwitchElement)
+        idx, _ = sw._select_generator()
+        assert idx == 0
+
+    def test_signal_false_switches_to_else(self):
+
+        cond = Signal(False)
+        result = render_template(
+            "<div>{% if cond %}A{% else %}B{% endif %}</div>",
+            {"cond": cond},
+        )
+        assert isinstance(result, Element)
+        sw = result._children[0]
+        idx, _ = sw._select_generator()
+        assert idx == -1
+
+    def test_signal_with_falsy_string(self):
+
+        cond = Signal("")
+        result = render_template(
+            "<div>{% if cond %}A{% else %}B{% endif %}</div>",
+            {"cond": cond},
+        )
+        assert isinstance(result, Element)
+        sw = result._children[0]
+        idx, _ = sw._select_generator()
+        assert idx == -1

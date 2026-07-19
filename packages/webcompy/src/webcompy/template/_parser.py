@@ -1,15 +1,26 @@
 from __future__ import annotations
 
+import re
 from html.parser import HTMLParser
+from typing import cast
 
 from webcompy.exception import WebComPyException
 from webcompy.template._ast import (
     AttrSpec,
+    DirectiveToken,
+    ElifDirective,
+    ElseDirective,
+    EndForDirective,
+    EndIfDirective,
+    ForDirective,
+    ForNode,
+    IfDirective,
+    IfNode,
     TemplateElement,
     TemplateNode,
     TemplateText,
 )
-from webcompy.template._holes import split_text
+from webcompy.template._holes import Hole, LiteralText, split_text
 
 VOID_ELEMENTS = frozenset(
     {
@@ -43,10 +54,162 @@ REJECTED_TAGS = frozenset(
 )
 
 
+DIRECTIVE_PATTERN = re.compile(r"\{%\s*(?P<directive>if|elif|else|endif|for|endfor)\b(?P<args>[^%]*)%\}")
+
+
 def _reject_tag(tag: str) -> None:
     raise WebComPyException(
         f"<{tag}> is not allowed in templates. Use scoped_style() for CSS or raw_html() for controlled HTML insertion."
     )
+
+
+def _parse_for_args(args: str) -> tuple[list[str], str]:
+    parts = args.split(" in ", 1)
+    if len(parts) != 2:
+        raise WebComPyException(f"Invalid {{% for %}} directive: missing ' in ' separator (got {args!r})")
+    lhs, rhs = parts
+    loop_vars = [v.strip() for v in lhs.split(",") if v.strip()]
+    if not loop_vars:
+        raise WebComPyException(f"Invalid {{% for %}} directive: missing loop variable (got {args!r})")
+    iterable_path = rhs.strip()
+    if not iterable_path:
+        raise WebComPyException(f"Invalid {{% for %}} directive: missing iterable expression (got {args!r})")
+    return loop_vars, iterable_path
+
+
+def _make_directive(match: re.Match) -> DirectiveToken:
+    name = match.group("directive")
+    args = match.group("args").strip()
+    if name == "if":
+        return IfDirective(condition=args)
+    if name == "elif":
+        return ElifDirective(condition=args)
+    if name == "else":
+        return ElseDirective()
+    if name == "endif":
+        return EndIfDirective()
+    if name == "for":
+        loop_vars, iterable_path = _parse_for_args(args)
+        return ForDirective(loop_vars=loop_vars, iterable_path=iterable_path)
+    return EndForDirective()
+
+
+def _scan_text_for_directives(text_node: TemplateText) -> list[TemplateText | DirectiveToken]:
+    pieces: list[TemplateText | DirectiveToken] = []
+    buffer: list[LiteralText | Hole] = []
+
+    def flush_text() -> None:
+        if not buffer:
+            return
+        pieces.append(TemplateText(parts=list(buffer)))
+        buffer.clear()
+
+    for part in text_node.parts:
+        if isinstance(part, Hole):
+            buffer.append(part)
+            continue
+        text = part.text
+        pos = 0
+        for match in DIRECTIVE_PATTERN.finditer(text):
+            if match.start() > pos:
+                buffer.append(LiteralText(text[pos : match.start()]))
+            flush_text()
+            pieces.append(_make_directive(match))
+            pos = match.end()
+        if pos < len(text):
+            buffer.append(LiteralText(text[pos:]))
+
+    flush_text()
+    return pieces
+
+
+_IntermediateChild = TemplateText | TemplateElement | DirectiveToken
+_IntermediateChildren = list[_IntermediateChild]
+
+
+def _split_directives_in_children(
+    children: list[TemplateNode],
+) -> _IntermediateChildren:
+    result: _IntermediateChildren = []
+    for child in children:
+        if isinstance(child, TemplateText):
+            result.extend(_scan_text_for_directives(child))
+        elif isinstance(child, TemplateElement):
+            new_children = _split_directives_in_children(child.children)
+            result.append(
+                TemplateElement(
+                    tag_name=child.tag_name,
+                    attrs=child.attrs,
+                    children=cast("list[TemplateNode]", new_children),
+                )
+            )
+        else:
+            raise WebComPyException(f"Unexpected node in template children (post-restructure): {type(child).__name__}")
+    return result
+
+
+def _restructure_directives(
+    children: _IntermediateChildren,
+) -> list[TemplateNode]:
+    result: list[TemplateNode] = []
+    append_stack: list[list[TemplateNode]] = [result]
+    context_stack: list[tuple[str, IfNode | ForNode]] = []
+
+    def cur_target() -> list[TemplateNode]:
+        return append_stack[-1]
+
+    for child in children:
+        if isinstance(child, TemplateText):
+            if child.parts:
+                cur_target().append(child)
+        elif isinstance(child, TemplateElement):
+            element_children = cast("_IntermediateChildren", child.children)
+            new_children = _restructure_directives(element_children)
+            cur_target().append(TemplateElement(tag_name=child.tag_name, attrs=child.attrs, children=new_children))
+        elif isinstance(child, IfDirective):
+            if_node = IfNode(branches=[(child.condition, [])])
+            cur_target().append(if_node)
+            context_stack.append(("if", if_node))
+            append_stack.append(if_node.branches[0][1])
+        elif isinstance(child, ElifDirective):
+            if not context_stack or context_stack[-1][0] != "if":
+                raise WebComPyException("{% elif %} outside of {% if %} block")
+            if_node = context_stack[-1][1]
+            assert isinstance(if_node, IfNode)
+            new_branch_body: list[TemplateNode] = []
+            if_node.branches.append((child.condition, new_branch_body))
+            append_stack.pop()
+            append_stack.append(new_branch_body)
+        elif isinstance(child, ElseDirective):
+            if not context_stack or context_stack[-1][0] != "if":
+                raise WebComPyException("{% else %} outside of {% if %} block")
+            if_node = context_stack[-1][1]
+            assert isinstance(if_node, IfNode)
+            new_branch_body: list[TemplateNode] = []
+            if_node.branches.append((None, new_branch_body))
+            append_stack.pop()
+            append_stack.append(new_branch_body)
+        elif isinstance(child, EndIfDirective):
+            if not context_stack or context_stack[-1][0] != "if":
+                raise WebComPyException("{% endif %} without matching {% if %}")
+            context_stack.pop()
+            append_stack.pop()
+        elif isinstance(child, ForDirective):
+            for_node = ForNode(loop_vars=child.loop_vars, iterable_path=child.iterable_path, body=[])
+            cur_target().append(for_node)
+            context_stack.append(("for", for_node))
+            append_stack.append(for_node.body)
+        elif isinstance(child, EndForDirective):
+            if not context_stack or context_stack[-1][0] != "for":
+                raise WebComPyException("{% endfor %} without matching {% for %}")
+            context_stack.pop()
+            append_stack.pop()
+
+    if context_stack:
+        unclosed = "{% if %}" if context_stack[-1][0] == "if" else "{% for %}"
+        raise WebComPyException(f"Unclosed template directive: {unclosed}")
+
+    return result
 
 
 class TemplateTreeBuilder(HTMLParser):
@@ -122,4 +285,7 @@ def parse_template(source: str) -> list[TemplateNode]:
     builder = TemplateTreeBuilder(source)
     builder.feed(source)
     builder.close()
-    return builder.roots
+    roots = builder.roots
+    split_roots = _split_directives_in_children(roots)
+    final_roots = _restructure_directives(split_roots)
+    return final_roots

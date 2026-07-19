@@ -5,7 +5,7 @@ import json
 import re
 
 from webcompy.components import define_component
-from webcompy.signal import Signal, use_state
+from webcompy.signal import ReactiveList, Signal, use_state
 from webcompy.template import render_template
 from webcompy_server.ports import VirtualDOMEvent
 from webcompy_testing import TestRenderer, create_test_app, render_app_html
@@ -160,3 +160,94 @@ class TestTemplateHydrationAdoption:
 
         sig.value = "world"
         assert text_el._get_node().textContent == "world"
+
+
+class TestTemplateControlFlowSSR:
+    def test_render_app_html_with_if(self):
+        @define_component
+        def IfPage(context):
+            show = Signal(True)
+            return render_template(
+                "<div data-testid='if-root'>{% if show %}A{% else %}B{% endif %}</div>",
+                {"show": show},
+            )
+
+        html = _generate(IfPage)
+        assert "A" in html
+        assert 'data-testid="if-root"' in html
+
+    def test_render_app_html_with_for(self):
+        @define_component
+        def ForPage(context):
+            items = ReactiveList(["x", "y", "z"])
+            return render_template(
+                "<ul data-testid='for-root'>{% for item in items %}<li data-testid='li'>{{ item }}</li>{% endfor %}</ul>",
+                {"items": items},
+            )
+
+        html = _generate(ForPage)
+        assert 'data-testid="li"' in html
+        assert "x" in html
+        assert "y" in html
+        assert "z" in html
+
+    def test_render_app_html_with_nested_control_flow(self):
+        @define_component
+        def NestedPage(context):
+            items = [
+                {"name": "a", "visible": True},
+                {"name": "b", "visible": False},
+                {"name": "c", "visible": True},
+            ]
+            return render_template(
+                "<ul>{% for item in items %}{% if item.visible %}<li>{{ item.name }}</li>{% endif %}{% endfor %}</ul>",
+                {"items": items},
+            )
+
+        html = _generate(NestedPage)
+        assert "a" in html
+        assert "c" in html
+        assert "b" not in html or "b</li>" not in html
+
+    def test_render_app_html_with_dict_kv(self):
+        @define_component
+        def DictPage(context):
+            return render_template(
+                "<ul>{% for k, v in d %}<li>{{ k }}={{ v }}</li>{% endfor %}</ul>",
+                {"d": {"a": 1, "b": 2}},
+            )
+
+        html = _generate(DictPage)
+        assert "a" in html and "1" in html
+        assert "b" in html and "2" in html
+
+
+class TestTemplateControlFlowPrerenderedFlags:
+    def test_if_branch_renders_correct_branch(self):
+        @define_component
+        def BranchPage(context):
+            flag = True
+            return render_template(
+                "<div>{% if flag %}visible{% else %}hidden{% endif %}</div>",
+                {"flag": flag},
+            )
+
+        with TestRenderer.render(BranchPage) as result:
+            html = result.to_html()
+            assert "visible" in html
+            assert "hidden" not in html
+
+    def test_for_loop_renders_all_iterations(self):
+        @define_component
+        def LoopPage(context):
+            items = ["a", "b", "c"]
+            return render_template(
+                "<ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>",
+                {"items": items},
+            )
+
+        with TestRenderer.render(LoopPage) as result:
+            html = result.to_html()
+            assert "<li" in html
+            assert html.count("<li") == 3
+            assert "a" in html and "b" in html and "c" in html

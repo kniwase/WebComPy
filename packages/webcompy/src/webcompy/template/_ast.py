@@ -24,4 +24,50 @@ class TemplateElement:
     children: list[TemplateNode] = field(default_factory=list)
 
 
-TemplateNode = TemplateText | TemplateElement
+@dataclass
+class IfNode:
+    branches: list[tuple[str | None, list[TemplateNode]]] = field(default_factory=list)
+
+
+@dataclass
+class ForNode:
+    loop_vars: list[str]
+    iterable_path: str
+    body: list[TemplateNode] = field(default_factory=list)
+
+
+@dataclass
+class IfDirective:
+    condition: str
+
+
+@dataclass
+class ElifDirective:
+    condition: str
+
+
+@dataclass
+class ElseDirective:
+    pass
+
+
+@dataclass
+class EndIfDirective:
+    pass
+
+
+@dataclass
+class ForDirective:
+    loop_vars: list[str]
+    iterable_path: str
+
+
+@dataclass
+class EndForDirective:
+    pass
+
+
+DirectiveToken = IfDirective | ElifDirective | ElseDirective | EndIfDirective | ForDirective | EndForDirective
+
+
+TemplateNode = TemplateText | TemplateElement | IfNode | ForNode
