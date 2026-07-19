@@ -53,6 +53,7 @@ class WebComPyApp:
             self._plugin_manager.init_all()
         self._render_context_class = _render_context_class
         self._server_fetch_port: Any = None
+        self._server_resource_port: Any = None
 
     @property
     def config(self) -> WebComPyAppConfig:

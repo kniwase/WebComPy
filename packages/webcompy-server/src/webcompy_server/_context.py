@@ -12,6 +12,7 @@ from webcompy.ports._keys import (
     HISTORY_PORT_KEY,
     HOST_PORT_KEY,
     MEDIA_QUERY_PORT_KEY,
+    RESOURCE_PORT_KEY,
 )
 from webcompy_server._html import generate_html
 from webcompy_server.ports._async_scheduler import ServerAsyncSchedulerPort
@@ -36,6 +37,9 @@ class ServerRenderContext(RenderContext):
         self._di_scope.provide(DOM_PORT_KEY, ServerDOMPort())
         fetch_port = self._app._server_fetch_port or ServerFetchPort()
         self._di_scope.provide(FETCH_PORT_KEY, fetch_port)
+        resource_port = getattr(self._app, "_server_resource_port", None)
+        if resource_port is not None:
+            self._di_scope.provide(RESOURCE_PORT_KEY, resource_port)
         self._di_scope.provide(FFI_PORT_KEY, ServerFFIPort())
         self._di_scope.provide(HISTORY_PORT_KEY, ServerHistoryPort(mode=router_mode))
         self._di_scope.provide(HOST_PORT_KEY, ServerHostPort())

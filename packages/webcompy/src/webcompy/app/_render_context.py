@@ -259,6 +259,7 @@ class BrowserRenderContext(RenderContext):
         from webcompy.ports._browser._history import BrowserHistoryPort
         from webcompy.ports._browser._host import BrowserHostPort
         from webcompy.ports._browser._media_query import BrowserMediaQueryPort
+        from webcompy.ports._browser._resource import BrowserResourcePort
         from webcompy.ports._keys import (
             ASYNC_SCHEDULER_PORT_KEY,
             COOKIE_PORT_KEY,
@@ -268,6 +269,7 @@ class BrowserRenderContext(RenderContext):
             HISTORY_PORT_KEY,
             HOST_PORT_KEY,
             MEDIA_QUERY_PORT_KEY,
+            RESOURCE_PORT_KEY,
         )
 
         router_mode = self._router.__mode__ if self._router else "history"
@@ -275,6 +277,7 @@ class BrowserRenderContext(RenderContext):
         self._di_scope.provide(COOKIE_PORT_KEY, BrowserCookiePort())
         self._di_scope.provide(DOM_PORT_KEY, BrowserDOMPort())
         self._di_scope.provide(FETCH_PORT_KEY, BrowserFetchPort())
+        self._di_scope.provide(RESOURCE_PORT_KEY, BrowserResourcePort(self._config.base_url))
         self._di_scope.provide(FFI_PORT_KEY, BrowserFFIPort())
         self._di_scope.provide(HISTORY_PORT_KEY, BrowserHistoryPort(mode=router_mode))
         self._di_scope.provide(HOST_PORT_KEY, BrowserHostPort())
@@ -283,7 +286,11 @@ class BrowserRenderContext(RenderContext):
         self._load_hydration_payload()
 
     def _load_hydration_payload(self) -> None:
-        from webcompy.di._keys import HYDRATION_DATA_KEY, HYDRATION_SIGNAL_DATA_KEY
+        from webcompy.di._keys import (
+            HYDRATION_DATA_KEY,
+            HYDRATION_SIGNAL_DATA_KEY,
+            RESOURCE_DATA_KEY,
+        )
         from webcompy.hydration._payload import deserialize_payload
         from webcompy.ports._keys import DOM_PORT_KEY, FETCH_PORT_KEY
 
@@ -301,6 +308,7 @@ class BrowserRenderContext(RenderContext):
                     fetch_port.populate_from_transfer(payload.fetches)
                 self._di_scope.provide(HYDRATION_DATA_KEY, payload.async_results)
                 self._di_scope.provide(HYDRATION_SIGNAL_DATA_KEY, payload.signals)
+                self._di_scope.provide(RESOURCE_DATA_KEY, payload.resources)
         except Exception as exc:
             logging.getLogger(__name__).warning("Failed to load hydration payload: %s", exc)
         finally:
