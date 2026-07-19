@@ -3,6 +3,9 @@ from __future__ import annotations
 from operator import truth
 from typing import Any, cast
 
+from webcompy.components._generator import ComponentStore
+from webcompy.di import inject
+from webcompy.di._keys import _COMPONENT_STORE_KEY
 from webcompy.elements.generators import repeat
 from webcompy.elements.typealias._element_property import (
     AttrValue,
@@ -31,6 +34,9 @@ from webcompy.template._holes import (
     format_value,
     resolve_var,
 )
+from webcompy.template._naming import TagResolution, kebab_to_snake, resolve_tag
+
+_EMPTY_COMPONENT_STORE = ComponentStore()
 
 
 def _attr_text(parts: list[LiteralText | Hole]) -> str:
@@ -256,9 +262,56 @@ def bind_children(nodes: list[TemplateNode], ctx: dict[str, Any]) -> list[Elemen
     return result
 
 
+def _bind_component_tag(node: TemplateElement, ctx: dict[str, Any], generator: Any) -> ElementChildren:
+    props: dict[str, Any] = {}
+    for attr in node.attrs:
+        if attr.name.startswith("@"):
+            raise WebComPyException(
+                f"@event attribute '{attr.name}' is not supported on component "
+                f"tags (<{node.tag_name}>). Components emit events via their "
+                f"own API, not through DOM-style @ attributes."
+            )
+        if attr.name.startswith(":"):
+            if any(isinstance(p, Hole) for p in attr.value):
+                raise WebComPyException(
+                    f"{{{{ }}}} interpolation is not supported in :prop attributes on component tags: {attr.name}"
+                )
+            raw_value = _attr_text(attr.value)
+            props[kebab_to_snake(attr.name[1:])] = resolve_var(raw_value, ctx)
+        else:
+            if attr.is_boolean:
+                value: Any = True
+            else:
+                value = resolve_attr(attr.value, ctx)
+            props[kebab_to_snake(attr.name)] = value
+
+    if node.children:
+        body = node.children
+
+        def slot_gen() -> ElementChildren:
+            return _wrap_for_fragment(bind_children(body, ctx))
+
+        slots: dict[str, Any] = {"default": slot_gen}
+    else:
+        slots = {}
+
+    return generator(props, slots=slots)
+
+
 def bind_element(node: TemplateElement, ctx: dict[str, Any]) -> ElementChildren:
     if node.tag_name == "br":
         return NewLine()
+
+    store_obj: Any = inject(_COMPONENT_STORE_KEY, default=None)
+    if store_obj is None:
+        store_obj = _EMPTY_COMPONENT_STORE
+    store = cast("ComponentStore", store_obj)
+    resolution, component_name = resolve_tag(node.tag_name, store)
+    if resolution is TagResolution.COMPONENT:
+        assert component_name is not None
+        generator = store.components[component_name]
+        return _bind_component_tag(node, ctx, generator)
+
     events, ref, regular_attrs = classify_attrs(node.attrs, ctx)
     resolved_attrs: dict[str, AttrValue] = {}
     for attr in regular_attrs:

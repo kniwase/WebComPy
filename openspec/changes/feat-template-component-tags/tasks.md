@@ -12,24 +12,24 @@
 
 - [x] 2.1 Implement `resolve_tag(tag: str, store: ComponentStore)` returning `TagResolution` (NEWLINE, HTML, or COMPONENT)
 - [x] 2.2 Implement hyphen-based error vs lenient fallback: hyphenated unknown → error, non-hyphenated → HTML element
-- [ ] 2.3 Integrate tag resolution into `bind_element` — intercept before HTML element creation, route to component path or HTML path
-- [ ] 2.4 Implement ComponentStore injection: `store = inject(_COMPONENT_STORE_KEY)` — note that `_COMPONENT_STORE_KEY` is typed `InjectKey[object]` (`di/_keys.py:8`) so the return value is `object` and requires a cast to `ComponentStore`
+- [x] 2.3 Integrate tag resolution into `bind_element` — intercept before HTML element creation, route to component path or HTML path
+- [x] 2.4 Implement ComponentStore injection: `store = inject(_COMPONENT_STORE_KEY)` — note that `_COMPONENT_STORE_KEY` is typed `InjectKey[object]` (`di/_keys.py:8`) so the return value is `object` and requires a cast to `ComponentStore`
 
 ## 3. Props Binding
 
-- [ ] 3.1 Implement static prop resolution: attribute value used as-is (literal string)
-- [ ] 3.2 Implement dynamic prop resolution: `:-prefixed` attribute → `resolve_var(value, ctx)` → stored in props dict
-- [ ] 3.3 Apply `kebab_to_snake` conversion to prop names before storing
-- [ ] 3.4 Implement `{{ }}` interpolation in regular component attributes using `resolve_attr` (reactive Computed for Signal values, static string for non-Signals)
+- [x] 3.1 Implement static prop resolution: attribute value used as-is (literal string)
+- [x] 3.2 Implement dynamic prop resolution: `:-prefixed` attribute → `resolve_var(value, ctx)` → stored in props dict
+- [x] 3.3 Apply `kebab_to_snake` conversion to prop names before storing
+- [x] 3.4 Implement `{{ }}` interpolation in regular component attributes using `resolve_attr` (reactive Computed for Signal values, static string for non-Signals)
 
 ## 4. Slot Binding
 
-- [ ] 4.1 Implement default slot generation: bind component body children, wrap multi-element in FragmentElement, create lambda generator
-- [ ] 4.2 Pass empty `slots={}` for self-closing tags (no body)
+- [x] 4.1 Implement default slot generation: bind component body children, wrap multi-element in FragmentElement, create lambda generator
+- [x] 4.2 Pass empty `slots={}` for self-closing tags (no body)
 
 ## 5. Component Instantiation
 
-- [ ] 5.1 Call `generator(props, slots=slots)` to create Component instance, returning it as the child element
+- [x] 5.1 Call `generator(props, slots=slots)` to create Component instance, returning it as the child element
 
 ## 6. Unit Tests
 

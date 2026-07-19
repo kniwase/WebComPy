@@ -201,9 +201,9 @@ class TestLenientUnknownTags:
         assert result._tag_name == "widget"
         assert result._children[0]._text == "text"
 
-    def test_kebab_case_tag(self):
-        result = render_template("<my-component>x</my-component>", {})
-        assert result._tag_name == "my-component"
+    def test_kebab_case_tag_raises_when_component_missing(self):
+        with pytest.raises(WebComPyException, match="MyComponent"):
+            render_template("<my-component>x</my-component>", {})
 
     def test_data_attributes(self):
         result = render_template('<div data-testid="x">y</div>', {})

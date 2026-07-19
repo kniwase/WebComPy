@@ -239,3 +239,24 @@ def server_di_scope():
     token = _active_di_scope.set(scope)
     yield scope
     _active_di_scope.reset(token)
+
+
+@pytest.fixture
+def component_store_di_scope():
+    """Provide an active DI scope carrying a fresh ``ComponentStore``.
+
+    Tests that exercise component-tag resolution should depend on this fixture
+    so that ``bind_element`` / ``render_template`` can inject the store. Tests
+    that exercise only HTML-tag binding (the binder's default fallback path)
+    do not need this — the binder uses an empty ComponentStore when no scope
+    is active.
+    """
+    from webcompy.components._generator import ComponentStore
+    from webcompy.di._keys import _COMPONENT_STORE_KEY
+    from webcompy.di._scope import DIScope, _active_di_scope
+
+    scope = DIScope()
+    scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+    token = _active_di_scope.set(scope)
+    yield scope
+    _active_di_scope.reset(token)
