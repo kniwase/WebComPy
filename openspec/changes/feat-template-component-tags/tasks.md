@@ -60,5 +60,5 @@
 
 ## 9. CI Review Update
 
-- [ ] 9.1 Update `.opencode/agents/ci-review.md`: add component-tag resolution pattern (DI-based ComponentStore lookup via `_COMPONENT_STORE_KEY`, kebab→PascalCase name conversion, kebab→snake_case prop conversion, hyphen convention for component-vs-HTML disambiguation)
-- [ ] 9.2 Update `AGENTS.md` File→Spec Mapping: `webcompy/template/_binder.py` component tag path → `template-engine` spec
+- [x] 9.1 Update `.opencode/agents/ci-review.md`: add component-tag resolution pattern (DI-based ComponentStore lookup via `_COMPONENT_STORE_KEY`, kebab→PascalCase name conversion, kebab→snake_case prop conversion, hyphen convention for component-vs-HTML disambiguation)
+- [x] 9.2 Update `AGENTS.md` File→Spec Mapping: `webcompy/template/_binder.py` component tag path → `template-engine` spec
