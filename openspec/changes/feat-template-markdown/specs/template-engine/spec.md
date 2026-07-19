@@ -48,7 +48,7 @@
 
 ### Requirement: render_markdown shall produce reactive Element trees from Markdown
 
-`render_markdown(source: str | Path, context: dict) -> ElementAbstract` SHALL render Markdown templates into reactive Element trees. The pipeline SHALL be: Markdown → HTML (via MarkdownPort) → strip directive paragraphs → parse HTML with multi-root support → bind → FragmentElement wrapping for multi-root. When Markdown produces a single top-level element, an `Element` SHALL be returned directly. When Markdown produces multiple top-level elements, a `FragmentElement` SHALL be returned containing all root elements.
+`render_markdown(source: str, context: dict) -> ElementAbstract` SHALL render Markdown templates into reactive Element trees. The pipeline SHALL be: Markdown → HTML (via MarkdownPort) → strip directive paragraphs → parse HTML with multi-root support → bind → FragmentElement wrapping for multi-root. When Markdown produces a single top-level element, an `Element` SHALL be returned directly. When Markdown produces multiple top-level elements, a `FragmentElement` SHALL be returned containing all root elements.
 
 #### Scenario: Basic Markdown rendering (single element)
 - **WHEN** `render_markdown("# Hello {{ name }}", {"name": "World"})` is called
@@ -84,9 +84,10 @@
 - **THEN** the component tag SHALL be preserved through Markdown parsing
 - **AND** `render_template` SHALL resolve it via ComponentStore (Change 3)
 
-#### Scenario: File loading
-- **WHEN** `render_markdown(Path("page.md"), ctx)` is called in a server environment
-- **THEN** the file SHALL be read, parsed as Markdown, and rendered
+#### Scenario: File-based Markdown via load_text composition
+- **WHEN** a developer writes `render_markdown(await load_text("page.md"), ctx)` inside an async component setup
+- **THEN** `load_text` SHALL read the file content and `render_markdown` SHALL parse the returned string
+- **AND** on the server, the read SHALL be recorded for hydration; on the browser, the same call SHALL resolve from the payload
 
 ### Requirement: {% %} directives shall not be wrapped in paragraph tags
 

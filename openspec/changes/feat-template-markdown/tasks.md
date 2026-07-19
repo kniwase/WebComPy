@@ -25,8 +25,8 @@
 
 ## 4. render_markdown Pipeline
 
-- [ ] 4.1 Implement `render_markdown(source: str | Path, context: dict) -> ElementAbstract` in `webcompy/template/__init__.py`
-- [ ] 4.2 Implement source loading: `str` → use directly; `Path` → `_load_file` from `webcompy.template._files` (created by Change 4)
+- [ ] 4.1 Implement `render_markdown(source: str, context: dict) -> ElementAbstract` in `webcompy/template/__init__.py`
+- [ ] 4.2 Accept `source: str` only (no `Path` support); file-based loading is the caller's responsibility via `await load_text(path)` from `webcompy.resources`
 - [ ] 4.3 Implement `inject(MARKDOWN_PORT_KEY).render(text)` to convert Markdown to HTML
 - [ ] 4.4 Implement `_strip_directive_paragraphs(html) -> str` using regex to remove `<p>` wrappers around lone `{% %}` directives
 - [ ] 4.5 Call `_render_nodes(html, context)` (shared function from Change 1) to parse + bind without single-root validation
@@ -63,7 +63,7 @@
 - [ ] 6.6 `{% for %}` and `{% endfor %}` `<p>` wrapper stripping
 - [ ] 6.7 `{% for %}` with nested `{% if %}` in body
 - [ ] 6.8 Component tags in Markdown HTML blocks
-- [ ] 6.9 File-based Markdown loading (`Path`)
+- [ ] 6.9 File-based Markdown loading via `await load_text` + `render_markdown` composition (async setup; SSR records for hydration)
 - [ ] 6.10 `textwrap.dedent` applied to Markdown source
 - [ ] 6.11 FragmentElement renders transparently inside parent element
 - [ ] 6.12 render_markdown as component root with explicit wrapper

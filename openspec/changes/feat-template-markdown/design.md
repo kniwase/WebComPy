@@ -14,7 +14,7 @@ For the Markdown parser itself, Python's stdlib provides no built-in solution. A
 - Implement `render_markdown` pipeline: Markdown → HTML → directive cleanup → `render_template`
 - Support nested lists via indent-based parsing
 - Support HTML block passthrough (including component tags)
-- Support file-based Markdown via `Path`
+- File-based Markdown via composition with `webcompy.resources.load_text` (async)
 - Support all template engine features in Markdown: `{{ }}`, `{% if %}`/`{% for %}`, component tags
 
 **Non-Goals:**
@@ -81,6 +81,21 @@ return html.ARTICLE({}, render_markdown("# Title\n\nText", locals()))
 **Change 7 refinement**: In Change 7, `{% for %}` over Markdown list bodies is routed to `MarkdownForElement` which merges list items into a single `<ul>` (instead of the baseline one-`<ul>`-per-iteration). Non-list for-loops stay on the fully-reactive `repeat()` path.
 
 **Implementation**: Change 1 is updated to expose `_render_nodes(source, context) -> list[ElementAbstract]` via the internal pipeline `_cache.py` → `_bind.py` → `_render_nodes`. This shared function parses + binds without single-root validation. `render_template` wraps `_render_nodes` with root validation. `render_markdown` uses `_render_nodes` directly.
+
+### D7: `str`-only signature; file loading via composition with `load_text`
+
+`render_markdown(source: str, context: dict)` accepts `str` only. File-based Markdown loading is delegated to `webcompy.resources.load_text` (Change 4), which is async. Callers compose:
+
+```python
+@define_component
+async def Page(ctx):
+    md_src = await load_text("pages/home.md")
+    return html.ARTICLE({}, render_markdown(md_src, locals()))
+```
+
+**Rationale**: `render_markdown` is a synchronous pipeline (Markdown → HTML → parse → bind). Making it async just for the `Path` case would force every call (including inline strings) to be awaited. Keeping `str`-only aligns with `render_template(source: str, ...)` and lets the parser remain pure (no I/O).
+
+**Browser behavior**: `load_text` works in both server and browser. Server-side reads are recorded for hydration; browser resolves from payload.
 
 ## Risks / Trade-offs
 

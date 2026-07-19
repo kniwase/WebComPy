@@ -100,4 +100,4 @@
 
 - ~~13.1 ETag / `If-None-Match` on the resource endpoint — defer to a separate change for production-side optimization~~
 - ~~13.2 Compression-tuning specific to the `resources` field — defer until payload-size profiling demonstrates the default threshold is suboptimal~~
-- [ ] 13.3 Change 5 (`feat-template-css-text`) and Change 6 (`feat-template-markdown`) revisions to consume `ResourcePort` — separate changes
+- [x] 13.3 Change 5 (`feat-template-css-text`) and Change 6 (`feat-template-markdown`) revisions to consume `ResourcePort` — separate changes
