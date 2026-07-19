@@ -207,7 +207,7 @@ def deserialize_payload(text: str) -> TransferPayload | None:
             data=entry.get("data"),
         )
     signals: dict[str, dict[str, Any]] = {}
-    if version == 2:
+    if version is not None and version >= 2:
         for cid, attrs in signals_data.items():
             if not isinstance(attrs, dict):
                 continue

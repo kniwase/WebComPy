@@ -69,10 +69,10 @@
 
 ## 9. Public helpers `webcompy.resources.load_text` / `load_bytes`
 
-- [ ] 9.1 Create `packages/webcompy/src/webcompy/resources.py` with two async functions: `load_text(source: str | Path) -> str` and `load_bytes(source: str | Path) -> bytes`
-- [ ] 9.2 Helper logic: normalize `str` (pass through) or `Path` (use `as_posix()` if relative, raise if absolute); reject `..` segments; `inject(RESOURCE_PORT_KEY)`; raise `WebComPyException` if missing; delegate to the port method
-- [ ] 9.3 Re-export `load_text` and `load_bytes` from `webcompy` (top-level `__init__.py`)
-- [ ] 9.4 Add unit tests: (a) str path, (b) relative Path → POSIX, (c) absolute Path raises, (d) traversal raises, (e) missing RESOURCE_PORT_KEY raises, (f) integration with a fake ResourcePort
+- [x] 9.1 Create `packages/webcompy/src/webcompy/resources.py` with two async functions: `load_text(source: str | Path) -> str` and `load_bytes(source: str | Path) -> bytes`
+- [x] 9.2 Helper logic: normalize `str` (pass through) or `Path` (use `as_posix()` if relative, raise if absolute); reject `..` segments; `inject(RESOURCE_PORT_KEY)`; raise `WebComPyException` if missing; delegate to the port method
+- [x] 9.3 Re-export `load_text` and `load_bytes` from `webcompy` (top-level `__init__.py`)
+- [x] 9.4 Add unit tests: (a) str path, (b) relative Path → POSIX, (c) absolute Path raises, (d) traversal raises, (e) missing RESOURCE_PORT_KEY raises, (f) integration with a fake ResourcePort
 
 ## 10. Remove legacy `load_asset` and assets machinery
 

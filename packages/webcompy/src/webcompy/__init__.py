@@ -15,6 +15,7 @@ from ._version import __version__
 from .app._config import WebComPyAppConfig
 from .assets import AssetNotFoundError, load_asset
 from .di import DIScope, InjectionError, InjectKey, inject, provide
+from .resources import load_bytes, load_text
 from .signal import use_computed, use_reactive_dict, use_reactive_list, use_state
 
 __all__ = [
@@ -33,6 +34,8 @@ __all__ = [
     "exception",
     "inject",
     "load_asset",
+    "load_bytes",
+    "load_text",
     "logging",
     "provide",
     "router",
