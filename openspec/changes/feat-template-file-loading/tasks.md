@@ -37,18 +37,18 @@
 
 ## 5. Hydration payload: resources field
 
-- [ ] 5.1 Modify `packages/webcompy/src/webcompy/hydration/_payload.py`: bump **both** version constants — the dataclass default `TransferPayload.__webcompy_transfer_version__: int = 3` (line 31) **and** the module-level `CURRENT_TRANSFER_VERSION: int = 3` (line 38, used by `collect_transfer_data`). Add `resources: dict[str, str] = field(default_factory=dict)` to `TransferPayload`.
-- [ ] 5.2 Update `_SUPPORTED_VERSIONS` frozenset to `{1, 2, 3}`
-- [ ] 5.3 Update `serialize_payload()` to include the `resources` field via the codec path (base64-encode raw bytes → str)
-- [ ] 5.4 Update `deserialize_payload()` to read the `resources` field when present in v3; default to empty dict for v1/v2
-- [ ] 5.5 Add test cases: v3 roundtrip, v2 deserializes with empty resources, v1 deserializes with empty resources, unknown version rejected
-- [ ] 5.6 Verify backward compat: existing tests still pass for v2/v1 payloads
+- [x] 5.1 Modify `packages/webcompy/src/webcompy/hydration/_payload.py`: bump **both** version constants — the dataclass default `TransferPayload.__webcompy_transfer_version__: int = 3` (line 31) **and** the module-level `CURRENT_TRANSFER_VERSION: int = 3` (line 38, used by `collect_transfer_data`). Add `resources: dict[str, str] = field(default_factory=dict)` to `TransferPayload`.
+- [x] 5.2 Update `_SUPPORTED_VERSIONS` frozenset to `{1, 2, 3}`
+- [x] 5.3 Update `serialize_payload()` to include the `resources` field via the codec path (base64-encode raw bytes → str)
+- [x] 5.4 Update `deserialize_payload()` to read the `resources` field when present in v3; default to empty dict for v1/v2
+- [x] 5.5 Add test cases: v3 roundtrip, v2 deserializes with empty resources, v1 deserializes with empty resources, unknown version rejected
+- [x] 5.6 Verify backward compat: existing tests still pass for v2/v1 payloads
 
 ## 6. SSR payload population
 
-- [ ] 6.1 In `packages/webcompy/src/webcompy/hydration/_collect.py` (`collect_transfer_data` at line 24): after the existing `fetch_port = inject(FETCH_PORT_KEY, default=None)` block (lines 31-33), add `resource_port = inject(RESOURCE_PORT_KEY, default=None)`; if non-`None` and `hasattr(resource_port, "get_recorded_resources")`, call it to obtain `dict[str, bytes]`; base64-encode each value into `dict[str, str]`; pass `resources=...` into the `TransferPayload(...)` constructor at lines 51-56. (M5: payload assembly lives in `_collect.py`, **not** `_html.py:_generate_html_impl`. The latter only builds the HTML envelope; payload is injected as a `<script>` block at `_html.py:212-213`.) **Note**: there is exactly ONE `ServerResourcePort` per `RenderContext` (DI scope is per-request, not per-component), so no merging is needed (M6).
-- [ ] 6.2 ~~Multiple `ServerResourcePort` instances may exist in nested scopes~~ **DELETED (M6)**: DI scope is per-`RenderContext`, not per-component; there is exactly one `ServerResourcePort` per render context. No merging logic required.
-- [ ] 6.3 Add test: SSR'd component using `load_text("a.html")` produces a hydration payload whose `resources` key contains the base64 encoding of the file's content
+- [x] 6.1 In `packages/webcompy/src/webcompy/hydration/_collect.py` (`collect_transfer_data` at line 24): after the existing `fetch_port = inject(FETCH_PORT_KEY, default=None)` block (lines 31-33), add `resource_port = inject(RESOURCE_PORT_KEY, default=None)`; if non-`None` and `hasattr(resource_port, "get_recorded_resources")`, call it to obtain `dict[str, bytes]`; base64-encode each value into `dict[str, str]`; pass `resources=...` into the `TransferPayload(...)` constructor at lines 51-56. (M5: payload assembly lives in `_collect.py`, **not** `_html.py:_generate_html_impl`. The latter only builds the HTML envelope; payload is injected as a `<script>` block at `_html.py:212-213`.) **Note**: there is exactly ONE `ServerResourcePort` per `RenderContext` (DI scope is per-request, not per-component), so no merging is needed (M6).
+- [x] 6.2 ~~Multiple `ServerResourcePort` instances may exist in nested scopes~~ **DELETED (M6)**: DI scope is per-`RenderContext`, not per-component; there is exactly one `ServerResourcePort` per render context. No merging logic required.
+- [x] 6.3 Add test: SSR'd component using `load_text("a.html")` produces a hydration payload whose `resources` key contains the base64 encoding of the file's content
 
 ## 7. CLI server endpoint
 

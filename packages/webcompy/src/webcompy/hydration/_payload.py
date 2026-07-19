@@ -28,14 +28,15 @@ class TransferAsyncResultEntry:
 
 @dataclass
 class TransferPayload:
-    __webcompy_transfer_version__: int = 2
+    __webcompy_transfer_version__: int = 3
     fetches: dict[str, TransferFetchEntry] = field(default_factory=dict)
     async_results: dict[str, TransferAsyncResultEntry] = field(default_factory=dict)
     signals: dict[str, dict[str, Any]] = field(default_factory=dict)
+    resources: dict[str, str] = field(default_factory=dict)
 
 
-_SUPPORTED_VERSIONS: frozenset[int] = frozenset({1, 2})
-CURRENT_TRANSFER_VERSION: int = 2
+_SUPPORTED_VERSIONS: frozenset[int] = frozenset({1, 2, 3})
+CURRENT_TRANSFER_VERSION: int = 3
 DEFAULT_COMPRESSION_THRESHOLD: int = 1024
 
 
@@ -75,6 +76,7 @@ def _to_serializable(payload: TransferPayload) -> dict[str, Any]:
         "signals": {
             cid: {attr_name: value for attr_name, value in signals.items()} for cid, signals in payload.signals.items()
         },
+        "resources": dict(payload.resources),
     }
 
 
@@ -210,9 +212,17 @@ def deserialize_payload(text: str) -> TransferPayload | None:
             if not isinstance(attrs, dict):
                 continue
             signals[cid] = {attr_name: value for attr_name, value in attrs.items()}
+    resources: dict[str, str] = {}
+    if version == 3:
+        raw_resources = raw.get("resources") or {}
+        if isinstance(raw_resources, dict):
+            resources = {
+                path: value for path, value in raw_resources.items() if isinstance(path, str) and isinstance(value, str)
+            }
     return TransferPayload(
         __webcompy_transfer_version__=version,
         fetches=fetches,
         async_results=async_results,
         signals=signals,
+        resources=resources,
     )
