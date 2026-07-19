@@ -50,8 +50,8 @@
 
 ## 9. Shared Pipeline + Public API
 
-- [ ] 9.1 Implement `_render_nodes(source: str, context: Mapping[str, Any] | None = None) -> list[ElementChildren]` in `template/__init__.py` as the shared internal pipeline: dedent → cache → parse → bind all root nodes without single-root validation (enables reuse by Change 6's `render_markdown`)
-- [ ] 9.2 Implement `render_template(source: str, context: dict[str, Any]) -> Element` in `__init__.py` that calls `_render_nodes` and asserts exactly one root Element
+- [x] 9.1 Implement `_render_nodes(source: str, context: Mapping[str, Any] | None = None) -> list[ElementChildren]` in `template/__init__.py` as the shared internal pipeline: dedent → cache → parse → bind all root nodes without single-root validation (enables reuse by Change 6's `render_markdown`)
+- [x] 9.2 Implement `render_template(source: str, context: dict[str, Any]) -> Element` in `__init__.py` that calls `_render_nodes` and asserts exactly one root Element
 
 ## 10. Unit Tests — Holes Module
 
@@ -82,12 +82,12 @@
 
 ## 13. Unit Tests — Integration
 
-- [ ] 13.1 Test `render_template` end-to-end with real component setup
-- [ ] 13.2 Test `locals()` usage pattern
-- [ ] 13.3 Test compile cache (same string → cache hit, different → cache miss)
-- [ ] 13.4 Test `textwrap.dedent` behavior with indented triple-quoted strings
-- [ ] 13.5 Test root element validation (single root OK, multiple roots error, whitespace trimming)
-- [ ] 13.6 Test lenient unknown tag handling (`<widget>` → `Element("widget", ...)`)
+- [x] 13.1 Test `render_template` end-to-end with real component setup
+- [x] 13.2 Test `locals()` usage pattern
+- [x] 13.3 Test compile cache (same string → cache hit, different → cache miss)
+- [x] 13.4 Test `textwrap.dedent` behavior with indented triple-quoted strings
+- [x] 13.5 Test root element validation (single root OK, multiple roots error, whitespace trimming)
+- [x] 13.6 Test lenient unknown tag handling (`<widget>` → `Element("widget", ...)`)
 
 ## 14. Spike
 
