@@ -28,6 +28,8 @@ def _component_di_scope() -> Any:
     store = ComponentStore()
     head_props = HeadPropsStore()
     parent_scope = _active_di_scope.get(None)
+    if parent_scope is not None and getattr(parent_scope, "_disposed", False):
+        parent_scope = None
     scope = parent_scope.create_child() if parent_scope is not None else DIScope()
     scope.provide(_COMPONENT_STORE_KEY, store)
     scope.provide(_HEAD_PROPS_KEY, head_props)

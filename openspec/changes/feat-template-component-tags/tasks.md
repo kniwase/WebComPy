@@ -48,9 +48,9 @@
 
 ## 7. Integration Tests
 
-- [ ] 7.1 Test end-to-end: `render_template` with `<user-card>` in component setup
-- [ ] 7.2 Test component receives reactive Signal via `:prop` and updates when Signal changes
-- [ ] 7.3 Test nested component tags (component inside component)
+- [x] 7.1 Test end-to-end: `render_template` with `<user-card>` in component setup
+- [x] 7.2 Test component receives reactive Signal via `:prop` and updates when Signal changes
+- [x] 7.3 Test nested component tags (component inside component)
 
 ## 8. SSR & Hydration
 
