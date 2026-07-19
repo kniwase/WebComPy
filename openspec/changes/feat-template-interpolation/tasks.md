@@ -91,13 +91,13 @@
 
 ## 14. Spike
 
-- [ ] 14.1 Verify `html.parser.HTMLParser` functionality in PyScript/Emscripten environment
+- [x] 14.1 Verify `html.parser.HTMLParser` functionality in PyScript/Emscripten environment
 
 ## 15. SSR & Hydration
 
-- [ ] 15.1 Test `render_app_html_sync(app)` with a template-based component — verify SSR HTML output contains expected text and element structure from `{{ }}` interpolation
-- [ ] 15.2 Test `TestRenderer.render(component)` — verify prerendered `__webcompy_prerendered_node__` flag is set on text nodes from Signal interpolation
-- [ ] 15.3 E2E: add a template-based demo page under `e2e/core/` using `static_site` fixture — verify (a) pre-rendered HTML matches the template structure, (b) hydration payload includes transferred Signal values, (c) after browser load, changing a Signal value updates the corresponding DOM text node
+- [x] 15.1 Test `render_app_html_sync(app)` with a template-based component — verify SSR HTML output contains expected text and element structure from `{{ }}` interpolation
+- [x] 15.2 Test `TestRenderer.render(component)` — verify prerendered `__webcompy_prerendered_node__` flag is set on text nodes from Signal interpolation
+- [x] 15.3 E2E: add a template-based demo page under `e2e/core/` using `static_site` fixture — verify (a) pre-rendered HTML matches the template structure, (b) hydration payload includes transferred Signal values, (c) after browser load, changing a Signal value updates the corresponding DOM text node
 
 ## 16. CI Review Update
 

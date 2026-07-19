@@ -199,6 +199,8 @@ jobs:
             files: e2e/core/test_standalone.py
           - name: plugin-script
             files: e2e/core/test_eruda.py
+          - name: template
+            files: e2e/core/test_template.py
         serving_mode: [prod, static]
         include:
           - group:

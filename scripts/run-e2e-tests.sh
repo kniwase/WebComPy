@@ -45,6 +45,7 @@ declare -A E2E_GROUPS=(
   ["runtime-local"]="e2e/core/test_runtime_local.py"
   ["standalone"]="e2e/core/test_standalone.py"
   ["plugin-script"]="e2e/core/test_eruda.py"
+  ["template"]="e2e/core/test_template.py"
 )
 
 # Docs groups are static-only in CI
