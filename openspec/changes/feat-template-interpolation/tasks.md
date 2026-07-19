@@ -101,8 +101,8 @@
 
 ## 16. CI Review Update
 
-- [ ] 16.1 Update `.opencode/agents/ci-review.md`: add template engine patterns (HTMLParser-based AST compilation, `HOLE_PATTERN`, `resolve_var`, `render_template` / `_render_nodes`)
-- [ ] 16.2 Update `AGENTS.md` File->Spec Mapping: `webcompy/template/` -> `template-engine` spec
+- [x] 16.1 Update `.opencode/agents/ci-review.md`: add template engine patterns (HTMLParser-based AST compilation, `HOLE_PATTERN`, `resolve_var`, `render_template` / `_render_nodes`)
+- [x] 16.2 Update `AGENTS.md` File->Spec Mapping: `webcompy/template/` -> `template-engine` spec
 
 ## 17. Future Enhancement — Cache Eviction
 
@@ -110,4 +110,4 @@
 
 ## 18. Main Spec Generation (Archive Time)
 
-- [ ] 18.1 Before archiving this change, sync its delta spec to `openspec/specs/template-engine/spec.md` via the standard OpenSpec archive workflow. Each template-engine change syncs its own delta incrementally; later changes' MODIFIED/REMOVED/RENAMED sections supersede the corresponding earlier requirements.
+- [x] 18.1 Before archiving this change, sync its delta spec to `openspec/specs/template-engine/spec.md` via the standard OpenSpec archive workflow. Each template-engine change syncs its own delta incrementally; later changes' MODIFIED/REMOVED/RENAMED sections supersede the corresponding earlier requirements.
