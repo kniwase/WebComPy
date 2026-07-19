@@ -23,6 +23,12 @@ from webcompy.template._holes import (
     resolve_var,
     split_text,
 )
+from webcompy.template._naming import (
+    TagResolution,
+    kebab_to_pascal,
+    kebab_to_snake,
+    resolve_tag,
+)
 
 
 def _render_nodes(source: str, context: Mapping[str, Any] | None = None) -> list[ElementChildren]:
@@ -43,12 +49,16 @@ __all__ = [
     "AttrSpec",
     "Hole",
     "LiteralText",
+    "TagResolution",
     "TemplateElement",
     "TemplateNode",
     "TemplateText",
     "format_value",
+    "kebab_to_pascal",
+    "kebab_to_snake",
     "render_template",
     "resolve_holes",
+    "resolve_tag",
     "resolve_var",
     "split_text",
 ]

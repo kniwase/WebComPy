@@ -1,12 +1,17 @@
 ## 1. Name Conversion Utilities
 
-- [ ] 1.1 Implement `kebab_to_pascal(kebab: str) -> str` (e.g., `"user-card"` → `"UserCard"`)
-- [ ] 1.2 Implement `kebab_to_snake(kebab: str) -> str` (e.g., `"item-count"` → `"item_count"`)
+- [x] 1.1 Implement `kebab_to_pascal(kebab: str) -> str` (e.g., `"user-card"` → `"UserCard"`)
+- [x] 1.2 Implement `kebab_to_snake(kebab: str) -> str` (e.g., `"item-count"` → `"item_count"`)
 
 ## 2. Tag Resolution
 
-- [ ] 2.1 Implement `resolve_tag(tag: str, store: ComponentStore)` returning `TagResolution` (NEWLINE, HTML, or COMPONENT)
-- [ ] 2.2 Implement hyphen-based error vs lenient fallback: hyphenated unknown → error, non-hyphenated → HTML element
+- [x] 2.1 Implement `resolve_tag(tag: str, store: ComponentStore)` returning `TagResolution` (NEWLINE, HTML, or COMPONENT)
+- [x] 2.2 Implement hyphen-based error vs lenient fallback: hyphenated unknown → error, non-hyphenated → HTML element
+
+## 2. Tag Resolution
+
+- [x] 2.1 Implement `resolve_tag(tag: str, store: ComponentStore)` returning `TagResolution` (NEWLINE, HTML, or COMPONENT)
+- [x] 2.2 Implement hyphen-based error vs lenient fallback: hyphenated unknown → error, non-hyphenated → HTML element
 - [ ] 2.3 Integrate tag resolution into `bind_element` — intercept before HTML element creation, route to component path or HTML path
 - [ ] 2.4 Implement ComponentStore injection: `store = inject(_COMPONENT_STORE_KEY)` — note that `_COMPONENT_STORE_KEY` is typed `InjectKey[object]` (`di/_keys.py:8`) so the return value is `object` and requires a cast to `ComponentStore`
 
