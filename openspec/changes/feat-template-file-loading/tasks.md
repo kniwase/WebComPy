@@ -87,9 +87,9 @@
 
 ## 11. CI review updates
 
-- [ ] 11.1 Update `AGENTS.md` **File → Spec Mapping** table (heading at line 214, table at lines 218-241): **add two new rows** for `webcompy/ports/_resource.py` → `resource-port` and `webcompy_server/ports/_resource.py` → `resource-port`. (M10: there is no existing entry for `webcompy/assets.py` to "mark as removed" — that file simply no longer exists, so no row is added or modified for it.)
-- [ ] 11.2 Update the **Current Specs List** in `AGENTS.md` (heading at line 301, table at lines 303-360): add a new row for `resource-port`. (M11: the on-disk AGENTS.md may differ from the system-prompt version — re-read the file immediately before editing to find the correct insertion line.)
-- [ ] 11.3 Update `.opencode/agents/ci-review.md` invariants to note: (a) `load_text` / `load_bytes` require `RESOURCE_PORT_KEY` in DI scope; (b) failed resource load must surface as `ResourceNotFoundError` not silent fallback; (c) hydration payload `resources` field must not be omitted from v3; (d) `load_asset` must not be re-introduced
+- [x] 11.1 Update `AGENTS.md` **File → Spec Mapping** table (heading at line 214, table at lines 218-241): **add two new rows** for `webcompy/ports/_resource.py` → `resource-port` and `webcompy_server/ports/_resource.py` → `resource-port`. (M10: there is no existing entry for `webcompy/assets.py` to "mark as removed" — that file simply no longer exists, so no row is added or modified for it.)
+- [x] 11.2 Update the **Current Specs List** in `AGENTS.md` (heading at line 301, table at lines 303-360): add a new row for `resource-port`. (M11: the on-disk AGENTS.md may differ from the system-prompt version — re-read the file immediately before editing to find the correct insertion line.)
+- [x] 11.3 Update `.opencode/agents/ci-review.md` invariants to note: (a) `load_text` / `load_bytes` require `RESOURCE_PORT_KEY` in DI scope; (b) failed resource load must surface as `ResourceNotFoundError` not silent fallback; (c) hydration payload `resources` field must not be omitted from v3; (d) `load_asset` must not be re-introduced
 
 ## 12. Main spec sync (archive time)
 
