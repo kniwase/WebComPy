@@ -1,8 +1,8 @@
 ## 1. FragmentElement
 
-- [ ] 1.1 Implement `FragmentElement(DynamicElement)` in `packages/webcompy/src/webcompy/elements/types/_fragment.py` (constructor accepts `list[ElementAbstract]`, `_on_set_parent` is no-op). After `refactor-element-foundations`, `FragmentElement` (an `ElementAbstract` subclass) is automatically valid as `ElementChildren`; no separate type-alias edit is needed.
-- [ ] 1.2 Test FragmentElement rendering (single child, multiple children, zero children, nested in repeat, nested in switch)
-- [ ] 1.3 Test FragmentElement hydration: zero children (no-op), single child (child hydrated), multiple children (all hydrated in parent)
+- [x] 1.1 Implement `FragmentElement(DynamicElement)` in `packages/webcompy/src/webcompy/elements/types/_fragment.py` (constructor accepts `list[ElementAbstract]`, `_on_set_parent` is no-op). After `refactor-element-foundations`, `FragmentElement` (an `ElementAbstract` subclass) is automatically valid as `ElementChildren`; no separate type-alias edit is needed.
+- [x] 1.2 Test FragmentElement rendering (single child, multiple children, zero children, nested in repeat, nested in switch)
+- [x] 1.3 Test FragmentElement hydration: zero children (no-op), single child (child hydrated), multiple children (all hydrated in parent)
 
 ## 2. Template AST — Control Flow Nodes
 
