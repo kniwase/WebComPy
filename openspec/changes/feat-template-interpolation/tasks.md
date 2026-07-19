@@ -31,22 +31,22 @@
 
 ## 6. Event Handler and Ref Binding
 
-- [ ] 6.1 Implement `classify_attrs()` that partitions attribute specs into: `@event` → events dict, `:ref` → ref lookup, boolean → attr True, regular → attr string
-- [ ] 6.2 Implement event handler resolution: `@click="on_click"` → `events["click"] = resolve_var("on_click", ctx)`
-- [ ] 6.3 Implement DomNodeRef resolution: `:ref="my_ref"` → `ref = resolve_var("my_ref", ctx)`
+- [x] 6.1 Implement `classify_attrs()` that partitions attribute specs into: `@event` → events dict, `:ref` → ref lookup, boolean → attr True, regular → attr string
+- [x] 6.2 Implement event handler resolution: `@click="on_click"` → `events["click"] = resolve_var("on_click", ctx)`
+- [x] 6.3 Implement DomNodeRef resolution: `:ref="my_ref"` → `ref = resolve_var("my_ref", ctx)`
 
 ## 7. Attribute Evaluation (Reactive + Static)
 
-- [ ] 7.1 Implement `resolve_attr(parts, ctx) -> AttrValue` with Signal detection: check all Hole references for `isinstance(resolve_var(...), SignalBase)`
-- [ ] 7.2 Implement `Computed` generation branch: when Signals are detected, create a `Computed(lambda: ...)` closure that concatenates literal parts and current Signal `.value`s (using `Computed(fn)` from `webcompy.signal` — Tier 2 internal constructor API)
-- [ ] 7.3 Ensure static path preserves original behavior: when no Signals are referenced, resolve to plain string via concatenation
-- [ ] 7.4 Test `Computed` lifecycle: component destroy cleans up attribute `Computed` consumer nodes (verified via `on_after_updating` callback node cleanup on `Element` destruction)
+- [x] 7.1 Implement `resolve_attr(parts, ctx) -> AttrValue` with Signal detection: check all Hole references for `isinstance(resolve_var(...), SignalBase)`
+- [x] 7.2 Implement `Computed` generation branch: when Signals are detected, create a `Computed(lambda: ...)` closure that concatenates literal parts and current Signal `.value`s (using `Computed(fn)` from `webcompy.signal` — Tier 2 internal constructor API)
+- [x] 7.3 Ensure static path preserves original behavior: when no Signals are referenced, resolve to plain string via concatenation
+- [x] 7.4 Test `Computed` lifecycle: component destroy cleans up attribute `Computed` consumer nodes (verified via `on_after_updating` callback node cleanup on `Element` destruction)
 
 ## 8. Element Tree Binding
 
-- [ ] 8.1 Implement `bind_element(node: TemplateElement, ctx) -> Element` that creates `Element` instances with resolved attrs, events, ref, and recursively bound children
-- [ ] 8.2 Implement `bind_children(nodes, ctx) -> list` that dispatches TemplateText → text parts binding, TemplateElement → bind_element
-- [ ] 8.3 Implement `bind_text_part(node: TemplateText, ctx) -> list[ElementChildren]` that processes all parts of a `TemplateText` node in a single call: `LiteralText` → its text, Hole → `resolve_var(Hole.var_path, ctx)` (None skipped per spec, `str`/`SignalBase`/`ElementAbstract` passed through, anything else `str()`-converted)
+- [x] 8.1 Implement `bind_element(node: TemplateElement, ctx) -> Element` that creates `Element` instances with resolved attrs, events, ref, and recursively bound children
+- [x] 8.2 Implement `bind_children(nodes, ctx) -> list` that dispatches TemplateText → text parts binding, TemplateElement → bind_element
+- [x] 8.3 Implement `bind_text_part(node: TemplateText, ctx) -> list[ElementChildren]` that processes all parts of a `TemplateText` node in a single call: `LiteralText` → its text, Hole → `resolve_var(Hole.var_path, ctx)` (None skipped per spec, `str`/`SignalBase`/`ElementAbstract` passed through, anything else `str()`-converted)
 
 ## 9. Shared Pipeline + Public API
 
@@ -73,12 +73,12 @@
 
 ## 12. Unit Tests — Binding
 
-- [ ] 12.1 Test text interpolation with Signal, str, int, None, Element, Component values
-- [ ] 12.2 Test dot notation resolution (dict access, object attribute access, chained)
-- [ ] 12.3 Test attribute evaluation: single Signal in attribute (Computed + DOM reactive update), mixed literal+Signal, multiple Signals, no-Signal static path, integer/bool static
-- [ ] 12.4 Test event handler binding (`@click`, multiple handlers)
-- [ ] 12.5 Test DomNodeRef binding (`:ref`)
-- [ ] 12.6 Test missing variable error (KeyError with available names)
+- [x] 12.1 Test text interpolation with Signal, str, int, None, Element, Component values
+- [x] 12.2 Test dot notation resolution (dict access, object attribute access, chained)
+- [x] 12.3 Test attribute evaluation: single Signal in attribute (Computed + DOM reactive update), mixed literal+Signal, multiple Signals, no-Signal static path, integer/bool static
+- [x] 12.4 Test event handler binding (`@click`, multiple handlers)
+- [x] 12.5 Test DomNodeRef binding (`:ref`)
+- [x] 12.6 Test missing variable error (KeyError with available names)
 
 ## 13. Unit Tests — Integration
 
