@@ -20,12 +20,12 @@
 
 ## 4. Binder — Control Flow Binding
 
-- [ ] 4.1 Implement `bind_if(node: IfNode, ctx) -> ElementChildren` with Signal detection → `switch()` path vs static truthiness evaluation path
-- [ ] 4.2 Implement `bind_for(node: ForNode, ctx) -> ElementChildren` with Signal detection → `repeat()` + FragmentElement path vs list comprehension path
-- [ ] 4.3 Implement branch/iteration body binding with context extension (loop variable added to context)
-- [ ] 4.4 Implement FragmentElement wrapping for multi-child branches/iterations
-- [ ] 4.5 Implement dict key-value mapping for `{% for key, value in dict %}`: select `repeat()` `Callable[[V, K], ElementChildren]` overload, map callback args `(value=args[0], key=args[1])` to loop variable names by position
-- [ ] 4.6 Widen `SwitchCasesSignal` type alias in `packages/webcompy/src/webcompy/elements/types/_switch.py:23` from `list[tuple[SignalBase[Any], NodeGenerator]]` to `list[tuple[Any, NodeGenerator]]` — aligns with runtime behavior in `_select_generator()` and with `SwitchCasesSignalList` which already uses `Any`; pure type-level change
+- [x] 4.1 Implement `bind_if(node: IfNode, ctx) -> ElementChildren` with Signal detection → `switch()` path vs static truthiness evaluation path
+- [x] 4.2 Implement `bind_for(node: ForNode, ctx) -> ElementChildren` with Signal detection → `repeat()` + FragmentElement path vs list comprehension path
+- [x] 4.3 Implement branch/iteration body binding with context extension (loop variable added to context)
+- [x] 4.4 Implement FragmentElement wrapping for multi-child branches/iterations
+- [x] 4.5 Implement dict key-value mapping for `{% for key, value in dict %}`: select `repeat()` `Callable[[V, K], ElementChildren]` overload, map callback args `(value=args[0], key=args[1])` to loop variable names by position
+- [x] 4.6 Widen `SwitchCasesSignal` type alias in `packages/webcompy/src/webcompy/elements/types/_switch.py:23` from `list[tuple[SignalBase[Any], NodeGenerator]]` to `list[tuple[Any, NodeGenerator]]` — aligns with runtime behavior in `_select_generator()` and with `SwitchCasesSignalList` which already uses `Any`; pure type-level change
 
 ## 5. Unit Tests — Parser Control Flow
 
@@ -36,16 +36,16 @@
 
 ## 6. Unit Tests — Binder Control Flow
 
-- [ ] 6.1 Test reactive if binding (Signal condition → switch generation)
-- [ ] 6.2 Test static if binding (bool/None condition → conditional inclusion)
-- [ ] 6.3 Test if-elif-else chain binding
-- [ ] 6.4 Test reactive for binding (ReactiveList → repeat generation, single child)
-- [ ] 6.5 Test reactive for binding with multiple children (FragmentElement wrapping)
-- [ ] 6.6 Test static for binding (plain list → list comprehension)
-- [ ] 6.7 Test for binding with ReactiveDict
-- [ ] 6.8 Test dict key-value unpacking (`{% for k, v in d %}`) with ReactiveDict — both `k` and `v` available in body
-- [ ] 6.9 Test loop variable scoping (item available in body)
-- [ ] 6.10 Test dot notation in conditions and iterables
+- [x] 6.1 Test reactive if binding (Signal condition → switch generation)
+- [x] 6.2 Test static if binding (bool/None condition → conditional inclusion)
+- [x] 6.3 Test if-elif-else chain binding
+- [x] 6.4 Test reactive for binding (ReactiveList → repeat generation, single child)
+- [x] 6.5 Test reactive for binding with multiple children (FragmentElement wrapping)
+- [x] 6.6 Test static for binding (plain list → list comprehension)
+- [x] 6.7 Test for binding with ReactiveDict
+- [x] 6.8 Test dict key-value unpacking (`{% for k, v in d %}`) with ReactiveDict — both `k` and `v` available in body
+- [x] 6.9 Test loop variable scoping (item available in body)
+- [x] 6.10 Test dot notation in conditions and iterables
 
 ## 7. Integration Tests
 

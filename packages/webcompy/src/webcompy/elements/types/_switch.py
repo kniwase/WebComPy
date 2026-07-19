@@ -21,7 +21,7 @@ from webcompy.ports._keys import HOST_PORT_KEY
 from webcompy.signal import SignalBase
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
-SwitchCasesSignal: TypeAlias = list[tuple[SignalBase[Any], NodeGenerator]]
+SwitchCasesSignal: TypeAlias = list[tuple[Any, NodeGenerator]]
 SwitchCasesSignalList: TypeAlias = SignalBase[list[tuple[Any, NodeGenerator]]]
 SwitchCases: TypeAlias = SwitchCasesSignal | SwitchCasesSignalList
 

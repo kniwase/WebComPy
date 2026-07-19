@@ -4,8 +4,10 @@ import pytest
 
 from tests.conftest import FakeDOMNode
 from webcompy.elements.types._element import Element
+from webcompy.elements.types._fragment import FragmentElement
+from webcompy.elements.types._switch import SwitchElement
 from webcompy.elements.types._text import NewLine, TextElement
-from webcompy.signal import Computed, Signal, SignalBase
+from webcompy.signal import Computed, ReactiveDict, ReactiveList, Signal, SignalBase
 from webcompy.template._binder import (
     bind_element,
     classify_attrs,
@@ -323,3 +325,304 @@ class TestClassifyAttrs:
         assert ref_out is ref
         assert len(regular) == 1
         assert regular[0].name == "id"
+
+
+class TestIfBindingReactive:
+    def test_reactive_if_with_signal_condition(self):
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        sig = Signal(True)
+        roots = parse_template("{% if show %}A{% endif %}")
+        assert len(roots) == 1
+        from webcompy.template._ast import IfNode
+
+        assert isinstance(roots[0], IfNode)
+        result = bind_children(roots, {"show": sig})
+        assert len(result) == 1
+        assert isinstance(result[0], SwitchElement)
+        sw = result[0]
+        assert len(sw._cases) == 1
+        assert sw._cases[0][0] is sig
+
+    def test_reactive_if_with_dot_notation(self):
+        from webcompy.template._ast import IfNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        class Item:
+            def __init__(self):
+                self.visible = Signal(True)
+
+        item = Item()
+        roots = parse_template("{% if item.visible %}A{% endif %}")
+        assert isinstance(roots[0], IfNode)
+        result = bind_children(roots, {"item": item})
+        assert len(result) == 1
+        assert isinstance(result[0], SwitchElement)
+        assert result[0]._cases[0][0] is item.visible
+
+    def test_multi_element_branch_uses_fragment(self):
+        from webcompy.template._ast import IfNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        sig = Signal(True)
+        roots = parse_template("{% if show %}<p>a</p><p>b</p>{% endif %}")
+        assert isinstance(roots[0], IfNode)
+        result = bind_children(roots, {"show": sig})
+        assert len(result) == 1
+        assert isinstance(result[0], SwitchElement)
+        sw = result[0]
+        generated = sw._select_generator()[1]()
+        assert isinstance(generated, FragmentElement)
+        assert len(generated._pending_children) == 2
+
+
+class TestIfBindingStatic:
+    def test_static_if_truthy_returns_children(self):
+        from webcompy.template._ast import IfNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template("{% if flag %}A{% endif %}")
+        assert isinstance(roots[0], IfNode)
+        result = bind_children(roots, {"flag": True})
+        assert result == ["A"]
+
+    def test_static_if_falsy_returns_empty(self):
+        from webcompy.template._ast import IfNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template("{% if flag %}A{% endif %}")
+        assert isinstance(roots[0], IfNode)
+        result = bind_children(roots, {"flag": False})
+        assert result == []
+
+    def test_static_if_none_returns_empty(self):
+        from webcompy.template._ast import IfNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template("{% if flag %}A{% endif %}")
+        assert isinstance(roots[0], IfNode)
+        result = bind_children(roots, {"flag": None})
+        assert result == []
+
+    def test_static_if_elif_else_first_truthy(self):
+        from webcompy.template._ast import IfNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template("{% if a %}A{% elif b %}B{% else %}C{% endif %}")
+        assert isinstance(roots[0], IfNode)
+        result = bind_children(roots, {"a": True, "b": False})
+        assert result == ["A"]
+
+    def test_static_if_elif_else_second_truthy(self):
+        from webcompy.template._ast import IfNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template("{% if a %}A{% elif b %}B{% else %}C{% endif %}")
+        assert isinstance(roots[0], IfNode)
+        result = bind_children(roots, {"a": False, "b": True})
+        assert result == ["B"]
+
+    def test_static_if_elif_else_falls_through_to_else(self):
+        from webcompy.template._ast import IfNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template("{% if a %}A{% elif b %}B{% else %}C{% endif %}")
+        assert isinstance(roots[0], IfNode)
+        result = bind_children(roots, {"a": False, "b": False})
+        assert result == ["C"]
+
+    def test_static_if_multi_child_branch_appends(self):
+        from webcompy.template._ast import IfNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template("<div>{% if flag %}<p>a</p><p>b</p>{% endif %}</div>")
+        div = roots[0]
+        if_node = div.children[0]
+        assert isinstance(if_node, IfNode)
+        result = bind_children([if_node], {"flag": True})
+        assert len(result) == 2
+        assert all(isinstance(e, Element) for e in result)
+
+
+class TestIfMixedConditions:
+    def test_mixed_signal_and_static_triggers_reactive(self):
+        from webcompy.template._ast import IfNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        sig = Signal(False)
+        roots = parse_template("{% if signal_a %}A{% elif plain_bool %}B{% endif %}")
+        assert isinstance(roots[0], IfNode)
+        result = bind_children(roots, {"signal_a": sig, "plain_bool": True})
+        assert len(result) == 1
+        assert isinstance(result[0], SwitchElement)
+
+
+class TestForBindingReactive:
+    def test_reactive_for_with_reactive_list_single_child(self):
+        from webcompy.elements.types._repeat import RepeatElement
+        from webcompy.template._ast import ForNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        rl = ReactiveList(["a", "b", "c"])
+        roots = parse_template("{% for item in items %}<p>{{ item }}</p>{% endfor %}")
+        assert isinstance(roots[0], ForNode)
+        result = bind_children(roots, {"items": rl})
+        assert len(result) == 1
+        assert isinstance(result[0], RepeatElement)
+
+    def test_reactive_for_with_multiple_children_uses_fragment(self):
+        from webcompy.elements.types._repeat import RepeatElement
+        from webcompy.template._ast import ForNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        rl = ReactiveList(["a", "b"])
+        roots = parse_template("{% for item in items %}<p>a</p><p>b</p>{% endfor %}")
+        assert isinstance(roots[0], ForNode)
+        result = bind_children(roots, {"items": rl})
+        assert len(result) == 1
+        rep = result[0]
+        assert isinstance(rep, RepeatElement)
+        rep._parent = _make_parent_stub()
+        rep._on_set_parent()
+        assert len(rep._children) == 2
+        for child in rep._children:
+            assert isinstance(child, FragmentElement)
+            assert len(child._children) == 2
+
+    def test_reactive_for_with_reactive_dict(self):
+        from webcompy.elements.types._repeat import RepeatElement
+        from webcompy.template._ast import ForNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        rd = ReactiveDict({"x": 1, "y": 2})
+        roots = parse_template("{% for value in d %}<p>{{ value }}</p>{% endfor %}")
+        assert isinstance(roots[0], ForNode)
+        result = bind_children(roots, {"d": rd})
+        assert len(result) == 1
+        assert isinstance(result[0], RepeatElement)
+
+    def test_reactive_for_with_dict_unpacking(self):
+        from webcompy.elements.types._repeat import RepeatElement
+        from webcompy.template._ast import ForNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        rd = ReactiveDict({"a": 1, "b": 2})
+        roots = parse_template("{% for key, value in d %}<p>{{ key }}={{ value }}</p>{% endfor %}")
+        assert isinstance(roots[0], ForNode)
+        result = bind_children(roots, {"d": rd})
+        assert len(result) == 1
+        rep = result[0]
+        assert isinstance(rep, RepeatElement)
+        rep._parent = _make_parent_stub()
+        rep._on_set_parent()
+        assert len(rep._children) == 2
+
+
+class TestForBindingStatic:
+    def test_static_for_with_plain_list_single_child(self):
+        from webcompy.template._ast import ForNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template("{% for item in items %}<p>x</p>{% endfor %}")
+        assert isinstance(roots[0], ForNode)
+        result = bind_children(roots, {"items": [1, 2, 3]})
+        assert len(result) == 3
+        assert all(isinstance(e, Element) and e._tag_name == "p" for e in result)
+
+    def test_static_for_with_multiple_children_no_fragment(self):
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template("{% for item in items %}<a>a</a><b>b</b>{% endfor %}")
+        result = bind_children(roots, {"items": [1, 2]})
+        assert len(result) == 4
+        assert not any(isinstance(r, FragmentElement) for r in result)
+
+
+class TestLoopVariableScoping:
+    def test_loop_var_visible_in_body(self):
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template("{% for item in items %}<p>{{ item }}</p>{% endfor %}")
+        result = bind_children(roots, {"items": ["x", "y"]})
+        assert len(result) == 2
+        for el in result:
+            assert isinstance(el, Element)
+            children = el._children
+            assert len(children) == 1
+            assert isinstance(children[0], TextElement)
+            assert children[0]._text in ("x", "y")
+
+    def test_dot_notation_in_for_iterable(self):
+        from webcompy.template._ast import ForNode
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        class User:
+            def __init__(self):
+                self.posts = ["p1", "p2"]
+
+        roots = parse_template("{% for post in user.posts %}<p>x</p>{% endfor %}")
+        assert isinstance(roots[0], ForNode)
+        result = bind_children(roots, {"user": User()})
+        assert len(result) == 2
+
+
+class TestDictKeyValueMapping:
+    def test_reactive_dict_two_var_uses_two_arg_template(self):
+        from webcompy.elements.types._repeat import RepeatElement
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        rd = ReactiveDict({"a": 1, "b": 2})
+        roots = parse_template("{% for key, value in d %}<p>k:{{ key }} v:{{ value }}</p>{% endfor %}")
+        result = bind_children(roots, {"d": rd})
+        rep = result[0]
+        assert isinstance(rep, RepeatElement)
+        assert rep._two_arg_template is not None
+        rep._parent = _make_parent_stub()
+        rep._on_set_parent()
+        assert len(rep._children) == 2
+
+    def test_static_dict_two_var_binds_both(self):
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template("{% for key, value in d %}<p>{{ key }}={{ value }}</p>{% endfor %}")
+        result = bind_children(roots, {"d": {"a": 1, "b": 2}})
+        assert len(result) == 2
+        for el in result:
+            assert isinstance(el, Element)
+            joined = "".join(c._text if isinstance(c, TextElement) else str(c) for c in el._children)
+            assert joined in ("a=1", "b=2")
+
+
+def _make_parent_stub():
+    from tests.conftest import FakeDOMNode
+    from webcompy.elements.types._element import Element
+
+    class FakeRootElement(Element):
+        _get_belonging_component = lambda self: ""
+        _get_belonging_components = lambda self: ()
+
+    parent = FakeRootElement("div", {}, {}, None, None)
+    parent._node_cache = FakeDOMNode("div")
+    parent._mounted = True
+    return parent
