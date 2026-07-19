@@ -24,7 +24,7 @@
 - [x] 3.3 Implement `async load_text(self, path) -> str`: first try `inject(RESOURCE_DATA_KEY, default={}).get(path)`; if present, decode base64 → bytes → utf-8 → return; else fetch `{base_url}_webcompy-resource/{path}` via `inject(FETCH_PORT_KEY).fetch(...)` and return response text
 - [x] 3.4 Implement `async load_bytes(self, path) -> bytes`: same priority chain, return base64-decoded bytes (payload) or response bytes (fetch)
 - [x] 3.5 On fetch failure (HTTP non-2xx or exception), raise `ResourceNotFoundError` mentioning both the payload miss and the fetch failure
-- [ ] 3.6 Base URL is threaded via constructor: `BrowserRenderContext._register_ports` (in `webcompy/app/_render_context.py:277` area, where `BrowserFetchPort()` is already provided) has access to `self._config.base_url`; pass it positionally to `BrowserResourcePort(self._config.base_url)`. (M1: `HostPort` does not expose `base_url`; `app.config` is not reachable inside a port constructor.)  *(wired in C4)*
+- [x] 3.6 Base URL is threaded via constructor: `BrowserRenderContext._register_ports` (in `webcompy/app/_render_context.py:277` area, where `BrowserFetchPort()` is already provided) has access to `self._config.base_url`; pass it positionally to `BrowserResourcePort(self._config.base_url)`. (M1: `HostPort` does not expose `base_url`; `app.config` is not reachable inside a port constructor.)  *(wired in C4)*
 - [x] 3.7 Add unit tests for the lookup-priority logic using `monkeypatch`-injected `RESOURCE_DATA_KEY` and a fake `FetchPort`; full browser integration test deferred to E2E
 
 ## 4. RenderContext port provisioning
