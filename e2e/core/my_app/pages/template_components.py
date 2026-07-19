@@ -18,7 +18,7 @@ def CardCount(context):
             <p data-testid="card-greeting">Hello, Component Tag!</p>
             <span data-testid="card-count-value">{{ count }}</span>
             <button data-testid="card-increment" @click="increment">+</button>
-            <span data-testid="card-initial">{initial}</span>
+            <span data-testid="card-initial">{{ initial }}</span>
         </section>
         """,
         {"count": start, "increment": increment, "initial": initial_value},
@@ -34,7 +34,7 @@ def NestedCount(context):
         """
         <article data-testid="nested-count">
             <span data-testid="nested-count-value">{{ count }}</span>
-            <span data-testid="nested-initial">{initial}</span>
+            <span data-testid="nested-initial">{{ initial }}</span>
         </article>
         """,
         {"count": start, "initial": initial_value},
