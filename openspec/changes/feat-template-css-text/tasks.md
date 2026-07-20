@@ -20,17 +20,17 @@
 
 ## 4. Unit Tests — CSS Parser
 
-- [ ] 4.1 Basic selectors (`.class`, `#id`, `element`, `*`)
-- [ ] 4.2 Combinator selectors (`.a > .b`, `.a + .b`, `.a ~ .b`, `.a .b`)
-- [ ] 4.3 Pseudo-classes (`:hover`, `:focus`, `:nth-child(n)`, `:not(sel)`)
-- [ ] 4.4 Pseudo-elements (`::before`, `::after`, `::placeholder`)
-- [ ] 4.5 At-rules (`@media`, `@supports`, `@container`)
-- [ ] 4.6 `@keyframes` with percentage selectors (`0%`, `100%`, `from`, `to`)
-- [ ] 4.7 Nested at-rules (at-rule inside at-rule)
-- [ ] 4.8 Mixed properties and nested rules in one block
-- [ ] 4.9 Comments (`/* ... */`) stripped correctly
-- [ ] 4.10 Multi-value properties (`font-family: a, b, c`)
-- [ ] 4.11 CSS variables (`--custom: value`) preserved as raw strings
+- [x] 4.1 Basic selectors (`.class`, `#id`, `element`, `*`)
+- [x] 4.2 Combinator selectors (`.a > .b`, `.a + .b`, `.a ~ .b`, `.a .b`)
+- [x] 4.3 Pseudo-classes (`:hover`, `:focus`, `:nth-child(n)`, `:not(sel)`)
+- [x] 4.4 Pseudo-elements (`::before`, `::after`, `::placeholder`)
+- [x] 4.5 At-rules (`@media`, `@supports`, `@container`)
+- [x] 4.6 `@keyframes` with percentage selectors (`0%`, `100%`, `from`, `to`)
+- [x] 4.7 Nested at-rules (at-rule inside at-rule)
+- [x] 4.8 Mixed properties and nested rules in one block
+- [x] 4.9 Comments (`/* ... */`) stripped correctly
+- [x] 4.10 Multi-value properties (`font-family: a, b, c`)
+- [x] 4.11 CSS variables (`--custom: value`) preserved as raw strings
 
 ## 5. Unit Tests — Template Functions
 
