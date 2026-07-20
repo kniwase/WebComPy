@@ -1,8 +1,8 @@
 ## 1. MarkdownPort ABC + DI Key
 
-- [ ] 1.1 Define `MarkdownPort` ABC in `webcompy/ports/_markdown.py` with abstract `render(source: str) -> str` method
-- [ ] 1.2 Add `MARKDOWN_PORT_KEY = InjectKey[MarkdownPort]("webcompy-port-markdown")` to `webcompy/ports/_keys.py`
-- [ ] 1.3 Add `MarkdownPort` and `MARKDOWN_PORT_KEY` to `webcompy/ports/__init__.py` (import + `__all__`), following the existing port export pattern
+- [x] 1.1 Define `MarkdownPort` ABC in `webcompy/ports/_markdown.py` with abstract `render(source: str) -> str` method
+- [x] 1.2 Add `MARKDOWN_PORT_KEY = InjectKey[MarkdownPort]("webcompy-port-markdown")` to `webcompy/ports/_keys.py`
+- [x] 1.3 Add `MarkdownPort` and `MARKDOWN_PORT_KEY` to `webcompy/ports/__init__.py` (import + `__all__`), following the existing port export pattern
 
 ## 2. DefaultMarkdownParser
 
