@@ -43,12 +43,20 @@ class TestSignalHydrationPayloadStructure:
         assert "signals" in payload
         assert isinstance(payload["signals"], dict)
 
-    def test_payload_version_is_two(self, static_site):
+    def test_payload_version_is_three(self, static_site):
         dist_dir, _wheel_file, _app_name = static_site
         html_content = (dist_dir / "index.html").read_text(encoding="utf-8")
         payload = _read_payload(html_content)
         assert payload is not None
-        assert payload["__webcompy_transfer_version__"] == 2
+        assert payload["__webcompy_transfer_version__"] == 3
+
+    def test_payload_includes_resources_section(self, static_site):
+        dist_dir, _wheel_file, _app_name = static_site
+        html_content = (dist_dir / "index.html").read_text(encoding="utf-8")
+        payload = _read_payload(html_content)
+        assert payload is not None
+        assert "resources" in payload
+        assert isinstance(payload["resources"], dict)
 
 
 class TestSignalHydrationNoRegression:
