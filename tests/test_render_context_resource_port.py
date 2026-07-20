@@ -142,3 +142,33 @@ class TestBrowserRenderContextHydrationPayloadResourceData:
         provided_values = {c.args[0]: c.args[1] for c in di_scope.provide.call_args_list}
         assert RESOURCE_DATA_KEY in provided_values
         assert provided_values[RESOURCE_DATA_KEY] == {"a.html": "aGVsbG8="}
+
+
+class TestResourceDataKeyPublicExport:
+    """Spec: from webcompy.di import RESOURCE_DATA_KEY SHALL succeed.
+
+    See openspec/specs/hydration-data-transfer/spec.md scenario
+    "RESOURCE_DATA_KEY importable".
+    """
+
+    def test_resource_data_key_importable_from_di_public_surface(self) -> None:
+        from webcompy.di import RESOURCE_DATA_KEY
+        from webcompy.di._keys import RESOURCE_DATA_KEY as defined_key
+
+        assert RESOURCE_DATA_KEY is defined_key
+
+    def test_resource_data_key_in_di_all(self) -> None:
+        import webcompy.di
+
+        assert "RESOURCE_DATA_KEY" in webcompy.di.__all__
+
+    def test_resource_data_key_usable_with_inject(self) -> None:
+        from webcompy.di import RESOURCE_DATA_KEY, DIScope, _active_di_scope, inject
+
+        scope = DIScope()
+        scope.provide(RESOURCE_DATA_KEY, {"k": "v"})
+        token = _active_di_scope.set(scope)
+        try:
+            assert inject(RESOURCE_DATA_KEY) == {"k": "v"}
+        finally:
+            _active_di_scope.reset(token)
