@@ -52,5 +52,5 @@
 
 ## 7. CI Review Update
 
-- [ ] 7.1 Update `.opencode/agents/ci-review.md`: add CSS text template patterns
-- [ ] 7.2 Update `AGENTS.md` File→Spec Mapping: `webcompy/template/_css_parser.py` and `_css_template.py` → `template-engine` spec
+- [x] 7.1 Update `.opencode/agents/ci-review.md`: add CSS text template patterns
+- [x] 7.2 Update `AGENTS.md` File→Spec Mapping: `webcompy/template/_css_parser.py` and `_css_template.py` → `template-engine` spec
