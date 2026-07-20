@@ -1,0 +1,141 @@
+from __future__ import annotations
+
+import re
+import textwrap
+from typing import Final
+
+from webcompy.components._generator import StyleDeclaration, StyleDict
+
+_COMMENT_PATTERN: Final = re.compile(r"/\*.*?\*/", re.DOTALL)
+
+
+def _strip_comments(text: str) -> str:
+    return _COMMENT_PATTERN.sub("", text)
+
+
+def _skip_ws(text: str, i: int) -> int:
+    n = len(text)
+    while i < n and text[i].isspace():
+        i += 1
+    return i
+
+
+def _read_key(text: str, start: int) -> tuple[str, int]:
+    depth = 0
+    i = start
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        elif depth == 0 and c in "{;":
+            return text[start:i].strip(), i
+        i += 1
+    return text[start:i].strip(), i
+
+
+def _find_colon(text: str, start: int, end: int) -> int:
+    depth = 0
+    i = start
+    while i < end:
+        c = text[i]
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        elif depth == 0 and c == ":":
+            return i
+        i += 1
+    return -1
+
+
+def _read_braced(text: str, open_pos: int) -> tuple[str, int]:
+    if open_pos >= len(text) or text[open_pos] != "{":
+        raise ValueError(f"Expected '{{' at position {open_pos}")
+    depth = 1
+    i = open_pos + 1
+    n = len(text)
+    start = i
+    while i < n and depth > 0:
+        c = text[i]
+        if c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+        i += 1
+    if depth != 0:
+        raise ValueError(f"Unbalanced braces: missing closing '}}' for '{{' at position {open_pos}")
+    return text[start : i - 1], i
+
+
+def _parse_stylesheet(text: str) -> StyleDict:
+    result: dict[str, StyleDeclaration] = {}
+    i = 0
+    n = len(text)
+    while True:
+        i = _skip_ws(text, i)
+        if i >= n:
+            break
+        selector, pos = _read_key(text, i)
+        if not selector:
+            if pos < n:
+                i = pos + 1
+                continue
+            break
+        if pos < n and text[pos] == "{":
+            inner, i = _read_braced(text, pos)
+            result[selector] = _parse_block_content(inner)
+        else:
+            if pos < n:
+                i = pos + 1
+            else:
+                break
+    return result
+
+
+def _parse_block_content(body: str) -> StyleDict:
+    result: dict[str, StyleDeclaration] = {}
+    i = 0
+    n = len(body)
+    while True:
+        i = _skip_ws(body, i)
+        if i >= n:
+            break
+        key, pos = _read_key(body, i)
+        if not key:
+            if pos < n:
+                i = pos + 1
+                continue
+            break
+        if pos < n and body[pos] == "{":
+            inner, i = _read_braced(body, pos)
+            result[key] = _parse_block_content(inner)
+        elif pos < n and body[pos] == ";":
+            colon = _find_colon(body, i, pos)
+            if colon != -1:
+                name = body[i:colon].strip()
+                value = body[colon + 1 : pos].strip()
+                while value.endswith(";"):
+                    value = value[:-1].rstrip()
+                if name:
+                    result[name] = value
+            i = pos + 1
+        else:
+            colon = _find_colon(body, i, len(body))
+            if colon != -1:
+                name = body[i:colon].strip()
+                value = body[colon + 1 :].strip()
+                while value.endswith(";"):
+                    value = value[:-1].rstrip()
+                if name:
+                    result[name] = value
+            break
+    return result
+
+
+def parse_css(text: str) -> StyleDict:
+    cleaned = _strip_comments(text)
+    cleaned = textwrap.dedent(cleaned)
+    return _parse_stylesheet(cleaned)

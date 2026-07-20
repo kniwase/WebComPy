@@ -14,6 +14,7 @@ from webcompy.template._ast import (
 )
 from webcompy.template._binder import bind_children
 from webcompy.template._cache import get_or_compile
+from webcompy.template._css_template import css_text, css_text_template
 from webcompy.template._holes import (
     HOLE_PATTERN,
     Hole,
@@ -53,6 +54,8 @@ __all__ = [
     "TemplateElement",
     "TemplateNode",
     "TemplateText",
+    "css_text",
+    "css_text_template",
     "format_value",
     "kebab_to_pascal",
     "kebab_to_snake",

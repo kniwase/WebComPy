@@ -1,22 +1,22 @@
 ## 1. CSS Parser Implementation
 
-- [ ] 1.1 Implement `parse_css(text: str) -> StyleDict` in `webcompy/template/_css_parser.py`
-- [ ] 1.2 Implement comment stripping: `re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL)`
-- [ ] 1.3 Implement `read_key` with parenthesis-depth tracking for `(`, `)` to handle at-rule arguments
-- [ ] 1.4 Implement `read_braced` with brace-depth matching for `{`, `}` to extract nested blocks
-- [ ] 1.5 Implement `parse_block_content` distinguishing properties (delimited by `;`) from nested rules (delimited by `{}`)
-- [ ] 1.6 Implement `textwrap.dedent` application before parsing
+- [x] 1.1 Implement `parse_css(text: str) -> StyleDict` in `webcompy/template/_css_parser.py`
+- [x] 1.2 Implement comment stripping: `re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL)`
+- [x] 1.3 Implement `read_key` with parenthesis-depth tracking for `(`, `)` to handle at-rule arguments
+- [x] 1.4 Implement `read_braced` with brace-depth matching for `{`, `}` to extract nested blocks
+- [x] 1.5 Implement `parse_block_content` distinguishing properties (delimited by `;`) from nested rules (delimited by `{}`)
+- [x] 1.6 Implement `textwrap.dedent` application before parsing
 
 ## 2. CSS Template Functions
 
-- [ ] 2.1 Implement `css_text(source: str) -> dict[str, StyleDict]` in `webcompy/template/_css_template.py`
-- [ ] 2.2 Implement `css_text_template(source: str, context: dict) -> Callable[[], dict[str, StyleDict]]`
-- [ ] 2.3 Import `resolve_holes` from `webcompy.template._holes` (shared module created by Change 1)
-- [ ] 2.4 Correct `ReactiveScopedStyleFunc` type alias in `packages/webcompy/src/webcompy/components/_reactive_scoped_style.py:61` from `Callable[[], "StyleDict"]` to `Callable[[], "dict[str, StyleDict]"]` — matches the runtime contract of `render_css()` / `_apply_scope()` which iterate `.items()` over the factory return value; type-only change (no behavioral effect)
+- [x] 2.1 Implement `css_text(source: str) -> dict[str, StyleDict]` in `webcompy/template/_css_template.py`
+- [x] 2.2 Implement `css_text_template(source: str, context: dict) -> Callable[[], dict[str, StyleDict]]`
+- [x] 2.3 Import `resolve_holes` from `webcompy.template._holes` (shared module created by Change 1)
+- [x] 2.4 Correct `ReactiveScopedStyleFunc` type alias in `packages/webcompy/src/webcompy/components/_reactive_scoped_style.py:61` from `Callable[[], "StyleDict"]` to `Callable[[], "dict[str, StyleDict]"]` — matches the runtime contract of `render_css()` / `_apply_scope()` which iterate `.items()` over the factory return value; type-only change (no behavioral effect)
 
 ## 3. Public API
 
-- [ ] 3.1 Export `css_text`, `css_text_template` from `webcompy.template.__init__`
+- [x] 3.1 Export `css_text`, `css_text_template` from `webcompy.template.__init__`
 
 ## 4. Unit Tests — CSS Parser
 

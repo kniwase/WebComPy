@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     from webcompy.components._generator import StyleDict
 
 
-ReactiveScopedStyleFunc: TypeAlias = Callable[[], "StyleDict"]
+ReactiveScopedStyleFunc: TypeAlias = Callable[[], "dict[str, StyleDict]"]
 
 
 _HELPERS_CACHE: tuple | None = None
