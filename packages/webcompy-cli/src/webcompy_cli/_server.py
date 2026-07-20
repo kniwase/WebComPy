@@ -125,6 +125,30 @@ def create_asgi_app(
 
         static_file_routes.append(Route("/" + relative_path, send_file))
 
+    resource_routes: list[Route] = []
+    resource_allow_list = artifacts.resource_allow_list
+    if resource_allow_list is not None:
+        base_url_stripped = "/" + app.config.base_url.strip("/") if app.config.base_url.strip("/") else ""
+
+        async def send_resource(request: Request):
+            path: str = request.path_params.get("path", "")  # type: ignore
+            if path not in resource_allow_list:  # type: ignore[operator]
+                raise HTTPException(404)
+            try:
+                resolved = (build_config.app_package_path / path).resolve()
+                resolved.relative_to(build_config.app_package_path.resolve())
+            except (ValueError, OSError):
+                raise HTTPException(403) from None
+            media_type = mimetypes.guess_type(str(resolved))[0] or "application/octet-stream"
+            headers: dict[str, str] = {}
+            if artifacts.dev_mode:
+                headers["Cache-Control"] = "no-cache, must-revalidate"
+            else:
+                headers["Cache-Control"] = "public, max-age=3600"
+            return FileResponse(resolved, media_type=media_type, headers=headers)
+
+        resource_routes.append(Route(base_url_stripped + "/_webcompy-resource/{path:path}", send_resource))
+
     from webcompy.ui._styles import get_styles_file
 
     async def send_framework_ui_css(request: Request):
@@ -223,6 +247,7 @@ def create_asgi_app(
         *wasm_asset_routes,
         *runtime_asset_routes,
         *framework_ui_routes,
+        *resource_routes,
         *static_file_routes,
         html_route,
     ]

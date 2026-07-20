@@ -13,6 +13,7 @@ class Response:
     status_code: int
     status_text: str
     ok: bool
+    content: bytes = b""
 
     def raise_for_status(self) -> None:
         if not self.ok:

@@ -286,14 +286,15 @@ class TestCollectTransferDataSignals:
         parent._property = {"component_id": "root"}
         payload = collect_transfer_data(parent)
         assert payload.__webcompy_transfer_version__ == CURRENT_TRANSFER_VERSION
-        assert payload.__webcompy_transfer_version__ == 2
+        assert payload.__webcompy_transfer_version__ == 3
 
 
 class TestPayloadVersioning:
-    def test_payload_default_version_is_2(self):
+    def test_payload_default_version_is_3(self):
         payload = TransferPayload()
-        assert payload.__webcompy_transfer_version__ == 2
+        assert payload.__webcompy_transfer_version__ == 3
         assert payload.signals == {}
+        assert payload.resources == {}
 
     def test_serialize_includes_signals_section(self):
         payload = TransferPayload(
@@ -301,17 +302,17 @@ class TestPayloadVersioning:
         )
         serialized = serialize_payload(payload)
         raw = json.loads(html_module.unescape(serialized))
-        assert raw["__webcompy_transfer_version__"] == 2
+        assert raw["__webcompy_transfer_version__"] == 3
         assert raw["signals"]["cmp-1"]["count"] == 5
 
-    def test_deserialize_v2_with_signals(self):
+    def test_deserialize_v3_with_signals(self):
         payload = TransferPayload(
             signals={"cmp-a": {"count": 7, "items": [1, 2]}},
         )
         serialized = serialize_payload(payload)
         result = deserialize_payload(serialized)
         assert result is not None
-        assert result.__webcompy_transfer_version__ == 2
+        assert result.__webcompy_transfer_version__ == 3
         assert result.signals["cmp-a"]["count"] == 7
         assert result.signals["cmp-a"]["items"] == [1, 2]
 

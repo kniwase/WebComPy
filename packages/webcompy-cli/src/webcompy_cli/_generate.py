@@ -110,6 +110,14 @@ async def generate_static_site(app: WebComPyApp | None = None):
             shutil.copy2(src_path, dst)
             print(dst)
 
+    if artifacts.resource_allow_list:
+        for rel_path in artifacts.resource_allow_list:
+            src = build_config.app_package_path / rel_path
+            dst = dist_dir / "_webcompy-resource" / rel_path
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            print(dst)
+
     from webcompy.ui._styles import get_styles_files
 
     framework_ui_dir = dist_dir / "_webcompy-ui"

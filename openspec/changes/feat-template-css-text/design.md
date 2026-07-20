@@ -18,11 +18,11 @@ This change introduces a CSS text parser that produces identical `StyleDict` str
 - Parse CSS text strings into `StyleDict` structures matching the existing dict format
 - Support all CSS constructs handled by WebComPy's scoped_style system
 - Support `{{ varname }}` interpolation in reactive CSS via `css_text_template`
-- Support file-based CSS loading via `Path`
+- File-based CSS loading via composition with `webcompy.resources.load_text` (async)
 - All scoped_style assignment goes through explicit `css_text()` / `css_text_template()` calls
 
 **Non-Goals:**
-- Direct string/Path assignment to `scoped_style` setter (must use `css_text()`)
+- Direct string assignment to `scoped_style` setter (must use `css_text()`)
 - Modification of `ReactiveScopedStyle` or `ComponentGenerator` internals
 - CSS validation/linting
 - Sass/Less/CSS-in-JS
@@ -69,15 +69,31 @@ To make this work, the existing `ReactiveScopedStyleFunc` type alias (`_reactive
 
 ### D5: Reuse `_holes.py` for `{{ }}` resolution
 
-The `resolve_holes`, `split_text`, `HOLE_PATTERN`, and `resolve_var` utilities are defined in Change 1's `webcompy/template/_holes.py` shared module. `css_text_template` imports from this module. File loading (`Path` arguments) delegates to Change 4's `_load_file` from `webcompy/template/_files.py`.
+The `resolve_holes`, `split_text`, `HOLE_PATTERN`, and `resolve_var` utilities are defined in Change 1's `webcompy/template/_holes.py` shared module. `css_text_template` imports from this module. File-based CSS loading is delegated to `webcompy.resources.load_text` (Change 4). Callers compose `css_text(await load_text(path))` inside an async component setup function.
 
 **Rationale**: Avoids duplicating the `{{ }}` resolution logic. Change 1's design is updated to include `_holes.py` extraction.
+
+### D6: `str`-only signatures; file loading via composition with `load_text`
+
+`css_text(source: str)` and `css_text_template(source: str, context: dict)` accept `str` only. File-based CSS loading is delegated to `webcompy.resources.load_text` (Change 4), which is async. Callers compose:
+
+```python
+@define_component
+async def Card(ctx):
+    css_src = await load_text("styles/card.css")
+    style = css_text(css_src)
+    return html.DIV(...)
+```
+
+**Rationale**: `css_text_template` returns a sync `Callable[[], dict[str, StyleDict]]` factory wrapped in a `Computed` by `reactive_scoped_style`. Since `Computed` evaluation is synchronous, the factory cannot call `await load_text(...)`. Therefore, file loading MUST happen outside the factory — before `css_text_template` is called. Dropping `Path` from both `css_text` and `css_text_template` (for API consistency) makes this constraint explicit at the type level.
+
+**Browser behavior**: Unlike the originally planned `_load_file` (which would have raised `WebComPyException` in browser), `load_text` works in both server and browser. Server-side reads are recorded by `ServerResourcePort` and embedded in the hydration payload; browser-side reads resolve from the payload first (no fetch needed for resources read during SSR).
 
 ## Risks / Trade-offs
 
 - **[Risk] CSS parser misses edge cases (CSS variables, vendor prefixes, complex selectors)** → Mitigation: Parser returns dict structure; properties and selectors are stored as raw strings. The existing `_process_style_declaration` handles value cleanup. Unknown constructs are preserved as-is.
 - **[Risk] Performance of parsing CSS text on every reactive evaluation** → Mitigation: For static CSS, parsing happens once (module level). For reactive CSS, the `Computed` only re-evaluates on Signal change. The parser operates on small CSS blocks (typical component styles are <50 lines).
-- **[Risk] File-based CSS loading in browser** → Mitigation: `css_text(Path(...))` / `css_text_template(Path(...))` delegates file reading to Change 4's `_load_file` in `_files.py`, which raises `WebComPyException` when `ENVIRONMENT == "pyscript"`. The same rejection applies to CSS file paths in the browser as to HTML template file paths.
+- **[Constraint] File-based CSS loading requires async context** → `load_text` is async (`await` inside async component setup). `css_text` and `css_text_template` accept `str` only — file loading is the caller's responsibility. This keeps the CSS parser pure (no I/O) and enables browser-side loading via the hydration payload (the originally planned browser-rejection no longer applies).
 - **[Trade-off] No validation/error reporting on CSS syntax** → Acceptable — the parser is lenient (like HTMLParser). Invalid CSS produces incorrect dicts which produce incorrect scoped CSS. Developers can validate with external tools.
 
 ## Open Questions

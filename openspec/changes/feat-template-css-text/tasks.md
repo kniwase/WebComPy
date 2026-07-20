@@ -9,11 +9,10 @@
 
 ## 2. CSS Template Functions
 
-- [ ] 2.1 Implement `css_text(source: str | Path) -> dict[str, StyleDict]` in `webcompy/template/_css_template.py`
-- [ ] 2.2 Implement `css_text_template(source: str | Path, context: dict) -> Callable[[], dict[str, StyleDict]]`
+- [ ] 2.1 Implement `css_text(source: str) -> dict[str, StyleDict]` in `webcompy/template/_css_template.py`
+- [ ] 2.2 Implement `css_text_template(source: str, context: dict) -> Callable[[], dict[str, StyleDict]]`
 - [ ] 2.3 Import `resolve_holes` from `webcompy.template._holes` (shared module created by Change 1)
-- [ ] 2.4 Import `_load_file` from `webcompy.template._files` (shared module created by Change 4); resolve `Path` arguments to strings via `_load_file(source)` before parsing
-- [ ] 2.5 Correct `ReactiveScopedStyleFunc` type alias in `packages/webcompy/src/webcompy/components/_reactive_scoped_style.py:61` from `Callable[[], "StyleDict"]` to `Callable[[], "dict[str, StyleDict]"]` — matches the runtime contract of `render_css()` / `_apply_scope()` which iterate `.items()` over the factory return value; type-only change (no behavioral effect)
+- [ ] 2.4 Correct `ReactiveScopedStyleFunc` type alias in `packages/webcompy/src/webcompy/components/_reactive_scoped_style.py:61` from `Callable[[], "StyleDict"]` to `Callable[[], "dict[str, StyleDict]"]` — matches the runtime contract of `render_css()` / `_apply_scope()` which iterate `.items()` over the factory return value; type-only change (no behavioral effect)
 
 ## 3. Public API
 
@@ -36,19 +35,18 @@
 ## 5. Unit Tests — Template Functions
 
 - [ ] 5.1 `css_text` with plain CSS string returns correct `dict[str, StyleDict]`
-- [ ] 5.2 `css_text` with `Path` loads and parses file content
-- [ ] 5.3 `css_text` with `Path` in PyScript browser environment raises `WebComPyException` (inherited from Change 4)
-- [ ] 5.4 `css_text_template` resolves `{{ }}` in CSS text
-- [ ] 5.5 `css_text_template` factory tracks Signal dependencies (Signal change → new `dict[str, StyleDict]`)
-- [ ] 5.6 `css_text_template` returns `Callable[[], dict[str, StyleDict]]` type compatible with `reactive_scoped_style`
-- [ ] 5.7 `textwrap.dedent` applied to CSS text
+- [ ] 5.2 `css_text` composes with `await load_text(path)` for file-based CSS (async setup pattern; server records for hydration)
+- [ ] 5.3 `css_text_template` resolves `{{ }}` in CSS text
+- [ ] 5.4 `css_text_template` factory tracks Signal dependencies (Signal change → new `dict[str, StyleDict]`)
+- [ ] 5.5 `css_text_template` returns `Callable[[], dict[str, StyleDict]]` type compatible with `reactive_scoped_style`
+- [ ] 5.6 `textwrap.dedent` applied to CSS text
 
 ## 6. Integration Tests
 
 - [ ] 6.1 Component with `css_text()` static scoped_style
 - [ ] 6.2 Component with reactive CSS text (`css_text_template` + `reactive_scoped_style`)
 - [ ] 6.3 Reactive style updates `<style>` element on Signal change
-- [ ] 6.4 File-based CSS loading (server environment)
+- [ ] 6.4 File-based CSS loading via `await load_text` + `css_text` composition (async component setup; SSR records resource for hydration, browser resolves from payload)
 - [ ] 6.5 Backward compat: dict `scoped_style` unchanged
 - [ ] 6.6 Backward compat: dict factory in `reactive_scoped_style` unchanged
 

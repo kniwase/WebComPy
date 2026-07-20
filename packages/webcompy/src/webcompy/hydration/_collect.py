@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from logging import getLogger
 from typing import TYPE_CHECKING, Any
 
@@ -11,7 +12,7 @@ from webcompy.hydration._payload import (
     TransferFetchEntry,
     TransferPayload,
 )
-from webcompy.ports._keys import FETCH_PORT_KEY
+from webcompy.ports._keys import FETCH_PORT_KEY, RESOURCE_PORT_KEY
 from webcompy.signal import Computed, SignalBase
 
 if TYPE_CHECKING:
@@ -27,10 +28,16 @@ def collect_transfer_data(root: AppDocumentRoot) -> TransferPayload:
     fetches: dict[str, TransferFetchEntry] = {}
     async_results: dict[str, TransferAsyncResultEntry] = {}
     signals: dict[str, dict[str, Any]] = {}
+    resources: dict[str, str] = {}
 
     fetch_port = inject(FETCH_PORT_KEY, default=None)
     if fetch_port is not None and hasattr(fetch_port, "get_transfer_data"):
         fetches = fetch_port.get_transfer_data()
+
+    resource_port = inject(RESOURCE_PORT_KEY, default=None)
+    if resource_port is not None and hasattr(resource_port, "get_recorded_resources"):
+        recorded = resource_port.get_recorded_resources()
+        resources = {path: base64.b64encode(content).decode("ascii") for path, content in recorded.items()}
 
     for component, async_instances in _walk_component_async_results(root):
         component_id = component._property.get("component_id", "")
@@ -53,6 +60,7 @@ def collect_transfer_data(root: AppDocumentRoot) -> TransferPayload:
         fetches=fetches,
         async_results=async_results,
         signals=signals,
+        resources=resources,
     )
 
 

@@ -49,7 +49,7 @@ class TestTransferPayload:
         assert isinstance(serialized, str)
         result = deserialize_payload(serialized)
         assert result is not None
-        assert result.__webcompy_transfer_version__ == 2
+        assert result.__webcompy_transfer_version__ == 3
         assert "/api/data" in result.fetches
         assert result.fetches["/api/data"].status_code == 200
         assert result.fetches["/api/data"].body == '{"key": "value"}'
@@ -64,7 +64,7 @@ class TestTransferPayload:
         assert result is not None
         assert result.fetches == {}
         assert result.async_results == {}
-        assert result.__webcompy_transfer_version__ == 2
+        assert result.__webcompy_transfer_version__ == 3
 
     def test_html_escaping_of_special_characters(self):
         payload = TransferPayload(
@@ -125,8 +125,9 @@ class TestTransferPayload:
         serialized = serialize_payload(payload)
         unescaped = html_module.unescape(serialized)
         parsed = json.loads(unescaped)
-        assert parsed["__webcompy_transfer_version__"] == 2
+        assert parsed["__webcompy_transfer_version__"] == 3
         assert "/test" in parsed["fetches"]
+        assert parsed["resources"] == {}
 
 
 class TestPayloadCompression:
@@ -155,7 +156,7 @@ class TestPayloadCompression:
         compressed_serialized = serialize_payload(payload, compression_threshold=1024)
         result = deserialize_payload(compressed_serialized)
         assert result is not None
-        assert result.__webcompy_transfer_version__ == 2
+        assert result.__webcompy_transfer_version__ == 3
         assert set(result.fetches.keys()) == set(payload.fetches.keys())
         assert set(result.async_results.keys()) == set(payload.async_results.keys())
         first_url = next(iter(payload.fetches.keys()))
@@ -177,7 +178,7 @@ class TestPayloadCompression:
         unescaped = html_module.unescape(serialized)
         parsed = json.loads(unescaped)
         assert "__webcompy_compressed__" not in parsed
-        assert parsed["__webcompy_transfer_version__"] == 2
+        assert parsed["__webcompy_transfer_version__"] == 3
         assert "/api/data" in parsed["fetches"]
 
     def test_threshold_none_disables_compression(self):
@@ -186,7 +187,7 @@ class TestPayloadCompression:
         unescaped = html_module.unescape(serialized)
         parsed = json.loads(unescaped)
         assert "__webcompy_compressed__" not in parsed
-        assert parsed["__webcompy_transfer_version__"] == 2
+        assert parsed["__webcompy_transfer_version__"] == 3
 
     def test_threshold_zero_disables_compression(self):
         payload = self._large_payload()
@@ -194,7 +195,7 @@ class TestPayloadCompression:
         unescaped = html_module.unescape(serialized)
         parsed = json.loads(unescaped)
         assert "__webcompy_compressed__" not in parsed
-        assert parsed["__webcompy_transfer_version__"] == 2
+        assert parsed["__webcompy_transfer_version__"] == 3
 
     def test_backward_compatible_with_uncompressed_payload(self):
         payload = TransferPayload(
@@ -220,10 +221,10 @@ class TestPayloadCompression:
         unescaped = html_module.unescape(serialized)
         envelope = json.loads(unescaped)
         assert envelope["__webcompy_compressed__"] is True
-        assert envelope["__webcompy_transfer_version__"] == 2
+        assert envelope["__webcompy_transfer_version__"] == 3
         assert isinstance(envelope["data"], str)
         inner = json.loads(zlib.decompress(base64.b64decode(envelope["data"])).decode("utf-8"))
-        assert inner["__webcompy_transfer_version__"] == 2
+        assert inner["__webcompy_transfer_version__"] == 3
 
     def test_uses_only_stdlib_for_compression(self):
         src = inspect.getsource(payload_module)
@@ -389,6 +390,58 @@ class TestCollectTransferData:
             _active_di_scope.reset(token)
             scope.dispose()
 
+    def test_collect_transfer_data_records_resources_via_port(self):
+        """``collect_transfer_data`` reads recorded resources from the
+        configured ``ResourcePort`` (when present in DI scope) and
+        base64-encodes them into the payload's ``resources`` field.
+        """
+        from webcompy.ports._keys import RESOURCE_PORT_KEY
+
+        class _FakeResourcePort:
+            def get_recorded_resources(self):
+                return {
+                    "templates/card.html": b"<p>hello</p>",
+                    "icons/star.png": b"\x89PNG_FAKE",
+                }
+
+        scope = DIScope()
+        scope.provide(RESOURCE_PORT_KEY, _FakeResourcePort())
+        token = _active_di_scope.set(scope)
+        try:
+
+            async def fetch():
+                return "x"
+
+            result = AsyncResult(fetch)
+            result._state.value = AsyncState.SUCCESS
+            result._data.value = "ok"
+
+            mock_component = self._make_component([result], component_id="cmp")
+            mock_root = self._make_root([mock_component])
+
+            payload = collect_transfer_data(mock_root)
+
+            assert "templates/card.html" in payload.resources
+            assert base64.b64decode(payload.resources["templates/card.html"]) == b"<p>hello</p>"
+            assert base64.b64decode(payload.resources["icons/star.png"]) == b"\x89PNG_FAKE"
+        finally:
+            _active_di_scope.reset(token)
+            scope.dispose()
+
+    def test_collect_transfer_data_empty_when_no_resource_port(self):
+        async def fetch():
+            return "x"
+
+        result = AsyncResult(fetch)
+        result._state.value = AsyncState.SUCCESS
+        result._data.value = "ok"
+
+        mock_component = self._make_component([result], component_id="cmp")
+        mock_root = self._make_root([mock_component])
+
+        payload = collect_transfer_data(mock_root)
+        assert payload.resources == {}
+
 
 class TestCollectTransferDataCompressionThreshold:
     def _make_root(self, compression_threshold):
@@ -432,3 +485,71 @@ class TestCollectTransferDataCompressionThreshold:
             root._collect_transfer_data()
             serialize_mock.assert_called_once()
             assert serialize_mock.call_args.kwargs["compression_threshold"] == 1024
+
+
+class TestTransferPayloadResources:
+    """v3 introduces a ``resources`` field carrying base64-encoded bytes
+    keyed by package-relative path.
+    """
+
+    def test_v3_roundtrip_preserves_resources(self):
+        encoded_html = base64.b64encode(b"<p>hello</p>").decode("ascii")
+        encoded_png = base64.b64encode(b"\x89PNG_FAKE").decode("ascii")
+        payload = TransferPayload(
+            resources={
+                "templates/card.html": encoded_html,
+                "icons/star.png": encoded_png,
+            },
+        )
+        serialized = serialize_payload(payload)
+        result = deserialize_payload(serialized)
+        assert result is not None
+        assert result.__webcompy_transfer_version__ == 3
+        assert result.resources == {
+            "templates/card.html": encoded_html,
+            "icons/star.png": encoded_png,
+        }
+
+    def test_v2_payload_deserializes_with_empty_resources(self):
+        serialized = json.dumps(
+            {
+                "__webcompy_transfer_version__": 2,
+                "fetches": {},
+                "async_results": {},
+                "signals": {},
+            }
+        )
+        text = html_module.escape(serialized, quote=True)
+        result = deserialize_payload(text)
+        assert result is not None
+        assert result.__webcompy_transfer_version__ == 2
+        assert result.resources == {}
+
+    def test_v1_payload_deserializes_with_empty_resources(self):
+        serialized = json.dumps(
+            {
+                "__webcompy_transfer_version__": 1,
+                "fetches": {},
+            }
+        )
+        text = html_module.escape(serialized, quote=True)
+        result = deserialize_payload(text)
+        assert result is not None
+        assert result.resources == {}
+
+    def test_unknown_version_rejected(self):
+        serialized = json.dumps(
+            {
+                "__webcompy_transfer_version__": 999,
+                "fetches": {},
+                "resources": {"a.html": "abc"},
+            }
+        )
+        text = html_module.escape(serialized, quote=True)
+        result = deserialize_payload(text)
+        assert result is None
+
+    def test_v3_default_resources_is_empty(self):
+        payload = TransferPayload()
+        assert payload.resources == {}
+        assert payload.__webcompy_transfer_version__ == 3

@@ -42,29 +42,35 @@ The result: components with transferred data skip the `LOADING` phase entirely o
 - **THEN** the return value SHALL be `False`
 - **AND** no exception SHALL be raised (the default is `None`)
 
-### Requirement: TransferPayload shall include fetches, async_results, and signals
+### Requirement: TransferPayload shall include fetches, async_results, signals, and resources
 
-`TransferPayload` SHALL be a dataclass defined in `packages/webcompy/src/webcompy/hydration/_payload.py` with the following fields: `__webcompy_transfer_version__: int` (default `2`), `fetches: dict[str, TransferFetchEntry]`, `async_results: dict[str, TransferAsyncResultEntry]`, and `signals: dict[str, dict[str, Any]]`. The `signals` field maps component ID to a dict of `{attr_name: encoded_value}` where encoded values are produced by `encode()` from `webcompy.hydration._codec`. `TransferFetchEntry` SHALL be a dataclass with `status_code: int`, `headers: dict[str, str]`, and `body: str`. `TransferAsyncResultEntry` SHALL be a dataclass with `state: str` (always `"success"` in this version) and `data: Any`.
+`TransferPayload` SHALL be a dataclass defined in `packages/webcompy/src/webcompy/hydration/_payload.py` with the following fields: `__webcompy_transfer_version__: int` (default `3`), `fetches: dict[str, TransferFetchEntry]`, `async_results: dict[str, TransferAsyncResultEntry]`, `signals: dict[str, dict[str, Any]]`, and `resources: dict[str, str]` (base64-encoded bytes keyed by package-relative POSIX path). The `signals` field maps component ID to a dict of `{attr_name: encoded_value}` where encoded values are produced by `encode()` from `webcompy.hydration._codec`. `TransferFetchEntry` SHALL be a dataclass with `status_code: int`, `headers: dict[str, str]`, and `body: str`. `TransferAsyncResultEntry` SHALL be a dataclass with `state: str` (always `"success"` in this version) and `data: Any`.
 
-`deserialize_payload()` SHALL accept both version 1 payloads (treating a missing `signals` section as empty) and version 2 payloads (with the `signals` section populated). Unknown versions SHALL be rejected.
+`deserialize_payload()` SHALL accept versions 1, 2, and 3. v1 payloads are treated as having empty `signals` and `resources` dicts. v2 payloads have `signals` populated but empty `resources`. v3 payloads have all fields populated. Unknown versions SHALL be rejected.
 
 #### Scenario: TransferPayload fields are exposed
 - **WHEN** a developer creates a `TransferPayload`
-- **THEN** the fields `__webcompy_transfer_version__`, `fetches`, `async_results`, and `signals` SHALL be accessible as attributes
-- **AND** the default value for `__webcompy_transfer_version__` SHALL be `2`
+- **THEN** the fields `__webcompy_transfer_version__`, `fetches`, `async_results`, `signals`, and `resources` SHALL be accessible as attributes
+- **AND** the default value for `__webcompy_transfer_version__` SHALL be `3`
 
-#### Scenario: Serializing a version 2 payload
-- **WHEN** `serialize_payload()` is called with a `TransferPayload` containing signals
-- **THEN** the JSON output SHALL include `"__webcompy_transfer_version__": 2`
-- **AND** the `"signals"` key SHALL be present in the output
+#### Scenario: Serializing a version 3 payload
+- **WHEN** `serialize_payload()` is called with a `TransferPayload` containing signals and resources
+- **THEN** the JSON output SHALL include `"__webcompy_transfer_version__": 3`
+- **AND** the `"signals"` and `"resources"` keys SHALL be present in the output
 
-#### Scenario: Deserializing a version 2 payload
-- **WHEN** `deserialize_payload()` receives a version 2 JSON string
-- **THEN** the resulting `TransferPayload` SHALL have the `signals` dict populated from the JSON
+#### Scenario: Deserializing a version 3 payload
+- **WHEN** `deserialize_payload()` receives a version 3 JSON string
+- **THEN** the resulting `TransferPayload` SHALL have the `signals` and `resources` dicts populated from the JSON
+
+#### Scenario: Deserializing a version 2 payload (backward compatibility)
+- **WHEN** `deserialize_payload()` receives a version 2 JSON string (no `resources` key)
+- **THEN** the resulting `TransferPayload.signals` SHALL be populated from the JSON
+- **AND** the resulting `TransferPayload.resources` SHALL be an empty dict `{}`
 
 #### Scenario: Deserializing a version 1 payload (backward compatibility)
-- **WHEN** `deserialize_payload()` receives a version 1 JSON string (no `signals` key)
+- **WHEN** `deserialize_payload()` receives a version 1 JSON string (no `signals` or `resources` key)
 - **THEN** the resulting `TransferPayload.signals` SHALL be an empty dict `{}`
+- **AND** the resulting `TransferPayload.resources` SHALL be an empty dict `{}`
 - **AND** no error SHALL be raised
 
 ### Requirement: serialize_payload shall produce HTML-escaped JSON
@@ -84,16 +90,21 @@ The result: components with transferred data skip the `LOADING` phase entirely o
 
 ### Requirement: deserialize_payload shall validate version and parse JSON
 
-`deserialize_payload(text: str) -> TransferPayload | None` SHALL parse the input as JSON, validate the `__webcompy_transfer_version__` field against the accept-list `{1, 2}`, and return a `TransferPayload` on success or `None` on parse error, missing version, or unknown version.
+`deserialize_payload(text: str) -> TransferPayload | None` SHALL parse the input as JSON, validate the `__webcompy_transfer_version__` field against the accept-list `{1, 2, 3}`, and return a `TransferPayload` on success or `None` on parse error, missing version, or unknown version.
 
 #### Scenario: Deserializing a valid v1 payload
 - **WHEN** a valid JSON string with `__webcompy_transfer_version__: 1` is passed
 - **THEN** a `TransferPayload` SHALL be returned with the parsed fields
-- **AND** the `signals` field SHALL default to an empty dict `{}`
+- **AND** the `signals` and `resources` fields SHALL default to empty dicts `{}`
 
 #### Scenario: Deserializing a valid v2 payload
 - **WHEN** a valid JSON string with `__webcompy_transfer_version__: 2` is passed
 - **THEN** a `TransferPayload` SHALL be returned with `fetches`, `async_results`, and `signals` populated from the JSON
+- **AND** the `resources` field SHALL default to an empty dict `{}`
+
+#### Scenario: Deserializing a valid v3 payload
+- **WHEN** a valid JSON string with `__webcompy_transfer_version__: 3` is passed
+- **THEN** a `TransferPayload` SHALL be returned with `fetches`, `async_results`, `signals`, and `resources` populated from the JSON
 
 #### Scenario: Deserializing an unknown version
 - **WHEN** a JSON string with `__webcompy_transfer_version__: 999` is passed
@@ -228,8 +239,9 @@ Non-serializable values that fail even the codec's extended encoders SHALL be dr
 1. Call `browser_fetch_port.populate_from_transfer(payload.fetches)`
 2. Provide `payload.async_results` via `HYDRATION_DATA_KEY` in the root DI scope
 3. Provide `payload.signals` via `HYDRATION_SIGNAL_DATA_KEY` in the root DI scope
+4. Provide `payload.resources` via `RESOURCE_DATA_KEY` in the root DI scope
 
-The `HYDRATION_SIGNAL_DATA_KEY` SHALL be provided **before** any component creation, so that `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` composable calls during component setup can access the payload via `inject(HYDRATION_SIGNAL_DATA_KEY)`.
+The `HYDRATION_SIGNAL_DATA_KEY` and `RESOURCE_DATA_KEY` SHALL be provided **before** any component creation, so that `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` composable calls during component setup can access the payload via `inject(HYDRATION_SIGNAL_DATA_KEY)`, and `BrowserResourcePort` can access embedded resources via `inject(RESOURCE_DATA_KEY)`.
 
 If the payload is missing or invalid, the function SHALL proceed with an empty payload (all DI keys unprovided). The script element SHALL be removed from the DOM after reading.
 
@@ -238,13 +250,15 @@ If the payload is missing or invalid, the function SHALL proceed with an empty p
 - **THEN** `BrowserFetchPort.populate_from_transfer()` SHALL be called with the `fetches` section
 - **AND** `HYDRATION_DATA_KEY` SHALL be provided with the `async_results` section
 - **AND** `HYDRATION_SIGNAL_DATA_KEY` SHALL be provided with the `signals` section
-- **AND** both DI keys SHALL be available during component `__setup()`
+- **AND** `RESOURCE_DATA_KEY` SHALL be provided with the `resources` section
+- **AND** all DI keys SHALL be available during component `__setup()`
 
 #### Scenario: Missing payload proceeds with empty data
 - **WHEN** `app.run()` is called and the DOM does not contain a `__webcompy_data__` script tag
 - **THEN** the `BrowserFetchPort` cache SHALL be empty
 - **AND** `HYDRATION_DATA_KEY` SHALL NOT be provided
 - **AND** `HYDRATION_SIGNAL_DATA_KEY` SHALL NOT be provided
+- **AND** `RESOURCE_DATA_KEY` SHALL NOT be provided
 - **AND** components SHALL use the normal lifecycle (factories run, async functions execute)
 
 #### Scenario: Script tag is removed after reading
@@ -257,13 +271,13 @@ If the payload is missing or invalid, the function SHALL proceed with an empty p
 - **THEN** `inject(HYDRATION_SIGNAL_DATA_KEY)` SHALL return the signals payload
 - **AND** `use_state()` SHALL check the payload for a matching key before running the factory
 
-### Requirement: collect_transfer_data shall collect fetches, async_results, and signals
+### Requirement: collect_transfer_data shall collect fetches, async_results, signals, and resources
 
-`collect_transfer_data(root)` SHALL traverse the component tree and populate three sections of the `TransferPayload`: `fetches` (from `FetchPort.get_transfer_data()`), `async_results` (from `Component._async_results`), and `signals` (from `Component.__signal_members__`). Signal values SHALL be encoded via `encode()` from `webcompy.hydration._codec`. Non-serializable Signal values SHALL be dropped with a warning. `AppDocumentRoot` (or `WebComPyApp`) SHALL provide a `_collect_transfer_data() -> TransferPayload` method that wraps `collect_transfer_data(self)`.
+`collect_transfer_data(root)` SHALL traverse the component tree and populate four sections of the `TransferPayload`: `fetches` (from `FetchPort.get_transfer_data()`), `async_results` (from `Component._async_results`), `signals` (from `Component.__signal_members__`), and `resources` (from `ResourcePort.get_recorded_resources()`). Signal values SHALL be encoded via `encode()` from `webcompy.hydration._codec`. Non-serializable Signal values SHALL be dropped with a warning. Resource content bytes SHALL be base64-encoded for transfer. `AppDocumentRoot` (or `WebComPyApp`) SHALL provide a `_collect_transfer_data() -> TransferPayload` method that wraps `collect_transfer_data(self)`.
 
-#### Scenario: collect_transfer_data gathers all three sections
+#### Scenario: collect_transfer_data gathers all four sections
 - **WHEN** `collect_transfer_data(root)` is called after SSR rendering
-- **THEN** the returned `TransferPayload` SHALL have `fetches`, `async_results`, and `signals` populated
+- **THEN** the returned `TransferPayload` SHALL have `fetches`, `async_results`, `signals`, and `resources` populated
 
 #### Scenario: collect_transfer_data handles components with no signals
 - **WHEN** a component has no `__signal_members__` entries
@@ -283,6 +297,47 @@ If the payload is missing or invalid, the function SHALL proceed with an empty p
 - **WHEN** `deserialize_payload()` receives a payload without `__webcompy_compressed__`
 - **THEN** the payload SHALL be processed as uncompressed JSON
 - **AND** the behavior SHALL be identical to the pre-compression implementation
+
+### Requirement: RESOURCE_DATA_KEY shall expose embedded resource bytes to the browser port
+
+`webcompy/di/_keys.py` SHALL define `RESOURCE_DATA_KEY = InjectKey[dict[str, str]]("webcompy-resource-data")` (mirroring the existing `HYDRATION_DATA_KEY` and `HYDRATION_SIGNAL_DATA_KEY` pattern). The value SHALL be the decoded `payload.resources` dict (base64 strings keyed by package-relative path).
+
+#### Scenario: RESOURCE_DATA_KEY importable
+- **WHEN** a developer writes `from webcompy.di import RESOURCE_DATA_KEY`
+- **THEN** the import SHALL succeed
+- **AND** the key SHALL be usable as the first argument to `inject()`
+
+#### Scenario: Browser port consumes RESOURCE_DATA_KEY during hydration
+- **WHEN** `BrowserResourcePort().load_text("templates/card.html")` is called and `RESOURCE_DATA_KEY` is provided in the DI scope with a matching entry
+- **THEN** the base64-decoded content SHALL be returned
+- **AND** no HTTP fetch SHALL be issued
+
+### Requirement: SSR shall populate payload.resources from ServerResourcePort
+
+During SSR/SSG, after component rendering completes for a request, `ServerRenderContext` SHALL collect the recorded resources from every active `ServerResourcePort` (via `port.get_recorded_resources()`) and populate `TransferPayload.resources` with the path → bytes mapping. The codec pipeline SHALL base64-encode the bytes prior to JSON serialization.
+
+#### Scenario: Loaded resource appears in hydration payload
+- **WHEN** an async component in an SSR'd page calls `await load_text("templates/card.html")`
+- **AND** the resource file exists
+- **THEN** the resulting `__webcompy_data__` script SHALL include `"templates/card.html"` in the `resources` dict
+- **AND** the value SHALL be the base64 of the file's bytes
+
+#### Scenario: Failed load does not appear in payload
+- **WHEN** a component calls `await load_text("missing.html")` and the load raises
+- **THEN** the `resources` dict SHALL NOT contain `"missing.html"` after SSR
+
+#### Scenario: Same resource loaded twice appears once in payload
+- **WHEN** two components call `await load_text("templates/card.html")` during the same SSR pass
+- **THEN** the `resources` dict SHALL contain a single entry for `"templates/card.html"` with the latest content
+
+### Requirement: Payload compression shall apply to the resources field
+
+The existing `compression_threshold` mechanism (gzip envelope triggered above the size threshold, via the `__webcompy_compressed__` flag) SHALL apply to v3 payloads including the new `resources` field. No special-case compression logic SHALL be added for `resources` specifically.
+
+#### Scenario: Large resources trigger compression
+- **WHEN** the unencoded payload size exceeds the configured `compression_threshold`
+- **THEN** the serialized output SHALL be gzipped and base64-encoded with the `__webcompy_compressed__` envelope
+- **AND** the `resources` field SHALL be included in the gzipped output
 
 ## Limitations
 

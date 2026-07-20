@@ -8,6 +8,7 @@ from webcompy.di._key import InjectKey
 from webcompy.di._keys import (
     HYDRATION_DATA_KEY,
     HYDRATION_SIGNAL_DATA_KEY,
+    RESOURCE_DATA_KEY,
     SUSPENSE_RESOLVING_KEY,
 )
 from webcompy.di._scope import _MISSING, DIScope, _active_di_scope, _get_app_di_scope
@@ -56,6 +57,7 @@ def inject(key: object, default: Any = _MISSING) -> Any:
 __all__ = [
     "HYDRATION_DATA_KEY",
     "HYDRATION_SIGNAL_DATA_KEY",
+    "RESOURCE_DATA_KEY",
     "SUSPENSE_RESOLVING_KEY",
     "DIScope",
     "InjectKey",

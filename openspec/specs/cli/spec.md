@@ -292,27 +292,53 @@ Each CLI invocation creates a fresh `WebComPyBuildConfig` instance. The `--stand
 - **THEN** a fresh `WebComPyBuildConfig` SHALL be created with `standalone=True`
 - **AND** the lock file SHALL be regenerated with `standalone: true`, `wasm_serving: "local"`, `runtime_serving: "local"`
 
-### MODIFIED: Application configuration shall support assets
-`WebComPyBuildConfig` SHALL accept an `assets` parameter that maps string keys to file paths relative to the app package directory. These assets SHALL be included in the bundled wheel and accessible at runtime via `load_asset`.
+### MODIFIED: The dev server and SSG shall serve application resource files
 
-#### Scenario: Configuring assets for application resources
-- **WHEN** a developer specifies `assets={"logo": "images/logo.png", "config": "data/settings.json"}`
-- **THEN** the CLI SHALL include the referenced files in the bundled wheel inside the app package tree
-- **AND** an `_assets_registry.py` module SHALL be generated mapping `"logo"` to `"app/images/logo.png"` and `"config"` to `"app/data/settings.json"`
-- **AND** those files SHALL be accessible via `load_asset("logo")` and `load_asset("config")` in the browser environment
+The dev/prod SSR server SHALL expose a `GET {base_url}_webcompy-resource/{path:path}` endpoint that serves allow-listed application resource files. The endpoint SHALL be registered in both dev and prod modes. `WebComPyBuildConfig` SHALL accept `resources: list[str] | None` and `resource_exclude: list[str] | None` fields for configuring which files are served via the resource endpoint. The `assets: dict[str, str] | None` field is REMOVED (superseded by the resource auto-detection mechanism). Resource paths SHALL be package-relative (POSIX-style, no `..` segments).
 
-#### Scenario: Omitting assets
-- **WHEN** a developer does not specify `assets`
-- **THEN** only Python source files, stub files, and `py.typed` markers SHALL be included in the wheel
-- **AND** no `_assets_registry.py` module SHALL be generated
+#### Scenario: Allow-listed resource is served
+- **WHEN** the allow-list contains `"templates/card.html"` and the file exists
+- **AND** a GET request arrives for `{base_url}_webcompy-resource/templates/card.html`
+- **THEN** the response SHALL be HTTP 200 with the file's UTF-8 text body and `Content-Type: text/html`
 
-### MODIFIED: Assets shall be loadable by key at runtime
-The `webcompy.assets` module SHALL provide a `load_asset(key: str) -> bytes` function and an `AssetNotFoundError` exception. When called, `load_asset` SHALL look up the key in the app's `_assets_registry` module and return the file content as `bytes` using `importlib.resources`.
+#### Scenario: Non-allow-listed resource returns 404
+- **WHEN** the allow-list does NOT contain `"secrets/credentials.json"`
+- **AND** a GET request arrives for `{base_url}_webcompy-resource/secrets/credentials.json`
+- **THEN** the response SHALL be HTTP 404
+- **AND** no filesystem access SHALL occur
 
-#### Scenario: Loading an asset by key
-- **WHEN** `load_asset("logo")` is called in browser code where `_assets_registry` maps `"logo"` to `"app/images/logo.png"`
-- **THEN** the function SHALL return the raw `bytes` content of `app/images/logo.png`
+#### Scenario: Path traversal rejected
+- **WHEN** a GET request arrives for `{base_url}_webcompy-resource/../webcompy_config.py`
+- **THEN** the response SHALL be HTTP 404 (resolved outside allow-list) or 403 (realpath outside root)
+- **AND** the file SHALL NOT be returned
 
-#### Scenario: Asset key not found
-- **WHEN** `load_asset("nonexistent")` is called
-- **THEN** `AssetNotFoundError` SHALL be raised with the key as an attribute
+#### Scenario: Cache-Control in dev mode
+- **WHEN** the server runs in dev mode
+- **THEN** resource responses SHALL include `Cache-Control: no-cache`
+
+#### Scenario: Cache-Control in prod mode
+- **WHEN** the server runs in prod mode
+- **THEN** resource responses SHALL include `Cache-Control: public, max-age=3600`
+
+### MODIFIED: Static site generation shall copy allow-listed resources to dist
+
+`generate_static_site` SHALL copy every allow-listed resource to `{dist_dir}/_webcompy-resource/{path}` preserving the package-relative path's directory structure. The copy SHALL happen after the dist directory is created and before static-file and app-package copies.
+
+#### Scenario: Allow-listed resources appear in dist
+- **WHEN** the allow-list contains `"templates/card.html"`, `"assets/icons/star.svg"`, and `"styles/main.css"`
+- **AND** `generate_static_site(app)` runs
+- **THEN** `{dist_dir}/_webcompy-resource/templates/card.html` SHALL exist
+- **AND** `{dist_dir}/_webcompy-resource/assets/icons/star.svg` SHALL exist
+- **AND** `{dist_dir}/_webcompy-resource/styles/main.css` SHALL exist
+- **AND** each file's contents SHALL match the source
+
+#### Scenario: Non-allow-listed files are not copied
+- **WHEN** the app package contains `secrets/credentials.json` and `webcompy_config.py`
+- **AND** these paths are NOT in the allow-list
+- **THEN** `{dist_dir}/_webcompy-resource/secrets/credentials.json` SHALL NOT exist
+- **AND** `{dist_dir}/_webcompy-resource/webcompy_config.py` SHALL NOT exist
+
+#### Scenario: Static host serves the same URL
+- **WHEN** the generated `dist/` directory is deployed to a static host
+- **AND** a browser fetches `{base_url}_webcompy-resource/templates/card.html`
+- **THEN** the host SHALL serve the copied file with the same content as the live SSR endpoint would have

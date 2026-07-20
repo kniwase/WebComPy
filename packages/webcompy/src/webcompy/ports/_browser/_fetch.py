@@ -56,8 +56,16 @@ class BrowserFetchPort(FetchPort):
             res = await self._browser.fetch(url, **options)
 
             headers_obj = res.headers
+            cloned = res.clone()
+            text = await res.text()
+            try:
+                array_buf = await cloned.arrayBuffer()
+                content = bytes(array_buf)
+            except Exception:
+                content = text.encode("utf-8")
             response = Response(
-                text=await res.text(),
+                text=text,
+                content=content,
                 headers=dict(
                     zip(
                         list(headers_obj.keys()),

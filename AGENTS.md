@@ -230,6 +230,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md` |
 | `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md` |
+| `webcompy/ports/_resource.py`, `webcompy_server/ports/_resource.py` | `resource-port/spec.md` |
 | `webcompy_server/ports/` | `virtual-dom/spec.md`, `server-fetch-asgi/spec.md`, `async-scheduler/spec.md` |
 | `webcompy_server/_context.py`, `webcompy_server/_html.py` | `async-scheduler/spec.md`, `app-lifecycle/spec.md` |
 | `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md` |
@@ -325,6 +326,7 @@ When specs are added, modified, or removed, update:
 | `cli` | Dev server, SSG, project scaffolding, configuration |
 | `browser-api` | Browser environment detection and API abstraction |
 | `port-abstraction` | Typed, injectable port ABCs replacing monolithic `browser` |
+| `resource-port` | Async `ResourcePort` ABC + `ServerResourcePort`/`BrowserResourcePort` for app-package resource files (replaces legacy `load_asset`) |
 | `virtual-dom` | Server-side virtual DOM tree for SSG and testing |
 | `async` | Async operations, HTTP client integration |
 | `async-component-setup` | Async component definition support via two-phase initialization during `_render()` |

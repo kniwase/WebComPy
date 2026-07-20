@@ -8,7 +8,7 @@ After the HTML template engine (Changes 1-5), the next frontier is Markdown — 
 - Implement `DefaultMarkdownParser` — a minimal but practical Markdown-to-HTML converter (~300 lines) supporting headings, paragraphs, ordered/unordered/nested lists, code blocks, inline formatting, links, images, blockquotes, horizontal rules, and HTML block passthrough
 - Implement `render_markdown(source, context)` — a pipeline that converts Markdown to HTML, strips `<p>` wrappers around `{% %}` directives, and feeds the result to `render_template`
 - Register `DefaultMarkdownParser` in both `BrowserRenderContext` and `ServerRenderContext`
-- Support file-based Markdown loading via `Path`
+- File-based Markdown loading delegated to `webcompy.resources.load_text` (async); callers compose `render_markdown(await load_text(path), ctx)` inside async component setup. `render_markdown` accepts `str` only.
 - Support all HTML template engine features: `{{ }}`, `{% if %}`, component tags in HTML blocks
 - Support `{% for %}` via standard `repeat()` path (baseline): Markdown-native list bodies produce one list block per iteration; full list-merging with `MarkdownForElement` is added in Change 7
 
@@ -46,6 +46,6 @@ _None — this is a new capability layered on Changes 1, 2, 4, 5_
 - **Depends on**: Change 1 (template interpolation — `render_template` API)
 - **Depends on**: Change 2 (control flow — `{% if %}`/`{% for %}` in Markdown)
 - **Depends on**: Change 3 (component tags — `<user-card>` in Markdown HTML blocks)
-- **Depends on**: Change 4 (file loading — `_load_file` for Path support)
+- **Depends on**: Change 4 (`webcompy.resources.load_text` for file-based Markdown loading; callers compose `render_markdown(await load_text(path), ctx)`)
 - **Required by**: Change 7 (markdown for-expansion — `MarkdownForElement` list-body merging)
 - **Recommended implementation order**: Sixth template-engine change (0 → 1 → 2 → 3 → 4 → 5 → **6** → 7)
