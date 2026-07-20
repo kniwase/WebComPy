@@ -43,12 +43,12 @@
 
 ## 6. Integration Tests
 
-- [ ] 6.1 Component with `css_text()` static scoped_style
-- [ ] 6.2 Component with reactive CSS text (`css_text_template` + `reactive_scoped_style`)
-- [ ] 6.3 Reactive style updates `<style>` element on Signal change
-- [ ] 6.4 File-based CSS loading via `await load_text` + `css_text` composition (async component setup; SSR records resource for hydration, browser resolves from payload)
-- [ ] 6.5 Backward compat: dict `scoped_style` unchanged
-- [ ] 6.6 Backward compat: dict factory in `reactive_scoped_style` unchanged
+- [x] 6.1 Component with `css_text()` static scoped_style
+- [x] 6.2 Component with reactive CSS text (`css_text_template` + `reactive_scoped_style`)
+- [x] 6.3 Reactive style updates `<style>` element on Signal change
+- [x] 6.4 File-based CSS loading via `await load_text` + `css_text` composition (async component setup; SSR records resource for hydration, browser resolves from payload)
+- [x] 6.5 Backward compat: dict `scoped_style` unchanged
+- [x] 6.6 Backward compat: dict factory in `reactive_scoped_style` unchanged
 
 ## 7. CI Review Update
 
