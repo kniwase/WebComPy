@@ -34,12 +34,12 @@
 
 ## 5. Unit Tests — Template Functions
 
-- [ ] 5.1 `css_text` with plain CSS string returns correct `dict[str, StyleDict]`
-- [ ] 5.2 `css_text` composes with `await load_text(path)` for file-based CSS (async setup pattern; server records for hydration)
-- [ ] 5.3 `css_text_template` resolves `{{ }}` in CSS text
-- [ ] 5.4 `css_text_template` factory tracks Signal dependencies (Signal change → new `dict[str, StyleDict]`)
-- [ ] 5.5 `css_text_template` returns `Callable[[], dict[str, StyleDict]]` type compatible with `reactive_scoped_style`
-- [ ] 5.6 `textwrap.dedent` applied to CSS text
+- [x] 5.1 `css_text` with plain CSS string returns correct `dict[str, StyleDict]`
+- [x] 5.2 `css_text` composes with `await load_text(path)` for file-based CSS (async setup pattern; server records for hydration)
+- [x] 5.3 `css_text_template` resolves `{{ }}` in CSS text
+- [x] 5.4 `css_text_template` factory tracks Signal dependencies (Signal change → new `dict[str, StyleDict]`)
+- [x] 5.5 `css_text_template` returns `Callable[[], dict[str, StyleDict]]` type compatible with `reactive_scoped_style`
+- [x] 5.6 `textwrap.dedent` applied to CSS text
 
 ## 6. Integration Tests
 
