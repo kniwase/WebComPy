@@ -5,6 +5,7 @@ import textwrap
 from typing import Final
 
 from webcompy.components._generator import StyleDeclaration, StyleDict
+from webcompy.exception import WebComPyException
 
 _COMMENT_PATTERN: Final = re.compile(r"/\*.*?\*/", re.DOTALL)
 
@@ -53,7 +54,7 @@ def _find_colon(text: str, start: int, end: int) -> int:
 
 def _read_braced(text: str, open_pos: int) -> tuple[str, int]:
     if open_pos >= len(text) or text[open_pos] != "{":
-        raise ValueError(f"Expected '{{' at position {open_pos}")
+        raise WebComPyException(f"Expected '{{' at position {open_pos}")
     depth = 1
     i = open_pos + 1
     n = len(text)
@@ -66,12 +67,12 @@ def _read_braced(text: str, open_pos: int) -> tuple[str, int]:
             depth -= 1
         i += 1
     if depth != 0:
-        raise ValueError(f"Unbalanced braces: missing closing '}}' for '{{' at position {open_pos}")
+        raise WebComPyException(f"Unbalanced braces: missing closing '}}' for '{{' at position {open_pos}")
     return text[start : i - 1], i
 
 
-def _parse_stylesheet(text: str) -> StyleDict:
-    result: dict[str, StyleDeclaration] = {}
+def _parse_stylesheet(text: str) -> dict[str, StyleDict]:
+    result: dict[str, StyleDict] = {}
     i = 0
     n = len(text)
     while True:
@@ -135,7 +136,37 @@ def _parse_block_content(body: str) -> StyleDict:
     return result
 
 
-def parse_css(text: str) -> StyleDict:
+def parse_css(text: str) -> dict[str, StyleDict]:
+    """Parse a CSS text string into a selector-keyed ``dict[str, StyleDict]``.
+
+    The result mirrors the structure consumed by ``ComponentGenerator.scoped_style``
+    and ``reactive_scoped_style``, so existing scoping logic is reused unchanged.
+
+    Processing:
+      * ``/* ... */`` comments are stripped.
+      * ``textwrap.dedent`` is applied to normalize triple-quoted indentation.
+      * Selectors, combinators, pseudo-classes/elements, at-rules
+        (``@media``/``@supports``/``@container``/``@keyframes``), and arbitrarily
+        nested rules are recognized.
+
+    The parser is intentionally lenient (no validation/linting). Limitations:
+      * Statement at-rules without a block (``@import``, ``@charset``,
+        ``@namespace``) are not preserved — they don't fit ``StyleDict`` and are
+        not meaningful inside a scoped style.
+      * CSS string literals (``"..."`` / ``'...'``) containing structural
+        characters (``{ }`` ``:`` ``;``) are not tokenized; a ``}`` inside a
+        string literal will close the surrounding block. Use external tools to
+        validate CSS syntax.
+
+    Args:
+        text: CSS source string.
+
+    Returns:
+        Selector-keyed dict whose values are ``StyleDict`` blocks.
+
+    Raises:
+        WebComPyException: If braces are unbalanced.
+    """
     cleaned = _strip_comments(text)
     cleaned = textwrap.dedent(cleaned)
     return _parse_stylesheet(cleaned)

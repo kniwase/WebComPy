@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+
+from webcompy.exception import WebComPyException
 from webcompy.template import css_text
 
 
@@ -340,3 +343,23 @@ class TestMiscEdgeCases:
 
     def test_double_colon_pseudo_at_top_level(self):
         assert css_text("::before { color: red; }") == {"::before": {"color": "red"}}
+
+
+class TestErrorHandling:
+    def test_unbalanced_braces_missing_close_raises_webcompy_exception(self):
+        with pytest.raises(WebComPyException, match="Unbalanced"):
+            css_text(".x { color: red;")
+
+    def test_unbalanced_nested_braces_raises_webcompy_exception(self):
+        with pytest.raises(WebComPyException, match="Unbalanced"):
+            css_text(".x { :hover { color: red; }")
+
+    def test_unbalanced_at_rule_braces_raises_webcompy_exception(self):
+        with pytest.raises(WebComPyException, match="Unbalanced"):
+            css_text("@media (max-width: 768px) { .btn { color: red; }")
+
+    def test_extra_close_brace_silently_consumed(self):
+        assert css_text(".x { color: red; }}") == {".x": {"color": "red"}}
+
+    def test_lone_close_brace_at_top_silently_consumed(self):
+        assert css_text("}") == {}
