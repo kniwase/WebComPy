@@ -1,30 +1,30 @@
 ## 1. MarkdownForElement Implementation
 
-- [ ] 1.1 Implement `MarkdownForElement(DynamicElement)` in `webcompy/template/_markdown_for.py` (constructor accepts iterable, body_markdown str, loop_vars list[str], context dict)
-- [ ] 1.2 Implement `_render()`: read iterable items, per-item rename loop vars in expression spans with `__wmdf_{N}_{varname}` prefix, inject synthetic keys into per-item context, concatenate markdown, `MarkdownPort.render()`, `<p>` strip, `_render_nodes()`, set children
-- [ ] 1.3 Implement `_refresh()` following `SwitchElement._refresh` pattern (re-expand, patch children, defer `on_after_rendering`); use shared `_run_refresh_sync(self._refresh, *args)` from `webcompy.elements.types._dynamic` for the callback registration path
-- [ ] 1.4 Register `on_after_updating` on reactive iterable during `_render()` if not `_signal_activated`; store callback node in `_callback_nodes`
-- [ ] 1.5 Handle static iterable (plain list/dict): no callback registration, one-shot render
+- [x] 1.1 Implement `MarkdownForElement(DynamicElement)` in `webcompy/template/_markdown_for.py` (constructor accepts iterable, body_markdown str, loop_vars list[str], context dict)
+- [x] 1.2 Implement `_render()`: read iterable items, per-item rename loop vars in expression spans with `__wmdf_{N}_{varname}` prefix, inject synthetic keys into per-item context, concatenate markdown, `MarkdownPort.render()`, `<p>` strip, `_render_nodes()`, set children
+- [x] 1.3 Implement `_refresh()` following `SwitchElement._refresh` pattern (re-expand, patch children, defer `on_after_rendering`); use shared `_run_refresh_sync(self._refresh, *args)` from `webcompy.elements.types._dynamic` for the callback registration path
+- [x] 1.4 Register `on_after_updating` on reactive iterable during `_render()` if not `_signal_activated`; store callback node in `_callback_nodes`
+- [x] 1.5 Handle static iterable (plain list/dict): no callback registration, one-shot render
 
 ## 2. Expression-Scoped Renaming
 
 Span boundaries for `{{ }}` and `{% %}` SHALL use the same brace delimiters as Changes 1 and 2. Renamed variable paths SHALL be validated against `HOLE_PATTERN` from `webcompy.template._holes` (Change 1). `{% %}` span boundaries SHALL match the same delimiter structure as `DIRECTIVE_PATTERN` from `webcompy.template._ast` (Change 2). Variable name replacement within spans SHALL use simple string substitution (no regex needed).
 
-- [ ] 2.1 Implement `_rename_in_expressions(text: str, var_name: str, replacement: str) -> str` that renames `var_name` → `replacement` only within `{{ }}` / `{% %}` spans
-- [ ] 2.2 Handle tuple unpacking: rename all loop variable names in expression spans (`{% for k, v in d %}` → `__wmdf_N_k`, `__wmdf_N_v`)
-- [ ] 2.3 Ensure prose (non-expression text) is NOT affected by renaming
+- [x] 2.1 Implement `_rename_in_expressions(text: str, var_name: str, replacement: str) -> str` that renames `var_name` → `replacement` only within `{{ }}` / `{% %}` spans
+- [x] 2.2 Handle tuple unpacking: rename all loop variable names in expression spans (`{% for k, v in d %}` → `__wmdf_N_k`, `__wmdf_N_v`)
+- [x] 2.3 Ensure prose (non-expression text) is NOT affected by renaming
 
 ## 3. Nested and Inline Directive Handling
 
-- [ ] 3.1 Implement nested `{% for %}` detection and routing: if body contains `{% for %}` → recursively create `MarkdownForElement` (or repeat if non-list body) with composite naming prefix
-- [ ] 3.2 Statically evaluate `{% if %}` inside list-body for: resolve condition per item using `resolve_var` against per-item context; omit body for falsy iterations
-- [ ] 3.3 Handle `{% elif %}` / `{% else %}` within static per-item if evaluation
+- [x] 3.1 Implement nested `{% for %}` detection and routing: if body contains `{% for %}` → recursively create `MarkdownForElement` (or repeat if non-list body) with composite naming prefix
+- [x] 3.2 Statically evaluate `{% if %}` inside list-body for: resolve condition per item using `resolve_var` against per-item context; omit body for falsy iterations
+- [x] 3.3 Handle `{% elif %}` / `{% else %}` within static per-item if evaluation
 
 ## 4. Body-Type Detection in render_markdown Pipeline
 
-- [ ] 4.1 Implement `_is_list_body(body_text: str) -> bool` heuristic: strip if-directive lines, check remaining non-empty lines start with `-`, `*`, `+`, or digit+`.`/`)`
-- [ ] 4.2 Integrate detection into `render_markdown`: for-each `{% for %}` block, if list body → create `MarkdownForElement`; else → use standard repeat() path
-- [ ] 4.3 Ensure non-list for-loops continue to work with reactive `{% if %}` (unchanged from Change 6 baseline)
+- [x] 4.1 Implement `_is_list_body(body_text: str) -> bool` heuristic: strip if-directive lines, check remaining non-empty lines start with `-`, `*`, `+`, or digit+`.`/`)`
+- [x] 4.2 Integrate detection into `render_markdown`: for-each `{% for %}` block, if list body → create `MarkdownForElement`; else → use standard repeat() path
+- [x] 4.3 Ensure non-list for-loops continue to work with reactive `{% if %}` (unchanged from Change 6 baseline)
 
 ## 5. Reserved Prefix Documentation
 
