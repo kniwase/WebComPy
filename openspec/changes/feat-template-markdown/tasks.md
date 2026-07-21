@@ -77,12 +77,12 @@
 
 ## 8. Integration Tests
 
-- [ ] 8.1 Component using `render_markdown` with `locals()`
-- [ ] 8.2 Reactive Markdown: Signal value change → DOM text update
-- [ ] 8.3 Markdown with `{% for %}` containing Markdown-formatted items (Signal preservation)
-- [ ] 8.4 Markdown with component tags and dynamic props (`<card :count="signal">`)
-- [ ] 8.5 SSR/SSG with Markdown template
-- [ ] 8.6 Custom Markdown parser via DI (e.g., mistletoe adapter)
+- [x] 8.1 Component using `render_markdown` with `locals()`
+- [x] 8.2 Reactive Markdown: Signal value change → DOM text update
+- [x] 8.3 Markdown with `{% for %}` containing Markdown-formatted items (Signal preservation)
+- [x] 8.4 Markdown with component tags and dynamic props (`<card :count="signal">`)
+- [x] 8.5 SSR/SSG with Markdown template
+- [x] 8.6 Custom Markdown parser via DI (e.g., mistletoe adapter)
 
 ## 9. CI Review Update
 
