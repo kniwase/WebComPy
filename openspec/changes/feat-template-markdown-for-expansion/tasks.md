@@ -28,7 +28,7 @@ Span boundaries for `{{ }}` and `{% %}` SHALL use the same brace delimiters as C
 
 ## 5. Reserved Prefix Documentation
 
-- [ ] 5.1 Document `__wmdf_` as framework-reserved prefix for synthetic context keys in the template engine module docstring and README
+- [x] 5.1 Document `__wmdf_` as framework-reserved prefix for synthetic context keys in the template engine module docstring and README
 
 ## 6. Unit Tests — MarkdownForElement
 
