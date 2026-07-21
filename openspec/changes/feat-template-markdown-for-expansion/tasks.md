@@ -32,46 +32,46 @@ Span boundaries for `{{ }}` and `{% %}` SHALL use the same brace delimiters as C
 
 ## 6. Unit Tests — MarkdownForElement
 
-- [ ] 6.1 Single list-body for produces one `<ul>` with N `<li>` children (static list)
-- [ ] 6.2 Ordered list body produces one `<ol>` with N `<li>` children
-- [ ] 6.3 Field-level reactivity: `{{ item.field }}` with Signal → DOM text updates on field change without block re-render
-- [ ] 6.4 Collection reactivity: `ReactiveList` append → `_refresh` called → `<ul>` updated with new `<li>`
-- [ ] 6.5 Collection reactivity: `ReactiveList` remove → `_refresh` → `<ul>` updated
-- [ ] 6.6 Collection reactivity: `ReactiveDict` change → `_refresh` → `<ul>` updated
-- [ ] 6.7 Static iterable (plain list): no on_after_updating registered, `_refresh` not called on change
-- [ ] 6.8 Loop variable renaming correctness (item → `__wmdf_N_item`)
-- [ ] 6.9 Renaming scoped to expressions only (prose "item" preserved)
-- [ ] 6.10 Tuple unpacking (`{% for k, v in d %}`) — both vars renamed and bound correctly
-- [ ] 6.11 Nested `{% for %}` in list body (inner for merged recursively)
+- [x] 6.1 Single list-body for produces one `<ul>` with N `<li>` children (static list)
+- [x] 6.2 Ordered list body produces one `<ol>` with N `<li>` children
+- [x] 6.3 Field-level reactivity: `{{ item.field }}` with Signal → DOM text updates on field change without block re-render
+- [x] 6.4 Collection reactivity: `ReactiveList` append → `_refresh` called → `<ul>` updated with new `<li>`
+- [x] 6.5 Collection reactivity: `ReactiveList` remove → `_refresh` → `<ul>` updated
+- [x] 6.6 Collection reactivity: `ReactiveDict` change → `_refresh` → `<ul>` updated
+- [x] 6.7 Static iterable (plain list): no on_after_updating registered, `_refresh` not called on change
+- [x] 6.8 Loop variable renaming correctness (item → `__wmdf_N_item`)
+- [x] 6.9 Renaming scoped to expressions only (prose "item" preserved)
+- [x] 6.10 Tuple unpacking (`{% for k, v in d %}`) — both vars renamed and bound correctly
+- [x] 6.11 Nested `{% for %}` in list body (inner for merged recursively)
 
 ## 7. Unit Tests — If-in-For Static Evaluation
 
-- [ ] 7.1 `{% if item.active %}` in list-body for: static evaluation, truthy branch emitted, falsy omitted
-- [ ] 7.2 `{% if %}` re-evaluates on collection change (block re-render)
-- [ ] 7.3 `{% elif %}` / `{% else %}` within static per-item if
-- [ ] 7.4 Non-list for with `{% if %}`: reactive via switch() (unchanged from Change 6)
+- [x] 7.1 `{% if item.active %}` in list-body for: static evaluation, truthy branch emitted, falsy omitted
+- [x] 7.2 `{% if %}` re-evaluates on collection change (block re-render)
+- [x] 7.3 `{% elif %}` / `{% else %}` within static per-item if
+- [x] 7.4 Non-list for with `{% if %}`: reactive via switch() (unchanged from Change 6)
 
 ## 8. Unit Tests — Body-Type Detection
 
-- [ ] 8.1 List body (`- ` lines) → routed to MarkdownForElement
-- [ ] 8.2 Unordered list (`* ` marker) → MarkdownForElement
-- [ ] 8.3 Ordered list (`1. ` marker) → MarkdownForElement
-- [ ] 8.4 Non-list body (heading `# `) → routed to repeat()
-- [ ] 8.5 Non-list body (plain text paragraphs) → routed to repeat()
-- [ ] 8.6 Non-list body (HTML blocks `<div>`) → routed to repeat()
-- [ ] 8.7 Non-list body preserves reactive `{% if %}` (repeat + switch)
+- [x] 8.1 List body (`- ` lines) → routed to MarkdownForElement
+- [x] 8.2 Unordered list (`* ` marker) → MarkdownForElement
+- [x] 8.3 Ordered list (`1. ` marker) → MarkdownForElement
+- [x] 8.4 Non-list body (heading `# `) → routed to repeat()
+- [x] 8.5 Non-list body (plain text paragraphs) → routed to repeat()
+- [x] 8.6 Non-list body (HTML blocks `<div>`) → routed to repeat()
+- [x] 8.7 Non-list body preserves reactive `{% if %}` (repeat + switch)
 
 ## 9. Unit Tests — HTML-Block Escape Hatch
 
-- [ ] 9.1 `<ul>{% for %}{% if %}<li>...</li>{% endif %}{% endfor %}</ul>` produces single `<ul>` with reactive if (repeat + switch path)
-- [ ] 9.2 Incremental (O(1)) patching: adding one item to list does not re-render all items
+- [x] 9.1 `<ul>{% for %}{% if %}<li>...</li>{% endif %}{% endfor %}</ul>` produces single `<ul>` with reactive if (repeat + switch path)
+- [x] 9.2 Incremental (O(1)) patching: adding one item to list does not re-render all items
 
 ## 10. Unit Tests — Lifecycle
 
-- [ ] 10.1 Callback node stored in `_callback_nodes` on reactive iterable
-- [ ] 10.2 Callback node destroyed on element cleanup
-- [ ] 10.3 `on_after_rendering` deferred during `_refresh()` (signal_activated)
-- [ ] 10.4 Zero children case (empty iterable): no DOM nodes created, no error
+- [x] 10.1 Callback node stored in `_callback_nodes` on reactive iterable
+- [x] 10.2 Callback node destroyed on element cleanup
+- [x] 10.3 `on_after_rendering` deferred during `_refresh()` (signal_activated)
+- [x] 10.4 Zero children case (empty iterable): no DOM nodes created, no error
 
 ## 11. Integration Tests
 
