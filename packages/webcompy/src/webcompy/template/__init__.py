@@ -1,3 +1,12 @@
+"""WebComPy template engine.
+
+Reserved namespace: the ``__wmdf_`` prefix is used by the markdown
+for-expansion pipeline (``MarkdownForElement``) to generate synthetic
+context keys (e.g. ``__wmdf_0_item``, ``__wmdf_1_item``). User-supplied
+context keys with this prefix MAY collide with framework-generated keys
+and cause unexpected behavior.
+"""
+
 from __future__ import annotations
 
 import re
