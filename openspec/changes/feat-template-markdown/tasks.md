@@ -6,16 +6,16 @@
 
 ## 2. DefaultMarkdownParser
 
-- [ ] 2.1 Implement `DefaultMarkdownParser(MarkdownPort)` in `webcompy/template/_markdown_default.py`
-- [ ] 2.2 Implement block-level parser: headings (`#`~`######`), paragraphs (consecutive non-blank lines), blank line handling
-- [ ] 2.3 Implement list parser with nested list support (indent-based nesting, tab→2space normalization, ul/ol mixed nesting)
-- [ ] 2.4 Implement fenced code block parser (```` ``` ```` fences, optional language hint ignored)
-- [ ] 2.5 Implement blockquote parser (`>` prefix, multi-line joins)
-- [ ] 2.6 Implement horizontal rule parser (`---`, `***`, `___` on own line)
-- [ ] 2.7 Implement HTML block detection: lines starting with `<` output as-is (passthrough)
-- [ ] 2.8 Implement inline parser: bold (`**`), italic (`*`), strikethrough (`~~`), inline code (`` ` ``), links (`[]()`), images (`![]()`)
-- [ ] 2.9 Ensure inline formatting order: images before links, bold before italic
-- [ ] 2.10 Apply `textwrap.dedent` to source before parsing
+- [x] 2.1 Implement `DefaultMarkdownParser(MarkdownPort)` in `webcompy/template/_markdown_default.py`
+- [x] 2.2 Implement block-level parser: headings (`#`~`######`), paragraphs (consecutive non-blank lines), blank line handling
+- [x] 2.3 Implement list parser with nested list support (indent-based nesting, tab→2space normalization, ul/ol mixed nesting)
+- [x] 2.4 Implement fenced code block parser (```` ``` ```` fences, optional language hint ignored)
+- [x] 2.5 Implement blockquote parser (`>` prefix, multi-line joins)
+- [x] 2.6 Implement horizontal rule parser (`---`, `***`, `___` on own line)
+- [x] 2.7 Implement HTML block detection: lines starting with `<` output as-is (passthrough)
+- [x] 2.8 Implement inline parser: bold (`**`), italic (`*`), strikethrough (`~~`), inline code (`` ` ``), links (`[]()`), images (`![]()`)
+- [x] 2.9 Ensure inline formatting order: images before links, bold before italic
+- [x] 2.10 Apply `textwrap.dedent` to source before parsing
 
 ## 3. Port Registration
 
@@ -35,23 +35,23 @@
 
 ## 5. Unit Tests — DefaultMarkdownParser
 
-- [ ] 5.1 Headings (h1-h6, with/without space after `#`)
-- [ ] 5.2 Paragraphs (single line, multi-line joined, with inline formatting)
-- [ ] 5.3 Unordered lists (`-` and `*` markers)
-- [ ] 5.4 Ordered lists (`1.` and `1)` markers)
-- [ ] 5.5 Nested lists (indent-based, ul/ol mixed, 3+ levels)
-- [ ] 5.6 Deeply nested lists (3+ levels, alternate markers)
-- [ ] 5.7 Code blocks (```` ``` ```` fenced, with language hint ignored)
-- [ ] 5.8 Inline code (backtick)
-- [ ] 5.9 Bold (`**text**`) and italic (`*text*`)
-- [ ] 5.10 Strikethrough (`~~text~~`)
-- [ ] 5.11 Links (`[text](url)`)
-- [ ] 5.12 Images (`![alt](url)`)
-- [ ] 5.13 Horizontal rules (`---`, `***`, `___`)
-- [ ] 5.14 Blockquotes (`> text`, multi-line join)
-- [ ] 5.15 HTML block passthrough (div, span, component tags like `<user-card>`)
-- [ ] 5.16 `{{ }}` and `{% %}` preserved as plain text in output
-- [ ] 5.17 Mixed content (heading + paragraph + nested list + blockquote + code)
+- [x] 5.1 Headings (h1-h6, with/without space after `#`)
+- [x] 5.2 Paragraphs (single line, multi-line joined, with inline formatting)
+- [x] 5.3 Unordered lists (`-` and `*` markers)
+- [x] 5.4 Ordered lists (`1.` and `1)` markers)
+- [x] 5.5 Nested lists (indent-based, ul/ol mixed, 3+ levels)
+- [x] 5.6 Deeply nested lists (3+ levels, alternate markers)
+- [x] 5.7 Code blocks (```` ``` ```` fenced, with language hint ignored)
+- [x] 5.8 Inline code (backtick)
+- [x] 5.9 Bold (`**text**`) and italic (`*text*`)
+- [x] 5.10 Strikethrough (`~~text~~`)
+- [x] 5.11 Links (`[text](url)`)
+- [x] 5.12 Images (`![alt](url)`)
+- [x] 5.13 Horizontal rules (`---`, `***`, `___`)
+- [x] 5.14 Blockquotes (`> text`, multi-line join)
+- [x] 5.15 HTML block passthrough (div, span, component tags like `<user-card>`)
+- [x] 5.16 `{{ }}` and `{% %}` preserved as plain text in output
+- [x] 5.17 Mixed content (heading + paragraph + nested list + blockquote + code)
 
 ## 6. Unit Tests — render_markdown Pipeline
 
