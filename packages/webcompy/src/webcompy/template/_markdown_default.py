@@ -104,7 +104,9 @@ class DefaultMarkdownParser(MarkdownPort):
                 if not candidate.strip():
                     break
                 candidate_lines.append(candidate)
-                if closing_pattern.search(candidate):
+                if closing_pattern.search(candidate) or (
+                    not candidate.lstrip().startswith("<") and bool(re.search(r"/\s*>\s*$", candidate))
+                ):
                     block_lines.extend(candidate_lines)
                     return "\n".join(block_lines), candidate_index + 1
             return first_line, index + 1

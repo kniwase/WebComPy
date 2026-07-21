@@ -81,6 +81,22 @@ class TestDefaultMarkdownParser:
         assert parser.render("<span>raw</span>") == "<span>raw</span>"
         assert parser.render('<user-card title="Hello" />') == '<user-card title="Hello" />'
 
+    def test_multiline_self_closing_tag_is_preserved(self, parser: DefaultMarkdownParser):
+        source = '<user-card\n  title="Hello"\n/>'
+        assert parser.render(source) == source
+
+    def test_multiline_self_closing_tag_with_attr_on_closing_line(self, parser: DefaultMarkdownParser):
+        source = '<user-card\n  title="Hello" />\n'
+        assert parser.render(source) == source.rstrip()
+
+    def test_nested_self_closing_tag_does_not_prematurely_close_block(self, parser: DefaultMarkdownParser):
+        source = "<div>\n  <span />\n  text\n</div>"
+        assert parser.render(source) == source
+
+    def test_multiline_closing_tag_block_is_preserved(self, parser: DefaultMarkdownParser):
+        source = '<div\n  class="x">\ncontent\n</div>'
+        assert parser.render(source) == source
+
     def test_template_syntax_is_preserved(self, parser: DefaultMarkdownParser):
         source = "Hello {{ name }}\n\n{% if visible %}Visible{% endif %}"
         assert parser.render(source) == ("<p>Hello {{ name }}</p><p>{% if visible %}Visible{% endif %}</p>")
