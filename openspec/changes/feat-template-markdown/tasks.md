@@ -86,5 +86,5 @@
 
 ## 9. CI Review Update
 
-- [ ] 9.1 Update `.opencode/agents/ci-review.md`: add MarkdownPort and DefaultMarkdownParser patterns
-- [ ] 9.2 Update `AGENTS.md` File→Spec Mapping: `webcompy/ports/_markdown.py` → `port-abstraction` spec; `webcompy/template/_markdown_default.py` → `template-engine` spec
+- [x] 9.1 Update `.opencode/agents/ci-review.md`: add MarkdownPort and DefaultMarkdownParser patterns
+- [x] 9.2 Update `AGENTS.md` File→Spec Mapping: `webcompy/ports/_markdown.py` → `port-abstraction` spec; `webcompy/template/_markdown_default.py` → `template-engine` spec
