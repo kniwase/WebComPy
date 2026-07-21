@@ -308,17 +308,18 @@ def _expand_directives_in_body(body: str, ctx: dict[str, Any], prefix: str) -> s
                 elif dk_name == "endif":
                     if_depth -= 1
 
-                if if_depth == 0 and dk_name in ("elif", "else", "endif"):
+                if if_depth == 1 and dk_name in ("elif", "else"):
                     branch_body = body[branch_start : dk.start()]
                     branches.append((current_cond, branch_body))
                     if dk_name == "elif":
                         current_cond = dk.group("args").strip()
-                        branch_start = dk.end()
                     elif dk_name == "else":
                         current_cond = None
-                        branch_start = dk.end()
-                    elif dk_name == "endif":
-                        break
+                    branch_start = dk.end()
+                elif if_depth == 0 and dk_name == "endif":
+                    branch_body = body[branch_start : dk.start()]
+                    branches.append((current_cond, branch_body))
+                    break
 
             emitted = False
             for cond, branch_body in branches:
