@@ -268,9 +268,11 @@ class BrowserRenderContext(RenderContext):
             FFI_PORT_KEY,
             HISTORY_PORT_KEY,
             HOST_PORT_KEY,
+            MARKDOWN_PORT_KEY,
             MEDIA_QUERY_PORT_KEY,
             RESOURCE_PORT_KEY,
         )
+        from webcompy.template._markdown_default import DefaultMarkdownParser
 
         router_mode = self._router.__mode__ if self._router else "history"
         self._di_scope.provide(ASYNC_SCHEDULER_PORT_KEY, BrowserAsyncSchedulerPort())
@@ -282,6 +284,7 @@ class BrowserRenderContext(RenderContext):
         self._di_scope.provide(HISTORY_PORT_KEY, BrowserHistoryPort(mode=router_mode))
         self._di_scope.provide(HOST_PORT_KEY, BrowserHostPort())
         self._di_scope.provide(MEDIA_QUERY_PORT_KEY, BrowserMediaQueryPort())
+        self._di_scope.provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
 
         self._load_hydration_payload()
 

@@ -45,7 +45,7 @@ re.sub(r'<p>\s*(\{%[^<]*?%\})\s*</p>', r'\1', html)
 
 ### D3: HTML block detection for preserving component tags
 
-Lines starting with `<` are detected as HTML blocks and passed through unchanged by the Markdown parser. This preserves component tags (`<user-card>`) and other raw HTML in Markdown content.
+Lines starting with `<` are detected as HTML blocks and passed through unchanged by the Markdown parser. This preserves component tags (`<user-card>`) and other raw HTML in Markdown content. Multi-line HTML blocks are supported: subsequent non-blank lines are collected until a closing `</tag>` or self-closing `/>` is found. The `/>` terminates the block only when the line does not itself start with a new `<` tag, so nested self-closing elements (e.g., `<span />` inside `<div>...</div>`) are preserved without prematurely closing the outer block.
 
 **Rationale**: Standard Markdown behavior — most parsers pass HTML through unchanged. Component tags from Change 3 resolve during the `render_template` step of the pipeline.
 
@@ -55,11 +55,11 @@ List items are grouped by indent level. When indent increases, a nested sub-list
 
 **Rationale**: Nested lists are essential for documentation and content. The indent-based approach maps naturally to Markdown's visual structure. Tab normalization avoids platform-specific indent issues.
 
-### D5: Inline formatting order (images before links)
+### D5: Inline formatting order (inline code first, then images before links)
 
-Inline parsing applies transformations in a specific order: images (`![alt](url)`) before links (`[text](url)`), then bold, italic, strikethrough, and inline code. This prevents `![alt](url)` from being partially consumed by the link regex.
+Inline parsing applies transformations in a specific order: inline code first (to protect code content from being mangled by formatting regexes), then images (`![alt](url)`) before links (`[text](url)`), then bold, italic, strikethrough. Processing images before links prevents `![alt](url)` from being partially consumed by the link regex.
 
-**Rationale**: Images start with `!` and contain `[...](...)` which overlaps with the link pattern. Processing images first ensures `!` is consumed before the link regex sees the bracket structure.
+**Rationale**: Inline code must be tokenized before any other inline transformation so that formatting markers inside code spans (e.g., `` `*not bold*` ``) are preserved literally. Images start with `!` and contain `[...](...)` which overlaps with the link pattern. Processing images first ensures `!` is consumed before the link regex sees the bracket structure.
 
 ### D6: FragmentElement for multi-root Markdown documents
 
@@ -104,6 +104,7 @@ async def Page(ctx):
 - **[Risk] Markdown block-level state machine complexity** → Mitigation: Line-by-line parser with simple state transitions (para, list, code, html, blank). No lookahead beyond 1 line in most cases.
 - **[Trade-off] No CommonMark compliance in built-in parser** → Acceptable — the DI injection mechanism provides the upgrade path if needed.
 - **[Trade-off] DefaultMarkdownParser (~300 lines) adds to browser wheel bundle size** → Acceptable. The parser is part of the `webcompy` core package and always included in the browser wheel. ~300 lines of Python compresses to ~10KB, which is negligible compared to the PyScript/Emscripten WASM runtime (several MB). If bundle size becomes a concern in the future, `DefaultMarkdownParser` can be lazy-imported at first `inject(MARKDOWN_PORT_KEY)` time, avoiding the overhead for apps that do not use Markdown.
+- **[Risk] `javascript:` URL scheme in links not sanitized** → Mitigation: `DefaultMarkdownParser` applies `html.escape` to link/image URLs but does not filter dangerous URI schemes (`javascript:`, `data:`). This is consistent with the framework's overall posture — no HTML sanitization is performed on template output anywhere (including plain HTML templates). Users processing untrusted Markdown input MUST inject a third-party parser with sanitization via `app.provide(MARKDOWN_PORT_KEY, custom_parser)`.
 
 ## Open Questions
 

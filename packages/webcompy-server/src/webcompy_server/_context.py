@@ -11,9 +11,11 @@ from webcompy.ports._keys import (
     FFI_PORT_KEY,
     HISTORY_PORT_KEY,
     HOST_PORT_KEY,
+    MARKDOWN_PORT_KEY,
     MEDIA_QUERY_PORT_KEY,
     RESOURCE_PORT_KEY,
 )
+from webcompy.template._markdown_default import DefaultMarkdownParser
 from webcompy_server._html import generate_html
 from webcompy_server.ports._async_scheduler import ServerAsyncSchedulerPort
 from webcompy_server.ports._cookie import ServerCookiePort
@@ -43,6 +45,7 @@ class ServerRenderContext(RenderContext):
         self._di_scope.provide(FFI_PORT_KEY, ServerFFIPort())
         self._di_scope.provide(HISTORY_PORT_KEY, ServerHistoryPort(mode=router_mode))
         self._di_scope.provide(HOST_PORT_KEY, ServerHostPort())
+        self._di_scope.provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
         self._di_scope.provide(MEDIA_QUERY_PORT_KEY, ServerMediaQueryPort())
 
     async def render_html(self, **kwargs: Any) -> str:
