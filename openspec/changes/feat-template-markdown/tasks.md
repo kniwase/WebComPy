@@ -19,9 +19,9 @@
 
 ## 3. Port Registration
 
-- [ ] 3.1 Import `DefaultMarkdownParser` and `MARKDOWN_PORT_KEY` in `BrowserRenderContext._register_ports()`
-- [ ] 3.2 Provide `DefaultMarkdownParser()` via `self._di_scope.provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())`
-- [ ] 3.3 Do the same in `ServerRenderContext._register_ports()`
+- [x] 3.1 Import `DefaultMarkdownParser` and `MARKDOWN_PORT_KEY` in `BrowserRenderContext._register_ports()`
+- [x] 3.2 Provide `DefaultMarkdownParser()` via `self._di_scope.provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())`
+- [x] 3.3 Do the same in `ServerRenderContext._register_ports()`
 
 ## 4. render_markdown Pipeline
 
@@ -70,10 +70,10 @@
 
 ## 7. Unit Tests — DI
 
-- [ ] 7.1 DefaultMarkdownParser provided by default in BrowserRenderContext
-- [ ] 7.2 DefaultMarkdownParser provided by default in ServerRenderContext
-- [ ] 7.3 Custom parser injection via `app.provide(MARKDOWN_PORT_KEY, ...)`
-- [ ] 7.4 `inject(MARKDOWN_PORT_KEY)` returns correct instance after injection
+- [x] 7.1 DefaultMarkdownParser provided by default in BrowserRenderContext
+- [x] 7.2 DefaultMarkdownParser provided by default in ServerRenderContext
+- [x] 7.3 Custom parser injection via `app.provide(MARKDOWN_PORT_KEY, ...)`
+- [x] 7.4 `inject(MARKDOWN_PORT_KEY)` returns correct instance after injection
 
 ## 8. Integration Tests
 
