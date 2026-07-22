@@ -87,5 +87,5 @@ Span boundaries for `{{ }}` and `{% %}` SHALL use the same brace delimiters as C
 
 ## 13. CI Review Update
 
-- [ ] 13.1 Update `.opencode/agents/ci-review.md`: add `MarkdownForElement` pattern (reactive block-rendering DynamicElement, expression-scoped renaming, list-body detection heuristic, lifecycle mirroring SwitchElement, `__wmdf_` reserved prefix)
-- [ ] 13.2 Update `AGENTS.md` File→Spec Mapping: `webcompy/template/_markdown_for.py` → `template-engine` spec
+- [x] 13.1 Update `.opencode/agents/ci-review.md`: add `MarkdownForElement` pattern (reactive block-rendering DynamicElement, expression-scoped renaming, list-body detection heuristic, lifecycle mirroring SwitchElement, `__wmdf_` reserved prefix)
+- [x] 13.2 Update `AGENTS.md` File→Spec Mapping: `webcompy/template/_markdown_for.py` → `template-engine` spec
