@@ -75,15 +75,15 @@ Span boundaries for `{{ }}` and `{% %}` SHALL use the same brace delimiters as C
 
 ## 11. Integration Tests
 
-- [ ] 11.1 End-to-end: `render_markdown` with `{% for %}` over list body and `locals()` context
-- [ ] 11.2 Mixed for: list-body for + non-list for in same Markdown document
+- [x] 11.1 End-to-end: `render_markdown` with `{% for %}` over list body and `locals()` context
+- [x] 11.2 Mixed for: list-body for + non-list for in same Markdown document
 
 ## 12. SSR & Hydration
 
-- [ ] 12.1 `render_app_html_sync(app)` with Markdown template using list-body `{% for %}` — verify SSR HTML contains single `<ul>` with correct `<li>` elements
-- [ ] 12.2 `TestRenderer.render()` — verify `__webcompy_prerendered_node__` flags on children of MarkdownForElement
-- [ ] 12.3 E2E: test that after hydration, field-level Signal changes update individual `<li>` text nodes
-- [ ] 12.4 E2E: test that after hydration, ReactiveList append triggers re-render of the merged `<ul>` block
+- [x] 12.1 `render_app_html_sync(app)` with Markdown template using list-body `{% for %}` — verify SSR HTML contains single `<ul>` with correct `<li>` elements
+- [x] 12.2 `TestRenderer.render()` — verify `__webcompy_prerendered_node__` flags on children of MarkdownForElement
+- [x] 12.3 E2E: test that after hydration, field-level Signal changes update individual `<li>` text nodes
+- [x] 12.4 E2E: test that after hydration, ReactiveList append triggers re-render of the merged `<ul>` block
 
 ## 13. CI Review Update
 

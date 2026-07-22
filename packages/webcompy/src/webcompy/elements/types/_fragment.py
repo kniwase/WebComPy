@@ -10,7 +10,11 @@ class FragmentElement(DynamicElement):
         super().__init__()
 
     def _on_set_parent(self) -> None:
-        for child in self._pending_children:
-            child._parent = self._parent
-        self._children = self._pending_children
-        self._pending_children = []
+        if self._pending_children:
+            for child in self._pending_children:
+                child._parent = self._parent
+            self._children = self._pending_children
+            self._pending_children = []
+        else:
+            for child in self._children:
+                child._parent = self._parent

@@ -103,7 +103,7 @@ class TestMarkdownReactiveUpdate:
 
 
 class TestMarkdownForLoopReactiveItems:
-    def test_reactive_list_in_markdown_for_loop_preserves_signal_reflection(self):
+    def test_reactive_list_in_markdown_for_loop_produces_single_ul(self):
         @define_component
         def MarkdownForPage(context):
             items = use_reactive_list(lambda: ["alpha", "beta", "gamma"])
@@ -125,6 +125,7 @@ class TestMarkdownForLoopReactiveItems:
         result = TestRenderer.render(MarkdownForPage, parent_scope=_markdown_parent_scope())
         try:
             html_str = result.to_html()
+            assert html_str.count("<ul") == 1
             assert html_str.count("<li") == 3
             assert "alpha" in html_str
             assert "beta" in html_str
@@ -135,6 +136,7 @@ class TestMarkdownForLoopReactiveItems:
             assert btn is not None
             btn.dispatchEvent(VirtualDOMEvent("click"))
             html_str = result.to_html()
+            assert html_str.count("<ul") == 1
             assert html_str.count("<li") == 4
             assert "delta" in html_str
         finally:
@@ -305,3 +307,28 @@ class TestCustomMarkdownParserInjection:
             assert injected.render("# x") == "<app-provide-md># x</app-provide-md>"
         finally:
             ctx.dispose()
+
+
+class TestMarkdownForMixedBodies:
+    def test_list_body_and_non_list_body_in_same_document(self):
+        @define_component
+        def MixedForPage(context):
+            items = ["a", "b"]
+            return html.ARTICLE(
+                {},
+                render_markdown(
+                    "# Title\n\n"
+                    "{% for item in items %}\n- {{ item }}\n{% endfor %}\n\n"
+                    "{% for n in nums %}\n## {{ n }}\n{% endfor %}",
+                    {"items": items, "nums": [1, 2]},
+                ),
+            )
+
+        result = TestRenderer.render(MixedForPage, parent_scope=_markdown_parent_scope())
+        try:
+            html_str = result.to_html()
+            assert html_str.count("<ul") == 1
+            assert html_str.count("<li") == 2
+            assert html_str.count("<h2") == 2
+        finally:
+            result.close()
