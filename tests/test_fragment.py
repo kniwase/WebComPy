@@ -76,6 +76,30 @@ class TestFragmentElementOnSetParent:
         frag._node_idx = 0
         assert frag._node_count == 2
 
+    def test_reparent_updates_existing_children_parent(self):
+        """Regression: re-parenting a FragmentElement whose children have
+        already been moved from _pending_children to _children must update
+        each child's _parent to the new parent. Previously, only the
+        pending-children path updated parent references.
+        """
+        c1 = TextElement("a")
+        c2 = TextElement("b")
+        frag = FragmentElement([c1, c2])
+        parent1 = _make_parent()
+        frag._parent = parent1
+        assert c1._parent is parent1
+        assert c2._parent is parent1
+        assert len(frag._children) == 2
+
+        parent2 = _make_parent()
+        frag._parent = parent2
+
+        assert c1._parent is parent2
+        assert c2._parent is parent2
+        assert len(frag._children) == 2
+        assert c1 in frag._children
+        assert c2 in frag._children
+
 
 class TestFragmentElementRendering:
     @pytest.mark.asyncio

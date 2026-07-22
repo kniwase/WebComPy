@@ -142,6 +142,48 @@ class TestMarkdownForLoopReactiveItems:
         finally:
             result.close()
 
+    def test_refresh_updates_dom_without_crashing(self):
+        """Smoke test: MarkdownForElement._refresh triggered by collection
+        change must complete without errors and update the DOM.
+
+        Verifies that the lifecycle defer mechanism (start_defer_after_rendering /
+        end_defer_after_rendering) in _refresh does not break the refresh path.
+        The defer behavior itself is verified at the render-context level
+        (see tests/test_app_instance.py).
+        """
+
+        @define_component
+        def MarkdownRefreshPage(context):
+            items = use_reactive_list(lambda: ["alpha", "beta"])
+            return html.DIV(
+                {},
+                render_markdown(
+                    "{% for item in items %}\n- {{ item }}\n{% endfor %}",
+                    locals(),
+                ),
+                html.BUTTON(
+                    {
+                        "@click": lambda _: items.append("gamma"),
+                        "data-testid": "add",
+                    },
+                    "+",
+                ),
+            )
+
+        result = TestRenderer.render(MarkdownRefreshPage, parent_scope=_markdown_parent_scope())
+        try:
+            html_str = result.to_html()
+            assert html_str.count("<li ") == 2
+
+            btn = result.find_by_attribute("data-testid", "add")
+            assert btn is not None
+            btn.dispatchEvent(VirtualDOMEvent("click"))
+
+            html_str = result.to_html()
+            assert html_str.count("<li ") == 3
+        finally:
+            result.close()
+
 
 class TestMarkdownDynamicProps:
     def test_kebab_dynamic_prop_passes_signal_to_component(self):
@@ -249,6 +291,31 @@ class TestMarkdownSSR:
         payload = _read_payload(html_str)
         assert payload is not None, "Hydration payload script not found in SSR HTML"
         assert "Hydration Section" in html_str
+
+    def test_ssr_contains_single_ul_with_merged_lis(self):
+        @define_component
+        def MarkdownListForSSRPage(context):
+            return html.ARTICLE(
+                {},
+                render_markdown(
+                    "{% for item in items %}\n- {{ item }}\n{% endfor %}",
+                    {"items": ["alpha", "beta", "gamma"]},
+                ),
+            )
+
+        app = create_test_app(root_component=MarkdownListForSSRPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert html_str.count("<ul") == 1
+        assert html_str.count("<li ") == 3
+        assert html_str.count(">alpha<") == 1
+        assert html_str.count(">beta<") == 1
+        assert html_str.count(">gamma<") == 1
 
 
 class TestCustomMarkdownParserInjection:

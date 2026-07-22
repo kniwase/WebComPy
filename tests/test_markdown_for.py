@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 import pytest
 
+from tests.conftest import FakeDOMNode
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.ports._keys import MARKDOWN_PORT_KEY
@@ -15,6 +16,18 @@ from webcompy.template._markdown_for import (
     _is_list_body,
     _rename_in_expressions,
 )
+
+
+class _FakeRootElement(Element):
+    _get_belonging_component = lambda self: ""
+    _get_belonging_components = lambda self: ()
+
+
+def _make_render_parent():
+    parent = _FakeRootElement("div", {}, {}, None, None)
+    parent._node_cache = FakeDOMNode("div")
+    parent._mounted = True
+    return parent
 
 
 @pytest.fixture(autouse=True)
@@ -125,6 +138,24 @@ class TestMarkdownForCollectionReactivity:
         mfe = MarkdownForElement(["item"], "items", "- {{ item }}", {"items": d})
         with _markdown_di_scope():
             _attach(mfe)
+        ul = _find_ul(mfe)
+        assert len(_find_lis(ul)) == 2
+
+    @pytest.mark.asyncio
+    async def test_reactive_list_pop_decreases_li(self, fake_browser_full):
+        _active_di_scope.get().provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
+        items = ReactiveList(["a", "b", "c"])
+        mfe = MarkdownForElement(["item"], "items", "- {{ item }}", {"items": items})
+        parent = _make_render_parent()
+        mfe._parent = parent
+        mfe._node_idx = 0
+        await mfe._render()
+
+        ul = _find_ul(mfe)
+        assert len(_find_lis(ul)) == 3
+
+        items.pop(0)
+
         ul = _find_ul(mfe)
         assert len(_find_lis(ul)) == 2
 
@@ -292,3 +323,52 @@ class TestLifecycle:
             mfe = MarkdownForElement(["item"], "items", "- {{ item }}", {"items": []})
             _attach(mfe)
         assert mfe._children == []
+
+    @pytest.mark.asyncio
+    async def test_callback_registered_after_render(self, fake_browser_full):
+        _active_di_scope.get().provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
+        items = ReactiveList(["a", "b"])
+        mfe = MarkdownForElement(["item"], "items", "- {{ item }}", {"items": items})
+        parent = _make_render_parent()
+        mfe._parent = parent
+        mfe._node_idx = 0
+
+        assert len(mfe._callback_nodes) == 0
+        assert mfe._signal_activated is False
+
+        await mfe._render()
+
+        assert mfe._signal_activated is True
+        assert len(mfe._callback_nodes) == 1
+
+    @pytest.mark.asyncio
+    async def test_static_iterable_no_callback_after_render(self, fake_browser_full):
+        _active_di_scope.get().provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
+        mfe = MarkdownForElement(["item"], "items", "- {{ item }}", {"items": ["a", "b"]})
+        parent = _make_render_parent()
+        mfe._parent = parent
+        mfe._node_idx = 0
+        await mfe._render()
+
+        assert mfe._signal_activated is True
+        assert len(mfe._callback_nodes) == 0
+
+    @pytest.mark.asyncio
+    async def test_callback_destroyed_on_remove_element(self, fake_browser_full):
+        _active_di_scope.get().provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
+        items = ReactiveList(["a", "b"])
+        mfe = MarkdownForElement(["item"], "items", "- {{ item }}", {"items": items})
+        parent = _make_render_parent()
+        mfe._parent = parent
+        mfe._node_idx = 0
+        await mfe._render()
+        assert len(mfe._callback_nodes) == 1
+
+        nodes_before = list(mfe._callback_nodes)
+        for node in nodes_before:
+            assert node.producers is not None
+
+        mfe._remove_element()
+
+        for node in nodes_before:
+            assert node.producers is None
