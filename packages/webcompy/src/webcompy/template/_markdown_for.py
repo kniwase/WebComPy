@@ -180,7 +180,7 @@ class _SourceParser:
                 return branch_body
             try:
                 resolved = resolve_var(cond, dict(self._ctx))
-            except Exception:
+            except (KeyError, AttributeError):
                 continue
             if isinstance(resolved, SignalBase):
                 return [_TextSegment(self._source[if_token.start : self._tokens[self._pos - 1].end])]
@@ -264,6 +264,10 @@ def _expand_directives_in_body(body: str, ctx: dict[str, Any], prefix: str) -> s
                     key, value = item
                     ctx[f"{inner_prefix}{loop_vars[0]}"] = key
                     ctx[f"{inner_prefix}{loop_vars[1]}"] = value
+                else:
+                    raise WebComPyException(
+                        f"Two-variable for-loop requires a dict iterable (got {type(iterable).__name__})"
+                    )
 
                 expanded = inner_body
                 for var in loop_vars:
@@ -338,7 +342,7 @@ def _expand_directives_in_body(body: str, ctx: dict[str, Any], prefix: str) -> s
                         result.append(expanded)
                         emitted = True
                         break
-                except Exception:
+                except (KeyError, AttributeError):
                     continue
 
             pos = endif_m.end()
@@ -403,6 +407,10 @@ class MarkdownForElement(DynamicElement):
                 key, value = item
                 augmented_ctx[f"{prefix}{self._loop_vars[0]}"] = key
                 augmented_ctx[f"{prefix}{self._loop_vars[1]}"] = value
+            else:
+                raise WebComPyException(
+                    f"Two-variable for-loop requires a dict iterable (got {type(iterable_val).__name__})"
+                )
 
             item_body = self._body_markdown
             for var in self._loop_vars:

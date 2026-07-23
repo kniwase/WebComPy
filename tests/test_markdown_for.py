@@ -7,6 +7,7 @@ import pytest
 from tests.conftest import FakeDOMNode
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements.types._element import Element, ElementBase
+from webcompy.exception import WebComPyException
 from webcompy.ports._keys import MARKDOWN_PORT_KEY
 from webcompy.signal import ReactiveDict, ReactiveList, Signal, SignalBase
 from webcompy.template._cache import clear_cache
@@ -372,3 +373,29 @@ class TestLifecycle:
 
         for node in nodes_before:
             assert node.producers is None
+
+
+class TestErrorHandling:
+    def test_two_var_for_with_non_dict_raises(self):
+        with _markdown_di_scope():
+            mfe = MarkdownForElement(
+                ["k", "v"],
+                "pairs",
+                "- {{ k }}: {{ v }}",
+                {"pairs": [("a", 1), ("b", 2)]},
+            )
+            with pytest.raises(WebComPyException, match="Two-variable for-loop requires a dict iterable"):
+                _attach(mfe)
+
+    def test_nested_two_var_for_with_non_dict_raises(self):
+        items = [{"name": "x", "pairs": [("a", 1)]}]
+        body = "- {{ item.name }}\n{% for k, v in item.pairs %}\n  - {{ k }}: {{ v }}\n{% endfor %}"
+        with _markdown_di_scope():
+            mfe = MarkdownForElement(
+                ["item"],
+                "items",
+                body,
+                {"items": items},
+            )
+            with pytest.raises(WebComPyException, match="Two-variable for-loop requires a dict iterable"):
+                _attach(mfe)
