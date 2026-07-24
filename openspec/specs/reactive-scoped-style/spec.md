@@ -120,3 +120,17 @@ A `reactive_scoped_style` function SHALL be a synchronous callable. Async functi
 - **WHEN** a developer passes `async def f(): ...` to `reactive_scoped_style`
 - **THEN** the framework SHALL raise a `TypeError` at registration time with a message indicating the function must be synchronous
 
+### Requirement: Reactive scoping shall be identical to static scoping
+
+The selector-scoping transformation applied to reactive scoped styles SHALL be the same transformation used for static `scoped_style` (a single shared implementation). For any identical style dict input, the scoped selector output of the static and reactive paths SHALL match.
+
+#### Scenario: Same input, same output
+- **WHEN** the same selector set (including combinators such as `a~b`, leading `> .child`, and functional pseudo-classes like `:nth-child(2n+1)`) is rendered through the static `scoped_style` setter and through `reactive_scoped_style`
+- **THEN** both paths SHALL produce identical scoped selectors
+- **AND** neither path SHALL split selectors inside parentheses, brackets, or strings
+
+#### Scenario: Leading combinator at top level
+- **WHEN** a top-level selector starts with a combinator (e.g., `> .child`)
+- **THEN** both paths SHALL emit a valid scoped selector (e.g., `*[webcompy-cid-{id}]> .child[webcompy-cid-{id}]`)
+- **AND** the reactive path SHALL NOT differ from the static path
+
