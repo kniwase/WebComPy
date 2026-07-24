@@ -363,3 +363,46 @@ class TestErrorHandling:
 
     def test_lone_close_brace_at_top_silently_consumed(self):
         assert css_text("}") == {}
+
+
+class TestStringAndBracketAwareness:
+    def test_attribute_value_with_semicolon(self):
+        assert css_text('[data-x="a;b"] { color: red; }') == {'[data-x="a;b"]': {"color": "red"}}
+
+    def test_attribute_value_with_open_brace(self):
+        assert css_text('[data-x="a{b"] { color: red; }') == {'[data-x="a{b"]': {"color": "red"}}
+
+    def test_attribute_value_with_close_brace(self):
+        assert css_text('[data-x="a}b"] { color: red; }') == {'[data-x="a}b"]': {"color": "red"}}
+
+    def test_attribute_value_with_comma(self):
+        assert css_text('[data-x="a,b"] { color: red; }') == {'[data-x="a,b"]': {"color": "red"}}
+
+    def test_content_with_open_brace_in_string(self):
+        assert css_text(r".x { content: '{'; }") == {".x": {"content": "'{'"}}
+
+    def test_content_with_semicolon_in_string(self):
+        assert css_text(r".x { content: ';'; }") == {".x": {"content": "';'"}}
+
+    def test_content_with_close_brace_in_string(self):
+        assert css_text(r".x { content: '}'; }") == {".x": {"content": "'}'"}}
+
+    def test_comment_inside_string_preserved(self):
+        assert css_text(r".x { content: '/* not a comment */'; }") == {".x": {"content": "'/* not a comment */'"}}
+
+    def test_double_quote_string(self):
+        assert css_text(r'.x { content: "/* not a comment */"; }') == {".x": {"content": '"/* not a comment */"'}}
+
+    def test_attribute_value_with_at_rule_media_inside_string(self):
+        assert css_text(r'.x[data-x="@media"] { color: red; }') == {'.x[data-x="@media"]': {"color": "red"}}
+
+    def test_unbalanced_brace_in_string_does_not_trigger_error(self):
+        assert css_text(r".x { content: 'unbalanced { here'; }") == {".x": {"content": "'unbalanced { here'"}}
+
+    def test_real_unbalanced_brace_still_raises(self):
+        with pytest.raises(WebComPyException, match="Unbalanced"):
+            css_text(".x { color: red")
+
+    def test_comment_in_string_does_not_split_declarations(self):
+        result = css_text(r'.x { content: "a; b"; color: red; }')
+        assert result == {".x": {"content": '"a; b"', "color": "red"}}

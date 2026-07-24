@@ -18,10 +18,10 @@
 
 ## 3. CSS Parser String/Bracket Awareness
 
-- [ ] 3.1 Add string-literal and `[ ]` depth tracking to `_css_parser._read_key` so attribute selectors with `;`/`{`/`}` in values parse correctly
-- [ ] 3.2 Add string-literal tracking to `_read_braced`/`_parse_block_content` so `;{}` inside quoted strings are inert
-- [ ] 3.3 Make comment stripping string-aware (comments inside string literals are preserved)
-- [ ] 3.4 Tests: `[data-x="a;b"]`, `[data-x="a{b"]`, `content: "{"`/`";"`/`"}"`, `content: "/* not a comment */"`, unbalanced-brace error still fires for genuinely broken CSS
+- [x] 3.1 Add string-literal and `[ ]` depth tracking to `_css_parser._read_key` so attribute selectors with `;`/`{`/`}` in values parse correctly
+- [x] 3.2 Add string-literal tracking to `_read_braced`/`_parse_block_content` so `;{}` inside quoted strings are inert
+- [x] 3.3 Make comment stripping string-aware (comments inside string literals are preserved)
+- [x] 3.4 Tests: `[data-x="a;b"]`, `[data-x="a{b"]`, `content: "{"`/`";"`/`"}"`, `content: "/* not a comment */"`, unbalanced-brace error still fires for genuinely broken CSS
 
 ## 4. HTML Template Binding Validation
 

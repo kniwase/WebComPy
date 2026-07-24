@@ -1,17 +1,40 @@
 from __future__ import annotations
 
-import re
 import textwrap
-from typing import Final
 
 from webcompy.components._generator import StyleDeclaration, StyleDict
 from webcompy.exception import WebComPyException
 
-_COMMENT_PATTERN: Final = re.compile(r"/\*.*?\*/", re.DOTALL)
-
 
 def _strip_comments(text: str) -> str:
-    return _COMMENT_PATTERN.sub("", text)
+    out: list[str] = []
+    i = 0
+    n = len(text)
+    quote: str | None = None
+    while i < n:
+        c = text[i]
+        if quote is not None:
+            out.append(c)
+            if c == "\\" and i + 1 < n:
+                out.append(text[i + 1])
+                i += 2
+                continue
+            if c == quote:
+                quote = None
+            i += 1
+            continue
+        if c in "\"'":
+            quote = c
+            out.append(c)
+            i += 1
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "*":
+            end = text.find("*/", i + 2)
+            i = n if end == -1 else end + 2
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
 
 
 def _skip_ws(text: str, i: int) -> int:
@@ -23,15 +46,36 @@ def _skip_ws(text: str, i: int) -> int:
 
 def _read_key(text: str, start: int) -> tuple[str, int]:
     depth = 0
+    bracket = 0
+    quote: str | None = None
     i = start
     n = len(text)
     while i < n:
         c = text[i]
+        if quote is not None:
+            if c == "\\" and i + 1 < n:
+                i += 2
+                continue
+            if c == quote:
+                quote = None
+            i += 1
+            continue
+        if c in "\"'":
+            quote = c
+            i += 1
+            continue
+        if c == "\\" and i + 1 < n:
+            i += 2
+            continue
         if c == "(":
             depth += 1
         elif c == ")":
             depth -= 1
-        elif depth == 0 and c in "{;":
+        elif c == "[":
+            bracket += 1
+        elif c == "]":
+            bracket -= 1
+        elif depth == 0 and bracket == 0 and c in "{;":
             return text[start:i].strip(), i
         i += 1
     return text[start:i].strip(), i
@@ -39,14 +83,35 @@ def _read_key(text: str, start: int) -> tuple[str, int]:
 
 def _find_colon(text: str, start: int, end: int) -> int:
     depth = 0
+    bracket = 0
+    quote: str | None = None
     i = start
     while i < end:
         c = text[i]
+        if quote is not None:
+            if c == "\\" and i + 1 < end:
+                i += 2
+                continue
+            if c == quote:
+                quote = None
+            i += 1
+            continue
+        if c in "\"'":
+            quote = c
+            i += 1
+            continue
+        if c == "\\" and i + 1 < end:
+            i += 2
+            continue
         if c == "(":
             depth += 1
         elif c == ")":
             depth -= 1
-        elif depth == 0 and c == ":":
+        elif c == "[":
+            bracket += 1
+        elif c == "]":
+            bracket -= 1
+        elif depth == 0 and bracket == 0 and c == ":":
             return i
         i += 1
     return -1
@@ -59,8 +124,24 @@ def _read_braced(text: str, open_pos: int) -> tuple[str, int]:
     i = open_pos + 1
     n = len(text)
     start = i
+    quote: str | None = None
     while i < n and depth > 0:
         c = text[i]
+        if quote is not None:
+            if c == "\\" and i + 1 < n:
+                i += 2
+                continue
+            if c == quote:
+                quote = None
+            i += 1
+            continue
+        if c in "\"'":
+            quote = c
+            i += 1
+            continue
+        if c == "\\" and i + 1 < n:
+            i += 2
+            continue
         if c == "{":
             depth += 1
         elif c == "}":
@@ -143,7 +224,8 @@ def parse_css(text: str) -> dict[str, StyleDict]:
     and ``reactive_scoped_style``, so existing scoping logic is reused unchanged.
 
     Processing:
-      * ``/* ... */`` comments are stripped.
+      * ``/* ... */`` comments are stripped (string-literal aware: comments inside
+        ``"..."``/``'...'`` are preserved).
       * ``textwrap.dedent`` is applied to normalize triple-quoted indentation.
       * Selectors, combinators, pseudo-classes/elements, at-rules
         (``@media``/``@supports``/``@container``/``@keyframes``), and arbitrarily
@@ -153,10 +235,6 @@ def parse_css(text: str) -> dict[str, StyleDict]:
       * Statement at-rules without a block (``@import``, ``@charset``,
         ``@namespace``) are not preserved — they don't fit ``StyleDict`` and are
         not meaningful inside a scoped style.
-      * CSS string literals (``"..."`` / ``'...'``) containing structural
-        characters (``{ }`` ``:`` ``;``) are not tokenized; a ``}`` inside a
-        string literal will close the surrounding block. Use external tools to
-        validate CSS syntax.
 
     Args:
         text: CSS source string.
