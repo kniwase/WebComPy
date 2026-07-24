@@ -119,7 +119,7 @@ class _SourceParser:
         for_token = self._tokens[self._pos]
         try:
             loop_vars, iterable_path = _parse_for_args(for_token.args)
-        except Exception:
+        except WebComPyException:
             self._pos += 1
             return _TextSegment(self._source[for_token.start : for_token.end])
 
@@ -241,7 +241,7 @@ def _expand_directives_in_body(body: str, ctx: dict[str, Any], prefix: str) -> s
             args = m.group("args").strip()
             try:
                 loop_vars, iterable_path = _parse_for_args(args)
-            except Exception:
+            except WebComPyException:
                 result.append(body[pos : endfor_m.end()])
                 pos = endfor_m.end()
                 i = j + 1

@@ -514,7 +514,7 @@ Both `css_text` and `css_text_template` SHALL be importable from `webcompy.templ
 
 ### Requirement: render_markdown shall produce reactive Element trees from Markdown
 
-`render_markdown(source: str | Path, context: dict) -> ElementAbstract` SHALL render Markdown templates into reactive Element trees. The pipeline SHALL be: Markdown → HTML (via MarkdownPort) → strip directive paragraphs → parse HTML with multi-root support → bind → FragmentElement wrapping for multi-root. When Markdown produces a single top-level element, an `Element` SHALL be returned directly. When Markdown produces multiple top-level elements, a `FragmentElement` SHALL be returned containing all root elements.
+`render_markdown(source: str, context: dict) -> ElementAbstract` SHALL render Markdown templates into reactive Element trees. The pipeline SHALL be: Markdown → HTML (via MarkdownPort) → strip directive paragraphs → parse HTML with multi-root support → bind → FragmentElement wrapping for multi-root. When Markdown produces a single top-level element, an `Element` SHALL be returned directly. When Markdown produces multiple top-level elements, a `FragmentElement` SHALL be returned containing all root elements.
 
 `{% for %}` blocks whose body is a Markdown list (lines starting with `-`, `*`, `+`, or digit`.`/`)`) SHALL be routed to `MarkdownForElement` for merged single-`<ul>` output with collection-level reactivity (superseding the Change 6 baseline of one `<ul>` per iteration via `repeat()`). All other `{% for %}` blocks (headings, paragraphs, HTML blocks) SHALL continue to use the standard `repeat()` path (unchanged from Change 6).
 
