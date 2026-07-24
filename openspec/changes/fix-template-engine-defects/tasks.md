@@ -2,10 +2,10 @@
 
 ## 1. CSS Scoping Tokenizer (shared foundation)
 
-- [ ] 1.1 Create `packages/webcompy/src/webcompy/components/_css_utils.py` with a depth-aware selector tokenizer `_split_selector_parts(selector)` tracking `()`/`[]`/string state (with backslash escapes), splitting on top-level combinators (`,`, `>`, `+`, `~`, whitespace runs incl. newlines/tabs)
-- [ ] 1.2 Add `_insert_cid(compound, cid)` helper that inserts `[webcompy-cid-{id}]` before any trailing pseudo-element chain (incl. functional pseudo-elements like `::slotted(...)`)
-- [ ] 1.3 Add shared `_scope_selector(selector, cid)` used for both flat and nested selectors; handle leading combinators by emitting `*[cid]` base
-- [ ] 1.4 Unit tests for tokenizer and cid insertion: `:nth-child(2n+1)`, `[data-x="a>b"]`, `[title="Hello, World"]`, `a~b`, `.a\n.b`, `.x::before`, `.x:hover::before`, escaped selectors (`.\31 23`), `:has(> img)`, leading `> .child`
+- [x] 1.1 Create `packages/webcompy/src/webcompy/components/_css_utils.py` with a depth-aware selector tokenizer `_split_selector_parts(selector)` tracking `()`/`[]`/string state (with backslash escapes), splitting on top-level combinators (`,`, `>`, `+`, `~`, whitespace runs incl. newlines/tabs)
+- [x] 1.2 Add `_insert_cid(compound, cid)` helper that inserts `[webcompy-cid-{id}]` before any trailing pseudo-element chain (incl. functional pseudo-elements like `::slotted(...)`)
+- [x] 1.3 Add shared `_scope_selector(selector, cid)` used for both flat and nested selectors; handle leading combinators by emitting `*[cid]` base
+- [x] 1.4 Unit tests for tokenizer and cid insertion: `:nth-child(2n+1)`, `[data-x="a>b"]`, `[title="Hello, World"]`, `a~b`, `.a\n.b`, `.x::before`, `.x:hover::before`, escaped selectors (`.\31 23`), `:has(> img)`, leading `> .child`
 
 ## 2. CSS Scoping Integration
 
