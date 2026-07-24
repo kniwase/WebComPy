@@ -9,12 +9,12 @@
 
 ## 2. CSS Scoping Integration
 
-- [ ] 2.1 Replace the `_combinator_pattern` regex path in `components/_generator.py` (setter + `_scope_combinator_selector` + `_generate_css_recursive` combinator branch) with the shared helpers from `_css_utils`
-- [ ] 2.2 Replace the reactive scoping path in `components/_reactive_scoped_style.py` with the same shared helpers (static/reactive divergence eliminated)
-- [ ] 2.3 Implement declaration-body at-rule classification (`@font-face`, `@page`, `@property`, `@counter-style` rendered unscoped, no crash) in both static and reactive renderers
-- [ ] 2.4 Make keyframes detection case-insensitive and vendor-prefix aware (`@(-webkit-|-moz-|-o-)?keyframes`) in both renderers
-- [ ] 2.5 Reject `&` nesting selectors with `WebComPyException` suggesting the nested dict form
-- [ ] 2.6 Tests: static vs reactive parity for identical inputs, declaration-body at-rules, vendor keyframes, `&` rejection, pseudo-element insertion end-to-end
+- [x] 2.1 Replace the `_combinator_pattern` regex path in `components/_generator.py` (setter + `_scope_combinator_selector` + `_generate_css_recursive` combinator branch) with the shared helpers from `_css_utils`
+- [x] 2.2 Replace the reactive scoping path in `components/_reactive_scoped_style.py` with the same shared helpers (static/reactive divergence eliminated)
+- [x] 2.3 Implement declaration-body at-rule classification (`@font-face`, `@page`, `@property`, `@counter-style` rendered unscoped, no crash) in both static and reactive renderers
+- [x] 2.4 Make keyframes detection case-insensitive and vendor-prefix aware (`@(-webkit-|-moz-|-o-)?keyframes`) in both renderers
+- [x] 2.5 Reject `&` nesting selectors with `WebComPyException` suggesting the nested dict form
+- [x] 2.6 Tests: static vs reactive parity for identical inputs, declaration-body at-rules, vendor keyframes, `&` rejection, pseudo-element insertion end-to-end
 
 ## 3. CSS Parser String/Bracket Awareness
 

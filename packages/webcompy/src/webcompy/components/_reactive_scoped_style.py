@@ -49,8 +49,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from inspect import iscoroutinefunction
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, TypeAlias
 
+from webcompy.components._css_utils import _scope_selector
 from webcompy.components._libs import WebComPyComponentException
 from webcompy.signal import Computed
 
@@ -68,17 +69,14 @@ def _get_helpers():
     global _HELPERS_CACHE
     if _HELPERS_CACHE is None:
         from webcompy.components._generator import (
-            _classify_nested_key,
-            _generate_css_recursive,
             _process_style_declaration,
-            _scope_combinator_selector,
+            _render_scoped_style_css,
         )
 
         _HELPERS_CACHE = (
-            _classify_nested_key,
-            _generate_css_recursive,
             _process_style_declaration,
-            _scope_combinator_selector,
+            _render_scoped_style_css,
+            _scope_selector,
         )
     return _HELPERS_CACHE
 
@@ -166,110 +164,23 @@ class ReactiveScopedStyle:
         if self._dict_computed is None:
             return ""
         (
-            _classify_nested_key,
-            _generate_css_recursive,
             _process_style_declaration,
-            _scope_combinator_selector,
+            _render_scoped_style_css,
+            _scope_selector,
         ) = _get_helpers()
         style = self._dict_computed.value
         if not style:
             return ""
-        scoped_items = self._apply_scope(style, cid)
-        parts: list[str] = []
-        for selector, style_dict in scoped_items.items():
-            stripped = selector.strip()
-            if stripped.startswith("@keyframes"):
-                inner_parts: list[str] = []
-                for inner_sel, inner_styles in style_dict.items():
-                    inner_parts.append(
-                        _generate_css_recursive(
-                            inner_sel.strip(),
-                            cast("dict[str, Any]", inner_styles),
-                        )
-                    )
-                parts.append(f"{stripped} {{ {' '.join(inner_parts)} }}")
-            elif _classify_nested_key(stripped) == "at-rule":
-                inner_parts = self._render_at_rule_inner(style_dict, cid)
-                parts.append(f"{stripped} {{ {' '.join(inner_parts)} }}")
-            else:
-                parts.append(
-                    _generate_css_recursive(
-                        selector,
-                        cast("dict[str, Any]", style_dict),
-                    )
-                )
-        body = " ".join(parts)
-        if not body.strip():
-            return ""
-        return f"@layer webcompy-scope {{ {body} }}"
-
-    def _apply_scope(self, style: Any, cid: str) -> dict[str, dict[str, Any]]:
-        (
-            _classify_nested_key,
-            _generate_css_recursive,
-            _process_style_declaration,
-            _scope_combinator_selector,
-        ) = _get_helpers()
         scoped_items: list[tuple[str, dict[str, Any]]] = []
         for selector, declaration in style.items():
+            from webcompy.components._generator import _classify_nested_key
+
             if _classify_nested_key(selector.strip()) == "at-rule":
                 processed_selector = selector.strip()
             else:
-                stripped = selector.strip()
-                processed_selector = _scope_combinator_selector(stripped, cid)
+                processed_selector = _scope_selector(selector.strip(), cid)
             scoped_items.append((processed_selector, _process_style_declaration(declaration)))
-        return dict(scoped_items)
-
-    def _render_at_rule_inner(self, style_dict: Any, cid: str) -> list[str]:
-        (
-            _classify_nested_key,
-            _generate_css_recursive,
-            _process_style_declaration,
-            _scope_combinator_selector,
-        ) = _get_helpers()
-        inner_parts: list[str] = []
-        for inner_sel, inner_styles in style_dict.items():
-            stripped_inner = inner_sel.strip()
-            inner_type = _classify_nested_key(stripped_inner)
-            if inner_type == "at-rule":
-                if stripped_inner.startswith("@keyframes"):
-                    key_parts: list[str] = []
-                    for k, v in inner_styles.items():
-                        key_parts.append(
-                            _generate_css_recursive(
-                                k.strip(),
-                                cast("dict[str, Any]", v),
-                            )
-                        )
-                    inner_parts.append(f"{stripped_inner} {{ {' '.join(key_parts)} }}")
-                else:
-                    nested_parts = self._render_at_rule_inner(cast("dict[str, Any]", inner_styles), cid)
-                    inner_parts.append(f"{stripped_inner} {{ {' '.join(nested_parts)} }}")
-            elif inner_type == "pseudo":
-                scoped = f"*[webcompy-cid-{cid}]{stripped_inner}"
-                inner_parts.append(
-                    _generate_css_recursive(
-                        scoped,
-                        cast("dict[str, Any]", inner_styles),
-                    )
-                )
-            elif inner_type == "combinator":
-                scoped_inner = _scope_combinator_selector(stripped_inner, cid)
-                inner_parts.append(
-                    _generate_css_recursive(
-                        scoped_inner,
-                        cast("dict[str, Any]", inner_styles),
-                    )
-                )
-            else:
-                scoped_inner = f"{stripped_inner}[webcompy-cid-{cid}]"
-                inner_parts.append(
-                    _generate_css_recursive(
-                        scoped_inner,
-                        cast("dict[str, Any]", inner_styles),
-                    )
-                )
-        return inner_parts
+        return _render_scoped_style_css(dict(scoped_items), cid)
 
 
 def reactive_scoped_style(func: ReactiveScopedStyleFunc) -> ReactiveScopedStyle:

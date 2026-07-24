@@ -120,6 +120,32 @@ class TestReactiveScopedStyleRenderCss:
 
         assert static == reactive
 
+    @pytest.mark.parametrize(
+        "style_dict",
+        [
+            {"a~b": {"color": "red"}},
+            {":nth-child(2n+1)": {"color": "red"}},
+            {'[data-x="a>b"]': {"color": "red"}},
+            {"> .child": {"color": "red"}},
+            {"@font-face": {"font-family": "'X'", "src": "url(x.woff2)"}},
+            {"@-webkit-keyframes spin": {"0%": {"opacity": "0"}}},
+        ],
+    )
+    def test_static_reactive_parity(self, style_dict):
+        def _noop2(ctx):
+            pass
+
+        gen = ComponentGenerator("ParityComp", _noop2)
+        gen.scoped_style = style_dict
+        style = reactive_scoped_style(lambda: style_dict)
+        style._bind(gen._id)
+        assert gen.scoped_style == style.render_css(gen._id)
+
+    def test_reactive_ampersand_rejected(self):
+        style = reactive_scoped_style(lambda: {".btn": {"&:hover": {"color": "red"}}})
+        with pytest.raises(WebComPyException, match="&"):
+            style._bind("rx")
+
     def test_double_bind_same_cid_idempotent(self):
         style = reactive_scoped_style(lambda: {".x": {"color": "red"}})
         style._bind("c7")

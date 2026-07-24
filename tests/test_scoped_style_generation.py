@@ -6,6 +6,7 @@ from webcompy.components._generator import (
     _generate_css_recursive,
     _process_style_declaration,
 )
+from webcompy.exception import WebComPyException
 
 
 class TestClassifyNestedKey:
@@ -318,3 +319,114 @@ class TestComponentGeneratorScopedStyle:
         css = gen.scoped_style
         assert "*[webcompy-cid-" in css
         assert "::after" in css
+
+    def test_sibling_no_space_scoped(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"a~b": {"color": "red"}}
+        css = gen.scoped_style
+        assert "a[webcompy-cid-" in css
+        assert "b[webcompy-cid-" in css
+        assert "~b[webcompy-cid-" in css
+        assert "]~b[" in css
+
+    def test_nth_child_scoped(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {".x:nth-child(2n+1)": {"color": "red"}}
+        css = gen.scoped_style
+        assert ".x:nth-child(2n+1)[webcompy-cid-" in css
+
+    def test_attribute_value_with_greater_than_scoped(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {'[data-x="a>b"]': {"color": "red"}}
+        css = gen.scoped_style
+        assert '[data-x="a>b"][webcompy-cid-' in css
+
+    def test_newline_descendant_scoped(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {".a\n.b": {"color": "red"}}
+        css = gen.scoped_style
+        assert ".a[webcompy-cid-" in css
+        assert ".b[webcompy-cid-" in css
+
+    def test_leading_combinator_top_level_scoped(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"> .child": {"color": "red"}}
+        css = gen.scoped_style
+        assert "*[webcompy-cid-" in css
+        assert ".child[webcompy-cid-" in css
+        assert "]*[webcompy-cid-" not in css
+        assert "]> .child[" in css or "]> .child" in css.split("{")[0]
+
+    def test_pseudo_element_cid_before_pseudo(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {".x::before": {"content": "''"}}
+        css = gen.scoped_style
+        assert ".x[webcompy-cid-" in css
+        assert "::before" in css
+        assert ".x[webcompy-cid-" in css.split("::before")[0]
+        assert ".x::before[webcompy-cid-" not in css
+
+    def test_pseudo_class_then_pseudo_element_cid(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {".x:hover::before": {"content": "''"}}
+        css = gen.scoped_style
+        assert ".x:hover[webcompy-cid-" in css or ".x[webcompy-cid-]:hover" in css
+        assert "::before" in css
+        assert "::before[webcompy-cid-" not in css
+        cid_pos = css.find("[webcompy-cid-")
+        before_pos = css.find("::before")
+        assert 0 <= cid_pos < before_pos
+
+    def test_font_face_renders_unscoped(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"@font-face": {"font-family": "'X'", "src": "url(x.woff2)"}}
+        css = gen.scoped_style
+        assert "@font-face {" in css or "@font-face{" in css.replace(" ", "")
+        assert "font-family: 'X'" in css or "font-family:'X'" in css.replace(" ", "")
+        assert "url(x.woff2)" in css
+        assert "webcompy-cid-" not in css.split("@font-face")[0]
+        assert "@font-face[webcompy-cid-" not in css
+
+    def test_page_renders_unscoped(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"@page": {"margin": "1cm"}}
+        css = gen.scoped_style
+        assert "@page" in css
+        assert "@page[webcompy-cid-" not in css
+        assert "margin: 1cm" in css or "margin:1cm" in css.replace(" ", "")
+
+    def test_property_renders_unscoped(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"@property --x": {"syntax": "'<color>'", "inherits": "false"}}
+        css = gen.scoped_style
+        assert "@property --x" in css
+        assert "@property[webcompy-cid-" not in css
+        assert "syntax: '<color>'" in css or "syntax:'<color>'" in css.replace(" ", "")
+
+    def test_vendor_webkit_keyframes_no_cid_on_inner(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"@-webkit-keyframes spin": {"0%": {"opacity": "0"}}}
+        css = gen.scoped_style
+        assert "@-webkit-keyframes spin" in css
+        assert "0%[webcompy-cid-" not in css
+
+    def test_uppercase_keyframes_detected(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {"@Keyframes spin": {"0%": {"opacity": "0"}}}
+        css = gen.scoped_style
+        assert "@Keyframes spin" in css
+        assert "0%[webcompy-cid-" not in css
+
+    def test_ampersand_top_level_raises(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        with pytest.raises(WebComPyException) as exc_info:
+            gen.scoped_style = {".btn &": {"color": "red"}}
+        assert "&" in str(exc_info.value)
+        assert "nesting" in str(exc_info.value).lower() or "CSS" in str(exc_info.value)
+
+    def test_ampersand_in_nested_dict_raises(self):
+        gen = ComponentGenerator("TestComponent", lambda ctx: None)
+        gen.scoped_style = {".btn": {"&:hover": {"color": "red"}}}
+        with pytest.raises(WebComPyException) as exc_info:
+            _ = gen.scoped_style
+        assert "&" in str(exc_info.value)
