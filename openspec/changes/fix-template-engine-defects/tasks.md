@@ -48,9 +48,9 @@
 
 ## 7. Verification & Regression Sweep
 
-- [ ] 7.1 `uv run ruff check .` and `uv run ruff format .` clean
-- [ ] 7.2 `uv run pyright` clean
-- [ ] 7.3 `uv run python -m pytest tests/ --tb=short` green (incl. updated/new tests)
-- [ ] 7.4 `uv run python -m webcompy generate` on docs_app succeeds — proves no internal template relies on old lenient behavior
-- [ ] 7.5 Update `.opencode/agents/ci-review.md` invariants if the change introduces new rules (e.g., strict-HTML, scoping tokenizer contract)
-- [ ] 7.6 Run E2E suite `scripts/run-e2e-tests.sh` (or relevant groups) to confirm no browser regressions
+- [x] 7.1 `uv run ruff check .` and `uv run ruff format .` clean
+- [x] 7.2 `uv run pyright` clean
+- [x] 7.3 `uv run python -m pytest tests/ --tb=short` green (incl. updated/new tests)
+- [x] 7.4 `uv run python -m webcompy generate` on docs_app succeeds — proves no internal template relies on old lenient behavior
+- [x] 7.5 Update `.opencode/agents/ci-review.md` invariants if the change introduces new rules (e.g., strict-HTML, scoping tokenizer contract)
+- [x] 7.6 Run E2E suite `scripts/run-e2e-tests.sh` (or relevant groups) to confirm no browser regressions
