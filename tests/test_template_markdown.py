@@ -351,3 +351,70 @@ class TestComponentRootIntegration:
         assert comp._tag_name == "article"
         assert len(comp._children) == 1
         assert isinstance(comp._children[0], FragmentElement)
+
+
+class TestRenderMarkdownCodeBlockTemplateProtection:
+    def test_hole_in_fenced_code_block_rendered_literally(self):
+        with _markdown_di_scope():
+            result = render_markdown("```\n{{ x }}\n```", {"x": "secret"})
+        text = _extract_text(result)
+        assert "{{ x }}" in text
+        assert "secret" not in text
+
+    def test_directive_in_fenced_code_block_not_executed(self):
+        with _markdown_di_scope():
+            result = render_markdown("```\n{% if y %}boom{% endif %}\n```", {"y": True})
+        text = _extract_text(result)
+        assert "{% if y %}" in text
+        assert "{% endif %}" in text
+        assert "boom" in text
+
+    def test_hole_in_inline_code_span_rendered_literally(self):
+        with _markdown_di_scope():
+            result = render_markdown("Hello `{{ x }}` world", {"x": "secret"})
+        text = _extract_text(result)
+        assert "{{ x }}" in text
+        assert "secret" not in text
+
+
+class TestRenderMarkdownUrlSanitization:
+    def test_javascript_url_in_link(self):
+        with _markdown_di_scope():
+            result = render_markdown("[click](javascript:alert(1))", {})
+        text = _extract_text(result)
+        assert "javascript:" not in text
+        assert "click" in text
+
+    def test_javascript_url_in_image(self):
+        with _markdown_di_scope():
+            result = render_markdown("![alt](javascript:alert(1))", {})
+        text = _extract_text(result)
+        assert "javascript:" not in text
+        assert "<img" not in text
+
+
+class TestRenderMarkdownDirectivesInCodeNotExecuted:
+    def test_if_directive_in_fenced_code_block_not_executed(self):
+        with _markdown_di_scope():
+            result = render_markdown("```\n{% if y %}x{% endif %}\n```", {"y": False})
+        text = _extract_text(result)
+        assert "{% if y %}" in text
+        assert text.count("{% if y %}") == 1
+
+    def test_if_directive_in_fenced_code_block_keeps_intact(self):
+        with _markdown_di_scope():
+            result = render_markdown("```\n{% if y %}x{% endif %}\n```", {"y": True})
+        assert isinstance(result, Element)
+        assert result._tag_name == "pre"
+        inner_text = _extract_text(result)
+        assert "{% if y %}" in inner_text
+        assert "{% endif %}" in inner_text
+
+    def test_hole_in_fenced_code_block_keeps_intact(self):
+        with _markdown_di_scope():
+            result = render_markdown("```\n{{ x }}\n```", {"x": "SECRET"})
+        assert isinstance(result, Element)
+        assert result._tag_name == "pre"
+        inner_text = _extract_text(result)
+        assert "{{ x }}" in inner_text
+        assert "SECRET" not in inner_text

@@ -10,6 +10,16 @@ from webcompy.signal import SignalBase
 HOLE_PATTERN = re.compile(r"\{\{\s*([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*)\s*\}\}")
 _ANY_BRACE_SPAN_RE = re.compile(r"\{\{.*?\}\}")
 
+PROTECTED_LBRACE_PLACEHOLDER = "\x00wc-lb\x00"
+
+
+def protect_lbrace(text: str) -> str:
+    return text.replace("{", PROTECTED_LBRACE_PLACEHOLDER)
+
+
+def restore_protected(text: str) -> str:
+    return text.replace(PROTECTED_LBRACE_PLACEHOLDER, "{")
+
 
 @dataclass
 class LiteralText:

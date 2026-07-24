@@ -29,6 +29,8 @@ from webcompy.template._parser import DIRECTIVE_PATTERN, _parse_for_args
 
 _EXPRESSION_SPAN_RE = re.compile(r"\{\{.*?\}\}|\{%.*?%\}", re.DOTALL)
 _LIST_MARKER_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s")
+_FENCE_LINE_RE = re.compile(r"^ {0,3}```")
+_CODE_SPAN_RE = re.compile(r"`[^`\n]+`")
 
 
 def _rename_in_expressions(text: str, var_name: str, replacement: str) -> str:
@@ -70,10 +72,31 @@ class _Token:
     args: str
 
 
+def _protected_spans(source: str) -> list[tuple[int, int]]:
+    spans: list[tuple[int, int]] = []
+    pos = 0
+    in_fence = False
+    for line in source.splitlines(keepends=True):
+        line_start, line_end = pos, pos + len(line)
+        stripped = line.rstrip("\r\n")
+        if in_fence or _FENCE_LINE_RE.match(stripped):
+            spans.append((line_start, line_end))
+            if _FENCE_LINE_RE.match(stripped):
+                in_fence = not in_fence
+        else:
+            for m in _CODE_SPAN_RE.finditer(stripped):
+                spans.append((line_start + m.start(), line_start + m.end()))
+        pos = line_end
+    return spans
+
+
 def _tokenize_source(source: str) -> list[_Token]:
+    protected = _protected_spans(source)
     tokens: list[_Token] = []
     pos = 0
     for m in DIRECTIVE_PATTERN.finditer(source):
+        if any(s <= m.start() < e for s, e in protected):
+            continue
         if m.start() > pos:
             tokens.append(_Token("text", pos, m.start(), ""))
         name = m.group("directive")

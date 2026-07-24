@@ -40,11 +40,11 @@
 
 ## 6. Markdown Parser Defects
 
-- [ ] 6.1 Protect fenced code blocks and inline code spans from `{{ }}` interpolation and `{% %}` execution (placeholder mechanism restored to literal text during binding); tests assert literal `{{ x }}`/`{% if %}` rendering and no context-value leakage
-- [ ] 6.2 Make inline tokenization order-independent with spoof-resistant placeholder keys (NUL-prefixed, per-render nonce); resolve nested placeholders recursively
-- [ ] 6.3 Add URL scheme allow-list (`http:`, `https:`, `mailto:`, relative, `#fragment`) for links/images; disallowed schemes render link text as plain text
-- [ ] 6.4 Add `+` to `_LIST_RE`; join multi-line list-item text with a space; emit `<ol start="N">` when N != 1; recognize spaced HR patterns (`* * *`, `- - -`, `_ _ _`) before list/paragraph handling
-- [ ] 6.5 Tests for all of the above incl. `*a **b** c*`, `~~a **b** c~~`, placeholder spoofing, `javascript:` URLs, `+` for-loop bodies via `MarkdownForElement`
+- [x] 6.1 Protect fenced code blocks and inline code spans from `{{ }}` interpolation and `{% %}` execution (placeholder mechanism restored to literal text during binding); tests assert literal `{{ x }}`/`{% if %}` rendering and no context-value leakage
+- [x] 6.2 Make inline tokenization order-independent with spoof-resistant placeholder keys (NUL-prefixed, per-render nonce); resolve nested placeholders recursively
+- [x] 6.3 Add URL scheme allow-list (`http:`, `https:`, `mailto:`, relative, `#fragment`) for links/images; disallowed schemes render link text as plain text
+- [x] 6.4 Add `+` to `_LIST_RE`; join multi-line list-item text with a space; emit `<ol start="N">` when N != 1; recognize spaced HR patterns (`* * *`, `- - -`, `_ _ _`) before list/paragraph handling
+- [x] 6.5 Tests for all of the above incl. `*a **b** c*`, `~~a **b** c~~`, placeholder spoofing, `javascript:` URLs, `+` for-loop bodies via `MarkdownForElement`
 
 ## 7. Verification & Regression Sweep
 

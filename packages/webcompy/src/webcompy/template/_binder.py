@@ -36,6 +36,7 @@ from webcompy.template._holes import (
     LiteralText,
     format_value,
     resolve_var,
+    restore_protected,
 )
 from webcompy.template._naming import TagResolution, kebab_to_snake, resolve_tag
 
@@ -113,7 +114,7 @@ def resolve_attr(parts: list[LiteralText | Hole], ctx: dict[str, Any]) -> AttrVa
         out: list[str] = []
         for idx, part in enumerate(parts):
             if isinstance(part, LiteralText):
-                out.append(part.text)
+                out.append(restore_protected(part.text))
             else:
                 out.append(format_value(resolved_vars[idx]))
         return "".join(out)
@@ -127,7 +128,7 @@ def bind_text_part(node: TemplateText, ctx: dict[str, Any]) -> list[ElementChild
     result: list[ElementChildren] = []
     for part in node.parts:
         if isinstance(part, LiteralText):
-            result.append(part.text)
+            result.append(restore_protected(part.text))
             continue
         value = resolve_var(part.var_path, ctx)
         if value is None:
