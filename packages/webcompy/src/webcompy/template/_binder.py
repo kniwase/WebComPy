@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+from collections.abc import Iterable
 from operator import truth
 from typing import Any, cast
 
@@ -16,6 +18,7 @@ from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._fragment import FragmentElement
+from webcompy.elements.types._refference import DomNodeRef
 from webcompy.elements.types._switch import SwitchElement
 from webcompy.elements.types._text import NewLine, TextElement
 from webcompy.exception import WebComPyException
@@ -38,6 +41,15 @@ from webcompy.template._naming import TagResolution, kebab_to_snake, resolve_tag
 
 _EMPTY_COMPONENT_STORE = ComponentStore()
 
+_VAR_PATH_RE = re.compile(r"^[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*$")
+
+
+def _validate_var_path(path: str, context: str) -> None:
+    if not _VAR_PATH_RE.match(path):
+        raise WebComPyException(
+            f"Unsupported expression {path!r} in {context}: only variable paths with dot notation are supported"
+        )
+
 
 def _attr_text(parts: list[LiteralText | Hole]) -> str:
     return "".join(part.text for part in parts if isinstance(part, LiteralText))
@@ -52,6 +64,12 @@ def classify_attrs(attrs: list[AttrSpec], ctx: dict[str, Any]) -> tuple[dict[str
             if any(isinstance(p, Hole) for p in attr.value):
                 raise WebComPyException(f"{{{{ }}}} interpolation is not supported in @event attributes: {attr.name}")
             event_name = attr.name[1:]
+            if "." in event_name:
+                raise WebComPyException(
+                    f"Event modifiers are not supported in templates: '{attr.name}'. "
+                    f"Use the plain event name '@{event_name.split('.')[0]}' and "
+                    "handle the modifier logic inside the handler."
+                )
             raw_value = _attr_text(attr.value)
             handler = resolve_var(raw_value, ctx)
             if not callable(handler):
@@ -60,10 +78,20 @@ def classify_attrs(attrs: list[AttrSpec], ctx: dict[str, Any]) -> tuple[dict[str
                 )
             events[event_name] = handler
         elif attr.name.startswith(":"):
+            if attr.name != ":ref":
+                raise WebComPyException(
+                    f"Unsupported attribute '{attr.name}' on HTML element: only ':ref' is allowed "
+                    f"for ':'-prefixed attributes. Use {{{{ }}}} interpolation instead, "
+                    f'e.g. {attr.name[1:]}="{{{{ ... }}}}".'
+                )
             if any(isinstance(p, Hole) for p in attr.value):
                 raise WebComPyException(f"{{{{ }}}} interpolation is not supported in :ref attributes: {attr.name}")
             raw_value = _attr_text(attr.value)
             ref = resolve_var(raw_value, ctx)
+            if not isinstance(ref, DomNodeRef):
+                raise WebComPyException(
+                    f":ref value '{raw_value}' must be a DomNodeRef instance (got {type(ref).__name__})"
+                )
         else:
             regular.append(attr)
     return events, ref, regular
@@ -150,6 +178,7 @@ def bind_if(node: IfNode, ctx: dict[str, Any]) -> list[ElementChildren]:
         if cond_str is None:
             branch_data.append((True, None, body))
         else:
+            _validate_var_path(cond_str, "{% if %} condition")
             resolved = resolve_var(cond_str, ctx)
             if isinstance(resolved, SignalBase):
                 has_signal = True
@@ -191,12 +220,18 @@ def _extend_for_ctx(
 
 def bind_for(node: ForNode, ctx: dict[str, Any]) -> list[ElementChildren]:
     loop_vars = node.loop_vars
+    _validate_var_path(node.iterable_path, "{% for %} iterable")
     iterable_resolved = resolve_var(node.iterable_path, ctx)
 
     if isinstance(iterable_resolved, SignalBase):
         return [_bind_for_reactive(loop_vars, iterable_resolved, node.body, ctx)]
 
     is_dict = isinstance(iterable_resolved, dict)
+    if not is_dict and not isinstance(iterable_resolved, Iterable):
+        raise WebComPyException(
+            f"Non-iterable {{% for %}} target: '{node.iterable_path}' resolved to {type(iterable_resolved).__name__}"
+        )
+
     result: list[ElementChildren] = []
 
     if len(loop_vars) == 1:

@@ -146,7 +146,7 @@ class TestBooleanAttributes:
         roots = _parse('<input disabled="">')
         attr = roots[0].attrs[0]
         assert attr.name == "disabled"
-        assert attr.is_boolean is True
+        assert attr.is_boolean is False
         assert attr.value == []
 
     def test_explicit_string_value(self):

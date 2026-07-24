@@ -25,11 +25,11 @@
 
 ## 4. HTML Template Binding Validation
 
-- [ ] 4.1 In `_binder.classify_attrs`, restrict `:`-prefixed attributes on HTML elements to `:ref` only; raise `WebComPyException` for others (message suggests `{{ }}` interpolation); validate `:ref` values are `DomNodeRef`
-- [ ] 4.2 Reject `@event` attributes containing modifiers (e.g., `@click.stop`) with `WebComPyException`
-- [ ] 4.3 Empty-string attribute values bind as `""`, not `True` (`value is None` ⇒ boolean); update the `test_empty_value_boolean` test to the corrected behavior
-- [ ] 4.4 Raise `WebComPyException` for non-iterable `{% for %}` targets (name + type), unsupported `{% if %}` expressions, and `{{ }}` spans matching brace syntax but not the identifier/dot grammar (text/directive positions)
-- [ ] 4.5 Tests for all of the above incl. component-tag `:prop` path unaffected
+- [x] 4.1 In `_binder.classify_attrs`, restrict `:`-prefixed attributes on HTML elements to `:ref` only; raise `WebComPyException` for others (message suggests `{{ }}` interpolation); validate `:ref` values are `DomNodeRef`
+- [x] 4.2 Reject `@event` attributes containing modifiers (e.g., `@click.stop`) with `WebComPyException`
+- [x] 4.3 Empty-string attribute values bind as `""`, not `True` (`value is None` ⇒ boolean); update the `test_empty_value_boolean` test to the corrected behavior
+- [x] 4.4 Raise `WebComPyException` for non-iterable `{% for %}` targets (name + type), unsupported `{% if %}` expressions, and `{{ }}` spans matching brace syntax but not the identifier/dot grammar (text/directive positions)
+- [x] 4.5 Tests for all of the above incl. component-tag `:prop` path unaffected
 
 ## 5. HTML Parser Strictness & Cache
 

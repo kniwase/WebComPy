@@ -230,7 +230,7 @@ class TemplateTreeBuilder(HTMLParser):
         return self._stack[-1] if self._stack else None
 
     def _make_attr_spec(self, name: str, value: str | None) -> AttrSpec:
-        if value is None or value == "":
+        if value is None:
             return AttrSpec(name=name, value=[], is_boolean=True)
         return AttrSpec(name=name, value=split_text(value), is_boolean=False)
 
