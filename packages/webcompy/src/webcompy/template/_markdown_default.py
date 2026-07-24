@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import re
 import textwrap
+import uuid
 
 from webcompy.ports._markdown import MarkdownPort
 from webcompy.template._holes import protect_lbrace
@@ -26,6 +27,8 @@ _ALLOWED_URL_SCHEMES = frozenset({"http", "https", "mailto"})
 
 
 def _is_safe_url(url: str) -> bool:
+    if any(ord(c) < 0x20 or ord(c) == 0x7F for c in url):
+        return False
     if url.startswith("#"):
         return True
     match = _SCHEME_RE.match(url)
@@ -215,8 +218,6 @@ class DefaultMarkdownParser(MarkdownPort):
         return int(match.group(1)) if match else None
 
     def _inline(self, text: str) -> str:
-        import uuid
-
         tokens: dict[str, str] = {}
         nonce = uuid.uuid4().hex[:12]
 

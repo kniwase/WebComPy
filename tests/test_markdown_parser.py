@@ -200,6 +200,22 @@ class TestMarkdownUrlAllowList:
         assert "javascript:" not in result
         assert "<img" not in result
 
+    def test_link_with_leading_control_char_neutralized(self, parser: DefaultMarkdownParser):
+        result = parser.render("[click](\x01javascript:alert(1))")
+        assert "javascript:" not in result
+        assert "<a" not in result
+        assert "click" in result
+
+    def test_image_with_leading_control_char_neutralized(self, parser: DefaultMarkdownParser):
+        result = parser.render("![alt](\x02data:text/html,evil)")
+        assert "data:" not in result
+        assert "<img" not in result
+
+    def test_link_with_del_control_char_neutralized(self, parser: DefaultMarkdownParser):
+        result = parser.render("[click](\x7fhttps://example.com)")
+        assert "\x7f" not in result
+        assert "<a" not in result
+
 
 class TestMarkdownLists:
     def test_plus_marker_list(self, parser: DefaultMarkdownParser):
