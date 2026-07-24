@@ -116,3 +116,136 @@ class TestDefaultMarkdownParser:
             \t- child
         """
         assert parser.render(source) == "<ul><li>parent<ul><li>child</li></ul></li></ul>"
+
+
+class TestMarkdownCodeBlockTemplateProtection:
+    def test_hole_in_code_block_rendered_literally(self, parser: DefaultMarkdownParser):
+        result = parser.render("```\n{{ x }}\n```")
+        assert "\x00" in result
+        assert "x }}" in result
+        assert "{{ x }}" not in result
+
+    def test_directive_in_code_block_preserved(self, parser: DefaultMarkdownParser):
+        result = parser.render("```\n{% if y %}text{% endif %}\n```")
+        assert "% if y %}" in result
+        assert "% endif %}" in result
+        assert "\x00" in result
+
+    def test_hole_in_inline_code_span(self, parser: DefaultMarkdownParser):
+        result = parser.render("Hello `{{ x }}` world")
+        assert "<code>" in result
+        assert "x }}</code>" in result
+        assert "{{ x }}" not in result
+
+
+class TestMarkdownInlineTokenization:
+    def test_italic_containing_bold(self, parser: DefaultMarkdownParser):
+        result = parser.render("*a **b** c*")
+        assert result == "<p><em>a <strong>b</strong> c</em></p>"
+
+    def test_strikethrough_containing_bold(self, parser: DefaultMarkdownParser):
+        result = parser.render("~~a **b** c~~")
+        assert result == "<p><del>a <strong>b</strong> c</del></p>"
+
+    def test_no_placeholder_leak(self, parser: DefaultMarkdownParser):
+        result = parser.render("*a **b** c*")
+        assert "__WEBCOMPY_INLINE_" not in result
+        assert "\x00WC" not in result
+
+    def test_user_text_placeholder_like_preserved(self, parser: DefaultMarkdownParser):
+        result = parser.render("__WEBCOMPY_INLINE_0__ and **bold**")
+        assert "__WEBCOMPY_INLINE_0__" in result
+        assert "<strong>bold</strong>" in result
+
+
+class TestMarkdownUrlAllowList:
+    def test_javascript_url_neutralized(self, parser: DefaultMarkdownParser):
+        result = parser.render("[click](javascript:alert(1))")
+        assert "javascript:" not in result
+        assert "<a" not in result
+        assert "click" in result
+
+    def test_vbscript_url_neutralized(self, parser: DefaultMarkdownParser):
+        result = parser.render("[click](vbscript:msgbox)")
+        assert "vbscript:" not in result
+        assert "<a" not in result
+
+    def test_data_url_neutralized(self, parser: DefaultMarkdownParser):
+        result = parser.render("[click](data:text/html,evil)")
+        assert "data:" not in result
+        assert "<a" not in result
+
+    def test_https_url_allowed(self, parser: DefaultMarkdownParser):
+        result = parser.render("[click](https://example.com)")
+        assert '<a href="https://example.com">click</a>' in result
+
+    def test_http_url_allowed(self, parser: DefaultMarkdownParser):
+        result = parser.render("[click](http://example.com)")
+        assert '<a href="http://example.com">click</a>' in result
+
+    def test_mailto_url_allowed(self, parser: DefaultMarkdownParser):
+        result = parser.render("[mail](mailto:foo@example.com)")
+        assert '<a href="mailto:foo@example.com">mail</a>' in result
+
+    def test_relative_url_allowed(self, parser: DefaultMarkdownParser):
+        result = parser.render("[docs](/docs)")
+        assert '<a href="/docs">docs</a>' in result
+
+    def test_fragment_url_allowed(self, parser: DefaultMarkdownParser):
+        result = parser.render("[section](#section)")
+        assert '<a href="#section">section</a>' in result
+
+    def test_image_javascript_neutralized(self, parser: DefaultMarkdownParser):
+        result = parser.render("![alt](javascript:alert(1))")
+        assert "javascript:" not in result
+        assert "<img" not in result
+
+    def test_link_with_leading_control_char_neutralized(self, parser: DefaultMarkdownParser):
+        result = parser.render("[click](\x01javascript:alert(1))")
+        assert "javascript:" not in result
+        assert "<a" not in result
+        assert "click" in result
+
+    def test_image_with_leading_control_char_neutralized(self, parser: DefaultMarkdownParser):
+        result = parser.render("![alt](\x02data:text/html,evil)")
+        assert "data:" not in result
+        assert "<img" not in result
+
+    def test_link_with_del_control_char_neutralized(self, parser: DefaultMarkdownParser):
+        result = parser.render("[click](\x7fhttps://example.com)")
+        assert "\x7f" not in result
+        assert "<a" not in result
+
+
+class TestMarkdownLists:
+    def test_plus_marker_list(self, parser: DefaultMarkdownParser):
+        result = parser.render("+ one\n+ two")
+        assert result == "<ul><li>one</li><li>two</li></ul>"
+
+    def test_ordered_list_start(self, parser: DefaultMarkdownParser):
+        result = parser.render("3. three\n4. four")
+        assert result == '<ol start="3"><li>three</li><li>four</li></ol>'
+
+    def test_ordered_list_default_start(self, parser: DefaultMarkdownParser):
+        result = parser.render("1. one\n2. two")
+        assert result == "<ol><li>one</li><li>two</li></ol>"
+
+    def test_multi_line_list_item(self, parser: DefaultMarkdownParser):
+        result = parser.render("- foo\n  bar")
+        assert "<li>foo bar</li>" in result
+
+    def test_spaced_horizontal_rule_star(self, parser: DefaultMarkdownParser):
+        result = parser.render("* * *")
+        assert "<hr>" in result
+
+    def test_spaced_horizontal_rule_dash(self, parser: DefaultMarkdownParser):
+        result = parser.render("- - -")
+        assert "<hr>" in result
+
+    def test_spaced_horizontal_rule_underscore(self, parser: DefaultMarkdownParser):
+        result = parser.render("_ _ _")
+        assert "<hr>" in result
+
+    def test_compact_horizontal_rule(self, parser: DefaultMarkdownParser):
+        result = parser.render("---")
+        assert "<hr>" in result

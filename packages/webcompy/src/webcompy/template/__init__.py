@@ -45,7 +45,7 @@ from webcompy.template._naming import (
     resolve_tag,
 )
 
-_DIRECTIVE_PARAGRAPH_PATTERN = re.compile(r"<p>\s*(\{%[^<]*?%\})\s*</p>")
+_DIRECTIVE_PARAGRAPH_PATTERN = re.compile(r"<p>\s*(\{%\s*(?:if|elif|else|endif|for|endfor)\b[^%]*?%\})\s*</p>")
 
 
 def _render_nodes(source: str, context: Mapping[str, Any] | None = None) -> list[ElementChildren]:

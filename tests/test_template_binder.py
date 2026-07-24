@@ -7,12 +7,14 @@ from webcompy.elements.types._element import Element
 from webcompy.elements.types._fragment import FragmentElement
 from webcompy.elements.types._switch import SwitchElement
 from webcompy.elements.types._text import NewLine, TextElement
+from webcompy.exception import WebComPyException
 from webcompy.signal import Computed, ReactiveDict, ReactiveList, Signal, SignalBase
+from webcompy.template._ast import AttrSpec
 from webcompy.template._binder import (
     bind_element,
     classify_attrs,
 )
-from webcompy.template._holes import resolve_var
+from webcompy.template._holes import LiteralText, resolve_var
 from webcompy.template._parser import parse_template
 
 
@@ -626,3 +628,141 @@ def _make_parent_stub():
     parent._node_cache = FakeDOMNode("div")
     parent._mounted = True
     return parent
+
+
+class TestClassifyAttrsValidation:
+    def test_non_ref_colon_attribute_raises(self):
+        with pytest.raises(WebComPyException) as exc_info:
+            classify_attrs([AttrSpec(name=":class", value=[LiteralText("cls")])], ctx={})
+        msg = str(exc_info.value)
+        assert ":class" in msg
+        assert "{{" in msg
+        assert "class=" in msg
+
+    def test_ref_binding_type_validation(self):
+        from webcompy.elements.types._refference import DomNodeRef
+
+        ref = DomNodeRef()
+        attr = AttrSpec(name=":ref", value=[LiteralText("r")])
+        _events, got_ref, _ = classify_attrs([attr], ctx={"r": ref})
+        assert got_ref is ref
+
+    def test_ref_with_non_DomNodeRef_raises(self):
+        attr = AttrSpec(name=":ref", value=[LiteralText("r")])
+        with pytest.raises(WebComPyException) as exc_info:
+            classify_attrs([attr], ctx={"r": "not-a-ref"})
+        msg = str(exc_info.value)
+        assert "r" in msg
+        assert "str" in msg
+        assert "DomNodeRef" in msg
+
+    def test_event_modifier_rejected(self):
+        attr = AttrSpec(name="@click.stop", value=[LiteralText("handler")])
+
+        def handler(_event):
+            pass
+
+        with pytest.raises(WebComPyException) as exc_info:
+            classify_attrs([attr], ctx={"handler": handler})
+        msg = str(exc_info.value)
+        assert "@click.stop" in msg
+        assert "modifier" in msg.lower() or "modifiers" in msg.lower()
+
+    def test_event_without_modifier_still_works(self):
+        def handler(_event):
+            pass
+
+        attr = AttrSpec(name="@click", value=[LiteralText("handler")])
+        events, _, _ = classify_attrs([attr], ctx={"handler": handler})
+        assert "click" in events
+
+
+class TestBindIfValidation:
+    def test_if_unsupported_expression_raises(self):
+        roots = parse_template("{% if a > b %}yes{% endif %}")
+        from webcompy.template._binder import bind_children
+
+        with pytest.raises(WebComPyException) as exc_info:
+            bind_children(roots, {"a": 1, "b": 2})
+        msg = str(exc_info.value)
+        assert "a > b" in msg
+        assert "if" in msg.lower() or "condition" in msg.lower()
+
+    def test_if_valid_path_works(self):
+        roots = parse_template("{% if flag %}yes{% endif %}")
+        from webcompy.template._binder import bind_children
+
+        result = bind_children(roots, {"flag": True})
+        assert len(result) == 1
+
+
+class TestBindForValidation:
+    def test_for_non_iterable_int_raises(self):
+        roots = parse_template("{% for x in items %}<p>{{ x }}</p>{% endfor %}")
+        from webcompy.template._binder import bind_children
+
+        with pytest.raises(WebComPyException) as exc_info:
+            bind_children(roots, {"items": 5})
+        msg = str(exc_info.value)
+        assert "items" in msg
+        assert "int" in msg
+
+    def test_for_non_iterable_none_raises(self):
+        roots = parse_template("{% for x in items %}<p>{{ x }}</p>{% endfor %}")
+        from webcompy.template._binder import bind_children
+
+        with pytest.raises(WebComPyException) as exc_info:
+            bind_children(roots, {"items": None})
+        msg = str(exc_info.value)
+        assert "items" in msg
+        assert "NoneType" in msg
+
+    def test_for_string_iterable_works(self):
+        roots = parse_template("{% for c in s %}<p>{{ c }}</p>{% endfor %}")
+        from webcompy.template._binder import bind_children
+
+        result = bind_children(roots, {"s": "ab"})
+        assert len(result) == 2
+
+    def test_for_list_iterable_works(self):
+        roots = parse_template("{% for x in items %}<p>{{ x }}</p>{% endfor %}")
+        from webcompy.template._binder import bind_children
+
+        result = bind_children(roots, {"items": [1, 2, 3]})
+        assert len(result) == 3
+
+    def test_for_invalid_path_raises(self):
+        roots = parse_template("{% for x in items[0] %}<p>{{ x }}</p>{% endfor %}")
+        from webcompy.template._binder import bind_children
+
+        with pytest.raises(WebComPyException):
+            bind_children(roots, {"items": [1, 2, 3]})
+
+
+class TestEmptyStringAttribute:
+    def test_alt_empty_string_renders_as_empty(self):
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template('<img alt="">')
+        result = bind_children(roots, {})
+        assert isinstance(result[0], Element)
+        assert result[0]._attrs.get("alt") == ""
+
+    def test_disabled_empty_string_renders_as_empty(self):
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template('<input disabled="">')
+        result = bind_children(roots, {})
+        assert isinstance(result[0], Element)
+        assert result[0]._attrs.get("disabled") == ""
+
+    def test_disabled_boolean_renders_as_true(self):
+        from webcompy.template._binder import bind_children
+        from webcompy.template._parser import parse_template
+
+        roots = parse_template("<input disabled>")
+        result = bind_children(roots, {})
+        assert isinstance(result[0], Element)
+        assert result[0]._attrs.get("disabled") is True

@@ -95,8 +95,9 @@ class TestCompileCache:
         for i in range(max_size + 1):
             get_or_compile(f'<div data-i="{i}"></div>')
         assert len(cache_mod._template_cache) == max_size
-        assert '<div data-i="0"></div>' not in cache_mod._template_cache
-        assert f'<div data-i="{max_size}"></div>' in cache_mod._template_cache
+        sources_in_cache = {key[0] for key in cache_mod._template_cache}
+        assert '<div data-i="0"></div>' not in sources_in_cache
+        assert f'<div data-i="{max_size}"></div>' in sources_in_cache
 
     def test_lru_access_keeps_entry_alive(self):
         from webcompy.template import _cache as cache_mod
@@ -109,8 +110,9 @@ class TestCompileCache:
         get_or_compile('<div id="first"></div>')
         get_or_compile('<div id="newcomer"></div>')
         assert len(cache_mod._template_cache) == max_size
-        assert '<div id="first"></div>' in cache_mod._template_cache
-        assert '<div data-i="0"></div>' not in cache_mod._template_cache
+        sources_in_cache = {key[0] for key in cache_mod._template_cache}
+        assert '<div id="first"></div>' in sources_in_cache
+        assert '<div data-i="0"></div>' not in sources_in_cache
 
     def test_eviction_respects_parse_fn_injection(self):
         from webcompy.template import _cache as cache_mod

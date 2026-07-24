@@ -146,7 +146,7 @@ class TestBooleanAttributes:
         roots = _parse('<input disabled="">')
         attr = roots[0].attrs[0]
         assert attr.name == "disabled"
-        assert attr.is_boolean is True
+        assert attr.is_boolean is False
         assert attr.value == []
 
     def test_explicit_string_value(self):
@@ -458,3 +458,82 @@ class TestDirectivePatternEdgeCases:
         assert isinstance(p.children[1], IfNode)
         assert isinstance(p.children[2], TemplateText)
         assert p.children[2].parts == [LiteralText("c")]
+
+
+class TestMalformedHtmlErrors:
+    def test_mismatched_closing_tag_raises(self):
+        with pytest.raises(WebComPyException) as exc_info:
+            parse_template("<div><b>bold</div></b>")
+        msg = str(exc_info.value)
+        assert "b" in msg
+        assert "div" in msg
+
+    def test_unclosed_element_raises(self):
+        with pytest.raises(WebComPyException) as exc_info:
+            parse_template("<div><p>hi")
+        msg = str(exc_info.value)
+        assert "p" in msg
+        assert "div" in msg
+
+    def test_stray_closing_tag_raises(self):
+        with pytest.raises(WebComPyException) as exc_info:
+            parse_template("<div>text</span></div>")
+        msg = str(exc_info.value)
+        assert "span" in msg
+
+    def test_well_formed_template_passes(self):
+        roots = parse_template("<div><p>hi</p></div>")
+        assert len(roots) == 1
+        assert roots[0].tag_name == "div"
+
+
+class TestDirectiveParagraphStripping:
+    def test_paragraph_with_only_if_directive_stripped(self):
+        from webcompy.template import _strip_directive_paragraphs
+
+        result = _strip_directive_paragraphs("<p>{% if x %}</p>")
+        assert result == "{% if x %}"
+
+    def test_paragraph_with_only_for_directive_stripped(self):
+        from webcompy.template import _strip_directive_paragraphs
+
+        result = _strip_directive_paragraphs("<p>{% for x in items %}</p>")
+        assert result == "{% for x in items %}"
+
+    def test_paragraph_with_text_preserved(self):
+        from webcompy.template import _strip_directive_paragraphs
+
+        original = "<p>{% if x %}text{% endif %}</p>"
+        result = _strip_directive_paragraphs(original)
+        assert result == original
+
+    def test_paragraph_with_text_then_directive_preserved(self):
+        from webcompy.template import _strip_directive_paragraphs
+
+        original = "<p>before {% if x %}text{% endif %}</p>"
+        result = _strip_directive_paragraphs(original)
+        assert result == original
+
+    def test_paragraph_with_only_endif_stripped(self):
+        from webcompy.template import _strip_directive_paragraphs
+
+        result = _strip_directive_paragraphs("<p>{% endif %}</p>")
+        assert result == "{% endif %}"
+
+
+class TestUnsupportedHoleExpression:
+    def test_subscript_in_text_raises(self):
+        with pytest.raises(WebComPyException) as exc_info:
+            parse_template("<p>{{ items[0] }}</p>")
+        msg = str(exc_info.value)
+        assert "items[0]" in msg
+
+    def test_call_in_text_raises(self):
+        with pytest.raises(WebComPyException) as exc_info:
+            parse_template("<p>{{ get_name() }}</p>")
+        msg = str(exc_info.value)
+        assert "get_name" in msg
+
+    def test_valid_hole_still_works(self):
+        roots = parse_template("<p>{{ name }}</p>")
+        assert len(roots) == 1

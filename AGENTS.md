@@ -223,6 +223,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/template/_markdown_default.py` | `template-engine/spec.md` |
 | `webcompy/template/_markdown_for.py` | `template-engine/spec.md` |
 | `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md`, `signal-value-transfer/spec.md` |
+| `webcompy/components/_css_utils.py` | `components/spec.md`, `reactive-scoped-style/spec.md` |
 | `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md`, `suspense/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/elements/types/_suspense.py` | `suspense/spec.md`, `async-scheduler/spec.md` |

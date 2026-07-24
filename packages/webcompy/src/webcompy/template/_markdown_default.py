@@ -3,11 +3,13 @@ from __future__ import annotations
 import html
 import re
 import textwrap
+import uuid
 
 from webcompy.ports._markdown import MarkdownPort
+from webcompy.template._holes import protect_lbrace
 
 _HEADING_RE = re.compile(r"^ {0,3}(?P<hashes>#{1,6})(?!#)[ \t]*(?P<text>.*?)\s*$")
-_LIST_RE = re.compile(r"^(?P<indent> *)(?P<marker>(?:[-*]|\d+[.)]))(?:[ \t]+(?P<text>.*)|$)")
+_LIST_RE = re.compile(r"^(?P<indent> *)(?P<marker>(?:[-*+]|\d+[.)]))(?:[ \t]+(?P<text>.*)|$)")
 _BLOCKQUOTE_RE = re.compile(r"^ {0,3}>[ \t]?(?P<text>.*)$")
 _FENCE_START_RE = re.compile(r"^ {0,3}```(?:.*)$")
 _FENCE_END_RE = re.compile(r"^ {0,3}```[ \t]*$")
@@ -19,6 +21,25 @@ _LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
 _BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 _ITALIC_RE = re.compile(r"(?<!\*)\*([^*\n]+?)\*(?!\*)")
 _STRIKE_RE = re.compile(r"~~(.+?)~~")
+_HR_CANDIDATE_RE = re.compile(r"^ {0,3}[*_\-\t ]+$")
+_SCHEME_RE = re.compile(r"^([a-zA-Z][a-zA-Z0-9+.\-]*):")
+_ALLOWED_URL_SCHEMES = frozenset({"http", "https", "mailto"})
+
+
+def _is_safe_url(url: str) -> bool:
+    if any(ord(c) < 0x20 or ord(c) == 0x7F for c in url):
+        return False
+    if url.startswith("#"):
+        return True
+    match = _SCHEME_RE.match(url)
+    return match is None or match.group(1).lower() in _ALLOWED_URL_SCHEMES
+
+
+def _is_thematic_break(line: str) -> bool:
+    if not _HR_CANDIDATE_RE.match(line):
+        return False
+    markers = [c for c in line if c in "*-_"]
+    return len(markers) >= 3 and len(set(markers)) == 1
 
 
 class DefaultMarkdownParser(MarkdownPort):
@@ -46,7 +67,7 @@ class DefaultMarkdownParser(MarkdownPort):
                 rendered.append(f"<h{level}>{self._inline(content)}</h{level}>")
                 index += 1
                 continue
-            if line.strip() in {"---", "***", "___"}:
+            if _is_thematic_break(line):
                 rendered.append("<hr>")
                 index += 1
                 continue
@@ -75,7 +96,7 @@ class DefaultMarkdownParser(MarkdownPort):
                 break
             code_lines.append(lines[index])
             index += 1
-        return f"<pre><code>{html.escape(chr(10).join(code_lines))}</code></pre>", index
+        return ("<pre><code>" + protect_lbrace(html.escape(chr(10).join(code_lines))) + "</code></pre>"), index
 
     def _parse_blockquote(self, lines: list[str], index: int) -> tuple[str, int]:
         quote_lines: list[str] = []
@@ -131,7 +152,7 @@ class DefaultMarkdownParser(MarkdownPort):
         return (
             _FENCE_START_RE.match(line) is not None
             or _HEADING_RE.fullmatch(line) is not None
-            or line.strip() in {"---", "***", "___"}
+            or _is_thematic_break(line)
             or _BLOCKQUOTE_RE.match(line) is not None
             or _LIST_RE.match(line) is not None
             or line.lstrip().startswith("<")
@@ -143,6 +164,7 @@ class DefaultMarkdownParser(MarkdownPort):
             return "", index
         base_indent = len(first_match.group("indent"))
         list_kind = self._list_kind(first_match.group("marker"))
+        start_number = self._list_start_number(first_match.group("marker")) if list_kind == "ol" else None
         items: list[str] = []
         while index < len(lines):
             match = _LIST_RE.fullmatch(lines[index])
@@ -178,38 +200,53 @@ class DefaultMarkdownParser(MarkdownPort):
                     break
                 leading_spaces = len(lines[index]) - len(lines[index].lstrip(" "))
                 if leading_spaces > base_indent:
-                    item_parts.append(self._inline(lines[index].strip()))
+                    item_parts.append(" " + self._inline(lines[index].strip()))
                     index += 1
                     continue
                 break
             items.append(f"<li>{''.join(item_parts)}</li>")
-        return f"<{list_kind}>{''.join(items)}</{list_kind}>", index
+        open_tag = (
+            f'<ol start="{start_number}">' if start_number is not None and start_number != 1 else f"<{list_kind}>"
+        )
+        return f"{open_tag}{''.join(items)}</{list_kind}>", index
 
     def _list_kind(self, marker: str) -> str:
-        return "ul" if marker in {"-", "*"} else "ol"
+        return "ul" if marker in {"-", "*", "+"} else "ol"
+
+    def _list_start_number(self, marker: str) -> int | None:
+        match = re.match(r"(\d+)", marker)
+        return int(match.group(1)) if match else None
 
     def _inline(self, text: str) -> str:
         tokens: dict[str, str] = {}
+        nonce = uuid.uuid4().hex[:12]
 
         def token(value: str) -> str:
-            key = f"__WEBCOMPY_INLINE_{len(tokens)}__"
+            key = f"\x00WC{nonce}{len(tokens)}\x00"
             tokens[key] = value
             return key
 
-        protected = _TEMPLATE_RE.sub(lambda match: token(match.group(0)), text)
         protected = _CODE_RE.sub(
-            lambda match: token(f"<code>{html.escape(match.group(1))}</code>"),
-            protected,
+            lambda match: token(f"<code>{protect_lbrace(html.escape(match.group(1)))}</code>"),
+            text,
         )
+        protected = _TEMPLATE_RE.sub(lambda match: token(match.group(0)), protected)
         protected = _IMAGE_RE.sub(
-            lambda match: token(
-                f'<img src="{html.escape(match.group(2), quote=True)}" alt="{html.escape(match.group(1), quote=True)}">'
+            lambda match: (
+                token(
+                    f'<img src="{html.escape(match.group(2), quote=True)}" '
+                    f'alt="{html.escape(match.group(1), quote=True)}">'
+                )
+                if _is_safe_url(match.group(2))
+                else token(self._inline(match.group(1)))
             ),
             protected,
         )
         protected = _LINK_RE.sub(
-            lambda match: token(
-                f'<a href="{html.escape(match.group(2), quote=True)}">{self._inline(match.group(1))}</a>'
+            lambda match: (
+                token(f'<a href="{html.escape(match.group(2), quote=True)}">{self._inline(match.group(1))}</a>')
+                if _is_safe_url(match.group(2))
+                else token(self._inline(match.group(1)))
             ),
             protected,
         )
@@ -226,6 +263,9 @@ class DefaultMarkdownParser(MarkdownPort):
             protected,
         )
         result = html.escape(protected, quote=False)
-        for key, value in tokens.items():
-            result = result.replace(key, value)
+        previous: str | None = None
+        while previous != result:
+            previous = result
+            for key, value in tokens.items():
+                result = result.replace(key, value)
         return result
