@@ -33,10 +33,10 @@
 
 ## 5. HTML Parser Strictness & Cache
 
-- [ ] 5.1 `handle_endtag` raises `WebComPyException` on mismatched/stray closing tags (name expected vs actual); EOF with non-empty stack raises listing unclosed tags
-- [ ] 5.2 Include parse-function identity in the template AST cache key (`_cache.py`)
-- [ ] 5.3 Fix directive-paragraph stripping in `template/__init__.py` to only unwrap `<p>` containing exactly one `{% %}` directive and nothing else (spec compliance; add the missing "if with text preserved" test)
-- [ ] 5.4 Tests: malformed HTML errors, cache parse_fn isolation, `<p>{% if x %}text{% endif %}</p>` preserved, `render_markdown` output unaffected (well-formed)
+- [x] 5.1 `handle_endtag` raises `WebComPyException` on mismatched/stray closing tags (name expected vs actual); EOF with non-empty stack raises listing unclosed tags
+- [x] 5.2 Include parse-function identity in the template AST cache key (`_cache.py`)
+- [x] 5.3 Fix directive-paragraph stripping in `template/__init__.py` to only unwrap `<p>` containing exactly one `{% %}` directive and nothing else (spec compliance; add the missing "if with text preserved" test)
+- [x] 5.4 Tests: malformed HTML errors, cache parse_fn isolation, `<p>{% if x %}text{% endif %}</p>` preserved, `render_markdown` output unaffected (well-formed)
 
 ## 6. Markdown Parser Defects
 

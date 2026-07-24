@@ -4,9 +4,11 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from webcompy.exception import WebComPyException
 from webcompy.signal import SignalBase
 
 HOLE_PATTERN = re.compile(r"\{\{\s*([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*)\s*\}\}")
+_ANY_BRACE_SPAN_RE = re.compile(r"\{\{.*?\}\}")
 
 
 @dataclass
@@ -19,7 +21,7 @@ class Hole:
     var_path: str
 
 
-def split_text(text: str) -> list[LiteralText | Hole]:
+def split_text(text: str, *, strict: bool = False) -> list[LiteralText | Hole]:
     parts: list[LiteralText | Hole] = []
     last_end = 0
     for match in HOLE_PATTERN.finditer(text):
@@ -29,6 +31,15 @@ def split_text(text: str) -> list[LiteralText | Hole]:
         last_end = match.end()
     if last_end < len(text):
         parts.append(LiteralText(text[last_end:]))
+    if strict:
+        for part in parts:
+            if isinstance(part, LiteralText):
+                bad = _ANY_BRACE_SPAN_RE.search(part.text)
+                if bad is not None:
+                    raise WebComPyException(
+                        f"Unsupported expression {bad.group(0)!r} in {{{{ }}}} hole: only variable paths "
+                        "with dot notation are supported (subscripts, calls, and filters are not)"
+                    )
     return parts
 
 

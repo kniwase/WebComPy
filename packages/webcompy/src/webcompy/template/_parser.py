@@ -263,12 +263,15 @@ class TemplateTreeBuilder(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         tag_lower = tag.lower()
         if not self._stack:
-            return
-        if self._stack[-1].tag_name == tag_lower:
-            self._stack.pop()
+            raise WebComPyException(f"Stray closing tag </{tag_lower}> with no matching open element")
+        if self._stack[-1].tag_name != tag_lower:
+            raise WebComPyException(
+                f"Mismatched closing tag </{tag_lower}>: expected </{self._stack[-1].tag_name}> (check element nesting)"
+            )
+        self._stack.pop()
 
     def handle_data(self, data: str) -> None:
-        parts = split_text(data)
+        parts = split_text(data, strict=True)
         if not parts:
             return
         text_node = TemplateText(parts=parts)
@@ -276,6 +279,10 @@ class TemplateTreeBuilder(HTMLParser):
             self._stack[-1].children.append(text_node)
         else:
             self._roots.append(text_node)
+
+    @property
+    def open_tags(self) -> list[str]:
+        return [el.tag_name for el in self._stack]
 
     def handle_comment(self, data: str) -> None:
         return
@@ -285,6 +292,9 @@ def parse_template(source: str) -> list[TemplateNode]:
     builder = TemplateTreeBuilder(source)
     builder.feed(source)
     builder.close()
+    if builder.open_tags:
+        names = ", ".join(f"<{t}>" for t in builder.open_tags)
+        raise WebComPyException(f"Unclosed element(s) at end of template: {names}")
     roots = builder.roots
     split_roots = _split_directives_in_children(roots)
     final_roots = _restructure_directives(split_roots)
