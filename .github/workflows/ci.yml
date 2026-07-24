@@ -224,7 +224,7 @@ jobs:
           - name: plugin-script
             files: e2e/core/test_eruda.py
           - name: template
-            files: e2e/core/test_template.py e2e/core/test_template_control_flow.py
+            files: e2e/core/test_template.py e2e/core/test_template_control_flow.py e2e/core/test_markdown_for.py
         serving_mode: [prod, static]
         include:
           - group:

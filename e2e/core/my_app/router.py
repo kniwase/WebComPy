@@ -11,6 +11,7 @@ from .pages.event import EventPage
 from .pages.home import HomePage
 from .pages.keyed_repeat import KeyedRepeatPage
 from .pages.lifecycle import LifecyclePage
+from .pages.markdown_for import MarkdownForPage
 from .pages.nested_dynamic import NestedDynamicPage
 from .pages.not_found import NotFound
 from .pages.repeat import RepeatPage
@@ -44,6 +45,7 @@ router = Router(
     {"path": "/template", "component": TemplatePage},
     {"path": "/template-components", "component": TemplateComponentsPage},
     {"path": "/template-control-flow", "component": TemplateControlFlowPage},
+    {"path": "/markdown-for", "component": MarkdownForPage},
     default=NotFound,
     mode="history",
 )

@@ -21,6 +21,7 @@ from webcompy.signal import Signal
 from webcompy.template import render_markdown
 from webcompy.template._cache import clear_cache
 from webcompy.template._markdown_default import DefaultMarkdownParser
+from webcompy.template._markdown_for import MarkdownForElement
 
 
 @pytest.fixture(autouse=True)
@@ -167,19 +168,21 @@ class TestRenderMarkdownIfElifElse:
 
 
 class TestRenderMarkdownForBlock:
-    def test_for_wraps_multiple_markdown_elements(self):
+    def test_for_over_list_body_produces_single_ul(self):
         with _markdown_di_scope():
             result = render_markdown(
                 "{% for item in items %}\n- {{ item }}\n{% endfor %}",
                 {"items": ["a", "b", "c"]},
             )
-        assert isinstance(result, FragmentElement)
-        uls = [c for c in result._pending_children if isinstance(c, Element) and c._tag_name == "ul"]
-        assert len(uls) == 3
-        for ul in uls:
-            li = next(c for c in ul._children if isinstance(c, Element) and c._tag_name == "li")
-            text = li._children[0]._text
-            assert text in ("a", "b", "c")
+            assert isinstance(result, MarkdownForElement)
+            parent = Element("section")
+            parent._append_child(result)
+            ul = next(c for c in result._children if isinstance(c, Element) and c._tag_name == "ul")
+            lis = [c for c in ul._children if isinstance(c, Element) and c._tag_name == "li"]
+            assert len(lis) == 3
+            for li in lis:
+                text = li._children[0]._text
+                assert text in ("a", "b", "c")
 
     def test_for_and_endfor_directives_p_stripped(self):
         with _markdown_di_scope():
@@ -187,10 +190,13 @@ class TestRenderMarkdownForBlock:
                 "{% for x in xs %}\n- {{ x }}\n{% endfor %}",
                 {"xs": ["a", "b"]},
             )
-        assert isinstance(result, FragmentElement)
-        for child in result._pending_children:
-            assert isinstance(child, Element)
-            assert child._tag_name == "ul"
+            assert isinstance(result, MarkdownForElement)
+            parent = Element("section")
+            parent._append_child(result)
+            ul = next(c for c in result._children if isinstance(c, Element) and c._tag_name == "ul")
+            assert ul._tag_name == "ul"
+            lis = [c for c in ul._children if isinstance(c, Element) and c._tag_name == "li"]
+            assert len(lis) == 2
 
     def test_for_with_nested_if_in_body(self):
         with _markdown_di_scope():
@@ -204,16 +210,15 @@ class TestRenderMarkdownForBlock:
                     ]
                 },
             )
-        assert isinstance(result, FragmentElement)
-        uls = [c for c in result._pending_children if isinstance(c, Element) and c._tag_name == "ul"]
-        assert len(uls) == 2
-        names = []
-        for ul in uls:
-            li = next(c for c in ul._children if isinstance(c, Element) and c._tag_name == "li")
-            names.append(_extract_text(li))
-        assert "a" in names
-        assert "c" in names
-        assert "b" not in names
+            assert isinstance(result, MarkdownForElement)
+            parent = Element("section")
+            parent._append_child(result)
+            ul = next(c for c in result._children if isinstance(c, Element) and c._tag_name == "ul")
+            lis = [c for c in ul._children if isinstance(c, Element) and c._tag_name == "li"]
+            names = [_extract_text(li) for li in lis]
+            assert "a" in names
+            assert "c" in names
+            assert "b" not in names
 
 
 class TestRenderMarkdownComponentTags:

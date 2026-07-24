@@ -103,7 +103,7 @@ class TestMarkdownReactiveUpdate:
 
 
 class TestMarkdownForLoopReactiveItems:
-    def test_reactive_list_in_markdown_for_loop_preserves_signal_reflection(self):
+    def test_reactive_list_in_markdown_for_loop_produces_single_ul(self):
         @define_component
         def MarkdownForPage(context):
             items = use_reactive_list(lambda: ["alpha", "beta", "gamma"])
@@ -125,6 +125,7 @@ class TestMarkdownForLoopReactiveItems:
         result = TestRenderer.render(MarkdownForPage, parent_scope=_markdown_parent_scope())
         try:
             html_str = result.to_html()
+            assert html_str.count("<ul") == 1
             assert html_str.count("<li") == 3
             assert "alpha" in html_str
             assert "beta" in html_str
@@ -135,8 +136,51 @@ class TestMarkdownForLoopReactiveItems:
             assert btn is not None
             btn.dispatchEvent(VirtualDOMEvent("click"))
             html_str = result.to_html()
+            assert html_str.count("<ul") == 1
             assert html_str.count("<li") == 4
             assert "delta" in html_str
+        finally:
+            result.close()
+
+    def test_refresh_updates_dom_without_crashing(self):
+        """Smoke test: MarkdownForElement._refresh triggered by collection
+        change must complete without errors and update the DOM.
+
+        Verifies that the lifecycle defer mechanism (start_defer_after_rendering /
+        end_defer_after_rendering) in _refresh does not break the refresh path.
+        The defer behavior itself is verified at the render-context level
+        (see tests/test_app_instance.py).
+        """
+
+        @define_component
+        def MarkdownRefreshPage(context):
+            items = use_reactive_list(lambda: ["alpha", "beta"])
+            return html.DIV(
+                {},
+                render_markdown(
+                    "{% for item in items %}\n- {{ item }}\n{% endfor %}",
+                    locals(),
+                ),
+                html.BUTTON(
+                    {
+                        "@click": lambda _: items.append("gamma"),
+                        "data-testid": "add",
+                    },
+                    "+",
+                ),
+            )
+
+        result = TestRenderer.render(MarkdownRefreshPage, parent_scope=_markdown_parent_scope())
+        try:
+            html_str = result.to_html()
+            assert html_str.count("<li ") == 2
+
+            btn = result.find_by_attribute("data-testid", "add")
+            assert btn is not None
+            btn.dispatchEvent(VirtualDOMEvent("click"))
+
+            html_str = result.to_html()
+            assert html_str.count("<li ") == 3
         finally:
             result.close()
 
@@ -248,6 +292,31 @@ class TestMarkdownSSR:
         assert payload is not None, "Hydration payload script not found in SSR HTML"
         assert "Hydration Section" in html_str
 
+    def test_ssr_contains_single_ul_with_merged_lis(self):
+        @define_component
+        def MarkdownListForSSRPage(context):
+            return html.ARTICLE(
+                {},
+                render_markdown(
+                    "{% for item in items %}\n- {{ item }}\n{% endfor %}",
+                    {"items": ["alpha", "beta", "gamma"]},
+                ),
+            )
+
+        app = create_test_app(root_component=MarkdownListForSSRPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert html_str.count("<ul") == 1
+        assert html_str.count("<li ") == 3
+        assert html_str.count(">alpha<") == 1
+        assert html_str.count(">beta<") == 1
+        assert html_str.count(">gamma<") == 1
+
 
 class TestCustomMarkdownParserInjection:
     def test_custom_parser_via_parent_scope_replaces_default(self):
@@ -305,3 +374,28 @@ class TestCustomMarkdownParserInjection:
             assert injected.render("# x") == "<app-provide-md># x</app-provide-md>"
         finally:
             ctx.dispose()
+
+
+class TestMarkdownForMixedBodies:
+    def test_list_body_and_non_list_body_in_same_document(self):
+        @define_component
+        def MixedForPage(context):
+            items = ["a", "b"]
+            return html.ARTICLE(
+                {},
+                render_markdown(
+                    "# Title\n\n"
+                    "{% for item in items %}\n- {{ item }}\n{% endfor %}\n\n"
+                    "{% for n in nums %}\n## {{ n }}\n{% endfor %}",
+                    {"items": items, "nums": [1, 2]},
+                ),
+            )
+
+        result = TestRenderer.render(MixedForPage, parent_scope=_markdown_parent_scope())
+        try:
+            html_str = result.to_html()
+            assert html_str.count("<ul") == 1
+            assert html_str.count("<li") == 2
+            assert html_str.count("<h2") == 2
+        finally:
+            result.close()

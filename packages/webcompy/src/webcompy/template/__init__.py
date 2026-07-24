@@ -1,3 +1,12 @@
+"""WebComPy template engine.
+
+Reserved namespace: the ``__wmdf_`` prefix is used by the markdown
+for-expansion pipeline (``MarkdownForElement``) to generate synthetic
+context keys (e.g. ``__wmdf_0_item``, ``__wmdf_1_item``). User-supplied
+context keys with this prefix MAY collide with framework-generated keys
+and cause unexpected behavior.
+"""
+
 from __future__ import annotations
 
 import re
@@ -50,17 +59,31 @@ def _strip_directive_paragraphs(html: str) -> str:
 
 
 def render_markdown(source: str, context: Mapping[str, Any] | None = None) -> ElementAbstract:
+    from webcompy.template._markdown_for import (
+        MarkdownForElement,
+        _ForBlock,
+        _split_markdown_source,
+    )
+
+    ctx: dict[str, Any] = dict(context) if context else {}
+    segments = _split_markdown_source(source, ctx)
+
     parser = inject(MARKDOWN_PORT_KEY)
-    html = parser.render(source)
-    html = _strip_directive_paragraphs(html)
-    nodes = _render_nodes(html, context)
     elements: list[ElementAbstract] = []
-    for node in nodes:
-        if node is None:
-            continue
-        if isinstance(node, str) and not node.strip():
-            continue
-        elements.append(_to_element(node))
+    for seg in segments:
+        if isinstance(seg, _ForBlock):
+            elements.append(MarkdownForElement(seg.loop_vars, seg.iterable_path, seg.body_markdown, ctx))
+        else:
+            html = parser.render(seg.text)
+            html = _strip_directive_paragraphs(html)
+            nodes = _render_nodes(html, ctx)
+            for node in nodes:
+                if node is None:
+                    continue
+                if isinstance(node, str) and not node.strip():
+                    continue
+                elements.append(_to_element(node))
+
     if len(elements) == 1:
         return elements[0]
     return FragmentElement(elements)
