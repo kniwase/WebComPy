@@ -16,12 +16,12 @@ from webcompy.components._css_utils import (
     _contains_top_level_ampersand,
     _is_declaration_body_at_rule,
     _is_keyframes_rule,
+    _raise_nesting_unsupported,
     _scope_selector,
 )
 from webcompy.components._libs import ComponentContext, NodeGenerator, WebComPyComponentException, generate_id
 from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
 from webcompy.elements.typealias._element_property import ElementChildren
-from webcompy.exception import WebComPyException
 
 _camel_to_kebab_pattern: Final = re_compile("((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))")
 
@@ -127,9 +127,6 @@ def _render_at_rule_inner(style_dict: StyleDict, cid: str) -> list[str]:
         elif _classify_nested_key(stripped_inner) == "combinator":
             scoped_inner = _scope_selector(stripped_inner, cid)
             inner_parts.append(_generate_css_recursive(scoped_inner, cast("dict[str, StyleDeclaration]", inner_styles)))
-        else:
-            scoped_inner = f"{stripped_inner}[webcompy-cid-{cid}]"
-            inner_parts.append(_generate_css_recursive(scoped_inner, cast("dict[str, StyleDeclaration]", inner_styles)))
     return inner_parts
 
 
@@ -154,11 +151,7 @@ def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaratio
             result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
         else:
             if _contains_top_level_ampersand(nested_selector):
-                raise WebComPyException(
-                    f"CSS nesting with '&' is not supported in scoped styles "
-                    f"(selector: {nested_selector!r}). Use the nested dict form instead, "
-                    f"e.g. {{'.btn': {{':hover': {{...}}}}}}."
-                )
+                _raise_nesting_unsupported(nested_selector)
             combined = f"{selector} {nested_selector}"
             result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
     return result

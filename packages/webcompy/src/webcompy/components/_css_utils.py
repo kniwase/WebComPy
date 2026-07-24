@@ -177,13 +177,17 @@ def _contains_top_level_ampersand(selector: str) -> bool:
     return False
 
 
+def _raise_nesting_unsupported(selector: str) -> None:
+    raise WebComPyException(
+        f"CSS nesting with '&' is not supported in scoped styles "
+        f"(selector: {selector!r}). Use the nested dict form instead, "
+        f"e.g. {{'.btn': {{':hover': {{...}}}}}}."
+    )
+
+
 def _scope_selector(selector: str, cid: str) -> str:
     if _contains_top_level_ampersand(selector):
-        raise WebComPyException(
-            f"CSS nesting with '&' is not supported in scoped styles "
-            f"(selector: {selector!r}). Use the nested dict form instead, "
-            f"e.g. {{'.btn': {{':hover': {{...}}}}}}."
-        )
+        _raise_nesting_unsupported(selector)
     parts, combinators = _split_selector_parts(selector)
     out: list[str] = []
     for idx, part in enumerate(parts):

@@ -51,7 +51,6 @@ from collections.abc import Callable
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeAlias
 
-from webcompy.components._css_utils import _scope_selector
 from webcompy.components._libs import WebComPyComponentException
 from webcompy.signal import Computed
 
@@ -68,12 +67,15 @@ _HELPERS_CACHE: tuple | None = None
 def _get_helpers():
     global _HELPERS_CACHE
     if _HELPERS_CACHE is None:
+        from webcompy.components._css_utils import _scope_selector
         from webcompy.components._generator import (
+            _classify_nested_key,
             _process_style_declaration,
             _render_scoped_style_css,
         )
 
         _HELPERS_CACHE = (
+            _classify_nested_key,
             _process_style_declaration,
             _render_scoped_style_css,
             _scope_selector,
@@ -164,6 +166,7 @@ class ReactiveScopedStyle:
         if self._dict_computed is None:
             return ""
         (
+            _classify_nested_key,
             _process_style_declaration,
             _render_scoped_style_css,
             _scope_selector,
@@ -173,8 +176,6 @@ class ReactiveScopedStyle:
             return ""
         scoped_items: list[tuple[str, dict[str, Any]]] = []
         for selector, declaration in style.items():
-            from webcompy.components._generator import _classify_nested_key
-
             if _classify_nested_key(selector.strip()) == "at-rule":
                 processed_selector = selector.strip()
             else:
