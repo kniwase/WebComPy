@@ -14,10 +14,10 @@
 
 ## 3. HTML Parser Environment Parity
 
-- [ ] 3.1 Add a unit-tier helper that renders a fixed set of version-sensitive templates (`<textarea>` with markup-like content, `<title>`, `<pre>`, charref edge cases, `<plaintext>`) via `render_template` and serializes the resulting tree for comparison
-- [ ] 3.2 Add one E2E scenario (existing Playwright infra, appended to a suitable group) rendering the same template set in the browser and comparing against the server serialization
-- [ ] 3.3 Run the parity check; if divergence is found, implement framework-side pinning in `webcompy/template/_parser.py` (explicit RCDATA handling for `textarea`/`title`, `CDATA_CONTENT_ELEMENTS` override) with unit tests
-- [ ] 3.4 Record the parity verdict (and pin, if applied) in the design doc's Open Questions section and the spec scenario outcomes
+- [x] 3.1 Add a unit-tier helper that renders a fixed set of version-sensitive templates (`<textarea>` with markup-like content, `<title>`, `<pre>`, charref edge cases, `<plaintext>`) via `render_template` and serializes the resulting tree for comparison
+- [x] 3.2 Add one E2E scenario (existing Playwright infra, appended to a suitable group) rendering the same template set in the browser and comparing against the server serialization
+- [x] 3.3 Run the parity check; if divergence is found, implement framework-side pinning in `webcompy/template/_parser.py` (explicit RCDATA handling for `textarea`/`title`, `CDATA_CONTENT_ELEMENTS` override) with unit tests
+- [x] 3.4 Record the parity verdict (and pin, if applied) in the design doc's Open Questions section and the spec scenario outcomes
 
 ## 4. Spec Documentation of Limitations
 

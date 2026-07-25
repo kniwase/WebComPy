@@ -537,3 +537,24 @@ class TestUnsupportedHoleExpression:
     def test_valid_hole_still_works(self):
         roots = parse_template("<p>{{ name }}</p>")
         assert len(roots) == 1
+
+
+class TestRcdataPinning:
+    def test_textarea_markup_parsed_as_text(self):
+        roots = parse_template("<div><textarea><b>x</b></textarea></div>")
+        div = roots[0]
+        textarea = div.children[0]
+        assert textarea.tag_name == "textarea"
+        assert len(textarea.children) == 1
+        text_node = textarea.children[0]
+        assert isinstance(text_node, TemplateText)
+        assert text_node.parts[0].text == "<b>x</b>"
+
+    def test_title_markup_parsed_as_text(self):
+        roots = parse_template("<div><title><b>y</b></title></div>")
+        title = roots[0].children[0]
+        assert title.tag_name == "title"
+        assert len(title.children) == 1
+        text_node = title.children[0]
+        assert isinstance(text_node, TemplateText)
+        assert text_node.parts[0].text == "<b>y</b>"

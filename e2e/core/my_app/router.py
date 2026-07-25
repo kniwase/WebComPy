@@ -9,6 +9,7 @@ from .pages.di_test import DiInjectPage, DiProviderWrapper
 from .pages.dict_repeat import DictRepeatPage
 from .pages.event import EventPage
 from .pages.home import HomePage
+from .pages.html_parser_parity import HtmlParserParityPage
 from .pages.keyed_repeat import KeyedRepeatPage
 from .pages.lifecycle import LifecyclePage
 from .pages.markdown_for import MarkdownForPage
@@ -46,6 +47,7 @@ router = Router(
     {"path": "/template-components", "component": TemplateComponentsPage},
     {"path": "/template-control-flow", "component": TemplateControlFlowPage},
     {"path": "/markdown-for", "component": MarkdownForPage},
+    {"path": "/html-parser-parity", "component": HtmlParserParityPage},
     default=NotFound,
     mode="history",
 )

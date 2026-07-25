@@ -210,7 +210,7 @@ jobs:
           - name: reactive-lists
             files: e2e/core/test_reactive.py e2e/core/test_repeat.py e2e/core/test_keyed_repeat.py e2e/core/test_dict_repeat.py
           - name: dynamic-control
-            files: e2e/core/test_nested_dynamic.py e2e/core/test_switch.py
+            files: e2e/core/test_nested_dynamic.py e2e/core/test_switch.py e2e/core/test_suspense.py
           - name: router
             files: e2e/core/test_router.py e2e/core/test_async_nav.py
           - name: interaction
@@ -224,7 +224,7 @@ jobs:
           - name: plugin-script
             files: e2e/core/test_eruda.py
           - name: template
-            files: e2e/core/test_template.py e2e/core/test_template_control_flow.py e2e/core/test_markdown_for.py
+            files: e2e/core/test_template.py e2e/core/test_template_components.py e2e/core/test_template_control_flow.py e2e/core/test_markdown_for.py e2e/core/test_html_parser_parity.py
         serving_mode: [prod, static]
         include:
           - group:
