@@ -11,6 +11,7 @@ def parser() -> DefaultMarkdownParser:
 
 
 class TestDefaultMarkdownParser:
+    @pytest.mark.gfm_deviation
     def test_headings_with_and_without_space(self, parser: DefaultMarkdownParser):
         source = "\n".join(
             [
@@ -24,14 +25,17 @@ class TestDefaultMarkdownParser:
         )
         assert parser.render(source) == ("<h1>One</h1><h2>Two</h2><h3>Three</h3><h4>Four</h4><h5>Five</h5><h6>Six</h6>")
 
+    @pytest.mark.gfm_deviation
     def test_paragraphs_join_lines_and_apply_inline_formatting(self, parser: DefaultMarkdownParser):
         source = "first line\nsecond line with **bold** and *italic*"
         assert parser.render(source) == "<p>first line second line with <strong>bold</strong> and <em>italic</em></p>"
 
+    @pytest.mark.gfm_deviation
     def test_unordered_lists_accept_both_markers(self, parser: DefaultMarkdownParser):
         source = "- one\n* two\n- three"
         assert parser.render(source) == "<ul><li>one</li><li>two</li><li>three</li></ul>"
 
+    @pytest.mark.gfm_deviation
     def test_ordered_lists_accept_both_markers(self, parser: DefaultMarkdownParser):
         source = "1. first\n2) second\n3. third"
         assert parser.render(source) == "<ol><li>first</li><li>second</li><li>third</li></ol>"
@@ -47,6 +51,7 @@ class TestDefaultMarkdownParser:
             "<ul><li>level four</li></ul></li></ol></li></ul></li></ul>"
         )
 
+    @pytest.mark.gfm_deviation
     def test_fenced_code_blocks_ignore_language_and_escape_content(self, parser: DefaultMarkdownParser):
         source = '```python\nif x < 2:\n    print("ok")\n```'
         assert parser.render(source) == ("<pre><code>if x &lt; 2:\n    print(&quot;ok&quot;)</code></pre>")
@@ -72,6 +77,7 @@ class TestDefaultMarkdownParser:
     def test_horizontal_rules(self, parser: DefaultMarkdownParser, rule: str):
         assert parser.render(rule) == "<hr>"
 
+    @pytest.mark.gfm_deviation
     def test_multiline_blockquotes_join_lines(self, parser: DefaultMarkdownParser):
         source = "> first line\n> second line"
         assert parser.render(source) == "<blockquote>first line second line</blockquote>"
@@ -110,6 +116,7 @@ class TestDefaultMarkdownParser:
             "<pre><code>&lt;code&gt;</code></pre>"
         )
 
+    @pytest.mark.gfm_deviation
     def test_source_is_dedented_and_tabs_use_two_spaces_for_lists(self, parser: DefaultMarkdownParser):
         source = """
             - parent

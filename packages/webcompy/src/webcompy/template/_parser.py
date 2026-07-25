@@ -212,6 +212,9 @@ def _restructure_directives(
     return result
 
 
+RCDATA_ELEMENTS = frozenset({"textarea", "title"})
+
+
 class TemplateTreeBuilder(HTMLParser):
     def __init__(self, source: str) -> None:
         super().__init__(convert_charrefs=True)
@@ -252,6 +255,8 @@ class TemplateTreeBuilder(HTMLParser):
         else:
             element = self._push_element(tag_lower, attr_specs)
             self._stack.append(element)
+        if tag_lower in RCDATA_ELEMENTS:
+            self.set_cdata_mode(tag_lower)
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         tag_lower = tag.lower()
