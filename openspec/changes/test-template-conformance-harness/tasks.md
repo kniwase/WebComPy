@@ -26,9 +26,9 @@
 
 ## 5. Verification
 
-- [ ] 5.1 `uv run ruff check .` and `uv run ruff format .` clean
-- [ ] 5.2 `uv run pyright` clean
-- [ ] 5.3 `uv run python -m pytest tests/ --tb=short` green (harness included; deviation marker selectable via `-m gfm_deviation`)
-- [ ] 5.4 Conformance rate captured in the PR description as the rewrite baseline
-- [ ] 5.5 `scripts/run-e2e-tests.sh <parity group>` green
-- [ ] 5.6 `openspec validate test-template-conformance-harness --strict` passes
+- [x] 5.1 `uv run ruff check .` and `uv run ruff format .` clean
+- [x] 5.2 `uv run pyright` clean
+- [x] 5.3 `uv run python -m pytest tests/ --tb=short` green (harness included; deviation marker selectable via `-m gfm_deviation`)
+- [x] 5.4 Conformance rate captured in the PR description as the rewrite baseline (16.2%, 109/672)
+- [x] 5.5 `scripts/run-e2e-tests.sh <parity group>` green (all 15 groups × 2 modes = 30 successes)
+- [x] 5.6 `openspec validate test-template-conformance-harness --strict` passes
