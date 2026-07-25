@@ -13,7 +13,7 @@
 
 #### Scenario: Known deviations scheduled for removal
 - **WHEN** the conformance suite runs against the current parser
-- **THEN** deviations including space-less ATX headings (`#hashtag` producing `<h1>`), ignored fenced-code info strings, tab normalization to 2 spaces, missing setext headings, and missing GFM extensions SHALL be tracked as scheduled for removal (not as accepted behavior)
+- **THEN** deviations including space-less ATX headings (`#hashtag` producing `<h1>`), ignored fenced-code info strings, tab normalization to 2 spaces, missing setext headings, paragraph line-joining (current parser joins lines with a space; GFM preserves the newline), mixed list-marker coalescing (current parser merges `-`/`*`/`+` and `1.`/`2)` into a single list; GFM splits them), blockquote multiline joining (current parser joins lines as inline text; GFM wraps them in `<p>`), and missing GFM extensions SHALL be tracked as scheduled for removal (not as accepted behavior)
 
 ### Requirement: GFM spec examples shall run as a parametrized test suite
 

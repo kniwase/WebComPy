@@ -9,8 +9,8 @@
 
 ## 2. Deviation Inventory
 
-- [ ] 2.1 Mark existing deviation-pinning tests in `tests/test_markdown_parser.py` (space-less headings, ignored fence language, tab→2-spaces, and any others found) with `pytest.mark.gfm_deviation`; register the marker in pytest config
-- [ ] 2.2 Record the full deviation list in the `markdown-conformance` spec (cross-check against the harness xfail list so every deviation maps to failing spec examples)
+- [x] 2.1 Mark existing deviation-pinning tests in `tests/test_markdown_parser.py` (space-less headings, ignored fence language, tab→2-spaces, and any others found) with `pytest.mark.gfm_deviation`; register the marker in pytest config
+- [x] 2.2 Record the full deviation list in the `markdown-conformance` spec (cross-check against the harness xfail list so every deviation maps to failing spec examples)
 
 ## 3. HTML Parser Environment Parity
 
