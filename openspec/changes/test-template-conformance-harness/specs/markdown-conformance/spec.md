@@ -37,7 +37,7 @@ The official GFM `spec.txt` SHALL be fetched on-demand (per the harness download
 
 ### Requirement: Conformance failures shall be tracked as strict xfails
 
-Every failing spec example SHALL be listed by number in a checked-in xfail list and marked with `pytest.mark.xfail(strict=True)`. An example that begins passing while still listed SHALL fail the suite until removed from the list, making conformance improvements explicit, reviewable diffs. A non-failing summary test SHALL report the current pass rate.
+Every failing spec example SHALL be listed by number in a checked-in xfail file (`tests/conformance/xfail.json`, which also records the pinned spec revision, SHA-256, baseline counts, and generation date) and marked with `pytest.mark.xfail(strict=True)`. An example that begins passing while still listed SHALL fail the suite until removed from the list, making conformance improvements explicit, reviewable diffs. A non-failing summary test SHALL report the current pass rate.
 
 #### Scenario: Improvement flips an xfail
 - **WHEN** a parser change makes a previously-failing example pass
@@ -47,6 +47,10 @@ Every failing spec example SHALL be listed by number in a checked-in xfail list 
 #### Scenario: Conformance rate visible
 - **WHEN** the conformance suite completes
 - **THEN** the current pass/total count SHALL be reported (e.g., via the summary test's output) without failing the suite
+
+#### Scenario: Spec revision pin integrity
+- **WHEN** the harness `SPEC_REVISION` (and `SPEC_SHA256`) constants are updated to a new cmark-gfm revision
+- **THEN** `xfail.json` SHALL also be regenerated against the new revision; if it still references the previous revision, the test suite SHALL fail with a clear mismatch error rather than silently mixing revisions (the strict-xfail numbers from the old revision would not correspond to the new example set)
 
 ### Requirement: Tests pinning GFM deviations shall be marked for retirement
 

@@ -1,20 +1,22 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
-SPEC_URL = "https://raw.githubusercontent.com/github/cmark-gfm/499789b49373bfa045d0e7547e5ee63444c77bca/test/spec.txt"
+SPEC_REVISION = "499789b49373bfa045d0e7547e5ee63444c77bca"
+SPEC_URL = f"https://raw.githubusercontent.com/github/cmark-gfm/{SPEC_REVISION}/test/spec.txt"
 SPEC_SHA256 = "7d8e5814befec287ac116786d81ff14e0adc9b13295b4494649e995408fd871c"
 SPEC_EXAMPLE_COUNT = 672
 
 CACHE_DIR = Path(__file__).parent / ".tmp"
 CACHE_PATH = CACHE_DIR / "gfm_spec.txt"
-XFAIL_PATH = Path(__file__).parent / "xfail.txt"
+XFAIL_JSON_PATH = Path(__file__).parent / "xfail.json"
 
 FENCE = "`" * 32
 EXAMPLE_START = FENCE + " example"
@@ -30,6 +32,17 @@ class SpecExample:
     section: str
     markdown: str
     expected_html: str
+
+
+@dataclass(frozen=True)
+class XfailData:
+    spec_revision: str
+    spec_sha256: str
+    baseline_passing: int
+    baseline_xfailing: int
+    baseline_total: int
+    generated_at: str
+    xfail_examples: set[int] = field(default_factory=set)
 
 
 def _download_spec(url: str) -> bytes:
@@ -123,16 +136,36 @@ def extract_examples(path: Path | None = None) -> list[SpecExample]:
     return examples
 
 
-def load_xfail_numbers(path: Path = XFAIL_PATH) -> set[int]:
+def _empty_xfail_data() -> XfailData:
+    return XfailData(
+        spec_revision=SPEC_REVISION,
+        spec_sha256=SPEC_SHA256,
+        baseline_passing=SPEC_EXAMPLE_COUNT,
+        baseline_xfailing=0,
+        baseline_total=SPEC_EXAMPLE_COUNT,
+        generated_at="",
+        xfail_examples=set(),
+    )
+
+
+def load_xfail_data(path: Path = XFAIL_JSON_PATH) -> XfailData:
     if not path.is_file():
-        return set()
-    numbers: set[int] = set()
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        stripped = raw.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        numbers.add(int(stripped))
-    return numbers
+        return _empty_xfail_data()
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    bl = raw["baseline"]
+    return XfailData(
+        spec_revision=raw["spec_revision"],
+        spec_sha256=raw["spec_sha256"],
+        baseline_passing=bl["passing"],
+        baseline_xfailing=bl["xfailing"],
+        baseline_total=bl["total"],
+        generated_at=raw.get("generated_at", ""),
+        xfail_examples=set(raw["xfail_examples"]),
+    )
+
+
+def load_xfail_numbers(path: Path | None = None) -> set[int]:
+    return load_xfail_data(path or XFAIL_JSON_PATH).xfail_examples
 
 
 def slugify(section: str) -> str:

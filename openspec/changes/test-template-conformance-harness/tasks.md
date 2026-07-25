@@ -5,7 +5,8 @@
 - [x] 1.1 Pin the official GFM `spec.txt` to a specific cmark-gfm commit (URL + SHA-256) as constants in `tests/conformance/_spec_examples.py`; implement on-demand download with SHA-256 verification and cache at `tests/conformance/.tmp/gfm_spec.txt` (gitignored). Fail with clear error when cache is missing AND network is unavailable.
 - [x] 1.2 Implement the example extractor (`tests/conformance/_spec_examples.py`): parse `example` fences into `(number, section, markdown, expected_html)` tuples; unit-test the extractor itself (counts, section names, edge cases)
 - [x] 1.3 Implement the parametrized pytest suite (`tests/conformance/test_gfm_spec.py`): one test per example running `DefaultMarkdownParser.render()`, comparison normalized only for trailing whitespace/newlines
-- [x] 1.4 Create the strict-xfail list mechanism (`tests/conformance/xfail.txt` + loader); mark every currently-failing example; add `test_gfm_conformance_rate` summary reporting pass/total without failing
+- [x] 1.4 Create the strict-xfail JSON file (`tests/conformance/xfail.json`) with `spec_revision`, `spec_sha256`, `baseline {passing, xfailing, total}`, `generated_at`, and `xfail_examples` array; add the `XfailData` dataclass + `load_xfail_data()` loader in `_spec_examples.py` (and keep `load_xfail_numbers()` as a backward-compatible wrapper); mark every currently-failing example in `xfail_examples`; add `test_gfm_conformance_rate` summary reporting pass/total without failing
+- [x] 1.5 Add xfail-data validation tests in `tests/conformance/test_spec_examples.py`: example numbers in `1..SPEC_EXAMPLE_COUNT`, `spec_revision` matches `SPEC_REVISION` constant, `spec_sha256` matches `SPEC_SHA256` constant, `baseline.total` equals `SPEC_EXAMPLE_COUNT`, `passing + xfailing == total`, and the examples array contains no duplicates
 
 ## 2. Deviation Inventory
 
