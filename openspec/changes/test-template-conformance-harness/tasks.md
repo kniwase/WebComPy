@@ -21,8 +21,8 @@
 
 ## 4. Spec Documentation of Limitations
 
-- [ ] 4.1 Verify each documented limitation against the actual code behavior (expression grammar, for-loop semantics, scoped-CSS dead rules/last-wins/dropped at-rules/global keyframes, SVG casing, dedent×pre, no `{# #}`, entity-decoded holes); adjust spec wording where reality differs
-- [ ] 4.2 Update `.opencode/agents/ci-review.md` file→spec mapping for the new `markdown-conformance` spec
+- [x] 4.1 Verify each documented limitation against the actual code behavior (expression grammar, for-loop semantics, scoped-CSS dead rules/last-wins/dropped at-rules/global keyframes, SVG casing, dedent×pre, no `{# #}`, entity-decoded holes); adjust spec wording where reality differs
+- [x] 4.2 Update `.opencode/agents/ci-review.md` file→spec mapping for the new `markdown-conformance` spec
 
 ## 5. Verification
 
