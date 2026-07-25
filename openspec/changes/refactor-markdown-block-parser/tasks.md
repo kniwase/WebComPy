@@ -21,7 +21,7 @@ stays green at every commit. Each A-task is one commit.
   (`incorporate_line`, `close_unmatched_blocks`, `add_child`, `finalize`) with
   document + paragraph only, and an HTML renderer for document/paragraph.
   Validate against the Paragraphs and Blank lines spec sections
-- [ ] A1 Port block_quote (first container; validates the continuation descent and
+- [x] A1 Port block_quote (first container; validates the continuation descent and
   lazy continuation). Validate against the Block quotes spec section
 - [ ] A2 Port ATX headings (space-required, closing sequences, 0-3 indent,
   7+ hashes rejected), setext headings (block-start conversion of the open

@@ -189,3 +189,33 @@ class TestDedent:
     def test_single_line_source_not_dedented(self) -> None:
         r = parse_blocks("    foo", lambda x: x)
         assert r.html == "<p>foo</p>"
+
+
+class TestBlockQuote:
+    def test_single_line(self) -> None:
+        r = parse_blocks("> foo", lambda x: x)
+        assert r.html == "<blockquote>\n<p>foo</p>\n</blockquote>"
+
+    def test_multi_line_with_markers(self) -> None:
+        r = parse_blocks("> foo\n> bar", lambda x: x)
+        assert r.html == "<blockquote>\n<p>foo\nbar</p>\n</blockquote>"
+
+    def test_lazy_continuation(self) -> None:
+        r = parse_blocks("> foo\nbar", lambda x: x)
+        assert r.html == "<blockquote>\n<p>foo\nbar</p>\n</blockquote>"
+
+    def test_nested_blockquotes(self) -> None:
+        r = parse_blocks("> > nested", lambda x: x)
+        assert r.html == ("<blockquote>\n<blockquote>\n<p>nested</p>\n</blockquote>\n</blockquote>")
+
+    def test_optional_space_after_marker(self) -> None:
+        r = parse_blocks(">foo", lambda x: x)
+        assert r.html == "<blockquote>\n<p>foo</p>\n</blockquote>"
+
+    def test_blockquote_after_paragraph(self) -> None:
+        r = parse_blocks("a\n\n> b", lambda x: x)
+        assert r.html == "<p>a</p>\n<blockquote>\n<p>b</p>\n</blockquote>"
+
+    def test_indented_blockquote_marker_not_recognized(self) -> None:
+        r = parse_blocks("    > foo", lambda x: x)
+        assert "> foo" in r.html

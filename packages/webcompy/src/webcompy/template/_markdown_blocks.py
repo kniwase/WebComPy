@@ -178,6 +178,50 @@ _register_block(
 )
 
 
+def _continue_block_quote(parser: _Parser, container: _Block) -> int:
+    ln = parser.current_line
+    if not parser.indented and peek(ln, parser.next_nonspace) == ">":
+        parser.advance_next_nonspace()
+        parser.advance_offset(1, False)
+        if is_space_or_tab(peek(ln, parser.offset)):
+            parser.advance_offset(1, True)
+    else:
+        return 1
+    return 0
+
+
+def _finalize_block_quote(parser: _Parser, block: _Block) -> None:
+    pass
+
+
+def _can_contain_block_quote(t: str) -> bool:
+    return t != "item"
+
+
+_register_block(
+    "block_quote",
+    continue_=_continue_block_quote,
+    finalize=_finalize_block_quote,
+    can_contain=_can_contain_block_quote,
+    accepts_lines=False,
+)
+
+
+def _start_block_quote(parser: _Parser, container: _Block) -> int:
+    if not parser.indented and peek(parser.current_line, parser.next_nonspace) == ">":
+        parser.advance_next_nonspace()
+        parser.advance_offset(1, False)
+        if is_space_or_tab(peek(parser.current_line, parser.offset)):
+            parser.advance_offset(1, True)
+        parser.close_unmatched_blocks()
+        parser.add_child("block_quote", parser.next_nonspace)
+        return 1
+    return 0
+
+
+BLOCK_STARTS.insert(0, _start_block_quote)
+
+
 def _parse_reference(content: str, refmap: dict[str, _LinkRef]) -> int:
     return 0
 
@@ -420,6 +464,9 @@ def _render(block: _Block, inline: Callable[[str], str]) -> str:
         if content.endswith("\n"):
             content = content[:-1]
         return "<p>" + inline(content) + "</p>"
+    if block.t == "block_quote":
+        inner = "\n".join(_render(c, inline) for c in block.children)
+        return "<blockquote>\n" + inner + "\n</blockquote>"
     raise NotImplementedError(f"unsupported block kind in render: {block.t}")
 
 
