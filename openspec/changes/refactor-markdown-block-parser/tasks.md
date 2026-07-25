@@ -11,7 +11,7 @@ stays green at every commit. Each A-task is one commit.
 
 ## Session A: block parser
 
-- [ ] A0 Read the reference material end-to-end before writing code: commonmark.py
+- [x] A0 Read the reference material end-to-end before writing code: commonmark.py
   `blocks.py` (driver, `BlockStarts`, `parse_list_marker`, tight/loose logic) and
   the spec.txt sections Tabs / Block quotes / List items / Lists / Appendix.
   Then create `webcompy/template/_markdown_blocks.py` with: the `_Block` model,
