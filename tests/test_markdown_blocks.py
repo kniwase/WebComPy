@@ -219,3 +219,60 @@ class TestBlockQuote:
     def test_indented_blockquote_marker_not_recognized(self) -> None:
         r = parse_blocks("    > foo", lambda x: x)
         assert "> foo" in r.html
+
+
+class TestATXHeading:
+    def test_h1_through_h6(self) -> None:
+        for i in range(1, 7):
+            r = parse_blocks("#" * i + " Title", lambda x: x)
+            assert r.html == f"<h{i}>Title</h{i}>"
+
+    def test_space_required(self) -> None:
+        r = parse_blocks("#hashtag", lambda x: x)
+        assert r.html == "<p>#hashtag</p>"
+
+    def test_seven_hashes_not_heading(self) -> None:
+        r = parse_blocks("####### foo", lambda x: x)
+        assert r.html == "<p>####### foo</p>"
+
+    def test_closing_hashes_stripped(self) -> None:
+        r = parse_blocks("## Title ##", lambda x: x)
+        assert r.html == "<h2>Title</h2>"
+
+    def test_trailing_whitespace_stripped(self) -> None:
+        r = parse_blocks("# foo   ", lambda x: x)
+        assert r.html == "<h1>foo</h1>"
+
+    def test_empty_heading(self) -> None:
+        r = parse_blocks("#", lambda x: x)
+        assert r.html == "<h1></h1>"
+
+
+class TestSetextHeading:
+    def test_h1_via_equals(self) -> None:
+        r = parse_blocks("Title\n===", lambda x: x)
+        assert r.html == "<h1>Title</h1>"
+
+    def test_h2_via_dashes(self) -> None:
+        r = parse_blocks("Title\n---", lambda x: x)
+        assert r.html == "<h2>Title</h2>"
+
+    def test_multi_line_setext(self) -> None:
+        r = parse_blocks("Foo\nbar\n---", lambda x: x)
+        assert r.html == "<h2>Foo\nbar</h2>"
+
+    def test_setext_not_thematic_break(self) -> None:
+        r = parse_blocks("Title\n---", lambda x: x)
+        assert r.html == "<h2>Title</h2>"
+        assert "<hr" not in r.html
+
+
+class TestThematicBreak:
+    @pytest.mark.parametrize("rule", ["---", "***", "___", "* * *", "- - -", "_ _ _"])
+    def test_thematic_break_variants(self, rule: str) -> None:
+        r = parse_blocks(rule, lambda x: x)
+        assert r.html == "<hr />"
+
+    def test_thematic_break_between_paragraphs(self) -> None:
+        r = parse_blocks("a\n\n---\n\nb", lambda x: x)
+        assert r.html == "<p>a</p>\n<hr />\n<p>b</p>"

@@ -23,7 +23,7 @@ stays green at every commit. Each A-task is one commit.
   Validate against the Paragraphs and Blank lines spec sections
 - [x] A1 Port block_quote (first container; validates the continuation descent and
   lazy continuation). Validate against the Block quotes spec section
-- [ ] A2 Port ATX headings (space-required, closing sequences, 0-3 indent,
+- [x] A2 Port ATX headings (space-required, closing sequences, 0-3 indent,
   7+ hashes rejected), setext headings (block-start conversion of the open
   paragraph, with link-ref resolution first), and thematic breaks (incl. spaced
   variants). Validate against ATX headings / Setext headings / Thematic breaks

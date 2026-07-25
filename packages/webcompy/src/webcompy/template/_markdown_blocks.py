@@ -222,6 +222,95 @@ def _start_block_quote(parser: _Parser, container: _Block) -> int:
 BLOCK_STARTS.insert(0, _start_block_quote)
 
 
+def _continue_heading(parser: _Parser, container: _Block) -> int:
+    return 1
+
+
+def _finalize_heading(parser: _Parser, block: _Block) -> None:
+    pass
+
+
+def _can_contain_heading(t: str) -> bool:
+    return False
+
+
+_register_block(
+    "heading",
+    continue_=_continue_heading,
+    finalize=_finalize_heading,
+    can_contain=_can_contain_heading,
+    accepts_lines=False,
+)
+
+
+def _continue_thematic_break(parser: _Parser, container: _Block) -> int:
+    return 1
+
+
+def _finalize_thematic_break(parser: _Parser, block: _Block) -> None:
+    pass
+
+
+def _can_contain_thematic_break(t: str) -> bool:
+    return False
+
+
+_register_block(
+    "thematic_break",
+    continue_=_continue_thematic_break,
+    finalize=_finalize_thematic_break,
+    can_contain=_can_contain_thematic_break,
+    accepts_lines=False,
+)
+
+
+def _start_atx_heading(parser: _Parser, container: _Block) -> int:
+    if not parser.indented:
+        m = reATXHeadingMarker.search(parser.current_line[parser.next_nonspace :])
+        if m:
+            parser.advance_next_nonspace()
+            parser.advance_offset(len(m.group()), False)
+            parser.close_unmatched_blocks()
+            heading = parser.add_child("heading", parser.next_nonspace)
+            heading.level = len(m.group().strip())
+            text = parser.current_line[parser.offset :]
+            text = re.sub(r"^[ \t]*#+[ \t]*$", "", text)
+            text = re.sub(r"[ \t]+#+[ \t]*$", "", text)
+            heading.string_content = text.strip()
+            parser.advance_offset(len(parser.current_line) - parser.offset, False)
+            return 2
+    return 0
+
+
+def _start_setext_heading(parser: _Parser, container: _Block) -> int:
+    if not parser.indented and container.t == "paragraph":
+        m = reSetextHeadingLine.search(parser.current_line[parser.next_nonspace :])
+        if m:
+            parser.close_unmatched_blocks()
+            if container.string_content:
+                container.t = "heading"
+                container.level = 1 if m.group()[0] == "=" else 2
+                parser.tip = container
+                parser.advance_offset(len(parser.current_line) - parser.offset, False)
+                return 2
+            return 0
+    return 0
+
+
+def _start_thematic_break(parser: _Parser, container: _Block) -> int:
+    if not parser.indented and reThematicBreak.search(parser.current_line[parser.next_nonspace :]):
+        parser.close_unmatched_blocks()
+        parser.add_child("thematic_break", parser.next_nonspace)
+        parser.advance_offset(len(parser.current_line) - parser.offset, False)
+        return 2
+    return 0
+
+
+BLOCK_STARTS.append(_start_atx_heading)
+BLOCK_STARTS.append(_start_setext_heading)
+BLOCK_STARTS.append(_start_thematic_break)
+
+
 def _parse_reference(content: str, refmap: dict[str, _LinkRef]) -> int:
     return 0
 
@@ -467,6 +556,13 @@ def _render(block: _Block, inline: Callable[[str], str]) -> str:
     if block.t == "block_quote":
         inner = "\n".join(_render(c, inline) for c in block.children)
         return "<blockquote>\n" + inner + "\n</blockquote>"
+    if block.t == "heading":
+        content = block.string_content
+        if content.endswith("\n"):
+            content = content[:-1]
+        return f"<h{block.level}>{inline(content)}</h{block.level}>"
+    if block.t == "thematic_break":
+        return "<hr />"
     raise NotImplementedError(f"unsupported block kind in render: {block.t}")
 
 
