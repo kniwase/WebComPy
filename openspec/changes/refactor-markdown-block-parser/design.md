@@ -74,6 +74,20 @@ At list-item finalization, a leading `[ ]`/`[x]`/`[X]` marker (per GFM rules: af
 
 Block Phase 1 must recognize and *absorb* link reference definition paragraphs (they produce no output). The parsed table is stored on the parse result so the inline rewrite can resolve reference links; this change only guarantees definitions no longer leak into output as paragraph text.
 
+### D11. `textwrap.dedent` is applied to multi-line sources only
+
+`textwrap.dedent` on a single-line source strips *all* leading whitespace (the whole prefix is "common"), which destroys conformance-relevant indentation (`"\tfoo"` → `"foo"`). This is also one of the mechanisms by which the old parser corrupted tabs. Therefore: `render()`/the block parser applies `textwrap.dedent` **only when the source contains a newline**; single-line sources are parsed as-is. The delta spec scenario wording ("`textwrap.dedent` SHALL be applied to the source before parsing") SHALL be amended at spec-sync time to reflect this.
+
+### D12. Implementation strategy: structural port of the reference block parser
+
+The block layer SHALL be implemented as a **structural port of the reference two-phase algorithm** (the CommonMark appendix strategy, as embodied by commonmark.js / commonmark.py `blocks.py`), not written from memory or as a custom variant. Concretely:
+
+- Read the reference implementation (`commonmark.py` `blocks.py`, ~600 lines — https://github.com/readthedocs/commonmark.py/blob/master/commonmark/blocks.py, fetchable read-only via web_fetch) and the vendored `spec.txt` prose sections (Tabs, Block quotes, List items, Lists, Appendix) **before writing code**. An earlier implementation attempt that drafted the driver from memory produced two discarded drafts; that approach is explicitly rejected.
+- Port the structure: `Parser.incorporate_line` (continuation descent → lazy continuation → block-start priority loop → line incorporation), per-kind `continue_`/`finalize`/`can_contain` operations, `parse_list_marker` (W+N padding rules), `lists_match`, `ends_with_blank_line`-based tight/loose determination, and the `advance_offset`/`find_next_nonspace` cursor with partial tabs. Port the *structure and rules*, not verbatim code; adapt to the WebComPy `_Block` model and the narrow inline seam (D3).
+- commonmark.py lacks GFM extensions: tables (D6) and task list items (D7) are added on top per their spec.txt examples. Its HTML-block type 1 lacks `textarea` (older spec) — use the GFM `spec.txt` tag lists instead.
+- Validation is example-driven: after each block kind lands, run the matching spec.txt section through the conformance harness and confirm the expected flips before proceeding.
+- The reference's NUL-replacement (`\0` → U+FFFD) is ported as-is (input sanitization).
+
 ## Risks / Trade-offs
 
 - [Big-bang rewrite of the block layer regresses template integration] → The conformance suite + existing `test_markdown*.py` + `webcompy generate` on docs_app form the regression net; integration tests run before and after.

@@ -1,40 +1,102 @@
 # Tasks: refactor-markdown-block-parser
 
-## 1. Foundations
+Implementation strategy (per design D12): the block layer is a **structural port**
+of the reference two-phase algorithm (commonmark.py `blocks.py` + the appendix and
+prose sections of the vendored `tests/conformance/.tmp/gfm_spec.txt`). Do NOT draft
+the driver from memory. After each block kind lands, run the matching spec section
+through the conformance harness and confirm expected flips before proceeding.
 
-- [ ] 1.1 Create `webcompy/template/_markdown_blocks.py` with the block tree model (container/leaf node types) and the `(offset, column)` cursor with CommonMark tab advancement incl. partial tabs; unit-test tab math against spec tab examples
-- [ ] 1.2 Implement the open-block stack driver (continuation checks → block-start priority → line incorporation → lazy continuation → bottom-up finalization) per the CommonMark appendix algorithm
+Until task A10 the new module is NOT wired into `DefaultMarkdownParser`; the repo
+stays green at every commit. Each A-task is one commit.
 
-## 2. Leaf Blocks
+## Session A: block parser
 
-- [ ] 2.1 ATX headings (space-required, closing sequences, 0-3 indent) — flip corresponding xfails
-- [ ] 2.2 Thematic breaks incl. spaced variants; setext headings via paragraph finalization — flip xfails; remove `gfm_deviation` heading tests
-- [ ] 2.3 Fenced code (``` and `~~~`, info string → `class="language-*"`, closing-length/char rules, tab preservation) — flip xfails; remove deviation tests
-- [ ] 2.4 Indented code blocks (4-column rule, interruption rules, blank-line handling) — flip xfails
-- [ ] 2.5 HTML blocks (all 7 types, spec end conditions, multi-line comments/declarations) — flip xfails
-- [ ] 2.6 Link reference definitions (parse + absorb, retain table on parse result) — flip xfails
+- [ ] A0 Read the reference material end-to-end before writing code: commonmark.py
+  `blocks.py` (driver, `BlockStarts`, `parse_list_marker`, tight/loose logic) and
+  the spec.txt sections Tabs / Block quotes / List items / Lists / Appendix.
+  Then create `webcompy/template/_markdown_blocks.py` with: the `_Block` model,
+  the `(offset, column, next_nonspace, indent, blank, partially_consumed_tab)`
+  cursor (`advance_offset` / `find_next_nonspace` / `advance_next_nonspace` /
+  `add_line` incl. partial tabs and NUL replacement), the `Parser` driver
+  (`incorporate_line`, `close_unmatched_blocks`, `add_child`, `finalize`) with
+  document + paragraph only, and an HTML renderer for document/paragraph.
+  Validate against the Paragraphs and Blank lines spec sections
+- [ ] A1 Port block_quote (first container; validates the continuation descent and
+  lazy continuation). Validate against the Block quotes spec section
+- [ ] A2 Port ATX headings (space-required, closing sequences, 0-3 indent,
+  7+ hashes rejected), setext headings (block-start conversion of the open
+  paragraph, with link-ref resolution first), and thematic breaks (incl. spaced
+  variants). Validate against ATX headings / Setext headings / Thematic breaks
+- [ ] A3 Port indented code blocks (4-column rule, paragraph-interruption rule,
+  blank-line handling) and verify tab behavior end-to-end (partial tabs in
+  container and code contexts). Validate against Indented code blocks and Tabs
+- [ ] A4 Port lists and list items: `parse_list_marker` (W+N padding rules,
+  paragraph-interruption rules: ordered must start with 1, empty first item may
+  not interrupt), `lists_match` (bullet char / ordered delimiter consistency,
+  `<ol start="N">` when N != 1), tight/loose via `ends_with_blank_line`, block
+  children inside items. This is the largest task; port the reference logic
+  without simplification. Validate against List items / Lists / Precedence
+- [ ] A5 Port fenced code blocks (``` and ~~~, backtick-fence info may not contain
+  a backtick, closing fence same char and >= opening length, fence offset
+  stripping with partial tabs, info string first word entity-decoded →
+  `class="language-*"`, closing fence returns the continue_=2 early exit).
+  Validate against Fenced code blocks
+- [ ] A6 Port HTML blocks: all seven GFM types (type 1 includes `textarea` per
+  GFM spec.txt; type 6 tag list transcribed from spec.txt; type 7 may not
+  interrupt a paragraph; types 1-5 end on their close condition checked after
+  add_line; types 6-7 end on blank line). Validate against HTML blocks
+- [ ] A7 Implement link reference definition parsing in the block layer
+  (label/destination/title grammar incl. multi-line titles, first-definition-wins,
+  absorption removes them from paragraph output) and retain the table on the
+  parse result for the inline rewrite. Validate against Link reference definitions
+- [ ] A8 Add GFM tables: at paragraph finalization, second line is a valid
+  delimiter row (cells = trimmed `:?-+:?`, cell count equals header count) →
+  convert to a table block; row splitting on unescaped pipes (`\|` skipped);
+  excess cells dropped, missing cells filled empty; alignment emitted as
+  `align="left|center|right"` per delimiter colons; no `<tbody>` when no body
+  rows. Validate against Tables (extension)
+- [ ] A9 Add GFM task list items: at list-item finalization, a leading
+  `[ ]`/`[x]`/`[X]` marker followed by whitespace is stripped from the first
+  paragraph and recorded; rendering emits
+  `<input checked="" disabled="" type="checkbox"> ` (checked only when set;
+  cmark-gfm attribute order, no self-closing slash) at the start of the item's
+  first paragraph content. Validate against Task list items (extension)
+- [ ] A10 Switch `DefaultMarkdownParser.render()` to the new module (dedent
+  multi-line sources only, per D11; move `_inline` behind the narrow seam).
+  Then flip the conformance xfails: run the suite, remove every XPASS number
+  from `tests/conformance/xfail.json`, keep `baseline` counts consistent
+  (`xfailing == len(xfail_examples)`, `passing + xfailing == 672`), add a
+  `notes` field mapping remaining block-section xfail numbers to inline-cause
+  explanations (loader + `test_gfm_spec.py` reason + a validation test that
+  every block-section xfail has a note). Update `tests/test_markdown_parser.py`
+  expectations to cmark-gfm emission (incl. `<hr />`, newline-joined blocks,
+  blockquote `<p>` wrapping, multi-line component tags now escaped paragraphs)
+  and remove the retired `gfm_deviation` block tests. Investigate any
+  previously-passing example that regresses before considering an xfail addition
 
-## 3. Containers
+## Session B: integration and verification
 
-- [ ] 3.1 Blockquotes (nesting, lazy continuation, inner block elements) — flip xfails
-- [ ] 3.2 Lists and list items (marker consistency, start numbers, tight/loose, block children, indentation rules) — flip xfails
-- [ ] 3.3 GFM task list items (static checkbox emission, GFM marker rules) — flip xfails
-- [ ] 3.4 GFM tables (delimiter-row detection at paragraph finalization, alignment, cell-count rules, cell inline rendering via carried-over inline layer) — flip xfails
-
-## 4. Integration
-
-- [ ] 4.1 Rewire `DefaultMarkdownParser.render()` as facade: dedent → block parse → inline render of leaf content (existing inline code behind a narrow seam) → HTML emission
-- [ ] 4.2 Re-point `_markdown_for._is_list_body` at the block parser's list-item start condition (single source of truth); decide + test task-list bodies in `{% for %}` (design open question 2)
-- [ ] 4.3 Re-verify `MarkdownForElement` end-to-end (`test_markdown_for.py` green; merged `<ul>`/`<ol>` output identical; `{% if %}` static evaluation per item preserved)
-- [ ] 4.4 Verify `{{ }}`/`{% %}` code protection still holds for fenced and indented code (tests from fix-template-engine-defects stay green)
-- [ ] 4.5 Deep-nesting stress test (blockquotes/lists ~100 levels) proving iterative (non-recursive) operation
-
-## 5. Cleanup & Verification
-
-- [ ] 5.1 Remove all retired `gfm_deviation` block tests; confirm `pytest -m gfm_deviation` selects only remaining inline deviations
-- [ ] 5.2 Confirm every remaining block-section xfail carries an inline-cause note (spec scenario: block xfails flipped)
-- [ ] 5.3 `uv run ruff check .`, `uv run ruff format .`, `uv run pyright` clean
-- [ ] 5.4 `uv run python -m pytest tests/ --tb=short` green; conformance rate recorded in PR
-- [ ] 5.5 `uv run python -m webcompy generate` on docs_app succeeds; spot-check Markdown-using pages
-- [ ] 5.6 Update `.opencode/agents/ci-review.md` if invariants changed (e.g., block-parser contracts)
-- [ ] 5.7 `openspec validate refactor-markdown-block-parser --strict` passes
+- [ ] B1 Re-point `_markdown_for._is_list_body` at the ported list-marker matcher
+  (single source of truth) with `textwrap.dedent` applied to the body BEFORE
+  matching (pre-dedent template sources must still detect); extend
+  `_protected_spans`' fence detection to `~~~`; add a test that task-list bodies
+  (`- [ ] {{ item }}`) are detected as list bodies (design open question 2: yes)
+- [ ] B2 Re-verify `MarkdownForElement` end-to-end (`test_markdown_for.py` green;
+  merged `<ul>`/`<ol>` structure identical; per-item static `{% if %}` preserved)
+  and verify `{{ }}`/`{% %}` code protection still holds for fenced and indented
+  code (`TestMarkdownCodeBlockTemplateProtection` stays green)
+- [ ] B3 Deep-nesting stress test (blockquotes/lists ~100 levels) proving
+  iterative (non-recursive) driver operation within Python/Pyodide stack limits
+- [ ] B4 `uv run ruff check .`, `uv run ruff format .`, `uv run pyright` clean;
+  `uv run python -m pytest tests/ --tb=short` green; conformance rate recorded
+  for the PR; check `.opencode/agents/ci-review.md` invariants (expected: no
+  change needed — markdown internals only)
+- [ ] B5 `uv run python -m webcompy generate` on docs_app succeeds
+- [ ] B6 Run every E2E group SEQUENTIALLY, one at a time (never `--parallel`):
+  `scripts/run-e2e-tests.sh bootstrap-static`, `components`, `reactive-lists`,
+  `dynamic-control`, `router`, `interaction`, `bundled-deps`, `runtime-local`,
+  `standalone`, `plugin-script`, `template`, `docs-home`, `docs-demos`,
+  `docs-matplotlib`, `docs-fetch` — all must pass
+- [ ] B7 `openspec validate refactor-markdown-block-parser --strict` passes; run
+  the openspec-verify-change skill and report findings (spec sync and archive
+  are explicitly out of scope, per user instruction)
