@@ -87,7 +87,7 @@ stays green at every commit. Each A-task is one commit.
   code (`TestMarkdownCodeBlockTemplateProtection` stays green)
 - [x] B3 Deep-nesting stress test (blockquotes/lists ~100 levels) proving
   iterative (non-recursive) driver operation within Python/Pyodide stack limits
-- [ ] B4 `uv run ruff check .`, `uv run ruff format .`, `uv run pyright` clean;
+- [x] B4 `uv run ruff check .`, `uv run ruff format .`, `uv run pyright` clean;
   `uv run python -m pytest tests/ --tb=short` green; conformance rate recorded
   for the PR; check `.opencode/agents/ci-review.md` invariants (expected: no
   change needed — markdown internals only)
