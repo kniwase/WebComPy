@@ -45,7 +45,7 @@ stays green at every commit. Each A-task is one commit.
   GFM spec.txt; type 6 tag list transcribed from spec.txt; type 7 may not
   interrupt a paragraph; types 1-5 end on their close condition checked after
   add_line; types 6-7 end on blank line). Validate against HTML blocks
-- [ ] A7 Implement link reference definition parsing in the block layer
+- [x] A7 Implement link reference definition parsing in the block layer
   (label/destination/title grammar incl. multi-line titles, first-definition-wins,
   absorption removes them from paragraph output) and retain the table on the
   parse result for the inline rewrite. Validate against Link reference definitions

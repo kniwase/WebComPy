@@ -383,3 +383,31 @@ class TestHtmlBlock:
     def test_type_1_pre_block(self) -> None:
         r = parse_blocks("<pre>\n*foo*\n</pre>", lambda x: x)
         assert r.html == "<pre>\n*foo*\n</pre>"
+
+
+class TestLinkReferenceDef:
+    def test_simple_definition_absorbed(self) -> None:
+        r = parse_blocks("[foo]: /url\n\n[foo]", lambda x: x)
+        assert "<p>[foo]: /url</p>" not in r.html
+
+    def test_definition_registered_in_refmap(self) -> None:
+        result = parse_blocks("[foo]: /url", lambda x: x)
+        assert "foo" in result.link_refs
+        assert result.link_refs["foo"].destination == "/url"
+
+    def test_paragraph_with_only_def_is_removed(self) -> None:
+        r = parse_blocks("[foo]: /url", lambda x: x)
+        assert r.html == ""
+
+    def test_def_with_title(self) -> None:
+        result = parse_blocks('[foo]: /url "title"', lambda x: x)
+        assert result.link_refs["foo"].title == "title"
+
+    def test_only_definitions_at_start_paragraph(self) -> None:
+        r = parse_blocks("[a]: /1\n[b]: /2\n\n[a][b]", lambda x: x)
+        assert "<p>[a]:" not in r.html
+
+    def test_mixed_def_and_prose(self) -> None:
+        r = parse_blocks("[foo]: /url\n\nSome text", lambda x: x)
+        assert "Some text" in r.html
+        assert "[foo]: /url" not in r.html

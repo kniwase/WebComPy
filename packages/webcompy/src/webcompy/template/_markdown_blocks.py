@@ -166,7 +166,15 @@ def _continue_paragraph(parser: _Parser, container: _Block) -> int:
 
 
 def _finalize_paragraph(parser: _Parser, block: _Block) -> None:
-    pass
+    content = block.string_content
+    while True:
+        consumed = _parse_reference(content, parser.refmap)
+        if not consumed:
+            break
+        content = content[consumed:]
+    block.string_content = content
+    if not content.strip() and block.parent is not None:
+        block.parent.children.remove(block)
 
 
 def _can_contain_paragraph(t: str) -> bool:
@@ -617,8 +625,132 @@ BLOCK_STARTS.insert(BLOCK_STARTS.index(_start_setext_heading) + 1, _start_html_b
 BLOCK_STARTS.insert(BLOCK_STARTS.index(_start_indented_code_block), _start_list_item)
 
 
+def _unescape_string(text: str) -> str:
+    out: list[str] = []
+    i = 0
+    while i < len(text):
+        c = text[i]
+        if c == "\\" and i + 1 < len(text) and text[i + 1] in r"\\\"'`":
+            out.append(text[i + 1])
+            i += 2
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def _percent_encode(text: str) -> str:
+    return "".join(f"%{ord(c):02X}" if not _UNRESERVED_RE.match(c) else c for c in text)
+
+
+_UNRESERVED_RE = re.compile(r"[A-Za-z0-9._~:!$&'()*+,;=/@?#%]")
+
+
+_LINK_DEST_VALID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+
+
+def _normalize_uri(uri: str) -> str:
+    return _percent_encode(uri) if not _LINK_DEST_VALID_RE.match(uri) else uri
+
+
+def _normalize_label(raw: str) -> str:
+    text = _unescape_string(raw)
+    text = text.replace("\n", " ")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text.casefold()
+
+
 def _parse_reference(content: str, refmap: dict[str, _LinkRef]) -> int:
-    return 0
+    if not content or content[0] != "[":
+        return 0
+    m = re.match(r"\[((?:\\.|[^\[\]])*)\]", content, re.DOTALL)
+    if m is None:
+        return 0
+    label_raw = m.group(1)
+    label = _normalize_label(label_raw)
+    if not label:
+        return 0
+    pos = m.end()
+    ws = _consume_whitespace(content, pos)
+    pos += ws
+    if pos >= len(content) or content[pos] != ":":
+        return 0
+    pos += 1
+    ws = _consume_whitespace(content, pos)
+    pos += ws
+    destination = ""
+    consumed_dest = 0
+    if pos < len(content) and content[pos] == "<":
+        m2 = re.match(r"<(.*?)>", content[pos:], re.DOTALL)
+        if m2 is None:
+            return 0
+        destination = m2.group(1)
+        consumed_dest = m2.end()
+    else:
+        depth = 0
+        end = 0
+        i = pos
+        while i < len(content):
+            c = content[i]
+            if c == "\\" and i + 1 < len(content):
+                i += 2
+                end = i
+                continue
+            if c == "(":
+                depth += 1
+            elif c == ")":
+                if depth == 0:
+                    break
+                depth -= 1
+            elif c in " \t\n":
+                break
+            i += 1
+            end = i
+        if depth != 0 or end == pos:
+            return 0
+        destination = content[pos:end]
+        consumed_dest = end - pos
+    pos += consumed_dest
+    ws = _consume_whitespace(content, pos)
+    pos += ws
+    if pos >= len(content):
+        pos_after_title = pos
+    else:
+        c = content[pos]
+        title = ""
+        consumed_title = 0
+        if c == '"':
+            m2 = re.match(r'"((?:\\.|[^"\\])*)"', content[pos:], re.DOTALL)
+            if m2 is None:
+                return 0
+            title = m2.group(1)
+            consumed_title = m2.end()
+        elif c == "'":
+            m2 = re.match(r"'((?:\\.|[^'\\])*)'", content[pos:], re.DOTALL)
+            if m2 is None:
+                return 0
+            title = m2.group(1)
+            consumed_title = m2.end()
+        elif c == "(":
+            m2 = re.match(r"\(((?:\\.|[^()\\])*)\)", content[pos:], re.DOTALL)
+            if m2 is None:
+                return 0
+            title = m2.group(1)
+            consumed_title = m2.end()
+        pos_after_title = pos + consumed_title
+    if label and label not in refmap:
+        refmap[label] = _LinkRef(
+            destination=_normalize_uri(_unescape_string(destination)),
+            title=_unescape_string(title),
+        )
+    return pos_after_title
+
+
+def _consume_whitespace(content: str, pos: int) -> int:
+    n = 0
+    while pos + n < len(content) and content[pos + n] in (" ", "\t"):
+        n += 1
+    return n
 
 
 class _Parser:
