@@ -3,9 +3,11 @@ from __future__ import annotations
 import html
 import re
 import uuid
+from collections.abc import Callable
 
 from webcompy.ports._markdown import MarkdownPort
 from webcompy.template._holes import protect_lbrace
+from webcompy.template._markdown_blocks import _ParseResult
 from webcompy.template._markdown_blocks import parse_blocks as _parse_blocks_module
 
 _CODE_RE = re.compile(r"`([^`\n]+)`")
@@ -81,7 +83,7 @@ def _render_inline(text: str) -> str:
     return result
 
 
-def _render_blocks(source: str, inline):
+def _render_blocks(source: str, inline: Callable[[str], str]) -> _ParseResult:
     return _parse_blocks_module(source, inline)
 
 

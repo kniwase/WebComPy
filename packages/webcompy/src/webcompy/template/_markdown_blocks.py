@@ -100,6 +100,7 @@ class _Block:
     task_checked: bool | None = None
     alignments: list[str] = dataclasses.field(default_factory=list)
     header: list[str] = dataclasses.field(default_factory=list)
+    lines: list[str] = dataclasses.field(default_factory=list)
 
     @property
     def last_child(self) -> _Block | None:
@@ -178,8 +179,6 @@ def _finalize_paragraph(parser: _Parser, block: _Block) -> None:
         return
     if _try_convert_to_table(block):
         return
-    if not content.strip() and block.parent is not None:
-        pass
 
 
 _ALIGNMENT_RE = re.compile(r"^\s*:?-+:?\s*$")
@@ -237,7 +236,6 @@ def _try_convert_to_table(block: _Block) -> bool:
     ncols = len(header)
     if len(aligns) != ncols:
         return False
-    [_split_row(rl) for rl in body_lines]
     block.t = "table"
     block.string_content = ""
     block.lines = body_lines
@@ -707,8 +705,6 @@ def _start_fenced_code_block(parser: _Parser, container: _Block) -> int:
         code.fence_offset = parser.indent
         parser.advance_next_nonspace()
         parser.advance_offset(fence_length, False)
-        info = parser.current_line[parser.offset :].strip()
-        code.info = info
         return 2
     return 0
 
