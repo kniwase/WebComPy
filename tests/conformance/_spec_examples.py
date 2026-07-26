@@ -106,8 +106,17 @@ def extract_examples(path: Path | None = None) -> list[SpecExample]:
     buffer: list[str] = []
 
     def emit() -> None:
-        joined = "\n".join(buffer)
-        markdown, _, expected_html = joined.partition("\n.\n")
+        sep_index: int | None = None
+        for i, line in enumerate(buffer):
+            if line == ".":
+                sep_index = i
+                break
+        if sep_index is None:
+            markdown = "\n".join(buffer)
+            expected_html = ""
+        else:
+            markdown = "\n".join(buffer[:sep_index])
+            expected_html = "\n".join(buffer[sep_index + 1 :])
         examples.append(
             SpecExample(
                 number=len(examples) + 1,
