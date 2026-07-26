@@ -2,8 +2,8 @@
   "spec_revision": "499789b49373bfa045d0e7547e5ee63444c77bca",
   "spec_sha256": "7d8e5814befec287ac116786d81ff14e0adc9b13295b4494649e995408fd871c",
   "baseline": {
-    "passing": 373,
-    "xfailing": 299,
+    "passing": 376,
+    "xfailing": 296,
     "total": 672
   },
   "generated_at": "2026-07-26",
@@ -36,8 +36,6 @@
     173,
     174,
     175,
-    176,
-    177,
     178,
     179,
     183,
@@ -45,7 +43,6 @@
     185,
     186,
     187,
-    188,
     196,
     217,
     218,
