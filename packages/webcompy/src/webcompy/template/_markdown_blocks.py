@@ -175,6 +175,75 @@ def _finalize_paragraph(parser: _Parser, block: _Block) -> None:
     block.string_content = content
     if not content.strip() and block.parent is not None:
         block.parent.children.remove(block)
+        return
+    if _try_convert_to_table(block):
+        return
+    if not content.strip() and block.parent is not None:
+        pass
+
+
+_ALIGNMENT_RE = re.compile(r"^\s*:?-+:?\s*$")
+_DELIMITER_CELL_RE = re.compile(r"[: ]+")
+
+
+def _parse_alignments(delimiter_line: str) -> list[str] | None:
+    raw = delimiter_line.strip()
+    if raw.startswith("|"):
+        raw = raw[1:]
+    if raw.endswith("|") and not raw.endswith(r"\|"):
+        raw = raw[:-1]
+    cells = [c.strip() for c in re.split(r"(?<!\\)\|", raw)]
+    if not cells or any(not _ALIGNMENT_RE.match(c) for c in cells):
+        return None
+    aligns: list[str] = []
+    for cell in cells:
+        left = cell.startswith(":")
+        right = cell.endswith(":")
+        if left and right:
+            aligns.append("center")
+        elif right:
+            aligns.append("right")
+        elif left:
+            aligns.append("left")
+        else:
+            aligns.append("")
+    return aligns
+
+
+def _split_row(row: str) -> list[str]:
+    text = row.strip()
+    if text.startswith("|"):
+        text = text[1:]
+    if text.endswith("|") and not text.endswith(r"\|"):
+        text = text[:-1]
+    return [c.strip().replace(r"\|", "|") for c in re.split(r"(?<!\\)\|", text)]
+
+
+def _try_convert_to_table(block: _Block) -> bool:
+    lines = block.string_content.split("\n")
+    if block.string_content.endswith("\n"):
+        lines = lines[:-1]
+    if len(lines) < 2:
+        return False
+    header_line = lines[0]
+    delimiter_line = lines[1]
+    body_lines = lines[2:]
+    if "|" not in header_line:
+        return False
+    aligns = _parse_alignments(delimiter_line)
+    if aligns is None:
+        return False
+    header = _split_row(header_line)
+    ncols = len(header)
+    if len(aligns) != ncols:
+        return False
+    [_split_row(rl) for rl in body_lines]
+    block.t = "table"
+    block.string_content = ""
+    block.lines = body_lines
+    block.header = header
+    block.alignments = aligns
+    return True
 
 
 def _can_contain_paragraph(t: str) -> bool:
@@ -1009,6 +1078,8 @@ def _render(block: _Block, inline: Callable[[str], str], *, tight: bool = False)
         return f"<pre><code{cls}>{content}</code></pre>"
     if t == "html_block":
         return block.literal
+    if t == "table":
+        return _render_table(block, inline)
     if t == "list":
         ld = block.list_data or {}
         list_tight = bool(ld.get("tight", True))
@@ -1034,6 +1105,35 @@ def _render(block: _Block, inline: Callable[[str], str], *, tight: bool = False)
         rendered = "\n".join(_render(c, inline, tight=tight) for c in children)
         return f"<li>\n{rendered}\n</li>"
     raise NotImplementedError(f"unsupported block kind in render: {t}")
+
+
+def _render_table(block: _Block, inline: Callable[[str], str]) -> str:
+    header = block.header
+    aligns = block.alignments
+    body_lines = block.lines
+    ncols = len(header)
+
+    def attr_for(i: int) -> str:
+        if i < len(aligns) and aligns[i]:
+            return f' align="{aligns[i]}"'
+        return ""
+
+    head_cells = "\n".join(f"<th{attr_for(i)}>{inline(header[i])}</th>" for i in range(ncols))
+    head = f"<tr>\n{head_cells}\n</tr>"
+
+    body_trs: list[str] = []
+    for row_line in body_lines:
+        row_cells = _split_row(row_line)
+        if len(row_cells) < ncols:
+            row_cells = row_cells + [""] * (ncols - len(row_cells))
+        elif len(row_cells) > ncols:
+            row_cells = row_cells[:ncols]
+        cell_strs = "\n".join(f"<td{attr_for(i)}>{inline(row_cells[i])}</td>" for i in range(ncols))
+        body_trs.append(f"<tr>\n{cell_strs}\n</tr>")
+
+    if body_trs:
+        return "<table>\n<thead>\n" + head + "\n</thead>\n<tbody>\n" + "\n".join(body_trs) + "\n</tbody>\n</table>"
+    return "<table>\n<thead>\n" + head + "\n</thead>\n</table>"
 
 
 def parse_blocks(

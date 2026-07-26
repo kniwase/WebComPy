@@ -411,3 +411,36 @@ class TestLinkReferenceDef:
         r = parse_blocks("[foo]: /url\n\nSome text", lambda x: x)
         assert "Some text" in r.html
         assert "[foo]: /url" not in r.html
+
+
+class TestTable:
+    def test_simple_table(self) -> None:
+        r = parse_blocks(
+            "| foo | bar |\n| --- | --- |\n| baz | bim |",
+            lambda x: x,
+        )
+        assert "<table>" in r.html
+        assert "<th>foo</th>" in r.html
+        assert "<td>baz</td>" in r.html
+
+    def test_alignment_marks(self) -> None:
+        r = parse_blocks(
+            "| a | b |\n:-: | ---:|\nx | y",
+            lambda x: x,
+        )
+        assert 'align="center"' in r.html
+        assert 'align="right"' in r.html
+
+    def test_mismatched_cell_count_is_paragraph(self) -> None:
+        r = parse_blocks(
+            "| a | b |\n| --- |\n| x |",
+            lambda x: x,
+        )
+        assert "<table>" not in r.html
+
+    def test_missing_pipe_not_a_table(self) -> None:
+        r = parse_blocks(
+            "abc\n---",
+            lambda x: x,
+        )
+        assert "<table" not in r.html
