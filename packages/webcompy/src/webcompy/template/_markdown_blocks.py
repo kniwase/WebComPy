@@ -3,8 +3,9 @@ from __future__ import annotations
 import dataclasses
 import html
 import re
-import textwrap
 from collections.abc import Callable
+
+from webcompy.template._holes import protect_lbrace
 
 CODE_INDENT = 4
 
@@ -311,6 +312,70 @@ BLOCK_STARTS.append(_start_setext_heading)
 BLOCK_STARTS.append(_start_thematic_break)
 
 
+def _continue_code_block(parser: _Parser, container: _Block) -> int:
+    indent = parser.indent
+    if container.is_fenced:
+        match = (
+            indent <= 3
+            and len(parser.current_line) >= parser.next_nonspace + 1
+            and parser.current_line[parser.next_nonspace] == container.fence_char
+            and reClosingCodeFence.search(parser.current_line[parser.next_nonspace :])
+        )
+        if match and len(match.group()) >= container.fence_length:
+            parser.finalize(container, parser.line_number)
+            return 2
+        i = container.fence_offset
+        while i > 0 and is_space_or_tab(peek(parser.current_line, parser.offset)):
+            parser.advance_offset(1, True)
+            i -= 1
+        return 0
+    if indent >= CODE_INDENT:
+        parser.advance_offset(CODE_INDENT, True)
+    elif parser.blank:
+        parser.advance_next_nonspace()
+    else:
+        return 1
+    return 0
+
+
+def _finalize_code_block(parser: _Parser, block: _Block) -> None:
+    if block.is_fenced:
+        content = block.string_content
+        newline_pos = content.index("\n")
+        first_line = content[0:newline_pos]
+        rest = content[newline_pos + 1 :]
+        block.info = first_line.strip()
+        block.literal = rest
+    else:
+        block.literal = re.sub(r"(\n *)+$", "\n", block.string_content)
+    block.string_content = ""
+
+
+def _can_contain_code_block(t: str) -> bool:
+    return False
+
+
+_register_block(
+    "code_block",
+    continue_=_continue_code_block,
+    finalize=_finalize_code_block,
+    can_contain=_can_contain_code_block,
+    accepts_lines=True,
+)
+
+
+def _start_indented_code_block(parser: _Parser, container: _Block) -> int:
+    if parser.indented and parser.tip is not None and parser.tip.t != "paragraph" and not parser.blank:
+        parser.advance_offset(CODE_INDENT, True)
+        parser.close_unmatched_blocks()
+        parser.add_child("code_block", parser.offset)
+        return 2
+    return 0
+
+
+BLOCK_STARTS.append(_start_indented_code_block)
+
+
 def _parse_reference(content: str, refmap: dict[str, _LinkRef]) -> int:
     return 0
 
@@ -563,6 +628,14 @@ def _render(block: _Block, inline: Callable[[str], str]) -> str:
         return f"<h{block.level}>{inline(content)}</h{block.level}>"
     if block.t == "thematic_break":
         return "<hr />"
+    if block.t == "code_block":
+        cls = ""
+        if block.is_fenced and block.info:
+            word = block.info.split()[0] if block.info.split() else ""
+            if word:
+                cls = f' class="language-{_escape_code_text(word)}"'
+        content = protect_lbrace(_escape_code_text(block.literal))
+        return f"<pre><code{cls}>{content}</code></pre>"
     raise NotImplementedError(f"unsupported block kind in render: {block.t}")
 
 
@@ -570,8 +643,7 @@ def parse_blocks(
     source: str,
     inline: Callable[[str], str],
 ) -> _ParseResult:
-    normalized = textwrap.dedent(source) if "\n" in source else source
     parser = _Parser()
-    doc = parser.parse(normalized)
+    doc = parser.parse(source)
     html_out = _render(doc, inline)
     return _ParseResult(html=html_out, link_refs=parser.refmap)

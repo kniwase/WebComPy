@@ -27,7 +27,7 @@ stays green at every commit. Each A-task is one commit.
   7+ hashes rejected), setext headings (block-start conversion of the open
   paragraph, with link-ref resolution first), and thematic breaks (incl. spaced
   variants). Validate against ATX headings / Setext headings / Thematic breaks
-- [ ] A3 Port indented code blocks (4-column rule, paragraph-interruption rule,
+- [x] A3 Port indented code blocks (4-column rule, paragraph-interruption rule,
   blank-line handling) and verify tab behavior end-to-end (partial tabs in
   container and code contexts). Validate against Indented code blocks and Tabs
 - [ ] A4 Port lists and list items: `parse_list_marker` (W+N padding rules,

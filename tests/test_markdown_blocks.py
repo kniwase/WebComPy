@@ -181,14 +181,14 @@ class TestInlineSeam:
 
 
 class TestDedent:
-    def test_multiline_source_is_dedented(self) -> None:
+    def test_parser_does_not_dedent(self) -> None:
+        r = parse_blocks("    foo", lambda x: x)
+        assert r.html == "<pre><code>foo\n</code></pre>"
+
+    def test_multiline_indented_code_preserved(self) -> None:
         source = "    foo\n    bar"
         r = parse_blocks(source, lambda x: x)
-        assert r.html == "<p>foo\nbar</p>"
-
-    def test_single_line_source_not_dedented(self) -> None:
-        r = parse_blocks("    foo", lambda x: x)
-        assert r.html == "<p>foo</p>"
+        assert r.html == "<pre><code>foo\nbar\n</code></pre>"
 
 
 class TestBlockQuote:
@@ -218,7 +218,7 @@ class TestBlockQuote:
 
     def test_indented_blockquote_marker_not_recognized(self) -> None:
         r = parse_blocks("    > foo", lambda x: x)
-        assert "> foo" in r.html
+        assert "<pre><code>" in r.html
 
 
 class TestATXHeading:
