@@ -92,7 +92,7 @@ stays green at every commit. Each A-task is one commit.
   for the PR; check `.opencode/agents/ci-review.md` invariants (expected: no
   change needed — markdown internals only)
 - [x] B5 `uv run python -m webcompy generate` on docs_app succeeds
-- [ ] B6 Run every E2E group SEQUENTIALLY, one at a time (never `--parallel`):
+- [x] B6 Run every E2E group SEQUENTIALLY, one at a time (never `--parallel`):
   `scripts/run-e2e-tests.sh bootstrap-static`, `components`, `reactive-lists`,
   `dynamic-control`, `router`, `interaction`, `bundled-deps`, `runtime-local`,
   `standalone`, `plugin-script`, `template`, `docs-home`, `docs-demos`,
