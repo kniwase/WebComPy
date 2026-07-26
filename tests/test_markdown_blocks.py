@@ -357,3 +357,29 @@ class TestFencedCode:
     def test_multiple_lines(self) -> None:
         r = parse_blocks("```\na\nb\nc\n```", lambda x: x)
         assert r.html == "<pre><code>a\nb\nc\n</code></pre>"
+
+
+class TestHtmlBlock:
+    def test_type_7_complete_open_tag(self) -> None:
+        r = parse_blocks("<div>\n  *hi*\n</div>", lambda x: x)
+        assert r.html == "<div>\n  *hi*\n</div>"
+
+    def test_type_2_html_comment(self) -> None:
+        r = parse_blocks("<!-- comment -->", lambda x: x)
+        assert r.html == "<!-- comment -->"
+
+    def test_type_3_processing_instruction(self) -> None:
+        r = parse_blocks("<?xml?>", lambda x: x)
+        assert r.html == "<?xml?>"
+
+    def test_type_4_declaration(self) -> None:
+        r = parse_blocks("<!DOCTYPE html>", lambda x: x)
+        assert r.html == "<!DOCTYPE html>"
+
+    def test_type_5_cdata(self) -> None:
+        r = parse_blocks("<![CDATA[\nfoo\n]]>", lambda x: x)
+        assert r.html == "<![CDATA[\nfoo\n]]>"
+
+    def test_type_1_pre_block(self) -> None:
+        r = parse_blocks("<pre>\n*foo*\n</pre>", lambda x: x)
+        assert r.html == "<pre>\n*foo*\n</pre>"

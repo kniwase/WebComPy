@@ -374,6 +374,45 @@ _register_block(
 )
 
 
+def _continue_html_block(parser: _Parser, container: _Block) -> int:
+    if parser.blank and container.html_block_type in (6, 7):
+        return 1
+    return 0
+
+
+def _finalize_html_block(parser: _Parser, block: _Block) -> None:
+    block.literal = re.sub(r"(\n *)+$", "", block.string_content)
+    block.string_content = ""
+
+
+def _can_contain_html_block(t: str) -> bool:
+    return False
+
+
+_register_block(
+    "html_block",
+    continue_=_continue_html_block,
+    finalize=_finalize_html_block,
+    can_contain=_can_contain_html_block,
+    accepts_lines=True,
+)
+
+
+def _start_html_block(parser: _Parser, container: _Block) -> int:
+    if parser.indented:
+        return 0
+    if peek(parser.current_line, parser.next_nonspace) != "<":
+        return 0
+    s = parser.current_line[parser.next_nonspace :]
+    for block_type in range(1, 8):
+        if reHtmlBlockOpen[block_type].search(s) and (block_type < 7 or container.t != "paragraph"):
+            parser.close_unmatched_blocks()
+            hb = parser.add_child("html_block", parser.offset)
+            hb.html_block_type = block_type
+            return 2
+    return 0
+
+
 def _start_indented_code_block(parser: _Parser, container: _Block) -> int:
     if parser.indented and parser.tip is not None and parser.tip.t != "paragraph" and not parser.blank:
         parser.advance_offset(CODE_INDENT, True)
@@ -574,6 +613,7 @@ def _start_fenced_code_block(parser: _Parser, container: _Block) -> int:
 
 
 BLOCK_STARTS.insert(BLOCK_STARTS.index(_start_setext_heading), _start_fenced_code_block)
+BLOCK_STARTS.insert(BLOCK_STARTS.index(_start_setext_heading) + 1, _start_html_block)
 BLOCK_STARTS.insert(BLOCK_STARTS.index(_start_indented_code_block), _start_list_item)
 
 
@@ -835,6 +875,8 @@ def _render(block: _Block, inline: Callable[[str], str], *, tight: bool = False)
                 cls = f' class="language-{_escape_code_text(word)}"'
         content = protect_lbrace(_escape_code_text(block.literal))
         return f"<pre><code{cls}>{content}</code></pre>"
+    if t == "html_block":
+        return block.literal
     if t == "list":
         ld = block.list_data or {}
         list_tight = bool(ld.get("tight", True))

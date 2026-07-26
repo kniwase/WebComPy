@@ -41,7 +41,7 @@ stays green at every commit. Each A-task is one commit.
   stripping with partial tabs, info string first word entity-decoded →
   `class="language-*"`, closing fence returns the continue_=2 early exit).
   Validate against Fenced code blocks
-- [ ] A6 Port HTML blocks: all seven GFM types (type 1 includes `textarea` per
+- [x] A6 Port HTML blocks: all seven GFM types (type 1 includes `textarea` per
   GFM spec.txt; type 6 tag list transcribed from spec.txt; type 7 may not
   interrupt a paragraph; types 1-5 end on their close condition checked after
   add_line; types 6-7 end on blank line). Validate against HTML blocks
