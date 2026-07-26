@@ -1,3 +1,13 @@
+"""CommonMark two-phase block parser.
+
+The parsing strategy follows the CommonMark specification
+(https://commonmark.org/) Appendix: A parsing strategy.
+The structural approach is informed by commonmark.py
+(BSD-3-Clause, Copyright (c) 2014 Bibek Kafle, Roland Shoemaker;
+based on stmd.js by John MacFarlane). This is an independent
+implementation adapted to the WebComPy block model.
+"""
+
 from __future__ import annotations
 
 import dataclasses
@@ -376,6 +386,176 @@ def _start_indented_code_block(parser: _Parser, container: _Block) -> int:
 BLOCK_STARTS.append(_start_indented_code_block)
 
 
+def _parse_list_marker(parser: _Parser, container: _Block) -> dict[str, object] | None:
+    rest = parser.current_line[parser.next_nonspace :]
+    data: dict[str, object] = {
+        "type": None,
+        "tight": True,
+        "bullet_char": None,
+        "start": None,
+        "delimiter": None,
+        "padding": None,
+        "marker_offset": parser.indent,
+    }
+    if parser.indent >= CODE_INDENT:
+        return None
+    m = reBulletListMarker.search(rest)
+    m2 = reOrderedListMarker.search(rest)
+    if m:
+        data["type"] = "bullet"
+        data["bullet_char"] = m.group()[0]
+    elif m2 and (container.t != "paragraph" or m2.group(1) == "1"):
+        m = m2
+        data["type"] = "ordered"
+        data["start"] = int(m.group(1))
+        data["delimiter"] = m.group(2)
+    else:
+        return None
+
+    nextc = peek(parser.current_line, parser.next_nonspace + len(m.group()))
+    if not (nextc is None or nextc == "\t" or nextc == " "):
+        return None
+
+    if container.t == "paragraph" and not re.search(
+        reNonSpace, parser.current_line[parser.next_nonspace + len(m.group()) :]
+    ):
+        return None
+
+    parser.advance_next_nonspace()
+    parser.advance_offset(len(m.group()), True)
+    spaces_start_col = parser.column
+    spaces_start_offset = parser.offset
+    while True:
+        parser.advance_offset(1, True)
+        n = peek(parser.current_line, parser.offset)
+        if parser.column - spaces_start_col < 5 and is_space_or_tab(n):
+            pass
+        else:
+            break
+    blank_item = peek(parser.current_line, parser.offset) is None
+    spaces_after_marker = parser.column - spaces_start_col
+    if spaces_after_marker >= 5 or spaces_after_marker < 1 or blank_item:
+        data["padding"] = len(m.group()) + 1
+        parser.column = spaces_start_col
+        parser.offset = spaces_start_offset
+        if is_space_or_tab(peek(parser.current_line, parser.offset)):
+            parser.advance_offset(1, True)
+    else:
+        data["padding"] = len(m.group()) + spaces_after_marker
+
+    return data
+
+
+def _lists_match(list_data: dict[str, object], item_data: dict[str, object]) -> bool:
+    return (
+        list_data.get("type") == item_data.get("type")
+        and list_data.get("delimiter") == item_data.get("delimiter")
+        and list_data.get("bullet_char") == item_data.get("bullet_char")
+    )
+
+
+def _ends_with_blank_line(block: _Block | None) -> bool:
+    while block is not None:
+        if block.last_line_blank:
+            return True
+        if not block.last_line_checked and block.t in ("list", "item"):
+            block.last_line_checked = True
+            block = block.last_child
+        else:
+            block.last_line_checked = True
+            break
+    return False
+
+
+def _continue_list(parser: _Parser, container: _Block) -> int:
+    return 0
+
+
+def _finalize_list(parser: _Parser, block: _Block) -> None:
+    items = block.children
+    for i, item in enumerate(items):
+        i_has_next = i + 1 < len(items)
+        if _ends_with_blank_line(item) and i_has_next:
+            assert block.list_data is not None
+            block.list_data["tight"] = False
+            return
+        for j, sub in enumerate(item.children):
+            j_has_next = j + 1 < len(item.children)
+            if _ends_with_blank_line(sub) and (i_has_next or j_has_next):
+                assert block.list_data is not None
+                block.list_data["tight"] = False
+                return
+
+
+def _can_contain_list(t: str) -> bool:
+    return t == "item"
+
+
+_register_block(
+    "list",
+    continue_=_continue_list,
+    finalize=_finalize_list,
+    can_contain=_can_contain_list,
+    accepts_lines=False,
+)
+
+
+def _continue_item(parser: _Parser, container: _Block) -> int:
+    if parser.blank:
+        if container.first_child is None:
+            return 1
+        parser.advance_next_nonspace()
+        return 0
+    ld = container.list_data
+    assert ld is not None
+    mo = ld["marker_offset"]
+    pd = ld["padding"]
+    assert isinstance(mo, int)
+    assert isinstance(pd, int)
+    if parser.indent >= mo + pd:
+        parser.advance_offset(mo + pd, True)
+    else:
+        return 1
+    return 0
+
+
+def _finalize_item(parser: _Parser, block: _Block) -> None:
+    pass
+
+
+def _can_contain_item(t: str) -> bool:
+    return t != "item"
+
+
+_register_block(
+    "item",
+    continue_=_continue_item,
+    finalize=_finalize_item,
+    can_contain=_can_contain_item,
+    accepts_lines=False,
+)
+
+
+def _start_list_item(parser: _Parser, container: _Block) -> int:
+    if not (not parser.indented or container.t == "list"):
+        return 0
+    data = _parse_list_marker(parser, container)
+    if data is None:
+        return 0
+    parser.close_unmatched_blocks()
+    assert parser.tip is not None
+    reuse = parser.tip.t == "list" and _lists_match(parser.tip.list_data or {}, data)
+    if not reuse:
+        new_list = parser.add_child("list", parser.next_nonspace)
+        new_list.list_data = data
+    item = parser.add_child("item", parser.next_nonspace)
+    item.list_data = data
+    return 1
+
+
+BLOCK_STARTS.insert(BLOCK_STARTS.index(_start_indented_code_block), _start_list_item)
+
+
 def _parse_reference(content: str, refmap: dict[str, _LinkRef]) -> int:
     return 0
 
@@ -610,25 +790,23 @@ def _escape_code_text(text: str) -> str:
     return html.escape(text, quote=False).replace('"', "&quot;")
 
 
-def _render(block: _Block, inline: Callable[[str], str]) -> str:
-    if block.t == "document":
+def _render(block: _Block, inline: Callable[[str], str], *, tight: bool = False) -> str:
+    t = block.t
+    if t == "document":
         return "\n".join(_render(c, inline) for c in block.children)
-    if block.t == "paragraph":
-        content = block.string_content
-        if content.endswith("\n"):
-            content = content[:-1]
-        return "<p>" + inline(content) + "</p>"
-    if block.t == "block_quote":
+    if t == "paragraph":
+        content = block.string_content.rstrip("\n")
+        result = inline(content)
+        return result if tight else f"<p>{result}</p>"
+    if t == "block_quote":
         inner = "\n".join(_render(c, inline) for c in block.children)
         return "<blockquote>\n" + inner + "\n</blockquote>"
-    if block.t == "heading":
-        content = block.string_content
-        if content.endswith("\n"):
-            content = content[:-1]
+    if t == "heading":
+        content = block.string_content.rstrip("\n")
         return f"<h{block.level}>{inline(content)}</h{block.level}>"
-    if block.t == "thematic_break":
+    if t == "thematic_break":
         return "<hr />"
-    if block.t == "code_block":
+    if t == "code_block":
         cls = ""
         if block.is_fenced and block.info:
             word = block.info.split()[0] if block.info.split() else ""
@@ -636,7 +814,31 @@ def _render(block: _Block, inline: Callable[[str], str]) -> str:
                 cls = f' class="language-{_escape_code_text(word)}"'
         content = protect_lbrace(_escape_code_text(block.literal))
         return f"<pre><code{cls}>{content}</code></pre>"
-    raise NotImplementedError(f"unsupported block kind in render: {block.t}")
+    if t == "list":
+        ld = block.list_data or {}
+        list_tight = bool(ld.get("tight", True))
+        tag = "ol" if ld.get("type") == "ordered" else "ul"
+        start_attr = ""
+        if tag == "ol":
+            start_val = ld.get("start", 1)
+            assert isinstance(start_val, int)
+            if start_val != 1:
+                start_attr = f' start="{start_val}"'
+        items_html = "\n".join(_render(c, inline, tight=list_tight) for c in block.children)
+        return f"<{tag}{start_attr}>\n{items_html}\n</{tag}>"
+    if t == "item":
+        children = block.children
+        if not children:
+            return "<li></li>"
+        if tight and children[0].t == "paragraph":
+            first_inline = inline(children[0].string_content.rstrip("\n"))
+            rest = [_render(c, inline, tight=True) for c in children[1:]]
+            if not rest:
+                return f"<li>{first_inline}</li>"
+            return f"<li>{first_inline}\n" + "\n".join(rest) + "\n</li>"
+        rendered = "\n".join(_render(c, inline, tight=tight) for c in children)
+        return f"<li>\n{rendered}\n</li>"
+    raise NotImplementedError(f"unsupported block kind in render: {t}")
 
 
 def parse_blocks(

@@ -30,7 +30,7 @@ stays green at every commit. Each A-task is one commit.
 - [x] A3 Port indented code blocks (4-column rule, paragraph-interruption rule,
   blank-line handling) and verify tab behavior end-to-end (partial tabs in
   container and code contexts). Validate against Indented code blocks and Tabs
-- [ ] A4 Port lists and list items: `parse_list_marker` (W+N padding rules,
+- [x] A4 Port lists and list items: `parse_list_marker` (W+N padding rules,
   paragraph-interruption rules: ordered must start with 1, empty first item may
   not interrupt), `lists_match` (bullet char / ordered delimiter consistency,
   `<ol start="N">` when N != 1), tight/loose via `ends_with_blank_line`, block

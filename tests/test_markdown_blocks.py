@@ -276,3 +276,54 @@ class TestThematicBreak:
     def test_thematic_break_between_paragraphs(self) -> None:
         r = parse_blocks("a\n\n---\n\nb", lambda x: x)
         assert r.html == "<p>a</p>\n<hr />\n<p>b</p>"
+
+
+class TestList:
+    def test_simple_bullet(self) -> None:
+        r = parse_blocks("- one\n- two", lambda x: x)
+        assert r.html == "<ul>\n<li>one</li>\n<li>two</li>\n</ul>"
+
+    def test_three_bullet_markers_separate_lists(self) -> None:
+        r = parse_blocks("* a\n+ b\n- c", lambda x: x)
+        assert r.html == "<ul>\n<li>a</li>\n</ul>\n<ul>\n<li>b</li>\n</ul>\n<ul>\n<li>c</li>\n</ul>"
+
+    def test_ordered_dot_delimiter(self) -> None:
+        r = parse_blocks("1. a\n2. b", lambda x: x)
+        assert r.html == "<ol>\n<li>a</li>\n<li>b</li>\n</ol>"
+
+    def test_ordered_paren_delimiter(self) -> None:
+        r = parse_blocks("1) a\n2) b", lambda x: x)
+        assert r.html == "<ol>\n<li>a</li>\n<li>b</li>\n</ol>"
+
+    def test_ordered_start_attribute(self) -> None:
+        r = parse_blocks("3. a\n4. b", lambda x: x)
+        assert r.html == '<ol start="3">\n<li>a</li>\n<li>b</li>\n</ol>'
+
+    def test_tight_list_no_p_wrappers(self) -> None:
+        r = parse_blocks("- one\n- two", lambda x: x)
+        assert "<p>" not in r.html
+
+    def test_loose_list_wraps_paragraphs(self) -> None:
+        r = parse_blocks("- one\n\n- two", lambda x: x)
+        assert "<p>one</p>" in r.html
+        assert "<p>two</p>" in r.html
+
+    def test_nested_list_in_tight_item(self) -> None:
+        r = parse_blocks("- parent\n  - child", lambda x: x)
+        assert r.html == ("<ul>\n<li>parent\n<ul>\n<li>child</li>\n</ul>\n</li>\n</ul>")
+
+    def test_list_in_block_quote(self) -> None:
+        r = parse_blocks("> - list", lambda x: x)
+        assert r.html == "<blockquote>\n<ul>\n<li>list</li>\n</ul>\n</blockquote>"
+
+    def test_extra_spaces_after_marker(self) -> None:
+        r = parse_blocks("-    extra", lambda x: x)
+        assert "extra" in r.html
+
+    def test_numbered_marker_too_large_not_a_list(self) -> None:
+        r = parse_blocks("1234567890. a", lambda x: x)
+        assert r.html == "<p>1234567890. a</p>"
+
+    def test_dash_then_blank_does_not_interrupt_paragraph(self) -> None:
+        r = parse_blocks("paragraph\n- x", lambda x: x)
+        assert "<h2>" not in r.html
