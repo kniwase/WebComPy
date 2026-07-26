@@ -61,7 +61,7 @@ stays green at every commit. Each A-task is one commit.
   `<input checked="" disabled="" type="checkbox"> ` (checked only when set;
   cmark-gfm attribute order, no self-closing slash) at the start of the item's
   first paragraph content. Validate against Task list items (extension)
-- [ ] A10 Switch `DefaultMarkdownParser.render()` to the new module (dedent
+- [x] A10 Switch `DefaultMarkdownParser.render()` to the new module (dedent
   multi-line sources only, per D11; move `_inline` behind the narrow seam).
   Then flip the conformance xfails: run the suite, remove every XPASS number
   from `tests/conformance/xfail.json`, keep `baseline` counts consistent
