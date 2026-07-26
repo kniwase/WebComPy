@@ -8,18 +8,26 @@ The `DefaultMarkdownParser` is the framework's built-in implementation of the `M
 
 ### Requirement: The framework shall declare GFM as the Markdown conformance target
 
-`DefaultMarkdownParser` SHALL target conformance with the GitHub Flavored Markdown specification: CommonMark plus the GFM extensions (tables, task list items, strikethrough, autolinks, disallowed raw HTML). The harness SHALL pin the conformance target to a specific cmark-gfm commit by recording the commit URL and SHA-256 hash of the official `spec.txt` as code constants. The spec TEXT itself SHALL NOT be committed to the repository (it is derived from the CC BY-SA 4.0 CommonMark spec); the harness SHALL download, hash-verify, and cache the file on first use. Current deviations from the target SHALL be explicitly listed as scheduled for removal in the parser-rewrite changes.
+`DefaultMarkdownParser` SHALL target conformance with the GitHub Flavored Markdown specification: CommonMark plus the GFM extensions (tables, task list items, strikethrough, autolinks, disallowed raw HTML). The harness SHALL pin the conformance target to a specific cmark-gfm commit by recording the commit URL and SHA-256 hash of the official `spec.txt` as code constants. The spec TEXT itself SHALL NOT be committed to the repository (it is derived from the CC BY-SA 4.0 CommonMark spec); the harness SHALL download, hash-verify, and cache the file on first use. Deviations from the target SHALL be tracked as strict xfails in `tests/conformance/xfail.json`; when a deviation is retired by a rewrite change, the corresponding xfail entry SHALL be removed in the same change.
 
 #### Scenario: Conformance target is discoverable
 
 - **WHEN** a developer inspects the conformance harness module
 - **THEN** the pinned cmark-gfm commit URL and SHA-256 hash SHALL be recorded as constants
-- **AND** the list of currently-deviating behaviors SHALL be recorded in this spec
+- **AND** the list of currently-deviating behaviors SHALL be recorded as xfail entries with section/cause notes
 
 #### Scenario: Known deviations scheduled for removal
 
 - **WHEN** the conformance suite runs against the current parser
-- **THEN** deviations including space-less ATX headings (`#hashtag` producing `<h1>`), ignored fenced-code info strings, tab normalization to 2 spaces, missing setext headings, paragraph line-joining (current parser joins lines with a space; GFM preserves the newline), mixed list-marker coalescing (current parser merges `-`/`*`/`+` and `1.`/`2)` into a single list; GFM splits them), blockquote multiline joining (current parser joins lines as inline text; GFM wraps them in `<p>`), and missing GFM extensions SHALL be tracked as scheduled for removal (not as accepted behavior)
+- **THEN** remaining deviations SHALL appear as strict xfails in `tests/conformance/xfail.json`
+- **AND** remaining deviations SHALL be tracked as scheduled for removal in `refactor-markdown-inline-parser`
+- **AND** block-level deviations (headings, tabs, blockquotes, lists, code blocks, HTML blocks, link reference definitions, thematic breaks, tables, task list items) SHALL have been removed by `refactor-markdown-block-parser`
+
+#### Scenario: Block-section xfails flipped
+
+- **WHEN** `refactor-markdown-block-parser` completes
+- **THEN** every strict xfail in the conformance suite attributable to block structure SHALL have been removed (passing)
+- **AND** any remaining xfail in block test sections SHALL carry a note that its cause is inline-level
 
 ### Requirement: GFM spec examples shall run as a parametrized test suite
 
