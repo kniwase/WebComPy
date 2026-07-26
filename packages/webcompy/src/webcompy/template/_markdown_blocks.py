@@ -749,6 +749,18 @@ def _normalize_label(raw: str) -> str:
     return text.casefold()
 
 
+def _spnl(content: str, pos: int) -> int:
+    n = 0
+    length = len(content)
+    while pos + n < length and content[pos + n] in (" ", "\t"):
+        n += 1
+    if pos + n < length and content[pos + n] == "\n":
+        n += 1
+        while pos + n < length and content[pos + n] in (" ", "\t"):
+            n += 1
+    return n
+
+
 def _parse_reference(content: str, refmap: dict[str, _LinkRef]) -> int:
     if not content or content[0] != "[":
         return 0
@@ -760,13 +772,10 @@ def _parse_reference(content: str, refmap: dict[str, _LinkRef]) -> int:
     if not label:
         return 0
     pos = m.end()
-    ws = _consume_whitespace(content, pos)
-    pos += ws
     if pos >= len(content) or content[pos] != ":":
         return 0
     pos += 1
-    ws = _consume_whitespace(content, pos)
-    pos += ws
+    pos += _spnl(content, pos)
     destination = ""
     consumed_dest = 0
     if pos < len(content) and content[pos] == "<":
@@ -800,46 +809,50 @@ def _parse_reference(content: str, refmap: dict[str, _LinkRef]) -> int:
         destination = content[pos:end]
         consumed_dest = end - pos
     pos += consumed_dest
-    ws = _consume_whitespace(content, pos)
-    pos += ws
-    if pos >= len(content):
-        pos_after_title = pos
-    else:
+    pos += _spnl(content, pos)
+    title = ""
+    consumed_title = 0
+    has_title = False
+    if pos < len(content):
         c = content[pos]
-        title = ""
-        consumed_title = 0
         if c == '"':
             m2 = re.match(r'"((?:\\.|[^"\\])*)"', content[pos:], re.DOTALL)
             if m2 is None:
                 return 0
             title = m2.group(1)
             consumed_title = m2.end()
+            has_title = True
         elif c == "'":
             m2 = re.match(r"'((?:\\.|[^'\\])*)'", content[pos:], re.DOTALL)
             if m2 is None:
                 return 0
             title = m2.group(1)
             consumed_title = m2.end()
+            has_title = True
         elif c == "(":
             m2 = re.match(r"\(((?:\\.|[^()\\])*)\)", content[pos:], re.DOTALL)
             if m2 is None:
                 return 0
             title = m2.group(1)
             consumed_title = m2.end()
-        pos_after_title = pos + consumed_title
+            has_title = True
+    pos_after_title = pos + consumed_title
+    if has_title:
+        check = pos_after_title
+        while check < len(content) and content[check] in (" ", "\t"):
+            check += 1
+        if check < len(content) and content[check] != "\n":
+            return 0
+    while pos_after_title < len(content) and content[pos_after_title] in (" ", "\t"):
+        pos_after_title += 1
+    if pos_after_title < len(content) and content[pos_after_title] == "\n":
+        pos_after_title += 1
     if label and label not in refmap:
         refmap[label] = _LinkRef(
             destination=_normalize_uri(_unescape_string(destination)),
             title=_unescape_string(title),
         )
     return pos_after_title
-
-
-def _consume_whitespace(content: str, pos: int) -> int:
-    n = 0
-    while pos + n < len(content) and content[pos + n] in (" ", "\t"):
-        n += 1
-    return n
 
 
 class _Parser:
