@@ -97,6 +97,6 @@ stays green at every commit. Each A-task is one commit.
   `dynamic-control`, `router`, `interaction`, `bundled-deps`, `runtime-local`,
   `standalone`, `plugin-script`, `template`, `docs-home`, `docs-demos`,
   `docs-matplotlib`, `docs-fetch` — all must pass
-- [ ] B7 `openspec validate refactor-markdown-block-parser --strict` passes; run
+- [x] B7 `openspec validate refactor-markdown-block-parser --strict` passes; run
   the openspec-verify-change skill and report findings (spec sync and archive
   are explicitly out of scope, per user instruction)
