@@ -636,7 +636,19 @@ def _continue_item(parser: _Parser, container: _Block) -> int:
 
 
 def _finalize_item(parser: _Parser, block: _Block) -> None:
-    pass
+    first = block.first_child
+    if first is not None and first.t == "paragraph" and first.string_content:
+        first_line = first.string_content.split("\n", 1)[0]
+        if first_line.startswith("["):
+            m = _TASK_MARKER_RE.match(first_line)
+            if m is not None:
+                checked = m.group(1) != " "
+                block.task_checked = checked
+                rest = first_line[m.end() :]
+                if rest:
+                    first.string_content = rest + "\n" + first.string_content[len(first_line) + 1 :]
+                else:
+                    first.string_content = first.string_content[len(first_line) + 1 :] or ""
 
 
 def _can_contain_item(t: str) -> bool:
@@ -667,6 +679,9 @@ def _start_list_item(parser: _Parser, container: _Block) -> int:
     item = parser.add_child("item", parser.next_nonspace)
     item.list_data = data
     return 1
+
+
+_TASK_MARKER_RE = re.compile(r"^\[([ xX])\][ \t]")
 
 
 def _start_fenced_code_block(parser: _Parser, container: _Block) -> int:
@@ -1096,14 +1111,19 @@ def _render(block: _Block, inline: Callable[[str], str], *, tight: bool = False)
         children = block.children
         if not children:
             return "<li></li>"
+        checkbox = ""
+        if block.task_checked is not None:
+            checked_attr = 'checked="" ' if block.task_checked else ""
+            checkbox = f'<input {checked_attr}disabled="" type="checkbox"> '
         if tight and children[0].t == "paragraph":
             first_inline = inline(children[0].string_content.rstrip("\n"))
             rest = [_render(c, inline, tight=True) for c in children[1:]]
             if not rest:
-                return f"<li>{first_inline}</li>"
-            return f"<li>{first_inline}\n" + "\n".join(rest) + "\n</li>"
+                return f"<li>{checkbox}{first_inline}</li>"
+            inner = f"{checkbox}{first_inline}" + "\n" + "\n".join(rest)
+            return f"<li>{inner}\n</li>"
         rendered = "\n".join(_render(c, inline, tight=tight) for c in children)
-        return f"<li>\n{rendered}\n</li>"
+        return f"<li>\n{checkbox}{rendered}\n</li>"
     raise NotImplementedError(f"unsupported block kind in render: {t}")
 
 

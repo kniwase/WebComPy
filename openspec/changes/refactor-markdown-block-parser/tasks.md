@@ -55,7 +55,7 @@ stays green at every commit. Each A-task is one commit.
   excess cells dropped, missing cells filled empty; alignment emitted as
   `align="left|center|right"` per delimiter colons; no `<tbody>` when no body
   rows. Validate against Tables (extension)
-- [ ] A9 Add GFM task list items: at list-item finalization, a leading
+- [x] A9 Add GFM task list items: at list-item finalization, a leading
   `[ ]`/`[x]`/`[X]` marker followed by whitespace is stripped from the first
   paragraph and recorded; rendering emits
   `<input checked="" disabled="" type="checkbox"> ` (checked only when set;

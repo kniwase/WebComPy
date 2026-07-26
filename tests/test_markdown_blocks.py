@@ -444,3 +444,22 @@ class TestTable:
             lambda x: x,
         )
         assert "<table" not in r.html
+
+
+class TestTaskList:
+    def test_unchecked_task(self) -> None:
+        r = parse_blocks("- [ ] todo", lambda x: x)
+        assert '<input disabled="" type="checkbox">' in r.html
+        assert "checked" not in r.html
+
+    def test_lowercase_x_checked(self) -> None:
+        r = parse_blocks("- [x] done", lambda x: x)
+        assert '<input checked="" disabled="" type="checkbox">' in r.html
+
+    def test_uppercase_x_checked(self) -> None:
+        r = parse_blocks("- [X] case", lambda x: x)
+        assert '<input checked="" disabled="" type="checkbox">' in r.html
+
+    def test_non_task_item_unchanged(self) -> None:
+        r = parse_blocks("- regular", lambda x: x)
+        assert "checkbox" not in r.html
