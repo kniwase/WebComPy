@@ -36,7 +36,7 @@ stays green at every commit. Each A-task is one commit.
   `<ol start="N">` when N != 1), tight/loose via `ends_with_blank_line`, block
   children inside items. This is the largest task; port the reference logic
   without simplification. Validate against List items / Lists / Precedence
-- [ ] A5 Port fenced code blocks (``` and ~~~, backtick-fence info may not contain
+- [x] A5 Port fenced code blocks (``` and ~~~, backtick-fence info may not contain
   a backtick, closing fence same char and >= opening length, fence offset
   stripping with partial tabs, info string first word entity-decoded →
   `class="language-*"`, closing fence returns the continue_=2 early exit).

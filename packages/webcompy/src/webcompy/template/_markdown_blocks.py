@@ -553,6 +553,27 @@ def _start_list_item(parser: _Parser, container: _Block) -> int:
     return 1
 
 
+def _start_fenced_code_block(parser: _Parser, container: _Block) -> int:
+    if parser.indented:
+        return 0
+    m = reCodeFence.search(parser.current_line[parser.next_nonspace :])
+    if m:
+        fence_length = len(m.group())
+        parser.close_unmatched_blocks()
+        code = parser.add_child("code_block", parser.next_nonspace)
+        code.is_fenced = True
+        code.fence_length = fence_length
+        code.fence_char = m.group()[0]
+        code.fence_offset = parser.indent
+        parser.advance_next_nonspace()
+        parser.advance_offset(fence_length, False)
+        info = parser.current_line[parser.offset :].strip()
+        code.info = info
+        return 2
+    return 0
+
+
+BLOCK_STARTS.insert(BLOCK_STARTS.index(_start_setext_heading), _start_fenced_code_block)
 BLOCK_STARTS.insert(BLOCK_STARTS.index(_start_indented_code_block), _start_list_item)
 
 

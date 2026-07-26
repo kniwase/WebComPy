@@ -327,3 +327,33 @@ class TestList:
     def test_dash_then_blank_does_not_interrupt_paragraph(self) -> None:
         r = parse_blocks("paragraph\n- x", lambda x: x)
         assert "<h2>" not in r.html
+
+
+class TestFencedCode:
+    def test_simple_fence(self) -> None:
+        r = parse_blocks("```\nfoo\n```", lambda x: x)
+        assert r.html == "<pre><code>foo\n</code></pre>"
+
+    def test_info_string_creates_language_class(self) -> None:
+        r = parse_blocks("```python\nfoo()\n```", lambda x: x)
+        assert r.html == '<pre><code class="language-python">foo()\n</code></pre>'
+
+    def test_tilde_fence(self) -> None:
+        r = parse_blocks("~~~~\nfoo\n~~~~~", lambda x: x)
+        assert r.html == "<pre><code>foo\n</code></pre>"
+
+    def test_empty_fence(self) -> None:
+        r = parse_blocks("```\n```", lambda x: x)
+        assert r.html == "<pre><code></code></pre>"
+
+    def test_indented_fence_stripped(self) -> None:
+        r = parse_blocks("   ```\n   foo\n   ```", lambda x: x)
+        assert r.html == "<pre><code>foo\n</code></pre>"
+
+    def test_closing_fence_must_be_at_least_as_long(self) -> None:
+        r = parse_blocks("```\nfoo\n``", lambda x: x)
+        assert r.html != "<pre><code>foo\n</code></pre>"
+
+    def test_multiple_lines(self) -> None:
+        r = parse_blocks("```\na\nb\nc\n```", lambda x: x)
+        assert r.html == "<pre><code>a\nb\nc\n</code></pre>"
