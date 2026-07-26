@@ -681,6 +681,15 @@ def _start_list_item(parser: _Parser, container: _Block) -> int:
     return 1
 
 
+def match_list_item_start(line: str) -> bool:
+    parser = _Parser()
+    parser.current_line = line
+    parser.find_next_nonspace()
+    if parser.blank:
+        return False
+    return _parse_list_marker(parser, parser.doc) is not None
+
+
 _TASK_MARKER_RE = re.compile(r"^\[([ xX])\][ \t]")
 
 

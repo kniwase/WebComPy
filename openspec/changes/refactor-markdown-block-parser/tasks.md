@@ -76,7 +76,7 @@ stays green at every commit. Each A-task is one commit.
 
 ## Session B: integration and verification
 
-- [ ] B1 Re-point `_markdown_for._is_list_body` at the ported list-marker matcher
+- [x] B1 Re-point `_markdown_for._is_list_body` at the ported list-marker matcher
   (single source of truth) with `textwrap.dedent` applied to the body BEFORE
   matching (pre-dedent template sources must still detect); extend
   `_protected_spans`' fence detection to `~~~`; add a test that task-list bodies
