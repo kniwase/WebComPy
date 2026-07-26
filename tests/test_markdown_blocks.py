@@ -463,3 +463,22 @@ class TestTaskList:
     def test_non_task_item_unchanged(self) -> None:
         r = parse_blocks("- regular", lambda x: x)
         assert "checkbox" not in r.html
+
+
+class TestDeepNesting:
+    def test_deeply_nested_block_quotes(self) -> None:
+        depth = 100
+        r = parse_blocks("> " * depth + "deep", lambda x: x)
+        assert r.html.count("<blockquote>") == depth
+
+    def test_deeply_nested_lists(self) -> None:
+        depth = 50
+        source = "\n".join("  " * i + "- item" for i in range(depth))
+        r = parse_blocks(source, lambda x: x)
+        assert r.html.count("<ul>") == depth
+
+    def test_deeply_nested_block_quotes_containing_list(self) -> None:
+        depth = 40
+        r = parse_blocks("> " * depth + "- item", lambda x: x)
+        assert r.html.count("<blockquote>") == depth
+        assert "<ul>" in r.html

@@ -85,7 +85,7 @@ stays green at every commit. Each A-task is one commit.
   merged `<ul>`/`<ol>` structure identical; per-item static `{% if %}` preserved)
   and verify `{{ }}`/`{% %}` code protection still holds for fenced and indented
   code (`TestMarkdownCodeBlockTemplateProtection` stays green)
-- [ ] B3 Deep-nesting stress test (blockquotes/lists ~100 levels) proving
+- [x] B3 Deep-nesting stress test (blockquotes/lists ~100 levels) proving
   iterative (non-recursive) driver operation within Python/Pyodide stack limits
 - [ ] B4 `uv run ruff check .`, `uv run ruff format .`, `uv run pyright` clean;
   `uv run python -m pytest tests/ --tb=short` green; conformance rate recorded
