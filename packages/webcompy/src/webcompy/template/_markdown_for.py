@@ -55,6 +55,17 @@ def _is_list_body(body_text: str) -> bool:
     return False
 
 
+def _strip_blank_edge_lines(text: str) -> str:
+    lines = text.split("\n")
+    start = 0
+    end = len(lines)
+    while start < end and not lines[start].strip():
+        start += 1
+    while end > start and not lines[end - 1].strip():
+        end -= 1
+    return "\n".join(lines[start:end])
+
+
 @dataclass
 class _TextSegment:
     text: str
@@ -447,6 +458,9 @@ class MarkdownForElement(DynamicElement):
                 item_body = _rename_in_expressions(item_body, var, f"{prefix}{var}")
 
             item_body = _expand_directives_in_body(item_body, augmented_ctx, prefix)
+            item_body = _strip_blank_edge_lines(item_body)
+            if not item_body.strip():
+                continue
             markdown_parts.append(item_body)
 
         concatenated = "\n".join(markdown_parts)

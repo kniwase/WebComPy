@@ -81,7 +81,7 @@ stays green at every commit. Each A-task is one commit.
   matching (pre-dedent template sources must still detect); extend
   `_protected_spans`' fence detection to `~~~`; add a test that task-list bodies
   (`- [ ] {{ item }}`) are detected as list bodies (design open question 2: yes)
-- [ ] B2 Re-verify `MarkdownForElement` end-to-end (`test_markdown_for.py` green;
+- [x] B2 Re-verify `MarkdownForElement` end-to-end (`test_markdown_for.py` green;
   merged `<ul>`/`<ol>` structure identical; per-item static `{% if %}` preserved)
   and verify `{{ }}`/`{% %}` code protection still holds for fenced and indented
   code (`TestMarkdownCodeBlockTemplateProtection` stays green)
