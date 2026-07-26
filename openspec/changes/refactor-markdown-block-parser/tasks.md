@@ -49,7 +49,7 @@ stays green at every commit. Each A-task is one commit.
   (label/destination/title grammar incl. multi-line titles, first-definition-wins,
   absorption removes them from paragraph output) and retain the table on the
   parse result for the inline rewrite. Validate against Link reference definitions
-- [ ] A8 Add GFM tables: at paragraph finalization, second line is a valid
+- [x] A8 Add GFM tables: at paragraph finalization, second line is a valid
   delimiter row (cells = trimmed `:?-+:?`, cell count equals header count) →
   convert to a table block; row splitting on unescaped pipes (`\|` skipped);
   excess cells dropped, missing cells filled empty; alignment emitted as

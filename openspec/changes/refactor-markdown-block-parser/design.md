@@ -74,9 +74,9 @@ At list-item finalization, a leading `[ ]`/`[x]`/`[X]` marker (per GFM rules: af
 
 Block Phase 1 must recognize and *absorb* link reference definition paragraphs (they produce no output). The parsed table is stored on the parse result so the inline rewrite can resolve reference links; this change only guarantees definitions no longer leak into output as paragraph text.
 
-### D11. `textwrap.dedent` is applied to multi-line sources only
+### D11. `textwrap.dedent` is applied at the `render_markdown` framework level, never in the parser
 
-`textwrap.dedent` on a single-line source strips *all* leading whitespace (the whole prefix is "common"), which destroys conformance-relevant indentation (`"\tfoo"` → `"foo"`). This is also one of the mechanisms by which the old parser corrupted tabs. Therefore: `render()`/the block parser applies `textwrap.dedent` **only when the source contains a newline**; single-line sources are parsed as-is. The delta spec scenario wording ("`textwrap.dedent` SHALL be applied to the source before parsing") SHALL be amended at spec-sync time to reflect this.
+`textwrap.dedent` on a single-line source strips *all* leading whitespace (the whole prefix is "common"), and on a multi-line source strips the *common* leading whitespace — both destroy conformance-relevant indentation (e.g. an indented code block whose lines all share the 4-space indent becomes a paragraph). Therefore the block parser (`parse_blocks` / `DefaultMarkdownParser.render()`) applies **no** dedent at all; the conformance harness path is parsed verbatim. The template pipeline (`render_markdown` in `webcompy/template/__init__.py`) applies `textwrap.dedent` to multi-line sources before segmentation, preserving the convenience of indented Markdown in triple-quoted template strings. The delta spec scenario wording ("`textwrap.dedent` SHALL be applied to the source before parsing") SHALL be amended at spec-sync time to reflect this split.
 
 ### D12. Implementation strategy: structural port of the reference block parser
 
