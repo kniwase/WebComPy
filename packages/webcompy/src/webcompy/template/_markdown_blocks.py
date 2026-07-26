@@ -373,7 +373,14 @@ def _start_setext_heading(parser: _Parser, container: _Block) -> int:
         m = reSetextHeadingLine.search(parser.current_line[parser.next_nonspace :])
         if m:
             parser.close_unmatched_blocks()
-            if container.string_content:
+            content = container.string_content
+            while True:
+                consumed = _parse_reference(content, parser.refmap)
+                if not consumed:
+                    break
+                content = content[consumed:]
+            container.string_content = content
+            if content.strip():
                 container.t = "heading"
                 container.level = 1 if m.group()[0] == "=" else 2
                 parser.tip = container
