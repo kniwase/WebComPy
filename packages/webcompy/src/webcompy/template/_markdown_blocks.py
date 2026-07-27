@@ -48,7 +48,7 @@ reHtmlBlockOpen: list[re.Pattern[str]] = [
         re.IGNORECASE,
     ),
     re.compile(
-        r"^</?[a-zA-Z][a-zA-Z0-9:-]*(?:[ \t]+[a-zA-Z_:][\w.:-]*"
+        r"^</?[a-zA-Z][a-zA-Z0-9-]*(?:[ \t]+[a-zA-Z_:][\w.:-]*"
         r"(?:[ \t]*=[ \t]*[^ \t\"'=<>`]+|=[ \t]*\"[^\"]*\"|"
         r"=[ \t]*'[^']*')?)*[ \t]*/?>\s*$",
         re.IGNORECASE,
@@ -721,18 +721,36 @@ BLOCK_STARTS.insert(BLOCK_STARTS.index(_start_setext_heading) + 1, _start_html_b
 BLOCK_STARTS.insert(BLOCK_STARTS.index(_start_indented_code_block), _start_list_item)
 
 
+_ESCAPABLE_CHARS = frozenset(r"""!"#$%&'()*+,./:;<=>?@[\]^_`{|}~-""")
+_ENTITY_RE_BLOCKS = re.compile(
+    r"\\([!\"#$%&'()*+,./:;<=>?@\[\\\]^_`{|}~-])"
+    r"|&((?:#[xX][0-9a-fA-F]{1,8}|#[0-9]{1,9}|[A-Za-z][A-Za-z0-9]{1,31}));",
+    re.IGNORECASE,
+)
+
+
+def _resolve_entity_body(body: str) -> str:
+    if body[0] == "#":
+        cp = int(body[2:], 16) if body[1] in "xX" else int(body[1:])
+        if cp == 0 or 0xD800 <= cp <= 0xDFFF or cp > 0x10FFFF:
+            return "\ufffd"
+        return chr(cp)
+    resolved = html.entities.html5.get(body + ";")
+    if resolved is None:
+        resolved = html.entities.html5.get(body)
+    return resolved if resolved is not None else "&" + body + ";"
+
+
 def _unescape_string(text: str) -> str:
-    out: list[str] = []
-    i = 0
-    while i < len(text):
-        c = text[i]
-        if c == "\\" and i + 1 < len(text) and text[i + 1] in r"\\\"'`":
-            out.append(text[i + 1])
-            i += 2
-            continue
-        out.append(c)
-        i += 1
-    return "".join(out)
+    if not _ENTITY_RE_BLOCKS.search(text):
+        return text
+
+    def repl(m: re.Match[str]) -> str:
+        if m.group(1) is not None:
+            return m.group(1)
+        return _resolve_entity_body(m.group(2))
+
+    return _ENTITY_RE_BLOCKS.sub(repl, text)
 
 
 def _unescape_code_info(text: str) -> str:
@@ -741,7 +759,7 @@ def _unescape_code_info(text: str) -> str:
     n = len(text)
     while i < n:
         c = text[i]
-        if c == "\\" and i + 1 < n and text[i + 1] in r"\\\"'`":
+        if c == "\\" and i + 1 < n and text[i + 1] in _ESCAPABLE_CHARS:
             out.append(text[i + 1])
             i += 2
             continue
@@ -750,18 +768,10 @@ def _unescape_code_info(text: str) -> str:
     return html.unescape("".join(out))
 
 
-def _percent_encode(text: str) -> str:
-    return "".join(f"%{ord(c):02X}" if not _UNRESERVED_RE.match(c) else c for c in text)
-
-
-_UNRESERVED_RE = re.compile(r"[A-Za-z0-9._~:!$&'()*+,;=/@?#%]")
-
-
-_LINK_DEST_VALID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
-
-
 def _normalize_uri(uri: str) -> str:
-    return _percent_encode(uri) if not _LINK_DEST_VALID_RE.match(uri) else uri
+    from urllib.parse import quote
+
+    return quote(uri.encode("utf-8"), safe=";/@:+?=&()%#*,")
 
 
 def _normalize_label(raw: str) -> str:
@@ -1107,19 +1117,34 @@ def _escape_code_text(text: str) -> str:
     return html.escape(text, quote=False).replace('"', "&quot;")
 
 
+_TAGFILTER_NAMES = frozenset(
+    {"title", "textarea", "style", "xmp", "iframe", "noembed", "noframes", "script", "plaintext"}
+)
+_TAGFILTER_RE = re.compile(r"<(/?)([a-zA-Z][a-zA-Z0-9-]*)(?=[\s/>])", re.IGNORECASE)
+
+
+def apply_tagfilter(text: str) -> str:
+    def repl(m: re.Match[str]) -> str:
+        if m.group(2).lower() in _TAGFILTER_NAMES:
+            return "&lt;" + m.group(1) + m.group(2)
+        return m.group(0)
+
+    return _TAGFILTER_RE.sub(repl, text)
+
+
 def _render(block: _Block, inline: Callable[[str], str], *, tight: bool = False) -> str:
     t = block.t
     if t == "document":
         return "\n".join(_render(c, inline) for c in block.children)
     if t == "paragraph":
-        content = block.string_content.rstrip("\n")
+        content = block.string_content.rstrip()
         result = inline(content)
         return result if tight else f"<p>{result}</p>"
     if t == "block_quote":
         inner = "\n".join(_render(c, inline) for c in block.children)
         return "<blockquote>\n" + inner + "\n</blockquote>"
     if t == "heading":
-        content = block.string_content.rstrip("\n")
+        content = block.string_content.rstrip()
         return f"<h{block.level}>{inline(content)}</h{block.level}>"
     if t == "thematic_break":
         return "<hr />"
@@ -1133,7 +1158,7 @@ def _render(block: _Block, inline: Callable[[str], str], *, tight: bool = False)
         content = protect_lbrace(_escape_code_text(block.literal))
         return f"<pre><code{cls}>{content}</code></pre>"
     if t == "html_block":
-        return block.literal
+        return apply_tagfilter(block.literal)
     if t == "table":
         return _render_table(block, inline)
     if t == "list":
@@ -1157,7 +1182,7 @@ def _render(block: _Block, inline: Callable[[str], str], *, tight: bool = False)
             checked_attr = 'checked="" ' if block.task_checked else ""
             checkbox = f'<input {checked_attr}disabled="" type="checkbox"> '
         if tight and children[0].t == "paragraph":
-            first_inline = inline(children[0].string_content.rstrip("\n"))
+            first_inline = inline(children[0].string_content.rstrip())
             rest = [_render(c, inline, tight=True) for c in children[1:]]
             if not rest:
                 return f"<li>{checkbox}{first_inline}</li>"
@@ -1197,11 +1222,18 @@ def _render_table(block: _Block, inline: Callable[[str], str]) -> str:
     return "<table>\n<thead>\n" + head + "\n</thead>\n</table>"
 
 
+def parse_blocks_with_refs(
+    source: str,
+    inline: Callable[[str, dict[str, _LinkRef]], str],
+) -> _ParseResult:
+    parser = _Parser()
+    doc = parser.parse(source)
+    html_out = _render(doc, lambda text: inline(text, parser.refmap))
+    return _ParseResult(html=html_out, link_refs=parser.refmap)
+
+
 def parse_blocks(
     source: str,
     inline: Callable[[str], str],
 ) -> _ParseResult:
-    parser = _Parser()
-    doc = parser.parse(source)
-    html_out = _render(doc, inline)
-    return _ParseResult(html=html_out, link_refs=parser.refmap)
+    return parse_blocks_with_refs(source, lambda text, _refs: inline(text))
