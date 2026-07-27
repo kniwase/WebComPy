@@ -4,7 +4,7 @@
 
 ### Requirement: DefaultMarkdownParser shall convert Markdown to HTML
 
-`DefaultMarkdownParser.render(source)` SHALL convert Markdown text to HTML strings using a two-phase CommonMark parser (block structure per the container-stack algorithm; inline content per the delimiter-run algorithm), extended with the GFM extensions (tables, task list items, strikethrough, autolinks, disallowed raw HTML). `textwrap.dedent` SHALL be applied to the source before parsing. Tabs SHALL be handled per CommonMark (advance to the next 4-column stop, with partial-tab support); no global tab-to-spaces normalization SHALL be performed.
+`DefaultMarkdownParser.render(source)` SHALL convert Markdown text to HTML strings using a two-phase CommonMark parser (block structure per the container-stack algorithm; inline content per the delimiter-run algorithm), extended with the GFM extensions (tables, task list items, strikethrough, autolinks, disallowed raw HTML). `textwrap.dedent` SHALL be applied to multi-line sources at the framework layer (`render_markdown`) only; the parser itself SHALL NOT dedent. Tabs SHALL be handled per CommonMark (advance to the next 4-column stop, with partial-tab support); no global tab-to-spaces normalization SHALL be performed.
 
 Inline parsing SHALL be implemented as a character-scanning tokenizer followed by delimiter-stack processing (not sequential regex substitution), and SHALL be linear-time for adversarial inputs.
 
@@ -86,7 +86,8 @@ Inline parsing SHALL be implemented as a character-scanning tokenizer followed b
 #### Scenario: Autolinks and GFM extended autolinks
 - **WHEN** source contains `<scheme:...>`, `<email>`, `www.example.com`, bare URLs, or bare email addresses
 - **THEN** links SHALL be produced per CommonMark/GFM rules including trailing-punctuation trimming
-- **AND** every produced destination SHALL pass the URL scheme allow-list; disallowed schemes render as literal text (no element)
+- **AND** destinations from inline links, reference links, and images SHALL pass the URL scheme allow-list (`http`/`https`/`mailto`/relative/`#fragment`); disallowed schemes render as literal text (no element)
+- **AND** destinations from CommonMark angle-bracket autolinks and GFM extended autolinks SHALL be subject to a deny-list only (`javascript:`/`data:`/`vbscript:` render as literal text); any other syntactically valid scheme (e.g. `irc:`, `ftp:`, unknown schemes) produces a link per the GFM spec, because autolinks display their URL as text and thus carry no phishing surface
 
 #### Scenario: GFM disallowed raw HTML
 - **WHEN** source contains raw HTML tags in the GFM disallowed set (e.g., `<script>`, `<iframe>`)

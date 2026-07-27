@@ -53,7 +53,7 @@ Trailing-two-spaces and backslash breaks → `<br>`; single newlines → soft-br
 
 ### D7. docs_app limitations page written last, against final behavior
 
-A docs page (Japanese, matching docs_app conventions) documents the intentional limitations codified in `test-template-conformance-harness` plus the Markdown feature matrix (supported GFM constructs, and non-goals like footnotes). Written only after the parser is final so examples are verified against reality.
+A docs page (English, matching docs_app conventions) documents the intentional limitations codified in `test-template-conformance-harness` plus the Markdown feature matrix (supported GFM constructs, and non-goals like footnotes). Written only after the parser is final so examples are verified against reality.
 
 ## Risks / Trade-offs
 
