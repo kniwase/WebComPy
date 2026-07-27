@@ -48,9 +48,10 @@ reHtmlBlockOpen: list[re.Pattern[str]] = [
         re.IGNORECASE,
     ),
     re.compile(
-        r"^</?[a-zA-Z][a-zA-Z0-9-]*(?:[ \t]+[a-zA-Z_:][\w.:-]*"
+        r"^(?:<[a-zA-Z][a-zA-Z0-9-]*(?:[ \t]+[a-zA-Z_:][\w.:-]*"
         r"(?:[ \t]*=[ \t]*[^ \t\"'=<>`]+|=[ \t]*\"[^\"]*\"|"
-        r"=[ \t]*'[^']*')?)*[ \t]*/?>\s*$",
+        r"=[ \t]*'[^']*')?)*[ \t]*/?>"
+        r"|</[a-zA-Z][a-zA-Z0-9-]*[ \t]*>)\s*$",
         re.IGNORECASE,
     ),
 ]
@@ -775,8 +776,7 @@ def _normalize_uri(uri: str) -> str:
 
 
 def _normalize_label(raw: str) -> str:
-    text = _unescape_string(raw)
-    text = text.replace("\n", " ")
+    text = raw.replace("\n", " ")
     text = re.sub(r"\s+", " ", text).strip()
     return text.casefold()
 
