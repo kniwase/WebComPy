@@ -735,6 +735,21 @@ def _unescape_string(text: str) -> str:
     return "".join(out)
 
 
+def _unescape_code_info(text: str) -> str:
+    out: list[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if c == "\\" and i + 1 < n and text[i + 1] in r"\\\"'`":
+            out.append(text[i + 1])
+            i += 2
+            continue
+        out.append(c)
+        i += 1
+    return html.unescape("".join(out))
+
+
 def _percent_encode(text: str) -> str:
     return "".join(f"%{ord(c):02X}" if not _UNRESERVED_RE.match(c) else c for c in text)
 
@@ -1113,6 +1128,7 @@ def _render(block: _Block, inline: Callable[[str], str], *, tight: bool = False)
         if block.is_fenced and block.info:
             word = block.info.split()[0] if block.info.split() else ""
             if word:
+                word = _unescape_code_info(word)
                 cls = f' class="language-{_escape_code_text(word)}"'
         content = protect_lbrace(_escape_code_text(block.literal))
         return f"<pre><code{cls}>{content}</code></pre>"

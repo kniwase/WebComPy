@@ -338,6 +338,18 @@ class TestFencedCode:
         r = parse_blocks("```python\nfoo()\n```", lambda x: x)
         assert r.html == '<pre><code class="language-python">foo()\n</code></pre>'
 
+    def test_info_string_named_entity_decoded(self) -> None:
+        r = parse_blocks("``` f&ouml;&ouml;\nfoo\n```", lambda x: x)
+        assert r.html == '<pre><code class="language-föö">foo\n</code></pre>'
+
+    def test_info_string_numeric_reference_decoded(self) -> None:
+        r = parse_blocks("``` &#246;\nfoo\n```", lambda x: x)
+        assert r.html == '<pre><code class="language-ö">foo\n</code></pre>'
+
+    def test_info_string_only_first_word_uses_class(self) -> None:
+        r = parse_blocks("``` f&ouml; extra\nfoo\n```", lambda x: x)
+        assert r.html == '<pre><code class="language-fö">foo\n</code></pre>'
+
     def test_tilde_fence(self) -> None:
         r = parse_blocks("~~~~\nfoo\n~~~~~", lambda x: x)
         assert r.html == "<pre><code>foo\n</code></pre>"
