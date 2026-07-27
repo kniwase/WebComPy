@@ -818,7 +818,7 @@ def _parse_reference(content: str, refmap: dict[str, _LinkRef]) -> int:
         consumed_dest = m2.end()
     else:
         depth = 0
-        end = 0
+        end = pos
         i = pos
         while i < len(content):
             c = content[i]
@@ -832,7 +832,7 @@ def _parse_reference(content: str, refmap: dict[str, _LinkRef]) -> int:
                 if depth == 0:
                     break
                 depth -= 1
-            elif c in " \t\n":
+            elif c in " \t\n]":
                 break
             i += 1
             end = i
@@ -1158,6 +1158,8 @@ def _render(block: _Block, inline: Callable[[str], str], *, tight: bool = False)
         content = protect_lbrace(_escape_code_text(block.literal))
         return f"<pre><code{cls}>{content}</code></pre>"
     if t == "html_block":
+        if block.html_block_type == 1:
+            return block.literal
         return apply_tagfilter(block.literal)
     if t == "table":
         return _render_table(block, inline)
