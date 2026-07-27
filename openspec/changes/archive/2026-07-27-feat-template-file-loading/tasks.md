@@ -93,8 +93,8 @@
 
 ## 12. Main spec sync (archive time)
 
-- [ ] 12.1 Run `openspec sync feat-template-file-loading` to merge the delta specs into main specs: add `resource-port/spec.md` (new), update `cli/spec.md` (ADDED), update `hydration-data-transfer/spec.md` (MODIFIED), update `wheel-builder/spec.md` (REMOVED)
-- [ ] 12.2 Run `openspec validate` against the merged specs to confirm consistency
+- [x] 12.1 Run `openspec archive feat-template-file-loading` to merge the delta specs into main specs: add `resource-port/spec.md` (new), update `cli/spec.md` (ADDED), update `hydration-data-transfer/spec.md` (MODIFIED), update `wheel-builder/spec.md` (REMOVED)
+- [x] 12.2 Run `openspec validate` against the merged specs to confirm consistency
 
 ## 13. Future / Deferred (out of scope)
 
