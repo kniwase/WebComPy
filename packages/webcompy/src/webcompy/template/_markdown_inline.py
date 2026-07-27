@@ -321,9 +321,50 @@ class _InlineParser:
     def parse_string(self, block: _Node) -> bool:
         m = self.match(reMain)
         if m:
-            block.append_child(_text(m))
+            match_start = self.pos - len(m)
+            prev_char = self.subject[match_start - 1] if match_start > 0 else "\n"
+            next_char = self.subject[self.pos] if self.pos < len(self.subject) else "\n"
+            self._process_text_autolinks(block, m, prev_char, next_char)
             return True
         return False
+
+    def _process_text_autolinks(self, block: _Node, text: str, orig_prev: str, orig_next: str) -> None:
+        pos_before = self.pos
+        result: list[_Node] = []
+        scan_pos = 0
+        current_prev = orig_prev
+        while scan_pos < len(text):
+            match = self._scan_autolink_in_text(text, scan_pos, current_prev)
+            if match is None:
+                remaining = text[scan_pos:]
+                if remaining:
+                    result.append(_text(remaining))
+                break
+            start, link_end, dest, display = match
+            if start > scan_pos:
+                result.append(_text(text[scan_pos:start]))
+            if dest.startswith("mailto:") and orig_next in "-_" and link_end == len(text):
+                result.append(_text(text[scan_pos:link_end]))
+                scan_pos = link_end
+                current_prev = orig_next
+                continue
+            link = _Node("link")
+            link.is_autolink = True
+            link.destination = dest
+            link.title = ""
+            link.append_child(_text(display))
+            result.append(link)
+            current_prev = display[-1] if display else " "
+            scan_pos = link_end
+        self.pos = pos_before
+        if len(result) <= 1 and result:
+            block.append_child(result[0])
+            return
+        if not result:
+            block.append_child(_text(text))
+            return
+        for r in result:
+            block.append_child(r)
 
     def parse_backticks(self, block: _Node) -> bool:
         ticks = self.match(reTicksHere)
@@ -691,22 +732,88 @@ class _InlineParser:
             return "\n"
         return self.subject[self.pos - 1]
 
+    def _scan_autolink_in_text(self, text: str, pos: int, prev_char: str) -> tuple[int, int, str, str] | None:
+        n = len(text)
+        if pos >= n:
+            return None
+        i = pos
+        while i < n:
+            c = text[i]
+            if c == "\n" or c == " " or c == "\t":
+                i += 1
+                continue
+            pc = prev_char if i == pos or text[i - 1] in " \t\n" else text[i - 1]
+            rest = text[i:]
+            lower = rest.lower()
+            if rest.startswith("www.") and (pc in " \t\n" or pc in "*_~("):
+                domain_end = self._scan_domain(text, i + 4)
+                if domain_end > i + 4:
+                    return self._finalize_autolink_text(text, i, domain_end, "http://", True)
+            if pc in " \t\n" or pc in "*_~(":
+                for scheme in ("http://", "https://", "ftp://"):
+                    if lower.startswith(scheme):
+                        domain_end = self._scan_domain(text, i + len(scheme))
+                        if domain_end > i + len(scheme):
+                            return self._finalize_autolink_text(text, i, domain_end, scheme, False)
+            email = self._try_email(text, i)
+            if email is not None:
+                link_end, dest, display = email
+                return i, i + link_end, dest, display
+            i += 1
+        return None
+
+    def _finalize_autolink_text(
+        self, text: str, url_start: int, domain_end: int, scheme: str, is_www: bool
+    ) -> tuple[int, int, str, str] | None:
+        n = len(text)
+        i = domain_end
+        while i < n:
+            c = text[i]
+            if c == " " or c == "\t" or c == "\n" or c == "<":
+                break
+            i += 1
+        link_end = i
+        while link_end > domain_end and text[link_end - 1] in self._TRAILING_PUNCT:
+            link_end -= 1
+        if link_end > domain_end and text[link_end - 1] == ")":
+            open_count = 0
+            for j in range(url_start, link_end):
+                if text[j] == "(":
+                    open_count += 1
+                elif text[j] == ")":
+                    open_count -= 1
+            while open_count < 0 and link_end > domain_end and text[link_end - 1] == ")":
+                link_end -= 1
+                open_count += 1
+        if link_end > domain_end and text[link_end - 1] == ";":
+            j = link_end - 2
+            if j >= url_start and text[j] == "&":
+                link_end -= 1
+            elif j >= url_start:
+                k = j
+                while k > url_start and text[k - 1].isalnum():
+                    k -= 1
+                if k > url_start and text[k - 1] == "&":
+                    link_end = k - 1
+        raw_url = text[url_start:link_end]
+        dest = scheme + raw_url if is_www else raw_url
+        return url_start, link_end, dest, raw_url
+
     def parse_extended_autolink(self, block: _Node) -> bool:
         pc = self._prev_char()
-        if pc not in " \t\n" and pc not in "*_~(":
-            return False
         subj = self.subject
         rest = subj[self.pos :]
         lower = rest.lower()
-        if rest.startswith("www."):
+        if rest.startswith("www.") and (pc in " \t\n" or pc in "*_~("):
             domain_end = self._scan_domain(subj, self.pos + 4)
             if domain_end > self.pos + 4:
                 return self._emit_extended(subj, self.pos, domain_end, "http://", block, is_www=True)
-        for scheme in ("http://", "https://", "ftp://"):
-            if lower.startswith(scheme):
-                domain_end = self._scan_domain(subj, self.pos + len(scheme))
-                if domain_end > self.pos + len(scheme):
-                    return self._emit_extended(subj, self.pos, domain_end, scheme, block, is_www=False)
+        if pc in " \t\n" or pc in "*_~(":
+            for scheme in ("http://", "https://", "ftp://"):
+                if lower.startswith(scheme):
+                    domain_end = self._scan_domain(subj, self.pos + len(scheme))
+                    if domain_end > self.pos + len(scheme):
+                        return self._emit_extended(subj, self.pos, domain_end, scheme, block, is_www=False)
         email = self._try_email(subj, self.pos)
         if email is not None:
             link_end, dest, display = email
@@ -763,33 +870,24 @@ class _InlineParser:
             link_end -= 1
         if link_end > domain_end and subj[link_end - 1] == ")":
             open_count = 0
-            for j in range(url_start, link_end - 1):
+            for j in range(url_start, link_end):
                 if subj[j] == "(":
                     open_count += 1
                 elif subj[j] == ")":
                     open_count -= 1
-            if open_count < 0:
-                trim = -open_count
-                while trim > 0 and link_end > domain_end and subj[link_end - 1] == ")":
-                    link_end -= 1
-                    trim -= 1
+            while open_count < 0 and link_end > domain_end and subj[link_end - 1] == ")":
+                link_end -= 1
+                open_count += 1
         if link_end > domain_end and subj[link_end - 1] == ";":
             j = link_end - 2
-            found_entity = False
             if j >= url_start and subj[j] == "&":
-                k = j + 1
-                while k < link_end - 1 and subj[k].isalnum():
-                    k += 1
-                if k == link_end - 1:
-                    found_entity = True
+                link_end -= 1
             elif j >= url_start:
                 k = j
                 while k > url_start and subj[k - 1].isalnum():
                     k -= 1
                 if k > url_start and subj[k - 1] == "&":
-                    found_entity = True
-            if found_entity:
-                link_end -= 1
+                    link_end = k - 1
         raw_url = subj[url_start:link_end]
         dest = scheme + raw_url if is_www else raw_url
         node = _Node("link")
@@ -813,30 +911,20 @@ class _InlineParser:
         local_end = i
         if i >= n or subj[i] != "@":
             return None
-        has_plus = "+" in subj[pos:local_end]
-        if has_plus:
-            at_idx = subj.index("@", pos)
-            local_part = subj[pos:at_idx]
-            if "+" in local_part[1:]:
-                pass
         domain_start = i + 1
         domain_end = self._scan_domain(subj, domain_start)
         if domain_end <= domain_start:
+            return None
+        if subj[domain_end - 1] in "-_":
+            return None
+        if domain_end < n and subj[domain_end] in "-_":
             return None
         while local_end > pos and subj[local_end - 1] in ".+-_":
             local_end -= 1
         if local_end <= pos:
             return None
-        if has_plus and subj[local_end : local_end + 1] == "+":
-            pass
-        email_end = domain_end
-        while email_end > domain_end:
-            email_end -= 1
         email = subj[pos:domain_end]
         if email.endswith("+"):
-            return None
-        last_char = subj[domain_end - 1] if domain_end > pos else ""
-        if last_char in "-_":
             return None
         return domain_end - pos, "mailto:" + email, email
 
