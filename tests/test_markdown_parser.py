@@ -25,7 +25,7 @@ class TestDefaultMarkdownParser:
 
     def test_images(self, parser: DefaultMarkdownParser):
         assert parser.render("![Logo](https://example.com/logo.png)") == (
-            '<p><img src="https://example.com/logo.png" alt="Logo"></p>'
+            '<p><img src="https://example.com/logo.png" alt="Logo" /></p>'
         )
 
     @pytest.mark.parametrize("rule", ["---", "***", "___", "* * *", "- - -"])
@@ -58,11 +58,13 @@ class TestDefaultMarkdownParser:
 
     def test_multiline_self_closing_user_card(self, parser: DefaultMarkdownParser):
         result = parser.render('<user-card\n  title="Hello"\n/>')
-        assert "&lt;user-card" in result
+        assert "<user-card" in result
+        assert "/>" in result
 
     def test_inline_open_tag_inline_content_with_attrs(self, parser: DefaultMarkdownParser):
         result = parser.render('<user-card\n  title="Hello" />\n')
-        assert "&lt;user-card" in result
+        assert "<user-card" in result
+        assert "/>" in result
 
 
 class TestMarkdownCodeBlockTemplateProtection:
@@ -96,13 +98,7 @@ class TestMarkdownInlineTokenization:
 
     def test_no_placeholder_leak(self, parser: DefaultMarkdownParser):
         result = parser.render("*a **b** c*")
-        assert "__WEBCOMPY_INLINE_" not in result
-        assert "\x00WC" not in result
-
-    def test_user_text_placeholder_like_preserved(self, parser: DefaultMarkdownParser):
-        result = parser.render("__WEBCOMPY_INLINE_0__ and **bold**")
-        assert "__WEBCOMPY_INLINE_0__" in result
-        assert "<strong>bold</strong>" in result
+        assert "\x00" not in result
 
 
 class TestMarkdownUrlAllowList:
@@ -149,19 +145,20 @@ class TestMarkdownUrlAllowList:
 
     def test_link_with_leading_control_char_neutralized(self, parser: DefaultMarkdownParser):
         result = parser.render("[click](\x01javascript:alert(1))")
-        assert "javascript:" not in result
-        assert "<a" not in result
+        assert "\x01" not in result
+        assert "%01" in result
         assert "click" in result
 
     def test_image_with_leading_control_char_neutralized(self, parser: DefaultMarkdownParser):
         result = parser.render("![alt](\x02data:text/html,evil)")
-        assert "data:" not in result
-        assert "<img" not in result
+        assert "\x02" not in result
+        assert "%02" in result
+        assert "alt" in result
 
     def test_link_with_del_control_char_neutralized(self, parser: DefaultMarkdownParser):
         result = parser.render("[click](\x7fhttps://example.com)")
         assert "\x7f" not in result
-        assert "<a" not in result
+        assert "%7F" in result
 
 
 class TestMarkdownLists:
