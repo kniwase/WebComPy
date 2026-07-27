@@ -10,6 +10,7 @@ and cause unexpected behavior.
 from __future__ import annotations
 
 import re
+import textwrap
 from collections.abc import Mapping
 from typing import Any
 
@@ -66,6 +67,8 @@ def render_markdown(source: str, context: Mapping[str, Any] | None = None) -> El
     )
 
     ctx: dict[str, Any] = dict(context) if context else {}
+    if "\n" in source:
+        source = textwrap.dedent(source)
     segments = _split_markdown_source(source, ctx)
 
     parser = inject(MARKDOWN_PORT_KEY)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import textwrap
 from collections.abc import Mapping
 from dataclasses import dataclass
 from inspect import iscoroutinefunction
@@ -25,11 +26,11 @@ from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY, MARKDOWN_PORT_KEY
 from webcompy.signal import SignalBase
 from webcompy.template._holes import resolve_var
+from webcompy.template._markdown_blocks import match_list_item_start
 from webcompy.template._parser import DIRECTIVE_PATTERN, _parse_for_args
 
 _EXPRESSION_SPAN_RE = re.compile(r"\{\{.*?\}\}|\{%.*?%\}", re.DOTALL)
-_LIST_MARKER_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s")
-_FENCE_LINE_RE = re.compile(r"^ {0,3}```")
+_FENCE_LINE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 _CODE_SPAN_RE = re.compile(r"`[^`\n]+`")
 
 
@@ -42,14 +43,27 @@ def _rename_in_expressions(text: str, var_name: str, replacement: str) -> str:
 
 
 def _is_list_body(body_text: str) -> bool:
+    if "\n" in body_text:
+        body_text = textwrap.dedent(body_text)
     for line in body_text.splitlines():
         stripped = line.strip()
         if not stripped:
             continue
         if DIRECTIVE_PATTERN.fullmatch(stripped):
             continue
-        return bool(_LIST_MARKER_RE.match(line))
+        return match_list_item_start(line)
     return False
+
+
+def _strip_blank_edge_lines(text: str) -> str:
+    lines = text.split("\n")
+    start = 0
+    end = len(lines)
+    while start < end and not lines[start].strip():
+        start += 1
+    while end > start and not lines[end - 1].strip():
+        end -= 1
+    return "\n".join(lines[start:end])
 
 
 @dataclass
@@ -75,17 +89,21 @@ class _Token:
 def _protected_spans(source: str) -> list[tuple[int, int]]:
     spans: list[tuple[int, int]] = []
     pos = 0
-    in_fence = False
+    fence_char: str | None = None
     for line in source.splitlines(keepends=True):
         line_start, line_end = pos, pos + len(line)
         stripped = line.rstrip("\r\n")
-        if in_fence or _FENCE_LINE_RE.match(stripped):
+        m = _FENCE_LINE_RE.match(stripped)
+        if fence_char is not None:
             spans.append((line_start, line_end))
-            if _FENCE_LINE_RE.match(stripped):
-                in_fence = not in_fence
+            if m is not None and m.group(1)[0] == fence_char:
+                fence_char = None
+        elif m is not None:
+            spans.append((line_start, line_end))
+            fence_char = m.group(1)[0]
         else:
-            for m in _CODE_SPAN_RE.finditer(stripped):
-                spans.append((line_start + m.start(), line_start + m.end()))
+            for cm in _CODE_SPAN_RE.finditer(stripped):
+                spans.append((line_start + cm.start(), line_start + cm.end()))
         pos = line_end
     return spans
 
@@ -440,6 +458,9 @@ class MarkdownForElement(DynamicElement):
                 item_body = _rename_in_expressions(item_body, var, f"{prefix}{var}")
 
             item_body = _expand_directives_in_body(item_body, augmented_ctx, prefix)
+            item_body = _strip_blank_edge_lines(item_body)
+            if not item_body.strip():
+                continue
             markdown_parts.append(item_body)
 
         concatenated = "\n".join(markdown_parts)

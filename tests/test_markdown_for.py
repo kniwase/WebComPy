@@ -16,6 +16,7 @@ from webcompy.template._markdown_for import (
     MarkdownForElement,
     _is_list_body,
     _rename_in_expressions,
+    _tokenize_source,
 )
 
 
@@ -305,6 +306,36 @@ class TestBodyDetection:
     def test_list_body_with_if_directive_first(self):
         body = "\n{% if x.visible %}\n- {{ x.name }}\n{% endif %}\n"
         assert _is_list_body(body) is True
+
+    def test_list_body_with_task_marker(self):
+        assert _is_list_body("\n- [ ] {{ item }}\n") is True
+
+    def test_list_body_with_checked_task_marker(self):
+        assert _is_list_body("\n- [x] {{ item }}\n") is True
+
+    def test_list_body_ordered_marker_any_start_number(self):
+        assert _is_list_body("\n3. {{ item }}\n") is True
+
+    def test_indented_code_looking_body_is_not_list(self):
+        assert _is_list_body("    - not a list") is False
+
+
+class TestProtectedSpans:
+    def test_tilde_fence_protects_directives(self):
+        tokens = _tokenize_source("~~~\n{% for x in xs %}\n~~~")
+        assert all(t.kind == "text" for t in tokens)
+
+    def test_backtick_fence_still_protects(self):
+        tokens = _tokenize_source("```\n{% for x in xs %}\n```")
+        assert all(t.kind == "text" for t in tokens)
+
+    def test_tilde_inside_backtick_fence_does_not_close(self):
+        tokens = _tokenize_source("```\n~~~\n{% for x in xs %}\n```")
+        assert all(t.kind == "text" for t in tokens)
+
+    def test_backtick_inside_tilde_fence_does_not_close(self):
+        tokens = _tokenize_source("~~~\n```\n{% for x in xs %}\n~~~")
+        assert all(t.kind == "text" for t in tokens)
 
 
 class TestEscapeHatch:
