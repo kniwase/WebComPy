@@ -12,12 +12,11 @@ HTML).
 
 from __future__ import annotations
 
-import html
 import re
 from urllib.parse import quote
 
 from webcompy.template._holes import protect_lbrace
-from webcompy.template._markdown_blocks import _LinkRef, _normalize_label, apply_tagfilter
+from webcompy.template._markdown_blocks import _LinkRef, _normalize_label, _resolve_entity_body, apply_tagfilter
 
 ESCAPABLE = r'[!"#$%&\'()*+,./:;<=>?@[\\\]^_`{|}~-]'
 ESCAPED_CHAR = "\\\\" + ESCAPABLE
@@ -99,34 +98,22 @@ HTMLTAG = (
 reHtmlTag = re.compile("^" + HTMLTAG, re.IGNORECASE)
 
 
-def _resolve_entity_full(text: str) -> str:
-    body = text[1:-1]
-    if body[0] == "#":
-        cp = int(body[2:], 16) if body[1] in "xX" else int(body[1:])
-        if cp == 0 or 0xD800 <= cp <= 0xDFFF or cp > 0x10FFFF:
-            return "\ufffd"
-        return chr(cp)
-    resolved = html.entities.html5.get(body + ";")
-    if resolved is None:
-        resolved = html.entities.html5.get(body)
-    return resolved if resolved is not None else text
+def _resolve_entity(text: str) -> str:
+    return _resolve_entity_body(text[1:-1])
 
 
 def unescape_string(s: str) -> str:
     if re.search(reBackslashOrAmp, s):
         return re.sub(
             reEntityOrEscapedChar,
-            lambda m: m.group(0)[1:] if m.group(0)[0] == "\\" else _resolve_entity_full(m.group(0)),
+            lambda m: m.group(0)[1:] if m.group(0)[0] == "\\" else _resolve_entity(m.group(0)),
             s,
         )
     return s
 
 
 def normalize_uri(uri: str) -> str:
-    try:
-        return quote(uri.encode("utf-8"), safe=";/@:+?=&()%#*,")
-    except UnicodeDecodeError:
-        return quote(uri.encode("utf-8"))
+    return quote(uri.encode("utf-8"), safe=";/@:+?=&()%#*,")
 
 
 _XMLSPECIAL = re.compile(r'[&<>"]')
@@ -314,7 +301,7 @@ class _InlineParser:
     def parse_entity(self, block: _Node) -> bool:
         m = self.match(reEntityHere)
         if m:
-            block.append_child(_text(_resolve_entity_full(m)))
+            block.append_child(_text(_resolve_entity(m)))
             return True
         return False
 
@@ -727,6 +714,40 @@ class _InlineParser:
 
     _TRAILING_PUNCT = frozenset("?!.,:*_~")
 
+    @staticmethod
+    def _trim_url_end(text: str, url_start: int, domain_end: int) -> int:
+        n = len(text)
+        i = domain_end
+        while i < n:
+            c = text[i]
+            if c == " " or c == "\t" or c == "\n" or c == "<":
+                break
+            i += 1
+        link_end = i
+        while link_end > domain_end and text[link_end - 1] in _InlineParser._TRAILING_PUNCT:
+            link_end -= 1
+        if link_end > domain_end and text[link_end - 1] == ")":
+            open_count = 0
+            for j in range(url_start, link_end):
+                if text[j] == "(":
+                    open_count += 1
+                elif text[j] == ")":
+                    open_count -= 1
+            while open_count < 0 and link_end > domain_end and text[link_end - 1] == ")":
+                link_end -= 1
+                open_count += 1
+        if link_end > domain_end and text[link_end - 1] == ";":
+            j = link_end - 2
+            if j >= url_start and text[j] == "&":
+                link_end -= 1
+            elif j >= url_start:
+                k = j
+                while k > url_start and text[k - 1].isalnum():
+                    k -= 1
+                if k > url_start and text[k - 1] == "&":
+                    link_end = k - 1
+        return link_end
+
     def _prev_char(self) -> str:
         if self.pos == 0:
             return "\n"
@@ -765,36 +786,7 @@ class _InlineParser:
     def _finalize_autolink_text(
         self, text: str, url_start: int, domain_end: int, scheme: str, is_www: bool
     ) -> tuple[int, int, str, str] | None:
-        n = len(text)
-        i = domain_end
-        while i < n:
-            c = text[i]
-            if c == " " or c == "\t" or c == "\n" or c == "<":
-                break
-            i += 1
-        link_end = i
-        while link_end > domain_end and text[link_end - 1] in self._TRAILING_PUNCT:
-            link_end -= 1
-        if link_end > domain_end and text[link_end - 1] == ")":
-            open_count = 0
-            for j in range(url_start, link_end):
-                if text[j] == "(":
-                    open_count += 1
-                elif text[j] == ")":
-                    open_count -= 1
-            while open_count < 0 and link_end > domain_end and text[link_end - 1] == ")":
-                link_end -= 1
-                open_count += 1
-        if link_end > domain_end and text[link_end - 1] == ";":
-            j = link_end - 2
-            if j >= url_start and text[j] == "&":
-                link_end -= 1
-            elif j >= url_start:
-                k = j
-                while k > url_start and text[k - 1].isalnum():
-                    k -= 1
-                if k > url_start and text[k - 1] == "&":
-                    link_end = k - 1
+        link_end = self._trim_url_end(text, url_start, domain_end)
         raw_url = text[url_start:link_end]
         dest = scheme + raw_url if is_www else raw_url
         return url_start, link_end, dest, raw_url
@@ -858,36 +850,7 @@ class _InlineParser:
     def _emit_extended(
         self, subj: str, url_start: int, domain_end: int, scheme: str, block: _Node, *, is_www: bool
     ) -> bool:
-        n = len(subj)
-        i = domain_end
-        while i < n:
-            c = subj[i]
-            if c == " " or c == "\t" or c == "\n" or c == "<":
-                break
-            i += 1
-        link_end = i
-        while link_end > domain_end and subj[link_end - 1] in self._TRAILING_PUNCT:
-            link_end -= 1
-        if link_end > domain_end and subj[link_end - 1] == ")":
-            open_count = 0
-            for j in range(url_start, link_end):
-                if subj[j] == "(":
-                    open_count += 1
-                elif subj[j] == ")":
-                    open_count -= 1
-            while open_count < 0 and link_end > domain_end and subj[link_end - 1] == ")":
-                link_end -= 1
-                open_count += 1
-        if link_end > domain_end and subj[link_end - 1] == ";":
-            j = link_end - 2
-            if j >= url_start and subj[j] == "&":
-                link_end -= 1
-            elif j >= url_start:
-                k = j
-                while k > url_start and subj[k - 1].isalnum():
-                    k -= 1
-                if k > url_start and subj[k - 1] == "&":
-                    link_end = k - 1
+        link_end = self._trim_url_end(subj, url_start, domain_end)
         raw_url = subj[url_start:link_end]
         dest = scheme + raw_url if is_www else raw_url
         node = _Node("link")
@@ -961,40 +924,33 @@ def _is_safe_link_url(url: str) -> bool:
 
 def _render_plain(node: _Node) -> str:
     out: list[str] = []
-    child = node.first_child
+    buf: dict[int, list[str]] = {id(node): out}
+    stack: list[tuple[bool, _Node]] = []
+    child = node.last_child
     while child is not None:
-        if child.t == "text" or child.t == "code":
-            out.append(child.literal)
-        elif child.t in ("softbreak", "linebreak"):
-            out.append("\n")
+        stack.append((False, child))
+        child = child.prv
+    while stack:
+        is_combine, n = stack.pop()
+        t = n.t
+        if is_combine:
+            seg = "".join(buf.pop(id(n), []))
+            buf.setdefault(id(n.parent), []).append(seg)
+        elif t == "text" or t == "code":
+            buf.setdefault(id(n.parent), []).append(n.literal)
+        elif t == "softbreak" or t == "linebreak":
+            buf.setdefault(id(n.parent), []).append("\n")
         else:
-            out.append(_render_plain(child))
-        child = child.nxt
+            stack.append((True, n))
+            c = n.last_child
+            while c is not None:
+                stack.append((False, c))
+                c = c.prv
     return "".join(out)
 
 
-def _render_children(node: _Node) -> str:
-    out: list[str] = []
-    child = node.first_child
-    while child is not None:
-        out.append(_render_node(child))
-        child = child.nxt
-    return "".join(out)
-
-
-def _render_node(node: _Node) -> str:
-    t = node.t
-    if t == "text":
-        return escape_xml(node.literal)
-    if t == "code":
-        return "<code>" + protect_lbrace(escape_xml(node.literal)) + "</code>"
-    if t == "html_inline":
-        return apply_tagfilter(node.literal)
-    if t == "softbreak":
-        return "\n"
-    if t == "linebreak":
-        return "<br />\n"
-    inner = _render_children(node)
+def _wrap_node(n: _Node, inner: str) -> str:
+    t = n.t
     if t == "emph":
         return "<em>" + inner + "</em>"
     if t == "strong":
@@ -1002,26 +958,60 @@ def _render_node(node: _Node) -> str:
     if t == "del":
         return "<del>" + inner + "</del>"
     if t == "link":
-        if node.is_autolink or _is_safe_link_url(node.destination):
-            href = ' href="' + escape_xml(node.destination) + '"'
+        if n.is_autolink or _is_safe_link_url(n.destination):
+            href = ' href="' + escape_xml(n.destination) + '"'
             title_attr = ""
-            if node.title:
-                title_attr = ' title="' + escape_xml(node.title) + '"'
+            if n.title:
+                title_attr = ' title="' + escape_xml(n.title) + '"'
             return "<a" + href + title_attr + ">" + inner + "</a>"
         return inner
     if t == "image":
-        alt = _render_plain(node)
-        if _is_safe_link_url(node.destination):
-            src = ' src="' + escape_xml(node.destination) + '"'
+        alt = _render_plain(n)
+        if _is_safe_link_url(n.destination):
+            src = ' src="' + escape_xml(n.destination) + '"'
             alt_attr = ' alt="' + escape_xml(alt) + '"'
             title_attr = ""
-            if node.title:
-                title_attr = ' title="' + escape_xml(node.title) + '"'
+            if n.title:
+                title_attr = ' title="' + escape_xml(n.title) + '"'
             return "<img" + src + alt_attr + title_attr + " />"
         return escape_xml(alt)
-    if t == "paragraph":
-        return _render_children(node)
-    return ""
+    return inner
+
+
+def _render_children(node: _Node) -> str:
+    out: list[str] = []
+    buf: dict[int, list[str]] = {id(node): out}
+    stack: list[tuple[bool, _Node]] = []
+    child = node.last_child
+    while child is not None:
+        stack.append((False, child))
+        child = child.prv
+    while stack:
+        is_combine, n = stack.pop()
+        t = n.t
+        if is_combine:
+            inner = "".join(buf.pop(id(n), []))
+            seg = _wrap_node(n, inner)
+            buf.setdefault(id(n.parent), []).append(seg)
+        elif t == "text":
+            buf.setdefault(id(n.parent), []).append(escape_xml(n.literal))
+        elif t == "code":
+            buf.setdefault(id(n.parent), []).append("<code>" + protect_lbrace(escape_xml(n.literal)) + "</code>")
+        elif t == "html_inline":
+            buf.setdefault(id(n.parent), []).append(apply_tagfilter(n.literal))
+        elif t == "softbreak":
+            buf.setdefault(id(n.parent), []).append("\n")
+        elif t == "linebreak":
+            buf.setdefault(id(n.parent), []).append("<br />\n")
+        elif t == "image":
+            stack.append((True, n))
+        else:
+            stack.append((True, n))
+            c = n.last_child
+            while c is not None:
+                stack.append((False, c))
+                c = c.prv
+    return "".join(out)
 
 
 def render_inline(text: str, refmap: dict[str, _LinkRef]) -> str:
