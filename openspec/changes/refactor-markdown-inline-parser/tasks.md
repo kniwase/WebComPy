@@ -24,7 +24,7 @@
 
 - [x] 4.1 Raw inline HTML recognition per spec + GFM disallowed-raw-HTML escaping — flip xfails
 - [x] 4.2 Remove the placeholder-based `{{ }}`/`{% %}` protection (structural guarantee: code content never enters inline parsing); keep all protection tests from fix-template-engine-defects green; add fuzz cases (template syntax inside spans/blocks, adjacent spans)
-- [~] 4.3 Adversarial-input tests (delimiter seas, deep bracket nesting) completing in linear time — mitigations in place (iterative renderer avoids RecursionError); dedicated tests added in follow-up
+- [x] 4.3 Adversarial-input tests (delimiter seas, deep bracket nesting) completing in linear time — iterative renderer avoids RecursionError; dedicated tests added in `tests/test_markdown_adversarial.py`
 
 ## 5. Integration & Conformance Completion
 

@@ -85,6 +85,15 @@ def DocumentLimitations(_: ComponentContext[None]):
             {},
             "Autolinks (angle-bracket and GFM extended forms) apply a deny-list instead: only javascript:, data:, and vbscript: are rejected; any other valid scheme produces a link.",
         ),
+        html.H3({}, "Disallowed Raw HTML (tagfilter)"),
+        html.P(
+            {},
+            "The GFM tagfilter extension escapes the leading < of disallowed tags (title, textarea, style, xmp, iframe, noembed, noframes, script, plaintext) when they appear as inline HTML or as HTML blocks of types 2-7.",
+        ),
+        html.P(
+            {},
+            "HTML blocks of type 1 (script, pre, style, textarea raw-text containers) pass through verbatim, because the GFM spec suite pins verbatim output for those examples. The template binding layer additionally rejects script, style, iframe, noembed, noframes, and xmp at render time; however textarea, title, and plaintext type-1 blocks are not rejected and flow into the DOM. For untrusted Markdown, apply a downstream HTML sanitizer.",
+        ),
         html.H2({}, "HTML Parsing"),
         html.P({}, "The HTML parser used for component tags and attributes has the following limitations:"),
         html.UL(

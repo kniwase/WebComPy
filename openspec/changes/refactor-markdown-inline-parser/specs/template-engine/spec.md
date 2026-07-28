@@ -91,9 +91,10 @@ Inline parsing SHALL be implemented as a character-scanning tokenizer followed b
 - **AND** destinations from CommonMark angle-bracket autolinks and GFM extended autolinks SHALL be subject to a deny-list only (`javascript:`/`data:`/`vbscript:` render as literal text); any other syntactically valid scheme (e.g. `irc:`, `ftp:`, unknown schemes) produces a link per the GFM spec, because autolinks display their URL as text and thus carry no phishing surface
 
 #### Scenario: GFM disallowed raw HTML
-- **WHEN** source contains raw HTML tags in the GFM disallowed set (e.g., `<script>`, `<iframe>`)
-- **THEN** the tags SHALL be entity-escaped in the Markdown→HTML output
-- **AND** the template binding layer's rejection of such tags remains as a separate, unchanged policy for non-Markdown templates
+- **WHEN** source contains raw HTML tags in the GFM disallowed set (`title`, `textarea`, `style`, `xmp`, `iframe`, `noembed`, `noframes`, `script`, `plaintext`) as **inline HTML** or as **HTML blocks of types 2-7**
+- **THEN** the leading `<` of those tags SHALL be entity-escaped (`&lt;`) in the Markdown→HTML output
+- **AND** HTML blocks of **type 1** (`<script>`, `<pre>`, `<style>`, `<textarea>` raw-text containers) SHALL pass through verbatim, because the GFM spec suite pins verbatim output for those examples (filtering them would break conformance)
+- **AND** the template binding layer's rejection of `script`/`style`/`iframe`/`noembed`/`noframes`/`xmp` remains as a separate, unchanged policy; note that `<textarea>`, `<title>`, and `<plaintext>` type-1 blocks are NOT rejected by the binding layer and therefore flow into the DOM verbatim (residual raw-HTML surface; rely on a downstream HTML sanitizer if Markdown is untrusted)
 
 ## ADDED Requirements
 

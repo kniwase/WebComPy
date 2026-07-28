@@ -34,7 +34,7 @@ Inline destinations: `<...>` form or balanced-parens form (nested balanced paren
 
 Every link/image/autolink/extended-autolink passes the final destination through the existing allow-list (`http:`, `https:`, `mailto:`, relative, `#fragment`, plus bare `www.`→`http://` per GFM). Disallowed schemes render as literal text (no element) — identical outcome to the current policy, now covering all link forms.
 
-- **GFM disallowed raw HTML**: tags in GFM's filtered list (`<script>`, `<iframe>`, etc.) are entity-escaped at emission. This composes with, and does not replace, the template binding layer's rejection of the same tags: Markdown→HTML output never contains them raw, and any that arrive via non-Markdown templates still fail at binding.
+- **GFM disallowed raw HTML**: tags in GFM's filtered list (`title`, `textarea`, `style`, `xmp`, `iframe`, `noembed`, `noframes`, `script`, `plaintext`) are entity-escaped (leading `<` → `&lt;`) when they appear as inline HTML or HTML blocks of types 2-7. HTML blocks of **type 1** (`<script>`, `<pre>`, `<style>`, `<textarea>` raw-text containers) pass through verbatim: the GFM spec suite pins verbatim output for those examples, so filtering them would break conformance. Consequently Markdown→HTML output CAN contain `<script>`/`<style>`/`<textarea>` raw when they open a type-1 block; the template binding layer rejects `script`/`style`/`iframe`/`noembed`/`noframes`/`xmp` (raises at bind time), but `<textarea>`/`<title>`/`<plaintext>` type-1 blocks are not rejected by the binding layer and flow into the DOM — a residual raw-HTML surface that requires a downstream HTML sanitizer for untrusted Markdown.
 
 ### D4. Template-syntax protection via tokenization, replacing placeholders
 
