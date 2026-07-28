@@ -86,6 +86,20 @@ class TestMarkdownCodeBlockTemplateProtection:
         assert "x }}</code>" in result
         assert "{{ x }}" not in result
 
+    def test_directive_in_inline_code_span(self, parser: DefaultMarkdownParser):
+        result = parser.render("before `{% if cond %}` after")
+        assert "<code>" in result
+        assert "{% if cond %}" in result or "\x00" in result
+
+    def test_adjacent_code_spans_with_template_syntax(self, parser: DefaultMarkdownParser):
+        result = parser.render("`{{ a }}` and `{{ b }}`")
+        assert result.count("<code>") == 2
+
+    def test_code_span_with_mixed_template_and_text(self, parser: DefaultMarkdownParser):
+        result = parser.render("`prefix {{ hole }} suffix`")
+        assert "<code>" in result
+        assert "hole" in result or "\x00" in result
+
 
 class TestMarkdownInlineTokenization:
     def test_italic_containing_bold(self, parser: DefaultMarkdownParser):
