@@ -755,6 +755,30 @@ class _InlineParser:
             return "\n"
         return self.subject[self.pos - 1]
 
+    def _match_autolink_at(self, pos: int, pc: str) -> tuple[int, str, str] | None:
+        subj = self.subject
+        rest = subj[pos:]
+        lower = rest.lower()
+        if rest.startswith("www.") and (pc in " \t\n" or pc in "*_~("):
+            domain_end = self._scan_domain(subj, pos + 4)
+            if domain_end > pos + 4:
+                link_end = self._trim_url_end(pos, domain_end)
+                raw_url = subj[pos:link_end]
+                return link_end, "http://" + raw_url, raw_url
+        if pc in " \t\n" or pc in "*_~(":
+            for scheme in ("http://", "https://", "ftp://"):
+                if lower.startswith(scheme):
+                    domain_end = self._scan_domain(subj, pos + len(scheme))
+                    if domain_end > pos + len(scheme):
+                        link_end = self._trim_url_end(pos, domain_end)
+                        raw_url = subj[pos:link_end]
+                        return link_end, raw_url, raw_url
+        email = self._try_email(subj, pos)
+        if email is not None:
+            link_len, dest, display = email
+            return pos + link_len, dest, display
+        return None
+
     def _scan_autolink_in_text(
         self, start: int, end: int, scan_pos: int, prev_char: str
     ) -> tuple[int, int, str, str] | None:
@@ -768,60 +792,26 @@ class _InlineParser:
             pc = prev_char if i == scan_pos else subj[i - 1]
             if prev_char == "<":
                 pc = "<"
-            rest = subj[i:end]
-            lower = rest.lower()
-            if rest.startswith("www.") and (pc in " \t\n" or pc in "*_~("):
-                domain_end = self._scan_domain(subj, i + 4)
-                if domain_end > i + 4:
-                    return self._finalize_autolink_text(i, domain_end, "http://", True)
-            if pc in " \t\n" or pc in "*_~(":
-                for scheme in ("http://", "https://", "ftp://"):
-                    if lower.startswith(scheme):
-                        domain_end = self._scan_domain(subj, i + len(scheme))
-                        if domain_end > i + len(scheme):
-                            return self._finalize_autolink_text(i, domain_end, scheme, False)
-            email = self._try_email(subj, i)
-            if email is not None:
-                link_len, dest, display = email
-                return i, i + link_len, dest, display
+            match = self._match_autolink_at(i, pc)
+            if match is not None:
+                link_end, dest, display = match
+                return i, link_end, dest, display
             i += 1
         return None
 
-    def _finalize_autolink_text(
-        self, url_start: int, domain_end: int, scheme: str, is_www: bool
-    ) -> tuple[int, int, str, str] | None:
-        link_end = self._trim_url_end(url_start, domain_end)
-        raw_url = self.subject[url_start:link_end]
-        dest = scheme + raw_url if is_www else raw_url
-        return url_start, link_end, dest, raw_url
-
     def parse_extended_autolink(self, block: _Node) -> bool:
-        pc = self._prev_char()
-        subj = self.subject
-        rest = subj[self.pos :]
-        lower = rest.lower()
-        if rest.startswith("www.") and (pc in " \t\n" or pc in "*_~("):
-            domain_end = self._scan_domain(subj, self.pos + 4)
-            if domain_end > self.pos + 4:
-                return self._emit_extended(self.pos, domain_end, "http://", block, is_www=True)
-        if pc in " \t\n" or pc in "*_~(":
-            for scheme in ("http://", "https://", "ftp://"):
-                if lower.startswith(scheme):
-                    domain_end = self._scan_domain(subj, self.pos + len(scheme))
-                    if domain_end > self.pos + len(scheme):
-                        return self._emit_extended(self.pos, domain_end, scheme, block, is_www=False)
-        email = self._try_email(subj, self.pos)
-        if email is not None:
-            link_len, dest, display = email
-            node = _Node("link")
-            node.is_autolink = True
-            node.destination = dest
-            node.title = ""
-            node.append_child(_text(display))
-            block.append_child(node)
-            self.pos = self.pos + link_len
-            return True
-        return False
+        match = self._match_autolink_at(self.pos, self._prev_char())
+        if match is None:
+            return False
+        link_end, dest, display = match
+        node = _Node("link")
+        node.is_autolink = True
+        node.destination = dest
+        node.title = ""
+        node.append_child(_text(display))
+        block.append_child(node)
+        self.pos = link_end
+        return True
 
     def _scan_domain(self, text: str, pos: int) -> int:
         n = len(text)
@@ -853,19 +843,6 @@ class _InlineParser:
         if (uscore1 > 0 or uscore2 > 0) and np <= 10:
             return -1
         return end
-
-    def _emit_extended(self, url_start: int, domain_end: int, scheme: str, block: _Node, *, is_www: bool) -> bool:
-        link_end = self._trim_url_end(url_start, domain_end)
-        raw_url = self.subject[url_start:link_end]
-        dest = scheme + raw_url if is_www else raw_url
-        node = _Node("link")
-        node.is_autolink = True
-        node.destination = dest
-        node.title = ""
-        node.append_child(_text(raw_url))
-        block.append_child(node)
-        self.pos = link_end
-        return True
 
     def _try_email(self, subj: str, pos: int) -> tuple[int, str, str] | None:
         n = len(subj)
@@ -1009,7 +986,7 @@ def _render_children(node: _Node) -> str:
         elif t == "linebreak":
             buf.setdefault(id(n.parent), []).append("<br />\n")
         elif t == "image":
-            stack.append((True, n))
+            buf.setdefault(id(n.parent), []).append(_wrap_node(n, ""))
         else:
             stack.append((True, n))
             c = n.last_child

@@ -302,3 +302,9 @@ class TestTagfilterAsymmetry:
     def test_inline_title_tag_filtered(self, parser: DefaultMarkdownParser):
         result = parser.render("inline <title>t</title> here")
         assert "&lt;title>" in result
+
+
+class TestMarkdownUriNormalization:
+    def test_scheme_url_brackets_and_bang_percent_encoded(self, parser: DefaultMarkdownParser):
+        result = parser.render("[a](https://example.com/[p]!)")
+        assert '<a href="https://example.com/%5Bp%5D%21">' in result
