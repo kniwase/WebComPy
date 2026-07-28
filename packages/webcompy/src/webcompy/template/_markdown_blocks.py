@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import dataclasses
 import html
+import html.entities
 import re
 from collections.abc import Callable
+from urllib.parse import quote
 
 from webcompy.template._holes import protect_lbrace
 
@@ -725,7 +727,7 @@ BLOCK_STARTS.insert(BLOCK_STARTS.index(_start_indented_code_block), _start_list_
 _ESCAPABLE_CHARS = frozenset(r"""!"#$%&'()*+,./:;<=>?@[\]^_`{|}~-""")
 _ENTITY_RE_BLOCKS = re.compile(
     r"\\([!\"#$%&'()*+,./:;<=>?@\[\\\]^_`{|}~-])"
-    r"|&((?:#[xX][0-9a-fA-F]{1,8}|#[0-9]{1,9}|[A-Za-z][A-Za-z0-9]{1,31}));",
+    r"|&((?:#[xX][0-9a-fA-F]{1,6}|#[0-9]{1,7}|[A-Za-z][A-Za-z0-9]{1,31}));",
     re.IGNORECASE,
 )
 
@@ -737,8 +739,6 @@ def _resolve_entity_body(body: str) -> str:
             return "\ufffd"
         return chr(cp)
     resolved = html.entities.html5.get(body + ";")
-    if resolved is None:
-        resolved = html.entities.html5.get(body)
     return resolved if resolved is not None else "&" + body + ";"
 
 
@@ -770,8 +770,6 @@ def _unescape_code_info(text: str) -> str:
 
 
 def _normalize_uri(uri: str) -> str:
-    from urllib.parse import quote
-
     return quote(uri.encode("utf-8"), safe=";/@:+?=&()%#*,")
 
 
