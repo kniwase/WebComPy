@@ -28,13 +28,23 @@
     645
   ],
   "notes": {
-    "170": "inline: example requires inline-layer support (refactor-markdown-inline-parser) or specific inline-caused behavior",
-    "179": "inline: example requires inline-layer support (refactor-markdown-inline-parser) or specific inline-caused behavior",
-    "187": "inline: example requires inline-layer support (refactor-markdown-inline-parser) or specific inline-caused behavior",
-    "217": "inline: example requires inline-layer support (refactor-markdown-inline-parser) or specific inline-caused behavior",
-    "218": "inline: example requires inline-layer support (refactor-markdown-inline-parser) or specific inline-caused behavior",
-    "278": "inline: example requires inline-layer support (refactor-markdown-inline-parser) or specific inline-caused behavior",
-    "619": "inline: bare http:// at line start is autolinked by GFM extension but not by CommonMark; cmark-gfm keeps it literal in this section",
-    "620": "inline: bare http:// at line start is autolinked by GFM extension but not by CommonMark; cmark-gfm keeps it literal in this section"
+    "170": "block-layer reference-def validation: [foo]: <bar>(baz) has trailing (baz) which should invalidate the definition; block parser accepts it as a title. Inherited from refactor-markdown-block-parser (pre-existing xfail); out of inline scope.",
+    "179": "block-layer reference-def validation: [foo]: /url\\n\"title\" ok has trailing 'ok' after the title, which should invalidate the definition; block parser accepts it. Inherited from refactor-markdown-block-parser; out of inline scope.",
+    "187": "block-layer rendering: empty blockquote after a reference-link paragraph emits \\n\\n instead of \\n for the empty blockquote content. Inherited from prior block changes; out of inline scope.",
+    "217": "block-layer rendering: empty blockquote '>' emits \\n\\n instead of \\n. Block-layer whitespace; out of inline scope.",
+    "218": "block-layer rendering: empty blockquote with trailing spaces emits \\n\\n instead of \\n. Block-layer whitespace; out of inline scope.",
+    "278": "block-layer rendering: list item with setext heading + lazy continuation emits extra \\n before </li>. Block-layer; out of inline scope.",
+    "398": "cmark-gfm emphasis divergence: '__foo, __bar__, baz__' expects <strong> wrapping the whole phrase but the delimiter-stack algorithm creates nested <strong> for the inner __bar__ part. All major reference implementations (commonmark.js, commonmark.py, markdown-it) produce the same nested output; only cmark-gfm (C) collapses to a single <strong>. Accepted as a documented deviation.",
+    "426": "cmark-gfm emphasis divergence: residual delimiter runs of even length (>=4) nest in commonmark.js/py/md-it but collapse in cmark-gfm. Accepted as documented deviation; matches ecosystem behavior.",
+    "434": "cmark-gfm emphasis divergence: residual underscore delimiter runs (even length >=4) nest instead of collapsing. Same root cause as 398/426. Accepted as documented deviation.",
+    "435": "cmark-gfm emphasis divergence: same root cause — residual delimiter re-matching produces nested emphasis where cmark-gfm collapses. Accepted as documented deviation.",
+    "436": "cmark-gfm emphasis divergence: same root cause. Accepted as documented deviation.",
+    "473": "cmark-gfm emphasis divergence: '****foo****' produces <strong><strong>foo</strong></strong> (two nesting levels) instead of single <strong>foo</strong>. All major impls (commonmark.js, commonmark.py, markdown-it) produce the nested form; only cmark-gfm collapses. Accepted as documented deviation — matches ecosystem behavior.",
+    "474": "cmark-gfm emphasis divergence: '____foo____' (underscore) — same root cause as 473. Accepted as documented deviation.",
+    "475": "cmark-gfm emphasis divergence: '******foo******' produces three nesting levels in commonmark.js/py/md-it; cmark-gfm collapses to single strong. Accepted as documented deviation.",
+    "477": "cmark-gfm emphasis divergence: '_____foo_____' (5+5 underscores) produces extra nesting layer in commonmark.js/py/md-it vs cmark-gfm. Accepted as documented deviation.",
+    "619": "harness artifact: this is a CommonMark-base example (fence-info 'example', no extension) expecting bare 'http://' URLs to remain literal. This parser enables GFM extended autolinks unconditionally (per GFM conformance target), so bare URLs are autolinked as correct GFM behavior. The harness cannot toggle extensions per-example.",
+    "620": "harness artifact: same as 619, for bare email address. GFM extended autolinks correctly autolink it; the CommonMark-base example expects literal. Harness limitation.",
+    "645": "inline raw HTML: degenerate comment '<!-->' / '<!--->' (HTML comment that starts with '>' or '->' after '<!--') is not matched by the inline HTML-comment regex and is escaped as text; cmark-gfm passes it through raw. Low-impact obscure edge case; accepted as documented deviation."
   }
 }
