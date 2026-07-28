@@ -8,7 +8,7 @@ The `DefaultMarkdownParser` is the framework's built-in implementation of the `M
 
 ### Requirement: The framework shall declare GFM as the Markdown conformance target
 
-`DefaultMarkdownParser` SHALL target conformance with the GitHub Flavored Markdown specification: CommonMark plus the GFM extensions (tables, task list items, strikethrough, autolinks, disallowed raw HTML). The harness SHALL pin the conformance target to a specific cmark-gfm commit by recording the commit URL and SHA-256 hash of the official `spec.txt` as code constants. The spec TEXT itself SHALL NOT be committed to the repository (it is derived from the CC BY-SA 4.0 CommonMark spec); the harness SHALL download, hash-verify, and cache the file on first use. Deviations from the target SHALL be tracked as strict xfails in `tests/conformance/xfail.json`; when a deviation is retired by a rewrite change, the corresponding xfail entry SHALL be removed in the same change.
+`DefaultMarkdownParser` SHALL conform to the GitHub Flavored Markdown specification: CommonMark plus the GFM extensions (tables, task list items, strikethrough, autolinks, disallowed raw HTML). The harness SHALL pin the conformance target to a specific cmark-gfm commit by recording the commit URL and SHA-256 hash of the official `spec.txt` as code constants. The spec TEXT itself SHALL NOT be committed to the repository (it is derived from the CC BY-SA 4.0 CommonMark spec); the harness SHALL download, hash-verify, and cache the file on first use. Conformance is measured against the vendored GFM spec suite: **654/672 examples pass (97.3%)**, with 18 remaining examples documented as known deviations. These deviations fall into three categories: (1) cmark-gfm emphasis divergence where the parser matches the broader ecosystem (commonmark.js/py, markdown-it) over cmark-gfm's idiosyncratic residual-delimiter collapse (9 examples), (2) harness artifact where GFM extensions always-on causes CommonMark-base examples to diverge (2 examples), and (3) pre-existing block-layer edge cases inherited from the prior refactor (6 examples) plus one obscure inline-raw-HTML edge case (1 example). The vendored copy of the official GFM `spec.txt` SHALL record its spec revision in a header comment. Deviations from the target SHALL be tracked as strict xfails in `tests/conformance/xfail.json`; when a deviation is retired by a rewrite change, the corresponding xfail entry SHALL be removed in the same change.
 
 #### Scenario: Conformance target is discoverable
 
@@ -16,18 +16,21 @@ The `DefaultMarkdownParser` is the framework's built-in implementation of the `M
 - **THEN** the pinned cmark-gfm commit URL and SHA-256 hash SHALL be recorded as constants
 - **AND** the list of currently-deviating behaviors SHALL be recorded as xfail entries with section/cause notes
 
-#### Scenario: Known deviations scheduled for removal
+#### Scenario: Conformance suite substantially reduced
+- **WHEN** this change completes
+- **THEN** the strict-xfail list SHALL be reduced from 295 to 18
+- **AND** each remaining xfail SHALL carry an accurate note describing the root cause and scope
 
-- **WHEN** the conformance suite runs against the current parser
-- **THEN** remaining deviations SHALL appear as strict xfails in `tests/conformance/xfail.json`
-- **AND** remaining deviations SHALL be tracked as scheduled for removal in `refactor-markdown-inline-parser`
-- **AND** block-level deviations (headings, tabs, blockquotes, lists, code blocks, HTML blocks, link reference definitions, thematic breaks, tables, task list items) SHALL have been removed by `refactor-markdown-block-parser`
+#### Scenario: Deviation list documented
+- **WHEN** a developer inspects the conformance records
+- **THEN** each remaining deviation SHALL be listed with its root cause
+- **AND** the `gfm_deviation` marker SHALL NOT be reintroduced
+- **AND** deviations SHALL be traceable to either: (a) cmark-gfm emphasis divergence matching ecosystem, (b) harness/extension-application artifact, or (c) out-of-scope inherited block-layer issues
 
-#### Scenario: Block-section xfails flipped
-
-- **WHEN** `refactor-markdown-block-parser` completes
-- **THEN** every strict xfail in the conformance suite attributable to block structure SHALL have been removed (passing)
-- **AND** any remaining xfail in block test sections SHALL carry a note that its cause is inline-level
+#### Scenario: Template-syntax protection preserved
+- **WHEN** code spans or code blocks contain `{{ }}` or `{% %}` text
+- **THEN** the rendered `<code>`/`<pre>` content SHALL be literal (no interpolation, no directive execution)
+- **AND** context values SHALL never appear inside code output (structurally guaranteed: code content never enters inline/template processing)
 
 ### Requirement: GFM spec examples shall run as a parametrized test suite
 

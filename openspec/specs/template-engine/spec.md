@@ -472,7 +472,9 @@ Both `css_text` and `css_text_template` SHALL be importable from `webcompy.templ
 
 ### Requirement: DefaultMarkdownParser shall convert Markdown to HTML
 
-`DefaultMarkdownParser.render(source)` SHALL convert Markdown text to HTML strings using a two-phase CommonMark block parser (container stack + leaf blocks) as specified in the CommonMark appendix, extended with GFM tables and task list items. `textwrap.dedent` SHALL be applied to multi-line sources at the framework layer (`render_markdown`) only; the parser itself SHALL NOT dedent. Tabs SHALL be handled per CommonMark (advance to the next 4-column stop, with partial-tab support); no global tab-to-spaces normalization SHALL be performed, and tab characters inside code blocks SHALL be preserved per spec expansion rules.
+`DefaultMarkdownParser.render(source)` SHALL convert Markdown text to HTML strings using a two-phase CommonMark parser (block structure per the container-stack algorithm; inline content per the delimiter-run algorithm), extended with the GFM extensions (tables, task list items, strikethrough, autolinks, disallowed raw HTML). `textwrap.dedent` SHALL be applied to multi-line sources at the framework layer (`render_markdown`) only; the parser itself SHALL NOT dedent. Tabs SHALL be handled per CommonMark (advance to the next 4-column stop, with partial-tab support); no global tab-to-spaces normalization SHALL be performed.
+
+Inline parsing SHALL be implemented as a character-scanning tokenizer followed by delimiter-stack processing (not sequential regex substitution), and SHALL be linear-time for adversarial inputs.
 
 #### Scenario: ATX headings
 
@@ -487,11 +489,10 @@ Both `css_text` and `css_text_template` SHALL be importable from `webcompy.templ
 - **THEN** the output SHALL be `<h1>Title</h1>`
 - **AND** an underline of `-` characters SHALL produce `<h2>Title</h2>` (not a thematic break)
 
-#### Scenario: Paragraphs
-
+#### Scenario: Paragraphs and line breaks
 - **WHEN** source contains consecutive non-blank lines
-- **THEN** they SHALL be joined into `<p>text</p>` with inline formatting applied
-- **AND** a setext underline SHALL NOT be absorbed into the paragraph
+- **THEN** they SHALL be joined into `<p>text</p>` with soft breaks preserved as newlines per spec
+- **AND** a line ending in two or more spaces or a backslash SHALL produce `<br>` (hard break)
 
 #### Scenario: Fenced code blocks
 
@@ -505,10 +506,10 @@ Both `css_text` and `css_text_template` SHALL be importable from `webcompy.templ
 - **WHEN** source contains lines indented by 4+ columns outside a list context
 - **THEN** they SHALL be emitted as `<pre><code>` blocks per CommonMark indented-code rules (including blank-line handling and interruption rules)
 
-#### Scenario: Unordered and ordered lists
+#### Scenario: Lists
 
 - **WHEN** source contains `-`/`+`/`*` bullet items or `1.`/`1)` ordered items
-- **THEN** the output SHALL be `<ul>`/`<ol>` with `<li>` children per CommonMark list rules (marker consistency, start-number via `<ol start="N">` when N != 1, loose vs tight rendering, and block children inside items)
+- **THEN** the output SHALL follow CommonMark list rules (marker consistency, `<ol start="N">` when N != 1, loose vs tight rendering, block children inside items)
 - **AND** tabs SHALL be normalized per column rules for indent calculation (never a fixed 2-space rule)
 
 #### Scenario: Nested and mixed container structures
@@ -546,6 +547,40 @@ Both `css_text` and `css_text_template` SHALL be importable from `webcompy.templ
 - **WHEN** a list item begins with `[ ]`, `[x]`, or `[X]` followed by whitespace
 - **THEN** the item SHALL begin with `<input type="checkbox" disabled="">` (plus `checked=""` when checked) per GFM
 - **AND** the checkbox SHALL be static HTML with no reactive binding
+
+#### Scenario: Emphasis and strong via delimiter runs
+- **WHEN** source contains `*`/`_` delimiters in any spec-valid configuration
+- **THEN** `<em>`/`<strong>` SHALL be produced per the CommonMark delimiter algorithm, including `***bold-italic***`, nested forms (`*a **b** c*`), and intraword underscore rules (`foo_bar_baz` remains literal; `_em_` and `__strong__` are active)
+- **NOTE**: Symmetric delimiter runs of length ≥4 (e.g. `****foo****`) produce nested `<strong>` levels matching commonmark.js/py and markdown-it behavior, rather than collapsing to a single level (as cmark-gfm does). This is a documented ecosystem-wide divergence: the portable reference implementations (commonmark.js, commonmark.py) share the same nested behavior; only the C cmark-gfm collapses. The WebComPy parser matches the broader ecosystem. See `openspec/changes/refactor-markdown-inline-parser/specs/markdown-conformance/spec.md` for the deviation catalog.
+
+#### Scenario: GFM strikethrough
+- **WHEN** source contains `~` or `~~` delimiters per the GFM extension
+- **THEN** `<del>` SHALL be produced per the delimiter algorithm
+
+#### Scenario: Code spans
+- **WHEN** source contains backtick strings of any length (`` `a` ``, `` ``a`b`` ``)
+- **THEN** matching variable-length code spans SHALL be produced per spec
+- **AND** content SHALL be HTML-escaped but otherwise literal (no emphasis, entities, or template processing inside)
+
+#### Scenario: Backslash escapes and entities
+- **WHEN** source contains backslash-escaped punctuation (`\*`) or entity/numeric references (`&copy;`, `&#65;`, `&#x41;`)
+- **THEN** escapes SHALL yield the literal punctuation character and references SHALL resolve per spec (via stdlib `html.entities`), except inside code spans/blocks where both remain literal
+
+#### Scenario: Links and images
+- **WHEN** source contains inline links/images with balanced-paren or `<...>` destinations and optional titles (`"..."`, `'...'`, `(...)`), or full/collapsed/shortcut reference links
+- **THEN** `<a href>`/`<img src>` SHALL be produced per spec, with titles and reference resolution via the block-layer definition table (CommonMark label normalization)
+
+#### Scenario: Autolinks and GFM extended autolinks
+- **WHEN** source contains `<scheme:...>`, `<email>`, `www.example.com`, bare URLs, or bare email addresses
+- **THEN** links SHALL be produced per CommonMark/GFM rules including trailing-punctuation trimming
+- **AND** destinations from inline links, reference links, and images SHALL pass the URL scheme allow-list (`http`/`https`/`mailto`/relative/`#fragment`); disallowed schemes render as literal text (no element)
+- **AND** destinations from CommonMark angle-bracket autolinks and GFM extended autolinks SHALL be subject to a deny-list only (`javascript:`/`data:`/`vbscript:` render as literal text); any other syntactically valid scheme (e.g. `irc:`, `ftp:`, unknown schemes) produces a link per the GFM spec, because autolinks display their URL as text and thus carry no phishing surface
+
+#### Scenario: GFM disallowed raw HTML
+- **WHEN** source contains raw HTML tags in the GFM disallowed set (`title`, `textarea`, `style`, `xmp`, `iframe`, `noembed`, `noframes`, `script`, `plaintext`) as **inline HTML** or as **HTML blocks of types 2-7**
+- **THEN** the leading `<` of those tags SHALL be entity-escaped (`&lt;`) in the Markdown→HTML output
+- **AND** HTML blocks of **type 1** (`<script>`, `<pre>`, `<style>`, `<textarea>` raw-text containers) SHALL pass through verbatim, because the GFM spec suite pins verbatim output for those examples (filtering them would break conformance)
+- **AND** the template binding layer's rejection of `script`/`style`/`iframe`/`noembed`/`noframes`/`xmp` remains as a separate, unchanged policy; note that `<textarea>`, `<title>`, and `<plaintext>` type-1 blocks are NOT rejected by the binding layer and therefore flow into the DOM verbatim (residual raw-HTML surface; rely on a downstream HTML sanitizer if Markdown is untrusted)
 
 ### Requirement: render_markdown shall produce reactive Element trees from Markdown
 
