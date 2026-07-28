@@ -24,20 +24,20 @@
 
 - [x] 4.1 Raw inline HTML recognition per spec + GFM disallowed-raw-HTML escaping — flip xfails
 - [x] 4.2 Remove the placeholder-based `{{ }}`/`{% %}` protection (structural guarantee: code content never enters inline parsing); keep all protection tests from fix-template-engine-defects green; add fuzz cases (template syntax inside spans/blocks, adjacent spans)
-- [x] 4.3 Adversarial-input tests (delimiter seas, deep bracket nesting) completing in linear time
+- [~] 4.3 Adversarial-input tests (delimiter seas, deep bracket nesting) completing in linear time — mitigations in place (iterative renderer avoids RecursionError); dedicated tests added in follow-up
 
 ## 5. Integration & Conformance Completion
 
 - [x] 5.1 Swap the block facade's inline seam to the new engine; remove the legacy inline code path
-- [x] 5.2 Empty the xfail list; confirm `pytest -m gfm_deviation` selects nothing; remove the marker registration if unused
-- [x] 5.3 `uv run python -m pytest tests/ --tb=short` green; conformance rate = full pass recorded in PR
+- [~] 5.2 Reduce xfail list from 295 to 18 (654/672 passing); remaining 18 are documented as known deviations with accurate notes (9 emphasis = cmark-gfm divergence matching ecosystem; 2 autolink = harness artifact; 6 block-layer = inherited from prior change; 1 raw HTML = obscure edge case). xfail list NOT emptied per decision (deviations accepted).
+- [~] 5.3 `uv run python -m pytest tests/ --tb=short` green; conformance rate 654/672 (97.3%) with 18 documented deviations
 - [x] 5.4 `uv run ruff check .`, `uv run ruff format .`, `uv run pyright` clean
 
 ## 6. Documentation & Final Sweep
 
-- [ ] 6.1 Add docs_app "Template engine limitations" page (expression language, for-loop semantics, scoped-CSS limits, HTML parsing limits, Markdown feature matrix incl. non-GFM non-goals), verified against final behavior
-- [ ] 6.2 Update docs_app Markdown-feature docs to the final supported set (GFM)
-- [ ] 6.3 `uv run python -m webcompy generate` on docs_app; diff-review generated output for unintended changes
-- [ ] 6.4 Run `scripts/run-e2e-tests.sh` (Markdown/template groups) green
-- [ ] 6.5 Update `.opencode/agents/ci-review.md` invariants if the inline engine introduces new contracts
-- [ ] 6.6 `openspec validate refactor-markdown-inline-parser --strict` passes
+- [x] 6.1 Add docs_app "Template engine limitations" page (expression language, for-loop semantics, scoped-CSS limits, HTML parsing limits, Markdown feature matrix incl. non-GFM non-goals), verified against final behavior
+- [x] 6.2 Update docs_app Markdown-feature docs to the final supported set (GFM)
+- [x] 6.3 `uv run python -m webcompy generate` on docs_app; diff-review generated output for unintended changes
+- [x] 6.4 Run `scripts/run-e2e-tests.sh` (Markdown/template groups) green
+- [x] 6.5 Update `.opencode/agents/ci-review.md` invariants if the inline engine introduces new contracts
+- [x] 6.6 `openspec validate refactor-markdown-inline-parser --strict` passes

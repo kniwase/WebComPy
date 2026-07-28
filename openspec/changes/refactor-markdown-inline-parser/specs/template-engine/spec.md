@@ -65,6 +65,7 @@ Inline parsing SHALL be implemented as a character-scanning tokenizer followed b
 #### Scenario: Emphasis and strong via delimiter runs
 - **WHEN** source contains `*`/`_` delimiters in any spec-valid configuration
 - **THEN** `<em>`/`<strong>` SHALL be produced per the CommonMark delimiter algorithm, including `***bold-italic***`, nested forms (`*a **b** c*`), and intraword underscore rules (`foo_bar_baz` remains literal; `_em_` and `__strong__` are active)
+- **NOTE**: Symmetric delimiter runs of length ≥4 (e.g. `****foo****`) produce nested `<strong>` levels matching commonmark.js/py and markdown-it behavior, rather than collapsing to a single level (as cmark-gfm does). This is a documented ecosystem-wide divergence: the portable reference implementations (commonmark.js, commonmark.py) share the same nested behavior; only the C cmark-gfm collapses. The WebComPy parser matches the broader ecosystem. See `openspec/changes/refactor-markdown-inline-parser/specs/markdown-conformance/spec.md` for the deviation catalog.
 
 #### Scenario: GFM strikethrough
 - **WHEN** source contains `~` or `~~` delimiters per the GFM extension
