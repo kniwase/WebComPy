@@ -2,8 +2,8 @@
 
 ## 1. Skills: review & inspection
 
-- [ ] 1.1 Create `.opencode/skills/webcompy-review/SKILL.md`: frontmatter (name, description) + Review Procedure with command-first acquisition (`git diff`, `gh pr diff`, `gh api`) and caller-provided-file precedence + Critical Framework Invariants (migrated verbatim from `.opencode/agents/ci-review.md`) + General Review Perspectives + review output template (section names unchanged — CI awk extraction contract)
-- [ ] 1.2 Create `.opencode/skills/webcompy-inspect/SKILL.md`: inspect CLI subcommands (serve/stop/screenshot/console/query/click/navigate/verify), typical workflows, file output rules, image analysis notes (migrated from `browser-inspector.md`)
+- [x] 1.1 Create `.opencode/skills/webcompy-review/SKILL.md`: frontmatter (name, description) + Review Procedure with command-first acquisition (`git diff`, `gh pr diff`, `gh api`) and caller-provided-file precedence + Critical Framework Invariants (migrated verbatim from `.opencode/agents/ci-review.md`) + General Review Perspectives + review output template (section names unchanged — CI awk extraction contract)
+- [x] 1.2 Create `.opencode/skills/webcompy-inspect/SKILL.md`: inspect CLI subcommands (serve/stop/screenshot/console/query/click/navigate/verify), typical workflows, file output rules, image analysis notes (migrated from `browser-inspector.md`)
 
 ## 2. Skills: development domains
 
@@ -15,6 +15,8 @@
 - [ ] 2.6 Write skill `description` fields so OpenCode's automatic skill matching replaces the old agent handoff rules (each description states when the skill applies)
 
 ## 3. Agents: redefine envelopes
+
+> File deletions in this section (8 files) are pre-authorized by the user.
 
 - [ ] 3.1 Rewrite `.opencode/agents/ci-review.md` → `.opencode/agents/webcompy-reviewer.md`: keep permission frontmatter and persona; remove all `.tmp/*.txt` references and procedural content; add mandatory `webcompy-review` skill loading with Read-fallback to `SKILL.md`; delete old `ci-review.md`
 - [ ] 3.2 Rewrite `.opencode/agents/browser-inspector.md` → `.opencode/agents/webcompy-inspector.md`: keep permission frontmatter and persona; remove procedural content; add mandatory `webcompy-inspect` skill loading with Read-fallback; replace "delegate to browser-developer" coordination note; delete old `browser-inspector.md`
@@ -35,5 +37,5 @@
 ## 6. Verification
 
 - [ ] 6.1 Run `openspec validate refactor-agent-skill-restructure` and confirm the change is valid
-- [ ] 6.2 Sanity-check `webcompy-reviewer` locally: invoke with a small local diff and confirm it acquires the diff via commands and produces the template-conformant review structure
+- [ ] 6.2 Static verification: confirm all 7 skills exist with required frontmatter (`name:` matching directory, `description:` present and meaningful); confirm both redefined agents contain the mandatory skill-load instruction with Read-fallback; confirm `ci.yml` uses `--agent webcompy-reviewer` and posts full Action Items; confirm the leftover-name grep returns 0 hits in live files (excluding `openspec/changes/archive/` and the current change's proposal/design/tasks)
 - [ ] 6.3 After merge, watch the first AI Code Review job run to confirm skill loading (or Read-fallback) works in the headless environment and the review comment posts with full Action Items
