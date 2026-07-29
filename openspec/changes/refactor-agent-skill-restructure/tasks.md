@@ -18,9 +18,9 @@
 
 > File deletions in this section (8 files) are pre-authorized by the user.
 
-- [ ] 3.1 Rewrite `.opencode/agents/ci-review.md` → `.opencode/agents/webcompy-reviewer.md`: keep permission frontmatter and persona; remove all `.tmp/*.txt` references and procedural content; add mandatory `webcompy-review` skill loading with Read-fallback to `SKILL.md`; delete old `ci-review.md`
-- [ ] 3.2 Rewrite `.opencode/agents/browser-inspector.md` → `.opencode/agents/webcompy-inspector.md`: keep permission frontmatter and persona; remove procedural content; add mandatory `webcompy-inspect` skill loading with Read-fallback; replace "delegate to browser-developer" coordination note; delete old `browser-inspector.md`
-- [ ] 3.3 Delete `.opencode/agents/browser-developer.md`, `server-developer.md`, `component-developer.md`, `docs-developer.md`, `runtime-analyzer.md`, `ci-local.md`
+- [x] 3.1 Rewrite `.opencode/agents/ci-review.md` → `.opencode/agents/webcompy-reviewer.md`: keep permission frontmatter and persona; remove all `.tmp/*.txt` references and procedural content; add mandatory `webcompy-review` skill loading with Read-fallback to `SKILL.md`; delete old `ci-review.md`
+- [x] 3.2 Rewrite `.opencode/agents/browser-inspector.md` → `.opencode/agents/webcompy-inspector.md`: keep permission frontmatter and persona; remove procedural content; add mandatory `webcompy-inspect` skill loading with Read-fallback; replace "delegate to browser-developer" coordination note; delete old `browser-inspector.md`
+- [x] 3.3 Delete `.opencode/agents/browser-developer.md`, `server-developer.md`, `component-developer.md`, `docs-developer.md`, `runtime-analyzer.md`, `ci-local.md`
 
 ## 4. CI workflow
 
