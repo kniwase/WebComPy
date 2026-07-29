@@ -36,6 +36,6 @@
 
 ## 6. Verification
 
-- [ ] 6.1 Run `openspec validate refactor-agent-skill-restructure` and confirm the change is valid
-- [ ] 6.2 Static verification: confirm all 7 skills exist with required frontmatter (`name:` matching directory, `description:` present and meaningful); confirm both redefined agents contain the mandatory skill-load instruction with Read-fallback; confirm `ci.yml` uses `--agent webcompy-reviewer` and posts full Action Items; confirm the leftover-name grep returns 0 hits in live files (excluding `openspec/changes/archive/` and the current change's proposal/design/tasks)
+- [x] 6.1 Run `openspec validate refactor-agent-skill-restructure` and confirm the change is valid
+- [x] 6.2 Static verification: confirm all 7 skills exist with required frontmatter (`name:` matching directory, `description:` present and meaningful); confirm both redefined agents contain the mandatory skill-load instruction with Read-fallback; confirm `ci.yml` uses `--agent webcompy-reviewer` and posts full Action Items; confirm the leftover-name grep returns 0 hits in live files (excluding `openspec/changes/archive/` and the current change's proposal/design/tasks)
 - [ ] 6.3 After merge, watch the first AI Code Review job run to confirm skill loading (or Read-fallback) works in the headless environment and the review comment posts with full Action Items
