@@ -655,12 +655,12 @@ jobs:
           CI results have already been verified by the CI pipeline — read .tmp/ci-results.txt for the full results.
           Trust these CI results and only review for issues that CI cannot catch (logic bugs, design issues, missing edge cases, spec violations).
 
-          SPEC-DRIVEN REVIEW: Classify changed files by subsystem and read the corresponding \`openspec/specs/\` before reviewing. Always start with \`openspec/specs/overview/spec.md\` and \`openspec/specs/architecture/spec.md\`. Then read subsystem specs as specified in your agent configuration. Use specs as a checklist — verify no \"SHALL\" requirement is violated.
+          SPEC-DRIVEN REVIEW: Classify changed files by subsystem and read the corresponding \`openspec/specs/\` before reviewing. Always start with \`openspec/specs/overview/spec.md\` and \`openspec/specs/architecture/spec.md\`. Then read subsystem specs as specified in the webcompy-review skill. Use specs as a checklist — verify no "SHALL" requirement is violated.
 
           .tmp/ and .workspace/ are your scratch workspace — you may write files there for intermediate work.
 
           When you have completed your review, write ONLY the final review to .tmp/review-output.md.
-          Follow the review template format specified in your agent configuration.
+          Follow the review template format specified in the webcompy-review skill.
           Do NOT write your research process, tool calls, or file reads — only the final review.
 
           IMPORTANT — Template rules:
@@ -710,7 +710,7 @@ jobs:
             fi
 
             opencode run \
-              --agent ci-review \
+              --agent webcompy-reviewer \
               "${FILES[@]}" \
               --title "PR #$PR_NUMBER Review" \
               "$PROMPT$RETRY_MSG" \
@@ -777,7 +777,6 @@ jobs:
           SUMMARY=$(extract "Summary of Changes")
           ASSESSMENT=$(extract "Overall Assessment")
           WHATSGOOD_HEADING=$(extract_bullets "What's Good")
-          ACTIONS_HEADING=$(extract_bullets "Action Items")
           ACTIONS_FULL=$(extract "Action Items")
           CHANGE_SUMMARY=$(extract "Change Summary")
           VERDICT=$(extract "Verdict")
@@ -805,10 +804,10 @@ jobs:
                 printf '%s\n' "### 🟢 What's Good" >> .tmp/digest-body.txt
                 printf '%s\n' "$WHATSGOOD_HEADING" >> .tmp/digest-body.txt
               fi
-              if [ -n "$ACTIONS_HEADING" ]; then
+              if [ -n "$ACTIONS_FULL" ]; then
                 printf '%s\n' "" >> .tmp/digest-body.txt
                 printf '%s\n' "### 📌 Action Items" >> .tmp/digest-body.txt
-                printf '%s\n' "$ACTIONS_HEADING" >> .tmp/digest-body.txt
+                printf '%s\n' "$ACTIONS_FULL" >> .tmp/digest-body.txt
               fi
               if [ -n "$CHANGE_SUMMARY" ]; then
                 printf '%s\n' "" >> .tmp/digest-body.txt

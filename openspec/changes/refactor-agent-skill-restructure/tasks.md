@@ -24,9 +24,9 @@
 
 ## 4. CI workflow
 
-- [ ] 4.1 Update `.github/workflows/ci.yml`: `--agent ci-review` → `--agent webcompy-reviewer`; update prompt wording ("your agent configuration" → "the webcompy-review skill")
-- [ ] 4.2 Update `build_digest()` approved branch: use `ACTIONS_FULL` instead of `ACTIONS_HEADING` so Action Items details are always posted
-- [ ] 4.3 Verify the awk `extract()` / `extract_bullets()` logic still matches the (unchanged) template section names
+- [x] 4.1 Update `.github/workflows/ci.yml`: `--agent ci-review` → `--agent webcompy-reviewer`; update prompt wording ("your agent configuration" → "the webcompy-review skill")
+- [x] 4.2 Update `build_digest()` approved branch: use `ACTIONS_FULL` instead of `ACTIONS_HEADING` so Action Items details are always posted
+- [x] 4.3 Verify the awk `extract()` / `extract_bullets()` logic still matches the (unchanged) template section names
 
 ## 5. Documentation & spec wording
 
