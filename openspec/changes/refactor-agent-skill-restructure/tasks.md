@@ -7,12 +7,12 @@
 
 ## 2. Skills: development domains
 
-- [ ] 2.1 Create `.opencode/skills/webcompy-browser-development/SKILL.md`: responsibilities, spec references, patterns from `browser-developer.md` (drop stale permission paths); absorb runtime-context analysis guidance from `runtime-analyzer.md`
-- [ ] 2.2 Create `.opencode/skills/webcompy-server-development/SKILL.md`: responsibilities, spec references, patterns from `server-developer.md` (drop stale permission paths); absorb runtime-context analysis guidance
-- [ ] 2.3 Create `.opencode/skills/webcompy-component-development/SKILL.md`: scope, boundaries, patterns from `component-developer.md`
-- [ ] 2.4 Create `.opencode/skills/webcompy-docs-development/SKILL.md`: docs_app rules from `docs-developer.md`
-- [ ] 2.5 Create `.opencode/skills/webcompy-local-ci/SKILL.md`: check sequence, reporting format, rules from `ci-local.md`
-- [ ] 2.6 Write skill `description` fields so OpenCode's automatic skill matching replaces the old agent handoff rules (each description states when the skill applies)
+- [x] 2.1 Create `.opencode/skills/webcompy-browser-development/SKILL.md`: responsibilities, spec references, patterns from `browser-developer.md` (drop stale permission paths); absorb runtime-context analysis guidance from `runtime-analyzer.md`
+- [x] 2.2 Create `.opencode/skills/webcompy-server-development/SKILL.md`: responsibilities, spec references, patterns from `server-developer.md` (drop stale permission paths); absorb runtime-context analysis guidance
+- [x] 2.3 Create `.opencode/skills/webcompy-component-development/SKILL.md`: scope, boundaries, patterns from `component-developer.md`
+- [x] 2.4 Create `.opencode/skills/webcompy-docs-development/SKILL.md`: docs_app rules from `docs-developer.md`
+- [x] 2.5 Create `.opencode/skills/webcompy-local-ci/SKILL.md`: check sequence, reporting format, rules from `ci-local.md`
+- [x] 2.6 Write skill `description` fields so OpenCode's automatic skill matching replaces the old agent handoff rules (each description states when the skill applies)
 
 ## 3. Agents: redefine envelopes
 
