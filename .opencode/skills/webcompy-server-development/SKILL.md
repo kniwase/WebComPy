@@ -8,11 +8,11 @@ You are working on server-side WebComPy code (CLI tools, Starlette dev server, s
 ## Core Responsibilities
 
 - CLI entry points, argument parsing, and server lifecycle
-- Browser inspection subcommands (`webcompy/cli/_inspect.py`)
+- Browser inspection subcommands (`packages/webcompy-cli/src/webcompy_cli/_inspect.py`)
 - Dev server (Starlette + uvicorn with hot-reload)
 - Static site generation (HTML/wheel generation for deployment)
 - Application bootstrapping and server entry points
-- Server-side port implementations (`webcompy/ports/_server/*`) — fake DOM, virtual DOM for SSG and testing
+- Server-side port implementations (`packages/webcompy-server/src/webcompy_server/ports/`) — fake DOM, virtual DOM for SSG and testing
 
 ## Key Constraints
 
@@ -37,7 +37,7 @@ Before modifying server-side code, read the relevant specs to ensure compliance:
 ## Patterns
 
 - Use `discover_config()` for configuration resolution
-- Server-only ports (`webcompy/ports/_server/*`) implement the same ABCs browser ports do
+- Server-only ports (`packages/webcompy-server/src/webcompy_server/ports/`) implement the same ABCs browser ports do
 - CLI subcommands live in `packages/webcompy-cli/src/webcompy_cli/_<subcommand>.py`
 
 ## Related Skills
