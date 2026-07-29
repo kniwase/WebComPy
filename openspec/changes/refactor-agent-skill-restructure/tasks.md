@@ -30,9 +30,9 @@
 
 ## 5. Documentation & spec wording
 
-- [ ] 5.1 Update `AGENTS.md`: replace the Agent Delegation Rules table with skill-oriented guidance; point the "complete invariant reference" to the `webcompy-review` skill; remove references to deleted agents
-- [ ] 5.2 Update `CONTRIBUTING.md` and `CONTRIBUTING.ja.md`: replace `@ci-local` / `@ci-review` mentions with the new skill/agent names
-- [ ] 5.3 Confirm no other live doc references the old agent names (archived changes under `openspec/changes/archive/` are intentionally untouched)
+- [x] 5.1 Update `AGENTS.md`: replace the Agent Delegation Rules table with skill-oriented guidance; point the "complete invariant reference" to the `webcompy-review` skill; remove references to deleted agents
+- [x] 5.2 Update `CONTRIBUTING.md` and `CONTRIBUTING.ja.md`: replace `@ci-local` / `@ci-review` mentions with the new skill/agent names
+- [x] 5.3 Confirm no other live doc references the old agent names (archived changes under `openspec/changes/archive/` are intentionally untouched); also updated `openspec/config.yaml` rules to reference the new skill path
 
 ## 6. Verification
 
