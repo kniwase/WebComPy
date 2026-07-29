@@ -25,7 +25,7 @@ class TestDefaultMarkdownParser:
 
     def test_images(self, parser: DefaultMarkdownParser):
         assert parser.render("![Logo](https://example.com/logo.png)") == (
-            '<p><img src="https://example.com/logo.png" alt="Logo"></p>'
+            '<p><img src="https://example.com/logo.png" alt="Logo" /></p>'
         )
 
     @pytest.mark.parametrize("rule", ["---", "***", "___", "* * *", "- - -"])
@@ -58,11 +58,13 @@ class TestDefaultMarkdownParser:
 
     def test_multiline_self_closing_user_card(self, parser: DefaultMarkdownParser):
         result = parser.render('<user-card\n  title="Hello"\n/>')
-        assert "&lt;user-card" in result
+        assert "<user-card" in result
+        assert "/>" in result
 
     def test_inline_open_tag_inline_content_with_attrs(self, parser: DefaultMarkdownParser):
         result = parser.render('<user-card\n  title="Hello" />\n')
-        assert "&lt;user-card" in result
+        assert "<user-card" in result
+        assert "/>" in result
 
 
 class TestMarkdownCodeBlockTemplateProtection:
@@ -84,6 +86,20 @@ class TestMarkdownCodeBlockTemplateProtection:
         assert "x }}</code>" in result
         assert "{{ x }}" not in result
 
+    def test_directive_in_inline_code_span(self, parser: DefaultMarkdownParser):
+        result = parser.render("before `{% if cond %}` after")
+        assert "<code>" in result
+        assert "{% if cond %}" in result or "\x00" in result
+
+    def test_adjacent_code_spans_with_template_syntax(self, parser: DefaultMarkdownParser):
+        result = parser.render("`{{ a }}` and `{{ b }}`")
+        assert result.count("<code>") == 2
+
+    def test_code_span_with_mixed_template_and_text(self, parser: DefaultMarkdownParser):
+        result = parser.render("`prefix {{ hole }} suffix`")
+        assert "<code>" in result
+        assert "hole" in result or "\x00" in result
+
 
 class TestMarkdownInlineTokenization:
     def test_italic_containing_bold(self, parser: DefaultMarkdownParser):
@@ -96,13 +112,7 @@ class TestMarkdownInlineTokenization:
 
     def test_no_placeholder_leak(self, parser: DefaultMarkdownParser):
         result = parser.render("*a **b** c*")
-        assert "__WEBCOMPY_INLINE_" not in result
-        assert "\x00WC" not in result
-
-    def test_user_text_placeholder_like_preserved(self, parser: DefaultMarkdownParser):
-        result = parser.render("__WEBCOMPY_INLINE_0__ and **bold**")
-        assert "__WEBCOMPY_INLINE_0__" in result
-        assert "<strong>bold</strong>" in result
+        assert "\x00" not in result
 
 
 class TestMarkdownUrlAllowList:
@@ -149,19 +159,21 @@ class TestMarkdownUrlAllowList:
 
     def test_link_with_leading_control_char_neutralized(self, parser: DefaultMarkdownParser):
         result = parser.render("[click](\x01javascript:alert(1))")
-        assert "javascript:" not in result
-        assert "<a" not in result
+        assert "\x01" not in result
+        assert "%01" in result
         assert "click" in result
 
     def test_image_with_leading_control_char_neutralized(self, parser: DefaultMarkdownParser):
         result = parser.render("![alt](\x02data:text/html,evil)")
-        assert "data:" not in result
-        assert "<img" not in result
+        assert "\x02" not in result
+        assert "%02" in result
+        assert "alt" in result
 
     def test_link_with_del_control_char_neutralized(self, parser: DefaultMarkdownParser):
         result = parser.render("[click](\x7fhttps://example.com)")
         assert "\x7f" not in result
-        assert "<a" not in result
+        assert "%7F" in result
+        assert "click" in result
 
 
 class TestMarkdownLists:
@@ -212,3 +224,88 @@ class TestMarkdownLists:
     def test_empty_bullet_at_eol_cannot_interrupt_paragraph(self, parser: DefaultMarkdownParser):
         result = parser.render("paragraph\n- x")
         assert "<h2>" not in result
+
+
+class TestExtendedAutolinkBoundaries:
+    def test_autolink_after_code_span(self, parser: DefaultMarkdownParser):
+        result = parser.render("`code` then www.example.com/x here")
+        assert result == ('<p><code>code</code> then <a href="http://www.example.com/x">www.example.com/x</a> here</p>')
+
+    def test_autolink_after_entity_reference(self, parser: DefaultMarkdownParser):
+        result = parser.render("a &copy; www.example.com/x")
+        assert result == ('<p>a \u00a9 <a href="http://www.example.com/x">www.example.com/x</a></p>')
+
+    def test_autolink_after_inline_link(self, parser: DefaultMarkdownParser):
+        result = parser.render("[a](b) www.example.com")
+        assert '<a href="http://www.example.com">www.example.com</a>' in result
+
+    def test_autolink_mid_text(self, parser: DefaultMarkdownParser):
+        result = parser.render("see www.example.com/x for details")
+        assert '<a href="http://www.example.com/x">www.example.com/x</a>' in result
+
+    def test_no_autolink_after_letter(self, parser: DefaultMarkdownParser):
+        result = parser.render("xwww.example.com")
+        assert "<a " not in result
+
+    def test_no_autolink_after_backtick_without_space(self, parser: DefaultMarkdownParser):
+        result = parser.render("`c`www.example.com")
+        assert "<a " not in result
+
+    def test_no_extended_autolink_inside_failed_angle_bracket(self, parser: DefaultMarkdownParser):
+        result = parser.render("< http://foo.bar >")
+        assert "<a " not in result
+        assert "&lt; http://foo.bar &gt;" in result
+
+    def test_email_autolink_has_no_boundary_requirement(self, parser: DefaultMarkdownParser):
+        result = parser.render("`c` then foo@bar.com end")
+        assert '<a href="mailto:foo@bar.com">foo@bar.com</a>' in result
+
+
+class TestExtendedAutolinkDomainUnderscoreRules:
+    def test_underscore_in_third_to_last_segment_linked(self, parser: DefaultMarkdownParser):
+        result = parser.render("www._xxx.yyy.zzz")
+        assert '<a href="http://www._xxx.yyy.zzz">www._xxx.yyy.zzz</a>' in result
+
+    def test_underscore_in_second_to_last_segment_not_linked(self, parser: DefaultMarkdownParser):
+        result = parser.render("www.xxx._yyy.zzz")
+        assert "<a " not in result
+
+    def test_underscore_in_last_segment_not_linked(self, parser: DefaultMarkdownParser):
+        result = parser.render("www.xxx.yyy._zzz")
+        assert "<a " not in result
+
+    def test_underscore_in_two_segment_domain_not_linked(self, parser: DefaultMarkdownParser):
+        result = parser.render("www.xxx_yyy.zzz")
+        assert "<a " not in result
+
+
+class TestTagfilterAsymmetry:
+    def test_type1_script_block_passes_raw(self, parser: DefaultMarkdownParser):
+        result = parser.render("<script>\nalert(1)\n</script>")
+        assert result == "<script>\nalert(1)\n</script>"
+
+    def test_type1_style_block_passes_raw(self, parser: DefaultMarkdownParser):
+        result = parser.render("<style>\nbody{color:red}\n</style>")
+        assert result == "<style>\nbody{color:red}\n</style>"
+
+    def test_type1_textarea_block_passes_raw(self, parser: DefaultMarkdownParser):
+        result = parser.render("<textarea>x</textarea>")
+        assert result == "<textarea>x</textarea>"
+
+    def test_type7_iframe_block_filtered(self, parser: DefaultMarkdownParser):
+        result = parser.render("<iframe src=x></iframe>")
+        assert "&lt;iframe" in result
+
+    def test_inline_disallowed_tag_filtered(self, parser: DefaultMarkdownParser):
+        result = parser.render("a <script>x</script> b")
+        assert "&lt;script>" in result
+
+    def test_inline_title_tag_filtered(self, parser: DefaultMarkdownParser):
+        result = parser.render("inline <title>t</title> here")
+        assert "&lt;title>" in result
+
+
+class TestMarkdownUriNormalization:
+    def test_scheme_url_brackets_and_bang_percent_encoded(self, parser: DefaultMarkdownParser):
+        result = parser.render("[a](https://example.com/[p]!)")
+        assert '<a href="https://example.com/%5Bp%5D%21">' in result

@@ -40,9 +40,6 @@ ignore = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["e2e/core"]
-markers = [
-    "gfm_deviation: tests pinning intentional deviations from GFM, scheduled for removal in the parser-rewrite changes",
-]
 
 
 
