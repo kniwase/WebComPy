@@ -53,8 +53,6 @@ Write the review following the template below. Focus ONLY on the diff (Step 1) â
 
 Watch for these WebComPy-specific issues that generic reviewers miss:
 
-Watch for these WebComPy-specific issues that generic reviewers miss:
-
 **Dual Environment**: `browser` is `None` on server, a proxy in browser. Code accessing browser APIs without `if browser:` guard is a bug. Server-only imports (uvicorn, starlette) must not be imported in browser code paths.
 
 **No New Globals**: `_root_di_scope`, `_default_component_store`, `RouterView._instance` are removed/deprecated. Framework services must use `inject()` via DI, not module-level singletons. New code must not introduce module-level globals for app-scoped state. `_active_app_context` ContextVar references the `RenderContext`, not `WebComPyApp`.
