@@ -173,6 +173,7 @@ class TestMarkdownUrlAllowList:
         result = parser.render("[click](\x7fhttps://example.com)")
         assert "\x7f" not in result
         assert "%7F" in result
+        assert "click" in result
 
 
 class TestMarkdownLists:
