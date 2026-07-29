@@ -1,25 +1,6 @@
 ---
-name: browser-developer
-description: Analyzes and modifies browser-side runtime code (reactive, elements, router, browser API)
-mode: subagent
-temperature: 0.1
-permission:
-  edit:
-    "webcompy/components/*": allow
-    "webcompy/elements/*": allow
-    "webcompy/reactive/*": allow
-    "webcompy/signal/*": allow
-    "webcompy/router/*": allow
-    "webcompy/app/*": allow  # Dual-environment code — also editable by server-developer
-    "webcompy/_browser/*": allow
-    "webcompy/ports/*": allow
-    "!webcompy/ports/_server/*": deny
-    "webcompy/di/*": allow
-    "webcompy/aio/*": allow
-    "webcompy/ajax/*": allow
-    "webcompy/plugin/*": allow
-    "webcompy/exception/*": allow
-    "webcompy/utils/*": allow
+name: webcompy-browser-development
+description: Develop WebComPy browser-side runtime code (components, elements, reactive signals, router, ports). Use when modifying packages/webcompy browser runtime internals.
 ---
 
 You are working on browser-side WebComPy runtime code that runs via PyScript/Emscripten.
@@ -38,6 +19,10 @@ You are working on browser-side WebComPy runtime code that runs via PyScript/Ems
 - No standard library modules are available at runtime in the browser
 - Browser APIs are accessed through the `js` module
 - Use `platform.system() == "Emscripten"` to detect browser environment
+
+## Runtime Context Detection
+
+`packages/webcompy/src/webcompy/` and `packages/webcompy/src/webcompy/_browser/` are browser-accessible. Code entering the browser checks `platform.system() == "Emscripten"`. Imports of `js` indicate browser code paths; `uvicorn`/`starlette`/`aiofiles` imports indicate server-only code (must not appear in browser modules).
 
 ## OpenSpec References
 
@@ -63,9 +48,9 @@ Before modifying runtime code, read the relevant specs to ensure compliance:
 - Component destruction must dispose its DI child scope
 - `_hydrate_node()` adopts existing prerendered nodes, never creates new ones
 
-## Handoff Rules
+## Related Skills
 
-- When the task involves building application UI components (not framework internals), delegate to `component-developer`
-- When you need to verify runtime behavior in a real browser, delegate to `browser-inspector`
-
-Example: "Add a new lifecycle hook to the component system" → you handle it (framework internal)
+- `webcompy-server-development` — server-side runtime (CLI, dev server, SSG) shares dual-environment code (`webcompy.app`)
+- `webcompy-component-development` — building application UI components using the public component API (not framework internals)
+- `webcompy-inspect` — verifying browser runtime behavior in a real browser
+- `webcompy-review` — spec-driven code review for PRs

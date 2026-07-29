@@ -145,32 +145,43 @@ PR 提出の mechanics については **プルリクエストプロセス** セ
 
 ## AI エージェントの活用
 
-### 利用可能なエージェント
+### 利用可能なスキルとエージェント
+
+OpenCode のスキルは `.opencode/skills/` 配下にあり、必要に応じて自動ロードされます。エージェントは権限サンドボックス付きの薄いラッパーとして2つ存在します。サンドボックスが不要なケースではスキルを直接読み込んでください。
+
+スキル（OpenCode が description 一致で自動ロード）:
+
+| スキル | 用途 |
+|---|---|
+| `webcompy-review` | WebComPy 変更のスペック駆動コードレビュー |
+| `webcompy-inspect` | `webcompy inspect` CLI によるブラウザ検証 |
+| `webcompy-browser-development` | ブラウザサイドランタイム（reactive、elements、router、browser API） |
+| `webcompy-server-development` | サーバーサイド（CLI、開発サーバー、SSG） |
+| `webcompy-component-development` | UI コンポーネントと docs_app |
+| `webcompy-docs-development` | docs_app のドキュメンテーションサイト |
+| `webcompy-local-ci` | ローカルでの lint / typecheck / ユニットテスト実行 |
+
+エージェント（権限サンドボックス付き、対応スキルをロード）:
 
 | エージェント | 責務 |
 |---|---|
-| `ci-review` | OpenSpec スペックに基づく自動 PR レビュー |
-| `ci-local` | ローカルでの lint / typecheck / ユニットテスト実行 |
-| `browser-developer` | ブラウザサイドランタイム（reactive、elements、router、browser API） |
-| `server-developer` | サーバーサイド（CLI、開発サーバー、SSG） |
-| `component-developer` | UI コンポーネントと docs_app |
-| `docs-developer` | docs_app のドキュメンテーションサイト |
-| `browser-inspector` | `webcompy inspect` によるブラウザ検証 |
+| `webcompy-reviewer` | OpenSpec スペックに基づく自動 PR レビュー（CI 使用） |
+| `webcompy-inspector` | `webcompy inspect` によるブラウザ検証 |
 
 ### タスク委譲（OpenCode）
 
 ```text
 "リアクティブリストのリコンシリエーションを実装して"
-→ @browser-developer
+→ webcompy-browser-development スキル
 
 "CLI のヘルプテキストを更新して"
-→ @server-developer
+→ webcompy-server-development スキル
 
 "プッシュ前に CI チェックを実行して"
-→ @ci-local
+→ webcompy-local-ci スキル
 
 "この差分をスペックに対してレビューして"
-→ @ci-review
+→ webcompy-review スキル（サンドボックス付きで呼び出すなら @webcompy-reviewer）
 ```
 
 ### AI エージェントとの言語について
@@ -182,7 +193,7 @@ PR 提出の mechanics については **プルリクエストプロセス** セ
 
 ### レビューの仕組み
 
-すべての PR は CI 通過後、`ci-review` エージェントによってレビューされます。レビュアーは:
+すべての PR は CI 通過後、`webcompy-reviewer` エージェントによってレビューされます。レビュアーは:
 
 1. 変更ファイルをサブシステムごとに分類
 2. 対応する OpenSpec スペックを参照
@@ -265,8 +276,8 @@ Co-Authored-By: opencode <noreply@opencode.ai>
 
 ### プッシュ前の確認
 
-1. **ローカル CI チェック** — `@ci-local` に委譲（lint、typecheck、ユニットテスト）
-2. **コードレビュー** — `@ci-review` に委譲（スペック駆動の差分レビュー）
+1. **ローカル CI チェック** — `webcompy-local-ci` スキルを使用（lint、typecheck、ユニットテスト）
+2. **コードレビュー** — `webcompy-review` スキルを使用（サンドボックス付きで呼び出す場合は `@webcompy-reviewer`）
 
 ### PR のライフサイクル
 

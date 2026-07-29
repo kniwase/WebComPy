@@ -145,39 +145,50 @@ For PR submission mechanics, see the **Pull Request Process** section.
 
 ---
 
-## Using AI Agents
+## Using AI Agents and Skills
 
-### Available Agents
+OpenCode skills under `.opencode/skills/` carry reusable domain knowledge and are loaded on demand. Two thin agents exist for permission-sandboxed execution and are listed below; load a skill directly unless the agent's sandbox is required.
+
+### Available Skills and Agents
+
+Skills (auto-loaded by OpenCode when their description matches the task):
+
+| Skill | Use for |
+|---|---|
+| `webcompy-review` | Spec-driven code review of WebComPy changes |
+| `webcompy-inspect` | Browser verification via the `webcompy inspect` CLI |
+| `webcompy-browser-development` | Browser-side runtime (reactive, elements, router, browser API) |
+| `webcompy-server-development` | Server-side code (CLI, dev server, SSG) |
+| `webcompy-component-development` | UI components and docs_app |
+| `webcompy-docs-development` | Documentation site under `docs_app/` |
+| `webcompy-local-ci` | Runs lint, typecheck, and unit tests locally |
+
+Agents (provide permission sandboxes; load their companion skill):
 
 | Agent | Responsibility |
 |---|---|
-| `ci-review` | Automated pull request review against OpenSpec specs |
-| `ci-local` | Runs lint, typecheck, and unit tests locally |
-| `browser-developer` | Browser-side runtime (reactive, elements, router, browser API) |
-| `server-developer` | Server-side code (CLI, dev server, SSG) |
-| `component-developer` | UI components and docs_app |
-| `docs-developer` | Documentation site under `docs_app/` |
-| `browser-inspector` | Browser verification via `webcompy inspect` |
+| `webcompy-reviewer` | Automated pull request review against OpenSpec specs (used by CI) |
+| `webcompy-inspector` | Browser verification via `webcompy inspect` |
 
 ### Delegating Tasks (OpenCode)
 
 ```text
 "Implement the reactive list reconciliation"
-→ @browser-developer
+→ webcompy-browser-development skill
 
 "Update the CLI help text"
-→ @server-developer
+→ webcompy-server-development skill
 
 "Run CI checks before pushing"
-→ @ci-local
+→ webcompy-local-ci skill
 
 "Review this diff against specs"
-→ @ci-review
+→ webcompy-review skill (or @webcompy-reviewer for sandboxed CI invocation)
 ```
 
 ### How Reviews Work
 
-Every PR is reviewed by the `ci-review` agent after CI passes. The reviewer:
+Every PR is reviewed by the `webcompy-reviewer` agent after CI passes. The reviewer:
 
 1. Classifies changed files by subsystem
 2. Reads corresponding OpenSpec specs
@@ -265,8 +276,8 @@ invocation paths:
 
 ### Pre-Push Verification (before pushing a branch)
 
-1. **Local CI checks** — delegate to `@ci-local` (lint, typecheck, unit tests)
-2. **Code review** — delegate to `@ci-review` for spec-driven diff review
+1. **Local CI checks** — use the `webcompy-local-ci` skill (lint, typecheck, unit tests)
+2. **Code review** — use the `webcompy-review` skill (or `@webcompy-reviewer` for sandboxed CI invocation)
 
 ### PR Lifecycle
 

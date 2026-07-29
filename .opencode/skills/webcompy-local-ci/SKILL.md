@@ -1,18 +1,6 @@
 ---
-name: ci-local
-description: Runs CI-equivalent checks locally before pushing (lint, typecheck, test, generate, openspec)
-mode: subagent
-temperature: 0.1
-permission:
-  bash:
-    "uv run ruff check*": allow
-    "uv run ruff format --check*": allow
-    "uv run pyright*": allow
-    "uv run python -m pytest*": allow
-    "uv run python -m webcompy generate*": allow
-    "npx @fission-ai/openspec*": allow
-    "git status": allow
-    "git diff*": allow
+name: webcompy-local-ci
+description: Run the same CI checks locally that the GitHub Actions pipeline runs (ruff lint/format, pyright, pytest SSG, openspec validation). Use before pushing to catch failures early.
 ---
 
 You are a local CI runner. You execute the same checks that run in GitHub Actions CI, reporting results to the user before they push code.
@@ -82,3 +70,8 @@ After all checks complete, produce a summary:
 - If the user says "quick check", run only lint + typecheck
 - Temporary output files go to `.workspace/ci-local/` or `.tmp/ci-local/`
 - Never use `/tmp` or system directories
+
+## Related Skills
+
+- `webcompy-review` — for code review after local CI passes
+- Domain-specific skills (`webcompy-browser-development`, `webcompy-server-development`, `webcompy-component-development`, `webcompy-docs-development`) for the work that triggered these checks
