@@ -4,9 +4,9 @@ from dataclasses import dataclass
 
 import pytest
 
+from webcompy.exception import WebComPyException
 from webcompy.signal import Signal
 from webcompy.template._holes import (
-    HOLE_PATTERN,
     Hole,
     LiteralText,
     resolve_holes,
@@ -21,51 +21,6 @@ class SampleUser:
     age: int
 
 
-class TestHolePattern:
-    def test_matches_simple_variable(self):
-        match = HOLE_PATTERN.search("{{ name }}")
-        assert match is not None
-        assert match.group(1) == "name"
-
-    def test_matches_no_whitespace(self):
-        match = HOLE_PATTERN.search("{{name}}")
-        assert match is not None
-        assert match.group(1) == "name"
-
-    def test_matches_extra_whitespace(self):
-        match = HOLE_PATTERN.search("{{   name   }}")
-        assert match is not None
-        assert match.group(1) == "name"
-
-    def test_matches_dotted_path(self):
-        match = HOLE_PATTERN.search("{{ user.name }}")
-        assert match is not None
-        assert match.group(1) == "user.name"
-
-    def test_matches_deep_dotted_path(self):
-        match = HOLE_PATTERN.search("{{ a.b.c.d }}")
-        assert match is not None
-        assert match.group(1) == "a.b.c.d"
-
-    def test_matches_underscore_start(self):
-        match = HOLE_PATTERN.search("{{ _private }}")
-        assert match is not None
-        assert match.group(1) == "_private"
-
-    def test_rejects_digit_first(self):
-        assert HOLE_PATTERN.search("{{ 123 }}") is None
-
-    def test_rejects_empty_braces(self):
-        assert HOLE_PATTERN.search("{{}}") is None
-        assert HOLE_PATTERN.search("{{ }}") is None
-
-    def test_rejects_unclosed(self):
-        assert HOLE_PATTERN.search("{{ name") is None
-
-    def test_rejects_digit_first_segment_in_path(self):
-        assert HOLE_PATTERN.search("{{ a.1b }}") is None
-
-
 class TestSplitText:
     def test_literal_only(self):
         result = split_text("hello world")
@@ -73,29 +28,87 @@ class TestSplitText:
 
     def test_hole_only(self):
         result = split_text("{{ name }}")
-        assert result == [Hole("name")]
+        assert len(result) == 1
+        assert isinstance(result[0], Hole)
+        assert result[0].expr_source == "name"
 
     def test_mixed_leading_literal_then_hole(self):
         result = split_text("hello {{ name }}")
-        assert result == [LiteralText("hello "), Hole("name")]
+        assert len(result) == 2
+        assert isinstance(result[0], LiteralText)
+        assert result[0].text == "hello "
+        assert isinstance(result[1], Hole)
+        assert result[1].expr_source == "name"
 
     def test_mixed_trailing_literal(self):
         result = split_text("{{ name }} done")
-        assert result == [Hole("name"), LiteralText(" done")]
+        assert len(result) == 2
+        assert isinstance(result[0], Hole)
+        assert result[0].expr_source == "name"
+        assert isinstance(result[1], LiteralText)
+        assert result[1].text == " done"
 
     def test_multiple_holes(self):
         result = split_text("{{ a }} and {{ b }}")
-        assert result == [Hole("a"), LiteralText(" and "), Hole("b")]
+        assert len(result) == 3
+        assert isinstance(result[0], Hole)
+        assert result[0].expr_source == "a"
+        assert isinstance(result[1], LiteralText)
+        assert result[1].text == " and "
+        assert isinstance(result[2], Hole)
+        assert result[2].expr_source == "b"
 
     def test_dotted_path(self):
         result = split_text("{{ user.name }}")
-        assert result == [Hole("user.name")]
+        assert len(result) == 1
+        assert isinstance(result[0], Hole)
+        assert result[0].plan.is_plain_path
+
+    def test_expression(self):
+        result = split_text("{{ count + 1 }}")
+        assert len(result) == 1
+        assert isinstance(result[0], Hole)
+        assert not result[0].plan.is_plain_path
+
+    def test_nested_dict_literal(self):
+        result = split_text('{{ {"a": {"b": 2}}["a"]["b"] }}')
+        assert len(result) == 1
+        assert isinstance(result[0], Hole)
+        assert result[0].expr_source == '{"a": {"b": 2}}["a"]["b"]'
 
     def test_empty_string(self):
         assert split_text("") == []
 
-    def test_only_literals_around_no_match(self):
-        assert split_text("{{123}}") == [LiteralText("{{123}}")]
+    def test_unclosed_raises_in_strict(self):
+        with pytest.raises(WebComPyException):
+            split_text("{{ unclosed", strict=True)
+
+    def test_unclosed_literal_in_non_strict(self):
+        result = split_text("{{unclosed")
+        assert result == [LiteralText("{{unclosed")]
+
+    def test_integer_literal_hole(self):
+        result = split_text("{{123}}")
+        assert len(result) == 1
+        assert isinstance(result[0], Hole)
+        assert result[0].expr_source == "123"
+
+    def test_invalid_expression_raises_in_strict(self):
+        with pytest.raises(WebComPyException):
+            split_text("{{ count + }}", strict=True)
+
+    def test_unbalanced_rbrace_literal_in_non_strict(self):
+        result = split_text("{{ } x")
+        assert result == [LiteralText("{{ } x")]
+
+    def test_unbalanced_rbrace_raises_in_strict(self):
+        with pytest.raises(WebComPyException):
+            split_text("{{ } x }}", strict=True)
+
+    def test_invalid_expression_literal_in_non_strict(self):
+        result = split_text("{{ count + }}")
+        # In non-strict, invalid expression stays literal
+        assert result == [LiteralText("{{ count + }}")]
 
 
 class TestResolveVar:

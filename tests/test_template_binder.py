@@ -678,15 +678,21 @@ class TestClassifyAttrsValidation:
 
 
 class TestBindIfValidation:
-    def test_if_unsupported_expression_raises(self):
+    def test_if_expression_falsy(self):
         roots = parse_template("{% if a > b %}yes{% endif %}")
         from webcompy.template._binder import bind_children
 
-        with pytest.raises(WebComPyException) as exc_info:
-            bind_children(roots, {"a": 1, "b": 2})
-        msg = str(exc_info.value)
-        assert "a > b" in msg
-        assert "if" in msg.lower() or "condition" in msg.lower()
+        result = bind_children(roots, {"a": 1, "b": 2})
+        # a=1, b=2 → a > b is False → no children
+        assert len(result) == 0
+
+    def test_if_expression_truthy(self):
+        roots = parse_template("{% if a > b %}yes{% endif %}")
+        from webcompy.template._binder import bind_children
+
+        result = bind_children(roots, {"a": 5, "b": 2})
+        # a=5, b=2 → a > b is True → body rendered
+        assert len(result) >= 1
 
     def test_if_valid_path_works(self):
         roots = parse_template("{% if flag %}yes{% endif %}")

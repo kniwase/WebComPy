@@ -23,6 +23,7 @@ from .pages.switch_test import SwitchPage
 from .pages.template import TemplatePage
 from .pages.template_components import TemplateComponentsPage
 from .pages.template_control_flow import TemplateControlFlowPage
+from .pages.template_expressions import TemplateExpressionsPage
 
 router = Router(
     {"path": "/", "component": HomePage},
@@ -46,6 +47,7 @@ router = Router(
     {"path": "/template", "component": TemplatePage},
     {"path": "/template-components", "component": TemplateComponentsPage},
     {"path": "/template-control-flow", "component": TemplateControlFlowPage},
+    {"path": "/template-expressions", "component": TemplateExpressionsPage},
     {"path": "/markdown-for", "component": MarkdownForPage},
     {"path": "/html-parser-parity", "component": HtmlParserParityPage},
     default=NotFound,
