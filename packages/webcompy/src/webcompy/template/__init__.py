@@ -31,7 +31,6 @@ from webcompy.template._binder import _to_element, bind_children
 from webcompy.template._cache import get_or_compile
 from webcompy.template._css_template import css_text, css_text_template
 from webcompy.template._holes import (
-    HOLE_PATTERN,
     Hole,
     LiteralText,
     format_value,
@@ -100,7 +99,6 @@ def render_template(source: str, context: Mapping[str, Any] | None = None) -> El
 
 
 __all__ = [
-    "HOLE_PATTERN",
     "AttrSpec",
     "Hole",
     "LiteralText",

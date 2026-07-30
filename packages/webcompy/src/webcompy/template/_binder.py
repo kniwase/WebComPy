@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import re
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from operator import truth
 from typing import Any, cast
 
@@ -31,6 +30,7 @@ from webcompy.template._ast import (
     TemplateNode,
     TemplateText,
 )
+from webcompy.template._expression import _EvalState, compile_expression, evaluate, resolve_scope
 from webcompy.template._holes import (
     Hole,
     LiteralText,
@@ -41,15 +41,6 @@ from webcompy.template._holes import (
 from webcompy.template._naming import TagResolution, kebab_to_snake, resolve_tag
 
 _EMPTY_COMPONENT_STORE = ComponentStore()
-
-_VAR_PATH_RE = re.compile(r"^[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*$")
-
-
-def _validate_var_path(path: str, context: str) -> None:
-    if not _VAR_PATH_RE.match(path):
-        raise WebComPyException(
-            f"Unsupported expression {path!r} in {context}: only variable paths with dot notation are supported"
-        )
 
 
 def _attr_text(parts: list[LiteralText | Hole]) -> str:
@@ -99,25 +90,33 @@ def classify_attrs(attrs: list[AttrSpec], ctx: dict[str, Any]) -> tuple[dict[str
 
 
 def resolve_attr(parts: list[LiteralText | Hole], ctx: dict[str, Any]) -> AttrValue:
-    resolved_vars: list[Any] = []
+    thunks: list[Callable[[], str]] = []
     has_signal = False
     for part in parts:
-        if isinstance(part, Hole):
-            value = resolve_var(part.var_path, ctx)
-            resolved_vars.append(value)
-            if isinstance(value, SignalBase):
-                has_signal = True
+        if isinstance(part, LiteralText):
+            text = restore_protected(part.text)
+            thunks.append(lambda t=text: t)
         else:
-            resolved_vars.append(None)
+            plan = part.plan
+            if plan.is_plain_path:
+                value = resolve_var(part.expr_source, ctx)
+                if isinstance(value, SignalBase):
+                    has_signal = True
+                    thunks.append(lambda v=value: format_value(v))
+                else:
+                    thunks.append(lambda v=value: format_value(v))
+            else:
+                scope = resolve_scope(plan, ctx)
+                state = _EvalState()
+                value = evaluate(plan, scope, state)
+                if state.saw_signal:
+                    has_signal = True
+                    thunks.append(lambda plan=plan, scope=scope: format_value(evaluate(plan, scope)))
+                else:
+                    thunks.append(lambda v=value: format_value(v))
 
     def _render_parts() -> str:
-        out: list[str] = []
-        for idx, part in enumerate(parts):
-            if isinstance(part, LiteralText):
-                out.append(restore_protected(part.text))
-            else:
-                out.append(format_value(resolved_vars[idx]))
-        return "".join(out)
+        return "".join(t() for t in thunks)
 
     if not has_signal:
         return _render_parts()
@@ -130,10 +129,25 @@ def bind_text_part(node: TemplateText, ctx: dict[str, Any]) -> list[ElementChild
         if isinstance(part, LiteralText):
             result.append(restore_protected(part.text))
             continue
-        value = resolve_var(part.var_path, ctx)
+        plan = part.plan
+        if plan.is_plain_path:
+            value = resolve_var(part.expr_source, ctx)
+            if value is None:
+                continue
+            if isinstance(value, (str, SignalBase, ElementAbstract)):
+                result.append(value)
+            else:
+                result.append(str(value))
+            continue
+        scope = resolve_scope(plan, ctx)
+        state = _EvalState()
+        value = evaluate(plan, scope, state)
+        if state.saw_signal:
+            result.append(Computed(lambda plan=plan, scope=scope: evaluate(plan, scope)))
+            continue
         if value is None:
             continue
-        if isinstance(value, (str, SignalBase, ElementAbstract)):
+        if isinstance(value, (str, ElementAbstract)):
             result.append(value)
         else:
             result.append(str(value))
@@ -179,11 +193,21 @@ def bind_if(node: IfNode, ctx: dict[str, Any]) -> list[ElementChildren]:
         if cond_str is None:
             branch_data.append((True, None, body))
         else:
-            _validate_var_path(cond_str, "{% if %} condition")
-            resolved = resolve_var(cond_str, ctx)
-            if isinstance(resolved, SignalBase):
-                has_signal = True
-            branch_data.append((False, resolved, body))
+            plan = compile_expression(cond_str)
+            if plan.is_plain_path:
+                resolved = resolve_var(cond_str, ctx)
+                if isinstance(resolved, SignalBase):
+                    has_signal = True
+                branch_data.append((False, resolved, body))
+            else:
+                scope = resolve_scope(plan, ctx)
+                state = _EvalState()
+                value = evaluate(plan, scope, state)
+                if state.saw_signal:
+                    has_signal = True
+                    branch_data.append((False, Computed(lambda plan=plan, scope=scope: evaluate(plan, scope)), body))
+                else:
+                    branch_data.append((False, value, body))
 
     if has_signal:
         cases: list[tuple[Any, Any]] = []
@@ -221,27 +245,59 @@ def _extend_for_ctx(
 
 def bind_for(node: ForNode, ctx: dict[str, Any]) -> list[ElementChildren]:
     loop_vars = node.loop_vars
-    _validate_var_path(node.iterable_path, "{% for %} iterable")
-    iterable_resolved = resolve_var(node.iterable_path, ctx)
+    iterable_path = node.iterable_path
+    plan = compile_expression(iterable_path)
 
-    if isinstance(iterable_resolved, SignalBase):
-        return [_bind_for_reactive(loop_vars, iterable_resolved, node.body, ctx)]
+    if plan.is_plain_path:
+        iterable_resolved = resolve_var(iterable_path, ctx)
+        if isinstance(iterable_resolved, SignalBase):
+            return [_bind_for_reactive(loop_vars, iterable_resolved, node.body, ctx)]
+        is_dict = isinstance(iterable_resolved, dict)
+        if not is_dict and not isinstance(iterable_resolved, Iterable):
+            raise WebComPyException(
+                f"Non-iterable {{% for %}} target: '{iterable_path}' resolved to {type(iterable_resolved).__name__}"
+            )
+        result: list[ElementChildren] = []
+        if len(loop_vars) == 1:
+            items: list[Any] = list(iterable_resolved.values()) if is_dict else list(iterable_resolved)
+            for value in items:
+                new_ctx = _extend_for_ctx(ctx, loop_vars, value, None, is_dict)
+                result.extend(bind_children(node.body, new_ctx))
+            return result
+        if len(loop_vars) == 2:
+            if not is_dict:
+                raise WebComPyException(
+                    f"Two-variable for-loop requires a dict iterable (got {type(iterable_resolved).__name__})"
+                )
+            for key, value in iterable_resolved.items():
+                new_ctx = _extend_for_ctx(ctx, loop_vars, value, key, is_dict=True)
+                result.extend(bind_children(node.body, new_ctx))
+            return result
+        raise WebComPyException(f"Invalid for-loop variable count: expected 1 or 2, got {len(loop_vars)}")
 
+    scope = resolve_scope(plan, ctx)
+    state = _EvalState()
+    value = evaluate(plan, scope, state)
+    if state.saw_signal:
+        return [
+            _bind_for_reactive(
+                loop_vars, Computed(lambda plan=plan, scope=scope: evaluate(plan, scope)), node.body, ctx
+            )
+        ]
+
+    iterable_resolved = value
     is_dict = isinstance(iterable_resolved, dict)
     if not is_dict and not isinstance(iterable_resolved, Iterable):
         raise WebComPyException(
-            f"Non-iterable {{% for %}} target: '{node.iterable_path}' resolved to {type(iterable_resolved).__name__}"
+            f"Non-iterable {{% for %}} target: '{iterable_path}' resolved to {type(iterable_resolved).__name__}"
         )
-
     result: list[ElementChildren] = []
-
     if len(loop_vars) == 1:
         items: list[Any] = list(iterable_resolved.values()) if is_dict else list(iterable_resolved)
         for value in items:
             new_ctx = _extend_for_ctx(ctx, loop_vars, value, None, is_dict)
             result.extend(bind_children(node.body, new_ctx))
         return result
-
     if len(loop_vars) == 2:
         if not is_dict:
             raise WebComPyException(
@@ -251,7 +307,6 @@ def bind_for(node: ForNode, ctx: dict[str, Any]) -> list[ElementChildren]:
             new_ctx = _extend_for_ctx(ctx, loop_vars, value, key, is_dict=True)
             result.extend(bind_children(node.body, new_ctx))
         return result
-
     raise WebComPyException(f"Invalid for-loop variable count: expected 1 or 2, got {len(loop_vars)}")
 
 
