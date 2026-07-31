@@ -12,11 +12,11 @@
 
 ## 2. Regression tests
 
-- [ ] 2.1 Add `tests/test_dynamic_child_node_index.py`: multi-line `{% for %}` over `ReactiveList` via TestRenderer renders all items on initial render (spec scenario 1)
-- [ ] 2.2 Same file: after `ReactiveList.pop(0)` refresh, DOM contains exactly the updated items in order (spec scenario 2)
-- [ ] 2.3 Same file: multi-element `{% if %}` branch toggles correctly (spec scenario 3)
-- [ ] 2.4 Same file: keyed `repeat` (or `ReactiveDict`) with fragment-producing templates positions children without overlapping `_node_idx` (spec scenario 4)
-- [ ] 2.5 `MarkdownForElement` with fragment children receives cumulative `_node_idx` in `_render` (TestRenderer or fake-browser pattern from `tests/test_markdown_for.py`)
+- [x] 2.1 Add `tests/test_dynamic_child_node_index.py`: multi-line `{% for %}` over `ReactiveList` via TestRenderer renders all items on initial render (spec scenario 1)
+- [x] 2.2 Same file: after `ReactiveList.pop(0)` refresh, DOM contains exactly the updated items in order (spec scenario 2)
+- [x] 2.3 Same file: multi-element `{% if %}` branch toggles correctly (spec scenario 3)
+- [x] 2.4 Same file: keyed `repeat` (or `ReactiveDict`) with fragment-producing templates positions children without overlapping `_node_idx` (spec scenario 4)
+- [x] 2.5 `MarkdownForElement` with fragment children receives cumulative `_node_idx` in `_render` (TestRenderer or fake-browser pattern from `tests/test_markdown_for.py`)
 
 ## 3. Verification
 
