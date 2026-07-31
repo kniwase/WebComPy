@@ -2,7 +2,7 @@
 
 ## Context
 
-Element positioning in WebComPy relies on `_node_idx`: every `ElementAbstract` knows its start index within its parent's DOM `childNodes`. Dynamic containers (elements without their own DOM node — `DynamicElement` subclasses such as `RepeatElement`, `SwitchElement`, `FragmentElement`, `SuspenseElement`, `ClientOnlyElement`, plus the `_render` loop of `ElementBase`) assign children's `_node_idx` before rendering and rely on `_position_element_nodes` to insert/move DOM nodes at those indices.
+Element positioning in WebComPy relies on `_node_idx`: every `ElementAbstract` knows its start index within its parent's DOM `childNodes`. Dynamic containers (elements without their own DOM node — `DynamicElement` subclasses such as `RepeatElement`, `SwitchElement`, `FragmentElement`, `SuspenseElement`, `ClientOnlyElement`, and `MarkdownForElement` (which overrides `_render`/`_refresh`), plus the `_render` loop of `ElementBase`) assign children's `_node_idx` before rendering and rely on `_position_element_nodes` to insert/move DOM nodes at those indices.
 
 The codebase already contains the correct cumulative-offset pattern in four places:
 
@@ -11,7 +11,7 @@ The codebase already contains the correct cumulative-offset pattern in four plac
 - `_position_element_nodes` (`_dynamic.py:206-210`): recursive cumulative walk
 - `ElementWithChildren._append_child` (`_base.py:109`): last child's `node_idx + node_count`
 
-However, 10 sites across 6 files assign `child._node_idx = self._node_idx + c_idx` (enumerate index). When every child has `_node_count == 1` (plain `Element`/`TextElement`), enumerate index equals cumulative offset, so the defect is invisible. When a child is a `FragmentElement` (multi-node — produced by template binding of multi-line bodies, since whitespace becomes `TextElement` siblings), subsequent children get indices that overlap earlier siblings' node ranges, and `insertBefore` positioning corrupts the DOM: earlier fragments' element nodes end up detached, leaving only the last fragment's elements.
+However, 12 sites across 7 files assign `child._node_idx = self._node_idx + c_idx` (enumerate index). When every child has `_node_count == 1` (plain `Element`/`TextElement`), enumerate index equals cumulative offset, so the defect is invisible. When a child is a `FragmentElement` (multi-node — produced by template binding of multi-line bodies, since whitespace becomes `TextElement` siblings), subsequent children get indices that overlap earlier siblings' node ranges, and `insertBefore` positioning corrupts the DOM: earlier fragments' element nodes end up detached, leaving only the last fragment's elements.
 
 Reproduction (verified on the base commit and via monkey-patched fix):
 
@@ -33,7 +33,7 @@ Reproduction (verified on the base commit and via monkey-patched fix):
 
 ## Decisions
 
-### D1: Apply the existing cumulative pattern verbatim to all 10 sites
+### D1: Apply the existing cumulative pattern verbatim to all 12 sites
 
 Each buggy loop becomes:
 
@@ -47,9 +47,11 @@ for child in self._children:
 
 For `RepeatElement._reconcile_children` (`_repeat.py:204-205`), `node_offset + c_idx` becomes a running `node_offset += child._node_count` per iteration (children not reused still render afterward at their assigned index).
 
+`MarkdownForElement` (`template/_markdown_for.py`) overrides `DynamicElement._render` and `_refresh` with the same enumerate-index pattern; its children (produced via `_render_nodes` → `bind_children`) may include `SwitchElement`/`RepeatElement`/components, i.e., multi-node children, so the same two sites receive the cumulative fix.
+
 No helper extraction: the loop is 3 lines and the four existing correct sites already inline it; a shared helper can be introduced later if the pattern grows.
 
-*Alternatives considered*: (a) Fixing only `RepeatElement` — rejected: `SwitchElement._render/_refresh`, `SuspenseElement`, `ClientOnlyElement._hydrate_node`, `ElementBase._render`, and `DynamicElement._render` share the identical defect and all accept fragment children (e.g., a switch branch whose generator returns multiple elements, a plain element containing a fragment child). (b) Changing `_position_element_nodes` to tolerate wrong indices — rejected: treats the symptom, leaves `_node_idx` semantics broken for reconciliation and `_children_length` arithmetic.
+*Alternatives considered*: (a) Fixing only `RepeatElement` — rejected: `SwitchElement._render/_refresh`, `SuspenseElement`, `ClientOnlyElement._hydrate_node`, `MarkdownForElement._render/_refresh`, `ElementBase._render`, and `DynamicElement._render` share the identical defect and all accept fragment children (e.g., a switch branch whose generator returns multiple elements, a plain element containing a fragment child). (b) Changing `_position_element_nodes` to tolerate wrong indices — rejected: treats the symptom, leaves `_node_idx` semantics broken for reconciliation and `_children_length` arithmetic.
 
 ### D2: Regression tests via `TestRenderer` with multi-line templates
 
