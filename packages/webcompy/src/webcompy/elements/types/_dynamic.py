@@ -73,8 +73,10 @@ class DynamicElement(ElementWithChildren):
 
     async def _render(self):
         parent_node = self._parent._get_node()
-        for c_idx, child in enumerate(self._children):
-            child._node_idx = self._node_idx + c_idx
+        idx = self._node_idx
+        for child in self._children:
+            child._node_idx = idx
+            idx += child._node_count
             if child._mounted is None and not self._hydrated:
                 await child._render()
         self._hydrated = False

@@ -35,8 +35,10 @@ class ElementWithChildren(ElementAbstract):
 
     async def _render(self):
         await super()._render()
-        for c_idx, child in enumerate(self._children):
-            child._node_idx = self._node_idx + c_idx
+        idx = self._node_idx
+        for child in self._children:
+            child._node_idx = idx
+            idx += child._node_count
         for child in self._children:
             await child._render()
         if (node := self._get_node()) is not None and not self._preserve_children:

@@ -166,8 +166,10 @@ class SuspenseElement(DynamicElement):
             old_children = self._children
             self._children = _patch_children(old_children, children, self._node_idx)
             self._resolved = True
-            for c_idx, child in enumerate(self._children):
-                child._node_idx = self._node_idx + c_idx
+            idx = self._node_idx
+            for child in self._children:
+                child._node_idx = idx
+                idx += child._node_count
                 await child._render()
             parent_node = self._parent._get_node()
             _position_element_nodes(self, parent_node, self._node_idx)
@@ -184,8 +186,10 @@ class SuspenseElement(DynamicElement):
             old_children = self._children
             self._children = _patch_children(old_children, error_fallback, self._node_idx)
             self._resolved = True
-            for c_idx, child in enumerate(self._children):
-                child._node_idx = self._node_idx + c_idx
+            idx = self._node_idx
+            for child in self._children:
+                child._node_idx = idx
+                idx += child._node_count
                 await child._render()
             parent_node = self._parent._get_node()
             _position_element_nodes(self, parent_node, self._node_idx)

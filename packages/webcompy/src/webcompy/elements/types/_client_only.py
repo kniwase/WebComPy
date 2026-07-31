@@ -44,6 +44,8 @@ class ClientOnlyElement(DynamicElement):
     def _hydrate_node(self):
         children = self._generate_children(self._children_generator) if self._is_client else self._generate_fallback()
         self._children = children
-        for c_idx, child in enumerate(self._children):
-            child._node_idx = self._node_idx + c_idx
+        idx = self._node_idx
+        for child in self._children:
+            child._node_idx = idx
+            idx += child._node_count
         super()._hydrate_node()

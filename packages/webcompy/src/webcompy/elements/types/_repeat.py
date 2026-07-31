@@ -159,8 +159,10 @@ class RepeatElement(DynamicElement):
             for _ in range(len(self._children)):
                 self._children.pop(-1)._remove_element()
             self._children = self._generate_children()
-            for c_idx, child in enumerate(self._children):
-                child._node_idx = self._node_idx + c_idx
+            idx = self._node_idx
+            for child in self._children:
+                child._node_idx = idx
+                idx += child._node_count
                 await child._render()
             if self._has_key:
                 self._populate_key_map()
@@ -201,8 +203,9 @@ class RepeatElement(DynamicElement):
                     new_children.append(child_element)
                     newly_created.add(len(new_children) - 1)
 
-        for c_idx, child in enumerate(new_children):
-            child._node_idx = node_offset + c_idx
+        for child in new_children:
+            child._node_idx = node_offset
+            node_offset += child._node_count
             if isinstance(child, DynamicElement):
                 _position_element_nodes(child, parent_node, child._node_idx)
             else:

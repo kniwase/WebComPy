@@ -58,8 +58,10 @@ class SwitchElement(DynamicElement):
         has_async = bool(self._children) and _subtree_has_async_setup(self)
         if self._children and all(child._mounted is None for child in self._children):
             parent_node = self._parent._get_node()
-            for c_idx, child in enumerate(self._children):
-                child._node_idx = self._node_idx + c_idx
+            idx = self._node_idx
+            for child in self._children:
+                child._node_idx = idx
+                idx += child._node_count
                 await child._render()
             _position_element_nodes(self, parent_node, self._node_idx)
         else:
@@ -82,8 +84,10 @@ class SwitchElement(DynamicElement):
         if idx == self._rendered_idx:
             if self._children and all(child._mounted is None for child in self._children):
                 parent_node = self._parent._get_node()
-                for c_idx, child in enumerate(self._children):
-                    child._node_idx = self._node_idx + c_idx
+                idx = self._node_idx
+                for child in self._children:
+                    child._node_idx = idx
+                    idx += child._node_count
                     await child._render()
                 _position_element_nodes(self, parent_node, self._node_idx)
             return
@@ -97,8 +101,10 @@ class SwitchElement(DynamicElement):
         should_defer = self._signal_activated
         if should_defer:
             start_defer_after_rendering()
-        for c_idx, child in enumerate(self._children):
-            child._node_idx = self._node_idx + c_idx
+        idx = self._node_idx
+        for child in self._children:
+            child._node_idx = idx
+            idx += child._node_count
             await child._render()
         if should_defer:
             deferred = end_defer_after_rendering()

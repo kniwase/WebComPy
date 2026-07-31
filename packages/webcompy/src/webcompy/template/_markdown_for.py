@@ -484,8 +484,10 @@ class MarkdownForElement(DynamicElement):
     async def _render(self) -> None:
         has_async = bool(self._children) and _subtree_has_async_setup(self)
         parent_node = self._parent._get_node()
-        for c_idx, child in enumerate(self._children):
-            child._node_idx = self._node_idx + c_idx
+        idx = self._node_idx
+        for child in self._children:
+            child._node_idx = idx
+            idx += child._node_count
             if child._mounted is None and not self._hydrated:
                 await child._render()
         self._hydrated = False
@@ -511,8 +513,10 @@ class MarkdownForElement(DynamicElement):
         should_defer = self._signal_activated
         if should_defer:
             start_defer_after_rendering()
-        for c_idx, child in enumerate(self._children):
-            child._node_idx = self._node_idx + c_idx
+        idx = self._node_idx
+        for child in self._children:
+            child._node_idx = idx
+            idx += child._node_count
             await child._render()
         if should_defer:
             deferred = end_defer_after_rendering()
