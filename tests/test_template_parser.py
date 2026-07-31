@@ -21,6 +21,12 @@ def _parse(source: str) -> list:
     return parse_template(source)
 
 
+def _hole(source: str) -> Hole:
+    from webcompy.template._expression import compile_expression
+
+    return Hole(source, compile_expression(source))
+
+
 class TestBasicStructure:
     def test_simple_div(self):
         roots = _parse("<div></div>")
@@ -207,24 +213,24 @@ class TestHoleScanningInAttributes:
     def test_single_hole_in_attr(self):
         roots = _parse('<p class="{{ cls }}"></p>')
         attr = roots[0].attrs[0]
-        assert attr.value == [Hole("cls")]
+        assert attr.value == [_hole("cls")]
 
     def test_mixed_literal_and_hole_in_attr(self):
         roots = _parse('<p class="card {{ cls }}"></p>')
         attr = roots[0].attrs[0]
-        assert attr.value == [LiteralText("card "), Hole("cls")]
+        assert attr.value == [LiteralText("card "), _hole("cls")]
 
     def test_multiple_holes_in_attr(self):
         roots = _parse('<p data-a="{{ a }}" data-b="{{ b }}"></p>')
         a = roots[0].attrs[0]
         b = roots[0].attrs[1]
-        assert a.value == [Hole("a")]
-        assert b.value == [Hole("b")]
+        assert a.value == [_hole("a")]
+        assert b.value == [_hole("b")]
 
     def test_dotted_path_in_attr(self):
         roots = _parse('<p class="{{ user.name }}"></p>')
         attr = roots[0].attrs[0]
-        assert attr.value == [Hole("user.name")]
+        assert attr.value == [_hole("user.name")]
 
     def test_holes_in_text_content(self):
         roots = _parse("<p>Hello {{ name }}, count: {{ count }}</p>")
@@ -232,9 +238,9 @@ class TestHoleScanningInAttributes:
         assert isinstance(text, TemplateText)
         assert text.parts == [
             LiteralText("Hello "),
-            Hole("name"),
+            _hole("name"),
             LiteralText(", count: "),
-            Hole("count"),
+            _hole("count"),
         ]
 
     def test_literal_only_text(self):
@@ -300,7 +306,7 @@ class TestIfDirectiveParsing:
         body = if_node.branches[0][1]
         text = body[0]
         assert isinstance(text, TemplateText)
-        assert text.parts == [LiteralText("Hello "), Hole("name")]
+        assert text.parts == [LiteralText("Hello "), _hole("name")]
 
     def test_if_else_chain(self):
         roots = _parse("{% if a %}A{% else %}B{% endif %}")
@@ -454,7 +460,7 @@ class TestDirectivePatternEdgeCases:
         assert len(p.children) == 3
         first = p.children[0]
         assert isinstance(first, TemplateText)
-        assert first.parts == [LiteralText("a"), Hole("x")]
+        assert first.parts == [LiteralText("a"), _hole("x")]
         assert isinstance(p.children[1], IfNode)
         assert isinstance(p.children[2], TemplateText)
         assert p.children[2].parts == [LiteralText("c")]
@@ -521,18 +527,14 @@ class TestDirectiveParagraphStripping:
         assert result == "{% endif %}"
 
 
-class TestUnsupportedHoleExpression:
-    def test_subscript_in_text_raises(self):
-        with pytest.raises(WebComPyException) as exc_info:
-            parse_template("<p>{{ items[0] }}</p>")
-        msg = str(exc_info.value)
-        assert "items[0]" in msg
+class TestHoleExpressions:
+    def test_subscript_in_text_works(self):
+        roots = parse_template("<p>{{ items[0] }}</p>")
+        assert len(roots) == 1
 
-    def test_call_in_text_raises(self):
-        with pytest.raises(WebComPyException) as exc_info:
-            parse_template("<p>{{ get_name() }}</p>")
-        msg = str(exc_info.value)
-        assert "get_name" in msg
+    def test_call_in_text_works(self):
+        roots = parse_template("<p>{{ get_name() }}</p>")
+        assert len(roots) == 1
 
     def test_valid_hole_still_works(self):
         roots = parse_template("<p>{{ name }}</p>")
@@ -558,3 +560,26 @@ class TestRcdataPinning:
         text_node = title.children[0]
         assert isinstance(text_node, TemplateText)
         assert text_node.parts[0].text == "<b>y</b>"
+
+
+class TestRawBlock:
+    def test_unclosed_raw_raises(self):
+        with pytest.raises(WebComPyException, match="Unclosed"):
+            _parse("{% raw %}{{ x }}")
+
+
+class TestCommentBlock:
+    def test_comment_is_stripped(self):
+        roots = _parse("<p>Hello {# comment #} World</p>")
+        assert len(roots) == 1
+        p = roots[0]
+        assert len(p.children) == 1
+        text_node = p.children[0]
+        assert isinstance(text_node, TemplateText)
+        assert text_node.parts[0].text == "Hello  World"
+
+    def test_comment_spanning_template_syntax(self):
+        roots = _parse("{# {{ x }} {% if y %} #}<p>ok</p>")
+        assert len(roots) == 1
+        assert isinstance(roots[0], TemplateElement)
+        assert roots[0].tag_name == "p"

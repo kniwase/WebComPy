@@ -304,3 +304,111 @@ class TestComponentTagTestRenderer:
             badge = result.find_by_attribute("data-testid", "badge")
             assert badge is not None
             assert badge.textContent == "ready"
+
+
+@define_component
+def _ExprRoot(context):
+    count = use_state(lambda: 5)
+    name = use_state(lambda: "alice")
+    items = use_state(lambda: ["a", "b", "c"])
+    return render_template(
+        """
+        <div>
+            <p data-testid="arith">{{ count + 1 }}</p>
+            <p data-testid="filter">{{ name | upper }}</p>
+            <p data-testid="subscript">{{ items[0] }}</p>
+            <p data-testid="slice">{{ items[:2] | join(", ") }}</p>
+        </div>
+        """,
+        locals(),
+    )
+
+
+class TestExprSSR:
+    def test_expression_renders_arithmetic(self):
+        with TestRenderer.render(_ExprRoot) as result:
+            el = result.find_by_attribute("data-testid", "arith")
+            assert el is not None
+            assert el.textContent == "6"
+
+    def test_expression_renders_filter(self):
+        with TestRenderer.render(_ExprRoot) as result:
+            el = result.find_by_attribute("data-testid", "filter")
+            assert el is not None
+            assert el.textContent == "ALICE"
+
+    def test_expression_renders_subscript(self):
+        with TestRenderer.render(_ExprRoot) as result:
+            el = result.find_by_attribute("data-testid", "subscript")
+            assert el is not None
+            assert el.textContent == "a"
+
+    def test_expression_renders_slice_with_filter(self):
+        with TestRenderer.render(_ExprRoot) as result:
+            el = result.find_by_attribute("data-testid", "slice")
+            assert el is not None
+            assert el.textContent == "a, b"
+
+
+@define_component
+def _CommentRawRoot(context):
+    return render_template(
+        """
+        <div>
+            <p data-testid="comment">Hello{# comment #} World</p>
+            <p data-testid="raw">{% raw %}{{ literal }}{% endraw %}</p>
+        </div>
+        """,
+    )
+
+
+class TestCommentRawSSR:
+    def test_comment_not_in_output(self):
+        with TestRenderer.render(_CommentRawRoot) as result:
+            el = result.find_by_attribute("data-testid", "comment")
+            assert el is not None
+            assert el.textContent == "Hello World"
+
+    def test_raw_block_preserves_literal_braces(self):
+        with TestRenderer.render(_CommentRawRoot) as result:
+            el = result.find_by_attribute("data-testid", "raw")
+            assert el is not None
+            assert el.textContent == "{{ literal }}"
+
+    def test_comment_inside_raw_preserved(self):
+        @define_component
+        def RawCommentPage(context):
+            return render_template(
+                '<p data-testid="rc">{% raw %}{# not a comment #}{% endraw %}</p>',
+            )
+
+        with TestRenderer.render(RawCommentPage) as result:
+            el = result.find_by_attribute("data-testid", "rc")
+            assert el is not None
+            assert el.textContent == "{# not a comment #}"
+
+    def test_raw_block_literal_directive(self):
+        @define_component
+        def RawDirectivePage(context):
+            return render_template(
+                '<p data-testid="rd">{% raw %}{% if x %}{% endraw %}</p>',
+            )
+
+        with TestRenderer.render(RawDirectivePage) as result:
+            el = result.find_by_attribute("data-testid", "rd")
+            assert el is not None
+            assert el.textContent == "{% if x %}"
+
+    def test_tags_inside_raw_still_parse(self):
+        @define_component
+        def RawTagsPage(context):
+            return render_template(
+                '<div data-testid="rt">{% raw %}<b>{{ x }}</b>{% endraw %}</div>',
+            )
+
+        with TestRenderer.render(RawTagsPage) as result:
+            el = result.find_by_attribute("data-testid", "rt")
+            assert el is not None
+            html_out = result.to_html()
+            assert "<b " in html_out or "<b>" in html_out
+            assert "{{ x }}</b>" in html_out

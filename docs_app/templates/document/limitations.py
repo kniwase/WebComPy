@@ -14,25 +14,54 @@ def DocumentLimitations(_: ComponentContext[None]):
         html.H2({}, "Expression Language"),
         html.P(
             {},
-            "The {{ }} expression language supports only variable paths with dot notation. The following are NOT supported:",
+            "The {{ }} expression language supports a safe subset of Python expressions. The following constructs are supported:",
         ),
         html.UL(
             {},
-            html.LI({}, "Subscript expressions: {{ items[0] }}"),
-            html.LI({}, "Function calls: {{ items.length() }}"),
-            html.LI({}, "Filters: {{ name | upper }}"),
-            html.LI({}, "Arithmetic: {{ count + 1 }}"),
+            html.LI({}, "Arithmetic: {{ count + 1 }}, {{ a * b }}, {{ items | length }}"),
+            html.LI({}, "Comparisons: {{ count > 3 }}, {{ name == 'Alice' }}"),
+            html.LI({}, "Boolean logic: {{ a and b }}, {{ not visible }}"),
+            html.LI({}, "Subscripts: {{ items[0] }}, {{ dict['key'] }}"),
+            html.LI({}, "Attribute access: {{ user.name }}, {{ obj.method() }}"),
+            html.LI({}, "Method calls: {{ name.upper() }}"),
+            html.LI({}, "Filters via |: {{ name | upper }}, {{ items | join(', ') }}"),
+            html.LI({}, "Ternary: {{ 'yes' if flag else 'no' }}"),
+            html.LI({}, "List/dict/set literals: {{ [1, 2, 3] }}, {{ {'a': 1} }}"),
+        ),
+        html.P({}, "The following constructs are intentionally NOT supported:"),
+        html.UL(
+            {},
+            html.LI({}, "Comprehensions, lambda, walrus/assignment expressions"),
+            html.LI({}, "F-strings, generator expressions"),
+            html.LI({}, "Jinja2 tests (is defined, is none)"),
+            html.LI({}, "Custom filter registration (registry is built-in)"),
+            html.LI({}, "Dunder/private attribute access (names starting with _)"),
         ),
         html.P(
             {},
-            "Only dotted variable paths like {{ user.name }} are allowed. Attempting unsupported expressions raises an error at template rendering time.",
+            "Signal-referencing expressions are automatically re-evaluated when the underlying Signal changes. Filters are only available via the pipe syntax (e.g., {{ name | upper }}), not as direct function calls ({{ upper(name) }}). Filter names take precedence over context variables on the right of |. Method calls from templates can mutate state (same exposure as Jinja2).",
         ),
         html.H2({}, "Template Comments"),
-        html.P({}, "The syntax {# ... #} is NOT supported. There is no comment syntax in WebComPy templates."),
+        html.P(
+            {},
+            "The syntax {# ... #} is supported. Template comments are stripped at compile time and do not appear in the rendered output.",
+        ),
+        html.P(
+            {},
+            "Inside {% raw %} blocks, {# and #} are preserved as literal text. Inside Markdown code blocks and code spans, template syntax (including comments) is automatically protected and rendered literally.",
+        ),
+        html.P(
+            {},
+            "Note: {# ... #} spans inside Markdown raw-HTML blocks (type 1) are also stripped. This matches Jinja2 behavior.",
+        ),
         html.H2({}, "Escaping Literal {{ in Templates"),
         html.P(
             {},
-            "There is no mechanism to escape literal double-braces. If you need {{ }} in rendered output, structure your content to avoid the pattern.",
+            "Use {% raw %}...{% endraw %} to emit literal {{ }} or {% %} syntax in rendered output. For example: {% raw %}{{ not_a_var }}{% endraw %} renders as the literal string {{ not_a_var }}.",
+        ),
+        html.P(
+            {},
+            "HTML entities decoded by the HTML parser (e.g., &#123;) become live {{ }} holes in template context. Use {% raw %} for literal brace output.",
         ),
         html.H2({}, "Scoped CSS Limits"),
         html.P(
@@ -100,10 +129,11 @@ def DocumentLimitations(_: ComponentContext[None]):
             {},
             html.LI(
                 {},
-                "Tag and attribute names are case-normalized to lowercase, breaking case-sensitive SVG element and attribute names (e.g., viewBox, linearGradient)",
+                "Tag and attribute names are case-normalized to lowercase, breaking case-sensitive SVG element and attribute names (e.g., viewBox, linearGradient). Use raw_html() for SVG content.",
             ),
             html.LI(
-                {}, "HTML entities decoded by the parser (e.g., &#123;) become live {{ }} holes in template context"
+                {},
+                "HTML entities decoded by the parser (e.g., &#123;) become live {{ }} holes in template context. Use {% raw %} for literal brace output.",
             ),
         ),
     )

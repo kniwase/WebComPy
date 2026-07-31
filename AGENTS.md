@@ -219,7 +219,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 |---|---|
 | `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md`, `signal-value-transfer/spec.md` |
 | `webcompy/template/_css_parser.py`, `webcompy/template/_css_template.py` | `template-engine/spec.md` |
-| `webcompy/template/` | `template-engine/spec.md` |
+| `webcompy/template/`, `webcompy/template/_expression.py` | `template-engine/spec.md` |
 | `webcompy/template/_markdown_default.py` | `template-engine/spec.md`, `markdown-conformance/spec.md` |
 | `webcompy/template/_markdown_for.py` | `template-engine/spec.md` |
 | `tests/conformance/` | `markdown-conformance/spec.md`, `template-engine/spec.md`, `test-execution-paths/spec.md` |

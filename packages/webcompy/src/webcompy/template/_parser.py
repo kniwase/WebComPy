@@ -20,7 +20,22 @@ from webcompy.template._ast import (
     TemplateNode,
     TemplateText,
 )
-from webcompy.template._holes import Hole, LiteralText, split_text
+from webcompy.template._holes import Hole, LiteralText, protect_lbrace, split_text
+
+_RAW_BLOCK_RE = re.compile(r"\{%\s*raw\s*%\}(.*?)\{%\s*endraw\s*%\}", re.DOTALL)
+_RAW_OPEN_RE = re.compile(r"\{%\s*raw\s*%\}")
+_COMMENT_RE = re.compile(r"\{#.*?#\}", re.DOTALL)
+
+
+def _preprocess(source: str) -> str:
+    def protect_raw(m: re.Match[str]) -> str:
+        return protect_lbrace(m.group(1))
+
+    out = _RAW_BLOCK_RE.sub(protect_raw, source)
+    if _RAW_OPEN_RE.search(out):
+        raise WebComPyException("Unclosed {% raw %} block in template")
+    return _COMMENT_RE.sub("", out)
+
 
 VOID_ELEMENTS = frozenset(
     {
@@ -294,6 +309,7 @@ class TemplateTreeBuilder(HTMLParser):
 
 
 def parse_template(source: str) -> list[TemplateNode]:
+    source = _preprocess(source)
     builder = TemplateTreeBuilder(source)
     builder.feed(source)
     builder.close()

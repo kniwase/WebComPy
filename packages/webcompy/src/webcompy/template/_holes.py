@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Any
 
 from webcompy.exception import WebComPyException
 from webcompy.signal import SignalBase
-
-HOLE_PATTERN = re.compile(r"\{\{\s*([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*)\s*\}\}")
-_ANY_BRACE_SPAN_RE = re.compile(r"\{\{.*?\}\}")
+from webcompy.template._expression import (
+    ExpressionPlan,
+    compile_expression,
+    evaluate,
+    resolve_scope,
+)
 
 PROTECTED_LBRACE_PLACEHOLDER = "\x00wc-lb\x00"
 
@@ -28,29 +30,87 @@ class LiteralText:
 
 @dataclass
 class Hole:
-    var_path: str
+    expr_source: str
+    plan: ExpressionPlan
+
+
+def _scan_hole_end(text: str, start: int) -> int | None:
+    depth = 0
+    quote: str | None = None
+    i = start
+    while i < len(text):
+        ch = text[i]
+        if quote is not None:
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == quote:
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            if depth == 0:
+                if i + 1 < len(text) and text[i + 1] == "}":
+                    return i
+                raise WebComPyException(f"Unbalanced '}}' in template expression: {text!r}")
+            depth -= 1
+        i += 1
+    return None
 
 
 def split_text(text: str, *, strict: bool = False) -> list[LiteralText | Hole]:
     parts: list[LiteralText | Hole] = []
-    last_end = 0
-    for match in HOLE_PATTERN.finditer(text):
-        if match.start() > last_end:
-            parts.append(LiteralText(text[last_end : match.start()]))
-        parts.append(Hole(match.group(1)))
-        last_end = match.end()
-    if last_end < len(text):
-        parts.append(LiteralText(text[last_end:]))
+    buf: list[str] = []
+    i = 0
+    while i < len(text):
+        if text[i] == "{" and i + 1 < len(text) and text[i + 1] == "{":
+            if buf:
+                parts.append(LiteralText("".join(buf)))
+                buf = []
+            try:
+                end = _scan_hole_end(text, i + 2)
+            except WebComPyException:
+                if strict:
+                    raise
+                buf.append(text[i])
+                i += 1
+                continue
+            if end is not None:
+                expr_source = text[i + 2 : end].strip()
+                try:
+                    plan = compile_expression(expr_source)
+                except WebComPyException:
+                    if strict:
+                        raise
+                    buf.append(text[i])
+                    i += 1
+                    continue
+                parts.append(Hole(expr_source=expr_source, plan=plan))
+                i = end + 2
+                continue
+            elif strict:
+                raise WebComPyException(f"Unclosed {{{{ }}}} hole in template: ...{text[i : i + 20]!r}...")
+            else:
+                buf.append(text[i])
+                i += 1
+                continue
+        buf.append(text[i])
+        i += 1
+    if buf:
+        parts.append(LiteralText("".join(buf)))
     if strict:
         for part in parts:
             if isinstance(part, LiteralText):
-                bad = _ANY_BRACE_SPAN_RE.search(part.text)
-                if bad is not None:
-                    raise WebComPyException(
-                        f"Unsupported expression {bad.group(0)!r} in {{{{ }}}} hole: only variable paths "
-                        "with dot notation are supported (subscripts, calls, and filters are not)"
-                    )
+                _check_stale_braces(part.text)
     return parts
+
+
+def _check_stale_braces(text: str) -> None:
+    for j in range(len(text) - 1):
+        if text[j] == "{" and text[j + 1] == "{":
+            raise WebComPyException(f"Unclosed or malformed expression near {text[j : j + 15]!r} in template")
 
 
 def resolve_var(path: str, ctx: dict[str, Any]) -> Any:
@@ -106,5 +166,11 @@ def resolve_holes(text: str, ctx: dict[str, Any]) -> str:
         if isinstance(part, LiteralText):
             rendered.append(part.text)
         else:
-            rendered.append(format_value(resolve_var(part.var_path, ctx)))
+            plan = part.plan
+            if plan.is_plain_path:
+                value = resolve_var(part.expr_source, ctx)
+            else:
+                scope = resolve_scope(plan, ctx)
+                value = evaluate(plan, scope)
+            rendered.append(format_value(value))
     return "".join(rendered)
