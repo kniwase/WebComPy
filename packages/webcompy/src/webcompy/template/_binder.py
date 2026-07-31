@@ -243,6 +243,37 @@ def _extend_for_ctx(
     return new_ctx
 
 
+def _bind_for_static(
+    iterable_resolved: Any,
+    loop_vars: list[str],
+    body: list[TemplateNode],
+    ctx: dict[str, Any],
+    iterable_path: str,
+) -> list[ElementChildren]:
+    is_dict = isinstance(iterable_resolved, dict)
+    if not is_dict and not isinstance(iterable_resolved, Iterable):
+        raise WebComPyException(
+            f"Non-iterable {{% for %}} target: '{iterable_path}' resolved to {type(iterable_resolved).__name__}"
+        )
+    result: list[ElementChildren] = []
+    if len(loop_vars) == 1:
+        items: list[Any] = list(iterable_resolved.values()) if is_dict else list(iterable_resolved)
+        for value in items:
+            new_ctx = _extend_for_ctx(ctx, loop_vars, value, None, is_dict)
+            result.extend(bind_children(body, new_ctx))
+        return result
+    if len(loop_vars) == 2:
+        if not is_dict:
+            raise WebComPyException(
+                f"Two-variable for-loop requires a dict iterable (got {type(iterable_resolved).__name__})"
+            )
+        for key, value in iterable_resolved.items():
+            new_ctx = _extend_for_ctx(ctx, loop_vars, value, key, is_dict=True)
+            result.extend(bind_children(body, new_ctx))
+        return result
+    raise WebComPyException(f"Invalid for-loop variable count: expected 1 or 2, got {len(loop_vars)}")
+
+
 def bind_for(node: ForNode, ctx: dict[str, Any]) -> list[ElementChildren]:
     loop_vars = node.loop_vars
     iterable_path = node.iterable_path
@@ -252,28 +283,7 @@ def bind_for(node: ForNode, ctx: dict[str, Any]) -> list[ElementChildren]:
         iterable_resolved = resolve_var(iterable_path, ctx)
         if isinstance(iterable_resolved, SignalBase):
             return [_bind_for_reactive(loop_vars, iterable_resolved, node.body, ctx)]
-        is_dict = isinstance(iterable_resolved, dict)
-        if not is_dict and not isinstance(iterable_resolved, Iterable):
-            raise WebComPyException(
-                f"Non-iterable {{% for %}} target: '{iterable_path}' resolved to {type(iterable_resolved).__name__}"
-            )
-        result: list[ElementChildren] = []
-        if len(loop_vars) == 1:
-            items: list[Any] = list(iterable_resolved.values()) if is_dict else list(iterable_resolved)
-            for value in items:
-                new_ctx = _extend_for_ctx(ctx, loop_vars, value, None, is_dict)
-                result.extend(bind_children(node.body, new_ctx))
-            return result
-        if len(loop_vars) == 2:
-            if not is_dict:
-                raise WebComPyException(
-                    f"Two-variable for-loop requires a dict iterable (got {type(iterable_resolved).__name__})"
-                )
-            for key, value in iterable_resolved.items():
-                new_ctx = _extend_for_ctx(ctx, loop_vars, value, key, is_dict=True)
-                result.extend(bind_children(node.body, new_ctx))
-            return result
-        raise WebComPyException(f"Invalid for-loop variable count: expected 1 or 2, got {len(loop_vars)}")
+        return _bind_for_static(iterable_resolved, loop_vars, node.body, ctx, iterable_path)
 
     scope = resolve_scope(plan, ctx)
     state = _EvalState()
@@ -285,29 +295,7 @@ def bind_for(node: ForNode, ctx: dict[str, Any]) -> list[ElementChildren]:
             )
         ]
 
-    iterable_resolved = value
-    is_dict = isinstance(iterable_resolved, dict)
-    if not is_dict and not isinstance(iterable_resolved, Iterable):
-        raise WebComPyException(
-            f"Non-iterable {{% for %}} target: '{iterable_path}' resolved to {type(iterable_resolved).__name__}"
-        )
-    result: list[ElementChildren] = []
-    if len(loop_vars) == 1:
-        items: list[Any] = list(iterable_resolved.values()) if is_dict else list(iterable_resolved)
-        for value in items:
-            new_ctx = _extend_for_ctx(ctx, loop_vars, value, None, is_dict)
-            result.extend(bind_children(node.body, new_ctx))
-        return result
-    if len(loop_vars) == 2:
-        if not is_dict:
-            raise WebComPyException(
-                f"Two-variable for-loop requires a dict iterable (got {type(iterable_resolved).__name__})"
-            )
-        for key, value in iterable_resolved.items():
-            new_ctx = _extend_for_ctx(ctx, loop_vars, value, key, is_dict=True)
-            result.extend(bind_children(node.body, new_ctx))
-        return result
-    raise WebComPyException(f"Invalid for-loop variable count: expected 1 or 2, got {len(loop_vars)}")
+    return _bind_for_static(value, loop_vars, node.body, ctx, iterable_path)
 
 
 def _bind_for_reactive(
