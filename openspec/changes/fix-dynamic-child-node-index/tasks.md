@@ -20,7 +20,7 @@
 
 ## 3. Verification
 
-- [ ] 3.1 Run `uv run ruff check . && uv run ruff format --check . && uv run pyright`
-- [ ] 3.2 Run `uv run python -m pytest tests/ --tb=short`
-- [ ] 3.3 Run full e2e suite via `scripts/run-e2e-tests.sh` (all groups, prod + static) and confirm all pass
-- [ ] 3.4 Run `openspec validate fix-dynamic-child-node-index`
+- [x] 3.1 Run `uv run ruff check . && uv run ruff format --check . && uv run pyright`
+- [x] 3.2 Run `uv run python -m pytest tests/ --tb=short`
+- [x] 3.3 Run full e2e suite via `scripts/run-e2e-tests.sh` (all groups, prod + static) and confirm all pass
+- [x] 3.4 Run `openspec validate fix-dynamic-child-node-index`
