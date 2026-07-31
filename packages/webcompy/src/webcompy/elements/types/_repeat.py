@@ -162,8 +162,8 @@ class RepeatElement(DynamicElement):
             idx = self._node_idx
             for child in self._children:
                 child._node_idx = idx
-                idx += child._node_count
                 await child._render()
+                idx += child._node_count
             if self._has_key:
                 self._populate_key_map()
         self._parent._re_index_children(False)
@@ -203,10 +203,11 @@ class RepeatElement(DynamicElement):
                     new_children.append(child_element)
                     newly_created.add(len(new_children) - 1)
 
-        for child in new_children:
+        for c_idx, child in enumerate(new_children):
             child._node_idx = node_offset
-            node_offset += child._node_count
-            if isinstance(child, DynamicElement):
+            if c_idx in newly_created:
+                await child._render()
+            elif isinstance(child, DynamicElement):
                 _position_element_nodes(child, parent_node, child._node_idx)
             else:
                 node = child._get_node()
@@ -220,14 +221,7 @@ class RepeatElement(DynamicElement):
                         parent_node.appendChild(node)
                     if not child._mounted:
                         child._mounted = True
-
-        for c_idx, child in enumerate(new_children):
-            if c_idx in newly_created:
-                await child._render()
-            elif isinstance(child, DynamicElement):
-                pass
-            elif child._node_cache is None:
-                await child._render()
+            node_offset += child._node_count
 
         self._children = new_children
         self._children_keys = new_keys

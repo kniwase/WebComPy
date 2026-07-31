@@ -61,8 +61,8 @@ class SwitchElement(DynamicElement):
             idx = self._node_idx
             for child in self._children:
                 child._node_idx = idx
-                idx += child._node_count
                 await child._render()
+                idx += child._node_count
             _position_element_nodes(self, parent_node, self._node_idx)
         else:
             await self._refresh()
@@ -80,21 +80,21 @@ class SwitchElement(DynamicElement):
         _run_refresh_sync(self._refresh, *args)
 
     async def _refresh(self, *args: Any):
-        idx, generator = self._select_generator()
-        if idx == self._rendered_idx:
+        branch_idx, generator = self._select_generator()
+        if branch_idx == self._rendered_idx:
             if self._children and all(child._mounted is None for child in self._children):
                 parent_node = self._parent._get_node()
                 idx = self._node_idx
                 for child in self._children:
                     child._node_idx = idx
-                    idx += child._node_count
                     await child._render()
+                    idx += child._node_count
                 _position_element_nodes(self, parent_node, self._node_idx)
             return
         parent_node = self._parent._get_node()
         if not parent_node:
             raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
-        self._rendered_idx = idx
+        self._rendered_idx = branch_idx
         new_children = self._generate_children(generator)
         old_children = self._children
         self._children = _patch_children(old_children, new_children, self._node_idx)
@@ -104,8 +104,8 @@ class SwitchElement(DynamicElement):
         idx = self._node_idx
         for child in self._children:
             child._node_idx = idx
-            idx += child._node_count
             await child._render()
+            idx += child._node_count
         if should_defer:
             deferred = end_defer_after_rendering()
             for callback in deferred:

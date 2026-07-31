@@ -487,9 +487,9 @@ class MarkdownForElement(DynamicElement):
         idx = self._node_idx
         for child in self._children:
             child._node_idx = idx
-            idx += child._node_count
             if child._mounted is None and not self._hydrated:
                 await child._render()
+            idx += child._node_count
         self._hydrated = False
         _position_element_nodes(self, parent_node, self._node_idx)
 
@@ -516,8 +516,8 @@ class MarkdownForElement(DynamicElement):
         idx = self._node_idx
         for child in self._children:
             child._node_idx = idx
-            idx += child._node_count
             await child._render()
+            idx += child._node_count
         if should_defer:
             deferred = end_defer_after_rendering()
             for callback in deferred:

@@ -5,8 +5,11 @@ import pytest
 from tests.conftest import FakeDOMNode
 from webcompy.components import define_component
 from webcompy.di._scope import _active_di_scope
+from webcompy.elements import ClientOnly, html
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._fragment import FragmentElement
+from webcompy.elements.types._suspense import SuspenseElement
+from webcompy.elements.types._text import TextElement
 from webcompy.ports._keys import MARKDOWN_PORT_KEY
 from webcompy.signal import ReactiveDict, ReactiveList, Signal
 from webcompy.template import render_template
@@ -135,3 +138,92 @@ class TestMarkdownForFragmentChildren:
         await mfe._render()
         assert frag._node_idx == 0
         assert tail._node_idx == 2
+
+
+class TestDynamicChildMaterialization:
+    def test_client_only_preserves_following_sibling(self):
+        @define_component
+        def ClientOnlyPage(context):
+            return html.DIV(
+                {},
+                ClientOnly(
+                    children=lambda: TextElement("client"),
+                    fallback=lambda: TextElement("fallback"),
+                ),
+                html.P({}, "tail"),
+            )
+
+        with TestRenderer.render(ClientOnlyPage) as result:
+            children = result._root_node.childNodes
+            assert [child.nodeName for child in children] == ["#text", "P"]
+            assert children[0].textContent == "fallback"
+            assert children[1].textContent == "tail"
+
+    def test_suspense_preserves_following_sibling(self):
+        @define_component
+        def SuspensePage(context):
+            return html.DIV(
+                {},
+                SuspenseElement(
+                    fallback=lambda: html.I({}, "fallback"),
+                    children=lambda: html.SPAN({}, "suspense"),
+                ),
+                html.P({}, "tail"),
+            )
+
+        with TestRenderer.render(SuspensePage) as result:
+            children = result._root_node.childNodes
+            assert [child.nodeName for child in children] == ["SPAN", "P"]
+            assert children[0].textContent == "suspense"
+            assert children[1].textContent == "tail"
+
+    def test_fragment_materialization_preserves_following_siblings(self):
+        @define_component
+        def FragmentPage(context):
+            return html.DIV(
+                {},
+                FragmentElement(
+                    [
+                        ClientOnly(
+                            children=lambda: TextElement("client"),
+                            fallback=lambda: TextElement("fallback"),
+                        ),
+                        html.SPAN({}, "inside"),
+                    ]
+                ),
+                html.P({}, "tail"),
+            )
+
+        with TestRenderer.render(FragmentPage) as result:
+            children = result._root_node.childNodes
+            assert [child.nodeName for child in children] == ["#text", "SPAN", "P"]
+            assert [child.textContent for child in children] == ["fallback", "inside", "tail"]
+
+
+class TestDynamicChildHydration:
+    def test_client_only_hydration_reindexes_following_sibling(self, fake_browser_full, monkeypatch):
+        monkeypatch.setattr("webcompy.elements.types._client_only.ENVIRONMENT", "pyscript")
+
+        parent = _FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        prerendered_fallback = FakeDOMNode("#text", text_content="loading")
+        prerendered_fallback.__webcompy_prerendered_node__ = True
+        prerendered_tail = FakeDOMNode("p", text_content="tail")
+        prerendered_tail.__webcompy_prerendered_node__ = True
+        parent._node_cache.appendChild(prerendered_fallback)
+        parent._node_cache.appendChild(prerendered_tail)
+
+        client_only = ClientOnly(
+            children=lambda: TextElement("client"),
+            fallback=lambda: TextElement("loading"),
+        )
+        tail = Element("p", {}, {}, None, [TextElement("tail")])
+        parent._append_child(client_only)
+        parent._append_child(tail)
+
+        client_only._hydrate_node()
+        tail._hydrate_node()
+
+        assert tail._node_idx == 1
+        assert tail._node_cache is prerendered_tail

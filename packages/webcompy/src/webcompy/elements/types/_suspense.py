@@ -169,8 +169,8 @@ class SuspenseElement(DynamicElement):
             idx = self._node_idx
             for child in self._children:
                 child._node_idx = idx
-                idx += child._node_count
                 await child._render()
+                idx += child._node_count
             parent_node = self._parent._get_node()
             _position_element_nodes(self, parent_node, self._node_idx)
             self._parent._re_index_children(False)
@@ -189,8 +189,8 @@ class SuspenseElement(DynamicElement):
             idx = self._node_idx
             for child in self._children:
                 child._node_idx = idx
-                idx += child._node_count
                 await child._render()
+                idx += child._node_count
             parent_node = self._parent._get_node()
             _position_element_nodes(self, parent_node, self._node_idx)
             self._parent._re_index_children(False)

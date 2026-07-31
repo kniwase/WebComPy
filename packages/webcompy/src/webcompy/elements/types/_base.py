@@ -38,18 +38,19 @@ class ElementWithChildren(ElementAbstract):
         idx = self._node_idx
         for child in self._children:
             child._node_idx = idx
-            idx += child._node_count
-        for child in self._children:
             await child._render()
+            idx += child._node_count
         if (node := self._get_node()) is not None and not self._preserve_children:
             for _ in range(node.childNodes.length - self._children_length):
                 node.childNodes[-1].remove()
 
     def _hydrate_node(self):
         result = super()._hydrate_node()
-        self._re_index_children()
+        idx = 0
         for child in self._children:
+            child._node_idx = idx
             child._hydrate_node()
+            idx += child._node_count
         if (node := self._get_node()) is not None and not self._preserve_children:
             for _ in range(node.childNodes.length - self._children_length):
                 node.childNodes[-1].remove()
