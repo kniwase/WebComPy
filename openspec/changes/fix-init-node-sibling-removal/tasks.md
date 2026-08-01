@@ -2,9 +2,9 @@
 
 ## 1. Core fix
 
-- [ ] 1.1 Guard `ElementBase._init_node` in `packages/webcompy/src/webcompy/elements/types/_element.py` (line ~81-82): change the `else: existing_node.remove()` branch to `elif not getattr(existing_node, "__webcompy_node__", False): existing_node.remove()` (mirror `NewLine._init_node` in `_text.py:33`)
-- [ ] 1.2 Guard `TextElement._init_node` in `packages/webcompy/src/webcompy/elements/types/_text.py` (line ~78-79): same change to its `else: existing_node.remove()` branch
-- [ ] 1.3 Guard `RawHTMLElement._init_node` in `packages/webcompy/src/webcompy/elements/types/_text.py` (line ~119-120): same change to its `else: existing_node.remove()` branch
+- [x] 1.1 Guard `ElementBase._init_node` in `packages/webcompy/src/webcompy/elements/types/_element.py` (line ~81-82): change the `else: existing_node.remove()` branch to `elif not getattr(existing_node, "__webcompy_node__", False): existing_node.remove()` (mirror `NewLine._init_node` in `_text.py:33`) — already merged via #219 (`c2d94dc`), verified identical to `NewLine`'s guard
+- [x] 1.2 Guard `TextElement._init_node` in `packages/webcompy/src/webcompy/elements/types/_text.py` (line ~78-79): same change to its `else: existing_node.remove()` branch — already merged via #219 (`c2d94dc`), verified
+- [x] 1.3 Guard `RawHTMLElement._init_node` in `packages/webcompy/src/webcompy/elements/types/_text.py` (line ~119-120): same change to its `else: existing_node.remove()` branch — already merged via #219 (`c2d94dc`), verified
 
 ## 2. Regression tests
 
