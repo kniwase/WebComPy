@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from operator import truth
 from typing import Any, cast
 
@@ -41,6 +42,30 @@ from webcompy.template._holes import (
 from webcompy.template._naming import TagResolution, kebab_to_snake, resolve_tag
 
 _EMPTY_COMPONENT_STORE = ComponentStore()
+
+
+@dataclass
+class LoopMetadata:
+    index: object
+    index0: object
+    revindex: object
+    revindex0: object
+    first: object
+    last: object
+    length: object
+
+
+def _make_loop_meta(index0: int, length: int) -> LoopMetadata:
+    index = index0 + 1
+    return LoopMetadata(
+        index=index,
+        index0=index0,
+        revindex=length - index0,
+        revindex0=length - index,
+        first=index0 == 0,
+        last=index == length,
+        length=length,
+    )
 
 
 def _attr_text(parts: list[LiteralText | Hole]) -> str:
@@ -231,8 +256,11 @@ def _extend_for_ctx(
     value: Any,
     key: Any,
     is_dict: bool,
+    loop_meta: LoopMetadata | None = None,
 ) -> dict[str, Any]:
     new_ctx = dict(ctx)
+    if loop_meta is not None:
+        new_ctx["loop"] = loop_meta
     if len(loop_vars) == 1:
         new_ctx[loop_vars[0]] = value
     elif len(loop_vars) == 2 and is_dict:
@@ -258,8 +286,10 @@ def _bind_for_static(
     result: list[ElementChildren] = []
     if len(loop_vars) == 1:
         items: list[Any] = list(iterable_resolved.values()) if is_dict else list(iterable_resolved)
-        for value in items:
-            new_ctx = _extend_for_ctx(ctx, loop_vars, value, None, is_dict)
+        total = len(items)
+        for idx0, value in enumerate(items):
+            meta = _make_loop_meta(idx0, total)
+            new_ctx = _extend_for_ctx(ctx, loop_vars, value, None, is_dict, loop_meta=meta)
             result.extend(bind_children(body, new_ctx))
         return result
     if len(loop_vars) == 2:
@@ -267,8 +297,11 @@ def _bind_for_static(
             raise WebComPyException(
                 f"Two-variable for-loop requires a dict iterable (got {type(iterable_resolved).__name__})"
             )
-        for key, value in iterable_resolved.items():
-            new_ctx = _extend_for_ctx(ctx, loop_vars, value, key, is_dict=True)
+        items = list(iterable_resolved.items())
+        total = len(items)
+        for idx0, (key, value) in enumerate(items):
+            meta = _make_loop_meta(idx0, total)
+            new_ctx = _extend_for_ctx(ctx, loop_vars, value, key, is_dict=True, loop_meta=meta)
             result.extend(bind_children(body, new_ctx))
         return result
     raise WebComPyException(f"Invalid for-loop variable count: expected 1 or 2, got {len(loop_vars)}")
@@ -307,12 +340,27 @@ def _bind_for_reactive(
     is_dict = isinstance(signal.value, dict)
 
     if len(loop_vars) == 1:
+        if is_dict:
 
-        def single_arg_cb(value: Any) -> ElementChildren:
-            new_ctx = _extend_for_ctx(ctx, loop_vars, value, None, is_dict)
+            def single_arg_cb(value: Any) -> ElementChildren:
+                new_ctx = _extend_for_ctx(ctx, loop_vars, value, None, is_dict)
+                return _wrap_for_fragment(bind_children(body, new_ctx))
+
+            return repeat(signal, single_arg_cb)
+
+        gen: dict[str, Any] = {"idx": 0}
+
+        def list_cb(value: Any) -> ElementChildren:
+            idx0 = gen["idx"]
+            gen["idx"] = idx0 + 1
+            total = len(signal.value)
+            if gen["idx"] >= total:
+                gen["idx"] = 0
+            meta = _make_loop_meta(idx0, total)
+            new_ctx = _extend_for_ctx(ctx, loop_vars, value, None, is_dict, loop_meta=meta)
             return _wrap_for_fragment(bind_children(body, new_ctx))
 
-        return repeat(signal, single_arg_cb)
+        return repeat(signal, list_cb)
 
     if len(loop_vars) == 2:
         if not is_dict:

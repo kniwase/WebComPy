@@ -7,10 +7,10 @@
 
 ## 2. Loop Metadata — Core (`render_template` path)
 
-- [ ] 2.1 Implement internal `LoopMetadata` class (plain-value attributes) in `packages/webcompy/src/webcompy/template/_binder.py`; extend `_extend_for_ctx` to inject `loop` (metadata assigned before loop vars so a user var named `loop` shadows it)
-- [ ] 2.2 Wire plain metadata into `_bind_for_static` (enumerate-based positions for list and dict paths)
-- [ ] 2.3 Wire plain metadata into the ReactiveList single-arg path of `_bind_for_reactive`
-- [ ] 2.4 Unit tests: all seven attributes over static list/dict; ReactiveList values correct after append/remove; nested-loop shadowing; user loop var named `loop` shadows metadata (add to `tests/test_template_integration.py` or new `tests/test_template_loop_metadata.py`)
+- [x] 2.1 Implement internal `LoopMetadata` class (plain-value attributes) in `packages/webcompy/src/webcompy/template/_binder.py`; extend `_extend_for_ctx` to inject `loop` (metadata assigned before loop vars so a user var named `loop` shadows it)
+- [x] 2.2 Wire plain metadata into `_bind_for_static` (enumerate-based positions for list and dict paths)
+- [x] 2.3 Wire plain metadata into the ReactiveList single-arg path of `_bind_for_reactive`
+- [x] 2.4 Unit tests: all seven attributes over static list/dict; ReactiveList values correct after append/remove; nested-loop shadowing; user loop var named `loop` shadows metadata (add to `tests/test_template_integration.py` or new `tests/test_template_loop_metadata.py`)
 
 ## 3. Loop Metadata — ReactiveDict (Computed-backed)
 
