@@ -2,8 +2,8 @@
 
 ## 1. Core fix
 
-- [ ] 1.1 Add a Pyodide branch to `_run_refresh_sync` in `packages/webcompy/src/webcompy/elements/types/_dynamic.py` (line ~32-46): when `ENVIRONMENT == "pyscript"` and an event loop is running, schedule the refresh coroutine on the event loop via `aio_run` wrapped in a `_safe_refresh` coroutine that logs exceptions via `logging.error`, instead of calling `loop.run_until_complete`
-- [ ] 1.2 Keep the non-Pyodide path unchanged (`asyncio.run` without a running loop; `nest_asyncio` + `run_until_complete` with one)
+- [x] 1.1 Add a Pyodide branch to `_run_refresh_sync` in `packages/webcompy/src/webcompy/elements/types/_dynamic.py` (line ~32-46): when `ENVIRONMENT == "pyscript"` and an event loop is running, schedule the refresh coroutine on the event loop via `aio_run` wrapped in a `_safe_refresh` coroutine that logs exceptions via `logging.error`, instead of calling `loop.run_until_complete`
+- [x] 1.2 Keep the non-Pyodide path unchanged (`asyncio.run` without a running loop; `nest_asyncio` + `run_until_complete` with one)
 
 ## 2. Regression tests
 
