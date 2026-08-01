@@ -83,7 +83,7 @@ class ElementAbstract(SignalReceivable):
             self._adopt_node(existing)
             return existing
         else:
-            if existing:
+            if existing and not getattr(existing, "__webcompy_node__", False):
                 existing.remove()
             node = self._create_node()
             self._init_new_node(node)

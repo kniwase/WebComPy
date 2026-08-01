@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from tests.conftest import FakeDOMNode
+from tests.conftest import FakeDOMNode, MockHistoryPort
 from webcompy.components import define_component
+from webcompy.di import DIScope
+from webcompy.di._keys import _ROUTER_KEY
 from webcompy.di._scope import _active_di_scope
 from webcompy.elements import ClientOnly, html
 from webcompy.elements.types._element import Element
@@ -11,6 +13,8 @@ from webcompy.elements.types._fragment import FragmentElement
 from webcompy.elements.types._suspense import SuspenseElement
 from webcompy.elements.types._text import TextElement
 from webcompy.ports._keys import MARKDOWN_PORT_KEY
+from webcompy.router._router import Router
+from webcompy.router._view import RouterView
 from webcompy.signal import ReactiveDict, ReactiveList, Signal
 from webcompy.template import render_template
 from webcompy.template._markdown_default import DefaultMarkdownParser
@@ -227,3 +231,172 @@ class TestDynamicChildHydration:
 
         assert tail._node_idx == 1
         assert tail._node_cache is prerendered_tail
+
+
+class TestReactiveIfInsideForToggle:
+    def test_double_toggle_preserves_all_items(self):
+        items = ReactiveList([1, 2, 3])
+        flag = Signal(True)
+
+        @define_component
+        def TogglePage(context):
+            return render_template(
+                """
+                <ul>
+                    <li>header</li>
+                    {% for item in items %}
+                    {% if flag %}
+                    <li>on-{{ item }}</li>
+                    {% else %}
+                    <li>off-{{ item }}</li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+                """,
+                {"items": items, "flag": flag},
+            )
+
+        with TestRenderer.render(TogglePage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == [
+                "header",
+                "on-1",
+                "on-2",
+                "on-3",
+            ]
+            flag.value = False
+            assert [li.textContent for li in result.query_selector_all("li")] == [
+                "header",
+                "off-1",
+                "off-2",
+                "off-3",
+            ]
+            flag.value = True
+            assert [li.textContent for li in result.query_selector_all("li")] == [
+                "header",
+                "on-1",
+                "on-2",
+                "on-3",
+            ]
+            items.pop(0)
+            assert [li.textContent for li in result.query_selector_all("li")] == [
+                "header",
+                "on-2",
+                "on-3",
+            ]
+            items.append(4)
+            assert [li.textContent for li in result.query_selector_all("li")] == [
+                "header",
+                "on-2",
+                "on-3",
+                "on-4",
+            ]
+
+
+class TestRepeatRefreshWithFollowingSibling:
+    def test_following_sibling_preserved_after_pop(self):
+        items = ReactiveList(["x", "y"])
+
+        @define_component
+        def SiblingPage(context):
+            return render_template(
+                """
+                <div>
+                    <p>head</p>
+                    {% for item in items %}
+                    <b>{{ item }}</b>
+                    {% endfor %}
+                    <span>tail</span>
+                </div>
+                """,
+                {"items": items},
+            )
+
+        with TestRenderer.render(SiblingPage) as result:
+            assert result.query_selector("p").textContent == "head"
+            assert [b.textContent for b in result.query_selector_all("b")] == ["x", "y"]
+            assert result.query_selector("span").textContent == "tail"
+            items.pop(0)
+            assert result.query_selector("p").textContent == "head"
+            assert [b.textContent for b in result.query_selector_all("b")] == ["y"]
+            assert result.query_selector("span").textContent == "tail"
+            assert len(result.query_selector_all("b")) == 1
+
+
+class TestNestedForRefresh:
+    def test_both_levels_mutate_without_losing_cells(self):
+        rows = ReactiveList(["a", "b"])
+        cols = ReactiveList([1, 2])
+
+        @define_component
+        def NestedPage(context):
+            return render_template(
+                """
+                <table>
+                    {% for row in rows %}
+                    <tr>
+                        {% for col in cols %}
+                        <td>{{ row }}{{ col }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+                """,
+                {"rows": rows, "cols": cols},
+            )
+
+        with TestRenderer.render(NestedPage) as result:
+            assert [td.textContent for td in result.query_selector_all("td")] == ["a1", "a2", "b1", "b2"]
+            cols.pop(0)
+            assert [td.textContent for td in result.query_selector_all("td")] == ["a2", "b2"]
+            rows.append("c")
+            assert [td.textContent for td in result.query_selector_all("td")] == ["a2", "b2", "c2"]
+            rows.pop(0)
+            assert [td.textContent for td in result.query_selector_all("td")] == ["b2", "c2"]
+
+
+class TestReindexWithoutNodeIdx:
+    def test_fragment_without_node_idx_does_not_raise(self):
+        frag = FragmentElement([])
+        frag._re_index_children(False)
+
+    def test_fragment_with_children_falls_back_to_zero_base(self):
+        parent = _FakeRootElement("div", {}, {}, None, None)
+        first = Element("p")
+        second = Element("p")
+        frag = FragmentElement([first, second])
+        frag._parent = parent
+        frag._re_index_children(False)
+        assert first._node_idx == 0
+        assert second._node_idx == 1
+
+    def test_router_view_on_set_parent_without_node_idx(self):
+        scope = DIScope()
+        router = Router(history=MockHistoryPort(mode="hash"), preload=False)
+        scope.provide(_ROUTER_KEY, router)
+        scope.__enter__()
+        try:
+            view = RouterView()
+            parent = _FakeRootElement("div", {}, {}, None, None)
+            view._parent = parent
+            assert view._children[0]._node_idx == 0
+        finally:
+            scope.__exit__(None, None, None)
+
+
+class TestMarkdownForRenderReindexesFollowingSibling:
+    @pytest.mark.asyncio
+    async def test_render_reindexes_following_sibling(self, fake_browser_full):
+        _active_di_scope.get().provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
+        mfe = MarkdownForElement(["item"], "items", "- {{ item }}", {"items": ["a", "b"]})
+        parent = _FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        mfe._parent = parent
+        mfe._node_idx = 0
+        tail = Element("span")
+        tail._parent = parent
+        tail._node_idx = 5
+        parent._children = [mfe, tail]
+        await mfe._render()
+        assert tail._node_idx == mfe._node_count
+        assert mfe._children[0]._node_idx == 0

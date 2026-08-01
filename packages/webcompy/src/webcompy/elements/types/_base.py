@@ -99,7 +99,9 @@ class ElementWithChildren(ElementAbstract):
         return sum(child._node_count for child in self._children)
 
     def _re_index_children(self, recursive: bool = False):
-        idx = 0
+        from webcompy.elements.types._dynamic import DynamicElement
+
+        idx = getattr(self, "_node_idx", 0) if isinstance(self, DynamicElement) else 0
         for c_idx in range(len(self._children)):
             self._children[c_idx]._node_idx = idx
             idx += self._children[c_idx]._node_count

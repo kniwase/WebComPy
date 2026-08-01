@@ -61,6 +61,7 @@ class DynamicElement(ElementWithChildren):
 
     def __init__(self) -> None:
         super().__init__()
+        self._children: list[ElementAbstract] = []
         self._pending_render_tasks: list[asyncio.Task[Any]] = []
         self._hydrated = False
 

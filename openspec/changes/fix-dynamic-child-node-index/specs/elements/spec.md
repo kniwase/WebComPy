@@ -4,7 +4,7 @@
 
 ### Requirement: Dynamic containers shall assign child node indices by cumulative node offset
 
-When a container element assigns `_node_idx` to its children during render, refresh, reconciliation, or hydration, each child's index SHALL be the container's own `_node_idx` plus the sum of all preceding siblings' `_node_count` (cumulative node offset). Containers SHALL NOT use the child's enumerate position in the children list as the node offset. This applies to `ElementBase._render`, `DynamicElement._render`, `RepeatElement._refresh` (full-rebuild path), `RepeatElement._reconcile_children`, `SwitchElement._render`, `SwitchElement._refresh`, `SuspenseElement`, `ClientOnlyElement`, and `MarkdownForElement` (`template/_markdown_for.py`), matching the existing cumulative behavior of `_re_index_children`, `_hydrate_node`, `_position_element_nodes`, and `_append_child`. For children with `_node_count == 1` the two schemes coincide; multi-node children (`FragmentElement`) MUST be positioned at non-overlapping offsets.
+When a container element assigns `_node_idx` to its children during render, refresh, reconciliation, or hydration, each child's index SHALL be the container's own `_node_idx` plus the sum of all preceding siblings' `_node_count` (cumulative node offset). Containers SHALL NOT use the child's enumerate position in the children list as the node offset. This applies to `ElementWithChildren._render`, `DynamicElement._render`, `RepeatElement._refresh` (full-rebuild path), `RepeatElement._reconcile_children`, `SwitchElement._render`, `SwitchElement._refresh`, `SuspenseElement`, `ClientOnlyElement`, and `MarkdownForElement` (`template/_markdown_for.py`), matching the existing cumulative behavior of `_re_index_children`, `_hydrate_node`, `_position_element_nodes`, and `_append_child`. For children with `_node_count == 1` the two schemes coincide; multi-node children (`FragmentElement`) MUST be positioned at non-overlapping offsets.
 
 #### Scenario: Multi-line template for-loop renders all items on initial render
 - **WHEN** a template contains `{% for item in items %}` with a multi-line body (whitespace producing `TextElement` siblings, i.e., `FragmentElement` children) over a `ReactiveList`
@@ -21,3 +21,11 @@ When a container element assigns `_node_idx` to its children during render, refr
 #### Scenario: Keyed reconciliation positions fragment children at non-overlapping offsets
 - **WHEN** `repeat` with a `key` function (or `ReactiveDict`) renders templates that produce multi-node children and the collection is mutated
 - **THEN** reused and newly created children SHALL be positioned by cumulative node offset with no overlapping `_node_idx` values
+
+#### Scenario: Reactive if branch inside a reactive for-loop survives repeated toggles
+- **WHEN** a template contains `{% if %}` (reactive condition) inside `{% for %}` (reactive iterable) and the condition signal toggles more than once while items are also mutated
+- **THEN** every toggle SHALL update the DOM without raising and without losing items, and the refreshed DOM SHALL contain exactly the branch elements for all items in order
+
+#### Scenario: Refresh preserves following siblings of a dynamic container
+- **WHEN** a dynamic container (e.g., a reactive `{% for %}`) has a following sibling element in its parent and the underlying collection is mutated
+- **THEN** the following sibling's DOM node SHALL remain in the parent at its correct position after the refresh, and no node owned by a sibling SHALL be removed or replaced during the container's render or reconcile

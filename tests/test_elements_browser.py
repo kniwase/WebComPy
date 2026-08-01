@@ -276,6 +276,7 @@ class TestTextElementWithBrowser:
         text_el._parent = parent
         text_el._node_idx = 0
         existing_node = FakeDOMNode("#text", text_content="stale")
+        existing_node.__webcompy_node__ = False
         parent_node.appendChild(existing_node)
         node = text_el._init_node()
         assert node is not existing_node
@@ -439,6 +440,54 @@ class TestPartialHydrationElement:
         el, existing_node = self._setup_prerendered_element("span", {}, {"data-extra": "value"})
         el._init_node()
         assert existing_node.getAttribute("data-extra") is None
+
+    def test_hydrate_replaces_prerendered_tag_mismatch(self, fake_browser_full):
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        existing_node = FakeDOMNode("p")
+        existing_node.__webcompy_prerendered_node__ = True
+        parent_node.appendChild(existing_node)
+        el = Element("span", {}, {}, None, None)
+        el._parent = parent
+        el._node_idx = 0
+        node = el._init_node()
+        assert node is not existing_node
+        assert node.nodeName == "SPAN"
+        assert existing_node.parentNode is None
+        assert parent_node.childNodes.length == 0
+
+    def test_hydrate_removes_prerendered_tag_mismatch_via_hydrate_node(self, fake_browser_full):
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        existing_node = FakeDOMNode("p")
+        existing_node.__webcompy_prerendered_node__ = True
+        parent_node.appendChild(existing_node)
+        el = Element("span", {}, {}, None, None)
+        el._parent = parent
+        el._node_idx = 0
+        el._hydrate_node()
+        assert existing_node.parentNode is None
+        assert parent_node.childNodes.length == 0
+
+    def test_hydrate_preserves_framework_managed_node(self, fake_browser_full):
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent_node = parent._get_node()
+        existing_node = FakeDOMNode("p")
+        existing_node.__webcompy_node__ = True
+        parent_node.appendChild(existing_node)
+        el = Element("span", {}, {}, None, None)
+        el._parent = parent
+        el._node_idx = 0
+        el._hydrate_node()
+        assert existing_node.parentNode is parent_node
+        assert parent_node.childNodes.length == 1
+        assert el._node_cache is not existing_node
 
     def test_new_element_unconditionally_sets_attributes(self, fake_browser_full):
         el = _setup_element("div", {"class": "test"})

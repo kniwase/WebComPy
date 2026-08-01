@@ -96,6 +96,10 @@ class RepeatElement(DynamicElement):
         return self._single_arg_template(v)  # type: ignore[misc]
 
     def _on_set_parent(self):
+        if self._children:
+            for child in self._children:
+                child._parent = self._parent
+            return
         self._children = self._generate_children()
         if self._has_key:
             self._populate_key_map()
@@ -210,6 +214,8 @@ class RepeatElement(DynamicElement):
             elif isinstance(child, DynamicElement):
                 _position_element_nodes(child, parent_node, child._node_idx)
             else:
+                if child._node_cache is None:
+                    await child._render()
                 node = child._get_node()
                 if node:
                     expected_idx = child._node_idx
@@ -226,11 +232,6 @@ class RepeatElement(DynamicElement):
         self._children = new_children
         self._children_keys = new_keys
         self._key_to_child = new_key_to_child
-
-        if parent_node and not newly_created:
-            expected = sum(c._node_count for c in new_children)
-            while parent_node.childNodes.length > expected:
-                parent_node.childNodes[-1].remove()
 
 
 class MultiLineTextElement(RepeatElement):

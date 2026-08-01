@@ -420,6 +420,10 @@ class MarkdownForElement(DynamicElement):
 
     def _on_set_parent(self) -> None:
         self._iterable = self._resolve_iterable()
+        if self._children:
+            for child in self._children:
+                child._parent = self._parent
+            return
         self._children = self._generate_children()
 
     def _generate_children(self) -> list[ElementAbstract]:
@@ -492,6 +496,7 @@ class MarkdownForElement(DynamicElement):
             idx += child._node_count
         self._hydrated = False
         _position_element_nodes(self, parent_node, self._node_idx)
+        self._parent._re_index_children(False)
 
         if not self._signal_activated:
             self._signal_activated = True
