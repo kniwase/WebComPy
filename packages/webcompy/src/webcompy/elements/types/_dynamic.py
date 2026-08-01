@@ -37,13 +37,23 @@ def _run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: A
     except RuntimeError:
         asyncio.run(refresh(*args))
     else:
-        if ENVIRONMENT != "pyscript":
+        if ENVIRONMENT == "pyscript":
+            from webcompy.aio._aio import _log_error, aio_run
+
+            async def _safe_refresh() -> None:
+                try:
+                    await refresh(*args)
+                except Exception as err:
+                    _log_error(err)
+
+            aio_run(_safe_refresh())
+        else:
             import nest_asyncio
 
             if not getattr(loop, "_nest_asyncio_patched", False):
                 nest_asyncio.apply(loop)
                 loop._nest_asyncio_patched = True  # type: ignore[attr-defined]
-        loop.run_until_complete(refresh(*args))
+            loop.run_until_complete(refresh(*args))
 
 
 class DynamicElement(ElementWithChildren):

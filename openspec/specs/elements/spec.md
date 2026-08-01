@@ -151,6 +151,19 @@ A `_run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: An
 - **WHEN** a new `DynamicElement` subclass (e.g., `MarkdownForElement`) requires `_refresh_sync` semantics
 - **THEN** it SHALL use `_run_refresh_sync(self._refresh, *args)` without duplicating the sync-wrapper logic
 
+### Requirement: Synchronous refresh dispatch shall not block the event loop in the Pyodide environment
+
+`_run_refresh_sync` SHALL NOT call `loop.run_until_complete` when running in the Pyodide environment (`ENVIRONMENT == "pyscript"`). Instead, the refresh coroutine SHALL be scheduled on the event loop (via the existing `aio_run` mechanism) so it completes fully without raising "Cannot stack switch"; exceptions raised by the refresh SHALL be logged with a formatted traceback (via `_log_error`, the same logging path used by `_resolve_async_callback`) rather than propagated into the DOM event handler. In non-Pyodide environments, `_run_refresh_sync` SHALL keep its current synchronous behavior (`asyncio.run` without a running loop; `nest_asyncio` + `run_until_complete` with one), so a refresh SHALL complete before the call returns.
+
+#### Scenario: Signal-driven refresh from a DOM event handler completes in Pyodide
+- **WHEN** a signal-driven refresh (`RepeatElement`, `SwitchElement`, or `MarkdownForElement`) is dispatched from a synchronous DOM event handler in the Pyodide environment
+- **THEN** the refresh coroutine SHALL be scheduled on the event loop and run to completion without raising "Cannot stack switch"
+- **AND** a failed refresh SHALL log a formatted traceback via the logging facility instead of surfacing as an uncaught pageerror
+
+#### Scenario: Refresh remains synchronous outside Pyodide
+- **WHEN** `_run_refresh_sync` is called in a non-Pyodide environment with a running event loop
+- **THEN** the refresh SHALL complete synchronously before `_run_refresh_sync` returns (existing behavior preserved)
+
 ### Requirement: Pre-rendered DOM nodes shall be reused during hydration via adopt-and-hydrate
 When full hydration is enabled, elements SHALL use `_hydrate_node()` instead of `_init_node()` for prerendered nodes. `_hydrate_node()` SHALL check for an existing prerendered node and delegate to `_adopt_node()` if found, or fall back to `_init_node()` if not. This enables efficient hydration of server-rendered content. This requirement applies to all node types including `#text` nodes. During hydration, attribute values and text content SHALL only be written if they differ from the prerendered values to avoid redundant DOM operations.
 
