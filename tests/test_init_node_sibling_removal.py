@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import pytest
+
 from tests.conftest import FakeDOMNode
 from webcompy.components import define_component
+from webcompy.di._scope import _active_di_scope
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._text import RawHTMLElement, TextElement
+from webcompy.ports._keys import MARKDOWN_PORT_KEY
 from webcompy.signal import ReactiveDict, ReactiveList, Signal
 from webcompy.template import render_template
+from webcompy.template._markdown_default import DefaultMarkdownParser
+from webcompy.template._markdown_for import MarkdownForElement
 from webcompy_testing import TestRenderer
 
 
@@ -75,6 +81,34 @@ class TestIfBranchTogglePreservesFollowingSibling:
 class _FakeRootElement(Element):
     _get_belonging_component = lambda self: ""
     _get_belonging_components = lambda self: ()
+
+
+class TestMarkdownForRefreshPreservesFollowingSibling:
+    @pytest.mark.asyncio
+    async def test_following_sibling_preserved_after_append_from_empty(self, fake_browser_full):
+        _active_di_scope.get().provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
+        items = ReactiveList([])
+        mfe = MarkdownForElement(["item"], "items", "- {{ item }}", {"items": items})
+        parent = _FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        parent._append_child(mfe)
+        tail = Element("span", {}, {}, None, [TextElement("tail")])
+        parent._append_child(tail)
+        await mfe._render()
+        await tail._render()
+
+        div = parent._node_cache
+        assert [c.nodeName for c in div.childNodes] == ["SPAN"]
+
+        items.append("c")
+
+        assert [c.nodeName for c in div.childNodes] == ["UL", "SPAN"]
+        ul_node = div.childNodes[0]
+        lis = [c for c in ul_node.childNodes if c.nodeName == "LI"]
+        assert len(lis) == 1
+        assert lis[0].textContent == "c"
+        assert div.childNodes[1] is tail._node_cache
 
 
 class TestPrerenderMismatchStillRecreated:
