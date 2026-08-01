@@ -56,14 +56,13 @@ def _run_refresh_sync(refresh, *args):
         asyncio.run(refresh(*args))
     else:
         if ENVIRONMENT == "pyscript":
-            from webcompy import logging
-            from webcompy.aio._aio import aio_run
+            from webcompy.aio._aio import _log_error, aio_run
 
             async def _safe_refresh() -> None:
                 try:
                     await refresh(*args)
                 except Exception as err:
-                    logging.error(err)
+                    _log_error(err)
 
             aio_run(_safe_refresh())
         else:
@@ -75,7 +74,7 @@ def _run_refresh_sync(refresh, *args):
 Rationale:
 
 - `aio_run` is the established mechanism for fire-and-forget coroutine scheduling in the browser (`_resolve_async_callback` uses it for async signal callbacks), so this keeps refresh dispatch consistent with the rest of the framework.
-- The `_safe_refresh` wrapper converts refresh exceptions into `logging.error` — previously the exception surfaced as a pageerror; now it is logged without corrupting the event handler, and refresh failures remain observable in console logs.
+- The `_safe_refresh` wrapper converts refresh exceptions into a formatted-traceback log via `_log_error` (the same logger `_resolve_async_callback` uses) — previously the exception surfaced as a pageerror; now it is logged without corrupting the event handler, and refresh failures remain observable in console logs. Unlike a plain `logging.error(err)` call (which logs only `str(err)`), `_log_error` preserves the full traceback, so the e2e `assert_no_console_errors` check (which matches `"Traceback (most recent call last):"` patterns) detects refresh failures.
 - The branch is keyed on `ENVIRONMENT == "pyscript"` (the same condition the existing code already checks for the `nest_asyncio` skip), so non-Pyodide behavior is byte-for-byte unchanged.
 
 *Alternatives considered*:
@@ -88,5 +87,5 @@ Rationale:
 
 - [Refresh becomes asynchronous in the browser] → DOM updates after a mutation land on the next event-loop iteration. E2E tests use Playwright locator auto-waiting, so existing assertions remain valid; verified by the full e2e suite. The docs todo tests used immediate `is_visible()` checks, which do not wait — they were updated to Playwright's auto-waiting `expect` assertions (`test_todo_add_item`, `test_todo_remove_done_items`), and `test_todo_remove_done_items` additionally pins that no `pageerror` is raised during the interaction.
 - [Queued refreshes on rapid mutations] → Each refresh reconciles from the current signal value (idempotent last-state-wins). Coalescing is explicitly out of scope (see Non-goals).
-- [Exceptions in scheduled refreshes are logged, not raised] → `logging.error` keeps them visible in the browser console; E2E `assert_no_console_errors` (which matches Python traceback patterns) would still catch a refresh failure.
+- [Exceptions in scheduled refreshes are logged, not raised] → `_log_error` keeps them visible in the browser console as a formatted traceback; E2E `assert_no_console_errors` (which matches `"Traceback (most recent call last):"` patterns) would catch a refresh failure. The docs todo e2e test additionally pins that no `pageerror` is raised during the interaction.
 - [Behavioral divergence between Pyodide and server] → By design; server/test environments depend on synchronous refresh. The unit tests pin both branches.

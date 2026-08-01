@@ -38,14 +38,13 @@ def _run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: A
         asyncio.run(refresh(*args))
     else:
         if ENVIRONMENT == "pyscript":
-            from webcompy import logging
-            from webcompy.aio._aio import aio_run
+            from webcompy.aio._aio import _log_error, aio_run
 
             async def _safe_refresh() -> None:
                 try:
                     await refresh(*args)
                 except Exception as err:
-                    logging.error(err)
+                    _log_error(err)
 
             aio_run(_safe_refresh())
         else:

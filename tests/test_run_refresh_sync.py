@@ -27,8 +27,8 @@ async def test_pyscript_logs_refresh_errors(monkeypatch):
     monkeypatch.setattr(env_mod, "ENVIRONMENT", "pyscript")
     logged: list[object] = []
 
-    def fake_error(err: Exception) -> None:
-        logged.append(err)
+    def fake_error(msg: object) -> None:
+        logged.append(msg)
 
     monkeypatch.setattr("webcompy.logging.error", fake_error)
 
@@ -38,8 +38,9 @@ async def test_pyscript_logs_refresh_errors(monkeypatch):
     _run_refresh_sync(refresh, "x")
     await asyncio.sleep(0)
     assert len(logged) == 1
-    assert isinstance(logged[0], ValueError)
-    assert str(logged[0]) == "boom"
+    assert isinstance(logged[0], str)
+    assert "Traceback (most recent call last):" in logged[0]
+    assert "ValueError: boom" in logged[0]
 
 
 @pytest.mark.asyncio
