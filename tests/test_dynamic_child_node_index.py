@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Coroutine
+from typing import Any
+
 import pytest
 
 from tests.conftest import FakeDOMNode, MockHistoryPort
@@ -10,9 +14,11 @@ from webcompy.di._scope import _active_di_scope
 from webcompy.elements import ClientOnly, html
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._fragment import FragmentElement
+from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._suspense import SuspenseElement
 from webcompy.elements.types._text import TextElement
-from webcompy.ports._keys import MARKDOWN_PORT_KEY
+from webcompy.ports._async_scheduler import AsyncSchedulerPort
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, MARKDOWN_PORT_KEY
 from webcompy.router._router import Router
 from webcompy.router._view import RouterView
 from webcompy.signal import ReactiveDict, ReactiveList, Signal
@@ -400,3 +406,45 @@ class TestMarkdownForRenderReindexesFollowingSibling:
         await mfe._render()
         assert tail._node_idx == mfe._node_count
         assert mfe._children[0]._node_idx == 0
+
+
+class _EagerScheduler(AsyncSchedulerPort):
+    """Scheduler whose tasks actually run the scheduled coroutine.
+
+    FakeAsyncSchedulerPort returns a bare ``sleep(0)`` task, which cannot
+    reproduce ghost renders. This scheduler lets the scheduled render tasks
+    execute when the event loop is pumped.
+    """
+
+    def __init__(self) -> None:
+        self._tasks: list[asyncio.Task[Any]] = []
+
+    def schedule(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
+        task = asyncio.ensure_future(coro)
+        self._tasks.append(task)
+        return task
+
+    async def await_pending(self) -> None:
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
+            self._tasks.clear()
+
+
+class TestStaleHydrationRenderTasks:
+    @pytest.mark.asyncio
+    async def test_repeat_refresh_cancels_stale_hydration_render_tasks(self, fake_browser_full):
+        _active_di_scope.get().provide(ASYNC_SCHEDULER_PORT_KEY, _EagerScheduler())
+        rl = ReactiveList(["a", "b"])
+        rep = RepeatElement(rl, lambda x: TextElement(x))
+        parent = _FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        rep._parent = parent
+        rep._node_idx = 0
+        rep._hydrate_node()
+        assert len(rep._pending_render_tasks) == 2
+        await rep._refresh()
+        assert rep._pending_render_tasks == []
+        await asyncio.sleep(0)
+        node = parent._get_node()
+        assert node.childNodes.length == 2

@@ -74,5 +74,5 @@
 ## 10. Regression fix (D12)
 
 - [x] 10.1 Add `DynamicElement._cancel_pending_render_tasks()` (extracted from `_remove_element`) and call it at the top of `RepeatElement._refresh`, `SwitchElement._refresh`, `MarkdownForElement._refresh`, and before `_patch_children` in `SuspenseElement._browser_resolve`/`_handle_error`; update design.md (D12), proposal.md, and spec delta
-- [ ] 10.2 Regression test: repeat hydration schedules render tasks, refresh cancels them, and no ghost nodes appear after the event loop runs (RED before fix, GREEN after)
+- [x] 10.2 Regression test: repeat hydration schedules render tasks, refresh cancels them, and no ghost nodes appear after the event loop runs (RED before fix, GREEN after)
 - [ ] 10.3 Verify: ruff/pyright, full unit suite, full e2e suite (all groups, prod + static), openspec validate
