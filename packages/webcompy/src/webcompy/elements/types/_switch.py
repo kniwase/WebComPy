@@ -80,6 +80,7 @@ class SwitchElement(DynamicElement):
         _run_refresh_sync(self._refresh, *args)
 
     async def _refresh(self, *args: Any):
+        self._cancel_pending_render_tasks()
         branch_idx, generator = self._select_generator()
         if branch_idx == self._rendered_idx:
             if self._children and all(child._mounted is None for child in self._children):

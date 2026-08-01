@@ -164,6 +164,7 @@ class SuspenseElement(DynamicElement):
                         raise result
                 self._resolve_component_templates(pairs, results)
             old_children = self._children
+            self._cancel_pending_render_tasks()
             self._children = _patch_children(old_children, children, self._node_idx)
             self._resolved = True
             idx = self._node_idx
@@ -184,6 +185,7 @@ class SuspenseElement(DynamicElement):
         if self._error_fallback_generator is not None:
             error_fallback = self._generate_children(self._error_fallback_generator)
             old_children = self._children
+            self._cancel_pending_render_tasks()
             self._children = _patch_children(old_children, error_fallback, self._node_idx)
             self._resolved = True
             idx = self._node_idx

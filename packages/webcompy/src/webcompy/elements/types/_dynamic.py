@@ -84,11 +84,14 @@ class DynamicElement(ElementWithChildren):
         _position_element_nodes(self, parent_node, self._node_idx)
         self._parent._re_index_children(False)
 
-    def _remove_element(self, recursive: bool = True, remove_node: bool = True):
+    def _cancel_pending_render_tasks(self) -> None:
         for task in self._pending_render_tasks:
             if not task.done():
                 task.cancel()
         self._pending_render_tasks.clear()
+
+    def _remove_element(self, recursive: bool = True, remove_node: bool = True):
+        self._cancel_pending_render_tasks()
         for callback_node in self._callback_nodes:
             consumer_destroy(callback_node)
         self._clear_node_cache(False)

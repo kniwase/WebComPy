@@ -154,6 +154,7 @@ class RepeatElement(DynamicElement):
         _run_refresh_sync(self._refresh, *args)
 
     async def _refresh(self, *args: Any):
+        self._cancel_pending_render_tasks()
         parent_node = self._parent._get_node()
         if not parent_node:
             raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")

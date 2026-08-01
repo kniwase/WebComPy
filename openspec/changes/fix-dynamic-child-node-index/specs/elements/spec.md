@@ -29,3 +29,7 @@ When a container element assigns `_node_idx` to its children during render, refr
 #### Scenario: Refresh preserves following siblings of a dynamic container
 - **WHEN** a dynamic container (e.g., a reactive `{% for %}`) has a following sibling element in its parent and the underlying collection is mutated
 - **THEN** the following sibling's DOM node SHALL remain in the parent at its correct position after the refresh, and no node owned by a sibling SHALL be removed or replaced during the container's render or reconcile
+
+#### Scenario: Refresh cancels stale hydration render tasks of replaced children
+- **WHEN** hydration has scheduled render tasks for a dynamic container's children and a refresh replaces those children before the tasks execute
+- **THEN** no render task scheduled for a replaced child SHALL execute afterwards, and the DOM SHALL contain exactly the current children's nodes (no duplicated nodes from removed children)
