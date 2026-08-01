@@ -1,0 +1,22 @@
+# Tasks: fix-init-node-sibling-removal
+
+## 1. Core fix
+
+- [x] 1.1 Guard `ElementBase._init_node` in `packages/webcompy/src/webcompy/elements/types/_element.py` (line ~81-82): change the `else: existing_node.remove()` branch to `elif not getattr(existing_node, "__webcompy_node__", False): existing_node.remove()` (mirror `NewLine._init_node` in `_text.py:33`) — already merged via #219 (`c2d94dc`), verified identical to `NewLine`'s guard
+- [x] 1.2 Guard `TextElement._init_node` in `packages/webcompy/src/webcompy/elements/types/_text.py` (line ~78-79): same change to its `else: existing_node.remove()` branch — already merged via #219 (`c2d94dc`), verified
+- [x] 1.3 Guard `RawHTMLElement._init_node` in `packages/webcompy/src/webcompy/elements/types/_text.py` (line ~119-120): same change to its `else: existing_node.remove()` branch — already merged via #219 (`c2d94dc`), verified
+
+## 2. Regression tests
+
+- [x] 2.1 Add `tests/test_init_node_sibling_removal.py`: unkeyed `{% for %}` over `ReactiveList` with a trailing static `<p>` after `{% endfor %}` — after `items.append(...)`, the `<p>` is still present after the `<li>` elements (spec scenario 1). Verify RED before the fix — verified RED via temporary guard revert, GREEN with guard. The pop direction is already covered by `tests/test_dynamic_child_node_index.py::TestRepeatRefreshWithFollowingSibling`
+- [x] 2.2 Same file: keyed `{% for k, v in d %}` over `ReactiveDict` with a trailing static sibling — after inserting a new key, the sibling survives (spec scenario 2)
+- [x] 2.3 Same file: `{% if %}` with non-patchable branch tags (`<span>` vs `<em>`) and a trailing static sibling — after toggling the condition both ways, the sibling survives (spec scenario 3)
+- [x] 2.4 Same file: prerender-adoption mismatch still recreates the node (spec scenario 4) — e.g., SSR HTML whose slot content tag mismatches the client tree is replaced, not kept
+- [x] 2.5 Same file: `MarkdownForElement._refresh` trailing-sibling test — a `MarkdownForElement` over an empty `ReactiveList` with a trailing static `<span>` sibling; appending the first item renders the `<ul>` and the sibling survives (design D3). Verified RED on pre-fix code (3ae80b8)
+
+## 3. Verification
+
+- [x] 3.1 Run `uv run ruff check . && uv run ruff format --check . && uv run pyright` — all passed
+- [x] 3.2 Run `uv run python -m pytest tests/ --tb=short` — 3203 passed, 3 skipped, 18 xfailed
+- [x] 3.3 Run full e2e suite via `scripts/run-e2e-tests.sh` (all groups, prod + static) and confirm all pass — 30 passed, 0 failed
+- [x] 3.4 Run `openspec validate fix-init-node-sibling-removal` — change is valid
