@@ -7,10 +7,11 @@
 
 ## 2. Regression tests
 
-- [ ] 2.1 Add `tests/test_run_refresh_sync.py`: with `ENVIRONMENT` patched to `"pyscript"`, `_run_refresh_sync` returns immediately without executing the refresh, and the refresh runs (to completion) after the event loop is pumped
-- [ ] 2.2 Same file: in the Pyodide branch, an exception raised by the refresh is logged via `logging.error` and does not propagate to the caller
-- [ ] 2.3 Same file: in a non-Pyodide environment with a running loop, `_run_refresh_sync` completes the refresh synchronously (existing behavior pinned)
-- [ ] 2.4 Extend `e2e/docs/test_todo.py::test_todo_remove_done_items` with a `page.on("pageerror")` listener and assert no `pageerror` occurred during the checkbox/remove interaction (fails before the fix with "Cannot stack switch")
+- [x] 2.1 Add `tests/test_run_refresh_sync.py`: with `ENVIRONMENT` patched to `"pyscript"`, `_run_refresh_sync` returns immediately without executing the refresh, and the refresh runs (to completion) after the event loop is pumped
+- [x] 2.2 Same file: in the Pyodide branch, an exception raised by the refresh is logged via `logging.error` and does not propagate to the caller
+- [x] 2.3 Same file: in a non-Pyodide environment with a running loop, `_run_refresh_sync` completes the refresh synchronously (existing behavior pinned)
+- [x] 2.4 Extend `e2e/docs/test_todo.py::test_todo_remove_done_items` with a `page.on("pageerror")` listener and assert no `pageerror` occurred during the checkbox/remove interaction (fails before the fix with "Cannot stack switch")
+- [x] 2.5 Update immediate `is_visible()` assertions in `e2e/docs/test_todo.py` (`test_todo_add_item`, `test_todo_remove_done_items`) to Playwright auto-waiting `expect` assertions, since Pyodide refreshes are now asynchronous
 
 ## 3. Verification
 

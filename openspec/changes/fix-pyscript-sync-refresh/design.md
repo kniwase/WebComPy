@@ -86,7 +86,7 @@ Rationale:
 
 ## Risks / Trade-offs
 
-- [Refresh becomes asynchronous in the browser] → DOM updates after a mutation land on the next event-loop iteration. E2E tests use Playwright locator auto-waiting, so existing assertions remain valid; verified by the full e2e suite. The docs todo `test_todo_remove_done_items` additionally pins that no `pageerror` is raised during the interaction.
+- [Refresh becomes asynchronous in the browser] → DOM updates after a mutation land on the next event-loop iteration. E2E tests use Playwright locator auto-waiting, so existing assertions remain valid; verified by the full e2e suite. The docs todo tests used immediate `is_visible()` checks, which do not wait — they were updated to Playwright's auto-waiting `expect` assertions (`test_todo_add_item`, `test_todo_remove_done_items`), and `test_todo_remove_done_items` additionally pins that no `pageerror` is raised during the interaction.
 - [Queued refreshes on rapid mutations] → Each refresh reconciles from the current signal value (idempotent last-state-wins). Coalescing is explicitly out of scope (see Non-goals).
 - [Exceptions in scheduled refreshes are logged, not raised] → `logging.error` keeps them visible in the browser console; E2E `assert_no_console_errors` (which matches Python traceback patterns) would still catch a refresh failure.
 - [Behavioral divergence between Pyodide and server] → By design; server/test environments depend on synchronous refresh. The unit tests pin both branches.

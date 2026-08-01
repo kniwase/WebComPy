@@ -30,5 +30,5 @@ Signal-driven refresh in dynamic containers (`RepeatElement`, `SwitchElement`, `
 
 - **Code**: `packages/webcompy/src/webcompy/elements/types/_dynamic.py` — one branch in `_run_refresh_sync` (~8 lines).
 - **Specs**: `openspec/specs/elements/spec.md` (delta: one ADDED requirement with two scenarios).
-- **Tests**: new `tests/test_run_refresh_sync.py` (Pyodide scheduling, error logging, non-Pyodide synchronous path); `e2e/docs/test_todo.py::test_todo_remove_done_items` extended to assert no `pageerror` occurred during the interaction. Full unit suite and full e2e suite re-run.
+- **Tests**: new `tests/test_run_refresh_sync.py` (Pyodide scheduling, error logging, non-Pyodide synchronous path); `e2e/docs/test_todo.py::test_todo_remove_done_items` extended to assert no `pageerror` occurred during the interaction, and immediate `is_visible()` checks in `test_todo_add_item`/`test_todo_remove_done_items` updated to Playwright auto-waiting `expect` assertions (Pyodide refreshes are now asynchronous). Full unit suite and full e2e suite re-run.
 - **Risk**: low — the Pyodide path is currently broken (refresh never completes), so no working behavior depends on the current blocking call; the non-Pyodide path is unchanged by construction.
