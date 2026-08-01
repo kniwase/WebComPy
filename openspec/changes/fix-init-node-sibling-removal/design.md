@@ -71,6 +71,8 @@ For `ElementBase._init_node` the structure is already `if prerendered and tag-ma
 
 The bug needs no fragments and no index corruption: a plain single-line `{% for %}` with a trailing `<p>` after `{% endfor %}` reproduces it. Tests assert the trailing element's presence and position after signal-driven refresh, following existing `TestRenderer` patterns from `tests/test_template_ssr.py` and `tests/test_tier2_interactive.py`. Each test is verified RED against unfixed code before the guard is applied.
 
+The pop direction and the ClientOnly/Suspense materialization variants are already pinned by `tests/test_dynamic_child_node_index.py` (`TestRepeatRefreshWithFollowingSibling`, `TestDynamicChildMaterialization`), so this change adds the previously uncovered `MarkdownForElement._refresh` path: a `MarkdownForElement` over an empty `ReactiveList` followed by a static sibling `<span>`. Appending the first item renders a fresh `<ul>` at index 0 — where the sibling sits — which destroys the sibling without the guard (verified RED on pre-fix code).
+
 ## Risks / Trade-offs
 
 - [A managed node that should legitimately be replaced is now left in the DOM] → No such live path identified in the audit (D2); failure mode is a benign duplicate, not data loss. Full unit + e2e suite validates.

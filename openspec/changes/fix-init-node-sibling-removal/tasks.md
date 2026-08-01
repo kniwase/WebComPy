@@ -8,10 +8,11 @@
 
 ## 2. Regression tests
 
-- [x] 2.1 Add `tests/test_init_node_sibling_removal.py`: unkeyed `{% for %}` over `ReactiveList` with a trailing static `<p>` after `{% endfor %}` — after `items.append(...)`, the `<p>` is still present after the `<li>` elements (spec scenario 1). Verify RED before the fix — verified RED via temporary guard revert, GREEN with guard
+- [x] 2.1 Add `tests/test_init_node_sibling_removal.py`: unkeyed `{% for %}` over `ReactiveList` with a trailing static `<p>` after `{% endfor %}` — after `items.append(...)`, the `<p>` is still present after the `<li>` elements (spec scenario 1). Verify RED before the fix — verified RED via temporary guard revert, GREEN with guard. The pop direction is already covered by `tests/test_dynamic_child_node_index.py::TestRepeatRefreshWithFollowingSibling`
 - [x] 2.2 Same file: keyed `{% for k, v in d %}` over `ReactiveDict` with a trailing static sibling — after inserting a new key, the sibling survives (spec scenario 2)
 - [x] 2.3 Same file: `{% if %}` with non-patchable branch tags (`<span>` vs `<em>`) and a trailing static sibling — after toggling the condition both ways, the sibling survives (spec scenario 3)
 - [x] 2.4 Same file: prerender-adoption mismatch still recreates the node (spec scenario 4) — e.g., SSR HTML whose slot content tag mismatches the client tree is replaced, not kept
+- [ ] 2.5 Same file: `MarkdownForElement._refresh` trailing-sibling test — a `MarkdownForElement` over an empty `ReactiveList` with a trailing static `<span>` sibling; appending the first item renders the `<ul>` and the sibling survives (design D3). Verified RED on pre-fix code (3ae80b8)
 
 ## 3. Verification
 

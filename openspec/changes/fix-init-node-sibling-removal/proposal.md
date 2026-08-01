@@ -14,7 +14,7 @@ Found during a full audit of the template/element mechanism while scoping `fix-d
 
 - Align the removal guard in `ElementBase._init_node` (`elements/types/_element.py`), `TextElement._init_node`, and `RawHTMLElement._init_node` (`elements/types/_text.py`) with the guard `NewLine._init_node` already has: only remove the existing node when it is NOT a webcompy-managed node (`not getattr(existing_node, "__webcompy_node__", False)`).
 - Prerendered nodes never carry `__webcompy_node__` (only `__webcompy_prerendered_node__`, set by `_mark_as_prerendered`), so the hydration adoption path (tag-mismatched prerendered node removed and recreated) is preserved unchanged.
-- Add regression tests pinning that following siblings survive: unkeyed `{% for %}` refresh (append/pop), keyed/dict repeat insertion, and `{% if %}` branch toggle with non-patchable branch tags.
+- Add regression tests pinning that following siblings survive: unkeyed `{% for %}` refresh (append), keyed/dict repeat insertion, `{% if %}` branch toggle with non-patchable branch tags, and `MarkdownForElement._refresh` growing its collection from empty. The pop direction is already covered by `tests/test_dynamic_child_node_index.py::TestRepeatRefreshWithFollowingSibling`.
 
 No public API changes.
 
