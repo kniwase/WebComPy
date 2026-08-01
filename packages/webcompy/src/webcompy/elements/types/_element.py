@@ -78,6 +78,7 @@ class ElementBase(ElementWithChildren):
             ):
                 self._adopt_node(existing_node)
                 return existing_node
+            # preserve framework-managed sibling nodes at this index
             elif not getattr(existing_node, "__webcompy_node__", False):
                 existing_node.remove()
         node = self._create_node()
