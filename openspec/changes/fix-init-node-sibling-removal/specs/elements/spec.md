@@ -18,6 +18,10 @@ When `_init_node` finds an existing DOM node at an element's `_node_idx` that is
 - **WHEN** an `{% if %}` whose branches use non-patchable tags (e.g., `<span>` vs `<em>`) is followed by a static sibling element and the condition signal toggles
 - **THEN** the incoming branch's element SHALL be rendered and the following sibling SHALL still be present in the DOM
 
+#### Scenario: MarkdownFor refresh preserves following siblings
+- **WHEN** a `MarkdownForElement` over an empty `ReactiveList` is followed by a static sibling element and the first item is appended to the list
+- **THEN** the refreshed DOM SHALL contain the rendered `<ul>` before the sibling and SHALL still contain the following sibling at its original position
+
 #### Scenario: Prerendered tag mismatch is still discarded
 - **WHEN** hydration encounters a prerendered node at an element's index whose tag does not match the element
 - **THEN** the prerendered node SHALL be removed and a fresh node SHALL be created, as before
