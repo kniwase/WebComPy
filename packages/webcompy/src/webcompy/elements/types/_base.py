@@ -35,7 +35,7 @@ class ElementWithChildren(ElementAbstract):
 
     async def _render(self):
         await super()._render()
-        idx = self._node_idx
+        idx = 0
         for child in self._children:
             child._node_idx = idx
             await child._render()
