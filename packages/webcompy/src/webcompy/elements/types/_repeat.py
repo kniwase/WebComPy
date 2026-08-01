@@ -5,10 +5,12 @@ from functools import partial
 from itertools import chain
 from typing import Any, TypeVar, overload
 
+from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import (
     DynamicElement,
+    _collect_owned_nodes,
     _position_element_nodes,
     _run_refresh_sync,
     _subtree_has_async_setup,
@@ -154,13 +156,13 @@ class RepeatElement(DynamicElement):
         _run_refresh_sync(self._refresh, *args)
 
     async def _refresh(self, *args: Any):
-        self._cancel_pending_render_tasks()
         parent_node = self._parent._get_node()
         if not parent_node:
             raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
         if self._has_key and self._signal_activated and self._children_keys:
             await self._reconcile_children()
         else:
+            self._cancel_pending_render_tasks()
             for _ in range(len(self._children)):
                 self._children.pop(-1)._remove_element()
             self._children = self._generate_children()
@@ -188,7 +190,14 @@ class RepeatElement(DynamicElement):
 
         removed_keys = old_key_set - new_key_set
         for k in removed_keys:
-            self._key_to_child.pop(k)._remove_element()
+            child = self._key_to_child.pop(k)
+            stale_nodes: list[DOMNode] = []
+            _collect_owned_nodes(child, stale_nodes)
+            self._cancel_pending_render_tasks_for(child)
+            child._remove_element()
+            for node in stale_nodes:
+                if node.parentNode is not None:
+                    node.remove()
 
         parent_node = self._parent._get_node()
         new_children: list[ElementAbstract] = []

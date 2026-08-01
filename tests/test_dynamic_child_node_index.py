@@ -8,7 +8,7 @@ import pytest
 
 from tests.conftest import FakeDOMNode, MockHistoryPort
 from webcompy.components import define_component
-from webcompy.di import DIScope
+from webcompy.di import DIScope, inject
 from webcompy.di._keys import _ROUTER_KEY
 from webcompy.di._scope import _active_di_scope
 from webcompy.elements import ClientOnly, html
@@ -448,3 +448,86 @@ class TestStaleHydrationRenderTasks:
         await asyncio.sleep(0)
         node = parent._get_node()
         assert node.childNodes.length == 2
+
+
+class TestKeyedHydrationTaskOwnership:
+    def _setup_keyed_fragment_repeat(self):
+        rl = ReactiveList(["a", "b"])
+        rep = RepeatElement(
+            rl,
+            lambda item, _key: FragmentElement([TextElement(item), TextElement(item)]),
+            key=lambda item: item,
+        )
+        parent = _FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        rep._parent = parent
+        rep._node_idx = 0
+        rep._signal_activated = True
+        return rl, rep, parent
+
+    @pytest.mark.asyncio
+    async def test_reused_fragment_child_render_task_survives_keyed_refresh(self, fake_browser_full):
+        _active_di_scope.get().provide(ASYNC_SCHEDULER_PORT_KEY, _EagerScheduler())
+        rl, rep, parent = self._setup_keyed_fragment_repeat()
+        rep._hydrate_node()
+        assert len(rep._pending_render_tasks) == 2
+        fragment_b = rep._children[1]
+
+        rl.pop(0)
+        await rep._refresh()
+
+        reused_tasks = [task for target, task in rep._pending_render_tasks if target is fragment_b]
+        assert reused_tasks, "render task of a reused keyed child must not be cancelled"
+        assert fragment_b._hydrated is True
+
+        await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+        node = parent._get_node()
+        assert node.childNodes.length == 2
+        assert fragment_b._hydrated is False
+        assert all(child._mounted for child in fragment_b._children)
+
+    @pytest.mark.asyncio
+    async def test_discarded_fragment_child_render_tasks_cancelled(self, fake_browser_full):
+        _active_di_scope.get().provide(ASYNC_SCHEDULER_PORT_KEY, _EagerScheduler())
+        rl, rep, parent = self._setup_keyed_fragment_repeat()
+        rep._hydrate_node()
+        assert len(rep._pending_render_tasks) == 2
+
+        rl.clear()
+        await rep._refresh()
+        assert rep._pending_render_tasks == []
+
+        await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+        assert parent._get_node().childNodes.length == 0
+
+
+class TestRangeScopedOrphanCleanup:
+    @pytest.mark.asyncio
+    async def test_reconcile_removes_orphan_in_owned_range_preserving_following_sibling(
+        self, fake_browser_full, monkeypatch
+    ):
+        rl = ReactiveList(["a", "b"])
+        rep = RepeatElement(rl, lambda item, _key: TextElement(item), key=lambda item: item)
+        parent = _FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        tail = TextElement("tail")
+        tail._parent = parent
+        rep._parent = parent
+        rep._node_idx = 0
+        parent._children = [rep, tail]
+        await rep._render()
+        await tail._render()
+        node = parent._get_node()
+        assert [c.textContent for c in node.childNodes] == ["a", "b", "tail"]
+
+        original_remove = TextElement._remove_element
+
+        def _failing_remove(self, recursive=True, remove_node=True):
+            original_remove(self, recursive, False)
+
+        monkeypatch.setattr(TextElement, "_remove_element", _failing_remove)
+        rl.pop(0)
+        await rep._refresh()
+        assert [c.textContent for c in node.childNodes] == ["b", "tail"]
