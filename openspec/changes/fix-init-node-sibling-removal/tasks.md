@@ -15,7 +15,7 @@
 
 ## 3. Verification
 
-- [ ] 3.1 Run `uv run ruff check . && uv run ruff format --check . && uv run pyright`
-- [ ] 3.2 Run `uv run python -m pytest tests/ --tb=short`
-- [ ] 3.3 Run full e2e suite via `scripts/run-e2e-tests.sh` (all groups, prod + static) and confirm all pass
-- [ ] 3.4 Run `openspec validate fix-init-node-sibling-removal`
+- [x] 3.1 Run `uv run ruff check . && uv run ruff format --check . && uv run pyright` — all passed
+- [x] 3.2 Run `uv run python -m pytest tests/ --tb=short` — 3202 passed, 3 skipped, 18 xfailed
+- [x] 3.3 Run full e2e suite via `scripts/run-e2e-tests.sh` (all groups, prod + static) and confirm all pass — 30 passed, 0 failed
+- [x] 3.4 Run `openspec validate fix-init-node-sibling-removal` — change is valid
