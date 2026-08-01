@@ -2,8 +2,8 @@
 
 ## 1. Directive Classification (Parser)
 
-- [ ] 1.1 Add `_GENERIC_DIRECTIVE_RE` and `_KNOWN_UNSUPPORTED_DIRECTIVES` to `packages/webcompy/src/webcompy/template/_parser.py`; rewrite `_scan_text_for_directives` to dispatch supported / known-unsupported / unknown with concise `WebComPyException` messages (compile-time)
-- [ ] 1.2 Add unit tests: unsupported directives (`extends`, `block`, `macro`, `include`, `set`, etc.) raise with "not supported" message; unknown directive (`{% endfo %}`) raises "unknown directive"; `{% raw %}` literal path unaffected; `{%` in attribute values stays literal; markdown path rejects unsupported directives (add to `tests/test_template_parser.py` / `tests/test_template_markdown.py`)
+- [x] 1.1 Add `_GENERIC_DIRECTIVE_RE` and `_KNOWN_UNSUPPORTED_DIRECTIVES` to `packages/webcompy/src/webcompy/template/_parser.py`; rewrite `_scan_text_for_directives` to dispatch supported / known-unsupported / unknown with concise `WebComPyException` messages (compile-time)
+- [x] 1.2 Add unit tests: unsupported directives (`extends`, `block`, `macro`, `include`, `set`, etc.) raise with "not supported" message; unknown directive (`{% endfo %}`) raises "unknown directive"; `{% raw %}` literal path unaffected; `{%` in attribute values stays literal; markdown path rejects unsupported directives (add to `tests/test_template_parser.py` / `tests/test_template_markdown.py`)
 
 ## 2. Loop Metadata — Core (`render_template` path)
 

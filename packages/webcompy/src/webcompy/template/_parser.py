@@ -71,6 +71,37 @@ REJECTED_TAGS = frozenset(
 
 DIRECTIVE_PATTERN = re.compile(r"\{%\s*(?P<directive>if|elif|else|endif|for|endfor)\b(?P<args>[^%]*)%\}")
 
+_SUPPORTED_DIRECTIVES = frozenset({"if", "elif", "else", "endif", "for", "endfor"})
+
+_KNOWN_UNSUPPORTED_DIRECTIVES = frozenset(
+    {
+        "extends",
+        "block",
+        "endblock",
+        "macro",
+        "endmacro",
+        "call",
+        "endcall",
+        "include",
+        "import",
+        "from",
+        "set",
+        "with",
+        "endwith",
+        "filter",
+        "endfilter",
+        "do",
+        "trans",
+        "endtrans",
+        "pluralize",
+        "autoescape",
+        "endautoescape",
+        "debug",
+    }
+)
+
+_GENERIC_DIRECTIVE_RE = re.compile(r"\{%\s*(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)\b(?P<args>[^%]*)%\}")
+
 
 def _reject_tag(tag: str) -> None:
     raise WebComPyException(
@@ -93,7 +124,7 @@ def _parse_for_args(args: str) -> tuple[list[str], str]:
 
 
 def _make_directive(match: re.Match) -> DirectiveToken:
-    name = match.group("directive")
+    name = match.group("name")
     args = match.group("args").strip()
     if name == "if":
         return IfDirective(condition=args)
@@ -125,12 +156,18 @@ def _scan_text_for_directives(text_node: TemplateText) -> list[TemplateText | Di
             continue
         text = part.text
         pos = 0
-        for match in DIRECTIVE_PATTERN.finditer(text):
-            if match.start() > pos:
-                buffer.append(LiteralText(text[pos : match.start()]))
-            flush_text()
-            pieces.append(_make_directive(match))
-            pos = match.end()
+        for match in _GENERIC_DIRECTIVE_RE.finditer(text):
+            name = match.group("name")
+            if name in _SUPPORTED_DIRECTIVES:
+                if match.start() > pos:
+                    buffer.append(LiteralText(text[pos : match.start()]))
+                flush_text()
+                pieces.append(_make_directive(match))
+                pos = match.end()
+            elif name in _KNOWN_UNSUPPORTED_DIRECTIVES:
+                raise WebComPyException(f"{{% {name} %}} is not supported in WebComPy templates")
+            else:
+                raise WebComPyException(f"Unknown template directive: {{% {name} %}}")
         if pos < len(text):
             buffer.append(LiteralText(text[pos:]))
 

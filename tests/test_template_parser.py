@@ -466,6 +466,74 @@ class TestDirectivePatternEdgeCases:
         assert p.children[2].parts == [LiteralText("c")]
 
 
+class TestDirectiveRejection:
+    @pytest.mark.parametrize(
+        "source",
+        [
+            '{% extends "base.html" %}',
+            "{% block content %}",
+            "{% endblock %}",
+            "{% macro x() %}",
+            "{% endmacro %}",
+            "{% call x() %}",
+            "{% endcall %}",
+            '{% include "partial.html" %}',
+            "{% import x %}",
+            "{% from x import y %}",
+            "{% set z = 1 %}",
+            "{% with a = 1 %}",
+            "{% endwith %}",
+            "{% filter upper %}",
+            "{% endfilter %}",
+            "{% do x %}",
+            "{% trans %}",
+            "{% endtrans %}",
+            "{% pluralize %}",
+            "{% autoescape true %}",
+            "{% endautoescape %}",
+            "{% debug %}",
+        ],
+    )
+    def test_unsupported_directive_raises(self, source):
+        with pytest.raises(WebComPyException, match="not supported"):
+            _parse(f"<p>{source}</p>")
+
+    def test_unsupported_directive_message_names_directive(self):
+        with pytest.raises(WebComPyException) as exc_info:
+            _parse("<p>{% extends 'base.html' %}</p>")
+        assert "{% extends %}" in str(exc_info.value)
+
+    def test_unknown_directive_raises(self):
+        with pytest.raises(WebComPyException, match="Unknown template directive"):
+            _parse("<p>{% endfo %}</p>")
+
+    def test_unknown_directive_message_names_directive(self):
+        with pytest.raises(WebComPyException) as exc_info:
+            _parse("<p>{% endfo %}</p>")
+        assert "{% endfo %}" in str(exc_info.value)
+
+    def test_raw_block_literal_path_unaffected(self):
+        roots = _parse("<p>{% raw %}{% anything %}{% endraw %}</p>")
+        assert len(roots) == 1
+
+    def test_directive_like_span_in_attribute_stays_literal(self):
+        roots = _parse('<div title="{% extends %}"></div>')
+        assert len(roots) == 1
+        assert roots[0].attrs[0].name == "title"
+
+    def test_uppercase_known_directive_is_unknown(self):
+        with pytest.raises(WebComPyException, match="Unknown template directive"):
+            _parse("<p>{% Extends %}</p>")
+
+    def test_supported_directives_still_parse(self):
+        roots = _parse("<p>{% if a %}x{% else %}y{% endif %}</p>")
+        assert isinstance(roots[0].children[0], IfNode)
+
+    def test_malformed_for_still_parses_as_supported(self):
+        roots = _parse("{% for x in items[ %}<p>{{ x }}</p>{% endfor %}")
+        assert isinstance(roots[0], ForNode)
+
+
 class TestMalformedHtmlErrors:
     def test_mismatched_closing_tag_raises(self):
         with pytest.raises(WebComPyException) as exc_info:
