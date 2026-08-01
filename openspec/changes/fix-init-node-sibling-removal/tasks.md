@@ -12,11 +12,11 @@
 - [x] 2.2 Same file: keyed `{% for k, v in d %}` over `ReactiveDict` with a trailing static sibling — after inserting a new key, the sibling survives (spec scenario 2)
 - [x] 2.3 Same file: `{% if %}` with non-patchable branch tags (`<span>` vs `<em>`) and a trailing static sibling — after toggling the condition both ways, the sibling survives (spec scenario 3)
 - [x] 2.4 Same file: prerender-adoption mismatch still recreates the node (spec scenario 4) — e.g., SSR HTML whose slot content tag mismatches the client tree is replaced, not kept
-- [ ] 2.5 Same file: `MarkdownForElement._refresh` trailing-sibling test — a `MarkdownForElement` over an empty `ReactiveList` with a trailing static `<span>` sibling; appending the first item renders the `<ul>` and the sibling survives (design D3). Verified RED on pre-fix code (3ae80b8)
+- [x] 2.5 Same file: `MarkdownForElement._refresh` trailing-sibling test — a `MarkdownForElement` over an empty `ReactiveList` with a trailing static `<span>` sibling; appending the first item renders the `<ul>` and the sibling survives (design D3). Verified RED on pre-fix code (3ae80b8)
 
 ## 3. Verification
 
 - [x] 3.1 Run `uv run ruff check . && uv run ruff format --check . && uv run pyright` — all passed
-- [x] 3.2 Run `uv run python -m pytest tests/ --tb=short` — 3202 passed, 3 skipped, 18 xfailed
+- [x] 3.2 Run `uv run python -m pytest tests/ --tb=short` — 3203 passed, 3 skipped, 18 xfailed
 - [x] 3.3 Run full e2e suite via `scripts/run-e2e-tests.sh` (all groups, prod + static) and confirm all pass — 30 passed, 0 failed
 - [x] 3.4 Run `openspec validate fix-init-node-sibling-removal` — change is valid
