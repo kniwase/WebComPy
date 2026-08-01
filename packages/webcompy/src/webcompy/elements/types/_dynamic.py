@@ -61,7 +61,8 @@ class DynamicElement(ElementWithChildren):
 
     def __init__(self) -> None:
         super().__init__()
-        self._pending_render_tasks: list[asyncio.Task[Any]] = []
+        self._children: list[ElementAbstract] = []
+        self._pending_render_tasks: list[tuple[ElementAbstract, asyncio.Task[Any]]] = []
         self._hydrated = False
 
     @property
@@ -73,18 +74,34 @@ class DynamicElement(ElementWithChildren):
 
     async def _render(self):
         parent_node = self._parent._get_node()
-        for c_idx, child in enumerate(self._children):
-            child._node_idx = self._node_idx + c_idx
+        idx = self._node_idx
+        for child in self._children:
+            child._node_idx = idx
             if child._mounted is None and not self._hydrated:
                 await child._render()
+            idx += child._node_count
         self._hydrated = False
         _position_element_nodes(self, parent_node, self._node_idx)
+        self._parent._re_index_children(False)
 
-    def _remove_element(self, recursive: bool = True, remove_node: bool = True):
-        for task in self._pending_render_tasks:
+    def _cancel_pending_render_tasks(self) -> None:
+        for _, task in self._pending_render_tasks:
             if not task.done():
                 task.cancel()
         self._pending_render_tasks.clear()
+
+    def _cancel_pending_render_tasks_for(self, child: ElementAbstract) -> None:
+        remaining: list[tuple[ElementAbstract, asyncio.Task[Any]]] = []
+        for target, task in self._pending_render_tasks:
+            if target is child:
+                if not task.done():
+                    task.cancel()
+            else:
+                remaining.append((target, task))
+        self._pending_render_tasks = remaining
+
+    def _remove_element(self, recursive: bool = True, remove_node: bool = True):
+        self._cancel_pending_render_tasks()
         for callback_node in self._callback_nodes:
             consumer_destroy(callback_node)
         self._clear_node_cache(False)
@@ -95,17 +112,17 @@ class DynamicElement(ElementWithChildren):
 
     def _hydrate_node(self) -> None:
         self._hydrated = True
-        for child in self._children:
-            child._hydrate_node()
         idx = self._node_idx
         scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
         for child in self._children:
             child._node_idx = idx
+            child._hydrate_node()
             idx += child._node_count
             if not child._mounted:
                 task = scheduler.schedule(child._render())
-                self._pending_render_tasks.append(task)
+                self._pending_render_tasks.append((child, task))
                 task.add_done_callback(self._on_hydrate_render_done)
+        self._parent._re_index_children(False)
 
     def _on_hydrate_render_done(self, task: asyncio.Task) -> None:
         try:
@@ -115,8 +132,10 @@ class DynamicElement(ElementWithChildren):
             if exc:
                 logging.error(exc)
         finally:
-            if task in self._pending_render_tasks:
-                self._pending_render_tasks.remove(task)
+            for entry in self._pending_render_tasks:
+                if entry[1] is task:
+                    self._pending_render_tasks.remove(entry)
+                    break
 
     @property
     def _parent(self) -> ElementWithChildren:
@@ -230,3 +249,13 @@ def _position_element_nodes(
             element._mounted = True
         return start_idx + element._node_count
     return start_idx + element._node_count
+
+
+def _collect_owned_nodes(element: ElementAbstract, acc: list[DOMNode]) -> None:
+    if isinstance(element, DynamicElement):
+        for child in element._children:
+            _collect_owned_nodes(child, acc)
+    else:
+        node = element._node_cache
+        if node is not None:
+            acc.append(node)

@@ -20,6 +20,8 @@ class FakeDOMNode(VirtualDOMNode):
         self.textContent_write_count += 1
 
     def __setattr__(self, name: str, value: object) -> None:
+        if name == "__webcompy_prerendered_node__" and value:
+            object.__setattr__(self, "_webcompy_node", False)
         if (
             name.startswith("_VirtualDOMNode__")
             or name in ("__webcompy_node__", "__webcompy_prerendered_node__")

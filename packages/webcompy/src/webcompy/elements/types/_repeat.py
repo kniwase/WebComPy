@@ -5,10 +5,12 @@ from functools import partial
 from itertools import chain
 from typing import Any, TypeVar, overload
 
+from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import (
     DynamicElement,
+    _collect_owned_nodes,
     _position_element_nodes,
     _run_refresh_sync,
     _subtree_has_async_setup,
@@ -96,6 +98,10 @@ class RepeatElement(DynamicElement):
         return self._single_arg_template(v)  # type: ignore[misc]
 
     def _on_set_parent(self):
+        if self._children:
+            for child in self._children:
+                child._parent = self._parent
+            return
         self._children = self._generate_children()
         if self._has_key:
             self._populate_key_map()
@@ -156,12 +162,15 @@ class RepeatElement(DynamicElement):
         if self._has_key and self._signal_activated and self._children_keys:
             await self._reconcile_children()
         else:
+            self._cancel_pending_render_tasks()
             for _ in range(len(self._children)):
                 self._children.pop(-1)._remove_element()
             self._children = self._generate_children()
-            for c_idx, child in enumerate(self._children):
-                child._node_idx = self._node_idx + c_idx
+            idx = self._node_idx
+            for child in self._children:
+                child._node_idx = idx
                 await child._render()
+                idx += child._node_count
             if self._has_key:
                 self._populate_key_map()
         self._parent._re_index_children(False)
@@ -181,7 +190,14 @@ class RepeatElement(DynamicElement):
 
         removed_keys = old_key_set - new_key_set
         for k in removed_keys:
-            self._key_to_child.pop(k)._remove_element()
+            child = self._key_to_child.pop(k)
+            stale_nodes: list[DOMNode] = []
+            _collect_owned_nodes(child, stale_nodes)
+            self._cancel_pending_render_tasks_for(child)
+            child._remove_element()
+            for node in stale_nodes:
+                if node.parentNode is not None:
+                    node.remove()
 
         parent_node = self._parent._get_node()
         new_children: list[ElementAbstract] = []
@@ -202,10 +218,14 @@ class RepeatElement(DynamicElement):
                     newly_created.add(len(new_children) - 1)
 
         for c_idx, child in enumerate(new_children):
-            child._node_idx = node_offset + c_idx
-            if isinstance(child, DynamicElement):
+            child._node_idx = node_offset
+            if c_idx in newly_created:
+                await child._render()
+            elif isinstance(child, DynamicElement):
                 _position_element_nodes(child, parent_node, child._node_idx)
             else:
+                if child._node_cache is None:
+                    await child._render()
                 node = child._get_node()
                 if node:
                     expected_idx = child._node_idx
@@ -217,23 +237,11 @@ class RepeatElement(DynamicElement):
                         parent_node.appendChild(node)
                     if not child._mounted:
                         child._mounted = True
-
-        for c_idx, child in enumerate(new_children):
-            if c_idx in newly_created:
-                await child._render()
-            elif isinstance(child, DynamicElement):
-                pass
-            elif child._node_cache is None:
-                await child._render()
+            node_offset += child._node_count
 
         self._children = new_children
         self._children_keys = new_keys
         self._key_to_child = new_key_to_child
-
-        if parent_node and not newly_created:
-            expected = sum(c._node_count for c in new_children)
-            while parent_node.childNodes.length > expected:
-                parent_node.childNodes[-1].remove()
 
 
 class MultiLineTextElement(RepeatElement):

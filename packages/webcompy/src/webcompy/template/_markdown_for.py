@@ -420,6 +420,10 @@ class MarkdownForElement(DynamicElement):
 
     def _on_set_parent(self) -> None:
         self._iterable = self._resolve_iterable()
+        if self._children:
+            for child in self._children:
+                child._parent = self._parent
+            return
         self._children = self._generate_children()
 
     def _generate_children(self) -> list[ElementAbstract]:
@@ -484,12 +488,15 @@ class MarkdownForElement(DynamicElement):
     async def _render(self) -> None:
         has_async = bool(self._children) and _subtree_has_async_setup(self)
         parent_node = self._parent._get_node()
-        for c_idx, child in enumerate(self._children):
-            child._node_idx = self._node_idx + c_idx
+        idx = self._node_idx
+        for child in self._children:
+            child._node_idx = idx
             if child._mounted is None and not self._hydrated:
                 await child._render()
+            idx += child._node_count
         self._hydrated = False
         _position_element_nodes(self, parent_node, self._node_idx)
+        self._parent._re_index_children(False)
 
         if not self._signal_activated:
             self._signal_activated = True
@@ -501,6 +508,7 @@ class MarkdownForElement(DynamicElement):
         _run_refresh_sync(self._refresh, *args)
 
     async def _refresh(self, *args: Any) -> None:
+        self._cancel_pending_render_tasks()
         parent_node = self._parent._get_node()
         if not parent_node:
             raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
@@ -511,9 +519,11 @@ class MarkdownForElement(DynamicElement):
         should_defer = self._signal_activated
         if should_defer:
             start_defer_after_rendering()
-        for c_idx, child in enumerate(self._children):
-            child._node_idx = self._node_idx + c_idx
+        idx = self._node_idx
+        for child in self._children:
+            child._node_idx = idx
             await child._render()
+            idx += child._node_count
         if should_defer:
             deferred = end_defer_after_rendering()
             for callback in deferred:

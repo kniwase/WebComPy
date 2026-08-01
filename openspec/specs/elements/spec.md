@@ -133,6 +133,39 @@ When `key` is provided (overloads 2, 4, 5) or dict mode is used (overloads 1, 2)
 - **THEN** one `<li>` SHALL be rendered for each key-value pair in `my_dict`
 - **AND** dict keys SHALL be used as reconciliation identifiers for efficient DOM updates
 
+### Requirement: Dynamic containers shall assign child node indices by cumulative node offset
+
+When a container element assigns `_node_idx` to its children during render, refresh, reconciliation, or hydration, each child's index SHALL be the container's own `_node_idx` plus the sum of all preceding siblings' `_node_count` (cumulative node offset). Containers SHALL NOT use the child's enumerate position in the children list as the node offset. This applies to `ElementWithChildren._render`, `DynamicElement._render`, `RepeatElement._refresh` (full-rebuild path), `RepeatElement._reconcile_children`, `SwitchElement._render`, `SwitchElement._refresh`, `SuspenseElement`, `ClientOnlyElement`, and `MarkdownForElement` (`template/_markdown_for.py`), matching the existing cumulative behavior of `_re_index_children`, `_hydrate_node`, `_position_element_nodes`, and `_append_child`. For children with `_node_count == 1` the two schemes coincide; multi-node children (`FragmentElement`) MUST be positioned at non-overlapping offsets.
+
+#### Scenario: Multi-line template for-loop renders all items on initial render
+- **WHEN** a template contains `{% for item in items %}` with a multi-line body (whitespace producing `TextElement` siblings, i.e., `FragmentElement` children) over a `ReactiveList`
+- **THEN** the initial render SHALL produce one element per item in order, with no item's nodes lost or overlapped
+
+#### Scenario: Multi-line template for-loop keeps all items after list mutation
+- **WHEN** a reactive `{% for %}` with a multi-line body has rendered and the underlying `ReactiveList` is mutated (e.g., first item removed)
+- **THEN** the refreshed DOM SHALL contain exactly the elements for the updated items in order
+
+#### Scenario: Multi-element if branch toggles without losing nodes
+- **WHEN** an `{% if %}` branch contains multiple sibling elements (wrapped in `FragmentElement`) and the condition signal toggles
+- **THEN** the outgoing branch's nodes SHALL be removed and the incoming branch's elements SHALL all be present at correct positions
+
+#### Scenario: Keyed reconciliation positions fragment children at non-overlapping offsets
+- **WHEN** `repeat` with a `key` function (or `ReactiveDict`) renders templates that produce multi-node children and the collection is mutated
+- **THEN** reused and newly created children SHALL be positioned by cumulative node offset with no overlapping `_node_idx` values
+
+#### Scenario: Reactive if branch inside a reactive for-loop survives repeated toggles
+- **WHEN** a template contains `{% if %}` (reactive condition) inside `{% for %}` (reactive iterable) and the condition signal toggles more than once while items are also mutated
+- **THEN** every toggle SHALL update the DOM without raising and without losing items, and the refreshed DOM SHALL contain exactly the branch elements for all items in order
+
+#### Scenario: Refresh preserves following siblings of a dynamic container
+- **WHEN** a dynamic container (e.g., a reactive `{% for %}`) has a following sibling element in its parent and the underlying collection is mutated
+- **THEN** the following sibling's DOM node SHALL remain in the parent at its correct position after the refresh, and no node owned by a sibling SHALL be removed or replaced during the container's render or reconcile
+
+#### Scenario: Refresh cancels stale hydration render tasks of replaced children
+- **WHEN** hydration has scheduled render tasks for a dynamic container's children and a refresh replaces those children before the tasks execute
+- **THEN** no render task scheduled for a replaced child SHALL execute afterwards, and the DOM SHALL contain exactly the current children's nodes (no duplicated nodes from removed children)
+- **AND** render tasks scheduled for keyed children that the reconciliation reuses SHALL NOT be cancelled, and SHALL run to completion so each reused child's subtree finishes rendering
+
 ### Requirement: DynamicElement `_refresh_sync` pattern shall use a shared helper
 
 A `_run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None` helper SHALL be defined in `webcompy/elements/types/_dynamic.py`. The helper SHALL encapsulate the nest_asyncio + loop.run_until_complete sync-wrapping logic. `SwitchElement._refresh_sync` and `RepeatElement._refresh_sync` SHALL delegate to `_run_refresh_sync` instead of containing their own copies of the sync-wrapper logic.
