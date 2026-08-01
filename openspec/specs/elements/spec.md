@@ -164,6 +164,7 @@ When a container element assigns `_node_idx` to its children during render, refr
 #### Scenario: Refresh cancels stale hydration render tasks of replaced children
 - **WHEN** hydration has scheduled render tasks for a dynamic container's children and a refresh replaces those children before the tasks execute
 - **THEN** no render task scheduled for a replaced child SHALL execute afterwards, and the DOM SHALL contain exactly the current children's nodes (no duplicated nodes from removed children)
+- **AND** render tasks scheduled for keyed children that the reconciliation reuses SHALL NOT be cancelled, and SHALL run to completion so each reused child's subtree finishes rendering
 
 ### Requirement: DynamicElement `_refresh_sync` pattern shall use a shared helper
 

@@ -278,23 +278,15 @@ When a stale proxy triggers `_init_node()`, a new DOM element is created but nev
 - **AND** the cached node SHALL be returned without calling `_init_node()`
 - **AND** the DOM element SHALL NOT be replaced with a detached ghost element
 
-### Requirement: Reconcile shall remove orphaned DOM nodes by count
+### Requirement: Reconcile shall remove replaced children's DOM nodes when removal fails
 
-`RepeatElement._reconcile_children()` SHALL, after the removal loop, check the parent element's child count against the expected count and remove any trailing children that exceed expectations. This provides a fallback when `_remove_element()` fails to remove a DOM node (e.g., due to a stale `_node_cache` proxy).
-
-The cleanup SHALL use:
-```python
-expected = sum(c._node_count for c in new_children)
-while parent_node.childNodes.length > expected:
-    parent_node.childNodes[-1].remove()
-```
-
-This SHALL only run when no newly created children exist (i.e., `not newly_created`) to avoid accidentally removing children that are about to be rendered.
+`RepeatElement._reconcile_children()` SHALL, before calling `_remove_element()` on a removed key's child, collect the DOM nodes owned by that child (recursively via each element's `_node_cache`), and after `_remove_element()` returns SHALL remove any of those nodes that remain attached to the DOM (`parentNode` is not `null`). This provides a fallback when `_remove_element()` fails to remove a DOM node (e.g., due to a stale `_node_cache` proxy) while guaranteeing that following siblings of the container are never touched, since only nodes owned by removed children are removed.
 
 #### Scenario: Orphaned LI remains after reconcile
 - **WHEN** `_reconcile_children()` removes a key but `_remove_element()` fails to remove the corresponding `<li>` from the parent `<ul>`
-- **THEN** the trailing-child cleanup SHALL remove the orphaned `<li>` from the `<ul>` by comparing expected child count against actual
+- **THEN** the ownership-based fallback SHALL remove the orphaned `<li>` from the `<ul>`
 - **AND** the DOM SHALL match the expected state after reconcile completes
+- **AND** following siblings of the container SHALL remain in place
 
 `_HtmlElement.render_html()` SHALL be an `async def` method that awaits `self._render()`. This propagates the async pipeline to the SSG layer.
 
