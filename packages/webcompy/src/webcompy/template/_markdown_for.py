@@ -102,17 +102,31 @@ def _rename_expression(expr: str, renames: dict[str, str]) -> str:
     return f"{lead_ws}{encoded.decode('utf-8')}{trail_ws}"
 
 
+def _merge_spans(spans: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    merged: list[tuple[int, int]] = []
+    for start, end in sorted(spans):
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
 def _apply_renames(text: str, renames: dict[str, str]) -> str:
     if not renames:
         return text
-    raw_blocks: dict[str, str] = {}
-
-    def _stash_raw(m: re.Match[str]) -> str:
-        key = f"\x00wc-raw-{len(raw_blocks)}\x00"
-        raw_blocks[key] = m.group(0)
-        return key
-
-    protected_text = _RAW_BLOCK_RE.sub(_stash_raw, text)
+    spans = [(m.start(), m.end()) for m in _RAW_BLOCK_RE.finditer(text)]
+    spans.extend(_protected_spans(text))
+    stashed: list[str] = []
+    chunks: list[str] = []
+    pos = 0
+    for start, end in _merge_spans(spans):
+        chunks.append(text[pos:start])
+        chunks.append(f"\x00wc-prot-{len(stashed)}\x00")
+        stashed.append(text[start:end])
+        pos = end
+    chunks.append(text[pos:])
+    protected_text = "".join(chunks)
     out: list[str] = []
     for part in split_text(protected_text):
         if isinstance(part, LiteralText):
@@ -120,8 +134,8 @@ def _apply_renames(text: str, renames: dict[str, str]) -> str:
         else:
             out.append("{{ " + _rename_expression(part.expr_source, renames) + " }}")
     result = "".join(out)
-    for key, original in raw_blocks.items():
-        result = result.replace(key, original)
+    for i, original in enumerate(stashed):
+        result = result.replace(f"\x00wc-prot-{i}\x00", original)
     return result
 
 
@@ -435,9 +449,9 @@ def _expand_directives_in_body(
                     ctx[f"{inner_prefix}{loop_vars[1]}"] = value
 
                 inner_renames = dict(renames)
+                inner_renames["loop"] = f"{inner_prefix}loop"
                 for var in loop_vars:
                     inner_renames[var] = f"{inner_prefix}{var}"
-                inner_renames["loop"] = f"{inner_prefix}loop"
                 expanded = _expand_directives_in_body(inner_body, ctx, inner_prefix, inner_renames)
                 result.append(expanded)
 

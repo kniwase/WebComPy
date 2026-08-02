@@ -292,6 +292,14 @@ class TestMarkdownNestedLoopMetadata:
             _attach(mfe)
         assert self._li_texts(mfe) == ["1:a 2:b L"]
 
+    def test_inner_loop_variable_named_loop_shadows_metadata(self):
+        items = [{"subs": ["x", "y"]}, {"subs": ["z"]}]
+        body = "- {% for loop in item.subs %}{{ loop }} {% endfor %}\n"
+        with _markdown_di_scope():
+            mfe = MarkdownForElement(["item"], "items", body, {"items": items})
+            _attach(mfe)
+        assert self._li_texts(mfe) == ["x y", "z"]
+
     def test_outer_loop_variable_reference_inside_inner_body(self):
         items = [{"name": "A", "subs": ["x", "y"]}, {"name": "B", "subs": ["z"]}]
         body = "- {% for sub in item.subs %}{{ item.name }}{{ sub }} {% endfor %}\n"
@@ -350,6 +358,48 @@ class TestRenaming:
         result = _apply_renames("{{ loop.index }}{% raw %}{{ loop }}{% endraw %}", {"loop": "__wmdf_0_loop"})
         assert "{{ __wmdf_0_loop.index }}" in result
         assert "{% raw %}{{ loop }}{% endraw %}" in result
+
+    def test_rename_preserves_inline_code_span(self):
+        result = _apply_renames("- `{{ item }}` and {{ item }}", {"item": "__wmdf_0_item"})
+        assert "`{{ item }}`" in result
+        assert "{{ __wmdf_0_item }}" in result
+
+    def test_rename_preserves_fenced_code_block(self):
+        body = "- {{ item }}\n\n```\n{{ item }}\n```"
+        result = _apply_renames(body, {"item": "__wmdf_0_item"})
+        assert "{{ __wmdf_0_item }}" in result
+        assert "```\n{{ item }}\n```" in result
+
+    def test_rename_preserves_code_span_inside_raw_block(self):
+        result = _apply_renames("{% raw %}`{{ item }}`{% endraw %}", {"item": "__wmdf_0_item"})
+        assert "__wmdf" not in result
+
+    def test_rename_preserves_fenced_code_containing_raw_block(self):
+        body = "```\n{% raw %}\n{{ item }}\n{% endraw %}\n```"
+        result = _apply_renames(body, {"item": "__wmdf_0_item"})
+        assert "__wmdf" not in result
+        assert "{{ item }}" in result
+
+    def test_rendered_code_span_keeps_template_text_literal(self):
+        def _collect_text(nodes: list[object]) -> str:
+            parts: list[str] = []
+            for c in nodes:
+                if isinstance(c, str):
+                    parts.append(c)
+                    continue
+                text = getattr(c, "_text", None)
+                if isinstance(text, str):
+                    parts.append(text)
+                parts.append(_collect_text(list(getattr(c, "_children", []))))
+            return "".join(parts)
+
+        with _markdown_di_scope():
+            mfe = MarkdownForElement(["item"], "items", "- `{{ item }}` and {{ item }}", {"items": ["A"]})
+            _attach(mfe)
+        ul = _find_ul(mfe)
+        li = _find_lis(ul)[0]
+        assert "{{ item }}" in _collect_text(li._children)
+        assert _collect_text(li._children).endswith(" and A")
 
     def test_loop_variable_renamed_per_iteration(self):
         with _markdown_di_scope():
