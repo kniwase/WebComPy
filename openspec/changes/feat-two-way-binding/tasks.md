@@ -19,7 +19,7 @@
 ## 4. Spec, Mapping, and Housekeeping
 
 - [ ] 4.1 Apply the delta to `openspec/specs/elements/spec.md` and `openspec/specs/template-engine/spec.md` (via archive/sync flow after implementation)
-- [ ] 4.2 Update `AGENTS.md` File→Spec Mapping if a new row is needed for `webcompy/elements/_bind.py` (map to `elements/spec.md`); check `.opencode/skills/webcompy-review/SKILL.md` invariants for stale statements about colon attributes or event handling
+- [x] 4.2 Update `AGENTS.md` File→Spec Mapping if a new row is needed for `webcompy/elements/_bind.py` (map to `elements/spec.md`); check `.opencode/skills/webcompy-review/SKILL.md` invariants for stale statements about colon attributes or event handling
 
 ## 5. E2E and Verification
 
