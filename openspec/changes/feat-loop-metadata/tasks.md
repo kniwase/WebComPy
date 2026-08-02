@@ -20,8 +20,8 @@
 
 ## 4. Loop Metadata — MarkdownForElement
 
-- [ ] 4.1 Inject `__wmdf_{n}_loop` plain metadata into `augmented_ctx` and extend `_rename_in_expressions` usage to rename `loop` in expressions in `packages/webcompy/src/webcompy/template/_markdown_for.py`
-- [ ] 4.2 Unit tests: `{{ loop.index }}` in markdown list-body for-loops renders positions; literal text "loop" outside expressions unaffected (add to `tests/test_markdown_for.py`)
+- [x] 4.1 Inject `__wmdf_{n}_loop` plain metadata into `augmented_ctx` and extend `_rename_in_expressions` usage to rename `loop` in expressions in `packages/webcompy/src/webcompy/template/_markdown_for.py`
+- [x] 4.2 Unit tests: `{{ loop.index }}` in markdown list-body for-loops renders positions; literal text "loop" outside expressions unaffected (add to `tests/test_markdown_for.py`)
 
 ## 5. Spec Consolidation and docs_app Removal
 

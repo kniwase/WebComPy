@@ -25,6 +25,7 @@ from webcompy.elements.types._dynamic import (
 from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY, MARKDOWN_PORT_KEY
 from webcompy.signal import SignalBase
+from webcompy.template._binder import _make_loop_meta
 from webcompy.template._holes import resolve_var
 from webcompy.template._markdown_blocks import match_list_item_start
 from webcompy.template._parser import DIRECTIVE_PATTERN, _parse_for_args
@@ -442,9 +443,11 @@ class MarkdownForElement(DynamicElement):
 
         augmented_ctx: dict[str, Any] = dict(self._context)
         markdown_parts: list[str] = []
+        total = len(items)
 
         for n, item in enumerate(items):
             prefix = f"__wmdf_{n}_"
+            augmented_ctx[f"{prefix}loop"] = _make_loop_meta(n, total)
 
             if len(self._loop_vars) == 1:
                 augmented_ctx[f"{prefix}{self._loop_vars[0]}"] = item
@@ -458,7 +461,10 @@ class MarkdownForElement(DynamicElement):
                 )
 
             item_body = self._body_markdown
-            for var in self._loop_vars:
+            rename_vars = list(self._loop_vars)
+            if "loop" not in rename_vars:
+                rename_vars.append("loop")
+            for var in rename_vars:
                 item_body = _rename_in_expressions(item_body, var, f"{prefix}{var}")
 
             item_body = _expand_directives_in_body(item_body, augmented_ctx, prefix)

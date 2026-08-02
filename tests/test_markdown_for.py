@@ -172,6 +172,69 @@ class TestMarkdownForStaticIterable:
         assert len(_find_lis(ul)) == 2
 
 
+class TestMarkdownForLoopMetadata:
+    def _li_texts(self, mfe: MarkdownForElement) -> list[str]:
+        ul = _find_ul(mfe)
+        result: list[str] = []
+        for li in _find_lis(ul):
+            parts: list[str] = []
+            for c in li._children:
+                if isinstance(c, str):
+                    parts.append(c)
+                elif hasattr(c, "_text") and isinstance(c._text, str):
+                    parts.append(c._text)
+            result.append("".join(parts))
+        return result
+
+    def test_loop_index_and_edges_rendered(self):
+        mfe = MarkdownForElement(
+            ["item"],
+            "items",
+            "- {{ loop.index }}:{{ loop.first }}-{{ loop.last }}/{{ loop.length }} {{ item }}",
+            {"items": ["a", "b", "c"]},
+        )
+        with _markdown_di_scope():
+            _attach(mfe)
+        assert self._li_texts(mfe) == [
+            "1:True-False/3 a",
+            "2:False-False/3 b",
+            "3:False-True/3 c",
+        ]
+
+    def test_loop_revindex_and_index0(self):
+        mfe = MarkdownForElement(
+            ["item"],
+            "items",
+            "- {{ loop.index0 }}-{{ loop.revindex }} {{ item }}",
+            {"items": ["a", "b"]},
+        )
+        with _markdown_di_scope():
+            _attach(mfe)
+        assert self._li_texts(mfe) == ["0-2 a", "1-1 b"]
+
+    def test_literal_text_loop_unaffected(self):
+        mfe = MarkdownForElement(
+            ["item"],
+            "items",
+            "- loop: {{ item }}",
+            {"items": ["a"]},
+        )
+        with _markdown_di_scope():
+            _attach(mfe)
+        assert self._li_texts(mfe) == ["loop: a"]
+
+    def test_loop_in_nested_directive(self):
+        mfe = MarkdownForElement(
+            ["item"],
+            "items",
+            "- {% if loop.first %}first{% else %}{{ loop.index }}{% endif %}",
+            {"items": ["a", "b"]},
+        )
+        with _markdown_di_scope():
+            _attach(mfe)
+        assert self._li_texts(mfe) == ["first", "2"]
+
+
 class TestRenaming:
     def test_rename_in_expressions_renames_var_in_hole(self):
         result = _rename_in_expressions("{{ item.name }}", "item", "__wmdf_0_item")
