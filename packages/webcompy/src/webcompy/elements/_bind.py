@@ -5,7 +5,7 @@ from inspect import iscoroutinefunction
 from typing import Any, cast
 
 from webcompy.elements._dom_objs import DOMEvent
-from webcompy.elements.typealias._element_property import AttrValue, EventHandler
+from webcompy.elements.typealias._element_property import AttrValue, ElementChildren, EventHandler
 from webcompy.exception import WebComPyException
 from webcompy.signal import Computed, Signal, SignalBase
 
@@ -58,6 +58,27 @@ def _expand_text_bind(
     if "value" in attrs:
         raise WebComPyException("':bind' conflicts with explicit 'value' attribute")
     attrs["value"] = signal
+
+    def write_back(ev: DOMEvent) -> None:
+        if (target := ev.target) is not None:
+            signal.value = target.value
+
+    _register_write_back(events, "input", write_back)
+
+
+def _expand_textarea_bind(
+    signal: Signal[Any],
+    attrs: dict[str, AttrValue],
+    events: dict[str, EventHandler],
+    children: list[ElementChildren],
+) -> None:
+    if not isinstance(signal.value, str):
+        raise WebComPyException(
+            f":bind on a text input or textarea requires a str-valued Signal (got {type(signal.value).__name__})"
+        )
+    if "value" in attrs:
+        raise WebComPyException("':bind' conflicts with explicit 'value' attribute")
+    children.append(signal)
 
     def write_back(ev: DOMEvent) -> None:
         if (target := ev.target) is not None:
@@ -137,6 +158,7 @@ def expand_bind_attr(
     tag_name: str,
     attrs: dict[str, AttrValue],
     events: dict[str, EventHandler],
+    children: list[ElementChildren] | None = None,
 ) -> None:
     """Pop ':bind' from attrs and expand it into a bound attr + write-back handler.
 
@@ -153,7 +175,11 @@ def expand_bind_attr(
         raise WebComPyException(":bind requires a static 'type' attribute")
     input_type = type_attr if isinstance(type_attr, str) else None
 
-    if tag_name == "textarea" or (tag_name == "input" and (input_type is None or input_type in _TEXT_TYPES)):
+    if tag_name == "textarea":
+        if children is None:
+            raise WebComPyException("textarea :bind requires the element children list")
+        _expand_textarea_bind(signal, attrs, events, children)
+    elif tag_name == "input" and (input_type is None or input_type in _TEXT_TYPES):
         _expand_text_bind(signal, attrs, events)
     elif tag_name == "input" and input_type == "number":
         _expand_number_bind(signal, attrs, events)

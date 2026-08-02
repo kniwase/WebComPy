@@ -11,10 +11,12 @@ Supported elements and rules:
 | Element | Bound attribute | Event | Write-back |
 |---|---|---|---|
 | `input` with `type` of `text`/`email`/`password`/`search`/`tel`/`url` or no `type` | `value` | `input` | `signal.value = ev.target.value` |
-| `textarea` | `value` | `input` | `signal.value = ev.target.value` |
+| `textarea` | text content (child `TextElement`) | `input` | `signal.value = ev.target.value` |
 | `input[type=number]` | `value` | `input` | converted per the number-conversion requirement below |
 | `input[type=checkbox]` | `checked` | `change` | `signal.value = bool(ev.target.checked)` |
 | `input[type=radio]` | `checked` | `change` | if `ev.target.checked`, set the Signal to the element's static `value` attribute |
+
+For `textarea`, the Signal→DOM direction binds the element's text content via a child `TextElement` (HTML textareas expose no `value` attribute); the write-back direction is unchanged.
 
 For radio, the Signal→DOM direction SHALL use a `Computed` that compares the Signal value with the element's static `value` attribute (`checked` is true when equal), so a group of radios sharing one Signal stays in sync.
 

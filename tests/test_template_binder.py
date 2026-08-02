@@ -289,7 +289,10 @@ class TestBindAttrBinding:
         sig = Signal("hi")
         roots = parse_template('<textarea :bind="text"></textarea>')
         result = bind_element(roots[0], {"text": sig})
-        assert result._attrs.get("value") is sig
+        assert "value" not in result._attrs
+        assert len(result._children) == 1
+        assert isinstance(result._children[0], TextElement)
+        assert result._children[0]._text is sig
         assert "input" in result._event_handlers
 
     def test_bind_non_signal_raises_naming_variable_and_type(self):

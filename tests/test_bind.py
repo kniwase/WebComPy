@@ -78,9 +78,24 @@ class TestTextBindings:
         sig = Signal("hello")
         attrs = {":bind": sig}
         events = {}
-        expand_bind_attr("textarea", attrs, events)
-        assert attrs["value"] is sig
+        children: list = []
+        expand_bind_attr("textarea", attrs, events, children)
+        assert "value" not in attrs
+        assert children == [sig]
         assert "input" in events
+
+    def test_textarea_write_back_sets_signal(self):
+        sig = Signal("hello")
+        attrs = {":bind": sig}
+        events = {}
+        children: list = []
+        expand_bind_attr("textarea", attrs, events, children)
+        events["input"](_ev(value="world"))
+        assert sig.value == "world"
+
+    def test_textarea_requires_children_list(self):
+        with pytest.raises(WebComPyException, match="children"):
+            expand_bind_attr("textarea", {":bind": Signal("x")}, {})
 
     def test_write_back_sets_signal(self):
         sig = Signal("hello")
@@ -444,3 +459,22 @@ class TestElementIntegration:
         html = ServerDOMPort().render_html(node)
         assert 'value="hello"' in html
         assert ":bind" not in html
+
+    @pytest.mark.asyncio
+    async def test_textarea_binding_text_content(self):
+        sig = Signal("initial")
+        el = Element("textarea", {":bind": sig}, {}, None, None)
+        node = await _render_with_fake_browser(el)
+        assert node.textContent == "initial"
+        node.value = "typed"
+        node.dispatchEvent(VirtualDOMEvent("input"))
+        assert sig.value == "typed"
+        sig.value = "next"
+        assert node.textContent == "next"
+
+    @pytest.mark.asyncio
+    async def test_textarea_ssr_renders_text_content(self):
+        el = Element("textarea", {":bind": Signal("initial")}, {}, None, None)
+        node = await _render_with_server(el)
+        html = ServerDOMPort().render_html(node)
+        assert "<textarea>initial</textarea>" in html

@@ -166,12 +166,13 @@ class Element(ElementBase):
         self._tag_name = cast("HtmlTags", tag_name.lower())
         attrs = attrs if attrs else dict()
         events = events if events else dict()
+        children = list(children) if children else list()
         if ":bind" in attrs:
-            expand_bind_attr(self._tag_name, attrs, events)
+            expand_bind_attr(self._tag_name, attrs, events, children)
         self._attrs = attrs
         self._event_handlers = events
         self._ref = ref
         self._preserve_children = preserve_children
         self._children = []
         super().__init__()
-        self._init_children(children if children else list())
+        self._init_children(children)

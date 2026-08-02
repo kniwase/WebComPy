@@ -51,7 +51,7 @@ Relevant code paths:
 
 ### D1. Intercept `:bind` inside `Element.__init__` (single convergence point)
 
-Both construction paths end at `Element.__init__` with `attrs: dict[str, AttrValue]`. `Element.__init__` (`_element.py:163-170`) currently does `self._attrs = attrs if attrs else dict()`. The interception pops `":bind"` from the incoming attrs and expands it into (a) a bound attr entry and (b) a write-back entry in `events` — before the dicts are stored. Because expansion happens in `__init__`, the existing `_init_new_node` attr-reactivity and event-proxy lifecycle apply unchanged, in browser, SSR, hydration, and TestRenderer paths.
+Both construction paths end at `Element.__init__` with `attrs: dict[str, AttrValue]`. `Element.__init__` (`_element.py:163-170`) currently does `self._attrs = attrs if attrs else dict()`. The interception pops `":bind"` from the incoming attrs and expands it into (a) a bound attr entry and (b) a write-back entry in `events` — before the dicts are stored. For `textarea`, (a) is a bound child `TextElement` appended to the incoming children list instead of an attr entry (see D3). Because expansion happens in `__init__`, the existing `_init_new_node` attr-reactivity and event-proxy lifecycle apply unchanged, in browser, SSR, hydration, and TestRenderer paths.
 
 **Alternative considered:** expanding in `create_element()` only — rejected: the template path (`bind_element`) constructs `Element` directly and would need duplicated logic.
 
@@ -89,7 +89,7 @@ Determination order: tag name first, then the **static** `type` attribute for `i
 | Tag / type | Bound attr | Event | Signal→DOM | DOM→Signal |
 |---|---|---|---|---|
 | `input` with `type` in `_TEXT_TYPES` or absent | `value` | `input` | signal as attr (existing pipeline) | `signal.value = ev.target.value` |
-| `textarea` | `value` | `input` | same | same |
+| `textarea` | text content (child `TextElement`) | `input` | signal as child TextElement (HTML textareas expose no `value` attribute; an attr would never display) | `signal.value = ev.target.value` |
 | `input[type=number]` | `value` | `input` | same | converted per D5 |
 | `input[type=checkbox]` | `checked` | `change` | signal as attr | `signal.value = bool(ev.target.checked)` |
 | `input[type=radio]` | `checked` | `change` | `Computed(lambda: sig.value == radio_value)` | `if ev.target.checked: sig.value = radio_value` |
