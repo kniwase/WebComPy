@@ -34,6 +34,28 @@ Metadata SHALL be available in HTML template loops (`render_template` and markdo
 - **WHEN** a markdown `{% for item in items %}` list-body block references `{{ loop.index }}`
 - **THEN** each iteration SHALL render its 1-based position
 
+#### Scenario: ReactiveDict value that is an Element rendered as child
+- **WHEN** `{% for v in d %}{{ v }}{% endfor %}` is used with a `ReactiveDict` whose values include `Element` or `Component` instances
+- **THEN** each Element/Component SHALL be placed as a direct child element (not stringified)
+- **AND** scalar values SHALL continue to render as text with reactive updates
+
+#### Scenario: ReactiveDict loop value keeps fresh value semantics
+- **WHEN** a `ReactiveDict` key is updated with a new value (including a nested `Signal` value) while a loop over the dict is rendered
+- **THEN** the loop body SHALL observe the current stored value (not a stale callback argument), unwrapping nested `Signal` values
+- **AND** the rendered content SHALL update reactively
+
+### Requirement: Dotted paths shall unwrap intermediate Signals
+
+Multi-segment plain paths (e.g., `{{ user.profile.name }}`) SHALL unwrap a `SignalBase` encountered at any intermediate segment (read `.value`) and continue resolving the remaining segments. When an intermediate segment resolves to a Signal, the resolution SHALL be wrapped in an implicit `Computed` so downstream text updates reactively when the Signal changes. Single-segment plain paths that resolve to a Signal SHALL pass the Signal through unwrapped (no `Computed`).
+
+#### Scenario: Dotted path with intermediate Signal
+- **WHEN** `{{ user.profile.name }}` is used where `user.profile` resolves to a `Signal({"name": "Alice"})`
+- **THEN** the intermediate Signal SHALL be unwrapped (`.value` read) and the remaining segment `name` SHALL resolve to `"Alice"`
+
+#### Scenario: Reactive dotted path with intermediate Signal
+- **WHEN** `{{ user.profile.name }}` has an intermediate `Signal` at the `.profile` position and that Signal is updated
+- **THEN** the rendered text SHALL update reactively via an implicit `Computed` that re-resolves the remaining segments through the unwrapped Signal
+
 ### Requirement: Loop metadata shadowing shall follow innermost-wins semantics
 
 In nested `{% for %}` loops, the inner loop's `loop` SHALL shadow the outer loop's `loop` within the inner body. A user-declared loop variable named `loop` SHALL shadow the metadata object within that loop body. Outside any `{% for %}`, a context variable named `loop` SHALL be unaffected.
