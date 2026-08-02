@@ -80,6 +80,15 @@ def DeepLayout(context: ComponentContext[RouterContext]):
     )
 
 
+@define_component
+def LevelOneLeaf(context: ComponentContext[RouterContext]):
+    _count("LevelOneLeaf")
+    return html.DIV(
+        {"data-testid": "leaf-page"},
+        html.DIV({"data-testid": "deep-slot"}, RouterView()),
+    )
+
+
 def _make_router(*, mode: str = "hash") -> tuple[Router, MockHistoryPort]:
     _reset_counts()
     hist = MockHistoryPort(mode=mode)
@@ -130,6 +139,26 @@ class TestRouterViewLevelRendering:
         with _render(router) as result:
             assert result.find_by_attribute("data-testid", "docs-layout") is not None
             assert result.find_by_attribute("data-testid", "guide-page") is not None
+
+    def test_mounted_view_deeper_than_chain_renders_empty(self):
+        hist = MockHistoryPort(mode="hash")
+        router = Router(
+            {
+                "path": "/docs",
+                "component": DocsLayout,
+                "children": [{"path": "/guide", "component": LevelOneLeaf}],
+            },
+            history=hist,
+            preload=False,
+        )
+        _reset_counts()
+        hist.navigate("/docs/guide", None)
+        with _render(router) as result:
+            assert result.find_by_attribute("data-testid", "leaf-page") is not None
+            deep_slot = result.find_by_attribute("data-testid", "deep-slot")
+            assert deep_slot is not None
+            assert deep_slot.childNodes.length == 0, "depth-2 view must render empty when the chain has 2 levels"
+            assert _setup_counts["LevelOneLeaf"][0] == 1
 
     def test_no_match_renders_empty_view(self):
         router, hist = _make_router()
@@ -289,3 +318,77 @@ class TestRouterViewReuse:
             param_name = result.find_by_attribute("data-testid", "param-name")
             assert param_name is not None
             assert param_name.textContent == "b"
+
+
+class TestRouterViewInFlightNavigation:
+    def test_stale_route_render_callbacks_are_skipped(self):
+        import asyncio
+
+        from webcompy.components._component import _active_app_context
+        from webcompy.components._hooks import on_after_rendering
+
+        fired: list[str] = []
+
+        @define_component
+        def HomePage(context: ComponentContext[RouterContext]):
+            return html.DIV({"data-testid": "home-page"}, "home")
+
+        @define_component
+        async def SlowPage(context: ComponentContext[RouterContext]):
+            @on_after_rendering
+            def after():
+                fired.append("slow")
+
+            await asyncio.sleep(0.02)
+            return html.DIV({"data-testid": "slow-page"}, "slow")
+
+        @define_component
+        async def FastPage(context: ComponentContext[RouterContext]):
+            @on_after_rendering
+            def after():
+                fired.append("fast")
+
+            await asyncio.sleep(0.001)
+            return html.DIV({"data-testid": "fast-page"}, "fast")
+
+        class _FakeDeferApp:
+            def __init__(self):
+                self._defer_depth = 0
+                self._deferred_callbacks: list = []
+
+        pages = [
+            {"path": "/home", "component": HomePage},
+            {"path": "/slow", "component": SlowPage},
+            {"path": "/fast", "component": FastPage},
+        ]
+        hist = MockHistoryPort(mode="hash")
+        router = Router(*pages, history=hist, preload=False)
+        hist.navigate("/home", None)
+        _reset_counts()
+        with _render(router) as result:
+            view = result._instance._children[0]
+
+            scratch = Router(*pages, history=MockHistoryPort(mode="hash"), preload=False)
+            scratch._history.navigate("/slow", None)
+            match_slow = scratch.current_match.value
+            scratch._history.navigate("/fast", None)
+            match_fast = scratch.current_match.value
+
+            fake_app = _FakeDeferApp()
+            token = _active_app_context.set(fake_app)
+            try:
+                from webcompy_testing._utils import run_sync
+
+                async def _race():
+                    await asyncio.gather(
+                        view._on_match_changed(match_slow),
+                        view._on_match_changed(match_fast),
+                    )
+
+                run_sync(_race())
+            finally:
+                _active_app_context.reset(token)
+
+            assert fired == ["fast"], "stale render callbacks must not run after a newer navigation committed"
+            assert view._mounted_component is not None
+            assert fake_app._defer_depth == 0, "defer depth must be balanced after a stale render"

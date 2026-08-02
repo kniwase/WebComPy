@@ -174,6 +174,28 @@ class TestCloneForRequest:
         assert cloned.__base_url__ == "app"
         assert cloned._preload is False
 
+    def test_clone_preserves_hooks_as_independent_lists(self):
+        r = Router(
+            {"path": "/docs", "component": _mock_comp()},
+            history=MockHistoryPort(mode="hash"),
+            preload=False,
+        )
+        before = lambda frm, to: None
+        after = lambda path: None
+        on_error = lambda exc: None
+        r.before_route_change.append(before)
+        r.after_route_change.append(after)
+        r.on_route_error.append(on_error)
+
+        clone = r._clone_for_request()
+
+        assert clone.before_route_change == [before]
+        assert clone.after_route_change == [after]
+        assert clone.on_route_error == [on_error]
+        assert clone.before_route_change is not r.before_route_change
+        assert clone.after_route_change is not r.after_route_change
+        assert clone.on_route_error is not r.on_route_error
+
 
 class TestChainMatching:
     def test_match_nested_with_params(self):
@@ -375,6 +397,179 @@ class TestHooksOncePerNavigation:
         assert len(before_calls) == 2
         assert len(after_calls) == 2
         assert after_calls[1] == "/docs/guide"
+
+
+class TestRouteVariants:
+    def _router(self, pages):
+        return Router(*pages, history=MockHistoryPort(mode="hash"), preload=False)
+
+    def test_flat_route_without_params_has_no_variants(self):
+        r = self._router([{"path": "/docs", "component": _mock_comp()}])
+        assert r.__route_variants__ == [None]
+
+    def test_flat_route_with_path_params_uses_page_variants(self):
+        r = self._router(
+            [{"path": "/users/{uid}", "component": _mock_comp(), "path_params": [{"uid": "a"}, {"uid": "b"}]}]
+        )
+        assert r.__route_variants__ == [[{"uid": "a"}, {"uid": "b"}]]
+
+    def test_nested_dynamic_parent_variants_merge_into_full_path(self):
+        r = self._router(
+            [
+                {
+                    "path": "/users/{uid}",
+                    "component": _mock_comp(),
+                    "path_params": [{"uid": "alice"}, {"uid": "bob"}],
+                    "children": [{"path": "/docs", "component": _mock_comp()}],
+                }
+            ]
+        )
+        assert r.__route_variants__ == [[{"uid": "alice"}, {"uid": "bob"}]]
+
+    def test_multiple_dynamic_levels_produce_cartesian_product(self):
+        r = self._router(
+            [
+                {
+                    "path": "/users/{uid}",
+                    "component": _mock_comp(),
+                    "path_params": [{"uid": "a"}, {"uid": "b"}],
+                    "children": [
+                        {
+                            "path": "/docs/{doc}",
+                            "component": _mock_comp(),
+                            "path_params": [{"doc": "x"}, {"doc": "y"}],
+                        }
+                    ],
+                }
+            ]
+        )
+        expected = [
+            {"uid": "a", "doc": "x"},
+            {"uid": "a", "doc": "y"},
+            {"uid": "b", "doc": "x"},
+            {"uid": "b", "doc": "y"},
+        ]
+        actual = r.__route_variants__[0]
+        assert actual is not None
+        assert sorted(tuple(sorted(v.items())) for v in actual) == sorted(tuple(sorted(v.items())) for v in expected)
+
+    def test_child_param_collision_wins_over_ancestor(self):
+        r = self._router(
+            [
+                {
+                    "path": "/users/{uid}",
+                    "component": _mock_comp(),
+                    "path_params": [{"uid": "a"}],
+                    "children": [
+                        {"path": "/uid/{uid}", "component": _mock_comp(), "path_params": [{"uid": "override"}]}
+                    ],
+                }
+            ]
+        )
+        assert r.__route_variants__ == [[{"uid": "override"}]]
+
+    def test_leaf_only_params_keep_old_flat_behavior(self):
+        r = self._router(
+            [
+                {
+                    "path": "/docs",
+                    "component": _mock_comp(),
+                    "children": [{"path": "/{name}", "component": _mock_comp(), "path_params": [{"name": "x"}]}],
+                }
+            ]
+        )
+        assert r.__route_variants__ == [[{"name": "x"}]]
+
+
+class TestPreloadDedup:
+    def test_shared_lazy_generator_is_preloaded_once(self):
+        import sys
+        import types
+
+        from webcompy.components._generator import ComponentStore
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.router._lazy import LazyComponentGenerator
+
+        scope = DIScope()
+        store = ComponentStore()
+        scope.provide(_COMPONENT_STORE_KEY, store)
+        scope.__enter__()
+
+        try:
+            leaf_gen = _make_test_component("SharedLeaf")
+            fake_module = types.ModuleType("shared_leaf_module")
+            fake_module.SharedLeaf = leaf_gen
+            sys.modules["shared_leaf_module"] = fake_module
+
+            shared_lazy = LazyComponentGenerator("shared_leaf_module:SharedLeaf", __file__)
+            pages = [
+                {
+                    "path": "/docs",
+                    "component": _mock_comp(),
+                    "children": [
+                        {"path": "/a", "component": shared_lazy},
+                        {"path": "/b", "component": shared_lazy},
+                    ],
+                }
+            ]
+            r = Router(*pages, history=MockHistoryPort(mode="hash"), preload=False)
+
+            preload_calls: list[int] = []
+            original_preload = shared_lazy._preload
+
+            def counting_preload():
+                preload_calls.append(1)
+                return original_preload()
+
+            shared_lazy._preload = counting_preload
+
+            r._preload = True
+            r.preload_lazy_routes()
+
+            assert len(preload_calls) == 1, "shared lazy generator must be preloaded exactly once"
+            assert shared_lazy._resolved is leaf_gen
+        finally:
+            scope.__exit__(None, None, None)
+
+
+class TestResolvedLazyReRegistration:
+    def test_resolved_lazy_registers_into_later_component_stores(self):
+        import sys
+        import types
+
+        from webcompy.components._generator import ComponentStore
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.router._lazy import LazyComponentGenerator
+
+        leaf_gen = _make_test_component("ReRegisteredLeaf")
+        fake_module = types.ModuleType("re_registered_module")
+        fake_module.ReRegisteredLeaf = leaf_gen
+        sys.modules["re_registered_module"] = fake_module
+
+        lazy_gen = LazyComponentGenerator("re_registered_module:ReRegisteredLeaf", __file__)
+
+        scope1 = DIScope()
+        store1 = ComponentStore()
+        scope1.provide(_COMPONENT_STORE_KEY, store1)
+        scope1.__enter__()
+        try:
+            assert lazy_gen._resolved is None
+            lazy_gen._resolve()
+            assert "ReRegisteredLeaf" in store1.components
+        finally:
+            scope1.__exit__(None, None, None)
+
+        scope2 = DIScope()
+        store2 = ComponentStore()
+        scope2.provide(_COMPONENT_STORE_KEY, store2)
+        scope2.__enter__()
+        try:
+            assert "ReRegisteredLeaf" not in store2.components, "fresh store must start without the component"
+            lazy_gen._resolve()
+            assert "ReRegisteredLeaf" in store2.components, "resolved lazy must re-register in later contexts"
+        finally:
+            scope2.__exit__(None, None, None)
+        sys.modules.pop("re_registered_module", None)
 
 
 class TestPreloadTreeWalk:
