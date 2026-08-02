@@ -172,3 +172,171 @@ class TestCloneForRequest:
         assert cloned.__mode__ == "history"
         assert cloned.__base_url__ == "app"
         assert cloned._preload is False
+
+
+class TestChainMatching:
+    def test_match_nested_with_params(self):
+        pages = [
+            {
+                "path": "/users/{uid}",
+                "component": _mock_comp(),
+                "children": [{"path": "/docs/{doc_id}", "component": _mock_comp()}],
+            }
+        ]
+        r = Router(*pages, history=MockHistoryPort(mode="hash"), preload=False)
+        r._history.navigate("/users/42/docs/7", None)
+        match = r.current_match.value
+        assert match is not None
+        assert match.path_params == {"uid": "42", "doc_id": "7"}
+        assert match.per_level_params == ({"uid": "42"}, {"doc_id": "7"})
+
+    def test_no_match_returns_none(self):
+        r = Router(history=MockHistoryPort(mode="hash"), preload=False)
+        r._history.navigate("/nonexistent", None)
+        assert r.current_match.value is None
+
+    def test_index_match_chain(self):
+        pages = [
+            {
+                "path": "/docs",
+                "component": _mock_comp(),
+                "children": [{"path": "", "component": _mock_comp("Index")}],
+            }
+        ]
+        r = Router(*pages, history=MockHistoryPort(mode="hash"), preload=False)
+        r._history.navigate("/docs", None)
+        match = r.current_match.value
+        assert match is not None
+        assert len(match.chain) == 2
+        assert match.chain[1].segment == ""
+
+    def test_overlapping_sibling_patterns_first_wins(self):
+        pages = [
+            {
+                "path": "/docs",
+                "component": _mock_comp(),
+                "children": [
+                    {"path": "/new", "component": _mock_comp("New")},
+                    {"path": "/{name}", "component": _mock_comp("Named")},
+                ],
+            }
+        ]
+        r = Router(*pages, history=MockHistoryPort(mode="hash"), preload=False)
+        r._history.navigate("/docs/new", None)
+        match = r.current_match.value
+        assert match is not None
+        assert match.chain[1].segment == "new"
+        assert match.path_params == {}
+
+        r._history.navigate("/docs/other", None)
+        match = r.current_match.value
+        assert match is not None
+        assert match.chain[1].segment == "{name}"
+        assert match.path_params == {"name": "other"}
+
+    def test_index_vs_param_collision_definition_order(self):
+        pages = [
+            {
+                "path": "/docs",
+                "component": _mock_comp(),
+                "children": [
+                    {"path": "", "component": _mock_comp("Index")},
+                    {"path": "/{name}", "component": _mock_comp("Named")},
+                ],
+            }
+        ]
+        r = Router(*pages, history=MockHistoryPort(mode="hash"), preload=False)
+        r._history.navigate("/docs", None)
+        match = r.current_match.value
+        assert match is not None
+        assert match.chain[1].segment == ""
+        assert match.path_params == {}
+
+        r._history.navigate("/docs/some-page", None)
+        match = r.current_match.value
+        assert match is not None
+        assert match.chain[1].segment == "{name}"
+        assert match.path_params == {"name": "some-page"}
+
+    def test_duplicate_full_path_first_definition_wins(self):
+        pages = [
+            {
+                "path": "/docs",
+                "component": _mock_comp(),
+                "children": [
+                    {"path": "", "component": _mock_comp("FirstIndex")},
+                    {"path": "/", "component": _mock_comp("SecondIndex")},
+                ],
+            }
+        ]
+        r = Router(*pages, history=MockHistoryPort(mode="hash"), preload=False)
+        r._history.navigate("/docs", None)
+        match = r.current_match.value
+        assert match is not None
+        assert match.chain[1].component == pages[0]["children"][0]["component"]
+
+    def test_query_parsing(self):
+        r = Router(
+            {"path": "/", "component": _mock_comp()},
+            history=MockHistoryPort(mode="hash"),
+            preload=False,
+        )
+        r._history.navigate("/?tab=a&filter=active", None)
+        match = r.current_match.value
+        assert match is not None
+        assert match.query == {"tab": "a", "filter": "active"}
+
+    def test_query_empty(self):
+        r = Router(
+            {"path": "/", "component": _mock_comp()},
+            history=MockHistoryPort(mode="hash"),
+            preload=False,
+        )
+        r._history.navigate("/", None)
+        match = r.current_match.value
+        assert match is not None
+        assert match.query == {}
+
+    def test_history_mode_with_base_url(self):
+        pages = [
+            {
+                "path": "/docs",
+                "component": _mock_comp(),
+                "children": [{"path": "/guide", "component": _mock_comp()}],
+            }
+        ]
+        r = Router(
+            *pages,
+            history=MockHistoryPort(mode="history"),
+            base_url="app",
+            preload=False,
+        )
+        r._history.navigate("/app/docs/guide", None)
+        match = r.current_match.value
+        assert match is not None
+        assert match.path == "/docs/guide"
+        assert len(match.chain) == 2
+
+    def test_state_captured(self):
+        r = Router(
+            {"path": "/", "component": _mock_comp()},
+            history=MockHistoryPort(mode="hash"),
+            preload=False,
+        )
+        r._history.navigate("/", {"k": "v"})
+        match = r.current_match.value
+        assert match is not None
+        assert match.state == {"k": "v"}
+
+    def test_flat_route_single_level_match(self):
+        r = Router(
+            {"path": "/users/{id}", "component": _mock_comp()},
+            history=MockHistoryPort(mode="hash"),
+            preload=False,
+        )
+        r._history.navigate("/users/42", None)
+        match = r.current_match.value
+        assert match is not None
+        assert len(match.chain) == 1
+        assert match.path_params == {"id": "42"}
+        assert match.per_level_params == ({"id": "42"},)

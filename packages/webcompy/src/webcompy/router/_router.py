@@ -98,6 +98,70 @@ class Router:
             preload=self._preload,
         )
 
+    @computed_property
+    def current_match(self):
+        try:
+            return self._compute_current_match()
+        except Exception as e:
+            for handler in self.on_route_error:
+                if handler(e) is True:
+                    return None
+            raise
+
+    def _compute_current_match(self) -> RouteMatch | None:
+        current_path, search = self._get_current_path()
+        if self.__mode__ == "history" and self.__base_url__:
+            current_path = self._base_url_stripper(current_path)
+        clean_path = current_path.strip("/")
+        query = self._parse_query(search)
+        history = self._resolve_history()
+        state = history.state or {}
+
+        for i, route in enumerate(self.__routes__):
+            _, matcher, _, _, _ = route
+            match = matcher(clean_path)
+            if match:
+                chain_entry = self.__chains__[i]
+                groups = match.groups()
+                per_level_params = self._split_params_by_level(groups, chain_entry.per_level_param_names)
+                accumulated: dict[str, str] = {}
+                for level_params in per_level_params:
+                    accumulated.update(level_params)
+                return RouteMatch(
+                    path=current_path,
+                    chain=chain_entry.chain,
+                    per_level_params=tuple(per_level_params),
+                    path_params=accumulated,
+                    query=query,
+                    state=state,
+                )
+        return None
+
+    def _split_params_by_level(
+        self,
+        groups: tuple[str, ...],
+        per_level_param_names: tuple[list[str], ...],
+    ) -> list[dict[str, str]]:
+        result: list[dict[str, str]] = []
+        offset = 0
+        for level_names in per_level_param_names:
+            count = len(level_names)
+            level_params = dict(zip(level_names, groups[offset : offset + count], strict=True)) if level_names else {}
+            result.append(level_params)
+            offset += count
+        return result
+
+    def _parse_query(self, search: str) -> dict[str, str]:
+        if not search:
+            return {}
+        return {
+            name: value
+            for name, value in (
+                [it[0], ""] if len(it) == 1 else it for it in (q.split("=", 2) for q in search.split("&"))
+            )
+            if name and value
+        }
+
     def _resolve_history(self) -> HistoryPort:
         history = self._history
         if history is None:
