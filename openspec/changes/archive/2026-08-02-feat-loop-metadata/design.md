@@ -96,6 +96,34 @@ Nested loops: the inner `_extend_for_ctx` assignment shadows the outer `loop`. A
 
 No code migration needed. Template authors hitting the new compile-time errors either fix the directive or wrap literal `{%` output in `{% raw %}`. The removed `docs_app` page URL (`/documents/limitations`) falls back to the router's Not Found handling; no redirect is provided (docs site is pre-release).
 
+## Post-Review Refinements
+
+The following behaviors were refined by post-archive review feedback (commits after `6c691b5`). They are documented here to keep the archived design consistent with the implementation and the main `template-engine` spec.
+
+### R1. ReactiveDict loop values preserve value semantics
+
+`_bind_dict_reactive` (`_binder.py`) now re-reads the current stored value (`read_value()` reads `signal.value[key]` rather than trusting the callback's `value` argument), so a key updated mid-reconciliation yields the fresh value. Nested `Signal` values are unwrapped (`.value` read). Values that are `Element`/`Component` instances are passed through directly as child elements — never stringified and never wrapped in `Computed`; scalar and nested-Signal values are wrapped in `Computed(read_value)` for reactive updates. Only the actual Signal members are registered in `__signal_members__` so member purging on element removal stays correct.
+
+### R2. Directive args accept `%` (quoted strings and non-closing percent)
+
+`DIRECTIVE_PATTERN` / `_GENERIC_DIRECTIVE_RE` (`_parser.py`) previously used `[^%]*` for arguments, rejecting conditions like `{% if n % 2 == 0 %}`. The shared `_DIRECTIVE_ARGS` pattern now matches quoted strings verbatim and allows `%` that is not part of `%}` (`(?:'[^']*'|"[^"]*"|%(?!\})|[^%])*`). This aligns the scanner with the already-spec'd contract that conditions accept the safe expression subset (modulo is a `BinOp`).
+
+### R3. Unclosed `{% raw %}` validated on the markdown path too
+
+Markdown list-body for-loops with an empty iterable bypass `_preprocess`'s raw-block validation. `_validate_directives` (`_markdown_for.py`) now tracks `raw`/`endraw` balance (`raw_depth`) and raises `WebComPyException` for an unclosed `{% raw %}` or a stray `{% endraw %}` at compile time, so the spec'd "unclosed raw block" contract holds on every path.
+
+### R4. Dotted-path resolution unwraps intermediate Signals
+
+`resolve_var` (`_holes.py`) now unwraps `SignalBase` at every segment step and at the final segment. When an intermediate segment resolves to a Signal, it returns a `Computed` that re-resolves the remaining segments through the unwrapped Signal, so `{{ user.profile.name }}` with a Signal-valued `.profile` renders and updates reactively. Single-segment plain paths still pass the Signal through unwrapped.
+
+### R5. Markdown directive scanning protects more syntax
+
+`_validate_directives` / `_tokenize_source` / `_expand_directives_in_body` (`_markdown_for.py`) protect fenced code blocks (honoring CommonMark closing-fence length rules), code spans (variable-length backtick runs), `{% raw %}` blocks, quoted and unquoted attribute values, `{# #}`/HTML comments, and `{{ }}` holes from directive matching and loop-variable renaming. Renaming is AST-based (`ast.parse`) with a regex fallback, and string literals are stashed during renaming so they are never rewritten. For-level `{% else %}`/`{% elif %}`, stray `{% endfor %}`/`{% endif %}`, and unclosed `{% if %}`/`{% for %}` raise `WebComPyException` with the same messages as the HTML path.
+
+### R6. Empty-body dict loops render nothing
+
+`_bind_dict_reactive` returns a `FragmentElement()` when the for-body is empty, instead of failing during member registration.
+
 ## Open Questions
 
 None.
