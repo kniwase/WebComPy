@@ -275,6 +275,73 @@ class TestEventRefAttrValidation:
             bind_element(roots[0], {"x": 42})
 
 
+class TestBindAttrBinding:
+    def test_bind_binding(self):
+        sig = Signal("hi")
+        roots = parse_template('<input :bind="text">')
+        result = bind_element(roots[0], {"text": sig})
+        assert isinstance(result, Element)
+        assert result._attrs.get("value") is sig
+        assert ":bind" not in result._attrs
+        assert "input" in result._event_handlers
+
+    def test_bind_on_textarea(self):
+        sig = Signal("hi")
+        roots = parse_template('<textarea :bind="text"></textarea>')
+        result = bind_element(roots[0], {"text": sig})
+        assert "value" not in result._attrs
+        assert len(result._children) == 1
+        assert isinstance(result._children[0], TextElement)
+        assert result._children[0]._text is sig
+        assert "input" in result._event_handlers
+
+    def test_bind_non_signal_raises_naming_variable_and_type(self):
+        roots = parse_template('<input :bind="text">')
+        with pytest.raises(WebComPyException, match=r"text.*str"):
+            bind_element(roots[0], {"text": "literal"})
+
+    def test_bind_computed_raises(self):
+        roots = parse_template('<input :bind="text">')
+        with pytest.raises(WebComPyException, match="writable Signal"):
+            bind_element(roots[0], {"text": Computed(lambda: "x")})
+
+    def test_bind_hole_raises(self):
+        sig = Signal("hi")
+        roots = parse_template('<input :bind="{{ text }}">')
+        with pytest.raises(WebComPyException, match=r":bind"):
+            bind_element(roots[0], {"text": sig})
+
+    def test_other_colon_attr_rejected_with_updated_message(self):
+        roots = parse_template('<div :class="cls"></div>')
+        with pytest.raises(WebComPyException, match=r"':ref' and ':bind'"):
+            bind_element(roots[0], {"cls": "x"})
+
+
+class TestRadioTemplateValueComparison:
+    def test_template_string_value_never_matches_int_signal(self):
+        choice = Signal(1)
+        roots = parse_template('<input type="radio" value="1" :bind="choice">')
+        result = bind_element(roots[0], {"choice": choice})
+        checked = result._attrs["checked"]
+        assert isinstance(checked, Computed)
+        assert checked.value is False
+
+    def test_template_string_value_matches_str_signal(self):
+        choice = Signal("1")
+        roots = parse_template('<input type="radio" value="1" :bind="choice">')
+        result = bind_element(roots[0], {"choice": choice})
+        checked = result._attrs["checked"]
+        assert isinstance(checked, Computed)
+        assert checked.value is True
+
+    def test_element_api_preserves_non_string_value(self):
+        choice = Signal(1)
+        result = Element("input", {"type": "radio", "value": 1, ":bind": choice}, {}, None, None)
+        checked = result._attrs["checked"]
+        assert isinstance(checked, Computed)
+        assert checked.value is True
+
+
 class TestMissingVariable:
     def test_missing_variable_raises_with_available_names(self):
         roots = parse_template("<p>{{ missing }}</p>")
@@ -299,6 +366,12 @@ class TestBrSpecialCasing:
         result = bind_element(roots[0], {})
         assert isinstance(result._children[0], NewLine)
 
+    def test_br_with_bind_rejected(self):
+        sig = Signal("x")
+        roots = parse_template('<div><br :bind="sig"></div>')
+        with pytest.raises(WebComPyException, match="not supported"):
+            bind_element(roots[0], {"sig": sig})
+
 
 class TestResolveVarDirect:
     def test_resolve_var_dict_missing_raises(self):
@@ -315,7 +388,7 @@ class TestClassifyAttrs:
 
         ref = DomNodeRef()
         roots = parse_template('<input id="myid" @click="on_click" :ref="my_ref">')
-        events, ref_out, regular = classify_attrs(
+        events, ref_out, _bind_out, regular = classify_attrs(
             roots[0].attrs,
             {
                 "on_click": handler,
@@ -647,7 +720,7 @@ class TestClassifyAttrsValidation:
 
         ref = DomNodeRef()
         attr = AttrSpec(name=":ref", value=[LiteralText("r")])
-        _events, got_ref, _ = classify_attrs([attr], ctx={"r": ref})
+        _events, got_ref, _bind_out, _ = classify_attrs([attr], ctx={"r": ref})
         assert got_ref is ref
 
     def test_ref_with_non_DomNodeRef_raises(self):
@@ -676,7 +749,7 @@ class TestClassifyAttrsValidation:
             pass
 
         attr = AttrSpec(name="@click", value=[LiteralText("handler")])
-        events, _, _ = classify_attrs([attr], ctx={"handler": handler})
+        events, _, _, _ = classify_attrs([attr], ctx={"handler": handler})
         assert "click" in events
 
 

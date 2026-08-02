@@ -140,6 +140,14 @@ class TestPropBinding:
             _bind("<user-card :count='val' />", {"val": 99})
         assert captured["props"] == {"count": 99}
 
+    def test_bind_prop_stays_plain_prop(self):
+        sig = Signal(5)
+        captured: dict[str, Any] = {}
+        with _component_di_scope():
+            _make_recorder("UserCard", captured)
+            _bind("<user-card :bind='val' />", {"val": sig})
+        assert captured["props"] == {"bind": sig}
+
     def test_kebab_prop_name_converts_to_snake(self):
         captured: dict[str, Any] = {}
         with _component_di_scope():
