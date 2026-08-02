@@ -82,6 +82,19 @@ The `RouterView` renders via a `SwitchElement` whose single case tracks whether 
 
 `RouterContext.path_params` for level N = merge of `per_level_params[0..N]` (child wins on collision).
 
+**Implementation note (deviation from D4):** the shipped `RouterView` does NOT render through a `SwitchElement`. It manages `_mounted_component` / `_mounted_identity` directly (destroy via `_remove_element()`, create via `node.component(context)`), which keeps component destruction side effects out of the holder Computed (a Computed should be pure/derived). The deferred-`on_after_rendering` semantics are preserved by wrapping the new component's `_render()` in `start_defer_after_rendering()` / `end_defer_after_rendering()` inside `_on_match_changed()`, mirroring `SwitchElement._refresh`.
+
+### D7. Transient-creation guard (`_ancestor_will_remount`)
+
+Without extra coordination, when a navigation changes an ANCESTOR level's identity (query change, ancestor param change), the old deeper `RouterView`'s `_on_match_changed` callback can fire before the remounting ancestor destroys the old subtree — creating a transient child instance that is immediately discarded (setup side effects run twice; the transient component is briefly rendered into the doomed subtree). Signal dispatch order is not guaranteed top-down, so this cannot be fixed by ordering.
+
+The shipped implementation adds `RouterView._ancestor_will_remount(match)`: at the top of `_on_match_changed`, the view walks its `_parent` chain, and for each ancestor `RouterView` (depth k) compares the new match's identity at level k (`_build_identity`) against the ancestor's CURRENT (not yet updated) `_mounted_identity`. If any ancestor differs — or the chain is shorter than the ancestor's depth, or the match is `None` — the deeper view returns early: the ancestor will remount and its fresh subtree will recreate the deeper view exactly once.
+
+- The guard is dispatch-order independent: it reads the ancestor's pre-navigation identity, which is stable until the ancestor's own callback runs; the comparison is identical to the ancestor's own mount decision, so a skip is always followed by the ancestor's remount.
+- Depth-0 views always return `False` (no ancestors) and never skip.
+- When all ancestors are preserved (sibling navigation, leaf param change), the guard returns `False` and the deeper view reacts on its own, preserving today's remount semantics.
+- Net effect: each chain level is re-created at most once per navigation; `test_query_change_remounts_level` / `test_ancestor_param_change_remounts_descendants` assert the leaf is created exactly once (count 2, not 3).
+
 ### D5. Navigation, hooks, lazy, and SSG stay on existing paths
 
 - `__set_path__` fires hooks once per navigation — untouched.

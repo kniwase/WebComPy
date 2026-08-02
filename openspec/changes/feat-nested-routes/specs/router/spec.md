@@ -37,7 +37,7 @@
 
 ### Requirement: Chain levels shall be reused only on identical match
 
-For each chain level, the mounted component instance SHALL be preserved across a navigation only when the level's route record, the accumulated `path_params` (levels 0..N), and the `query` dict are all identical to the previous navigation. Otherwise, that level and all deeper levels SHALL be destroyed and re-created. Preservation SHALL use signal identity (the same instance object), so no re-render or setup re-execution occurs for preserved levels.
+For each chain level, the mounted component instance SHALL be preserved across a navigation only when the level's route record, the accumulated `path_params` (levels 0..N), and the `query` dict are all identical to the previous navigation. Otherwise, that level and all deeper levels SHALL be destroyed and re-created. Preservation SHALL use signal identity (the same instance object), so no re-render or setup re-execution occurs for preserved levels. When a level is re-created, its descendants SHALL NOT be instantiated transiently before the remounting ancestor destroys the old subtree — each level SHALL be re-created at most once per navigation.
 
 #### Scenario: Sibling navigation preserves parent
 - **WHEN** navigating from `/docs/guide` to `/docs/api` (chain level 0 identical: `DocsLayout`, no params, same query)
@@ -56,6 +56,11 @@ For each chain level, the mounted component instance SHALL be preserved across a
 #### Scenario: Ancestor param change remounts descendants
 - **WHEN** navigating from `/users/1/docs` to `/users/2/docs`
 - **THEN** the `/users/{uid}` level and ALL deeper levels SHALL be remounted
+
+#### Scenario: Descendant levels are re-created once per navigation
+- **WHEN** a query or ancestor-param change remounts an ancestor level
+- **THEN** the ancestor and each descendant level SHALL be re-created exactly once
+- **AND** no transient duplicate instance SHALL be created for any descendant level (setup SHALL NOT run twice for the same navigation)
 
 ### Requirement: RouterContext path_params shall accumulate ancestor params
 
