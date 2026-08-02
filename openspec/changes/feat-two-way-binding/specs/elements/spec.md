@@ -86,7 +86,7 @@ The `:bind` value SHALL be a writable `Signal` instance. `Computed`, `ReadonlySi
 
 ### Requirement: `:bind` shall reject unsupported elements and conflicting attributes
 
-`:bind` on elements other than the supported set (including `select` and `option`) SHALL raise `WebComPyException` naming the supported elements. An explicit attribute duplicating the bound one (`value` for text-like/number, `checked` for checkbox/radio) SHALL raise `WebComPyException`. An explicit user handler for the binding event SHALL be chained: the binding write-back SHALL run first, then the user handler. An explicit static `value` attribute on a radio is REQUIRED and is NOT a conflict.
+`:bind` on elements other than the supported set (including `select` and `option`) SHALL raise `WebComPyException` naming the supported elements. An explicit attribute duplicating the bound one (`value` for text-like/number, `checked` for checkbox/radio) SHALL raise `WebComPyException`. For `textarea`, the bound target is the text content; a non-empty children list combined with `:bind` SHALL raise `WebComPyException`. An explicit user handler for the binding event SHALL be chained: the binding write-back SHALL run first, then the user handler. An explicit static `value` attribute on a radio is REQUIRED and is NOT a conflict.
 
 #### Scenario: select rejected
 - **WHEN** `html.SELECT({":bind": sig})` is used
@@ -95,6 +95,10 @@ The `:bind` value SHALL be a writable `Signal` instance. `Computed`, `ReadonlySi
 #### Scenario: Conflicting value attribute rejected
 - **WHEN** `html.INPUT({"value": "x", ":bind": text_signal})` is used
 - **THEN** `WebComPyException` SHALL be raised stating the conflict with the explicit `value` attribute
+
+#### Scenario: Conflicting textarea text content rejected
+- **WHEN** `html.TEXTAREA({":bind": text_signal}, "default")` is used with explicit text content
+- **THEN** `WebComPyException` SHALL be raised stating the conflict with explicit text content
 
 #### Scenario: User handler chained after binding
 - **WHEN** `html.INPUT({":bind": text_signal, "@input": user_handler})` is used and the user types

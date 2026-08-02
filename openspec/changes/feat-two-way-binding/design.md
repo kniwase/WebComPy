@@ -138,6 +138,7 @@ Signal kind check (before type check): value must be a `Signal` instance exactly
 ### D7. Conflict policy
 
 - Bound-attr duplication: attrs already containing the bound name (`value` for text-like/number, `checked` for checkbox/radio) → `WebComPyException("':bind' conflicts with explicit '<name>' attribute")`. Silent precedence would be ambiguous; explicit error forces intent. (For radio, an explicit static `value` attr is REQUIRED and is not a conflict — `value` is not the bound attr there.)
+- Textarea text-content duplication: a non-empty children list combined with `:bind` → `WebComPyException("':bind' conflicts with explicit text content")`. The bound target for textarea is the text content, so explicit children (e.g. `<textarea :bind="x">default</textarea>` or `html.TEXTAREA({":bind": x}, "default")`) would otherwise produce two child text nodes with confusing rendering.
 - Same-event user handler: chained. Expansion wraps: `events["input"] = _chained(binding_handler, user_handler)` — binding first, then user handler, both through the existing single proxy path. Chaining preserves side-effect use cases (e.g., live-search hook) without forbidding composition. A user handler for a *different* event (e.g., `@blur`) is untouched.
 
 ### D8. Template `:bind` is resolved like `:ref`

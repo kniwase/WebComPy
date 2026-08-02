@@ -78,6 +78,8 @@ def _expand_textarea_bind(
         )
     if "value" in attrs:
         raise WebComPyException("':bind' conflicts with explicit 'value' attribute")
+    if children:
+        raise WebComPyException("':bind' conflicts with explicit text content")
     children.append(signal)
 
     def write_back(ev: DOMEvent) -> None:

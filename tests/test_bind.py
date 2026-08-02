@@ -258,6 +258,10 @@ class TestConflicts:
         with pytest.raises(WebComPyException, match="'checked'"):
             expand_bind_attr("input", {"type": "radio", ":bind": Signal("a"), "value": "a", "checked": True}, {})
 
+    def test_textarea_children_conflict(self):
+        with pytest.raises(WebComPyException, match="text content"):
+            expand_bind_attr("textarea", {":bind": Signal("x")}, {}, ["default"])
+
 
 class TestDynamicType:
     def test_dynamic_type_rejected(self):
