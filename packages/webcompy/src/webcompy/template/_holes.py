@@ -130,6 +130,8 @@ def _resolve_segments(segments: list[str], ctx: dict[str, Any]) -> Any:
         if isinstance(current, SignalBase):
             current = current.value
         current = _lookup(current, segment)
+    if isinstance(current, SignalBase):
+        current = current.value
     return current
 
 
