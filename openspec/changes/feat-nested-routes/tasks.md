@@ -32,4 +32,4 @@
 ## 6. Spec and Housekeeping
 
 - [ ] 6.1 Apply the delta to `openspec/specs/router/spec.md` (archive/sync flow); update the spec's "does not yet provide" note about nested routes
-- [ ] 6.2 Check `AGENTS.md` File→Spec Mapping and `.opencode/skills/webcompy-review/SKILL.md` for stale router statements (e.g., flat-route assumptions)
+- [x] 6.2 Check `AGENTS.md` File→Spec Mapping and `.opencode/skills/webcompy-review/SKILL.md` for stale router statements (e.g., flat-route assumptions)

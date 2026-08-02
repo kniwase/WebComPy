@@ -167,7 +167,7 @@ Event handlers must be created via `create_proxy()` and `destroy()`ed on removal
 Missing `destroy()` is a PyScript memory leak.
 
 ### Lifecycle Ordering
-`on_after_rendering` during route navigation (`SwitchElement._refresh()`) must be
+`on_after_rendering` during route navigation (`RouterView._on_match_changed()`) must be
 deferred, not synchronous in the callback chain. Component setup must restore
 `_active_di_scope` ContextVar on exit.
 
@@ -185,6 +185,20 @@ closest scope wins. Component destruction must dispose its DI child scope.
 `_hydrate_node()` adopts existing prerendered nodes, never creates new ones.
 `AppDocumentRoot._render()` MUST call `child._hydrate_node()` ONLY inside the
 `if self._app and self._app._hydrate and not self.__hydrated:` guard block.
+
+### RouterView Depth and Level Reuse
+`RouterView` computes its depth by counting `RouterView` ancestors at match time
+(NOT in `_on_set_parent`, where the parent chain is incomplete during component
+setup) and renders chain level N; a chain shorter than the depth renders nothing.
+A level's component instance is preserved only when its route node, accumulated
+`path_params` (levels 0..N), and `query` are identical to the previous navigation —
+otherwise that level and all deeper levels are destroyed and re-created. Each view
+subscribes to its own holder `Computed` over `router.current_match` (multiple
+`on_after_updating` consumers on a single Computed dispatch only once). The depth-0
+view renders `router.__default__()` when nothing matches. `RouterView._hydrate_node()`
+MUST NOT eagerly hydrate the routed component — the scheduled `child._render()` must
+adopt the prerendered nodes AND complete setup (signal subscriptions, lifecycle
+hooks), or interactive updates on hydrated pages silently break.
 
 ### Composable Usage
 `use_state()` / `use_reactive_list()` / `use_reactive_dict()` MUST be called from inside a
