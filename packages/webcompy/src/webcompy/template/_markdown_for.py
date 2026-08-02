@@ -38,7 +38,8 @@ from webcompy.template._parser import (
 )
 
 _FENCE_LINE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
-_CODE_SPAN_RE = re.compile(r"`[^`\n]+`")
+_CLOSING_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})\s*$")
+_CODE_SPAN_RE = re.compile(r"(`+)([^`\n]|`(?!\1))*?\1")
 _STRING_LITERAL_RE = re.compile(r"'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"")
 _RAW_BLOCK_RE = re.compile(r"\{%\s*raw\s*%\}(.*?)\{%\s*endraw\s*%\}", re.DOTALL)
 _ATTR_VALUE_RE = re.compile(r"""[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*"[^"]*"|[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*'[^']*'""")
@@ -231,20 +232,25 @@ def _protected_spans(source: str) -> list[tuple[int, int]]:
     spans: list[tuple[int, int]] = []
     pos = 0
     fence_char: str | None = None
+    fence_length = 0
     for line in source.splitlines(keepends=True):
         line_start, line_end = pos, pos + len(line)
         stripped = line.rstrip("\r\n")
-        m = _FENCE_LINE_RE.match(stripped)
         if fence_char is not None:
             spans.append((line_start, line_end))
-            if m is not None and m.group(1)[0] == fence_char:
+            m = _CLOSING_FENCE_RE.match(stripped)
+            if m is not None and m.group(1)[0] == fence_char and len(m.group(1)) >= fence_length:
                 fence_char = None
-        elif m is not None:
-            spans.append((line_start, line_end))
-            fence_char = m.group(1)[0]
+                fence_length = 0
         else:
-            for cm in _CODE_SPAN_RE.finditer(stripped):
-                spans.append((line_start + cm.start(), line_start + cm.end()))
+            m = _FENCE_LINE_RE.match(stripped)
+            if m is not None:
+                spans.append((line_start, line_end))
+                fence_char = m.group(1)[0]
+                fence_length = len(m.group(1))
+            else:
+                for cm in _CODE_SPAN_RE.finditer(stripped):
+                    spans.append((line_start + cm.start(), line_start + cm.end()))
         pos = line_end
     return spans
 
