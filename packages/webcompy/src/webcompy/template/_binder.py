@@ -7,6 +7,7 @@ from typing import Any, cast
 from webcompy.components._generator import ComponentStore
 from webcompy.di import inject
 from webcompy.di._keys import _COMPONENT_STORE_KEY
+from webcompy.elements._bind import is_bind_target
 from webcompy.elements.generators import repeat
 from webcompy.elements.typealias._element_property import (
     AttrValue,
@@ -47,9 +48,12 @@ def _attr_text(parts: list[LiteralText | Hole]) -> str:
     return "".join(part.text for part in parts if isinstance(part, LiteralText))
 
 
-def classify_attrs(attrs: list[AttrSpec], ctx: dict[str, Any]) -> tuple[dict[str, EventHandler], Any, list[AttrSpec]]:
+def classify_attrs(
+    attrs: list[AttrSpec], ctx: dict[str, Any]
+) -> tuple[dict[str, EventHandler], Any, Any, list[AttrSpec]]:
     events: dict[str, EventHandler] = {}
     ref: Any = None
+    bind: Any = None
     regular: list[AttrSpec] = []
     for attr in attrs:
         if attr.name.startswith("@"):
@@ -70,23 +74,33 @@ def classify_attrs(attrs: list[AttrSpec], ctx: dict[str, Any]) -> tuple[dict[str
                 )
             events[event_name] = handler
         elif attr.name.startswith(":"):
-            if attr.name != ":ref":
+            if attr.name not in (":ref", ":bind"):
                 raise WebComPyException(
-                    f"Unsupported attribute '{attr.name}' on HTML element: only ':ref' is allowed "
+                    f"Unsupported attribute '{attr.name}' on HTML element: only ':ref' and ':bind' are allowed "
                     f"for ':'-prefixed attributes. Use {{{{ }}}} interpolation instead, "
                     f'e.g. {attr.name[1:]}="{{{{ ... }}}}".'
                 )
             if any(isinstance(p, Hole) for p in attr.value):
-                raise WebComPyException(f"{{{{ }}}} interpolation is not supported in :ref attributes: {attr.name}")
-            raw_value = _attr_text(attr.value)
-            ref = resolve_var(raw_value, ctx)
-            if not isinstance(ref, DomNodeRef):
                 raise WebComPyException(
-                    f":ref value '{raw_value}' must be a DomNodeRef instance (got {type(ref).__name__})"
+                    f"{{{{ }}}} interpolation is not supported in {attr.name} attributes: {attr.name}"
                 )
+            raw_value = _attr_text(attr.value)
+            resolved = resolve_var(raw_value, ctx)
+            if attr.name == ":ref":
+                if not isinstance(resolved, DomNodeRef):
+                    raise WebComPyException(
+                        f":ref value '{raw_value}' must be a DomNodeRef instance (got {type(resolved).__name__})"
+                    )
+                ref = resolved
+            else:
+                if not is_bind_target(resolved):
+                    raise WebComPyException(
+                        f":bind value '{raw_value}' must be a writable Signal (got {type(resolved).__name__})"
+                    )
+                bind = resolved
         else:
             regular.append(attr)
-    return events, ref, regular
+    return events, ref, bind, regular
 
 
 def resolve_attr(parts: list[LiteralText | Hole], ctx: dict[str, Any]) -> AttrValue:
@@ -391,13 +405,15 @@ def bind_element(node: TemplateElement, ctx: dict[str, Any]) -> ElementChildren:
         generator = store.components[component_name]
         return _bind_component_tag(node, ctx, generator)
 
-    events, ref, regular_attrs = classify_attrs(node.attrs, ctx)
+    events, ref, bind, regular_attrs = classify_attrs(node.attrs, ctx)
     resolved_attrs: dict[str, AttrValue] = {}
     for attr in regular_attrs:
         if attr.is_boolean:
             resolved_attrs[attr.name] = True
         else:
             resolved_attrs[attr.name] = resolve_attr(attr.value, ctx)
+    if bind is not None:
+        resolved_attrs[":bind"] = bind
     children = bind_children(node.children, ctx)
     return Element(
         tag_name=cast("HtmlTags", node.tag_name),

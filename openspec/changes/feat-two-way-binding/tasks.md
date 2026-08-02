@@ -13,8 +13,8 @@
 
 ## 3. Template Integration
 
-- [ ] 3.1 In `packages/webcompy/src/webcompy/template/_binder.py` `classify_attrs`, accept `:bind` alongside `:ref`: reject `{{ }}` holes inside, `resolve_var` + validate `Signal` (type-naming error), return it so `bind_element` passes `resolved_attrs[":bind"] = signal` into `Element(...)`; update the "only ':ref' is allowed" error message to mention `:bind`
-- [ ] 3.2 Unit tests: `<input :bind="text">` produces a bound element equivalent to the element API; non-Signal `:bind` error names variable and observed type; `{{ }}` inside `:bind` rejected; other `:`-attrs still rejected with updated message (extend `tests/test_template_binder.py`)
+- [x] 3.1 In `packages/webcompy/src/webcompy/template/_binder.py` `classify_attrs`, accept `:bind` alongside `:ref`: reject `{{ }}` holes inside, `resolve_var` + validate `Signal` (type-naming error), return it so `bind_element` passes `resolved_attrs[":bind"] = signal` into `Element(...)`; update the "only ':ref' is allowed" error message to mention `:bind`
+- [x] 3.2 Unit tests: `<input :bind="text">` produces a bound element equivalent to the element API; non-Signal `:bind` error names variable and observed type; `{{ }}` inside `:bind` rejected; other `:`-attrs still rejected with updated message (extend `tests/test_template_binder.py`)
 
 ## 4. Spec, Mapping, and Housekeeping
 
