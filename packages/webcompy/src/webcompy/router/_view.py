@@ -66,9 +66,11 @@ class RouterView(DynamicElement):
         return accumulated
 
     def _get_or_create_component(self, match):
-        self._depth = self._count_router_view_ancestors()
-        depth = self._depth
+        depth = self._count_router_view_ancestors()
+        self._depth = depth
         if match is None or depth >= len(match.chain):
+            if match is None and depth == 0:
+                return self._get_or_create_default_component()
             if self._mounted_component is not None:
                 self._mounted_component._remove_element()
                 self._mounted_component = None
@@ -89,6 +91,25 @@ class RouterView(DynamicElement):
             state=match.state,
         )
         component = node.component(context)
+        self._mounted_component = component
+        self._mounted_identity = identity
+        return component
+
+    def _get_or_create_default_component(self):
+        current_path, search = self._router._get_current_path()
+        query = self._router._parse_query(search)
+        identity = ("__default__", current_path, tuple(sorted(query.items())))
+        if self._mounted_component is not None and identity == self._mounted_identity:
+            return self._mounted_component
+        if self._mounted_component is not None:
+            self._mounted_component._remove_element()
+        result = self._router.__default__()
+        if isinstance(result, str):
+            from webcompy.elements.types._text import TextElement
+
+            component = TextElement(result)
+        else:
+            component = result
         self._mounted_component = component
         self._mounted_identity = identity
         return component

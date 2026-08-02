@@ -65,6 +65,12 @@ def DeepNestedPage(context: ComponentContext[RouterContext]):
 
 
 @define_component
+def NotFoundPage(context: ComponentContext[RouterContext]):
+    _count("NotFoundPage")
+    return html.DIV({"data-testid": "not-found-page"}, "default")
+
+
+@define_component
 def DeepLayout(context: ComponentContext[RouterContext]):
     _count("DeepLayout")
     return html.DIV(
@@ -131,6 +137,36 @@ class TestRouterViewLevelRendering:
         with _render(router) as result:
             assert result.find_by_attribute("data-testid", "root") is not None
             assert result.find_by_attribute("data-testid", "docs-layout") is None
+
+    def test_no_match_with_default_renders_default(self):
+        hist = MockHistoryPort(mode="hash")
+        router = Router(
+            {"path": "/docs", "component": DocsLayout},
+            default=NotFoundPage,
+            history=hist,
+            preload=False,
+        )
+        _reset_counts()
+        hist.navigate("/nonexistent", None)
+        with _render(router) as result:
+            assert result.find_by_attribute("data-testid", "not-found-page") is not None
+            assert _setup_counts["NotFoundPage"][0] == 1
+
+            router.__set_path__("/docs", None)
+
+            assert result.find_by_attribute("data-testid", "docs-layout") is not None
+            assert result.find_by_attribute("data-testid", "not-found-page") is None
+
+            router.__set_path__("/another-missing", None)
+
+            assert result.find_by_attribute("data-testid", "not-found-page") is not None
+            assert _setup_counts["NotFoundPage"][0] == 2, "default must remount on path change"
+
+    def test_no_match_without_default_shows_not_found_text(self):
+        router, hist = _make_router()
+        hist.navigate("/nonexistent", None)
+        with _render(router) as result:
+            assert result.find_by_text("Not Found") is not None
 
 
 class TestRouterViewReuse:

@@ -212,7 +212,7 @@ jobs:
           - name: dynamic-control
             files: e2e/core/test_nested_dynamic.py e2e/core/test_switch.py e2e/core/test_suspense.py
           - name: router
-            files: e2e/core/test_router.py e2e/core/test_async_nav.py
+            files: e2e/core/test_router.py e2e/core/test_async_nav.py e2e/core/test_nested_routes.py
           - name: interaction
             files: e2e/core/test_event.py e2e/core/test_di.py
           - name: bundled-deps
