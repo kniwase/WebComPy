@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from webcompy.exception import WebComPyException
-from webcompy.signal import SignalBase
+from webcompy.signal import Computed, SignalBase
 from webcompy.template._expression import (
     ExpressionPlan,
     compile_expression,
@@ -113,19 +113,33 @@ def _check_stale_braces(text: str) -> None:
             raise WebComPyException(f"Unclosed or malformed expression near {text[j : j + 15]!r} in template")
 
 
+def _lookup(current: Any, segment: str) -> Any:
+    if isinstance(current, dict):
+        if segment not in current:
+            available = ", ".join(sorted(current.keys()))
+            raise KeyError(f"Template variable '{segment}' not found in context (available: {available})")
+        return current[segment]
+    if not hasattr(current, segment):
+        raise KeyError(f"Template variable '{segment}' not found on {type(current).__name__}")
+    return getattr(current, segment)
+
+
+def _resolve_segments(segments: list[str], ctx: dict[str, Any]) -> Any:
+    current: Any = ctx
+    for segment in segments:
+        if isinstance(current, SignalBase):
+            current = current.value
+        current = _lookup(current, segment)
+    return current
+
+
 def resolve_var(path: str, ctx: dict[str, Any]) -> Any:
     segments = path.split(".")
     current: Any = ctx
     for segment in segments:
-        if isinstance(current, dict):
-            if segment not in current:
-                available = ", ".join(sorted(current.keys()))
-                raise KeyError(f"Template variable '{segment}' not found in context (available: {available})")
-            current = current[segment]
-        else:
-            if not hasattr(current, segment):
-                raise KeyError(f"Template variable '{segment}' not found on {type(current).__name__}")
-            current = getattr(current, segment)
+        if isinstance(current, SignalBase):
+            return Computed(lambda segments=segments, ctx=ctx: _resolve_segments(segments, ctx))
+        current = _lookup(current, segment)
     return current
 
 
