@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, final
 
 from webcompy.forms._validators import Validator
 from webcompy.signal import Computed, Signal
@@ -9,6 +9,7 @@ from webcompy.signal import Computed, Signal
 T = TypeVar("T")
 
 
+@final
 class Field(Generic[T]):
     def __init__(
         self,

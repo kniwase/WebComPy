@@ -7,6 +7,7 @@ from typing import Any, cast
 from webcompy.elements._dom_objs import DOMEvent
 from webcompy.elements.typealias._element_property import AttrValue, ElementChildren, EventHandler
 from webcompy.exception import WebComPyException
+from webcompy.forms._field import Field
 from webcompy.signal import Computed, Signal, SignalBase
 
 _TEXT_TYPES = {"text", "email", "password", "search", "tel", "url"}
@@ -46,10 +47,24 @@ def _register_write_back(
         events[event_name] = _chain_handlers(handler, existing)
 
 
+def _register_field_touched(
+    events: dict[str, EventHandler],
+    field: Field[Any] | None,
+) -> None:
+    if field is None:
+        return
+
+    def mark_touched(ev: DOMEvent) -> None:
+        field.touched.value = True
+
+    _register_write_back(events, "blur", mark_touched)
+
+
 def _expand_text_bind(
     signal: Signal[Any],
     attrs: dict[str, AttrValue],
     events: dict[str, EventHandler],
+    dirty: Signal[bool] | None = None,
 ) -> None:
     if not isinstance(signal.value, str):
         raise WebComPyException(
@@ -61,6 +76,8 @@ def _expand_text_bind(
 
     def write_back(ev: DOMEvent) -> None:
         if (target := ev.target) is not None:
+            if dirty is not None:
+                dirty.value = True
             signal.value = target.value
 
     _register_write_back(events, "input", write_back)
@@ -71,6 +88,7 @@ def _expand_textarea_bind(
     attrs: dict[str, AttrValue],
     events: dict[str, EventHandler],
     children: list[ElementChildren],
+    dirty: Signal[bool] | None = None,
 ) -> None:
     if not isinstance(signal.value, str):
         raise WebComPyException(
@@ -84,6 +102,8 @@ def _expand_textarea_bind(
 
     def write_back(ev: DOMEvent) -> None:
         if (target := ev.target) is not None:
+            if dirty is not None:
+                dirty.value = True
             signal.value = target.value
 
     _register_write_back(events, "input", write_back)
@@ -93,6 +113,7 @@ def _expand_number_bind(
     signal: Signal[Any],
     attrs: dict[str, AttrValue],
     events: dict[str, EventHandler],
+    dirty: Signal[bool] | None = None,
 ) -> None:
     current = signal.value
     if not isinstance(current, (int, float)) or isinstance(current, bool):
@@ -112,6 +133,8 @@ def _expand_number_bind(
             return
         current_value = signal.value
         with suppress(ValueError):
+            if dirty is not None:
+                dirty.value = True
             signal.value = int(raw) if isinstance(current_value, int) else float(raw)
 
     _register_write_back(events, "input", write_back)
@@ -121,6 +144,7 @@ def _expand_checkbox_bind(
     signal: Signal[Any],
     attrs: dict[str, AttrValue],
     events: dict[str, EventHandler],
+    dirty: Signal[bool] | None = None,
 ) -> None:
     if not isinstance(signal.value, bool):
         raise WebComPyException(
@@ -132,6 +156,8 @@ def _expand_checkbox_bind(
 
     def write_back(ev: DOMEvent) -> None:
         if (target := ev.target) is not None:
+            if dirty is not None:
+                dirty.value = True
             signal.value = bool(target.checked)
 
     _register_write_back(events, "change", write_back)
@@ -141,6 +167,7 @@ def _expand_radio_bind(
     signal: Signal[Any],
     attrs: dict[str, AttrValue],
     events: dict[str, EventHandler],
+    dirty: Signal[bool] | None = None,
 ) -> None:
     radio_value = attrs.get("value")
     if radio_value is None or isinstance(radio_value, SignalBase):
@@ -152,6 +179,8 @@ def _expand_radio_bind(
 
     def write_back(ev: DOMEvent) -> None:
         if (target := ev.target) is not None and target.checked:
+            if dirty is not None:
+                dirty.value = True
             signal.value = radio_value
 
     _register_write_back(events, "change", write_back)
@@ -181,9 +210,16 @@ def expand_bind_attr(
     signal kind, type-discipline violation, bound-attr conflict, dynamic type attr.
     """
     bind_value = attrs.pop(":bind")
-    if not is_bind_target(bind_value):
+    field: Field[Any] | None
+    if isinstance(bind_value, Field):
+        field = bind_value
+        signal = field.value
+    elif is_bind_target(bind_value):
+        field = None
+        signal = cast("Signal[Any]", bind_value)
+    else:
         raise WebComPyException(f":bind requires a writable Signal (got {type(bind_value).__name__})")
-    signal = cast("Signal[Any]", bind_value)
+    dirty = field.dirty if field is not None else None
 
     type_attr = attrs.get("type")
     if isinstance(type_attr, SignalBase):
@@ -193,18 +229,23 @@ def expand_bind_attr(
     if tag_name == "textarea":
         if children is None:
             raise WebComPyException("textarea :bind requires the element children list")
-        _expand_textarea_bind(signal, attrs, events, children)
+        _expand_textarea_bind(signal, attrs, events, children, dirty)
+        _register_field_touched(events, field)
         return set(), [(signal, "value")]
     if tag_name == "input" and (input_type is None or input_type in _TEXT_TYPES):
-        _expand_text_bind(signal, attrs, events)
+        _expand_text_bind(signal, attrs, events, dirty)
+        _register_field_touched(events, field)
         return {"value"}, []
     if tag_name == "input" and input_type == "number":
-        _expand_number_bind(signal, attrs, events)
+        _expand_number_bind(signal, attrs, events, dirty)
+        _register_field_touched(events, field)
         return {"value"}, []
     if tag_name == "input" and input_type == "checkbox":
-        _expand_checkbox_bind(signal, attrs, events)
+        _expand_checkbox_bind(signal, attrs, events, dirty)
+        _register_field_touched(events, field)
         return {"checked"}, []
     if tag_name == "input" and input_type == "radio":
-        _expand_radio_bind(signal, attrs, events)
+        _expand_radio_bind(signal, attrs, events, dirty)
+        _register_field_touched(events, field)
         return {"checked"}, []
     raise WebComPyException(f":bind is not supported on <{tag_name}> (supported: {_SUPPORTED_ELEMENTS})")
