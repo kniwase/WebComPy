@@ -69,3 +69,14 @@ def test_nested_route_with_query_params(page_on):
     page = page_on("/nested/guide?tab=b")
     expect(page.locator("[data-testid='nested-layout']")).to_be_visible()
     expect(page.locator("[data-testid='nested-guide-page']")).to_be_visible()
+
+
+def test_query_change_transition_creates_leaf_once(page_on):
+    page = page_on("/nested/guide?tab=a")
+    expect(page.locator("[data-testid='nested-guide-page']")).to_be_visible()
+    guide_count = int(page.locator("[data-testid='nested-guide-count']").text_content())
+
+    page.locator("[data-testid='nav-guide-tab-b']").click()
+    expect(page).to_have_url(re.compile(r"/nested/guide/?\?tab=b"))
+    expect(page.locator("[data-testid='nested-guide-page']")).to_be_visible()
+    assert int(page.locator("[data-testid='nested-guide-count']").text_content()) == guide_count + 1

@@ -12,6 +12,7 @@ _item_setup_count = 0
 def NestedDocsLayout(context: ComponentContext[RouterContext]):
     sidebar_open = use_state(lambda: True)
     sidebar_label = use_computed(lambda: "open" if sidebar_open.value else "closed")
+    tab_b_query = use_state(lambda: {"tab": "b"})
 
     def toggle(_):
         sidebar_open.value = not sidebar_open.value
@@ -24,6 +25,15 @@ def NestedDocsLayout(context: ComponentContext[RouterContext]):
                 {},
                 html.LI({}, RouterLink(to="/nested", text=["Index"], attrs={"data-testid": "nav-nested-index"})),
                 html.LI({}, RouterLink(to="/nested/guide", text=["Guide"], attrs={"data-testid": "nav-nested-guide"})),
+                html.LI(
+                    {},
+                    RouterLink(
+                        to="/nested/guide",
+                        text=["Guide?tab=b"],
+                        query=tab_b_query,
+                        attrs={"data-testid": "nav-guide-tab-b"},
+                    ),
+                ),
                 html.LI({}, RouterLink(to="/nested/api", text=["API"], attrs={"data-testid": "nav-nested-api"})),
                 html.LI(
                     {}, RouterLink(to="/nested/item/1", text=["Item 1"], attrs={"data-testid": "nav-nested-item1"})
