@@ -24,7 +24,6 @@ from webcompy.elements.types._switch import SwitchElement
 from webcompy.elements.types._text import NewLine, TextElement
 from webcompy.exception import WebComPyException
 from webcompy.signal import Computed, SignalBase
-from webcompy.signal._graph import consumer_destroy
 from webcompy.template._ast import (
     AttrSpec,
     ForNode,
@@ -354,7 +353,7 @@ def _bind_dict_reactive(
 ) -> ElementChildren:
     def dict_cb(_value: Any, key: Any) -> ElementChildren:
         if not body:
-            return None
+            return FragmentElement()
         length = Computed(lambda: len(signal.value))
 
         def pos() -> int:
@@ -392,10 +391,8 @@ def _bind_dict_reactive(
             reactive_value,
         ]
         if result is None:
-            for member in members:
-                consumer_destroy(member)
-            return None
-        if isinstance(result, (str, SignalBase)):
+            result = FragmentElement()
+        elif isinstance(result, (str, SignalBase)):
             result = TextElement(result)
         for idx, member in enumerate(members):
             result.__set_signal_member__(f"_loop_member_{idx}", member)

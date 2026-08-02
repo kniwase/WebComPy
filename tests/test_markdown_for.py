@@ -15,8 +15,8 @@ from webcompy.template._cache import clear_cache
 from webcompy.template._markdown_default import DefaultMarkdownParser
 from webcompy.template._markdown_for import (
     MarkdownForElement,
+    _apply_renames,
     _is_list_body,
-    _rename_in_expressions,
     _tokenize_source,
 )
 
@@ -303,26 +303,49 @@ class TestMarkdownNestedLoopMetadata:
 
 class TestRenaming:
     def test_rename_in_expressions_renames_var_in_hole(self):
-        result = _rename_in_expressions("{{ item.name }}", "item", "__wmdf_0_item")
+        result = _apply_renames("{{ item.name }}", {"item": "__wmdf_0_item"})
         assert result == "{{ __wmdf_0_item.name }}"
 
     def test_rename_in_expressions_renames_var_in_directive(self):
-        result = _rename_in_expressions("{% if item.active %}- x{% endif %}", "item", "__wmdf_0_item")
+        result = _apply_renames("{% if item.active %}- x{% endif %}", {"item": "__wmdf_0_item"})
         assert result == "{% if __wmdf_0_item.active %}- x{% endif %}"
 
     def test_rename_in_expressions_preserves_prose(self):
-        result = _rename_in_expressions(
+        result = _apply_renames(
             "The item is {{ item.name }} and the items are separate.",
-            "item",
-            "__wmdf_0_item",
+            {"item": "__wmdf_0_item"},
         )
         assert "items are separate" in result
         assert "{{ item.name }}" not in result
         assert "{{ __wmdf_0_item.name }}" in result
 
     def test_rename_in_expressions_word_boundary_no_partial_match(self):
-        result = _rename_in_expressions("{{ items }}", "item", "__wmdf_0_item")
+        result = _apply_renames("{{ items }}", {"item": "__wmdf_0_item"})
         assert result == "{{ items }}"
+
+    def test_rename_preserves_quoted_string_literal(self):
+        result = _apply_renames('{{ "loop" }}', {"loop": "__wmdf_0_loop"})
+        assert "__wmdf" not in result
+        assert "loop" in result
+
+    def test_rename_preserves_subscript_string_literal(self):
+        result = _apply_renames('{{ x["loop"] }}', {"loop": "__wmdf_0_loop"})
+        assert "__wmdf" not in result
+
+    def test_rename_preserves_attribute_access_named_like_loop_var(self):
+        result = _apply_renames("{{ obj.loop }}", {"loop": "__wmdf_0_loop"})
+        assert "__wmdf" not in result
+        assert "obj.loop" in result
+
+    def test_rename_preserves_raw_block_content(self):
+        result = _apply_renames("{% raw %}{{ loop }}{% endraw %}", {"loop": "__wmdf_0_loop"})
+        assert "__wmdf" not in result
+        assert "{{ loop }}" in result
+
+    def test_rename_renames_free_variable_outside_raw_block(self):
+        result = _apply_renames("{{ loop.index }}{% raw %}{{ loop }}{% endraw %}", {"loop": "__wmdf_0_loop"})
+        assert "{{ __wmdf_0_loop.index }}" in result
+        assert "{% raw %}{{ loop }}{% endraw %}" in result
 
     def test_loop_variable_renamed_per_iteration(self):
         with _markdown_di_scope():

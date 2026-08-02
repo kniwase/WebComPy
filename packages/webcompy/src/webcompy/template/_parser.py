@@ -20,7 +20,7 @@ from webcompy.template._ast import (
     TemplateNode,
     TemplateText,
 )
-from webcompy.template._holes import Hole, LiteralText, protect_lbrace, split_text
+from webcompy.template._holes import LiteralText, protect_lbrace, split_text
 
 _RAW_BLOCK_RE = re.compile(r"\{%\s*raw\s*%\}(.*?)\{%\s*endraw\s*%\}", re.DOTALL)
 _RAW_OPEN_RE = re.compile(r"\{%\s*raw\s*%\}")
@@ -140,38 +140,32 @@ def _make_directive(match: re.Match) -> DirectiveToken:
     return EndForDirective()
 
 
+def _emit_text_segment(text: str) -> list[TemplateText]:
+    sub_parts = split_text(text)
+    if not sub_parts:
+        return []
+    return [TemplateText(parts=sub_parts)]
+
+
 def _scan_text_for_directives(text_node: TemplateText) -> list[TemplateText | DirectiveToken]:
+    full_text = "".join(
+        part.text if isinstance(part, LiteralText) else "{{ " + part.expr_source + " }}" for part in text_node.parts
+    )
     pieces: list[TemplateText | DirectiveToken] = []
-    buffer: list[LiteralText | Hole] = []
-
-    def flush_text() -> None:
-        if not buffer:
-            return
-        pieces.append(TemplateText(parts=list(buffer)))
-        buffer.clear()
-
-    for part in text_node.parts:
-        if isinstance(part, Hole):
-            buffer.append(part)
-            continue
-        text = part.text
-        pos = 0
-        for match in _GENERIC_DIRECTIVE_RE.finditer(text):
-            name = match.group("name")
-            if name in _SUPPORTED_DIRECTIVES:
-                if match.start() > pos:
-                    buffer.append(LiteralText(text[pos : match.start()]))
-                flush_text()
-                pieces.append(_make_directive(match))
-                pos = match.end()
-            elif name in _KNOWN_UNSUPPORTED_DIRECTIVES:
-                raise WebComPyException(f"{{% {name} %}} is not supported in WebComPy templates")
-            else:
-                raise WebComPyException(f"Unknown template directive: {{% {name} %}}")
-        if pos < len(text):
-            buffer.append(LiteralText(text[pos:]))
-
-    flush_text()
+    pos = 0
+    for match in _GENERIC_DIRECTIVE_RE.finditer(full_text):
+        name = match.group("name")
+        if match.start() > pos:
+            pieces.extend(_emit_text_segment(full_text[pos : match.start()]))
+        if name in _SUPPORTED_DIRECTIVES:
+            pieces.append(_make_directive(match))
+        elif name in _KNOWN_UNSUPPORTED_DIRECTIVES:
+            raise WebComPyException(f"{{% {name} %}} is not supported in WebComPy templates")
+        else:
+            raise WebComPyException(f"Unknown template directive: {{% {name} %}}")
+        pos = match.end()
+    if pos < len(full_text):
+        pieces.extend(_emit_text_segment(full_text[pos:]))
     return pieces
 
 

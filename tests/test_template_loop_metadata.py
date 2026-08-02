@@ -341,3 +341,52 @@ class TestReactiveDictComputedLifecycle:
             assert before - after == 8
             d["c"] = 3
             assert self._count_consumers(d) - after == 8
+
+
+class TestReactiveDictEmptyBody:
+    def test_empty_body_dict_loop_renders_without_error(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def EmptyBodyPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": 1, "b": 2})
+            captured["d"] = d
+            return render_template("<ul>{% for v in d %}{% endfor %}</ul>", {"d": d})
+
+        with TestRenderer.render(EmptyBodyPage) as result:
+            assert result.query_selector_all("li") == []
+            captured["d"]["c"] = 3
+            assert result.query_selector_all("li") == []
+
+    def test_conditionally_empty_body_dict_loop_renders(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def CondEmptyPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": 1, "b": 2})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}{% if show %}<li>{{ v }}</li>{% endif %}{% endfor %}</ul>",
+                {"d": d, "show": False},
+            )
+
+        with TestRenderer.render(CondEmptyPage) as result:
+            assert result.query_selector_all("li") == []
+
+    def test_empty_body_two_var_dict_loop_renders(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def TwoVarEmptyPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": 1, "b": 2})
+            captured["d"] = d
+            return render_template("<ul>{% for k, v in d %}{% endfor %}</ul>", {"d": d})
+
+        with TestRenderer.render(TwoVarEmptyPage) as result:
+            assert result.query_selector_all("li") == []

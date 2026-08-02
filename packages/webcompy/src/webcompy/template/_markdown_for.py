@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import re
 import textwrap
 from collections.abc import Mapping
@@ -39,34 +40,77 @@ from webcompy.template._parser import (
 _EXPRESSION_SPAN_RE = re.compile(r"\{\{.*?\}\}|\{%.*?%\}", re.DOTALL)
 _FENCE_LINE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 _CODE_SPAN_RE = re.compile(r"`[^`\n]+`")
+_SPAN_DELIM_RE = re.compile(r"^(\{\{|\{%)(.*)(\}\}|%\})$", re.DOTALL)
+_STRING_LITERAL_RE = re.compile(r"'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"")
+_RAW_BLOCK_RE = re.compile(r"\{%\s*raw\s*%\}(.*?)\{%\s*endraw\s*%\}", re.DOTALL)
+_ATTR_VALUE_RE = re.compile(r"""[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*"[^"]*"|[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*'[^']*'""")
 
 
-def _rename_in_expressions(text: str, var_name: str, replacement: str) -> str:
-    def _replace_in_span(m: re.Match) -> str:
-        span = m.group(0)
-        return re.sub(rf"\b{re.escape(var_name)}\b", replacement, span)
+def _rename_expression_regex(expr: str, renames: dict[str, str]) -> str:
+    protected: dict[str, str] = {}
 
-    return _EXPRESSION_SPAN_RE.sub(_replace_in_span, text)
+    def _stash(m: re.Match[str]) -> str:
+        key = f"\x00wc-lit-{len(protected)}\x00"
+        protected[key] = m.group(0)
+        return key
+
+    text = _STRING_LITERAL_RE.sub(_stash, expr)
+    for name, replacement in renames.items():
+        text = re.sub(rf"\b{re.escape(name)}\b", replacement, text)
+    for key, original in protected.items():
+        text = text.replace(key, original)
+    return text
 
 
 def _rename_expression(expr: str, renames: dict[str, str]) -> str:
-    for name, replacement in renames.items():
-        expr = re.sub(rf"\b{re.escape(name)}\b", replacement, expr)
-    return expr
+    if not renames:
+        return expr
+    delim_match = _SPAN_DELIM_RE.match(expr.strip())
+    prefix = suffix = ""
+    inner = expr
+    if delim_match:
+        prefix = delim_match.group(1)
+        suffix = delim_match.group(3)
+        inner = delim_match.group(2)
+    stripped = inner.strip()
+    if "\n" in stripped:
+        return _rename_expression_regex(expr, renames)
+    try:
+        tree = ast.parse(stripped, mode="eval")
+    except SyntaxError:
+        return _rename_expression_regex(expr, renames)
+    targets: list[tuple[int, int, str]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id in renames and node.end_col_offset is not None:
+            targets.append((node.col_offset, node.end_col_offset, renames[node.id]))
+    if not targets:
+        return expr
+    offset = len(inner) - len(inner.lstrip())
+    chars = list(inner)
+    for start, end, repl in sorted(targets, key=lambda t: t[0], reverse=True):
+        chars[offset + start : offset + end] = list(repl)
+    return f"{prefix}{''.join(chars)}{suffix}"
 
 
 def _apply_renames(text: str, renames: dict[str, str]) -> str:
     if not renames:
         return text
+    raw_blocks: dict[str, str] = {}
 
-    def _replace_in_span(m: re.Match) -> str:
+    def _stash_raw(m: re.Match[str]) -> str:
+        key = f"\x00wc-raw-{len(raw_blocks)}\x00"
+        raw_blocks[key] = m.group(0)
+        return key
+
+    protected_text = _RAW_BLOCK_RE.sub(_stash_raw, text)
+
+    def _replace_in_span(m: re.Match[str]) -> str:
         return _rename_expression(m.group(0), renames)
 
-    return _EXPRESSION_SPAN_RE.sub(_replace_in_span, text)
-
-
-_RAW_BLOCK_RE = re.compile(r"\{%\s*raw\s*%\}(.*?)\{%\s*endraw\s*%\}", re.DOTALL)
-_ATTR_VALUE_RE = re.compile(r"""[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*"[^"]*"|[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*'[^']*'""")
+    protected_text = _EXPRESSION_SPAN_RE.sub(_replace_in_span, protected_text)
+    for key, original in raw_blocks.items():
+        protected_text = protected_text.replace(key, original)
+    return protected_text
 
 
 def _validate_body_directives(text: str) -> None:

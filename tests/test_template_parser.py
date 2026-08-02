@@ -512,6 +512,28 @@ class TestDirectiveRejection:
             _parse("<p>{% endfo %}</p>")
         assert "{% endfo %}" in str(exc_info.value)
 
+    @pytest.mark.parametrize(
+        "source",
+        [
+            '{% include "{{ path }}" %}',
+            "{% endfo {{ value }} %}",
+            '{% extends "{{ base }}" %}',
+        ],
+    )
+    def test_directive_split_by_hole_still_rejected(self, source):
+        with pytest.raises(WebComPyException):
+            _parse(f"<p>{source}</p>")
+
+    def test_unsupported_directive_split_by_hole_names_directive(self):
+        with pytest.raises(WebComPyException) as exc_info:
+            _parse('<p>{% include "{{ path }}" %}</p>')
+        assert "{% include %}" in str(exc_info.value)
+
+    def test_unknown_directive_split_by_hole_names_directive(self):
+        with pytest.raises(WebComPyException) as exc_info:
+            _parse("<p>{% endfo {{ value }} %}</p>")
+        assert "{% endfo %}" in str(exc_info.value)
+
     def test_raw_block_literal_path_unaffected(self):
         roots = _parse("<p>{% raw %}{% anything %}{% endraw %}</p>")
         assert len(roots) == 1
