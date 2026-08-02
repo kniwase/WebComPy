@@ -276,19 +276,13 @@ class TestRouterHooks:
     def test_on_route_error_suppress(self):
         class BadRouter(Router):
             def __init__(self):
-                from collections.abc import Callable
-                from re import Match
-
                 self._history = type("Hist", (), {"_value": "/", "value": "/", "state": None})()
-                matcher: Callable[[str], Match[str] | None] = lambda _: None
-                self.__routes__ = [
-                    ("/test", matcher, [], type("DummyGen", (), {"_instance_id": ""})(), {}),
-                ]
+                self.__routes__ = []
                 self.before_route_change = []
                 self.after_route_change = []
                 self.on_route_error = []
 
-            def _get_elements_generator(self, args):
+            def _compute_current_match(self):
                 raise ValueError("test error")
 
         router = BadRouter()
@@ -300,25 +294,20 @@ class TestRouterHooks:
             return True
 
         router.on_route_error.append(handler)
-        _ = router.__cases__
+        result = router.current_match.value
         assert suppressed
+        assert result is None
 
     def test_on_route_error_propagate(self):
         class BadRouter(Router):
             def __init__(self):
-                from collections.abc import Callable
-                from re import Match
-
                 self._history = type("Hist", (), {"_value": "/", "value": "/", "state": None})()
-                matcher: Callable[[str], Match[str] | None] = lambda _: None
-                self.__routes__ = [
-                    ("/test", matcher, [], type("DummyGen", (), {"_instance_id": ""})(), {}),
-                ]
+                self.__routes__ = []
                 self.before_route_change = []
                 self.after_route_change = []
                 self.on_route_error = []
 
-            def _get_elements_generator(self, args):
+            def _compute_current_match(self):
                 raise ValueError("test error")
 
         router = BadRouter()
@@ -333,5 +322,5 @@ class TestRouterHooks:
 
         router.on_route_error.append(handler)
         with pytest.raises(ValueError):
-            _ = router.__cases__
+            _ = router.current_match.value
         assert called

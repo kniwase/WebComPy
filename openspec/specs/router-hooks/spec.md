@@ -88,3 +88,13 @@ The `WebComPyApp` SHALL expose the current `Router` instance as `app.router` so 
 - **WHEN** an auth plugin's `on_app_init(app)` calls `app.router.before_route_change.append(auth_guard)`
 - **THEN** the guard SHALL be active for all subsequent navigations
 - **AND** the guard SHALL persist for the application's lifetime
+
+### Requirement: Request-scoped router clones shall inherit hook registrations
+
+`Router._clone_for_request()` SHALL copy the `before_route_change`, `after_route_change`, and `on_route_error` registrations from the source router into the clone as independent lists. Every `RenderContext` injects such a clone into the component tree, so hooks registered on `app.router` (e.g., by plugins during `on_app_init`) SHALL be invoked for navigations through the injected per-request router.
+
+#### Scenario: Guard registered on app.router fires on injected router navigation
+- **WHEN** a plugin appends `guard(from_path, to_path)` to `app.router.before_route_change` before any `RenderContext` is created
+- **AND** a `RenderContext` is created and `__set_path__` is called on its injected router
+- **THEN** `guard` SHALL be called with the current and target paths
+- **AND** appending callbacks to the clone afterwards SHALL NOT mutate the source router's hook lists (and vice versa)
