@@ -340,6 +340,11 @@ class TestRenaming:
         assert "__wmdf" not in result
         assert "loop" in result
 
+    def test_rename_preserves_multi_backtick_code_span(self):
+        text = "- `` `item` {{ item }} ``\n"
+        result = _apply_renames(text, {"item": "__wmdf_0_item"})
+        assert result == text
+
     def test_rename_preserves_subscript_string_literal(self):
         result = _apply_renames('{{ x["loop"] }}', {"loop": "__wmdf_0_loop"})
         assert "__wmdf" not in result
@@ -543,6 +548,18 @@ class TestProtectedSpans:
         tokens = _tokenize_source("~~~\n```\n{% for x in xs %}\n~~~")
         assert all(t.kind == "text" for t in tokens)
 
+    def test_shorter_backtick_fence_does_not_close(self):
+        tokens = _tokenize_source("````\n```\n{% endfo %}\n````")
+        assert all(t.kind == "text" for t in tokens)
+
+    def test_shorter_tilde_fence_does_not_close(self):
+        tokens = _tokenize_source("~~~~\n~~~\n{% endfo %}\n~~~~")
+        assert all(t.kind == "text" for t in tokens)
+
+    def test_fence_closing_line_with_trailing_content_does_not_close(self):
+        tokens = _tokenize_source("```\n```info\n{% endfo %}\n```")
+        assert all(t.kind == "text" for t in tokens)
+
 
 class TestEscapeHatch:
     def test_html_block_for_uses_repeat_path(self):
@@ -671,6 +688,27 @@ class TestMarkdownDirectiveValidation:
         from webcompy.template._markdown_for import _validate_directives
 
         _validate_directives("- `{% endfo %}`\n")
+
+    def test_directive_after_four_backtick_fence_with_shorter_line_not_rejected(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        _validate_directives("````\n```\n{% endfo %}\n````\n")
+
+    def test_directive_after_fence_closing_line_with_trailing_content_not_rejected(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        _validate_directives("```\n```info\n{% endfo %}\n```\n")
+
+    def test_directive_in_multi_backtick_code_span_not_rejected(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        _validate_directives("- `` `x` {% endfo %} ``\n")
+
+    def test_directive_after_properly_closed_fence_rejected(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        with pytest.raises(WebComPyException, match="Unknown template directive"):
+            _validate_directives("```\ncode\n```\n{% endfo %}\n")
 
     def test_directive_like_text_in_attribute_value_not_rejected(self):
         from webcompy.template._markdown_for import _validate_directives
