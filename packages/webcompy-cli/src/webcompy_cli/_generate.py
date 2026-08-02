@@ -2,10 +2,12 @@ import os
 import pathlib
 import shutil
 import sys
+from typing import Any, cast
 
 import httpx
 
 from webcompy.app._app import WebComPyApp
+from webcompy.router import LazyComponentGenerator
 from webcompy_cli._argparser import get_params
 from webcompy_cli._server import create_asgi_app
 from webcompy_cli._static_files import get_static_files
@@ -33,7 +35,7 @@ async def generate_static_site(app: WebComPyApp | None = None):
 
             app_module = _types.ModuleType("_webcompy_app")
             app_module.__file__ = str(_Path.cwd())
-            app_module.app = app
+            cast("Any", app_module).app = app
         build_config = WebComPyBuildConfig(app_module)
 
     serve_all_deps = args.get("serve_all_deps")
@@ -131,8 +133,9 @@ async def generate_static_site(app: WebComPyApp | None = None):
 
     if app.router_mode == "history" and app.routes:
         for _, _, _, _, page in app.routes:
-            if hasattr(page, "_preload"):
-                page._preload()
+            component = page["component"]
+            if isinstance(component, LazyComponentGenerator):
+                component._preload()
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=serving.asgi),

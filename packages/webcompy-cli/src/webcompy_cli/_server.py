@@ -5,7 +5,7 @@ from functools import partial
 from operator import truth
 from re import compile as re_compile
 from re import escape as re_escape
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import aiofiles
 import uvicorn
@@ -301,7 +301,7 @@ def run_server(app: WebComPyApp | None = None):
 
             app_module = _types.ModuleType("_webcompy_app")
             app_module.__file__ = str(_Path.cwd())
-            app_module.app = app
+            cast("Any", app_module).app = app
         build_config = WebComPyBuildConfig(app_module)
 
     serve_all_deps = args.get("serve_all_deps")

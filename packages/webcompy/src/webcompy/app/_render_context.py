@@ -26,9 +26,9 @@ if TYPE_CHECKING:
 
 
 class RenderContext(ABC):
-    _root: AppDocumentRoot
-    _di_scope: DIScope
-    _component_store: ComponentStore
+    _root: AppDocumentRoot | None
+    _di_scope: DIScope | None
+    _component_store: ComponentStore | None
     _router: Router | None
 
     def __init__(
@@ -132,42 +132,51 @@ class RenderContext(ABC):
     @property
     def routes(self):
         self._check_disposed()
+        assert self._root is not None
         return self._root.routes
 
     @property
     def router_mode(self):
         self._check_disposed()
+        assert self._root is not None
         return self._root.router_mode
 
     def set_path(self, path: str):
         self._check_disposed()
+        assert self._root is not None
         return self._root.set_path(path)
 
     @property
     def head(self):
         self._check_disposed()
+        assert self._root is not None
         return self._root.head
 
     @property
     def scoped_styles(self):
         self._check_disposed()
+        assert self._root is not None
         return self._root.scoped_styles
 
     @property
     def scripts(self):
         self._check_disposed()
+        assert self._root is not None
         return self._root.scripts
 
     def set_title(self, title: str) -> None:
         self._check_disposed()
+        assert self._root is not None
         return self._root.set_title(title)
 
     def set_meta(self, key: str, attributes: dict[str, str]) -> None:
         self._check_disposed()
+        assert self._root is not None
         return self._root.set_meta(key, attributes)
 
     def append_link(self, attributes: dict[str, str]) -> None:
         self._check_disposed()
+        assert self._root is not None
         return self._root.append_link(attributes)
 
     def append_script(
@@ -177,31 +186,38 @@ class RenderContext(ABC):
         in_head: bool = False,
     ) -> None:
         self._check_disposed()
+        assert self._root is not None
         return self._root.append_script(attributes, script, in_head)
 
     def append_style(self, content: Any) -> None:
         self._check_disposed()
+        assert self._root is not None
         return self._root.append_style(content)
 
     def set_head(self, head: Any) -> None:
         self._check_disposed()
+        assert self._root is not None
         return self._root.set_head(head)
 
     def update_head(self, head: Any) -> None:
         self._check_disposed()
+        assert self._root is not None
         return self._root.update_head(head)
 
     def set_html_attr(self, key: str, value: Any) -> None:
         self._check_disposed()
+        assert self._root is not None
         return self._root.set_html_attr(key, value)
 
     def remove_html_attr(self, key: str) -> None:
         self._check_disposed()
+        assert self._root is not None
         return self._root.remove_html_attr(key)
 
     @property
     def html_attrs(self):
         self._check_disposed()
+        assert self._root is not None
         return self._root.html_attrs
 
     def dispose(self) -> None:
@@ -212,12 +228,16 @@ class RenderContext(ABC):
         self._app._render_context_cv.reset(self._render_context_cv_token)
         _set_app_di_scope(None)
         _set_app_instance(None)
-        if self._di_scope_token is not None and self._di_scope._token is None:
+        di_scope = self._di_scope
+        root = self._root
+        assert di_scope is not None
+        assert root is not None
+        if self._di_scope_token is not None and di_scope._token is None:
             _active_di_scope.reset(self._di_scope_token)
         self._di_scope_token = None
-        self._di_scope.__exit__(None, None, None)
-        self._di_scope.dispose()
-        self._root._head_element._cleanup_consumers()
+        di_scope.__exit__(None, None, None)
+        di_scope.dispose()
+        root._head_element._cleanup_consumers()
         self._root = None
         self._di_scope = None
         self._component_store = None
@@ -242,10 +262,12 @@ class RenderContext(ABC):
     @property
     def di_scope(self) -> DIScope:
         self._check_disposed()
+        assert self._di_scope is not None
         return self._di_scope
 
     def provide(self, key: object, value: Any) -> None:
         self._check_disposed()
+        assert self._di_scope is not None
         self._di_scope.provide(key, value)
 
 
@@ -274,6 +296,7 @@ class BrowserRenderContext(RenderContext):
         )
         from webcompy.template._markdown_default import DefaultMarkdownParser
 
+        assert self._di_scope is not None
         router_mode = self._router.__mode__ if self._router else "history"
         self._di_scope.provide(ASYNC_SCHEDULER_PORT_KEY, BrowserAsyncSchedulerPort())
         self._di_scope.provide(COOKIE_PORT_KEY, BrowserCookiePort())
@@ -297,6 +320,7 @@ class BrowserRenderContext(RenderContext):
         from webcompy.hydration._payload import deserialize_payload
         from webcompy.ports._keys import DOM_PORT_KEY, FETCH_PORT_KEY
 
+        assert self._di_scope is not None
         dom_port = self._di_scope.inject(DOM_PORT_KEY, default=None)
         if dom_port is None:
             return

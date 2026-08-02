@@ -7,7 +7,12 @@ from typing import Literal
 
 from webcompy_cli.config._server_config import LockfileSyncConfig, WebComPyServerConfig
 
-_UNSET = object()
+
+class _Sentinel:
+    pass
+
+
+_UNSET: _Sentinel = _Sentinel()
 
 
 @dataclass
@@ -33,10 +38,10 @@ class WebComPyBuildConfig:
     def __post_init__(self):
         self.app_package_path = Path(self.app_module.__file__).parent  # type: ignore[arg-type]
         self.app = getattr(self.app_module, self.app_var)
-        self._explicit_wasm_serving: Literal["cdn", "local"] | object = (
+        self._explicit_wasm_serving: Literal["cdn", "local"] | _Sentinel = (
             self.wasm_serving if self.wasm_serving is not None else _UNSET
         )
-        self._explicit_runtime_serving: Literal["cdn", "local"] | object = (
+        self._explicit_runtime_serving: Literal["cdn", "local"] | _Sentinel = (
             self.runtime_serving if self.runtime_serving is not None else _UNSET
         )
         self.resolve_standalone()
@@ -48,10 +53,16 @@ class WebComPyBuildConfig:
             if self.serve_all_deps is False:
                 print("Warning: standalone=True forces serve_all_deps=True", file=sys.stderr, flush=True)
             self.serve_all_deps = True
-            self.wasm_serving = "local" if self._explicit_wasm_serving is _UNSET else self._explicit_wasm_serving
+            self.wasm_serving = (
+                "local" if isinstance(self._explicit_wasm_serving, _Sentinel) else self._explicit_wasm_serving
+            )
             self.runtime_serving = (
-                "local" if self._explicit_runtime_serving is _UNSET else self._explicit_runtime_serving
+                "local" if isinstance(self._explicit_runtime_serving, _Sentinel) else self._explicit_runtime_serving
             )
         else:
-            self.wasm_serving = "cdn" if self._explicit_wasm_serving is _UNSET else self._explicit_wasm_serving
-            self.runtime_serving = "cdn" if self._explicit_runtime_serving is _UNSET else self._explicit_runtime_serving
+            self.wasm_serving = (
+                "cdn" if isinstance(self._explicit_wasm_serving, _Sentinel) else self._explicit_wasm_serving
+            )
+            self.runtime_serving = (
+                "cdn" if isinstance(self._explicit_runtime_serving, _Sentinel) else self._explicit_runtime_serving
+            )

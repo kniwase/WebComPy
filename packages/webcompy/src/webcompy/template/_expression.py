@@ -185,9 +185,7 @@ def _unwrap(v: Any, state: _EvalState | None) -> Any:
 
 
 def _eval_node(node: ast.AST, scope: dict[str, Any], state: _EvalState | None) -> Any:
-    node_type = type(node)
-
-    if node_type is ast.Name:
+    if isinstance(node, ast.Name):
         if node.id in scope:
             value = scope[node.id]
             return _unwrap(value, state)
@@ -195,10 +193,10 @@ def _eval_node(node: ast.AST, scope: dict[str, Any], state: _EvalState | None) -
         available = ", ".join(sorted(scope.keys()))
         raise KeyError(f"Template variable '{node.id}' not found in context (available: {available})")
 
-    if node_type is ast.Constant:
+    if isinstance(node, ast.Constant):
         return node.value
 
-    if node_type is ast.Attribute:
+    if isinstance(node, ast.Attribute):
         obj = _eval_node(node.value, scope, state)
         obj = _unwrap(obj, state)
         name = node.attr
@@ -206,33 +204,33 @@ def _eval_node(node: ast.AST, scope: dict[str, Any], state: _EvalState | None) -
             return _unwrap(obj[name], state)
         return _unwrap(getattr(obj, name), state)
 
-    if node_type is ast.Subscript:
+    if isinstance(node, ast.Subscript):
         obj = _eval_node(node.value, scope, state)
         obj = _unwrap(obj, state)
         key = _eval_node(node.slice, scope, state)
         return _unwrap(obj[key], state)
 
-    if node_type is ast.Slice:
+    if isinstance(node, ast.Slice):
         lower = _eval_node(node.lower, scope, state) if node.lower else None
         upper = _eval_node(node.upper, scope, state) if node.upper else None
         step = _eval_node(node.step, scope, state) if node.step else None
         return slice(lower, upper, step)
 
-    if node_type is ast.List:
+    if isinstance(node, ast.List):
         return [_eval_node(el, scope, state) for el in node.elts]
 
-    if node_type is ast.Tuple:
+    if isinstance(node, ast.Tuple):
         return tuple(_eval_node(el, scope, state) for el in node.elts)
 
-    if node_type is ast.Set:
+    if isinstance(node, ast.Set):
         return {_eval_node(el, scope, state) for el in node.elts}
 
-    if node_type is ast.Dict:
+    if isinstance(node, ast.Dict):
         keys = [_eval_node(k, scope, state) if k else None for k in node.keys]
         values = [_eval_node(v, scope, state) for v in node.values]
         return dict(zip(keys, values, strict=True))
 
-    if node_type is ast.UnaryOp:
+    if isinstance(node, ast.UnaryOp):
         operand = _eval_node(node.operand, scope, state)
         op = type(node.op)
         if op is ast.Not:
@@ -245,7 +243,7 @@ def _eval_node(node: ast.AST, scope: dict[str, Any], state: _EvalState | None) -
             return ~(_unwrap(operand, state))
         raise WebComPyException(f"Unsupported unary operator: {type(node.op).__name__}")
 
-    if node_type is ast.BinOp:
+    if isinstance(node, ast.BinOp):
         left = _eval_node(node.left, scope, state)
         op = type(node.op)
 
@@ -274,7 +272,7 @@ def _eval_node(node: ast.AST, scope: dict[str, Any], state: _EvalState | None) -
             raise WebComPyException(f"Unsupported binary operator: {type(node.op).__name__}")
         return fn(left_u, right_u)
 
-    if node_type is ast.BoolOp:
+    if isinstance(node, ast.BoolOp):
         last = _eval_node(node.values[0], scope, state)
         last_u = _unwrap(last, state)
         if type(node.op) is ast.Or and last_u:
@@ -290,7 +288,7 @@ def _eval_node(node: ast.AST, scope: dict[str, Any], state: _EvalState | None) -
                 return last_u
         return last_u
 
-    if node_type is ast.Compare:
+    if isinstance(node, ast.Compare):
         left = _unwrap(_eval_node(node.left, scope, state), state)
         op = type(node.ops[0])
         right = _unwrap(_eval_node(node.comparators[0], scope, state), state)
@@ -304,13 +302,13 @@ def _eval_node(node: ast.AST, scope: dict[str, Any], state: _EvalState | None) -
                 return False
         return result
 
-    if node_type is ast.IfExp:
+    if isinstance(node, ast.IfExp):
         cond = _unwrap(_eval_node(node.test, scope, state), state)
         if cond:
             return _eval_node(node.body, scope, state)
         return _eval_node(node.orelse, scope, state)
 
-    if node_type is ast.Call:
+    if isinstance(node, ast.Call):
         func = _eval_node(node.func, scope, state)
         func = _unwrap(func, state)
         args = [_unwrap(_eval_node(a, scope, state), state) for a in node.args]

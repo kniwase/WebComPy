@@ -97,7 +97,7 @@ class Component(ElementBase):
         property = self.__setup(component_def, props, slots)
         self._property = property
         if self._pending_async_template is None:
-            self.__init_component(property)
+            self._init_component(property)
 
     def __setup(
         self,
@@ -183,7 +183,7 @@ class Component(ElementBase):
             "on_before_destroy": on_before_destroy_with_scope_cleanup,
         }
 
-    def __init_component(self, property: ComponentProperty):
+    def _init_component(self, property: ComponentProperty):
         node = property["template"]
         if not isinstance(node, Element):
             raise WebComPyException("Root Node of Component must be instance of 'Element'")
@@ -254,7 +254,7 @@ class Component(ElementBase):
                 property = self._property
                 property["template"] = template
                 self._refresh_async_setup_results()
-                self.__init_component(property)
+                self._init_component(property)
         if not self._async_setup_extracted and self._render_state is not None:
             self._refresh_async_setup_results()
         on_before = self._property["on_before_rendering"]
