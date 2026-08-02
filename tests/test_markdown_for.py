@@ -854,3 +854,41 @@ class TestMarkdownDirectiveValidation:
     def test_unclosed_for_in_list_body_raises(self):
         with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unclosed"):
             render_markdown("{% for item in items %}\n- {{ item }}", {"items": ["a"]})
+
+    def test_unclosed_raw_in_list_body_raises_with_empty_iterable(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unclosed"):
+            render_markdown("{% for item in items %}\n- {% raw %}{{ item }}\n{% endfor %}", {"items": []})
+
+    def test_unclosed_raw_in_list_body_raises_with_nonempty_iterable(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unclosed"):
+            render_markdown("{% for item in items %}\n- {% raw %}{{ item }}\n{% endfor %}", {"items": ["a"]})
+
+    def test_unclosed_raw_at_top_level_raises(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unclosed"):
+            render_markdown("- {% raw %}{{ x }}\n", {"x": "y"})
+
+    def test_stray_endraw_in_markdown_raises(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="without matching"):
+            render_markdown("- {% endraw %}\n", {})
+
+    def test_balanced_raw_block_passes_validation(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        _validate_directives("- {% raw %}{{ x }}{% endraw %}\n")
+
+    def test_unclosed_raw_raises_in_validate_directives(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        with pytest.raises(WebComPyException, match="Unclosed"):
+            _validate_directives("- {% raw %}{{ x }}\n")
+
+    def test_stray_endraw_raises_in_validate_directives(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        with pytest.raises(WebComPyException, match="without matching"):
+            _validate_directives("- {% endraw %}\n")
+
+    def test_sequential_raw_blocks_pass_validation(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        _validate_directives("{% raw %}a{% endraw %}{% raw %}b{% endraw %}")

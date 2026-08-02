@@ -448,6 +448,74 @@ class TestReactiveDictValueReactivity:
             texts = [li.textContent for li in result.query_selector_all("li")]
         assert texts == ["Alice", "Bob"]
 
+    def test_one_var_element_value_rendered_as_child(self):
+        @define_component
+        def DictValueElementPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(
+                lambda: {
+                    "a": Element("span", children=[TextElement("Alice")]),
+                    "b": Element("span", children=[TextElement("Bob")]),
+                }
+            )
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(DictValueElementPage) as result:
+            spans = result.query_selector_all("span")
+            assert [s.textContent for s in spans] == ["Alice", "Bob"]
+            lis = result.query_selector_all("li")
+            assert [li.textContent for li in lis] == ["Alice", "Bob"]
+
+    def test_two_var_element_value_rendered_as_child(self):
+        @define_component
+        def TwoVarDictValueElementPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(
+                lambda: {
+                    "a": Element("span", children=[TextElement("Alice")]),
+                    "b": Element("b", children=[TextElement("Bob")]),
+                }
+            )
+            return render_template(
+                "<ul>{% for k, v in d %}<li>{{ k }}:{{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(TwoVarDictValueElementPage) as result:
+            spans = result.query_selector_all("span")
+            bolds = result.query_selector_all("b")
+            assert [s.textContent for s in spans] == ["Alice"]
+            assert [b.textContent for b in bolds] == ["Bob"]
+            lis = result.query_selector_all("li")
+            assert [li.textContent for li in lis] == ["a:Alice", "b:Bob"]
+
+    def test_one_var_signal_wrapping_element_value_rendered_as_child(self):
+        from webcompy.signal import Signal
+
+        @define_component
+        def DictValueSignalElementPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(
+                lambda: {
+                    "a": Signal(Element("span", children=[TextElement("Alice")])),
+                    "b": Signal(Element("span", children=[TextElement("Bob")])),
+                }
+            )
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(DictValueSignalElementPage) as result:
+            spans = result.query_selector_all("span")
+            assert [s.textContent for s in spans] == ["Alice", "Bob"]
+
 
 class TestReactiveDictComputedLifecycle:
     def _count_consumers(self, signal: Any) -> int:

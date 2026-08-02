@@ -562,6 +562,27 @@ class TestDirectiveRejection:
         roots = _parse("{% for x in items[ %}<p>{{ x }}</p>{% endfor %}")
         assert isinstance(roots[0], ForNode)
 
+    def test_if_with_percent_in_condition_parses(self):
+        roots = _parse("<p>{% if n % 2 == 0 %}even{% endif %}</p>")
+        node = roots[0].children[0]
+        assert isinstance(node, IfNode)
+        assert node.branches[0][0] == "n % 2 == 0"
+
+    def test_if_with_percent_in_quoted_string_parses(self):
+        roots = _parse('<p>{% if "%" in s %}has{% endif %}</p>')
+        node = roots[0].children[0]
+        assert isinstance(node, IfNode)
+        assert '"%"' in node.branches[0][0]
+
+    def test_directive_with_closing_percent_in_quoted_string_parses(self):
+        roots = _parse('<p>{% if x == "%}" %}y{% endif %}</p>')
+        node = roots[0].children[0]
+        assert isinstance(node, IfNode)
+
+    def test_unknown_directive_with_percent_in_args_rejected(self):
+        with pytest.raises(WebComPyException, match="Unknown template directive"):
+            _parse("<p>{% endfo a % b %}</p>")
+
 
 class TestMalformedHtmlErrors:
     def test_mismatched_closing_tag_raises(self):
