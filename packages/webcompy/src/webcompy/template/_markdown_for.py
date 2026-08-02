@@ -42,7 +42,13 @@ _CLOSING_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})\s*$")
 _CODE_SPAN_RE = re.compile(r"(`+)([^`\n]|`(?!\1))*?\1")
 _STRING_LITERAL_RE = re.compile(r"'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"")
 _RAW_BLOCK_RE = re.compile(r"\{%\s*raw\s*%\}(.*?)\{%\s*endraw\s*%\}", re.DOTALL)
-_ATTR_VALUE_RE = re.compile(r"""[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*"[^"]*"|[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*'[^']*'""")
+_ATTR_VALUE_RE = re.compile(
+    r"""[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*"[^"]*"|"""
+    r"""[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*'[^']*'|"""
+    r"""[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*[^\s"'=<>`]+"""
+)
+_COMMENT_RE = re.compile(r"\{#.*?#\}", re.DOTALL)
+_HTML_COMMENT_RE = re.compile(r"<!--(?!>|->)[\s\S]*?(?<!-)-->")
 
 
 def _hole_spans(text: str) -> list[tuple[int, int]]:
@@ -73,7 +79,7 @@ def _rename_expression_regex(expr: str, renames: dict[str, str]) -> str:
 
     text = _STRING_LITERAL_RE.sub(_stash, expr)
     for name, replacement in renames.items():
-        text = re.sub(rf"\b{re.escape(name)}\b", replacement, text)
+        text = re.sub(rf"(?<!\.)\b{re.escape(name)}\b", replacement, text)
     for key, original in protected.items():
         text = text.replace(key, original)
     return text
@@ -85,16 +91,29 @@ def _rename_expression(expr: str, renames: dict[str, str]) -> str:
     stripped = expr.strip()
     lead_ws = expr[: len(expr) - len(expr.lstrip())]
     trail_ws = expr[len(expr.rstrip()) :]
-    if "\n" in stripped:
-        return _rename_expression_regex(expr, renames)
     try:
         tree = ast.parse(stripped, mode="eval")
     except SyntaxError:
         return _rename_expression_regex(expr, renames)
+    byte_lines = stripped.encode("utf-8").split(b"\n")
+    line_offsets: list[int] = []
+    running = 0
+    for line in byte_lines:
+        line_offsets.append(running)
+        running += len(line) + 1
     targets: list[tuple[int, int, str]] = []
     for node in ast.walk(tree):
-        if isinstance(node, ast.Name) and node.id in renames and node.end_col_offset is not None:
-            targets.append((node.col_offset, node.end_col_offset, renames[node.id]))
+        if (
+            isinstance(node, ast.Name)
+            and node.id in renames
+            and node.lineno is not None
+            and node.col_offset is not None
+            and node.end_lineno is not None
+            and node.end_col_offset is not None
+        ):
+            start = line_offsets[node.lineno - 1] + node.col_offset
+            end = line_offsets[node.end_lineno - 1] + node.end_col_offset
+            targets.append((start, end, renames[node.id]))
     if not targets:
         return expr
     encoded = bytearray(stripped.encode("utf-8"))
@@ -143,23 +162,18 @@ def _apply_renames(text: str, renames: dict[str, str]) -> str:
 def _validate_directives(text: str) -> None:
     """Reject unsupported/unknown directives in Markdown source.
 
-    Code spans, fenced code, ``{% raw %}`` blocks, quoted attribute values,
-    and ``{{ }}`` interpolation holes are protected: directive-like spans
-    inside them stay literal, mirroring the HTML template path.
+    Code spans, fenced code, ``{% raw %}`` blocks, quoted and unquoted
+    attribute values, ``{# #}``/HTML comments, and ``{{ }}`` interpolation
+    holes are protected: directive-like spans inside them stay literal,
+    mirroring the HTML template path.
 
     Supported directives are also checked structurally: ``elif``/``else``
     outside an ``if`` (including a for-level ``else``), mismatched or
     unclosed ``if``/``for`` blocks raise ``WebComPyException`` with the same
     messages as the HTML template path.
     """
-    protected = _protected_spans(text)
-    protected.extend(_hole_spans(text))
-    protected.extend((m.start(), m.end()) for m in _RAW_BLOCK_RE.finditer(text))
-    protected.extend((m.start(), m.end()) for m in _ATTR_VALUE_RE.finditer(text))
     stack: list[str] = []
-    for m in _GENERIC_DIRECTIVE_RE.finditer(text):
-        if any(s <= m.start() < e for s, e in protected):
-            continue
+    for m in _masked_directive_matches(text, _GENERIC_DIRECTIVE_RE):
         name = m.group("name")
         if name in ("raw", "endraw"):
             continue
@@ -255,13 +269,26 @@ def _protected_spans(source: str) -> list[tuple[int, int]]:
     return spans
 
 
+def _masked_directive_matches(text: str, pattern: re.Pattern[str]) -> list[re.Match[str]]:
+    """Directive matches outside protected Markdown/template syntax spans.
+
+    Protected: fenced code blocks, code spans, ``{% raw %}`` blocks, quoted and
+    unquoted attribute values, ``{# #}``/HTML comments, and ``{{ }}`` holes.
+    """
+    protected = _protected_spans(text)
+    protected.extend(_hole_spans(text))
+    protected.extend((m.start(), m.end()) for m in _RAW_BLOCK_RE.finditer(text))
+    protected.extend((m.start(), m.end()) for m in _ATTR_VALUE_RE.finditer(text))
+    protected.extend((m.start(), m.end()) for m in _COMMENT_RE.finditer(text))
+    protected.extend((m.start(), m.end()) for m in _HTML_COMMENT_RE.finditer(text))
+    merged = _merge_spans(protected)
+    return [m for m in pattern.finditer(text) if not any(s <= m.start() < e for s, e in merged)]
+
+
 def _tokenize_source(source: str) -> list[_Token]:
-    protected = _protected_spans(source)
     tokens: list[_Token] = []
     pos = 0
-    for m in DIRECTIVE_PATTERN.finditer(source):
-        if any(s <= m.start() < e for s, e in protected):
-            continue
+    for m in _masked_directive_matches(source, DIRECTIVE_PATTERN):
         if m.start() > pos:
             tokens.append(_Token("text", pos, m.start(), ""))
         name = m.group("directive")
@@ -404,7 +431,7 @@ def _expand_directives_in_body(
     loop's variables and ``loop`` metadata shadow outer entries (innermost-wins
     shadowing).
     """
-    directives = list(DIRECTIVE_PATTERN.finditer(body))
+    directives = _masked_directive_matches(body, DIRECTIVE_PATTERN)
     if not directives:
         return _apply_renames(body, renames)
 
