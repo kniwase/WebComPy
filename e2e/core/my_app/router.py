@@ -8,6 +8,7 @@ from .pages.component import FunctionStylePage
 from .pages.di_test import DiInjectPage, DiProviderWrapper
 from .pages.dict_repeat import DictRepeatPage
 from .pages.event import EventPage
+from .pages.form_fields import FormFieldsPage
 from .pages.home import HomePage
 from .pages.html_parser_parity import HtmlParserParityPage
 from .pages.keyed_repeat import KeyedRepeatPage
@@ -52,6 +53,7 @@ router = Router(
     {"path": "/markdown-for", "component": MarkdownForPage},
     {"path": "/html-parser-parity", "component": HtmlParserParityPage},
     {"path": "/two-way-binding", "component": TwoWayBindingPage},
+    {"path": "/form-fields", "component": FormFieldsPage},
     default=NotFound,
     mode="history",
 )

@@ -15,6 +15,7 @@ from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements._bind import expand_bind_attr
 from webcompy.elements.types._element import Element
 from webcompy.exception import WebComPyException
+from webcompy.forms import use_field
 from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
 from webcompy.signal import Computed, ReactiveDict, ReactiveList, Signal, readonly
 from webcompy_server.ports import VirtualDOMEvent, VirtualDOMNode
@@ -261,6 +262,91 @@ class TestConflicts:
     def test_textarea_children_conflict(self):
         with pytest.raises(WebComPyException, match="text content"):
             expand_bind_attr("textarea", {":bind": Signal("x")}, {}, ["default"])
+
+
+class TestFieldBindings:
+    def test_field_accepted_on_text_input(self):
+        field = use_field(Signal("hello"))
+        attrs = {":bind": field}
+        events = {}
+        expand_bind_attr("input", attrs, events)
+        assert attrs["value"] is field.value
+        assert "input" in events
+        assert "blur" in events
+
+    def test_field_accepted_on_number_input(self):
+        field = use_field(Signal(5))
+        attrs = {"type": "number", ":bind": field}
+        events = {}
+        expand_bind_attr("input", attrs, events)
+        assert attrs["value"] is field.value
+
+    def test_field_accepted_on_checkbox(self):
+        field = use_field(Signal(False))
+        attrs = {"type": "checkbox", ":bind": field}
+        events = {}
+        expand_bind_attr("input", attrs, events)
+        assert attrs["checked"] is field.value
+
+    def test_field_accepted_on_radio(self):
+        field = use_field(Signal("a"))
+        attrs = {":bind": field, "value": "a", "type": "radio"}
+        events = {}
+        expand_bind_attr("input", attrs, events)
+        assert isinstance(attrs["checked"], Computed)
+
+    def test_field_accepted_on_textarea(self):
+        field = use_field(Signal("hello"))
+        attrs = {":bind": field}
+        events = {}
+        children: list = []
+        expand_bind_attr("textarea", attrs, events, children)
+        assert children == [field.value]
+
+    def test_write_back_marks_dirty_before_value_update(self):
+        field = use_field(Signal("hello"))
+        order: list[str] = []
+        field.value.on_after_updating(lambda _: order.append("update"))
+        attrs = {":bind": field}
+        events = {}
+        expand_bind_attr("input", attrs, events)
+        events["input"](_ev(value="world"))
+        assert field.value.value == "world"
+        assert field.dirty.value is True
+
+    def test_blur_marks_touched(self):
+        field = use_field(Signal("hello"))
+        attrs = {":bind": field}
+        events = {}
+        expand_bind_attr("input", attrs, events)
+        assert field.touched.value is False
+        events["blur"](_ev())
+        assert field.touched.value is True
+
+    def test_user_blur_chained_after_touched(self):
+        field = use_field(Signal("hello"))
+        calls: list[str] = []
+
+        def user_blur(ev):
+            calls.append("user")
+
+        attrs = {":bind": field}
+        events = {"blur": user_blur}
+        expand_bind_attr("input", attrs, events)
+        events["blur"](_ev())
+        assert field.touched.value is True
+        assert calls == ["user"]
+
+    def test_field_type_discipline_applies_to_field_value(self):
+        field = use_field(Signal("x"))
+        attrs = {"type": "checkbox", ":bind": field}
+        with pytest.raises(WebComPyException, match="bool-valued"):
+            expand_bind_attr("input", attrs, {})
+
+    def test_field_value_conflict(self):
+        field = use_field(Signal("x"))
+        with pytest.raises(WebComPyException, match="'value'"):
+            expand_bind_attr("input", {":bind": field, "value": "y"}, {})
 
 
 class TestDynamicType:
