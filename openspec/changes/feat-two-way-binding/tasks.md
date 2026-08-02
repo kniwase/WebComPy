@@ -2,9 +2,9 @@
 
 ## 1. Core Expansion Module (`webcompy/elements/_bind.py`)
 
-- [ ] 1.1 Create `packages/webcompy/src/webcompy/elements/_bind.py` with `expand_bind_attr(tag_name, attrs, events)`: pops `":bind"` from `attrs`, validates the Signal kind (`Signal` only — reject `Computed`/`ReadonlySignal`/`ReactiveList`/`ReactiveDict`/non-signals with type-naming `WebComPyException`), determines the binding rule from tag + static `type` attr (see design D3 table), validates value-type discipline (D6), checks bound-attr conflicts (D7), sets the bound attr entry (radio: `Computed` equality), and registers the write-back handler into `events` (chaining a pre-existing same-event handler so binding runs first)
-- [ ] 1.2 Implement the number write-back converter (design D5: int/float by current Signal type, skip empty/unparseable)
-- [ ] 1.3 Unit tests for `expand_bind_attr` in isolation: each element-type rule, all error cases (wrong kind, wrong type, conflict, dynamic type, unsupported tag incl. `select`, radio without static `value`), handler chaining order, `:bind` key removed from attrs
+- [x] 1.1 Create `packages/webcompy/src/webcompy/elements/_bind.py` with `expand_bind_attr(tag_name, attrs, events)`: pops `":bind"` from `attrs`, validates the Signal kind (`Signal` only — reject `Computed`/`ReadonlySignal`/`ReactiveList`/`ReactiveDict`/non-signals with type-naming `WebComPyException`), determines the binding rule from tag + static `type` attr (see design D3 table), validates value-type discipline (D6), checks bound-attr conflicts (D7), sets the bound attr entry (radio: `Computed` equality), and registers the write-back handler into `events` (chaining a pre-existing same-event handler so binding runs first)
+- [x] 1.2 Implement the number write-back converter (design D5: int/float by current Signal type, skip empty/unparseable)
+- [x] 1.3 Unit tests for `expand_bind_attr` in isolation: each element-type rule, all error cases (wrong kind, wrong type, conflict, dynamic type, unsupported tag incl. `select`, radio without static `value`), handler chaining order, `:bind` key removed from attrs
 
 ## 2. Element Integration
 
