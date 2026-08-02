@@ -420,6 +420,36 @@ class TestElementIntegration:
         node = await _render_with_fake_browser(el)
         sig.value = "next"
         assert node.getAttribute("value") == "next"
+        assert node.value == "next"
+
+    @pytest.mark.asyncio
+    async def test_signal_update_after_user_edit_updates_property(self):
+        sig = Signal("hello")
+        el = Element("input", {":bind": sig}, {}, None, None)
+        node = await _render_with_fake_browser(el)
+        node.value = "world"
+        sig.value = "reset"
+        assert node.value == "reset"
+
+    @pytest.mark.asyncio
+    async def test_checkbox_property_update_after_user_toggle(self):
+        flag = Signal(False)
+        el = Element("input", {"type": "checkbox", ":bind": flag}, {}, None, None)
+        node = await _render_with_fake_browser(el)
+        node.checked = True
+        node.dispatchEvent(VirtualDOMEvent("change"))
+        assert flag.value is True
+        flag.value = False
+        assert node.checked is False
+
+    @pytest.mark.asyncio
+    async def test_textarea_property_update_after_user_edit(self):
+        sig = Signal("initial")
+        el = Element("textarea", {":bind": sig}, {}, None, None)
+        node = await _render_with_fake_browser(el)
+        node.value = "typed"
+        sig.value = "overwritten"
+        assert node.value == "overwritten"
 
     @pytest.mark.asyncio
     async def test_checkbox_binding(self):

@@ -393,6 +393,11 @@ def _bind_component_tag(node: TemplateElement, ctx: dict[str, Any], generator: A
 
 def bind_element(node: TemplateElement, ctx: dict[str, Any]) -> ElementChildren:
     if node.tag_name == "br":
+        if any(attr.name == ":bind" for attr in node.attrs):
+            raise WebComPyException(
+                ":bind is not supported on <br> "
+                "(supported: input[type=text|email|password|search|tel|url|number|checkbox|radio] and textarea)"
+            )
         return NewLine()
 
     store_obj: Any = inject(_COMPONENT_STORE_KEY, default=None)

@@ -19,6 +19,7 @@ def test_text_signal_to_dom(page_on):
     page = page_on("/two-way-binding")
     expect(page.locator("[data-testid='two-way-binding-page']")).to_be_visible()
 
+    page.locator("[data-testid='bind-text']").fill("world")
     page.locator("[data-testid='set-text-btn']").click()
     expect(page.locator("[data-testid='bind-text']")).to_have_value("reset")
     expect(page.locator("[data-testid='bind-text-value']")).to_have_text("reset")

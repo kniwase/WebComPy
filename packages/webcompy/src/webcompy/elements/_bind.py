@@ -147,7 +147,8 @@ def _expand_radio_bind(
         raise WebComPyException("radio :bind requires a static value attribute")
     if "checked" in attrs:
         raise WebComPyException("':bind' conflicts with explicit 'checked' attribute")
-    attrs["checked"] = Computed(lambda: signal.value == radio_value)
+    checked = Computed(lambda: signal.value == radio_value)
+    attrs["checked"] = checked
 
     def write_back(ev: DOMEvent) -> None:
         if (target := ev.target) is not None and target.checked:
@@ -161,8 +162,20 @@ def expand_bind_attr(
     attrs: dict[str, AttrValue],
     events: dict[str, EventHandler],
     children: list[ElementChildren] | None = None,
-) -> None:
+) -> tuple[set[str], list[tuple[SignalBase, str]]]:
     """Pop ':bind' from attrs and expand it into a bound attr + write-back handler.
+
+    Returns ``(property_attrs, extra_property_callbacks)``:
+
+    - ``property_attrs``: attr names whose reactive attribute updater SHALL also
+      update the live DOM property (``value``/``checked``), so Signal→DOM changes
+      affect the control even after the user has edited it. Used for input,
+      checkbox, and radio (their signal lives in ``attrs`` and the attribute
+      updater is the single callback — avoiding a second callback on a Computed,
+      which the reactive graph would skip).
+    - ``extra_property_callbacks``: ``(signal, property_name)`` pairs to register
+      as separate property-only callbacks (used by textarea, whose signal lives
+      in the children list, not attrs).
 
     Raises WebComPyException for: unsupported tag, non-Signal value, read-only
     signal kind, type-discipline violation, bound-attr conflict, dynamic type attr.
@@ -181,13 +194,17 @@ def expand_bind_attr(
         if children is None:
             raise WebComPyException("textarea :bind requires the element children list")
         _expand_textarea_bind(signal, attrs, events, children)
-    elif tag_name == "input" and (input_type is None or input_type in _TEXT_TYPES):
+        return set(), [(signal, "value")]
+    if tag_name == "input" and (input_type is None or input_type in _TEXT_TYPES):
         _expand_text_bind(signal, attrs, events)
-    elif tag_name == "input" and input_type == "number":
+        return {"value"}, []
+    if tag_name == "input" and input_type == "number":
         _expand_number_bind(signal, attrs, events)
-    elif tag_name == "input" and input_type == "checkbox":
+        return {"value"}, []
+    if tag_name == "input" and input_type == "checkbox":
         _expand_checkbox_bind(signal, attrs, events)
-    elif tag_name == "input" and input_type == "radio":
+        return {"checked"}, []
+    if tag_name == "input" and input_type == "radio":
         _expand_radio_bind(signal, attrs, events)
-    else:
-        raise WebComPyException(f":bind is not supported on <{tag_name}> (supported: {_SUPPORTED_ELEMENTS})")
+        return {"checked"}, []
+    raise WebComPyException(f":bind is not supported on <{tag_name}> (supported: {_SUPPORTED_ELEMENTS})")

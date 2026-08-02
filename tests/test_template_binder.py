@@ -366,6 +366,12 @@ class TestBrSpecialCasing:
         result = bind_element(roots[0], {})
         assert isinstance(result._children[0], NewLine)
 
+    def test_br_with_bind_rejected(self):
+        sig = Signal("x")
+        roots = parse_template('<div><br :bind="sig"></div>')
+        with pytest.raises(WebComPyException, match="not supported"):
+            bind_element(roots[0], {"sig": sig})
+
 
 class TestResolveVarDirect:
     def test_resolve_var_dict_missing_raises(self):

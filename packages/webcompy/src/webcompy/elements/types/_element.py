@@ -40,6 +40,8 @@ _WEBCOMPY_INTERNAL_ATTRS = frozenset(_WEBCOMPY_INTERNAL_ATTRS)
 class ElementBase(ElementWithChildren):
     _ref: DomNodeRef | None
     _event_handlers_added: dict[str, Any]
+    _bind_property_attrs: set[str]
+    _bind_property_callbacks: list[tuple[SignalBase, str]]
 
     def _adopt_node(self, node: DOMNode) -> None:
         self._node_cache = node
@@ -59,6 +61,7 @@ class ElementBase(ElementWithChildren):
         for name, value in self._attrs.items():
             if isinstance(value, SignalBase):
                 self._add_callback_node(value.on_after_updating(self._generate_attr_updater(name)))
+        self._register_bind_property_callbacks()
         self._event_handlers_added = {}
         for name, func in self._event_handlers.items():
             event_handler = _generate_event_handler(func)
@@ -97,6 +100,7 @@ class ElementBase(ElementWithChildren):
         for name, value in self._attrs.items():
             if isinstance(value, SignalBase):
                 self._add_callback_node(value.on_after_updating(self._generate_attr_updater(name)))
+        self._register_bind_property_callbacks()
         self._event_handlers_added = {}
         for name, func in self._event_handlers.items():
             event_handler = _generate_event_handler(func)
@@ -106,6 +110,8 @@ class ElementBase(ElementWithChildren):
             self._ref.__init_node__(node)
 
     def _generate_attr_updater(self, name: str):
+        bind_property_attrs = getattr(self, "_bind_property_attrs", set())
+
         def update_attr(new_value: Any, name: str = name):
             node = self._get_node()
             if node is not None:
@@ -114,8 +120,28 @@ class ElementBase(ElementWithChildren):
                     node.removeAttribute(name)
                 else:
                     node.setAttribute(name, value)
+                if name in bind_property_attrs:
+                    if name == "checked":
+                        node.checked = bool(new_value)
+                    else:
+                        node.value = value or ""
 
         return update_attr
+
+    def _register_bind_property_callbacks(self) -> None:
+        for signal, prop_name in getattr(self, "_bind_property_callbacks", ()):
+            self._add_callback_node(signal.on_after_updating(self._generate_property_updater(prop_name)))
+
+    def _generate_property_updater(self, name: str):
+        def update_property(new_value: Any, name: str = name):
+            node = self._get_node()
+            if node is not None:
+                if name == "checked":
+                    node.checked = bool(new_value)
+                else:
+                    node.value = self._proc_attr(new_value) or ""
+
+        return update_property
 
     def _init_children(self, children: Iterable[ElementChildren]):
         for idx in range(self._children_length - 1, -1, -1):
@@ -167,8 +193,12 @@ class Element(ElementBase):
         attrs = attrs if attrs else dict()
         events = events if events else dict()
         children = list(children) if children else list()
+        self._bind_property_attrs: set[str] = set()
+        self._bind_property_callbacks: list[tuple[SignalBase, str]] = []
         if ":bind" in attrs:
-            expand_bind_attr(self._tag_name, attrs, events, children)
+            self._bind_property_attrs, self._bind_property_callbacks = expand_bind_attr(
+                self._tag_name, attrs, events, children
+            )
         self._attrs = attrs
         self._event_handlers = events
         self._ref = ref
