@@ -380,19 +380,23 @@ def _bind_dict_reactive(
             last=Computed(lambda: pos() + 1 == len(signal.value)),
             length=length,
         )
-        reactive_value = Computed(read_value)
-        new_ctx = _extend_for_ctx(ctx, loop_vars, reactive_value, key, is_dict=True, loop_meta=meta)
-        result = _wrap_for_fragment(bind_children(body, new_ctx))
-        members = [
-            meta.index,
-            meta.index0,
-            meta.revindex,
-            meta.revindex0,
-            meta.first,
-            meta.last,
-            meta.length,
-            reactive_value,
+        members: list[SignalBase] = [
+            cast("SignalBase", meta.index),
+            cast("SignalBase", meta.index0),
+            cast("SignalBase", meta.revindex),
+            cast("SignalBase", meta.revindex0),
+            cast("SignalBase", meta.first),
+            cast("SignalBase", meta.last),
+            cast("SignalBase", meta.length),
         ]
+        current = read_value()
+        if isinstance(current, ElementAbstract):
+            loop_value: Any = current
+        else:
+            loop_value = Computed(read_value)
+            members.append(loop_value)
+        new_ctx = _extend_for_ctx(ctx, loop_vars, loop_value, key, is_dict=True, loop_meta=meta)
+        result = _wrap_for_fragment(bind_children(body, new_ctx))
         if result is None:
             result = FragmentElement()
         elif isinstance(result, (str, SignalBase)):
