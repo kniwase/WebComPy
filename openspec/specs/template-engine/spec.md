@@ -82,7 +82,7 @@ HTML comments (`<!-- ... -->`) SHALL be ignored and SHALL NOT produce any nodes 
 
 ### Requirement: Template engine shall support variable interpolation in text content
 
-`{{ varname }}` and `{{ a.b.c }}` (dot notation) SHALL interpolate variables from the context into text content; these plain paths SHALL pass Signal values directly to `TextElement` for reactive updates. `{{ }}` holes SHALL additionally accept the safe expression subset (per the expression-language requirement), with Signal-referencing expressions wrapped in an implicit `Computed`.
+`{{ varname }}` and `{{ a.b.c }}` (dot notation) SHALL interpolate variables from the context into text content. Single-segment plain paths that resolve to a Signal SHALL pass the Signal directly to `TextElement` for reactive updates. Multi-segment plain paths where an intermediate segment resolves to a Signal SHALL unwrap the Signal (read `.value`) and continue resolution, wrapping the result in an implicit `Computed` so downstream text updates reactively when the intermediate Signal changes. `{{ }}` holes SHALL additionally accept the safe expression subset (per the expression-language requirement), with Signal-referencing expressions wrapped in an implicit `Computed`.
 
 #### Scenario: Signal in text content
 - **WHEN** `render_template("<p>{{ count }}</p>", {"count": Signal(5)})` is called
@@ -115,6 +115,14 @@ HTML comments (`<!-- ... -->`) SHALL be ignored and SHALL NOT produce any nodes 
 #### Scenario: Dot notation with object attribute
 - **WHEN** `{{ user.name }}` is used with `user` being a dataclass/NamedTuple
 - **THEN** `getattr(user, "name")` SHALL be used
+
+#### Scenario: Dotted path with intermediate Signal
+- **WHEN** `{{ user.profile.name }}` is used where `user.profile` resolves to a `Signal({"name": "Alice"})`
+- **THEN** the intermediate Signal SHALL be unwrapped (`.value` read) and the remaining segment `name` SHALL resolve to `"Alice"`
+
+#### Scenario: Reactive dotted path with intermediate Signal
+- **WHEN** `{{ user.profile.name }}` has an intermediate `Signal` at the `.profile` position and that Signal is updated
+- **THEN** the rendered text SHALL update reactively via an implicit `Computed` that re-resolves the remaining segments through the unwrapped Signal
 
 #### Scenario: Expression in text content
 - **WHEN** `render_template("<p>{{ price * quantity }}</p>", {"price": 100, "quantity": 3})` is called
@@ -286,7 +294,7 @@ A `BinOp(BitOr)` node whose right operand is a `Name` registered in the built-in
 
 ### Requirement: Signal-referencing expressions shall re-evaluate reactively via implicit Computed
 
-Each hole, condition, or iterable target SHALL be classified at bind time. A **plain path** (only `Name`/`Attribute` chain) SHALL behave exactly as before: a resolved Signal is passed through unwrapped. A **true expression** (any other form) whose referenced context values include a `SignalBase` SHALL be wrapped in a `Computed` closure that re-evaluates the expression; a true expression without Signal references SHALL be evaluated once. During expression evaluation, encountering a `SignalBase` SHALL read `.value` (unwrap), registering the dependency via the active-consumer mechanism. Unwrapping a `ReactiveList`/`ReactiveDict` yields the raw collection (coarse dependency).
+Each hole, condition, or iterable target SHALL be classified at bind time. A **plain path** (only `Name`/`Attribute` chain) whose final resolved value is a Signal SHALL pass the Signal through unwrapped (single-segment paths like `{{ count }}`); a plain path where an intermediate segment resolves to a Signal SHALL wrap the remaining resolution in an implicit `Computed` that unwraps the intermediate Signal and re-resolves on change. A **true expression** (any other form) whose referenced context values include a `SignalBase` SHALL be wrapped in a `Computed` closure that re-evaluates the expression; a true expression without Signal references SHALL be evaluated once. During expression evaluation, encountering a `SignalBase` SHALL read `.value` (unwrap), registering the dependency via the active-consumer mechanism. Unwrapping a `ReactiveList`/`ReactiveDict` yields the raw collection (coarse dependency).
 
 #### Scenario: Reactive arithmetic
 - **WHEN** `render_template("<p>{{ count + 1 }}</p>", {"count": Signal(5)})` is called
@@ -304,6 +312,11 @@ Each hole, condition, or iterable target SHALL be classified at bind time. A **p
 #### Scenario: Signal mid-expression unwrapped
 - **WHEN** `{{ user.name + '!' }}` is used with `user.name` resolving to a `Signal`
 - **THEN** evaluation SHALL read `.value` and the expression SHALL re-evaluate when that Signal changes
+
+#### Scenario: Intermediate Signal in dotted path unwrapped
+- **WHEN** `{{ user.profile.name }}` is used and `user.profile` resolves to a `Signal`
+- **THEN** `resolve_var` SHALL return a `Computed` that unwraps the intermediate Signal and resolves the remaining segments
+- **AND** the rendered text SHALL update when the intermediate Signal changes
 
 ### Requirement: Template engine shall support {# #} comments
 
@@ -539,6 +552,16 @@ Tags not in the HtmlTags literal SHALL be treated as regular HTML elements. An e
 - **THEN** `repeat()` SHALL be generated using the `Callable[[V, K], ElementChildren]` overload
 - **AND** both `key` and `value` SHALL be available as loop variables in the body context
 - **AND** the body SHALL update reactively when dict entries change
+
+#### Scenario: ReactiveDict value that is an Element rendered as child
+- **WHEN** `{% for v in d %}{{ v }}{% endfor %}` is used with a `ReactiveDict` whose values include `Element` or `Component` instances
+- **THEN** each Element/Component SHALL be placed as a direct child element (not stringified)
+- **AND** scalar values SHALL continue to render as text with reactive updates
+
+#### Scenario: ReactiveDict loop value keeps fresh value semantics
+- **WHEN** a `ReactiveDict` key is updated with a new value (including a nested `Signal` value) while a loop over the dict is rendered
+- **THEN** the loop body SHALL observe the current stored value (not a stale callback argument), unwrapping nested `Signal` values
+- **AND** the rendered content SHALL update reactively
 
 ### Requirement: `{% for %}` loops shall expose loop metadata
 
