@@ -186,6 +186,22 @@ class TestRouterViewReuse:
             assert _setup_counts["ApiPage"][0] == 1
             assert _setup_counts["GuidePage"][0] == 1
 
+    def test_deeper_view_reacts_when_ancestor_preserved(self):
+        router, hist = _make_router()
+        hist.navigate("/docs/guide", None)
+        with _render(router) as result:
+            assert result.find_by_attribute("data-testid", "guide-page") is not None
+            assert _setup_counts["GuidePage"][0] == 1
+
+            router.__set_path__("/docs/api", None)
+
+            # The remount guard must NOT over-skip: with all ancestors preserved,
+            # the depth-1 view reacts on its own and remounts the leaf once.
+            assert _setup_counts["DocsLayout"][0] == 1, "layout must be preserved"
+            assert _setup_counts["ApiPage"][0] == 1, "leaf must be created exactly once"
+            assert result.find_by_attribute("data-testid", "api-page") is not None
+            assert result.find_by_attribute("data-testid", "guide-page") is None
+
     def test_param_change_remounts_leaf_only(self):
         router, hist = _make_router()
         hist.navigate("/docs/foo", None)
@@ -215,10 +231,11 @@ class TestRouterViewReuse:
             router.__set_path__("/docs/guide?tab=b", None)
 
             # query is part of every level identity -> layout remounts too.
-            # the old depth-1 view's callback remounts its leaf first (transient),
-            # then the remounted layout's nested view creates the final leaf.
+            # the depth-1 view defers to the remounting layout (no transient
+            # leaf creation), so the leaf is created exactly once by the fresh
+            # nested view inside the new layout.
             assert _setup_counts["DocsLayout"][0] == 2, "layout must remount (query is part of level identity)"
-            assert _setup_counts["GuidePage"][0] == 3
+            assert _setup_counts["GuidePage"][0] == 2, "leaf must be created once (no transient creation)"
             assert result.find_by_attribute("data-testid", "guide-page") is not None
 
     def test_navigating_away_destroys_and_back_remounts(self):
@@ -268,7 +285,7 @@ class TestRouterViewReuse:
             router.__set_path__("/users/2/docs/b", None)
 
             assert _setup_counts["DocsLayout"][0] == 2, "ancestor param change must remount layout"
-            assert _setup_counts["ParamPage"][0] == 3, "descendant must remount (transient + final)"
+            assert _setup_counts["ParamPage"][0] == 2, "descendant must be created once (no transient creation)"
             param_name = result.find_by_attribute("data-testid", "param-name")
             assert param_name is not None
             assert param_name.textContent == "b"

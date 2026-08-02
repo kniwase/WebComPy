@@ -153,6 +153,8 @@ class Router:
     def _parse_query(self, search: str) -> dict[str, str]:
         if not search:
             return {}
+        # Deliberately drops empty-valued params (`?tab=` -> {}), preserving the
+        # pre-existing query semantics used by level-identity comparisons.
         return {
             name: value
             for name, value in (
@@ -204,17 +206,7 @@ class Router:
         path_param_names: list[str],
     ):
         history = self._resolve_history()
-        query = (
-            {
-                name: value
-                for name, value in (
-                    [it[0], ""] if len(it) == 1 else it for it in (q.split("=", 2) for q in search.split("&"))
-                )
-                if name and value
-            }
-            if search
-            else {}
-        )
+        query = self._parse_query(search)
         path_params = (
             (dict(zip(path_param_names, match.groups(), strict=True)) if path_param_names else {}) if match else {}
         )

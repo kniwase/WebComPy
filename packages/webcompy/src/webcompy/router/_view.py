@@ -1,21 +1,24 @@
 from __future__ import annotations
 
 from inspect import iscoroutinefunction
-from typing import Any
+from typing import cast
 
 from webcompy.components._component import end_defer_after_rendering, start_defer_after_rendering
 from webcompy.di import inject
 from webcompy.di._exceptions import InjectionError
 from webcompy.di._keys import _ROUTER_KEY
+from webcompy.elements.typealias._element_property import ElementChildren
+from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement, _position_element_nodes
 from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, HOST_PORT_KEY
 from webcompy.router._context import TypedRouterContext
+from webcompy.router._router import RouteMatch
 from webcompy.signal import Computed
 
 
 class RouterView(DynamicElement):
     _depth: int | None
-    _mounted_component: Any
+    _mounted_component: ElementAbstract | None
     _mounted_identity: tuple | None
     _signal_activated: bool
 
@@ -50,7 +53,7 @@ class RouterView(DynamicElement):
         if router._preload:
             router.preload_lazy_routes()
 
-    def _build_identity(self, match, depth: int) -> tuple:
+    def _build_identity(self, match: RouteMatch, depth: int) -> tuple:
         node = match.chain[depth]
         accumulated = self._accumulate_params(match, depth)
         return (
@@ -59,13 +62,32 @@ class RouterView(DynamicElement):
             tuple(sorted(match.query.items())),
         )
 
-    def _accumulate_params(self, match, depth: int) -> dict[str, str]:
+    def _accumulate_params(self, match: RouteMatch, depth: int) -> dict[str, str]:
         accumulated: dict[str, str] = {}
         for level_params in match.per_level_params[: depth + 1]:
             accumulated.update(level_params)
         return accumulated
 
-    def _get_or_create_component(self, match):
+    def _ancestor_will_remount(self, match: RouteMatch | None) -> bool:
+        depth = self._count_router_view_ancestors()
+        if depth == 0:
+            return False
+        if match is None:
+            return True
+        ancestor = getattr(self, "_parent", None)
+        ancestor_depth = depth - 1
+        while ancestor is not None and ancestor_depth >= 0:
+            if isinstance(ancestor, RouterView):
+                if ancestor_depth >= len(match.chain):
+                    return True
+                new_identity = ancestor._build_identity(match, ancestor_depth)
+                if ancestor._mounted_identity is None or ancestor._mounted_identity != new_identity:
+                    return True
+                ancestor_depth -= 1
+            ancestor = getattr(ancestor, "_parent", None)
+        return False
+
+    def _get_or_create_component(self, match: RouteMatch | None):
         depth = self._count_router_view_ancestors()
         self._depth = depth
         if match is None or depth >= len(match.chain):
@@ -103,13 +125,13 @@ class RouterView(DynamicElement):
             return self._mounted_component
         if self._mounted_component is not None:
             self._mounted_component._remove_element()
-        result = self._router.__default__()
+        result: ElementChildren = self._router.__default__()
         if isinstance(result, str):
             from webcompy.elements.types._text import TextElement
 
-            component = TextElement(result)
+            component: ElementAbstract = TextElement(result)
         else:
-            component = result
+            component = cast("ElementAbstract", result)
         self._mounted_component = component
         self._mounted_identity = identity
         return component
@@ -124,14 +146,19 @@ class RouterView(DynamicElement):
                 self._children = [component]
         await super()._render()
 
-    async def _on_match_changed(self, match):
+    async def _on_match_changed(self, match: RouteMatch | None):
         self._cancel_pending_render_tasks()
+        if self._ancestor_will_remount(match):
+            return
         old_component = self._mounted_component
         new_component = self._get_or_create_component(match)
         if new_component is old_component:
             return
         if new_component is None:
             self._children = []
+            parent_node = self._parent._get_node()
+            _position_element_nodes(self, parent_node, self._node_idx)
+            self._parent._re_index_children(False)
             return
         new_component._parent = self
         new_component._node_idx = self._node_idx
