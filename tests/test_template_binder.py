@@ -516,6 +516,9 @@ class TestForBindingReactive:
         result = bind_children(roots, {"d": rd})
         assert len(result) == 1
         assert isinstance(result[0], RepeatElement)
+        result[0]._parent = _make_parent_stub()
+        result[0]._on_set_parent()
+        assert len(result[0]._children) == 2
 
     def test_reactive_for_with_dict_unpacking(self):
         from webcompy.elements.types._repeat import RepeatElement

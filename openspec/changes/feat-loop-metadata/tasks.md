@@ -14,9 +14,9 @@
 
 ## 3. Loop Metadata — ReactiveDict (Computed-backed)
 
-- [ ] 3.1 In `_bind_for_reactive`, route dict loops through the two-arg dict `repeat()` overload (including one-var loops) so callbacks receive the key
-- [ ] 3.2 Build shared per-loop `positions` and `length` Computeds over the source signal; per-item attribute Computeds (`index`/`index0`/`revindex`/`revindex0`/`first`/`last`) derived from `positions`
-- [ ] 3.3 Unit tests: metadata correct on initial render; after `ReactiveDict` add/remove/reorder, reused children observe updated positions/length/first/last; removed-key Computeds become unobserved (no stale updates)
+- [x] 3.1 In `_bind_for_reactive`, route dict loops through the two-arg dict `repeat()` overload (including one-var loops) so callbacks receive the key
+- [x] 3.2 Build shared per-loop `positions` and `length` Computeds over the source signal; per-item attribute Computeds (`index`/`index0`/`revindex`/`revindex0`/`first`/`last`) derived from `positions`
+- [x] 3.3 Unit tests: metadata correct on initial render; after `ReactiveDict` add/remove/reorder, reused children observe updated positions/length/first/last; removed-key Computeds become unobserved (no stale updates)
 
 ## 4. Loop Metadata — MarkdownForElement
 

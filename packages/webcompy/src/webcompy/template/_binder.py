@@ -331,6 +331,36 @@ def bind_for(node: ForNode, ctx: dict[str, Any]) -> list[ElementChildren]:
     return _bind_for_static(value, loop_vars, node.body, ctx, iterable_path)
 
 
+def _bind_dict_reactive(
+    loop_vars: list[str],
+    signal: SignalBase,
+    body: list[TemplateNode],
+    ctx: dict[str, Any],
+) -> ElementChildren:
+    def dict_cb(value: Any, key: Any) -> ElementChildren:
+        length = Computed(lambda: len(signal.value))
+
+        def pos() -> int:
+            try:
+                return list(signal.value).index(key)
+            except ValueError:
+                return -1
+
+        meta = LoopMetadata(
+            index=Computed(lambda: pos() + 1),
+            index0=Computed(pos),
+            revindex=Computed(lambda: len(signal.value) - pos()),
+            revindex0=Computed(lambda: len(signal.value) - pos() - 1),
+            first=Computed(lambda: pos() == 0),
+            last=Computed(lambda: pos() + 1 == len(signal.value)),
+            length=length,
+        )
+        new_ctx = _extend_for_ctx(ctx, loop_vars, value, key, is_dict=True, loop_meta=meta)
+        return _wrap_for_fragment(bind_children(body, new_ctx))
+
+    return repeat(signal, dict_cb)
+
+
 def _bind_for_reactive(
     loop_vars: list[str],
     signal: SignalBase,
@@ -341,12 +371,7 @@ def _bind_for_reactive(
 
     if len(loop_vars) == 1:
         if is_dict:
-
-            def single_arg_cb(value: Any) -> ElementChildren:
-                new_ctx = _extend_for_ctx(ctx, loop_vars, value, None, is_dict)
-                return _wrap_for_fragment(bind_children(body, new_ctx))
-
-            return repeat(signal, single_arg_cb)
+            return _bind_dict_reactive(loop_vars, signal, body, ctx)
 
         gen: dict[str, Any] = {"idx": 0}
 
@@ -365,12 +390,7 @@ def _bind_for_reactive(
     if len(loop_vars) == 2:
         if not is_dict:
             raise WebComPyException("Two-variable for-loop over a reactive non-dict iterable is not supported")
-
-        def two_arg_cb(value: Any, key: Any) -> ElementChildren:
-            new_ctx = _extend_for_ctx(ctx, loop_vars, value, key, is_dict=True)
-            return _wrap_for_fragment(bind_children(body, new_ctx))
-
-        return repeat(signal, two_arg_cb)
+        return _bind_dict_reactive(loop_vars, signal, body, ctx)
 
     raise WebComPyException(f"Invalid for-loop variable count: expected 1 or 2, got {len(loop_vars)}")
 

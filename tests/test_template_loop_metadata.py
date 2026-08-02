@@ -172,3 +172,94 @@ class TestPlainSignalListLoopMetadata:
             captured["items"].value = ["a", "b", "c"]
             texts = [li.textContent for li in result.query_selector_all("li")]
         assert texts == ["1:a", "2:b", "3:c"]
+
+
+class TestReactiveDictLoopMetadata:
+    def _page(self, captured: dict[str, Any]):
+        @define_component
+        def ReactiveDictPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"x": 1, "y": 2, "z": 9})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}"
+                "<li>{{ loop.index }},{{ loop.first }},{{ loop.last }},{{ loop.length }}:{{ v }}</li>"
+                "{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        return ReactiveDictPage
+
+    def test_initial_positions(self):
+        captured: dict[str, Any] = {}
+        with TestRenderer.render(self._page(captured)) as result:
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["1,True,False,3:1", "2,False,False,3:2", "3,False,True,3:9"]
+
+    def test_metadata_updates_after_remove(self):
+        captured: dict[str, Any] = {}
+        with TestRenderer.render(self._page(captured)) as result:
+            captured["d"].pop("x")
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["1,True,False,2:2", "2,False,True,2:9"]
+
+    def test_metadata_updates_after_add(self):
+        captured: dict[str, Any] = {}
+        with TestRenderer.render(self._page(captured)) as result:
+            captured["d"].pop("x")
+            captured["d"]["w"] = 0
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["1,True,False,3:2", "2,False,False,3:9", "3,False,True,3:0"]
+
+    def test_metadata_updates_after_reorder(self):
+        captured: dict[str, Any] = {}
+        with TestRenderer.render(self._page(captured)) as result:
+            d = captured["d"]
+            d.pop("z")
+            d["z"] = 9
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["1,True,False,3:1", "2,False,False,3:2", "3,False,True,3:9"]
+
+    def test_metadata_updates_after_repeated_mutations(self):
+        captured: dict[str, Any] = {}
+        with TestRenderer.render(self._page(captured)) as result:
+            d = captured["d"]
+            d.pop("z")
+            d["z"] = 9
+            d.pop("y")
+            d["y"] = 2
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["1,True,False,3:1", "2,False,False,3:9", "3,False,True,3:2"]
+
+    def test_metadata_after_clear_and_refill(self):
+        captured: dict[str, Any] = {}
+        with TestRenderer.render(self._page(captured)) as result:
+            d = captured["d"]
+            d.clear()
+            assert [li.textContent for li in result.query_selector_all("li")] == []
+            d["a"] = 5
+            d["b"] = 6
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["1,True,False,2:5", "2,False,True,2:6"]
+
+    def test_two_var_dict_loop_with_metadata(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def TwoVarPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": 1, "b": 2})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for k, v in d %}<li>{{ loop.index }}:{{ k }}={{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(TwoVarPage) as result:
+            texts = [li.textContent for li in result.query_selector_all("li")]
+            assert texts == ["1:a=1", "2:b=2"]
+            captured["d"]["c"] = 3
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["1:a=1", "2:b=2", "3:c=3"]
