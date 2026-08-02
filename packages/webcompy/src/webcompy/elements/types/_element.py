@@ -6,6 +6,7 @@ from typing import Any, cast
 
 from webcompy.aio import resolve_async
 from webcompy.di import inject
+from webcompy.elements._bind import expand_bind_attr
 from webcompy.elements._dom_objs import DOMEvent, DOMNode
 from webcompy.elements.typealias._element_property import (
     AttrValue,
@@ -163,8 +164,12 @@ class Element(ElementBase):
         preserve_children: bool = False,
     ) -> None:
         self._tag_name = cast("HtmlTags", tag_name.lower())
-        self._attrs = attrs if attrs else dict()
-        self._event_handlers = events if events else dict()
+        attrs = attrs if attrs else dict()
+        events = events if events else dict()
+        if ":bind" in attrs:
+            expand_bind_attr(self._tag_name, attrs, events)
+        self._attrs = attrs
+        self._event_handlers = events
         self._ref = ref
         self._preserve_children = preserve_children
         self._children = []

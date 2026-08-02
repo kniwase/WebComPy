@@ -8,8 +8,8 @@
 
 ## 2. Element Integration
 
-- [ ] 2.1 In `packages/webcompy/src/webcompy/elements/types/_element.py` `Element.__init__`, call `expand_bind_attr(self._tag_name, attrs, events)` before storing `self._attrs`/`self._event_handlers` (design D1; `create_element` in `generators.py:43` already routes `:bind` into `attrs`, no change needed there)
-- [ ] 2.2 Unit tests via element API: `html.INPUT({":bind": sig})` renders `value`, Signal→DOM updates work, DOM→Signal write-back works with fake ports (see `tests/test_unified_render_path.py` patterns), radio group `checked` Computeds sync, no `:bind` attribute on the DOM node, SSR (`ServerDOMPort`) renders bound attr without events
+- [x] 2.1 In `packages/webcompy/src/webcompy/elements/types/_element.py` `Element.__init__`, call `expand_bind_attr(self._tag_name, attrs, events)` before storing `self._attrs`/`self._event_handlers` (design D1; `create_element` in `generators.py:43` already routes `:bind` into `attrs`, no change needed there)
+- [x] 2.2 Unit tests via element API: `html.INPUT({":bind": sig})` renders `value`, Signal→DOM updates work, DOM→Signal write-back works with fake ports (see `tests/test_unified_render_path.py` patterns), radio group `checked` Computeds sync, no `:bind` attribute on the DOM node, SSR (`ServerDOMPort`) renders bound attr without events
 
 ## 3. Template Integration
 

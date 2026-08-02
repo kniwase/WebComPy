@@ -5,9 +5,20 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.conftest import (
+    FakeBrowserDOMPort,
+    FakeBrowserFFIPort,
+    FakeBrowserHostPort,
+    FakeDOMNode,
+)
+from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements._bind import expand_bind_attr
+from webcompy.elements.types._element import Element
 from webcompy.exception import WebComPyException
+from webcompy.ports._keys import DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
 from webcompy.signal import Computed, ReactiveDict, ReactiveList, Signal, readonly
+from webcompy_server.ports import VirtualDOMEvent, VirtualDOMNode
+from webcompy_server.ports._dom import ServerDOMPort
 
 
 def _ev(value=None, *, checked=None, target=None):
@@ -301,3 +312,135 @@ class TestHandlerChaining:
         expand_bind_attr("input", attrs, events)
         assert events["blur"] is user_handler
         assert "input" in events
+
+
+class _DummyParent:
+    def __init__(self, node):
+        self._node = node
+
+    def _get_node(self):
+        return self._node
+
+    def _get_belonging_component(self):
+        return ""
+
+    def _get_belonging_components(self):
+        return ()
+
+    def _re_index_children(self, recursive):
+        pass
+
+
+async def _render_with_fake_browser(element):
+    scope = DIScope()
+    scope.provide(DOM_PORT_KEY, FakeBrowserDOMPort())
+    scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
+    scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
+    token = _active_di_scope.set(scope)
+    try:
+        root_node = FakeDOMNode("div")
+        root_node.__webcompy_node__ = False
+        root_node.__webcompy_prerendered_node__ = True
+        element._parent = _DummyParent(root_node)
+        element._node_idx = 0
+        await element._render()
+        if root_node.childNodes.length > 0:
+            return root_node.childNodes[0]
+        return None
+    finally:
+        _active_di_scope.reset(token)
+
+
+async def _render_with_server(element):
+    port = ServerDOMPort()
+    scope = DIScope()
+    scope.provide(DOM_PORT_KEY, port)
+    scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
+    scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
+    token = _active_di_scope.set(scope)
+    try:
+        root_node = VirtualDOMNode("div")
+        root_node.__webcompy_node__ = False
+        root_node.__webcompy_prerendered_node__ = True
+        element._parent = _DummyParent(root_node)
+        element._node_idx = 0
+        await element._render()
+        if root_node.childNodes.length > 0:
+            return root_node.childNodes[0]
+        return None
+    finally:
+        _active_di_scope.reset(token)
+
+
+class TestElementIntegration:
+    @pytest.mark.asyncio
+    async def test_text_binding_initial_value(self):
+        el = Element("input", {":bind": Signal("hello")}, {}, None, None)
+        node = await _render_with_fake_browser(el)
+        assert node.getAttribute("value") == "hello"
+
+    @pytest.mark.asyncio
+    async def test_no_bind_attribute_on_dom(self):
+        el = Element("input", {":bind": Signal("hello")}, {}, None, None)
+        node = await _render_with_fake_browser(el)
+        assert node.getAttribute(":bind") is None
+
+    @pytest.mark.asyncio
+    async def test_dom_to_signal_write_back(self):
+        sig = Signal("hello")
+        el = Element("input", {":bind": sig}, {}, None, None)
+        node = await _render_with_fake_browser(el)
+        node.value = "world"
+        node.dispatchEvent(VirtualDOMEvent("input"))
+        assert sig.value == "world"
+
+    @pytest.mark.asyncio
+    async def test_signal_to_dom_update(self):
+        sig = Signal("hello")
+        el = Element("input", {":bind": sig}, {}, None, None)
+        node = await _render_with_fake_browser(el)
+        sig.value = "next"
+        assert node.getAttribute("value") == "next"
+
+    @pytest.mark.asyncio
+    async def test_checkbox_binding(self):
+        flag = Signal(False)
+        el = Element("input", {"type": "checkbox", ":bind": flag}, {}, None, None)
+        node = await _render_with_fake_browser(el)
+        assert node.getAttribute("checked") is None
+        node.checked = True
+        node.dispatchEvent(VirtualDOMEvent("change"))
+        assert flag.value is True
+        assert node.getAttribute("checked") == ""
+
+    @pytest.mark.asyncio
+    async def test_radio_group_sync(self):
+        choice = Signal("a")
+        el = Element(
+            "div",
+            {},
+            {},
+            None,
+            [
+                Element("input", {"type": "radio", "value": "a", ":bind": choice}, {}, None, None),
+                Element("input", {"type": "radio", "value": "b", ":bind": choice}, {}, None, None),
+            ],
+        )
+        root = await _render_with_fake_browser(el)
+        node_a = root.childNodes[0]
+        node_b = root.childNodes[1]
+        assert node_a.getAttribute("checked") == ""
+        assert node_b.getAttribute("checked") is None
+        node_b.checked = True
+        node_b.dispatchEvent(VirtualDOMEvent("change"))
+        assert choice.value == "b"
+        assert node_a.getAttribute("checked") is None
+        assert node_b.getAttribute("checked") == ""
+
+    @pytest.mark.asyncio
+    async def test_ssr_renders_bound_attr_only(self):
+        el = Element("input", {":bind": Signal("hello")}, {}, None, None)
+        node = await _render_with_server(el)
+        html = ServerDOMPort().render_html(node)
+        assert 'value="hello"' in html
+        assert ":bind" not in html
