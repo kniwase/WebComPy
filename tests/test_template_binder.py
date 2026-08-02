@@ -317,6 +317,31 @@ class TestBindAttrBinding:
             bind_element(roots[0], {"cls": "x"})
 
 
+class TestRadioTemplateValueComparison:
+    def test_template_string_value_never_matches_int_signal(self):
+        choice = Signal(1)
+        roots = parse_template('<input type="radio" value="1" :bind="choice">')
+        result = bind_element(roots[0], {"choice": choice})
+        checked = result._attrs["checked"]
+        assert isinstance(checked, Computed)
+        assert checked.value is False
+
+    def test_template_string_value_matches_str_signal(self):
+        choice = Signal("1")
+        roots = parse_template('<input type="radio" value="1" :bind="choice">')
+        result = bind_element(roots[0], {"choice": choice})
+        checked = result._attrs["checked"]
+        assert isinstance(checked, Computed)
+        assert checked.value is True
+
+    def test_element_api_preserves_non_string_value(self):
+        choice = Signal(1)
+        result = Element("input", {"type": "radio", "value": 1, ":bind": choice}, {}, None, None)
+        checked = result._attrs["checked"]
+        assert isinstance(checked, Computed)
+        assert checked.value is True
+
+
 class TestMissingVariable:
     def test_missing_variable_raises_with_available_names(self):
         roots = parse_template("<p>{{ missing }}</p>")
