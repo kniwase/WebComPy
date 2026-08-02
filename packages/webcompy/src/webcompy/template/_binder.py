@@ -364,9 +364,12 @@ def _bind_dict_reactive(
 
         def read_value() -> Any:
             try:
-                return signal.value[key]
+                stored = signal.value[key]
             except (KeyError, IndexError):
                 return _value
+            if isinstance(stored, SignalBase):
+                return stored.value
+            return stored
 
         meta = LoopMetadata(
             index=Computed(lambda: pos() + 1),

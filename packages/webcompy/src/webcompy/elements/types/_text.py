@@ -61,6 +61,8 @@ class TextElement(ElementAbstract):
     def _get_text(self) -> str:
         if isinstance(self._text, SignalBase):
             value = self._text.value
+            if value is None:
+                return ""
             text = value if isinstance(value, str) else str(value)
         else:
             text = self._text
@@ -88,7 +90,10 @@ class TextElement(ElementAbstract):
     def _update_text(self, new_text: Any):
         node = self._get_node()
         if node:
-            node.textContent = new_text if isinstance(new_text, str) else str(new_text)
+            if new_text is None:
+                node.textContent = ""
+            else:
+                node.textContent = new_text if isinstance(new_text, str) else str(new_text)
 
 
 class RawHTMLElement(ElementAbstract):
