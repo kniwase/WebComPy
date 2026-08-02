@@ -16,3 +16,4 @@ class RouterPageRequired(TypedDict):
 class RouterPage(RouterPageRequired, total=False):
     path_params: list[dict[str, str]]
     meta: Any
+    children: list["RouterPage"]

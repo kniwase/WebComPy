@@ -3,6 +3,7 @@ from __future__ import annotations
 import urllib.parse
 from collections.abc import Callable, Sequence
 from contextlib import suppress
+from dataclasses import dataclass
 from functools import partial
 from re import Match
 from re import compile as re_compile
@@ -29,6 +30,31 @@ RouteType: TypeAlias = tuple[
     RouterPage,
 ]
 
+
+@dataclass(frozen=True)
+class RouteNode:
+    segment: str
+    component: ComponentGenerator[RouterContext]
+    page: RouterPage
+
+
+@dataclass(frozen=True)
+class ChainEntry:
+    full_path: str
+    chain: tuple[RouteNode, ...]
+    per_level_param_names: tuple[list[str], ...]
+
+
+@dataclass(frozen=True)
+class RouteMatch:
+    path: str
+    chain: tuple[RouteNode, ...]
+    per_level_params: tuple[dict[str, str], ...]
+    path_params: dict[str, str]
+    query: dict[str, str]
+    state: dict[str, Any]
+
+
 _convert_to_regex_pattern = partial(re_compile(r"\\\{[^\{\}/]+\\\}").sub, r"([^/]*?)")
 _get_path_params = re_compile(r"{([^\{\}/]+)}").findall
 
@@ -37,6 +63,8 @@ class Router:
     _history: HistoryPort | None
     __mode__: Literal["hash", "history"]
     __routes__: list[RouteType]
+    __chains__: list[ChainEntry]
+    __pages__: tuple[RouterPage, ...]
 
     def __init__(
         self,
@@ -47,18 +75,28 @@ class Router:
         base_url: str = "",
         preload: bool = True,
     ) -> None:
+        self.__pages__ = pages
         self._history = history
         self.__mode__ = mode if history is None else history.mode
         if history is not None:
             history.set_navigation_callback(self.__set_path__)
         self.__base_url__ = base_url.strip().strip("/")
         self._base_url_stripper = partial(re_compile("^" + re_escape("/" + self.__base_url__)).sub, "")
-        self.__routes__ = self._generate_routes(pages)
+        self.__routes__, self.__chains__ = self._generate_routes(pages)
         self._default = default
         self._preload = preload
         self.before_route_change: list[Callable[[str, str], bool | None]] = []
         self.after_route_change: list[Callable[[str], None]] = []
         self.on_route_error: list[Callable[[Exception], bool | None]] = []
+
+    def _clone_for_request(self) -> Router:
+        return Router(
+            *self.__pages__,
+            default=self._default,
+            mode=self.__mode__,
+            base_url=self.__base_url__ or "",
+            preload=self._preload,
+        )
 
     def _resolve_history(self) -> HistoryPort:
         history = self._history
@@ -154,23 +192,44 @@ class Router:
     def _generate_route_matcher(self, path: str):
         return re_compile(_convert_to_regex_pattern(re_escape(path)) + "$").match
 
-    def _generate_routes(self, pages: Sequence[RouterPage]) -> list[RouteType]:
-        return [
-            (*path, component, page)
-            for path, component, page in zip(
-                map(
-                    lambda path: (
-                        path,
-                        self._generate_route_matcher(path),
-                        _get_path_params(path),
-                    ),
-                    map(lambda page: page["path"].strip("/"), pages),
-                ),
-                map(lambda page: page["component"], pages),
-                pages,
-                strict=True,
-            )
-        ]
+    def _generate_routes(self, pages: Sequence[RouterPage]) -> tuple[list[RouteType], list[ChainEntry]]:
+        routes: list[RouteType] = []
+        chains: list[ChainEntry] = []
+        for page in pages:
+            for full_path, chain, per_level_param_names in self._walk_page_tree(page, "", (), ()):
+                full_matcher = self._generate_route_matcher(full_path)
+                full_param_names: list[str] = []
+                for level_names in per_level_param_names:
+                    full_param_names.extend(level_names)
+                leaf_node = chain[-1]
+                routes.append((full_path, full_matcher, full_param_names, leaf_node.component, leaf_node.page))
+                chains.append(ChainEntry(full_path, chain, per_level_param_names))
+        return routes, chains
+
+    def _walk_page_tree(
+        self,
+        page: RouterPage,
+        parent_accumulated: str,
+        chain_so_far: tuple[RouteNode, ...],
+        param_names_so_far: tuple[list[str], ...],
+    ):
+        segment = page["path"].strip("/")
+        if segment:
+            accumulated = f"{parent_accumulated}/{segment}" if parent_accumulated else segment
+        else:
+            accumulated = parent_accumulated
+
+        node = RouteNode(segment=segment, component=page["component"], page=page)
+        level_param_names = _get_path_params(segment)
+        chain = (*chain_so_far, node)
+        all_param_names = (*param_names_so_far, level_param_names)
+
+        children = page.get("children")
+        if children:
+            for child in children:
+                yield from self._walk_page_tree(child, accumulated, chain, all_param_names)
+        else:
+            yield (accumulated, chain, all_param_names)
 
     def __set_path__(self, path: str, state: dict[str, Any] | None):
         history = self._resolve_history()
