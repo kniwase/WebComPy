@@ -284,13 +284,23 @@ class Router:
         from webcompy.router._lazy import LazyComponentGenerator
         from webcompy.utils._environment import ENVIRONMENT
 
-        lazy_components = [
-            route[3]
-            for route in self.__routes__
-            if isinstance(route[3], LazyComponentGenerator)
-            and route[3]._resolved is None
-            and not route[3]._resolve_error
-        ]
+        def _collect_lazy(pages):
+            seen: set[int] = set()
+            for page in pages:
+                comp = page["component"]
+                if (
+                    isinstance(comp, LazyComponentGenerator)
+                    and comp._resolved is None
+                    and not comp._resolve_error
+                    and id(comp) not in seen
+                ):
+                    seen.add(id(comp))
+                    yield comp
+                children = page.get("children")
+                if children:
+                    yield from _collect_lazy(children)
+
+        lazy_components = list(_collect_lazy(self.__pages__))
         if lazy_components:
             if ENVIRONMENT == "pyscript":
 

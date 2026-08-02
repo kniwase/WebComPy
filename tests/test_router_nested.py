@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 from tests.conftest import MockHistoryPort
 from webcompy.components import ComponentGenerator
+from webcompy.di import DIScope
 from webcompy.router._router import Router
 
 
@@ -340,3 +341,95 @@ class TestChainMatching:
         assert len(match.chain) == 1
         assert match.path_params == {"id": "42"}
         assert match.per_level_params == ({"id": "42"},)
+
+
+class TestHooksOncePerNavigation:
+    def test_hooks_fire_once_on_nested_navigation(self):
+        pages = [
+            {
+                "path": "/docs",
+                "component": _mock_comp(),
+                "children": [
+                    {"path": "/guide", "component": _mock_comp()},
+                    {"path": "/api", "component": _mock_comp()},
+                ],
+            }
+        ]
+        r = Router(*pages, history=MockHistoryPort(mode="hash"), preload=False)
+        before_calls: list[tuple[str, str]] = []
+        after_calls: list[str] = []
+
+        def guard(frm, to):
+            before_calls.append((frm, to))
+            return None
+
+        r.before_route_change.append(guard)
+        r.after_route_change.append(after_calls.append)
+
+        r.__set_path__("/docs/api", None)
+        assert len(before_calls) == 1
+        assert len(after_calls) == 1
+        assert after_calls[0] == "/docs/api"
+
+        r.__set_path__("/docs/guide", None)
+        assert len(before_calls) == 2
+        assert len(after_calls) == 2
+        assert after_calls[1] == "/docs/guide"
+
+
+class TestPreloadTreeWalk:
+    def test_preload_traverses_all_levels(self):
+        import sys
+        import types
+
+        from webcompy.components._generator import ComponentStore
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.router._lazy import LazyComponentGenerator
+
+        scope = DIScope()
+        store = ComponentStore()
+        scope.provide(_COMPONENT_STORE_KEY, store)
+        scope.__enter__()
+
+        try:
+            layout_gen = _make_test_component("TreeLayout")
+            leaf_gen = _make_test_component("TreeLeaf")
+            fake_module = types.ModuleType("tree_module")
+            fake_module.TreeLayout = layout_gen
+            fake_module.TreeLeaf = leaf_gen
+            sys.modules["tree_module"] = fake_module
+
+            lazy_layout = LazyComponentGenerator("tree_module:TreeLayout", __file__)
+            lazy_leaf = LazyComponentGenerator("tree_module:TreeLeaf", __file__)
+            pages = [
+                {
+                    "path": "/docs",
+                    "component": lazy_layout,
+                    "children": [
+                        {"path": "/guide", "component": lazy_leaf},
+                        {"path": "/api", "component": lazy_leaf},
+                    ],
+                }
+            ]
+            r = Router(*pages, history=MockHistoryPort(mode="hash"), preload=False)
+            assert lazy_layout._resolved is None
+            assert lazy_leaf._resolved is None
+
+            r._preload = True
+            r.preload_lazy_routes()
+
+            assert lazy_layout._resolved is layout_gen, "layout lazy component must be preloaded"
+            assert lazy_leaf._resolved is leaf_gen
+        finally:
+            scope.__exit__(None, None, None)
+
+
+def _make_test_component(name):
+    from webcompy.components import define_component
+    from webcompy.elements import html
+
+    def setup(ctx):
+        return html.DIV({})
+
+    setup.__name__ = name
+    return define_component(setup)
