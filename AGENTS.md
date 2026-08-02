@@ -227,6 +227,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/components/_css_utils.py` | `components/spec.md`, `reactive-scoped-style/spec.md` |
 | `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md`, `suspense/spec.md`, `async-scheduler/spec.md` |
+| `webcompy/elements/_bind.py` | `elements/spec.md` |
 | `webcompy/elements/types/_suspense.py` | `suspense/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/elements/types/_dynamic.py` | `async-scheduler/spec.md` |
 | `webcompy/elements/types/_fragment.py` | `elements/spec.md` |

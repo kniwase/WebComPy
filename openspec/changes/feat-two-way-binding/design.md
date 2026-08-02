@@ -45,6 +45,7 @@ Relevant code paths:
 - `use_field`/validators/`use_form` (planned `feat-form-fields`; `:bind` accepting a Field object comes with that change).
 - Dynamic `input[type]` combined with `:bind` (rejected, see D4).
 - Component-tag `:bind` semantics (on components it stays an ordinary prop named `bind`).
+- Update-timing selection for text-like bindings (commit on `change`/`blur` vs per-keystroke `input`; e.g. Vue `.lazy`, Blazor `@bind:event`, Angular `updateOn`). `:bind` on text-like inputs, number inputs, and textareas updates on every `input` event only. This matches the majority of JS reactive frameworks (Vue/Svelte/React/Angular/Solid default to per-keystroke; Blazor and Aurelia 1 default to commit). A commit-timing variant is deferred: validation timing will be addressed together with `feat-form-fields` (`use_field`), and a `:bind-event`-style extension can be added if needed. The existing skip policy for number inputs and the Signal same-value suppression already neutralize the two classic per-keystroke failure modes (intermediate unparseable values, signal→DOM echo).
 
 ## Decisions
 
