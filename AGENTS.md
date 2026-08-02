@@ -232,6 +232,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/elements/types/_dynamic.py` | `async-scheduler/spec.md` |
 | `webcompy/elements/types/_fragment.py` | `elements/spec.md` |
 | `webcompy/elements/types/_switch.py` | `elements/spec.md`, `async-rendering/spec.md` |
+| `webcompy/forms/` | `forms/spec.md` |
 | `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md` |
@@ -327,6 +328,7 @@ When specs are added, modified, or removed, update:
 | `nested-dynamic-element` | Nesting of `repeat` and `switch` at arbitrary depth |
 | `dict-repeat-overload` | Efficient DOM reconciliation for `ReactiveDict` with `repeat()` |
 | `element-preserve-children` | `:preserve_children` attribute for externally-managed child DOM nodes |
+| `forms` | Field wrapper, built-in validators, Form aggregation, `:bind` integration |
 | `head-vdom` | Declarative head element management via `HeadElement` VDOM |
 | `router` | Client-side routing, hash/history modes, path params |
 | `router-hooks` | Navigation lifecycle callbacks |
