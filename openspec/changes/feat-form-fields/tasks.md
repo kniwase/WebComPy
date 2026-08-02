@@ -18,7 +18,7 @@
 
 ## 4. Spec, Mapping, and Housekeeping
 
-- [ ] 4.1 Apply the delta: create `openspec/specs/forms/spec.md`, apply ADDED requirement to `openspec/specs/elements/spec.md` (archive/sync flow) — deferred by owner; will be done together with spec sync
+- [x] 4.1 Apply the delta: create `openspec/specs/forms/spec.md`, apply ADDED requirement to `openspec/specs/elements/spec.md` (archive/sync flow)
 - [x] 4.2 Update `AGENTS.md` File→Spec Mapping (`webcompy/forms/` → `forms/spec.md`) and the Current Specs list; update `.opencode/skills/webcompy-review/SKILL.md` spec list accordingly
 
 ## 5. E2E and Verification
