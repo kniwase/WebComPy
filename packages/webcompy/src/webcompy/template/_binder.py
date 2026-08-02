@@ -337,7 +337,7 @@ def _bind_dict_reactive(
     body: list[TemplateNode],
     ctx: dict[str, Any],
 ) -> ElementChildren:
-    def dict_cb(value: Any, key: Any) -> ElementChildren:
+    def dict_cb(_value: Any, key: Any) -> ElementChildren:
         length = Computed(lambda: len(signal.value))
 
         def pos() -> int:
@@ -345,6 +345,12 @@ def _bind_dict_reactive(
                 return list(signal.value).index(key)
             except ValueError:
                 return -1
+
+        def read_value() -> Any:
+            try:
+                return signal.value[key]
+            except (KeyError, IndexError):
+                return _value
 
         meta = LoopMetadata(
             index=Computed(lambda: pos() + 1),
@@ -355,7 +361,8 @@ def _bind_dict_reactive(
             last=Computed(lambda: pos() + 1 == len(signal.value)),
             length=length,
         )
-        new_ctx = _extend_for_ctx(ctx, loop_vars, value, key, is_dict=True, loop_meta=meta)
+        reactive_value = Computed(read_value)
+        new_ctx = _extend_for_ctx(ctx, loop_vars, reactive_value, key, is_dict=True, loop_meta=meta)
         return _wrap_for_fragment(bind_children(body, new_ctx))
 
     return repeat(signal, dict_cb)

@@ -263,3 +263,45 @@ class TestReactiveDictLoopMetadata:
             captured["d"]["c"] = 3
             texts = [li.textContent for li in result.query_selector_all("li")]
         assert texts == ["1:a=1", "2:b=2", "3:c=3"]
+
+
+class TestReactiveDictValueReactivity:
+    def test_one_var_value_replacement_updates_existing_key(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def DictValuePage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"x": 1, "y": 2})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(DictValuePage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["1", "2"]
+            captured["d"]["x"] = 99
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["99", "2"]
+
+    def test_two_var_value_replacement_updates_existing_key(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def TwoVarValuePage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": 1, "b": 2})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for k, v in d %}<li>{{ k }}={{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(TwoVarValuePage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["a=1", "b=2"]
+            captured["d"]["b"] = 7
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["a=1", "b=7"]

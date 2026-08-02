@@ -43,6 +43,56 @@ def _rename_in_expressions(text: str, var_name: str, replacement: str) -> str:
     return _EXPRESSION_SPAN_RE.sub(_replace_in_span, text)
 
 
+def _rename_loop_scoped(body: str, prefix: str) -> str:
+    """Rename bare ``loop`` to ``{prefix}loop`` outside nested for-loop bodies.
+
+    References to ``loop`` that live inside a direct child
+    ``{% for %}...{% endfor %}`` block are left untouched, so the recursive
+    expansion can bind them to the inner loop's metadata (innermost-wins
+    shadowing). Non-for directives (``{% if %}`` etc.) are transparent: ``loop``
+    inside them still belongs to the current scope and is renamed.
+    """
+    directives = list(DIRECTIVE_PATTERN.finditer(body))
+    replacement = f"{prefix}loop"
+    if not directives:
+        return _rename_in_expressions(body, "loop", replacement)
+
+    parts: list[str] = []
+    pos = 0
+    i = 0
+    while i < len(directives):
+        m = directives[i]
+        if m.group("directive") != "for":
+            i += 1
+            continue
+        depth = 1
+        j = i + 1
+        while j < len(directives):
+            dj = directives[j].group("directive")
+            if dj == "for":
+                depth += 1
+            elif dj == "endfor":
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+
+        parts.append(_rename_in_expressions(body[pos : m.start()], "loop", replacement))
+        parts.append(_rename_in_expressions(body[m.start() : m.end()], "loop", replacement))
+        if j >= len(directives):
+            pos = m.end()
+            i += 1
+            continue
+        endfor_m = directives[j]
+        parts.append(body[m.end() : endfor_m.start()])
+        parts.append(_rename_in_expressions(body[endfor_m.start() : endfor_m.end()], "loop", replacement))
+        pos = endfor_m.end()
+        i = j + 1
+
+    parts.append(_rename_in_expressions(body[pos:], "loop", replacement))
+    return "".join(parts)
+
+
 def _is_list_body(body_text: str) -> bool:
     if "\n" in body_text:
         body_text = textwrap.dedent(body_text)
@@ -293,27 +343,33 @@ def _expand_directives_in_body(body: str, ctx: dict[str, Any], prefix: str) -> s
             if isinstance(iterable, SignalBase):
                 iterable = iterable.value
             is_dict = isinstance(iterable, dict)
-            if is_dict:
-                items: list[Any] = list(iterable.items())
-            else:
-                items = list(iterable)
-
-            for n, item in enumerate(items):
-                inner_prefix = f"{prefix}{n}_"
-                if len(loop_vars) == 1:
-                    ctx[f"{inner_prefix}{loop_vars[0]}"] = item
-                elif len(loop_vars) == 2 and is_dict:
-                    key, value = item
-                    ctx[f"{inner_prefix}{loop_vars[0]}"] = key
-                    ctx[f"{inner_prefix}{loop_vars[1]}"] = value
-                else:
+            n_vars = len(loop_vars)
+            if n_vars == 2:
+                if not is_dict:
                     raise WebComPyException(
                         f"Two-variable for-loop requires a dict iterable (got {type(iterable).__name__})"
                     )
+                items: list[Any] = list(iterable.items())
+            elif n_vars == 1:
+                items = list(iterable.values()) if is_dict else list(iterable)
+            else:
+                raise WebComPyException(f"Invalid for-loop variable count: expected 1 or 2, got {n_vars}")
+
+            total = len(items)
+            for n, item in enumerate(items):
+                inner_prefix = f"{prefix}{n}_"
+                ctx[f"{inner_prefix}loop"] = _make_loop_meta(n, total)
+                if n_vars == 1:
+                    ctx[f"{inner_prefix}{loop_vars[0]}"] = item
+                else:
+                    key, value = item
+                    ctx[f"{inner_prefix}{loop_vars[0]}"] = key
+                    ctx[f"{inner_prefix}{loop_vars[1]}"] = value
 
                 expanded = inner_body
                 for var in loop_vars:
                     expanded = _rename_in_expressions(expanded, var, f"{inner_prefix}{var}")
+                expanded = _rename_loop_scoped(expanded, inner_prefix)
                 expanded = _expand_directives_in_body(expanded, ctx, inner_prefix)
                 result.append(expanded)
 
@@ -432,11 +488,18 @@ class MarkdownForElement(DynamicElement):
 
         iterable_val = self._iterable.value if isinstance(self._iterable, SignalBase) else self._iterable
         is_dict = isinstance(iterable_val, dict)
+        n_vars = len(self._loop_vars)
 
-        if is_dict:
+        if n_vars == 2:
+            if not is_dict:
+                raise WebComPyException(
+                    f"Two-variable for-loop requires a dict iterable (got {type(iterable_val).__name__})"
+                )
             items: list[Any] = list(iterable_val.items())
+        elif n_vars == 1:
+            items = list(iterable_val.values()) if is_dict else list(iterable_val)
         else:
-            items = list(iterable_val)
+            raise WebComPyException(f"Invalid for-loop variable count: expected 1 or 2, got {n_vars}")
 
         if not items:
             return []
@@ -449,23 +512,17 @@ class MarkdownForElement(DynamicElement):
             prefix = f"__wmdf_{n}_"
             augmented_ctx[f"{prefix}loop"] = _make_loop_meta(n, total)
 
-            if len(self._loop_vars) == 1:
+            if n_vars == 1:
                 augmented_ctx[f"{prefix}{self._loop_vars[0]}"] = item
-            elif len(self._loop_vars) == 2 and is_dict:
+            else:
                 key, value = item
                 augmented_ctx[f"{prefix}{self._loop_vars[0]}"] = key
                 augmented_ctx[f"{prefix}{self._loop_vars[1]}"] = value
-            else:
-                raise WebComPyException(
-                    f"Two-variable for-loop requires a dict iterable (got {type(iterable_val).__name__})"
-                )
 
             item_body = self._body_markdown
-            rename_vars = list(self._loop_vars)
-            if "loop" not in rename_vars:
-                rename_vars.append("loop")
-            for var in rename_vars:
+            for var in self._loop_vars:
                 item_body = _rename_in_expressions(item_body, var, f"{prefix}{var}")
+            item_body = _rename_loop_scoped(item_body, prefix)
 
             item_body = _expand_directives_in_body(item_body, augmented_ctx, prefix)
             item_body = _strip_blank_edge_lines(item_body)

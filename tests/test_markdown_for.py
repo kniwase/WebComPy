@@ -234,6 +234,55 @@ class TestMarkdownForLoopMetadata:
             _attach(mfe)
         assert self._li_texts(mfe) == ["first", "2"]
 
+    def test_one_var_dict_loop_binds_values_not_tuples(self):
+        mfe = MarkdownForElement(
+            ["v"],
+            "d",
+            "- {{ v }}",
+            {"d": {"k1": "v1", "k2": "v2"}},
+        )
+        with _markdown_di_scope():
+            _attach(mfe)
+        assert self._li_texts(mfe) == ["v1", "v2"]
+
+    def test_one_var_reactive_dict_loop_binds_values(self):
+        d = ReactiveDict({"k1": "v1", "k2": "v2"})
+        mfe = MarkdownForElement(["v"], "d", "- {{ v }}", {"d": d})
+        with _markdown_di_scope():
+            _attach(mfe)
+        assert self._li_texts(mfe) == ["v1", "v2"]
+
+
+class TestMarkdownNestedLoopMetadata:
+    def _li_texts(self, mfe: MarkdownForElement) -> list[str]:
+        ul = _find_ul(mfe)
+        result: list[str] = []
+        for li in _find_lis(ul):
+            parts: list[str] = []
+            for c in li._children:
+                if isinstance(c, str):
+                    parts.append(c)
+                elif hasattr(c, "_text") and isinstance(c._text, str):
+                    parts.append(c._text)
+            result.append("".join(parts))
+        return result
+
+    def test_inner_loop_metadata_is_innermost(self):
+        items = [{"subs": ["a", "b"]}, {"subs": ["c"]}]
+        body = "- {% for sub in item.subs %}{{ loop.index }}:{{ sub }} {% endfor %}outer={{ loop.length }}\n"
+        with _markdown_di_scope():
+            mfe = MarkdownForElement(["item"], "items", body, {"items": items})
+            _attach(mfe)
+        assert self._li_texts(mfe) == ["1:a 2:b outer=2", "1:c outer=2"]
+
+    def test_inner_loop_length_differs_from_outer(self):
+        items = [{"subs": ["a", "b", "c"]}]
+        body = "- {% for sub in item.subs %}{{ loop.length }}:{{ sub }} {% endfor %}outer={{ loop.length }}\n"
+        with _markdown_di_scope():
+            mfe = MarkdownForElement(["item"], "items", body, {"items": items})
+            _attach(mfe)
+        assert self._li_texts(mfe) == ["3:a 3:b 3:c outer=1"]
+
 
 class TestRenaming:
     def test_rename_in_expressions_renames_var_in_hole(self):
