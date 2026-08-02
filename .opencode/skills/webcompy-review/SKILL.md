@@ -53,7 +53,7 @@ Write the review following the template below. Focus ONLY on the diff (Step 1) â
 
 ### Initial implementation vs review-fix commits
 
-When a PR has undergone multiple review cycles, distinguish the original implementation from subsequent review-fix commits in your analysis. The original implementation is the PRIMARY review target. Review-fix commits SHALL be checked only for: (a) correct resolution of the previous concern, and (b) whether they introduce regressions in the fixed area. Do NOT use review-fix commits as a springboard to expand scope into adjacent edge cases.
+When a PR has undergone multiple review cycles, distinguish the original implementation from subsequent review-fix commits in your analysis. The original implementation is the PRIMARY review target. Review-fix commits SHALL be checked for: (a) correct resolution of the previous concern, and (b) whether they introduce regressions in the fixed area or any other area changed by the commit. Do NOT use review-fix commits as a springboard to expand scope into adjacent edge cases.
 
 ### Pre-existing bugs
 
