@@ -58,9 +58,11 @@ Level matching detail: compile each level's segment pattern as today (`_convert_
 
 ### D3. RouterView depth = count of RouterView ancestors
 
-`RouterView._on_set_parent()` walks `self._parent` links counting `RouterView` instances; that count is its depth `N` (root `RouterView` → 0). This needs no DI/ContextVar plumbing and is immune to component-setup timing (async two-phase setup) because the element tree already encodes nesting. A `RouterView` at depth N subscribes to a per-level holder (D4) and renders `chain[N]`'s component when the chain has more than N levels; otherwise it renders nothing (empty).
+`RouterView` walks `self._parent` links counting `RouterView` instances; that count is its depth `N` (root `RouterView` → 0). This needs no DI/ContextVar plumbing and is immune to component-setup timing (async two-phase setup) because the element tree already encodes nesting. A `RouterView` at depth N subscribes to a per-level holder (D4) and renders `chain[N]`'s component when the chain has more than N levels; otherwise it renders nothing (empty).
 
 Edge cases: multiple `RouterView`s at the same depth (different branches) each render their level of the single current match — allowed, documented. A `RouterView` deeper than the chain renders empty (NOT an error), which makes conditional layouts safe.
+
+**Implementation note (deviation from D3):** depth is NOT computed in `_on_set_parent()`. During component setup the parent chain is incomplete — a `RouterView`'s `_parent` links are assigned when its ancestor component renders, which happens later — so counting there would always yield 0 and break nesting. The shipped `RouterView` computes depth at match time via `_count_router_view_ancestors()` (called from `_get_or_create_component()` in `_on_match_changed()`/`_render()`), when the parent chain is fully wired.
 
 ### D4. Per-level component preservation via a holder Computed
 
@@ -99,8 +101,11 @@ The shipped implementation adds `RouterView._ancestor_will_remount(match)`: at t
 
 - `__set_path__` fires hooks once per navigation — untouched.
 - `preload_lazy_routes` walks the page tree (all nodes, any depth) instead of the flat list.
-- SSG: `webcompy_cli/_generate.py` unchanged — `__routes__` (D1) yields full leaf paths; `path_params` variants still come from the leaf `page`. History-mode SSR of a full path resolves the chain via `current_match` identically to browser.
+- SSG: `webcompy_cli/_generate.py` expands each route via `Router.__route_variants__` (a parallel list to `__routes__`), which merges the `path_params` of ALL chain levels into a Cartesian product (child wins on collision). This is a review-driven change from the original "leaf-only" plan: a nested route such as `/users/{uid}` with a dynamic parent and `path_params` on the parent previously produced a literal `users/{uid}/docs` page. For flat routes the variants are identical to the old `page.get("path_params")` expansion, so behavior is unchanged. History-mode SSR of a full path resolves the chain via `current_match` identically to browser.
+- Request-scoped routers: `RenderContext` clones the app router via `Router._clone_for_request()`, which now copies `before_route_change` / `after_route_change` / `on_route_error` (review-driven fix: hooks registered by plugins on `app.router` must also exist on the injected per-request router).
+- Lazy components: `LazyComponentGenerator._resolve()` re-registers the resolved generator into the active render-context component store on every call (idempotent by name), and `preload_lazy_routes` traverses resolved lazies too — a component resolved during the first SSR/SSG request stays registered in later requests' fresh stores (scoped styles / template tag resolution preserved). `preload_lazy_routes` deduplicates shared `LazyComponentGenerator` instances across sibling branches (single `seen` set for the whole traversal).
 - Hash mode: matching input is the hash path, same as today.
+- Async navigation: `RouterView._on_match_changed()` tracks a per-view navigation generation; after awaiting the new component's `_render()` it skips the DOM commit / deferred `on_after_rendering` dispatch when a newer navigation superseded it, and `end_defer_after_rendering()` runs in a `finally` so a failed render cannot unbalance the defer scope (review-driven fixes).
 
 ### D6. Backward compatibility surface
 
@@ -110,7 +115,7 @@ Public API unchanged: `Router(...)`, `RouterPage` (new optional key only), `Rout
 
 - [Chain matching order bugs with sibling patterns] → first-definition-wins, mirroring today; unit tests cover overlapping patterns (`/docs/new` vs `/docs/{name}`).
 - [Holder Computed leaks destroyed components] → destruction happens inside the Computed on transition; destroyed components unsubscribe via the existing component/DI-scope disposal path.
-- [Depth-by-ancestor-walk breaks under reparenting] → RouterViews are not reparented in practice; document that depth is computed once in `_on_set_parent`.
+- [Depth-by-ancestor-walk breaks under reparenting] → RouterViews are not reparented in practice; depth is recomputed at match time, so a reparented view would simply get a fresh depth on the next match.
 - [Query-identity rule remounts pages on irrelevant query changes] → deliberate (context immutability); documented as current-behavior-consistent; apps can strip query keys via `before_route_change` redirects if needed.
 - [Index route `""` collides with a sibling `"{param}"`] → definition order decides; spec scenario pins this.
 

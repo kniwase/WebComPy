@@ -201,8 +201,16 @@ For each chain level, the mounted component instance SHALL be preserved across a
 - **THEN** the ancestor and each descendant level SHALL be re-created exactly once
 - **AND** no transient duplicate instance SHALL be created for any descendant level (setup SHALL NOT run twice for the same navigation)
 
+### Requirement: In-flight route renders shall be invalidated by newer navigation
+`RouterView._on_match_changed()` SHALL track a per-view navigation generation, incrementing it for every match change. After awaiting the new component's `_render()`, it SHALL check the generation before committing DOM/lifecycle work (node positioning, re-indexing, and deferred `on_after_rendering` dispatch); if a newer navigation superseded the awaited render, the commit SHALL be skipped. The deferred-rendering scope (`start_defer_after_rendering()` / `end_defer_after_rendering()`) SHALL be balanced even when the awaited render raises, so a failed route render cannot leak defer depth or queued callbacks into subsequent navigations.
+
+#### Scenario: Rapid navigation during an async route render
+- **WHEN** navigating from A to B where B's render is slow (async setup), then navigating from B to C while B's render is still awaiting
+- **THEN** B's stale render SHALL NOT commit positioning or deferred `on_after_rendering` callbacks after C has committed
+- **AND** the defer scope SHALL be balanced (depth returns to its pre-navigation value)
+
 ### Requirement: Nested routes shall integrate with lazy loading, hooks, and SSG
-Lazy components (`lazy()`) SHALL be allowed at any tree level; preloading SHALL traverse the whole tree. Router hooks SHALL fire once per navigation (not per level). `Router.__routes__` SHALL remain a flat list of full leaf paths in the existing 5-tuple shape so that static site generation enumerates all nested paths without changes to the CLI.
+Lazy components (`lazy()`) SHALL be allowed at any tree level; preloading SHALL traverse the whole tree, deduplicating a `LazyComponentGenerator` shared by multiple sibling branches (preloaded at most once per traversal). Already-resolved lazy generators SHALL be re-registered into the active render-context component store on every resolution (idempotent by name), so a lazy component resolved during an earlier request remains registered in later requests' fresh stores. Router hooks SHALL fire once per navigation (not per level). `Router._clone_for_request()` SHALL copy the navigation hook registrations so hooks registered on `app.router` exist on the injected per-request router.
 
 #### Scenario: Lazy child preloads on hover
 - **WHEN** a child route uses `lazy("app.pages.guide:GuidePage", __file__)` and a `RouterLink` to its full path is hovered
@@ -215,6 +223,12 @@ Lazy components (`lazy()`) SHALL be allowed at any tree level; preloading SHALL 
 #### Scenario: SSG renders nested paths
 - **WHEN** `webcompy generate` runs with history-mode nested routes `/docs` → `["", "/guide"]`
 - **THEN** static HTML SHALL be produced for `/docs/` and `/docs/guide/`, each with the full chain rendered
+
+#### Scenario: SSG expands nested dynamic parents
+- **WHEN** a nested route has a dynamic parent with `path_params` (e.g., `/users/{uid}` → `/docs` with `path_params=[{"uid": "alice"}, {"uid": "bob"}]`)
+- **THEN** `webcompy generate` SHALL produce one page per merged ancestor/leaf variant (`/users/alice/docs/` and `/users/bob/docs/`)
+- **AND** `path_params` of multiple dynamic levels SHALL expand as the Cartesian product (child wins on name collision)
+- **AND** flat routes SHALL keep the previous single-level expansion unchanged
 
 ### Requirement: A default page shall be shown when no route matches
 When the current URL does not match any defined route, the router SHALL render a default component or display "Not Found".
