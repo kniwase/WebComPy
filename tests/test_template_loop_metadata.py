@@ -369,6 +369,63 @@ class TestReactiveDictValueReactivity:
             texts = [li.textContent for li in result.query_selector_all("li")]
         assert texts == ["Alicia", "Bob"]
 
+    def test_one_var_signal_value_plain_interpolation(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def DictValueSignalPage(_: ComponentContext[None]):
+            from webcompy.signal import Signal, use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": Signal("Alice"), "b": Signal("Bob")})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(DictValueSignalPage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["Alice", "Bob"]
+            captured["d"]["a"].value = "Alicia"
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["Alicia", "Bob"]
+
+    def test_one_var_none_value_omitted(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def DictValueNonePage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": None, "b": "two"})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(DictValueNonePage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["", "two"]
+
+    def test_one_var_none_value_replaced_reactively(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def DictValueNoneReplacedPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": None, "b": "two"})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(DictValueNoneReplacedPage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["", "two"]
+            captured["d"]["a"] = "one"
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["one", "two"]
+
     def test_one_var_dict_value_dotted_condition(self):
         captured: dict[str, Any] = {}
 

@@ -63,6 +63,16 @@ class TestTextInterpolation:
         assert result._children[0]._text == "before"
         assert result._children[1]._text == "after"
 
+    def test_signal_with_none_value_renders_empty(self):
+        sig = Signal(None)
+        roots = parse_template("<p>before{{ value }}after</p>")
+        result = bind_element(roots[0], {"value": sig})
+        assert len(result._children) == 3
+        text_el = result._children[1]
+        assert isinstance(text_el, TextElement)
+        assert text_el._text is sig
+        assert text_el._get_text() == ""
+
     def test_element_as_variable(self):
         child = Element("span", {}, [], None, ["x"])
         roots = parse_template("<div>{{ card }}</div>")

@@ -364,6 +364,25 @@ class TestRenaming:
         assert "{{ __wmdf_0_loop.index }}" in result
         assert "{% raw %}{{ loop }}{% endraw %}" in result
 
+    def test_rename_multiline_expression_renames_names_per_line(self):
+        result = _apply_renames("{{ (item.name +\n    item.age) }}", {"item": "__wmdf_0_item"})
+        assert result == "{{ (__wmdf_0_item.name +\n    __wmdf_0_item.age) }}"
+
+    def test_rename_multiline_attribute_segment_not_renamed(self):
+        result = _apply_renames("{{ (obj.item.name +\n    obj.item.age) }}", {"item": "__wmdf_0_item"})
+        assert "__wmdf" not in result
+        assert "obj.item" in result
+
+    def test_rename_multiline_string_literal_not_renamed(self):
+        result = _apply_renames('{{ (item.name +\n    "item") }}', {"item": "__wmdf_0_item"})
+        assert result == '{{ (__wmdf_0_item.name +\n    "item") }}'
+
+    def test_rename_regex_fallback_skips_attribute_segment(self):
+        from webcompy.template._markdown_for import _rename_expression
+
+        result = _rename_expression("obj.item + (", {"item": "__wmdf_0_item"})
+        assert "__wmdf" not in result
+
     def test_rename_preserves_inline_code_span(self):
         result = _apply_renames("- `{{ item }}` and {{ item }}", {"item": "__wmdf_0_item"})
         assert "`{{ item }}`" in result
@@ -560,6 +579,63 @@ class TestProtectedSpans:
         tokens = _tokenize_source("```\n```info\n{% endfo %}\n```")
         assert all(t.kind == "text" for t in tokens)
 
+    def test_directive_inside_comment_not_tokenized(self):
+        tokens = _tokenize_source("{# {% for x in xs %} #}")
+        assert all(t.kind == "text" for t in tokens)
+
+    def test_directive_inside_html_comment_not_tokenized(self):
+        tokens = _tokenize_source("<!-- {% for x in xs %} -->")
+        assert all(t.kind == "text" for t in tokens)
+
+    def test_directive_inside_raw_block_not_tokenized(self):
+        tokens = _tokenize_source("{% raw %}{% for x in xs %}{% endraw %}")
+        assert all(t.kind == "text" for t in tokens)
+
+    def test_directive_inside_hole_not_tokenized(self):
+        tokens = _tokenize_source('{{ "{% for x in xs %}" }}')
+        assert all(t.kind == "text" for t in tokens)
+
+    def test_directive_inside_unquoted_attr_not_tokenized(self):
+        tokens = _tokenize_source("<a href={% endfo %}>link</a>")
+        assert all(t.kind == "text" for t in tokens)
+
+
+class TestExpandDirectivesInBody:
+    def test_if_inside_code_span_stays_literal(self):
+        from webcompy.template._markdown_for import _expand_directives_in_body
+
+        body = "- `{% if cond %}a{% else %}b{% endif %}`\n"
+        result = _expand_directives_in_body(body, {"cond": True}, "", {})
+        assert result == body
+
+    def test_if_inside_raw_block_stays_literal(self):
+        from webcompy.template._markdown_for import _expand_directives_in_body
+
+        body = "- {% raw %}{% if cond %}a{% endif %}{% endraw %}\n"
+        result = _expand_directives_in_body(body, {"cond": True}, "", {})
+        assert result == body
+
+    def test_if_inside_comment_stays_literal(self):
+        from webcompy.template._markdown_for import _expand_directives_in_body
+
+        body = "- {# {% if cond %}a{% endif %} #}\n"
+        result = _expand_directives_in_body(body, {"cond": True}, "", {})
+        assert result == body
+
+    def test_unprotected_if_still_expands(self):
+        from webcompy.template._markdown_for import _expand_directives_in_body
+
+        body = "- {% if cond %}a{% else %}b{% endif %}\n"
+        result = _expand_directives_in_body(body, {"cond": True}, "", {})
+        assert result == "- a\n"
+
+    def test_mixed_protected_and_unprotected_directives(self):
+        from webcompy.template._markdown_for import _expand_directives_in_body
+
+        body = "- `{% if x %}a{% endif %}` {% if cond %}b{% endif %}"
+        result = _expand_directives_in_body(body, {"cond": True}, "", {})
+        assert result == "- `{% if x %}a{% endif %}` b"
+
 
 class TestEscapeHatch:
     def test_html_block_for_uses_repeat_path(self):
@@ -719,6 +795,27 @@ class TestMarkdownDirectiveValidation:
         from webcompy.template._markdown_for import _validate_directives
 
         _validate_directives("- {% raw %}{% endfo %}{% endraw %}\n")
+
+    def test_directive_like_text_in_comment_not_rejected(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        _validate_directives("- {# {% endfo %} #}\n")
+
+    def test_directive_like_text_in_html_comment_not_rejected(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        _validate_directives("- <!-- {% endfo %} -->\n")
+
+    def test_comment_like_text_inside_raw_block_preserved(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        _validate_directives("- {% raw %}{# {% endfo %} #}{% endraw %}\n")
+
+    def test_directive_like_text_in_unquoted_attribute_value_not_rejected(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        _validate_directives("- <a href={% endfo %}>x</a>\n")
+        _validate_directives("- <a href={%endfo%}>x</a>\n")
 
     def test_directive_like_text_inside_hole_not_rejected(self):
         from webcompy.template._markdown_for import _validate_directives
