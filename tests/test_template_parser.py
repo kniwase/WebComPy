@@ -538,6 +538,13 @@ class TestDirectiveRejection:
         roots = _parse("<p>{% raw %}{% anything %}{% endraw %}</p>")
         assert len(roots) == 1
 
+    def test_directive_like_text_inside_hole_not_rejected(self):
+        roots = _parse('<p>{{ "{% endfo %}" }}</p>')
+        assert len(roots) == 1
+        p = roots[0]
+        assert len(p.children) == 1
+        assert isinstance(p.children[0], TemplateText)
+
     def test_directive_like_span_in_attribute_stays_literal(self):
         roots = _parse('<div title="{% extends %}"></div>')
         assert len(roots) == 1

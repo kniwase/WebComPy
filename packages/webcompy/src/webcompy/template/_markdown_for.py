@@ -27,7 +27,7 @@ from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY, MARKDOWN_PORT_KEY
 from webcompy.signal import SignalBase
 from webcompy.template._binder import _make_loop_meta
-from webcompy.template._holes import resolve_var
+from webcompy.template._holes import LiteralText, _scan_hole_end, resolve_var, split_text
 from webcompy.template._markdown_blocks import match_list_item_start
 from webcompy.template._parser import (
     _GENERIC_DIRECTIVE_RE,
@@ -37,13 +37,29 @@ from webcompy.template._parser import (
     _parse_for_args,
 )
 
-_EXPRESSION_SPAN_RE = re.compile(r"\{\{.*?\}\}|\{%.*?%\}", re.DOTALL)
 _FENCE_LINE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 _CODE_SPAN_RE = re.compile(r"`[^`\n]+`")
-_SPAN_DELIM_RE = re.compile(r"^(\{\{|\{%)(.*)(\}\}|%\})$", re.DOTALL)
 _STRING_LITERAL_RE = re.compile(r"'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"")
 _RAW_BLOCK_RE = re.compile(r"\{%\s*raw\s*%\}(.*?)\{%\s*endraw\s*%\}", re.DOTALL)
 _ATTR_VALUE_RE = re.compile(r"""[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*"[^"]*"|[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*'[^']*'""")
+
+
+def _hole_spans(text: str) -> list[tuple[int, int]]:
+    spans: list[tuple[int, int]] = []
+    i = 0
+    n = len(text)
+    while i < n - 1:
+        if text[i] == "{" and text[i + 1] == "{":
+            try:
+                end = _scan_hole_end(text, i + 2)
+            except WebComPyException:
+                end = None
+            if end is not None:
+                spans.append((i, end + 2))
+                i = end + 2
+                continue
+        i += 1
+    return spans
 
 
 def _rename_expression_regex(expr: str, renames: dict[str, str]) -> str:
@@ -65,14 +81,9 @@ def _rename_expression_regex(expr: str, renames: dict[str, str]) -> str:
 def _rename_expression(expr: str, renames: dict[str, str]) -> str:
     if not renames:
         return expr
-    delim_match = _SPAN_DELIM_RE.match(expr.strip())
-    prefix = suffix = ""
-    inner = expr
-    if delim_match:
-        prefix = delim_match.group(1)
-        suffix = delim_match.group(3)
-        inner = delim_match.group(2)
-    stripped = inner.strip()
+    stripped = expr.strip()
+    lead_ws = expr[: len(expr) - len(expr.lstrip())]
+    trail_ws = expr[len(expr.rstrip()) :]
     if "\n" in stripped:
         return _rename_expression_regex(expr, renames)
     try:
@@ -85,11 +96,10 @@ def _rename_expression(expr: str, renames: dict[str, str]) -> str:
             targets.append((node.col_offset, node.end_col_offset, renames[node.id]))
     if not targets:
         return expr
-    offset = len(inner) - len(inner.lstrip())
-    chars = list(inner)
+    encoded = bytearray(stripped.encode("utf-8"))
     for start, end, repl in sorted(targets, key=lambda t: t[0], reverse=True):
-        chars[offset + start : offset + end] = list(repl)
-    return f"{prefix}{''.join(chars)}{suffix}"
+        encoded[start:end] = repl.encode("utf-8")
+    return f"{lead_ws}{encoded.decode('utf-8')}{trail_ws}"
 
 
 def _apply_renames(text: str, renames: dict[str, str]) -> str:
@@ -103,24 +113,27 @@ def _apply_renames(text: str, renames: dict[str, str]) -> str:
         return key
 
     protected_text = _RAW_BLOCK_RE.sub(_stash_raw, text)
-
-    def _replace_in_span(m: re.Match[str]) -> str:
-        return _rename_expression(m.group(0), renames)
-
-    protected_text = _EXPRESSION_SPAN_RE.sub(_replace_in_span, protected_text)
+    out: list[str] = []
+    for part in split_text(protected_text):
+        if isinstance(part, LiteralText):
+            out.append(part.text)
+        else:
+            out.append("{{ " + _rename_expression(part.expr_source, renames) + " }}")
+    result = "".join(out)
     for key, original in raw_blocks.items():
-        protected_text = protected_text.replace(key, original)
-    return protected_text
+        result = result.replace(key, original)
+    return result
 
 
-def _validate_body_directives(text: str) -> None:
-    """Reject unsupported/unknown directives in a Markdown list-body for block.
+def _validate_directives(text: str) -> None:
+    """Reject unsupported/unknown directives in Markdown source.
 
-    Code spans, fenced code, ``{% raw %}`` blocks, and quoted attribute values
-    are protected: directive-like spans inside them stay literal, mirroring the
-    HTML template path.
+    Code spans, fenced code, ``{% raw %}`` blocks, quoted attribute values,
+    and ``{{ }}`` interpolation holes are protected: directive-like spans
+    inside them stay literal, mirroring the HTML template path.
     """
     protected = _protected_spans(text)
+    protected.extend(_hole_spans(text))
     protected.extend((m.start(), m.end()) for m in _RAW_BLOCK_RE.finditer(text))
     protected.extend((m.start(), m.end()) for m in _ATTR_VALUE_RE.finditer(text))
     for m in _GENERIC_DIRECTIVE_RE.finditer(text):
@@ -277,7 +290,6 @@ class _SourceParser:
         self._pos = j + 1
 
         if _is_list_body(body_text):
-            _validate_body_directives(body_text)
             return _ForBlock(loop_vars, iterable_path, body_text)
         return _TextSegment(self._source[for_token.start : endfor_token.end])
 
@@ -325,6 +337,7 @@ class _SourceParser:
 
 
 def _split_markdown_source(source: str, ctx: Mapping[str, Any]) -> list[_TextSegment | _ForBlock]:
+    _validate_directives(source)
     tokens = _tokenize_source(source)
     if not any(t.kind != "text" for t in tokens):
         return [_TextSegment(source)]

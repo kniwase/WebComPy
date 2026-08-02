@@ -148,15 +148,25 @@ def _emit_text_segment(text: str) -> list[TemplateText]:
 
 
 def _scan_text_for_directives(text_node: TemplateText) -> list[TemplateText | DirectiveToken]:
-    full_text = "".join(
-        part.text if isinstance(part, LiteralText) else "{{ " + part.expr_source + " }}" for part in text_node.parts
-    )
+    mask_to_source: dict[str, str] = {}
+    buf: list[str] = []
+    for idx, part in enumerate(text_node.parts):
+        if isinstance(part, LiteralText):
+            buf.append(part.text)
+        else:
+            mask = f"\x00h{idx}\x00"
+            mask_to_source[mask] = part.expr_source
+            buf.append(mask)
+    masked = "".join(buf)
     pieces: list[TemplateText | DirectiveToken] = []
     pos = 0
-    for match in _GENERIC_DIRECTIVE_RE.finditer(full_text):
+    for match in _GENERIC_DIRECTIVE_RE.finditer(masked):
         name = match.group("name")
         if match.start() > pos:
-            pieces.extend(_emit_text_segment(full_text[pos : match.start()]))
+            segment = masked[pos : match.start()]
+            for mask, source in mask_to_source.items():
+                segment = segment.replace(mask, "{{ " + source + " }}")
+            pieces.extend(_emit_text_segment(segment))
         if name in _SUPPORTED_DIRECTIVES:
             pieces.append(_make_directive(match))
         elif name in _KNOWN_UNSUPPORTED_DIRECTIVES:
@@ -164,8 +174,11 @@ def _scan_text_for_directives(text_node: TemplateText) -> list[TemplateText | Di
         else:
             raise WebComPyException(f"Unknown template directive: {{% {name} %}}")
         pos = match.end()
-    if pos < len(full_text):
-        pieces.extend(_emit_text_segment(full_text[pos:]))
+    if pos < len(masked):
+        segment = masked[pos:]
+        for mask, source in mask_to_source.items():
+            segment = segment.replace(mask, "{{ " + source + " }}")
+        pieces.extend(_emit_text_segment(segment))
     return pieces
 
 

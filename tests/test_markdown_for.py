@@ -306,9 +306,13 @@ class TestRenaming:
         result = _apply_renames("{{ item.name }}", {"item": "__wmdf_0_item"})
         assert result == "{{ __wmdf_0_item.name }}"
 
-    def test_rename_in_expressions_renames_var_in_directive(self):
-        result = _apply_renames("{% if item.active %}- x{% endif %}", {"item": "__wmdf_0_item"})
-        assert result == "{% if __wmdf_0_item.active %}- x{% endif %}"
+    def test_rename_depth_aware_nested_braces_in_hole(self):
+        result = _apply_renames("{{ {'a': {'b': 1}} and item }}", {"item": "__wmdf_0_item"})
+        assert result == "{{ {'a': {'b': 1}} and __wmdf_0_item }}"
+
+    def test_rename_handles_multibyte_characters(self):
+        result = _apply_renames('{{ "é" + item }}', {"item": "__wmdf_0_item"})
+        assert result == '{{ "é" + __wmdf_0_item }}'
 
     def test_rename_in_expressions_preserves_prose(self):
         result = _apply_renames(
@@ -614,16 +618,31 @@ class TestMarkdownDirectiveValidation:
             render_markdown(body, {"items": [{"name": "a", "visible": True}]})
 
     def test_directive_like_text_in_code_span_not_rejected(self):
-        from webcompy.template._markdown_for import _validate_body_directives
+        from webcompy.template._markdown_for import _validate_directives
 
-        _validate_body_directives("- `{% endfo %}`\n")
+        _validate_directives("- `{% endfo %}`\n")
 
     def test_directive_like_text_in_attribute_value_not_rejected(self):
-        from webcompy.template._markdown_for import _validate_body_directives
+        from webcompy.template._markdown_for import _validate_directives
 
-        _validate_body_directives('- <a href="{% endfo %}">x</a>\n')
+        _validate_directives('- <a href="{% endfo %}">x</a>\n')
 
     def test_directive_like_text_in_raw_block_not_rejected(self):
-        from webcompy.template._markdown_for import _validate_body_directives
+        from webcompy.template._markdown_for import _validate_directives
 
-        _validate_body_directives("- {% raw %}{% endfo %}{% endraw %}\n")
+        _validate_directives("- {% raw %}{% endfo %}{% endraw %}\n")
+
+    def test_directive_like_text_inside_hole_not_rejected(self):
+        from webcompy.template._markdown_for import _validate_directives
+
+        _validate_directives('- {{ "{% endfo %}" }}\n')
+
+    def test_unknown_directive_in_unselected_top_level_branch_raises(self):
+        body = "{% if flag %}ok{% else %}{% endfo %}{% endif %}"
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unknown template directive"):
+            render_markdown(body, {"flag": True})
+
+    def test_unsupported_directive_in_unselected_branch_raises(self):
+        body = "{% if flag %}ok{% else %}{% include 'x' %}{% endif %}"
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="not supported"):
+            render_markdown(body, {"flag": True})
