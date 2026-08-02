@@ -25,10 +25,10 @@
 
 ## 5. Spec Consolidation and docs_app Removal
 
-- [ ] 5.1 Expand `openspec/specs/template-engine/spec.md` Purpose with design intent (sugar over Element/Component system; Jinja2-inspired, not compatible; composition via components/slots; template inheritance permanently rejected)
-- [ ] 5.2 Apply delta: add loop-metadata/shadowing/directive-rejection requirements; modify the four limitation requirements to be self-contained (sync via archive flow)
+- [x] 5.1 Expand `openspec/specs/template-engine/spec.md` Purpose with design intent (sugar over Element/Component system; Jinja2-inspired, not compatible; composition via components/slots; template inheritance permanently rejected)
+- [x] 5.2 Apply delta: add loop-metadata/shadowing/directive-rejection requirements; modify the four limitation requirements to be self-contained (sync via archive flow)
 - [x] 5.3 Remove `docs_app` limitations page: route in `docs_app/router.py`, `docs_app/pages/document/limitations.py`, `docs_app/templates/document/limitations.py`
-- [ ] 5.4 Check and update references: `AGENTS.md` File→Spec Mapping and `.opencode/skills/webcompy-review/SKILL.md` (mapping and invariants per spec changes)
+- [x] 5.4 Check and update references: `AGENTS.md` File→Spec Mapping and `.opencode/skills/webcompy-review/SKILL.md` (mapping and invariants per spec changes)
 
 ## 6. E2E and Verification
 
