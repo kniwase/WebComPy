@@ -306,6 +306,70 @@ class TestReactiveDictValueReactivity:
             texts = [li.textContent for li in result.query_selector_all("li")]
         assert texts == ["a=1", "b=7"]
 
+    def test_one_var_dict_value_dotted_access(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def DictValueDottedPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(
+                lambda: {"a": {"name": "Alice", "visible": True}, "b": {"name": "Bob", "visible": False}}
+            )
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ v.name }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(DictValueDottedPage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["Alice", "Bob"]
+            captured["d"]["b"] = {"name": "Bobby", "visible": False}
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["Alice", "Bobby"]
+
+    def test_two_var_dict_value_dotted_access(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def TwoVarDictValueDottedPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": {"name": "Alice"}, "b": {"name": "Bob"}})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for k, v in d %}<li>{{ k }}={{ v.name }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(TwoVarDictValueDottedPage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["a=Alice", "b=Bob"]
+            captured["d"]["c"] = {"name": "Carol"}
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["a=Alice", "b=Bob", "c=Carol"]
+
+    def test_one_var_dict_value_dotted_condition(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def DictValueConditionPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(
+                lambda: {"a": {"name": "Alice", "visible": True}, "b": {"name": "Bob", "visible": False}}
+            )
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}{% if v.visible %}<li>{{ v.name }}</li>{% endif %}{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(DictValueConditionPage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["Alice"]
+            captured["d"]["b"] = {"name": "Bob", "visible": True}
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["Alice", "Bob"]
+
 
 class TestReactiveDictComputedLifecycle:
     def _count_consumers(self, signal: Any) -> int:
