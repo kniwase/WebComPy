@@ -29,6 +29,7 @@ from webcompy_server.ports._media_query import ServerMediaQueryPort
 
 class ServerRenderContext(RenderContext):
     def _register_ports(self) -> None:
+        assert self._di_scope is not None
         router_mode = self._router.__mode__ if self._router else "history"
         override_scheduler = getattr(self._app, "_test_async_scheduler_port", None)
         if override_scheduler is not None:

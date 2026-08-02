@@ -321,6 +321,7 @@ async def _generate_html_impl(
             )
         )
 
+    assert ctx._root is not None
     head_content_html = ctx._root._head_element.get_head_content_html()
 
     html_output = "<!doctype html>" + (

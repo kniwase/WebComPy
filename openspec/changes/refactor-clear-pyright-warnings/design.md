@@ -121,7 +121,11 @@ and `_UNSET` is a bare `object()`. Because `_UNSET` is `object`, the
 `self._explicit_* is _UNSET` check does not narrow, so the value assigned back
 to `wasm_serving` / `runtime_serving` retains an `object` component, which
 pyright reports as "Cannot assign to attribute." A dedicated `_Sentinel` type
-makes the `is _UNSET` check narrow correctly and removes the `object` leak.
+and `isinstance(self._explicit_*, _Sentinel)` guards remove the `object` leak:
+pyright narrows the non-sentinel branch to `Literal["cdn", "local"]` exactly.
+(An `is _UNSET` identity check does not narrow here, because `_Sentinel` is a
+class type and pyright cannot exclude other potential instances from the
+identity comparison; `isinstance` narrowing works on the type itself.)
 
 ### Decision 5: `RenderContext` disposal attributes widened to `| None`
 
@@ -131,9 +135,13 @@ makes the `is _UNSET` check narrow correctly and removes the `object` leak.
 
 **Rationale.** `dispose()` explicitly nulls these to break reference cycles.
 The current declarations forbid `None`, so the assignment is flagged. Widening
-the declared type matches the actual lifecycle. Code that reads these fields is
-already guarded by `_check_disposed()` (which raises after disposal), so no new
-`None`-handling is required at read sites.
+the declared type matches the actual lifecycle. Read sites (properties,
+`dispose()` cleanup, `_register_ports` in both render contexts) add
+`assert self._root is not None` / `assert self._di_scope is not None`
+narrowing: pyright cannot infer that `_check_disposed()` raises after disposal,
+so the asserts are required for the widened types to type-check. The asserts
+are harmless at runtime — they can only fire if a read slips past the disposed
+guard, which is a bug.
 
 ### Decision 6: `RouterPage._preload` as an optional TypedDict key + `"_preload" in page`
 
@@ -145,16 +153,21 @@ already guarded by `_check_disposed()` (which raises after disposal), so no new
 does. Declaring the key makes the access type-valid and documents the optional
 contract.
 
-### Decision 7: `setattr` for dynamic `ModuleType` attributes
+### Decision 7: `cast` for dynamic `ModuleType` attributes
 
 **Choice.** Replace `app_module.app = app` with
-`setattr(app_module, "app", app)` in `cli/_generate.py` and `cli/_server.py`.
+`cast("Any", app_module).app = app` in `cli/_generate.py` and `cli/_server.py`.
 
 **Rationale.** `types.ModuleType` does not declare an `app` attribute, and these
-modules are synthetic (`ModuleType("_webcompy_app")`). `setattr` is the
-idiomatic way to attach dynamic attributes while keeping the static type
-checker quiet, and it matches the existing `app_module.__file__ = ...` pattern
-nearby (which is itself a known module attribute, hence not flagged).
+modules are synthetic (`ModuleType("_webcompy_app")`). `setattr(app_module,
+"app", app)` was the first choice, but ruff's B010 rule rejects `setattr` with a
+constant attribute name ("not any safer than normal property access"),
+reintroducing the exact warning we are removing. A `cast("Any", ...)` on the
+module is the sanctioned last-resort for genuinely dynamic attributes: it
+expresses "this module dynamically carries an `app` attribute" at the type
+level while satisfying both pyright and ruff. It sits next to the existing
+`app_module.__file__ = ...` assignment (a known module attribute, hence not
+flagged).
 
 ### Decision 8: `isinstance` dispatch in `_expression.py`
 

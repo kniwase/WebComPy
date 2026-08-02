@@ -36,7 +36,7 @@ of a source of ignored noise.
   TypedDict and switch the SSG guard from `hasattr(page, "_preload")` to
   `"_preload" in page` so pyright narrows the TypedDict correctly (1 warning).
 - Replace direct `app_module.app = app` assignment with
-  `setattr(app_module, "app", app)` for dynamically attributed `ModuleType`
+  `cast("Any", app_module).app = app` for dynamically attributed `ModuleType`
   instances (2 warnings).
 
 ## Capabilities
@@ -62,7 +62,7 @@ existing requirement behavior):
   convention (`_name`) rather than name-mangled double-underscore (`__name`).
 
 The remaining fixes (ast `isinstance` dispatch, `_Sentinel` typing,
-`RenderContext` disposal `Optional` widening, `setattr` for dynamic
+`RenderContext` disposal `Optional` widening, `cast` for dynamic
 `ModuleType` attributes, `RouterPage._preload` TypedDict key) are local
 type-annotation hygiene and are covered as implementation tasks, not spec
 requirements.

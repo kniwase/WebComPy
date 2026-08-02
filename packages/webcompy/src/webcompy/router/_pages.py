@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Any, TypedDict
 
 from webcompy.components import ComponentGenerator, WebComPyComponentException
@@ -16,3 +17,4 @@ class RouterPageRequired(TypedDict):
 class RouterPage(RouterPageRequired, total=False):
     path_params: list[dict[str, str]]
     meta: Any
+    _preload: Callable[[], None]

@@ -25,12 +25,12 @@ class CallbackConsumerNode(SignalNode, _CallbackMixin):
     _callback: Callable[[Any], Any]
     _is_before: bool
     _is_async: bool
-    _producer: SignalNode
+    _producer: SignalBase[Any]
 
     def __init__(
         self,
         callback: Callable[[Any], Any],
-        producer: SignalNode,
+        producer: SignalBase[Any],
         is_before: bool = False,
     ) -> None:
         super().__init__()

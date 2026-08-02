@@ -16,6 +16,7 @@ class ElementAbstract(SignalReceivable):
     _mounted: bool | None = None
     _remount_to: DOMNode | None = None
     _callback_nodes: list[CallbackConsumerNode]
+    _children: list[ElementAbstract] = []  # noqa: RUF012
     __parent: ElementAbstract
 
     def __init__(self) -> None:

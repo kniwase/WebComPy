@@ -79,7 +79,7 @@ class SuspenseElement(DynamicElement):
             component._pending_async_template = None
             component._property["template"] = result
             component._refresh_async_setup_results()
-            component._Component__init_component(component._property)
+            component._init_component(component._property)
 
     async def _render(self):
         if not self._children:

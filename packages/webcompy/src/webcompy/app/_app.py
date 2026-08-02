@@ -267,5 +267,6 @@ class WebComPyApp:
         ctx = self.create_render_context()
         self._plugin_manager.call_on_app_ready(ctx)
 
+        assert ctx._root is not None
         ctx._root._selector = self._config.selector
         resolve_async(ctx._root._render())
