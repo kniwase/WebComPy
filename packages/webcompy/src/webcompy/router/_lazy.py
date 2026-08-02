@@ -39,7 +39,8 @@ class LazyComponentGenerator(ComponentGenerator):
             self._cid = resolved._id
             self._style = resolved._style
             self._registered = resolved._registered
-            resolved._try_register()
+        assert self._resolved is not None
+        self._resolved._try_register()
         return self._resolved
 
     def _preload(self) -> None:

@@ -64,6 +64,7 @@ class Router:
     __routes__: list[RouteType]
     __chains__: list[ChainEntry]
     __pages__: tuple[RouterPage, ...]
+    __route_variants__: list[list[dict[str, str]] | None]
 
     def __init__(
         self,
@@ -81,7 +82,7 @@ class Router:
             history.set_navigation_callback(self.__set_path__)
         self.__base_url__ = base_url.strip().strip("/")
         self._base_url_stripper = partial(re_compile("^" + re_escape("/" + self.__base_url__)).sub, "")
-        self.__routes__, self.__chains__ = self._generate_routes(pages)
+        self.__routes__, self.__chains__, self.__route_variants__ = self._generate_routes(pages)
         self._default = default
         self._preload = preload
         self.before_route_change: list[Callable[[str, str], bool | None]] = []
@@ -89,13 +90,17 @@ class Router:
         self.on_route_error: list[Callable[[Exception], bool | None]] = []
 
     def _clone_for_request(self) -> Router:
-        return Router(
+        router = Router(
             *self.__pages__,
             default=self._default,
             mode=self.__mode__,
             base_url=self.__base_url__ or "",
             preload=self._preload,
         )
+        router.before_route_change = list(self.before_route_change)
+        router.after_route_change = list(self.after_route_change)
+        router.on_route_error = list(self.on_route_error)
+        return router
 
     @computed_property
     def current_match(self):
@@ -220,9 +225,12 @@ class Router:
     def _generate_route_matcher(self, path: str):
         return re_compile(_convert_to_regex_pattern(re_escape(path)) + "$").match
 
-    def _generate_routes(self, pages: Sequence[RouterPage]) -> tuple[list[RouteType], list[ChainEntry]]:
+    def _generate_routes(
+        self, pages: Sequence[RouterPage]
+    ) -> tuple[list[RouteType], list[ChainEntry], list[list[dict[str, str]] | None]]:
         routes: list[RouteType] = []
         chains: list[ChainEntry] = []
+        variants: list[list[dict[str, str]] | None] = []
         for page in pages:
             for full_path, chain, per_level_param_names in self._walk_page_tree(page, "", (), ()):
                 full_matcher = self._generate_route_matcher(full_path)
@@ -232,7 +240,22 @@ class Router:
                 leaf_node = chain[-1]
                 routes.append((full_path, full_matcher, full_param_names, leaf_node.component, leaf_node.page))
                 chains.append(ChainEntry(full_path, chain, per_level_param_names))
-        return routes, chains
+                variants.append(self._compute_route_variants(chain))
+        return routes, chains, variants
+
+    @staticmethod
+    def _compute_route_variants(chain: tuple[RouteNode, ...]) -> list[dict[str, str]] | None:
+        variants: list[dict[str, str]] = [{}]
+        for node in chain:
+            path_params = node.page.get("path_params")
+            if not path_params:
+                continue
+            merged: list[dict[str, str]] = []
+            for params in path_params:
+                for base in variants:
+                    merged.append({**base, **params})
+            variants = merged
+        return None if variants == [{}] else variants
 
     def _walk_page_tree(
         self,
@@ -276,16 +299,12 @@ class Router:
         from webcompy.router._lazy import LazyComponentGenerator
         from webcompy.utils._environment import ENVIRONMENT
 
+        seen: set[int] = set()
+
         def _collect_lazy(pages):
-            seen: set[int] = set()
             for page in pages:
                 comp = page["component"]
-                if (
-                    isinstance(comp, LazyComponentGenerator)
-                    and comp._resolved is None
-                    and not comp._resolve_error
-                    and id(comp) not in seen
-                ):
+                if isinstance(comp, LazyComponentGenerator) and not comp._resolve_error and id(comp) not in seen:
                     seen.add(id(comp))
                     yield comp
                 children = page.get("children")
