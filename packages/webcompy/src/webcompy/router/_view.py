@@ -32,6 +32,7 @@ class RouterView(DynamicElement):
         self._mounted_component = None
         self._mounted_identity = None
         self._signal_activated = False
+        self._navigation_generation = 0
         super().__init__()
 
     def _count_router_view_ancestors(self) -> int:
@@ -147,6 +148,8 @@ class RouterView(DynamicElement):
         await super()._render()
 
     async def _on_match_changed(self, match: RouteMatch | None):
+        self._navigation_generation += 1
+        generation = self._navigation_generation
         self._cancel_pending_render_tasks()
         if self._ancestor_will_remount(match):
             return
@@ -165,8 +168,15 @@ class RouterView(DynamicElement):
         self._children = [new_component]
 
         start_defer_after_rendering()
-        await new_component._render()
+        try:
+            await new_component._render()
+        except BaseException:
+            end_defer_after_rendering()
+            raise
         deferred = end_defer_after_rendering()
+
+        if generation != self._navigation_generation:
+            return
         for callback in deferred:
             if iscoroutinefunction(callback):
                 from webcompy.aio._aio import aio_run
