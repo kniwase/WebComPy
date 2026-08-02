@@ -3,6 +3,7 @@ from __future__ import annotations
 import urllib.parse
 from collections.abc import Callable, Sequence
 from contextlib import suppress
+from dataclasses import dataclass
 from functools import partial
 from re import Match
 from re import compile as re_compile
@@ -15,7 +16,6 @@ from typing import (
 
 from webcompy.components import ComponentGenerator
 from webcompy.elements.typealias._element_property import ElementChildren
-from webcompy.elements.types._switch import NodeGenerator
 from webcompy.ports._history import HistoryPort
 from webcompy.router._context import RouterContext, TypedRouterContext
 from webcompy.router._pages import RouterPage
@@ -29,6 +29,31 @@ RouteType: TypeAlias = tuple[
     RouterPage,
 ]
 
+
+@dataclass(frozen=True)
+class RouteNode:
+    segment: str
+    component: ComponentGenerator[RouterContext]
+    page: RouterPage
+
+
+@dataclass(frozen=True)
+class ChainEntry:
+    full_path: str
+    chain: tuple[RouteNode, ...]
+    per_level_param_names: tuple[list[str], ...]
+
+
+@dataclass(frozen=True)
+class RouteMatch:
+    path: str
+    chain: tuple[RouteNode, ...]
+    per_level_params: tuple[dict[str, str], ...]
+    path_params: dict[str, str]
+    query: dict[str, str]
+    state: dict[str, Any]
+
+
 _convert_to_regex_pattern = partial(re_compile(r"\\\{[^\{\}/]+\\\}").sub, r"([^/]*?)")
 _get_path_params = re_compile(r"{([^\{\}/]+)}").findall
 
@@ -37,6 +62,9 @@ class Router:
     _history: HistoryPort | None
     __mode__: Literal["hash", "history"]
     __routes__: list[RouteType]
+    __chains__: list[ChainEntry]
+    __pages__: tuple[RouterPage, ...]
+    __route_variants__: list[list[dict[str, str]] | None]
 
     def __init__(
         self,
@@ -47,18 +75,98 @@ class Router:
         base_url: str = "",
         preload: bool = True,
     ) -> None:
+        self.__pages__ = pages
         self._history = history
         self.__mode__ = mode if history is None else history.mode
         if history is not None:
             history.set_navigation_callback(self.__set_path__)
         self.__base_url__ = base_url.strip().strip("/")
         self._base_url_stripper = partial(re_compile("^" + re_escape("/" + self.__base_url__)).sub, "")
-        self.__routes__ = self._generate_routes(pages)
+        self.__routes__, self.__chains__, self.__route_variants__ = self._generate_routes(pages)
         self._default = default
         self._preload = preload
         self.before_route_change: list[Callable[[str, str], bool | None]] = []
         self.after_route_change: list[Callable[[str], None]] = []
         self.on_route_error: list[Callable[[Exception], bool | None]] = []
+
+    def _clone_for_request(self) -> Router:
+        router = Router(
+            *self.__pages__,
+            default=self._default,
+            mode=self.__mode__,
+            base_url=self.__base_url__ or "",
+            preload=self._preload,
+        )
+        router.before_route_change = list(self.before_route_change)
+        router.after_route_change = list(self.after_route_change)
+        router.on_route_error = list(self.on_route_error)
+        return router
+
+    @computed_property
+    def current_match(self):
+        try:
+            return self._compute_current_match()
+        except Exception as e:
+            for handler in self.on_route_error:
+                if handler(e) is True:
+                    return None
+            raise
+
+    def _compute_current_match(self) -> RouteMatch | None:
+        current_path, search = self._get_current_path()
+        if self.__mode__ == "history" and self.__base_url__:
+            current_path = self._base_url_stripper(current_path)
+        clean_path = current_path.strip("/")
+        query = self._parse_query(search)
+        history = self._resolve_history()
+        state = history.state or {}
+
+        for i, route in enumerate(self.__routes__):
+            _, matcher, _, _, _ = route
+            match = matcher(clean_path)
+            if match:
+                chain_entry = self.__chains__[i]
+                groups = match.groups()
+                per_level_params = self._split_params_by_level(groups, chain_entry.per_level_param_names)
+                accumulated: dict[str, str] = {}
+                for level_params in per_level_params:
+                    accumulated.update(level_params)
+                return RouteMatch(
+                    path=current_path,
+                    chain=chain_entry.chain,
+                    per_level_params=tuple(per_level_params),
+                    path_params=accumulated,
+                    query=query,
+                    state=state,
+                )
+        return None
+
+    def _split_params_by_level(
+        self,
+        groups: tuple[str, ...],
+        per_level_param_names: tuple[list[str], ...],
+    ) -> list[dict[str, str]]:
+        result: list[dict[str, str]] = []
+        offset = 0
+        for level_names in per_level_param_names:
+            count = len(level_names)
+            level_params = dict(zip(level_names, groups[offset : offset + count], strict=True)) if level_names else {}
+            result.append(level_params)
+            offset += count
+        return result
+
+    def _parse_query(self, search: str) -> dict[str, str]:
+        if not search:
+            return {}
+        # Deliberately drops empty-valued params (`?tab=` -> {}), preserving the
+        # pre-existing query semantics used by level-identity comparisons.
+        return {
+            name: value
+            for name, value in (
+                [it[0], ""] if len(it) == 1 else it for it in (q.split("=", 2) for q in search.split("&"))
+            )
+            if name and value
+        }
 
     def _resolve_history(self) -> HistoryPort:
         history = self._history
@@ -71,16 +179,6 @@ class Router:
             self.__mode__ = history.mode
             history.set_navigation_callback(self.__set_path__)
         return history  # type: ignore[return-value]
-
-    @computed_property
-    def __cases__(self):
-        try:
-            return list(map(self._get_elements_generator, self.__routes__))
-        except Exception as e:
-            for handler in self.on_route_error:
-                if handler(e) is True:
-                    return []
-            raise
 
     def __default__(self) -> ElementChildren:
         if self._default:
@@ -105,23 +203,6 @@ class Router:
         pathname, search = (decoded_href[0], "") if len(decoded_href) == 1 else decoded_href
         return pathname, search
 
-    def _get_elements_generator(self, args: RouteType) -> tuple[Any, NodeGenerator]:
-        match_targeted_routes, path_param_names, component = args[1:-1]
-        current_path, search = self._get_current_path()
-        if self.__mode__ == "history" and self.__base_url__:
-            current_path = self._base_url_stripper(current_path)
-        match = match_targeted_routes(current_path.strip("/"))
-        if match:
-            props = self._generate_router_context(
-                current_path,
-                search,
-                match,
-                path_param_names,
-            )
-            return (match, lambda: component(props))
-        else:
-            return (match, lambda: None)
-
     def _generate_router_context(
         self,
         pathname: str,
@@ -130,17 +211,7 @@ class Router:
         path_param_names: list[str],
     ):
         history = self._resolve_history()
-        query = (
-            {
-                name: value
-                for name, value in (
-                    [it[0], ""] if len(it) == 1 else it for it in (q.split("=", 2) for q in search.split("&"))
-                )
-                if name and value
-            }
-            if search
-            else {}
-        )
+        query = self._parse_query(search)
         path_params = (
             (dict(zip(path_param_names, match.groups(), strict=True)) if path_param_names else {}) if match else {}
         )
@@ -154,23 +225,62 @@ class Router:
     def _generate_route_matcher(self, path: str):
         return re_compile(_convert_to_regex_pattern(re_escape(path)) + "$").match
 
-    def _generate_routes(self, pages: Sequence[RouterPage]) -> list[RouteType]:
-        return [
-            (*path, component, page)
-            for path, component, page in zip(
-                map(
-                    lambda path: (
-                        path,
-                        self._generate_route_matcher(path),
-                        _get_path_params(path),
-                    ),
-                    map(lambda page: page["path"].strip("/"), pages),
-                ),
-                map(lambda page: page["component"], pages),
-                pages,
-                strict=True,
-            )
-        ]
+    def _generate_routes(
+        self, pages: Sequence[RouterPage]
+    ) -> tuple[list[RouteType], list[ChainEntry], list[list[dict[str, str]] | None]]:
+        routes: list[RouteType] = []
+        chains: list[ChainEntry] = []
+        variants: list[list[dict[str, str]] | None] = []
+        for page in pages:
+            for full_path, chain, per_level_param_names in self._walk_page_tree(page, "", (), ()):
+                full_matcher = self._generate_route_matcher(full_path)
+                full_param_names: list[str] = []
+                for level_names in per_level_param_names:
+                    full_param_names.extend(level_names)
+                leaf_node = chain[-1]
+                routes.append((full_path, full_matcher, full_param_names, leaf_node.component, leaf_node.page))
+                chains.append(ChainEntry(full_path, chain, per_level_param_names))
+                variants.append(self._compute_route_variants(chain))
+        return routes, chains, variants
+
+    @staticmethod
+    def _compute_route_variants(chain: tuple[RouteNode, ...]) -> list[dict[str, str]] | None:
+        variants: list[dict[str, str]] = [{}]
+        for node in chain:
+            path_params = node.page.get("path_params")
+            if not path_params:
+                continue
+            merged: list[dict[str, str]] = []
+            for params in path_params:
+                for base in variants:
+                    merged.append({**base, **params})
+            variants = merged
+        return None if variants == [{}] else variants
+
+    def _walk_page_tree(
+        self,
+        page: RouterPage,
+        parent_accumulated: str,
+        chain_so_far: tuple[RouteNode, ...],
+        param_names_so_far: tuple[list[str], ...],
+    ):
+        segment = page["path"].strip("/")
+        if segment:
+            accumulated = f"{parent_accumulated}/{segment}" if parent_accumulated else segment
+        else:
+            accumulated = parent_accumulated
+
+        node = RouteNode(segment=segment, component=page["component"], page=page)
+        level_param_names = _get_path_params(segment)
+        chain = (*chain_so_far, node)
+        all_param_names = (*param_names_so_far, level_param_names)
+
+        children = page.get("children")
+        if children:
+            for child in children:
+                yield from self._walk_page_tree(child, accumulated, chain, all_param_names)
+        else:
+            yield (accumulated, chain, all_param_names)
 
     def __set_path__(self, path: str, state: dict[str, Any] | None):
         history = self._resolve_history()
@@ -189,13 +299,19 @@ class Router:
         from webcompy.router._lazy import LazyComponentGenerator
         from webcompy.utils._environment import ENVIRONMENT
 
-        lazy_components = [
-            route[3]
-            for route in self.__routes__
-            if isinstance(route[3], LazyComponentGenerator)
-            and route[3]._resolved is None
-            and not route[3]._resolve_error
-        ]
+        seen: set[int] = set()
+
+        def _collect_lazy(pages):
+            for page in pages:
+                comp = page["component"]
+                if isinstance(comp, LazyComponentGenerator) and not comp._resolve_error and id(comp) not in seen:
+                    seen.add(id(comp))
+                    yield comp
+                children = page.get("children")
+                if children:
+                    yield from _collect_lazy(children)
+
+        lazy_components = list(_collect_lazy(self.__pages__))
         if lazy_components:
             if ENVIRONMENT == "pyscript":
 

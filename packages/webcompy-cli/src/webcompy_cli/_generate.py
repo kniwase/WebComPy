@@ -142,10 +142,10 @@ async def generate_static_site(app: WebComPyApp | None = None):
         base_url="http://test",
     ) as client:
         if app.router_mode == "history" and app.routes:
-            for p, _, _, _, page in app.routes:
-                paths = (
-                    {p.format(**params) for params in path_params} if (path_params := page.get("path_params")) else {p}
-                )
+            route_variants = app.router.__route_variants__ if app.router is not None else None
+            for i, (p, _, _, _, _) in enumerate(app.routes):
+                variants = route_variants[i] if route_variants is not None else None
+                paths = {p} if variants is None else {p.format(**params) for params in variants}
                 for path in paths:
                     response = await client.get(f"{url_prefix}/{path}")
                     if not (path_dir := dist_dir / path).exists():

@@ -14,6 +14,13 @@ from .pages.html_parser_parity import HtmlParserParityPage
 from .pages.keyed_repeat import KeyedRepeatPage
 from .pages.lifecycle import LifecyclePage
 from .pages.markdown_for import MarkdownForPage
+from .pages.nested_docs import (
+    NestedDocsApiPage,
+    NestedDocsGuidePage,
+    NestedDocsIndexPage,
+    NestedDocsItemPage,
+    NestedDocsLayout,
+)
 from .pages.nested_dynamic import NestedDynamicPage
 from .pages.not_found import NotFound
 from .pages.repeat import RepeatPage
@@ -52,6 +59,16 @@ router = Router(
     {"path": "/template-expressions", "component": TemplateExpressionsPage},
     {"path": "/markdown-for", "component": MarkdownForPage},
     {"path": "/html-parser-parity", "component": HtmlParserParityPage},
+    {
+        "path": "/nested",
+        "component": NestedDocsLayout,
+        "children": [
+            {"path": "", "component": NestedDocsIndexPage},
+            {"path": "/guide", "component": NestedDocsGuidePage},
+            {"path": "/api", "component": NestedDocsApiPage},
+            {"path": "/item/{id}", "component": NestedDocsItemPage, "path_params": [{"id": "1"}, {"id": "2"}]},
+        ],
+    },
     {"path": "/two-way-binding", "component": TwoWayBindingPage},
     {"path": "/form-fields", "component": FormFieldsPage},
     default=NotFound,
