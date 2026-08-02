@@ -7,6 +7,14 @@ import pathlib
 import re
 import zipfile
 
+_DETERMINISTIC_DATE_TIME = (1980, 1, 1, 0, 0, 0)
+
+
+def _write_zip_entry(zf: zipfile.ZipFile, arc_path: str, data: bytes | str) -> None:
+    info = zipfile.ZipInfo(arc_path, date_time=_DETERMINISTIC_DATE_TIME)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    zf.writestr(info, data)
+
 
 def _discover_packages(package_dir: pathlib.Path) -> list[str]:
     packages: list[str] = []
@@ -122,10 +130,10 @@ def _content_hash_wheel(wheel_path: pathlib.Path, name: str, app_version: str) -
     with zipfile.ZipFile(new_path, "w", zipfile.ZIP_DEFLATED) as zf_out:
         record_entries = []
         for arc_path, data in entries:
-            zf_out.writestr(arc_path, data)
+            _write_zip_entry(zf_out, arc_path, data)
             record_entries.append((arc_path, _sha256_b64(data), len(data)))
         record_content = _write_record(record_entries, new_dist_info)
-        zf_out.writestr(f"{new_dist_info}/RECORD", record_content)
+        _write_zip_entry(zf_out, f"{new_dist_info}/RECORD", record_content)
 
     return new_path
 
@@ -180,24 +188,24 @@ def make_wheel(
     with zipfile.ZipFile(wheel_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for filepath, arc_path in files:
             data = filepath.read_bytes()
-            zf.writestr(arc_path, data)
+            _write_zip_entry(zf, arc_path, data)
             record_entries.append((arc_path, _sha256_b64(data), len(data)))
 
-        zf.writestr(metadata_path, metadata_content)
+        _write_zip_entry(zf, metadata_path, metadata_content)
         record_entries.append(
             (metadata_path, _sha256_b64(metadata_content.encode("utf-8")), len(metadata_content.encode("utf-8")))
         )
-        zf.writestr(wheel_meta_path, wheel_content)
+        _write_zip_entry(zf, wheel_meta_path, wheel_content)
         record_entries.append(
             (wheel_meta_path, _sha256_b64(wheel_content.encode("utf-8")), len(wheel_content.encode("utf-8")))
         )
-        zf.writestr(top_level_path, top_level_content)
+        _write_zip_entry(zf, top_level_path, top_level_content)
         record_entries.append(
             (top_level_path, _sha256_b64(top_level_content.encode("utf-8")), len(top_level_content.encode("utf-8")))
         )
 
         record_content = _write_record(record_entries, dist_info)
-        zf.writestr(f"{dist_info}/RECORD", record_content)
+        _write_zip_entry(zf, f"{dist_info}/RECORD", record_content)
 
     return wheel_path
 
@@ -241,29 +249,29 @@ def make_bundled_wheel(
     with zipfile.ZipFile(wheel_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for filepath, arc_path in all_files:
             data = filepath.read_bytes()
-            zf.writestr(arc_path, data)
+            _write_zip_entry(zf, arc_path, data)
             record_entries.append((arc_path, _sha256_b64(data), len(data)))
 
         if extra_files:
             for arc_path, content in extra_files:
-                zf.writestr(arc_path, content)
+                _write_zip_entry(zf, arc_path, content)
                 record_entries.append((arc_path, _sha256_b64(content), len(content)))
 
-        zf.writestr(metadata_path, metadata_content)
+        _write_zip_entry(zf, metadata_path, metadata_content)
         record_entries.append(
             (metadata_path, _sha256_b64(metadata_content.encode("utf-8")), len(metadata_content.encode("utf-8")))
         )
-        zf.writestr(wheel_meta_path, wheel_content)
+        _write_zip_entry(zf, wheel_meta_path, wheel_content)
         record_entries.append(
             (wheel_meta_path, _sha256_b64(wheel_content.encode("utf-8")), len(wheel_content.encode("utf-8")))
         )
-        zf.writestr(top_level_path, top_level_content)
+        _write_zip_entry(zf, top_level_path, top_level_content)
         record_entries.append(
             (top_level_path, _sha256_b64(top_level_content.encode("utf-8")), len(top_level_content.encode("utf-8")))
         )
 
         record_content = _write_record(record_entries, dist_info)
-        zf.writestr(f"{dist_info}/RECORD", record_content)
+        _write_zip_entry(zf, f"{dist_info}/RECORD", record_content)
 
     return wheel_path
 
@@ -317,23 +325,23 @@ def make_webcompy_app_package(
     with zipfile.ZipFile(wheel_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for filepath, arc_path in all_files:
             data = filepath.read_bytes()
-            zf.writestr(arc_path, data)
+            _write_zip_entry(zf, arc_path, data)
             record_entries.append((arc_path, _sha256_b64(data), len(data)))
 
-        zf.writestr(metadata_path, metadata_content)
+        _write_zip_entry(zf, metadata_path, metadata_content)
         record_entries.append(
             (metadata_path, _sha256_b64(metadata_content.encode("utf-8")), len(metadata_content.encode("utf-8")))
         )
-        zf.writestr(wheel_meta_path, wheel_content)
+        _write_zip_entry(zf, wheel_meta_path, wheel_content)
         record_entries.append(
             (wheel_meta_path, _sha256_b64(wheel_content.encode("utf-8")), len(wheel_content.encode("utf-8")))
         )
-        zf.writestr(top_level_path, top_level_content)
+        _write_zip_entry(zf, top_level_path, top_level_content)
         record_entries.append(
             (top_level_path, _sha256_b64(top_level_content.encode("utf-8")), len(top_level_content.encode("utf-8")))
         )
 
         record_content = _write_record(record_entries, dist_info)
-        zf.writestr(f"{dist_info}/RECORD", record_content)
+        _write_zip_entry(zf, f"{dist_info}/RECORD", record_content)
 
     return _content_hash_wheel(wheel_path, app_name, app_version)

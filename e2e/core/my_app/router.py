@@ -24,6 +24,7 @@ from .pages.template import TemplatePage
 from .pages.template_components import TemplateComponentsPage
 from .pages.template_control_flow import TemplateControlFlowPage
 from .pages.template_expressions import TemplateExpressionsPage
+from .pages.two_way_binding import TwoWayBindingPage
 
 router = Router(
     {"path": "/", "component": HomePage},
@@ -50,6 +51,7 @@ router = Router(
     {"path": "/template-expressions", "component": TemplateExpressionsPage},
     {"path": "/markdown-for", "component": MarkdownForPage},
     {"path": "/html-parser-parity", "component": HtmlParserParityPage},
+    {"path": "/two-way-binding", "component": TwoWayBindingPage},
     default=NotFound,
     mode="history",
 )
