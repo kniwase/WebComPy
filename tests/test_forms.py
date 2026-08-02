@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
+from webcompy.di import inject
 from webcompy.exception import WebComPyException
 from webcompy.forms import (
     email,
@@ -12,7 +15,9 @@ from webcompy.forms import (
     pattern,
     required,
     use_field,
+    use_form,
 )
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
 from webcompy.signal import Signal
 
 
@@ -147,3 +152,109 @@ class TestValidators:
     def test_multiple_validators_accumulate(self):
         field = use_field(Signal(""), validators=[required(), min_length(8)])
         assert "This field is required" in field.errors.value
+
+
+def _valid_form():
+    return use_form(
+        email=use_field(Signal("alice@example.com"), validators=[required(), email()]),
+        password=use_field(Signal("secret123"), validators=[required(), min_length(8)]),
+    )
+
+
+class TestForm:
+    def test_aggregate_valid(self):
+        form = _valid_form()
+        assert form.valid.value is True
+        assert form.invalid.value is False
+        form.fields["email"].value.value = "bad"
+        assert form.valid.value is False
+        assert form.invalid.value is True
+
+    def test_aggregate_touched_any(self):
+        form = _valid_form()
+        assert form.touched.value is False
+        form.fields["email"].touched.value = True
+        assert form.touched.value is True
+
+    def test_aggregate_dirty_any(self):
+        form = _valid_form()
+        assert form.dirty.value is False
+        form.fields["password"].dirty.value = True
+        assert form.dirty.value is True
+
+    def test_touch_all(self):
+        form = _valid_form()
+        form.touch_all()
+        assert all(f.touched.value for f in form.fields.values())
+
+    def test_reset_resets_all_fields(self):
+        form = _valid_form()
+        form.fields["email"].value.value = "changed@example.com"
+        form.fields["email"].touched.value = True
+        form.fields["password"].dirty.value = True
+        form.reset()
+        assert form.fields["email"].value.value == "alice@example.com"
+        assert form.fields["email"].touched.value is False
+        assert form.fields["password"].dirty.value is False
+
+    def test_values(self):
+        form = _valid_form()
+        assert form.values() == {"email": "alice@example.com", "password": "secret123"}
+
+    def test_submit_blocked_when_invalid(self):
+        form = _valid_form()
+        form.fields["email"].value.value = ""
+        handler = MagicMock()
+        ev = MagicMock()
+        form.submit(handler)(ev)
+        ev.preventDefault.assert_called_once()
+        assert all(f.touched.value for f in form.fields.values())
+        handler.assert_not_called()
+        assert form.submitting.value is False
+
+    @pytest.mark.asyncio
+    async def test_async_submit_success(self, fake_browser_full):
+        form = _valid_form()
+        seen: dict[str, object] = {}
+
+        async def handler(values):
+            seen["submitting_during"] = form.submitting.value
+            seen["values"] = values
+
+        ev = MagicMock()
+        form.submit(handler)(ev)
+        ev.preventDefault.assert_called_once()
+        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+        await scheduler.drain()
+        assert seen["values"] == {"email": "alice@example.com", "password": "secret123"}
+        assert seen["submitting_during"] is True
+        assert form.submitting.value is False
+        assert form.submit_error.value is None
+
+    @pytest.mark.asyncio
+    async def test_sync_submit_success(self, fake_browser_full):
+        form = _valid_form()
+        seen: dict[str, object] = {}
+
+        def handler(values):
+            seen["values"] = values
+
+        form.submit(handler)(MagicMock())
+        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+        await scheduler.drain()
+        assert seen["values"] == {"email": "alice@example.com", "password": "secret123"}
+        assert form.submitting.value is False
+
+    @pytest.mark.asyncio
+    async def test_submit_exception_captured(self, fake_browser_full):
+        form = _valid_form()
+
+        def handler(values):
+            raise ValueError("boom")
+
+        form.submit(handler)(MagicMock())
+        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+        await scheduler.drain()
+        assert isinstance(form.submit_error.value, ValueError)
+        assert str(form.submit_error.value) == "boom"
+        assert form.submitting.value is False
