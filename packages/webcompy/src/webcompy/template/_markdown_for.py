@@ -170,12 +170,23 @@ def _validate_directives(text: str) -> None:
     Supported directives are also checked structurally: ``elif``/``else``
     outside an ``if`` (including a for-level ``else``), mismatched or
     unclosed ``if``/``for`` blocks raise ``WebComPyException`` with the same
-    messages as the HTML template path.
+    messages as the HTML template path. ``{% raw %}``/``{% endraw %}`` pairs
+    are tracked for balance: an unclosed ``{% raw %}`` or a stray
+    ``{% endraw %}`` raises ``WebComPyException`` so that empty-iterable
+    list-body for-loops (which bypass the parser's ``_preprocess`` raw
+    validation) still surface the error at compile time.
     """
     stack: list[str] = []
+    raw_depth = 0
     for m in _masked_directive_matches(text, _GENERIC_DIRECTIVE_RE):
         name = m.group("name")
-        if name in ("raw", "endraw"):
+        if name == "raw":
+            raw_depth += 1
+            continue
+        if name == "endraw":
+            if raw_depth == 0:
+                raise WebComPyException("{% endraw %} without matching {% raw %}")
+            raw_depth -= 1
             continue
         if name in _KNOWN_UNSUPPORTED_DIRECTIVES:
             raise WebComPyException(f"{{% {name} %}} is not supported in WebComPy templates")
@@ -196,6 +207,8 @@ def _validate_directives(text: str) -> None:
             stack.pop()
     if stack:
         raise WebComPyException(f"Unclosed template directive: {{% {stack[-1]} %}}")
+    if raw_depth > 0:
+        raise WebComPyException("Unclosed {% raw %} block in Markdown source")
 
 
 def _is_list_body(body_text: str) -> bool:

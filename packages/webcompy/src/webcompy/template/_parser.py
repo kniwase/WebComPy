@@ -69,7 +69,9 @@ REJECTED_TAGS = frozenset(
 )
 
 
-DIRECTIVE_PATTERN = re.compile(r"\{%\s*(?P<directive>if|elif|else|endif|for|endfor)\b(?P<args>[^%]*)%\}")
+_DIRECTIVE_ARGS = r"(?P<args>(?:'[^']*'|\"[^\"]*\"|%(?!\})|[^%])*)"
+
+DIRECTIVE_PATTERN = re.compile(rf"\{{%\s*(?P<directive>if|elif|else|endif|for|endfor)\b{_DIRECTIVE_ARGS}%\}}")
 
 _SUPPORTED_DIRECTIVES = frozenset({"if", "elif", "else", "endif", "for", "endfor"})
 
@@ -100,7 +102,7 @@ _KNOWN_UNSUPPORTED_DIRECTIVES = frozenset(
     }
 )
 
-_GENERIC_DIRECTIVE_RE = re.compile(r"\{%\s*(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)\b(?P<args>[^%]*)%\}")
+_GENERIC_DIRECTIVE_RE = re.compile(rf"\{{%\s*(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)\b{_DIRECTIVE_ARGS}%\}}")
 
 
 def _reject_tag(tag: str) -> None:
