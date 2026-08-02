@@ -32,6 +32,6 @@
 
 ## 6. E2E and Verification
 
-- [ ] 6.1 Add e2e coverage: loop metadata rendering and reactive dict updates in `e2e/core/my_app/pages/` + `e2e/core/` (extend `test_template_control_flow.py`-style page); verify directive rejection surfaces as compile error
+- [x] 6.1 Add e2e coverage: loop metadata rendering and reactive dict updates in `e2e/core/my_app/pages/` + `e2e/core/` (extend `test_template_control_flow.py`-style page); verify directive rejection surfaces as compile error
 - [ ] 6.2 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short`
 - [ ] 6.3 Run relevant e2e groups via `scripts/run-e2e-tests.sh` (template groups) and `uv run python -m webcompy generate` on docs_app to confirm the removed page breaks nothing

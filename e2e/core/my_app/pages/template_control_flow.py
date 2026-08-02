@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from webcompy.components import ComponentContext, define_component
-from webcompy.signal import ReactiveList, use_state
+from webcompy.signal import ReactiveList, use_reactive_dict, use_state
 from webcompy.template import render_template
 
 
@@ -18,12 +18,19 @@ def TemplateControlFlowPage(context: ComponentContext[None]):
             [{"name": "alpha", "visible": True}, {"name": "beta", "visible": False}, {"name": "gamma", "visible": True}]
         )
     )
+    meta_dict = use_reactive_dict(lambda: {"a": 1, "b": 2, "c": 3})
 
     def toggle_show(_: Any) -> None:
         show.value = not show.value
 
     def increment(_: Any) -> None:
         count.value += 1
+
+    def mutate_dict(_: Any) -> None:
+        first_key = next(iter(meta_dict.value.keys()))
+        first_value = meta_dict.value[first_key]
+        meta_dict.pop(first_key)
+        meta_dict[first_key] = first_value
 
     return render_template(
         """
@@ -47,6 +54,18 @@ def TemplateControlFlowPage(context: ComponentContext[None]):
                 </ul>
             </div>
 
+            <div data-testid="loop-meta-section">
+                <ul data-testid="loop-meta-static">
+                    {% for x in static_items %}
+                        <li data-testid="loop-meta-static-item">{{ loop.index }},{{ loop.first }},{{ loop.last }},{{ loop.length }}:{{ x }}</li>
+                    {% endfor %}
+                </ul>
+                <ul data-testid="loop-meta-dict">
+{% for v in meta_dict %}<li data-testid="loop-meta-dict-item">{{ loop.index }},{{ loop.first }},{{ loop.last }},{{ loop.length }}:{{ v }}</li>{% endfor %}
+                </ul>
+                <button data-testid="loop-dict-mutate" @click="mutate_dict">Rotate Dict</button>
+            </div>
+
             <div>
                 <span data-testid="count">{{ count }}</span>
                 <button data-testid="increment-btn" @click="increment">+</button>
@@ -60,5 +79,8 @@ def TemplateControlFlowPage(context: ComponentContext[None]):
             "count": count,
             "increment": increment,
             "items": items,
+            "static_items": ["alpha", "beta", "gamma"],
+            "meta_dict": meta_dict,
+            "mutate_dict": mutate_dict,
         },
     )
