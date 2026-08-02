@@ -384,7 +384,8 @@ class TestReindexWithoutNodeIdx:
             view = RouterView()
             parent = _FakeRootElement("div", {}, {}, None, None)
             view._parent = parent
-            assert view._children[0]._node_idx == 0
+            # RouterView populates children during _render, not in _on_set_parent.
+            assert view._children == []
         finally:
             scope.__exit__(None, None, None)
 

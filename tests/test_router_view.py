@@ -1,0 +1,238 @@
+from __future__ import annotations
+
+from tests.conftest import MockHistoryPort
+from webcompy.components import ComponentContext, define_component
+from webcompy.di import DIScope
+from webcompy.di._keys import _ROUTER_KEY
+from webcompy.elements import html
+from webcompy.router import Router, RouterContext, RouterView
+from webcompy_testing import TestRenderer
+
+_setup_counts: dict[str, list[int]] = {}
+
+
+def _count(name: str) -> int:
+    counts = _setup_counts.setdefault(name, [0])
+    counts[0] += 1
+    return counts[0]
+
+
+def _reset_counts() -> None:
+    _setup_counts.clear()
+
+
+@define_component
+def RootLayout(context: ComponentContext[None]):
+    return html.DIV({"data-testid": "root"}, RouterView())
+
+
+@define_component
+def DocsLayout(context: ComponentContext[RouterContext]):
+    _count("DocsLayout")
+    return html.DIV(
+        {"data-testid": "docs-layout"},
+        html.SPAN({"data-testid": "docs-layout-count"}, str(_setup_counts["DocsLayout"][0])),
+        RouterView(),
+    )
+
+
+@define_component
+def GuidePage(context: ComponentContext[RouterContext]):
+    _count("GuidePage")
+    return html.DIV({"data-testid": "guide-page"}, f"guide-{_setup_counts['GuidePage'][0]}")
+
+
+@define_component
+def ApiPage(context: ComponentContext[RouterContext]):
+    _count("ApiPage")
+    return html.DIV({"data-testid": "api-page"}, f"api-{_setup_counts['ApiPage'][0]}")
+
+
+@define_component
+def ParamPage(context: ComponentContext[RouterContext]):
+    _count("ParamPage")
+    return html.DIV(
+        {"data-testid": "param-page"},
+        html.SPAN({"data-testid": "param-name"}, str(context.props.path_params.get("name"))),
+        html.SPAN({"data-testid": "param-count"}, str(_setup_counts["ParamPage"][0])),
+    )
+
+
+@define_component
+def DeepNestedPage(context: ComponentContext[RouterContext]):
+    _count("DeepNestedPage")
+    return html.DIV({"data-testid": "deep-nested-page"}, "deep")
+
+
+@define_component
+def DeepLayout(context: ComponentContext[RouterContext]):
+    _count("DeepLayout")
+    return html.DIV(
+        {"data-testid": "deep-layout"},
+        RouterView(),
+        RouterView(),
+    )
+
+
+def _make_router(*, mode: str = "hash") -> tuple[Router, MockHistoryPort]:
+    _reset_counts()
+    hist = MockHistoryPort(mode=mode)
+    router = Router(
+        {
+            "path": "/docs",
+            "component": DocsLayout,
+            "children": [
+                {"path": "/guide", "component": GuidePage},
+                {"path": "/api", "component": ApiPage},
+                {"path": "/{name}", "component": ParamPage},
+                {
+                    "path": "/deep",
+                    "component": DeepLayout,
+                    "children": [{"path": "/x", "component": DeepNestedPage}],
+                },
+            ],
+        },
+        history=hist,
+        preload=False,
+    )
+    return router, hist
+
+
+def _render(router: Router) -> TestRenderer:
+    scope = DIScope()
+    scope.provide(_ROUTER_KEY, router)
+    return TestRenderer.render(RootLayout, parent_scope=scope)
+
+
+class TestRouterViewLevelRendering:
+    def test_root_view_renders_layout_and_nested_view_renders_leaf(self):
+        router, hist = _make_router()
+        hist.navigate("/docs/guide", None)
+        with _render(router) as result:
+            assert result.find_by_attribute("data-testid", "docs-layout") is not None
+            assert result.find_by_attribute("data-testid", "guide-page") is not None
+            assert result.find_by_attribute("data-testid", "api-page") is None
+
+    def test_view_deeper_than_chain_renders_empty(self):
+        router, hist = _make_router()
+        hist.navigate("/docs/deep/x", None)
+        with _render(router) as result:
+            assert result.find_by_attribute("data-testid", "deep-layout") is not None
+            assert result.find_by_attribute("data-testid", "deep-nested-page") is not None
+
+        hist.navigate("/docs/guide", None)
+        with _render(router) as result:
+            assert result.find_by_attribute("data-testid", "docs-layout") is not None
+            assert result.find_by_attribute("data-testid", "guide-page") is not None
+
+    def test_no_match_renders_empty_view(self):
+        router, hist = _make_router()
+        hist.navigate("/nonexistent", None)
+        with _render(router) as result:
+            assert result.find_by_attribute("data-testid", "root") is not None
+            assert result.find_by_attribute("data-testid", "docs-layout") is None
+
+
+class TestRouterViewReuse:
+    def test_sibling_navigation_preserves_parent_instance(self):
+        router, hist = _make_router()
+        hist.navigate("/docs/guide", None)
+        with _render(router) as result:
+            assert result.find_by_attribute("data-testid", "guide-page") is not None
+            assert _setup_counts["DocsLayout"][0] == 1
+            assert _setup_counts["GuidePage"][0] == 1
+
+            router.__set_path__("/docs/api", None)
+
+            assert result.find_by_attribute("data-testid", "api-page") is not None
+            assert result.find_by_attribute("data-testid", "guide-page") is None
+            assert _setup_counts["DocsLayout"][0] == 1, "layout setup must NOT re-run"
+            assert _setup_counts["ApiPage"][0] == 1
+            assert _setup_counts["GuidePage"][0] == 1
+
+    def test_param_change_remounts_leaf_only(self):
+        router, hist = _make_router()
+        hist.navigate("/docs/foo", None)
+        with _render(router) as result:
+            assert result.find_by_attribute("data-testid", "param-page") is not None
+            assert _setup_counts["DocsLayout"][0] == 1
+            assert _setup_counts["ParamPage"][0] == 1
+            param_name = result.find_by_attribute("data-testid", "param-name")
+            assert param_name is not None
+            assert param_name.textContent == "foo"
+
+            router.__set_path__("/docs/bar", None)
+
+            assert _setup_counts["DocsLayout"][0] == 1, "layout setup must NOT re-run"
+            assert _setup_counts["ParamPage"][0] == 2, "leaf must remount on param change"
+            param_name = result.find_by_attribute("data-testid", "param-name")
+            assert param_name is not None
+            assert param_name.textContent == "bar"
+
+    def test_query_change_remounts_level(self):
+        router, hist = _make_router()
+        hist.navigate("/docs/guide", None)
+        with _render(router) as result:
+            assert result.find_by_attribute("data-testid", "guide-page") is not None
+            assert _setup_counts["GuidePage"][0] == 1
+
+            router.__set_path__("/docs/guide?tab=b", None)
+
+            # query is part of every level identity -> layout remounts too.
+            # the old depth-1 view's callback remounts its leaf first (transient),
+            # then the remounted layout's nested view creates the final leaf.
+            assert _setup_counts["DocsLayout"][0] == 2, "layout must remount (query is part of level identity)"
+            assert _setup_counts["GuidePage"][0] == 3
+            assert result.find_by_attribute("data-testid", "guide-page") is not None
+
+    def test_navigating_away_destroys_and_back_remounts(self):
+        router, hist = _make_router()
+        hist.navigate("/docs/guide", None)
+        with _render(router) as result:
+            assert result.find_by_attribute("data-testid", "guide-page") is not None
+            assert _setup_counts["DocsLayout"][0] == 1
+
+            router.__set_path__("/nonexistent", None)
+
+            assert result.find_by_attribute("data-testid", "docs-layout") is None
+            assert result.find_by_attribute("data-testid", "guide-page") is None
+
+            router.__set_path__("/docs/guide", None)
+
+            assert result.find_by_attribute("data-testid", "docs-layout") is not None
+            assert result.find_by_attribute("data-testid", "guide-page") is not None
+            assert _setup_counts["DocsLayout"][0] == 2, "layout must remount after no-match"
+
+    def test_ancestor_param_change_remounts_descendants(self):
+        router, hist = MockHistoryPort(mode="hash"), None
+        _reset_counts()
+
+        def _param_route_router() -> tuple[Router, MockHistoryPort]:
+            hist = MockHistoryPort(mode="hash")
+            router = Router(
+                {
+                    "path": "/users/{uid}",
+                    "component": DocsLayout,
+                    "children": [{"path": "/docs/{name}", "component": ParamPage}],
+                },
+                history=hist,
+                preload=False,
+            )
+            return router, hist
+
+        router, hist = _param_route_router()
+        hist.navigate("/users/1/docs/a", None)
+        with _render(router) as result:
+            assert _setup_counts["DocsLayout"][0] == 1
+            assert _setup_counts["ParamPage"][0] == 1
+            param_name = result.find_by_attribute("data-testid", "param-name")
+            assert param_name is not None
+            assert param_name.textContent == "a"
+
+            router.__set_path__("/users/2/docs/b", None)
+
+            assert _setup_counts["DocsLayout"][0] == 2, "ancestor param change must remount layout"
+            assert _setup_counts["ParamPage"][0] == 3, "descendant must remount (transient + final)"
+            param_name = result.find_by_attribute("data-testid", "param-name")
+            assert param_name is not None
+            assert param_name.textContent == "b"

@@ -57,13 +57,7 @@ class RenderContext(ABC):
 
         self._router = None
         if app._router:
-            pages = [route[4] for route in app._router.__routes__]
-            self._router = Router(
-                *pages,
-                default=app._router._default,
-                mode=app._router.__mode__,
-                base_url=app._router.__base_url__ or "",
-            )
+            self._router = app._router._clone_for_request()
 
         self._di_scope.__enter__()
         self._di_scope_token = self._di_scope._token

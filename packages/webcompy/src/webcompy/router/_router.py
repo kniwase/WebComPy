@@ -16,7 +16,6 @@ from typing import (
 
 from webcompy.components import ComponentGenerator
 from webcompy.elements.typealias._element_property import ElementChildren
-from webcompy.elements.types._switch import NodeGenerator
 from webcompy.ports._history import HistoryPort
 from webcompy.router._context import RouterContext, TypedRouterContext
 from webcompy.router._pages import RouterPage
@@ -174,16 +173,6 @@ class Router:
             history.set_navigation_callback(self.__set_path__)
         return history  # type: ignore[return-value]
 
-    @computed_property
-    def __cases__(self):
-        try:
-            return list(map(self._get_elements_generator, self.__routes__))
-        except Exception as e:
-            for handler in self.on_route_error:
-                if handler(e) is True:
-                    return []
-            raise
-
     def __default__(self) -> ElementChildren:
         if self._default:
             current_path, search = self._get_current_path()
@@ -206,23 +195,6 @@ class Router:
         decoded_href = tuple(map(urllib.parse.unquote, history.value.split("?", 2)))
         pathname, search = (decoded_href[0], "") if len(decoded_href) == 1 else decoded_href
         return pathname, search
-
-    def _get_elements_generator(self, args: RouteType) -> tuple[Any, NodeGenerator]:
-        match_targeted_routes, path_param_names, component = args[1:-1]
-        current_path, search = self._get_current_path()
-        if self.__mode__ == "history" and self.__base_url__:
-            current_path = self._base_url_stripper(current_path)
-        match = match_targeted_routes(current_path.strip("/"))
-        if match:
-            props = self._generate_router_context(
-                current_path,
-                search,
-                match,
-                path_param_names,
-            )
-            return (match, lambda: component(props))
-        else:
-            return (match, lambda: None)
 
     def _generate_router_context(
         self,
