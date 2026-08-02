@@ -49,6 +49,22 @@ If previous review comments are reachable, look for `REVIEW_RESULT` markers. Do 
 
 Write the review following the template below. Focus ONLY on the diff (Step 1) — do not review unchanged code. Check for code quality issues, potential bugs, and logic errors that CI cannot catch.
 
+## Scope Discipline
+
+### Initial implementation vs review-fix commits
+
+When a PR has undergone multiple review cycles, distinguish the original implementation from subsequent review-fix commits in your analysis. The original implementation is the PRIMARY review target. Review-fix commits SHALL be checked for: (a) correct resolution of the previous concern, and (b) whether they introduce regressions in the fixed area or any other area changed by the commit. Do NOT use review-fix commits as a springboard to expand scope into adjacent edge cases.
+
+### Pre-existing bugs
+
+Bugs in baseline code that the PR did not modify SHALL be 🔵 Note with a recommendation to file a separate change. However, if a pre-existing bug is activated or worsened by the PR's new functionality (i.e., the PR causes the bug to affect code paths it previously did not), flag it at the appropriate severity.
+
+### Severity calibration
+
+- Resource leaks confined to error paths (e.g., template compilation failure due to a missing variable) SHALL be at most 🟡 Should Improve, not 🔴 Must Fix.
+- Edge cases requiring pathological input that does not occur in realistic templates SHALL be at most 🔵 Note.
+- Missing test coverage for unlikely scenarios SHALL be at most 🟡 Should Improve.
+
 ## Critical Framework Invariants
 
 Watch for these WebComPy-specific issues that generic reviewers miss:
