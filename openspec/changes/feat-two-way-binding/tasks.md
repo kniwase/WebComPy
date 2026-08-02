@@ -23,6 +23,6 @@
 
 ## 5. E2E and Verification
 
-- [ ] 5.1 Add e2e page(s) under `e2e/core/my_app/pages/` (e.g., `two_way_binding.py`) exercising: text input round-trip (type → signal → rendered text), number conversion, checkbox toggle, radio group switching, SSR prerender of bound attrs; add Playwright tests under `e2e/core/`
-- [ ] 5.2 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short`
-- [ ] 5.3 Run the relevant e2e group via `scripts/run-e2e-tests.sh` and `uv run python -m webcompy generate` on docs_app to confirm no regression
+- [x] 5.1 Add e2e page(s) under `e2e/core/my_app/pages/` (e.g., `two_way_binding.py`) exercising: text input round-trip (type → signal → rendered text), number conversion, checkbox toggle, radio group switching, SSR prerender of bound attrs; add Playwright tests under `e2e/core/`
+- [x] 5.2 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short`
+- [x] 5.3 Run the relevant e2e group via `scripts/run-e2e-tests.sh` and `uv run python -m webcompy generate` on docs_app to confirm no regression
