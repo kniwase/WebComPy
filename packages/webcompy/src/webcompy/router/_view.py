@@ -164,7 +164,6 @@ class RouterView(DynamicElement):
         idx = self._node_idx
         for child in self._children:
             child._node_idx = idx
-            child._hydrate_node()
             idx += child._node_count
             if not child._mounted:
                 task = scheduler.schedule(child._render())
