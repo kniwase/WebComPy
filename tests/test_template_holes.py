@@ -143,6 +143,20 @@ class TestResolveVar:
         assert result.value == "Charlie"
         assert resolve_var("user.age", ctx).value == 25
 
+    def test_signal_intermediate_unwraps_final_signal(self):
+        ctx = {"user": Signal({"name": Signal("Bob")})}
+        result = resolve_var("user.name", ctx)
+        assert isinstance(result, Computed)
+        assert result.value == "Bob"
+
+    def test_signal_intermediate_tracks_final_signal(self):
+        inner = Signal("Bob")
+        ctx = {"user": Signal({"name": inner})}
+        result = resolve_var("user.name", ctx)
+        assert result.value == "Bob"
+        inner.value = "Bobby"
+        assert result.value == "Bobby"
+
     def test_final_signal_preserved(self):
         sig = Signal("Alice")
         assert resolve_var("user", {"user": sig}) is sig

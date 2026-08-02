@@ -348,6 +348,27 @@ class TestReactiveDictValueReactivity:
             texts = [li.textContent for li in result.query_selector_all("li")]
         assert texts == ["a=Alice", "b=Bob", "c=Carol"]
 
+    def test_dict_value_signal_field_dotted_access(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def DictValueSignalFieldPage(_: ComponentContext[None]):
+            from webcompy.signal import Signal, use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": {"name": Signal("Alice")}, "b": {"name": Signal("Bob")}})
+            captured["d"] = d
+            captured["inner"] = d["a"]["name"]
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ v.name }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(DictValueSignalFieldPage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["Alice", "Bob"]
+            captured["inner"].value = "Alicia"
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["Alicia", "Bob"]
+
     def test_one_var_dict_value_dotted_condition(self):
         captured: dict[str, Any] = {}
 
