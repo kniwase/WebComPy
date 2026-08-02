@@ -24,7 +24,7 @@
 
 ### Requirement: RouterView shall render its chain level by ancestor depth
 
-`RouterView` SHALL determine its depth by counting `RouterView` ancestors in the element tree (computed once in `_on_set_parent`). A depth-N `RouterView` SHALL render the component at chain level N of the current match. If the chain has N or fewer levels, the `RouterView` SHALL render nothing (not an error). Multiple `RouterView`s at the same depth SHALL each render their level of the single current match.
+`RouterView` SHALL determine its depth by counting `RouterView` ancestors in the element tree (computed at match time, not in `_on_set_parent`, where the parent chain is incomplete during component setup). A depth-N `RouterView` SHALL render the component at chain level N of the current match. If the chain has N or fewer levels, the `RouterView` SHALL render nothing (not an error). Multiple `RouterView`s at the same depth SHALL each render their level of the single current match.
 
 #### Scenario: Layout with nested view
 - **WHEN** the URL is `/docs/guide` matching chain `[DocsLayout, GuidePage]`
