@@ -97,6 +97,8 @@ Determination order: tag name first, then the **static** `type` attribute for `i
 
 Radio `radio_value` = the element's **static** `value` attribute; missing or non-static `value` on a radio with `:bind` → `WebComPyException` ("radio :bind requires a static value attribute"). Multiple radios sharing one Signal form a group naturally.
 
+**Type-coercion caveat:** the `checked` Computed compares `sig.value == radio_value` with plain `==`. In templates, HTML attribute values are always strings, so `radio_value` is a string; binding a non-string-valued Signal through a template (e.g. `<input type="radio" value="1" :bind="choice">` with `Signal(1)`) yields `1 == "1"` → `False` and the radio is never checked. The element API preserves non-string values (`html.INPUT({"value": 1, ":bind": choice})` compares int-to-int). Template radio groups SHALL use string-valued Signals. This constraint is spec-level (see the elements delta "Template radio value compared as string" scenario).
+
 ### D4. Static-type requirement for `input`
 
 Binding semantics depend on `type`. If `attrs["type"]` is a `SignalBase` (dynamic), `expand_bind_attr` raises: "`:bind` requires a static `type` attribute". A missing `type` defaults to text semantics (matches the HTML default).

@@ -18,7 +18,7 @@ Supported elements and rules:
 
 For `textarea`, the Signal→DOM direction binds the element's text content via a child `TextElement` (HTML textareas expose no `value` attribute); the write-back direction is unchanged.
 
-For radio, the Signal→DOM direction SHALL use a `Computed` that compares the Signal value with the element's static `value` attribute (`checked` is true when equal), so a group of radios sharing one Signal stays in sync.
+For radio, the Signal→DOM direction SHALL use a `Computed` that compares the Signal value with the element's static `value` attribute (`checked` is true when equal), so a group of radios sharing one Signal stays in sync. The comparison SHALL be a plain Python `==` on the resolved values. In templates, HTML attribute values are always strings, so the static `value` attribute is compared as a string; a template radio bound to a non-string-valued Signal (e.g. `<input type="radio" value="1" :bind="choice">` with an int-valued Signal) SHALL NOT be rendered checked. The element API (`html.INPUT({"type": "radio", "value": 1, ":bind": choice})`) preserves non-string values and SHALL compare them without coercion. Template users SHALL bind radio groups to string-valued Signals.
 
 The `:bind` key SHALL NOT be emitted as a DOM attribute.
 
@@ -38,6 +38,12 @@ The `:bind` key SHALL NOT be emitted as a DOM attribute.
 - **THEN** the radio whose static `value` equals `choice.value` SHALL be rendered checked
 - **AND** when the second radio fires `change` with `ev.target.checked` true, `choice.value` SHALL become `"b"`
 - **AND** the first radio's `checked` SHALL become false reactively
+
+#### Scenario: Template radio value compared as string
+- **WHEN** a radio is created via template `<input type="radio" value="1" :bind="choice">` with an int-valued `choice = Signal(1)`
+- **THEN** the `checked` Computed SHALL compare `1 == "1"`, which is `False`
+- **AND** the radio SHALL NOT be rendered checked
+- **AND** template users SHALL bind radio groups to string-valued Signals; the element API (`html.INPUT({"value": 1, ":bind": choice})`) SHALL compare non-string values without coercion
 
 #### Scenario: No :bind attribute reaches the DOM
 - **WHEN** any element is created with `:bind`
