@@ -74,9 +74,13 @@ def test_nested_route_with_query_params(page_on):
 def test_query_change_transition_creates_leaf_once(page_on):
     page = page_on("/nested/guide?tab=a")
     expect(page.locator("[data-testid='nested-guide-page']")).to_be_visible()
-    guide_count = int(page.locator("[data-testid='nested-guide-count']").text_content())
+    # Wait for hydration to settle: the prerendered count is overwritten by the
+    # browser runtime's fresh-module value (exactly 1).
+    expect(page.locator("[data-testid='nested-guide-count']")).to_have_text("1")
+    guide_count = 1
 
     page.locator("[data-testid='nav-guide-tab-b']").click()
     expect(page).to_have_url(re.compile(r"/nested/guide/?\?tab=b"))
-    expect(page.locator("[data-testid='nested-guide-page']")).to_be_visible()
-    assert int(page.locator("[data-testid='nested-guide-count']").text_content()) == guide_count + 1
+    # Exactly one new instance: the settled count is guide_count + 1 (a
+    # transient duplicate would settle at +2).
+    expect(page.locator("[data-testid='nested-guide-count']")).to_have_text(str(guide_count + 1))
