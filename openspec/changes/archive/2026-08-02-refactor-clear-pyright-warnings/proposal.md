@@ -32,9 +32,11 @@ of a source of ignored noise.
 - Retype `CallbackConsumerNode._producer` (and its constructor parameter) from
   `SignalNode` to `SignalBase[Any]`, matching the runtime invariant that
   callback producers are always value-bearing signals (2 warnings).
-- Add an optional `_preload: Callable[[], None]` key to the `RouterPage`
-  TypedDict and switch the SSG guard from `hasattr(page, "_preload")` to
-  `"_preload" in page` so pyright narrows the TypedDict correctly (1 warning).
+- Fix the SSG lazy-route preload to inspect `page["component"]` (narrowing to
+  `LazyComponentGenerator`) and invoke its `_preload()` instead of checking the
+  `RouterPage` dict itself — the pre-PR `hasattr(page, "_preload")` guard never
+  matched, so lazy routes were never pre-resolved before route generation
+  (1 warning).
 - Replace direct `app_module.app = app` assignment with
   `cast("Any", app_module).app = app` for dynamically attributed `ModuleType`
   instances (2 warnings).
@@ -63,7 +65,7 @@ existing requirement behavior):
 
 The remaining fixes (ast `isinstance` dispatch, `_Sentinel` typing,
 `RenderContext` disposal `Optional` widening, `cast` for dynamic
-`ModuleType` attributes, `RouterPage._preload` TypedDict key) are local
+`ModuleType` attributes, SSG lazy-route preload target) are local
 type-annotation hygiene and are covered as implementation tasks, not spec
 requirements.
 

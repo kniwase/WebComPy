@@ -7,6 +7,7 @@ from typing import Any, cast
 import httpx
 
 from webcompy.app._app import WebComPyApp
+from webcompy.router import LazyComponentGenerator
 from webcompy_cli._argparser import get_params
 from webcompy_cli._server import create_asgi_app
 from webcompy_cli._static_files import get_static_files
@@ -132,8 +133,9 @@ async def generate_static_site(app: WebComPyApp | None = None):
 
     if app.router_mode == "history" and app.routes:
         for _, _, _, _, page in app.routes:
-            if "_preload" in page:
-                page["_preload"]()
+            component = page["component"]
+            if isinstance(component, LazyComponentGenerator):
+                component._preload()
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=serving.asgi),

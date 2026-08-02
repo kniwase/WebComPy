@@ -143,15 +143,23 @@ so the asserts are required for the widened types to type-check. The asserts
 are harmless at runtime — they can only fire if a read slips past the disposed
 guard, which is a bug.
 
-### Decision 6: `RouterPage._preload` as an optional TypedDict key + `"_preload" in page`
+### Decision 6: SSG lazy-route preload targets `page["component"]`
 
-**Choice.** Add `_preload: Callable[[], None]` to `RouterPage` (the
-`total=False` portion) and change the SSG guard in `cli/_generate.py` from
-`hasattr(page, "_preload")` to `"_preload" in page`.
+**Choice.** In `cli/_generate.py`, replace the dead `hasattr(page, "_preload")`
+guard with `isinstance(page["component"], LazyComponentGenerator)` and call
+`component._preload()` on the narrowed generator.
 
-**Rationale.** `hasattr` on a `TypedDict` does not narrow; the `in` operator
-does. Declaring the key makes the access type-valid and documents the optional
-contract.
+**Rationale.** Route tuples contain the `RouterPage` dict at index 4 and the
+component generator at index 3 (`page["component"]`). `_preload()` lives on
+`LazyComponentGenerator` only — `RouterPage` dicts never carry it, so the
+pre-PR `hasattr(page, "_preload")` guard was always false and lazy routes were
+never pre-resolved during SSG, violating the `ssg-via-ssr` requirement that
+`_preload()` run on each page component before route fetching. Narrowing
+`page["component"]` to `LazyComponentGenerator` is type-valid and matches the
+runtime contract; the `ssg-via-ssr` spec already documents the required
+behavior, so no spec change is needed. A regression test
+(`tests/test_ssg_lazy_preload.py`) covers lazy-route preload ordering and
+scoped-CSS availability.
 
 ### Decision 7: `cast` for dynamic `ModuleType` attributes
 

@@ -34,9 +34,9 @@
 
 ## 6. Router TypedDict + SSG/Server dynamic attributes (3 warnings)
 
-- [x] 6.1 In `packages/webcompy/src/webcompy/router/_pages.py`, add `_preload: Callable[[], None]` to the `RouterPage` TypedDict (the `total=False` portion) and add the `Callable` import
-- [x] 6.2 In `packages/webcompy-cli/src/webcompy_cli/_generate.py`, change the SSG guard from `hasattr(page, "_preload")` to `"_preload" in page` with index access `page["_preload"]()` (pyright requires TypedDict item access via index, not attribute), and change `app_module.app = app` to `cast("Any", app_module).app = app` (ruff B010 rejects `setattr` with a constant name)
-- [x] 6.3 In `packages/webcompy-cli/src/webcompy_cli/_server.py`, change `app_module.app = app` to `setattr(app_module, "app", app)`
+- [x] 6.1 In `packages/webcompy-cli/src/webcompy_cli/_generate.py`, fix the SSG lazy-route preload to narrow `page["component"]` to `LazyComponentGenerator` and call `component._preload()` (the pre-PR `hasattr(page, "_preload")` guard checked the `RouterPage` dict, which never carries `_preload`, so lazy routes were never pre-resolved); import `LazyComponentGenerator` from `webcompy.router`
+- [x] 6.2 Add regression test `tests/test_ssg_lazy_preload.py` covering: (a) a lazy route's generator is resolved via `_preload()` before the first route fetch during SSG, with its scoped CSS reachable afterwards, and (b) eager routes generate without any preload
+- [x] 6.3 In `packages/webcompy-cli/src/webcompy_cli/_server.py`, change `app_module.app = app` to `cast("Any", app_module).app = app` (ruff B010 rejects `setattr` with a constant name)
 - [x] 6.4 Run `uv run pyright` on `_pages.py`, `_generate.py`, and `_server.py` and confirm the 3 warnings are gone
 
 ## 7. Full verification
