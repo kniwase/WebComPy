@@ -145,20 +145,42 @@ def _validate_directives(text: str) -> None:
     Code spans, fenced code, ``{% raw %}`` blocks, quoted attribute values,
     and ``{{ }}`` interpolation holes are protected: directive-like spans
     inside them stay literal, mirroring the HTML template path.
+
+    Supported directives are also checked structurally: ``elif``/``else``
+    outside an ``if`` (including a for-level ``else``), mismatched or
+    unclosed ``if``/``for`` blocks raise ``WebComPyException`` with the same
+    messages as the HTML template path.
     """
     protected = _protected_spans(text)
     protected.extend(_hole_spans(text))
     protected.extend((m.start(), m.end()) for m in _RAW_BLOCK_RE.finditer(text))
     protected.extend((m.start(), m.end()) for m in _ATTR_VALUE_RE.finditer(text))
+    stack: list[str] = []
     for m in _GENERIC_DIRECTIVE_RE.finditer(text):
         if any(s <= m.start() < e for s, e in protected):
             continue
         name = m.group("name")
-        if name in _SUPPORTED_DIRECTIVES or name in ("raw", "endraw"):
+        if name in ("raw", "endraw"):
             continue
         if name in _KNOWN_UNSUPPORTED_DIRECTIVES:
             raise WebComPyException(f"{{% {name} %}} is not supported in WebComPy templates")
-        raise WebComPyException(f"Unknown template directive: {{% {name} %}}")
+        if name not in _SUPPORTED_DIRECTIVES:
+            raise WebComPyException(f"Unknown template directive: {{% {name} %}}")
+        if name in ("if", "for"):
+            stack.append(name)
+        elif name in ("elif", "else"):
+            if not stack or stack[-1] != "if":
+                raise WebComPyException(f"{{% {name} %}} outside of {{% if %}} block")
+        elif name == "endif":
+            if not stack or stack[-1] != "if":
+                raise WebComPyException("{% endif %} without matching {% if %}")
+            stack.pop()
+        elif name == "endfor":
+            if not stack or stack[-1] != "for":
+                raise WebComPyException("{% endfor %} without matching {% for %}")
+            stack.pop()
+    if stack:
+        raise WebComPyException(f"Unclosed template directive: {{% {stack[-1]} %}}")
 
 
 def _is_list_body(body_text: str) -> bool:
@@ -528,9 +550,10 @@ def _expand_directives_in_body(
             pos = endif_m.end()
             i = j + 1
 
+        elif name in ("elif", "else"):
+            raise WebComPyException(f"{{% {name} %}} outside of {{% if %}} block")
         else:
-            pos = m.end()
-            i += 1
+            raise WebComPyException(f"{{% {name} %}} without matching {{% if %}} or {{% for %}}")
 
     if pos < len(body):
         result.append(_apply_renames(body[pos:], renames))

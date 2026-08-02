@@ -696,3 +696,26 @@ class TestMarkdownDirectiveValidation:
         body = "{% if flag %}ok{% else %}{% include 'x' %}{% endif %}"
         with _markdown_di_scope(), pytest.raises(WebComPyException, match="not supported"):
             render_markdown(body, {"flag": True})
+
+    def test_for_else_in_list_body_raises(self):
+        body = "{% for item in items %}\n- {{ item }}\n{% else %}\n- empty\n{% endfor %}"
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="outside of"):
+            render_markdown(body, {"items": ["a", "b"]})
+
+    def test_for_else_in_list_body_raises_with_empty_iterable(self):
+        body = "{% for item in items %}\n- {{ item }}\n{% else %}\n- empty\n{% endfor %}"
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="outside of"):
+            render_markdown(body, {"items": []})
+
+    def test_for_elif_in_list_body_raises(self):
+        body = "{% for item in items %}\n{% elif item %}\n- {{ item }}\n{% endfor %}"
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="outside of"):
+            render_markdown(body, {"items": ["a"]})
+
+    def test_stray_endfor_in_markdown_raises(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="without matching"):
+            render_markdown("{% endfor %}", {})
+
+    def test_unclosed_for_in_list_body_raises(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unclosed"):
+            render_markdown("{% for item in items %}\n- {{ item }}", {"items": ["a"]})
