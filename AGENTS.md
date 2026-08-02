@@ -241,10 +241,12 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/components/_css_utils.py` | `components/spec.md`, `reactive-scoped-style/spec.md` |
 | `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md`, `suspense/spec.md`, `async-scheduler/spec.md` |
+| `webcompy/elements/_bind.py` | `elements/spec.md` |
 | `webcompy/elements/types/_suspense.py` | `suspense/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/elements/types/_dynamic.py` | `async-scheduler/spec.md` |
 | `webcompy/elements/types/_fragment.py` | `elements/spec.md` |
 | `webcompy/elements/types/_switch.py` | `elements/spec.md`, `async-rendering/spec.md` |
+| `webcompy/forms/` | `forms/spec.md` |
 | `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md` |
@@ -340,6 +342,7 @@ When specs are added, modified, or removed, update:
 | `nested-dynamic-element` | Nesting of `repeat` and `switch` at arbitrary depth |
 | `dict-repeat-overload` | Efficient DOM reconciliation for `ReactiveDict` with `repeat()` |
 | `element-preserve-children` | `:preserve_children` attribute for externally-managed child DOM nodes |
+| `forms` | Field wrapper, built-in validators, Form aggregation, `:bind` integration |
 | `head-vdom` | Declarative head element management via `HeadElement` VDOM |
 | `router` | Client-side routing, hash/history modes, path params |
 | `router-hooks` | Navigation lifecycle callbacks |

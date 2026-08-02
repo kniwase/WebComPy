@@ -8,6 +8,7 @@ from .pages.component import FunctionStylePage
 from .pages.di_test import DiInjectPage, DiProviderWrapper
 from .pages.dict_repeat import DictRepeatPage
 from .pages.event import EventPage
+from .pages.form_fields import FormFieldsPage
 from .pages.home import HomePage
 from .pages.html_parser_parity import HtmlParserParityPage
 from .pages.keyed_repeat import KeyedRepeatPage
@@ -31,6 +32,7 @@ from .pages.template import TemplatePage
 from .pages.template_components import TemplateComponentsPage
 from .pages.template_control_flow import TemplateControlFlowPage
 from .pages.template_expressions import TemplateExpressionsPage
+from .pages.two_way_binding import TwoWayBindingPage
 
 router = Router(
     {"path": "/", "component": HomePage},
@@ -67,6 +69,8 @@ router = Router(
             {"path": "/item/{id}", "component": NestedDocsItemPage, "path_params": [{"id": "1"}, {"id": "2"}]},
         ],
     },
+    {"path": "/two-way-binding", "component": TwoWayBindingPage},
+    {"path": "/form-fields", "component": FormFieldsPage},
     default=NotFound,
     mode="history",
 )
