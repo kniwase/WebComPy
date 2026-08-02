@@ -305,3 +305,39 @@ class TestReactiveDictValueReactivity:
             captured["d"]["b"] = 7
             texts = [li.textContent for li in result.query_selector_all("li")]
         assert texts == ["a=1", "b=7"]
+
+
+class TestReactiveDictComputedLifecycle:
+    def _count_consumers(self, signal: Any) -> int:
+        count = 0
+        edge = signal.consumers
+        while edge is not None:
+            count += 1
+            edge = edge.next_consumer
+        return count
+
+    def _page(self, captured: dict[str, Any]):
+        @define_component
+        def DictLifecyclePage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": 1, "b": 2})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}<li>item</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        return DictLifecyclePage
+
+    def test_key_removal_destroys_item_computeds(self):
+        captured: dict[str, Any] = {}
+        with TestRenderer.render(self._page(captured)) as result:
+            assert len(result.query_selector_all("li")) == 2
+            d = captured["d"]
+            before = self._count_consumers(d)
+            d.pop("a")
+            after = self._count_consumers(d)
+            assert before - after == 8
+            d["c"] = 3
+            assert self._count_consumers(d) - after == 8

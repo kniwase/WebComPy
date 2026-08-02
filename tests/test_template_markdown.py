@@ -177,14 +177,11 @@ class TestRenderMarkdownDirectiveRejection:
             render_markdown("{% endfo %}", {})
 
     def test_unsupported_directive_rejected_inside_list_body_for(self):
-        with _markdown_di_scope():
-            result = render_markdown(
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="not supported"):
+            render_markdown(
                 "{% for item in items %}\n- {{ item }}{% extends 'x.html' %}\n{% endfor %}",
                 {"items": ["a"]},
             )
-            parent = Element("section")
-            with pytest.raises(WebComPyException, match="not supported"):
-                parent._append_child(result)
 
 
 class TestRenderMarkdownForBlock:

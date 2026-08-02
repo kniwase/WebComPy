@@ -28,7 +28,13 @@ from webcompy.signal import SignalBase
 from webcompy.template._binder import _make_loop_meta
 from webcompy.template._holes import resolve_var
 from webcompy.template._markdown_blocks import match_list_item_start
-from webcompy.template._parser import DIRECTIVE_PATTERN, _parse_for_args
+from webcompy.template._parser import (
+    _GENERIC_DIRECTIVE_RE,
+    _KNOWN_UNSUPPORTED_DIRECTIVES,
+    _SUPPORTED_DIRECTIVES,
+    DIRECTIVE_PATTERN,
+    _parse_for_args,
+)
 
 _EXPRESSION_SPAN_RE = re.compile(r"\{\{.*?\}\}|\{%.*?%\}", re.DOTALL)
 _FENCE_LINE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
@@ -43,54 +49,45 @@ def _rename_in_expressions(text: str, var_name: str, replacement: str) -> str:
     return _EXPRESSION_SPAN_RE.sub(_replace_in_span, text)
 
 
-def _rename_loop_scoped(body: str, prefix: str) -> str:
-    """Rename bare ``loop`` to ``{prefix}loop`` outside nested for-loop bodies.
+def _rename_expression(expr: str, renames: dict[str, str]) -> str:
+    for name, replacement in renames.items():
+        expr = re.sub(rf"\b{re.escape(name)}\b", replacement, expr)
+    return expr
 
-    References to ``loop`` that live inside a direct child
-    ``{% for %}...{% endfor %}`` block are left untouched, so the recursive
-    expansion can bind them to the inner loop's metadata (innermost-wins
-    shadowing). Non-for directives (``{% if %}`` etc.) are transparent: ``loop``
-    inside them still belongs to the current scope and is renamed.
+
+def _apply_renames(text: str, renames: dict[str, str]) -> str:
+    if not renames:
+        return text
+
+    def _replace_in_span(m: re.Match) -> str:
+        return _rename_expression(m.group(0), renames)
+
+    return _EXPRESSION_SPAN_RE.sub(_replace_in_span, text)
+
+
+_RAW_BLOCK_RE = re.compile(r"\{%\s*raw\s*%\}(.*?)\{%\s*endraw\s*%\}", re.DOTALL)
+_ATTR_VALUE_RE = re.compile(r"""[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*"[^"]*"|[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*'[^']*'""")
+
+
+def _validate_body_directives(text: str) -> None:
+    """Reject unsupported/unknown directives in a Markdown list-body for block.
+
+    Code spans, fenced code, ``{% raw %}`` blocks, and quoted attribute values
+    are protected: directive-like spans inside them stay literal, mirroring the
+    HTML template path.
     """
-    directives = list(DIRECTIVE_PATTERN.finditer(body))
-    replacement = f"{prefix}loop"
-    if not directives:
-        return _rename_in_expressions(body, "loop", replacement)
-
-    parts: list[str] = []
-    pos = 0
-    i = 0
-    while i < len(directives):
-        m = directives[i]
-        if m.group("directive") != "for":
-            i += 1
+    protected = _protected_spans(text)
+    protected.extend((m.start(), m.end()) for m in _RAW_BLOCK_RE.finditer(text))
+    protected.extend((m.start(), m.end()) for m in _ATTR_VALUE_RE.finditer(text))
+    for m in _GENERIC_DIRECTIVE_RE.finditer(text):
+        if any(s <= m.start() < e for s, e in protected):
             continue
-        depth = 1
-        j = i + 1
-        while j < len(directives):
-            dj = directives[j].group("directive")
-            if dj == "for":
-                depth += 1
-            elif dj == "endfor":
-                depth -= 1
-                if depth == 0:
-                    break
-            j += 1
-
-        parts.append(_rename_in_expressions(body[pos : m.start()], "loop", replacement))
-        parts.append(_rename_in_expressions(body[m.start() : m.end()], "loop", replacement))
-        if j >= len(directives):
-            pos = m.end()
-            i += 1
+        name = m.group("name")
+        if name in _SUPPORTED_DIRECTIVES or name in ("raw", "endraw"):
             continue
-        endfor_m = directives[j]
-        parts.append(body[m.end() : endfor_m.start()])
-        parts.append(_rename_in_expressions(body[endfor_m.start() : endfor_m.end()], "loop", replacement))
-        pos = endfor_m.end()
-        i = j + 1
-
-    parts.append(_rename_in_expressions(body[pos:], "loop", replacement))
-    return "".join(parts)
+        if name in _KNOWN_UNSUPPORTED_DIRECTIVES:
+            raise WebComPyException(f"{{% {name} %}} is not supported in WebComPy templates")
+        raise WebComPyException(f"Unknown template directive: {{% {name} %}}")
 
 
 def _is_list_body(body_text: str) -> bool:
@@ -236,6 +233,7 @@ class _SourceParser:
         self._pos = j + 1
 
         if _is_list_body(body_text):
+            _validate_body_directives(body_text)
             return _ForBlock(loop_vars, iterable_path, body_text)
         return _TextSegment(self._source[for_token.start : endfor_token.end])
 
@@ -293,10 +291,23 @@ def _split_markdown_source(source: str, ctx: Mapping[str, Any]) -> list[_TextSeg
     return result
 
 
-def _expand_directives_in_body(body: str, ctx: dict[str, Any], prefix: str) -> str:
+def _expand_directives_in_body(
+    body: str,
+    ctx: dict[str, Any],
+    prefix: str,
+    renames: dict[str, str],
+) -> str:
+    """Expand nested directives in ``body``, renaming loop-scoped names.
+
+    ``renames`` maps bare names to prefixed names for all enclosing loop scopes.
+    Text at the current scope is renamed with ``renames``; each nested for-loop
+    body is expanded recursively with an extended mapping where the nested
+    loop's variables and ``loop`` metadata shadow outer entries (innermost-wins
+    shadowing).
+    """
     directives = list(DIRECTIVE_PATTERN.finditer(body))
     if not directives:
-        return body
+        return _apply_renames(body, renames)
 
     result: list[str] = []
     pos = 0
@@ -305,7 +316,7 @@ def _expand_directives_in_body(body: str, ctx: dict[str, Any], prefix: str) -> s
     while i < len(directives):
         m = directives[i]
         if m.start() > pos:
-            result.append(body[pos : m.start()])
+            result.append(_apply_renames(body[pos : m.start()], renames))
 
         name = m.group("directive")
 
@@ -339,7 +350,7 @@ def _expand_directives_in_body(body: str, ctx: dict[str, Any], prefix: str) -> s
                 i = j + 1
                 continue
 
-            iterable = resolve_var(iterable_path, ctx)
+            iterable = resolve_var(_rename_expression(iterable_path, renames), ctx)
             if isinstance(iterable, SignalBase):
                 iterable = iterable.value
             is_dict = isinstance(iterable, dict)
@@ -366,11 +377,11 @@ def _expand_directives_in_body(body: str, ctx: dict[str, Any], prefix: str) -> s
                     ctx[f"{inner_prefix}{loop_vars[0]}"] = key
                     ctx[f"{inner_prefix}{loop_vars[1]}"] = value
 
-                expanded = inner_body
+                inner_renames = dict(renames)
                 for var in loop_vars:
-                    expanded = _rename_in_expressions(expanded, var, f"{inner_prefix}{var}")
-                expanded = _rename_loop_scoped(expanded, inner_prefix)
-                expanded = _expand_directives_in_body(expanded, ctx, inner_prefix)
+                    inner_renames[var] = f"{inner_prefix}{var}"
+                inner_renames["loop"] = f"{inner_prefix}loop"
+                expanded = _expand_directives_in_body(inner_body, ctx, inner_prefix, inner_renames)
                 result.append(expanded)
 
             pos = endfor_m.end()
@@ -427,16 +438,16 @@ def _expand_directives_in_body(body: str, ctx: dict[str, Any], prefix: str) -> s
             for cond, branch_body in branches:
                 if cond is None:
                     if not emitted:
-                        expanded = _expand_directives_in_body(branch_body, ctx, prefix)
+                        expanded = _expand_directives_in_body(branch_body, ctx, prefix, renames)
                         result.append(expanded)
                         emitted = True
                     break
                 try:
-                    resolved = resolve_var(cond, ctx)
+                    resolved = resolve_var(_rename_expression(cond, renames), ctx)
                     if isinstance(resolved, SignalBase):
                         resolved = resolved.value
                     if truth(resolved):
-                        expanded = _expand_directives_in_body(branch_body, ctx, prefix)
+                        expanded = _expand_directives_in_body(branch_body, ctx, prefix, renames)
                         result.append(expanded)
                         emitted = True
                         break
@@ -451,7 +462,7 @@ def _expand_directives_in_body(body: str, ctx: dict[str, Any], prefix: str) -> s
             i += 1
 
     if pos < len(body):
-        result.append(body[pos:])
+        result.append(_apply_renames(body[pos:], renames))
 
     return "".join(result)
 
@@ -519,12 +530,11 @@ class MarkdownForElement(DynamicElement):
                 augmented_ctx[f"{prefix}{self._loop_vars[0]}"] = key
                 augmented_ctx[f"{prefix}{self._loop_vars[1]}"] = value
 
-            item_body = self._body_markdown
+            renames: dict[str, str] = {"loop": f"{prefix}loop"}
             for var in self._loop_vars:
-                item_body = _rename_in_expressions(item_body, var, f"{prefix}{var}")
-            item_body = _rename_loop_scoped(item_body, prefix)
+                renames[var] = f"{prefix}{var}"
 
-            item_body = _expand_directives_in_body(item_body, augmented_ctx, prefix)
+            item_body = _expand_directives_in_body(self._body_markdown, augmented_ctx, prefix, renames)
             item_body = _strip_blank_edge_lines(item_body)
             if not item_body.strip():
                 continue

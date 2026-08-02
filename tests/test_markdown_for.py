@@ -10,6 +10,7 @@ from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
 from webcompy.ports._keys import MARKDOWN_PORT_KEY
 from webcompy.signal import ReactiveDict, ReactiveList, Signal, SignalBase
+from webcompy.template import render_markdown
 from webcompy.template._cache import clear_cache
 from webcompy.template._markdown_default import DefaultMarkdownParser
 from webcompy.template._markdown_for import (
@@ -283,6 +284,22 @@ class TestMarkdownNestedLoopMetadata:
             _attach(mfe)
         assert self._li_texts(mfe) == ["3:a 3:b 3:c outer=1"]
 
+    def test_outer_loop_variable_named_loop_preserves_inner_metadata(self):
+        items = [{"label": "L", "subs": ["a", "b"]}]
+        body = "- {% for sub in loop.subs %}{{ loop.index }}:{{ sub }} {% endfor %}{{ loop.label }}\n"
+        with _markdown_di_scope():
+            mfe = MarkdownForElement(["loop"], "items", body, {"items": items})
+            _attach(mfe)
+        assert self._li_texts(mfe) == ["1:a 2:b L"]
+
+    def test_outer_loop_variable_reference_inside_inner_body(self):
+        items = [{"name": "A", "subs": ["x", "y"]}, {"name": "B", "subs": ["z"]}]
+        body = "- {% for sub in item.subs %}{{ item.name }}{{ sub }} {% endfor %}\n"
+        with _markdown_di_scope():
+            mfe = MarkdownForElement(["item"], "items", body, {"items": items})
+            _attach(mfe)
+        assert self._li_texts(mfe) == ["Ax Ay", "Bz"]
+
 
 class TestRenaming:
     def test_rename_in_expressions_renames_var_in_hole(self):
@@ -542,3 +559,48 @@ class TestErrorHandling:
             )
             with pytest.raises(WebComPyException, match="Two-variable for-loop requires a dict iterable"):
                 _attach(mfe)
+
+
+class TestMarkdownDirectiveValidation:
+    def test_unknown_directive_in_for_body_raises_with_empty_iterable(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unknown template directive"):
+            render_markdown("{% for item in items %}\n- {% endfo %}\n{% endfor %}", {"items": []})
+
+    def test_unknown_directive_in_for_body_raises_at_render_time(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unknown template directive"):
+            render_markdown("{% for item in items %}\n- {% endfo %}\n{% endfor %}", {"items": ["a"]})
+
+    def test_unsupported_directive_in_for_body_raises(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="not supported"):
+            render_markdown(
+                "{% for item in items %}\n- {% extends 'base.html' %}\n{% endfor %}",
+                {"items": ["a"]},
+            )
+
+    def test_unknown_directive_in_statically_unselected_branch_raises(self):
+        body = (
+            "{% for item in items %}\n"
+            "{% if item.visible %}\n"
+            "- {{ item.name }}\n"
+            "{% else %}\n"
+            "- {% endfo %}\n"
+            "{% endif %}\n"
+            "{% endfor %}"
+        )
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unknown template directive"):
+            render_markdown(body, {"items": [{"name": "a", "visible": True}]})
+
+    def test_directive_like_text_in_code_span_not_rejected(self):
+        from webcompy.template._markdown_for import _validate_body_directives
+
+        _validate_body_directives("- `{% endfo %}`\n")
+
+    def test_directive_like_text_in_attribute_value_not_rejected(self):
+        from webcompy.template._markdown_for import _validate_body_directives
+
+        _validate_body_directives('- <a href="{% endfo %}">x</a>\n')
+
+    def test_directive_like_text_in_raw_block_not_rejected(self):
+        from webcompy.template._markdown_for import _validate_body_directives
+
+        _validate_body_directives("- {% raw %}{% endfo %}{% endraw %}\n")
