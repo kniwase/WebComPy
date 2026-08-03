@@ -17,6 +17,7 @@ from webcompy.elements.typealias._element_property import (
 )
 from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._abstract import ElementAbstract
+from webcompy.elements.types._dynamic import DynamicElement, _run_refresh_sync
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._fragment import FragmentElement
 from webcompy.elements.types._refference import DomNodeRef
@@ -37,6 +38,8 @@ from webcompy.template._expression import _EvalState, compile_expression, evalua
 from webcompy.template._holes import (
     Hole,
     LiteralText,
+    _resolve_segments,
+    _resolve_segments_with_signal,
     format_value,
     resolve_var,
     restore_protected,
@@ -139,12 +142,13 @@ def resolve_attr(parts: list[LiteralText | Hole], ctx: dict[str, Any]) -> AttrVa
         else:
             plan = part.plan
             if plan.is_plain_path:
-                value = resolve_var(part.expr_source, ctx)
-                if isinstance(value, SignalBase):
+                segments = part.expr_source.split(".")
+                static_value, saw_signal = _resolve_segments_with_signal(segments, ctx)
+                if saw_signal:
                     has_signal = True
-                    thunks.append(lambda v=value: format_value(v))
+                    thunks.append(lambda segments=segments, ctx=ctx: format_value(_resolve_segments(segments, ctx)))
                 else:
-                    thunks.append(lambda v=value: format_value(v))
+                    thunks.append(lambda v=static_value: format_value(v))
             else:
                 scope = resolve_scope(plan, ctx)
                 state = _EvalState()
@@ -346,6 +350,49 @@ def bind_for(node: ForNode, ctx: dict[str, Any]) -> list[ElementChildren]:
     return _bind_for_static(value, loop_vars, node.body, ctx, iterable_path)
 
 
+class _DictValueRow(DynamicElement):
+    """Keyed ``ReactiveDict`` row that regenerates its children when the stored
+    value's representation (Element/Component vs scalar) or Element identity
+    changes. Scalar value changes are handled reactively by the inner
+    ``TextElement(Computed(read_value))``; representation changes rebuild the
+    row via ``_refresh``.
+    """
+
+    def __init__(self, token: Computed, generator: Callable[[], ElementChildren]) -> None:
+        super().__init__()
+        self._token = token
+        self._generator = generator
+
+    def _on_set_parent(self) -> None:
+        self._children = self._build_children()
+        _ = self._token.value
+        self._add_callback_node(self._token.on_after_updating(self._refresh_sync))
+
+    def _build_children(self) -> list[ElementAbstract]:
+        child = self._generator()
+        if child is None:
+            return []
+        if isinstance(child, ElementAbstract):
+            child._parent = self
+            return [child]
+        return [TextElement(child)]
+
+    def _refresh_sync(self, *args: Any) -> None:
+        _run_refresh_sync(self._refresh, *args)
+
+    async def _refresh(self, *args: Any) -> None:
+        self._cancel_pending_render_tasks()
+        for child in self._children:
+            child._remove_element()
+        self._children = self._build_children()
+        idx = self._node_idx
+        for child in self._children:
+            child._node_idx = idx
+            await child._render()
+            idx += child._node_count
+        self._parent._re_index_children(False)
+
+
 def _bind_dict_reactive(
     loop_vars: list[str],
     signal: SignalBase,
@@ -355,13 +402,6 @@ def _bind_dict_reactive(
     def dict_cb(_value: Any, key: Any) -> ElementChildren:
         if not body:
             return FragmentElement()
-        length = Computed(lambda: len(signal.value))
-
-        def pos() -> int:
-            try:
-                return list(signal.value).index(key)
-            except ValueError:
-                return -1
 
         def read_value() -> Any:
             try:
@@ -372,44 +412,64 @@ def _bind_dict_reactive(
                 return stored.value
             return stored
 
-        meta = LoopMetadata(
-            index=Computed(lambda: pos() + 1),
-            index0=Computed(pos),
-            revindex=Computed(lambda: len(signal.value) - pos()),
-            revindex0=Computed(lambda: len(signal.value) - pos() - 1),
-            first=Computed(lambda: pos() == 0),
-            last=Computed(lambda: pos() + 1 == len(signal.value)),
-            length=length,
-        )
-        members: list[SignalBase] = [
-            cast("SignalBase", meta.index),
-            cast("SignalBase", meta.index0),
-            cast("SignalBase", meta.revindex),
-            cast("SignalBase", meta.revindex0),
-            cast("SignalBase", meta.first),
-            cast("SignalBase", meta.last),
-            cast("SignalBase", meta.length),
-        ]
-        current = read_value()
-        if isinstance(current, ElementAbstract):
-            loop_value: Any = current
-        else:
-            loop_value = Computed(read_value)
-            members.append(loop_value)
-        new_ctx = _extend_for_ctx(ctx, loop_vars, loop_value, key, is_dict=True, loop_meta=meta)
-        try:
-            result = _wrap_for_fragment(bind_children(body, new_ctx))
-        except Exception:
-            for member in members:
-                consumer_destroy(member)
-            raise
-        if result is None:
-            result = FragmentElement()
-        elif isinstance(result, (str, SignalBase)):
-            result = TextElement(result)
-        for idx, member in enumerate(members):
-            result.__set_signal_member__(f"_loop_member_{idx}", member)
-        return result
+        def _value_token() -> tuple[str, Any]:
+            current = read_value()
+            if isinstance(current, ElementAbstract):
+                return ("element", current)
+            return ("scalar", None)
+
+        token = Computed(_value_token)
+
+        def _row_generator() -> ElementChildren:
+            length = Computed(lambda: len(signal.value))
+
+            def pos() -> int:
+                try:
+                    return list(signal.value).index(key)
+                except ValueError:
+                    return -1
+
+            meta = LoopMetadata(
+                index=Computed(lambda: pos() + 1),
+                index0=Computed(pos),
+                revindex=Computed(lambda: len(signal.value) - pos()),
+                revindex0=Computed(lambda: len(signal.value) - pos() - 1),
+                first=Computed(lambda: pos() == 0),
+                last=Computed(lambda: pos() + 1 == len(signal.value)),
+                length=length,
+            )
+            members: list[SignalBase] = [
+                cast("SignalBase", meta.index),
+                cast("SignalBase", meta.index0),
+                cast("SignalBase", meta.revindex),
+                cast("SignalBase", meta.revindex0),
+                cast("SignalBase", meta.first),
+                cast("SignalBase", meta.last),
+                cast("SignalBase", meta.length),
+            ]
+            current = read_value()
+            if isinstance(current, ElementAbstract):
+                loop_value: Any = current
+            else:
+                loop_value = Computed(read_value)
+                members.append(loop_value)
+            new_ctx = _extend_for_ctx(ctx, loop_vars, loop_value, key, is_dict=True, loop_meta=meta)
+            try:
+                result = _wrap_for_fragment(bind_children(body, new_ctx))
+            except Exception:
+                for member in members:
+                    consumer_destroy(member)
+                consumer_destroy(token)
+                raise
+            if result is None:
+                result = FragmentElement()
+            elif isinstance(result, (str, SignalBase)):
+                result = TextElement(result)
+            for idx, member in enumerate(members):
+                result.__set_signal_member__(f"_loop_member_{idx}", member)
+            return result
+
+        return _DictValueRow(token, _row_generator)
 
     return repeat(signal, dict_cb)
 
@@ -527,10 +587,16 @@ def bind_element(node: TemplateElement, ctx: dict[str, Any]) -> ElementChildren:
     if bind is not None:
         resolved_attrs[":bind"] = bind
     children = bind_children(node.children, ctx)
-    return Element(
+    element = Element(
         tag_name=cast("HtmlTags", node.tag_name),
         attrs=resolved_attrs,
         events=events,
         ref=ref,
         children=children,
     )
+    for name, value in resolved_attrs.items():
+        if name == ":bind":
+            continue
+        if isinstance(value, SignalBase):
+            element.__set_signal_member__(f"__attr_{name}", value)
+    return element

@@ -125,7 +125,7 @@ def _lookup(current: Any, segment: str) -> Any:
     return getattr(current, segment)
 
 
-def _resolve_segments(segments: list[str], ctx: dict[str, Any]) -> Any:
+def _resolve_segments(segments: list[str], ctx: Mapping[str, Any]) -> Any:
     current: Any = ctx
     for segment in segments:
         if isinstance(current, SignalBase):
@@ -134,6 +134,20 @@ def _resolve_segments(segments: list[str], ctx: dict[str, Any]) -> Any:
     if isinstance(current, SignalBase):
         current = current.value
     return current
+
+
+def _resolve_segments_with_signal(segments: list[str], ctx: Mapping[str, Any]) -> tuple[Any, bool]:
+    current: Any = ctx
+    saw_signal = False
+    for segment in segments:
+        if isinstance(current, SignalBase):
+            current = current.value
+            saw_signal = True
+        current = _lookup(current, segment)
+    if isinstance(current, SignalBase):
+        current = current.value
+        saw_signal = True
+    return current, saw_signal
 
 
 def resolve_var(path: str, ctx: dict[str, Any]) -> Any:

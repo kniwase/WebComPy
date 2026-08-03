@@ -38,6 +38,10 @@ class SwitchElement(DynamicElement):
         self._default = default
         self._signal_activated = False
         self._rendered_idx = None
+        if not isinstance(cases, SignalBase):
+            for idx, (cond, _) in enumerate(cases):
+                if isinstance(cond, SignalBase):
+                    self.__set_signal_member__(f"_cond_{idx}", cond)
         super().__init__()
 
     def _select_generator(self) -> tuple[int, Callable[[], ElementChildren]]:
