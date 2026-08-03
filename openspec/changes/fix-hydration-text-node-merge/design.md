@@ -24,7 +24,7 @@ The bug only manifests under two conditions together: (1) a fragment/composite i
 
 **Goals:**
 
-- Restore a 1:1 element-tree-to-DOM correspondence at hydration time by splitting parser-merged `#text` nodes, localized to `ElementWithChildren._hydrate_node`.
+- Restore a 1:1 element-tree-to-DOM correspondence at hydration time by splitting parser-merged `#text` nodes, via a shared normalization helper used by BOTH `ElementWithChildren._hydrate_node` and `DynamicElement._hydrate_node`.
 - Keep reconcile/positioning code untouched (it already assumes the 1:1 invariant; normalization restores it).
 - Make the normalization unit-testable without a browser by adding `splitText` to the testing `FakeDOMNode`.
 - Remove the e2e single-element-body workaround and guard the composite-body path with a regression test.
@@ -37,9 +37,11 @@ The bug only manifests under two conditions together: (1) a fragment/composite i
 
 ## Decisions
 
-### D1. Detect text runs in `_hydrate_node` and split the merged DOM node (chosen — "Policy B")
+### D1. Detect text runs at hydration time and split the merged DOM node (chosen — "Policy B")
 
-During the child-iteration loop in `ElementWithChildren._hydrate_node`, maintain a DOM cursor alongside the element index. When the child at position `i` is a text-bearing leaf (`TextElement`, or a `NewLine`/`RawHTML` whose DOM contribution is `#text`) AND the DOM node at the cursor is a single `#text` whose content is the concatenation of a consecutive run of such children, split it:
+Implement a shared helper (e.g. `_normalize_text_runs(children, ...)`) and call it from BOTH child-iteration loops: `ElementWithChildren._hydrate_node` (`_base.py`) AND `DynamicElement._hydrate_node` (`_dynamic.py`). The dynamic-container loop is NOT optional: `RepeatElement` items and `FragmentElement` bodies are hydrated through `DynamicElement._hydrate_node` (it overrides the base with its own `self._children` loop), and the fragment-level text runs — the whitespace/interpolation text inside composite loop bodies — live exactly there. Normalizing only the base-class loop would leave the actual bug site (keyed loops with composite bodies) broken.
+
+The helper maintains a DOM cursor alongside the element index. When the child at position `i` is a text-bearing leaf (a `TextElement` — the only element kind whose DOM contribution is `#text`) AND the DOM node at the cursor is a single `#text` whose content is the concatenation of a consecutive run of such children, split it:
 
 ```
 for each child in run (c_0 .. c_k):
@@ -59,7 +61,7 @@ After splitting, each child once again maps to a distinct `childNodes[_node_idx]
 
 ### D2. Run boundaries — an element child terminates a run
 
-A text run is a maximal consecutive sequence of text-bearing children. An `Element`/component child (DOM `nodeName != "#text"`) terminates the run because it occupies its own non-mergeable DOM node. `NewLine` (`<br>`) and `RawHTML` (`<span>`) also terminate a run when they render as a non-`#text` element; only `RawHTML` with a text-like wrapper, or genuinely adjacent `#text`-producing children, participate. The detector keys off the DOM node's `nodeName`, not the Python type alone, so it stays correct across all element kinds.
+A text run is a maximal consecutive sequence of `TextElement` children — the only element kind whose DOM contribution is a `#text` node, and therefore the only kind the parser can merge. Every other child (an `Element`, a component, a `NewLine` (`<br>`), or a `RawHTML` wrapper element) occupies its own non-mergeable DOM node and terminates a run. The detector keys off the expected DOM `nodeName` of each child (rather than the Python type alone), so it stays correct across all element kinds.
 
 ### D3. Content-mismatch fallback
 

@@ -4,10 +4,10 @@ Hydration adopts prerendered DOM nodes by sibling index: `_get_existing_node()` 
 
 ## What Changes
 
-- Add hydration-time text-node normalization to `ElementWithChildren._hydrate_node` (`packages/webcompy/src/webcompy/elements/types/_base.py`): when iterating children to assign `_node_idx`, detect consecutive `TextElement`/`NewLine`/`RawHTML` runs whose corresponding DOM `#text` was merged, and call `splitText` on the merged DOM text node at the cumulative expected-text boundary so the 1:1 index correspondence is restored before per-child adoption proceeds. Reconcile and positioning logic is unchanged.
+- Add a shared hydration-time text-run normalization helper (in `packages/webcompy/src/webcompy/elements/types/_base.py`) and invoke it from BOTH `ElementWithChildren._hydrate_node` AND `DynamicElement._hydrate_node` (`packages/webcompy/src/webcompy/elements/types/_dynamic.py`): when iterating children to assign `_node_idx`, detect consecutive `TextElement` runs whose corresponding DOM `#text` was merged by the parser (`NewLine`/`RawHTML` render element nodes and terminate runs), and call `splitText` on the merged DOM text node at the cumulative expected-text boundary so the 1:1 index correspondence is restored before per-child adoption proceeds. Reconcile and positioning logic is unchanged.
 - Add `splitText` support to the testing `FakeDOMNode` (`packages/webcompy-testing/src/webcompy_testing/_dom.py`) so the normalization path is unit-testable browserlessly.
 - Add unit tests covering: fragment body (element + adjacent text) hydration with merged DOM text; keyed `ReactiveDict` loop with composite item body hydrating and reconciling correctly; edge cases (empty text, `NewLine`, `RawHTML`, content mismatch).
-- Restore the e2e keyed-repeat page's dict loop to a composite body (the single-element-body workaround added to dodge this bug) as a regression guard, plus a dedicated hydration parity check.
+- Restore the e2e dict loop in `e2e/core/my_app/pages/template_control_flow.py` to a composite body (the single-element-body workaround added to dodge this bug) as a regression guard, plus a dedicated hydration parity check.
 - Non-goal: no `VirtualDOMNode` (server) changes — the server never merges text nodes; normalization is a browser-hydration concern only.
 
 ## Capabilities
@@ -22,14 +22,14 @@ Hydration adopts prerendered DOM nodes by sibling index: `_get_existing_node()` 
 
 ## Impact
 
-- **Affected code**: `packages/webcompy/src/webcompy/elements/types/_base.py` (`ElementWithChildren._hydrate_node`); `packages/webcompy-testing/src/webcompy_testing/_dom.py` (`FakeDOMNode.splitText`).
-- **Tests**: new unit tests (hydration with merged text); `tests/test_full_hydration.py` / a new `tests/test_hydration_text_merge.py`; e2e keyed-repeat page restoration in `e2e/core/my_app/pages/keyed_repeat.py` and `e2e/core/my_app/parity_fixtures.py`.
+- **Affected code**: `packages/webcompy/src/webcompy/elements/types/_base.py` (shared normalization helper + `ElementWithChildren._hydrate_node`); `packages/webcompy/src/webcompy/elements/types/_dynamic.py` (`DynamicElement._hydrate_node` call site); `packages/webcompy-testing/src/webcompy_testing/_dom.py` (`FakeDOMNode.splitText`).
+- **Tests**: new unit tests (hydration with merged text); `tests/test_full_hydration.py` / a new `tests/test_hydration_text_merge.py`; e2e dict-loop composite-body restoration in `e2e/core/my_app/pages/template_control_flow.py` and parity fixture extension in `e2e/core/my_app/parity_fixtures.py`.
 - **APIs/dependencies**: none public. `splitText` is invoked on the existing DOM port node object (a standard `Text.splitText` API already available in the browser).
 - **Risk**: moderate. The normalization runs only during hydration when a text-run mismatch is detected; the no-merge common path is untouched. Incorrect boundary computation could mis-split text, mitigated by content-equality assertions and the spike test (task 1).
 
 ## Known Issues Addressed
 
-Addresses the hydration text-node drift that forced a single-element-body workaround in the e2e keyed-repeat page during the `feat-loop-metadata`/`feat-form-fields` work. Also supersedes the stale known-issue note *"TextElement does not hydrate pre-rendered text nodes (always creates new text node)"* in `openspec/config.yaml` — `TextElement._adopt_node` already exists; this change ensures those adopted text nodes align with the correct sibling index under parser merging.
+Addresses the hydration text-node drift that forced a single-element-body workaround in the e2e dict loop (`e2e/core/my_app/pages/template_control_flow.py`) during the `feat-loop-metadata` work. Also supersedes the stale known-issue note *"TextElement does not hydrate pre-rendered text nodes (always creates new text node)"* in `openspec/config.yaml` — `TextElement._adopt_node` already exists; this change ensures those adopted text nodes align with the correct sibling index under parser merging.
 
 ## Non-goals
 
