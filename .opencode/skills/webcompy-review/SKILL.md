@@ -75,7 +75,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss:
 
 **RenderContext Isolation**: `RenderContext` owns all mutable rendering state per request. `WebComPyApp` is an immutable definition holder. `app.create_render_context(path)` creates a fresh context with independent DI scope, Router, and ComponentStore. `ctx.dispose()` must clean up all resources. `_deferred_ops` on `WebComPyApp` are applied to every RenderContext (never cleared). SSR paths must use `try/finally: ctx.dispose()`. Signal graph globals (`_active_consumer`, `_in_notification_phase`) use ContextVar with module-level fallback for PyScript.
 
-**Reactive Contracts**: Signal equality check is `old is new or old == new` — same-value set must NOT trigger notifications. Computed is lazily evaluated (only recomputes when read after dirty). Computed that returns unchanged result must NOT notify downstream.
+**Reactive Contracts**: Signal equality check is `old is new or old == new` — same-value set must NOT trigger notifications. Computed is lazily evaluated (only recomputes when read after dirty). Computed that returns unchanged result must NOT notify downstream. `producer_update_value_version()` MUST clear `producer.dirty` on the `_epoch == last_clean_epoch` early-return path — the value is already current for the epoch, so any residual `dirty` is a stale mid-sweep re-mark (reachable in diamond topologies) that would otherwise strand the node out of the next mutation's notification sweep.
 
 **Event Handler Leaks**: Event handlers must be created via `create_proxy()` and `destroy()`ed on removal. Missing `destroy()` is a PyScript memory leak.
 

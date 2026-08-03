@@ -17,11 +17,11 @@
 
 ## 4. Verification
 
-- [ ] 4.1 Run `uv run ruff check .` and `uv run ruff format --check .`; fix any findings
-- [ ] 4.2 Run `uv run pyright`; resolve any new type warnings
-- [ ] 4.3 Run `uv run python -m pytest tests/ --tb=short`; ensure no regressions across the signal and element test suites
+- [x] 4.1 Run `uv run ruff check .` and `uv run ruff format --check .`; fix any findings
+- [x] 4.2 Run `uv run pyright`; resolve any new type warnings
+- [x] 4.3 Run `uv run python -m pytest tests/ --tb=short`; ensure no regressions across the signal and element test suites
 
 ## 5. Spec / Review-Skill Maintenance
 
-- [ ] 5.1 Confirm the `reactive` spec delta and the File→Spec Mapping entry for `webcompy/signal/` remain consistent (no main-spec edit required until archive)
-- [ ] 5.2 Update `.opencode/skills/webcompy-review/SKILL.md` Critical Framework Invariants to note the cleared-dirty invariant on the epoch early-return path, per the config.yaml spec-change rule
+- [x] 5.1 Confirm the `reactive` spec delta and the File→Spec Mapping entry for `webcompy/signal/` remain consistent (no main-spec edit required until archive)
+- [x] 5.2 Update `.opencode/skills/webcompy-review/SKILL.md` Critical Framework Invariants to note the cleared-dirty invariant on the epoch early-return path, per the config.yaml spec-change rule
