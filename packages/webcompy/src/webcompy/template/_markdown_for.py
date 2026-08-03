@@ -27,6 +27,12 @@ from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY, MARKDOWN_PORT_KEY
 from webcompy.signal import SignalBase
 from webcompy.template._binder import _make_loop_meta
+from webcompy.template._expression import (
+    _EvalState,
+    compile_expression,
+    evaluate,
+    resolve_scope,
+)
 from webcompy.template._holes import (
     LiteralText,
     _path_is_reactive,
@@ -413,16 +419,47 @@ class _SourceParser:
         for cond, branch_body in branches:
             if cond is None:
                 return branch_body
-            if _path_is_reactive(cond, self._ctx):
+            is_reactive, evaluated, resolved = _eval_condition(cond, self._ctx)
+            if is_reactive:
                 return [_TextSegment(self._source[if_token.start : self._tokens[self._pos - 1].end])]
-            try:
-                resolved = resolve_var(cond, dict(self._ctx))
-            except (KeyError, AttributeError):
+            if not evaluated:
                 continue
             if truth(resolved):
                 return branch_body
 
         return []
+
+
+def _eval_condition(cond: str, ctx: Mapping[str, Any]) -> tuple[bool, bool, Any]:
+    """Evaluate a Markdown pre-scan directive condition.
+
+    Returns ``(is_reactive, evaluated, value)`` where ``evaluated`` is False
+    when the condition cannot be resolved (missing variable etc.). Supports
+    the full safe expression subset (modulo, comparisons, filters), not just
+    dotted paths. Never allocates a ``Computed``: plain paths use the
+    non-allocating ``_path_is_reactive`` probe plus ``_resolve_segments``,
+    and expressions are evaluated once via ``evaluate`` (Signal reads carry
+    no active consumer, so no graph edges are created).
+    """
+    try:
+        plan = compile_expression(cond)
+    except WebComPyException:
+        return False, False, None
+    if plan.is_plain_path:
+        segments = cond.split(".")
+        is_reactive = _path_is_reactive(cond, ctx)
+        try:
+            value = _resolve_segments(segments, ctx)
+        except (KeyError, AttributeError):
+            return is_reactive, False, None
+        return is_reactive, True, value
+    scope = resolve_scope(plan, dict(ctx))
+    state = _EvalState()
+    try:
+        value = evaluate(plan, scope, state)
+    except (KeyError, AttributeError):
+        return False, False, None
+    return state.saw_signal, True, value
 
 
 def _split_markdown_source(source: str, ctx: Mapping[str, Any]) -> list[_TextSegment | _ForBlock]:
@@ -586,15 +623,14 @@ def _expand_directives_in_body(
                         result.append(expanded)
                         emitted = True
                     break
-                try:
-                    resolved = _resolve_segments(_rename_expression(cond, renames).split("."), ctx)
-                    if truth(resolved):
-                        expanded = _expand_directives_in_body(branch_body, ctx, prefix, renames)
-                        result.append(expanded)
-                        emitted = True
-                        break
-                except (KeyError, AttributeError):
+                _, evaluated, resolved = _eval_condition(_rename_expression(cond, renames), ctx)
+                if not evaluated:
                     continue
+                if truth(resolved):
+                    expanded = _expand_directives_in_body(branch_body, ctx, prefix, renames)
+                    result.append(expanded)
+                    emitted = True
+                    break
 
             pos = endif_m.end()
             i = j + 1
