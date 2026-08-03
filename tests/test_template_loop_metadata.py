@@ -518,6 +518,88 @@ class TestReactiveDictValueReactivity:
             spans = result.query_selector_all("span")
             assert [s.textContent for s in spans] == ["Alice", "Bob"]
 
+    def test_scalar_to_element_replacement_renders_child(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def ScalarToElementPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": 1})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(ScalarToElementPage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["1"]
+            captured["d"]["a"] = Element("span", children=[TextElement("ELEM")])
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["ELEM"]
+
+    def test_element_to_scalar_replacement_renders_scalar(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def ElementToScalarPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": Element("span", children=[TextElement("ELEM")])})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(ElementToScalarPage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["ELEM"]
+            captured["d"]["a"] = 42
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["42"]
+
+    def test_element_to_element_replacement_renders_new_element(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def ElementToElementPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": Element("span", children=[TextElement("A")])})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(ElementToElementPage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["A"]
+            captured["d"]["a"] = Element("span", children=[TextElement("B")])
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["B"]
+
+    def test_signal_wrapped_element_inner_change_renders_new_element(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def SignalElementChangePage(_: ComponentContext[None]):
+            from webcompy.signal import Signal, use_reactive_dict
+
+            inner = Signal(Element("span", children=[TextElement("A")]))
+            captured["inner"] = inner
+            d = use_reactive_dict(lambda: {"a": inner})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with TestRenderer.render(SignalElementChangePage) as result:
+            assert [li.textContent for li in result.query_selector_all("li")] == ["A"]
+            captured["inner"].value = Element("span", children=[TextElement("B")])
+            texts = [li.textContent for li in result.query_selector_all("li")]
+        assert texts == ["B"]
+
 
 class TestReactiveDictComputedLifecycle:
     def _count_consumers(self, signal: Any) -> int:
@@ -550,9 +632,76 @@ class TestReactiveDictComputedLifecycle:
             before = self._count_consumers(d)
             d.pop("a")
             after = self._count_consumers(d)
-            assert before - after == 8
+            assert before - after == 9
             d["c"] = 3
-            assert self._count_consumers(d) - after == 8
+            assert self._count_consumers(d) - after == 9
+
+
+class TestIntermediateSignalCleanup:
+    def _count_consumers(self, signal: Any) -> int:
+        count = 0
+        edge = signal.consumers
+        while edge is not None:
+            count += 1
+            edge = edge.next_consumer
+        return count
+
+    def test_attr_binding_teardown_cleans_intermediate_signal(self):
+        from webcompy.signal import Signal
+
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def AttrPage(_: ComponentContext[None]):
+            profile = Signal({"name": "Alice"})
+            captured["profile"] = profile
+            return render_template(
+                '<p data-x="{{ user.profile.name }}">x</p>',
+                {"user": {"profile": profile}},
+            )
+
+        with TestRenderer.render(AttrPage) as result:
+            assert self._count_consumers(captured["profile"]) == 1
+            result._instance._remove_element()
+            assert self._count_consumers(captured["profile"]) == 0
+
+    def test_if_condition_teardown_cleans_intermediate_signal(self):
+        from webcompy.signal import Signal
+
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def IfCondPage(_: ComponentContext[None]):
+            user = Signal({"visible": True})
+            captured["user"] = user
+            return render_template(
+                "<p>{% if user.visible %}yes{% endif %}</p>",
+                {"user": user},
+            )
+
+        with TestRenderer.render(IfCondPage) as result:
+            assert self._count_consumers(captured["user"]) == 1
+            result._instance._remove_element()
+            assert self._count_consumers(captured["user"]) == 0
+
+    def test_text_binding_teardown_cleans_intermediate_signal(self):
+        from webcompy.signal import Signal
+
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def TextPage(_: ComponentContext[None]):
+            profile = Signal({"name": "Alice"})
+            captured["profile"] = profile
+            return render_template(
+                "<p>{{ user.profile.name }}</p>",
+                {"user": {"profile": profile}},
+            )
+
+        with TestRenderer.render(TextPage) as result:
+            assert self._count_consumers(captured["profile"]) == 1
+            result._instance._remove_element()
+            assert self._count_consumers(captured["profile"]) == 0
 
 
 class TestReactiveDictEmptyBody:

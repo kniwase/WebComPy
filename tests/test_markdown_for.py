@@ -636,6 +636,38 @@ class TestExpandDirectivesInBody:
         result = _expand_directives_in_body(body, {"cond": True}, "", {})
         assert result == "- `{% if x %}a{% endif %}` b"
 
+    def test_modulo_condition_expands(self):
+        from webcompy.template._markdown_for import _expand_directives_in_body
+
+        body = "{% if n % 2 == 0 %}\n- even\n{% else %}\n- odd\n{% endif %}"
+        assert _expand_directives_in_body(body, {"n": 4}, "", {}) == "\n- even\n"
+        assert _expand_directives_in_body(body, {"n": 3}, "", {}) == "\n- odd\n"
+
+    def test_if_elif_else_expression_expands(self):
+        from webcompy.template._markdown_for import _expand_directives_in_body
+
+        body = "{% if n % 3 == 0 %}\n- fizz\n{% elif n % 3 == 1 %}\n- one\n{% else %}\n- other\n{% endif %}"
+        assert _expand_directives_in_body(body, {"n": 3}, "", {}) == "\n- fizz\n"
+        assert _expand_directives_in_body(body, {"n": 4}, "", {}) == "\n- one\n"
+        assert _expand_directives_in_body(body, {"n": 5}, "", {}) == "\n- other\n"
+
+    def test_comparison_condition_expands(self):
+        from webcompy.template._markdown_for import _expand_directives_in_body
+
+        body = "{% if count > 3 %}\n- big\n{% else %}\n- small\n{% endif %}"
+        assert _expand_directives_in_body(body, {"count": 5}, "", {}) == "\n- big\n"
+        assert _expand_directives_in_body(body, {"count": 2}, "", {}) == "\n- small\n"
+
+    def test_if_expression_wrapping_list_for_selects_branch(self):
+        from webcompy.template._markdown_for import _split_markdown_source
+
+        source = "{% if n % 2 == 0 %}\n{% for item in items %}\n- {{ item }}\n{% endfor %}\n{% endif %}"
+        with _markdown_di_scope():
+            result = _split_markdown_source(source, {"n": 4, "items": ["a"]})
+            assert any(getattr(x, "loop_vars", None) == ["item"] for x in result)
+            result_odd = _split_markdown_source(source, {"n": 3, "items": ["a"]})
+            assert not any(getattr(x, "loop_vars", None) for x in result_odd)
+
 
 class TestEscapeHatch:
     def test_html_block_for_uses_repeat_path(self):
