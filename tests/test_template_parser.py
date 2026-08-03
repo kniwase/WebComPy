@@ -583,6 +583,12 @@ class TestDirectiveRejection:
         with pytest.raises(WebComPyException, match="Unknown template directive"):
             _parse("<p>{% endfo a % b %}</p>")
 
+    def test_if_with_escaped_quote_and_percent_parses(self):
+        roots = _parse('<p>{% if s == "a\\"%}b" %}x{% endif %}</p>')
+        node = roots[0].children[0]
+        assert isinstance(node, IfNode)
+        assert node.branches[0][0] == 's == "a\\"%}b"'
+
 
 class TestMalformedHtmlErrors:
     def test_mismatched_closing_tag_raises(self):

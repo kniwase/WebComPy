@@ -892,3 +892,27 @@ class TestMarkdownDirectiveValidation:
         from webcompy.template._markdown_for import _validate_directives
 
         _validate_directives("{% raw %}a{% endraw %}{% raw %}b{% endraw %}")
+
+
+class TestPreScanNoLeak:
+    def test_if_pre_scan_with_signal_intermediate_does_not_leak(self):
+        from webcompy.signal import Signal
+        from webcompy.template._markdown_for import _split_markdown_source
+
+        user = Signal({"visible": True})
+        source = "{% if user.visible %}\n{% for item in items %}\n- {{ item }}\n{% endfor %}\n{% endif %}"
+        with _markdown_di_scope():
+            for _ in range(3):
+                _split_markdown_source(source, {"user": user, "items": ["a", "b"]})
+        assert user.consumers is None
+
+    def test_nested_for_iterable_with_signal_intermediate_does_not_leak(self):
+        from webcompy.signal import Signal
+        from webcompy.template._markdown_for import _expand_directives_in_body
+
+        entry = Signal({"items": ["a"]})
+        body = "\n{% for item in entry.items %}\n- {{ item }}\n{% endfor %}\n"
+        ctx = {"__wmdf_0_entry": entry, "__wmdf_0_loop": None}
+        result = _expand_directives_in_body(body, ctx, "__wmdf_0_", {"entry": "__wmdf_0_entry"})
+        assert "- {{ __wmdf_0_0_item }}\n" in result
+        assert entry.consumers is None

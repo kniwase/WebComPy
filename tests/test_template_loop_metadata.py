@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._text import TextElement
@@ -600,3 +602,23 @@ class TestReactiveDictEmptyBody:
 
         with TestRenderer.render(TwoVarEmptyPage) as result:
             assert result.query_selector_all("li") == []
+
+    def test_failed_binding_cleans_up_row_computeds(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def DictValueFailPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": 1})
+            captured["d"] = d
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ loop.index + 1 }}{{ missing }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        with pytest.raises(KeyError), TestRenderer.render(DictValueFailPage):
+            pass
+
+        d = captured["d"]
+        assert d.consumers is None
