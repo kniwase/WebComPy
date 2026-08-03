@@ -12,8 +12,8 @@
 
 ## 3. Integration Test (Computed → DOM update)
 
-- [ ] 3.1 Add an integration test (in `tests/test_signal.py` or a new `tests/test_computed_diamond.py`) that wires a `Computed` driven by two `Signal` producers to a `TextElement`/callback, performs two sequential mutations across epochs, and asserts the downstream text/callback observes every update (guards against silent stale UI)
-- [ ] 3.2 Verify the integration test fails on the unpatched graph and passes after the fix (temporarily revert to confirm, then re-apply)
+- [x] 3.1 Add an integration test (in `tests/test_signal.py` or a new `tests/test_computed_diamond.py`) that wires a `Computed` driven by two `Signal` producers to a `TextElement`/callback, performs two sequential mutations across epochs, and asserts the downstream text/callback observes every update (guards against silent stale UI)
+- [x] 3.2 Verify the integration test fails on the unpatched graph and passes after the fix (temporarily revert to confirm, then re-apply)
 
 ## 4. Verification
 

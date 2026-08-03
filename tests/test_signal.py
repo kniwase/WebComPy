@@ -69,6 +69,23 @@ class TestComputed:
         a.value = 10
         assert c.value == 12
 
+
+class TestComputedDiamondNotification:
+    def test_diamond_computed_callback_fires_on_every_mutation(self):
+        a = Signal(1)
+        left = Computed(lambda: a.value + 1)
+        right = Computed(lambda: a.value * 2)
+        d = Computed(lambda: right.value + left.value)
+        results = []
+        d.on_after_updating(lambda v: results.append(v))
+
+        assert d.value == 4
+        a.value = 2
+        a.value = 3
+
+        assert results == [7, 10]
+        assert d.value == 10
+
     def test_computed_with_single_dependency(self):
         a = Signal(5)
         c = Computed(lambda: a.value * 2)
