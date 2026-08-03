@@ -44,8 +44,11 @@ from webcompy.template._naming import (
     kebab_to_snake,
     resolve_tag,
 )
+from webcompy.template._parser import _DIRECTIVE_ARGS
 
-_DIRECTIVE_PARAGRAPH_PATTERN = re.compile(r"<p>\s*(\{%\s*(?:if|elif|else|endif|for|endfor)\b[^%]*?%\})\s*</p>")
+_DIRECTIVE_PARAGRAPH_PATTERN = re.compile(
+    rf"<p>\s*(\{{%\s*(?:if|elif|else|endif|for|endfor)\b{_DIRECTIVE_ARGS}%\}})\s*</p>"
+)
 
 
 def _render_nodes(source: str, context: Mapping[str, Any] | None = None) -> list[ElementChildren]:

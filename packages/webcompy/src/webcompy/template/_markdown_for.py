@@ -26,6 +26,7 @@ from webcompy.elements.types._dynamic import (
 from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY, MARKDOWN_PORT_KEY
 from webcompy.signal import SignalBase
+from webcompy.signal._computed import _OwnedComputed
 from webcompy.template._binder import _make_loop_meta
 from webcompy.template._expression import (
     _EvalState,
@@ -194,9 +195,13 @@ def _validate_directives(text: str) -> None:
     for m in _masked_directive_matches(text, _GENERIC_DIRECTIVE_RE):
         name = m.group("name")
         if name == "raw":
+            if m.group("args").strip():
+                raise WebComPyException("Unknown template directive: {% raw %}")
             raw_depth += 1
             continue
         if name == "endraw":
+            if m.group("args").strip():
+                raise WebComPyException("Unknown template directive: {% endraw %}")
             if raw_depth == 0:
                 raise WebComPyException("{% endraw %} without matching {% raw %}")
             raw_depth -= 1
@@ -439,12 +444,11 @@ def _eval_condition(cond: str, ctx: Mapping[str, Any]) -> tuple[bool, bool, Any]
     dotted paths. Never allocates a ``Computed``: plain paths use the
     non-allocating ``_path_is_reactive`` probe plus ``_resolve_segments``,
     and expressions are evaluated once via ``evaluate`` (Signal reads carry
-    no active consumer, so no graph edges are created).
+    no active consumer, so no graph edges are created). Expression
+    compilation errors propagate as ``WebComPyException`` per the template
+    contract (malformed directive expressions are reported at bind time).
     """
-    try:
-        plan = compile_expression(cond)
-    except WebComPyException:
-        return False, False, None
+    plan = compile_expression(cond)
     if plan.is_plain_path:
         segments = cond.split(".")
         is_reactive = _path_is_reactive(cond, ctx)
@@ -533,7 +537,14 @@ def _expand_directives_in_body(
                 i = j + 1
                 continue
 
-            iterable = _resolve_segments(_rename_expression(iterable_path, renames).split("."), ctx)
+            iterable_path = _rename_expression(iterable_path, renames)
+            plan = compile_expression(iterable_path)
+            if plan.is_plain_path:
+                iterable = _resolve_segments(iterable_path.split("."), ctx)
+            else:
+                scope = resolve_scope(plan, ctx)
+                state = _EvalState()
+                iterable = evaluate(plan, scope, state)
             is_dict = isinstance(iterable, dict)
             n_vars = len(loop_vars)
             if n_vars == 2:
@@ -663,7 +674,15 @@ class MarkdownForElement(DynamicElement):
         super().__init__()
 
     def _resolve_iterable(self) -> Any:
-        return resolve_var(self._iterable_path, self._context)
+        plan = compile_expression(self._iterable_path)
+        if plan.is_plain_path:
+            return resolve_var(self._iterable_path, self._context)
+        scope = resolve_scope(plan, self._context)
+        state = _EvalState()
+        value = evaluate(plan, scope, state)
+        if state.saw_signal:
+            return _OwnedComputed(lambda plan=plan, scope=scope: evaluate(plan, scope))
+        return value
 
     def _on_set_parent(self) -> None:
         self._iterable = self._resolve_iterable()
