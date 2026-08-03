@@ -132,6 +132,7 @@ def producer_notify_consumers(producer: SignalNode) -> None:
 
 def producer_update_value_version(producer: SignalNode) -> None:
     if _epoch == producer.last_clean_epoch:
+        producer.dirty = False
         return
     if not producer.producer_must_recompute():
         producer.last_clean_epoch = _epoch

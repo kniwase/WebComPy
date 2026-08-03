@@ -7,8 +7,8 @@
 
 ## 2. Fix `producer_update_value_version`
 
-- [ ] 2.1 In `packages/webcompy/src/webcompy/signal/_graph.py`, add `producer.dirty = False` to the `_epoch == producer.last_clean_epoch` early-return branch of `producer_update_value_version` (currently lines 133-135)
-- [ ] 2.2 Confirm the regression tests from group 1 now pass
+- [x] 2.1 In `packages/webcompy/src/webcompy/signal/_graph.py`, add `producer.dirty = False` to the `_epoch == producer.last_clean_epoch` early-return branch of `producer_update_value_version` (currently lines 133-135)
+- [x] 2.2 Confirm the regression tests from group 1 now pass
 
 ## 3. Integration Test (Computed → DOM update)
 
