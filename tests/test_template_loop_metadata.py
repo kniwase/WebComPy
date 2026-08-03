@@ -771,3 +771,129 @@ class TestReactiveDictEmptyBody:
 
         d = captured["d"]
         assert d.consumers is None
+
+
+class TestDictValueRowCallbackRegistration:
+    def test_on_set_parent_registers_raw_async_refresh(self):
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def DictRowPage(_: ComponentContext[None]):
+            from webcompy.signal import use_reactive_dict
+
+            d = use_reactive_dict(lambda: {"a": 1, "b": 2})
+            captured["d"] = d
+            return render_template("<ul>{% for v in d %}<li>{{ v }}</li>{% endfor %}</ul>", {"d": d})
+
+        with TestRenderer.render(DictRowPage) as result:
+            rows = result._instance._children[0]._children
+            assert all(len(row._callback_nodes) == 1 for row in rows)
+            assert all(row._callback_nodes[0]._is_async for row in rows)
+
+
+class TestIncomingSignalOwnership:
+    def _count_consumers(self, signal: Any) -> int:
+        count = 0
+        edge = signal.consumers
+        while edge is not None:
+            count += 1
+            edge = edge.next_consumer
+        return count
+
+    def test_switch_condition_user_computed_not_claimed(self):
+        from webcompy.signal import Computed, Signal
+
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def SwitchPage(_: ComponentContext[None]):
+            src = Signal(1)
+            shared = Computed(lambda: src.value * 2)
+            captured["src"] = src
+            captured["shared"] = shared
+            return render_template(
+                "<div>{% if c %}A{% else %}B{% endif %}</div>",
+                {"c": shared},
+            )
+
+        with TestRenderer.render(SwitchPage) as result:
+            assert self._count_consumers(captured["src"]) == 1
+            result._instance._remove_element()
+            assert self._count_consumers(captured["src"]) == 1
+            captured["src"].value = 10
+            assert captured["shared"].value == 20
+
+    def test_user_computed_plain_path_condition_not_claimed(self):
+        from webcompy.signal import Computed, Signal
+
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def IfPlainPage(_: ComponentContext[None]):
+            src = Signal(1)
+            is_even = Computed(lambda: src.value % 2 == 0)
+            captured["src"] = src
+            captured["is_even"] = is_even
+            return render_template(
+                "<p>{% if is_even %}yes{% endif %}</p>",
+                {"src": src, "is_even": is_even},
+            )
+
+        with TestRenderer.render(IfPlainPage) as result:
+            assert self._count_consumers(captured["src"]) == 1
+            result._instance._remove_element()
+            assert self._count_consumers(captured["src"]) == 1
+            captured["src"].value = 2
+            assert captured["is_even"].value is True
+
+    def test_template_expression_condition_computed_still_destroyed(self):
+        from webcompy.signal import Signal
+
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def IfExprPage(_: ComponentContext[None]):
+            src = Signal(2)
+            captured["src"] = src
+            return render_template("<p>{% if src % 2 == 0 %}even{% endif %}</p>", {"src": src})
+
+        with TestRenderer.render(IfExprPage) as result:
+            assert self._count_consumers(captured["src"]) == 1
+            result._instance._remove_element()
+            assert self._count_consumers(captured["src"]) == 0
+
+    def test_component_root_attr_user_signal_not_collected_or_destroyed(self):
+        from webcompy.hydration._collect import _collect_component_signals
+        from webcompy.signal import Signal
+
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def ManualRootPage(_: ComponentContext[None]):
+            cls = Signal("user-cls")
+            captured["cls"] = cls
+            return Element("div", attrs={"class": cls}, children=[TextElement("x")])
+
+        with TestRenderer.render(ManualRootPage) as result:
+            assert "class" in result._instance._attrs
+            members = _collect_component_signals(result._instance)
+            assert not any(key.startswith("__attr_") for key in members)
+            result._instance._remove_element()
+            captured["cls"].value = "still-alive"
+            assert captured["cls"].value == "still-alive"
+
+    def test_template_root_attr_computed_still_destroyed_on_teardown(self):
+        from webcompy.signal import Signal
+
+        captured: dict[str, Any] = {}
+
+        @define_component
+        def AttrPage(_: ComponentContext[None]):
+            src = Signal("red")
+            captured["src"] = src
+            return render_template('<p data-x="{{ s }}">x</p>', {"s": src})
+
+        with TestRenderer.render(AttrPage) as result:
+            assert self._count_consumers(captured["src"]) == 1
+            result._instance._remove_element()
+            assert self._count_consumers(captured["src"]) == 0

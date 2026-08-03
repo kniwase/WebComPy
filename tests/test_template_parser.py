@@ -650,6 +650,18 @@ class TestDirectiveParagraphStripping:
         result = _strip_directive_paragraphs("<p>{% endif %}</p>")
         assert result == "{% endif %}"
 
+    def test_paragraph_with_percent_in_condition_stripped(self):
+        from webcompy.template import _strip_directive_paragraphs
+
+        result = _strip_directive_paragraphs("<p>{% if n % 2 == 0 %}</p>")
+        assert result == "{% if n % 2 == 0 %}"
+
+    def test_paragraph_with_percent_in_quoted_string_stripped(self):
+        from webcompy.template import _strip_directive_paragraphs
+
+        result = _strip_directive_paragraphs('<p>{% if s == "a%}b" %}</p>')
+        assert result == '{% if s == "a%}b" %}'
+
 
 class TestHoleExpressions:
     def test_subscript_in_text_works(self):

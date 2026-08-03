@@ -948,3 +948,98 @@ class TestPreScanNoLeak:
         result = _expand_directives_in_body(body, ctx, "__wmdf_0_", {"entry": "__wmdf_0_entry"})
         assert "- {{ __wmdf_0_0_item }}\n" in result
         assert entry.consumers is None
+
+
+class TestExpressionIterables:
+    def test_static_expression_slice_iterable(self):
+        with _markdown_di_scope():
+            mfe = MarkdownForElement(["item"], "items[:2]", "- {{ item }}", {"items": ["a", "b", "c"]})
+            _attach(mfe)
+        lis = _find_lis(_find_ul(mfe))
+        assert len(lis) == 2
+
+    def test_static_expression_subscript_iterable(self):
+        items = [{"children": ["a", "b"]}, {"children": ["c"]}]
+        with _markdown_di_scope():
+            mfe = MarkdownForElement(["item"], "items[0].children", "- {{ item }}", {"items": items})
+            _attach(mfe)
+        lis = _find_lis(_find_ul(mfe))
+        assert len(lis) == 2
+
+    def test_reactive_expression_iterable_wraps_in_computed(self):
+        items = ReactiveList(["a", "b", "c", "d"])
+        mfe = MarkdownForElement(["item"], "items[:3]", "- {{ item }}", {"items": items})
+        with _markdown_di_scope():
+            _attach(mfe)
+        assert isinstance(mfe._iterable, SignalBase)
+        assert len(_find_lis(_find_ul(mfe))) == 3
+
+    @pytest.mark.asyncio
+    async def test_reactive_expression_iterable_rerenders_on_change(self, fake_browser_full):
+        _active_di_scope.get().provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
+        items = ReactiveList(["a", "b", "c", "d"])
+        mfe = MarkdownForElement(["item"], "items[:3]", "- {{ item }}", {"items": items})
+        parent = _make_render_parent()
+        mfe._parent = parent
+        mfe._node_idx = 0
+        await mfe._render()
+        assert len(_find_lis(_find_ul(mfe))) == 3
+
+        items.pop(0)
+        items.pop(0)
+        assert len(_find_lis(_find_ul(mfe))) == 2
+
+    def test_nested_expression_iterable_expands_statically(self):
+        with _markdown_di_scope():
+            mfe = MarkdownForElement(
+                ["item"],
+                "items",
+                "- {{ item.name }}\n{% for child in item.children[:2] %}\n  - {{ child }}\n{% endfor %}",
+                {"items": [{"name": "x", "children": ["a", "b", "c"]}]},
+            )
+            _attach(mfe)
+        ul = _find_ul(mfe)
+        lis = _find_lis(ul)
+        assert len(lis) == 1
+        nested_ul = [c for c in lis[0]._children if isinstance(c, ElementBase) and c._tag_name == "ul"]
+        assert len(nested_ul) == 1
+        assert len(_find_lis(nested_ul[0])) == 2
+
+
+class TestConditionCompilationErrors:
+    def test_malformed_condition_in_list_body_raises(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Invalid template expression"):
+            render_markdown("{% for item in items %}\n{% if item a b %}- x\n{% endif %}\n{% endfor %}", {"items": [1]})
+
+    @pytest.mark.asyncio
+    async def test_malformed_condition_in_unselected_branch_raises_on_render(self, fake_browser_full):
+        _active_di_scope.get().provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
+        mfe = MarkdownForElement(
+            ["item"],
+            "items",
+            "{% if broken !!! %}\n- x\n{% else %}\n- y\n{% endif %}",
+            {"items": [{}]},
+        )
+        parent = _make_render_parent()
+        with pytest.raises(WebComPyException, match="Invalid template expression"):
+            mfe._parent = parent
+
+
+class TestRawDirectiveValidation:
+    def test_raw_with_args_raises(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unknown template directive"):
+            render_markdown("{% raw extra %}\n- x\n{% endraw %}", {})
+
+    def test_endraw_with_args_raises(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unknown template directive"):
+            render_markdown("{% raw %}\n- x\n{% endraw extra %}", {})
+
+    def test_raw_with_args_raises_with_empty_iterable(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unknown template directive"):
+            render_markdown("{% for item in items %}\n{% raw extra %}\n{% endraw %}\n{% endfor %}", {"items": []})
+
+    def test_exact_raw_forms_still_pass(self):
+        with _markdown_di_scope():
+            mfe = MarkdownForElement(["item"], "items", "- {% raw %}{{ literal }}{% endraw %}", {"items": ["a"]})
+            _attach(mfe)
+        assert len(_find_lis(_find_ul(mfe))) == 1
