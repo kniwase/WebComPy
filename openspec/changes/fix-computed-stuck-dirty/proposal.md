@@ -1,6 +1,6 @@
 ## Why
 
-In a diamond signal topology, a `Computed` that is cleaned within the current epoch and then re-marked dirty by a second producer during the same notification sweep is left with `dirty = True`. `producer_update_value_version()` early-returns on `_epoch == last_clean_epoch` WITHOUT clearing the stale dirty flag, so the next mutation's `producer_notify_consumers()` skips the node (it only collects consumers where `dirty` is `False`). Downstream consumers stop receiving updates, producing stale UI. This is a genuine framework bug that the `feat-loop-metadata` design (decision D3) isolated and deferred for a dedicated fix.
+In a diamond signal topology, a `Computed` that is cleaned within the current epoch and then re-marked dirty later in the same notification sweep is left with `dirty = True`. `producer_notify_consumers()` collects all non-dirty consumers up front, so a consumer that a mid-sweep dispatch eagerly recomputed clean is marked again when the collection loop reaches it — and a diamond's second producer path makes such mid-sweep eager recomputes easy to trigger. `producer_update_value_version()` early-returns on `_epoch == last_clean_epoch` WITHOUT clearing the stale dirty flag, so the next mutation's `producer_notify_consumers()` skips the node (it only collects consumers where `dirty` is `False`). Downstream consumers stop receiving updates, producing stale UI. This is a genuine framework bug that the `feat-loop-metadata` design (decision D3) isolated and deferred for a dedicated fix.
 
 ## What Changes
 

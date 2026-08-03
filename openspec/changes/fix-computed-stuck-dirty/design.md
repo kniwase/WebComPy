@@ -17,21 +17,34 @@ def producer_update_value_version(producer: SignalNode) -> None:
 In a diamond topology this strands a `Computed`. The sweep trace that reproduces the bug:
 
 ```
-Topology:  A ──┐
-              ├──▶ C ──▶ D
-        B ──┘
+Topology:  A (source) ─▶ B ─┐
+                            ├──▶ D (Computed) ──▶ consumer callback
+           A ────────────▶ C ┘
 
-epoch E starts (mutation → increment_epoch)
-  notify A's consumers: C collected (C.dirty False) → C.dirty=True → recurse to D
-  C is recomputed/cleaned for epoch E  (C.last_clean_epoch = E)
-    BUT within the SAME sweep, B also notifies C
-    B's notify run sees C.dirty is already True → C NOT re-collected (correct, no double-dispatch)
-    However C.dirty remains True after the sweep
+epoch E begins (mutation on A → increment_epoch)
+  producer_notify_consumers(A) collects [B, C] up front (both dirty=False)
+  loop marks B: B.dirty=True → consumer_mark_dirty(B) → D.dirty=True → D's callback dispatches
+    → callback reads D.value → producer_update_value_version(D) → D recomputes for E
+    → D reads B.value (B recomputed, clean for E) and C.value
+    → C is eagerly recomputed and cleaned for E (last_clean_epoch = E, dirty = False)
+  the collection loop (which re-checks `if not consumer.dirty` at mark time) reaches C:
+    C.dirty is False again → C is re-marked dirty = True
+    → consumer_mark_dirty(C) → D: not dirty → D.dirty=True → D's callback dispatches
+    → callback reads D.value → producer_update_value_version(D)
+    → _epoch == D.last_clean_epoch (D was cleaned earlier in this sweep)
+    → EARLY RETURN without clearing dirty   ← D stays dirty=True
 epoch E+1 (next mutation)
-  notify A's consumers: C is skipped because C.dirty is still True
-    → consumer_mark_dirty(C) never called → D never notified
-    → D goes stale
+  notify A's consumers: B marked → consumer_mark_dirty(B) → notify B's consumers
+  D is skipped (D.dirty is still True) → consumer_mark_dirty(D) never called
+    → D's callback never dispatched → D goes stale
 ```
+
+The re-mark is NOT a second sweep: `producer_notify_consumers` collects all non-dirty
+consumers up front, and any consumer that a mid-sweep dispatch eagerly recomputed clean
+is marked again when the loop reaches it. A node with two producers (diamond) makes this
+easy to hit — an eager read through one producer path cleans a node that a second
+collected path later re-marks — but the residue (clean value + stale `dirty = True` for
+the epoch) is the same with a single producer.
 
 The `feat-loop-metadata` design (decision D3) verified this experimentally and deferred it: *"This is a genuine framework bug worth a separate fix (clear `producer.dirty` on that early-return)."*
 
