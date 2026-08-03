@@ -25,6 +25,7 @@ from webcompy.elements.types._switch import SwitchElement
 from webcompy.elements.types._text import NewLine, TextElement
 from webcompy.exception import WebComPyException
 from webcompy.signal import Computed, SignalBase
+from webcompy.signal._computed import _OwnedComputed
 from webcompy.signal._graph import consumer_destroy
 from webcompy.template._ast import (
     AttrSpec,
@@ -164,7 +165,7 @@ def resolve_attr(parts: list[LiteralText | Hole], ctx: dict[str, Any]) -> AttrVa
 
     if not has_signal:
         return _render_parts()
-    return Computed(_render_parts)
+    return _OwnedComputed(_render_parts)
 
 
 def bind_text_part(node: TemplateText, ctx: dict[str, Any]) -> list[ElementChildren]:
@@ -249,7 +250,13 @@ def bind_if(node: IfNode, ctx: dict[str, Any]) -> list[ElementChildren]:
                 value = evaluate(plan, scope, state)
                 if state.saw_signal:
                     has_signal = True
-                    branch_data.append((False, Computed(lambda plan=plan, scope=scope: evaluate(plan, scope)), body))
+                    branch_data.append(
+                        (
+                            False,
+                            _OwnedComputed(lambda plan=plan, scope=scope: evaluate(plan, scope)),
+                            body,
+                        )
+                    )
                 else:
                     branch_data.append((False, value, body))
 
@@ -366,7 +373,7 @@ class _DictValueRow(DynamicElement):
     def _on_set_parent(self) -> None:
         self._children = self._build_children()
         _ = self._token.value
-        self._add_callback_node(self._token.on_after_updating(self._refresh_sync))
+        self._add_callback_node(self._token.on_after_updating(self._refresh))
 
     def _build_children(self) -> list[ElementAbstract]:
         child = self._generator()
@@ -597,6 +604,6 @@ def bind_element(node: TemplateElement, ctx: dict[str, Any]) -> ElementChildren:
     for name, value in resolved_attrs.items():
         if name == ":bind":
             continue
-        if isinstance(value, SignalBase):
+        if isinstance(value, _OwnedComputed):
             element.__set_signal_member__(f"__attr_{name}", value)
     return element

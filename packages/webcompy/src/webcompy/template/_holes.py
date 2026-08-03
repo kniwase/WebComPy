@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from webcompy.exception import WebComPyException
-from webcompy.signal import Computed, SignalBase
+from webcompy.signal import SignalBase
+from webcompy.signal._computed import _OwnedComputed
 from webcompy.template._expression import (
     ExpressionPlan,
     compile_expression,
@@ -155,7 +156,7 @@ def resolve_var(path: str, ctx: dict[str, Any]) -> Any:
     current: Any = ctx
     for segment in segments:
         if isinstance(current, SignalBase):
-            return Computed(lambda segments=segments, ctx=ctx: _resolve_segments(segments, ctx))
+            return _OwnedComputed(lambda segments=segments, ctx=ctx: _resolve_segments(segments, ctx))
         current = _lookup(current, segment)
     return current
 

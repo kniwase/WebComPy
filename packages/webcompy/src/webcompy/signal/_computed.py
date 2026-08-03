@@ -67,6 +67,16 @@ class Computed(SignalBase[V]):
         return self._value
 
 
+class _OwnedComputed(Computed[V]):
+    """A ``Computed`` created by the framework (template binder).
+
+    Owning elements (``SwitchElement``, ``Component`` root, template-bound
+    elements) register ``_OwnedComputed`` instances as signal members so
+    teardown destroys them. Computeds and Signals supplied by the caller
+    are never instances of this type and must not be claimed as owned.
+    """
+
+
 def use_computed(factory: Callable[[], T]) -> Computed[T]:
     """Create a reactive Computed value.
 

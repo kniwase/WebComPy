@@ -19,6 +19,7 @@ from webcompy.elements.types._dynamic import (
 from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY
 from webcompy.signal import SignalBase
+from webcompy.signal._computed import _OwnedComputed
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
 SwitchCasesSignal: TypeAlias = list[tuple[Any, NodeGenerator]]
@@ -40,7 +41,7 @@ class SwitchElement(DynamicElement):
         self._rendered_idx = None
         if not isinstance(cases, SignalBase):
             for idx, (cond, _) in enumerate(cases):
-                if isinstance(cond, SignalBase):
+                if isinstance(cond, _OwnedComputed):
                     self.__set_signal_member__(f"_cond_{idx}", cond)
         super().__init__()
 
