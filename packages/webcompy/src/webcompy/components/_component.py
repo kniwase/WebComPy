@@ -13,6 +13,7 @@ from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
 from webcompy.signal import ReactiveDict, computed_property
+from webcompy.signal._computed import _OwnedComputed
 
 if TYPE_CHECKING:
     from webcompy.app._render_context import RenderContext
@@ -193,6 +194,9 @@ class Component(ElementBase):
             "webcompy-component": property["component_name"],
             "webcompy-cid-" + property["component_id"]: True,
         }
+        for name, value in self._attrs.items():
+            if isinstance(value, _OwnedComputed):
+                self.__set_signal_member__(f"__attr_{name}", value)
         self._event_handlers = node._event_handlers
         self._ref = node._ref
         self._preserve_children = node._preserve_children

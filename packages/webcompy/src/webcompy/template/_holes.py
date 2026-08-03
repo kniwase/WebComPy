@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
 from webcompy.exception import WebComPyException
 from webcompy.signal import SignalBase
+from webcompy.signal._computed import _OwnedComputed
 from webcompy.template._expression import (
     ExpressionPlan,
     compile_expression,
@@ -113,20 +115,69 @@ def _check_stale_braces(text: str) -> None:
             raise WebComPyException(f"Unclosed or malformed expression near {text[j : j + 15]!r} in template")
 
 
+def _lookup(current: Any, segment: str) -> Any:
+    if isinstance(current, dict):
+        if segment not in current:
+            available = ", ".join(sorted(current.keys()))
+            raise KeyError(f"Template variable '{segment}' not found in context (available: {available})")
+        return current[segment]
+    if not hasattr(current, segment):
+        raise KeyError(f"Template variable '{segment}' not found on {type(current).__name__}")
+    return getattr(current, segment)
+
+
+def _resolve_segments(segments: list[str], ctx: Mapping[str, Any]) -> Any:
+    current: Any = ctx
+    for segment in segments:
+        if isinstance(current, SignalBase):
+            current = current.value
+        current = _lookup(current, segment)
+    if isinstance(current, SignalBase):
+        current = current.value
+    return current
+
+
+def _resolve_segments_with_signal(segments: list[str], ctx: Mapping[str, Any]) -> tuple[Any, bool]:
+    current: Any = ctx
+    saw_signal = False
+    for segment in segments:
+        if isinstance(current, SignalBase):
+            current = current.value
+            saw_signal = True
+        current = _lookup(current, segment)
+    if isinstance(current, SignalBase):
+        current = current.value
+        saw_signal = True
+    return current, saw_signal
+
+
 def resolve_var(path: str, ctx: dict[str, Any]) -> Any:
     segments = path.split(".")
     current: Any = ctx
     for segment in segments:
-        if isinstance(current, dict):
-            if segment not in current:
-                available = ", ".join(sorted(current.keys()))
-                raise KeyError(f"Template variable '{segment}' not found in context (available: {available})")
-            current = current[segment]
-        else:
-            if not hasattr(current, segment):
-                raise KeyError(f"Template variable '{segment}' not found on {type(current).__name__}")
-            current = getattr(current, segment)
+        if isinstance(current, SignalBase):
+            return _OwnedComputed(lambda segments=segments, ctx=ctx: _resolve_segments(segments, ctx))
+        current = _lookup(current, segment)
     return current
+
+
+def _path_is_reactive(path: str, ctx: Mapping[str, Any]) -> bool:
+    """Probe whether a dotted path involves a Signal without allocating a Computed.
+
+    Mirrors ``resolve_var``'s traversal (including intermediate Signal
+    unwrapping), but returns a plain bool so classification code can check
+    reactivity without leaking a temporary ``Computed`` consumer.
+    """
+    segments = path.split(".")
+    current: Any = ctx
+    for segment in segments:
+        if isinstance(current, SignalBase):
+            return True
+        try:
+            current = _lookup(current, segment)
+        except (KeyError, AttributeError):
+            return False
+    return isinstance(current, SignalBase)
 
 
 def format_value(value: Any) -> str:

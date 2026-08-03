@@ -14,6 +14,7 @@ from webcompy.elements.types._dynamic import (
     _position_element_nodes,
     _run_refresh_sync,
     _subtree_has_async_setup,
+    _subtree_needs_render,
 )
 from webcompy.elements.types._text import NewLine
 from webcompy.exception import WebComPyException
@@ -222,7 +223,10 @@ class RepeatElement(DynamicElement):
             if c_idx in newly_created:
                 await child._render()
             elif isinstance(child, DynamicElement):
-                _position_element_nodes(child, parent_node, child._node_idx)
+                if not child._hydrated and _subtree_needs_render(child):
+                    await child._render()
+                else:
+                    _position_element_nodes(child, parent_node, child._node_idx)
             else:
                 if child._node_cache is None:
                     await child._render()

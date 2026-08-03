@@ -29,6 +29,12 @@ def _subtree_has_async_setup(element: ElementAbstract) -> bool:
     return False
 
 
+def _subtree_needs_render(element: ElementAbstract) -> bool:
+    if isinstance(element, DynamicElement):
+        return any(_subtree_needs_render(child) for child in element._children)
+    return element._node_cache is None
+
+
 def _run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None:
     from webcompy.utils._environment import ENVIRONMENT
 

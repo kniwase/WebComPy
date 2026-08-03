@@ -20,7 +20,7 @@ from webcompy.template._ast import (
     TemplateNode,
     TemplateText,
 )
-from webcompy.template._holes import Hole, LiteralText, protect_lbrace, split_text
+from webcompy.template._holes import LiteralText, protect_lbrace, split_text
 
 _RAW_BLOCK_RE = re.compile(r"\{%\s*raw\s*%\}(.*?)\{%\s*endraw\s*%\}", re.DOTALL)
 _RAW_OPEN_RE = re.compile(r"\{%\s*raw\s*%\}")
@@ -69,7 +69,40 @@ REJECTED_TAGS = frozenset(
 )
 
 
-DIRECTIVE_PATTERN = re.compile(r"\{%\s*(?P<directive>if|elif|else|endif|for|endfor)\b(?P<args>[^%]*)%\}")
+_DIRECTIVE_ARGS = r"(?P<args>(?:'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"|%(?!\})|[^%])*)"
+
+DIRECTIVE_PATTERN = re.compile(rf"\{{%\s*(?P<directive>if|elif|else|endif|for|endfor)\b{_DIRECTIVE_ARGS}%\}}")
+
+_SUPPORTED_DIRECTIVES = frozenset({"if", "elif", "else", "endif", "for", "endfor"})
+
+_KNOWN_UNSUPPORTED_DIRECTIVES = frozenset(
+    {
+        "extends",
+        "block",
+        "endblock",
+        "macro",
+        "endmacro",
+        "call",
+        "endcall",
+        "include",
+        "import",
+        "from",
+        "set",
+        "with",
+        "endwith",
+        "filter",
+        "endfilter",
+        "do",
+        "trans",
+        "endtrans",
+        "pluralize",
+        "autoescape",
+        "endautoescape",
+        "debug",
+    }
+)
+
+_GENERIC_DIRECTIVE_RE = re.compile(rf"\{{%\s*(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)\b{_DIRECTIVE_ARGS}%\}}")
 
 
 def _reject_tag(tag: str) -> None:
@@ -93,7 +126,7 @@ def _parse_for_args(args: str) -> tuple[list[str], str]:
 
 
 def _make_directive(match: re.Match) -> DirectiveToken:
-    name = match.group("directive")
+    name = match.group("name")
     args = match.group("args").strip()
     if name == "if":
         return IfDirective(condition=args)
@@ -109,32 +142,45 @@ def _make_directive(match: re.Match) -> DirectiveToken:
     return EndForDirective()
 
 
+def _emit_text_segment(text: str) -> list[TemplateText]:
+    sub_parts = split_text(text)
+    if not sub_parts:
+        return []
+    return [TemplateText(parts=sub_parts)]
+
+
 def _scan_text_for_directives(text_node: TemplateText) -> list[TemplateText | DirectiveToken]:
+    mask_to_source: dict[str, str] = {}
+    buf: list[str] = []
+    for idx, part in enumerate(text_node.parts):
+        if isinstance(part, LiteralText):
+            buf.append(part.text)
+        else:
+            mask = f"\x00h{idx}\x00"
+            mask_to_source[mask] = part.expr_source
+            buf.append(mask)
+    masked = "".join(buf)
     pieces: list[TemplateText | DirectiveToken] = []
-    buffer: list[LiteralText | Hole] = []
-
-    def flush_text() -> None:
-        if not buffer:
-            return
-        pieces.append(TemplateText(parts=list(buffer)))
-        buffer.clear()
-
-    for part in text_node.parts:
-        if isinstance(part, Hole):
-            buffer.append(part)
-            continue
-        text = part.text
-        pos = 0
-        for match in DIRECTIVE_PATTERN.finditer(text):
-            if match.start() > pos:
-                buffer.append(LiteralText(text[pos : match.start()]))
-            flush_text()
+    pos = 0
+    for match in _GENERIC_DIRECTIVE_RE.finditer(masked):
+        name = match.group("name")
+        if match.start() > pos:
+            segment = masked[pos : match.start()]
+            for mask, source in mask_to_source.items():
+                segment = segment.replace(mask, "{{ " + source + " }}")
+            pieces.extend(_emit_text_segment(segment))
+        if name in _SUPPORTED_DIRECTIVES:
             pieces.append(_make_directive(match))
-            pos = match.end()
-        if pos < len(text):
-            buffer.append(LiteralText(text[pos:]))
-
-    flush_text()
+        elif name in _KNOWN_UNSUPPORTED_DIRECTIVES:
+            raise WebComPyException(f"{{% {name} %}} is not supported in WebComPy templates")
+        else:
+            raise WebComPyException(f"Unknown template directive: {{% {name} %}}")
+        pos = match.end()
+    if pos < len(masked):
+        segment = masked[pos:]
+        for mask, source in mask_to_source.items():
+            segment = segment.replace(mask, "{{ " + source + " }}")
+        pieces.extend(_emit_text_segment(segment))
     return pieces
 
 

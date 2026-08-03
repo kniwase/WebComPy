@@ -63,6 +63,16 @@ class TestTextInterpolation:
         assert result._children[0]._text == "before"
         assert result._children[1]._text == "after"
 
+    def test_signal_with_none_value_renders_empty(self):
+        sig = Signal(None)
+        roots = parse_template("<p>before{{ value }}after</p>")
+        result = bind_element(roots[0], {"value": sig})
+        assert len(result._children) == 3
+        text_el = result._children[1]
+        assert isinstance(text_el, TextElement)
+        assert text_el._text is sig
+        assert text_el._get_text() == ""
+
     def test_element_as_variable(self):
         child = Element("span", {}, [], None, ["x"])
         roots = parse_template("<div>{{ card }}</div>")
@@ -589,6 +599,9 @@ class TestForBindingReactive:
         result = bind_children(roots, {"d": rd})
         assert len(result) == 1
         assert isinstance(result[0], RepeatElement)
+        result[0]._parent = _make_parent_stub()
+        result[0]._on_set_parent()
+        assert len(result[0]._children) == 2
 
     def test_reactive_for_with_dict_unpacking(self):
         from webcompy.elements.types._repeat import RepeatElement

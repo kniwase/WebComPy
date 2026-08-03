@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import pytest
 
 from webcompy.exception import WebComPyException
-from webcompy.signal import Signal
+from webcompy.signal import Computed, Signal
 from webcompy.template._holes import (
     Hole,
     LiteralText,
@@ -129,6 +129,37 @@ class TestResolveVar:
         user = SampleUser(name="Dave", age=40)
         ctx = {"outer": {"inner": user}}
         assert resolve_var("outer.inner.name", ctx) == "Dave"
+
+    def test_signal_intermediate_unwrapped_for_dict(self):
+        ctx = {"user": Signal({"name": "Bob"})}
+        result = resolve_var("user.name", ctx)
+        assert isinstance(result, Computed)
+        assert result.value == "Bob"
+
+    def test_signal_intermediate_unwrapped_for_object(self):
+        ctx = {"user": Signal(SampleUser(name="Charlie", age=25))}
+        result = resolve_var("user.name", ctx)
+        assert isinstance(result, Computed)
+        assert result.value == "Charlie"
+        assert resolve_var("user.age", ctx).value == 25
+
+    def test_signal_intermediate_unwraps_final_signal(self):
+        ctx = {"user": Signal({"name": Signal("Bob")})}
+        result = resolve_var("user.name", ctx)
+        assert isinstance(result, Computed)
+        assert result.value == "Bob"
+
+    def test_signal_intermediate_tracks_final_signal(self):
+        inner = Signal("Bob")
+        ctx = {"user": Signal({"name": inner})}
+        result = resolve_var("user.name", ctx)
+        assert result.value == "Bob"
+        inner.value = "Bobby"
+        assert result.value == "Bobby"
+
+    def test_final_signal_preserved(self):
+        sig = Signal("Alice")
+        assert resolve_var("user", {"user": sig}) is sig
 
     def test_missing_dict_key_raises(self):
         with pytest.raises(KeyError, match="missing"):

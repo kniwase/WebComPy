@@ -167,6 +167,23 @@ class TestRenderMarkdownIfElifElse:
         assert _extract_text(result) == "C"
 
 
+class TestRenderMarkdownDirectiveRejection:
+    def test_unsupported_directive_rejected(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="not supported"):
+            render_markdown("{% block content %}block{% endblock %}", {})
+
+    def test_unknown_directive_rejected(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="Unknown template directive"):
+            render_markdown("{% endfo %}", {})
+
+    def test_unsupported_directive_rejected_inside_list_body_for(self):
+        with _markdown_di_scope(), pytest.raises(WebComPyException, match="not supported"):
+            render_markdown(
+                "{% for item in items %}\n- {{ item }}{% extends 'x.html' %}\n{% endfor %}",
+                {"items": ["a"]},
+            )
+
+
 class TestRenderMarkdownForBlock:
     def test_for_over_list_body_produces_single_ul(self):
         with _markdown_di_scope():
