@@ -16,6 +16,7 @@ from webcompy.signal._graph import (
     producer_add_live_consumer,
     producer_notify_consumers,
     producer_remove_live_consumer_link,
+    producer_update_value_version,
     set_active_consumer,
 )
 
@@ -287,6 +288,33 @@ class TestDiamondTopology:
         assert consumer.dirty is False
         producer_notify_consumers(producer)
         assert consumer.dirty is True
+
+    def test_epoch_early_return_clears_stale_dirty(self):
+        from webcompy.signal._graph import _epoch
+
+        a = SimpleSignalNode()
+        b = SimpleSignalNode()
+        c = SimpleConsumerNode()
+        d = SimpleConsumerNode()
+
+        set_active_consumer(c)
+        producer_accessed(a)
+        producer_accessed(b)
+        set_active_consumer(None)
+        set_active_consumer(d)
+        producer_accessed(c)
+        set_active_consumer(None)
+
+        c.last_clean_epoch = _epoch
+        c.dirty = True
+
+        producer_update_value_version(c)
+        assert c.dirty is False
+
+        increment_epoch()
+        producer_notify_consumers(a)
+        assert c.dirty is True
+        assert d.dirty is True
 
 
 class TestLiveVsNonLiveConsumer:

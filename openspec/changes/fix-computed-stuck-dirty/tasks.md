@@ -2,8 +2,8 @@
 
 ## 1. Regression Test (fails before fix)
 
-- [ ] 1.1 Add a scenario to `TestDiamondTopology` in `tests/test_graph.py` that builds a diamond (`A→C, B→C, C→D`), cleans `C` within an epoch (`C.last_clean_epoch = _epoch`), re-marks `C.dirty = True` (mid-sweep re-mark), then calls `producer_update_value_version(C)` and asserts `C.dirty` is `False` after the call
-- [ ] 1.2 Extend the scenario to simulate a second mutation (advance epoch via `increment_epoch()`) and assert that `producer_notify_consumers` collects `C` and propagates to `D` (i.e., `D.dirty` becomes `True`); confirm the test fails on the unpatched `_graph.py` and passes after the fix
+- [x] 1.1 Add a scenario to `TestDiamondTopology` in `tests/test_graph.py` that builds a diamond (`A→C, B→C, C→D`), cleans `C` within an epoch (`C.last_clean_epoch = _epoch`), re-marks `C.dirty = True` (mid-sweep re-mark), then calls `producer_update_value_version(C)` and asserts `C.dirty` is `False` after the call
+- [x] 1.2 Extend the scenario to simulate a second mutation (advance epoch via `increment_epoch()`) and assert that `producer_notify_consumers` collects `C` and propagates to `D` (i.e., `D.dirty` becomes `True`); confirm the test fails on the unpatched `_graph.py` and passes after the fix
 
 ## 2. Fix `producer_update_value_version`
 
