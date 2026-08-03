@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -143,6 +144,25 @@ def resolve_var(path: str, ctx: dict[str, Any]) -> Any:
             return Computed(lambda segments=segments, ctx=ctx: _resolve_segments(segments, ctx))
         current = _lookup(current, segment)
     return current
+
+
+def _path_is_reactive(path: str, ctx: Mapping[str, Any]) -> bool:
+    """Probe whether a dotted path involves a Signal without allocating a Computed.
+
+    Mirrors ``resolve_var``'s traversal (including intermediate Signal
+    unwrapping), but returns a plain bool so classification code can check
+    reactivity without leaking a temporary ``Computed`` consumer.
+    """
+    segments = path.split(".")
+    current: Any = ctx
+    for segment in segments:
+        if isinstance(current, SignalBase):
+            return True
+        try:
+            current = _lookup(current, segment)
+        except (KeyError, AttributeError):
+            return False
+    return isinstance(current, SignalBase)
 
 
 def format_value(value: Any) -> str:

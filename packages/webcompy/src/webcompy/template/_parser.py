@@ -69,7 +69,7 @@ REJECTED_TAGS = frozenset(
 )
 
 
-_DIRECTIVE_ARGS = r"(?P<args>(?:'[^']*'|\"[^\"]*\"|%(?!\})|[^%])*)"
+_DIRECTIVE_ARGS = r"(?P<args>(?:'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"|%(?!\})|[^%])*)"
 
 DIRECTIVE_PATTERN = re.compile(rf"\{{%\s*(?P<directive>if|elif|else|endif|for|endfor)\b{_DIRECTIVE_ARGS}%\}}")
 

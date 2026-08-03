@@ -27,7 +27,14 @@ from webcompy.exception import WebComPyException
 from webcompy.ports._keys import HOST_PORT_KEY, MARKDOWN_PORT_KEY
 from webcompy.signal import SignalBase
 from webcompy.template._binder import _make_loop_meta
-from webcompy.template._holes import LiteralText, _scan_hole_end, resolve_var, split_text
+from webcompy.template._holes import (
+    LiteralText,
+    _path_is_reactive,
+    _resolve_segments,
+    _scan_hole_end,
+    resolve_var,
+    split_text,
+)
 from webcompy.template._markdown_blocks import match_list_item_start
 from webcompy.template._parser import (
     _GENERIC_DIRECTIVE_RE,
@@ -406,12 +413,12 @@ class _SourceParser:
         for cond, branch_body in branches:
             if cond is None:
                 return branch_body
+            if _path_is_reactive(cond, self._ctx):
+                return [_TextSegment(self._source[if_token.start : self._tokens[self._pos - 1].end])]
             try:
                 resolved = resolve_var(cond, dict(self._ctx))
             except (KeyError, AttributeError):
                 continue
-            if isinstance(resolved, SignalBase):
-                return [_TextSegment(self._source[if_token.start : self._tokens[self._pos - 1].end])]
             if truth(resolved):
                 return branch_body
 
@@ -489,9 +496,7 @@ def _expand_directives_in_body(
                 i = j + 1
                 continue
 
-            iterable = resolve_var(_rename_expression(iterable_path, renames), ctx)
-            if isinstance(iterable, SignalBase):
-                iterable = iterable.value
+            iterable = _resolve_segments(_rename_expression(iterable_path, renames).split("."), ctx)
             is_dict = isinstance(iterable, dict)
             n_vars = len(loop_vars)
             if n_vars == 2:
@@ -582,9 +587,7 @@ def _expand_directives_in_body(
                         emitted = True
                     break
                 try:
-                    resolved = resolve_var(_rename_expression(cond, renames), ctx)
-                    if isinstance(resolved, SignalBase):
-                        resolved = resolved.value
+                    resolved = _resolve_segments(_rename_expression(cond, renames).split("."), ctx)
                     if truth(resolved):
                         expanded = _expand_directives_in_body(branch_body, ctx, prefix, renames)
                         result.append(expanded)
