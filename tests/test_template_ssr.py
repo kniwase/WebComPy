@@ -5,7 +5,7 @@ import json
 import re
 
 from webcompy.components import define_component
-from webcompy.signal import ReactiveList, Signal, use_state
+from webcompy.signal import ReactiveList, Signal, use_reactive_dict, use_state
 from webcompy.template import render_template
 from webcompy_server.ports import VirtualDOMEvent
 from webcompy_testing import TestRenderer, create_test_app, render_app_html
@@ -220,6 +220,34 @@ class TestTemplateControlFlowSSR:
         html = _generate(DictPage)
         assert "a" in html and "1" in html
         assert "b" in html and "2" in html
+
+    def test_render_app_html_with_dict_loop_metadata_after_cache_clear(self):
+        from webcompy_server._html import _HtmlElement
+        from webcompy_testing._utils import run_sync
+
+        @define_component
+        def DictLoopPage(context):
+            d = use_reactive_dict(lambda: {"a": 1, "b": 2, "c": 3})
+            return render_template(
+                "<ul>{% for v in d %}<li>{{ loop.index }},{{ loop.first }},{{ loop.last }},{{ loop.length }}:{{ v }}</li>{% endfor %}</ul>",
+                {"d": d},
+            )
+
+        app = create_test_app(root_component=DictLoopPage)
+        ctx = app.create_render_context("/")
+        try:
+            element = _HtmlElement("div", {}, ctx._root)
+
+            async def _render_twice() -> str:
+                await element.render_html()
+                return await element.render_html()
+
+            html = run_sync(_render_twice())
+        finally:
+            ctx.dispose()
+        assert "1,True,False,3:1" in html
+        assert "2,False,False,3:2" in html
+        assert "3,False,True,3:3" in html
 
 
 class TestTemplateControlFlowPrerenderedFlags:
