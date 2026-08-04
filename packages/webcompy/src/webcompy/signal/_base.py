@@ -7,6 +7,7 @@ from inspect import iscoroutinefunction
 from typing import Any, Generic, ParamSpec, TypeVar, cast, final
 
 from webcompy.signal._graph import (
+    SignalEdge,
     SignalNode,
     _CallbackMixin,
     increment_epoch,
@@ -126,21 +127,17 @@ class SignalBase(SignalNode, Generic[V]):
         return method
 
 
-def _find_callback_consumer_nodes(producer: SignalNode) -> list[CallbackConsumerNode]:
-    nodes: list[CallbackConsumerNode] = []
+def _notify_before_callbacks(producer: SignalNode, value: Any) -> None:
+    edges: list[SignalEdge] = []
     edge = producer.consumers
     while edge is not None:
-        consumer = edge.consumer
-        if isinstance(consumer, CallbackConsumerNode):
-            nodes.append(consumer)
+        if edge.active and isinstance(edge.consumer, CallbackConsumerNode) and edge.consumer._is_before:
+            edges.append(edge)
         edge = edge.next_consumer
-    return nodes
-
-
-def _notify_before_callbacks(producer: SignalNode, value: Any) -> None:
-    for cb in _find_callback_consumer_nodes(producer):
-        if cb._is_before:
-            cb.notify(value)
+    for edge in edges:
+        if not edge.active:
+            continue
+        cast("CallbackConsumerNode", edge.consumer).notify(value)
 
 
 class Signal(SignalBase[V]):
