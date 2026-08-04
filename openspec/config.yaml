@@ -19,7 +19,6 @@ context: |
   ### Element System
   - No virtual DOM diffing — direct DOM manipulation only
   - SwitchElement completely regenerates children on change (RepeatElement now supports key-based reconciliation)
-  - TextElement does not hydrate pre-rendered text nodes (always creates new text node)
 
   ### Router
   - RouterView singleton removed (per-app via DI), but Router singleton remains for now

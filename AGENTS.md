@@ -193,8 +193,10 @@ setup) and renders chain level N; a chain shorter than the depth renders nothing
 A level's component instance is preserved only when its route node, accumulated
 `path_params` (levels 0..N), and `query` are identical to the previous navigation —
 otherwise that level and all deeper levels are destroyed and re-created. Each view
-subscribes to its own holder `Computed` over `router.current_match` (multiple
-`on_after_updating` consumers on a single Computed dispatch only once). The depth-0
+subscribes to its own holder `Computed` over `router.current_match` (per-view
+subscription isolation — the holder keeps a view's callback local to its lifetime;
+a shared Computed with multiple consumers now notifies every consumer, so the holder
+is an isolation boundary rather than a workaround for dropped consumers). The depth-0
 view renders `router.__default__()` when nothing matches. `RouterView._hydrate_node()`
 MUST NOT eagerly hydrate the routed component — the scheduled `child._render()` must
 adopt the prerendered nodes AND complete setup (signal subscriptions, lifecycle

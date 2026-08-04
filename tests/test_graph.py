@@ -380,6 +380,28 @@ class TestLiveVsNonLiveConsumer:
         producer_remove_live_consumer_link(edge)
         assert _find_consumer_edge(producer, consumer) is None
 
+    def test_edge_marked_inactive_on_detach(self):
+        producer = SimpleSignalNode()
+        consumer = SimpleConsumerNode()
+        edge = producer_add_live_consumer(producer, consumer)
+        assert edge.active is True
+        consumer_destroy(consumer)
+        assert edge.active is False
+
+    def test_destroyed_consumer_not_marked_by_notification_sweep(self):
+        producer = SimpleSignalNode()
+        c1 = SimpleConsumerNode()
+        c2 = SimpleConsumerNode()
+        edge1 = producer_add_live_consumer(producer, c1)
+        edge2 = producer_add_live_consumer(producer, c2)
+        consumer_destroy(c1)
+        increment_epoch()
+        producer_notify_consumers(producer)
+        assert c1.dirty is False
+        assert c2.dirty is True
+        assert edge1.active is False
+        assert edge2.active is True
+
 
 def _find_consumer_edge_local_epoch():
     from webcompy.signal._graph import _epoch

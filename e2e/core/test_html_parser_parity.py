@@ -14,4 +14,13 @@ def test_html_parser_environment_parity(page_on):
     locator = page.locator("[data-testid='parity-result']")
     expect(locator).not_to_have_text("", timeout=30_000)
     browser_results = json.loads(locator.inner_text())
-    assert browser_results == compute_parity_results()
+    assert browser_results["tree"] == compute_parity_results()
+
+
+def test_adjacent_text_nodes_merge_in_parsed_dom(page_on):
+    page = page_on("/html-parser-parity")
+    locator = page.locator("[data-testid='parity-result']")
+    expect(locator).not_to_have_text("", timeout=30_000)
+    browser_results = json.loads(locator.inner_text())
+    assert browser_results["tree"]["adjacent_text"] == ["tree", "div[](#text('a');#text('x');#text('b'))"]
+    assert browser_results["dom"]["adjacent_text"] == "div(#text('a{{ x }}b'))"

@@ -11,6 +11,7 @@ _epoch: int = 0
 
 class SignalEdge:
     __slots__ = (
+        "active",
         "consumer",
         "last_read_version",
         "next_consumer",
@@ -30,6 +31,7 @@ class SignalEdge:
         self.prev_consumer: SignalEdge | None = None
         self.next_consumer: SignalEdge | None = None
         self.next_producer: SignalEdge | None = None
+        self.active: bool = True
 
 
 class SignalNode:
@@ -115,14 +117,16 @@ def producer_accessed(producer: SignalNode) -> None:
 def producer_notify_consumers(producer: SignalNode) -> None:
     _set_in_notification_phase(True)
     try:
-        consumers_to_notify: list[SignalNode] = []
+        edges_to_notify: list[SignalEdge] = []
         edge = producer.consumers
         while edge is not None:
-            consumer = edge.consumer
-            if not consumer.dirty:
-                consumers_to_notify.append(consumer)
+            if edge.active and not edge.consumer.dirty:
+                edges_to_notify.append(edge)
             edge = edge.next_consumer
-        for consumer in consumers_to_notify:
+        for edge in edges_to_notify:
+            if not edge.active:
+                continue
+            consumer = edge.consumer
             if consumer.last_clean_epoch == _epoch:
                 consumer.dirty = False
                 consumer_mark_dirty(consumer)
@@ -286,6 +290,7 @@ def _detach_producer_edge(consumer: SignalNode, edge: SignalEdge) -> None:
 
 
 def _detach_consumer_edge(producer: SignalNode, edge: SignalEdge) -> None:
+    edge.active = False
     if edge.prev_consumer is not None:
         edge.prev_consumer.next_consumer = edge.next_consumer
     elif producer.consumers is edge:

@@ -7,6 +7,7 @@ from inspect import iscoroutinefunction
 from typing import Any, Generic, ParamSpec, TypeVar, cast, final
 
 from webcompy.signal._graph import (
+    SignalEdge,
     SignalNode,
     _CallbackMixin,
     increment_epoch,
@@ -26,6 +27,7 @@ class CallbackConsumerNode(SignalNode, _CallbackMixin):
     _is_before: bool
     _is_async: bool
     _producer: SignalBase[Any]
+    _last_notified_value: Any
 
     def __init__(
         self,
@@ -39,6 +41,13 @@ class CallbackConsumerNode(SignalNode, _CallbackMixin):
         self._is_async = iscoroutinefunction(callback)
         self._producer = producer
         self.consumer_is_always_live = True
+        self._last_notified_value = None
+        if not is_before:
+            from webcompy.signal._computed import Computed
+
+            if isinstance(producer, Computed):
+                producer_update_value_version(producer)
+                self._last_notified_value = producer._value
         producer_add_live_consumer(producer, self)
 
     def producer_must_recompute(self) -> bool:
@@ -52,11 +61,13 @@ class CallbackConsumerNode(SignalNode, _CallbackMixin):
             return
         from webcompy.signal._computed import Computed
 
-        old_version = self._producer.version
         producer_update_value_version(self._producer)
         self.dirty = False
-        if isinstance(self._producer, Computed) and self._producer.version <= old_version:
-            return
+        if isinstance(self._producer, Computed):
+            current = self._producer._value
+            if current is self._last_notified_value or current == self._last_notified_value:
+                return
+            self._last_notified_value = current
         if self._is_async:
             from webcompy.aio._aio import _resolve_async_callback
 
@@ -116,21 +127,17 @@ class SignalBase(SignalNode, Generic[V]):
         return method
 
 
-def _find_callback_consumer_nodes(producer: SignalNode) -> list[CallbackConsumerNode]:
-    nodes: list[CallbackConsumerNode] = []
+def _notify_before_callbacks(producer: SignalNode, value: Any) -> None:
+    edges: list[SignalEdge] = []
     edge = producer.consumers
     while edge is not None:
-        consumer = edge.consumer
-        if isinstance(consumer, CallbackConsumerNode):
-            nodes.append(consumer)
+        if edge.active and isinstance(edge.consumer, CallbackConsumerNode) and edge.consumer._is_before:
+            edges.append(edge)
         edge = edge.next_consumer
-    return nodes
-
-
-def _notify_before_callbacks(producer: SignalNode, value: Any) -> None:
-    for cb in _find_callback_consumer_nodes(producer):
-        if cb._is_before:
-            cb.notify(value)
+    for edge in edges:
+        if not edge.active:
+            continue
+        cast("CallbackConsumerNode", edge.consumer).notify(value)
 
 
 class Signal(SignalBase[V]):

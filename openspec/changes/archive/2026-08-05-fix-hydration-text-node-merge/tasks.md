@@ -1,0 +1,60 @@
+# Tasks
+
+## 1. Spike — failing test for merged-text hydration
+
+- [x] 1.1 Construct a unit test (new `tests/test_hydration_text_merge.py`) that builds an element tree with adjacent text-bearing children, simulates a browser-parsed DOM where the `#text` nodes are merged into one, runs `_hydrate_node`, and asserts the post-hydration DOM has a 1:1 child correspondence (fails before the fix)
+- [x] 1.2 Confirm the spike fails on the current `ElementWithChildren._hydrate_node` with a concrete index-drift assertion, locking the contract before implementation
+
+## 2. `FakeDOMNode.splitText` support
+
+- [x] 2.1 Implement `splitText(offset)` on `FakeDOMNode` in `packages/webcompy-testing/src/webcompy_testing/_dom.py`: truncate receiver to `textContent[:offset]`, create and insert a new `FakeDOMNode("#text", text_content=textContent[offset:])` into the parent's `childNodes` after the receiver, return the new node (standard DOM `Text.splitText` contract)
+- [x] 2.2 Unit-test `splitText` directly: offset splits content correctly; the new node is inserted at the right sibling position; out-of-range offset raises (matching browser behavior)
+
+## 3. Normalization helper + both hydration loops
+
+- [x] 3.1 Add a shared text-run normalization helper in `packages/webcompy/src/webcompy/elements/types/_base.py` and call it from BOTH `ElementWithChildren._hydrate_node` (`_base.py`) and `DynamicElement._hydrate_node` (`packages/webcompy/src/webcompy/elements/types/_dynamic.py`): collect consecutive `TextElement` children whose DOM `#text` was merged, compute cumulative expected-text boundaries, and call `splitText` to restore per-child DOM nodes before per-child `_hydrate_node()` proceeds (dynamic containers are required — `RepeatElement` items and `FragmentElement` bodies hydrate through `DynamicElement._hydrate_node`)
+- [x] 3.2 Implement the content-equality guard (skip + fall back when `dom.textContent != concat(expected)`) and the idempotency fast path (no split when DOM already 1:1)
+- [x] 3.3 Verify the group-1 spike now passes; ensure no-merge common path still hydrates identically (regression guard on `tests/test_full_hydration.py`)
+
+## 4. Fragment-body + keyed-reconcile unit tests
+
+- [x] 4.1 Add unit tests: fragment body (element + adjacent text + element) hydrating with merged DOM text; `NewLine` and `RawHTML` run-boundary handling; empty `TextElement` (`""`) no-op; content-mismatch fallback (no split, no exception)
+- [x] 4.2 Add a keyed `ReactiveDict` loop hydration test: composite item body hydrates correctly, then a reorder mutation reconciles children to the correct DOM positions with no empty/stray nodes (use `TestRenderer`/`FakeDOMNode`)
+
+## 5. E2E regression — composite body + parity fixture
+
+- [x] 5.1 Restore the dict loop in `e2e/core/my_app/pages/template_control_flow.py` (line 64) to a composite item body (multiple elements + text), removing the single-element-body workaround
+- [x] 5.2 Extend `e2e/core/my_app/parity_fixtures.py` (or add a fixture) with a merged-text-node case proving the element-tree-vs-browser-DOM node-count divergence, and assert the e2e hydration path normalizes it (`e2e/core/test_template_control_flow.py` / `test_html_parser_parity.py`)
+
+## 6. Full verification
+
+- [x] 6.1 Run `uv run ruff check .` and `uv run ruff format --check .`; fix any findings
+- [x] 6.2 Run `uv run pyright`; resolve any new type warnings
+- [x] 6.3 Run `uv run python -m pytest tests/ --tb=short`; ensure no regressions
+- [x] 6.4 Run `scripts/run-e2e-tests.sh <relevant-group>` (template-control-flow / html-parser-parity); confirm green
+
+## 7. Spec / Review-skill maintenance
+
+- [x] 7.1 Confirm the `elements` spec delta and the File→Spec Mapping entry for `webcompy/elements/` remain consistent (no main-spec edit required until archive)
+- [x] 7.2 Update `.opencode/skills/webcompy-review/SKILL.md` Critical Framework Invariants to note the hydration text-node normalization invariant, per the config.yaml spec-change rule
+
+## 8. Shared-Computed multi-consumer notification fix (discovered during implementation)
+
+- [x] 8.1 Fix `CallbackConsumerNode._dispatch` to fire the callback when the producer `Computed`'s recomputed value differs from the node's last-notified value (per-node `_last_notified_value`, `is`/`==` equality), so the 2nd+ consumer of a shared `Computed` is not dropped when its dispatch runs after the producer was already recomputed in the same mutation epoch (`packages/webcompy/src/webcompy/signal/_base.py`)
+- [x] 8.2 Add unit tests in `tests/test_signal.py`: multi-consumer `Computed` all fire on change; multi-consumer `Computed` skip on equal result
+- [x] 8.3 Document the discovery in `design.md` (D5) and add the `reactive` capability delta spec with the multi-consumer notification requirement
+
+## 9. Review corrections — hydration normalization and signal lifecycle robustness
+
+- [x] 9.1 Rehome the delta from `specs/signal/spec.md` to `specs/reactive/spec.md` (the repository capability is `reactive`) and fix capability references in `proposal.md`/`design.md`
+- [x] 9.2 Add failing hydration unit tests: multiple independent merged runs in one container (second run beyond the initial DOM length); trailing empty runs (`["a", ""]`, `["a", "", ""]`); all-empty runs with no DOM node; astral-plane text (`["😀", "x"]`) with no rewrite; mismatch followed by a valid run (no stale-index splitting)
+- [x] 9.3 Rewrite `_normalize_hydration_text_runs` to walk a live DOM cursor: normalize each run in place at its current DOM position; detect already-split runs by checking every expected node (including empty ones); split merged nodes at every boundary including zero-length; synthesize empty text nodes for all-empty runs that have no DOM node
+- [x] 9.4 Content mismatch: log via `webcompy.logging.warning` and halt normalization for the remainder of the container (pre-fix create/adopt fallback); never split with stale pre-normalization indices
+- [x] 9.5 Use UTF-16 code-unit offsets for `splitText` via a shared `_utf16_length` helper; make `FakeDOMNode.splitText` interpret `offset` as UTF-16 code units and add a UTF-16 unit test
+- [x] 9.6 Add failing signal tests: a consumer destroyed by an earlier consumer's dispatch must not fire (after-update and before-update paths); registering an after-update callback on a dirty `Computed` must establish the current value as baseline (no false fire on equal result, fire on return to initial)
+- [x] 9.7 Make notification snapshots edge-aware: snapshot `SignalEdge` objects in `producer_notify_consumers` and `_notify_before_callbacks`, mark edges inactive on detach (`_detach_consumer_edge`), and skip inactive edges before marking/dispatching
+- [x] 9.8 Establish a dirty `Computed`'s current value as the callback baseline in `CallbackConsumerNode.__init__` (via `producer_update_value_version` before `producer_add_live_consumer`), without creating graph edges; retain `_last_notified_value` only for after-update `Computed` callbacks
+- [x] 9.9 Extend the E2E dict-loop hydration test: after hydration, rotate the dict and assert the text-node structure is preserved (child/text counts and framework-managed markers) and the item text updates
+- [x] 9.10 Update `.opencode/skills/webcompy-review/SKILL.md` and `AGENTS.md` so the RouterView holder rationale no longer claims shared-`Computed` consumers are intentionally dropped (the version-dedup no longer exists); extend the hydration and reactive invariants with the review-correction contracts
+- [x] 9.11 Remove the stale "TextElement does not hydrate pre-rendered text nodes" known-issue entry from `openspec/config.yaml` (superseded by this change)
+- [x] 9.12 Full verification: `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short`, `scripts/run-e2e-tests.sh template`, `openspec validate --changes --strict`

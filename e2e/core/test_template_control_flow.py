@@ -85,6 +85,44 @@ class TestTemplateControlFlowBrowser:
         expect(items.nth(1)).to_have_text("2,False,False,3:1")
         expect(items.nth(2)).to_have_text("3,False,True,3:2")
 
+    def test_loop_metadata_dict_hydration_normalizes_merged_text(self, page_on):
+        page = page_on("/template-control-flow")
+        expect(page.locator("[data-testid='loop-meta-dict-item']")).to_have_count(3)
+        counts = page.evaluate(
+            """() => {
+                const el = document.querySelector('[data-testid="loop-meta-dict"]');
+                return {
+                    childNodes: el.childNodes.length,
+                    textNodes: Array.from(el.childNodes).filter(n => n.nodeType === 3).length,
+                    itemChildNodes: document.querySelectorAll(
+                        '[data-testid="loop-meta-dict-item"]'
+                    )[0].childNodes.length,
+                };
+            }"""
+        )
+        assert counts == {"childNodes": 18, "textNodes": 15, "itemChildNodes": 9}
+        managed = page.evaluate(
+            """() => Array.from(
+                document.querySelector('[data-testid="loop-meta-dict"]').childNodes
+            ).every(n => n.__webcompy_prerendered_node__ === true || n.__webcompy_node__ === true)"""
+        )
+        assert managed
+        page.locator("[data-testid='loop-dict-mutate']").click()
+        expect(page.locator("[data-testid='loop-meta-dict-item']").nth(0)).to_have_text("1,True,False,3:2")
+        counts_after = page.evaluate(
+            """() => {
+                const el = document.querySelector('[data-testid="loop-meta-dict"]');
+                return {
+                    childNodes: el.childNodes.length,
+                    textNodes: Array.from(el.childNodes).filter(n => n.nodeType === 3).length,
+                    itemChildNodes: document.querySelectorAll(
+                        '[data-testid="loop-meta-dict-item"]'
+                    )[0].childNodes.length,
+                };
+            }"""
+        )
+        assert counts_after == {"childNodes": 18, "textNodes": 15, "itemChildNodes": 9}
+
 
 class TestTemplateControlFlowSSR:
     def test_static_html_includes_branch_and_iterations(self, static_site):

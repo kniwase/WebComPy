@@ -374,6 +374,64 @@ class TestComputedCallbackContract:
         a.value = -5
         assert results == []
 
+    def test_computed_multi_consumer_all_fire_on_change(self):
+        a = Signal(1)
+        c = Computed(lambda: a.value * 2)
+        first = []
+        second = []
+        c.on_after_updating(lambda v: first.append(v))
+        c.on_after_updating(lambda v: second.append(v))
+        a.value = 5
+        assert first == [10]
+        assert second == [10]
+
+    def test_computed_multi_consumer_skip_on_equal_result(self):
+        a = Signal(5)
+        c = Computed(lambda: abs(a.value))
+        first = []
+        second = []
+        c.on_after_updating(lambda v: first.append(v))
+        c.on_after_updating(lambda v: second.append(v))
+        a.value = -5
+        assert first == []
+        assert second == []
+
+    def test_computed_consumer_destroyed_during_dispatch_is_not_called(self):
+        a = Signal(1)
+        c = Computed(lambda: a.value)
+        results = []
+        first = c.on_after_updating(lambda v: results.append(("first", v)))
+        c.on_after_updating(lambda v: (results.append(("second", v)), consumer_destroy(first)))
+        a.value = 5
+        assert results == [("second", 5)]
+
+    def test_before_consumer_destroyed_during_notification_is_not_called(self):
+        a = Signal(1)
+        results = []
+        first = a.on_before_updating(lambda v: results.append(("first", v)))
+        a.on_before_updating(lambda v: (results.append(("second", v)), consumer_destroy(first)))
+        a.value = 5
+        assert results == [("second", 1)]
+
+    def test_computed_callback_registered_while_dirty_does_not_fire_on_equal_current(self):
+        a = Signal(0)
+        c = Computed(lambda: abs(a.value))
+        a.value = 1
+        results = []
+        c.on_after_updating(results.append)
+        assert c.value == 1
+        a.value = -1
+        assert results == []
+
+    def test_computed_callback_registered_while_dirty_fires_on_return_to_initial(self):
+        a = Signal(0)
+        c = Computed(lambda: a.value)
+        a.value = 1
+        results = []
+        c.on_after_updating(results.append)
+        a.value = 0
+        assert results == [0]
+
 
 class TestReactiveListEqualitySkip:
     def test_set_value_same_list_no_callback(self):
