@@ -18,8 +18,8 @@
 
 ## 4. Fragment-body + keyed-reconcile unit tests
 
-- [ ] 4.1 Add unit tests: fragment body (element + adjacent text + element) hydrating with merged DOM text; `NewLine` and `RawHTML` run-boundary handling; empty `TextElement` (`""`) no-op; content-mismatch fallback (no split, no exception)
-- [ ] 4.2 Add a keyed `ReactiveDict` loop hydration test: composite item body hydrates correctly, then a reorder mutation reconciles children to the correct DOM positions with no empty/stray nodes (use `TestRenderer`/`FakeDOMNode`)
+- [x] 4.1 Add unit tests: fragment body (element + adjacent text + element) hydrating with merged DOM text; `NewLine` and `RawHTML` run-boundary handling; empty `TextElement` (`""`) no-op; content-mismatch fallback (no split, no exception)
+- [x] 4.2 Add a keyed `ReactiveDict` loop hydration test: composite item body hydrates correctly, then a reorder mutation reconciles children to the correct DOM positions with no empty/stray nodes (use `TestRenderer`/`FakeDOMNode`)
 
 ## 5. E2E regression — composite body + parity fixture
 
