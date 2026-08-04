@@ -101,6 +101,27 @@ class TestTemplateControlFlowBrowser:
             }"""
         )
         assert counts == {"childNodes": 18, "textNodes": 15, "itemChildNodes": 9}
+        managed = page.evaluate(
+            """() => Array.from(
+                document.querySelector('[data-testid="loop-meta-dict"]').childNodes
+            ).every(n => n.__webcompy_prerendered_node__ === true || n.__webcompy_node__ === true)"""
+        )
+        assert managed
+        page.locator("[data-testid='loop-dict-mutate']").click()
+        expect(page.locator("[data-testid='loop-meta-dict-item']").nth(0)).to_have_text("1,True,False,3:2")
+        counts_after = page.evaluate(
+            """() => {
+                const el = document.querySelector('[data-testid="loop-meta-dict"]');
+                return {
+                    childNodes: el.childNodes.length,
+                    textNodes: Array.from(el.childNodes).filter(n => n.nodeType === 3).length,
+                    itemChildNodes: document.querySelectorAll(
+                        '[data-testid="loop-meta-dict-item"]'
+                    )[0].childNodes.length,
+                };
+            }"""
+        )
+        assert counts_after == {"childNodes": 18, "textNodes": 15, "itemChildNodes": 9}
 
 
 class TestTemplateControlFlowSSR:
