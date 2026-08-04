@@ -26,6 +26,22 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **AND** `node.dispatchEvent(VirtualDOMEvent("click"))` is called
 - **THEN** the handler SHALL be invoked with the event (propagation inherited from `VirtualDOMNode.dispatchEvent`)
 
+### ADDED: FakeDOMNode.splitText SHALL follow the DOM Text.splitText contract with UTF-16 offsets
+
+`FakeDOMNode.splitText(offset)` SHALL split the receiver's text at the given offset interpreted as UTF-16 code units (the browser `Text.splitText` contract), truncating the receiver to the first `offset` code units, creating a new `FakeDOMNode("#text", ...)` holding the tail, inserting it into the parent's `childNodes` immediately after the receiver (appending when the receiver is last), and returning the new node. Splitting inside a surrogate pair SHALL produce lone-surrogate halves, mirroring browser behavior. `splitText` on a non-text node SHALL raise `TypeError`; an `offset` outside `[0, utf16_length]` SHALL raise `IndexError`.
+
+#### Scenario: splitText splits at a UTF-16 code-unit boundary
+- **WHEN** a `FakeDOMNode("#text", text_content="😀x")` is split at offset `2`
+- **THEN** the receiver holds `"😀"` and the returned node holds `"x"`
+
+#### Scenario: splitText inside a surrogate pair mirrors the browser
+- **WHEN** a `FakeDOMNode("#text", text_content="😀x")` is split at offset `1`
+- **THEN** the receiver holds the lone high surrogate and the returned node holds the lone low surrogate followed by `"x"`
+
+#### Scenario: splitText raises on invalid input
+- **WHEN** `splitText` is called on an element node, or with an offset outside the text length
+- **THEN** `TypeError` (element node) or `IndexError` (offset) SHALL be raised
+
 ### MODIFIED: webcompy.testing package shall provide fake port implementations
 
 `FakeBrowserDOMPort` SHALL be a subclass of `ServerDOMPort` (from `webcompy_server.ports._dom`, formerly `webcompy.ports._server._dom`). It SHALL override `create_element()` to return `FakeDOMNode` instances instead of `VirtualDOMNode`. It SHALL override `create_text_node()` to return a text `FakeDOMNode`. It SHALL maintain an internal document tree consisting of `<html>`, `<head>`, and `<body>` `FakeDOMNode` instances. The `query_selector()` and `get_element_by_id()` methods SHALL search this internal tree instead of returning `None`. It SHALL inherit `create_event()`, `set_title()`, `add_document_event_listener()`, and `render_html()` from `ServerDOMPort`. The internal document tree SHALL preserve mutations across method calls within the same instance — appending elements to the tree SHALL be visible to subsequent `query_selector` and `get_element_by_id` calls. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` calling `callback()` synchronously and `create_js_global_getter()` returning a callable that returns `None`. `FakeBrowserFFIPort` SHALL implement `FFIPort` with all 5 abstract methods: `create_proxy` (returns `MagicMock` wrapping the original), `destroy_proxy`, `is_none`, `to_js`, `assign`. `FakeFetchPort` SHALL implement `FetchPort` with `fetch()` that matches registered responses by `(method, url)` key. It SHALL accept an optional `responses` constructor parameter — a `dict` mapping `(method, url)` tuples to `Response` objects. When `fetch(method, url, *, headers, body)` is called, it SHALL look up `(method, url)` in the responses dict and return the matching `Response`. If no match is found, it SHALL raise `KeyError` with a message listing available keys.
