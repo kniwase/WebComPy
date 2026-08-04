@@ -69,6 +69,57 @@ class TestComputed:
         a.value = 10
         assert c.value == 12
 
+
+class TestComputedDiamondNotification:
+    def test_diamond_computed_callback_fires_on_every_mutation(self):
+        a = Signal(1)
+        left = Computed(lambda: a.value + 1)
+        right = Computed(lambda: a.value * 2)
+        d = Computed(lambda: right.value + left.value)
+        results = []
+        d.on_after_updating(lambda v: results.append(v))
+
+        assert d.value == 4
+        a.value = 2
+        a.value = 3
+
+        assert results == [7, 10]
+        assert d.value == 10
+
+    def test_nested_diamond_callback_fires_on_every_mutation(self):
+        a = Signal(1)
+        left = Computed(lambda: a.value + 1)
+        right = Computed(lambda: a.value * 2)
+        inner = Computed(lambda: right.value + left.value)
+        outer = Computed(lambda: inner.value * 10)
+        results = []
+        outer.on_after_updating(lambda v: results.append(v))
+
+        assert outer.value == 40
+        a.value = 2
+        a.value = 3
+
+        assert results == [70, 100]
+
+    def test_diamond_side_consumer_callback_fires_on_every_mutation(self):
+        a = Signal(1)
+        c = Computed(lambda: a.value + 1)
+        b = Computed(lambda: a.value * 2)
+        d = Computed(lambda: b.value + c.value)
+        e = Computed(lambda: c.value * 10)
+        res_d = []
+        res_e = []
+        d.on_after_updating(lambda v: res_d.append(v))
+        e.on_after_updating(lambda v: res_e.append(v))
+
+        assert d.value == 4
+        assert e.value == 20
+        a.value = 2
+        a.value = 3
+
+        assert res_d == [7, 10]
+        assert res_e == [30, 40]
+
     def test_computed_with_single_dependency(self):
         a = Signal(5)
         c = Computed(lambda: a.value * 2)
