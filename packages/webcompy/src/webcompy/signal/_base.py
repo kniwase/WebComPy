@@ -26,6 +26,7 @@ class CallbackConsumerNode(SignalNode, _CallbackMixin):
     _is_before: bool
     _is_async: bool
     _producer: SignalBase[Any]
+    _last_notified_value: Any
 
     def __init__(
         self,
@@ -40,6 +41,7 @@ class CallbackConsumerNode(SignalNode, _CallbackMixin):
         self._producer = producer
         self.consumer_is_always_live = True
         producer_add_live_consumer(producer, self)
+        self._last_notified_value = producer._value
 
     def producer_must_recompute(self) -> bool:
         return self.dirty
@@ -52,11 +54,13 @@ class CallbackConsumerNode(SignalNode, _CallbackMixin):
             return
         from webcompy.signal._computed import Computed
 
-        old_version = self._producer.version
         producer_update_value_version(self._producer)
         self.dirty = False
-        if isinstance(self._producer, Computed) and self._producer.version <= old_version:
-            return
+        if isinstance(self._producer, Computed):
+            current = self._producer._value
+            if current is self._last_notified_value or current == self._last_notified_value:
+                return
+            self._last_notified_value = current
         if self._is_async:
             from webcompy.aio._aio import _resolve_async_callback
 

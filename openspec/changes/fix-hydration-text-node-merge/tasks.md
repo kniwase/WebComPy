@@ -35,5 +35,11 @@
 
 ## 7. Spec / Review-skill maintenance
 
-- [ ] 7.1 Confirm the `elements` spec delta and the File→Spec Mapping entry for `webcompy/elements/` remain consistent (no main-spec edit required until archive)
+- [x] 7.1 Confirm the `elements` spec delta and the File→Spec Mapping entry for `webcompy/elements/` remain consistent (no main-spec edit required until archive)
 - [ ] 7.2 Update `.opencode/skills/webcompy-review/SKILL.md` Critical Framework Invariants to note the hydration text-node normalization invariant, per the config.yaml spec-change rule
+
+## 8. Shared-Computed multi-consumer notification fix (discovered during implementation)
+
+- [x] 8.1 Fix `CallbackConsumerNode._dispatch` to fire the callback when the producer `Computed`'s recomputed value differs from the node's last-notified value (per-node `_last_notified_value`, `is`/`==` equality), so the 2nd+ consumer of a shared `Computed` is not dropped when its dispatch runs after the producer was already recomputed in the same mutation epoch (`packages/webcompy/src/webcompy/signal/_base.py`)
+- [x] 8.2 Add unit tests in `tests/test_signal.py`: multi-consumer `Computed` all fire on change; multi-consumer `Computed` skip on equal result
+- [x] 8.3 Document the discovery in `design.md` (D5) and add the `signal` capability delta spec with the multi-consumer notification requirement

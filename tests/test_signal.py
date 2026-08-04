@@ -323,6 +323,28 @@ class TestComputedCallbackContract:
         a.value = -5
         assert results == []
 
+    def test_computed_multi_consumer_all_fire_on_change(self):
+        a = Signal(1)
+        c = Computed(lambda: a.value * 2)
+        first = []
+        second = []
+        c.on_after_updating(lambda v: first.append(v))
+        c.on_after_updating(lambda v: second.append(v))
+        a.value = 5
+        assert first == [10]
+        assert second == [10]
+
+    def test_computed_multi_consumer_skip_on_equal_result(self):
+        a = Signal(5)
+        c = Computed(lambda: abs(a.value))
+        first = []
+        second = []
+        c.on_after_updating(lambda v: first.append(v))
+        c.on_after_updating(lambda v: second.append(v))
+        a.value = -5
+        assert first == []
+        assert second == []
+
 
 class TestReactiveListEqualitySkip:
     def test_set_value_same_list_no_callback(self):
