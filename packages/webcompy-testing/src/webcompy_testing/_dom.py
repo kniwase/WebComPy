@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from webcompy.elements.types._base import _utf16_length
 from webcompy_server.ports import VirtualDOMNode
 
 
@@ -18,10 +19,16 @@ class FakeDOMNode(VirtualDOMNode):
         if self._node_type != 3:
             raise TypeError("splitText is only valid on text nodes")
         text = self._text_content or ""
-        if not 0 <= offset <= len(text):
-            raise IndexError(f"splitText offset {offset} out of range for text of length {len(text)}")
-        new_node = FakeDOMNode("#text", text_content=text[offset:])
-        self._text_content = text[:offset]
+        length = _utf16_length(text)
+        if not 0 <= offset <= length:
+            raise IndexError(f"splitText offset {offset} out of range for text of length {length}")
+        encoded = text.encode("utf-16-le", "surrogatepass")
+        boundary = offset * 2
+        new_node = FakeDOMNode(
+            "#text",
+            text_content=encoded[boundary:].decode("utf-16-le", "surrogatepass"),
+        )
+        self._text_content = encoded[:boundary].decode("utf-16-le", "surrogatepass")
         parent = self._parent
         if parent is not None:
             siblings = parent._children
