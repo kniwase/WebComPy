@@ -11,6 +11,16 @@ Hydration adopts prerendered DOM nodes by sibling index: `_get_existing_node()` 
 - Restore the e2e dict loop in `e2e/core/my_app/pages/template_control_flow.py` to a composite body (the single-element-body workaround added to dodge this bug) as a regression guard, plus a dedicated hydration parity check.
 - Non-goal: no `VirtualDOMNode` (server) changes — the server never merges text nodes; normalization is a browser-hydration concern only.
 
+## Review Corrections (post-review follow-up)
+
+The initial landing of the normalization helper had three correctness gaps, corrected in the review pass:
+
+- The helper pre-collected run indices against the initial `childNodes.length`, so a later merged run (whose logical position sat at or beyond the initial length) was never split after an earlier run was. The helper now walks a live DOM cursor, normalizing each run at its current DOM position.
+- The idempotency shortcut (`content == first child`) misclassified trailing empty children (`["a", ""]` stayed merged). Already-normalized runs are now detected by checking every expected node, and zero-length boundaries are split.
+- `splitText` received Python code-point lengths while the browser API uses UTF-16 code units, mis-splitting astral text. Offsets now use a shared UTF-16 length helper, and `FakeDOMNode.splitText` mirrors UTF-16 semantics.
+
+The signal fix also gained two lifecycle corrections: notification sweeps snapshot `SignalEdge`s and skip edges detached mid-sweep (a callback destroying another consumer no longer lets the destroyed consumer fire), and registering an after-update callback on a dirty `Computed` establishes the current value as the baseline (no false fire on equal results, no missed return-to-initial).
+
 ## Capabilities
 
 ### New Capabilities
@@ -19,8 +29,9 @@ Hydration adopts prerendered DOM nodes by sibling index: `_get_existing_node()` 
 
 ### Modified Capabilities
 
-- `elements`: adds a requirement that hydration SHALL normalize parser-merged text nodes to element-tree granularity before index-based adoption, formalizing the contract that `_hydrate_node` must not assume a pristine 1:1 DOM when adjacent text nodes are present.
-- `signal`: adds a requirement that a `Computed` SHALL notify every callback consumer whose last-notified value differs after a recompute, fixing the multi-consumer dispatch drop (exposed by the composite-body regression guard).
+- `elements`: adds a requirement that hydration SHALL normalize parser-merged text nodes to element-tree granularity before index-based adoption, formalizing the contract that `_hydrate_node` must not assume a pristine 1:1 DOM when adjacent text nodes are present — including live-cursor traversal, zero-length boundaries, UTF-16 offsets, empty-run materialization, and the mismatch halt.
+- `reactive`: adds requirements that a `Computed` SHALL notify every callback consumer whose last-notified value differs after a recompute, that a detached callback consumer SHALL NOT be dispatched during an in-flight sweep, and that registration on a dirty `Computed` SHALL use the current value as the baseline.
+- `testing-module`: adds the `FakeDOMNode.splitText` UTF-16 contract used by the normalization unit tests.
 
 ## Impact
 
