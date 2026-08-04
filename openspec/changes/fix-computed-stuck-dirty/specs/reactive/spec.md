@@ -24,3 +24,35 @@ This invariant applies to any `SignalNode` acting as a producer (including `Comp
 - **WHEN** a `Computed` has exactly one producer and is cleaned within an epoch
 - **THEN** `producer_update_value_version` on the early-return path SHALL still clear `dirty` (a no-op since it is already `False`)
 - **AND** observable propagation behavior SHALL be unchanged
+
+### Requirement: The notification sweep SHALL NOT re-mark a consumer already clean for the current epoch
+
+`producer_notify_consumers()` SHALL, at mark time (not collection time), skip re-marking any collected consumer whose `last_clean_epoch` equals the current `_epoch`, clearing its `dirty` flag — and SHALL still propagate the notification to that consumer's own consumers (via `consumer_mark_dirty`), so nodes that depend on it receive the sweep's updates. A consumer cleaned within the current epoch has already incorporated every mutation of that sweep; re-marking it would dispatch a duplicate same-epoch notification and, in nested topologies, leave it stuck-dirty because the duplicate dispatch's version check short-circuits before the node is re-read. The propagation re-applies the gate at every level: consumers of the skipped node that are themselves clean for the epoch are skipped in turn (no duplicate dispatch, no residue), while consumers not yet brought current are marked and dispatched exactly once. The gate SHALL NOT recompute or read any node, and SHALL NOT modify the collection predicate (`if not consumer.dirty`).
+
+#### Scenario: Nested Computed chain updates a downstream callback on every mutation
+- **WHEN** a source `Signal` feeds two `Computed` producers (`left`, `right`), which feed an `inner` `Computed`, which feeds an `outer` `Computed`, and a callback subscribes to `outer` (nested diamond)
+- **AND** the source is mutated across two epochs without reading `outer.value` in between
+- **THEN** the callback SHALL fire exactly once per mutation and observe the updated value for both mutations (no silent stale UI)
+- **AND** after each sweep, every node in the chain SHALL have `dirty = False` (no stuck residue)
+
+#### Scenario: Cleaned-then-remarked node is not re-marked mid-sweep
+- **WHEN** a consumer in a diamond is cleaned for epoch `E` during the first producer path's dispatch
+- **AND** the second producer path's collection loop reaches it within the same sweep
+- **THEN** the sweep SHALL NOT mark it dirty again or dispatch it a second time
+- **AND** its `dirty` flag SHALL remain `False` for the rest of the epoch
+
+#### Scenario: Consumer of a mid-sweep-cleaned node still receives the notification
+- **WHEN** a node `C` in a diamond is eagerly recomputed and cleaned for epoch `E` during the first producer path's dispatch, and its value changes (version bumps)
+- **AND** a consumer `E` depends only on `C` — it is reachable through no other path of the sweep
+- **THEN** the sweep SHALL mark `E` and dispatch its callback exactly once with the updated value (the gate skips `C` itself but propagates to `C`'s consumers)
+- **AND** `C` SHALL remain `dirty = False` for the rest of the epoch
+
+#### Scenario: Sweep performs no recomputation
+- **WHEN** a notification sweep processes a graph containing dirty `Computed` nodes
+- **THEN** the sweep itself SHALL NOT execute any computation function
+- **AND** `Computed` values SHALL only be recomputed when read (lazy evaluation is preserved)
+
+#### Scenario: Mid-sweep-registered consumer is not notified for the in-flight mutation
+- **WHEN** a consumer is registered on a producer while a notification sweep for that producer is already in progress (its `last_clean_epoch` is the current `_epoch` at registration)
+- **THEN** the sweep SHALL NOT mark or dispatch that consumer for the in-flight mutation
+- **AND** the consumer SHALL receive notifications for subsequent mutations
