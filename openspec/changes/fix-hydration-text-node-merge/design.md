@@ -46,14 +46,20 @@ The helper maintains a DOM cursor alongside the element index. When the child at
 ```
 for each child in run (c_0 .. c_k):
     expected_text += c_j._get_text()
-split_offset = 0
+remainder = dom_text_node              # DOM #text node currently at the run start
 for each child in run (c_0 .. c_k-1):
-    split_offset += len(c_j._get_text())
-    dom_text_node.splitText(split_offset)      # creates a new #text sibling
-advance DOM cursor past each split
+    remainder = remainder.splitText(len(c_j._get_text()))   # splitText truncates the
+    remainder.__webcompy_prerendered_node__ = True          #   receiver to [0:offset]
+advance DOM cursor past each split                          #   and returns the tail
 ```
 
-After splitting, each child once again maps to a distinct `childNodes[_node_idx]`, and the existing per-child `_hydrate_node()` / `_adopt_node()` proceeds unmodified. Reconcile, `_position_element_nodes`, and `_re_index_children` are NOT changed.
+`splitText(offset)` truncates the receiver to `[0:offset]` and returns a new sibling
+`#text` node holding the tail, so each split must be issued on the returned remainder
+node (chaining), never on the original node with cumulative offsets (the second call
+would exceed the truncated length and raise `IndexSizeError` in the browser). The new
+nodes are freshly created by the splitter and therefore lack the
+`__webcompy_prerendered_node__` expando, so the helper marks them as prerendered to
+keep `_hydrate_node`'s adoption path working. After splitting, each child once again maps to a distinct `childNodes[_node_idx]`, and the existing per-child `_hydrate_node()` / `_adopt_node()` proceeds unmodified. Reconcile, `_position_element_nodes`, and `_re_index_children` are NOT changed.
 
 **Why split rather than re-index the element tree.** The element tree's `_node_count` is the source of truth used everywhere (render, refresh, reconcile, hydration, positioning). Re-indexing the tree to match the merged DOM would corrupt that invariant and ripple into every code path; splitting the DOM to match the tree is local, reversible, and confined to hydration.
 

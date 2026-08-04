@@ -12,9 +12,9 @@
 
 ## 3. Normalization helper + both hydration loops
 
-- [ ] 3.1 Add a shared text-run normalization helper in `packages/webcompy/src/webcompy/elements/types/_base.py` and call it from BOTH `ElementWithChildren._hydrate_node` (`_base.py`) and `DynamicElement._hydrate_node` (`packages/webcompy/src/webcompy/elements/types/_dynamic.py`): collect consecutive `TextElement` children whose DOM `#text` was merged, compute cumulative expected-text boundaries, and call `splitText` to restore per-child DOM nodes before per-child `_hydrate_node()` proceeds (dynamic containers are required — `RepeatElement` items and `FragmentElement` bodies hydrate through `DynamicElement._hydrate_node`)
-- [ ] 3.2 Implement the content-equality guard (skip + fall back when `dom.textContent != concat(expected)`) and the idempotency fast path (no split when DOM already 1:1)
-- [ ] 3.3 Verify the group-1 spike now passes; ensure no-merge common path still hydrates identically (regression guard on `tests/test_full_hydration.py`)
+- [x] 3.1 Add a shared text-run normalization helper in `packages/webcompy/src/webcompy/elements/types/_base.py` and call it from BOTH `ElementWithChildren._hydrate_node` (`_base.py`) and `DynamicElement._hydrate_node` (`packages/webcompy/src/webcompy/elements/types/_dynamic.py`): collect consecutive `TextElement` children whose DOM `#text` was merged, compute cumulative expected-text boundaries, and call `splitText` to restore per-child DOM nodes before per-child `_hydrate_node()` proceeds (dynamic containers are required — `RepeatElement` items and `FragmentElement` bodies hydrate through `DynamicElement._hydrate_node`)
+- [x] 3.2 Implement the content-equality guard (skip + fall back when `dom.textContent != concat(expected)`) and the idempotency fast path (no split when DOM already 1:1)
+- [x] 3.3 Verify the group-1 spike now passes; ensure no-merge common path still hydrates identically (regression guard on `tests/test_full_hydration.py`)
 
 ## 4. Fragment-body + keyed-reconcile unit tests
 

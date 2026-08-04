@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from webcompy import logging
+from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.typealias._element_property import (
     AttrValue,
     ElementChildren,
@@ -11,6 +13,48 @@ from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._text import TextElement
 from webcompy.signal import SignalBase
+
+
+def _normalize_hydration_text_runs(
+    children: list[ElementAbstract],
+    parent_node: DOMNode,
+    start_idx: int,
+) -> None:
+    child_count = parent_node.childNodes.length
+    runs: list[tuple[int, list[TextElement]]] = []
+    dom_idx = start_idx
+    i = 0
+    n = len(children)
+    while i < n:
+        child = children[i]
+        if isinstance(child, TextElement):
+            run: list[TextElement] = []
+            j = i
+            while j < n and isinstance(children[j], TextElement):
+                run.append(children[j])
+                j += 1
+            if len(run) >= 2 and dom_idx < child_count:
+                runs.append((dom_idx, run))
+            dom_idx += len(run)
+            i = j
+        else:
+            dom_idx += child._node_count
+            i += 1
+    for run_start, run in runs:
+        node = parent_node.childNodes[run_start]
+        if node.nodeName.lower() != "#text":
+            continue
+        content = node.textContent or ""
+        if content == run[0]._get_text():
+            continue
+        expected = "".join(c._get_text() for c in run)
+        if content != expected:
+            logging.warning(f"Hydration text-run mismatch: expected {expected!r}, found {content!r}; skipping split")
+            continue
+        remainder: DOMNode = node
+        for c in run[:-1]:
+            remainder = remainder.splitText(len(c._get_text()))
+            remainder.__webcompy_prerendered_node__ = True
 
 
 class ElementWithChildren(ElementAbstract):
@@ -46,6 +90,8 @@ class ElementWithChildren(ElementAbstract):
 
     def _hydrate_node(self):
         result = super()._hydrate_node()
+        if (node := self._node_cache) is not None and not self._preserve_children:
+            _normalize_hydration_text_runs(self._children, node, 0)
         idx = 0
         for child in self._children:
             child._node_idx = idx
