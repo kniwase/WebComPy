@@ -36,7 +36,7 @@
 ## 7. Spec / Review-skill maintenance
 
 - [x] 7.1 Confirm the `elements` spec delta and the File→Spec Mapping entry for `webcompy/elements/` remain consistent (no main-spec edit required until archive)
-- [ ] 7.2 Update `.opencode/skills/webcompy-review/SKILL.md` Critical Framework Invariants to note the hydration text-node normalization invariant, per the config.yaml spec-change rule
+- [x] 7.2 Update `.opencode/skills/webcompy-review/SKILL.md` Critical Framework Invariants to note the hydration text-node normalization invariant, per the config.yaml spec-change rule
 
 ## 8. Shared-Computed multi-consumer notification fix (discovered during implementation)
 
