@@ -2,8 +2,8 @@
 
 ## 1. Spike — failing test for merged-text hydration
 
-- [ ] 1.1 Construct a unit test (new `tests/test_hydration_text_merge.py`) that builds an element tree with adjacent text-bearing children, simulates a browser-parsed DOM where the `#text` nodes are merged into one, runs `_hydrate_node`, and asserts the post-hydration DOM has a 1:1 child correspondence (fails before the fix)
-- [ ] 1.2 Confirm the spike fails on the current `ElementWithChildren._hydrate_node` with a concrete index-drift assertion, locking the contract before implementation
+- [x] 1.1 Construct a unit test (new `tests/test_hydration_text_merge.py`) that builds an element tree with adjacent text-bearing children, simulates a browser-parsed DOM where the `#text` nodes are merged into one, runs `_hydrate_node`, and asserts the post-hydration DOM has a 1:1 child correspondence (fails before the fix)
+- [x] 1.2 Confirm the spike fails on the current `ElementWithChildren._hydrate_node` with a concrete index-drift assertion, locking the contract before implementation
 
 ## 2. `FakeDOMNode.splitText` support
 
