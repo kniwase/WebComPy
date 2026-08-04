@@ -185,6 +185,31 @@ class TestElementNoBrowser:
             _active_di_scope.reset(token)
 
 
+class TestComputedDiamondTextElement:
+    def test_text_updates_on_every_mutation(self, fake_browser_full):
+        from webcompy.signal import Computed, Signal
+
+        a = Signal(1)
+        left = Computed(lambda: a.value + 1)
+        right = Computed(lambda: a.value * 2)
+        inner = Computed(lambda: right.value + left.value)
+        outer = Computed(lambda: inner.value * 10)
+
+        parent = FakeRootElement("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        text_el = TextElement(outer)
+        text_el._parent = parent
+        text_el._node_idx = 0
+        text_el._init_node()
+
+        assert text_el._get_node().textContent == "40"
+        a.value = 2
+        assert text_el._get_node().textContent == "70"
+        a.value = 3
+        assert text_el._get_node().textContent == "100"
+
+
 class TestTextElementWithBrowser:
     def test_init_node_creates_text_node(self, fake_browser_full):
         parent = Element("div", {}, {}, None, None)
