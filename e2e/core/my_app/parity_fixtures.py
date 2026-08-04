@@ -10,6 +10,11 @@ PARITY_TEMPLATES: dict[str, str] = {
     "pre_plain": "<pre>  a\n  b</pre>",
     "charref_decoded": "<p>&lt;tag&gt; &amp; &#65;</p>",
     "plaintext_unclosed": "<div><plaintext><b>z</b>",
+    "adjacent_text": "<div>a{{ x }}b</div>",
+}
+
+PARITY_CONTEXTS: dict[str, dict[str, object]] = {
+    "adjacent_text": {"x": "x"},
 }
 
 
@@ -28,7 +33,7 @@ def compute_parity_results() -> dict[str, list[str]]:
     results: dict[str, list[str]] = {}
     for name, source in PARITY_TEMPLATES.items():
         try:
-            results[name] = ["tree", serialize_tree(render_template(source, {}))]
+            results[name] = ["tree", serialize_tree(render_template(source, PARITY_CONTEXTS.get(name, {})))]
         except Exception as exc:
             results[name] = ["error", f"{type(exc).__name__}: {exc}"]
     return results

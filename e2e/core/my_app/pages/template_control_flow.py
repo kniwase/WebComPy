@@ -60,9 +60,7 @@ def TemplateControlFlowPage(context: ComponentContext[None]):
                         <li data-testid="loop-meta-static-item">{{ loop.index }},{{ loop.first }},{{ loop.last }},{{ loop.length }}:{{ x }}</li>
                     {% endfor %}
                 </ul>
-                <ul data-testid="loop-meta-dict">
-{% for v in meta_dict %}<li data-testid="loop-meta-dict-item">{{ loop.index }},{{ loop.first }},{{ loop.last }},{{ loop.length }}:{{ v }}</li>{% endfor %}
-                </ul>
+                <div data-testid="loop-meta-dict">{% for v in meta_dict %}[{{ loop.index }}/{{ loop.length }}] <span data-testid="loop-meta-dict-item">{{ loop.index }},{{ loop.first }},{{ loop.last }},{{ loop.length }}:{{ v }}</span>{% endfor %}</div>
                 <button data-testid="loop-dict-mutate" @click="mutate_dict">Rotate Dict</button>
             </div>
 
