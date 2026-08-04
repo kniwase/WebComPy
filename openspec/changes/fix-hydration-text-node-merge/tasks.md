@@ -23,8 +23,8 @@
 
 ## 5. E2E regression — composite body + parity fixture
 
-- [ ] 5.1 Restore the dict loop in `e2e/core/my_app/pages/template_control_flow.py` (line 64) to a composite item body (multiple elements + text), removing the single-element-body workaround
-- [ ] 5.2 Extend `e2e/core/my_app/parity_fixtures.py` (or add a fixture) with a merged-text-node case proving the element-tree-vs-browser-DOM node-count divergence, and assert the e2e hydration path normalizes it (`e2e/core/test_template_control_flow.py` / `test_html_parser_parity.py`)
+- [x] 5.1 Restore the dict loop in `e2e/core/my_app/pages/template_control_flow.py` (line 64) to a composite item body (multiple elements + text), removing the single-element-body workaround
+- [x] 5.2 Extend `e2e/core/my_app/parity_fixtures.py` (or add a fixture) with a merged-text-node case proving the element-tree-vs-browser-DOM node-count divergence, and assert the e2e hydration path normalizes it (`e2e/core/test_template_control_flow.py` / `test_html_parser_parity.py`)
 
 ## 6. Full verification
 
