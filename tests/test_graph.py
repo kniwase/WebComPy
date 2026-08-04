@@ -16,6 +16,7 @@ from webcompy.signal._graph import (
     producer_add_live_consumer,
     producer_notify_consumers,
     producer_remove_live_consumer_link,
+    producer_update_value_version,
     set_active_consumer,
 )
 
@@ -264,6 +265,7 @@ class TestDiamondTopology:
         c.dirty = False
         d.dirty = False
 
+        increment_epoch()
         producer_notify_consumers(a)
         assert b.dirty is True
         assert c.dirty is True
@@ -271,9 +273,11 @@ class TestDiamondTopology:
         b.dirty = False
         c.dirty = False
 
+        increment_epoch()
         producer_notify_consumers(b)
         assert d.dirty is True
 
+        increment_epoch()
         producer_notify_consumers(c)
         assert d.dirty is True
 
@@ -285,8 +289,63 @@ class TestDiamondTopology:
         set_active_consumer(None)
 
         assert consumer.dirty is False
+        increment_epoch()
         producer_notify_consumers(producer)
         assert consumer.dirty is True
+
+    def test_epoch_early_return_clears_stale_dirty(self):
+        a = SimpleSignalNode()
+        b = SimpleSignalNode()
+        c = SimpleConsumerNode()
+        d = SimpleConsumerNode()
+
+        set_active_consumer(c)
+        producer_accessed(a)
+        producer_accessed(b)
+        set_active_consumer(None)
+        set_active_consumer(d)
+        producer_accessed(c)
+        set_active_consumer(None)
+
+        c.last_clean_epoch = increment_epoch()
+        c.dirty = True
+
+        producer_update_value_version(c)
+        assert c.dirty is False
+
+        increment_epoch()
+        producer_notify_consumers(a)
+        assert c.dirty is True
+        assert d.dirty is True
+
+    def test_epoch_clean_consumer_not_remarked_during_sweep(self):
+        a = SimpleSignalNode()
+        b = SimpleConsumerNode()
+        c = SimpleConsumerNode()
+        d = SimpleConsumerNode()
+        e = SimpleConsumerNode()
+
+        set_active_consumer(b)
+        producer_accessed(a)
+        set_active_consumer(None)
+        set_active_consumer(c)
+        producer_accessed(a)
+        set_active_consumer(None)
+        set_active_consumer(d)
+        producer_accessed(b)
+        producer_accessed(c)
+        set_active_consumer(None)
+        set_active_consumer(e)
+        producer_accessed(c)
+        set_active_consumer(None)
+
+        c.last_clean_epoch = increment_epoch()
+
+        producer_notify_consumers(a)
+        assert b.dirty is True
+        assert c.dirty is False
+        assert d.dirty is True
+        assert e.dirty is True
 
 
 class TestLiveVsNonLiveConsumer:
@@ -336,6 +395,7 @@ class TestLiveVsNonLiveConsumer:
         edge1 = producer_add_live_consumer(producer, c1)
         edge2 = producer_add_live_consumer(producer, c2)
         consumer_destroy(c1)
+        increment_epoch()
         producer_notify_consumers(producer)
         assert c1.dirty is False
         assert c2.dirty is True
