@@ -13,7 +13,7 @@
 - [x] 2.1 In `packages/webcompy/src/webcompy/signal/_graph.py`, add the epoch-aware mark-time gate to `producer_notify_consumers`: skip (and clear residual `dirty` on) any collected consumer whose `last_clean_epoch` equals the current `_epoch`; the collection predicate is unchanged
 - [x] 2.2 Keep `producer.dirty = False` on the `_epoch == producer.last_clean_epoch` early-return branch of `producer_update_value_version` as a defensive invariant for directly polled nodes
 - [x] 2.3 Confirm the regression tests from group 1 now pass
-- [ ] 2.4 Extend the gate branch to propagate: when the mark step skips a same-epoch-clean consumer, notify its consumers via `consumer_mark_dirty` (the node itself is not re-marked and its `dirty` stays `False`); the propagation is gate-checked at each level, so already-current consumers are skipped in turn and every other consumer receives exactly one notification
+- [x] 2.4 Extend the gate branch to propagate: when the mark step skips a same-epoch-clean consumer, notify its consumers via `consumer_mark_dirty` (the node itself is not re-marked and its `dirty` stays `False`); the propagation is gate-checked at each level, so already-current consumers are skipped in turn and every other consumer receives exactly one notification
 
 ## 3. Integration Tests (Computed → DOM update)
 

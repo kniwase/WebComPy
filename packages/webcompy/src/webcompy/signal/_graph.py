@@ -123,6 +123,10 @@ def producer_notify_consumers(producer: SignalNode) -> None:
                 consumers_to_notify.append(consumer)
             edge = edge.next_consumer
         for consumer in consumers_to_notify:
+            if consumer.last_clean_epoch == _epoch:
+                consumer.dirty = False
+                consumer_mark_dirty(consumer)
+                continue
             if not consumer.dirty:
                 consumer.dirty = True
                 consumer_mark_dirty(consumer)
