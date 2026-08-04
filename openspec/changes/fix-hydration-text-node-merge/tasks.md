@@ -7,8 +7,8 @@
 
 ## 2. `FakeDOMNode.splitText` support
 
-- [ ] 2.1 Implement `splitText(offset)` on `FakeDOMNode` in `packages/webcompy-testing/src/webcompy_testing/_dom.py`: truncate receiver to `textContent[:offset]`, create and insert a new `FakeDOMNode("#text", text_content=textContent[offset:])` into the parent's `childNodes` after the receiver, return the new node (standard DOM `Text.splitText` contract)
-- [ ] 2.2 Unit-test `splitText` directly: offset splits content correctly; the new node is inserted at the right sibling position; out-of-range offset raises (matching browser behavior)
+- [x] 2.1 Implement `splitText(offset)` on `FakeDOMNode` in `packages/webcompy-testing/src/webcompy_testing/_dom.py`: truncate receiver to `textContent[:offset]`, create and insert a new `FakeDOMNode("#text", text_content=textContent[offset:])` into the parent's `childNodes` after the receiver, return the new node (standard DOM `Text.splitText` contract)
+- [x] 2.2 Unit-test `splitText` directly: offset splits content correctly; the new node is inserted at the right sibling position; out-of-range offset raises (matching browser behavior)
 
 ## 3. Normalization helper + both hydration loops
 

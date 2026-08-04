@@ -14,6 +14,24 @@ class FakeDOMNode(VirtualDOMNode):
         super().setAttribute(name, value)
         self.setAttribute_count += 1
 
+    def splitText(self, offset: int) -> FakeDOMNode:
+        if self._node_type != 3:
+            raise TypeError("splitText is only valid on text nodes")
+        text = self._text_content or ""
+        if not 0 <= offset <= len(text):
+            raise IndexError(f"splitText offset {offset} out of range for text of length {len(text)}")
+        new_node = FakeDOMNode("#text", text_content=text[offset:])
+        self._text_content = text[:offset]
+        parent = self._parent
+        if parent is not None:
+            siblings = parent._children
+            idx = siblings.index(self)
+            if idx + 1 < len(siblings):
+                parent.insertBefore(new_node, siblings[idx + 1])
+            else:
+                parent.appendChild(new_node)
+        return new_node
+
     @VirtualDOMNode.textContent.setter  # type: ignore[attr-defined]
     def textContent(self, value: str | None) -> None:
         VirtualDOMNode.textContent.fset(self, value)  # type: ignore[misc]
