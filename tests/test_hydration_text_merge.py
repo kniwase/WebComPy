@@ -89,6 +89,22 @@ class TestFakeDOMNodeSplitText:
         with pytest.raises(TypeError):
             node.splitText(0)
 
+    def test_split_text_uses_utf16_offsets(self):
+        parent = FakeDOMNode("div")
+        node = FakeDOMNode("#text", text_content="😀x")
+        parent.appendChild(node)
+        new_node = node.splitText(2)
+        assert node.textContent == "😀"
+        assert new_node.textContent == "x"
+
+    def test_split_text_inside_surrogate_pair_mirrors_browser(self):
+        parent = FakeDOMNode("div")
+        node = FakeDOMNode("#text", text_content="😀x")
+        parent.appendChild(node)
+        new_node = node.splitText(1)
+        assert node.textContent == "\ud83d"
+        assert new_node.textContent == "\ude00x"
+
 
 class TestHydrationTextMergeSpike:
     def test_merged_text_nodes_are_split_for_1to1_adoption(self, fake_browser_full):
@@ -180,6 +196,69 @@ class TestHydrationTextRunNormalization:
         assert prerendered.childNodes.length == 2
         assert first.textContent_write_count == 0
         assert second.textContent_write_count == 0
+
+    def test_multiple_merged_runs_are_all_split(self, fake_browser_full):
+        el, prerendered = _hydrate_container(
+            ["a", "b", Element("span", {}, {}, None, None), "c", "d"],
+            [
+                FakeDOMNode("#text", text_content="ab"),
+                FakeDOMNode("span"),
+                FakeDOMNode("#text", text_content="cd"),
+            ],
+        )
+        assert prerendered.childNodes.length == 5
+        assert [n.textContent for n in prerendered.childNodes] == ["a", "b", "", "c", "d"]
+        assert el._children[3]._node_cache is prerendered.childNodes[3]
+        assert el._children[4]._node_cache is prerendered.childNodes[4]
+
+    def test_trailing_empty_text_run_is_split(self, fake_browser_full):
+        el, prerendered = _hydrate_container(["a", ""], [FakeDOMNode("#text", text_content="a")])
+        assert prerendered.childNodes.length == 2
+        assert [n.textContent for n in prerendered.childNodes] == ["a", ""]
+        assert el._children[1]._node_cache is prerendered.childNodes[1]
+
+    def test_multiple_trailing_empty_children_are_split(self, fake_browser_full):
+        el, prerendered = _hydrate_container(["a", "", ""], [FakeDOMNode("#text", text_content="a")])
+        assert prerendered.childNodes.length == 3
+        assert [n.textContent for n in prerendered.childNodes] == ["a", "", ""]
+        assert el._children[1]._node_cache is prerendered.childNodes[1]
+        assert el._children[2]._node_cache is prerendered.childNodes[2]
+
+    def test_all_empty_run_without_dom_node_is_materialized(self, fake_browser_full):
+        el, prerendered = _hydrate_container(
+            ["", "", Element("span", {}, {}, None, None)],
+            [FakeDOMNode("span")],
+        )
+        assert prerendered.childNodes.length == 3
+        assert [n.textContent for n in prerendered.childNodes] == ["", "", ""]
+        assert el._children[0]._node_cache is prerendered.childNodes[0]
+        assert el._children[1]._node_cache is prerendered.childNodes[1]
+        assert el._children[2]._node_cache is prerendered.childNodes[2]
+
+    def test_astral_text_run_is_split_at_utf16_boundaries(self, fake_browser_full):
+        first = FakeDOMNode("#text", text_content="😀x")
+        el, prerendered = _hydrate_container(["😀", "x"], [first])
+        assert prerendered.childNodes.length == 2
+        assert [n.textContent for n in prerendered.childNodes] == ["😀", "x"]
+        assert el._children[0]._node_cache is prerendered.childNodes[0]
+        assert el._children[1]._node_cache is prerendered.childNodes[1]
+        assert first.textContent_write_count == 0
+
+    def test_content_mismatch_halts_normalization_for_later_runs(self, fake_browser_full, caplog):
+        cd_node = FakeDOMNode("#text", text_content="cd")
+        _, prerendered = _hydrate_container(
+            ["a", "b", Element("span", {}, {}, None, None), "c", "d"],
+            [
+                FakeDOMNode("#text", text_content="ax"),
+                FakeDOMNode("span"),
+                cd_node,
+            ],
+        )
+        assert "Hydration text-run mismatch" in caplog.text
+        assert prerendered.childNodes.length == 2
+        assert [n.textContent for n in prerendered.childNodes] == ["a", "cd"]
+        assert prerendered.childNodes[1] is cd_node
+        assert cd_node.textContent == "cd"
 
 
 class TestKeyedReactiveDictHydrationReconcile:
