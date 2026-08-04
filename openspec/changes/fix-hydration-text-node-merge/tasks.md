@@ -28,10 +28,10 @@
 
 ## 6. Full verification
 
-- [ ] 6.1 Run `uv run ruff check .` and `uv run ruff format --check .`; fix any findings
-- [ ] 6.2 Run `uv run pyright`; resolve any new type warnings
-- [ ] 6.3 Run `uv run python -m pytest tests/ --tb=short`; ensure no regressions
-- [ ] 6.4 Run `scripts/run-e2e-tests.sh <relevant-group>` (template-control-flow / html-parser-parity); confirm green
+- [x] 6.1 Run `uv run ruff check .` and `uv run ruff format --check .`; fix any findings
+- [x] 6.2 Run `uv run pyright`; resolve any new type warnings
+- [x] 6.3 Run `uv run python -m pytest tests/ --tb=short`; ensure no regressions
+- [x] 6.4 Run `scripts/run-e2e-tests.sh <relevant-group>` (template-control-flow / html-parser-parity); confirm green
 
 ## 7. Spec / Review-skill maintenance
 
