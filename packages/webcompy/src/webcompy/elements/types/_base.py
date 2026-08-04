@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from webcompy import logging
+from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.typealias._element_property import (
     AttrValue,
@@ -12,7 +13,60 @@ from webcompy.elements.typealias._element_property import (
 from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._text import TextElement
+from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.signal import SignalBase
+
+
+def _utf16_length(value: str) -> int:
+    return len(value.encode("utf-16-le", "surrogatepass")) // 2
+
+
+def _text_run_matches_dom(parts: list[str], parent_node: DOMNode, dom_idx: int) -> bool:
+    nodes = parent_node.childNodes
+    if dom_idx + len(parts) > nodes.length:
+        return False
+    for k, part in enumerate(parts):
+        node = nodes[dom_idx + k]
+        if node.nodeName.lower() != "#text" or (node.textContent or "") != part:
+            return False
+    return True
+
+
+def _materialize_empty_run(parts: list[str], parent_node: DOMNode, dom_idx: int) -> int:
+    for _ in parts:
+        node = inject(DOM_PORT_KEY).create_text_node("")
+        node.__webcompy_prerendered_node__ = True
+        if dom_idx < parent_node.childNodes.length:
+            parent_node.insertBefore(node, parent_node.childNodes[dom_idx])
+        else:
+            parent_node.appendChild(node)
+        dom_idx += 1
+    return dom_idx
+
+
+def _normalize_text_run(parts: list[str], parent_node: DOMNode, dom_idx: int) -> tuple[bool, int]:
+    if _text_run_matches_dom(parts, parent_node, dom_idx):
+        return True, dom_idx + len(parts)
+    if all(part == "" for part in parts):
+        return True, _materialize_empty_run(parts, parent_node, dom_idx)
+    if dom_idx >= parent_node.childNodes.length:
+        return True, dom_idx + len(parts)
+    node = parent_node.childNodes[dom_idx]
+    if node.nodeName.lower() != "#text":
+        logging.warning(
+            f"Hydration text-run mismatch: expected {''.join(parts)!r}, found non-text node; skipping split"
+        )
+        return False, dom_idx
+    content = node.textContent or ""
+    expected = "".join(parts)
+    if content != expected:
+        logging.warning(f"Hydration text-run mismatch: expected {expected!r}, found {content!r}; skipping split")
+        return False, dom_idx
+    remainder: DOMNode = node
+    for part in parts[:-1]:
+        remainder = remainder.splitText(_utf16_length(part))
+        remainder.__webcompy_prerendered_node__ = True
+    return True, dom_idx + len(parts)
 
 
 def _normalize_hydration_text_runs(
@@ -20,8 +74,6 @@ def _normalize_hydration_text_runs(
     parent_node: DOMNode,
     start_idx: int,
 ) -> None:
-    child_count = parent_node.childNodes.length
-    runs: list[tuple[int, list[TextElement]]] = []
     dom_idx = start_idx
     i = 0
     n = len(children)
@@ -33,28 +85,17 @@ def _normalize_hydration_text_runs(
             while j < n and isinstance(children[j], TextElement):
                 run.append(children[j])
                 j += 1
-            if len(run) >= 2 and dom_idx < child_count:
-                runs.append((dom_idx, run))
-            dom_idx += len(run)
+            parts = [c._get_text() for c in run]
+            if len(run) == 1 and parts[0] != "":
+                dom_idx += 1
+            else:
+                ok, dom_idx = _normalize_text_run(parts, parent_node, dom_idx)
+                if not ok:
+                    return
             i = j
         else:
             dom_idx += child._node_count
             i += 1
-    for run_start, run in runs:
-        node = parent_node.childNodes[run_start]
-        if node.nodeName.lower() != "#text":
-            continue
-        content = node.textContent or ""
-        if content == run[0]._get_text():
-            continue
-        expected = "".join(c._get_text() for c in run)
-        if content != expected:
-            logging.warning(f"Hydration text-run mismatch: expected {expected!r}, found {content!r}; skipping split")
-            continue
-        remainder: DOMNode = node
-        for c in run[:-1]:
-            remainder = remainder.splitText(len(c._get_text()))
-            remainder.__webcompy_prerendered_node__ = True
 
 
 class ElementWithChildren(ElementAbstract):
