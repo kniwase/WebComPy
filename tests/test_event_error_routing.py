@@ -6,12 +6,23 @@ from types import SimpleNamespace
 import pytest
 
 from webcompy.components import define_component
-from webcompy.components._component import _set_app_instance
+from webcompy.components._component import _active_app_context, _set_app_instance
 from webcompy.elements import ErrorBoundary, html
 from webcompy.elements.types._error_boundary import ErrorBoundaryElement
 from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
 from webcompy_server.ports import VirtualDOMEvent
 from webcompy_testing import TestRenderer
+
+
+def _use_fake_app(fake_ctx):
+    token = _active_app_context.set(None)
+    _set_app_instance(fake_ctx)
+    return token
+
+
+def _release_fake_app(token):
+    _set_app_instance(None)
+    _active_app_context.reset(token)
 
 
 def _find_element_by_testid(root, testid: str):
@@ -55,11 +66,11 @@ class TestSyncEventHandlerErrors:
             btn = result.find_by_attribute("data-testid", "btn")
             assert btn is not None
             html_before = result.to_html()
-            _set_app_instance(fake_ctx)
+            token = _use_fake_app(fake_ctx)
             try:
                 btn.dispatchEvent(VirtualDOMEvent("click"))
             finally:
-                _set_app_instance(None)
+                _release_fake_app(token)
             assert len(received) == 1
             assert str(received[0]) == "sync event boom"
             assert result.to_html() == html_before
@@ -109,11 +120,11 @@ class TestSyncEventHandlerErrors:
         with TestRenderer.render(Root) as result:
             btn = result.find_by_attribute("data-testid", "btn")
             assert btn is not None
-            _set_app_instance(fake_ctx)
+            token = _use_fake_app(fake_ctx)
             try:
                 btn.dispatchEvent(VirtualDOMEvent("click"))
             finally:
-                _set_app_instance(None)
+                _release_fake_app(token)
             assert result.find_by_attribute("data-testid", "event-fallback") is None
             boundary = _find_boundary(result._instance)
             assert boundary is not None
@@ -139,13 +150,13 @@ class TestAsyncEventHandlerErrors:
         with TestRenderer.render(Root) as result:
             btn = result.find_by_attribute("data-testid", "btn")
             assert btn is not None
-            _set_app_instance(fake_ctx)
+            token = _use_fake_app(fake_ctx)
             try:
                 btn.dispatchEvent(VirtualDOMEvent("click"))
                 scheduler = result._scope.inject(ASYNC_SCHEDULER_PORT_KEY)
                 await scheduler.drain()
             finally:
-                _set_app_instance(None)
+                _release_fake_app(token)
             assert len(received) == 1
             assert str(received[0]) == "async event boom"
 

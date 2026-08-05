@@ -22,9 +22,9 @@
 
 ## 4. Reactive Re-render and Lifecycle Catch Points
 
-- [ ] 4.1 Wrap the internal refresh entry points of dynamic containers (`_dynamic.py`, `_repeat.py`, `_switch.py`) so re-render exceptions route via the propagation walk from the raising element
-- [ ] 4.2 Catch lifecycle-hook (`on_before_rendering`/`on_after_rendering`/`on_before_destroy`) exceptions at their invocation sites in `Component` and route them
-- [ ] 4.3 Unit tests: signal-driven re-render failure → boundary fallback, app stays reactive; lifecycle hook error routed
+- [x] 4.1 Wrap the internal refresh entry points of dynamic containers (`_dynamic.py`, `_repeat.py`, `_switch.py`) so re-render exceptions route via the propagation walk from the raising element
+- [x] 4.2 Catch lifecycle-hook (`on_before_rendering`/`on_after_rendering`/`on_before_destroy`) exceptions at their invocation sites in `Component` and route them
+- [x] 4.3 Unit tests: signal-driven re-render failure → boundary fallback, app stays reactive; lifecycle hook error routed
 
 ## 5. Signal Notification Isolation (reactive delta)
 

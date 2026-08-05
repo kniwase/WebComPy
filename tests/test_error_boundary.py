@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from webcompy.components import define_component
-from webcompy.components._component import Component, _set_app_instance
+from webcompy.components._component import Component, _active_app_context, _set_app_instance
 from webcompy.di import DIScope
 from webcompy.di._keys import ERROR_POLICY_KEY
 from webcompy.elements import ErrorBoundary, html
@@ -16,6 +16,17 @@ from webcompy.elements.types._error_boundary import (
     route_error,
 )
 from webcompy_testing import TestRenderer, run_sync
+
+
+def _use_fake_app(fake_ctx):
+    token = _active_app_context.set(None)
+    _set_app_instance(fake_ctx)
+    return token
+
+
+def _release_fake_app(token):
+    _set_app_instance(None)
+    _active_app_context.reset(token)
 
 
 def _find_boundary(root) -> ErrorBoundaryElement | None:
@@ -489,23 +500,23 @@ class TestGlobalHandler:
     def test_unhandled_error_reaches_config_on_error(self):
         received: list[Exception] = []
         fake_ctx = SimpleNamespace(_config=SimpleNamespace(on_error=received.append))
-        _set_app_instance(fake_ctx)
+        token = _use_fake_app(fake_ctx)
         try:
             err = RuntimeError("uncontained")
             run_sync(route_error(None, err))
         finally:
-            _set_app_instance(None)
+            _release_fake_app(token)
         assert received == [err]
 
     def test_report_unhandled_calls_config_handler_once(self):
         received: list[Exception] = []
         fake_ctx = SimpleNamespace(_config=SimpleNamespace(on_error=received.append))
-        _set_app_instance(fake_ctx)
+        token = _use_fake_app(fake_ctx)
         try:
             err = RuntimeError("reported")
             report_unhandled_error(err)
         finally:
-            _set_app_instance(None)
+            _release_fake_app(token)
         assert received == [err]
 
     def test_handler_exception_is_swallowed(self):
@@ -513,16 +524,20 @@ class TestGlobalHandler:
             raise ValueError("handler exploded")
 
         fake_ctx = SimpleNamespace(_config=SimpleNamespace(on_error=bad_handler))
-        _set_app_instance(fake_ctx)
+        token = _use_fake_app(fake_ctx)
         try:
             report_unhandled_error(RuntimeError("original"))
         finally:
-            _set_app_instance(None)
+            _release_fake_app(token)
 
     def test_default_logging_without_handler(self, monkeypatch):
         logged: list[Exception] = []
         monkeypatch.setattr("webcompy.aio._aio._log_error", lambda e: logged.append(e))
+        token = _active_app_context.set(None)
         _set_app_instance(None)
-        err = RuntimeError("logged")
-        report_unhandled_error(err)
+        try:
+            err = RuntimeError("logged")
+            report_unhandled_error(err)
+        finally:
+            _active_app_context.reset(token)
         assert logged == [err]

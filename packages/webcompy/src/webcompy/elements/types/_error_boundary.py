@@ -9,6 +9,7 @@ from webcompy.di._keys import ERROR_POLICY_KEY
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement, _patch_children, _position_element_nodes
+from webcompy.exception import WebComPyException
 
 _logger = getLogger(__name__)
 
@@ -95,6 +96,23 @@ def route_error_sync(
     report_unhandled_error(error)
 
 
+def route_error_deferred(
+    source: ElementAbstract | None,
+    error: Exception,
+    *,
+    is_event_error: bool = False,
+) -> None:
+    handled, boundary = _find_engaging_boundary(source, error, is_event_error=is_event_error)
+    if handled:
+        return
+    if boundary is not None:
+        from webcompy.aio._aio import aio_run
+
+        aio_run(boundary._engage(error))
+        return
+    report_unhandled_error(error)
+
+
 class ErrorBoundaryElement(DynamicElement):
     def __init__(
         self,
@@ -123,6 +141,8 @@ class ErrorBoundaryElement(DynamicElement):
         if not self._children:
             try:
                 self._children = self._generate_boundary_children(self._children_generator)
+            except WebComPyException:
+                raise
             except Exception as err:
                 await self._engage(err)
                 return
@@ -133,6 +153,8 @@ class ErrorBoundaryElement(DynamicElement):
             try:
                 if child._mounted is None and not self._hydrated:
                     await child._render()
+            except WebComPyException:
+                raise
             except Exception as err:
                 await route_error(child, err)
                 return

@@ -157,24 +157,31 @@ class RepeatElement(DynamicElement):
         _run_refresh_sync(self._refresh, *args)
 
     async def _refresh(self, *args: Any):
-        parent_node = self._parent._get_node()
-        if not parent_node:
-            raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
-        if self._has_key and self._signal_activated and self._children_keys:
-            await self._reconcile_children()
-        else:
-            self._cancel_pending_render_tasks()
-            for _ in range(len(self._children)):
-                self._children.pop(-1)._remove_element()
-            self._children = self._generate_children()
-            idx = self._node_idx
-            for child in self._children:
-                child._node_idx = idx
-                await child._render()
-                idx += child._node_count
-            if self._has_key:
-                self._populate_key_map()
-        self._parent._re_index_children(False)
+        try:
+            parent_node = self._parent._get_node()
+            if not parent_node:
+                raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
+            if self._has_key and self._signal_activated and self._children_keys:
+                await self._reconcile_children()
+            else:
+                self._cancel_pending_render_tasks()
+                for _ in range(len(self._children)):
+                    self._children.pop(-1)._remove_element()
+                self._children = self._generate_children()
+                idx = self._node_idx
+                for child in self._children:
+                    child._node_idx = idx
+                    await child._render()
+                    idx += child._node_count
+                if self._has_key:
+                    self._populate_key_map()
+            self._parent._re_index_children(False)
+        except WebComPyException:
+            raise
+        except Exception as err:
+            from webcompy.elements.types._error_boundary import route_error_deferred
+
+            route_error_deferred(self, err)
 
     async def _reconcile_children(self):
         items = self._iter_items()
