@@ -10,8 +10,8 @@
 
 ## 2. on_error_captured Hook
 
-- [ ] 2.1 Add `context.on_error_captured(fn)` registration following the `_active_component_context` pattern (`components/_hooks.py:40-45`); raise `LookupError` outside setup
-- [ ] 2.2 Store hooks on the component instance alongside the existing hook machinery (`components/_component.py:225-234`); release on destroy
+- [x] 2.1 Add `context.on_error_captured(fn)` registration following the `_active_component_context` pattern (`components/_hooks.py:40-45`); raise `LookupError` outside setup
+- [x] 2.2 Store hooks on the component instance alongside the existing hook machinery (`components/_component.py:225-234`); release on destroy
 - [ ] 2.3 Unit tests: invocation order (nearest-first), veto semantics, release-on-destroy, LookupError outside setup
 
 ## 3. Global Handler and Event-Handler Routing

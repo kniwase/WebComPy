@@ -94,6 +94,7 @@ class Component(ElementBase):
         self._pending_async_template: Coroutine[Any, Any, ElementChildren] | None = None
         self._async_results: list = []
         self._async_setup_extracted: bool = False
+        self._error_captured_hooks: list[Callable[[Exception], Any]] = []
         super().__init__()
         property = self.__setup(component_def, props, slots)
         self._property = property
@@ -160,6 +161,7 @@ class Component(ElementBase):
                 _pending_di_parent.reset(pending_token)
 
         self._async_results = list(context._async_results)
+        self._error_captured_hooks = list(context._error_captured_hooks)
         self._merge_transferables(context)
 
         if self._pending_async_template is None:
@@ -206,6 +208,7 @@ class Component(ElementBase):
     def _cleanup_pending_async(self):
         self._pending_async_template = None
         self._property["on_before_destroy"]()
+        self._error_captured_hooks.clear()
         for cb in self._callback_nodes:
             from webcompy.signal._graph import consumer_destroy
 
@@ -233,6 +236,7 @@ class Component(ElementBase):
 
         self._property["on_before_destroy"] = on_before_destroy_with_scope_cleanup
         self._async_results = list(context._async_results)
+        self._error_captured_hooks = list(context._error_captured_hooks)
         self._merge_transferables(context)
         self._async_setup_extracted = True
 
@@ -287,6 +291,7 @@ class Component(ElementBase):
             if self._instance_id in self._head_props.head_metas:
                 del self._head_props.head_metas[self._instance_id]
         self._property["on_before_destroy"]()
+        self._error_captured_hooks.clear()
         super()._remove_element(recursive, remove_node)
 
     def _detach_from_node(self) -> None:
@@ -299,6 +304,7 @@ class Component(ElementBase):
             if self._instance_id in self._head_props.head_metas:
                 del self._head_props.head_metas[self._instance_id]
         self._property["on_before_destroy"]()
+        self._error_captured_hooks.clear()
         super()._detach_from_node()
 
     def _get_belonging_component(self):
