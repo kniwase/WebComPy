@@ -51,8 +51,8 @@
 ## 9. E2E and Verification
 
 - [x] 9.1 Add e2e pages under `e2e/core/my_app/pages/`: crashing component with retry button; crashing page inside a nested layout; Playwright specs under `e2e/core/`
-- [ ] 9.2 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` (all existing tests MUST pass)
-- [ ] 9.3 Run relevant e2e groups via `scripts/run-e2e-tests.sh` and `uv run python -m webcompy generate` on docs_app
+- [x] 9.2 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` (all existing tests MUST pass)
+- [x] 9.3 Run relevant e2e groups via `scripts/run-e2e-tests.sh` and `uv run python -m webcompy generate` on docs_app
 
 ## 10. Spec and Housekeeping
 
