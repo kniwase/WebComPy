@@ -57,4 +57,4 @@
 ## 10. Spec and Housekeeping
 
 - [ ] 10.1 Sync deltas to main specs (`error-handling` new; `components`, `app-config`, `elements`, `router`, `reactive` modified) via the archive flow
-- [ ] 10.2 Update `AGENTS.md` File→Spec Mapping (new `_error_boundary.py` → error-handling; `signal/_graph.py`/`_base.py` → reactive + error-handling) and the Current Specs list; check `.opencode/skills/webcompy-review/SKILL.md` invariants for stale assumptions (e.g., notification-chain behavior)
+- [x] 10.2 Update `AGENTS.md` File→Spec Mapping (new `_error_boundary.py` → error-handling; `signal/_graph.py`/`_base.py` → reactive + error-handling) and the Current Specs list; check `.opencode/skills/webcompy-review/SKILL.md` invariants for stale assumptions (e.g., notification-chain behavior)
