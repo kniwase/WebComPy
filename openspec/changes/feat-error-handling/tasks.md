@@ -17,8 +17,8 @@
 ## 3. Global Handler and Event-Handler Routing
 
 - [x] 3.1 Add `on_error: Callable[[Exception], Any] | None = None` to `WebComPyAppConfig` (`app/_config.py:18`); swallow+log exceptions raised by the handler itself
-- [ ] 3.2 Wrap `_generate_event_handler` (`elements/types/_element.py:24-31`) for sync and async (via the `resolve_async` error path) errors, routing into the propagation walk from the attached element; preserve create_proxy/destroy lifecycle
-- [ ] 3.3 Unit tests: sync/async handler errors reach global handler without DOM change; `catch_events=True` boundary engages; proxy destroy unaffected
+- [x] 3.2 Wrap `_generate_event_handler` (`elements/types/_element.py:24-31`) for sync and async (via the `resolve_async` error path) errors, routing into the propagation walk from the attached element; preserve create_proxy/destroy lifecycle
+- [x] 3.3 Unit tests: sync/async handler errors reach global handler without DOM change; `catch_events=True` boundary engages; proxy destroy unaffected
 
 ## 4. Reactive Re-render and Lifecycle Catch Points
 

@@ -21,12 +21,20 @@ from webcompy.signal import SignalBase
 from webcompy.signal._graph import consumer_destroy
 
 
-def _generate_event_handler(_event_handler: EventHandler) -> Callable[[DOMEvent], Any]:
+def _generate_event_handler(_event_handler: EventHandler, element: ElementBase) -> Callable[[DOMEvent], Any]:
+    def _route_error(err: Exception) -> None:
+        from webcompy.elements.types._error_boundary import route_error_sync
+
+        route_error_sync(element, err, is_event_error=True)
+
     def event_handler(ev: Any):
         if iscoroutinefunction(_event_handler):
-            resolve_async(_event_handler(ev))
+            resolve_async(_event_handler(ev), on_error=_route_error)
         else:
-            _event_handler(ev)
+            try:
+                _event_handler(ev)
+            except Exception as err:
+                _route_error(err)
 
     return inject(FFI_PORT_KEY).create_proxy(event_handler)
 
@@ -64,7 +72,7 @@ class ElementBase(ElementWithChildren):
         self._register_bind_property_callbacks()
         self._event_handlers_added = {}
         for name, func in self._event_handlers.items():
-            event_handler = _generate_event_handler(func)
+            event_handler = _generate_event_handler(func, self)
             node.addEventListener(name, event_handler, False)
             self._event_handlers_added[name] = event_handler
         if self._ref:
@@ -103,7 +111,7 @@ class ElementBase(ElementWithChildren):
         self._register_bind_property_callbacks()
         self._event_handlers_added = {}
         for name, func in self._event_handlers.items():
-            event_handler = _generate_event_handler(func)
+            event_handler = _generate_event_handler(func, self)
             node.addEventListener(name, event_handler, False)
             self._event_handlers_added[name] = event_handler
         if self._ref:

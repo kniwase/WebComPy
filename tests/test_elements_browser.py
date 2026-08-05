@@ -63,12 +63,14 @@ class TestElementInitNode:
 
     def test_generate_event_handler_returns_callable(self, fake_browser_full):
         handler = lambda ev: None
-        result = _generate_event_handler(handler)
+        el = _setup_element("button")
+        result = _generate_event_handler(handler, el)
         assert callable(result)
 
     def test_generate_event_handler_proxy_has_destroy(self, fake_browser_full):
         handler = lambda ev: None
-        result = _generate_event_handler(handler)
+        el = _setup_element("button")
+        result = _generate_event_handler(handler, el)
         assert hasattr(result, "destroy")
         result.destroy()
 
