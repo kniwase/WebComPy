@@ -45,8 +45,8 @@
 
 ## 8. Hydration Retry (stretch — may be deferred)
 
-- [ ] 8.1 Mark SSR fallback output with `data-webcompy-error-fallback`; on `_hydrate_node`, adopt fallback DOM and schedule one automatic `reset()` via the async scheduler after initial hydration — without touching the `AppDocumentRoot._render()` hydration guard
-- [ ] 8.2 Tests: SSR-fallback page hydrates and retries; persistent failure settles into fallback
+- [x] 8.1 Mark SSR fallback output with `data-webcompy-error-fallback`; on `_hydrate_node`, adopt fallback DOM and schedule one automatic `reset()` via the async scheduler after initial hydration — without touching the `AppDocumentRoot._render()` hydration guard
+- [x] 8.2 Tests: SSR-fallback page hydrates and retries; persistent failure settles into fallback
 
 ## 9. E2E and Verification
 

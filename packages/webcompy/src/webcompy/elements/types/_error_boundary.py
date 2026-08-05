@@ -10,6 +10,7 @@ from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement, _patch_children, _position_element_nodes
 from webcompy.exception import WebComPyException
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
 
 _logger = getLogger(__name__)
 
@@ -187,6 +188,8 @@ class ErrorBoundaryElement(DynamicElement):
             await self._swap_children(fallback_children)
         except Exception as render_err:
             await route_error(self, render_err)
+            return
+        self._mark_fallback_root()
 
     async def _swap_children(self, new_children: list[ElementAbstract]) -> None:
         self._swapping = True
@@ -228,7 +231,48 @@ class ErrorBoundaryElement(DynamicElement):
         self._error = None
         super()._remove_element(recursive, remove_node)
 
+    def _mark_fallback_root(self) -> None:
+        from webcompy.utils._environment import ENVIRONMENT
+
+        if ENVIRONMENT == "pyscript":
+            return
+        for child in self._children:
+            node = getattr(child, "_node_cache", None)
+            set_attr = getattr(node, "setAttribute", None) if node is not None else None
+            if set_attr is not None:
+                set_attr("data-webcompy-error-fallback", "")
+
+    def _ssr_fallback_in_dom(self) -> bool:
+        try:
+            parent_node = self._parent._get_node()
+        except Exception:
+            return False
+        if parent_node is None or parent_node.childNodes.length <= self._node_idx:
+            return False
+        candidate = parent_node.childNodes[self._node_idx]
+        get_attr = getattr(candidate, "getAttribute", None)
+        if get_attr is None:
+            return False
+        return get_attr("data-webcompy-error-fallback") is not None
+
     def _hydrate_node(self) -> None:
+        if self._ssr_fallback_in_dom():
+            self._in_fallback = True
+            ssr_error = RuntimeError("SSR-rendered error fallback")
+            self._error = ssr_error
+            try:
+                self._children = self._generate_boundary_children(
+                    lambda: self._fallback_generator(ssr_error, self.reset)
+                )
+            except Exception as err:
+                route_error_deferred(self, err)
+                return
+            super()._hydrate_node()
+            scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+            task = scheduler.schedule(self._do_reset())
+            self._pending_render_tasks.append((self, task))
+            task.add_done_callback(self._on_hydrate_render_done)
+            return
         if not self._children:
             try:
                 self._children = self._generate_boundary_children(self._children_generator)

@@ -96,6 +96,8 @@ Implementation refinement (discovered during implementation): refresh/lifecycle/
 
 When SSR rendered a boundary's fallback, the boundary marks its fallback root with a `data-webcompy-error-fallback` attribute. During hydration (`_hydrate_node`), a boundary that adopts marked fallback DOM schedules exactly one automatic `reset()` on the client (via the async scheduler, after initial hydration completes). This rescues server-specific failures (e.g., an SSR-time fetch that the browser can succeed at). If the client attempt fails again, the boundary settles into its fallback as normal. Non-goal if it complicates hydration invariants; the change MUST NOT touch the `AppDocumentRoot._render()` hydration guard.
 
+Implemented (spike outcome: GO): `_engage` marks the fallback root node server-side only (`ENVIRONMENT != "pyscript"`); `_hydrate_node` checks the DOM at the boundary's node index for the marker BEFORE running the children generator (a persistently failing generator must not block hydration), adopts the fallback DOM with a synthetic error (`RuntimeError("SSR-rendered error fallback")`), and schedules `_do_reset()` through `ASYNC_SCHEDULER_PORT_KEY` tracked in `_pending_render_tasks`. The marker attribute is removed automatically by `ElementBase._adopt_node`'s stale-attribute cleanup when the retry's children patch/adopt the fallback node.
+
 ### D9: Public API surface
 
 - `webcompy.elements`: `ErrorBoundary`
