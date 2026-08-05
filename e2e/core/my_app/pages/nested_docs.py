@@ -41,6 +41,7 @@ def NestedDocsLayout(context: ComponentContext[RouterContext]):
                 html.LI(
                     {}, RouterLink(to="/nested/item/2", text=["Item 2"], attrs={"data-testid": "nav-nested-item2"})
                 ),
+                html.LI({}, RouterLink(to="/nested/crash", text=["Crash"], attrs={"data-testid": "nav-nested-crash"})),
             ),
         ),
         html.BUTTON({"data-testid": "nested-toggle", "@click": toggle}, "Toggle Sidebar"),

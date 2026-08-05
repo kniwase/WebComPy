@@ -46,6 +46,15 @@ def on_before_destroy(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any,
     return func
 
 
+def on_error_captured(func: Callable[[Exception], Any]) -> Callable[[Exception], Any]:
+    try:
+        ctx = _active_component_context.get()
+    except LookupError as err:
+        raise LookupError("on_error_captured must be called inside a component setup function") from err
+    ctx.on_error_captured(func)
+    return func
+
+
 def use_async_result(
     func: Callable[[], Coroutine[Any, Any, T]],
     *,

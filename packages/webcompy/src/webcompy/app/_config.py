@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -24,6 +26,7 @@ class WebComPyAppConfig:
     plugins: list[str] = field(default_factory=list)
     theme: dict | None = None
     compression_threshold: int | None = 1024
+    on_error: Callable[[Exception], Any] | None = None
 
     def __post_init__(self):
         stripped = self.base_url.strip("/")

@@ -197,8 +197,10 @@ class SuspenseElement(DynamicElement):
             _position_element_nodes(self, parent_node, self._node_idx)
             self._parent._re_index_children(False)
         else:
+            from webcompy.elements.types._error_boundary import route_error_deferred
+
             _logger.error("Suspense child async raised without error_fallback: %s", error)
-            raise error
+            route_error_deferred(self, error)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         for task in self._pending_tasks:

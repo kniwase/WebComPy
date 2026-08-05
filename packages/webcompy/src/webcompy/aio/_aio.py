@@ -120,7 +120,12 @@ def _resolve_async_callback(callback: Callable[..., Any], value: Any) -> None:
         try:
             await callback(value)
         except Exception as err:
-            _log_error(err)
+            try:
+                from webcompy.elements.types._error_boundary import report_unhandled_error
+
+                report_unhandled_error(err)
+            except Exception:
+                _log_error(err)
 
     if ENVIRONMENT == "pyscript":
         aio_run(_safe())

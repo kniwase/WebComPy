@@ -166,6 +166,18 @@ Computed that returns unchanged result must NOT notify downstream.
 Event handlers must be created via `create_proxy()` and `destroy()`ed on removal.
 Missing `destroy()` is a PyScript memory leak.
 
+### Error Handling
+`ErrorBoundary` catches descendant setup/render errors and swaps to `fallback(error, reset)`.
+Error discovery walks the element parent chain: `on_error_captured` hooks nearest-first
+(returning `False` vetoes propagation), then the nearest boundary engages; hooks above an
+engaged boundary are never called. A boundary never catches its own fallback (walk skips
+boundaries in `_in_fallback`/`_swapping` state). Event-handler errors go to the global
+handler (`WebComPyAppConfig.on_error`, else log) unless a `catch_events=True` boundary
+claims them. `WebComPyException` (framework validation) bypasses routing and propagates.
+SSR renders engaged fallbacks and survives; SSG re-raises (`ERROR_POLICY_KEY="ssg"`) and
+fails the build. Signal consumer notification is isolated per consumer — one failing
+consumer must not block siblings.
+
 ### Lifecycle Ordering
 `on_after_rendering` during route navigation (`RouterView._on_match_changed()`) must be
 deferred, not synchronous in the callback chain. Component setup must restore
@@ -200,7 +212,11 @@ is an isolation boundary rather than a workaround for dropped consumers). The de
 view renders `router.__default__()` when nothing matches. `RouterView._hydrate_node()`
 MUST NOT eagerly hydrate the routed component — the scheduled `child._render()` must
 adopt the prerendered nodes AND complete setup (signal subscriptions, lifecycle
-hooks), or interactive updates on hydrated pages silently break.
+hooks), or interactive updates on hydrated pages silently break. Each chain level (and
+the default component) is wrapped in an implicit `ErrorBoundary` whose fallback renders
+nothing; an errored level resets on navigation via `Router.after_route_change`
+(`_on_navigate_attempt`), because same-path navigations are de-duplicated by
+`HistoryPort.navigate` and `RouteMatch` structural equality.
 
 ### Composable Usage
 `use_state()` / `use_reactive_list()` / `use_reactive_dict()` MUST be called from inside a
@@ -233,24 +249,25 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 
 | Changed files | Specs to read |
 |---|---|
-| `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md`, `signal-value-transfer/spec.md` |
+| `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md`, `signal-value-transfer/spec.md`, `error-handling/spec.md` |
 | `webcompy/template/_css_parser.py`, `webcompy/template/_css_template.py` | `template-engine/spec.md` |
 | `webcompy/template/`, `webcompy/template/_expression.py` | `template-engine/spec.md` |
 | `webcompy/template/_markdown_default.py` | `template-engine/spec.md`, `markdown-conformance/spec.md` |
 | `webcompy/template/_markdown_for.py` | `template-engine/spec.md` |
 | `tests/conformance/` | `markdown-conformance/spec.md`, `template-engine/spec.md`, `test-execution-paths/spec.md` |
-| `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md`, `signal-value-transfer/spec.md` |
+| `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md`, `signal-value-transfer/spec.md`, `error-handling/spec.md` |
 | `webcompy/components/_css_utils.py` | `components/spec.md`, `reactive-scoped-style/spec.md` |
-| `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md`, `async-scheduler/spec.md` |
-| `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md`, `suspense/spec.md`, `async-scheduler/spec.md` |
+| `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
+| `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md`, `suspense/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
 | `webcompy/elements/_bind.py` | `elements/spec.md` |
-| `webcompy/elements/types/_suspense.py` | `suspense/spec.md`, `async-scheduler/spec.md` |
+| `webcompy/elements/types/_error_boundary.py` | `error-handling/spec.md` |
+| `webcompy/elements/types/_suspense.py` | `suspense/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
 | `webcompy/elements/types/_dynamic.py` | `async-scheduler/spec.md` |
 | `webcompy/elements/types/_fragment.py` | `elements/spec.md` |
 | `webcompy/elements/types/_switch.py` | `elements/spec.md`, `async-rendering/spec.md` |
 | `webcompy/forms/` | `forms/spec.md` |
 | `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md` |
-| `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md` |
+| `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md`, `error-handling/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md` |
 | `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md` |
 | `webcompy/ports/_markdown.py` | `port-abstraction/spec.md` |
@@ -260,7 +277,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md` |
 | `webcompy/di/` | `di-scope/spec.md`, `di-injection/spec.md`, `dependency-resolver/spec.md` |
 | `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md` |
-| `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `async-scheduler/spec.md` |
+| `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md` |
 | `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
@@ -344,6 +361,7 @@ When specs are added, modified, or removed, update:
 | `nested-dynamic-element` | Nesting of `repeat` and `switch` at arbitrary depth |
 | `dict-repeat-overload` | Efficient DOM reconciliation for `ReactiveDict` with `repeat()` |
 | `element-preserve-children` | `:preserve_children` attribute for externally-managed child DOM nodes |
+| `error-handling` | `ErrorBoundary` element, error propagation walk, SSR-tolerant/SSG-fail-fast policy, RouterView implicit boundaries |
 | `forms` | Field wrapper, built-in validators, Form aggregation, `:bind` integration |
 | `head-vdom` | Declarative head element management via `HeadElement` VDOM |
 | `router` | Client-side routing, hash/history modes, path params |

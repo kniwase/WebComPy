@@ -59,6 +59,10 @@ async def generate_static_site(app: WebComPyApp | None = None):
 
     assert app is not None
 
+    from webcompy.di._keys import ERROR_POLICY_KEY
+
+    app.provide(ERROR_POLICY_KEY, "ssg")
+
     if args.get("dist") is not None:
         dist_dir = pathlib.Path(args["dist"]).absolute()
     else:

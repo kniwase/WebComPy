@@ -76,6 +76,7 @@ class Context(Generic[PropsType]):
         self._generator = generator
         self._async_results: list = []
         self._transferable_signals: dict[str, SignalBase[Any]] = {}
+        self._error_captured_hooks: list[Callable[[Exception], Any]] = []
 
     @property
     def props(self) -> PropsType:
@@ -102,6 +103,9 @@ class Context(Generic[PropsType]):
 
     def on_before_destroy(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
         self.__on_before_destroy = func
+
+    def on_error_captured(self, func: Callable[[Exception], Any]) -> None:
+        self._error_captured_hooks.append(func)
 
     def get_title(self) -> str:
         return self.__title_getter()
@@ -237,6 +241,8 @@ class ComponentContext(Protocol[PropsType]):
     def on_after_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
 
     def on_before_destroy(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
+
+    def on_error_captured(self, func: Callable[[Exception], Any]) -> None: ...
 
     def get_title(self) -> str: ...
 

@@ -85,43 +85,55 @@ class SwitchElement(DynamicElement):
         _run_refresh_sync(self._refresh, *args)
 
     async def _refresh(self, *args: Any):
-        self._cancel_pending_render_tasks()
-        branch_idx, generator = self._select_generator()
-        if branch_idx == self._rendered_idx:
-            if self._children and all(child._mounted is None for child in self._children):
-                parent_node = self._parent._get_node()
+        try:
+            self._cancel_pending_render_tasks()
+            branch_idx, generator = self._select_generator()
+            if branch_idx == self._rendered_idx:
+                if self._children and all(child._mounted is None for child in self._children):
+                    parent_node = self._parent._get_node()
+                    idx = self._node_idx
+                    for child in self._children:
+                        child._node_idx = idx
+                        await child._render()
+                        idx += child._node_count
+                    _position_element_nodes(self, parent_node, self._node_idx)
+                return
+            parent_node = self._parent._get_node()
+            if not parent_node:
+                raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
+            self._rendered_idx = branch_idx
+            new_children = self._generate_children(generator)
+            old_children = self._children
+            self._children = _patch_children(old_children, new_children, self._node_idx)
+            should_defer = self._signal_activated
+            if should_defer:
+                start_defer_after_rendering()
+            try:
                 idx = self._node_idx
                 for child in self._children:
                     child._node_idx = idx
                     await child._render()
                     idx += child._node_count
-                _position_element_nodes(self, parent_node, self._node_idx)
-            return
-        parent_node = self._parent._get_node()
-        if not parent_node:
-            raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
-        self._rendered_idx = branch_idx
-        new_children = self._generate_children(generator)
-        old_children = self._children
-        self._children = _patch_children(old_children, new_children, self._node_idx)
-        should_defer = self._signal_activated
-        if should_defer:
-            start_defer_after_rendering()
-        idx = self._node_idx
-        for child in self._children:
-            child._node_idx = idx
-            await child._render()
-            idx += child._node_count
-        if should_defer:
-            deferred = end_defer_after_rendering()
-            for callback in deferred:
-                if iscoroutinefunction(callback):
-                    from webcompy.aio._aio import aio_run
+            except Exception:
+                if should_defer:
+                    end_defer_after_rendering()
+                raise
+            if should_defer:
+                deferred = end_defer_after_rendering()
+                for callback in deferred:
+                    if iscoroutinefunction(callback):
+                        from webcompy.aio._aio import aio_run
 
-                    callback = lambda cb=callback: aio_run(cb())
-                inject(HOST_PORT_KEY).schedule_macro_task(callback)
-        _position_element_nodes(self, parent_node, self._node_idx)
-        self._parent._re_index_children(False)
+                        callback = lambda cb=callback: aio_run(cb())
+                    inject(HOST_PORT_KEY).schedule_macro_task(callback)
+            _position_element_nodes(self, parent_node, self._node_idx)
+            self._parent._re_index_children(False)
+        except WebComPyException:
+            raise
+        except Exception as err:
+            from webcompy.elements.types._error_boundary import route_error_deferred
+
+            route_error_deferred(self, err)
 
     def _on_set_parent(self):
         if not self._signal_activated:

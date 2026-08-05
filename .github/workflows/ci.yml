@@ -225,6 +225,8 @@ jobs:
             files: e2e/core/test_eruda.py
           - name: template
             files: e2e/core/test_template.py e2e/core/test_template_components.py e2e/core/test_template_control_flow.py e2e/core/test_template_expressions.py e2e/core/test_markdown_for.py e2e/core/test_html_parser_parity.py
+          - name: error-handling
+            files: e2e/core/test_error_handling.py
         serving_mode: [prod, static]
         include:
           - group:
