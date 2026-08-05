@@ -1,6 +1,7 @@
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._client_only import ClientOnlyElement
 from webcompy.elements.types._element import Element
+from webcompy.elements.types._error_boundary import ErrorBoundaryElement
 from webcompy.elements.types._fragment import FragmentElement
 from webcompy.elements.types._repeat import MultiLineTextElement, RepeatElement
 from webcompy.elements.types._suspense import SuspenseElement
@@ -11,6 +12,7 @@ __all__ = [
     "ClientOnlyElement",
     "Element",
     "ElementAbstract",
+    "ErrorBoundaryElement",
     "FragmentElement",
     "MultiLineTextElement",
     "NewLine",

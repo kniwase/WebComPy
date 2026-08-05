@@ -15,9 +15,11 @@ from webcompy.elements.generators import (
     text,
 )
 from webcompy.elements.types._client_only import ClientOnlyElement
+from webcompy.elements.types._error_boundary import ErrorBoundaryElement
 from webcompy.elements.types._suspense import SuspenseElement
 
 ClientOnly = ClientOnlyElement
+ErrorBoundary = ErrorBoundaryElement
 Suspense = SuspenseElement
 
 __all__ = [
@@ -25,6 +27,7 @@ __all__ = [
     "DOMEvent",
     "DOMNode",
     "DomNodeRef",
+    "ErrorBoundary",
     "HeadElement",
     "Suspense",
     "break_line",

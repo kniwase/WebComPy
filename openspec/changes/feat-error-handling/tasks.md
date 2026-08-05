@@ -2,21 +2,21 @@
 
 ## 1. Core ErrorBoundary Element
 
-- [ ] 1.1 Implement `packages/webcompy/src/webcompy/elements/types/_error_boundary.py`: `ErrorBoundaryElement(DynamicElement)` with `children`/`fallback`/`on_error`/`catch_events`; `_render()` wraps children render in try/except; fallback swap reuses the `_patch_children` / `_position_element_nodes` / re-index pattern from `SuspenseElement._handle_error` (`_suspense.py:184-204`)
-- [ ] 1.2 Implement the D2 propagation walk (parent-chain ascent: component hooks nearest-first with `False` veto → nearest boundary → global handler/log) with lazy `Component` import to avoid cycles; a boundary never catches its own fallback (walk starts above it)
-- [ ] 1.3 Implement `reset()`: destroy subtree (component destruction + DI-scope disposal), re-run children generator; boundary state is ephemeral (no hydration serialization, no reconciliation keys)
-- [ ] 1.4 Export `ErrorBoundary` from `webcompy.elements` (mirror the `Suspense = SuspenseElement` pattern)
-- [ ] 1.5 Unit tests: sync/async setup error → fallback; sibling survival; nested boundaries nearest-first; error-in-fallback escalates; reset success/failure paths
+- [x] 1.1 Implement `packages/webcompy/src/webcompy/elements/types/_error_boundary.py`: `ErrorBoundaryElement(DynamicElement)` with `children`/`fallback`/`on_error`/`catch_events`; `_render()` wraps children render in try/except; fallback swap reuses the `_patch_children` / `_position_element_nodes` / re-index pattern from `SuspenseElement._handle_error` (`_suspense.py:184-204`)
+- [x] 1.2 Implement the D2 propagation walk (parent-chain ascent: component hooks nearest-first with `False` veto → nearest boundary → global handler/log) with lazy `Component` import to avoid cycles; a boundary never catches its own fallback (walk starts above it)
+- [x] 1.3 Implement `reset()`: destroy subtree (component destruction + DI-scope disposal), re-run children generator; boundary state is ephemeral (no hydration serialization, no reconciliation keys)
+- [x] 1.4 Export `ErrorBoundary` from `webcompy.elements` (mirror the `Suspense = SuspenseElement` pattern)
+- [x] 1.5 Unit tests: sync/async setup error → fallback; sibling survival; nested boundaries nearest-first; error-in-fallback escalates; reset success/failure paths
 
 ## 2. on_error_captured Hook
 
 - [x] 2.1 Add `context.on_error_captured(fn)` registration following the `_active_component_context` pattern (`components/_hooks.py:40-45`); raise `LookupError` outside setup
 - [x] 2.2 Store hooks on the component instance alongside the existing hook machinery (`components/_component.py:225-234`); release on destroy
-- [ ] 2.3 Unit tests: invocation order (nearest-first), veto semantics, release-on-destroy, LookupError outside setup
+- [x] 2.3 Unit tests: invocation order (nearest-first), veto semantics, release-on-destroy, LookupError outside setup
 
 ## 3. Global Handler and Event-Handler Routing
 
-- [ ] 3.1 Add `on_error: Callable[[Exception], Any] | None = None` to `WebComPyAppConfig` (`app/_config.py:18`); swallow+log exceptions raised by the handler itself
+- [x] 3.1 Add `on_error: Callable[[Exception], Any] | None = None` to `WebComPyAppConfig` (`app/_config.py:18`); swallow+log exceptions raised by the handler itself
 - [ ] 3.2 Wrap `_generate_event_handler` (`elements/types/_element.py:24-31`) for sync and async (via the `resolve_async` error path) errors, routing into the propagation walk from the attached element; preserve create_proxy/destroy lifecycle
 - [ ] 3.3 Unit tests: sync/async handler errors reach global handler without DOM change; `catch_events=True` boundary engages; proxy destroy unaffected
 
@@ -33,7 +33,7 @@
 
 ## 6. Environment Policy (SSR fallback / SSG fail-fast)
 
-- [ ] 6.1 Add `ERROR_POLICY_KEY` DI key (values `"ssr" | "ssg"`, default `"ssr"`); `ErrorBoundaryElement` re-raises when `"ssg"`
+- [x] 6.1 Add `ERROR_POLICY_KEY` DI key (values `"ssr" | "ssg"`, default `"ssr"`); `ErrorBoundaryElement` re-raises when `"ssg"`
 - [ ] 6.2 Provide `"ssg"` from the SSG entry point (`webcompy_cli/_generate.py`) at render-context creation
 - [ ] 6.3 Tests: SSR renders fallback + 200 + rest of page; SSG raises and fails the build
 
