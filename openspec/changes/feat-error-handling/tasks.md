@@ -28,8 +28,8 @@
 
 ## 5. Signal Notification Isolation (reactive delta)
 
-- [ ] 5.1 Isolate per-consumer notification in `producer_notify_consumers`/`consumer_mark_dirty` (`signal/_graph.py:117,164`) and `SignalCallback._dispatch` (`signal/_base.py:59`); route failures to the pipeline; guarantee `_in_notification_phase` restoration
-- [ ] 5.2 Unit tests: failing consumer does not block siblings; producer value consistent; no stuck-dirty Computed; notification phase restored
+- [x] 5.1 Isolate per-consumer notification in `producer_notify_consumers`/`consumer_mark_dirty` (`signal/_graph.py:117,164`) and `SignalCallback._dispatch` (`signal/_base.py:59`); route failures to the pipeline; guarantee `_in_notification_phase` restoration
+- [x] 5.2 Unit tests: failing consumer does not block siblings; producer value consistent; no stuck-dirty Computed; notification phase restored
 
 ## 6. Environment Policy (SSR fallback / SSG fail-fast)
 

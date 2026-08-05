@@ -115,6 +115,7 @@ def producer_accessed(producer: SignalNode) -> None:
 
 
 def producer_notify_consumers(producer: SignalNode) -> None:
+    prev_phase = _get_in_notification_phase()
     _set_in_notification_phase(True)
     try:
         edges_to_notify: list[SignalEdge] = []
@@ -127,15 +128,29 @@ def producer_notify_consumers(producer: SignalNode) -> None:
             if not edge.active:
                 continue
             consumer = edge.consumer
-            if consumer.last_clean_epoch == _epoch:
-                consumer.dirty = False
-                consumer_mark_dirty(consumer)
-                continue
-            if not consumer.dirty:
-                consumer.dirty = True
-                consumer_mark_dirty(consumer)
+            try:
+                if consumer.last_clean_epoch == _epoch:
+                    consumer.dirty = False
+                    consumer_mark_dirty(consumer)
+                    continue
+                if not consumer.dirty:
+                    consumer.dirty = True
+                    consumer_mark_dirty(consumer)
+            except Exception as err:
+                _report_consumer_error(err)
     finally:
-        _set_in_notification_phase(False)
+        _set_in_notification_phase(prev_phase)
+
+
+def _report_consumer_error(error: Exception) -> None:
+    try:
+        from webcompy.elements.types._error_boundary import report_unhandled_error
+    except Exception:
+        from logging import getLogger
+
+        getLogger(__name__).error("Unhandled signal consumer error: %r", error)
+        return
+    report_unhandled_error(error)
 
 
 def producer_update_value_version(producer: SignalNode) -> None:
