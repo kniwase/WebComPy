@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from webcompy.components import define_component, on_before_destroy, on_before_rendering
+from webcompy.components import define_component, on_after_rendering, on_before_destroy, on_before_rendering
 from webcompy.components._component import _active_app_context, _set_app_instance
 from webcompy.elements import ErrorBoundary, html
 from webcompy.elements.generators import repeat, suspense, switch
@@ -99,11 +99,17 @@ class TestReactiveRerenderErrors:
 
 class TestLifecycleHookErrors:
     def test_on_before_rendering_error_engages_boundary(self):
+        captured: dict[str, object] = {}
+
         @define_component
         def HookCrashing(context):
             @on_before_rendering
             def hook():
                 raise RuntimeError("before render boom")
+
+            @on_after_rendering
+            def after():
+                captured["after"] = True
 
             return html.DIV({"data-testid": "hook-content"}, "content")
 
@@ -120,6 +126,8 @@ class TestLifecycleHookErrors:
         with TestRenderer.render(Root) as result:
             assert result.find_by_attribute("data-testid", "lifecycle-fallback") is not None
             assert result.find_by_text("before render boom") is not None
+            assert result.find_by_attribute("data-testid", "hook-content") is None
+            assert "after" not in captured
 
     def test_on_before_destroy_error_does_not_break_fallback_swap(self):
         received: list[Exception] = []

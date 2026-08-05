@@ -280,6 +280,7 @@ class Component(ElementBase):
             from webcompy.elements.types._error_boundary import route_error_deferred
 
             route_error_deferred(self, err)
+            return
         await super()._render()
         on_after = self._property["on_after_rendering"]
         app = _active_app_context.get() or _get_app_instance()
