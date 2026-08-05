@@ -48,3 +48,19 @@ def test_renavigation_retries_errored_level(page_on):
 
     page.locator("[data-testid='nav-nested-crash']").click()
     expect(page.locator("[data-testid='nested-crash-page']")).to_be_visible()
+
+
+def test_catch_events_boundary_engages_on_handler_error(page_on):
+    page = page_on("/catch-events")
+    expect(page.locator("[data-testid='ce-crash']")).to_be_visible()
+    expect(page.locator("[data-testid='ce-sibling']")).to_have_text("alive")
+
+    page.locator("[data-testid='ce-crash']").click()
+    expect(page.locator("[data-testid='ce-fallback']")).to_be_visible()
+    expect(page.locator("[data-testid='ce-error']")).to_contain_text("event handler failed")
+    expect(page.locator("[data-testid='ce-crash']")).to_have_count(0)
+    expect(page.locator("[data-testid='ce-sibling']")).to_have_text("alive")
+
+    page.locator("[data-testid='ce-retry']").click()
+    expect(page.locator("[data-testid='ce-crash']")).to_be_visible()
+    expect(page.locator("[data-testid='ce-fallback']")).to_have_count(0)

@@ -57,3 +57,29 @@ def NestedCrashPage(context: ComponentContext[RouterContext]):
         html.BUTTON({"data-testid": "crash-page", "@click": add_bad}, "Crash page"),
         html.UL({}, repeat(items, render_item)),
     )
+
+
+@define_component
+def CatchEventsPage(context: ComponentContext[RouterContext]):
+    def fallback(error: Exception, reset):
+        return html.DIV(
+            {"data-testid": "ce-fallback"},
+            html.P({"data-testid": "ce-error"}, str(error)),
+            html.BUTTON({"data-testid": "ce-retry", "@click": lambda _: reset()}, "Retry"),
+        )
+
+    def raise_in_handler(_):
+        raise RuntimeError("event handler failed")
+
+    return html.DIV(
+        {"data-testid": "ce-page"},
+        ErrorBoundary(
+            children=lambda: html.BUTTON(
+                {"data-testid": "ce-crash", "@click": raise_in_handler},
+                "Raise in handler",
+            ),
+            fallback=fallback,
+            catch_events=True,
+        ),
+        html.SPAN({"data-testid": "ce-sibling"}, "alive"),
+    )

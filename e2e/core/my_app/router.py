@@ -7,7 +7,7 @@ from .pages.client_only import ClientOnlyPage
 from .pages.component import FunctionStylePage
 from .pages.di_test import DiInjectPage, DiProviderWrapper
 from .pages.dict_repeat import DictRepeatPage
-from .pages.error_handling import ErrorBoundaryPage, NestedCrashPage
+from .pages.error_handling import CatchEventsPage, ErrorBoundaryPage, NestedCrashPage
 from .pages.event import EventPage
 from .pages.form_fields import FormFieldsPage
 from .pages.home import HomePage
@@ -74,6 +74,7 @@ router = Router(
     {"path": "/two-way-binding", "component": TwoWayBindingPage},
     {"path": "/form-fields", "component": FormFieldsPage},
     {"path": "/error-boundary", "component": ErrorBoundaryPage},
+    {"path": "/catch-events", "component": CatchEventsPage},
     default=NotFound,
     mode="history",
 )
