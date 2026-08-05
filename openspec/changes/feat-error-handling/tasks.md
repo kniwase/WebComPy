@@ -34,8 +34,8 @@
 ## 6. Environment Policy (SSR fallback / SSG fail-fast)
 
 - [x] 6.1 Add `ERROR_POLICY_KEY` DI key (values `"ssr" | "ssg"`, default `"ssr"`); `ErrorBoundaryElement` re-raises when `"ssg"`
-- [ ] 6.2 Provide `"ssg"` from the SSG entry point (`webcompy_cli/_generate.py`) at render-context creation
-- [ ] 6.3 Tests: SSR renders fallback + 200 + rest of page; SSG raises and fails the build
+- [x] 6.2 Provide `"ssg"` from the SSG entry point (`webcompy_cli/_generate.py`) at render-context creation
+- [x] 6.3 Tests: SSR renders fallback + 200 + rest of page; SSG raises and fails the build
 
 ## 7. RouterView Implicit Boundary
 
