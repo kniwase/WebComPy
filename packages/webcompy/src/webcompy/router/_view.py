@@ -20,7 +20,7 @@ from webcompy.signal import Computed
 
 
 class RouterView(DynamicElement):
-    _depth: int | None
+    _mounted_depth: int | None
     _mounted_component: ElementAbstract | None
     _mounted_identity: tuple | None
     _signal_activated: bool
@@ -31,7 +31,7 @@ class RouterView(DynamicElement):
         except InjectionError:
             raise RuntimeError("'Router' instance is not provided via DI.") from None
         self._router = router
-        self._depth = None
+        self._mounted_depth = None
         self._mounted_component = None
         self._mounted_identity = None
         self._signal_activated = False
@@ -94,14 +94,14 @@ class RouterView(DynamicElement):
 
     def _get_or_create_component(self, match: RouteMatch | None):
         depth = self._count_router_view_ancestors()
-        self._depth = depth
         if match is None or depth >= len(match.chain):
             if match is None and depth == 0:
-                return self._get_or_create_default_component()
+                return self._get_or_create_default_component(depth)
             if self._mounted_component is not None:
                 self._mounted_component._remove_element()
                 self._mounted_component = None
                 self._mounted_identity = None
+                self._mounted_depth = None
             return None
 
         identity = self._build_identity(match, depth)
@@ -113,6 +113,7 @@ class RouterView(DynamicElement):
         boundary = self._create_level_boundary(lambda: self._create_level_component(match, depth))
         self._mounted_component = boundary
         self._mounted_identity = identity
+        self._mounted_depth = depth
         return boundary
 
     def _create_level_component(self, match: RouteMatch, depth: int) -> ElementChildren:
@@ -128,7 +129,7 @@ class RouterView(DynamicElement):
     def _create_level_boundary(self, generator: Callable[[], ElementChildren]) -> ErrorBoundaryElement:
         return ErrorBoundaryElement(children=generator, fallback=lambda error, reset: None)
 
-    def _get_or_create_default_component(self):
+    def _get_or_create_default_component(self, depth: int):
         current_path, search = self._router._get_current_path()
         query = self._router._parse_query(search)
         identity = ("__default__", current_path, tuple(sorted(query.items())))
@@ -139,6 +140,7 @@ class RouterView(DynamicElement):
         boundary = self._create_level_boundary(self._create_default_component)
         self._mounted_component = boundary
         self._mounted_identity = identity
+        self._mounted_depth = depth
         return boundary
 
     def _create_default_component(self) -> ElementChildren:
@@ -205,7 +207,7 @@ class RouterView(DynamicElement):
         if not isinstance(boundary, ErrorBoundaryElement) or not boundary._in_fallback:
             return
         match = self._router.current_match.value
-        depth = self._depth if self._depth is not None else 0
+        depth = self._mounted_depth if self._mounted_depth is not None else 0
         if match is not None and depth < len(match.chain):
             if self._build_identity(match, depth) != self._mounted_identity:
                 return
