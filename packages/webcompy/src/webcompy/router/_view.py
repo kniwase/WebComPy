@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from contextlib import suppress
 from inspect import iscoroutinefunction
 from typing import cast
 
@@ -10,6 +12,7 @@ from webcompy.di._keys import _ROUTER_KEY
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement, _position_element_nodes
+from webcompy.elements.types._error_boundary import ErrorBoundaryElement
 from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, HOST_PORT_KEY
 from webcompy.router._context import TypedRouterContext
 from webcompy.router._router import RouteMatch
@@ -51,6 +54,7 @@ class RouterView(DynamicElement):
         router = self._router
         self._level_match = Computed(lambda: router.current_match.value)
         self._add_callback_node(self._level_match.on_after_updating(self._on_match_changed))
+        router.after_route_change.append(self._on_navigate_attempt)
         if router._preload:
             router.preload_lazy_routes()
 
@@ -106,6 +110,12 @@ class RouterView(DynamicElement):
 
         if self._mounted_component is not None:
             self._mounted_component._remove_element()
+        boundary = self._create_level_boundary(lambda: self._create_level_component(match, depth))
+        self._mounted_component = boundary
+        self._mounted_identity = identity
+        return boundary
+
+    def _create_level_component(self, match: RouteMatch, depth: int) -> ElementChildren:
         node = match.chain[depth]
         context = TypedRouterContext.__create_instance__(
             path=match.path,
@@ -113,10 +123,10 @@ class RouterView(DynamicElement):
             path_params=self._accumulate_params(match, depth),
             state=match.state,
         )
-        component = node.component(context)
-        self._mounted_component = component
-        self._mounted_identity = identity
-        return component
+        return node.component(context)
+
+    def _create_level_boundary(self, generator: Callable[[], ElementChildren]) -> ErrorBoundaryElement:
+        return ErrorBoundaryElement(children=generator, fallback=lambda error, reset: None)
 
     def _get_or_create_default_component(self):
         current_path, search = self._router._get_current_path()
@@ -126,16 +136,18 @@ class RouterView(DynamicElement):
             return self._mounted_component
         if self._mounted_component is not None:
             self._mounted_component._remove_element()
+        boundary = self._create_level_boundary(self._create_default_component)
+        self._mounted_component = boundary
+        self._mounted_identity = identity
+        return boundary
+
+    def _create_default_component(self) -> ElementChildren:
         result: ElementChildren = self._router.__default__()
         if isinstance(result, str):
             from webcompy.elements.types._text import TextElement
 
-            component: ElementAbstract = TextElement(result)
-        else:
-            component = cast("ElementAbstract", result)
-        self._mounted_component = component
-        self._mounted_identity = identity
-        return component
+            return TextElement(result)
+        return cast("ElementAbstract", result)
 
     async def _render(self):
         if not self._signal_activated:
@@ -187,6 +199,48 @@ class RouterView(DynamicElement):
         parent_node = self._parent._get_node()
         _position_element_nodes(self, parent_node, self._node_idx)
         self._parent._re_index_children(False)
+
+    def _on_navigate_attempt(self, _path: str) -> None:
+        boundary = self._mounted_component
+        if not isinstance(boundary, ErrorBoundaryElement) or not boundary._in_fallback:
+            return
+        match = self._router.current_match.value
+        depth = self._depth if self._depth is not None else 0
+        if match is not None and depth < len(match.chain):
+            if self._build_identity(match, depth) != self._mounted_identity:
+                return
+        elif not (match is None and depth == 0):
+            return
+        from webcompy.elements.types._dynamic import _run_refresh_sync
+
+        _run_refresh_sync(self._reset_errored_level, boundary)
+
+    async def _reset_errored_level(self, boundary: ErrorBoundaryElement) -> None:
+        self._navigation_generation += 1
+        generation = self._navigation_generation
+        start_defer_after_rendering()
+        try:
+            await boundary._do_reset()
+        except BaseException:
+            end_defer_after_rendering()
+            raise
+        deferred = end_defer_after_rendering()
+        if generation != self._navigation_generation:
+            return
+        for callback in deferred:
+            if iscoroutinefunction(callback):
+                from webcompy.aio._aio import aio_run
+
+                callback = lambda cb=callback: aio_run(cb())
+            inject(HOST_PORT_KEY).schedule_macro_task(callback)
+        parent_node = self._parent._get_node()
+        _position_element_nodes(self, parent_node, self._node_idx)
+        self._parent._re_index_children(False)
+
+    def _remove_element(self, recursive: bool = True, remove_node: bool = True):
+        with suppress(ValueError):
+            self._router.after_route_change.remove(self._on_navigate_attempt)
+        super()._remove_element(recursive, remove_node)
 
     def _hydrate_node(self):
         self._hydrated = True

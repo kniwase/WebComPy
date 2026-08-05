@@ -230,5 +230,9 @@ class ErrorBoundaryElement(DynamicElement):
 
     def _hydrate_node(self) -> None:
         if not self._children:
-            self._children = self._generate_boundary_children(self._children_generator)
+            try:
+                self._children = self._generate_boundary_children(self._children_generator)
+            except Exception as err:
+                route_error_deferred(self, err)
+                return
         super()._hydrate_node()

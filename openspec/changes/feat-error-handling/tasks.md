@@ -39,9 +39,9 @@
 
 ## 7. RouterView Implicit Boundary
 
-- [ ] 7.1 Wrap each chain level in an implicit boundary inside `RouterView._get_or_create_component` (`router/_view.py:91`); fallback renders empty
-- [ ] 7.2 Reset the implicit boundary on navigation when in error state (`_on_match_changed`, `_view.py:150`); verify the level-reuse rule is unaffected
-- [ ] 7.3 Unit tests (with `webcompy_testing`): page crash preserves layout; re-navigation retries; remount drops error state; app-declared inner boundary engages first
+- [x] 7.1 Wrap each chain level in an implicit boundary inside `RouterView._get_or_create_component` (`router/_view.py:91`); fallback renders empty
+- [x] 7.2 Reset the implicit boundary on navigation when in error state (`_on_match_changed`, `_view.py:150`); verify the level-reuse rule is unaffected
+- [x] 7.3 Unit tests (with `webcompy_testing`): page crash preserves layout; re-navigation retries; remount drops error state; app-declared inner boundary engages first
 
 ## 8. Hydration Retry (stretch — may be deferred)
 

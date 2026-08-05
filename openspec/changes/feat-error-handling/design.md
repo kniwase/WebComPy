@@ -84,10 +84,10 @@ Reactive-update instrumentation targets the framework's own refresh callbacks (t
 
 ### D7: RouterView implicit boundary
 
-`RouterView._get_or_create_component` (`router/_view.py:91`) wraps each chain level's component in an internal `ErrorBoundaryElement` whose fallback renders nothing (empty) by default.
+`RouterView._get_or_create_component` (`router/_view.py:91`) wraps each chain level's component in an internal `ErrorBoundaryElement` whose fallback renders nothing (empty) by default. The router's default (`__default__`) component created via `_get_or_create_default_component` is wrapped in the same implicit boundary, so a crashing 404/default view cannot take down the app either.
 
 - **Isolation**: a failing page level cannot take down an ancestor layout level — each level has its own boundary.
-- **Reset on navigate**: `RouterView._on_match_changed` (`_view.py:150`) resets the implicit boundary if it is in error state. Combined with the level-reuse rule: navigating to an identical match preserves the component, but an errored level retries ("click the same link to retry"); navigating elsewhere destroys the level anyway, so no stale error state survives.
+- **Reset on navigate**: `RouterView._on_match_changed` (`_view.py:150`) resets the implicit boundary if it is in error state. Because `HistoryPort.navigate` de-duplicates identical path+state and `RouteMatch` has structural equality (so the `_level_match` holder Computed does not re-notify on a same-link click), the reset is driven by `Router.after_route_change`, which fires on every `__set_path__` regardless of de-duplication: `RouterView` registers `_on_navigate_attempt` there and resets an errored boundary whose level identity is preserved. Combined with the level-reuse rule: navigating to an identical match preserves the component, but an errored level retries ("click the same link to retry"); navigating elsewhere destroys the level anyway, so no stale error state survives.
 - **Customization**: the implicit boundary's fallback is intentionally minimal (empty). Apps wanting per-route error UI declare their own `ErrorBoundary` inside their page components — explicit boundaries nest inside the implicit one and engage first (D2 nearest-wins).
 
 ### D8: Hydration retry (stretch goal)
