@@ -20,12 +20,12 @@
 
 ## 3. Tests
 
-- [ ] 3.1 Sync matrix: allow/cancel/short-circuit unchanged; `after_route_change` fires before `__set_path__` returns (fast-path synchronicity)
-- [ ] 3.2 Async matrix: awaitable allow/cancel/redirect; deferred `after_route_change`
-- [ ] 3.3 Redirect: target guard chain re-runs; `replace_url` used; depth > 10 → `WebComPyRouterException` via `on_route_error`
-- [ ] 3.4 Latest-wins: pending nav A + nav B → A's continuation abandons (no URL, no signal, no after hooks)
-- [ ] 3.5 URL ownership: cancelled link navigation leaves address bar untouched; programmatic `set_path` pushes URL
-- [ ] 3.6 Guard exception routing (sync raise, async raise, suppressed via `on_route_error`)
+- [x] 3.1 Sync matrix: allow/cancel/short-circuit unchanged; `after_route_change` fires before `__set_path__` returns (fast-path synchronicity)
+- [x] 3.2 Async matrix: awaitable allow/cancel/redirect; deferred `after_route_change`
+- [x] 3.3 Redirect: target guard chain re-runs; `replace_url` used; depth > 10 → `WebComPyRouterException` via `on_route_error`
+- [x] 3.4 Latest-wins: pending nav A + nav B → A's continuation abandons (no URL, no signal, no after hooks)
+- [x] 3.5 URL ownership: cancelled link navigation leaves address bar untouched; programmatic `set_path` pushes URL
+- [x] 3.6 Guard exception routing (sync raise, async raise, suppressed via `on_route_error`)
 
 ## 4. E2E and docs
 
