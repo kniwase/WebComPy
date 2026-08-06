@@ -53,7 +53,7 @@ The invariant → spec mapping reuses the existing "File → Spec Mapping" table
 | Async Signal Callback Execution | `async-rendering/spec.md` |
 | No Bare Asyncio Scheduling | `async-scheduler/spec.md` |
 | Async Dynamic Element Refresh | `async-rendering/spec.md` |
-| Hydration / Hydration Guard | `hydration-data-transfer/spec.md`, `elements/spec.md` |
+| Hydration / Hydration Guard | `hydration-data-transfer/spec.md`, `elements/spec.md`, `async-rendering/spec.md` |
 | Hydration Text-Node Normalization | `elements/spec.md` |
 | Transfer Codec | `transfer-codec/spec.md` |
 | Signal Value Transfer | `signal-value-transfer/spec.md` |
@@ -63,7 +63,7 @@ The invariant → spec mapping reuses the existing "File → Spec Mapping" table
 | FragmentElement | `elements/spec.md` |
 | Scoped CSS / Incremental | `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md` |
 | Head VDOM | `head-vdom/spec.md` |
-| Node Cache Strict is-None Check | `elements/spec.md` |
+| Node Cache Strict is-None Check | `async-rendering/spec.md` |
 | Composable Usage | `composables/spec.md` |
 | Testing Module | `testing-module/spec.md` |
 | Inspect CLI Independence | `inspect-cli/spec.md` |

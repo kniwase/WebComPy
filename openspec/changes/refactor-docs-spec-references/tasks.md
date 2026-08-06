@@ -29,3 +29,11 @@
 - [x] 4.3 Run `uv run ruff check .` and `uv run pyright` — pass
 - [x] 4.4 Run `openspec validate --specs` and `openspec validate --changes` — pass
 - [x] 4.5 Commit on branch `refactor/docs-spec-references` with `refactor:` message and `Co-Authored-By` footer (no push, no PR, no spec sync, no archive)
+
+## 5. Review-fix tasks
+
+- [x] 5.1 Fix `Node Cache Strict is-None Check` reference in `AGENTS.md` from `elements/spec.md` to `async-rendering/spec.md` (requirement lives in `openspec/specs/async-rendering/spec.md`)
+- [x] 5.2 Add `async-rendering/spec.md` to the `Hydration` invariant reference in `AGENTS.md` (hydration guard requirement is in `async-rendering/spec.md`)
+- [x] 5.3 Mirror both reference fixes in the `design.md` D2 invariant → spec mapping table
+- [x] 5.4 Promote the `_reposition_node()` is-None guard detail into `specs/async-rendering/spec.md` (delta spec) — the review skill held this detail but no spec covered it
+- [x] 5.5 Re-run `python3 scripts/check-doc-spec-refs.py`, `openspec validate --specs`, and `openspec validate --changes` — pass

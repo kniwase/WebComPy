@@ -150,12 +150,12 @@ the per-area reference.
 - **Lifecycle Ordering** — `components/spec.md`, `async-rendering/spec.md`
 - **Async Rendering Pipeline** — `async-rendering/spec.md`
 - **DI Scope Rules** — `di-scope/spec.md`
-- **Hydration** — `hydration-data-transfer/spec.md`, `elements/spec.md`
+- **Hydration** — `hydration-data-transfer/spec.md`, `elements/spec.md`, `async-rendering/spec.md`
 - **RouterView Depth and Level Reuse** — `router/spec.md`
 - **Composable Usage** — `composables/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
 - **Head VDOM** — `head-vdom/spec.md`
-- **Node Cache Strict is-None Check** — `elements/spec.md`
+- **Node Cache Strict is-None Check** — `async-rendering/spec.md`
 
 ## File → Spec Mapping
 
