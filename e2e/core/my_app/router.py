@@ -25,6 +25,7 @@ from .pages.nested_docs import (
 from .pages.nested_dynamic import NestedDynamicPage
 from .pages.not_found import NotFound
 from .pages.repeat import RepeatPage
+from .pages.route_guards import GuardAdminPage, GuardLoginPage, auth_guard
 from .pages.scoped_style import ScopedStylePage
 from .pages.signal import ReactivePage
 from .pages.suspense_test import SuspensePage
@@ -75,6 +76,10 @@ router = Router(
     {"path": "/form-fields", "component": FormFieldsPage},
     {"path": "/error-boundary", "component": ErrorBoundaryPage},
     {"path": "/catch-events", "component": CatchEventsPage},
+    {"path": "/login", "component": GuardLoginPage},
+    {"path": "/admin", "component": GuardAdminPage},
     default=NotFound,
     mode="history",
 )
+
+router.before_route_change.append(auth_guard)

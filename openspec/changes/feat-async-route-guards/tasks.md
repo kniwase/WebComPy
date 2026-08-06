@@ -29,8 +29,9 @@
 
 ## 4. E2E and docs
 
-- [ ] 4.1 E2E: protected page + async auth guard → redirect to `/login`; address bar shows `/login`; Back does not loop (`e2e/core/`)
-- [ ] 4.2 Docs: guard examples (async auth, login redirect) on the `docs_app` router page; `uv run python -m webcompy generate` succeeds
+- [x] 4.1 E2E: protected page + async auth guard → redirect to `/login`; address bar shows `/login`; Back does not loop (`e2e/core/`)
+- [x] 4.2 Docs: guard examples (async auth, login redirect) on the `docs_app` router page; `uv run python -m webcompy generate` succeeds
+  - Docs content skipped per user decision (no router docs page exists in docs_app); `webcompy generate` success is covered in verification (step 5).
 
 ## 5. Verification
 
