@@ -28,7 +28,13 @@ Call sites (the only two navigation funnels):
 - `HistoryPort.navigate()` (`ports/_history.py:56-69`) — the push funnel (RouterLink and programmatic `__set_path__` both end here): after `_do_navigate`, call `manager.on_push(old_value, normalized)`.
 - `BrowserHistoryPort._on_popstate()` (`ports/_browser/_history.py:30-44`) — the pop funnel: call `manager.on_pop(old_value, path)` after navigation dispatch (both the `_navigation_callback` override path and the default `_do_navigate` path).
 
-`_do_navigate` is never called directly by user code, and `_on_popstate` does not go through `navigate()`, so each navigation invokes exactly one hook — no double counting.
+`_on_popstate` DOES funnel through `navigate()` when a Router is attached: the popstate callback registered via `set_navigation_callback` is `Router.__set_path__`, which calls `history.navigate()`. To keep each navigation classified exactly once — push-only from `navigate()`, pop-only from `_on_popstate` — `HistoryPort` carries a `_is_pop_dispatch` flag:
+
+- `HistoryPort.__init__` initializes `self._is_pop_dispatch: bool = False`.
+- `BrowserHistoryPort._on_popstate` sets `self._is_pop_dispatch = True` around the dispatch (callback or default `_do_navigate`), restores it in a `finally`, then invokes `manager.on_pop(old_value, path)`.
+- `HistoryPort.navigate()` invokes `manager.on_push(old_value, normalized)` after `_do_navigate` only when `self._is_pop_dispatch` is `False`.
+
+`_do_navigate` is never called directly by user code, so each navigation invokes exactly one hook — no double counting.
 
 ### D2. Save/restore semantics
 

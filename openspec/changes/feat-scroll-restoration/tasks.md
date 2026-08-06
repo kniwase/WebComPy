@@ -2,9 +2,9 @@
 
 ## 1. HistoryPort hook
 
-- [ ] 1.1 Add `ScrollManager` protocol + `set_scroll_manager()` to `ports/_history.py`; invoke `on_push` from `navigate()` after `_do_navigate` (design D1)
-- [ ] 1.2 Invoke `on_pop` from `BrowserHistoryPort._on_popstate` on both dispatch paths (design D1)
-- [ ] 1.3 Unit tests: push/pop classification, exactly-once, same-value early-return silence, no-manager regression
+- [ ] 1.1 Add `ScrollManager` protocol + `set_scroll_manager()` + `_is_pop_dispatch` suppression flag to `ports/_history.py`; invoke `on_push` from `navigate()` after `_do_navigate` only when the flag is `False` (design D1)
+- [ ] 1.2 Invoke `on_pop` from `BrowserHistoryPort._on_popstate` on both dispatch paths, wrapping the dispatch in `_is_pop_dispatch = True` (try/finally) (design D1)
+- [ ] 1.3 Unit tests: push/pop classification, exactly-once, same-value early-return silence, popstate-via-callback does NOT fire `on_push`, no-manager regression
 
 ## 2. ScrollManager
 
@@ -17,10 +17,9 @@
 - [ ] 3.1 Add `scroll_restoration: bool = True` to `WebComPyAppConfig` (`app/_config.py`)
 - [ ] 3.2 Instantiate + register `BrowserScrollManager` where the browser `HistoryPort` is provisioned, gated on `ENVIRONMENT == "pyscript"` and the config flag (design D4); verify SSR/SSG create nothing
 
-## 4. E2E and docs
+## 4. E2E
 
-- [ ] 4.1 E2E: long page → scroll → navigate → assert top → Back → assert restored (add page under `e2e/core/my_app/pages/` + Playwright spec)
-- [ ] 4.2 Document default behavior + opt-out in `docs_app` routing page; verify `uv run python -m webcompy generate`
+- [ ] 4.1 E2E: long page → scroll → navigate → assert top → Back → assert restored (add page under `e2e/core/my_app/pages/` + Playwright spec); register the new test file in `scripts/run-e2e-tests.sh` `E2E_GROUPS["router"]` AND `.github/workflows/ci.yml` router matrix
 
 ## 5. Verification
 
