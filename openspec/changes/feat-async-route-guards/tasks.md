@@ -2,10 +2,10 @@
 
 ## 1. HistoryPort URL ownership
 
-- [ ] 1.1 Add `push_url` / `replace_url` no-op methods to `HistoryPort` (`ports/_history.py`); add recording overrides to `webcompy_testing` fakes (design D4)
-- [ ] 1.2 Implement both in `BrowserHistoryPort` (`ports/_browser/_history.py`) with optional `base_url` ctor param; hash `#` prefix / history base_url prefix; non-serializable state → `None` + warning (logic moved from `_link.py:104-110`)
-- [ ] 1.3 Thread `base_url` through the browser port provisioning site
-- [ ] 1.4 Unit tests: URL building per mode, no-op on server ports, fake recording
+- [x] 1.1 Add `push_url` / `replace_url` no-op methods to `HistoryPort` (`ports/_history.py`); add recording overrides to `webcompy_testing` fakes (design D4)
+- [x] 1.2 Implement both in `BrowserHistoryPort` (`ports/_browser/_history.py`) with optional `base_url` ctor param; hash `#` prefix / history base_url prefix; non-serializable state → `None` + warning (logic moved from `_link.py:104-110`)
+- [x] 1.3 Thread `base_url` through the browser port provisioning site
+- [x] 1.4 Unit tests: URL building per mode, no-op on server ports, fake recording
 
 ## 2. Guard pipeline
 

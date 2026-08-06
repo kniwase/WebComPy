@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 from typing import Any, Literal
 
 from webcompy.exception import WebComPyException
@@ -8,17 +9,45 @@ from webcompy.ports._browser._raw import browser as _raw_browser
 from webcompy.ports._history import HistoryPort
 from webcompy.signal import SignalBase
 from webcompy.utils._environment import ENVIRONMENT
+from webcompy.utils._serialize import is_json_seriarizable
 
 
 class BrowserHistoryPort(HistoryPort):
-    def __init__(self, *, mode: Literal["hash", "history"]) -> None:
+    def __init__(self, *, mode: Literal["hash", "history"], base_url: str = "") -> None:
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("BrowserHistoryPort is only available in browser environment")
         assert _raw_browser is not None
         self._browser = _raw_browser
+        self._base_url = base_url.strip().strip("/")
         super().__init__(self._compute_initial_path(mode), mode=mode)
         self._popstate_handler_proxy = self._browser.pyscript.ffi.create_proxy(self._on_popstate)
         self._browser.window.addEventListener("popstate", self._popstate_handler_proxy)
+
+    def _build_url(self, path: str) -> str:
+        pathname, sep, query = path.partition("?")
+        stripped = pathname.strip("/")
+        url = f"/{stripped}/" if stripped else "/"
+        if sep:
+            url += "?" + query
+        if self._mode == "hash":
+            return "#" + url
+        if self._base_url:
+            return f"/{self._base_url}{url}"
+        return url
+
+    def _serialize_state(self, state: dict[str, Any] | None) -> dict[str, Any] | None:
+        if state is not None and not is_json_seriarizable(state):
+            logging.warning(
+                "History state must be a json-serializable dict; passing None to the browser history entry."
+            )
+            return None
+        return state
+
+    def push_url(self, path: str, state: dict[str, Any] | None = None) -> None:
+        self._browser.window.history.pushState(self._serialize_state(state), None, self._build_url(path))
+
+    def replace_url(self, path: str, state: dict[str, Any] | None = None) -> None:
+        self._browser.window.history.replaceState(self._serialize_state(state), None, self._build_url(path))
 
     def _compute_initial_path(self, mode: Literal["hash", "history"]) -> str:
         location = self._browser.window.location

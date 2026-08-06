@@ -3,12 +3,13 @@ from __future__ import annotations
 import asyncio
 import re
 from collections.abc import Coroutine
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import MagicMock
 
 from webcompy.ports._async_scheduler import AsyncSchedulerPort
 from webcompy.ports._fetch import FetchPort, Response
 from webcompy.ports._ffi import FFIPort
+from webcompy.ports._history import HistoryPort
 from webcompy.ports._host import HostPort
 from webcompy_server.ports._dom import ServerDOMPort
 from webcompy_testing._dom import FakeDOMNode
@@ -141,6 +142,28 @@ class FakeFetchPort(FetchPort):
         raise KeyError(
             f"No canned response registered for {method} {url}. Registered keys: {list(self._responses.keys())}"
         )
+
+
+class FakeHistoryPort(HistoryPort):
+    def __init__(self, *, mode: Literal["hash", "history"] = "history", initial_path: str = "/") -> None:
+        super().__init__(initial_path, mode=mode)
+        self.pushed_urls: list[tuple[str, dict[str, Any] | None]] = []
+        self.replaced_urls: list[tuple[str, dict[str, Any] | None]] = []
+
+    def push_url(self, path: str, state: dict[str, Any] | None = None) -> None:
+        self.pushed_urls.append((path, state))
+
+    def replace_url(self, path: str, state: dict[str, Any] | None = None) -> None:
+        self.replaced_urls.append((path, state))
+
+    def current_search(self) -> str:
+        return ""
+
+    def history_state(self) -> object | None:
+        return self._state
+
+    def refresh_from_window(self) -> None:
+        pass
 
 
 class FakeAsyncSchedulerPort(AsyncSchedulerPort):

@@ -68,6 +68,29 @@ class HistoryPort(SignalBase[str]):
             return
         self._do_navigate(normalized, state)
 
+    def push_url(self, path: str, state: dict[str, Any] | None = None) -> None:
+        """Update the browser address bar via ``history.pushState``.
+
+        Base implementation is a no-op (server environments perform no URL
+        manipulation). Called by the navigation pipeline only AFTER guards
+        pass.
+
+        Args:
+            path: App-internal path (no mode prefix, no base_url).
+            state: Optional history state dict.
+        """
+
+    def replace_url(self, path: str, state: dict[str, Any] | None = None) -> None:
+        """Update the browser address bar via ``history.replaceState``.
+
+        Used when committing a redirect so the intermediate URL never
+        occupies a history entry. Base implementation is a no-op.
+
+        Args:
+            path: App-internal path (no mode prefix, no base_url).
+            state: Optional history state dict.
+        """
+
     def set_navigation_callback(
         self,
         callback: Callable[[str, dict[str, Any] | None], None] | None,
