@@ -14,7 +14,7 @@
 
 ## 3. Verification
 
-- [ ] 3.1 Verify SSR path: first render computes active state with no browser API access
-- [ ] 3.2 `uv run ruff check .` and `uv run ruff format --check .`
-- [ ] 3.3 `uv run pyright`
-- [ ] 3.4 `uv run python -m pytest tests/ --tb=short` (all existing tests MUST pass)
+- [x] 3.1 Verify SSR path: first render computes active state with no browser API access
+- [x] 3.2 `uv run ruff check .` and `uv run ruff format --check .`
+- [x] 3.3 `uv run pyright`
+- [x] 3.4 `uv run python -m pytest tests/ --tb=short` (all existing tests MUST pass)
