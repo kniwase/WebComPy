@@ -104,7 +104,7 @@ are skipped — only OpenSpec validation and AI review run.
 - Type annotations throughout (package includes `py.typed` marker and `.pyi` stubs)
 - No comments in code unless explicitly requested
 - Component classes use decorators: `@component_template`, `@on_before_rendering`
-- Reactive values are defined via `Reactive`, `Computed`, `ReactiveList`, `ReactiveDict`. New transfer-capable state SHOULD be created via `use_state` / `use_reactive_list` / `use_reactive_dict` composables inside component setup so the SSR transfer path works.
+- Reactive state primitives are specified in `openspec/specs/reactive/spec.md` and `openspec/specs/composables/spec.md`. New transfer-capable state SHOULD be created via `use_state` / `use_reactive_list` / `use_reactive_dict` composables inside component setup so the SSR transfer path works.
 
 ### Naming Conventions
 
@@ -137,111 +137,25 @@ are skipped — only OpenSpec validation and AI review run.
 ## Framework Invariants
 
 These are rules that apply across the entire codebase. Violations are 🔴 Must Fix.
+The authoritative requirements live in the owning specs — see the File → Spec Mapping
+table below and the `.opencode/skills/webcompy-review/SKILL.md` invariant headings for
+the per-area reference.
 
-### Dual Environment
-`browser` is `None` on server, a proxy object in browser. Code accessing browser APIs
-without `if browser:` guard is a bug. Server-only imports (uvicorn, starlette) must not
-be imported in browser code paths.
-
-### No New Globals
-`_root_di_scope`, `_default_component_store`, `RouterView._instance` are
-removed/deprecated. Framework services must use `inject()` via DI, not module-level
-singletons. New code must not introduce module-level globals for app-scoped state.
-`_active_app_context` ContextVar references the `RenderContext`, not `WebComPyApp`.
-
-### RenderContext Isolation
-`RenderContext` owns all mutable rendering state per request. `WebComPyApp` is an
-immutable definition holder. `app.create_render_context(path)` creates a fresh context
-with independent DI scope, Router, and ComponentStore. `ctx.dispose()` must clean up
-all resources. SSR paths must use `try/finally: ctx.dispose()`. Signal graph globals
-(`_active_consumer`, `_in_notification_phase`) use ContextVar with module-level
-fallback for PyScript.
-
-### Reactive Contracts
-Signal equality check is `old is new or old == new` — same-value set must NOT trigger
-notifications. Computed is lazily evaluated (only recomputes when read after dirty).
-Computed that returns unchanged result must NOT notify downstream.
-
-### Event Handler Leaks
-Event handlers must be created via `create_proxy()` and `destroy()`ed on removal.
-Missing `destroy()` is a PyScript memory leak.
-
-### Error Handling
-`ErrorBoundary` catches descendant setup/render errors and swaps to `fallback(error, reset)`.
-Error discovery walks the element parent chain: `on_error_captured` hooks nearest-first
-(returning `False` vetoes propagation), then the nearest boundary engages; hooks above an
-engaged boundary are never called. A boundary never catches its own fallback (walk skips
-boundaries in `_in_fallback`/`_swapping` state). Event-handler errors go to the global
-handler (`WebComPyAppConfig.on_error`, else log) unless a `catch_events=True` boundary
-claims them. `WebComPyException` (framework validation) bypasses routing and propagates.
-SSR renders engaged fallbacks and survives; SSG re-raises (`ERROR_POLICY_KEY="ssg"`) and
-fails the build. Signal consumer notification is isolated per consumer — one failing
-consumer must not block siblings.
-
-### Lifecycle Ordering
-`on_after_rendering` during route navigation (`RouterView._on_match_changed()`) must be
-deferred, not synchronous in the callback chain. Component setup must restore
-`_active_di_scope` ContextVar on exit.
-
-### Async Rendering Pipeline
-All `*_render()` methods (element/component/root) are `async def` and MUST be `await`ed;
-`_mount_node()` stays synchronous. Sibling children render sequentially via
-`for child in children: await child._render()`. Lifecycle hooks may be `async def`;
-`Component._render()` detects them via `iscoroutinefunction()` and awaits.
-
-### DI Scope Rules
-`provide()` lazily creates a child DI scope. `inject()` traverses the chain upward —
-closest scope wins. Component destruction must dispose its DI child scope.
-
-### Hydration
-`_hydrate_node()` adopts existing prerendered nodes, never creates new ones.
-`AppDocumentRoot._render()` MUST call `child._hydrate_node()` ONLY inside the
-`if self._app and self._app._hydrate and not self.__hydrated:` guard block.
-
-### RouterView Depth and Level Reuse
-`RouterView` computes its depth by counting `RouterView` ancestors at match time
-(NOT in `_on_set_parent`, where the parent chain is incomplete during component
-setup) and renders chain level N; a chain shorter than the depth renders nothing.
-A level's component instance is preserved only when its route node, accumulated
-`path_params` (levels 0..N), and `query` are identical to the previous navigation —
-otherwise that level and all deeper levels are destroyed and re-created. Each view
-subscribes to its own holder `Computed` over `router.current_match` (per-view
-subscription isolation — the holder keeps a view's callback local to its lifetime;
-a shared Computed with multiple consumers now notifies every consumer, so the holder
-is an isolation boundary rather than a workaround for dropped consumers). The depth-0
-view renders `router.__default__()` when nothing matches. `RouterView._hydrate_node()`
-MUST NOT eagerly hydrate the routed component — the scheduled `child._render()` must
-adopt the prerendered nodes AND complete setup (signal subscriptions, lifecycle
-hooks), or interactive updates on hydrated pages silently break. Each chain level (and
-the default component) is wrapped in an implicit `ErrorBoundary` whose fallback renders
-nothing; an errored level resets on navigation via `Router.after_route_change`
-(`_on_navigate_attempt`), because same-path navigations are de-duplicated by
-`HistoryPort.navigate` and `RouteMatch` structural equality.
-
-### Composable Usage
-`use_state()` / `use_reactive_list()` / `use_reactive_dict()` MUST be called from inside a
-component setup function (synchronously or inside an `await` of an async setup). They MUST
-NOT be called from event handlers, `on_after_rendering` callbacks, or any other context
-outside the initial component setup — such calls return a non-transferable Signal and emit a
-`UserWarning`. Per-row state SHOULD be lifted into a child `@define_component` rather than
-created in event handlers.
-
-### Scoped CSS
-At-rules (`@media`, `@supports`) must NOT receive the `[webcompy-cid-{id}]` attribute
-selector. Each component's scoped CSS SHALL be a separate `<style data-webcompy-cid="...">`
-element. `_reconcile_scoped_styles()` SHALL be idempotent.
-
-### Head VDOM
-Head content SHALL be managed via `HeadElement` (extends `ElementWithChildren`),
-not through imperative `AppDocumentRoot` methods.
-
-### Node Cache Strict is-None Check
-`_get_node()` MUST use `if self._node_cache is None:` (not truthiness) — stale
-PyScript PyProxy objects can evaluate falsy even when wrapping valid DOM nodes.
-
-See `.opencode/skills/webcompy-review/SKILL.md` for the complete invariant reference including
-async signal callback semantics, dynamic element refresh, hydration guard details,
-and testing module requirements.
+- **Dual Environment** — `architecture/spec.md`
+- **No New Globals** — `architecture/spec.md`, `di-scope/spec.md`
+- **RenderContext Isolation** — `render-context/spec.md`
+- **Reactive Contracts** — `reactive/spec.md`, `effect/spec.md`
+- **Event Handler Leaks** — `elements/spec.md`
+- **Error Handling** — `error-handling/spec.md`
+- **Lifecycle Ordering** — `components/spec.md`, `async-rendering/spec.md`
+- **Async Rendering Pipeline** — `async-rendering/spec.md`
+- **DI Scope Rules** — `di-scope/spec.md`
+- **Hydration** — `hydration-data-transfer/spec.md`, `elements/spec.md`, `async-rendering/spec.md`
+- **RouterView Depth and Level Reuse** — `router/spec.md`
+- **Composable Usage** — `composables/spec.md`
+- **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
+- **Head VDOM** — `head-vdom/spec.md`
+- **Node Cache Strict is-None Check** — `async-rendering/spec.md`
 
 ## File → Spec Mapping
 
@@ -339,11 +253,15 @@ Reusable knowledge lives in skills under `.opencode/skills/`. OpenCode auto-load
 
 ## Review Knowledge Maintenance
 
-When specs are added, modified, or removed, update:
+`openspec/specs/` is the single source of truth for requirements and API naming. Universal docs (`AGENTS.md`, `CONTRIBUTING.*`, `.opencode/skills/*/SKILL.md`) SHALL reference specs, not transcribe them. When specs are added, modified, or removed, update:
 
 1. The **File → Spec Mapping** table above
-2. The **Critical Framework Invariants** section in `.opencode/skills/webcompy-review/SKILL.md`
+2. The **Framework Invariants** list above and the **Critical Framework Invariants** section in `.opencode/skills/webcompy-review/SKILL.md` (headings + spec references)
 3. The **Current Specs List** below
+4. Any referencing doc whose spec reference now dangles or whose transcribed content is stale
+5. Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+
+When a public API is renamed, add the retired name to the blocklist in `scripts/check-doc-spec-refs.py` so docs referencing it fail validation.
 
 ## Current Specs
 
@@ -408,6 +326,7 @@ When specs are added, modified, or removed, update:
 | `payload-compression` | Optional gzip compression of the hydration data transfer payload via stdlib `zlib`/`base64`, threshold-based activation, `__webcompy_compressed__` envelope flag |
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
 | `test-execution-paths` | Physical separation between unit (`tests/`) and E2E (`e2e/`) tests; opt-in `WEBCOMPY_RUN_E2E=1` env var gate; `scripts/run-e2e-tests.sh` canonical entry point |
+| `doc-spec-references` | Governance of how universal docs reference `openspec/specs/`; retired API-name blocklist; `scripts/check-doc-spec-refs.py` guardrail |
 
 ## Language Rules
 
