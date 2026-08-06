@@ -40,6 +40,8 @@ jobs:
           node-version: 24
       - run: npx @fission-ai/openspec@latest validate --specs
       - run: npx @fission-ai/openspec@latest validate --changes
+      - name: Validate doc spec references
+        run: python3 scripts/check-doc-spec-refs.py
 
   openspec-check:
     if: github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft

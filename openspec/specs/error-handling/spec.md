@@ -99,3 +99,13 @@ When SSR output contains a boundary fallback (marked with `data-webcompy-error-f
 - **WHEN** SSR rendered a boundary fallback (e.g., SSR-time fetch failed) and the client hydrate succeeds for the rest of the page
 - **THEN** the boundary SHOULD attempt children rendering once on the client
 - **AND** on success the children SHALL replace the fallback
+
+### Requirement: Framework validation errors shall bypass error routing
+
+`WebComPyException` (framework validation, e.g. duplicate `repeat()` keys) SHALL NOT enter the error-boundary propagation walk. It SHALL propagate as a hard failure directly to the caller, bypassing `on_error_captured` hooks, `ErrorBoundary` engagement, and the global error handler.
+
+#### Scenario: Duplicate repeat key propagates as hard failure
+
+- **WHEN** a `repeat()` key function returns the same key for two items inside an `ErrorBoundary`
+- **THEN** the `WebComPyException` SHALL propagate past the boundary without engaging its fallback
+- **AND** `on_error` on any boundary SHALL NOT be invoked for this error

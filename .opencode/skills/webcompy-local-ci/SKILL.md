@@ -44,6 +44,13 @@ Execute these commands in order. Stop on the first failure unless instructed oth
    ```
    - Only if openspec/ files were changed and @fission-ai/openspec is installed
 
+7. **Doc Spec Reference Check**
+   ```bash
+   python3 scripts/check-doc-spec-refs.py
+   ```
+   - Validates that universal docs reference existing OpenSpec specs and contain no retired API names
+   - Run when AGENTS.md, CONTRIBUTING.*, `.opencode/skills/`, or `openspec/` files were changed
+
 ## Reporting Format
 
 After all checks complete, produce a summary:

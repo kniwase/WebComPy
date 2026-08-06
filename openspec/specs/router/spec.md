@@ -209,6 +209,16 @@ For each chain level, the mounted component instance SHALL be preserved across a
 - **THEN** B's stale render SHALL NOT commit positioning or deferred `on_after_rendering` callbacks after C has committed
 - **AND** the defer scope SHALL be balanced (depth returns to its pre-navigation value)
 
+### Requirement: RouterView shall subscribe through its own holder Computed
+
+Each `RouterView` SHALL subscribe to `router.current_match` through its OWN holder `Computed` (`self._level_match = Computed(lambda: router.current_match.value)`) rather than registering directly on the shared `router.current_match`. The holder SHALL keep the view's subscription local to the view's lifetime — destroying the view SHALL destroy only its holder edge — and SHALL preserve per-view notification semantics.
+
+#### Scenario: View destruction removes only its own subscription
+
+- **WHEN** a `RouterView` is destroyed while other views at other depths remain mounted
+- **THEN** the destroyed view's holder `Computed` edge SHALL be removed from `router.current_match`
+- **AND** the remaining views' subscriptions SHALL continue to receive notifications
+
 ### Requirement: Nested routes shall integrate with lazy loading, hooks, and SSG
 Lazy components (`lazy()`) SHALL be allowed at any tree level; preloading SHALL traverse the whole tree, deduplicating a `LazyComponentGenerator` shared by multiple sibling branches (preloaded at most once per traversal). Already-resolved lazy generators SHALL be re-registered into the active render-context component store on every resolution (idempotent by name), so a lazy component resolved during an earlier request remains registered in later requests' fresh stores. Router hooks SHALL fire once per navigation (not per level). `Router._clone_for_request()` SHALL copy the navigation hook registrations so hooks registered on `app.router` exist on the injected per-request router.
 
