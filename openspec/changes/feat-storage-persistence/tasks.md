@@ -21,9 +21,10 @@
 
 ## 4. Verification
 
-- [ ] 4.1 `uv run ruff check .` and `uv run ruff format --check .`
-- [ ] 4.2 `uv run pyright`
-- [ ] 4.3 `uv run python -m pytest tests/ --tb=short` (all existing tests MUST pass)
+- [x] 4.1 `uv run ruff check .` and `uv run ruff format --check .`
+- [x] 4.2 `uv run pyright`
+- [x] 4.3 `uv run python -m pytest tests/ --tb=short` (all existing tests MUST pass)
+- [x] 4.4 `scripts/run-e2e-tests.sh` (all groups, prod + static modes) MUST pass
 
 ## 5. Housekeeping (at archive time)
 
