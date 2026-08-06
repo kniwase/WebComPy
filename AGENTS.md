@@ -164,6 +164,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | Changed files | Specs to read |
 |---|---|
 | `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md`, `signal-value-transfer/spec.md`, `error-handling/spec.md` |
+| `webcompy/storage/` | `composables/spec.md` |
 | `webcompy/template/_css_parser.py`, `webcompy/template/_css_template.py` | `template-engine/spec.md` |
 | `webcompy/template/`, `webcompy/template/_expression.py` | `template-engine/spec.md` |
 | `webcompy/template/_markdown_default.py` | `template-engine/spec.md`, `markdown-conformance/spec.md` |
