@@ -230,7 +230,7 @@ The `Co-Authored-By` footer is required on every commit.
 - Package management with `uv` — use `uv add` and `uv lock`
 - No comments in code unless explicitly requested
 - Component classes use `@component_template`, `@on_before_rendering`
-- Reactive values defined via `Reactive`, `Computed`, `ReactiveList`, `ReactiveDict`
+- Reactive state primitives are specified in `openspec/specs/reactive/spec.md` and `openspec/specs/composables/spec.md`
 See [AGENTS.md](AGENTS.md#framework-invariants) for critical invariants
 (dual-environment architecture, DI scope rules, reactive contracts, etc.).
 

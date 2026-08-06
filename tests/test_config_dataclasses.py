@@ -14,6 +14,7 @@ class TestWebComPyAppConfig:
         assert config.selector == "#webcompy-app"
         assert config.profile is False
         assert config.hydrate is True
+        assert config.scroll_restoration is True
         assert config.scripts == []
         assert config.plugins == []
         assert config.compression_threshold == 1024
@@ -61,6 +62,14 @@ class TestWebComPyAppConfig:
     def test_hydrate_disabled(self):
         config = WebComPyAppConfig(hydrate=False)
         assert config.hydrate is False
+
+    def test_scroll_restoration_default(self):
+        config = WebComPyAppConfig()
+        assert config.scroll_restoration is True
+
+    def test_scroll_restoration_disabled(self):
+        config = WebComPyAppConfig(scroll_restoration=False)
+        assert config.scroll_restoration is False
 
     def test_theme_default_is_none(self):
         config = WebComPyAppConfig()
