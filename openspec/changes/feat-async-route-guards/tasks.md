@@ -35,6 +35,8 @@
 
 ## 5. Verification
 
-- [ ] 5.1 `uv run ruff check .` / `uv run ruff format --check .` / `uv run pyright`
-- [ ] 5.2 `uv run python -m pytest tests/ --tb=short` (all existing tests MUST pass — watch existing router-hooks tests for fast-path regressions)
-- [ ] 5.3 Relevant e2e groups via `scripts/run-e2e-tests.sh`
+- [x] 5.1 `uv run ruff check .` / `uv run ruff format --check .` / `uv run pyright`
+- [x] 5.2 `uv run python -m pytest tests/ --tb=short` (all existing tests MUST pass — watch existing router-hooks tests for fast-path regressions)
+- [x] 5.3 Relevant e2e groups via `scripts/run-e2e-tests.sh` (ALL groups, prod + static — 32/32 passed)
+  - Also: `uv run python -m webcompy generate --config docs_app.webcompy_config` succeeds (docs build)
+  - Also: SSR/SSG renders await pending async navigations before serialization (fix commit 385a946)
