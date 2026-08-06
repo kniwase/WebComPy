@@ -116,6 +116,17 @@ class TestReadWriteHelpers:
         assert fake.set_calls == []
         assert isinstance(sig.value, object)
 
+    def test_circular_reference_warns_and_skips_write(self, caplog):
+        fake = FakeStorage()
+        sig = storage_composable._make("data", None, fake)
+        circular: list[Any] = []
+        circular.append(circular)
+        with caplog.at_level(std_logging.WARNING, logger="uvicorn"):
+            sig.value = circular
+        assert any("not JSON-serializable" in r.message for r in caplog.records)
+        assert fake.set_calls == []
+        assert sig.value is circular
+
     def test_setitem_failure_swallowed(self, caplog):
         fake = FakeStorage(fail_on_set=True)
         sig = storage_composable._make("k", 0, fake)

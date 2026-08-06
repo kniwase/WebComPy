@@ -111,9 +111,17 @@ _MISSING: Final = object()
 def _resolve_default(default: T | Callable[[], T]) -> T:
     return default() if callable(default) else default
 
+def _is_missing(raw: Any) -> bool:
+    # PyScript proxies JS `null` to a PyProxy that is NOT Python `None`
+    if raw is None:
+        return True
+    if ENVIRONMENT == "pyscript":
+        return _pyscript_ffi_is_none(raw)
+    return False
+
 def _read(storage: Any, key: str, default: T | Callable[[], T]) -> T:
     raw = storage.getItem(key)
-    if raw is None:
+    if _is_missing(raw):
         return _resolve_default(default)
     try:
         return json.loads(str(raw))
@@ -124,7 +132,7 @@ def _read(storage: Any, key: str, default: T | Callable[[], T]) -> T:
 def _write(storage: Any, key: str, value: Any) -> None:
     try:
         payload = json.dumps(value)
-    except TypeError:
+    except (TypeError, ValueError):
         logging.warning("webcompy storage: value for key %r is not JSON-serializable; write skipped", key)
         return
     try:

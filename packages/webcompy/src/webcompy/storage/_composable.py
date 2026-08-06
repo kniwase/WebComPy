@@ -58,7 +58,7 @@ def _read(storage: Any, key: str, default: T | Callable[[], T]) -> T:
 def _write(storage: Any, key: str, value: Any) -> None:
     try:
         payload = json.dumps(value)
-    except TypeError:
+    except (TypeError, ValueError):
         logging.warning(f"webcompy storage: value for key {key!r} is not JSON-serializable; write skipped")
         return
     try:

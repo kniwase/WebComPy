@@ -26,3 +26,15 @@ def test_session_storage_write(page_on):
     page.locator("[data-testid='draft-btn']").click()
     expect(page.locator("[data-testid='draft']")).to_have_text("hello")
     assert page.evaluate("window.sessionStorage.getItem('e2e-draft')") == '"hello"'
+
+
+def test_session_storage_persists_across_reload(page_on, console_messages):
+    page = page_on("/storage")
+    expect(page.locator("[data-testid='draft']")).to_have_text("")
+
+    page.locator("[data-testid='draft-btn']").click()
+    expect(page.locator("[data-testid='draft']")).to_have_text("hello")
+
+    page.reload()
+    _wait_for_pyscript_init(page, console_messages)
+    expect(page.locator("[data-testid='draft']")).to_have_text("hello")
