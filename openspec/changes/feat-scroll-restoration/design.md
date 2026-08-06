@@ -81,7 +81,8 @@ The manager is only instantiated in the browser and all scroll APIs are reached 
 | Same-path navigation | `HistoryPort.navigate` early-returns on unchanged value+state (line 67-68) → hooks not called → scroll untouched |
 | Programmatic `set_path` | goes through `navigate()` → treated as push → top (correct) |
 | Direct hash edit / external anchor | arrives via popstate → treated as pop → restore-or-top |
-| Page shorter than viewport | `max_y <= 0` → `scrollTo(x, 0)`; no retry loop |
+| Page shorter than viewport, saved `y == 0` | `max_y <= 0` and `y == 0` (the natural case — a short page can only have `scrollY == 0`) → `scrollTo(x, 0)`; no retry loop |
+| Page currently shorter than viewport with saved `y > 0` | async content pending (Suspense fallback, lazy route chunk) → retried per D3 and restored once the document grows; after 3 attempts clamped to `scrollTo(x, 0)` (spec: "Restore waits for async content") |
 | Saved position, content never grows | after 3 retries, clamp to max scrollable |
 | Reload on same URL | positions map is in-memory → lost → top (acceptable; browsers still native-restore only if app opted out) |
 | Opt-out | config flag; zero side effects |
