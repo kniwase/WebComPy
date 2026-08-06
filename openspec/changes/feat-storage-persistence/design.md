@@ -42,7 +42,7 @@ Rationale for a new package rather than `signal/_composable.py`: storage access 
 
 Creation (browser path):
 
-1. `raw = storage.getItem(key)` (PyScript proxy call; returns `None`/`null` when absent — treat both as missing).
+1. `raw = storage.getItem(key)`. Absence detection must handle the PyScript JS interop reality: a missing key returns a JS `null` proxy which is NOT Python `None` (verified in E2E — a naive `raw is None` check would fall through to `json.loads` and spam "corrupted" warnings on every first visit). Missing is therefore detected via `_is_missing(raw)`: `raw is None` (CPython/tests) OR, under `ENVIRONMENT == "pyscript"`, `pyscript.ffi.is_none(raw)` (same API as `router/_history.py:39`).
 2. If missing → initial value = `_resolve_default()`.
 3. Else `json.loads(str(raw))`; on `json.JSONDecodeError`/`TypeError`/`ValueError` → `logging.warning(...)` and initial value = `_resolve_default()`. The corrupted entry is left in place (the next successful write overwrites it); it is NOT deleted automatically.
 

@@ -60,6 +60,29 @@ class TestReadWriteHelpers:
         sig = storage_composable._make("theme", "light", FakeStorage())
         assert sig.value == "light"
 
+    def test_missing_key_with_js_null_proxy(self, monkeypatch):
+        class NullProxy:
+            pass
+
+        fake = FakeStorage()
+        monkeypatch.setattr(storage_composable, "ENVIRONMENT", "pyscript")
+        monkeypatch.setattr(storage_composable, "_pyscript_ffi_is_none", lambda raw: isinstance(raw, NullProxy))
+
+        def getitem(key):
+            return NullProxy() if key not in fake._data else fake._data[key]
+
+        monkeypatch.setattr(fake, "getItem", getitem)
+        sig = storage_composable._make("missing", "fallback", fake)
+        assert sig.value == "fallback"
+
+    def test_is_missing_helpers(self, monkeypatch):
+        assert storage_composable._is_missing(None) is True
+        assert storage_composable._is_missing("x") is False
+        monkeypatch.setattr(storage_composable, "ENVIRONMENT", "pyscript")
+        monkeypatch.setattr(storage_composable, "_pyscript_ffi_is_none", lambda raw: raw == "jsnull")
+        assert storage_composable._is_missing("jsnull") is True
+        assert storage_composable._is_missing("x") is False
+
     def test_missing_key_uses_default_factory(self):
         calls: list = []
 
@@ -139,6 +162,7 @@ class TestServerPath:
 class TestBrowserPath:
     def _patch(self, monkeypatch, fake, *, session: bool = False):
         monkeypatch.setattr(storage_composable, "ENVIRONMENT", "pyscript")
+        monkeypatch.setattr(storage_composable, "_pyscript_ffi_is_none", lambda raw: False)
         monkeypatch.setattr(
             storage_composable,
             "_session_storage" if session else "_local_storage",

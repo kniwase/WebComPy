@@ -30,9 +30,23 @@ def _resolve_default(default: T | Callable[[], T]) -> T:
     return cast("T", default)
 
 
+def _pyscript_ffi_is_none(raw: Any) -> bool:
+    from pyscript import ffi as _pyscript_ffi  # type: ignore[import-untyped]
+
+    return bool(_pyscript_ffi.is_none(raw))
+
+
+def _is_missing(raw: Any) -> bool:
+    if raw is None:
+        return True
+    if ENVIRONMENT == "pyscript":
+        return _pyscript_ffi_is_none(raw)
+    return False
+
+
 def _read(storage: Any, key: str, default: T | Callable[[], T]) -> T:
     raw = storage.getItem(key)
-    if raw is None:
+    if _is_missing(raw):
         return _resolve_default(default)
     try:
         return cast("T", json.loads(str(raw)))

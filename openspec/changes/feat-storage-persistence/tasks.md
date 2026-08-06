@@ -12,6 +12,7 @@
 - [x] 2.2 Server-path test: no storage access in non-PyScript env (assert helper-level isolation and `Reactive(default)` return)
 - [x] 2.3 Outside-setup call emits no warning
 - [x] 2.4 Component integration via `webcompy_testing` TestRenderer: signal usable in template and updates trigger writes
+- [x] 2.5 E2E: storage page in `e2e/core/my_app/pages/storage.py` + `e2e/core/test_storage.py` + register in `interaction` group (run-e2e-tests.sh and ci.yml)
 
 ## 3. Docs
 

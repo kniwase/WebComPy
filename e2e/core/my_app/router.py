@@ -27,6 +27,7 @@ from .pages.not_found import NotFound
 from .pages.repeat import RepeatPage
 from .pages.scoped_style import ScopedStylePage
 from .pages.signal import ReactivePage
+from .pages.storage import StoragePage
 from .pages.suspense_test import SuspensePage
 from .pages.switch_test import SwitchPage
 from .pages.template import TemplatePage
@@ -73,6 +74,7 @@ router = Router(
     },
     {"path": "/two-way-binding", "component": TwoWayBindingPage},
     {"path": "/form-fields", "component": FormFieldsPage},
+    {"path": "/storage", "component": StoragePage},
     {"path": "/error-boundary", "component": ErrorBoundaryPage},
     {"path": "/catch-events", "component": CatchEventsPage},
     default=NotFound,
