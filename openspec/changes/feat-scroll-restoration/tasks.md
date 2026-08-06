@@ -29,4 +29,4 @@
 
 ## 6. Housekeeping (at archive time)
 
-- [ ] 6.1 Update `AGENTS.md` File→Spec Mapping (`webcompy/router/_scroll.py` → `scroll-restoration`; `ports/_history.py` → `port-abstraction` + `scroll-restoration`) and Current Specs list
+- [x] 6.1 Update `AGENTS.md` File→Spec Mapping (`webcompy/router/_scroll.py` → `scroll-restoration`; `ports/_history.py` → `port-abstraction` + `scroll-restoration`) and Current Specs list
