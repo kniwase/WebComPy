@@ -305,7 +305,7 @@ class BrowserRenderContext(RenderContext):
         self._di_scope.provide(MEDIA_QUERY_PORT_KEY, BrowserMediaQueryPort())
         self._di_scope.provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
 
-        if self._config.scroll_restoration:
+        if self._config.scroll_restoration and ENVIRONMENT == "pyscript":
             from webcompy.ports._browser._raw import browser as _raw_browser
             from webcompy.router._scroll import BrowserScrollManager
 
