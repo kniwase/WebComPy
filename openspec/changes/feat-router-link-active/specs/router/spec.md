@@ -6,7 +6,7 @@
 
 `RouterLink` SHALL accept optional keyword arguments `active_class: str | SignalBase[str] | None = None` and `exact: bool = False`. While the link's target path matches the current route, the rendered anchor SHALL include the active class in its `class` attribute and SHALL carry `aria-current="page"`; when not active, neither SHALL be present. When `active_class` is `None`, the link SHALL render exactly as before (no subscription, no matching).
 
-Matching SHALL compare path portions only (query string ignored). With `exact=False` (default), a target `T` matches current path `C` when `C == T` or `C` starts with `T + "/"`. The root target `/` SHALL always be matched exactly. With `exact=True`, only `C == T` matches. When no route matches (`current_match is None`), the link SHALL NOT be active.
+Matching SHALL compare path portions only (query string ignored). With `exact=False` (default), a target `T` matches current path `C` when `C == T` or `C` starts with `T + "/"`. Both `C` and `T` SHALL be normalized (leading slash, no trailing slash) before comparison, so `to="/docs"` matches the current path `/docs/`. The root target `/` SHALL always be matched exactly. With `exact=True`, only `C == T` matches. When no route matches (`current_match is None`), the link SHALL NOT be active.
 
 Active state SHALL be reactive: after any client-side navigation, affected links SHALL update their attributes without user code. The initial SSR/SSG render SHALL compute active state from the request path so generated HTML is already correct.
 
@@ -20,6 +20,11 @@ Active state SHALL be reactive: after any client-side navigation, affected links
 - **GIVEN** a `RouterLink` with `to="/docs"` and `active_class="active"`
 - **WHEN** the current route is `/docsx`
 - **THEN** the anchor SHALL NOT include `active` and SHALL NOT carry `aria-current`
+
+#### Scenario: Trailing slash normalization
+- **GIVEN** a `RouterLink` with `to="/docs"` and `active_class="active"`
+- **WHEN** the current route is `/docs/` (trailing slash)
+- **THEN** the anchor SHALL include `active`
 
 #### Scenario: Root link matches exactly
 - **GIVEN** a `RouterLink` with `to="/"` and `active_class="active"`

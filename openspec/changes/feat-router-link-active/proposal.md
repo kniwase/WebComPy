@@ -29,7 +29,7 @@ Navigation menus are the most common UI in any routed app, and every one of them
 
 ## Impact
 
-- **Code**: `packages/webcompy/src/webcompy/router/_link.py` only (new kwargs, match computation, `current_match` subscription reusing the existing `_add_callback_node` + `_refresh` pattern, attr merging in `_generate_attrs`).
+- **Code**: `packages/webcompy/src/webcompy/router/_link.py` only (new kwargs, match computation, `Computed`-based `class`/`aria-current` attribute values reusing the element attr-updater mechanism, attr merging in `_generate_attrs`).
 - **Specs**: delta to `openspec/specs/router/spec.md`.
 - **Docs**: router documentation page in `docs_app` gains an active-link section.
 - **Tests**: unit tests via `webcompy_testing` for each matching rule and reactive update; docs demo unaffected.
