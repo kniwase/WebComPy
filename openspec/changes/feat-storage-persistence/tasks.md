@@ -2,8 +2,8 @@
 
 ## 1. Implementation
 
-- [ ] 1.1 Create `packages/webcompy/src/webcompy/storage/__init__.py` and `_composable.py` per design D1–D4 (`use_local_storage`, `use_session_storage`, `_read`, `_write`, `_make`, overloads, `ENVIRONMENT` guard, `pyscript.context.window` access in browser branch only)
-- [ ] 1.2 Export both composables from `webcompy/__init__.py` (top-level) alongside the existing `use_*` exports
+- [x] 1.1 Create `packages/webcompy/src/webcompy/storage/__init__.py` and `_composable.py` per design D1–D4 (`use_local_storage`, `use_session_storage`, `_read`, `_write`, `_make`, overloads, `ENVIRONMENT` guard, `pyscript.context.window` access in browser branch only)
+- [x] 1.2 Export both composables from `webcompy/__init__.py` (top-level) alongside the existing `use_*` exports
 - [ ] 1.3 Confirm no SSR transfer registration occurs for storage signals (design D5)
 
 ## 2. Tests

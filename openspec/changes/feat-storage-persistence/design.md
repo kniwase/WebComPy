@@ -84,6 +84,16 @@ Storage format is plain `json.dumps` output. Rationale: human-readable/editable 
 
 All storage interaction is isolated in two module-private helpers `_read(storage, key, default)` / `_write(storage, key, value)` taking the storage object as a parameter, with the public composables resolving the storage object (or `None` on server) and delegating. Unit tests exercise the helpers with a simple `dict`-backed fake (`getItem`/`setItem`), and the environment guard by asserting the server path performs no storage access.
 
+### D10. Explicit value typing via variable annotation
+
+Python has no call-site syntax for explicit type arguments to function calls, so a wider value type (e.g. `str | None`) is declared by annotating the target variable and relying on pyright's expected-type (bidirectional) inference:
+
+```python
+theme: Signal[str | None] = use_local_storage("theme", None)
+```
+
+The overloads are ordered **factory-first, value-second** so that a callable `default` always matches the factory overload (`Signal[() -> int]` would otherwise be inferred for `use_local_storage("k", lambda: 0)`). The typing pattern is CI-verified via a `TYPE_CHECKING` block in `_composable.py` (package code is pyright-checked; `tests/` is not). Making `Signal` covariant (`V_co`) to relax assignability is a non-goal — it would touch the reactive core.
+
 ## Code Structure
 
 ```
