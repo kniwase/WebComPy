@@ -8,9 +8,9 @@
 
 ## 2. Tests
 
-- [ ] 2.1 Unit tests via `webcompy_testing` (`tests/test_router_link_active.py`): all spec scenarios — prefix, segment boundary, root exact, trailing-slash normalization, `exact=True`, query ignored, 404 never-active, reactive toggle on `__set_path__`, reactive `active_class` signal change at runtime, SSR initial render
-- [ ] 2.2 Regression: `active_class=None` renders byte-identical attrs to before (no `aria-current`, no `class` modification, no extra subscriptions)
-- [ ] 2.3 User `class` as plain str merges with active class; user `class` as signal stays reactive (merged string updates on both navigation and user-class signal change)
+- [x] 2.1 Unit tests via `webcompy_testing` (`tests/test_router_link_active.py`): all spec scenarios — prefix, segment boundary, root exact, trailing-slash normalization, `exact=True`, query ignored, 404 never-active, reactive toggle on `__set_path__`, reactive `active_class` signal change at runtime, SSR initial render
+- [x] 2.2 Regression: `active_class=None` renders byte-identical attrs to before (no `aria-current`, no `class` modification, no extra subscriptions)
+- [x] 2.3 User `class` as plain str merges with active class; user `class` as signal stays reactive (merged string updates on both navigation and user-class signal change)
 
 ## 3. Verification
 
