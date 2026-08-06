@@ -183,8 +183,9 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/forms/` | `forms/spec.md` |
 | `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md`, `error-handling/spec.md` |
+| `webcompy/router/_scroll.py` | `scroll-restoration/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md` |
-| `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md` |
+| `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md`, `scroll-restoration/spec.md` |
 | `webcompy/ports/_markdown.py` | `port-abstraction/spec.md` |
 | `webcompy/ports/_resource.py`, `webcompy_server/ports/_resource.py` | `resource-port/spec.md` |
 | `webcompy_server/ports/` | `virtual-dom/spec.md`, `server-fetch-asgi/spec.md`, `async-scheduler/spec.md` |
@@ -285,6 +286,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `head-vdom` | Declarative head element management via `HeadElement` VDOM |
 | `router` | Client-side routing, hash/history modes, path params |
 | `router-hooks` | Navigation lifecycle callbacks |
+| `scroll-restoration` | Window scroll management across navigations: scroll-to-top on push, position restore on Back/Forward, `scrollRestoration="manual"`, config opt-out, post-render scheduling with bounded retry |
 | `app` | Application bootstrapping, hydration, head management |
 | `app-lifecycle` | App start/run/shutdown across browser and server entry points |
 | `app-config` | AppConfig, ServerConfig, GenerateConfig dataclasses |

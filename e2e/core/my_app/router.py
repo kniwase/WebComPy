@@ -26,6 +26,7 @@ from .pages.nested_dynamic import NestedDynamicPage
 from .pages.not_found import NotFound
 from .pages.repeat import RepeatPage
 from .pages.scoped_style import ScopedStylePage
+from .pages.scroll_restoration import ScrollLongPage, ScrollTargetPage
 from .pages.signal import ReactivePage
 from .pages.storage import StoragePage
 from .pages.suspense_test import SuspensePage
@@ -49,6 +50,8 @@ router = Router(
     {"path": "/nested-dynamic", "component": NestedDynamicPage},
     {"path": "/lifecycle", "component": LifecyclePage},
     {"path": "/scoped-style", "component": ScopedStylePage},
+    {"path": "/scroll-long", "component": ScrollLongPage},
+    {"path": "/scroll-target", "component": ScrollTargetPage},
     {"path": "/async-nav", "component": AsyncNavPage},
     {"path": "/suspense", "component": SuspensePage},
     {"path": "/client-only", "component": ClientOnlyPage},

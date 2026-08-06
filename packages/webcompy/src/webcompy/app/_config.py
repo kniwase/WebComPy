@@ -22,6 +22,7 @@ class WebComPyAppConfig:
     selector: str = "#webcompy-app"
     profile: bool = False
     hydrate: bool = True
+    scroll_restoration: bool = True
     scripts: list[PluginScript] = field(default_factory=list)
     plugins: list[str] = field(default_factory=list)
     theme: dict | None = None
