@@ -2,9 +2,9 @@
 
 ## 1. HistoryPort hook
 
-- [ ] 1.1 Add `ScrollManager` protocol + `set_scroll_manager()` + `_is_pop_dispatch` suppression flag to `ports/_history.py`; invoke `on_push` from `navigate()` after `_do_navigate` only when the flag is `False` (design D1)
-- [ ] 1.2 Invoke `on_pop` from `BrowserHistoryPort._on_popstate` on both dispatch paths, wrapping the dispatch in `_is_pop_dispatch = True` (try/finally) (design D1)
-- [ ] 1.3 Unit tests: push/pop classification, exactly-once, same-value early-return silence, popstate-via-callback does NOT fire `on_push`, no-manager regression
+- [x] 1.1 Add `ScrollManager` protocol + `set_scroll_manager()` + `_is_pop_dispatch` suppression flag to `ports/_history.py`; invoke `on_push` from `navigate()` after `_do_navigate` only when the flag is `False` (design D1)
+- [x] 1.2 Invoke `on_pop` from `BrowserHistoryPort._on_popstate` on both dispatch paths, wrapping the dispatch in `_is_pop_dispatch = True` (try/finally) (design D1)
+- [x] 1.3 Unit tests: push/pop classification, exactly-once, same-value early-return silence, popstate-via-callback does NOT fire `on_push`, no-manager regression
 
 ## 2. ScrollManager
 
