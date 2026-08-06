@@ -326,6 +326,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `payload-compression` | Optional gzip compression of the hydration data transfer payload via stdlib `zlib`/`base64`, threshold-based activation, `__webcompy_compressed__` envelope flag |
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
 | `test-execution-paths` | Physical separation between unit (`tests/`) and E2E (`e2e/`) tests; opt-in `WEBCOMPY_RUN_E2E=1` env var gate; `scripts/run-e2e-tests.sh` canonical entry point |
+| `doc-spec-references` | Governance of how universal docs reference `openspec/specs/`; retired API-name blocklist; `scripts/check-doc-spec-refs.py` guardrail |
 
 ## Language Rules
 

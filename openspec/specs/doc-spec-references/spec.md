@@ -1,4 +1,10 @@
-## ADDED Requirements
+# Doc Spec References
+
+## Purpose
+
+`openspec/specs/` is the single source of truth for WebComPy requirements and API naming. The universal documentation files (`AGENTS.md`, `CONTRIBUTING.*`, `.opencode/skills/*/SKILL.md`) are expected to be stable and general, but they historically transcribed mutable spec content — causing drift when the specs changed (e.g. the `Reactive` → `Signal` rename left stale references in live docs). This capability governs how universal docs refer to specs, and provides a machine-checkable guardrail so retired API names and dangling spec references are caught before they merge.
+
+## Requirements
 
 ### Requirement: Universal docs shall reference specs instead of transcribing spec detail
 
