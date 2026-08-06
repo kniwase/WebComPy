@@ -28,4 +28,4 @@
 
 ## 5. Housekeeping (at archive time)
 
-- [ ] 5.1 Update `AGENTS.md` File→Spec Mapping with `webcompy/storage/` → `composables/spec.md`
+- [x] 5.1 Update `AGENTS.md` File→Spec Mapping with `webcompy/storage/` → `composables/spec.md`
