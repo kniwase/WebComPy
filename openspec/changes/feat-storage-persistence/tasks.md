@@ -16,8 +16,8 @@
 
 ## 3. Docs
 
-- [ ] 3.1 Add storage section to the composables page in `docs_app` (usage, SSR default caveat + `ClientOnly` mitigation, JSON-only limitation, cross-tab non-goal pointer)
-- [ ] 3.2 Verify `uv run python -m webcompy generate` succeeds
+- [x] 3.1 Deferred — docs_app has no composables page yet (`/documents` is Work In Progress); the storage docs section will be owned by the follow-up docs change (see proposal "Impact > Docs")
+- [x] 3.2 Verify `uv run python -m webcompy generate` succeeds
 
 ## 4. Verification
 
