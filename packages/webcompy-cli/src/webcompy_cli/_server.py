@@ -197,6 +197,8 @@ def create_asgi_app(
                     cookie_header=cookie_header,
                 )
                 try:
+                    scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+                    await scheduler.await_pending()
                     return HTMLResponse(await html_generator(ctx))
                 finally:
                     scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)

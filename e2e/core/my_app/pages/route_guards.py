@@ -8,7 +8,7 @@ _auth_state = {"authenticated": False}
 
 
 async def auth_guard(from_path: str, to_path: str):
-    if to_path.split("?")[0].rstrip("/").endswith("/admin"):
+    if to_path.split("?")[0].strip("/") == "admin":
         await asyncio.sleep(0.05)
         if not _auth_state["authenticated"]:
             return "/login"
