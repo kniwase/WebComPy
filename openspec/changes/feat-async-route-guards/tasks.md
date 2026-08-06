@@ -9,11 +9,14 @@
 
 ## 2. Guard pipeline
 
-- [ ] 2.1 Rewrite `Router.__set_path__` into `_attempt` / `_continue_async` / `_commit` / `_interpret` with monotonic navigation token and redirect depth bound 10 (design D2, D3); sync fast-path MUST remain fully synchronous
-- [ ] 2.2 Guard exceptions (sync + async) → cancel + `on_route_error`, unsuppressed async → async error pipeline (design D8)
-- [ ] 2.3 Normalize incoming paths (base_url strip + hash `#` removal) before guard invocation (design D5)
-- [ ] 2.4 `_clone_for_request` gets a fresh token counter (per-request isolation)
-- [ ] 2.5 Remove the manual `pushState` block from `RouterLink._on_click` (`router/_link.py:92-113`); keep shape validation
+- [x] 2.1 Rewrite `Router.__set_path__` into `_attempt` / `_continue_async` / `_commit` / `_interpret` with monotonic navigation token and redirect depth bound 10 (design D2, D3); sync fast-path MUST remain fully synchronous
+- [x] 2.2 Guard exceptions (sync + async) → cancel + `on_route_error`, unsuppressed async → async error pipeline (design D8)
+- [x] 2.3 Normalize incoming paths (base_url strip + hash `#` removal) before guard invocation (design D5)
+- [x] 2.4 `_clone_for_request` gets a fresh token counter (per-request isolation)
+- [x] 2.5 Remove the manual `pushState` block from `RouterLink._on_click` (`router/_link.py:92-113`); keep shape validation
+
+> Note: popstate navigations now route through the dedicated `Router._on_browser_navigation`
+> entry (no guards, no URL writes, after_route_change fires) per the approved design amendment.
 
 ## 3. Tests
 

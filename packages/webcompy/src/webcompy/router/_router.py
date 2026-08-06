@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import inspect
 import urllib.parse
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from functools import partial
+from itertools import count
 from re import Match
 from re import compile as re_compile
 from re import escape as re_escape
@@ -14,11 +16,12 @@ from typing import (
     TypeAlias,
 )
 
+from webcompy.aio._aio import _log_error, resolve_async
 from webcompy.components import ComponentGenerator
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.ports._history import HistoryPort
 from webcompy.router._context import RouterContext, TypedRouterContext
-from webcompy.router._pages import RouterPage
+from webcompy.router._pages import RouterPage, WebComPyRouterException
 from webcompy.signal import computed_property
 
 RouteType: TypeAlias = tuple[
@@ -28,6 +31,11 @@ RouteType: TypeAlias = tuple[
     ComponentGenerator[RouterContext],
     RouterPage,
 ]
+
+GuardResult: TypeAlias = bool | str | None
+BeforeRouteGuard: TypeAlias = Callable[[str, str], GuardResult | Awaitable[GuardResult]]
+
+_REDIRECT_DEPTH_LIMIT = 10
 
 
 @dataclass(frozen=True)
@@ -79,15 +87,17 @@ class Router:
         self._history = history
         self.__mode__ = mode if history is None else history.mode
         if history is not None:
-            history.set_navigation_callback(self.__set_path__)
+            history.set_navigation_callback(self._on_browser_navigation)
         self.__base_url__ = base_url.strip().strip("/")
         self._base_url_stripper = partial(re_compile("^" + re_escape("/" + self.__base_url__)).sub, "")
         self.__routes__, self.__chains__, self.__route_variants__ = self._generate_routes(pages)
         self._default = default
         self._preload = preload
-        self.before_route_change: list[Callable[[str, str], bool | None]] = []
+        self.before_route_change: list[BeforeRouteGuard] = []
         self.after_route_change: list[Callable[[str], None]] = []
         self.on_route_error: list[Callable[[Exception], bool | None]] = []
+        self._nav_token_counter = count(1)
+        self._latest_token = 0
 
     def _clone_for_request(self) -> Router:
         router = Router(
@@ -177,7 +187,7 @@ class Router:
             history = inject(HISTORY_PORT_KEY)
             self._history = history
             self.__mode__ = history.mode
-            history.set_navigation_callback(self.__set_path__)
+            history.set_navigation_callback(self._on_browser_navigation)
         return history  # type: ignore[return-value]
 
     def __default__(self) -> ElementChildren:
@@ -282,14 +292,127 @@ class Router:
         else:
             yield (accumulated, chain, all_param_names)
 
-    def __set_path__(self, path: str, state: dict[str, Any] | None):
+    def __set_path__(self, path: str, state: dict[str, Any] | None) -> None:
+        token = next(self._nav_token_counter)
+        self._latest_token = token
+        try:
+            self._attempt(path, state, token, redirect_depth=0, is_redirect=False)
+        except Exception as exc:
+            if not self._suppress_route_error(exc):
+                raise
+
+    def _on_browser_navigation(self, path: str, state: dict[str, Any] | None) -> None:
+        """Handle popstate navigations: the browser already owns the URL.
+
+        No guards run and no URL is written; pending async chains are
+        superseded so they cannot override the browser's own navigation.
+        """
+        self._latest_token = next(self._nav_token_counter)
         history = self._resolve_history()
-        for guard in self.before_route_change:
-            if guard(history.value, path) is False:
-                return
         history.navigate(path, state)
         for callback in self.after_route_change:
             callback(path)
+
+    def _normalize_app_path(self, path: str) -> str:
+        if self.__mode__ == "hash" and path.startswith("#"):
+            path = path[1:]
+        if self.__mode__ == "history" and self.__base_url__:
+            path = self._base_url_stripper(path)
+        return path
+
+    def _attempt(
+        self,
+        path: str,
+        state: dict[str, Any] | None,
+        token: int,
+        redirect_depth: int,
+        is_redirect: bool,
+    ) -> None:
+        if redirect_depth > _REDIRECT_DEPTH_LIMIT:
+            raise WebComPyRouterException("redirect loop detected (more than 10 redirects)")
+        history = self._resolve_history()
+        from_path = self._normalize_app_path(history.value)
+        to_path = self._normalize_app_path(path)
+        guards = list(self.before_route_change)
+        for index, guard in enumerate(guards):
+            result = guard(from_path, to_path)
+            if inspect.isawaitable(result):
+                resolve_async(
+                    self._continue_async(
+                        result,
+                        guards[index + 1 :],
+                        from_path,
+                        to_path,
+                        state,
+                        token,
+                        redirect_depth,
+                        is_redirect,
+                    ),
+                    on_error=self._log_unsuppressed_route_error,
+                )
+                return
+            if not self._interpret(result, token, redirect_depth):
+                return
+        self._commit(to_path, state, token, is_redirect)
+
+    async def _continue_async(
+        self,
+        pending: Awaitable[GuardResult],
+        remaining: list[BeforeRouteGuard],
+        from_path: str,
+        to_path: str,
+        state: dict[str, Any] | None,
+        token: int,
+        redirect_depth: int,
+        is_redirect: bool,
+    ) -> None:
+        result = await pending
+        if token != self._latest_token:
+            return
+        if not self._interpret(result, token, redirect_depth):
+            return
+        for guard in remaining:
+            result = guard(from_path, to_path)
+            if inspect.isawaitable(result):
+                result = await result
+                if token != self._latest_token:
+                    return
+            if not self._interpret(result, token, redirect_depth):
+                return
+        self._commit(to_path, state, token, is_redirect)
+
+    def _interpret(self, result: GuardResult, token: int, redirect_depth: int) -> bool:
+        if isinstance(result, str):
+            if token != self._latest_token:
+                return False
+            self._attempt(result, None, token, redirect_depth + 1, is_redirect=True)
+            return False
+        return result is not False
+
+    def _commit(
+        self,
+        to_path: str,
+        state: dict[str, Any] | None,
+        token: int,
+        is_redirect: bool,
+    ) -> None:
+        if token != self._latest_token:
+            return
+        history = self._resolve_history()
+        if is_redirect:
+            history.replace_url(to_path, state)
+        elif history.value != to_path:
+            history.push_url(to_path, state)
+        history.navigate(to_path, state)
+        for callback in self.after_route_change:
+            callback(to_path)
+
+    def _suppress_route_error(self, exc: Exception) -> bool:
+        return any(handler(exc) is True for handler in self.on_route_error)
+
+    def _log_unsuppressed_route_error(self, exc: Exception) -> None:
+        if not self._suppress_route_error(exc):
+            _log_error(exc)
 
     def preload_lazy_routes(self) -> None:
         if not self._preload:
