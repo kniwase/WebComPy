@@ -284,7 +284,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `error-handling` | `ErrorBoundary` element, error propagation walk, SSR-tolerant/SSG-fail-fast policy, RouterView implicit boundaries |
 | `forms` | Field wrapper, built-in validators, Form aggregation, `:bind` integration |
 | `head-vdom` | Declarative head element management via `HeadElement` VDOM |
-| `router` | Client-side routing, hash/history modes, path params |
+| `router` | Client-side routing, hash/history modes, path params, RouterLink active state |
 | `router-hooks` | Navigation lifecycle callbacks |
 | `scroll-restoration` | Window scroll management across navigations: scroll-to-top on push, position restore on Back/Forward, `scrollRestoration="manual"`, config opt-out, post-render scheduling with bounded retry |
 | `app` | Application bootstrapping, hydration, head management |

@@ -21,7 +21,7 @@ from webcompy.elements.typealias._element_property import (
 from webcompy.elements.types._element import Element
 from webcompy.router._lazy import LazyComponentGenerator
 from webcompy.router._pages import WebComPyRouterException
-from webcompy.signal import SignalBase, computed_property
+from webcompy.signal import Computed, SignalBase, computed_property
 from webcompy.utils._environment import ENVIRONMENT
 from webcompy.utils._serialize import is_json_seriarizable
 
@@ -34,6 +34,10 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
     _query: SignalBase[dict[str, str]] | None
     _params: SignalBase[dict[str, Any]] | None
     _path_params: SignalBase[dict[str, str]] | None
+    _active_class: str | SignalBase[str] | None
+    _exact: bool
+    _class_attr: Computed[str | bool] | None
+    _aria_current_attr: Computed[str | bool] | None
 
     def __init__(
         self,
@@ -44,6 +48,8 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         query: SignalBase[QueryParamsType] | None = None,
         path_params: SignalBase[PathParamsType] | None = None,
         attrs: dict[str, AttrValue] | None = None,
+        active_class: str | SignalBase[str] | None = None,
+        exact: bool = False,
     ) -> None:
         try:
             router = inject(_ROUTER_KEY)
@@ -56,6 +62,13 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         self._path_params = cast("SignalBase[dict[str, str]]", path_params) if path_params is not None else None
         self._text = text
         self._router = router
+        self._active_class = active_class
+        self._exact = exact
+        self._class_attr = None
+        self._aria_current_attr = None
+        if active_class is not None:
+            self._class_attr = Computed(self._compute_class_attr)
+            self._aria_current_attr = Computed(self._compute_aria_current_attr)
         super().__init__(
             "a",
             attrs=self._generate_attrs(),
@@ -119,13 +132,63 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         if isinstance(target, LazyComponentGenerator):
             target._preload()
 
+    def _target_path(self) -> str:
+        to = self._to.value if isinstance(self._to, SignalBase) else self._to
+        if self._path_params is not None:
+            to = to.format(**self._path_params.value)
+        to = to.split("?", 1)[0].split("#", 1)[0]
+        stripped = to.strip("/")
+        return f"/{stripped}" if stripped else "/"
+
+    def _is_active(self) -> bool:
+        match = self._router.current_match.value
+        if match is None:
+            return False
+        target = self._target_path()
+        current = "/" + match.path.strip("/")
+        if target == "/":
+            return current == "/"
+        if self._exact:
+            return current == target
+        return current == target or current.startswith(target + "/")
+
+    def _compute_class_attr(self) -> str | bool:
+        user_class: AttrValue | None = (self._given_attrs or {}).get("class")
+        base = user_class.value if isinstance(user_class, SignalBase) else user_class
+        if isinstance(base, str):
+            base_str = base
+        elif base is None or isinstance(base, bool):
+            base_str = ""
+        else:
+            if not isinstance(base, int):
+                logging.warning("Argument 'class' of RouterLink has an unsupported type; converting to string.")
+            base_str = str(base)
+        ac = self._active_class
+        ac_str = (ac.value if isinstance(ac, SignalBase) else ac) or ""
+        if self._is_active() and ac_str:
+            return f"{base_str} {ac_str}" if base_str else ac_str
+        return base_str if base_str else False
+
+    def _compute_aria_current_attr(self) -> str | bool:
+        return "page" if self._is_active() else False
+
     def _generate_attrs(self) -> dict[str, AttrValue]:
         attrs = self._given_attrs if self._given_attrs else {}
-        return {
-            **{k: v for k, v in attrs.items() if not k.startswith("@")},
+        if self._aria_current_attr is None:
+            return {
+                **{k: v for k, v in attrs.items() if not k.startswith("@")},
+                "href": self._href,
+                "webcompy-routerlink": True,
+            }
+        out: dict[str, AttrValue] = {
+            **{k: v for k, v in attrs.items() if not k.startswith("@") and k != "class"},
             "href": self._href,
             "webcompy-routerlink": True,
+            "aria-current": self._aria_current_attr,
         }
+        if self._class_attr is not None:
+            out["class"] = self._class_attr
+        return out
 
     @computed_property
     def _href(self) -> str:
