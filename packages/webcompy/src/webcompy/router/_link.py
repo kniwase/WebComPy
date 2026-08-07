@@ -160,6 +160,8 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
         elif base is None or isinstance(base, bool):
             base_str = ""
         else:
+            if not isinstance(base, int):
+                logging.warning("Argument 'class' of RouterLink has an unsupported type; converting to string.")
             base_str = str(base)
         ac = self._active_class
         ac_str = (ac.value if isinstance(ac, SignalBase) else ac) or ""

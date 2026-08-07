@@ -126,6 +126,7 @@ Design notes:
 - **Return values drive attribute removal.** `_proc_attr` (`elements/types/_base.py:152-159`) maps `False` → `None` → attribute removed, and passes `"page"` through as-is. So `_compute_class_attr` returns `False` (no `class` attribute at all) when nothing is merged, and `_compute_aria_current_attr` returns `False` when inactive. `aria-current` is therefore absent — never emptied — while inactive (D6).
 - **`active_class` is never cached.** `_compute_class_attr` reads the live value (`.value` when `SignalBase`). A construction-time cached string would go stale after the signal changed.
 - **User `class` stays reactive in both modes.** With `active_class` configured, the user's `SignalBase` class is read inside the merged-class `Computed` (tracked dependency). With `active_class=None`, the signal passes through unchanged and the element's own attr subscription (`_element.py:108-110`) handles it — identical to today.
+- **Unsupported class types are surfaced.** When the resolved user `class` value is not `str`/`bool`/`int`/`None` (i.e., outside `AttrValue` after resolution), `_compute_class_attr` logs a `logging.warning` before the `str()` fallback, so mis-typed input is not silently swallowed. `int` converts silently to match the framework's `_proc_attr` behavior; `bool`/`None` are handled by the earlier branches.
 - **Ordering:** user classes first, active class last (predictable specificity for CSS authors).
 
 ### D6. `aria-current`
