@@ -298,10 +298,19 @@ class BrowserRenderContext(RenderContext):
         self._di_scope.provide(FETCH_PORT_KEY, BrowserFetchPort())
         self._di_scope.provide(RESOURCE_PORT_KEY, BrowserResourcePort(self._config.base_url))
         self._di_scope.provide(FFI_PORT_KEY, BrowserFFIPort())
-        self._di_scope.provide(HISTORY_PORT_KEY, BrowserHistoryPort(mode=router_mode, base_url=self._config.base_url))
-        self._di_scope.provide(HOST_PORT_KEY, BrowserHostPort())
+        history_port = BrowserHistoryPort(mode=router_mode, base_url=self._config.base_url)
+        self._di_scope.provide(HISTORY_PORT_KEY, history_port)
+        host_port = BrowserHostPort()
+        self._di_scope.provide(HOST_PORT_KEY, host_port)
         self._di_scope.provide(MEDIA_QUERY_PORT_KEY, BrowserMediaQueryPort())
         self._di_scope.provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
+
+        if self._config.scroll_restoration and ENVIRONMENT == "pyscript":
+            from webcompy.ports._browser._raw import browser as _raw_browser
+            from webcompy.router._scroll import BrowserScrollManager
+
+            assert _raw_browser is not None
+            history_port.set_scroll_manager(BrowserScrollManager(host_port, _raw_browser.window))
 
         self._load_hydration_payload()
 

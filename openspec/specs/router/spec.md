@@ -149,6 +149,55 @@ When `Router` is created with `preload=True` (the default), the router SHALL aut
 - **WHEN** a user hovers over a `RouterLink` whose target component is a regular `ComponentGenerator`
 - **THEN** no additional action SHALL be taken
 
+### Requirement: RouterLink shall support active-state styling
+`RouterLink` SHALL accept optional keyword arguments `active_class: str | SignalBase[str] | None = None` and `exact: bool = False`. While the link's target path matches the current route, the rendered anchor SHALL include the active class in its `class` attribute and SHALL carry `aria-current="page"`; when not active, neither SHALL be present. When `active_class` is `None`, the link SHALL render exactly as before (no subscription, no matching).
+
+Matching SHALL compare path portions only (query string ignored). With `exact=False` (default), a target `T` matches current path `C` when `C == T` or `C` starts with `T + "/"`. Both `C` and `T` SHALL be normalized (leading slash, no trailing slash) before comparison, so `to="/docs"` matches the current path `/docs/`. The root target `/` SHALL always be matched exactly. With `exact=True`, only `C == T` matches. When no route matches (`current_match is None`), the link SHALL NOT be active.
+
+Active state SHALL be reactive: after any client-side navigation, affected links SHALL update their attributes without user code. The initial SSR/SSG render SHALL compute active state from the request path so generated HTML is already correct.
+
+#### Scenario: Prefix match activates parent link
+- **GIVEN** a `RouterLink` with `to="/docs"` and `active_class="active"`
+- **WHEN** the current route is `/docs/getting-started`
+- **THEN** the anchor's `class` SHALL include `active`
+- **AND** the anchor SHALL carry `aria-current="page"`
+
+#### Scenario: Segment boundary prevents false positives
+- **GIVEN** a `RouterLink` with `to="/docs"` and `active_class="active"`
+- **WHEN** the current route is `/docsx`
+- **THEN** the anchor SHALL NOT include `active` and SHALL NOT carry `aria-current`
+
+#### Scenario: Trailing slash normalization
+- **GIVEN** a `RouterLink` with `to="/docs"` and `active_class="active"`
+- **WHEN** the current route is `/docs/` (trailing slash)
+- **THEN** the anchor SHALL include `active`
+
+#### Scenario: Root link matches exactly
+- **GIVEN** a `RouterLink` with `to="/"` and `active_class="active"`
+- **WHEN** the current route is `/about`
+- **THEN** the anchor SHALL NOT include `active`
+
+#### Scenario: Exact matching
+- **GIVEN** a `RouterLink` with `to="/docs"`, `active_class="active"`, and `exact=True`
+- **WHEN** the current route is `/docs/getting-started`
+- **THEN** the anchor SHALL NOT include `active`
+
+#### Scenario: Query string ignored
+- **GIVEN** a `RouterLink` with `to="/search"` and `active_class="active"`
+- **WHEN** the current route is `/search?q=python`
+- **THEN** the anchor SHALL include `active`
+
+#### Scenario: Reactive update on navigation
+- **GIVEN** two links with `active_class`, pointing to `/a` and `/b`, rendered while on `/a`
+- **WHEN** the user navigates to `/b`
+- **THEN** the `/a` link SHALL lose the active class and `aria-current`
+- **AND** the `/b` link SHALL gain them
+
+#### Scenario: SSR renders correct initial state
+- **GIVEN** a page with a `RouterLink` to `/about` with `active_class="active"`
+- **WHEN** the page is server-rendered for request path `/about`
+- **THEN** the generated HTML SHALL already include `class` containing `active` and `aria-current="page"`
+
 ### Requirement: RouterView shall be a DynamicElement (not an Element)
 `RouterView` SHALL extend `DynamicElement` instead of `Element`. This removes the unnecessary `<div webcompy-routerview>` wrapper from the DOM and provides the `_on_set_parent()` lifecycle hook. In non-browser environments, `_on_set_parent()` SHALL schedule auto-preload. In browser environments, auto-preload SHALL be deferred until after the initial render completes and the loading indicator is removed.
 
@@ -208,6 +257,16 @@ For each chain level, the mounted component instance SHALL be preserved across a
 - **WHEN** navigating from A to B where B's render is slow (async setup), then navigating from B to C while B's render is still awaiting
 - **THEN** B's stale render SHALL NOT commit positioning or deferred `on_after_rendering` callbacks after C has committed
 - **AND** the defer scope SHALL be balanced (depth returns to its pre-navigation value)
+
+### Requirement: RouterView shall subscribe through its own holder Computed
+
+Each `RouterView` SHALL subscribe to `router.current_match` through its OWN holder `Computed` (`self._level_match = Computed(lambda: router.current_match.value)`) rather than registering directly on the shared `router.current_match`. The holder SHALL keep the view's subscription local to the view's lifetime — destroying the view SHALL destroy only its holder edge — and SHALL preserve per-view notification semantics.
+
+#### Scenario: View destruction removes only its own subscription
+
+- **WHEN** a `RouterView` is destroyed while other views at other depths remain mounted
+- **THEN** the destroyed view's holder `Computed` edge SHALL be removed from `router.current_match`
+- **AND** the remaining views' subscriptions SHALL continue to receive notifications
 
 ### Requirement: Nested routes shall integrate with lazy loading, hooks, and SSG
 Lazy components (`lazy()`) SHALL be allowed at any tree level; preloading SHALL traverse the whole tree, deduplicating a `LazyComponentGenerator` shared by multiple sibling branches (preloaded at most once per traversal). Already-resolved lazy generators SHALL be re-registered into the active render-context component store on every resolution (idempotent by name), so a lazy component resolved during an earlier request remains registered in later requests' fresh stores. Router hooks SHALL fire once per navigation (not per level). `Router._clone_for_request()` SHALL copy the navigation hook registrations so hooks registered on `app.router` exist on the injected per-request router.

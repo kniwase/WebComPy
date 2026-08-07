@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Callable
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 
 from webcompy.signal import SignalBase
 from webcompy.signal._graph import producer_accessed
+
+
+class ScrollManager(Protocol):
+    def on_push(self, from_path: str, to_path: str) -> None: ...
+    def on_pop(self, from_path: str, to_path: str) -> None: ...
 
 
 class HistoryPort(SignalBase[str]):
@@ -14,6 +19,8 @@ class HistoryPort(SignalBase[str]):
         self._mode: Literal["hash", "history"] = mode
         self._state: dict[str, Any] | None = None
         self._navigation_callback: Callable[[str, dict[str, Any] | None], None] | None = None
+        self._scroll_manager: ScrollManager | None = None
+        self._is_pop_dispatch: bool = False
 
     @property
     def mode(self) -> Literal["hash", "history"]:
@@ -66,7 +73,20 @@ class HistoryPort(SignalBase[str]):
         normalized = path[1:] if self._mode == "hash" and path.startswith("#") else path
         if self._value == normalized and self._state == state:
             return
+        old_value = self._value
         self._do_navigate(normalized, state)
+        manager = self._scroll_manager
+        if manager is not None and not self._is_pop_dispatch:
+            manager.on_push(old_value, normalized)
+
+    def set_scroll_manager(self, manager: ScrollManager | None) -> None:
+        """Register an object notified on push/pop navigation classification.
+
+        Args:
+            manager: An object with ``on_push(from_path, to_path)`` and
+                ``on_pop(from_path, to_path)`` methods, or ``None`` to clear.
+        """
+        self._scroll_manager = manager
 
     def push_url(self, path: str, state: dict[str, Any] | None = None) -> None:
         """Update the browser address bar via ``history.pushState``.

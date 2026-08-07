@@ -18,7 +18,7 @@ You do NOT edit the WebComPy framework internals in `packages/webcompy/src/webco
 
 - Use the public component API: `define_component`, `ComponentContext`, `props`, `slots()`
 - Apply standalone lifecycle decorators: `@on_before_rendering`, `@on_after_rendering`, `@on_before_destroy`
-- Use Reactive/Computed/ReactiveList/ReactiveDict for state management
+- Use the reactive state primitives and composables specified in `openspec/specs/reactive/spec.md` and `openspec/specs/composables/spec.md` for state management
 - Define scoped CSS via `generator.scoped_style`
 - Follow existing patterns in `docs_app/` for reference
 

@@ -278,6 +278,15 @@ When a stale proxy triggers `_init_node()`, a new DOM element is created but nev
 - **AND** the cached node SHALL be returned without calling `_init_node()`
 - **AND** the DOM element SHALL NOT be replaced with a detached ghost element
 
+### Requirement: _reposition_node() shall use is-None guards for node cache and parent
+
+`_reposition_node()` SHALL guard its node-cache access with a strict is-None check (`if node is None: return`) before reading `node.parentNode`, and SHALL guard the resolved parent with `if parent is None or not parent:` (strict is-None check followed by truthiness) before re-inserting the node. This mirrors the `_get_node()` strict is-None contract: stale PyScript PyProxy objects can evaluate as falsy even when wrapping valid DOM nodes, so a bare truthiness check on the parent would skip a necessary re-insertion.
+
+#### Scenario: PyProxy parent evaluates falsy
+
+- **WHEN** `_reposition_node()` resolves a parent PyProxy that wraps a valid DOM node but evaluates as falsy in a boolean context
+- **THEN** the strict is-None guard SHALL accept the parent and SHALL insert the node at the target index
+
 ### Requirement: Reconcile shall remove replaced children's DOM nodes when removal fails
 
 `RepeatElement._reconcile_children()` SHALL, before calling `_remove_element()` on a removed key's child, collect the DOM nodes owned by that child (recursively via each element's `_node_cache`), and after `_remove_element()` returns SHALL remove any of those nodes that remain attached to the DOM (`parentNode` is not `null`). This provides a fallback when `_remove_element()` fails to remove a DOM node (e.g., due to a stale `_node_cache` proxy) while guaranteeing that following siblings of the container are never touched, since only nodes owned by removed children are removed.

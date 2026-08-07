@@ -67,10 +67,18 @@ class BrowserHistoryPort(HistoryPort):
         state: dict[str, Any] | None = None
         if hist_state is not None and not self._browser.pyscript.ffi.is_none(hist_state):
             state = hist_state.to_dict()
-        if self._navigation_callback is not None:
-            self._navigation_callback(path, state)
-        else:
-            self._do_navigate(path, state)
+        old_value = self._value
+        self._is_pop_dispatch = True
+        try:
+            if self._navigation_callback is not None:
+                self._navigation_callback(path, state)
+            else:
+                self._do_navigate(path, state)
+        finally:
+            self._is_pop_dispatch = False
+        manager = self._scroll_manager
+        if manager is not None:
+            manager.on_pop(old_value, path)
 
     def __del__(self) -> None:
         with contextlib.suppress(Exception):

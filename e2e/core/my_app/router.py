@@ -27,7 +27,9 @@ from .pages.not_found import NotFound
 from .pages.repeat import RepeatPage
 from .pages.route_guards import GuardAdminPage, GuardLoginPage, auth_guard
 from .pages.scoped_style import ScopedStylePage
+from .pages.scroll_restoration import ScrollLongPage, ScrollTargetPage
 from .pages.signal import ReactivePage
+from .pages.storage import StoragePage
 from .pages.suspense_test import SuspensePage
 from .pages.switch_test import SwitchPage
 from .pages.template import TemplatePage
@@ -49,6 +51,8 @@ router = Router(
     {"path": "/nested-dynamic", "component": NestedDynamicPage},
     {"path": "/lifecycle", "component": LifecyclePage},
     {"path": "/scoped-style", "component": ScopedStylePage},
+    {"path": "/scroll-long", "component": ScrollLongPage},
+    {"path": "/scroll-target", "component": ScrollTargetPage},
     {"path": "/async-nav", "component": AsyncNavPage},
     {"path": "/suspense", "component": SuspensePage},
     {"path": "/client-only", "component": ClientOnlyPage},
@@ -74,6 +78,7 @@ router = Router(
     },
     {"path": "/two-way-binding", "component": TwoWayBindingPage},
     {"path": "/form-fields", "component": FormFieldsPage},
+    {"path": "/storage", "component": StoragePage},
     {"path": "/error-boundary", "component": ErrorBoundaryPage},
     {"path": "/catch-events", "component": CatchEventsPage},
     {"path": "/login", "component": GuardLoginPage},
