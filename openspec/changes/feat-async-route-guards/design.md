@@ -93,6 +93,7 @@ popstate is the browser already having moved — guards cannot veto it (the URL 
 - Guards run on the server during SSR/SSG as today (cloned router per request).
 - Async guards on the server: `resolve_async` uses `_aio_run_server` (`aio/_aio.py:60`) — tasks scheduled on the running loop. SSR rendering is already async; a guard-triggered navigation completes within the request lifecycle. This matches how other async operations behave server-side.
 - `push_url`/`replace_url` are no-ops on server ports: SSR output unaffected.
+- Server entry points (`webcompy_cli._server`, `webcompy_testing._asgi`) call `await scheduler.await_pending()` once immediately before page rendering so pending async guard chains settle before serialization. Guards with multi-step async chains that schedule new tasks during the drain may require a loop-drain pattern in the future; current guard patterns are not affected.
 
 ### D8. Failure and edge matrix
 

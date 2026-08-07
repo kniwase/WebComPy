@@ -96,7 +96,7 @@ class TestRouterSetPath:
         hist = MockHistoryPort(mode="hash")
         r = Router(page, history=hist)
         r.__set_path__("/new/path", {"key": "val"})
-        assert r._history._value == "/new/path"
+        assert r._history._value == "/new/path/"
 
 
 class TestRouterDefault:

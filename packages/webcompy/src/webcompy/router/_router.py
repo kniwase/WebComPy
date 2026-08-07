@@ -318,7 +318,15 @@ class Router:
             path = path[1:]
         if self.__mode__ == "history" and self.__base_url__:
             path = self._base_url_stripper(path)
-        return path
+        pathname, sep, query = path.partition("?")
+        # Normalize the pathname to a trailing-slash format so the stored
+        # path always matches the browser URL built by HistoryPort
+        # (_build_url emits a trailing slash). Without this, a programmatic
+        # navigation without a trailing slash would observe a different path
+        # on a later popstate and re-trigger navigation.
+        if pathname and not pathname.endswith("/"):
+            pathname += "/"
+        return pathname + sep + query
 
     def _attempt(
         self,

@@ -391,12 +391,12 @@ class TestHooksOncePerNavigation:
         r.__set_path__("/docs/api", None)
         assert len(before_calls) == 1
         assert len(after_calls) == 1
-        assert after_calls[0] == "/docs/api"
+        assert after_calls[0] == "/docs/api/"
 
         r.__set_path__("/docs/guide", None)
         assert len(before_calls) == 2
         assert len(after_calls) == 2
-        assert after_calls[1] == "/docs/guide"
+        assert after_calls[1] == "/docs/guide/"
 
 
 class TestRouteVariants:

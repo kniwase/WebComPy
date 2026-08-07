@@ -47,8 +47,8 @@ class TestHooksAcrossRenderContexts:
         finally:
             ctx.dispose()
 
-        assert guarded == ["/docs"]
-        assert navigated == ["/docs"]
+        assert guarded == ["/docs/"]
+        assert navigated == ["/docs/"]
 
 
 class TestLazyRegistrationAcrossRenderContexts:

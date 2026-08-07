@@ -23,16 +23,16 @@ class TestSyncFastPath:
         navigated: list[str] = []
         router.after_route_change.append(navigated.append)
         router.__set_path__("/about", {"k": "v"})
-        assert hist.value == "/about"
-        assert hist.pushed_urls == [("/about", {"k": "v"})]
-        assert navigated == ["/about"]
+        assert hist.value == "/about/"
+        assert hist.pushed_urls == [("/about/", {"k": "v"})]
+        assert navigated == ["/about/"]
 
     def test_cancel_leaves_everything_untouched(self):
         router, hist = _make_router()
         navigated: list[str] = []
 
         def guard(from_path, to_path):
-            return False if to_path == "/admin" else None
+            return False if to_path == "/admin/" else None
 
         router.before_route_change.append(guard)
         router.after_route_change.append(navigated.append)
@@ -62,13 +62,25 @@ class TestSyncFastPath:
         router, hist = _make_router()
         router.__set_path__("/about", None)
         router.__set_path__("/about", None)
-        assert hist.pushed_urls == [("/about", None)]
+        assert hist.pushed_urls == [("/about/", None)]
 
     def test_path_with_query_pushed_and_normalized(self):
         router, hist = _make_router()
         router.__set_path__("/search/?q=1", None)
         assert hist.pushed_urls == [("/search/?q=1", None)]
         assert hist.value == "/search/?q=1"
+
+    def test_query_path_without_slash_normalized(self):
+        router, hist = _make_router()
+        router.__set_path__("/search?q=1", None)
+        assert hist.pushed_urls == [("/search/?q=1", None)]
+        assert hist.value == "/search/?q=1"
+
+    def test_path_variants_deduplicated(self):
+        router, hist = _make_router()
+        router.__set_path__("/about", None)
+        router.__set_path__("/about/", None)
+        assert hist.pushed_urls == [("/about/", None)]
 
 
 class TestAsyncGuards:
@@ -87,8 +99,8 @@ class TestAsyncGuards:
         assert hist.value == "/"
         assert not done.is_set()
         await asyncio.wait_for(done.wait(), timeout=1)
-        assert hist.value == "/about"
-        assert hist.pushed_urls == [("/about", None)]
+        assert hist.value == "/about/"
+        assert hist.pushed_urls == [("/about/", None)]
 
     @pytest.mark.asyncio
     async def test_async_guard_cancel(self):
@@ -119,15 +131,15 @@ class TestAsyncGuards:
 
         async def guard(from_path, to_path):
             await asyncio.sleep(0.01)
-            return "/login" if to_path == "/admin" else None
+            return "/login" if to_path == "/admin/" else None
 
         router.before_route_change.append(guard)
         router.__set_path__("/admin", None)
         await asyncio.wait_for(done.wait(), timeout=1)
-        assert hist.value == "/login"
-        assert hist.replaced_urls == [("/login", None)]
+        assert hist.value == "/login/"
+        assert hist.replaced_urls == [("/login/", None)]
         assert hist.pushed_urls == []
-        assert navigated == ["/login"]
+        assert navigated == ["/login/"]
 
     @pytest.mark.asyncio
     async def test_async_guard_then_remaining_sync_guards_run(self):
@@ -147,7 +159,7 @@ class TestAsyncGuards:
         router.before_route_change.extend([async_guard, sync_guard])
         router.__set_path__("/about", None)
         await asyncio.wait_for(done.wait(), timeout=1)
-        assert calls == [("sync", "/about")]
+        assert calls == [("sync", "/about/")]
 
 
 class TestRedirect:
@@ -157,20 +169,20 @@ class TestRedirect:
 
         def guard(from_path, to_path):
             calls.append((from_path, to_path))
-            return "/login" if to_path == "/admin" else None
+            return "/login" if to_path == "/admin/" else None
 
         router.before_route_change.append(guard)
         router.__set_path__("/admin", None)
-        assert calls == [("/", "/admin"), ("/", "/login")]
-        assert hist.value == "/login"
-        assert hist.replaced_urls == [("/login", None)]
+        assert calls == [("/", "/admin/"), ("/", "/login/")]
+        assert hist.value == "/login/"
+        assert hist.replaced_urls == [("/login/", None)]
         assert hist.pushed_urls == []
 
     def test_redirect_loop_raises(self):
         router, hist = _make_router()
 
         def guard(from_path, to_path):
-            return "/b" if to_path == "/a" else "/a" if to_path == "/b" else None
+            return "/b/" if to_path == "/a/" else "/a/" if to_path == "/b/" else None
 
         router.before_route_change.append(guard)
         with pytest.raises(WebComPyRouterException):
@@ -182,7 +194,7 @@ class TestRedirect:
         received: list[Exception] = []
 
         def guard(from_path, to_path):
-            return "/b" if to_path == "/a" else "/a" if to_path == "/b" else None
+            return "/b/" if to_path == "/a/" else "/a/" if to_path == "/b/" else None
 
         def handler(exc):
             received.append(exc)
@@ -213,12 +225,12 @@ class TestLatestWins:
         router.__set_path__("/slow", None)
         router.before_route_change.clear()
         router.__set_path__("/fast", None)
-        assert hist.value == "/fast"
+        assert hist.value == "/fast/"
         gate.set_result(None)
         await asyncio.sleep(0.05)
-        assert hist.value == "/fast"
-        assert after == ["/fast"]
-        assert hist.pushed_urls == [("/fast", None)]
+        assert hist.value == "/fast/"
+        assert after == ["/fast/"]
+        assert hist.pushed_urls == [("/fast/", None)]
 
     @pytest.mark.asyncio
     async def test_superseded_chain_cannot_redirect(self):
@@ -238,10 +250,10 @@ class TestLatestWins:
         router.__set_path__("/fast", None)
         gate.set_result(None)
         await asyncio.sleep(0.05)
-        assert hist.value == "/fast"
-        assert hist.pushed_urls == [("/fast", None)]
+        assert hist.value == "/fast/"
+        assert hist.pushed_urls == [("/fast/", None)]
         assert hist.replaced_urls == []
-        assert after == ["/fast"]
+        assert after == ["/fast/"]
 
     @pytest.mark.asyncio
     async def test_popstate_supersedes_pending_chain(self):
@@ -271,7 +283,7 @@ class TestURLOwnership:
         router, hist = _make_router()
 
         def guard(from_path, to_path):
-            return False if to_path == "/admin" else None
+            return False if to_path == "/admin/" else None
 
         router.before_route_change.append(guard)
         router.__set_path__("/admin", None)
@@ -281,7 +293,7 @@ class TestURLOwnership:
     def test_programmatic_set_path_pushes_url(self):
         router, hist = _make_router()
         router.__set_path__("/about", None)
-        assert hist.pushed_urls == [("/about", None)]
+        assert hist.pushed_urls == [("/about/", None)]
 
     def test_routerlink_click_pushes_normalized_href(self):
         from webcompy.di._keys import _ROUTER_KEY
@@ -309,9 +321,9 @@ class TestURLOwnership:
 
         router.before_route_change.append(guard)
         router.__set_path__("/about", None)
-        assert calls == [("/", "/about")]
-        assert navigated == ["/about"]
-        assert hist.value == "/about"
+        assert calls == [("/", "/about/")]
+        assert navigated == ["/about/"]
+        assert hist.value == "/about/"
 
 
 class TestPerRequestIsolation:
