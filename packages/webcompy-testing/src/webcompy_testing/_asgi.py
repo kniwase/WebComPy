@@ -66,6 +66,8 @@ def create_test_asgi_app(app: WebComPyApp) -> ASGIApp:
         async def _send_html_static(_: Request) -> HTMLResponse:
             ctx = app.create_render_context("/")
             try:
+                scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+                await scheduler.await_pending()
                 html = await _HtmlElement("div", {}, ctx._root).render_html()
                 return HTMLResponse(html)
             finally:
