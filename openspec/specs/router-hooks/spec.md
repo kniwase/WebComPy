@@ -138,7 +138,7 @@ A guard that raises — synchronously or from an awaited coroutine — SHALL can
 
 ### Requirement: The router shall own browser URL updates after guards pass
 
-The browser address bar SHALL be updated only after the guard chain allows the navigation: push for normal navigations, replace for redirects. A cancelled or superseded navigation SHALL NOT modify the address bar. Programmatic path changes (`app.set_path` / router navigation without `RouterLink`) SHALL update the address bar identically to link-initiated ones. `before_route_change` guards SHALL receive clean app-internal paths (base-url and hash prefixes stripped). Browser history traversal (popstate) SHALL NOT run guards, as today.
+The browser address bar SHALL be updated only after the guard chain allows the navigation: push for normal navigations, replace for redirects. A cancelled or superseded navigation SHALL NOT modify the address bar. Programmatic path changes (`app.set_path` / router navigation without `RouterLink`) SHALL update the address bar identically to link-initiated ones. `before_route_change` guards SHALL receive clean app-internal paths (base-url and hash prefixes stripped, trailing-slash normalized). Browser history traversal (popstate) SHALL NOT run guards, as today.
 
 #### Scenario: Cancelled navigation leaves address bar unchanged
 - **WHEN** a guard cancels a `RouterLink` navigation to `/admin`
