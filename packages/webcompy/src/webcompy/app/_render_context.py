@@ -298,7 +298,7 @@ class BrowserRenderContext(RenderContext):
         self._di_scope.provide(FETCH_PORT_KEY, BrowserFetchPort())
         self._di_scope.provide(RESOURCE_PORT_KEY, BrowserResourcePort(self._config.base_url))
         self._di_scope.provide(FFI_PORT_KEY, BrowserFFIPort())
-        history_port = BrowserHistoryPort(mode=router_mode)
+        history_port = BrowserHistoryPort(mode=router_mode, base_url=self._config.base_url)
         self._di_scope.provide(HISTORY_PORT_KEY, history_port)
         host_port = BrowserHostPort()
         self._di_scope.provide(HOST_PORT_KEY, host_port)

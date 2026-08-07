@@ -255,7 +255,7 @@ class TestRouterHooks:
         router.after_route_change.append(navigated.append)
         router.__set_path__("/about", {})
         assert len(navigated) == 1
-        assert navigated[0] == "/about"
+        assert navigated[0] == "/about/"
 
     def test_multiple_guards_short_circuit(self):
         router = Router(history=MockHistoryPort(mode="hash"))

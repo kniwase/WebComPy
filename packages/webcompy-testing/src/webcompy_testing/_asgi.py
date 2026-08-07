@@ -6,6 +6,8 @@ from starlette.applications import Starlette
 from starlette.responses import HTMLResponse
 from starlette.routing import Route
 
+from webcompy.di import inject
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
 from webcompy_server import configure_server_context
 from webcompy_server._html import _HtmlElement
 from webcompy_testing._utils import run_sync
@@ -30,6 +32,8 @@ async def render_app_html(app: WebComPyApp, path: str = "/", **kwargs: Any) -> s
     configure_server_context(app)
     ctx = app.create_render_context(path)
     try:
+        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+        await scheduler.await_pending()
         return await generate_html(ctx, **kwargs)
     finally:
         ctx.dispose()
@@ -49,6 +53,8 @@ def create_test_asgi_app(app: WebComPyApp) -> ASGIApp:
             path: str = request.path_params.get("path", "")
             ctx = app.create_render_context(path.strip("/"))
             try:
+                scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+                await scheduler.await_pending()
                 html = await _HtmlElement("div", {}, ctx._root).render_html()
                 return HTMLResponse(html)
             finally:
@@ -60,6 +66,8 @@ def create_test_asgi_app(app: WebComPyApp) -> ASGIApp:
         async def _send_html_static(_: Request) -> HTMLResponse:
             ctx = app.create_render_context("/")
             try:
+                scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+                await scheduler.await_pending()
                 html = await _HtmlElement("div", {}, ctx._root).render_html()
                 return HTMLResponse(html)
             finally:

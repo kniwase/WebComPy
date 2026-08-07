@@ -4,12 +4,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from webcompy.ports._history import HistoryPort
 from webcompy_testing import (
     FakeBrowserDOMPort,
     FakeBrowserFFIPort,
     FakeBrowserHostPort,
     FakeDOMNode,
+    FakeHistoryPort,
 )
 
 
@@ -56,6 +56,7 @@ class FakeHistory:
     def __init__(self):
         self._state = None
         self.pushState = MagicMock()
+        self.replaceState = MagicMock()
 
     @property
     def state(self):
@@ -154,18 +155,8 @@ class FakeBrowserModule:
         return True
 
 
-class MockHistoryPort(HistoryPort):
-    def __init__(self, *, mode: str = "history", initial_path: str = "/"):
-        super().__init__(initial_path, mode=mode)  # type: ignore[arg-type]
-
-    def current_search(self) -> str:
-        return ""
-
-    def history_state(self) -> object | None:
-        return self._state
-
-    def refresh_from_window(self) -> None:
-        pass
+class MockHistoryPort(FakeHistoryPort):
+    pass
 
 
 @pytest.fixture

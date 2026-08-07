@@ -22,8 +22,6 @@ from webcompy.elements.types._element import Element
 from webcompy.router._lazy import LazyComponentGenerator
 from webcompy.router._pages import WebComPyRouterException
 from webcompy.signal import Computed, SignalBase, computed_property
-from webcompy.utils._environment import ENVIRONMENT
-from webcompy.utils._serialize import is_json_seriarizable
 
 ParamsType = TypeVar("ParamsType")
 QueryParamsType = TypeVar("QueryParamsType")
@@ -102,26 +100,6 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
             if any(not isinstance(k, str) for k in self._params.value):  # type: ignore
                 raise WebComPyRouterException("Keys of Argument 'params' of RouterLink must be str.")
         href = self._href.value if isinstance(self._href, SignalBase) else self._href
-        if ENVIRONMENT == "pyscript":
-            from pyscript import context  # type: ignore[import-untyped]
-
-            current_path = (
-                context.window.location.pathname if self._router.__mode__ == "history" else context.window.location.hash
-            )
-            if current_path != href:
-                if self._params is None:
-                    state = None
-                    params = None
-                else:
-                    params = dict(self._params.value.items())
-                    if is_json_seriarizable(self._params.value):
-                        state = params
-                    else:
-                        state = None
-                        logging.warning(
-                            "Argument 'params' of RouterLink should be a Signal Object of json-serializable dict."
-                        )
-                context.window.history.pushState(state, None, href)
         params = None if self._params is None else dict(self._params.value.items())
         self._router.__set_path__(href, params)
 
