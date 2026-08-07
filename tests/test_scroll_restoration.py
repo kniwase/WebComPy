@@ -76,14 +76,14 @@ class TestBrowserHistoryPortPopHook:
         manager = RecordingScrollManager()
         hist.set_scroll_manager(manager)
         hist._on_popstate(None)
-        assert manager.calls == [("pop", "/", "/a")]
+        assert manager.calls == [("pop", "/", "/a/")]
 
     def test_pop_hash_mode(self, monkeypatch):
         _, hist = self._make_port(monkeypatch, mode="hash", pathname="/", hash_val="/a")
         manager = RecordingScrollManager()
         hist.set_scroll_manager(manager)
         hist._on_popstate(None)
-        assert manager.calls == [("pop", "/", "/a")]
+        assert manager.calls == [("pop", "/", "/a/")]
 
     def test_pop_via_callback_does_not_fire_push(self, monkeypatch):
         _, hist = self._make_port(monkeypatch)
@@ -91,12 +91,12 @@ class TestBrowserHistoryPortPopHook:
         manager = RecordingScrollManager()
         hist.set_scroll_manager(manager)
         hist._on_popstate(None)
-        assert manager.calls == [("pop", "/", "/a")]
+        assert manager.calls == [("pop", "/", "/a/")]
 
     def test_pop_without_manager(self, monkeypatch):
         _, hist = self._make_port(monkeypatch)
         hist._on_popstate(None)
-        assert hist.value == "/a"
+        assert hist.value == "/a/"
 
 
 class FakeDocumentElement:

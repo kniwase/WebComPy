@@ -11,10 +11,10 @@ from webcompy.router._pages import RouterPage, WebComPyRouterException
 from webcompy.router._router import Router
 
 
-def _make_router(mode="hash") -> tuple[Router, MockHistoryPort]:
+def _make_router(mode="hash", base_url="") -> tuple[Router, MockHistoryPort]:
     page = RouterPage(path="/", component=MagicMock(spec=ComponentGenerator))
     hist = MockHistoryPort(mode=mode)
-    return Router(page, history=hist), hist
+    return Router(page, history=hist, base_url=base_url), hist
 
 
 class TestSyncFastPath:
@@ -276,6 +276,41 @@ class TestLatestWins:
         await asyncio.sleep(0.05)
         assert hist.value == "/"
         assert after == ["/"]
+
+
+class TestPopstateNormalization:
+    def test_on_browser_navigation_normalizes_path(self):
+        router, hist = _make_router()
+        navigated: list[str] = []
+        router.after_route_change.append(navigated.append)
+        router._on_browser_navigation("/about", None)
+        assert hist.value == "/about/"
+        assert navigated == ["/about/"]
+
+    def test_on_browser_navigation_strips_base_url(self):
+        router, hist = _make_router(mode="history", base_url="/myapp/")
+        navigated: list[str] = []
+        router.after_route_change.append(navigated.append)
+        router._on_browser_navigation("/myapp/about/", None)
+        assert hist.value == "/about/"
+        assert navigated == ["/about/"]
+
+    def test_no_duplicate_push_after_popstate(self):
+        router, hist = _make_router(mode="history", base_url="/myapp/")
+        hist._value = "/myapp/about/"
+        router._on_browser_navigation("/myapp/about/", None)
+        assert hist.value == "/about/"
+        router.__set_path__("/about/", None)
+        assert hist.pushed_urls == []
+        assert hist.value == "/about/"
+
+    def test_no_duplicate_push_after_popstate_without_trailing_slash(self):
+        router, hist = _make_router()
+        router._on_browser_navigation("/about", None)
+        assert hist.value == "/about/"
+        router.__set_path__("/about/", None)
+        assert hist.pushed_urls == []
+        assert hist.value == "/about/"
 
 
 class TestURLOwnership:

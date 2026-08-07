@@ -306,12 +306,15 @@ class Router:
 
         No guards run and no URL is written; pending async chains are
         superseded so they cannot override the browser's own navigation.
+        The incoming browser path is normalized so the stored value always
+        matches the canonical format used by app-initiated navigations.
         """
         self._latest_token = next(self._nav_token_counter)
         history = self._resolve_history()
-        history.navigate(path, state)
+        normalized = self._normalize_app_path(path)
+        history.navigate(normalized, state)
         for callback in self.after_route_change:
-            callback(path)
+            callback(normalized)
 
     def _normalize_app_path(self, path: str) -> str:
         if self.__mode__ == "hash" and path.startswith("#"):
@@ -409,7 +412,7 @@ class Router:
         history = self._resolve_history()
         if is_redirect:
             history.replace_url(to_path, state)
-        elif history.value != to_path:
+        elif self._normalize_app_path(history.value) != to_path:
             history.push_url(to_path, state)
         history.navigate(to_path, state)
         for callback in self.after_route_change:

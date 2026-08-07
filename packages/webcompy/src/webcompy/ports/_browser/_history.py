@@ -19,7 +19,8 @@ class BrowserHistoryPort(HistoryPort):
         assert _raw_browser is not None
         self._browser = _raw_browser
         self._base_url = base_url.strip().strip("/")
-        super().__init__(self._compute_initial_path(mode), mode=mode)
+        self._mode = mode
+        super().__init__(self._normalize_path(self._compute_initial_path(mode)), mode=mode)
         self._popstate_handler_proxy = self._browser.pyscript.ffi.create_proxy(self._on_popstate)
         self._browser.window.addEventListener("popstate", self._popstate_handler_proxy)
 
@@ -34,6 +35,19 @@ class BrowserHistoryPort(HistoryPort):
         if self._base_url:
             return f"/{self._base_url}{url}"
         return url
+
+    def _normalize_path(self, path: str) -> str:
+        if self._mode == "hash" and path.startswith("#"):
+            path = path[1:]
+        base_url = getattr(self, "_base_url", "")
+        if self._mode == "history" and base_url:
+            prefix = f"/{base_url}"
+            if path.startswith(prefix + "/") or path == prefix:
+                path = path[len(prefix) :] or "/"
+        pathname, sep, query = path.partition("?")
+        if pathname and not pathname.endswith("/"):
+            pathname += "/"
+        return pathname + sep + query
 
     def _serialize_state(self, state: dict[str, Any] | None) -> dict[str, Any] | None:
         if state is not None and not is_json_seriarizable(state):
@@ -63,6 +77,7 @@ class BrowserHistoryPort(HistoryPort):
         else:
             hash_val = location.hash
             path = hash_val[1:] if hash_val.startswith("#") else hash_val
+        path = self._normalize_path(path)
         hist_state = self._browser.window.history.state
         state: dict[str, Any] | None = None
         if hist_state is not None and not self._browser.pyscript.ffi.is_none(hist_state):
@@ -95,10 +110,11 @@ class BrowserHistoryPort(HistoryPort):
     def refresh_from_window(self) -> None:
         location = self._browser.window.location
         if self._mode == "history":
-            self._value = location.pathname + location.search
+            path = location.pathname + location.search
         else:
             hash_val = location.hash
-            self._value = hash_val[1:] if hash_val.startswith("#") else hash_val
+            path = hash_val[1:] if hash_val.startswith("#") else hash_val
+        self._value = self._normalize_path(path)
         hist_state = self._browser.window.history.state
         if hist_state is not None and not self._browser.pyscript.ffi.is_none(hist_state):
             self._state = hist_state.to_dict()

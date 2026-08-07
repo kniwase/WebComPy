@@ -37,6 +37,85 @@ class TestBuildUrl:
         assert _make_browser_port("history", "/myapp/")._build_url("/about") == "/myapp/about/"
 
 
+class TestNormalizePath:
+    def test_hash_mode(self):
+        port = _make_browser_port("hash")
+        assert port._normalize_path("#/about/") == "/about/"
+        assert port._normalize_path("#/about") == "/about/"
+        assert port._normalize_path("/about/") == "/about/"
+
+    def test_history_mode_no_base(self):
+        port = _make_browser_port("history")
+        assert port._normalize_path("/about") == "/about/"
+        assert port._normalize_path("/about/") == "/about/"
+        assert port._normalize_path("/") == "/"
+
+    def test_history_mode_with_base(self):
+        port = _make_browser_port("history", "/myapp")
+        assert port._normalize_path("/myapp/about/") == "/about/"
+        assert port._normalize_path("/myapp/about") == "/about/"
+        assert port._normalize_path("/myapp/") == "/"
+        assert port._normalize_path("/myapp") == "/"
+        assert port._normalize_path("/myappx/about/") == "/myappx/about/"
+
+    def test_query_preserved(self):
+        port = _make_browser_port("hash")
+        assert port._normalize_path("/search?q=1") == "/search/?q=1"
+
+
+class TestPopstateNormalization:
+    def test_on_popstate_passes_normalized_path_to_callback_and_scroll_manager(self):
+        from unittest.mock import MagicMock
+
+        port = _make_browser_port("history", "/myapp")
+        port._value = "/"
+        received: list[tuple[str, dict | None]] = []
+        port.set_navigation_callback(lambda p, s: received.append((p, s)))
+        manager = MagicMock()
+        port._scroll_manager = manager
+        port._browser.window.location.pathname = "/myapp/about/"
+        port._browser.window.location.search = ""
+        port._on_popstate(None)
+        assert received == [("/about/", None)]
+        manager.on_pop.assert_called_once_with("/", "/about/")
+
+    def test_on_popstate_default_path_normalizes(self):
+        from webcompy.ports._history import HistoryPort
+
+        port = _make_browser_port("hash")
+        HistoryPort.__init__(port, "/", mode="hash")
+        port.set_navigation_callback(None)
+        port._browser.window.location.hash = "#/about"
+        port._on_popstate(None)
+        assert port._value == "/about/"
+
+
+class TestInitialPathNormalization:
+    def test_ctor_initial_path_normalized(self, monkeypatch):
+        from webcompy.ports._browser._history import BrowserHistoryPort
+
+        fake = FakeBrowserModule()
+        monkeypatch.setattr("webcompy.ports._browser._history.ENVIRONMENT", "pyscript")
+        monkeypatch.setattr("webcompy.ports._browser._history._raw_browser", fake)
+        fake.window.location.pathname = "/scroll-long"
+        fake.window.location.search = ""
+        fake.window.location.hash = ""
+        hist = BrowserHistoryPort(mode="history")
+        assert hist.value == "/scroll-long/"
+
+    def test_ctor_initial_path_with_base_url_normalized(self, monkeypatch):
+        from webcompy.ports._browser._history import BrowserHistoryPort
+
+        fake = FakeBrowserModule()
+        monkeypatch.setattr("webcompy.ports._browser._history.ENVIRONMENT", "pyscript")
+        monkeypatch.setattr("webcompy.ports._browser._history._raw_browser", fake)
+        fake.window.location.pathname = "/myapp/about"
+        fake.window.location.search = ""
+        fake.window.location.hash = ""
+        hist = BrowserHistoryPort(mode="history", base_url="/myapp")
+        assert hist.value == "/about/"
+
+
 class TestBrowserPushReplace:
     def test_push_url_calls_pushState(self):
         port = _make_browser_port("hash")
