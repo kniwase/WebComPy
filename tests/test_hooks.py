@@ -11,6 +11,8 @@ from webcompy.components._hooks import (
     use_async_result,
 )
 from webcompy.components._libs import Context
+from webcompy.di._keys import HYDRATION_DATA_KEY
+from webcompy.di._scope import DIScope
 from webcompy.signal import Signal
 
 
@@ -205,6 +207,20 @@ def _with_context(fn):
     return result, ctx
 
 
+def _with_context_in_scope(fn, scope):
+    import webcompy.di._scope as di_scope_module
+
+    ctx = _make_context()
+    component_token = _active_component_context.set(ctx)
+    scope_token = di_scope_module._active_di_scope.set(scope)
+    try:
+        result = fn(ctx)
+    finally:
+        di_scope_module._active_di_scope.reset(scope_token)
+        _active_component_context.reset(component_token)
+    return result, ctx
+
+
 class TestUseAsyncResult:
     def test_immediate_true_registers_on_after_rendering(self):
         def setup(ctx):
@@ -295,6 +311,41 @@ class TestUseAsyncResult:
         userwarnings = [x for x in w if issubclass(x.category, UserWarning)]
         assert len(userwarnings) == 0
         assert result.data.value == 0
+
+    def test_transfer_false_marks_result_non_transferable(self):
+        async def fetch():
+            return "data"
+
+        def setup(ctx):
+            return use_async_result(fetch, transfer=False)
+
+        result, _ = _with_context(setup)
+        assert result._transferable is False
+
+    def test_transfer_default_keeps_result_transferable(self):
+        async def fetch():
+            return "data"
+
+        def setup(ctx):
+            return use_async_result(fetch)
+
+        result, _ = _with_context(setup)
+        assert result._transferable is True
+
+    def test_missing_transfer_entry_falls_back_to_client_execution(self):
+        async def fetch():
+            return 42
+
+        scope = DIScope()
+        scope.provide(HYDRATION_DATA_KEY, {})
+
+        def setup(ctx):
+            return use_async_result(fetch, default=0, transfer=False)
+
+        result, ctx = _with_context_in_scope(setup, scope)
+        hooks = ctx.__get_lifecyclehooks__()
+        assert "on_after_rendering" in hooks
+        assert result._transferable is False
 
 
 class TestUseAsync:

@@ -42,6 +42,8 @@ def collect_transfer_data(root: AppDocumentRoot) -> TransferPayload:
     for component, async_instances in _walk_component_async_results(root):
         component_id = component._property.get("component_id", "")
         for ar in async_instances:
+            if not getattr(ar, "_transferable", True):
+                continue
             if ar._state.value == AsyncState.SUCCESS:
                 async_results[component_id] = TransferAsyncResultEntry(
                     state="success",

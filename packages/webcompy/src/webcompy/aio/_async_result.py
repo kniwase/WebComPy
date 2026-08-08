@@ -29,6 +29,7 @@ class AsyncResult(Generic[T]):
         self._state: Signal[AsyncState] = Signal(AsyncState.PENDING)
         self._data: Signal[T | None] = Signal(default if default is not _MISSING else None)
         self._error: Signal[Exception | None] = Signal(None)
+        self._transferable: bool = True
 
         self.is_pending: Computed[bool] = Computed(lambda: self._state.value == AsyncState.PENDING)
         self.is_loading: Computed[bool] = Computed(lambda: self._state.value == AsyncState.LOADING)

@@ -173,22 +173,19 @@ def test_todo_remove_done_items():
 
 @pytest.mark.asyncio
 async def test_fetch_page_loads():
-    sample_json = (DOCS_APP_DIR / "static" / "_demos" / "fetch_sample" / "sample.json").read_text()
+    demo_dir = DOCS_APP_DIR / "static" / "_demos" / "fetch_sample"
+    responses = {
+        ("GET", f"/_demos/fetch_sample/{name}"): Response(
+            text=(demo_dir / name).read_text(),
+            headers={"content-type": "application/json"},
+            status_code=200,
+            status_text="OK",
+            ok=True,
+        )
+        for name in ("sample_object.json", "sample_array.json", "sample_scalar.json")
+    }
     scope = DIScope()
-    scope.provide(
-        FETCH_PORT_KEY,
-        FakeFetchPort(
-            responses={
-                ("GET", "/_demos/fetch_sample/sample.json"): Response(
-                    text=sample_json,
-                    headers={"content-type": "application/json"},
-                    status_code=200,
-                    status_text="OK",
-                    ok=True,
-                )
-            }
-        ),
-    )
+    scope.provide(FETCH_PORT_KEY, FakeFetchPort(responses=responses))
 
     with mock_app_run():
         from static._demos.fetch_sample.app import App
@@ -204,6 +201,7 @@ async def test_fetch_page_loads():
             assert "Alice" in html
             assert "Bob" in html
             assert "Charlie" in html
+            assert "Total users: 3" in html
 
 
 @skip_matplotlib
