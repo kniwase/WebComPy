@@ -14,15 +14,15 @@
 ## 3. SSG and fetch integration
 
 - [x] 3.1 Verify/ensure `ServerFetchPort.configure()` receives the fully assembled app including mounts plus the configured mount prefixes, and add regression tests that mount paths are absent from `blocked_paths` and are dispatched without `base_url` prefixing under a non-root `base_url`
-- [ ] 3.2 Verify `generate_static_site()` with mounts configured: pages generated, mount endpoints reachable in-process during generation, no mount paths in `dist/`
+- [x] 3.2 Verify `generate_static_site()` with mounts configured: pages generated, mount endpoints reachable in-process during generation, no mount paths in `dist/`
 
 ## 4. Tests
 
 - [x] 4.1 Unit test: mount insertion order (mount before catch-all; internal routes unaffected)
 - [x] 4.2 Unit test: collision detection for reserved prefix and page-route conflicts
-- [ ] 4.3 Integration test (webcompy_testing ASGI client): a mounted Starlette/FastAPI-style app responds at `/api/...` while SSR pages still render
-- [ ] 4.4 Integration test: component self-site fetch to a mounted endpoint during SSR returns the mounted app's response and populates the transfer cache (including a non-root `base_url` case)
-- [ ] 4.5 Integration test: SSG with mounts completes; mounted fetch response is baked into hydration payload; `dist/` has no mount files
+- [x] 4.3 Integration test (webcompy_testing ASGI client): a mounted Starlette/FastAPI-style app responds at `/api/...` while SSR pages still render
+- [x] 4.4 Integration test: component self-site fetch to a mounted endpoint during SSR returns the mounted app's response and populates the transfer cache (including a non-root `base_url` case)
+- [x] 4.5 Integration test: SSG with mounts completes; mounted fetch response is baked into hydration payload; `dist/` has no mount files
 
 ## 5. Verification
 
