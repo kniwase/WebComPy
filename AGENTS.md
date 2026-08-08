@@ -170,7 +170,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/template/_markdown_default.py` | `template-engine/spec.md`, `markdown-conformance/spec.md` |
 | `webcompy/template/_markdown_for.py` | `template-engine/spec.md` |
 | `tests/conformance/` | `markdown-conformance/spec.md`, `template-engine/spec.md`, `test-execution-paths/spec.md` |
-| `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md`, `signal-value-transfer/spec.md`, `error-handling/spec.md` |
+| `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md`, `signal-value-transfer/spec.md`, `typed-api-client/spec.md`, `error-handling/spec.md` |
 | `webcompy/components/_css_utils.py` | `components/spec.md`, `reactive-scoped-style/spec.md` |
 | `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
 | `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md`, `suspense/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
@@ -181,7 +181,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/elements/types/_fragment.py` | `elements/spec.md` |
 | `webcompy/elements/types/_switch.py` | `elements/spec.md`, `async-rendering/spec.md` |
 | `webcompy/forms/` | `forms/spec.md` |
-| `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md` |
+| `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md`, `typed-api-client/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md`, `error-handling/spec.md` |
 | `webcompy/router/_scroll.py` | `scroll-restoration/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md` |
@@ -192,7 +192,8 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy_server/_context.py`, `webcompy_server/_html.py` | `async-scheduler/spec.md`, `app-lifecycle/spec.md` |
 | `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md` |
 | `webcompy/di/` | `di-scope/spec.md`, `di-injection/spec.md`, `dependency-resolver/spec.md` |
-| `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md` |
+| `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md`, `typed-api-client/spec.md` |
+| `webcompy/ajax/_serde.py` | `typed-api-client/spec.md` |
 | `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md` |
 | `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md` |
@@ -298,6 +299,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `resource-port` | Async `ResourcePort` ABC + `ServerResourcePort`/`BrowserResourcePort` for app-package resource files (replaces legacy `load_asset`) |
 | `virtual-dom` | Server-side virtual DOM tree for SSG and testing |
 | `async` | Async operations, HTTP client integration |
+| `typed-api-client` | Schema-driven typed deserialization (`from_json`) and `response_type` typed requests on `HttpClient`, including validation strictness and container/scalar coercion |
 | `async-component-setup` | Async component definition support via two-phase initialization during `_render()` |
 | `async-rendering` | Async rendering pipeline, async lifecycle hooks, sequential sibling rendering |
 | `client-only` | ClientOnly element for browser-only rendering with optional SSR fallback |

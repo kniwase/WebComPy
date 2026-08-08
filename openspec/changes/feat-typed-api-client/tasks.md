@@ -34,6 +34,6 @@
 
 ## 6. Spec reference sync
 
-- [ ] 6.1 Update AGENTS.md: add `typed-api-client` to the Current Specs list; add File→Spec Mapping entries for the new serde module (`webcompy/ajax/_serde.py` → `typed-api-client/spec.md`) and the modified `webcompy/ajax/` (`HttpClient`), `webcompy/components/` (`use_async_result`), and `webcompy/hydration/` (`_collect.py`) rows (`typed-api-client` + `composables`)
-- [ ] 6.2 Check `.opencode/skills/webcompy-review/SKILL.md` for stale assumptions and sync invariant headings/spec references
-- [ ] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+- [x] 6.1 Update AGENTS.md: add `typed-api-client` to the Current Specs list; add File→Spec Mapping entries for the new serde module (`webcompy/ajax/_serde.py` → `typed-api-client/spec.md`) and the modified `webcompy/ajax/` (`HttpClient`), `webcompy/components/` (`use_async_result`), and `webcompy/hydration/` (`_collect.py`) rows (`typed-api-client` + `composables`)
+- [x] 6.2 Check `.opencode/skills/webcompy-review/SKILL.md` for stale assumptions and sync invariant headings/spec references
+- [x] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
