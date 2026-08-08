@@ -8,7 +8,7 @@
 ## 2. Route assembly
 
 - [ ] 2.1 In `create_asgi_app()` (packages/webcompy-cli/src/webcompy_cli/_server.py), invoke the mounts callable once and insert one Starlette `Mount` per entry immediately before the SSR catch-all route
-- [ ] 2.2 Implement collision detection: reject prefixes starting with `/_webcompy` and prefixes colliding with registered page routes; raise `WebComPyException` listing all conflicts before serving
+- [ ] 2.2 Implement collision detection: reject prefixes starting with `/_webcompy`, prefixes colliding with registered page routes, and prefixes that normalize to `/` (root mounting is rejected); raise `WebComPyException` listing all conflicts before serving
 - [ ] 2.3 Apply the same mount handling to the hash-mode serving path
 
 ## 3. SSG and fetch integration
@@ -24,10 +24,9 @@
 - [ ] 4.4 Integration test: component self-site fetch to a mounted endpoint during SSR returns the mounted app's response and populates the transfer cache (including a non-root `base_url` case)
 - [ ] 4.5 Integration test: SSG with mounts completes; mounted fetch response is baked into hydration payload; `dist/` has no mount files
 
-## 5. Docs and verification
+## 5. Verification
 
-- [ ] 5.1 Add an example or docs page showing `WebComPyServerConfig(mounts=...)` with a FastAPI app, including the note that mount paths are not prefixed by `base_url` (per `doc-spec-references`: docs reference the owning specs as source of truth rather than transcribing requirement prose)
-- [ ] 5.2 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
+- [ ] 5.1 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
 
 ## 6. Spec reference sync
 
