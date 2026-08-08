@@ -37,3 +37,9 @@
 - [x] 6.1 Update AGENTS.md: add `typed-api-client` to the Current Specs list; add File→Spec Mapping entries for the new serde module (`webcompy/ajax/_serde.py` → `typed-api-client/spec.md`) and the modified `webcompy/ajax/` (`HttpClient`), `webcompy/components/` (`use_async_result`), and `webcompy/hydration/` (`_collect.py`) rows (`typed-api-client` + `composables`)
 - [x] 6.2 Check `.opencode/skills/webcompy-review/SKILL.md` for stale assumptions and sync invariant headings/spec references
 - [x] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+
+## 7. Review fixes
+
+- [x] 7.1 Narrow `_deserialize_if_typed` exception handling in `webcompy/ajax/_fetch.py` from `except Exception` to `(JSONDecodeError, TypeError)`
+- [x] 7.2 Document the single-threaded assumption of `_hints_cache` in `webcompy/ajax/_serde.py` with an inline comment
+- [x] 7.3 Treat `InitVar` dataclass fields as known-but-ignored in `from_json` (silently skipped during reconstruction, not rejected in strict mode) and add unit tests

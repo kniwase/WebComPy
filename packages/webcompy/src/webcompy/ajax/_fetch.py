@@ -1,4 +1,5 @@
 import urllib.parse  # noqa: I001
+from json import JSONDecodeError
 from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Any, Literal, TypeVar, overload
@@ -87,7 +88,7 @@ def _deserialize_if_typed(res: Response, response_type: type[T] | None) -> Respo
     res.raise_for_status()
     try:
         data = json_loads(res.text)
-    except Exception as err:
+    except (JSONDecodeError, TypeError) as err:
         raise TypedResponseError(f"Failed to parse response as JSON: {res.text[:200]!r}") from err
     try:
         return from_json(response_type, data)
