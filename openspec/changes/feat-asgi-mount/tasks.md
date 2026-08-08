@@ -26,10 +26,10 @@
 
 ## 5. Verification
 
-- [ ] 5.1 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
+- [x] 5.1 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
 
 ## 6. Spec reference sync
 
-- [ ] 6.1 Update AGENTS.md: verify the File→Spec Mapping entries for `webcompy_cli/` (`cli`, `project-config`, `ssg-via-ssr`) and `webcompy_server/ports/` (`server-fetch-asgi`) against the modified specs, and check the Framework Invariants list for fetch/mount-related staleness
-- [ ] 6.2 Check `.opencode/skills/webcompy-review/SKILL.md` for stale assumptions about self-site fetch resolution and sync spec references
-- [ ] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+- [x] 6.1 Update AGENTS.md: verify the File→Spec Mapping entries for `webcompy_cli/` (`cli`, `project-config`, `ssg-via-ssr`) and `webcompy_server/ports/` (`server-fetch-asgi`) against the modified specs, and check the Framework Invariants list for fetch/mount-related staleness
+- [x] 6.2 Check `.opencode/skills/webcompy-review/SKILL.md` for stale assumptions about self-site fetch resolution and sync spec references
+- [x] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
