@@ -44,10 +44,11 @@ ServerDOMPort SHALL additionally provide `render_html(node: DOMNode) -> str` for
 - **WHEN** `ServerHistoryPort.navigate("/test")` is called
 - **THEN** the port's `value` property returns "/test"
 
-#### Scenario: ServerCookiePort propagates attributes via Set-Cookie during SSR
-- **WHEN** `ServerCookiePort.set("session", "abc", max_age=3600, secure=True, samesite="Strict", httponly=True, path="/")` is called during SSR
-- **THEN** the HTML page response SHALL include a `Set-Cookie` header for `session=abc`
-- **AND** the header SHALL preserve `Max-Age=3600`, `Secure`, `SameSite=Strict`, `HttpOnly`, and `Path=/`
+#### Scenario: ServerCookiePort ignores Set-Cookie attributes (current limitation)
+- **WHEN** `ServerCookiePort.set(name, value, max_age=3600, secure=True, samesite="Strict")` is called on the server
+- **THEN** the HTML page response SHALL include a `Set-Cookie` header for `name=value`
+- **AND** the header SHALL preserve the `max_age`, `secure`, `httponly`, `path`, and `samesite` attributes
+- **NOTE**: The current limitation documented by the pre-change spec (attributes discarded) is resolved by this change: attributes are retained and propagated via `Set-Cookie` response headers.
 
 #### Scenario: Multiple cookie writes produce multiple Set-Cookie headers
 - **WHEN** two different cookies are set during a single SSR request
