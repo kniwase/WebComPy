@@ -60,6 +60,9 @@ def _is_missing(raw: Any) -> bool:
 
 
 def _is_missing_pyscript(raw: Any) -> bool:
+    # Browser-only null detection without an ENVIRONMENT guard: unlike _is_missing,
+    # this SHALL only be called from browser event-dispatch paths (the storage
+    # listener is attached only in PyScript), where the ffi check is always wanted.
     if raw is None:
         return True
     return _pyscript_ffi_is_none(raw)
