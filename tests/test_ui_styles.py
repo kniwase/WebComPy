@@ -132,3 +132,32 @@ def test_tokens_dark_css_removed_from_styles_registry() -> None:
     assert "tokens-dark.css" not in _STYLES_FILES
     assert get_styles_file("tokens-dark.css") is None
     assert not (STYLES_DIR / "tokens-dark.css").exists()
+
+
+def test_prose_css_registered() -> None:
+    from webcompy.ui._styles import _STYLES_FILES, get_styles_file, get_styles_files
+
+    assert "prose.css" in _STYLES_FILES
+    assert get_styles_file("prose.css") is not None
+    assert "prose.css" in get_styles_files()
+
+
+def test_prose_css_not_imported_by_index() -> None:
+    css = _css_text("index.css")
+    assert "prose" not in css
+
+
+def test_prose_css_layer_and_scope() -> None:
+    css = _css_text("prose.css")
+    assert "@layer prose" in css
+    for rule in css.split("}"):
+        selector_part = rule.split("{")[0]
+        if "@layer prose" in selector_part or not selector_part.strip():
+            continue
+        assert ".prose" in selector_part, f"Unscoped rule selector block: {selector_part!r}"
+
+
+def test_prose_css_uses_tokens_no_hardcoded_colors() -> None:
+    css = _css_text("prose.css")
+    assert not re.search(r"#[0-9a-fA-F]{3,8}\b", css), "prose.css must not hard-code hex colors"
+    assert "var(--" in css, "prose.css must reference CSS variables"

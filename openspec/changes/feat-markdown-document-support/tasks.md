@@ -28,9 +28,9 @@
 
 ## 5. prose.css Preset
 
-- [ ] 5.1 Create `packages/webcompy/src/webcompy/ui/_styles/prose.css`: `.prose`-scoped rules in `@layer prose` for headings (incl. anchor affordance), paragraphs, lists, tables, blockquotes, `hr`, inline code; reference `tokens.css` variables only
-- [ ] 5.2 Register `prose.css` in `_STYLES_FILES` (`ui/_styles/__init__.py`); confirm it is NOT imported by `index.css`
-- [ ] 5.3 Add/adjust tests verifying `_STYLES_FILES` registration, dev-server serving, and SSG copy of `prose.css`
+- [x] 5.1 Create `packages/webcompy/src/webcompy/ui/_styles/prose.css`: `.prose`-scoped rules in `@layer prose` for headings (incl. anchor affordance), paragraphs, lists, tables, blockquotes, `hr`, inline code; reference `tokens.css` variables only
+- [x] 5.2 Register `prose.css` in `_STYLES_FILES` (`ui/_styles/__init__.py`); confirm it is NOT imported by `index.css`
+- [x] 5.3 Add/adjust tests verifying `_STYLES_FILES` registration, dev-server serving, and SSG copy of `prose.css`
 
 ## 6. Verification & Docs
 
