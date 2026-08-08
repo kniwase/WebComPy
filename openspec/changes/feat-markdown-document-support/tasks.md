@@ -7,12 +7,12 @@
 
 ## 2. Post-Bind Transforms
 
-- [ ] 2.1 Create `packages/webcompy/src/webcompy/template/_markdown_transforms.py` with a defensive element-tree walk (handles `_children` and `_pending_children`, follows the `_suspense.py` walk pattern)
-- [ ] 2.2 Implement slug generation (Unicode-aware lowercase, whitespace→`-`, strip non-alphanumeric except `-`, `-2`/`-3` dedupe) and `apply_heading_ids(element)`
-- [ ] 2.3 Implement `collect_headings(element) -> tuple[HeadingInfo, ...]` resolving text from `TextElement`/`Computed` descendants in document order
-- [ ] 2.4 Implement `replace_code_blocks(element)` swapping `<pre><code class="language-*">` subtrees for `CodeBlock({"code": text, "lang": lang})` preserving literal code content
-- [ ] 2.5 Implement `apply_class_map(element, classes)` merging mapped classes into matching tags additively
-- [ ] 2.6 Add unit tests `tests/test_markdown_transforms.py`: slug rules (ASCII, CJK, duplicates, punctuation), id injection on/off, TOC order/levels/interpolated text, code replacement on/off, literal `{{ }}` in fences, class merge behavior, `{% if %}`/`{% for %}` subtrees
+- [x] 2.1 Create `packages/webcompy/src/webcompy/template/_markdown_transforms.py` with a defensive element-tree walk (handles `_children` and `_pending_children`, follows the `_suspense.py` walk pattern)
+- [x] 2.2 Implement slug generation (Unicode-aware lowercase, whitespace→`-`, strip non-alphanumeric except `-`, `-2`/`-3` dedupe) and `apply_heading_ids(element)`
+- [x] 2.3 Implement `collect_headings(element) -> tuple[HeadingInfo, ...]` resolving text from `TextElement`/`Computed` descendants in document order
+- [x] 2.4 Implement `replace_code_blocks(element)` swapping `<pre><code class="language-*">` subtrees for `CodeBlock({"code": text, "lang": lang})` preserving literal code content
+- [x] 2.5 Implement `apply_class_map(element, classes)` merging mapped classes into matching tags additively
+- [x] 2.6 Add unit tests `tests/test_markdown_transforms.py`: slug rules (ASCII, CJK, duplicates, punctuation), id injection on/off, TOC order/levels/interpolated text, code replacement on/off, literal `{{ }}` in fences, class merge behavior, `{% if %}`/`{% for %}` subtrees
 
 ## 3. render_markdown Options
 
