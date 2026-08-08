@@ -21,3 +21,8 @@ The `response_type` path of `HttpClient` and `from_json` SHALL recognize transfe
 #### Scenario: Body key takes precedence over header
 - **WHEN** both `__webcompy_transfer_meta__` and `X-WebComPy-Transfer-Meta` are present
 - **THEN** the body key metadata SHALL be used
+
+#### Scenario: Header-mode metadata with a top-level array or scalar body
+- **WHEN** a response has a top-level array or scalar body and carries the `X-WebComPy-Transfer-Meta` header
+- **THEN** metadata-driven restoration SHALL apply at the recorded paths
+- **AND** paths SHALL be interpreted relative to the document root (the root value itself is addressed by the empty path per the path grammar)

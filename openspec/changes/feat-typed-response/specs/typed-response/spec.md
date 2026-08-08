@@ -28,6 +28,11 @@ In header mode (the default), the response body SHALL be the pristine JSON repre
 - **AND** the `X-WebComPy-Transfer-Meta` header SHALL contain the metadata JSON
 - **AND** a non-WebComPy HTTP client SHALL be able to consume the response normally
 
+#### Scenario: Array payload in header mode
+- **WHEN** a top-level array payload is encoded in header mode
+- **THEN** the response body SHALL remain a pristine JSON array
+- **AND** the metadata header SHALL record paths relative to the array root
+
 ### Requirement: Body wire mode requires a top-level object
 In body mode, metadata SHALL be injected into the response body under the key `__webcompy_transfer_meta__`. Body mode SHALL require the payload to serialize to a top-level JSON object. If the payload is a top-level array or scalar, encoding in body mode SHALL raise an explicit error; there SHALL be NO implicit wrapper or fallback shape. Callers with array/scalar payloads SHALL use header mode or restructure the payload as an object.
 

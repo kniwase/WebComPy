@@ -56,4 +56,4 @@ None — additive. APIs not using the helper are unaffected.
 
 ## Open Questions
 
-- Exact path-grammar encoding (percent-encoding vs JSON Pointer) — finalize in implementation; JSON Pointer (RFC 6901) is the leading candidate since it is an existing standard with escaping rules.
+- Exact path-grammar encoding (percent-encoding vs JSON Pointer) — finalize in implementation; JSON Pointer (RFC 6901) is the leading candidate since it is an existing standard with escaping rules. Its empty-string root reference naturally addresses top-level scalar/array payloads, which `feat-typed-api-client` now supports as `response_type` targets; body mode remains object-only per D2, so header mode is the sole metadata channel for such payloads.

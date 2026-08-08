@@ -1,8 +1,6 @@
-import asyncio
-from typing import TypedDict
+from dataclasses import dataclass
 
-from webcompy import logging
-from webcompy.aio import AsyncWrapper, resolve_async
+from webcompy.aio import AsyncWrapper
 from webcompy.ajax import HttpClient
 from webcompy.app import WebComPyApp
 from webcompy.components import ComponentContext, define_component
@@ -10,33 +8,49 @@ from webcompy.elements import html, repeat
 from webcompy.signal import use_reactive_list, use_state
 
 
-class User(TypedDict):
+@dataclass
+class User:
     id: int
     name: str
+
+
+@dataclass
+class UsersResponse:
+    data: list[User]
 
 
 @define_component
 def App(context: ComponentContext[None]):
     users = use_reactive_list(lambda: [])
-    json_text = use_state(lambda: "")
-    queue = asyncio.Queue[str](maxsize=1)
+    scalar_text = use_state(lambda: "")
+    raw_text = use_state(lambda: "")
 
     @AsyncWrapper()
-    async def fetch_user_data(url: str):
-        res = await HttpClient.get(url)
-        logging.info(res)
-        users.value = res.json()["data"]
+    async def fetch_object():
+        res = await HttpClient.get("/_demos/fetch_sample/sample_object.json", response_type=UsersResponse)
+        users.value = res.data
+
+    @AsyncWrapper()
+    async def fetch_array():
+        res = await HttpClient.get("/_demos/fetch_sample/sample_array.json", response_type=list[User])
+        users.value = res
+
+    @AsyncWrapper()
+    async def fetch_scalar():
+        count = await HttpClient.get("/_demos/fetch_sample/sample_scalar.json", response_type=int)
+        scalar_text.value = f"Total users: {count}"
 
     @AsyncWrapper()
     async def async_test():
-        res = await HttpClient.get("/_demos/fetch_sample/sample.json")
-        await queue.put(res.text)
+        res = await HttpClient.get("/_demos/fetch_sample/sample_array.json")
+        raw_text.value = res.text
 
     @context.on_after_rendering
     def _():
-        fetch_user_data("/_demos/fetch_sample/sample.json")
+        fetch_object()
+        fetch_array()
+        fetch_scalar()
         async_test()
-        resolve_async(queue.get(), json_text.set_value)
 
     return html.DIV(
         {},
@@ -52,9 +66,23 @@ def App(context: ComponentContext[None]):
                     {"class": "user-data"},
                     html.UL(
                         {},
-                        html.LI({}, "User ID: " + str(user_data["id"])),
-                        html.LI({}, "User Name: " + user_data["name"]),
+                        html.LI({}, "User ID: " + str(user_data.id)),
+                        html.LI({}, "User Name: " + user_data.name),
                     ),
+                ),
+            ),
+        ),
+        html.DIV(
+            {},
+            html.H5(
+                {},
+                "Scalar Data",
+            ),
+            html.PRE(
+                {},
+                html.CODE(
+                    {},
+                    scalar_text,
                 ),
             ),
         ),
@@ -68,7 +96,7 @@ def App(context: ComponentContext[None]):
                 {},
                 html.CODE(
                     {},
-                    json_text,
+                    raw_text,
                 ),
             ),
         ),
