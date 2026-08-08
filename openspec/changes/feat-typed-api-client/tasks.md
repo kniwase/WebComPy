@@ -2,11 +2,11 @@
 
 ## 1. Deserializer core
 
-- [ ] 1.1 Implement `from_json(cls, data, *, strict=False) -> T` in a new module (packages/webcompy/src/webcompy/ajax/_serde.py): dataclass reconstruction via `dataclasses.fields()` + `typing.get_type_hints()`, with per-class hint caching
-- [ ] 1.2 Support containers: `list[T]`, `dict[str, T]`, `Optional[T]`, `Union` (structural match in declaration order)
-- [ ] 1.3 Support leaf coercion: `datetime`/`date`/`time` (ISO-8601 via `fromisoformat`), `UUID`, `Enum` (by value)
-- [ ] 1.4 Implement strict/lenient modes (unknown-key handling, missing-field errors) with descriptive error messages naming field and expected type
-- [ ] 1.5 Re-export the public API from `webcompy.ajax` and add a dedicated `TypedResponseError` (or similarly named) framework exception
+- [x] 1.1 Implement `from_json(cls, data, *, strict=False) -> T` in a new module (packages/webcompy/src/webcompy/ajax/_serde.py): dataclass reconstruction via `dataclasses.fields()` + `typing.get_type_hints()`, with per-class hint caching
+- [x] 1.2 Support containers: `list[T]`, `dict[str, T]`, `Optional[T]`, `Union` (structural match in declaration order)
+- [x] 1.3 Support leaf coercion: `datetime`/`date`/`time` (ISO-8601 via `fromisoformat`), `UUID`, `Enum` (by value)
+- [x] 1.4 Implement strict/lenient modes (unknown-key handling, missing-field errors) with descriptive error messages naming field and expected type
+- [x] 1.5 Re-export the public API from `webcompy.ajax` and add a dedicated `TypedResponseError` (or similarly named) framework exception
 
 ## 2. HttpClient integration
 
@@ -21,8 +21,8 @@
 
 ## 4. Tests
 
-- [ ] 4.1 Serde unit tests: flat/nested dataclasses, list/dict/Optional/Union, datetime/date/UUID/Enum coercion, top-level list/scalar targets, strict vs lenient, error messages
-- [ ] 4.2 Serde test: schema module using `from __future__ import annotations`
+- [x] 4.1 Serde unit tests: flat/nested dataclasses, list/dict/Optional/Union, datetime/date/UUID/Enum coercion, top-level list/scalar targets, strict vs lenient, error messages
+- [x] 4.2 Serde test: schema module using `from __future__ import annotations`
 - [ ] 4.3 HttpClient tests: untyped call returns `Response`; typed call returns `T`; type inference verified via pyright
 - [ ] 4.4 Integration test (webcompy_testing): typed self-site fetch during SSR uses ASGITransport and populates the transfer cache
 - [ ] 4.5 Integration test: `transfer=False` result absent from hydration payload; browser executes the fetch after hydration; SSG artifact does not contain the data
