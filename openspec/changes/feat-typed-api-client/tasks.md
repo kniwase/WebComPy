@@ -15,17 +15,17 @@
 
 ## 3. Transfer opt-out
 
-- [ ] 3.1 Add `transfer: bool = True` to `use_async_result` (packages/webcompy/src/webcompy/components/_hooks.py) and mark the entry non-transferable
-- [ ] 3.2 Make `collect_transfer_data()` (packages/webcompy/src/webcompy/hydration/_collect.py) skip non-transferable async-result entries
-- [ ] 3.3 Verify browser hydration falls back to client-side execution when no transferred entry exists
+- [x] 3.1 Add `transfer: bool = True` to `use_async_result` (packages/webcompy/src/webcompy/components/_hooks.py) and mark the entry non-transferable
+- [x] 3.2 Make `collect_transfer_data()` (packages/webcompy/src/webcompy/hydration/_collect.py) skip non-transferable async-result entries
+- [x] 3.3 Verify browser hydration falls back to client-side execution when no transferred entry exists
 
 ## 4. Tests
 
 - [x] 4.1 Serde unit tests: flat/nested dataclasses, list/dict/Optional/Union, datetime/date/UUID/Enum coercion, top-level list/scalar targets, strict vs lenient, error messages
 - [x] 4.2 Serde test: schema module using `from __future__ import annotations`
 - [x] 4.3 HttpClient tests: untyped call returns `Response`; typed call returns `T`; type inference verified via pyright
-- [ ] 4.4 Integration test (webcompy_testing): typed self-site fetch during SSR uses ASGITransport and populates the transfer cache
-- [ ] 4.5 Integration test: `transfer=False` result absent from hydration payload; browser executes the fetch after hydration; SSG artifact does not contain the data
+- [x] 4.4 Integration test (webcompy_testing): typed self-site fetch during SSR uses ASGITransport and populates the transfer cache
+- [x] 4.5 Integration test: `transfer=False` result absent from hydration payload; browser executes the fetch after hydration; SSG artifact does not contain the data
 
 ## 5. Docs and verification
 

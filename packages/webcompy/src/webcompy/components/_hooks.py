@@ -61,8 +61,10 @@ def use_async_result(
     default: T | None = None,
     immediate: bool = True,
     watch: Iterable[SignalBase[Any]] = (),
+    transfer: bool = True,
 ) -> AsyncResult[T]:
     result = AsyncResult(func, default=default)
+    result._transferable = transfer
 
     try:
         ctx = _active_component_context.get()

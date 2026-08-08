@@ -360,6 +360,21 @@ class TestCollectTransferData:
         assert payload.async_results["cmp-loading"].state == "success"
         assert payload.async_results["cmp-loading"].data == "ok"
 
+    def test_collect_skips_non_transferable_async_results(self):
+        async def fetch():
+            return "data"
+
+        non_transferable = AsyncResult(fetch)
+        non_transferable._state.value = AsyncState.SUCCESS
+        non_transferable._data.value = "secret"
+        non_transferable._transferable = False
+
+        mock_component = self._make_component([non_transferable], component_id="cmp-no-transfer")
+        mock_root = self._make_root([mock_component])
+
+        payload = collect_transfer_data(mock_root)
+        assert "cmp-no-transfer" not in payload.async_results
+
     def test_collect_transfer_data_includes_fetches_from_port(self):
         class _FakeFetchPort:
             @staticmethod
