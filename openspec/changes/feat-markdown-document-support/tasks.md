@@ -21,10 +21,10 @@
 
 ## 4. load_markdown_document
 
-- [ ] 4.1 Create `packages/webcompy/src/webcompy/template/_markdown_document.py` with frozen dataclasses `HeadingInfo(level, text, id)` and `MarkdownDocument(content, metadata, toc)`
-- [ ] 4.2 Implement async `load_markdown_document(source: str | Path, ...)`: `ResourcePort.load_text` → `split_frontmatter` → `render_markdown` with document transforms → `collect_headings` → `MarkdownDocument`
-- [ ] 4.3 Export `load_markdown_document`, `MarkdownDocument`, `HeadingInfo` from `webcompy.template` (`__all__` and `.pyi` stubs if applicable)
-- [ ] 4.4 Add unit tests `tests/test_markdown_document.py` using `webcompy_testing` (TestRenderer / fake resource port): full pipeline, metadata propagation, SSR resource recording, TOC/id consistency, usage inside `async def` component setup with `context.set_title`
+- [x] 4.1 Create `packages/webcompy/src/webcompy/template/_markdown_document.py` with frozen dataclasses `HeadingInfo(level, text, id)` and `MarkdownDocument(content, metadata, toc)`
+- [x] 4.2 Implement async `load_markdown_document(source: str | Path, ...)`: `ResourcePort.load_text` → `split_frontmatter` → `render_markdown` with document transforms → `collect_headings` → `MarkdownDocument`
+- [x] 4.3 Export `load_markdown_document`, `MarkdownDocument`, `HeadingInfo` from `webcompy.template` (`__all__` and `.pyi` stubs if applicable)
+- [x] 4.4 Add unit tests `tests/test_markdown_document.py` using `webcompy_testing` (TestRenderer / fake resource port): full pipeline, metadata propagation, SSR resource recording, TOC/id consistency, usage inside `async def` component setup with `context.set_title`
 
 ## 5. prose.css Preset
 

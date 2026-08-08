@@ -122,10 +122,18 @@ def render_template(source: str, context: Mapping[str, Any] | None = None) -> El
     raise WebComPyException("Template must have exactly one root element")
 
 
+from webcompy.template._markdown_document import (  # noqa: E402
+    HeadingInfo,
+    MarkdownDocument,
+    load_markdown_document,
+)
+
 __all__ = [
     "AttrSpec",
+    "HeadingInfo",
     "Hole",
     "LiteralText",
+    "MarkdownDocument",
     "TagResolution",
     "TemplateElement",
     "TemplateNode",
@@ -135,6 +143,7 @@ __all__ = [
     "format_value",
     "kebab_to_pascal",
     "kebab_to_snake",
+    "load_markdown_document",
     "render_markdown",
     "render_template",
     "resolve_holes",
