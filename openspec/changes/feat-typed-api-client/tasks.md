@@ -30,7 +30,7 @@
 ## 5. Docs and verification
 
 - [x] 5.1 Add docs/example: shared dataclass schema used from both a FastAPI endpoint and a WebComPy component via `response_type` (per `doc-spec-references`: docs reference the owning specs as source of truth rather than transcribing requirement prose)
-- [ ] 5.2 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
+- [x] 5.2 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
 
 ## 6. Spec reference sync
 
