@@ -35,4 +35,4 @@
 
 ## 6. Housekeeping (at archive time)
 
-- [ ] 6.1 Update `AGENTS.md` File→Spec Mapping if new modules/keys were introduced
+- [x] 6.1 Update `AGENTS.md` File→Spec Mapping if new modules/keys were introduced (no new modules; `webcompy/di/` row already covers `_keys.py` — no change needed)
