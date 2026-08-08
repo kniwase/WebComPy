@@ -18,9 +18,9 @@
 
 ## 3. Unit tests
 
-- [ ] 3.1 Fake-dispatch tests (no browser): remote write updates signal + notifies consumers; remote removal resets (value and factory defaults); corrupted payload warning; unregistered key ignored; no write-back during apply (assert fake storage `setItem` not called); equal-value delivery is a no-op
-- [ ] 3.2 `sync_tabs=False` registers nothing; server path creates no listener
-- [ ] 3.3 Registry scoping: two app instances do not share subscriptions; unregister on destroy
+- [x] 3.1 Fake-dispatch tests (no browser): remote write updates signal + notifies consumers; remote removal resets (value and factory defaults); corrupted payload warning; unregistered key ignored; no write-back during apply (assert fake storage `setItem` not called); equal-value delivery is a no-op
+- [x] 3.2 `sync_tabs=False` registers nothing; server path creates no listener
+- [x] 3.3 Registry scoping: two app instances do not share subscriptions; unregister on destroy
 
 ## 4. E2E and docs
 
