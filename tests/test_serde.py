@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
 from datetime import date, datetime, time
 from enum import Enum
 from typing import Optional, Union
@@ -55,6 +55,13 @@ class WithDefaults:
     count: int = 0
 
 
+@dataclass
+class WithInitVar:
+    id: int
+    name: str
+    archived: InitVar[bool] = False
+
+
 class TestFlat:
     def test_flat_dataclass(self):
         assert from_json(User, {"id": 1, "name": "ada"}) == User(id=1, name="ada")
@@ -76,6 +83,15 @@ class TestFlat:
     def test_type_mismatch_names_field(self):
         with pytest.raises(TypeError, match="expected str"):
             from_json(User, {"id": 1, "name": 42})
+
+    def test_init_var_field_ignored_when_absent(self):
+        assert from_json(WithInitVar, {"id": 1, "name": "ada"}) == WithInitVar(id=1, name="ada")
+
+    def test_init_var_field_ignored_when_present(self):
+        assert from_json(WithInitVar, {"id": 1, "name": "ada", "archived": True}) == WithInitVar(id=1, name="ada")
+        assert from_json(WithInitVar, {"id": 1, "name": "ada", "archived": True}, strict=True) == WithInitVar(
+            id=1, name="ada"
+        )
 
 
 class TestNested:

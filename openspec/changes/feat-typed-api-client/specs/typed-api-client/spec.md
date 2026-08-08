@@ -37,6 +37,11 @@ The framework SHALL provide `from_json(cls, data, *, strict=False) -> T`, a pure
 - **WHEN** a declared field is missing from the data or a value cannot be coerced to its annotation
 - **THEN** a descriptive error SHALL be raised naming the field and the expected type
 
+#### Scenario: InitVar fields are known but ignored
+- **WHEN** a dataclass declares an `InitVar` field (present or absent in the data)
+- **THEN** the field SHALL be skipped during reconstruction and never coerced
+- **AND** in strict mode the field SHALL NOT be rejected as unknown
+
 ### Requirement: Lenient and strict validation modes
 `from_json` SHALL default to `strict=False`, in which unknown keys in the data SHALL be ignored (forward compatibility with additive API changes). With `strict=True`, unknown keys SHALL be rejected, missing required fields SHALL be rejected, and any type mismatch SHALL raise an error. The strictness parameter SHALL apply uniformly to nested dataclasses.
 

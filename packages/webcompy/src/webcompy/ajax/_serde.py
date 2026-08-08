@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import types
-from dataclasses import MISSING, fields, is_dataclass
+from dataclasses import MISSING, InitVar, fields, is_dataclass
 from datetime import date, datetime, time
 from enum import Enum
 from typing import Any, TypeVar, Union, get_args, get_origin, get_type_hints
@@ -16,6 +16,7 @@ class TypedResponseError(WebComPyException):
     pass
 
 
+# Per-class resolved-hints cache. Both runtimes use a single-threaded event loop, so no lock is needed.
 _hints_cache: dict[type, dict[str, Any]] = {}
 
 
@@ -93,9 +94,11 @@ def _convert_dataclass(tp: type, value: Any, *, path: str, strict: bool) -> Any:
 
     hints = _type_hints(tp)
     field_names = {f.name for f in fields(tp)}
+    initvar_names = {name for name, hint in hints.items() if isinstance(hint, InitVar)}
+    known_names = field_names | initvar_names
 
     if strict:
-        unknown = set(value) - field_names
+        unknown = set(value) - known_names
         if unknown:
             raise TypeError(f"{path}: unknown field(s) {sorted(unknown)}")
 
