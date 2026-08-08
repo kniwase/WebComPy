@@ -75,6 +75,20 @@ class TestServerFetchPortConfigure:
 
         assert port._base_url == "/myapp/"
 
+    def test_configure_sets_mount_prefixes(self):
+        port = ServerFetchPort()
+        app = Starlette(routes=[])
+        port.configure(app, mount_prefixes=["/api", "/admin/"])
+
+        assert port._mount_prefixes == ["/api", "/admin"]
+
+    def test_configure_defaults_mount_prefixes_to_empty(self):
+        port = ServerFetchPort()
+        app = Starlette(routes=[])
+        port.configure(app)
+
+        assert port._mount_prefixes == []
+
     def test_configure_raises_on_second_call(self):
         port = ServerFetchPort()
         app = Starlette(routes=[])
@@ -246,6 +260,48 @@ class TestServerFetchPortBaseUrlResolution:
 
         assert response.status_code == 200
         assert response.json() == {"path": "/myapp/api/data"}
+
+    @pytest.mark.asyncio
+    async def test_mount_path_exempt_from_base_url_prefix(self):
+        async def handler(request):
+            return JSONResponse({"path": str(request.url.path)})
+
+        app = Starlette(routes=[Route("/api/users", endpoint=handler)])
+        port = ServerFetchPort()
+        port.configure(app, blocked_paths=[], base_url="/myapp/", mount_prefixes=["/api"])
+
+        response = await port.fetch("/api/users")
+
+        assert response.status_code == 200
+        assert response.json() == {"path": "/api/users"}
+
+    @pytest.mark.asyncio
+    async def test_non_mount_path_resolved_with_base_url_alongside_mounts(self):
+        async def handler(request):
+            return JSONResponse({"path": str(request.url.path)})
+
+        app = Starlette(routes=[Route("/myapp/other/data", endpoint=handler)])
+        port = ServerFetchPort()
+        port.configure(app, blocked_paths=[], base_url="/myapp/", mount_prefixes=["/api"])
+
+        response = await port.fetch("/other/data")
+
+        assert response.status_code == 200
+        assert response.json() == {"path": "/myapp/other/data"}
+
+    @pytest.mark.asyncio
+    async def test_mount_path_not_blocked_despite_similar_shape(self):
+        async def handler(request):
+            return JSONResponse({"user": "data"})
+
+        app = Starlette(routes=[Route("/users/42", endpoint=handler)])
+        port = ServerFetchPort()
+        port.configure(app, blocked_paths=["/users/:id"], mount_prefixes=["/users"])
+
+        response = await port.fetch("/users/42")
+
+        assert response.status_code == 200
+        assert response.json() == {"user": "data"}
 
 
 class TestServerFetchPortClose:

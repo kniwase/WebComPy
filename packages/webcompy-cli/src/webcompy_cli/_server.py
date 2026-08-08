@@ -14,11 +14,12 @@ from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import FileResponse, HTMLResponse, Response
-from starlette.routing import Route
+from starlette.routing import BaseRoute, Mount, Route
 from starlette.types import ASGIApp
 
 from webcompy.app._app import WebComPyApp
 from webcompy.di import inject
+from webcompy.exception import WebComPyException
 from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
 from webcompy.ui.theme._server import read_theme_from_cookie
 from webcompy_cli._argparser import get_params
@@ -46,6 +47,47 @@ class _ServingApp:
         self.html_generator = html_generator
         self.hash_cache = hash_cache
         self.artifacts = artifacts
+
+
+def _normalize_mount_prefix(prefix: str) -> str:
+    return "/" + prefix.strip("/") if prefix.strip("/") else "/"
+
+
+def _page_static_prefix(path: str) -> list[str]:
+    segments: list[str] = []
+    for seg in path.strip("/").split("/"):
+        if not seg or "{" in seg:
+            break
+        segments.append(seg)
+    return segments
+
+
+def _resolve_mounts(app: WebComPyApp, build_config: WebComPyBuildConfig) -> list[tuple[str, ASGIApp]]:
+    mounts_factory = build_config.server.mounts
+    if mounts_factory is None:
+        return []
+
+    mount_map = mounts_factory()
+    conflicts: list[str] = []
+    resolved: list[tuple[str, ASGIApp]] = []
+    for prefix, asgi_app in mount_map.items():
+        normalized = _normalize_mount_prefix(prefix)
+        if normalized == "/":
+            conflicts.append(f"  '{prefix}': mounting at '/' would shadow all page routes")
+            continue
+        if normalized.startswith("/_webcompy"):
+            conflicts.append(f"  '{prefix}': prefixes starting with '/_webcompy' are reserved by the framework")
+            continue
+        mount_segments = normalized.strip("/").split("/")
+        for route in app.routes or []:
+            static = _page_static_prefix(route[0])
+            if len(static) >= len(mount_segments) and static[: len(mount_segments)] == mount_segments:
+                conflicts.append(f"  '{prefix}': collides with page route '/{route[0]}'")
+        resolved.append((normalized, asgi_app))
+
+    if conflicts:
+        raise WebComPyException("ASGI mount path collisions detected:\n" + "\n".join(dict.fromkeys(conflicts)))
+    return resolved
 
 
 def create_asgi_app(
@@ -243,7 +285,10 @@ def create_asgi_app(
     else:
         dev_routes: list[Route] = []
 
-    routes: list[Route] = [
+    mount_entries = _resolve_mounts(app, build_config)
+    mount_routes: list[BaseRoute] = [Mount(path=prefix, app=mounted) for prefix, mounted in mount_entries]
+
+    routes: list[BaseRoute] = [
         *dev_routes,
         app_package_files_route,
         *wasm_asset_routes,
@@ -251,6 +296,7 @@ def create_asgi_app(
         *framework_ui_routes,
         *resource_routes,
         *static_file_routes,
+        *mount_routes,
         html_route,
     ]
 
@@ -259,7 +305,12 @@ def create_asgi_app(
     fetch_port = app._server_fetch_port
     if fetch_port is not None:
         blocked_paths = [route[0] for route in (app.routes or []) if route[3] is not None]
-        fetch_port.configure(asgi, blocked_paths, base_url=app.config.base_url)
+        fetch_port.configure(
+            asgi,
+            blocked_paths,
+            base_url=app.config.base_url,
+            mount_prefixes=[prefix for prefix, _ in mount_entries],
+        )
 
     return _ServingApp(asgi=asgi, html_generator=html_generator, hash_cache=_hash_cache, artifacts=artifacts)
 
