@@ -61,7 +61,14 @@ def _strip_directive_paragraphs(html: str) -> str:
     return _DIRECTIVE_PARAGRAPH_PATTERN.sub(r"\1", html)
 
 
-def render_markdown(source: str, context: Mapping[str, Any] | None = None) -> ElementAbstract:
+def render_markdown(
+    source: str,
+    context: Mapping[str, Any] | None = None,
+    *,
+    heading_ids: bool = False,
+    code_blocks: bool = False,
+    classes: Mapping[str, str] | None = None,
+) -> ElementAbstract:
     from webcompy.template._markdown_for import (
         MarkdownForElement,
         _ForBlock,
@@ -88,6 +95,20 @@ def render_markdown(source: str, context: Mapping[str, Any] | None = None) -> El
                 if isinstance(node, str) and not node.strip():
                     continue
                 elements.append(_to_element(node))
+
+    if heading_ids or code_blocks or classes is not None:
+        from webcompy.template._markdown_transforms import (
+            apply_class_map_to_roots,
+            apply_heading_ids_to_roots,
+            replace_code_blocks_in_roots,
+        )
+
+        if heading_ids:
+            apply_heading_ids_to_roots(elements)
+        if code_blocks:
+            replace_code_blocks_in_roots(elements)
+        if classes is not None:
+            apply_class_map_to_roots(elements, classes)
 
     if len(elements) == 1:
         return elements[0]

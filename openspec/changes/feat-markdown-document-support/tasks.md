@@ -16,8 +16,8 @@
 
 ## 3. render_markdown Options
 
-- [ ] 3.1 Add keyword-only `heading_ids: bool = False`, `code_blocks: bool = False`, `classes: Mapping[str, str] | None = None` to `render_markdown` in `packages/webcompy/src/webcompy/template/__init__.py`, applying the corresponding transforms post-bind
-- [ ] 3.2 Add unit tests covering each option end-to-end via `render_markdown` and verify default output is byte-identical to current behavior
+- [x] 3.1 Add keyword-only `heading_ids: bool = False`, `code_blocks: bool = False`, `classes: Mapping[str, str] | None = None` to `render_markdown` in `packages/webcompy/src/webcompy/template/__init__.py`, applying the corresponding transforms post-bind
+- [x] 3.2 Add unit tests covering each option end-to-end via `render_markdown` and verify default output is byte-identical to current behavior
 
 ## 4. load_markdown_document
 

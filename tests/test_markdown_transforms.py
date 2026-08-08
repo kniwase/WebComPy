@@ -289,6 +289,59 @@ class TestApplyClassMap:
         assert all("class" not in h._attrs for h in _heading_elements(result))
 
 
+class TestRenderMarkdownOptions:
+    def test_heading_ids_option(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("# Getting Started", heading_ids=True)
+        assert _heading_elements(result)[0]._attrs.get("id") == "getting-started"
+
+    def test_heading_ids_default_off(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("# Getting Started")
+        assert _heading_elements(result)[0]._attrs.get("id") is None
+
+    def test_code_blocks_option(self) -> None:
+        with _markdown_component_di_scope():
+            result = render_markdown("Intro.\n\n```python\nx = 1\n```", code_blocks=True)
+        components = _find_all(
+            result, lambda n: isinstance(n, Component) and n._property.get("component_name") == "CodeBlock"
+        )
+        assert len(components) == 1
+
+    def test_code_blocks_default_off(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("Intro.\n\n```python\nx = 1\n```")
+        pres = _find_all(result, lambda n: isinstance(n, Element) and n._tag_name == "pre")
+        assert len(pres) == 1
+        assert not _find_all(result, lambda n: isinstance(n, Component))
+
+    def test_classes_option(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("| a | b |\n|---|---|", classes={"table": "doc-table"})
+        tables = _find_all(result, lambda n: isinstance(n, Element) and n._tag_name == "table")
+        assert tables[0]._attrs["class"] == "doc-table"
+
+    def test_classes_default_off(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("| a | b |\n|---|---|")
+        tables = _find_all(result, lambda n: isinstance(n, Element) and n._tag_name == "table")
+        assert "class" not in tables[0]._attrs
+
+    def test_all_options_combined(self) -> None:
+        with _markdown_component_di_scope():
+            result = render_markdown(
+                "# Title\n\n```python\nx = 1\n```",
+                heading_ids=True,
+                code_blocks=True,
+                classes={"pre": "doc-pre"},
+            )
+        assert _heading_elements(result)[0]._attrs.get("id") == "title"
+        assert any(
+            isinstance(n, Component) and n._property.get("component_name") == "CodeBlock"
+            for n in _find_all(result, lambda n: True)
+        )
+
+
 class TestTransformsOnFragment:
     def test_pending_children_walked(self) -> None:
         with _markdown_di_scope():
