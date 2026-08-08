@@ -69,3 +69,4 @@ None — additive API. Existing `HttpClient` calls are unchanged.
 ## Open Questions
 
 - Exact module placement (`webcompy/ajax/_serde.py` vs a new `webcompy/serde/` package if `feat-typed-response`/`feat-json-rpc` reuse grows) — decide at implementation; public import path is re-exported from `webcompy.ajax` either way.
+- Non-object top-level bodies (bare arrays, scalars) cannot carry in-body wire metadata. `feat-typed-response` already resolves this: header mode (the default) is the sole metadata channel for such payloads, and body mode is object-only by explicit contract (its D2).

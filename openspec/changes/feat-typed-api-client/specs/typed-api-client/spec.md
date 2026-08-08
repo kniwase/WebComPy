@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: Schema-driven JSON deserialization
-The framework SHALL provide `from_json(cls, data, *, strict=False) -> T`, a pure-Python, Pyodide-compatible deserializer that reconstructs nested dataclasses from plain JSON structures (dict/list/str/int/float/bool/None). It SHALL resolve target types from type annotations and SHALL support: nested dataclasses, `list[T]`, `dict[str, T]`, `Optional[T]`, and `Union` types (matched structurally in declaration order). When a target annotation is `datetime`, `date`, or `time`, an ISO-8601 string value SHALL be parsed into that type; when the annotation is `UUID`, a string value SHALL be parsed via `UUID(...)`; when the annotation is an `Enum` subclass, the value SHALL be matched by enum value. The function SHALL NOT resolve classes from wire data (no module-qualified-name import from payload content).
+The framework SHALL provide `from_json(cls, data, *, strict=False) -> T`, a pure-Python, Pyodide-compatible deserializer that reconstructs nested dataclasses from plain JSON structures (dict/list/str/int/float/bool/None). It SHALL resolve target types from type annotations and SHALL support: nested dataclasses, `list[T]`, `dict[str, T]`, `Optional[T]`, and `Union` types (matched structurally in declaration order). The top-level target SHALL NOT be limited to dataclasses: supported container targets (`list[T]`, `dict[str, T]`) and scalar targets (`int`, `str`, `float`, `bool`, `datetime`, `date`, `time`, `UUID`, Enum) SHALL be validated/coerced with the same rules as dataclass fields. When a target annotation is `datetime`, `date`, or `time`, an ISO-8601 string value SHALL be parsed into that type; when the annotation is `UUID`, a string value SHALL be parsed via `UUID(...)`; when the annotation is an `Enum` subclass, the value SHALL be matched by enum value. The function SHALL NOT resolve classes from wire data (no module-qualified-name import from payload content).
 
 #### Scenario: Flat dataclass reconstruction
 - **WHEN** `from_json(User, {"id": 1, "name": "ada"})` is called for a dataclass `User(id: int, name: str)`
@@ -17,6 +17,12 @@ The framework SHALL provide `from_json(cls, data, *, strict=False) -> T`, a pure
 - **WHEN** a dataclass field is annotated `Team | None` and the value is `None`
 - **THEN** the result SHALL be `None`
 - **AND** when the value is an object, it SHALL be reconstructed as `Team`
+
+#### Scenario: Top-level container and scalar targets
+- **WHEN** `from_json(list[User], [{"id": 1, "name": "ada"}])` is called
+- **THEN** a list of `User` instances SHALL be returned
+- **AND** when `from_json(datetime, "2026-08-05T12:34:56")` is called, a `datetime` instance SHALL be returned
+- **AND** scalar targets (`int`, `str`, `float`, `bool`, `UUID`, Enum) SHALL be validated/coerced with the same rules as dataclass fields
 
 #### Scenario: ISO datetime coercion from annotation
 - **WHEN** a dataclass field is annotated `created_at: datetime` and the JSON value is `"2026-08-05T12:34:56"`
@@ -53,6 +59,11 @@ The framework SHALL provide `from_json(cls, data, *, strict=False) -> T`, a pure
 - **WHEN** `await HttpClient.get("/api/users/1", response_type=User)` is called and the endpoint returns `{"id": 1, "name": "ada"}`
 - **THEN** the result SHALL be a `User` instance
 - **AND** static type checkers SHALL infer the result type as `User`
+
+#### Scenario: Typed call returning a top-level list
+- **WHEN** `await HttpClient.get("/api/users", response_type=list[User])` is called and the endpoint returns a bare JSON array
+- **THEN** the result SHALL be a `list[User]` with dataclass instances
+- **AND** static type checkers SHALL infer the result type as `list[User]`
 
 #### Scenario: Typed call against an existing unmodified JSON API
 - **WHEN** `response_type` is used against a third-party or pre-existing API that returns plain JSON with no WebComPy-specific metadata

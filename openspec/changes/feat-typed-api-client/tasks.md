@@ -21,7 +21,7 @@
 
 ## 4. Tests
 
-- [ ] 4.1 Serde unit tests: flat/nested dataclasses, list/dict/Optional/Union, datetime/date/UUID/Enum coercion, strict vs lenient, error messages
+- [ ] 4.1 Serde unit tests: flat/nested dataclasses, list/dict/Optional/Union, datetime/date/UUID/Enum coercion, top-level list/scalar targets, strict vs lenient, error messages
 - [ ] 4.2 Serde test: schema module using `from __future__ import annotations`
 - [ ] 4.3 HttpClient tests: untyped call returns `Response`; typed call returns `T`; type inference verified via pyright
 - [ ] 4.4 Integration test (webcompy_testing): typed self-site fetch during SSR uses ASGITransport and populates the transfer cache
