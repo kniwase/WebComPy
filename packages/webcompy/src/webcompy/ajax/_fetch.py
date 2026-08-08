@@ -1,12 +1,15 @@
 import urllib.parse  # noqa: I001
 from json import dumps as json_dumps
 from json import loads as json_loads
-from typing import Any, Literal
+from typing import Any, Literal, TypeVar, overload
 
+from webcompy.ajax._serde import TypedResponseError, from_json
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.exception import WebComPyException
 from webcompy.di import inject
 from webcompy.ports._keys import FETCH_PORT_KEY, FFI_PORT_KEY
+
+T = TypeVar("T")
 
 
 # HttpClient
@@ -76,6 +79,20 @@ class Response:
     @property
     def ok(self):
         return self._ok
+
+
+def _deserialize_if_typed(res: Response, response_type: type[T] | None) -> Response | T:
+    if response_type is None:
+        return res
+    res.raise_for_status()
+    try:
+        data = json_loads(res.text)
+    except Exception as err:
+        raise TypedResponseError(f"Failed to parse response as JSON: {res.text[:200]!r}") from err
+    try:
+        return from_json(response_type, data)
+    except (TypeError, ValueError) as err:
+        raise TypedResponseError(f"Response does not match schema: {err}; body excerpt: {res.text[:200]!r}") from err
 
 
 class HttpClient:
@@ -168,19 +185,66 @@ class HttpClient:
                 )
         return ret
 
+    @overload
     @classmethod
     async def get(
         cls,
         url: str,
         query_params: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
-    ) -> Response:
-        return await HttpClient.request(
+        *,
+        response_type: None = None,
+    ) -> Response: ...
+
+    @overload
+    @classmethod
+    async def get(
+        cls,
+        url: str,
+        query_params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+        *,
+        response_type: type[T],
+    ) -> T: ...
+
+    @classmethod
+    async def get(
+        cls,
+        url: str,
+        query_params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+        *,
+        response_type: type[T] | None = None,
+    ) -> Response | T:
+        res = await HttpClient.request(
             "GET",
             url,
             headers=headers,
             query_params=query_params,
         )
+        return _deserialize_if_typed(res, response_type)
+
+    @overload
+    @classmethod
+    async def head(
+        cls,
+        url: str,
+        query_params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+        *,
+        response_type: None = None,
+    ) -> Response: ...
+
+    @overload
+    @classmethod
+    async def head(
+        cls,
+        url: str,
+        query_params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+        *,
+        response_type: type[T],
+    ) -> T: ...
 
     @classmethod
     async def head(
@@ -188,13 +252,38 @@ class HttpClient:
         url: str,
         query_params: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
-    ) -> Response:
-        return await HttpClient.request(
+        *,
+        response_type: type[T] | None = None,
+    ) -> Response | T:
+        res = await HttpClient.request(
             "HEAD",
             url,
             headers=headers,
             query_params=query_params,
         )
+        return _deserialize_if_typed(res, response_type)
+
+    @overload
+    @classmethod
+    async def options(
+        cls,
+        url: str,
+        query_params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+        *,
+        response_type: None = None,
+    ) -> Response: ...
+
+    @overload
+    @classmethod
+    async def options(
+        cls,
+        url: str,
+        query_params: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+        *,
+        response_type: type[T],
+    ) -> T: ...
 
     @classmethod
     async def options(
@@ -202,13 +291,46 @@ class HttpClient:
         url: str,
         query_params: dict[str, str] | None = None,
         headers: dict[str, str] | None = None,
-    ) -> Response:
-        return await HttpClient.request(
+        *,
+        response_type: type[T] | None = None,
+    ) -> Response | T:
+        res = await HttpClient.request(
             "OPTIONS",
             url,
             headers=headers,
             query_params=query_params,
         )
+        return _deserialize_if_typed(res, response_type)
+
+    @overload
+    @classmethod
+    async def post(
+        cls,
+        url: str,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
+        *,
+        response_type: None = None,
+    ) -> Response: ...
+
+    @overload
+    @classmethod
+    async def post(
+        cls,
+        url: str,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
+        *,
+        response_type: type[T],
+    ) -> T: ...
 
     @classmethod
     async def post(
@@ -220,8 +342,10 @@ class HttpClient:
         body_data: str | bytes | None = None,
         form_data: dict[str, str | bytes] | None = None,
         form_element: DomNodeRef | None = None,
-    ) -> Response:
-        return await HttpClient.request(
+        *,
+        response_type: type[T] | None = None,
+    ) -> Response | T:
+        res = await HttpClient.request(
             "POST",
             url,
             headers=headers,
@@ -231,6 +355,37 @@ class HttpClient:
             form_data=form_data,
             form_element=form_element,
         )
+        return _deserialize_if_typed(res, response_type)
+
+    @overload
+    @classmethod
+    async def put(
+        cls,
+        url: str,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
+        *,
+        response_type: None = None,
+    ) -> Response: ...
+
+    @overload
+    @classmethod
+    async def put(
+        cls,
+        url: str,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
+        *,
+        response_type: type[T],
+    ) -> T: ...
 
     @classmethod
     async def put(
@@ -242,8 +397,10 @@ class HttpClient:
         body_data: str | bytes | None = None,
         form_data: dict[str, str | bytes] | None = None,
         form_element: DomNodeRef | None = None,
-    ) -> Response:
-        return await HttpClient.request(
+        *,
+        response_type: type[T] | None = None,
+    ) -> Response | T:
+        res = await HttpClient.request(
             "PUT",
             url,
             headers=headers,
@@ -253,6 +410,37 @@ class HttpClient:
             form_data=form_data,
             form_element=form_element,
         )
+        return _deserialize_if_typed(res, response_type)
+
+    @overload
+    @classmethod
+    async def delete(
+        cls,
+        url: str,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
+        *,
+        response_type: None = None,
+    ) -> Response: ...
+
+    @overload
+    @classmethod
+    async def delete(
+        cls,
+        url: str,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
+        *,
+        response_type: type[T],
+    ) -> T: ...
 
     @classmethod
     async def delete(
@@ -264,8 +452,10 @@ class HttpClient:
         body_data: str | bytes | None = None,
         form_data: dict[str, str | bytes] | None = None,
         form_element: DomNodeRef | None = None,
-    ) -> Response:
-        return await HttpClient.request(
+        *,
+        response_type: type[T] | None = None,
+    ) -> Response | T:
+        res = await HttpClient.request(
             "DELETE",
             url,
             headers=headers,
@@ -275,6 +465,37 @@ class HttpClient:
             form_data=form_data,
             form_element=form_element,
         )
+        return _deserialize_if_typed(res, response_type)
+
+    @overload
+    @classmethod
+    async def patch(
+        cls,
+        url: str,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
+        *,
+        response_type: None = None,
+    ) -> Response: ...
+
+    @overload
+    @classmethod
+    async def patch(
+        cls,
+        url: str,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        body_data: str | bytes | None = None,
+        form_data: dict[str, str | bytes] | None = None,
+        form_element: DomNodeRef | None = None,
+        *,
+        response_type: type[T],
+    ) -> T: ...
 
     @classmethod
     async def patch(
@@ -286,8 +507,10 @@ class HttpClient:
         body_data: str | bytes | None = None,
         form_data: dict[str, str | bytes] | None = None,
         form_element: DomNodeRef | None = None,
-    ) -> Response:
-        return await HttpClient.request(
+        *,
+        response_type: type[T] | None = None,
+    ) -> Response | T:
+        res = await HttpClient.request(
             "PATCH",
             url,
             headers=headers,
@@ -297,3 +520,4 @@ class HttpClient:
             form_data=form_data,
             form_element=form_element,
         )
+        return _deserialize_if_typed(res, response_type)

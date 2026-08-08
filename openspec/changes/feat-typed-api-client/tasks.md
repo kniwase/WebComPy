@@ -10,8 +10,8 @@
 
 ## 2. HttpClient integration
 
-- [ ] 2.1 Add keyword-only `response_type` parameter with `@overload` + `TypeVar` signatures to `HttpClient` verb methods (get/post/put/delete/patch/head/options), preserving `Response` return when omitted
-- [ ] 2.2 Wire typed calls through the existing FetchPort path; raise on non-2xx before deserialization; raise the dedicated exception on JSON/schema mismatch
+- [x] 2.1 Add keyword-only `response_type` parameter with `@overload` + `TypeVar` signatures to `HttpClient` verb methods (get/post/put/delete/patch/head/options), preserving `Response` return when omitted
+- [x] 2.2 Wire typed calls through the existing FetchPort path; raise on non-2xx before deserialization; raise the dedicated exception on JSON/schema mismatch
 
 ## 3. Transfer opt-out
 
@@ -23,7 +23,7 @@
 
 - [x] 4.1 Serde unit tests: flat/nested dataclasses, list/dict/Optional/Union, datetime/date/UUID/Enum coercion, top-level list/scalar targets, strict vs lenient, error messages
 - [x] 4.2 Serde test: schema module using `from __future__ import annotations`
-- [ ] 4.3 HttpClient tests: untyped call returns `Response`; typed call returns `T`; type inference verified via pyright
+- [x] 4.3 HttpClient tests: untyped call returns `Response`; typed call returns `T`; type inference verified via pyright
 - [ ] 4.4 Integration test (webcompy_testing): typed self-site fetch during SSR uses ASGITransport and populates the transfer cache
 - [ ] 4.5 Integration test: `transfer=False` result absent from hydration payload; browser executes the fetch after hydration; SSG artifact does not contain the data
 
