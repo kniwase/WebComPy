@@ -2,8 +2,8 @@
 
 ## 1. Frontmatter Parsing
 
-- [ ] 1.1 Create `packages/webcompy/src/webcompy/template/_frontmatter.py` with `split_frontmatter(source: str) -> tuple[dict[str, Any], str]` handling `---` (flat key-value) and `+++` (TOML via `tomllib`) delimiters; raise `WebComPyException` for malformed blocks
-- [ ] 1.2 Add unit tests `tests/test_frontmatter.py`: flat extraction, TOML nested structures, no-frontmatter passthrough, malformed flat line, invalid TOML, unterminated block
+- [x] 1.1 Create `packages/webcompy/src/webcompy/template/_frontmatter.py` with `split_frontmatter(source: str) -> tuple[dict[str, Any], str]` handling `---` (flat key-value) and `+++` (TOML via `tomllib`) delimiters; raise `WebComPyException` for malformed blocks
+- [x] 1.2 Add unit tests `tests/test_frontmatter.py`: flat extraction, TOML nested structures, no-frontmatter passthrough, malformed flat line, invalid TOML, unterminated block
 
 ## 2. Post-Bind Transforms
 
