@@ -6,7 +6,7 @@
 - [x] 1.2 Support containers: `list[T]`, `dict[str, T]`, `Optional[T]`, `Union` (structural match in declaration order)
 - [x] 1.3 Support leaf coercion: `datetime`/`date`/`time` (ISO-8601 via `fromisoformat`), `UUID`, `Enum` (by value)
 - [x] 1.4 Implement strict/lenient modes (unknown-key handling, missing-field errors) with descriptive error messages naming field and expected type
-- [x] 1.5 Re-export the public API from `webcompy.ajax` and add a dedicated `TypedResponseError` (or similarly named) framework exception
+- [x] 1.5 Re-export the public API from `webcompy.ajax` and add a dedicated `TypedResponseError` (or similarly named) exception (a plain `Exception` subclass, NOT a `WebComPyException`, so `ErrorBoundary` engages)
 
 ## 2. HttpClient integration
 

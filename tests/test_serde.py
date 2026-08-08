@@ -219,10 +219,11 @@ class TestErrorMessages:
 
 
 class TestTypedResponseError:
-    def test_is_framework_exception(self):
+    def test_is_plain_exception(self):
         from webcompy.exception import WebComPyException
 
-        assert issubclass(TypedResponseError, WebComPyException)
+        assert issubclass(TypedResponseError, Exception)
+        assert not issubclass(TypedResponseError, WebComPyException)
 
 
 def _record_data() -> dict:

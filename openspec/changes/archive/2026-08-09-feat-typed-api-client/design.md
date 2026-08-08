@@ -43,7 +43,7 @@ async def get(url: str, *, response_type: type[T], ...) -> T: ...
 ```
 **Why**: keeps one entry point, is discoverable, and preserves backward compatibility. A separate `typed_get()` family would fork the API surface. Overloads are the established pyright-friendly pattern for "return type depends on an optional argument".
 
-Error handling: non-2xx responses raise for status before deserialization (existing `raise_for_status` semantics preserved); JSON parse or schema mismatch raises a dedicated `TypedResponseError` (subclass of `WebComPyException`) carrying the response excerpt.
+Error handling: non-2xx responses raise for status before deserialization (existing `raise_for_status` semantics preserved); JSON parse or schema mismatch raises a dedicated `TypedResponseError` (a plain `Exception` subclass, deliberately NOT a `WebComPyException`, so that `ErrorBoundary` and the error pipeline can catch it) carrying the response excerpt.
 
 ### D5: `transfer=False` on `use_async_result` implemented at collection time
 The async-result entry is marked non-transferable; `collect_transfer_data()` skips marked entries. On hydration the browser finds no transferred entry and executes the fetch on the client (existing fallback behavior of `use_async_result`).
@@ -60,7 +60,7 @@ Precedent: the storage persistence composables (`use_local_storage`/`use_session
 - [Union coercion ambiguity (e.g. `Union[int, str]` matching both)] → coercion tries alternatives in declaration order; first structural match wins; documented.
 - [Deeply nested schemas cost runtime reflection per call] → cache resolved type hints per class (`functools.lru_cache`-style dict on the module); Pyodide-safe.
 - [Users expect pydantic-style validation strictness] → documented non-goal; `strict=True` covers structural checks only, not value constraints (no `gt=0`-style validators).
-- [Deserialization errors raised during component setup/render interact with the error pipeline] → Desirable, no special handling: `TypedResponseError` is an ordinary framework exception, so an `ErrorBoundary` can catch it and render a fallback (`error-handling` spec); during SSG an uncontained error fails the build, so pages with schema mismatches never ship as static artifacts.
+- [Deserialization errors raised during component setup/render interact with the error pipeline] → Desirable, no special handling: `TypedResponseError` is an ordinary (non-`WebComPyException`) error, so an `ErrorBoundary` can catch it and render a fallback (`error-handling` spec); during SSG an uncontained error fails the build, so pages with schema mismatches never ship as static artifacts.
 
 ## Migration Plan
 

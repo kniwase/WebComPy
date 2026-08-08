@@ -7,12 +7,10 @@ from enum import Enum
 from typing import Any, TypeVar, Union, get_args, get_origin, get_type_hints
 from uuid import UUID
 
-from webcompy.exception import WebComPyException
-
 T = TypeVar("T")
 
 
-class TypedResponseError(WebComPyException):
+class TypedResponseError(Exception):
     pass
 
 

@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from webcompy.ajax import TypedResponseError
 from webcompy.components import define_component
 from webcompy.components._component import Component, _active_app_context, _set_app_instance
 from webcompy.di import DIScope
@@ -205,6 +206,33 @@ class TestErrorBoundaryRender:
             assert isinstance(error, RuntimeError)
             assert str(error) == "capture me"
             assert callable(captured["reset"])
+
+    def test_typed_response_error_engages_fallback(self):
+        errors: list[Exception] = []
+
+        @define_component
+        def SchemaMismatchChild(context):
+            raise TypedResponseError("schema mismatch during fetch")
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {"data-testid": "root"},
+                ErrorBoundary(
+                    children=lambda: SchemaMismatchChild(None),
+                    fallback=lambda error, reset: html.DIV({"data-testid": "fallback"}, str(error)),
+                    on_error=lambda e: errors.append(e),
+                ),
+            )
+
+        with TestRenderer.render(Root) as result:
+            assert result.find_by_attribute("data-testid", "fallback") is not None
+            assert result.find_by_text("schema mismatch during fetch") is not None
+            assert len(errors) == 1
+            assert isinstance(errors[0], TypedResponseError)
+            boundary = _find_boundary(result._instance)
+            assert boundary is not None
+            assert boundary._in_fallback
 
 
 class TestPropagationWalk:
