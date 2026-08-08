@@ -100,7 +100,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **CSS Text Templates** — `template-engine/spec.md`
 - **Markdown Port & Default Parser** — `template-engine/spec.md`, `markdown-conformance/spec.md`
 - **GFM Conformance Harness** — `markdown-conformance/spec.md`
-- **Markdown Pipeline (`render_markdown`)** — `template-engine/spec.md`
+- **Markdown Pipeline (`render_markdown`)** — `template-engine/spec.md`, `markdown-document/spec.md`
 - **MarkdownForElement** — `template-engine/spec.md`
 - **Template Binder Control Flow** — `template-engine/spec.md`
 - **Template Binder Component Tag Resolution** — `template-engine/spec.md`

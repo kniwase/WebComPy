@@ -34,8 +34,8 @@
 
 ## 6. Verification & Docs
 
-- [ ] 6.1 Run `uv run ruff check .` and `uv run ruff format --check .` — fix all findings
-- [ ] 6.2 Run `uv run pyright` — fix all findings
-- [ ] 6.3 Run `uv run python -m pytest tests/ --tb=short` including `tests/conformance/` — GFM conformance suite must pass unmodified
-- [ ] 6.4 Update `AGENTS.md` File → Spec Mapping (`webcompy/template/` row gains `markdown-document/spec.md`), Framework Invariants if needed, and Current Specs list; update `.opencode/skills/webcompy-review/SKILL.md` invariant references in sync
-- [ ] 6.5 Run `python3 scripts/check-doc-spec-refs.py` and `openspec validate feat-markdown-document-support` — both must pass
+- [x] 6.1 Run `uv run ruff check .` and `uv run ruff format --check .` — fix all findings
+- [x] 6.2 Run `uv run pyright` — fix all findings
+- [x] 6.3 Run `uv run python -m pytest tests/ --tb=short` including `tests/conformance/` — GFM conformance suite must pass unmodified
+- [x] 6.4 Update `AGENTS.md` File → Spec Mapping (`webcompy/template/` row gains `markdown-document/spec.md`), Framework Invariants if needed, and Current Specs list; update `.opencode/skills/webcompy-review/SKILL.md` invariant references in sync
+- [x] 6.5 Run `python3 scripts/check-doc-spec-refs.py` and `openspec validate feat-markdown-document-support` — both must pass

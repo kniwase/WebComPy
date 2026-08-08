@@ -166,7 +166,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md`, `signal-value-transfer/spec.md`, `error-handling/spec.md` |
 | `webcompy/storage/` | `composables/spec.md` |
 | `webcompy/template/_css_parser.py`, `webcompy/template/_css_template.py` | `template-engine/spec.md` |
-| `webcompy/template/`, `webcompy/template/_expression.py` | `template-engine/spec.md` |
+| `webcompy/template/`, `webcompy/template/_expression.py` | `template-engine/spec.md`, `markdown-document/spec.md` |
 | `webcompy/template/_markdown_default.py` | `template-engine/spec.md`, `markdown-conformance/spec.md` |
 | `webcompy/template/_markdown_for.py` | `template-engine/spec.md` |
 | `tests/conformance/` | `markdown-conformance/spec.md`, `template-engine/spec.md`, `test-execution-paths/spec.md` |
@@ -196,7 +196,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/ajax/_serde.py` | `typed-api-client/spec.md` |
 | `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md` |
-| `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md` |
+| `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md`, `markdown-document/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
 
 Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md`.
@@ -277,6 +277,8 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `components` | Component definition styles, props, slots, scoped CSS, lifecycle |
 | `composables` | Reusable stateful logic functions for function-style component setup |
 | `template-engine` | HTML template parsing and variable interpolation that produces reactive WebComPy Element trees |
+| `markdown-document` | Markdown frontmatter parsing, `load_markdown_document`, TOC extraction, opt-in `prose.css` typography preset |
+| `markdown-conformance` | Byte-exact cmark-gfm compatibility of `DefaultMarkdownParser` HTML output, strict-xfail suite |
 | `elements` | DOM element creation, reactive updates, conditional/list rendering |
 | `list-reconciliation` | Key-based reconciliation for efficient DOM reuse |
 | `nested-dynamic-element` | Nesting of `repeat` and `switch` at arbitrary depth |
