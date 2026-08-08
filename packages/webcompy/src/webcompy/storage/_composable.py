@@ -59,6 +59,12 @@ def _is_missing(raw: Any) -> bool:
     return False
 
 
+def _is_missing_pyscript(raw: Any) -> bool:
+    if raw is None:
+        return True
+    return _pyscript_ffi_is_none(raw)
+
+
 def _read(storage: Any, key: str, default: T | Callable[[], T]) -> T:
     raw = storage.getItem(key)
     if _is_missing(raw):
@@ -118,8 +124,8 @@ class _StorageSyncRegistry:
         self._attached = True
 
     def _dispatch(self, event: Any) -> None:
-        key = None if _is_missing(event.key) else str(event.key)
-        new_value = None if _is_missing(event.newValue) else str(event.newValue)
+        key = None if _is_missing_pyscript(event.key) else str(event.key)
+        new_value = None if _is_missing_pyscript(event.newValue) else str(event.newValue)
         if key is None:
             callbacks = [cb for subs in list(self._subscribers.values()) for cb in list(subs)]
         else:
