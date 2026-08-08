@@ -491,11 +491,11 @@ When the `key` parameter is omitted, all composables (`use_state()`, `use_reacti
 
 ### Requirement: Storage persistence composables shall provide reactive localStorage/sessionStorage-backed state
 
-The framework SHALL provide `use_local_storage(key, default)` and `use_session_storage(key, default)` composables, importable from `webcompy` top-level and from `webcompy.storage`, each returning a `Reactive[T]`. `default` SHALL accept either a value or a zero-argument factory callable.
+The framework SHALL provide `use_local_storage(key, default)` and `use_session_storage(key, default)` composables, importable from `webcompy` top-level and from `webcompy.storage`, each returning a `Signal[T]`. `default` SHALL accept either a value or a zero-argument factory callable.
 
 In the browser (PyScript) environment, the composable SHALL read the current stored value for `key` at creation time and use it as the signal's initial value; when the key is absent, the default SHALL be used. Every subsequent update of the returned signal SHALL be automatically written back to the corresponding Web Storage API. Values SHALL be encoded with `json.dumps` and decoded with `json.loads`.
 
-In any non-PyScript environment (SSR, SSG, server-side tests), the composable SHALL NOT access any storage API and SHALL return `Reactive(default)`.
+In any non-PyScript environment (SSR, SSG, server-side tests), the composable SHALL NOT access any storage API and SHALL return `Signal(default)`.
 
 #### Scenario: Read persisted value on creation
 - **GIVEN** the browser's `localStorage` contains `{"theme": "\"dark\""}`-style JSON under key `"theme"`
@@ -518,7 +518,7 @@ In any non-PyScript environment (SSR, SSG, server-side tests), the composable SH
 
 #### Scenario: Callable outside component setup
 - **WHEN** `use_local_storage("k", 0)` is called outside any component setup function
-- **THEN** a working `Reactive` SHALL be returned
+- **THEN** a working `Signal` SHALL be returned
 - **AND** no `UserWarning` SHALL be emitted
 
 #### Scenario: Storage-backed signals are excluded from SSR transfer
