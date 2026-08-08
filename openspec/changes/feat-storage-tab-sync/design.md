@@ -120,3 +120,24 @@ Additional implementation-relevant observations:
 - Because `clear()` on empty storage fires no event, the D3 "all registered keys reset on
   `clear()`" handler only needs to react to real `clear()` events (data present), which is
   the platform's normal behavior.
+
+## Implementation Notes (Task 2)
+
+- **Registry provisioning goes through the app DI scope directly.** During component setup
+  `webcompy.di.provide()` routes through `_pending_di_parent` and would place the registry
+  in a child scope, breaking app-wide sharing. The registry is therefore created and stored
+  via `_get_app_di_scope().provide(_STORAGE_SYNC_REGISTRY_KEY, registry)`; lookup via
+  `DIScope.inject(..., default=None)`. If no app DI scope is active (composable called
+  outside an app context), a warning is logged and the subscription is skipped; the signal
+  behaves normally.
+- **Per-component unregister uses hook chaining.** `Context.on_before_destroy` holds a
+  single slot that overwrites any previous registration, so a plain
+  `on_before_destroy(unregister)` would leak earlier subscribers when a component creates
+  multiple `sync_tabs=True` instances. Instead the current hook is read via
+  `Context.__get_lifecyclehooks__()` and the unregister is wrapped around it. Known
+  residual limitation (pre-existing framework behavior shared with `use_async_result` and
+  `use_reactive_scoped_style`): a user hook registered *after* the composable call still
+  overwrites the unregister. Full multi-hook support would require a components-spec
+  change and is a non-goal here.
+- **`use_session_storage` gains no parameter** (D4); `_make` accepts `sync_tabs` with a
+  default of `False` so the session path is unchanged.

@@ -25,7 +25,7 @@
 ## 4. E2E and docs
 
 - [ ] 4.1 Convert the spike script into a permanent e2e test: two tabs, write in B → assert A's UI updates; remove in B → assert A resets
-- [ ] 4.2 Document `sync_tabs` in the `docs_app` composables storage section (opt-in, localStorage only, last-writer-wins); `uv run python -m webcompy generate` succeeds
+- [ ] 4.2 Document `sync_tabs` as OpenSpec requirements/scenarios in the composables delta spec (opt-in, localStorage only, last-writer-wins, `clear()` reset, no-DI-scope skip). The `docs_app` composables storage section does not exist, so no `docs_app` changes are made.
 
 ## 5. Verification
 
