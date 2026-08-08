@@ -10,11 +10,11 @@
 
 ## 2. Implementation (only after the spike gate passes)
 
-- [ ] 2.1 Add keyword-only `sync_tabs: bool = False` to `use_local_storage` (both overloads); `use_session_storage` unchanged (design D4)
-- [ ] 2.2 Implement the shared-listener + key registry with per-app scoping per design D1 (DI key or per-app holder following existing patterns; NO module-global singleton)
-- [ ] 2.3 Implement the remote-apply path with the `_applying_remote` flag guarding `_write` (design D2); removal → reset to default (D3); corrupted payload → warning + default
-- [ ] 2.4 Listener lifecycle: `create_proxy` / `removeEventListener` / `destroy` per framework invariant; subscriber unregister on component destroy for setup-created instances
-- [ ] 2.5 Server no-op path (`ENVIRONMENT != "pyscript"`)
+- [x] 2.1 Add keyword-only `sync_tabs: bool = False` to `use_local_storage` (both overloads); `use_session_storage` unchanged (design D4)
+- [x] 2.2 Implement the shared-listener + key registry with per-app scoping per design D1 (DI key or per-app holder following existing patterns; NO module-global singleton)
+- [x] 2.3 Implement the remote-apply path with the `_applying_remote` flag guarding `_write` (design D2); removal → reset to default (D3); corrupted payload → warning + default
+- [x] 2.4 Listener lifecycle: `create_proxy` / `removeEventListener` / `destroy` per framework invariant; subscriber unregister on component destroy for setup-created instances
+- [x] 2.5 Server no-op path (`ENVIRONMENT != "pyscript"`)
 
 ## 3. Unit tests
 
