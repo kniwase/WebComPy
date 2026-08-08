@@ -2,7 +2,7 @@
 
 ## Context
 
-Preceding changes provide all the plumbing: `feat-asgi-mount` inserts user/framework ASGI apps into the route table; `ServerFetchPort` makes self-site calls in-process during SSR/SSG with hydration baking; `from_json` (typed-api-client) reconstructs typed values schema-first; `encode_with_meta` (typed-response) produces the metadata sidecar for non-JSON-native types. What remains is a procedure-dispatch layer. JSON-RPC 2.0 is chosen over a bespoke protocol because it is small, fully specified, and tool-compatible.
+Preceding changes provide all the plumbing: `feat-asgi-mount` inserts user/framework ASGI apps into the route table; `ServerFetchPort` makes self-site calls in-process during SSR/SSG with hydration baking; `from_json` (typed-api-client) reconstructs typed values schema-first (including top-level container/scalar targets, so scalar- and list-returning procedures are decodable); `encode_with_meta` (typed-response) produces the metadata sidecar for non-JSON-native types. What remains is a procedure-dispatch layer. JSON-RPC 2.0 is chosen over a bespoke protocol because it is small, fully specified, and tool-compatible.
 
 ## Goals / Non-Goals
 
