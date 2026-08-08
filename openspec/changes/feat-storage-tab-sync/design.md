@@ -99,4 +99,24 @@ DI/registry plumbing per D1 (key in `webcompy/di/_keys.py` if the DI route is ta
 
 ## Spike Findings (to be filled during Task 1)
 
-(filled by the implementer; on fatal failure this section records the evidence and the change is abandoned)
+All six spike-gate items were verified in the PyScript runtime (e2e app spike page
+`e2e/core/my_app/pages/storage_sync_spike.py` + `e2e/core/test_storage_tab_sync.py`,
+two pages in one browser context, prod and static serving modes). No fatal failures;
+the change proceeds to section 2.
+
+| # | Verification | Result |
+|---|---|---|
+| 1 | Event reception from another tab | PASS — a `storage` listener registered via `create_proxy` + `addEventListener` receives events fired by another tab, for writes originating both from JS (`localStorage.setItem`) and from Python (`context.window.localStorage.setItem` through the proxy path) |
+| 2 | Payload readability | PASS — `event.key` reads as a Python `str`; `event.newValue` reads as `str` for values and is detectable as null via `ffi.is_none`; `event.url` reads as `str` |
+| 3 | Writing tab does not receive its own event | PASS — the writing page's event list stayed empty while the other page recorded 1 event per write |
+| 4 | Same-value `setItem` firing | Observed: NO extra event — writing the same value again produced 0 additional events. The platform suppresses same-value writes, so the equality-convergence no-op path (D5) is never exercised by real events |
+| 5 | `removeItem` / `clear()` payload shape | PASS — `removeItem(key)` fires an event with `key=<the key>`, `newValue=<null>`; `clear()` (with data present) fires an event with `key=<null>`, `newValue=<null>`. Note: `clear()` on an *already empty* storage area fires no event at all (HTML spec: no change → no event) |
+| 6 | Clean detach | PASS — after `removeEventListener` + `proxy.destroy()`, the page received no further events and produced no console errors |
+
+Additional implementation-relevant observations:
+
+- The Python-originated write path (`context.window.localStorage.setItem`) is the exact
+  path the real `_write` uses, and it fires remote events identically to a JS write.
+- Because `clear()` on empty storage fires no event, the D3 "all registered keys reset on
+  `clear()`" handler only needs to react to real `clear()` events (data present), which is
+  the platform's normal behavior.

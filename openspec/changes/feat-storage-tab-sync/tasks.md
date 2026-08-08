@@ -2,11 +2,11 @@
 
 ## 1. Spike: verify `storage` event reception from PyScript (GATE — abort conditions apply)
 
-- [ ] 1.1 Add a temporary spike page to the e2e app (`e2e/core/my_app/pages/`) that registers a `storage` listener via `create_proxy` + `addEventListener` and records received events (`key`, `newValue`, `url`) into the DOM
-- [ ] 1.2 Write a Playwright verification script that opens TWO pages in ONE browser context (separate contexts do not share `localStorage`), writes/removes from page B, and asserts page A's records
-- [ ] 1.3 Verify the six spike items (design "Spike Gate"): (1) event reception, (2) payload readability, (3) writing tab does not receive its own event, (4) same-value `setItem` firing behavior, (5) `removeItem`/`clear()` payload shape, (6) clean detach via `removeEventListener` + `proxy.destroy()`
-- [ ] 1.4 Record findings in design.md "Spike Findings". **If item 1, 2, or 6 fails: STOP. Do not proceed to section 2+. Record evidence, discard the change, and keep cross-tab sync as a documented non-goal of storage persistence.**
-- [ ] 1.5 On success, keep the spike script as the basis of the permanent e2e test (section 4)
+- [x] 1.1 Add a temporary spike page to the e2e app (`e2e/core/my_app/pages/`) that registers a `storage` listener via `create_proxy` + `addEventListener` and records received events (`key`, `newValue`, `url`) into the DOM
+- [x] 1.2 Write a Playwright verification script that opens TWO pages in ONE browser context (separate contexts do not share `localStorage`), writes/removes from page B, and asserts page A's records
+- [x] 1.3 Verify the six spike items (design "Spike Gate"): (1) event reception, (2) payload readability, (3) writing tab does not receive its own event, (4) same-value `setItem` firing behavior, (5) `removeItem`/`clear()` payload shape, (6) clean detach via `removeEventListener` + `proxy.destroy()`
+- [x] 1.4 Record findings in design.md "Spike Findings". **If item 1, 2, or 6 fails: STOP. Do not proceed to section 2+. Record evidence, discard the change, and keep cross-tab sync as a documented non-goal of storage persistence.**
+- [x] 1.5 On success, keep the spike script as the basis of the permanent e2e test (section 4)
 
 ## 2. Implementation (only after the spike gate passes)
 
