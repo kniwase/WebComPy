@@ -86,6 +86,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Hydration** — `hydration-data-transfer/spec.md`
 - **Hydration Text-Node Normalization** — `elements/spec.md`
 - **Transfer Codec** — `transfer-codec/spec.md`
+- **Metadata Type-Tag Decoding** — `typed-response/spec.md`, `typed-api-client/spec.md`
 - **Signal Value Transfer** — `signal-value-transfer/spec.md`
 - **Payload Compression** — `payload-compression/spec.md`
 - **ResourcePort** — `resource-port/spec.md`

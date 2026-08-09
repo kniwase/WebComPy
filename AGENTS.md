@@ -151,6 +151,7 @@ the per-area reference.
 - **Async Rendering Pipeline** — `async-rendering/spec.md`
 - **DI Scope Rules** — `di-scope/spec.md`
 - **Hydration** — `hydration-data-transfer/spec.md`, `elements/spec.md`, `async-rendering/spec.md`
+- **Metadata Type-Tag Decoding** — `typed-response/spec.md`, `typed-api-client/spec.md`
 - **RouterView Depth and Level Reuse** — `router/spec.md`
 - **Composable Usage** — `composables/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
@@ -181,7 +182,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/elements/types/_fragment.py` | `elements/spec.md` |
 | `webcompy/elements/types/_switch.py` | `elements/spec.md`, `async-rendering/spec.md` |
 | `webcompy/forms/` | `forms/spec.md` |
-| `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md`, `typed-api-client/spec.md` |
+| `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md`, `error-handling/spec.md` |
 | `webcompy/router/_scroll.py` | `scroll-restoration/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md` |
@@ -190,10 +191,11 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/ports/_resource.py`, `webcompy_server/ports/_resource.py` | `resource-port/spec.md` |
 | `webcompy_server/ports/` | `virtual-dom/spec.md`, `server-fetch-asgi/spec.md`, `async-scheduler/spec.md` |
 | `webcompy_server/_context.py`, `webcompy_server/_html.py` | `async-scheduler/spec.md`, `app-lifecycle/spec.md` |
+| `webcompy_server/contrib/` | `typed-response/spec.md` |
 | `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md` |
 | `webcompy/di/` | `di-scope/spec.md`, `di-injection/spec.md`, `dependency-resolver/spec.md` |
-| `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md`, `typed-api-client/spec.md` |
-| `webcompy/ajax/_serde.py` | `typed-api-client/spec.md` |
+| `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md` |
+| `webcompy/ajax/_serde.py` | `typed-api-client/spec.md`, `typed-response/spec.md` |
 | `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md` |
 | `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md`, `markdown-document/spec.md` |
@@ -302,6 +304,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `virtual-dom` | Server-side virtual DOM tree for SSG and testing |
 | `async` | Async operations, HTTP client integration |
 | `typed-api-client` | Schema-driven typed deserialization (`from_json`) and `response_type` typed requests on `HttpClient`, including validation strictness and container/scalar coercion |
+| `typed-response` | Metadata-augmented responses: framework-neutral `encode_with_meta`, JSON Pointer type-tag maps, header (`X-WebComPy-Transfer-Meta`) and body (`__webcompy_transfer_meta__`) wire modes, `TypedJSONResponse` FastAPI contrib, and client-side metadata consumption layered on schema-driven coercion |
 | `async-component-setup` | Async component definition support via two-phase initialization during `_render()` |
 | `async-rendering` | Async rendering pipeline, async lifecycle hooks, sequential sibling rendering |
 | `client-only` | ClientOnly element for browser-only rendering with optional SSR fallback |

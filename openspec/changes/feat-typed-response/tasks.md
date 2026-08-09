@@ -28,10 +28,10 @@
 
 ## 5. Verification
 
-- [ ] 5.1 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
+- [x] 5.1 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
 
 ## 6. Spec reference sync
 
-- [ ] 6.1 Update AGENTS.md: add `typed-response` to the Current Specs list; add File→Spec Mapping entries for the metadata-encoder module and `webcompy_server/contrib/` (`typed-response/spec.md`), and the `typed-api-client` client-consumption rows
-- [ ] 6.2 Check `.opencode/skills/webcompy-review/SKILL.md` for stale assumptions and sync invariant headings/spec references
-- [ ] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+- [x] 6.1 Update AGENTS.md: add `typed-response` to the Current Specs list; add File→Spec Mapping entries for the metadata-encoder module and `webcompy_server/contrib/` (`typed-response/spec.md`), and the `typed-api-client` client-consumption rows
+- [x] 6.2 Check `.opencode/skills/webcompy-review/SKILL.md` for stale assumptions and sync invariant headings/spec references
+- [x] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
