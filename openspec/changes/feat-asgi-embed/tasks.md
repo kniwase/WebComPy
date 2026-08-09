@@ -2,9 +2,9 @@
 
 ## 1. Fetch port root binding
 
-- [ ] 1.1 Add `root_app` parameter to `configure_server_context()` (packages/webcompy-server/src/webcompy_server/__init__.py) and thread it to `ServerFetchPort` configuration
-- [ ] 1.2 Implement root-app binding in `ServerFetchPort` (packages/webcompy-server/src/webcompy_server/ports/_fetch.py): self-site dispatch against `root_app`; resolve the double-`configure()` interaction with the CLI (deferral or explicit rebind)
-- [ ] 1.3 Adjust blocked-path evaluation for embedded mode: page paths prefixed by the mount prefix; host routes outside the prefix never blocked
+- [x] 1.1 Add `root_app` parameter to `configure_server_context()` (packages/webcompy-server/src/webcompy_server/__init__.py) and thread it to `ServerFetchPort` configuration
+- [x] 1.2 Implement root-app binding in `ServerFetchPort` (packages/webcompy-server/src/webcompy_server/ports/_fetch.py): self-site dispatch against `root_app`; resolve the double-`configure()` interaction with the CLI (deferral or explicit rebind)
+- [x] 1.3 Adjust blocked-path evaluation for embedded mode: page paths prefixed by the mount prefix; host routes outside the prefix never blocked
 
 ## 2. Embedding support
 
