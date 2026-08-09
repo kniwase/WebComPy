@@ -303,6 +303,48 @@ class TestServerFetchPortBaseUrlResolution:
         assert response.status_code == 200
         assert response.json() == {"user": "data"}
 
+    @pytest.mark.asyncio
+    async def test_mount_root_with_query_params_exempt_from_base_url_prefix(self):
+        async def handler(request):
+            return JSONResponse({"path": str(request.url.path), "query": str(request.url.query)})
+
+        app = Starlette(routes=[Route("/api", endpoint=handler)])
+        port = ServerFetchPort()
+        port.configure(app, blocked_paths=[], base_url="/myapp/", mount_prefixes=["/api"])
+
+        response = await port.fetch("/api?foo=bar")
+
+        assert response.status_code == 200
+        assert response.json() == {"path": "/api", "query": "foo=bar"}
+
+    @pytest.mark.asyncio
+    async def test_mount_subpath_with_query_params_exempt_from_base_url_prefix(self):
+        async def handler(request):
+            return JSONResponse({"path": str(request.url.path), "query": str(request.url.query)})
+
+        app = Starlette(routes=[Route("/api/users", endpoint=handler)])
+        port = ServerFetchPort()
+        port.configure(app, blocked_paths=[], base_url="/myapp/", mount_prefixes=["/api"])
+
+        response = await port.fetch("/api/users?page=2")
+
+        assert response.status_code == 200
+        assert response.json() == {"path": "/api/users", "query": "page=2"}
+
+    @pytest.mark.asyncio
+    async def test_mount_path_with_fragment_exempt_from_base_url_prefix(self):
+        async def handler(request):
+            return JSONResponse({"path": str(request.url.path)})
+
+        app = Starlette(routes=[Route("/api/users", endpoint=handler)])
+        port = ServerFetchPort()
+        port.configure(app, blocked_paths=[], base_url="/myapp/", mount_prefixes=["/api"])
+
+        response = await port.fetch("/api/users#section")
+
+        assert response.status_code == 200
+        assert response.json() == {"path": "/api/users"}
+
 
 class TestServerFetchPortClose:
     @pytest.mark.asyncio

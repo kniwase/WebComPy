@@ -103,6 +103,24 @@ def _make_mount_fetch_root():
     return _MountFetchRoot
 
 
+def _make_mount_fetch_root_with_query():
+    from webcompy.components import define_component
+    from webcompy.elements import html
+
+    @define_component
+    def _MountFetchRootWithQuery(context):
+        from webcompy.ajax import HttpClient
+        from webcompy.components._hooks import use_async_result
+
+        result = use_async_result(lambda: HttpClient.get("/api/users", query_params={"page": "2"}))
+        return html.DIV(
+            {"data-testid": "mount-fetch-root"},
+            result.data.value.text if result.data.value else "",
+        )
+
+    return _MountFetchRootWithQuery
+
+
 def _create_serving(app, build_config, *, mode="prod"):
     from webcompy_cli._server import create_asgi_app
     from webcompy_server import configure_server_context
@@ -135,6 +153,13 @@ class TestMountsCallableInvocation:
         _create_serving(app, build_config)
 
         assert build_config.server.mounts is None
+
+    def test_non_dict_factory_return_rejected(self, tmp_path: Path) -> None:
+        build_config = _make_build_config(tmp_path, mounts=lambda: ["/api"])
+        app = _make_app()
+
+        with pytest.raises(WebComPyException, match="must return a dict"):
+            _create_serving(app, build_config)
 
 
 class TestMountRouteInsertion:
@@ -376,6 +401,44 @@ class TestMountSelfSiteFetchDuringSsr:
         assert "/api/users" in port._response_cache
         assert "/api/users" in port.get_transfer_data()
         assert port._response_cache["/api/users"].json() == {"path": "/api/users"}
+        assert "mount-fetch-root" in html_str
+
+    @pytest.mark.asyncio
+    async def test_fetch_to_mount_with_query_params_under_non_root_base_url(self, tmp_path: Path) -> None:
+        from webcompy.app._app import WebComPyApp
+        from webcompy.app._config import WebComPyAppConfig
+        from webcompy.di import inject
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        async def users_handler(request):
+            return JSONResponse({"path": str(request.url.path), "query": str(request.url.query)})
+
+        api_app = Starlette(routes=[Route("/users", endpoint=users_handler)])
+        build_config = _make_build_config(tmp_path, mounts=lambda: {"/api": api_app})
+        app = WebComPyApp(
+            root_component=_make_mount_fetch_root_with_query(),
+            config=WebComPyAppConfig(base_url="/myapp/"),
+        )
+
+        serving = _create_serving(app, build_config)
+
+        port = app._server_fetch_port
+        assert port is not None
+        assert port._mount_prefixes == ["/api"]
+
+        ctx = app.create_render_context("/")
+        try:
+            scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+            await scheduler.await_pending()
+            html_str = await serving.html_generator(ctx)
+        finally:
+            ctx.dispose()
+
+        assert "/api/users?page=2" in port._response_cache
+        cached = port._response_cache["/api/users?page=2"]
+        assert cached.status_code == 200
+        assert cached.json() == {"path": "/api/users", "query": "page=2"}
+        assert "/api/users?page=2" in port.get_transfer_data()
         assert "mount-fetch-root" in html_str
 
 

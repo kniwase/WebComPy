@@ -23,6 +23,13 @@ When `base_url` is configured on the app (e.g., `/myapp/`), self-site absolute p
 - **THEN** the request SHALL be dispatched as `/api/users` (without the `base_url` prefix)
 - **AND** the request SHALL reach the mounted app in-process via `httpx.ASGITransport`
 
+#### Scenario: Self-site fetch to a mount path with query parameters
+- **WHEN** `base_url="/myapp/"` is configured and `/api` is a configured mount
+- **AND** a component calls `await fetch_port.fetch("/api?foo=bar")`
+- **THEN** the request SHALL be dispatched as `/api?foo=bar` (without the `base_url` prefix)
+- **AND** the query string SHALL be preserved in the dispatched request
+- **AND** the request SHALL reach the mounted app in-process via `httpx.ASGITransport`
+
 ## ADDED Requirements
 
 ### Requirement: Mount path prefixes shall not be blocked for self-site fetch

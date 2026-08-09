@@ -46,7 +46,8 @@ class ServerFetchPort(FetchPort):
         )
 
     def _is_mount_path(self, path: str) -> bool:
-        return any(path == prefix or path.startswith(prefix + "/") for prefix in self._mount_prefixes)
+        clean_path = path.split("?", 1)[0].split("#", 1)[0]
+        return any(clean_path == prefix or clean_path.startswith(prefix + "/") for prefix in self._mount_prefixes)
 
     def _resolve_self_site_path(self, url: str) -> str:
         if url.startswith("/") and self._is_mount_path(url):

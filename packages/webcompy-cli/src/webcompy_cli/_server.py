@@ -68,6 +68,10 @@ def _resolve_mounts(app: WebComPyApp, build_config: WebComPyBuildConfig) -> list
         return []
 
     mount_map = mounts_factory()
+    if not isinstance(mount_map, dict):
+        raise WebComPyException(
+            f"WebComPyServerConfig.mounts callable must return a dict[str, ASGIApp], got {type(mount_map).__name__}"
+        )
     conflicts: list[str] = []
     resolved: list[tuple[str, ASGIApp]] = []
     for prefix, asgi_app in mount_map.items():

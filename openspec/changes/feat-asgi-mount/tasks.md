@@ -33,3 +33,9 @@
 - [x] 6.1 Update AGENTS.md: verify the File→Spec Mapping entries for `webcompy_cli/` (`cli`, `project-config`, `ssg-via-ssr`) and `webcompy_server/ports/` (`server-fetch-asgi`) against the modified specs, and check the Framework Invariants list for fetch/mount-related staleness
 - [x] 6.2 Check `.opencode/skills/webcompy-review/SKILL.md` for stale assumptions about self-site fetch resolution and sync spec references
 - [x] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+
+## 7. Review follow-up
+
+- [x] 7.1 Make `_is_mount_path` strip query strings and fragments before prefix matching, so mount paths with query parameters are recognized as mounts (not base_url-prefixed, not blocked)
+- [x] 7.2 Validate that the `mounts` callable returns a `dict`; raise `WebComPyException` with a clear message otherwise
+- [x] 7.3 Add scenario to `server-fetch-asgi` delta spec covering self-site fetch to a mount path with query parameters
