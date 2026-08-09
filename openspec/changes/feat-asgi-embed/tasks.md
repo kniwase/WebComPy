@@ -9,14 +9,14 @@
 ## 2. Embedding support
 
 - [x] 2.1 Verify and fix asset/endpoint URL generation under a non-root `base_url` matching the mount prefix; in particular the `/_webcompy-resource` route is registered with the `base_url` prefix inside the app (`_server.py`) while the browser URL builder also prefixes `base_url` (`ports/_browser/_resource.py`) — under a mount this double-prefixes; adjust embedded-mode route construction while keeping standalone behavior unchanged (per design D5)
-- [ ] 2.2 Verify hash-mode serving under a mount prefix
+- [x] 2.2 Verify hash-mode serving under a mount prefix
 
 ## 3. Tests
 
-- [ ] 3.1 Integration test: host Starlette/FastAPI app with `mount("/admin", serving.asgi)` — SSR page render, framework endpoints under prefix, host routes unaffected
-- [ ] 3.2 Integration test: embedded component self-site fetches a host API route during SSR via ASGI transport; response recorded in transfer cache
-- [ ] 3.3 Test: blocked-path behavior — `/admin/<page>` blocked, host `/api/...` fetchable
-- [ ] 3.4 Test: default (`root_app=None`) behavior byte-identical to before
+- [x] 3.1 Integration test: host Starlette/FastAPI app with `mount("/admin", serving.asgi)` — SSR page render, framework endpoints under prefix, host routes unaffected
+- [x] 3.2 Integration test: embedded component self-site fetches a host API route during SSR via ASGI transport; response recorded in transfer cache
+- [x] 3.3 Test: blocked-path behavior — `/admin/<page>` blocked, host `/api/...` fetchable
+- [x] 3.4 Test: default (`root_app=None`) behavior byte-identical to before
 
 ## 4. Verification
 
