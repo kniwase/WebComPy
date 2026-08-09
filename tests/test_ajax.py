@@ -219,6 +219,17 @@ class TestHttpClientTransferMeta:
             await HttpClient.get("/api/record", response_type=TypedRecord)
 
     @pytest.mark.asyncio
+    async def test_malformed_meta_body_key_raises(self):
+        body = json.loads(_RECORD_BODY)
+        body[META_BODY_KEY] = "not_a_dict"
+        response = _port_response(json.dumps(body))
+        with (
+            self._scope({("GET", "/api/record"): response}),
+            pytest.raises(TypedResponseError, match="Malformed"),
+        ):
+            await HttpClient.get("/api/record", response_type=TypedRecord)
+
+    @pytest.mark.asyncio
     async def test_top_level_array_with_header(self):
         body = '["YQ==", "Yg=="]'
         header = {META_HEADER_NAME.lower(): json.dumps({"/0": "bytes", "/1": "bytes"})}

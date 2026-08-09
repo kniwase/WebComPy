@@ -175,7 +175,7 @@ def _decode_tagged(tag: str, value: Any, *, strict: bool, path: str) -> Any:
         return value
     try:
         return decoder(value)
-    except Exception as err:
+    except (TypeError, ValueError) as err:
         raise ValueError(f"Failed to decode value for transfer meta tag {tag!r} at path {path!r}") from err
 
 

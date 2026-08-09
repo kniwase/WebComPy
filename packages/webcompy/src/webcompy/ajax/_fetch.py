@@ -1,4 +1,5 @@
 import urllib.parse  # noqa: I001
+from collections.abc import Mapping
 from json import JSONDecodeError
 from json import dumps as json_dumps
 from json import loads as json_loads
@@ -94,6 +95,8 @@ def _deserialize_if_typed(res: Response, response_type: type[T] | None) -> Respo
     meta = None
     if isinstance(data, dict) and META_BODY_KEY in data:
         meta = data.pop(META_BODY_KEY)
+        if not isinstance(meta, Mapping):
+            raise TypedResponseError(f"Malformed {META_BODY_KEY}: expected a JSON object, got {type(meta).__name__}")
     else:
         header_value = next((v for k, v in res.headers.items() if k.lower() == META_HEADER_NAME.lower()), None)
         if header_value is not None:
