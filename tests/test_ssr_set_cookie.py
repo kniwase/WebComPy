@@ -51,6 +51,8 @@ def _make_router_root():
 
 
 def _make_cookie_setting_page():
+    from datetime import UTC, datetime
+
     from webcompy.components import define_component
     from webcompy.di import inject
     from webcompy.elements import html
@@ -61,10 +63,12 @@ def _make_cookie_setting_page():
             "session",
             "abc",
             max_age=3600,
+            expires=datetime(2024, 1, 1, tzinfo=UTC),
+            path="/",
+            domain="example.com",
             secure=True,
             httponly=True,
             samesite="Strict",
-            path="/",
         )
         return html.DIV({})
 
@@ -119,6 +123,8 @@ class TestSsrSetCookieHeaders:
         header = set_cookies[0]
         assert header.startswith("session=abc")
         assert "Max-Age=3600" in header
+        assert "expires=Mon, 01 Jan 2024 00:00:00 GMT" in header
+        assert "Domain=example.com" in header
         assert "Secure" in header
         assert "HttpOnly" in header
         assert "SameSite=Strict" in header
