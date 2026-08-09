@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import weakref
 from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Callable, Iterable
 from typing import Any, Generic, TypeVar, cast
 
@@ -193,6 +194,27 @@ def to_reactive_list(
     return result
 
 
+class _StreamAsyncIterator(Generic[T]):
+    def __init__(
+        self,
+        generator: AsyncGenerator[T, None],
+        dispose: Callable[[], None],
+    ) -> None:
+        self._generator = generator
+        self._dispose = dispose
+        self._finalizer = weakref.finalize(self, dispose)
+
+    def __aiter__(self) -> AsyncIterator[T]:
+        return self
+
+    async def __anext__(self) -> T:
+        return await self._generator.__anext__()
+
+    async def aclose(self) -> None:
+        self._dispose()
+        await self._generator.aclose()
+
+
 def to_async_iter(
     sig: Signal[T],
     *,
@@ -225,4 +247,4 @@ def to_async_iter(
         finally:
             _dispose()
 
-    return _generator()
+    return _StreamAsyncIterator(_generator(), _dispose)
