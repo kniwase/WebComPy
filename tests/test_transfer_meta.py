@@ -333,6 +333,14 @@ class TestApplyTransferMeta:
         with pytest.raises(ValueError, match="Failed to decode"):
             apply_transfer_meta({"x": "not-base64!!"}, {"/x": "bytes"})
 
+    def test_malformed_decimal_raises(self):
+        with pytest.raises(ValueError, match="Failed to decode"):
+            apply_transfer_meta({"price": "abc"}, {"/price": "decimal"})
+
+    def test_non_mapping_meta_raises(self):
+        with pytest.raises(ValueError, match="must be a mapping"):
+            apply_transfer_meta({"a": 1}, ["/a"])
+
     def test_set_tag_with_non_array_raises(self):
         with pytest.raises(ValueError, match="Failed to decode"):
             apply_transfer_meta({"x": {"a": 1}}, {"/x": "set"})

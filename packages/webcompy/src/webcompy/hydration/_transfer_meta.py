@@ -36,6 +36,10 @@ def merge_meta_into_body(json_data: Any, meta: Mapping[str, str]) -> dict[str, A
 
 
 def apply_transfer_meta(data: Any, meta: Mapping[str, str] | None, *, strict: bool = False) -> Any:
+    if meta is None:
+        return data
+    if not isinstance(meta, Mapping):
+        raise ValueError(f"Transfer meta must be a mapping of path to type tag, got {type(meta).__name__}")
     if not meta:
         return data
     result = copy.deepcopy(data)
@@ -175,7 +179,7 @@ def _decode_tagged(tag: str, value: Any, *, strict: bool, path: str) -> Any:
         return value
     try:
         return decoder(value)
-    except (TypeError, ValueError) as err:
+    except (TypeError, ValueError, ArithmeticError) as err:
         raise ValueError(f"Failed to decode value for transfer meta tag {tag!r} at path {path!r}") from err
 
 

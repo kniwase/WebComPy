@@ -230,6 +230,20 @@ class TestHttpClientTransferMeta:
             await HttpClient.get("/api/record", response_type=TypedRecord)
 
     @pytest.mark.asyncio
+    async def test_malformed_decimal_http_path_raises(self):
+        body = json.loads(_RECORD_BODY)
+        body["price"] = "abc"
+        response = _port_response(
+            json.dumps(body),
+            headers={**self._meta_header(), "content-type": "application/json"},
+        )
+        with (
+            self._scope({("GET", "/api/record"): response}),
+            pytest.raises(TypedResponseError, match="Response does not match schema"),
+        ):
+            await HttpClient.get("/api/record", response_type=TypedRecord)
+
+    @pytest.mark.asyncio
     async def test_top_level_array_with_header(self):
         body = '["YQ==", "Yg=="]'
         header = {META_HEADER_NAME.lower(): json.dumps({"/0": "bytes", "/1": "bytes"})}
