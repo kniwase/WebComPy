@@ -111,8 +111,17 @@ def _collect_headings_visit_factory(
     return visit
 
 
+_CodeBlock: Any | None = None
+
+
 def _code_block_visit() -> Visitor:
-    from webcompy.ui.code_block import CodeBlock
+    global _CodeBlock
+    if _CodeBlock is None:
+        from webcompy.ui.code_block import CodeBlock
+
+        _CodeBlock = CodeBlock
+    code_block = _CodeBlock
+    assert code_block is not None
 
     def visit(child: Any, lst: list[Any], i: int) -> Any | None:
         if not isinstance(child, Element) or child._tag_name != "pre":
@@ -129,7 +138,7 @@ def _code_block_visit() -> Visitor:
         m = _LANGUAGE_CLASS_RE.search(class_attr)
         if m is None:
             return None
-        return CodeBlock({"code": _resolve_text(code), "lang": m.group(1)})
+        return code_block({"code": _resolve_text(code), "lang": m.group(1)})
 
     return visit
 
