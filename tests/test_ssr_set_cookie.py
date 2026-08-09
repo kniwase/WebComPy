@@ -154,3 +154,71 @@ class TestSsrSetCookieHeaders:
 
         assert response.status_code == 200
         assert "set-cookie" not in response.headers
+
+
+class TestSsgCookieWrites:
+    def test_ssg_ignores_cookie_writes(self, tmp_path: Path) -> None:
+        import sys
+        import types
+
+        from webcompy.app._app import WebComPyApp
+        from webcompy.app._config import WebComPyAppConfig
+        from webcompy_cli._generate import generate_static_site
+        from webcompy_server import configure_server_context
+
+        pkg = _make_app_pkg(tmp_path)
+        mod_path = pkg / "_app_mod.py"
+        app = WebComPyApp(
+            root_component=_make_cookie_setting_root(),
+            config=WebComPyAppConfig(base_url="/"),
+        )
+
+        fake_mod = types.ModuleType("fake_app_mod")
+        fake_mod.__file__ = str(mod_path)
+        fake_mod.app = app
+        sys.modules["fake_app_mod"] = fake_mod
+        build_config = WebComPyBuildConfig(fake_mod)
+
+        saved_argv = sys.argv
+        sys.argv = ["webcompy", "generate"]
+        try:
+            with (
+                patch("webcompy_cli._generate.discover_config", return_value=build_config),
+                patch(
+                    "webcompy_cli._server.resolve_build_artifacts",
+                    return_value=_make_artifacts(pkg),
+                ),
+                patch("webcompy_cli._server.get_static_files", return_value=()),
+                patch("webcompy_cli._generate.get_static_files", return_value=()),
+                patch("webcompy.ui._styles.get_styles_files", return_value={}, create=True),
+            ):
+
+                async def _run() -> None:
+                    configure_server_context(app)
+                    await generate_static_site()
+
+                import asyncio
+
+                asyncio.run(_run())
+        finally:
+            sys.modules.pop("fake_app_mod", None)
+            sys.argv = saved_argv
+
+        index_html = pkg / "dist" / "index.html"
+        assert index_html.exists()
+        html_text = index_html.read_text(encoding="utf8")
+        assert "cookie-root" in html_text
+
+
+def _make_cookie_setting_root():
+    from webcompy.components import define_component
+    from webcompy.di import inject
+    from webcompy.elements import html
+    from webcompy.ports._keys import COOKIE_PORT_KEY
+
+    def setup(ctx):
+        inject(COOKIE_PORT_KEY).set("session", "abc")
+        return html.DIV({}, "cookie-root")
+
+    setup.__name__ = "AppRoot"
+    return define_component(setup)

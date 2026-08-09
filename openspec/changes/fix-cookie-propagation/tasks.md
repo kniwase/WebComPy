@@ -21,9 +21,9 @@
 - [x] 4.1 Unit test: `ServerCookiePort.set()` with full attributes produces a correct `Set-Cookie` header string (Max-Age, Expires, Domain, Secure, HttpOnly, SameSite, Path preserved)
 - [x] 4.2 Unit test: multiple cookie writes produce one header per cookie; last-write-wins for same name+path
 - [x] 4.3 Unit test: values requiring quoting are serialized correctly
-- [ ] 4.4 Unit test: `BrowserCookiePort.set()` with `expires`/`domain` includes both attributes in the `document.cookie` write (via a browser test double)
+- [x] 4.4 Unit test: `BrowserCookiePort.set()` with `expires`/`domain` includes both attributes in the `document.cookie` write (via a browser test double)
 - [x] 4.5 Integration test (webcompy_testing ASGI client): SSR response includes `Set-Cookie` headers set by a component during rendering
-- [ ] 4.6 Test: SSG (`generate_static_site`) completes without error when a component sets cookies, and static output is unaffected
+- [x] 4.6 Test: SSG (`generate_static_site`) completes without error when a component sets cookies, and static output is unaffected
 - [x] 4.7 Test: hash-mode serving does not emit `Set-Cookie` headers for cookies set during the pre-render
 - [x] 4.8 Unit test: `ServerCookiePort.delete()` produces a `Set-Cookie` header with `Max-Age=0` and removes the cookie from the read path
 
