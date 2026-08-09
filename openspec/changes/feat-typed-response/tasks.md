@@ -9,8 +9,8 @@
 
 ## 2. FastAPI contrib
 
-- [ ] 2.1 Create `packages/webcompy-server/src/webcompy_server/contrib/__init__.py` and `contrib/fastapi.py` with `TypedJSONResponse(JSONResponse)` (lazy imports, header mode default, body mode option)
-- [ ] 2.2 Verify importing `webcompy_server` without FastAPI installed does not fail; importing the contrib module without FastAPI raises a clear error
+- [x] 2.1 Create `packages/webcompy-server/src/webcompy_server/contrib/__init__.py` and `contrib/fastapi.py` with `TypedJSONResponse(JSONResponse)` (lazy imports, header mode default, body mode option)
+- [x] 2.2 Verify importing `webcompy_server` without FastAPI installed does not fail; importing the contrib module without FastAPI raises a clear error
 
 ## 3. Client consumption
 
