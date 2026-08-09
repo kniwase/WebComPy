@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterable, Callable, Iterable
+from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Callable, Iterable
 from typing import Any, Generic, TypeVar, cast
 
 from webcompy.aio._aio import aio_run
 from webcompy.signal import Signal
 from webcompy.signal._composable import _get_active_component_context
+from webcompy.signal._graph import consumer_destroy
 from webcompy.signal._list import ReactiveList
 
 T = TypeVar("T")
@@ -190,3 +191,38 @@ def to_reactive_list(
     aio_run(_pump())
     _register_cleanup(cancel)
     return result
+
+
+def to_async_iter(
+    sig: Signal[T],
+    *,
+    emit_initial: bool = False,
+    maxlen: int | None = None,
+) -> AsyncIterator[T]:
+    queue: _StreamQueue[T] = _StreamQueue(maxlen)
+    consumer = sig.on_after_updating(lambda v: queue.put_nowait(v))
+    closed = False
+    _CLOSED: Any = object()
+
+    def _dispose() -> None:
+        nonlocal closed
+        if not closed:
+            closed = True
+            consumer_destroy(consumer)
+            queue.put_nowait(_CLOSED)
+
+    _register_cleanup(_dispose)
+
+    async def _generator() -> AsyncGenerator[T, None]:
+        try:
+            if emit_initial and not closed:
+                yield sig.value
+            while True:
+                item = await queue.get()
+                if item is _CLOSED:
+                    break
+                yield item
+        finally:
+            _dispose()
+
+    return _generator()
