@@ -51,3 +51,11 @@ class ServerRenderContext(RenderContext):
 
     async def render_html(self, **kwargs: Any) -> str:
         return await generate_html(self, **kwargs)
+
+    def get_pending_set_cookie_headers(self) -> list[str]:
+        self._check_disposed()
+        assert self._di_scope is not None
+        port = self._di_scope.inject(COOKIE_PORT_KEY)
+        if isinstance(port, ServerCookiePort):
+            return port.get_pending_set_cookie_headers()
+        return []

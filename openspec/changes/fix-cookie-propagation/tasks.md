@@ -13,8 +13,8 @@
 
 ## 3. Response header emission
 
-- [ ] 3.1 In `send_html` (packages/webcompy-cli/src/webcompy_cli/_server.py), read pending `Set-Cookie` headers from the render context after `generate_html()` completes (before `ctx.dispose()`) and append them to the `HTMLResponse` as separate headers
-- [ ] 3.2 Ensure the hash-mode pre-rendered response path does NOT emit accumulated cookies
+- [x] 3.1 In `send_html` (packages/webcompy-cli/src/webcompy_cli/_server.py), read pending `Set-Cookie` headers from the render context after `generate_html()` completes (before `ctx.dispose()`) and append them to the `HTMLResponse` as separate headers
+- [x] 3.2 Ensure the hash-mode pre-rendered response path does NOT emit accumulated cookies
 
 ## 4. Tests
 
@@ -22,9 +22,9 @@
 - [x] 4.2 Unit test: multiple cookie writes produce one header per cookie; last-write-wins for same name+path
 - [x] 4.3 Unit test: values requiring quoting are serialized correctly
 - [ ] 4.4 Unit test: `BrowserCookiePort.set()` with `expires`/`domain` includes both attributes in the `document.cookie` write (via a browser test double)
-- [ ] 4.5 Integration test (webcompy_testing ASGI client): SSR response includes `Set-Cookie` headers set by a component during rendering
+- [x] 4.5 Integration test (webcompy_testing ASGI client): SSR response includes `Set-Cookie` headers set by a component during rendering
 - [ ] 4.6 Test: SSG (`generate_static_site`) completes without error when a component sets cookies, and static output is unaffected
-- [ ] 4.7 Test: hash-mode serving does not emit `Set-Cookie` headers for cookies set during the pre-render
+- [x] 4.7 Test: hash-mode serving does not emit `Set-Cookie` headers for cookies set during the pre-render
 - [x] 4.8 Unit test: `ServerCookiePort.delete()` produces a `Set-Cookie` header with `Max-Age=0` and removes the cookie from the read path
 
 ## 5. Verification
