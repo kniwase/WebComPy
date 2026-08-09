@@ -27,6 +27,7 @@ from webcompy_cli._build import BuildArtifacts, resolve_build_artifacts
 from webcompy_cli._static_files import get_static_files
 from webcompy_cli._utils import discover_config
 from webcompy_cli.config._build_config import WebComPyBuildConfig
+from webcompy_server._context import ServerRenderContext
 from webcompy_server._html import generate_html
 
 
@@ -242,10 +243,14 @@ def create_asgi_app(
                     initial_theme=initial_theme,
                     cookie_header=cookie_header,
                 )
+                assert isinstance(ctx, ServerRenderContext)
                 try:
                     scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
                     await scheduler.await_pending()
-                    return HTMLResponse(await html_generator(ctx))
+                    response = HTMLResponse(await html_generator(ctx))
+                    for header in ctx.get_pending_set_cookie_headers():
+                        response.headers.append("set-cookie", header)
+                    return response
                 finally:
                     scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
                     await scheduler.await_pending()

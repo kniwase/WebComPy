@@ -42,6 +42,11 @@ The attribute-retention requirement includes `expires` and `domain`, which the c
 
 **Why**: `domain` is required for real cross-subdomain session cookies and `expires` for absolute-expiry cookies; both are natively supported by `document.cookie` and `http.cookies`, so the parity cost is minimal. Alternative considered: restrict the spec to the five attributes the ABC accepts today — rejected because it would leave the port unable to express common cookie configurations, and because the extension is purely additive (no existing call site is affected).
 
+### D6: `ServerCookiePort.delete()` emits an expiring `Set-Cookie`
+`ServerCookiePort.delete()` records a pending write (`value=""`, `max_age=0`) for the `(name, path)` key in addition to popping the internal read-path dict. This makes SSR-time deletions reach the browser via `Set-Cookie` with `Max-Age=0`, mirroring `delete()`'s browser-side behavior (`set(name, "", max_age=0)`).
+
+**Why**: Without this, a component that calls `delete()` during SSR would silently fail to remove the cookie in the browser — the same class of silent breakage this change fixes for `set()`. The initial artifacts left `delete()` unspecified; this was decided during implementation planning.
+
 ## Risks / Trade-offs
 
 - [Attribute values with non-ASCII or control characters could produce malformed headers] → `http.cookies` performs quoting; add a test with values requiring quoting.

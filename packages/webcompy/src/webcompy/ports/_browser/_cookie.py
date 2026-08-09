@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from email.utils import format_datetime
 from urllib.parse import unquote
 
 from webcompy.exception import WebComPyException
@@ -25,7 +27,9 @@ class BrowserCookiePort(CookiePort):
         value: str,
         *,
         max_age: int | None = None,
+        expires: datetime | None = None,
         path: str = "/",
+        domain: str | None = None,
         secure: bool = False,
         httponly: bool = False,
         samesite: str | None = None,
@@ -33,8 +37,13 @@ class BrowserCookiePort(CookiePort):
         cookie = f"{name}={value}"
         if max_age is not None:
             cookie += f"; max-age={max_age}"
+        if expires is not None:
+            expires_utc = expires.astimezone(UTC) if expires.tzinfo is not None else expires.replace(tzinfo=UTC)
+            cookie += f"; expires={format_datetime(expires_utc, usegmt=True)}"
         if path:
             cookie += f"; path={path}"
+        if domain:
+            cookie += f"; domain={domain}"
         if secure:
             cookie += "; secure"
         if httponly:

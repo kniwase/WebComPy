@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 
 class CookiePort(ABC):
@@ -23,7 +24,9 @@ class CookiePort(ABC):
         value: str,
         *,
         max_age: int | None = None,
+        expires: datetime | None = None,
         path: str = "/",
+        domain: str | None = None,
         secure: bool = False,
         httponly: bool = False,
         samesite: str | None = None,
@@ -34,7 +37,9 @@ class CookiePort(ABC):
             name: Cookie name.
             value: Cookie value.
             max_age: Lifetime in seconds.
+            expires: Absolute expiry timestamp (converted to a UTC date string).
             path: URL path scope (default ``"/"``).
+            domain: Domain scope for the cookie.
             secure: Restrict to HTTPS.
             httponly: Prevent JavaScript access via ``document.cookie``.
             samesite: SameSite attribute (``"Strict"``, ``"Lax"``, ``"None"``).
