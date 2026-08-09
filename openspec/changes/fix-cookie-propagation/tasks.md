@@ -35,6 +35,6 @@
 
 ## 6. Spec reference sync
 
-- [ ] 6.1 Update AGENTS.md: verify the File→Spec Mapping entries covering `webcompy/ports/` and `webcompy_server/ports/` against the modified `port-abstraction` spec, and check the Framework Invariants list for cookie-related staleness
-- [ ] 6.2 Check `.opencode/skills/webcompy-review/SKILL.md` for stale assumptions about `ServerCookiePort` attribute handling and sync spec references
-- [ ] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+- [x] 6.1 Update AGENTS.md: verify the File→Spec Mapping entries covering `webcompy/ports/` and `webcompy_server/ports/` against the modified `port-abstraction` spec, and check the Framework Invariants list for cookie-related staleness
+- [x] 6.2 Check `.opencode/skills/webcompy-review/SKILL.md` for stale assumptions about `ServerCookiePort` attribute handling and sync spec references
+- [x] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
