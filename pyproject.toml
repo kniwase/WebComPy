@@ -85,6 +85,7 @@ stubPath = "packages/webcompy/src/webcompy/ports"
 [dependency-groups]
 dev = [
     "beautifulsoup4>=4.14.1",
+    "fastapi>=0.141.1",
     "nest-asyncio>=1.6.0",
     "nodeenv>=1.10.0",
     "playwright>=1.58.0",
