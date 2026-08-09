@@ -8,7 +8,7 @@
 
 ## 2. Embedding support
 
-- [ ] 2.1 Verify and fix asset/endpoint URL generation under a non-root `base_url` matching the mount prefix; in particular the `/_webcompy-resource` route is registered with the `base_url` prefix inside the app (`_server.py`) while the browser URL builder also prefixes `base_url` (`ports/_browser/_resource.py`) — under a mount this double-prefixes; adjust embedded-mode route construction while keeping standalone behavior unchanged (per design D5)
+- [x] 2.1 Verify and fix asset/endpoint URL generation under a non-root `base_url` matching the mount prefix; in particular the `/_webcompy-resource` route is registered with the `base_url` prefix inside the app (`_server.py`) while the browser URL builder also prefixes `base_url` (`ports/_browser/_resource.py`) — under a mount this double-prefixes; adjust embedded-mode route construction while keeping standalone behavior unchanged (per design D5)
 - [ ] 2.2 Verify hash-mode serving under a mount prefix
 
 ## 3. Tests

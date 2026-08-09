@@ -195,6 +195,8 @@ def create_asgi_app(
             return FileResponse(resolved, media_type=media_type, headers=headers)
 
         resource_routes.append(Route(base_url_stripped + "/_webcompy-resource/{path:path}", send_resource))
+        if base_url_stripped:
+            resource_routes.append(Route("/_webcompy-resource/{path:path}", send_resource))
 
     from webcompy.ui._styles import get_styles_file
 
