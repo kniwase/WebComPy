@@ -5,7 +5,7 @@ from pathlib import Path
 from webcompy.ui._styles import get_styles_file, get_styles_files
 
 
-def test_get_styles_files_returns_all_six() -> None:
+def test_get_styles_files_returns_all_files() -> None:
     files = get_styles_files()
     assert set(files.keys()) == {
         "index.css",
@@ -14,6 +14,7 @@ def test_get_styles_files_returns_all_six() -> None:
         "components.css",
         "code-block.css",
         "syntax-theme.css",
+        "prose.css",
     }
 
 

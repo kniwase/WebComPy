@@ -61,7 +61,14 @@ def _strip_directive_paragraphs(html: str) -> str:
     return _DIRECTIVE_PARAGRAPH_PATTERN.sub(r"\1", html)
 
 
-def render_markdown(source: str, context: Mapping[str, Any] | None = None) -> ElementAbstract:
+def render_markdown(
+    source: str,
+    context: Mapping[str, Any] | None = None,
+    *,
+    heading_ids: bool = False,
+    code_blocks: bool = False,
+    classes: Mapping[str, str] | None = None,
+) -> ElementAbstract:
     from webcompy.template._markdown_for import (
         MarkdownForElement,
         _ForBlock,
@@ -89,6 +96,20 @@ def render_markdown(source: str, context: Mapping[str, Any] | None = None) -> El
                     continue
                 elements.append(_to_element(node))
 
+    if heading_ids or code_blocks or classes:
+        from webcompy.template._markdown_transforms import (
+            apply_class_map_to_roots,
+            apply_heading_ids_to_roots,
+            replace_code_blocks_in_roots,
+        )
+
+        if heading_ids:
+            apply_heading_ids_to_roots(elements)
+        if code_blocks:
+            replace_code_blocks_in_roots(elements)
+        if classes is not None:
+            apply_class_map_to_roots(elements, classes)
+
     if len(elements) == 1:
         return elements[0]
     return FragmentElement(elements)
@@ -101,10 +122,18 @@ def render_template(source: str, context: Mapping[str, Any] | None = None) -> El
     raise WebComPyException("Template must have exactly one root element")
 
 
+from webcompy.template._markdown_document import (  # noqa: E402
+    HeadingInfo,
+    MarkdownDocument,
+    load_markdown_document,
+)
+
 __all__ = [
     "AttrSpec",
+    "HeadingInfo",
     "Hole",
     "LiteralText",
+    "MarkdownDocument",
     "TagResolution",
     "TemplateElement",
     "TemplateNode",
@@ -114,6 +143,7 @@ __all__ = [
     "format_value",
     "kebab_to_pascal",
     "kebab_to_snake",
+    "load_markdown_document",
     "render_markdown",
     "render_template",
     "resolve_holes",
