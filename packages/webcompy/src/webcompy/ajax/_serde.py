@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import types
+from collections.abc import Mapping
 from dataclasses import MISSING, InitVar, fields, is_dataclass
 from datetime import date, datetime, time
 from enum import Enum
 from typing import Any, TypeVar, Union, get_args, get_origin, get_type_hints
 from uuid import UUID
+
+from webcompy.hydration._transfer_meta import apply_transfer_meta
 
 T = TypeVar("T")
 
@@ -27,7 +30,9 @@ def _type_hints(cls: type) -> dict[str, Any]:
     return cached
 
 
-def from_json(cls: type[T], data: Any, *, strict: bool = False) -> T:
+def from_json(cls: type[T], data: Any, *, strict: bool = False, meta: Mapping[str, str] | None = None) -> T:
+    if meta:
+        data = apply_transfer_meta(data, meta, strict=strict)
     return _convert(cls, data, path=_type_name(cls), strict=strict)
 
 
@@ -79,6 +84,27 @@ def _convert(tp: Any, value: Any, *, path: str, strict: bool) -> Any:
             raise TypeError(f"{path}: expected {_expected_type_name(tp)}, got {type(value).__name__}")
         value_tp = get_args(tp)[1] if get_args(tp) else Any
         return {key: _convert(value_tp, item, path=f"{path}.{key}", strict=strict) for key, item in value.items()}
+
+    if origin is set or origin is frozenset:
+        if not isinstance(value, origin):
+            raise TypeError(f"{path}: expected {_expected_type_name(tp)}, got {type(value).__name__}")
+        item_tp = get_args(tp)[0] if get_args(tp) else Any
+        return origin(_convert(item_tp, item, path=f"{path}[*]", strict=strict) for item in value)
+
+    if origin is tuple:
+        if not isinstance(value, tuple):
+            raise TypeError(f"{path}: expected {_expected_type_name(tp)}, got {type(value).__name__}")
+        args = get_args(tp)
+        if not args:
+            return value
+        if len(args) == 2 and args[1] is Ellipsis:
+            return tuple(_convert(args[0], item, path=f"{path}[{i}]", strict=strict) for i, item in enumerate(value))
+        if len(args) != len(value):
+            raise TypeError(f"{path}: expected {len(args)}-tuple, got {len(value)} items")
+        return tuple(
+            _convert(arg, item, path=f"{path}[{i}]", strict=strict)
+            for i, (arg, item) in enumerate(zip(args, value, strict=True))
+        )
 
     if is_dataclass(tp) and isinstance(tp, type):
         return _convert_dataclass(tp, value, path=path, strict=strict)

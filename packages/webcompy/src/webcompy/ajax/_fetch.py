@@ -8,6 +8,7 @@ from webcompy.ajax._serde import TypedResponseError, from_json
 from webcompy.elements.types._refference import DomNodeRef
 from webcompy.exception import WebComPyException
 from webcompy.di import inject
+from webcompy.hydration._transfer_meta import META_BODY_KEY, META_HEADER_NAME
 from webcompy.ports._keys import FETCH_PORT_KEY, FFI_PORT_KEY
 
 T = TypeVar("T")
@@ -90,8 +91,18 @@ def _deserialize_if_typed(res: Response, response_type: type[T] | None) -> Respo
         data = json_loads(res.text)
     except (JSONDecodeError, TypeError) as err:
         raise TypedResponseError(f"Failed to parse response as JSON: {res.text[:200]!r}") from err
+    meta = None
+    if isinstance(data, dict) and META_BODY_KEY in data:
+        meta = data.pop(META_BODY_KEY)
+    else:
+        header_value = next((v for k, v in res.headers.items() if k.lower() == META_HEADER_NAME.lower()), None)
+        if header_value is not None:
+            try:
+                meta = json_loads(header_value)
+            except (JSONDecodeError, TypeError) as err:
+                raise TypedResponseError(f"Malformed {META_HEADER_NAME} header") from err
     try:
-        return from_json(response_type, data)
+        return from_json(response_type, data, meta=meta)
     except (TypeError, ValueError) as err:
         raise TypedResponseError(f"Response does not match schema: {err}; body excerpt: {res.text[:200]!r}") from err
 

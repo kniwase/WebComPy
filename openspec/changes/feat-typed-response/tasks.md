@@ -14,16 +14,16 @@
 
 ## 3. Client consumption
 
-- [ ] 3.1 Extend `from_json` with an optional `meta` parameter applying metadata-driven restoration at recorded paths before schema-driven reconstruction
-- [ ] 3.2 Wire metadata recognition into the `HttpClient` `response_type` path: read `__webcompy_transfer_meta__` (precedence) or `X-WebComPy-Transfer-Meta` header; closed-set tag decoding only
-- [ ] 3.3 Ensure browser `FetchPort` responses expose headers sufficiently for header-mode recognition (adjust `Response` wrapper if needed)
+- [x] 3.1 Extend `from_json` with an optional `meta` parameter applying metadata-driven restoration at recorded paths before schema-driven reconstruction
+- [x] 3.2 Wire metadata recognition into the `HttpClient` `response_type` path: read `__webcompy_transfer_meta__` (precedence) or `X-WebComPy-Transfer-Meta` header; closed-set tag decoding only
+- [x] 3.3 Ensure browser `FetchPort` responses expose headers sufficiently for header-mode recognition (adjust `Response` wrapper if needed)
 
 ## 4. Tests
 
-- [ ] 4.1 Encoder unit tests: each type tag, nested paths, pydantic input, empty-meta case
-- [ ] 4.2 Body-mode contract tests: object injection, array/scalar explicit error, no fallback wrapper
-- [ ] 4.3 Contrib test (FastAPI installed in dev deps): `TypedJSONResponse` header/body modes; non-WebComPy client sees ordinary JSON
-- [ ] 4.4 Client tests: bytes/set/tuple/Decimal restoration, precedence rules, unknown-tag behavior (lenient default, strict error), absent-metadata parity
+- [x] 4.1 Encoder unit tests: each type tag, nested paths, pydantic input, empty-meta case
+- [x] 4.2 Body-mode contract tests: object injection, array/scalar explicit error, no fallback wrapper
+- [x] 4.3 Contrib test (FastAPI installed in dev deps): `TypedJSONResponse` header/body modes; non-WebComPy client sees ordinary JSON
+- [x] 4.4 Client tests: bytes/set/tuple/Decimal restoration, precedence rules, unknown-tag behavior (lenient default, strict error), absent-metadata parity
 - [ ] 4.5 Integration test: mounted FastAPI endpoint returning `TypedJSONResponse` consumed by a component via `response_type`, in SSR and browser paths
 
 ## 5. Verification
