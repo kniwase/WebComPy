@@ -175,6 +175,21 @@ class TestCollectHeadings:
         assert toc[0].id == "no-id"
         assert _heading_elements(result)[0]._attrs.get("id") == "no-id"
 
+    def test_heading_ids_disabled_does_not_inject(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("# No Id")
+        toc = collect_headings(result, heading_ids=False)
+        assert toc[0].id == ""
+        assert _heading_elements(result)[0]._attrs.get("id") is None
+
+    def test_heading_ids_disabled_keeps_existing_id(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("# No Id")
+        _heading_elements(result)[0]._attrs["id"] = "custom"
+        toc = collect_headings(result, heading_ids=False)
+        assert toc[0].id == "custom"
+        assert _heading_elements(result)[0]._attrs.get("id") == "custom"
+
     def test_interpolated_text_resolved(self) -> None:
         with _markdown_di_scope():
             result = render_markdown("# {{ title }}", {"title": "Intro"})
@@ -324,6 +339,12 @@ class TestRenderMarkdownOptions:
     def test_classes_default_off(self) -> None:
         with _markdown_di_scope():
             result = render_markdown("| a | b |\n|---|---|")
+        tables = _find_all(result, lambda n: isinstance(n, Element) and n._tag_name == "table")
+        assert "class" not in tables[0]._attrs
+
+    def test_empty_classes_mapping_noop(self) -> None:
+        with _markdown_di_scope():
+            result = render_markdown("| a | b |\n|---|---|", classes={})
         tables = _find_all(result, lambda n: isinstance(n, Element) and n._tag_name == "table")
         assert "class" not in tables[0]._attrs
 

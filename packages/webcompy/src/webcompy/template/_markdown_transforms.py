@@ -87,7 +87,12 @@ def _heading_id_visit_factory(dedupe: _SlugDeduplicator) -> Visitor:
     return visit
 
 
-def _collect_headings_visit_factory(dedupe: _SlugDeduplicator, result: list[HeadingInfo]) -> Visitor:
+def _collect_headings_visit_factory(
+    dedupe: _SlugDeduplicator,
+    result: list[HeadingInfo],
+    *,
+    heading_ids: bool = True,
+) -> Visitor:
     def visit(child: Any, lst: list[Any], i: int) -> Any | None:
         if isinstance(child, Element) and child._tag_name in _HEADING_TAGS:
             text = _resolve_text(child)
@@ -95,9 +100,11 @@ def _collect_headings_visit_factory(dedupe: _SlugDeduplicator, result: list[Head
             if isinstance(existing, str):
                 dedupe.reserve(existing)
                 heading_id = existing
-            else:
+            elif heading_ids:
                 heading_id = dedupe.assign(slugify(text))
                 child._attrs["id"] = heading_id
+            else:
+                heading_id = ""
             result.append(HeadingInfo(level=int(child._tag_name[1]), text=text, id=heading_id))
         return None
 
@@ -152,16 +159,18 @@ def apply_heading_ids(root: ElementAbstract) -> None:
     _walk_elements([root], _heading_id_visit_factory(_SlugDeduplicator()))
 
 
-def collect_headings(root: ElementAbstract) -> tuple[HeadingInfo, ...]:
+def collect_headings(root: ElementAbstract, *, heading_ids: bool = True) -> tuple[HeadingInfo, ...]:
     """Collect headings in document order, injecting missing ids.
 
-    Ids are guaranteed to match the ``id`` attributes present in the tree:
-    headings lacking an id receive the same slug the id transform would
-    assign.
+    When ``heading_ids`` is ``True`` (default), ids are guaranteed to match
+    the ``id`` attributes present in the tree: headings lacking an id receive
+    the same slug the id transform would assign. When ``False``, no ids are
+    injected and headings without an existing ``id`` attribute yield an empty
+    ``id`` in the resulting ``HeadingInfo``.
     """
     dedupe = _SlugDeduplicator()
     result: list[HeadingInfo] = []
-    _walk_elements([root], _collect_headings_visit_factory(dedupe, result))
+    _walk_elements([root], _collect_headings_visit_factory(dedupe, result, heading_ids=heading_ids))
     return tuple(result)
 
 

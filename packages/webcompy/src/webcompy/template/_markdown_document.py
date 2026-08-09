@@ -53,5 +53,5 @@ async def load_markdown_document(
         code_blocks=code_blocks,
         classes=classes,
     )
-    toc = collect_headings(content)
+    toc = collect_headings(content, heading_ids=heading_ids)
     return MarkdownDocument(content=content, metadata=metadata, toc=toc)

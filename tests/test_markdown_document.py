@@ -92,8 +92,12 @@ class TestLoadMarkdownDocumentPipeline:
         port = _FakeResourcePort({"docs/a.md": "# No Id\n\n```python\nx\n```"})
         with _document_di_scope(port):
             doc = await load_markdown_document("docs/a.md", heading_ids=False, code_blocks=False)
-        assert doc.toc[0].id == "no-id"
+        assert doc.toc[0].text == "No Id"
+        assert doc.toc[0].id == ""
         assert doc.content is not None
+        assert not any(
+            h._attrs.get("id") for h in _walk(doc.content, lambda n: isinstance(n, Element) and n._tag_name == "h1")
+        )
 
     @pytest.mark.asyncio
     async def test_pathlib_source(self) -> None:

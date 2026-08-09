@@ -96,7 +96,7 @@ def render_markdown(
                     continue
                 elements.append(_to_element(node))
 
-    if heading_ids or code_blocks or classes is not None:
+    if heading_ids or code_blocks or classes:
         from webcompy.template._markdown_transforms import (
             apply_class_map_to_roots,
             apply_heading_ids_to_roots,
