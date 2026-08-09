@@ -24,7 +24,7 @@
 - [x] 4.2 Body-mode contract tests: object injection, array/scalar explicit error, no fallback wrapper
 - [x] 4.3 Contrib test (FastAPI installed in dev deps): `TypedJSONResponse` header/body modes; non-WebComPy client sees ordinary JSON
 - [x] 4.4 Client tests: bytes/set/tuple/Decimal restoration, precedence rules, unknown-tag behavior (lenient default, strict error), absent-metadata parity
-- [ ] 4.5 Integration test: mounted FastAPI endpoint returning `TypedJSONResponse` consumed by a component via `response_type`, in SSR and browser paths
+- [x] 4.5 Integration test: mounted FastAPI endpoint returning `TypedJSONResponse` consumed by a component via `response_type`, in SSR and browser paths
 
 ## 5. Verification
 
