@@ -10,6 +10,7 @@
 - [ ] 2.1 Extend `ServerCookiePort` (packages/webcompy-server/src/webcompy_server/ports/_cookie.py) to retain the full attribute set (`max_age`, `expires`, `path`, `domain`, `secure`, `httponly`, `samesite`) on `set()`, storing structured pending writes alongside the existing internal dict read path
 - [ ] 2.2 Add an accessor on `ServerCookiePort` (e.g. `get_pending_set_cookie_headers()`) that serializes pending writes to `Set-Cookie` header strings via `http.cookies.SimpleCookie` (server-only import; `expires` formatted to the RFC 1123 date string `Morsel` expects, `domain` assigned to the morsel) with last-write-wins per cookie name+path
 - [ ] 2.3 Expose pending cookies from `ServerRenderContext` (packages/webcompy-server/src/webcompy_server/_context.py) so the CLI layer can read them after rendering
+- [ ] 2.4 `ServerCookiePort.delete()` records an expiring pending write (`value=""`, `max_age=0`) so SSR deletions reach the browser via `Set-Cookie`
 
 ## 3. Response header emission
 
@@ -25,6 +26,7 @@
 - [ ] 4.5 Integration test (webcompy_testing ASGI client): SSR response includes `Set-Cookie` headers set by a component during rendering
 - [ ] 4.6 Test: SSG (`generate_static_site`) completes without error when a component sets cookies, and static output is unaffected
 - [ ] 4.7 Test: hash-mode serving does not emit `Set-Cookie` headers for cookies set during the pre-render
+- [ ] 4.8 Unit test: `ServerCookiePort.delete()` produces a `Set-Cookie` header with `Max-Age=0` and removes the cookie from the read path
 
 ## 5. Verification
 

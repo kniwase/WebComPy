@@ -67,3 +67,8 @@ ServerDOMPort SHALL additionally provide `render_html(node: DOMNode) -> str` for
 #### Scenario: Cookie writes are not emitted in hash mode
 - **WHEN** `ServerCookiePort.set(...)` is called during the hash-mode pre-render
 - **THEN** the cached shell response SHALL NOT include a `Set-Cookie` header
+
+#### Scenario: ServerCookiePort.delete() emits an expiring Set-Cookie during SSR
+- **WHEN** `ServerCookiePort.delete("session", path="/")` is called during SSR
+- **THEN** the HTML page response SHALL include a `Set-Cookie` header for `session` with `Max-Age=0`
+- **AND** the cookie SHALL be removed from the port's read path (`get()` returns `None`)
