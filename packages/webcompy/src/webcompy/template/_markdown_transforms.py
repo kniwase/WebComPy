@@ -8,6 +8,7 @@ from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._text import TextElement
 from webcompy.template._markdown_document import HeadingInfo
+from webcompy.ui.code_block import CodeBlock
 
 _HEADING_TAGS = frozenset({"h1", "h2", "h3", "h4", "h5", "h6"})
 _WHITESPACE_RUN_RE = re.compile(r"\s+")
@@ -111,18 +112,7 @@ def _collect_headings_visit_factory(
     return visit
 
 
-_CodeBlock: Any | None = None
-
-
 def _code_block_visit() -> Visitor:
-    global _CodeBlock
-    if _CodeBlock is None:
-        from webcompy.ui.code_block import CodeBlock
-
-        _CodeBlock = CodeBlock
-    code_block = _CodeBlock
-    assert code_block is not None
-
     def visit(child: Any, lst: list[Any], i: int) -> Any | None:
         if not isinstance(child, Element) or child._tag_name != "pre":
             return None
@@ -138,7 +128,7 @@ def _code_block_visit() -> Visitor:
         m = _LANGUAGE_CLASS_RE.search(class_attr)
         if m is None:
             return None
-        return code_block({"code": _resolve_text(code), "lang": m.group(1)})
+        return CodeBlock({"code": _resolve_text(code), "lang": m.group(1)})
 
     return visit
 
