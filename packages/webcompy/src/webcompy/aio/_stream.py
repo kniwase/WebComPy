@@ -4,6 +4,8 @@ import asyncio
 from collections.abc import AsyncIterable, Callable, Iterable
 from typing import Any, Generic, TypeVar, cast
 
+from webcompy.aio._aio import aio_run
+from webcompy.signal import Signal
 from webcompy.signal._composable import _get_active_component_context
 
 T = TypeVar("T")
@@ -71,3 +73,58 @@ def _register_cleanup(cleanup_fn: Callable[[], None]) -> None:
         previous()
 
     on_before_destroy(_combined)
+
+
+class StreamResult(Generic[T]):
+    def __init__(self, initial: T) -> None:
+        self._value: Signal[T] = Signal(initial)
+        self._error: Signal[Exception | None] = Signal(None)
+        self._finished: Signal[bool] = Signal(False)
+        self._cancel: Callable[[], None] | None = None
+
+    @property
+    def value(self) -> Signal[T]:
+        return self._value
+
+    @property
+    def error(self) -> Signal[Exception | None]:
+        return self._error
+
+    @property
+    def finished(self) -> Signal[bool]:
+        return self._finished
+
+    def aclose(self) -> None:
+        if self._cancel is not None:
+            self._cancel()
+
+
+def to_signal(source: AsyncIterable[T] | Iterable[T], initial: T) -> StreamResult[T]:
+    result = StreamResult[T](initial)
+    cancelled = False
+
+    def is_cancelled() -> bool:
+        return cancelled
+
+    def cancel() -> None:
+        nonlocal cancelled
+        cancelled = True
+
+    result._cancel = cancel
+
+    def on_item(item: T) -> None:
+        result._value.value = item
+
+    def on_error(err: Exception) -> None:
+        result._error.value = err
+        result._finished.value = True
+
+    def on_finished() -> None:
+        result._finished.value = True
+
+    async def _pump() -> None:
+        await _consume_iterable(source, on_item, on_error, on_finished, is_cancelled)
+
+    aio_run(_pump())
+    _register_cleanup(cancel)
+    return result
