@@ -29,9 +29,9 @@
 
 ## 5. Verification
 
-- [ ] 5.1 `uv run ruff check .` and `uv run ruff format --check .` pass
-- [ ] 5.2 `uv run pyright` passes
-- [ ] 5.3 `uv run python -m pytest tests/ --tb=short` passes
+- [x] 5.1 `uv run ruff check .` and `uv run ruff format --check .` pass
+- [x] 5.2 `uv run pyright` passes
+- [x] 5.3 `uv run python -m pytest tests/ --tb=short` passes
 
 ## 6. Spec reference sync
 
