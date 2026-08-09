@@ -7,6 +7,7 @@ from typing import Any, Generic, TypeVar, cast
 from webcompy.aio._aio import aio_run
 from webcompy.signal import Signal
 from webcompy.signal._composable import _get_active_component_context
+from webcompy.signal._list import ReactiveList
 
 T = TypeVar("T")
 
@@ -114,6 +115,67 @@ def to_signal(source: AsyncIterable[T] | Iterable[T], initial: T) -> StreamResul
 
     def on_item(item: T) -> None:
         result._value.value = item
+
+    def on_error(err: Exception) -> None:
+        result._error.value = err
+        result._finished.value = True
+
+    def on_finished() -> None:
+        result._finished.value = True
+
+    async def _pump() -> None:
+        await _consume_iterable(source, on_item, on_error, on_finished, is_cancelled)
+
+    aio_run(_pump())
+    _register_cleanup(cancel)
+    return result
+
+
+class StreamListResult(Generic[T]):
+    def __init__(self) -> None:
+        self._items: ReactiveList[T] = ReactiveList([])
+        self._error: Signal[Exception | None] = Signal(None)
+        self._finished: Signal[bool] = Signal(False)
+        self._cancel: Callable[[], None] | None = None
+
+    @property
+    def items(self) -> ReactiveList[T]:
+        return self._items
+
+    @property
+    def error(self) -> Signal[Exception | None]:
+        return self._error
+
+    @property
+    def finished(self) -> Signal[bool]:
+        return self._finished
+
+    def aclose(self) -> None:
+        if self._cancel is not None:
+            self._cancel()
+
+
+def to_reactive_list(
+    source: AsyncIterable[T] | Iterable[T],
+    *,
+    maxlen: int | None = None,
+) -> StreamListResult[T]:
+    result = StreamListResult[T]()
+    cancelled = False
+
+    def is_cancelled() -> bool:
+        return cancelled
+
+    def cancel() -> None:
+        nonlocal cancelled
+        cancelled = True
+
+    result._cancel = cancel
+
+    def on_item(item: T) -> None:
+        result._items.append(item)
+        if maxlen is not None and len(result._items) > maxlen:
+            result._items.pop(0)
 
     def on_error(err: Exception) -> None:
         result._error.value = err
