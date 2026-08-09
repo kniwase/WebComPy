@@ -26,10 +26,9 @@
 - [ ] 4.4 Integration tests: component RPC during SSR with bake; browser path; error propagation to `RpcError`
 - [ ] 4.5 Security test: crafted meta referencing arbitrary module-qualified class names is rejected without import attempts
 
-## 5. Docs and verification
+## 5. Verification
 
-- [ ] 5.1 Docs: defining procedures with shared dataclasses, calling from components, security model (allowlist), batch/notification usage (per `doc-spec-references`: docs reference the owning specs as source of truth rather than transcribing requirement prose)
-- [ ] 5.2 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
+- [ ] 5.1 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
 
 ## 6. Spec reference sync
 

@@ -18,10 +18,9 @@
 - [ ] 3.3 Test: blocked-path behavior — `/admin/<page>` blocked, host `/api/...` fetchable
 - [ ] 3.4 Test: default (`root_app=None`) behavior byte-identical to before
 
-## 4. Docs and verification
+## 4. Verification
 
-- [ ] 4.1 Docs + minimal example project: embedding WebComPy as an admin UI inside an existing FastAPI app, including the required `base_url`/mount-prefix pairing and the note that the host owns the server process (per `doc-spec-references`: docs reference the owning specs as source of truth rather than transcribing requirement prose)
-- [ ] 4.2 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
+- [ ] 4.1 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
 
 ## 5. Spec reference sync
 

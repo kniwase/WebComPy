@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: WebComPy serving apps shall be embeddable into host ASGI applications
-The framework SHALL officially support embedding a WebComPy serving app into a host ASGI application via standard mounting (e.g. Starlette/FastAPI `Mount`/`mount`). The documented pattern is: construct the serving app with `create_asgi_app()`, wire the fetch port with `configure_server_context(app, root_app=host)`, and mount `serving.asgi` under a path prefix. In embedded mode the host application owns the server process (`run_server()` is not used). SSR pages, framework asset endpoints, and static files SHALL be served correctly under the mount prefix.
+The framework SHALL officially support embedding a WebComPy serving app into a host ASGI application via standard mounting (e.g. Starlette/FastAPI `Mount`/`mount`). The supported pattern is: construct the serving app with `create_asgi_app()`, wire the fetch port with `configure_server_context(app, root_app=host)`, and mount `serving.asgi` under a path prefix. In embedded mode the host application owns the server process (`run_server()` is not used). SSR pages, framework asset endpoints, and static files SHALL be served correctly under the mount prefix.
 
 #### Scenario: Embedded SSR page render
 - **WHEN** a WebComPy app is mounted at `/admin` in a host FastAPI app and a client requests `/admin/` (or a page path under it)
@@ -23,7 +23,7 @@ The framework SHALL officially support embedding a WebComPy serving app into a h
 - **THEN** direct requests to those routes SHALL be handled by the host exactly as if WebComPy were not mounted
 
 ### Requirement: base_url shall match the mount prefix in embedded mode
-When embedded under a mount prefix, `AppConfig.base_url` SHALL be set to that prefix (e.g. `/admin/`). Generated asset URLs, router links, and self-site fetch URL resolution SHALL then align with the embedded location. The documentation SHALL present `base_url` and the mount prefix as a required pairing.
+When embedded under a mount prefix, `AppConfig.base_url` SHALL be set to that prefix (e.g. `/admin/`). Generated asset URLs, router links, and self-site fetch URL resolution SHALL then align with the embedded location. The `base_url` value and the mount prefix are a required pairing: mis-matching them is a configuration error whose symptoms (asset URLs, router links, or fetch resolution pointing outside the mount) are not caught at startup.
 
 #### Scenario: Asset URLs carry the prefix
 - **WHEN** `base_url="/admin/"` and the app is mounted at `/admin`

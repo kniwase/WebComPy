@@ -14,3 +14,5 @@
 #### Scenario: Static output contains only pages
 - **WHEN** SSG completes for an app with mounts configured
 - **THEN** `dist/` SHALL contain page HTML, static files, and framework assets only
+
+A statically deployed site has no live mount endpoints: only responses fetched from mounts during generation are available, replayed through the hydration transfer payload. Runtime-only fetches against mounts will fail on static hosting unless baked at build time.

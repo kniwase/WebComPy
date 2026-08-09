@@ -26,10 +26,9 @@
 - [ ] 4.4 Client tests: bytes/set/tuple/Decimal restoration, precedence rules, unknown-tag behavior (lenient default, strict error), absent-metadata parity
 - [ ] 4.5 Integration test: mounted FastAPI endpoint returning `TypedJSONResponse` consumed by a component via `response_type`, in SSR and browser paths
 
-## 5. Docs and verification
+## 5. Verification
 
-- [ ] 5.1 Docs: header vs body mode guidance (header default; body for large metadata; object-only contract), recipes for plain Starlette/Django using `encode_with_meta` directly (per `doc-spec-references`: docs reference the owning specs as source of truth rather than transcribing requirement prose)
-- [ ] 5.2 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
+- [ ] 5.1 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
 
 ## 6. Spec reference sync
 

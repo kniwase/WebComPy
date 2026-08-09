@@ -10,6 +10,10 @@ The dev/prod server SHALL support mounting user-provided ASGI applications at co
 - **THEN** a request to `/api/users` SHALL be handled by `fastapi_app`
 - **AND** a request to a page route SHALL still be handled by SSR
 
+#### Scenario: Mount reachable under non-root base_url
+- **WHEN** `base_url="/myapp/"` is configured and `/api` is a configured mount
+- **THEN** a request to `/api/users` SHALL reach the mounted app (mount paths are NOT prefixed by `base_url`)
+
 #### Scenario: Mounts take precedence over the catch-all
 - **WHEN** a mount is configured at `/api` and no page route matches `/api/anything`
 - **THEN** requests to `/api/...` SHALL be routed to the mounted app, not to SSR
@@ -20,7 +24,7 @@ The dev/prod server SHALL support mounting user-provided ASGI applications at co
 - **THEN** the route table SHALL be exactly as before this change
 
 ### Requirement: Mount path collisions shall fail fast at startup
-`create_asgi_app()` SHALL validate mount prefixes before constructing the ASGI app. A mount prefix that starts with `/_webcompy` (framework-reserved) SHALL be rejected. A mount prefix that collides with a registered page route SHALL be rejected. On any collision, the server SHALL raise an error listing all conflicting paths before serving begins; the same validation SHALL apply during SSG.
+`create_asgi_app()` SHALL validate mount prefixes before constructing the ASGI app. A mount prefix that starts with `/_webcompy` (framework-reserved) SHALL be rejected. A mount prefix that normalizes to `/` (root mounting) SHALL be rejected, as it would shadow the SSR catch-all and all page routes. A mount prefix that collides with a registered page route SHALL be rejected. On any collision, the server SHALL raise an error listing all conflicting paths before serving begins; the same validation SHALL apply during SSG.
 
 #### Scenario: Reserved prefix collision
 - **WHEN** a mount is declared at `/_webcompy-api`
@@ -29,3 +33,7 @@ The dev/prod server SHALL support mounting user-provided ASGI applications at co
 #### Scenario: Page route collision
 - **WHEN** a page route `/admin` exists and a mount is declared at `/admin`
 - **THEN** startup SHALL fail with an error listing the conflict
+
+#### Scenario: Root mount rejected
+- **WHEN** a mount is declared at `/` (or an empty prefix)
+- **THEN** startup SHALL fail with an error naming the prefix

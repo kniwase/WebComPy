@@ -248,11 +248,20 @@ class TestWebComPyServerConfig:
         config = WebComPyServerConfig()
         assert config.port == 8080
         assert config.dev is False
+        assert config.mounts is None
 
     def test_custom(self):
         config = WebComPyServerConfig(port=3000, dev=True)
         assert config.port == 3000
         assert config.dev is True
+
+    def test_mounts_callable_not_invoked_at_construction(self):
+        from unittest.mock import Mock
+
+        factory = Mock()
+        config = WebComPyServerConfig(mounts=factory)
+        assert config.mounts is factory
+        factory.assert_not_called()
 
 
 class TestLockfileSyncConfig:

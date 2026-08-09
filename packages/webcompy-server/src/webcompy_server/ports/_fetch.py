@@ -18,6 +18,7 @@ class ServerFetchPort(FetchPort):
         self._self_site_client: httpx.AsyncClient | None = None
         self._asgi_app: ASGIApp | None = None
         self._blocked_paths: list[str] = []
+        self._mount_prefixes: list[str] = []
         self._base_url: str = "/"
         self._response_cache: dict[str, Response] = {}
 
@@ -31,18 +32,26 @@ class ServerFetchPort(FetchPort):
         asgi_app: ASGIApp,
         blocked_paths: list[str] | None = None,
         base_url: str | None = None,
+        mount_prefixes: list[str] | None = None,
     ) -> None:
         if self._asgi_app is not None:
             raise WebComPyException("ServerFetchPort is already configured")
         self._asgi_app = asgi_app
         self._blocked_paths = blocked_paths or []
+        self._mount_prefixes = ["/" + p.strip("/") for p in (mount_prefixes or []) if p.strip("/")]
         if base_url is not None:
             self._base_url = base_url
         self._self_site_client = httpx.AsyncClient(
             transport=httpx.ASGITransport(app=asgi_app),
         )
 
+    def _is_mount_path(self, path: str) -> bool:
+        clean_path = path.split("?", 1)[0].split("#", 1)[0]
+        return any(clean_path == prefix or clean_path.startswith(prefix + "/") for prefix in self._mount_prefixes)
+
     def _resolve_self_site_path(self, url: str) -> str:
+        if url.startswith("/") and self._is_mount_path(url):
+            return url
         base = self._base_url.rstrip("/")
         if url.startswith("."):
             url = url.lstrip(".")
@@ -116,7 +125,7 @@ class ServerFetchPort(FetchPort):
         if cache_key in self._response_cache:
             return self._response_cache[cache_key]
 
-        if self._is_blocked(resolved_path):
+        if not self._is_mount_path(resolved_path) and self._is_blocked(resolved_path):
             return Response(
                 text=(
                     f"Path '{resolved_path}' is blocked during server-side rendering "
