@@ -2,8 +2,8 @@
 
 ## 1. Cookie port attribute extension
 
-- [ ] 1.1 Add keyword-only `expires: datetime | None = None` and `domain: str | None = None` parameters to the `CookiePort.set()` ABC (packages/webcompy/src/webcompy/ports/_cookie.py)
-- [ ] 1.2 Apply `expires` (UTC date string) and `domain` in `BrowserCookiePort.set()` (packages/webcompy/src/webcompy/ports/_browser/_cookie.py) alongside the existing attributes
+- [x] 1.1 Add keyword-only `expires: datetime | None = None` and `domain: str | None = None` parameters to the `CookiePort.set()` ABC (packages/webcompy/src/webcompy/ports/_cookie.py)
+- [x] 1.2 Apply `expires` (UTC date string) and `domain` in `BrowserCookiePort.set()` (packages/webcompy/src/webcompy/ports/_browser/_cookie.py) alongside the existing attributes
 
 ## 2. Server cookie port
 
