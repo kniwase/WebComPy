@@ -2,10 +2,10 @@
 
 ## 1. Core encoder
 
-- [ ] 1.1 Implement `encode_with_meta(value) -> tuple[json_data, meta]` in a framework-neutral module: dataclasses, pydantic (duck-typed `model_dump()`), plain structures; type tags for bytes/set/tuple/decimal/datetime/date/time/uuid
-- [ ] 1.2 Define and implement the path grammar (leading candidate: JSON Pointer RFC 6901) with escaping tests for keys containing dots/brackets/slashes
-- [ ] 1.3 Implement body-mode validation: top-level object required, explicit error for array/scalar with guidance message
-- [ ] 1.4 Ensure no `__webcompy_` keys or inline tags appear in pristine bodies (regression test)
+- [x] 1.1 Implement `encode_with_meta(value) -> tuple[json_data, meta]` in a framework-neutral module: dataclasses, pydantic (duck-typed `model_dump()`), plain structures; type tags for bytes/set/tuple/decimal/datetime/date/time/uuid
+- [x] 1.2 Define and implement the path grammar (leading candidate: JSON Pointer RFC 6901) with escaping tests for keys containing dots/brackets/slashes
+- [x] 1.3 Implement body-mode validation: top-level object required, explicit error for array/scalar with guidance message
+- [x] 1.4 Ensure no `__webcompy_` keys or inline tags appear in pristine bodies (regression test)
 
 ## 2. FastAPI contrib
 
