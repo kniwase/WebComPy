@@ -305,6 +305,16 @@ class TestApplyTransferMeta:
         apply_transfer_meta(data, {"/tags": "set", "/blob": "bytes"})
         assert data == original
 
+    def test_untouched_subtrees_shared(self):
+        data = {
+            "touched": {"blob": base64.b64encode(b"x").decode("ascii")},
+            "untouched": {"nested": [1, 2, 3]},
+        }
+        result = apply_transfer_meta(data, {"/touched/blob": "bytes"})
+        assert result["touched"]["blob"] == b"x"
+        assert result["untouched"] is data["untouched"]
+        assert data["untouched"]["nested"] == [1, 2, 3]
+
     def test_none_meta_returns_input(self):
         data = {"a": 1}
         assert apply_transfer_meta(data, None) == data

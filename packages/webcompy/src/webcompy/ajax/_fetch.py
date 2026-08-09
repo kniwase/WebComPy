@@ -14,6 +14,8 @@ from webcompy.ports._keys import FETCH_PORT_KEY, FFI_PORT_KEY
 
 T = TypeVar("T")
 
+_META_HEADER_NAME_LOWER = META_HEADER_NAME.lower()
+
 
 # HttpClient
 class WebComPyHttpClientException(WebComPyException):
@@ -98,7 +100,7 @@ def _deserialize_if_typed(res: Response, response_type: type[T] | None) -> Respo
         if not isinstance(meta, Mapping):
             raise TypedResponseError(f"Malformed {META_BODY_KEY}: expected a JSON object, got {type(meta).__name__}")
     else:
-        header_value = next((v for k, v in res.headers.items() if k.lower() == META_HEADER_NAME.lower()), None)
+        header_value = next((v for k, v in res.headers.items() if k.lower() == _META_HEADER_NAME_LOWER), None)
         if header_value is not None:
             try:
                 meta = json_loads(header_value)

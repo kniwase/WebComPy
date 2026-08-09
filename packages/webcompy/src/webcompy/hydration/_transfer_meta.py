@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import copy
 import dataclasses
 import logging
 from collections.abc import Callable, Mapping
@@ -42,30 +41,42 @@ def apply_transfer_meta(data: Any, meta: Mapping[str, str] | None, *, strict: bo
         raise ValueError(f"Transfer meta must be a mapping of path to type tag, got {type(meta).__name__}")
     if not meta:
         return data
-    result = copy.deepcopy(data)
+    result = data
     for path, tag in sorted(meta.items(), key=lambda item: item[0].count("/"), reverse=True):
         segments = _resolve_segments(path)
         if not segments:
             result = _decode_tagged(tag, result, strict=strict, path=path)
             continue
-        node: Any = result
-        for segment in segments[:-1]:
-            node = _navigate(node, segment, path=path)
-        leaf_segment = segments[-1]
-        if isinstance(node, dict):
-            if leaf_segment not in node:
-                raise ValueError(f"Transfer meta path {path!r} does not exist in response data")
-            node[leaf_segment] = _decode_tagged(tag, node[leaf_segment], strict=strict, path=path)
-        elif isinstance(node, list):
-            if not leaf_segment.isdigit():
-                raise ValueError(f"Transfer meta path {path!r} does not exist in response data")
-            try:
-                node[int(leaf_segment)] = _decode_tagged(tag, node[int(leaf_segment)], strict=strict, path=path)
-            except IndexError:
-                raise ValueError(f"Transfer meta path {path!r} does not exist in response data") from None
-        else:
-            raise ValueError(f"Transfer meta path {path!r} does not exist in response data")
+        result = _replace_at_path(result, segments, tag, strict=strict, path=path)
     return result
+
+
+def _replace_at_path(node: Any, segments: list[str], tag: str, *, strict: bool, path: str) -> Any:
+    head, *rest = segments
+    if isinstance(node, dict):
+        if head not in node:
+            raise ValueError(f"Transfer meta path {path!r} does not exist in response data")
+        new_node = dict(node)
+        if rest:
+            new_node[head] = _replace_at_path(node[head], rest, tag, strict=strict, path=path)
+        else:
+            new_node[head] = _decode_tagged(tag, node[head], strict=strict, path=path)
+        return new_node
+    if isinstance(node, list):
+        if not head.isdigit():
+            raise ValueError(f"Transfer meta path {path!r} does not exist in response data")
+        index = int(head)
+        try:
+            child = node[index]
+        except IndexError:
+            raise ValueError(f"Transfer meta path {path!r} does not exist in response data") from None
+        new_node = list(node)
+        if rest:
+            new_node[index] = _replace_at_path(child, rest, tag, strict=strict, path=path)
+        else:
+            new_node[index] = _decode_tagged(tag, child, strict=strict, path=path)
+        return new_node
+    raise ValueError(f"Transfer meta path {path!r} does not exist in response data")
 
 
 def _encode_value(value: Any, *, path: str, meta: dict[str, str], _seen: set[int]) -> Any:
@@ -153,21 +164,6 @@ def _resolve_segments(path: str) -> list[str]:
 
 def _unescape_token(token: str) -> str:
     return token.replace("~1", "/").replace("~0", "~")
-
-
-def _navigate(node: Any, segment: str, *, path: str) -> Any:
-    if isinstance(node, dict):
-        if segment not in node:
-            raise ValueError(f"Transfer meta path {path!r} does not exist in response data")
-        return node[segment]
-    if isinstance(node, list):
-        if not segment.isdigit():
-            raise ValueError(f"Transfer meta path {path!r} does not exist in response data")
-        try:
-            return node[int(segment)]
-        except IndexError:
-            raise ValueError(f"Transfer meta path {path!r} does not exist in response data") from None
-    raise ValueError(f"Transfer meta path {path!r} does not exist in response data")
 
 
 def _decode_tagged(tag: str, value: Any, *, strict: bool, path: str) -> Any:
