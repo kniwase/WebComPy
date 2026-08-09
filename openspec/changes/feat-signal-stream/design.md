@@ -56,6 +56,10 @@ Items are enqueued from `on_after_updating`, so signal-level dedup applies upstr
 
 Reuse the storage pattern: if `_get_active_component_context()` is present at creation, chain an `on_before_destroy` hook that cancels the pump / destroys the consumer node; otherwise the caller must `aclose()`. Rationale: consistency with `sync_tabs`; no new lifecycle machinery; satisfies the No-New-Globals invariant (no module-level registries — per-instance tasks only). Note: pump tasks registered through `aio_run` in a render context are awaited/cancelled by that context's scheduler, which covers server-side teardown.
 
+### D6a: `to_async_iter` abandonment cleanup via weakref-tracked wrapper
+
+CPython 3.12 does not call `aclose()` when an `async for` loop is abandoned with `break` (verified via bytecode: the break path skips `END_ASYNC_FOR`), and leaves a pending `async_generator_athrow` task that keeps the generator — and therefore the signal subscription — alive until loop shutdown (reproduced with a pure-Python minimal case, no WebComPy involved). To satisfy the spec requirement that abandonment removes the subscription, `to_async_iter` returns a small `_StreamAsyncIterator` wrapper instead of the raw async generator. The wrapper carries a `weakref.finalize` that runs `_dispose()` (consumer destroy + queue sentinel) as soon as the consumer drops the iterator — which happens promptly when the consuming coroutine's frame is released. Explicit `aclose()`, component destroy, and the generator's own `finally` (a guarded no-op once disposed) cover the remaining paths; the underlying generator object may linger until loop shutdown due to the CPython athrow-task behavior, but it is inert (disposed flag set, queue abandoned).
+
 ### D7: Sync iterables accepted everywhere
 
 `to_signal`/`to_reactive_list` accept plain `Iterable[T]` too (detect `__aiter__` vs `__iter__`), pumped item-by-item with `await asyncio.sleep(0)` yields so large sync sources don't starve the event loop. Rationale: makes the utilities unit-testable without any async source and costs almost nothing.
