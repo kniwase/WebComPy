@@ -242,6 +242,17 @@ class TestEmbeddedServing:
 
 class TestEmbeddedSelfSiteFetch:
     @pytest.mark.asyncio
+    async def test_embedded_relative_path_resolution(self) -> None:
+        from webcompy_server.ports._fetch import ServerFetchPort
+
+        port = ServerFetchPort()
+        port.configure(Starlette(routes=[]), base_url="/admin/", embedded=True)
+
+        assert port._resolve_self_site_path("./api/items") == "/admin/api/items"
+        assert port._resolve_self_site_path("/api/items") == "/api/items"
+        assert port._resolve_self_site_path("./") == "/admin/"
+
+    @pytest.mark.asyncio
     async def test_fetch_to_host_api_during_ssr(self, tmp_path: Path) -> None:
         from webcompy.di import inject
         from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY

@@ -25,7 +25,9 @@ def configure_server_context(
     if root_app is not None:
         prefix = app.config.base_url.strip("/")
         blocked_paths = [
-            f"{prefix}/{route[0]}" if route[0] else prefix for route in (app.routes or []) if route[3] is not None
+            f"{prefix}/{route[0].lstrip('/')}" if route[0] else prefix
+            for route in (app.routes or [])
+            if route[3] is not None
         ]
         fetch_port.configure(
             root_app,
