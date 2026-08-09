@@ -134,7 +134,12 @@ class _StorageSyncRegistry:
         else:
             callbacks = list(self._subscribers.get(key, ()))
         for callback in callbacks:
-            callback(new_value)
+            try:
+                callback(new_value)
+            except Exception as err:
+                logging.warning(
+                    f"webcompy storage: storage event handler for key {key!r} failed; continuing dispatch: {err}"
+                )
 
     def dispose(self) -> None:
         if not self._attached:

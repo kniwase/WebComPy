@@ -155,6 +155,20 @@ class TestRemoteApply:
         assert sig1.value == "light"
         assert sig2.value == 0
 
+    def test_dispatch_isolates_callback_failures(self, sync_env, caplog):
+        registry = storage_composable._StorageSyncRegistry()
+        received: list = []
+
+        def boom(raw):
+            raise RuntimeError("boom")
+
+        registry.subscribe("k", boom)
+        registry.subscribe("k", lambda raw: received.append(raw))
+        with caplog.at_level(std_logging.WARNING, logger="uvicorn"):
+            registry._dispatch(SimpleNamespace(key="k", newValue='"x"', url="http://localhost/"))
+        assert received == ['"x"']
+        assert any("failed; continuing dispatch" in r.message for r in caplog.records)
+
 
 class TestRegistrationPolicy:
     def test_sync_tabs_false_registers_nothing(self, sync_env):
