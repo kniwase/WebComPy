@@ -20,10 +20,10 @@
 
 ## 4. Verification
 
-- [ ] 4.1 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
+- [x] 4.1 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short` all pass
 
 ## 5. Spec reference sync
 
-- [ ] 5.1 Update AGENTS.md: add `asgi-embed` to the Current Specs list; add File→Spec Mapping entries for `webcompy_server/__init__.py` (`configure_server_context` → `asgi-embed/spec.md`) and the modified `server-fetch-asgi` rows
-- [ ] 5.2 Check `.opencode/skills/webcompy-review/SKILL.md` for stale assumptions and sync invariant headings/spec references
-- [ ] 5.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+- [x] 5.1 Update AGENTS.md: add `asgi-embed` to the Current Specs list; add File→Spec Mapping entries for `webcompy_server/__init__.py` (`configure_server_context` → `asgi-embed/spec.md`) and the modified `server-fetch-asgi` rows
+- [x] 5.2 Check `.opencode/skills/webcompy-review/SKILL.md` for stale assumptions and sync invariant headings/spec references
+- [x] 5.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
