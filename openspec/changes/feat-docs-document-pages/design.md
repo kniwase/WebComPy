@@ -68,10 +68,10 @@ Exactly one of `source` / `component` is set per entry. Route children, sidebar,
 
 ### 4. TOC links are plain anchors, not RouterLinks
 
-The router percent-encodes `#` in `to` and has no fragment concept; `HistoryPort` never treats hash changes as navigations. Native `<a href="#id">` therefore works in browser, SSR HTML, and the static site, and cannot conflict with scroll restoration (no `navigate()` occurs).
+The router percent-encodes `#` in `to` and has no fragment concept; `HistoryPort` never treats hash changes as navigations. The docs_app HTML carries a `<base href="/">` tag (injected by the server), so a bare `href="#id"` would resolve against the root path and navigate away. TOC anchors therefore use an **absolute-path fragment** (`href="{current_path}#{id}"`, where `current_path` is the page's `RouterContext.path`) — a native same-document fragment navigation that works in browser, SSR HTML, and the static site, and cannot conflict with scroll restoration (no `navigate()` occurs).
 
 - **Consequence**: heading ids from `load_markdown_document()` (Unicode-aware slugs) are the anchor contract; the TOC and content ids are guaranteed identical by `collect_headings`.
-- Browser-native anchor jump does not scroll-margin for the fixed navbar; the layout adds `scroll-margin-top` on `.prose :is(h1..h6)` via scoped style.
+- Browser-native anchor jump does not scroll-margin for the fixed navbar; the shared page scoped style adds `scroll-margin-top` on `.prose :is(h1..h6)`.
 
 ### 5. Markdown page wrapper pattern
 
@@ -95,7 +95,7 @@ async def InstallationPage(context: ComponentContext[RouterContext]):
 
 ### 7. Layout structure and responsiveness
 
-Desktop grid: `sidebar | content(+TOC)`. Breakpoint behavior follows the existing Navbar mobile precedent: sidebar collapses behind a toggle; the TOC aside hides below the wide breakpoint (TOC is navigation sugar, content remains complete without it). Styles are `DocsLayout.scoped_style` dicts; `prose.css` is added to the app head link list in `app.py`.
+Desktop grid: `sidebar | content(+TOC)`. Breakpoint behavior follows the existing Navbar mobile precedent: sidebar collapses behind a toggle; the TOC aside hides below the wide breakpoint (TOC is navigation sugar, content remains complete without it). Styles that target elements a component itself creates live in that component's `scoped_style` dict (`DocsLayout.scoped_style` for the grid shell and pager, `DocsSidebar.scoped_style` for the sidebar, and a shared `DOCS_PAGE_SCOPED_STYLE` on each Markdown page component for the article, TOC, and `.prose` heading `scroll-margin-top` — scoped CSS only matches the component that created the element, so the layout cannot style page-rendered content); `prose.css` is added to the app head link list in `app.py`.
 
 ### 8. Initial content scope
 

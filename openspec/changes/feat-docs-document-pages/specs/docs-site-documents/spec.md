@@ -37,7 +37,7 @@ The `/documents` route SHALL be a parent route whose component (`DocsLayout`) re
 
 ### Requirement: Markdown docs pages shall be thin async wrappers over a shared template
 
-Each Markdown-backed docs page component SHALL be an `async def` component that awaits `load_markdown_document(source)`, calls `context.set_title(...)` with the frontmatter title, and returns `docs_page_template(doc)`. The shared template SHALL render `doc.content` inside `<article class="prose">` and a right-hand TOC aside listing `doc.toc` entries as plain `<a href="#id">` links. The TOC aside SHALL be omitted when `doc.toc` is empty.
+Each Markdown-backed docs page component SHALL be an `async def` component that awaits `load_markdown_document(source)`, calls `context.set_title(...)` with the frontmatter title, and returns `docs_page_template(doc, context.path)`. The shared template SHALL render `doc.content` inside `<article class="prose">` and a right-hand TOC aside listing `doc.toc` entries as plain `<a>` links with absolute-path fragment hrefs (`{current_path}#{id}`, where `current_path` is the page's `RouterContext.path`). The TOC aside SHALL be omitted when `doc.toc` is empty.
 
 #### Scenario: Page renders Markdown with TOC
 
@@ -46,7 +46,7 @@ Each Markdown-backed docs page component SHALL be an `async def` component that 
 
 #### Scenario: TOC anchor navigation
 
-- **WHEN** a user clicks a TOC entry `<a href="#some-heading">`
+- **WHEN** a user clicks a TOC entry `<a href="/documents/getting-started/installation/#some-heading">`
 - **THEN** the browser scrolls to the heading natively without any router navigation occurring
 
 #### Scenario: SSR title

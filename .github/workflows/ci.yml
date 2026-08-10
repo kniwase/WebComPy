@@ -236,6 +236,10 @@ jobs:
               files: e2e/docs/test_home.py e2e/docs/test_documents.py e2e/docs/test_helloworld.py
             serving_mode: static
           - group:
+              name: docs-documents
+              files: e2e/docs/test_document_pages.py
+            serving_mode: static
+          - group:
               name: docs-demos
               files: e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py
             serving_mode: static

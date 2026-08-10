@@ -2,7 +2,12 @@ from webcompy.elements import html
 from webcompy.template import MarkdownDocument
 
 
-def docs_page_template(doc: MarkdownDocument):
+def _toc_href(current_path: str, heading_id: str) -> str:
+    path = current_path if current_path.startswith("/") else "/" + current_path
+    return f"{path.rstrip('/')}#{heading_id}"
+
+
+def docs_page_template(doc: MarkdownDocument, current_path: str):
     children: list = [html.ARTICLE({"class": "prose"}, doc.content)]
     if doc.toc:
         children.append(
@@ -15,7 +20,7 @@ def docs_page_template(doc: MarkdownDocument):
                         *tuple(
                             html.LI(
                                 {"class": f"docs-toc-level-{heading.level}"},
-                                html.A({"href": f"#{heading.id}"}, heading.text),
+                                html.A({"href": _toc_href(current_path, heading.id)}, heading.text),
                             )
                             for heading in doc.toc
                         ),

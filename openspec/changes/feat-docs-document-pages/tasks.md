@@ -26,8 +26,8 @@
 
 ## 5. Tests
 
-- [ ] 5.1 Add `e2e/docs/test_document_pages.py` following the `docs_page_on` fixture pattern: titles, sidebar active state, TOC anchor jump, code block highlighting, Prev/Next navigation (prod + static modes)
-- [ ] 5.2 Verify existing `e2e/docs/test_documents.py` and signal-stream E2E still pass against the moved route
+- [x] 5.1 Add `e2e/docs/test_document_pages.py` following the `docs_page_on` fixture pattern: titles, sidebar active state, TOC anchor jump, code block highlighting, Prev/Next navigation (prod + static modes)
+- [x] 5.2 Verify existing `e2e/docs/test_documents.py` and signal-stream E2E still pass against the moved route
 
 ## 6. Verification
 

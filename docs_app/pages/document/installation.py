@@ -9,7 +9,7 @@ from ...components.docs_page import DOCS_PAGE_SCOPED_STYLE, docs_page_template
 async def InstallationPage(context: ComponentContext[RouterContext]):
     doc = await load_markdown_document("documents/installation.md")
     context.set_title(f"{doc.metadata['title']} - WebComPy Docs")
-    return docs_page_template(doc)
+    return docs_page_template(doc, context.props.path)
 
 
 InstallationPage.scoped_style = DOCS_PAGE_SCOPED_STYLE
