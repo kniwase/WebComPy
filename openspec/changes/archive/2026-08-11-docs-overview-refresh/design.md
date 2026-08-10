@@ -32,10 +32,12 @@ two mechanisms:
 - The Purpose paragraph removal and the `config.yaml` cleanup are applied
   as direct edits (implementation tasks).
 - A single ADDED requirement is introduced in the `overview` capability:
-  the Purpose section shall not enumerate missing capabilities. This is not
-  an invented formality — it codifies D2 as a durable rule and prevents
-  this staleness class from recurring. Precedent: the `fix-typos` change
-  created the `internal-naming` governance spec from a cleanup change.
+  the Purpose section shall not enumerate missing capabilities, and open work
+  and known limitations shall instead be tracked in `openspec/config.yaml`
+  (Known Issues) or OpenSpec change proposals. This is not an invented
+  formality — it codifies D2 as a durable rule and prevents this staleness
+  class from recurring. Precedent: the `fix-typos` change created the
+  `internal-naming` governance spec from a cleanup change.
 
 Alternative considered: force the correction into a MODIFIED requirement
 (e.g. restate that the framework provides DI/plugins/reconciliation).
@@ -69,7 +71,8 @@ as remove/reword/keep:
 - Reconciliation: `list-reconciliation` spec; SwitchElement reuses DOM
   nodes via patching for matching structures and replaces children only
   when branch structures differ.
-- Kept entries re-checked: `_last_mutation` (`signal/_dict.py`),
+- Kept entries re-checked: `_last_mutation` (`signal/_list.py`,
+  `signal/_dict.py`),
   `__purge_signal_members__` (`signal/_container.py`), MD5 component IDs
   (`components/_libs.py`), binary Emscripten detection
   (`utils/_environment.py`), module-level fallbacks (`di/_scope.py`,

@@ -5,7 +5,7 @@
 The Purpose section of `openspec/specs/overview/spec.md` SHALL describe
 what the framework is and promises, and SHALL NOT maintain a list of
 capabilities the framework lacks. Open work and known limitations SHALL be
-tracked in `openspec/config.yaml` (Known Issues) and in OpenSpec change
+tracked in `openspec/config.yaml` (Known Issues) or in OpenSpec change
 proposals instead, so that capability claims cannot rot against implemented
 specs.
 

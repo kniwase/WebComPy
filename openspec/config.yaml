@@ -10,7 +10,7 @@ context: |
   ## Known Issues (to be resolved in future changes)
 
   ### Signal System
-  - No element-level reactivity in ReactiveList/ReactiveDict — any mutation triggers full change notification (ReactiveList now exposes _last_mutation metadata for incremental consumers)
+  - No element-level reactivity in ReactiveList/ReactiveDict — any mutation triggers full change notification (ReactiveList and ReactiveDict now expose _last_mutation metadata for incremental consumers)
   - __purge_signal_members__ in SignalReceivable properly calls consumer_destroy() for cleanup
 
   ### Component System

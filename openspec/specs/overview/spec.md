@@ -62,7 +62,7 @@ The CLI SHALL provide hot-reload development, static site generation, and projec
 - **AND** the generated static site SHALL be deployable to any static hosting service
 
 ### Requirement: The overview Purpose shall not enumerate missing capabilities
-The Purpose section of `openspec/specs/overview/spec.md` SHALL describe what the framework is and promises, and SHALL NOT maintain a list of capabilities the framework lacks. Open work and known limitations SHALL be tracked in `openspec/config.yaml` (Known Issues) and in OpenSpec change proposals instead, so that capability claims cannot rot against implemented specs.
+The Purpose section of `openspec/specs/overview/spec.md` SHALL describe what the framework is and promises, and SHALL NOT maintain a list of capabilities the framework lacks. Open work and known limitations SHALL be tracked in `openspec/config.yaml` (Known Issues) or in OpenSpec change proposals instead, so that capability claims cannot rot against implemented specs.
 
 #### Scenario: A gap list is proposed for the overview
 - **WHEN** a change proposes adding or updating a "not yet provided" style enumeration in the overview Purpose section

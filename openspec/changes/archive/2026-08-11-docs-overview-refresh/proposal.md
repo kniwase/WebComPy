@@ -3,13 +3,17 @@
 The overview spec is the entry-point document for the framework and will be
 the face of the v1 release, but it is stale. Its Purpose section states that
 WebComPy "does not yet provide" dependency injection, plugin systems, or
-fine-grained DOM patching — all three have since been implemented and are
-governed by their own specs (`di-injection`, `plugin-system`,
-`list-reconciliation`). The Known Issues block in `openspec/config.yaml` is
-similarly out of date: two entries describe limitations that no longer
-exist (Router singleton, missing plugin system), one overstates the
-current element system, and the popstate entry attributes cleanup to a
-manual `destroy()` call that no longer matches the code.
+fine-grained DOM patching. Dependency injection and plugin systems have since
+been implemented and are governed by their own specs (`di-injection`,
+`plugin-system`). The element system now supports targeted key-based
+reconciliation and structural patching for matching SwitchElement branch
+structures, but it does not provide general virtual-DOM diffing; these
+behaviors are governed by `list-reconciliation` and `elements`. The Known
+Issues block in `openspec/config.yaml` is similarly out of date: two entries
+describe limitations that no longer exist (Router singleton, missing plugin
+system), one overstates the current element system, and the popstate entry
+attributes cleanup to a manual `destroy()` call that no longer matches the
+code.
 
 ## What Changes
 
@@ -34,14 +38,17 @@ manual `destroy()` call that no longer matches the code.
     (`list-reconciliation`), and correct the SwitchElement entry: it
     replaces children only when branch structures differ, reusing DOM nodes
     via patching for matching structures.
-  - Keep the five entries that are still accurate as-is (element-level
-    signal reactivity, `__purge_signal_members__` note, MD5 component IDs,
-    binary browser detection, module-level app fallbacks). Together with
-    the three reworded entries (two element-system and the popstate
+  - Keep the five entries that remain accurate (the element-level signal
+    reactivity entry notes `_last_mutation` metadata for both `ReactiveList` and
+    `ReactiveDict`, alongside the `__purge_signal_members__` note, MD5 component
+    IDs, binary browser detection, and module-level app fallbacks). Together
+    with the three reworded entries (two element-system and the popstate
     cleanup), the final list contains eight entries.
 - Add a governance requirement to the `overview` capability: the Purpose
-  section shall not enumerate missing capabilities, so gap claims cannot
-  rot against implemented specs again.
+  section shall not enumerate missing capabilities, and open work and known
+  limitations shall instead be tracked in `openspec/config.yaml` (Known
+  Issues) or OpenSpec change proposals, so gap claims cannot rot against
+  implemented specs again.
 - Synchronize the new invariant into the review-knowledge references
   (Framework Invariants in `AGENTS.md` and Critical Framework Invariants in
   `.opencode/skills/webcompy-review/SKILL.md`) per the Review Knowledge

@@ -4,8 +4,10 @@
   the Purpose section of `openspec/specs/overview/spec.md` (no replacement
   text; per design D2)
 - [x] 1.2 Apply the added governance requirement (the overview Purpose
-  shall not enumerate missing capabilities) to
-  `openspec/specs/overview/spec.md` via the archived delta (per design D1)
+  shall not enumerate missing capabilities; open work and known limitations
+  shall instead be tracked in `openspec/config.yaml` (Known Issues) or
+  OpenSpec change proposals) to `openspec/specs/overview/spec.md` via the
+  archived delta (per design D1)
 
 ## 2. Known Issues cleanup in openspec/config.yaml
 
@@ -40,6 +42,7 @@
   `.opencode/skills/webcompy-review/SKILL.md`
 - [x] 4.2 Re-run `python3 scripts/check-doc-spec-refs.py` after the doc
   edits and confirm it passes
-- [x] 4.3 Confirm the governance requirement added in task 1.2 is
-  synchronized into the review-knowledge references (proposal.md
-  "What Changes" and the invariant headings from task 4.1)
+- [x] 4.3 Confirm the governance requirement added in task 1.2, including
+  its `config.yaml` Known Issues or OpenSpec change proposal tracking policy,
+  is synchronized into the review-knowledge references (proposal.md "What
+  Changes" and the invariant headings from task 4.1)
