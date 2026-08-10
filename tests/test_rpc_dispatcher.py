@@ -60,6 +60,8 @@ class User:
 
 
 def _get_user(user: User) -> User:
+    if not isinstance(user, User):
+        raise TypeError(f"expected User instance, got {type(user).__name__}")
     return user
 
 
