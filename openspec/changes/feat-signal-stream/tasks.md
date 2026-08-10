@@ -21,7 +21,7 @@
 
 ## 4. Public API and docs
 
-- [x] 4.1 Export `to_signal`, `to_reactive_list`, `to_async_iter`, `StreamResult`, `StreamListResult` from `webcompy/aio/__init__.py` (and top-level `webcompy` if that is the established re-export pattern)
+- [x] 4.1 Export `to_signal`, `to_reactive_list`, `to_async_iter`, `StreamResult`, `StreamListResult`, `StreamAsyncIterator` from `webcompy/aio/__init__.py` (and top-level `webcompy` if that is the established re-export pattern)
 - [x] 4.2 Add a docs_app section explaining cell-vs-occurrence semantics, the three utilities, the unbounded-default queue policy, and the `maxlen` guidance for long-lived streams
 
 ## 5. Validation

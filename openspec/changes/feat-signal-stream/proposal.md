@@ -26,7 +26,7 @@ WebComPy is signal-first: state lives in `Signal`/`ReactiveList` cells and the U
 ## Impact
 
 - **Code**: new `packages/webcompy/src/webcompy/aio/_stream.py`; public exports in `webcompy/aio/__init__.py`; unit tests under `tests/`.
-- **APIs**: additive only (`to_signal`, `to_reactive_list`, `to_async_iter`, `StreamResult`, `StreamListResult`). No breaking changes.
+- **APIs**: additive only (`to_signal`, `to_reactive_list`, `to_async_iter`, `StreamResult`, `StreamListResult`, `StreamAsyncIterator`). No breaking changes.
 - **Dependencies**: none (stdlib `asyncio`; existing signal and async-scheduler machinery).
 - **Downstream**: foundation for the planned realtime composables (`use_event_source` / `use_websocket`), which will consume transport callbacks via these bridges.
 - **Docs**: new section in docs_app covering the signal/stream duality and the three utilities.
