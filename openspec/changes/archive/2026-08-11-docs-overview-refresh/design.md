@@ -17,7 +17,8 @@ Goals:
 
 Non-goals:
 
-- Any requirement-level change to the overview spec.
+- Any requirement-level change to the overview spec beyond the single
+  governance requirement introduced in D1.
 - Code fixes for the remaining known issues.
 
 ## Decisions
@@ -60,7 +61,10 @@ as remove/reword/keep:
 
 - Router per-app: `Router._clone_for_request` (`router/_router.py`), DI
   provision of `_ROUTER_KEY` (`app/_root_component.py`).
-- Popstate cleanup: `BrowserHistoryPort.__del__` (`ports/_browser/_history.py`).
+- Popstate cleanup: cleanup relies on `BrowserHistoryPort.__del__`
+  (`ports/_browser/_history.py`), which may never run because the browser
+  event target can retain the proxy and its callback; the entry is kept
+  until an explicit port/context disposal path exists.
 - Plugin system: `plugin-system` / `plugin-script` specs implemented.
 - Reconciliation: `list-reconciliation` spec; SwitchElement reuses DOM
   nodes via patching for matching structures and replaces children only

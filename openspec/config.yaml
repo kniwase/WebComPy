@@ -20,6 +20,9 @@ context: |
   - No general virtual DOM diffing — updates are direct DOM manipulation; key-based reconciliation exists only for RepeatElement (list-reconciliation)
   - SwitchElement replaces children when branch structures differ; matching structures reuse DOM nodes via patching
 
+  ### Router
+  - Location popstate proxy cleanup relies on `BrowserHistoryPort.__del__`, which may never run because the browser event target can retain the proxy and its callback; no explicit port/context disposal path removes the listener and destroys the proxy
+
   ### General
   - Browser detection is binary (Emscripten vs other) — no partial API availability checks
   - Module-level fallbacks (_app_di_scope, _app_instance) hold only one app reference in browser environment, limiting true multi-app isolation

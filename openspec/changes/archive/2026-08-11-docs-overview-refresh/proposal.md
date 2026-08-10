@@ -6,9 +6,10 @@ WebComPy "does not yet provide" dependency injection, plugin systems, or
 fine-grained DOM patching — all three have since been implemented and are
 governed by their own specs (`di-injection`, `plugin-system`,
 `list-reconciliation`). The Known Issues block in `openspec/config.yaml` is
-similarly out of date: three entries describe limitations that no longer
-exist (Router singleton, manual popstate proxy disposal, missing plugin
-system) and one overstates the current element system.
+similarly out of date: two entries describe limitations that no longer
+exist (Router singleton, missing plugin system), one overstates the
+current element system, and the popstate entry attributes cleanup to a
+manual `destroy()` call that no longer matches the code.
 
 ## What Changes
 
@@ -21,8 +22,11 @@ system) and one overstates the current element system.
   - Remove "RouterView singleton removed ... Router singleton remains" —
     the Router is created per app (`Router._clone_for_request`) and provided
     via DI (`_ROUTER_KEY` in the root component scope).
-  - Remove "Location popstate proxy must be manually destroy()ed" — cleanup
-    is automatic via `BrowserHistoryPort.__del__`.
+  - Reword "Location popstate proxy must be manually destroy()ed" — cleanup
+    relies on `BrowserHistoryPort.__del__`, which may never run because the
+    browser event target can retain the proxy and its callback; the entry
+    stays until an explicit port/context disposal path removes the listener
+    and destroys the proxy.
   - Remove "No plugin system" — `plugin-system` and `plugin-script` specs
     exist and are implemented.
   - Reword "No virtual DOM diffing — direct DOM manipulation only" to
@@ -33,8 +37,8 @@ system) and one overstates the current element system.
   - Keep the five entries that are still accurate as-is (element-level
     signal reactivity, `__purge_signal_members__` note, MD5 component IDs,
     binary browser detection, module-level app fallbacks). Together with
-    the two reworded element-system entries, the final list contains seven
-    entries.
+    the three reworded entries (two element-system and the popstate
+    cleanup), the final list contains eight entries.
 - Add a governance requirement to the `overview` capability: the Purpose
   section shall not enumerate missing capabilities, so gap claims cannot
   rot against implemented specs again.
@@ -46,7 +50,7 @@ system) and one overstates the current element system.
 ## Known Issues Addressed
 
 This change does not fix any known issue in code. It removes Known Issues
-entries that no longer describe reality and corrects one entry, so the
+entries that no longer describe reality and corrects other entries, so the
 remaining list accurately reflects open work.
 
 ## Non-goals
@@ -57,8 +61,9 @@ remaining list accurately reflects open work.
 - Adding new "not yet provided" statements to the overview. New negative
   claims would risk the same staleness; capabilities are described by their
   owning specs.
-- Rewriting overview requirements. Only the Purpose prose is affected; all
-  requirements remain unchanged.
+- Rewriting overview requirements. The only requirement-level change is the
+  added governance requirement (the Purpose shall not enumerate missing
+  capabilities); all other requirements remain unchanged.
 
 ## Capabilities
 
