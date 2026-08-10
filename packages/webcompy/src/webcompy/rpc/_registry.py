@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import itertools
 import typing
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -35,6 +36,7 @@ class ProcedureRegistry:
         self._type_handlers: dict[str, tuple[type, Callable[[Any], Any], Callable[[Any], Any]]] = {}
         self._meta_encoders: dict[type, tuple[str, Callable[[Any], Any]]] = {}
         self._meta_decoders: dict[str, Callable[[Any], Any]] = {}
+        self._id_counter = itertools.count(1)
 
     @property
     def path(self) -> str:
@@ -54,6 +56,9 @@ class ProcedureRegistry:
     @property
     def has_procedures(self) -> bool:
         return bool(self._procedures)
+
+    def next_id(self) -> int:
+        return next(self._id_counter)
 
     def get(self, name: str) -> ProcedureInfo | None:
         return self._procedures.get(name)

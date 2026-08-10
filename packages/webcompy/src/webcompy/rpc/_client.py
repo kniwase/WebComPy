@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import itertools
 from collections.abc import Mapping, Sequence
 from json import JSONDecodeError
 from json import dumps as json_dumps
@@ -16,12 +15,6 @@ from webcompy.rpc._errors import INTERNAL_ERROR, SERVER_ERROR, RpcError
 from webcompy.rpc._registry import ProcedureRegistry
 
 T = TypeVar("T")
-
-_id_counter = itertools.count(1)
-
-
-def _next_id() -> int:
-    return next(_id_counter)
 
 
 def _registry_or_error() -> ProcedureRegistry:
@@ -111,7 +104,7 @@ async def call(
     result_type: type[T] | None = None,
 ) -> Any:
     registry = _registry_or_error()
-    envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": method, "id": _next_id()}
+    envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": method, "id": registry.next_id()}
     if params is not None:
         _encode_params(registry, envelope, params)
     data = await _post_envelope(registry, envelope)
@@ -131,7 +124,12 @@ async def notify(
     await _post_envelope(registry, envelope)
 
 
-async def batch(calls: Sequence[tuple[str, Any] | tuple[str, Any, type[Any]]]) -> list[Any]:
+async def batch(
+    calls: Sequence[
+        tuple[str, Mapping[str, Any] | Sequence[Any] | None]
+        | tuple[str, Mapping[str, Any] | Sequence[Any] | None, type[Any]]
+    ],
+) -> list[Any]:
     registry = _registry_or_error()
     envelopes: list[dict[str, Any]] = []
     entries: list[tuple[int, type[Any] | None]] = []
@@ -139,7 +137,7 @@ async def batch(calls: Sequence[tuple[str, Any] | tuple[str, Any, type[Any]]]) -
         method = call_spec[0]
         params = call_spec[1]
         result_type = call_spec[2] if len(call_spec) > 2 else None
-        req_id = _next_id()
+        req_id = registry.next_id()
         envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": method, "id": req_id}
         if params is not None:
             _encode_params(registry, envelope, params)

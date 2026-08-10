@@ -6,6 +6,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 import httpx
+import pytest
 
 from webcompy.rpc._registry import ProcedureRegistry
 from webcompy_server.rpc import create_dispatcher_app
@@ -69,13 +70,6 @@ def _get_typed() -> dict:
     return {"data": b"hello", "price": Decimal("1.5"), "at": datetime(2024, 1, 2, 3, 4, 5)}
 
 
-_NOTIFICATIONS_EXECUTED: list[str] = []
-
-
-def _record(name: str) -> None:
-    _NOTIFICATIONS_EXECUTED.append(name)
-
-
 def _boom() -> None:
     raise RuntimeError("boom")
 
@@ -98,7 +92,17 @@ def _reflect_point(point: Point) -> Point:
     return point
 
 
-def _make_registry() -> ProcedureRegistry:
+@pytest.fixture
+def recorded() -> list[str]:
+    return []
+
+
+def _make_registry(recorded: list[str] | None = None) -> ProcedureRegistry:
+    sink = recorded if recorded is not None else []
+
+    def _record(name: str) -> None:
+        sink.append(name)
+
     registry = ProcedureRegistry()
     registry.register("echo", _echo)
     registry.register("async_echo", _async_echo)
@@ -157,12 +161,13 @@ class TestSingleCall:
 
 
 class TestNotifications:
-    def test_notification_executes_without_response_body(self) -> None:
-        _NOTIFICATIONS_EXECUTED.clear()
-        response = _post(_make_app(_make_registry()), {"jsonrpc": "2.0", "method": "record", "params": {"name": "n1"}})
+    def test_notification_executes_without_response_body(self, recorded: list[str]) -> None:
+        response = _post(
+            _make_app(_make_registry(recorded)), {"jsonrpc": "2.0", "method": "record", "params": {"name": "n1"}}
+        )
         assert response.status_code == 204
         assert response.content == b""
-        assert _NOTIFICATIONS_EXECUTED == ["n1"]
+        assert recorded == ["n1"]
 
     def test_notification_unknown_method_no_response(self) -> None:
         response = _post(_make_app(_make_registry()), {"jsonrpc": "2.0", "method": "missing"})
@@ -196,10 +201,9 @@ class TestBatch:
             {"jsonrpc": "2.0", "result": 2, "id": 2},
         ]
 
-    def test_all_notification_batch_returns_no_body(self) -> None:
-        _NOTIFICATIONS_EXECUTED.clear()
+    def test_all_notification_batch_returns_no_body(self, recorded: list[str]) -> None:
         response = _post(
-            _make_app(_make_registry()),
+            _make_app(_make_registry(recorded)),
             [
                 {"jsonrpc": "2.0", "method": "record", "params": {"name": "a"}},
                 {"jsonrpc": "2.0", "method": "record", "params": {"name": "b"}},
@@ -207,7 +211,7 @@ class TestBatch:
         )
         assert response.status_code == 204
         assert response.content == b""
-        assert _NOTIFICATIONS_EXECUTED == ["a", "b"]
+        assert recorded == ["a", "b"]
 
     def test_empty_batch_array_returns_invalid_request(self) -> None:
         response = _post(_make_app(_make_registry()), [])
