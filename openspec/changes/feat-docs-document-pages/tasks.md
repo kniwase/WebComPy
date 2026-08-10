@@ -7,10 +7,10 @@
 
 ## 2. Layout and Components
 
-- [ ] 2.1 Create `docs_app/layout/document.py` (`DocsLayout`): sidebar slot area, nested `RouterView`, reactive Prev/Next footer from manifest, mobile sidebar toggle, `DocsLayout.scoped_style` (grid, sticky sidebar, breakpoints, `scroll-margin-top` for headings)
-- [ ] 2.2 Create `docs_app/components/docs_sidebar.py`: sectioned nav from manifest using `RouterLink` with `active_class` and `aria-current`, collapsible sections, mobile behavior
-- [ ] 2.3 Create `docs_app/components/docs_page.py`: `docs_page_template(doc)` rendering `<article class="prose">` + TOC aside (plain `<a href="#id">`, hidden when toc empty)
-- [ ] 2.4 Wire `prose.css` into `docs_app/app.py` head links
+- [x] 2.1 Create `docs_app/layout/document.py` (`DocsLayout`): sidebar slot area, nested `RouterView`, reactive Prev/Next footer from manifest, mobile sidebar toggle, `DocsLayout.scoped_style` (grid, sticky sidebar, breakpoints, `scroll-margin-top` for headings)
+- [x] 2.2 Create `docs_app/components/docs_sidebar.py`: sectioned nav from manifest using `RouterLink` with `active_class` and `aria-current`, collapsible sections, mobile behavior
+- [x] 2.3 Create `docs_app/components/docs_page.py`: `docs_page_template(doc)` rendering `<article class="prose">` + TOC aside (plain `<a href="#id">`, hidden when toc empty)
+- [x] 2.4 Wire `prose.css` into `docs_app/app.py` head links
 
 ## 3. Pages and Routing
 

@@ -37,6 +37,10 @@ app.set_head(
                 "rel": "stylesheet",
                 "href": "/styles/components.css",
             },
+            {
+                "rel": "stylesheet",
+                "href": "/_webcompy-ui/prose.css",
+            },
         ],
     }
 )

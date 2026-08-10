@@ -2,7 +2,7 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 from webcompy.router import RouterView
 
-from .components.navigation import Navbar, Page
+from ..components.navigation import Navbar, Page
 
 
 @define_component
