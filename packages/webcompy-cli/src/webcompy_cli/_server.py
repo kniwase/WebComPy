@@ -313,7 +313,7 @@ def create_asgi_app(
 
     rpc_routes: list[BaseRoute] = []
     rpc_mount_prefixes: list[str] = []
-    rpc_registry = app._rpc_registry
+    rpc_registry = app.rpc
     if rpc_registry.has_procedures:
         rpc_routes.append(_make_rpc_route(rpc_registry, rpc_registry.path))
         prefixed_rpc_path = app.config.base_url.rstrip("/") + rpc_registry.path

@@ -33,6 +33,8 @@ class ProcedureRegistry:
         self._base_url = base_url
         self._procedures: dict[str, ProcedureInfo] = {}
         self._type_handlers: dict[str, tuple[type, Callable[[Any], Any], Callable[[Any], Any]]] = {}
+        self._meta_encoders: dict[type, tuple[str, Callable[[Any], Any]]] = {}
+        self._meta_decoders: dict[str, Callable[[Any], Any]] = {}
 
     @property
     def path(self) -> str:
@@ -102,15 +104,18 @@ class ProcedureRegistry:
         encoder: Callable[[Any], Any],
         decoder: Callable[[Any], Any],
     ) -> None:
-        self._type_handlers[_qualified_type_name(cls)] = (cls, encoder, decoder)
+        tag = _qualified_type_name(cls)
+        self._type_handlers[tag] = (cls, encoder, decoder)
+        self._meta_encoders[cls] = (tag, encoder)
+        self._meta_decoders[tag] = decoder
 
     @property
     def meta_encoders(self) -> dict[type, tuple[str, Callable[[Any], Any]]]:
-        return {cls: (tag, encoder) for tag, (cls, encoder, _) in self._type_handlers.items()}
+        return self._meta_encoders
 
     @property
     def meta_decoders(self) -> dict[str, Callable[[Any], Any]]:
-        return {tag: decoder for tag, (_, _, decoder) in self._type_handlers.items()}
+        return self._meta_decoders
 
     def is_known_meta_tag(self, tag: str) -> bool:
         return tag in BUILTIN_META_TAGS or tag in self._type_handlers
