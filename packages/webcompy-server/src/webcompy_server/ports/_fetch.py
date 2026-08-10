@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 
 
 class ServerFetchPort(FetchPort):
-    def __init__(self) -> None:
-        self._external_client = httpx.AsyncClient()
+    def __init__(self, external_client: httpx.AsyncClient | None = None) -> None:
+        self._external_client = external_client or httpx.AsyncClient()
         self._self_site_client: httpx.AsyncClient | None = None
         self._asgi_app: ASGIApp | None = None
         self._blocked_paths: list[str] = []

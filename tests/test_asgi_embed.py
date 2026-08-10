@@ -353,3 +353,4 @@ class TestDefaultConfiguration:
         assert embedded_port is not None
         assert embedded_port._asgi_app is host
         assert embedded_port._embedded is True
+        assert embedded_port._external_client is cli_port._external_client

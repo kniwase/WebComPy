@@ -18,7 +18,8 @@ def configure_server_context(
     root_app: ASGIApp | None = None,
 ) -> None:
     app._render_context_class = ServerRenderContext
-    fetch_port = ServerFetchPort()
+    old_port = app._server_fetch_port
+    fetch_port = ServerFetchPort(external_client=old_port._external_client if old_port is not None else None)
     app._server_fetch_port = fetch_port
     if resource_port is not None:
         app._server_resource_port = resource_port
