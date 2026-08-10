@@ -1,6 +1,7 @@
 from webcompy.aio._aio import AsyncWrapper, resolve_async
 from webcompy.aio._async_result import AsyncResult, AsyncState
 from webcompy.aio._stream import (
+    StreamAsyncIterator,
     StreamListResult,
     StreamResult,
     to_async_iter,
@@ -13,6 +14,7 @@ __all__ = [
     "AsyncResult",
     "AsyncState",
     "AsyncWrapper",
+    "StreamAsyncIterator",
     "StreamListResult",
     "StreamResult",
     "resolve_async",

@@ -194,7 +194,7 @@ def to_reactive_list(
     return result
 
 
-class _StreamAsyncIterator(Generic[T]):
+class StreamAsyncIterator(Generic[T]):
     def __init__(
         self,
         generator: AsyncGenerator[T, None],
@@ -220,7 +220,7 @@ def to_async_iter(
     *,
     emit_initial: bool = False,
     maxlen: int | None = None,
-) -> AsyncIterator[T]:
+) -> StreamAsyncIterator[T]:
     queue: _StreamQueue[T] = _StreamQueue(maxlen)
     consumer = sig.on_after_updating(lambda v: queue.put_nowait(v))
     closed = False
@@ -247,4 +247,4 @@ def to_async_iter(
         finally:
             _dispose()
 
-    return _StreamAsyncIterator(_generator(), _dispose)
+    return StreamAsyncIterator(_generator(), _dispose)
