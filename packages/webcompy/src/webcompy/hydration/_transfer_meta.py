@@ -19,9 +19,13 @@ META_HEADER_NAME = "X-WebComPy-Transfer-Meta"
 META_BODY_KEY = "__webcompy_transfer_meta__"
 
 
-def encode_with_meta(value: Any) -> tuple[Any, dict[str, str]]:
+def encode_with_meta(
+    value: Any,
+    *,
+    type_handlers: Mapping[type, tuple[str, Callable[[Any], Any]]] | None = None,
+) -> tuple[Any, dict[str, str]]:
     meta: dict[str, str] = {}
-    json_data = _encode_value(value, path="", meta=meta, _seen=set())
+    json_data = _encode_value(value, path="", meta=meta, _seen=set(), type_handlers=type_handlers)
     return json_data, meta
 
 
@@ -34,33 +38,48 @@ def merge_meta_into_body(json_data: Any, meta: Mapping[str, str]) -> dict[str, A
     return {**json_data, META_BODY_KEY: dict(meta)}
 
 
-def apply_transfer_meta(data: Any, meta: Mapping[str, str] | None, *, strict: bool = False) -> Any:
+def apply_transfer_meta(
+    data: Any,
+    meta: Mapping[str, str] | None,
+    *,
+    strict: bool = False,
+    decoders: Mapping[str, Callable[[Any], Any]] | None = None,
+) -> Any:
     if meta is None:
         return data
     if not isinstance(meta, Mapping):
         raise ValueError(f"Transfer meta must be a mapping of path to type tag, got {type(meta).__name__}")
     if not meta:
         return data
+    effective_decoders = {**_DECODERS, **decoders} if decoders else _DECODERS
     result = data
     for path, tag in sorted(meta.items(), key=lambda item: item[0].count("/"), reverse=True):
         segments = _resolve_segments(path)
         if not segments:
-            result = _decode_tagged(tag, result, strict=strict, path=path)
+            result = _decode_tagged(tag, result, strict=strict, path=path, decoders=effective_decoders)
             continue
-        result = _replace_at_path(result, segments, tag, strict=strict, path=path)
+        result = _replace_at_path(result, segments, tag, strict=strict, path=path, decoders=effective_decoders)
     return result
 
 
-def _replace_at_path(node: Any, segments: list[str], tag: str, *, strict: bool, path: str) -> Any:
+def _replace_at_path(
+    node: Any,
+    segments: list[str],
+    tag: str,
+    *,
+    strict: bool,
+    path: str,
+    decoders: Mapping[str, Callable[[Any], Any]],
+) -> Any:
     head, *rest = segments
     if isinstance(node, dict):
         if head not in node:
             raise ValueError(f"Transfer meta path {path!r} does not exist in response data")
         new_node = dict(node)
         if rest:
-            new_node[head] = _replace_at_path(node[head], rest, tag, strict=strict, path=path)
+            new_node[head] = _replace_at_path(node[head], rest, tag, strict=strict, path=path, decoders=decoders)
         else:
-            new_node[head] = _decode_tagged(tag, node[head], strict=strict, path=path)
+            new_node[head] = _decode_tagged(tag, node[head], strict=strict, path=path, decoders=decoders)
         return new_node
     if isinstance(node, list):
         if not head.isdigit():
@@ -72,14 +91,21 @@ def _replace_at_path(node: Any, segments: list[str], tag: str, *, strict: bool, 
             raise ValueError(f"Transfer meta path {path!r} does not exist in response data") from None
         new_node = list(node)
         if rest:
-            new_node[index] = _replace_at_path(child, rest, tag, strict=strict, path=path)
+            new_node[index] = _replace_at_path(child, rest, tag, strict=strict, path=path, decoders=decoders)
         else:
-            new_node[index] = _decode_tagged(tag, child, strict=strict, path=path)
+            new_node[index] = _decode_tagged(tag, child, strict=strict, path=path, decoders=decoders)
         return new_node
     raise ValueError(f"Transfer meta path {path!r} does not exist in response data")
 
 
-def _encode_value(value: Any, *, path: str, meta: dict[str, str], _seen: set[int]) -> Any:
+def _encode_value(
+    value: Any,
+    *,
+    path: str,
+    meta: dict[str, str],
+    _seen: set[int],
+    type_handlers: Mapping[type, tuple[str, Callable[[Any], Any]]] | None,
+) -> Any:
     if value is None or (isinstance(value, (bool, int, float, str)) and not isinstance(value, Enum)):
         return value
 
@@ -90,12 +116,17 @@ def _encode_value(value: Any, *, path: str, meta: dict[str, str], _seen: set[int
     try:
         if isinstance(value, dict):
             return {
-                k: _encode_value(v, path=f"{path}/{_escape_token(str(k))}", meta=meta, _seen=_seen)
+                k: _encode_value(
+                    v, path=f"{path}/{_escape_token(str(k))}", meta=meta, _seen=_seen, type_handlers=type_handlers
+                )
                 for k, v in value.items()
             }
 
         if isinstance(value, list):
-            return [_encode_value(v, path=f"{path}/{i}", meta=meta, _seen=_seen) for i, v in enumerate(value)]
+            return [
+                _encode_value(v, path=f"{path}/{i}", meta=meta, _seen=_seen, type_handlers=type_handlers)
+                for i, v in enumerate(value)
+            ]
 
         if isinstance(value, datetime):
             meta[path] = "datetime"
@@ -108,10 +139,16 @@ def _encode_value(value: Any, *, path: str, meta: dict[str, str], _seen: set[int
             return value.isoformat()
         if isinstance(value, frozenset):
             meta[path] = "frozenset"
-            return [_encode_value(v, path=f"{path}/{i}", meta=meta, _seen=_seen) for i, v in enumerate(value)]
+            return [
+                _encode_value(v, path=f"{path}/{i}", meta=meta, _seen=_seen, type_handlers=type_handlers)
+                for i, v in enumerate(value)
+            ]
         if isinstance(value, set):
             meta[path] = "set"
-            return [_encode_value(v, path=f"{path}/{i}", meta=meta, _seen=_seen) for i, v in enumerate(value)]
+            return [
+                _encode_value(v, path=f"{path}/{i}", meta=meta, _seen=_seen, type_handlers=type_handlers)
+                for i, v in enumerate(value)
+            ]
         if isinstance(value, bytes):
             meta[path] = "bytes"
             return base64.b64encode(value).decode("ascii")
@@ -120,7 +157,10 @@ def _encode_value(value: Any, *, path: str, meta: dict[str, str], _seen: set[int
             return str(value)
         if isinstance(value, tuple):
             meta[path] = "tuple"
-            return [_encode_value(v, path=f"{path}/{i}", meta=meta, _seen=_seen) for i, v in enumerate(value)]
+            return [
+                _encode_value(v, path=f"{path}/{i}", meta=meta, _seen=_seen, type_handlers=type_handlers)
+                for i, v in enumerate(value)
+            ]
         if isinstance(value, Path):
             meta[path] = "path"
             return str(value)
@@ -128,11 +168,18 @@ def _encode_value(value: Any, *, path: str, meta: dict[str, str], _seen: set[int
             meta[path] = "uuid"
             return str(value)
         if isinstance(value, Enum):
-            return _encode_value(value.value, path=path, meta=meta, _seen=_seen)
+            return _encode_value(value.value, path=path, meta=meta, _seen=_seen, type_handlers=type_handlers)
+
+        if type_handlers:
+            handler = type_handlers.get(type(value))
+            if handler is not None:
+                tag, encoder = handler
+                meta[path] = tag
+                return encoder(value)
 
         model_dump = getattr(value, "model_dump", None)
         if callable(model_dump):
-            return _encode_value(model_dump(), path=path, meta=meta, _seen=_seen)
+            return _encode_value(model_dump(), path=path, meta=meta, _seen=_seen, type_handlers=type_handlers)
 
         if dataclasses.is_dataclass(value) and not isinstance(value, type):
             return {
@@ -141,6 +188,7 @@ def _encode_value(value: Any, *, path: str, meta: dict[str, str], _seen: set[int
                     path=f"{path}/{_escape_token(f.name)}",
                     meta=meta,
                     _seen=_seen,
+                    type_handlers=type_handlers,
                 )
                 for f in dataclasses.fields(value)
             }
@@ -166,8 +214,15 @@ def _unescape_token(token: str) -> str:
     return token.replace("~1", "/").replace("~0", "~")
 
 
-def _decode_tagged(tag: str, value: Any, *, strict: bool, path: str) -> Any:
-    decoder = _DECODERS.get(tag)
+def _decode_tagged(
+    tag: str,
+    value: Any,
+    *,
+    strict: bool,
+    path: str,
+    decoders: Mapping[str, Callable[[Any], Any]],
+) -> Any:
+    decoder = decoders.get(tag)
     if decoder is None:
         if strict:
             raise ValueError(f"Unknown transfer meta tag {tag!r} at path {path!r}")
