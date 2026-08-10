@@ -106,6 +106,11 @@ def SignalStream(_: ComponentContext[None]):
                     InlineCode({"text": "maxlen"}),
                     " to keep only the newest N items (drop-oldest). Without it the list grows unbounded, which is deliberate ",
                     "but SHALL be capped for long-lived streams.",
+                    " Each append and each trim triggers a reactive update, so a small ",
+                    InlineCode({"text": "maxlen"}),
+                    " on a high-frequency source increases notification churn; size ",
+                    InlineCode({"text": "maxlen"}),
+                    " to match the source rate.",
                 )
             },
         ),
