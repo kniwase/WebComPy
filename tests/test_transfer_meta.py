@@ -354,3 +354,94 @@ class TestApplyTransferMeta:
     def test_set_tag_with_non_array_raises(self):
         with pytest.raises(ValueError, match="Failed to decode"):
             apply_transfer_meta({"x": {"a": 1}}, {"/x": "set"})
+
+
+class TestCustomTypeHandlers:
+    def test_encode_with_meta_custom_type_handler(self):
+        class Point:
+            def __init__(self, x: int, y: int) -> None:
+                self.x = x
+                self.y = y
+
+        def encode_point(point: Point) -> dict[str, int]:
+            return {"x": point.x, "y": point.y}
+
+        tag = f"{Point.__module__}.{Point.__qualname__}"
+        json_data, meta = encode_with_meta(Point(1, 2), type_handlers={Point: (tag, encode_point)})
+
+        assert json_data == {"x": 1, "y": 2}
+        assert meta == {"": tag}
+
+    def test_encode_with_meta_custom_type_handler_nested(self):
+        class Point:
+            def __init__(self, x: int, y: int) -> None:
+                self.x = x
+                self.y = y
+
+        def encode_point(point: Point) -> dict[str, int]:
+            return {"x": point.x, "y": point.y}
+
+        tag = f"{Point.__module__}.{Point.__qualname__}"
+        json_data, meta = encode_with_meta(
+            {"origin": Point(3, 4)},
+            type_handlers={Point: (tag, encode_point)},
+        )
+
+        assert json_data == {"origin": {"x": 3, "y": 4}}
+        assert meta == {"/origin": tag}
+
+    def test_encode_with_meta_without_handlers_raises_for_unknown_type(self):
+        class Point:
+            pass
+
+        with pytest.raises(WebComPyException, match="Cannot encode"):
+            encode_with_meta(Point())
+
+    def test_apply_transfer_meta_custom_decoder(self):
+        class Point:
+            def __init__(self, x: int, y: int) -> None:
+                self.x = x
+                self.y = y
+
+        def decode_point(data: dict[str, int]) -> Point:
+            return Point(data["x"], data["y"])
+
+        tag = f"{Point.__module__}.{Point.__qualname__}"
+        result = apply_transfer_meta(
+            {"origin": {"x": 3, "y": 4}},
+            {"/origin": tag},
+            strict=True,
+            decoders={tag: decode_point},
+        )
+
+        assert isinstance(result["origin"], Point)
+        assert result["origin"].x == 3
+        assert result["origin"].y == 4
+
+    def test_apply_transfer_meta_custom_decoder_unknown_tag_still_lenient(self):
+        result = apply_transfer_meta(
+            {"x": 1},
+            {"/x": "future-type"},
+            strict=False,
+            decoders={"custom": lambda v: v},
+        )
+        assert result == {"x": 1}
+
+    def test_apply_transfer_meta_custom_decoder_unknown_tag_strict_raises(self):
+        with pytest.raises(ValueError, match="Unknown transfer meta tag"):
+            apply_transfer_meta(
+                {"x": 1},
+                {"/x": "unknown-tag"},
+                strict=True,
+                decoders={"future-type": lambda v: v},
+            )
+
+    def test_apply_transfer_meta_builtin_decoders_still_work_with_custom(self):
+        result = apply_transfer_meta(
+            {"data": "aGVsbG8=", "x": 1},
+            {"/data": "bytes", "/x": "custom-tag"},
+            strict=True,
+            decoders={"custom-tag": lambda v: v + 1},
+        )
+
+        assert result == {"data": b"hello", "x": 2}
