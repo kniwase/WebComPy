@@ -107,6 +107,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Template Binder Control Flow** — `template-engine/spec.md`
 - **Template Binder Component Tag Resolution** — `template-engine/spec.md`
 - **Forms** — `forms/spec.md`
+- **No Overview Gap List** — `overview/spec.md`
 
 UI/theme review guidance (runtime CSS generation, repeated class strings, FOUC via client-side highlighters, `<html>`/`<body>` outside scoped CSS reach, DOM re-injection hacks) is covered by `css-architecture/spec.md` and `theme-system/spec.md`.
 

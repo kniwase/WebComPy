@@ -8,8 +8,6 @@ A front-end framework exists to solve a fundamental problem: as web applications
 
 WebComPy's core promise is **reactivity by default**: when data changes, everything that depends on it updates automatically. This covers primitive values, computed derivations, collection mutations, conditional renderings, and async results. The developer describes what the UI should look like for a given state, and the framework handles the rest — no manual DOM manipulation, no event-driven update orchestration, no state synchronization bugs.
 
-**What WebComPy does not yet provide:** Other frontend frameworks commonly offer dependency injection (Vue's provide/inject, React's Context) for sharing state across the component tree without prop drilling, and plugin systems for extending framework behavior. WebComPy also lacks fine-grained DOM patching — when a list changes, the entire list is regenerated rather than reconciling individual items with keys.
-
 ## Requirements
 
 ### Requirement: WebComPy shall enable building web applications entirely in Python
@@ -62,3 +60,15 @@ The CLI SHALL provide hot-reload development, static site generation, and projec
 - **WHEN** a developer runs the dev server, makes changes, and then generates a static site
 - **THEN** the same application code SHALL work in both environments
 - **AND** the generated static site SHALL be deployable to any static hosting service
+
+### Requirement: The overview Purpose shall not enumerate missing capabilities
+The Purpose section of `openspec/specs/overview/spec.md` SHALL describe what the framework is and promises, and SHALL NOT maintain a list of capabilities the framework lacks. Open work and known limitations SHALL be tracked in `openspec/config.yaml` (Known Issues) or in OpenSpec change proposals instead, so that capability claims cannot rot against implemented specs.
+
+#### Scenario: A gap list is proposed for the overview
+- **WHEN** a change proposes adding or updating a "not yet provided" style enumeration in the overview Purpose section
+- **THEN** the enumeration SHALL be rejected
+- **AND** the gap SHALL be tracked in `openspec/config.yaml` Known Issues or in an OpenSpec change proposal instead
+
+#### Scenario: A capability gains its own spec
+- **WHEN** a capability is implemented and governed by its own spec (e.g. `di-injection`, `plugin-system`, `list-reconciliation`)
+- **THEN** the overview Purpose section SHALL require no gap-list edit, because it does not track gaps

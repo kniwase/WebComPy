@@ -10,23 +10,21 @@ context: |
   ## Known Issues (to be resolved in future changes)
 
   ### Signal System
-  - No element-level reactivity in ReactiveList/ReactiveDict — any mutation triggers full change notification (ReactiveList now exposes _last_mutation metadata for incremental consumers)
+  - No element-level reactivity in ReactiveList/ReactiveDict — any mutation triggers full change notification (ReactiveList and ReactiveDict now expose _last_mutation metadata for incremental consumers)
   - __purge_signal_members__ in SignalReceivable properly calls consumer_destroy() for cleanup
 
   ### Component System
   - Component IDs are MD5 hashes — not collision-proof
 
   ### Element System
-  - No virtual DOM diffing — direct DOM manipulation only
-  - SwitchElement completely regenerates children on change (RepeatElement now supports key-based reconciliation)
+  - No general virtual DOM diffing — updates are direct DOM manipulation; key-based reconciliation exists only for RepeatElement (list-reconciliation)
+  - SwitchElement replaces children when branch structures differ; matching structures reuse DOM nodes via patching
 
   ### Router
-  - RouterView singleton removed (per-app via DI), but Router singleton remains for now
-  - Location popstate proxy must be manually destroy()ed
+  - Location popstate proxy cleanup relies on `BrowserHistoryPort.__del__`, which may never run because the browser event target can retain the proxy and its callback; no explicit port/context disposal path removes the listener and destroys the proxy
 
   ### General
   - Browser detection is binary (Emscripten vs other) — no partial API availability checks
-  - No plugin system (noted in README ToDo)
   - Module-level fallbacks (_app_di_scope, _app_instance) hold only one app reference in browser environment, limiting true multi-app isolation
 
 # Per-artifact rules (optional)
