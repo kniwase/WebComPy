@@ -44,7 +44,7 @@ class TestToSignal:
         assert result.value.value == 42
         assert result.error.value is None
         assert result.finished.value is False
-        result.aclose()
+        await result.aclose()
         await asyncio.sleep(0.02)
 
     @pytest.mark.asyncio
@@ -115,7 +115,7 @@ class TestToSignal:
         result = to_signal(gen(), 0)
         await asyncio.sleep(0.01)
         assert result.value.value == 1
-        result.aclose()
+        await result.aclose()
         await asyncio.sleep(0.1)
         assert result.error.value is None
         assert result.finished.value is False
@@ -316,7 +316,7 @@ class TestLifecycle:
         result = to_signal(_counting(), 0)
         await asyncio.sleep(0.01)
         assert result.value.value > 0
-        result.aclose()
+        await result.aclose()
         last = result.value.value
         await asyncio.sleep(0.02)
         assert result.value.value == last

@@ -160,7 +160,7 @@ def SignalStream(_: ComponentContext[None]):
                                 """
                                 result = to_signal(infinite_source(), 0)
                                 ...
-                                result.aclose()  # stop pumping
+                                await result.aclose()  # stop pumping
                                 """
                             ),
                         }

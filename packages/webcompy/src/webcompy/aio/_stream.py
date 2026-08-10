@@ -97,7 +97,7 @@ class StreamResult(Generic[T]):
     def finished(self) -> Signal[bool]:
         return self._finished
 
-    def aclose(self) -> None:
+    async def aclose(self) -> None:
         if self._cancel is not None:
             self._cancel()
 
@@ -152,7 +152,7 @@ class StreamListResult(Generic[T]):
     def finished(self) -> Signal[bool]:
         return self._finished
 
-    def aclose(self) -> None:
+    async def aclose(self) -> None:
         if self._cancel is not None:
             self._cancel()
 
@@ -202,6 +202,7 @@ class StreamAsyncIterator(Generic[T]):
     ) -> None:
         self._generator = generator
         self._dispose = dispose
+        # retain the finalizer handle so the cleanup callback stays alive for the iterator's lifetime
         self._finalizer = weakref.finalize(self, dispose)
 
     def __aiter__(self) -> AsyncIterator[T]:
