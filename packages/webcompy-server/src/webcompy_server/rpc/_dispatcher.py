@@ -52,7 +52,7 @@ def _decode_params(
     elif isinstance(params, list):
         if len(params) > len(info.param_order):
             raise _ParamError("too many positional arguments")
-        raw_kwargs = dict(zip(info.param_order, params, strict=True))
+        raw_kwargs = dict(zip(info.param_order, params, strict=False))
     elif isinstance(params, dict):
         raw_kwargs = dict(params)
     else:

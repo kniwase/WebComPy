@@ -150,6 +150,11 @@ class TestSingleCall:
         assert response.status_code == 200
         assert response.json() == {"jsonrpc": "2.0", "result": 1, "id": None}
 
+    def test_positional_params_rely_on_defaults(self) -> None:
+        response = _post(_make_app(_make_registry()), {"jsonrpc": "2.0", "method": "add", "params": [5], "id": 1})
+        assert response.status_code == 200
+        assert response.json() == {"jsonrpc": "2.0", "result": 5, "id": 1}
+
 
 class TestNotifications:
     def test_notification_executes_without_response_body(self) -> None:
@@ -166,6 +171,11 @@ class TestNotifications:
 
     def test_notification_invalid_params_no_response(self) -> None:
         response = _post(_make_app(_make_registry()), {"jsonrpc": "2.0", "method": "add", "params": {"a": "x"}})
+        assert response.status_code == 204
+        assert response.content == b""
+
+    def test_notification_positional_params_rely_on_defaults(self) -> None:
+        response = _post(_make_app(_make_registry()), {"jsonrpc": "2.0", "method": "add", "params": [5]})
         assert response.status_code == 204
         assert response.content == b""
 
@@ -217,6 +227,20 @@ class TestBatch:
         by_id = {entry["id"]: entry for entry in data}
         assert by_id[1]["error"]["code"] == -32601
         assert by_id[2]["result"] == 1
+
+    def test_batch_positional_params_rely_on_defaults(self) -> None:
+        response = _post(
+            _make_app(_make_registry()),
+            [
+                {"jsonrpc": "2.0", "method": "add", "params": [5], "id": 1},
+                {"jsonrpc": "2.0", "method": "add", "params": [5, 2], "id": 2},
+            ],
+        )
+        assert response.status_code == 200
+        assert response.json() == [
+            {"jsonrpc": "2.0", "result": 5, "id": 1},
+            {"jsonrpc": "2.0", "result": 7, "id": 2},
+        ]
 
 
 class TestErrorCodes:

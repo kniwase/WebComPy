@@ -9,6 +9,11 @@ The framework SHALL provide a JSON-RPC 2.0 dispatcher as an ASGI endpoint, mount
 - **WHEN** a client POSTs `{"jsonrpc": "2.0", "method": "get_user", "params": {"id": 1}, "id": 1}` with a registered `get_user` procedure
 - **THEN** the dispatcher SHALL invoke the procedure and respond with `{"jsonrpc": "2.0", "result": <value>, "id": 1}`
 
+#### Scenario: Positional params relying on defaults
+- **WHEN** a client POSTs `{"jsonrpc": "2.0", "method": "add", "params": [5], "id": 1}` for a procedure `def add(a: int, b: int = 0) -> int`
+- **THEN** the dispatcher SHALL invoke the procedure with `a=5` and `b=0` (the declared default)
+- **AND** the response SHALL be `{"jsonrpc": "2.0", "result": 5, "id": 1}`
+
 #### Scenario: Batch call
 - **WHEN** a client POSTs an array of valid request objects
 - **THEN** the dispatcher SHALL process each entry independently and SHALL return an array of per-entry responses (excluding notifications)
