@@ -31,10 +31,10 @@
 
 ## 6. Verification
 
-- [ ] 6.1 Run `uv run ruff check .` and `uv run ruff format --check .`
-- [ ] 6.2 Run `uv run pyright`
-- [ ] 6.3 Run `uv run python -m pytest tests/ --tb=short`
-- [ ] 6.4 Run `uv run python -m webcompy generate` on docs_app and inspect generated `/documents*` HTML (titles, prose.css link, heading ids)
-- [ ] 6.5 Run `scripts/run-e2e-tests.sh` docs groups
-- [ ] 6.6 Update `AGENTS.md` File → Spec Mapping (docs_app row) and Current Specs list (`docs-site-documents`); sync `.opencode/skills/webcompy-review/SKILL.md` references; run `python3 scripts/check-doc-spec-refs.py`
-- [ ] 6.7 Run `openspec validate feat-docs-document-pages`
+- [x] 6.1 Run `uv run ruff check .` and `uv run ruff format --check .`
+- [x] 6.2 Run `uv run pyright`
+- [x] 6.3 Run `uv run python -m pytest tests/ --tb=short`
+- [x] 6.4 Run `uv run python -m webcompy generate` on docs_app and inspect generated `/documents*` HTML (titles, prose.css link, heading ids)
+- [x] 6.5 Run `scripts/run-e2e-tests.sh` docs groups
+- [x] 6.6 Update `AGENTS.md` File → Spec Mapping (docs_app row) and Current Specs list (`docs-site-documents`); sync `.opencode/skills/webcompy-review/SKILL.md` references; run `python3 scripts/check-doc-spec-refs.py`
+- [x] 6.7 Run `openspec validate feat-docs-document-pages`
