@@ -13,13 +13,14 @@ if TYPE_CHECKING:
 
 
 class ServerFetchPort(FetchPort):
-    def __init__(self) -> None:
-        self._external_client = httpx.AsyncClient()
+    def __init__(self, external_client: httpx.AsyncClient | None = None) -> None:
+        self._external_client = external_client or httpx.AsyncClient()
         self._self_site_client: httpx.AsyncClient | None = None
         self._asgi_app: ASGIApp | None = None
         self._blocked_paths: list[str] = []
         self._mount_prefixes: list[str] = []
         self._base_url: str = "/"
+        self._embedded: bool = False
         self._response_cache: dict[str, Response] = {}
 
     def is_self_site_url(self, url: str) -> bool:
@@ -33,6 +34,8 @@ class ServerFetchPort(FetchPort):
         blocked_paths: list[str] | None = None,
         base_url: str | None = None,
         mount_prefixes: list[str] | None = None,
+        *,
+        embedded: bool = False,
     ) -> None:
         if self._asgi_app is not None:
             raise WebComPyException("ServerFetchPort is already configured")
@@ -41,6 +44,7 @@ class ServerFetchPort(FetchPort):
         self._mount_prefixes = ["/" + p.strip("/") for p in (mount_prefixes or []) if p.strip("/")]
         if base_url is not None:
             self._base_url = base_url
+        self._embedded = embedded
         self._self_site_client = httpx.AsyncClient(
             transport=httpx.ASGITransport(app=asgi_app),
         )
@@ -50,6 +54,13 @@ class ServerFetchPort(FetchPort):
         return any(clean_path == prefix or clean_path.startswith(prefix + "/") for prefix in self._mount_prefixes)
 
     def _resolve_self_site_path(self, url: str) -> str:
+        if self._embedded:
+            if url.startswith("."):
+                base = self._base_url.rstrip("/")
+                url = url.lstrip(".")
+                url = url.lstrip("/")
+                return f"{base}/{url}" if base else f"/{url}"
+            return url
         if url.startswith("/") and self._is_mount_path(url):
             return url
         base = self._base_url.rstrip("/")
