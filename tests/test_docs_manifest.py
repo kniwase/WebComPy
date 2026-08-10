@@ -70,10 +70,8 @@ class TestManifestContent:
                 resource = DOCS_APP_DIR / page["source"]
                 assert resource.is_file(), f"Missing markdown resource: {resource}"
 
-    def test_explicit_component_references_are_importable(self) -> None:
+    def test_all_component_references_are_importable(self) -> None:
         for page in flatten_pages():
-            if "component" not in page:
-                continue
             module_path, attr_name = page_component_ref(page).rsplit(":", 1)
             module = importlib.import_module(module_path)
             resolved = getattr(module, attr_name)

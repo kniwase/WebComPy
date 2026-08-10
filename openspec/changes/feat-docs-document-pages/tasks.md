@@ -14,10 +14,10 @@
 
 ## 3. Pages and Routing
 
-- [ ] 3.1 Restructure `docs_app/router.py`: `/documents` parent with `DocsLayout`, children from `route_children()`; remove the flat `/documents/signal-stream` entry (URL preserved via manifest)
-- [ ] 3.2 Replace `docs_app/pages/document/home.py` stub with a real Index page (section cards from manifest)
-- [ ] 3.3 Create Markdown page wrappers `docs_app/pages/document/installation.py` and `quickstart.py` (async setup + `load_markdown_document` + `set_title` + `docs_page_template`)
-- [ ] 3.4 Update `docs_app/layout.py` Navbar "Documents" dropdown to populate from the manifest
+- [x] 3.1 Restructure `docs_app/router.py`: `/documents` parent with `DocsLayout`, children from `route_children()`; remove the flat `/documents/signal-stream` entry (URL preserved via manifest)
+- [x] 3.2 Replace `docs_app/pages/document/home.py` stub with a real Index page (section cards from manifest)
+- [x] 3.3 Create Markdown page wrappers `docs_app/pages/document/installation.py` and `quickstart.py` (async setup + `load_markdown_document` + `set_title` + `docs_page_template`)
+- [x] 3.4 Update `docs_app/layout.py` Navbar "Documents" dropdown to populate from the manifest
 
 ## 4. Initial Content
 
