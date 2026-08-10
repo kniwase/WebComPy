@@ -21,6 +21,7 @@ from webcompy.app._app import WebComPyApp
 from webcompy.di import inject
 from webcompy.exception import WebComPyException
 from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+from webcompy.rpc._registry import ProcedureRegistry
 from webcompy.ui.theme._server import read_theme_from_cookie
 from webcompy_cli._argparser import get_params
 from webcompy_cli._build import BuildArtifacts, resolve_build_artifacts
@@ -29,6 +30,7 @@ from webcompy_cli._utils import discover_config
 from webcompy_cli.config._build_config import WebComPyBuildConfig
 from webcompy_server._context import ServerRenderContext
 from webcompy_server._html import generate_html
+from webcompy_server.rpc import dispatch_body
 
 
 class _ServingApp:
@@ -93,6 +95,16 @@ def _resolve_mounts(app: WebComPyApp, build_config: WebComPyBuildConfig) -> list
     if conflicts:
         raise WebComPyException("ASGI mount path collisions detected:\n" + "\n".join(dict.fromkeys(conflicts)))
     return resolved
+
+
+def _make_rpc_route(registry: ProcedureRegistry, path: str) -> Route:
+    async def _rpc_endpoint(request: Request) -> Response:
+        status, body = await dispatch_body(await request.body(), registry)
+        if status == 204:
+            return Response(status_code=204)
+        return Response(content=body, status_code=status, media_type="application/json")
+
+    return Route(path, _rpc_endpoint, methods=["POST"])
 
 
 def create_asgi_app(
@@ -299,6 +311,16 @@ def create_asgi_app(
     mount_entries = _resolve_mounts(app, build_config)
     mount_routes: list[BaseRoute] = [Mount(path=prefix, app=mounted) for prefix, mounted in mount_entries]
 
+    rpc_routes: list[BaseRoute] = []
+    rpc_mount_prefixes: list[str] = []
+    rpc_registry = app._rpc_registry
+    if rpc_registry.has_procedures:
+        rpc_routes.append(_make_rpc_route(rpc_registry, rpc_registry.path))
+        prefixed_rpc_path = app.config.base_url.rstrip("/") + rpc_registry.path
+        if prefixed_rpc_path != rpc_registry.path:
+            rpc_routes.append(_make_rpc_route(rpc_registry, prefixed_rpc_path))
+            rpc_mount_prefixes.append(prefixed_rpc_path)
+
     routes: list[BaseRoute] = [
         *dev_routes,
         app_package_files_route,
@@ -308,6 +330,7 @@ def create_asgi_app(
         *resource_routes,
         *static_file_routes,
         *mount_routes,
+        *rpc_routes,
         html_route,
     ]
 
@@ -320,7 +343,7 @@ def create_asgi_app(
             asgi,
             blocked_paths,
             base_url=app.config.base_url,
-            mount_prefixes=[prefix for prefix, _ in mount_entries],
+            mount_prefixes=[prefix for prefix, _ in mount_entries] + rpc_mount_prefixes,
         )
 
     return _ServingApp(asgi=asgi, html_generator=html_generator, hash_cache=_hash_cache, artifacts=artifacts)
