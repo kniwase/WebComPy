@@ -6,10 +6,9 @@ from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Callab
 from typing import Any, Generic, TypeVar, cast
 
 from webcompy.aio._aio import aio_run
-from webcompy.signal import Signal
+from webcompy.signal import ReactiveList, Signal
 from webcompy.signal._composable import _get_active_component_context
 from webcompy.signal._graph import consumer_destroy
-from webcompy.signal._list import ReactiveList
 
 T = TypeVar("T")
 
