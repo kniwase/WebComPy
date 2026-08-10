@@ -8,8 +8,6 @@ A front-end framework exists to solve a fundamental problem: as web applications
 
 WebComPy's core promise is **reactivity by default**: when data changes, everything that depends on it updates automatically. This covers primitive values, computed derivations, collection mutations, conditional renderings, and async results. The developer describes what the UI should look like for a given state, and the framework handles the rest — no manual DOM manipulation, no event-driven update orchestration, no state synchronization bugs.
 
-**What WebComPy does not yet provide:** Other frontend frameworks commonly offer dependency injection (Vue's provide/inject, React's Context) for sharing state across the component tree without prop drilling, and plugin systems for extending framework behavior. WebComPy also lacks fine-grained DOM patching — when a list changes, the entire list is regenerated rather than reconciling individual items with keys.
-
 ## Requirements
 
 ### Requirement: WebComPy shall enable building web applications entirely in Python
