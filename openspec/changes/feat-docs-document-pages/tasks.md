@@ -21,8 +21,8 @@
 
 ## 4. Initial Content
 
-- [ ] 4.1 Write `docs_app/documents/installation.md` (flat frontmatter `title`/`description`; migrate and organize the home page's uv/Poetry Get Started content)
-- [ ] 4.2 Write `docs_app/documents/quickstart.md` (init → dev server → first component, concise)
+- [x] 4.1 Write `docs_app/documents/installation.md` (flat frontmatter `title`/`description`; migrate and organize the home page's uv/Poetry Get Started content)
+- [x] 4.2 Write `docs_app/documents/quickstart.md` (init → dev server → first component, concise)
 
 ## 5. Tests
 
