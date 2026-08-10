@@ -152,6 +152,7 @@ the per-area reference.
 - **DI Scope Rules** — `di-scope/spec.md`
 - **Hydration** — `hydration-data-transfer/spec.md`, `elements/spec.md`, `async-rendering/spec.md`
 - **Metadata Type-Tag Decoding** — `typed-response/spec.md`, `typed-api-client/spec.md`
+- **JSON-RPC Allowlist Decoding** — `json-rpc/spec.md`
 - **RouterView Depth and Level Reuse** — `router/spec.md`
 - **Composable Usage** — `composables/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
@@ -185,6 +186,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md`, `error-handling/spec.md` |
 | `webcompy/router/_scroll.py` | `scroll-restoration/spec.md` |
+| `webcompy/rpc/` | `json-rpc/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md` |
 | `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md`, `scroll-restoration/spec.md` |
 | `webcompy/ports/_markdown.py` | `port-abstraction/spec.md` |
@@ -193,11 +195,12 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy_server/__init__.py` | `asgi-embed/spec.md`, `server-fetch-asgi/spec.md` |
 | `webcompy_server/_context.py`, `webcompy_server/_html.py` | `async-scheduler/spec.md`, `app-lifecycle/spec.md` |
 | `webcompy_server/contrib/` | `typed-response/spec.md` |
+| `webcompy_server/rpc/` | `json-rpc/spec.md` |
 | `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md` |
 | `webcompy/di/` | `di-scope/spec.md`, `di-injection/spec.md`, `dependency-resolver/spec.md` |
 | `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md` |
 | `webcompy/ajax/_serde.py` | `typed-api-client/spec.md`, `typed-response/spec.md` |
-| `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
+| `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md`, `json-rpc/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md` |
 | `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md`, `markdown-document/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
@@ -325,6 +328,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `reactive-dropdown` | Demonstration of reactive dropdown menus |
 | `demo-iframe-isolation` | Isolated iframe PyScript contexts for demos |
 | `inspect-cli` | CLI tool for browser inspection of WebComPy apps |
+| `json-rpc` | JSON-RPC 2.0 dispatcher, procedure registry, metadata extension, allowlist type decoding, typed browser client |
 | `scoped-css-incremental` | Per-component `<style data-webcompy-cid="...">` injection |
 | `reactive-scoped-style` | Per-component reactive scoped style via dedicated style element |
 | `app-styles` | App-level reactive style injection via `@layer webcompy-dynamic` |
