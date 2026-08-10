@@ -120,6 +120,18 @@ class TestToSignal:
         assert result.error.value is None
         assert result.finished.value is False
 
+    @pytest.mark.asyncio
+    async def test_immediately_exhausted_source_settles_finished_with_initial_value(self):
+        async def empty():
+            if False:
+                yield
+
+        result = to_signal(empty(), 7)
+        await asyncio.sleep(0.05)
+        assert result.value.value == 7
+        assert result.finished.value is True
+        assert result.error.value is None
+
 
 class TestToReactiveList:
     @pytest.mark.asyncio
@@ -155,6 +167,17 @@ class TestToReactiveList:
         assert list(result.items) == [1]
         assert isinstance(result.error.value, RuntimeError)
         assert result.finished.value is True
+
+    @pytest.mark.asyncio
+    async def test_aclose_stops_pump_and_preserves_items(self):
+        result = to_reactive_list(_counting())
+        await asyncio.sleep(0.01)
+        assert len(result.items) > 0
+        await result.aclose()
+        snapshot = list(result.items)
+        await asyncio.sleep(0.02)
+        assert list(result.items) == snapshot
+        assert result.error.value is None
 
 
 class TestToAsyncIter:
@@ -265,6 +288,21 @@ class TestToAsyncIter:
         sig.value = 2
         await asyncio.sleep(0.01)
         assert collected == [1]
+
+    @pytest.mark.asyncio
+    async def test_anext_after_aclose_raises_stop_async_iteration(self):
+        sig = Signal(0)
+        iterator = to_async_iter(sig)
+        await iterator.aclose()
+        with pytest.raises(StopAsyncIteration):
+            await iterator.__anext__()
+
+    @pytest.mark.asyncio
+    async def test_double_aclose_is_safe(self):
+        sig = Signal(0)
+        iterator = to_async_iter(sig)
+        await iterator.aclose()
+        await iterator.aclose()
 
 
 class TestLifecycle:
