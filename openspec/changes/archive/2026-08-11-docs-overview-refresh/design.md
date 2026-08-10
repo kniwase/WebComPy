@@ -62,8 +62,9 @@ as remove/reword/keep:
   provision of `_ROUTER_KEY` (`app/_root_component.py`).
 - Popstate cleanup: `BrowserHistoryPort.__del__` (`ports/_browser/_history.py`).
 - Plugin system: `plugin-system` / `plugin-script` specs implemented.
-- Reconciliation: `list-reconciliation` spec; SwitchElement still
-  regenerates children.
+- Reconciliation: `list-reconciliation` spec; SwitchElement reuses DOM
+  nodes via patching for matching structures and replaces children only
+  when branch structures differ.
 - Kept entries re-checked: `_last_mutation` (`signal/_dict.py`),
   `__purge_signal_members__` (`signal/_container.py`), MD5 component IDs
   (`components/_libs.py`), binary Emscripten detection

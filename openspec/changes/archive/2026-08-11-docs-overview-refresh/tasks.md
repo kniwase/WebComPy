@@ -14,7 +14,9 @@
   ToDo)") — plugin system is implemented
 - [x] 2.4 Reword the element-system entry ("No virtual DOM diffing —
   direct DOM manipulation only") to acknowledge key-based reconciliation in
-  RepeatElement while keeping the SwitchElement regeneration note accurate
+  RepeatElement, and correct the SwitchElement entry to state that it
+  replaces children only when branch structures differ (matching structures
+  reuse DOM nodes via patching)
 
 ## 3. Verification
 

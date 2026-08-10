@@ -18,7 +18,7 @@ context: |
 
   ### Element System
   - No general virtual DOM diffing — updates are direct DOM manipulation; key-based reconciliation exists only for RepeatElement (list-reconciliation)
-  - SwitchElement completely regenerates children on change
+  - SwitchElement replaces children when branch structures differ; matching structures reuse DOM nodes via patching
 
   ### General
   - Browser detection is binary (Emscripten vs other) — no partial API availability checks

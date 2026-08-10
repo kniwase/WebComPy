@@ -27,7 +27,9 @@ system) and one overstates the current element system.
     exist and are implemented.
   - Reword "No virtual DOM diffing — direct DOM manipulation only" to
     reflect that `RepeatElement` supports key-based reconciliation
-    (`list-reconciliation`), while SwitchElement still regenerates children.
+    (`list-reconciliation`), and correct the SwitchElement entry: it
+    replaces children only when branch structures differ, reusing DOM nodes
+    via patching for matching structures.
   - Keep the six entries that are still accurate (element-level signal
     reactivity, `__purge_signal_members__` note, MD5 component IDs, binary
     browser detection, module-level app fallbacks).
@@ -44,7 +46,7 @@ remaining list accurately reflects open work.
 ## Non-goals
 
 - Fixing any of the remaining known issues (MD5 component IDs, module-level
-  app fallbacks, binary browser detection, SwitchElement regeneration,
+  app fallbacks, binary browser detection, SwitchElement branch replacement,
   element-level signal reactivity). They stay documented as open work.
 - Adding new "not yet provided" statements to the overview. New negative
   claims would risk the same staleness; capabilities are described by their
