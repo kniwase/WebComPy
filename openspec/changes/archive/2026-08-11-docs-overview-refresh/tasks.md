@@ -25,3 +25,12 @@
 - [x] 3.2 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
 - [x] 3.3 Run `openspec validate --specs` and confirm all main specs remain
   valid
+
+## 4. Review knowledge maintenance
+
+- [x] 4.1 Add the new invariant heading (No Overview Gap List) referencing
+  `overview/spec.md` to the Framework Invariants list in `AGENTS.md` and to
+  the Critical Framework Invariants section in
+  `.opencode/skills/webcompy-review/SKILL.md`
+- [x] 4.2 Re-run `python3 scripts/check-doc-spec-refs.py` after the doc
+  edits and confirm it passes

@@ -158,6 +158,7 @@ the per-area reference.
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
 - **Head VDOM** — `head-vdom/spec.md`
 - **Node Cache Strict is-None Check** — `async-rendering/spec.md`
+- **No Overview Gap List** — `overview/spec.md`
 
 ## File → Spec Mapping
 
@@ -276,7 +277,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 
 | Spec | Description |
 |---|---|
-| `overview` | Framework purpose, core promises, development lifecycle |
+| `overview` | Framework purpose, core promises, development lifecycle; Purpose-section governance (no gap lists) |
 | `architecture` | Dual-environment model, project structure, CLI workflows, hydration |
 | `reactive` | Reactive state primitives and change propagation |
 | `effect` | Side-effecting functions with automatic reactive dependency tracking |

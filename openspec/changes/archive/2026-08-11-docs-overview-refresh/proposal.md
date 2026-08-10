@@ -30,12 +30,18 @@ system) and one overstates the current element system.
     (`list-reconciliation`), and correct the SwitchElement entry: it
     replaces children only when branch structures differ, reusing DOM nodes
     via patching for matching structures.
-  - Keep the six entries that are still accurate (element-level signal
-    reactivity, `__purge_signal_members__` note, MD5 component IDs, binary
-    browser detection, module-level app fallbacks).
+  - Keep the five entries that are still accurate as-is (element-level
+    signal reactivity, `__purge_signal_members__` note, MD5 component IDs,
+    binary browser detection, module-level app fallbacks). Together with
+    the two reworded element-system entries, the final list contains seven
+    entries.
 - Add a governance requirement to the `overview` capability: the Purpose
   section shall not enumerate missing capabilities, so gap claims cannot
   rot against implemented specs again.
+- Synchronize the new invariant into the review-knowledge references
+  (Framework Invariants in `AGENTS.md` and Critical Framework Invariants in
+  `.opencode/skills/webcompy-review/SKILL.md`) per the Review Knowledge
+  Maintenance rules.
 
 ## Known Issues Addressed
 
@@ -72,4 +78,6 @@ None.
 - `openspec/specs/overview/spec.md` — Purpose section prose edited
   directly; one requirement added via delta
 - `openspec/config.yaml` — `context` block Known Issues list only
+- `AGENTS.md`, `.opencode/skills/webcompy-review/SKILL.md` — new invariant
+  heading referencing `overview/spec.md` (review-knowledge sync)
 - No code, API, or dependency changes
