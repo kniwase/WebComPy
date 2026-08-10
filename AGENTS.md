@@ -198,7 +198,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy_server/rpc/` | `json-rpc/spec.md` |
 | `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md` |
 | `webcompy/di/` | `di-scope/spec.md`, `di-injection/spec.md`, `dependency-resolver/spec.md` |
-| `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md` |
+| `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md`, `signal-stream/spec.md` |
 | `webcompy/ajax/_serde.py` | `typed-api-client/spec.md`, `typed-response/spec.md` |
 | `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md`, `json-rpc/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md` |
@@ -338,6 +338,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `suspense` | Declarative async boundary showing fallback while children load, with SSR awaiting and hydration integration |
 | `hydration-data-transfer` | Server-to-browser data transfer for `AsyncResult` states, `FetchPort` response caches, and `Signal` values via versioned payload injection |
 | `signal-value-transfer` | Collection and restoration of `Signal`/`Computed`/`ReactiveList`/`ReactiveDict` values across the hydration boundary via `__signal_members__` |
+| `signal-stream` | Bidirectional conversion between occurrence-based streams and signals: `to_signal`, `to_reactive_list`, `to_async_iter`, with AsyncResult-style error/completion signals, drop-oldest capping, and lifecycle cleanup |
 | `transfer-codec` | Layered serialization engine (encode/decode) preserving Python type fidelity across the hydration boundary via `__webcompy_`-tagged JSON |
 | `payload-compression` | Optional gzip compression of the hydration data transfer payload via stdlib `zlib`/`base64`, threshold-based activation, `__webcompy_compressed__` envelope flag |
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
