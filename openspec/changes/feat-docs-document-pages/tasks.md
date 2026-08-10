@@ -2,8 +2,8 @@
 
 ## 1. Manifest
 
-- [ ] 1.1 Create `docs_app/docs_manifest.py` with `DocsPageEntry` / `DocsSection` TypedDicts, `DOCS_SECTIONS` (Getting Started: Installation, Quickstart; Guides: Signal Stream), validation of exactly-one-of `source`/`component`, and helpers: `flatten_pages()` (ordered page list), `route_children()` (lazy route children), `prev_next(path)` lookup
-- [ ] 1.2 Add `tests/test_docs_manifest.py`: unique paths, exactly-one-of validation errors, `source` files exist, `component` references importable, route children match manifest, prev/next ordering and boundary omissions
+- [x] 1.1 Create `docs_app/docs_manifest.py` with `DocsPageEntry` / `DocsSection` TypedDicts, `DOCS_SECTIONS` (Getting Started: Installation, Quickstart; Guides: Signal Stream), validation of exactly-one-of `source`/`component`, and helpers: `flatten_pages()` (ordered page list), `route_children()` (lazy route children), `prev_next(path)` lookup
+- [x] 1.2 Add `tests/test_docs_manifest.py`: unique paths, exactly-one-of validation errors, `source` files exist, `component` references importable, route children match manifest, prev/next ordering and boundary omissions
 
 ## 2. Layout and Components
 
