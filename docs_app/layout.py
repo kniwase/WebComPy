@@ -15,7 +15,12 @@ def Root(_: ComponentContext[None]):
         {
             "title": "Documents",
             "to": "/documents",
-            "children": [],
+            "children": [
+                {
+                    "title": "Signal Stream",
+                    "to": "/documents/signal-stream",
+                },
+            ],
         },
         {
             "title": "Demos",
