@@ -9,6 +9,7 @@ from webcompy.components import ComponentGenerator
 from webcompy.exception import WebComPyException
 from webcompy.plugin._manager import PluginManager
 from webcompy.router import Router
+from webcompy.rpc._registry import ProcedureRegistry
 from webcompy.utils import ENVIRONMENT
 
 if TYPE_CHECKING:
@@ -54,10 +55,15 @@ class WebComPyApp:
         self._render_context_class = _render_context_class
         self._server_fetch_port: Any = None
         self._server_resource_port: Any = None
+        self._rpc_registry = ProcedureRegistry(base_url=self._config.base_url)
 
     @property
     def config(self) -> WebComPyAppConfig:
         return self._config
+
+    @property
+    def rpc(self) -> ProcedureRegistry:
+        return self._rpc_registry
 
     @property
     def profile_data(self) -> dict[str, float] | None:

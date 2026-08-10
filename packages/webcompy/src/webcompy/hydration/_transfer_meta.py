@@ -242,3 +242,5 @@ _DECODERS: dict[str, Callable[[Any], Any]] = {
     "path": _decode_path,
     "uuid": _decode_uuid,
 }
+
+BUILTIN_META_TAGS: frozenset[str] = frozenset(_DECODERS.keys())

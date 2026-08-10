@@ -14,7 +14,7 @@ from webcompy.components._generator import (
     ComponentStore,
     _register_deferred_components,
 )
-from webcompy.di._keys import _COMPONENT_STORE_KEY
+from webcompy.di._keys import _COMPONENT_STORE_KEY, RPC_REGISTRY_KEY
 from webcompy.di._scope import DIScope, _active_di_scope, _set_app_di_scope
 from webcompy.exception import WebComPyException
 from webcompy.router import Router
@@ -54,6 +54,7 @@ class RenderContext(ABC):
         self._di_scope = DIScope()
         self._component_store = ComponentStore()
         self._di_scope.provide(_COMPONENT_STORE_KEY, self._component_store)
+        self._di_scope.provide(RPC_REGISTRY_KEY, app._rpc_registry)
 
         self._router = None
         if app._router:
