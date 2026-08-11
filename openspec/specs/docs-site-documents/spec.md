@@ -68,8 +68,8 @@ Each Markdown-backed docs page component SHALL be an `async def` component that 
 
 #### Scenario: Middle page shows both links
 
-- **WHEN** the user is on the Quickstart page (between Installation and Signal Stream in manifest order)
-- **THEN** the footer links to Installation (Prev) and Signal Stream (Next)
+- **WHEN** the user is on the Quickstart page (between Installation and Signals and Streams in manifest order)
+- **THEN** the footer links to Installation (Prev) and Signals and Streams (Next)
 
 #### Scenario: Reactive update on navigation
 
@@ -78,12 +78,17 @@ Each Markdown-backed docs page component SHALL be an `async def` component that 
 
 ### Requirement: The existing signal-stream page shall join the docs section without URL change
 
-The signal-stream page SHALL move from the flat route table into the `/documents` children via a manifest `component` entry. Its URL (`/documents/signal-stream`) SHALL NOT change, and its template content SHALL remain a Python component (no Markdown conversion).
+The signal-stream page SHALL be a Markdown-backed docs page served from the `/documents` children via a manifest `source` entry (`documents/signal_stream.md`). Its URL (`/documents/signal-stream`) SHALL NOT change. The page SHALL be rendered through `docs_page_template` like the other Markdown docs pages, and its manifest label, frontmatter title, and H1 SHALL all be "Signals and Streams".
 
 #### Scenario: URL preserved
 
 - **WHEN** `/documents/signal-stream` is requested
-- **THEN** the SignalStream page renders inside `DocsLayout` with the sidebar visible
+- **THEN** the Signals and Streams page renders inside `DocsLayout` with the sidebar visible
+
+#### Scenario: Markdown rendering with TOC
+
+- **WHEN** `/documents/signal-stream` is requested
+- **THEN** the article shows the rendered Markdown content with heading ids, and the TOC aside lists the page headings in document order
 
 ### Requirement: The Navbar "Documents" dropdown shall be generated from the manifest
 

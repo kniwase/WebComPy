@@ -48,9 +48,9 @@ DOCS_SECTIONS: list[DocsSection] = [
         "title": "Guides",
         "pages": [
             {
-                "label": "Signal Stream",
+                "label": "Signals and Streams",
                 "path": "/documents/signal-stream",
-                "component": "docs_app.pages.document.signal_stream:SignalStreamPage",
+                "source": "documents/signal_stream.md",
             },
         ],
     },
