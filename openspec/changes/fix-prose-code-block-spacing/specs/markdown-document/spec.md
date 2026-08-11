@@ -4,7 +4,7 @@
 
 ### Requirement: A prose typography preset stylesheet shall be provided opt-in
 
-The framework SHALL ship a `prose.css` stylesheet under `webcompy/ui/_styles/`, registered in `_STYLES_FILES` so it is served at `/_webcompy-ui/prose.css` and copied during SSG like the other framework stylesheets. It SHALL NOT be imported by `index.css`. All rules SHALL be scoped under a `.prose` wrapper class and wrapped in `@layer prose`. Colors, spacing, and fonts SHALL reference the existing `tokens.css` CSS variables so the preset follows the active theme. The preset SHALL cover headings, paragraphs, lists, tables, blockquotes, horizontal rules, inline code, and code blocks. Code blocks SHALL receive symmetric vertical spacing (`margin: var(--space-4) 0`) from a `.prose pre` rule, and the code block stylesheet (`code-block.css`) SHALL be wrapped in `@layer components` so the layered preset rule takes precedence over the block's base `margin: 0`.
+The framework SHALL ship a `prose.css` stylesheet under `webcompy/ui/_styles/`, registered in `_STYLES_FILES` so it is served at `/_webcompy-ui/prose.css` and copied during SSG like the other framework stylesheets. It SHALL NOT be imported by `index.css`. All rules SHALL be scoped under a `.prose` wrapper class and wrapped in `@layer prose`. Colors, spacing, and fonts SHALL reference the existing `tokens.css` CSS variables so the preset follows the active theme. The preset SHALL cover headings, paragraphs, lists, tables, blockquotes, horizontal rules, inline code, and code blocks. Code blocks SHALL receive symmetric vertical spacing (`margin: var(--space-4) 0`) from a `.prose pre` rule. `prose.css` SHALL declare the cascade layer order (`@layer reset, tokens, components, prose, webcompy-scope`) before its rules so the `prose` layer is ordered after `components` regardless of stylesheet load order, and the code block stylesheet (`code-block.css`) SHALL be wrapped in `@layer components` so the layered preset rule takes precedence over the block's base `margin: 0`.
 
 #### Scenario: Stylesheet served and copied
 
@@ -20,6 +20,11 @@ The framework SHALL ship a `prose.css` stylesheet under `webcompy/ui/_styles/`, 
 
 - **WHEN** `prose.css` content is inspected
 - **THEN** it contains a `.prose pre` rule setting `margin: var(--space-4) 0`
+
+#### Scenario: Prose layer declared after components
+
+- **WHEN** `prose.css` content is inspected
+- **THEN** it declares the cascade layer order `@layer reset, tokens, components, prose, webcompy-scope` before its `@layer prose` rules
 
 #### Scenario: Code block stylesheet participates in the layer system
 

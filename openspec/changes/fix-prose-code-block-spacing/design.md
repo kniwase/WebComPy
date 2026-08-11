@@ -35,7 +35,7 @@ Alternatives considered:
 
 ### 2. Wrap `code-block.css` rules in `@layer components`
 
-CSS cascade gives unlayered rules higher priority than layered rules, so the layered `.prose pre` rule cannot beat the unlayered `.code-block { margin: 0 }`. Wrapping `code-block.css` in `@layer components` moves it under the same layer as `components.css` (which already declares `@layer components`), so the later-declared `@layer prose` wins. This also fixes the one stylesheet that was left outside the layer system.
+CSS cascade gives unlayered rules higher priority than layered rules, so the layered `.prose pre` rule cannot beat the unlayered `.code-block { margin: 0 }`. Wrapping `code-block.css` in `@layer components` moves it under the same layer as `components.css` (which already declares `@layer components`), so the `@layer prose` rule wins as long as `prose` is ordered after `components`. This also fixes the one stylesheet that was left outside the layer system.
 
 Alternatives considered:
 - **Unlayered `.prose .code-block { margin: var(--space-4) 0; }` in `code-block.css`** — works (higher specificity beats the unlayered `.code-block`), but mixes a prose-specific rule into `code-block.css` and leaves the layer inconsistency; rejected.
@@ -45,10 +45,31 @@ Alternatives considered:
 
 The existing paragraph bottom margin defines the reference spacing. Reusing the token keeps the preset consistent with the rest of `prose.css` and the theme.
 
+### 4. Declare the cascade layer order in `prose.css`
+
+The cascade layer order is defined by the order in which layer names **first appear** in the document (CSS Cascade 5 §6.4.3), not by the order in which the stylesheets are served. In the generated HTML head, the app's `set_head` links (including `prose.css`) are inserted immediately after `<head>` (`webcompy-server/_html.py`), so `prose.css` is fetched and parsed **before** `index.css`. If `prose.css` only contains `@layer prose { ... }`, then `prose` is the first layer declared and `components` (declared later by `index.css`) wins — the exact opposite of what the fix needs.
+
+To make the ordering robust regardless of load order, `prose.css` declares the full layer order up front, before its `@layer prose { ... }` block:
+
+```css
+@layer reset, tokens, components, prose, webcompy-scope;
+
+@layer prose {
+  ...
+}
+```
+
+With this statement, `prose` is positioned after `components` (so `.prose pre` wins over `.code-block { margin: 0 }`) and before `webcompy-scope` (so app scoped styles keep the ability to override the preset). Verified in Chromium via Playwright for both load orders (`prose.css` first and `index.css` first): the computed `pre` margin-top is 1rem in both cases.
+
+Alternatives considered:
+- **Add `prose` to the `@layer` statement in `index.css`** — ineffective when `prose.css` loads first, because the layer order is fixed by the first occurrence of each layer name; the `index.css` statement cannot reorder an already-declared `prose`. Verified in Chromium (margin stays 0px); rejected.
+- **Reorder the head so `index.css` loads before the app's `set_head` links** — a framework-wide change to `webcompy-server/_html.py` affecting every application's stylesheet order; out of scope for this fix. Rejected.
+
 ## Risks / Trade-offs
 
-- [Margin collapsing assumptions (top space stays 1rem)] → Vertical margin collapsing between adjacent block siblings is well-specified CSS behavior; the paragraph and code block are direct block children of `.prose` with nothing between them, so the collapse applies. Verified by unit-testing the rule presence and visually confirmed via docs E2E.
+- [Margin collapsing assumptions (top space stays 1rem)] → Vertical margin collapsing between adjacent block siblings is well-specified CSS behavior; the paragraph and code block are direct block children of `.prose` with nothing between them, so the collapse applies. Verified by unit-testing the rule presence and confirmed in Chromium via Playwright (the visual gap between the paragraph and the code block computes to 1rem, not 2rem).
 - [`@layer components` wrapping changes cascade priority for other `code-block.css` rules] → `syntax-theme.css` (unlayered) sets the same background/token colors, so no visual change; `@scope` and `.tok-*` rules move into the layer with identical values. Unit tests assert the wrapper and scope remain present.
+- [Layer order depends on `prose` being declared after `components`] → The layer-order statement at the top of `prose.css` fixes the position of `prose` regardless of stylesheet load order. Verified in Chromium via Playwright for both `prose.css`-first and `index.css`-first head ordering.
 - [Prose-only scope misses code blocks outside `.prose`] → Deliberate non-goal; the proposal scopes the fix to Markdown document pages.
 
 ## Migration Plan
