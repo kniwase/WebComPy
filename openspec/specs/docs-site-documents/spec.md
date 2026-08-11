@@ -3,9 +3,7 @@
 ## Purpose
 
 The documentation section of the docs_app (`/documents`) presents framework documentation as static-looking pages: a manifest-driven route table, a nested-route shared layout with a sectioned sidebar and Prev/Next paging, thin async Markdown page wrappers over a shared template with a right-hand TOC, and a prose typography preset. A single manifest (`DOCS_SECTIONS` plus a `DOCS_INDEX` entry) is the single source of truth from which the routes, sidebar, Navbar "Documents" dropdown, and Prev/Next ordering all derive.
-
 ## Requirements
-
 ### Requirement: A manifest shall be the single source of truth for the docs structure
 
 docs_app SHALL define a `DOCS_SECTIONS` manifest in `docs_app/docs_manifest.py`: an ordered list of sections, each with a `title` and an ordered list of page entries. Each page entry SHALL have `label` (nav label) and `path` (absolute route path), and exactly one of `source` (Markdown resource path, relative to the app package) or `component` (`"module:Attr"` lazy reference). docs_app SHALL also define a `DOCS_INDEX` entry representing the `/documents` index route. The route children under `/documents` SHALL be generated from the manifest (the `DOCS_INDEX` entry first, then the section page entries in order). The docs sidebar, the Navbar "Documents" dropdown, and Prev/Next ordering SHALL be generated from the section page entries only — the index SHALL NOT appear in navigation or paging. Paths SHALL be unique across the manifest. Every page path SHALL equal the docs root (`DOCS_ROOT`) or be a path under it, so the manifest-owned routes always live inside the `/documents` subtree.
@@ -32,12 +30,13 @@ docs_app SHALL define a `DOCS_SECTIONS` manifest in `docs_app/docs_manifest.py`:
 
 ### Requirement: The docs section shall use a nested-route shared layout
 
-The `/documents` route SHALL be a parent route whose component (`DocsLayout`) renders a sectioned sidebar and a nested `RouterView`. Sibling navigation between docs pages SHALL preserve the layout instance (per RouterView level reuse), so sidebar state survives page transitions.
+The `/documents` route SHALL be a parent route whose component (`DocsLayout`) renders a sectioned sidebar and a nested `RouterView`. Sibling navigation between docs pages SHALL preserve the layout instance (per RouterView level reuse), so the section-open sidebar state survives page transitions. The transient mobile sidebar overlay SHALL close when a navigation completes, so the destination page is unobstructed on narrow viewports.
 
 #### Scenario: Layout persists across sibling navigation
 
 - **WHEN** a user navigates from one docs page to another docs page
-- **THEN** the sidebar is not remounted and its interactive state (open sections, mobile toggle) is preserved
+- **THEN** the sidebar is not remounted and its section-open state is preserved
+- **AND** the mobile sidebar overlay is closed after the navigation completes
 
 #### Scenario: Sidebar shows current page as active
 
@@ -112,3 +111,4 @@ On wide viewports the layout SHALL show sidebar, content, and TOC. Below the wid
 
 - **WHEN** a docs page is viewed on a narrow viewport
 - **THEN** the sidebar is hidden until toggled and the TOC is not rendered visibly
+
