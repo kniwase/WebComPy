@@ -1,4 +1,4 @@
-@layer reset, tokens, components, webcompy-scope;
+@layer reset, tokens, components, prose, webcompy-scope;
 
 @import url("./tokens.css");
 @import url("./reset.css");

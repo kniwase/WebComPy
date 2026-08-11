@@ -58,9 +58,9 @@ def test_required_files_exist() -> None:
 def test_index_css_declares_layer_order() -> None:
     css = _css_text("index.css")
     assert re.search(
-        r"@layer\s+reset,\s*tokens,\s*components,\s*webcompy-scope\s*;",
+        r"@layer\s+reset,\s*tokens,\s*components,\s*prose,\s*webcompy-scope\s*;",
         css,
-    ), "index.css must declare '@layer reset, tokens, components, webcompy-scope;' once"
+    ), "index.css must declare '@layer reset, tokens, components, prose, webcompy-scope;' once"
 
 
 def test_index_css_does_not_import_tokens_dark() -> None:
@@ -144,7 +144,7 @@ def test_prose_css_registered() -> None:
 
 def test_prose_css_not_imported_by_index() -> None:
     css = _css_text("index.css")
-    assert "prose" not in css
+    assert "prose.css" not in css, "index.css must not import prose.css (it is loaded separately)"
 
 
 def test_prose_css_layer_and_scope() -> None:
