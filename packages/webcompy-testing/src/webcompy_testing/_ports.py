@@ -24,6 +24,10 @@ class FakeBrowserDOMPort(ServerDOMPort):
         self._html.appendChild(self._head)
         self._html.appendChild(self._body)
 
+    @property
+    def body(self) -> FakeDOMNode:
+        return self._body
+
     def create_element(self, tag: str) -> FakeDOMNode:
         return FakeDOMNode(tag)
 

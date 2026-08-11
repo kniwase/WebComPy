@@ -88,6 +88,13 @@ class TestRendererResult:
                     err,
                 )
 
+    @property
+    def body_node(self) -> VirtualDOMNode | None:
+        dom = self._scope.inject(DOM_PORT_KEY, default=None)
+        if isinstance(dom, FakeBrowserDOMPort):
+            return dom.body
+        return None
+
 
 class TestRenderer:
     @staticmethod
@@ -108,7 +115,8 @@ class TestRenderer:
             scope = DIScope(parent=parent_scope)
             fake_scheduler = FakeAsyncSchedulerPort()
             scope.provide(ASYNC_SCHEDULER_PORT_KEY, fake_scheduler)
-            scope.provide(DOM_PORT_KEY, FakeBrowserDOMPort())
+            dom_port = FakeBrowserDOMPort()
+            scope.provide(DOM_PORT_KEY, dom_port)
             scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
             scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
             scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
@@ -120,6 +128,7 @@ class TestRenderer:
             root_node = VirtualDOMNode("div")
             root_node.__webcompy_node__ = False
             root_node.__webcompy_prerendered_node__ = True
+            dom_port._body.appendChild(root_node)
 
             class _DummyParent:
                 def __init__(self, node):
