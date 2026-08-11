@@ -26,7 +26,7 @@
 
 ## 5. Tests
 
-- [x] 5.1 Add `e2e/docs/test_document_pages.py` following the `docs_page_on` fixture pattern: titles, sidebar active state, TOC anchor jump, code block highlighting, Prev/Next navigation (prod + static modes)
+- [x] 5.1 Add route-specific docs E2E files following the `docs_page_on` fixture pattern: `e2e/docs/test_installation.py`, `test_quickstart.py`, `test_signal_stream.py`, plus index-page coverage in `e2e/docs/test_documents.py` (titles, sidebar active state, TOC anchor jump, code block highlighting, Prev/Next navigation; prod + static modes)
 - [x] 5.2 Verify existing `e2e/docs/test_documents.py` and signal-stream E2E still pass against the moved route
 
 ## 6. Verification

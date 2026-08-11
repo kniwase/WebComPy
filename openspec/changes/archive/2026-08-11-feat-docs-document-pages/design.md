@@ -112,7 +112,7 @@ Three pages: `/documents` index (section cards, replaces the WIP stub), `getting
 
 ## Migration Plan
 
-Docs-site-only change. `/documents` and `/documents/signal-stream` URLs are preserved; new URLs are additive. Rollback = revert. The old `e2e/docs/test_documents.py` asserted the WIP stub content and was rewritten to assert the new index page; signal-stream coverage lives in the new `e2e/docs/test_document_pages.py`, which verifies the moved route renders inside `DocsLayout` with the sidebar.
+Docs-site-only change. `/documents` and `/documents/signal-stream` URLs are preserved; new URLs are additive. Rollback = revert. The old `e2e/docs/test_documents.py` asserted the WIP stub content and was rewritten to assert the new index page; signal-stream coverage lives in the new `e2e/docs/test_signal_stream.py`, which verifies the moved route renders inside `DocsLayout` with the sidebar.
 
 ## Open Questions
 

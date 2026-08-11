@@ -237,11 +237,11 @@ jobs:
             serving_mode: static
           - group:
               name: docs-documents
-              files: e2e/docs/test_document_pages.py
+              files: e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py
             serving_mode: prod
           - group:
               name: docs-documents
-              files: e2e/docs/test_document_pages.py
+              files: e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py
             serving_mode: static
           - group:
               name: docs-demos

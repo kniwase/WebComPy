@@ -29,7 +29,7 @@ With `feat-markdown-document-support` merged, the framework can load Markdown do
 - **Code**: `docs_app/` — new `docs_manifest.py`, `layout/document.py` (DocsLayout), `components/docs_sidebar.py`, `components/docs_page.py` (page template + TOC), `pages/document/*.py` page wrappers, `documents/*.md` content; modifications to `router.py` (nested `/documents` tree), `layout.py` (Navbar dropdown from manifest), `app.py` (prose.css link)
 - **Framework packages**: none — consumes the merged `load_markdown_document`, `prose.css`, nested routes, and `RouterLink` active state
 - **Specs**: new `docs-site-documents`; delta to `docs-e2e`
-- **Tests**: new unit tests (`tests/test_docs_manifest.py`), new E2E (`e2e/docs/test_document_pages.py`)
+- **Tests**: new unit tests (`tests/test_docs_manifest.py`), new route-specific E2E (`e2e/docs/test_installation.py`, `test_quickstart.py`, `test_signal_stream.py`, plus index-page coverage in `test_documents.py`)
 - **URLs**: `/documents` and `/documents/signal-stream` preserved; new paths added. No breaking changes.
 
 ## Known Issues Addressed

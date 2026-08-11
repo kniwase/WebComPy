@@ -5,24 +5,9 @@ from playwright.sync_api import expect
 
 
 @pytest.mark.e2e
-def test_documents_index_shows_section_cards(docs_page_on, assert_no_console_errors):
-    page = docs_page_on("/documents")
-    expect(page.get_by_role("heading", name="Documentation")).to_be_visible()
-    expect(page.get_by_role("heading", name="Getting Started")).to_be_visible()
-    expect(page.get_by_role("link", name="Open Installation")).to_be_visible()
-    expect(page.get_by_role("link", name="Open Signal Stream")).to_be_visible()
-
-
-@pytest.mark.e2e
 def test_installation_page_title(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents/getting-started/installation")
     assert page.title() == "Installation - WebComPy Docs"
-
-
-@pytest.mark.e2e
-def test_quickstart_page_title(docs_page_on, assert_no_console_errors):
-    page = docs_page_on("/documents/getting-started/quickstart")
-    assert page.title() == "Quickstart - WebComPy Docs"
 
 
 @pytest.mark.e2e
@@ -65,38 +50,6 @@ def test_first_page_omits_prev_link(docs_page_on, assert_no_console_errors):
     expect(page.locator(".docs-pager-prev")).to_have_count(0)
     expect(page.locator(".docs-pager-next")).to_have_count(1)
     expect(page.locator(".docs-pager-next a")).to_have_text("Quickstart")
-
-
-@pytest.mark.e2e
-def test_middle_page_shows_both_links(docs_page_on, assert_no_console_errors):
-    page = docs_page_on("/documents/getting-started/quickstart")
-    expect(page.locator(".docs-pager-prev a")).to_have_text("Installation")
-    expect(page.locator(".docs-pager-next a")).to_have_text("Signal Stream")
-
-
-@pytest.mark.e2e
-def test_last_page_omits_next_link(docs_page_on, assert_no_console_errors):
-    page = docs_page_on("/documents/signal-stream")
-    expect(page.locator(".docs-pager-prev")).to_have_count(1)
-    expect(page.locator(".docs-pager-prev a")).to_have_text("Quickstart")
-    expect(page.locator(".docs-pager-next")).to_have_count(0)
-
-
-@pytest.mark.e2e
-def test_next_navigation_updates_sidebar_active(docs_page_on, assert_no_console_errors):
-    page = docs_page_on("/documents/getting-started/quickstart")
-    page.locator(".docs-pager-next a").click()
-    expect(page).to_have_url(re.compile(r"/documents/signal-stream"))
-    expect(page.get_by_role("heading", name="Signals and Streams")).to_be_visible()
-    expect(page.locator(".docs-sidebar a[aria-current='page']")).to_have_text("Signal Stream")
-
-
-@pytest.mark.e2e
-def test_signal_stream_renders_inside_layout(docs_page_on, assert_no_console_errors):
-    page = docs_page_on("/documents/signal-stream")
-    assert page.title() == "Signal Stream - WebComPy Docs"
-    expect(page.locator(".docs-sidebar")).to_be_visible()
-    expect(page.get_by_role("heading", name="Signals and Streams")).to_be_visible()
 
 
 @pytest.mark.e2e
