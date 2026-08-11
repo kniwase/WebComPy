@@ -233,15 +233,15 @@ jobs:
         include:
           - group:
               name: docs-home
-              files: e2e/docs/test_home.py e2e/docs/test_documents.py e2e/docs/test_helloworld.py
+              files: e2e/docs/test_home.py e2e/docs/test_helloworld.py
             serving_mode: static
           - group:
               name: docs-documents
-              files: e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py
+              files: e2e/docs/test_documents.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py
             serving_mode: prod
           - group:
               name: docs-documents
-              files: e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py
+              files: e2e/docs/test_documents.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py
             serving_mode: static
           - group:
               name: docs-demos
