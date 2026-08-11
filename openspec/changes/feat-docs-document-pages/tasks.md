@@ -48,3 +48,13 @@
 - [x] 7.5 Add unit/E2E tests: manifest index routing, trailing-slash TOC navigation, mobile sidebar close, code-block highlighting
 - [x] 7.6 Update `design.md`, `specs/docs-site-documents/spec.md`, and `specs/docs-e2e/spec.md` to reflect the review fixes
 - [x] 7.7 Re-run verification (ruff, pyright, pytest, generate, E2E, openspec validate)
+
+## 8. Second Review Findings
+
+- [x] 8.1 Add a `DOCS_ROOT` prefix check to `validate_manifest()` (every entry path equals `DOCS_ROOT` or is under it) and unit tests for the rejection and for the root-path pass-through
+- [x] 8.2 Unify the signal-stream page title suffix to `- WebComPy Docs` and update the E2E title assertion
+- [x] 8.3 Fix the `scripts/run-e2e-tests.sh` `--help` text to reflect the docs-documents prod+static exception
+- [x] 8.4 Add trailing newlines to `docs_app/documents/installation.md` and `quickstart.md`
+- [x] 8.5 Consolidate `DocsLayout` Prev/Next into a single `pager` computed (one `prev_next()` evaluation per route change)
+- [x] 8.6 Update `design.md` and `specs/docs-site-documents/spec.md` (path-prefix rule + scenario) to reflect the follow-up fixes
+- [x] 8.7 Re-run verification (ruff, pyright, pytest, openspec validate, check-doc-spec-refs, docs E2E)

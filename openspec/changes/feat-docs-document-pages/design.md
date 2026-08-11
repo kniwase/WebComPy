@@ -53,10 +53,10 @@ class DocsSection(TypedDict):
 DOCS_SECTIONS: list[DocsSection] = [...]
 ```
 
-Exactly one of `source` / `component` is set per entry. A separate `DOCS_INDEX` entry owns the `/documents` index route. Route children (index first, then section pages) derive from the manifest, while the sidebar, Navbar "Documents" dropdown, and Prev/Next ordering derive from the section pages only — the index is generated into the route table but excluded from navigation and paging.
+Exactly one of `source` / `component` is set per entry, and every entry `path` equals `DOCS_ROOT` or is a path under it (so manifest-owned routes always live inside the `/documents` subtree). A separate `DOCS_INDEX` entry owns the `/documents` index route. Route children (index first, then section pages) derive from the manifest, while the sidebar, Navbar "Documents" dropdown, and Prev/Next ordering derive from the section pages only — the index is generated into the route table but excluded from navigation and paging.
 
 - **Why**: every consumer iterating one list guarantees consistency (Next.js explicitly documented the opposite failure mode — a manifest drifting from files — but here the manifest *is* the route definition, so drift is impossible by construction).
-- Nav labels intentionally live in the manifest while page `<h1>`/`<title>` live in frontmatter: labels are often shorter than titles. A unit test asserts paths are unique, `source` files exist, and generated routes match the manifest — but does not force label==title.
+- Nav labels intentionally live in the manifest while page `<h1>`/`<title>` live in frontmatter: labels are often shorter than titles. A unit test asserts paths are unique and under the docs root, `source` files exist, and generated routes match the manifest — but does not force label==title.
 - **Alternative rejected**: sidebar reads frontmatter titles at runtime by loading every `.md` — loads all documents on every page render and pollutes the hydration payload for marginal DRY benefit.
 
 ### 3. Page-side TOC, layout-side Prev/Next

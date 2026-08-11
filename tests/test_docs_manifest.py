@@ -64,6 +64,16 @@ class TestValidateManifest:
         with pytest.raises(WebComPyException, match="Duplicate"):
             validate_manifest(sections)  # type: ignore[arg-type]
 
+    def test_path_outside_docs_root_rejected(self) -> None:
+        entry = _page({"path": "/outside"})
+        with pytest.raises(WebComPyException, match="must be under"):
+            validate_manifest([{"title": "S", "pages": [entry]}])
+
+    def test_path_equal_to_docs_root_passes_prefix_check(self) -> None:
+        entry = _page({"path": DOCS_ROOT})
+        with pytest.raises(WebComPyException, match="Duplicate"):
+            validate_manifest([{"title": "S", "pages": [entry]}])
+
 
 class TestManifestContent:
     def test_source_files_exist_on_disk(self) -> None:

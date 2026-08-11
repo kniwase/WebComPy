@@ -73,9 +73,12 @@ def validate_manifest(sections: list[DocsSection]) -> None:
         has_component = "component" in entry
         if has_source == has_component:
             raise WebComPyException(f"Docs manifest entry must set exactly one of 'source'/'component': {entry!r}")
-        if entry["path"] in paths:
-            raise WebComPyException(f"Duplicate docs manifest path: {entry['path']!r}")
-        paths.add(entry["path"])
+        entry_path = entry["path"]
+        if entry_path != DOCS_ROOT and not entry_path.startswith(DOCS_ROOT + "/"):
+            raise WebComPyException(f"Docs manifest path must be under {DOCS_ROOT!r}: {entry!r}")
+        if entry_path in paths:
+            raise WebComPyException(f"Duplicate docs manifest path: {entry_path!r}")
+        paths.add(entry_path)
 
     _check_entry(DOCS_INDEX)
     for section in sections:

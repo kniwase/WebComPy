@@ -90,7 +90,7 @@ for arg in "$@"; do
       echo "  $name"
     done
     echo ""
-    echo "Docs E2E groups (static mode only):"
+    echo "Docs E2E groups (static-only in CI, except docs-documents which runs prod + static):"
     for name in "${!DOCS_GROUPS[@]}"; do
       echo "  $name"
     done

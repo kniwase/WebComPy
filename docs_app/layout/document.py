@@ -18,8 +18,7 @@ def DocsLayout(context: ComponentContext[RouterContext]):
         match = router.current_match.value
         return match.path if match is not None else ""
 
-    prev_entry = use_computed(lambda: prev_next(_current_path())[0])
-    next_entry = use_computed(lambda: prev_next(_current_path())[1])
+    pager = use_computed(lambda: prev_next(_current_path()))
 
     def _toggle_mobile(_ev):
         mobile_open.value = not mobile_open.value
@@ -57,26 +56,26 @@ def DocsLayout(context: ComponentContext[RouterContext]):
                 {"class": "docs-pager"},
                 switch(
                     {
-                        "case": use_computed(lambda: prev_entry.value is not None),
+                        "case": use_computed(lambda: pager.value[0] is not None),
                         "generator": lambda: html.DIV(
                             {"class": "docs-pager-prev"},
                             html.SPAN({"class": "docs-pager-label"}, "Previous"),
                             RouterLink(
-                                to=use_computed(lambda: prev_entry.value["path"] if prev_entry.value else "/"),
-                                text=[use_computed(lambda: prev_entry.value["label"] if prev_entry.value else "")],
+                                to=use_computed(lambda: pager.value[0]["path"] if pager.value[0] else "/"),
+                                text=[use_computed(lambda: pager.value[0]["label"] if pager.value[0] else "")],
                             ),
                         ),
                     },
                 ),
                 switch(
                     {
-                        "case": use_computed(lambda: next_entry.value is not None),
+                        "case": use_computed(lambda: pager.value[1] is not None),
                         "generator": lambda: html.DIV(
                             {"class": "docs-pager-next"},
                             html.SPAN({"class": "docs-pager-label"}, "Next"),
                             RouterLink(
-                                to=use_computed(lambda: next_entry.value["path"] if next_entry.value else "/"),
-                                text=[use_computed(lambda: next_entry.value["label"] if next_entry.value else "")],
+                                to=use_computed(lambda: pager.value[1]["path"] if pager.value[1] else "/"),
+                                text=[use_computed(lambda: pager.value[1]["label"] if pager.value[1] else "")],
                             ),
                         ),
                     },

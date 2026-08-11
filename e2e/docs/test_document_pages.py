@@ -94,7 +94,7 @@ def test_next_navigation_updates_sidebar_active(docs_page_on, assert_no_console_
 @pytest.mark.e2e
 def test_signal_stream_renders_inside_layout(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents/signal-stream")
-    assert page.title() == "Signal Stream - WebComPy"
+    assert page.title() == "Signal Stream - WebComPy Docs"
     expect(page.locator(".docs-sidebar")).to_be_visible()
     expect(page.get_by_role("heading", name="Signals and Streams")).to_be_visible()
 
