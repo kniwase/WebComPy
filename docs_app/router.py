@@ -17,6 +17,7 @@ router = Router(
         "component": lazy("docs_app.pages.demo.matplotlib_sample:MatplotlibSamplePage", __file__),
     },
     {"path": "/sample/fetch", "component": lazy("docs_app.pages.demo.fetch_sample:FetchSamplePage", __file__)},
+    {"path": "/sample/teleport", "component": lazy("docs_app.pages.demo.teleport:TeleportDemoPage", __file__)},
     default=NotFound,
     mode="history",
     base_url="",

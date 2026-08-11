@@ -46,6 +46,10 @@ def Root(_: ComponentContext[None]):
                     "title": "Fetch Sample",
                     "to": "/sample/fetch",
                 },
+                {
+                    "title": "Teleport",
+                    "to": "/sample/teleport",
+                },
             ],
         },
     ]
