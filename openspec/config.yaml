@@ -19,6 +19,7 @@ context: |
   ### Element System
   - No general virtual DOM diffing — updates are direct DOM manipulation; key-based reconciliation exists only for RepeatElement (list-reconciliation)
   - SwitchElement replaces children when branch structures differ; matching structures reuse DOM nodes via patching
+  - On SSR-rendered pages, scoped component styles (`<style data-webcompy-cid>`, wrapped in `@layer webcompy-scope`) are emitted before the framework stylesheet links, so `webcompy-scope` becomes the FIRST cascade layer and scoped styles lose to layered framework rules (e.g., `components.css` beats a scoped `a` color). A framework-level fix would declare the cascade layer order before scoped styles are emitted (e.g., an inline `@layer` statement at the top of `<head>`)
 
   ### Router
   - Location popstate proxy cleanup relies on `BrowserHistoryPort.__del__`, which may never run because the browser event target can retain the proxy and its callback; no explicit port/context disposal path removes the listener and destroys the proxy

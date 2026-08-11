@@ -1,3 +1,5 @@
+@layer reset, tokens, components, prose, webcompy-scope;
+
 @layer prose {
   .prose {
     color: var(--color-fg);
@@ -37,6 +39,10 @@
 
   .prose p {
     margin: 0 0 var(--space-4);
+  }
+
+  .prose pre {
+    margin: var(--space-4) 0;
   }
 
   .prose a {

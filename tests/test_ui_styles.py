@@ -58,9 +58,9 @@ def test_required_files_exist() -> None:
 def test_index_css_declares_layer_order() -> None:
     css = _css_text("index.css")
     assert re.search(
-        r"@layer\s+reset,\s*tokens,\s*components,\s*webcompy-scope\s*;",
+        r"@layer\s+reset,\s*tokens,\s*components,\s*prose,\s*webcompy-scope\s*;",
         css,
-    ), "index.css must declare '@layer reset, tokens, components, webcompy-scope;' once"
+    ), "index.css must declare '@layer reset, tokens, components, prose, webcompy-scope;' once"
 
 
 def test_index_css_does_not_import_tokens_dark() -> None:
@@ -144,7 +144,7 @@ def test_prose_css_registered() -> None:
 
 def test_prose_css_not_imported_by_index() -> None:
     css = _css_text("index.css")
-    assert "prose" not in css
+    assert "prose.css" not in css, "index.css must not import prose.css (it is loaded separately)"
 
 
 def test_prose_css_layer_and_scope() -> None:
@@ -161,3 +161,22 @@ def test_prose_css_uses_tokens_no_hardcoded_colors() -> None:
     css = _css_text("prose.css")
     assert not re.search(r"#[0-9a-fA-F]{3,8}\b", css), "prose.css must not hard-code hex colors"
     assert "var(--" in css, "prose.css must reference CSS variables"
+
+
+def test_prose_css_code_block_margin() -> None:
+    css = _css_text("prose.css")
+    assert re.search(r"\.prose\s+pre\s*\{[^}]*margin:\s*var\(--space-4\)\s+0\b", css), (
+        "prose.css must give code blocks symmetric vertical spacing via .prose pre"
+    )
+
+
+def test_prose_css_declares_layer_order() -> None:
+    css = _css_text("prose.css")
+    assert re.search(r"@layer\s+reset,\s*tokens,\s*components,\s*prose,", css), (
+        "prose.css must declare the layer order with prose after components"
+    )
+
+
+def test_code_block_css_in_components_layer() -> None:
+    css = _css_text("code-block.css")
+    assert "@layer components" in css, "code-block.css must be wrapped in @layer components"
