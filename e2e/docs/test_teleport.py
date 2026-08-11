@@ -7,7 +7,7 @@ from e2e.docs.conftest import _wait_for_demo_iframe
 @pytest.mark.e2e
 def test_teleport_page_loads(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/sample/teleport")
-    expect(page.get_by_role("heading", name="Teleport")).to_be_visible()
+    expect(page.locator("h1.page-title")).to_have_text("Teleport")
 
 
 @pytest.mark.e2e

@@ -1,27 +1,33 @@
 from webcompy.app import WebComPyApp
 from webcompy.components import ComponentContext, define_component
-from webcompy.elements import html, switch
+from webcompy.elements import Teleport, html, switch
 from webcompy.signal import use_state
 
 
 def _modal(close_handler):
-    return html.DIV(
-        {"class": "demo-modal-backdrop"},
+    return Teleport(
+        {"to": "body"},
         html.DIV(
-            {"class": "demo-modal"},
-            html.H2({}, "Teleported Modal"),
-            html.P({}, "This modal is rendered as a direct child of <body> via Teleport."),
-            html.BUTTON({"id": "close-modal", "@click": close_handler}, "Close"),
+            {"class": "demo-modal-backdrop"},
+            html.DIV(
+                {"class": "demo-modal"},
+                html.H2({}, "Teleported Modal"),
+                html.P({}, "This modal is rendered as a direct child of <body> via Teleport."),
+                html.BUTTON({"id": "close-modal", "@click": close_handler}, "Close"),
+            ),
         ),
     )
 
 
 def _dropdown():
-    return html.UL(
-        {"class": "demo-dropdown"},
-        html.LI({"class": "demo-dropdown-item"}, "Dropdown Action 1"),
-        html.LI({"class": "demo-dropdown-item"}, "Dropdown Action 2"),
-        html.LI({"class": "demo-dropdown-item"}, "Dropdown Action 3"),
+    return Teleport(
+        {"to": "body"},
+        html.UL(
+            {"class": "demo-dropdown"},
+            html.LI({"class": "demo-dropdown-item"}, "Dropdown Action 1"),
+            html.LI({"class": "demo-dropdown-item"}, "Dropdown Action 2"),
+            html.LI({"class": "demo-dropdown-item"}, "Dropdown Action 3"),
+        ),
     )
 
 
