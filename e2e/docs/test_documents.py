@@ -10,7 +10,7 @@ def test_documents_index_shows_section_cards(docs_page_on, assert_no_console_err
     expect(page.get_by_role("heading", name="Documentation")).to_be_visible()
     expect(page.get_by_role("heading", name="Getting Started")).to_be_visible()
     expect(page.get_by_role("link", name="Open Installation")).to_be_visible()
-    expect(page.get_by_role("link", name="Open Signal Stream")).to_be_visible()
+    expect(page.get_by_role("link", name="Open Signals and Streams")).to_be_visible()
 
 
 @pytest.mark.e2e
