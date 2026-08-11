@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import PurePosixPath
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 from webcompy.exception import WebComPyException
 from webcompy.router import lazy
@@ -9,11 +9,11 @@ from webcompy.router import lazy
 DOCS_ROOT = "/documents"
 
 
-class DocsPageEntry(TypedDict, total=False):
+class DocsPageEntry(TypedDict):
     label: str
     path: str
-    source: str
-    component: str
+    source: NotRequired[str]
+    component: NotRequired[str]
 
 
 class DocsSection(TypedDict):
@@ -69,6 +69,10 @@ def validate_manifest(sections: list[DocsSection]) -> None:
     paths: set[str] = set()
 
     def _check_entry(entry: DocsPageEntry) -> None:
+        if "label" not in entry:
+            raise WebComPyException(f"Docs manifest entry must include 'label': {entry!r}")
+        if "path" not in entry:
+            raise WebComPyException(f"Docs manifest entry must include 'path': {entry!r}")
         has_source = "source" in entry
         has_component = "component" in entry
         if has_source == has_component:

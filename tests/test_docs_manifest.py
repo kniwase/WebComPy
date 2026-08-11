@@ -47,6 +47,18 @@ class TestValidateManifest:
         with pytest.raises(WebComPyException, match="exactly one"):
             validate_manifest([{"title": "S", "pages": [entry]}])  # type: ignore[typeddict-item]
 
+    def test_entry_without_label_rejected(self) -> None:
+        entry = _page({})
+        del entry["label"]
+        with pytest.raises(WebComPyException, match="must include 'label'"):
+            validate_manifest([{"title": "S", "pages": [entry]}])  # type: ignore[typeddict-item]
+
+    def test_entry_without_path_rejected(self) -> None:
+        entry = _page({})
+        del entry["path"]
+        with pytest.raises(WebComPyException, match="must include 'path'"):
+            validate_manifest([{"title": "S", "pages": [entry]}])  # type: ignore[typeddict-item]
+
     def test_duplicate_paths_rejected(self) -> None:
         sections = [
             {
