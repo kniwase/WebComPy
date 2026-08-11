@@ -1,13 +1,14 @@
 from webcompy.router import Router, lazy
 
+from .docs_manifest import route_children
 from .pages.not_found import NotFound
 
 router = Router(
     {"path": "/", "component": lazy("docs_app.pages.home:HomePage", __file__)},
-    {"path": "/documents", "component": lazy("docs_app.pages.document.home:DocumentHomePage", __file__)},
     {
-        "path": "/documents/signal-stream",
-        "component": lazy("docs_app.pages.document.signal_stream:SignalStreamPage", __file__),
+        "path": "/documents",
+        "component": lazy("docs_app.layout.document:DocsLayout", __file__),
+        "children": route_children(),
     },
     {"path": "/sample/helloworld", "component": lazy("docs_app.pages.demo.helloworld:HelloWorldPage", __file__)},
     {"path": "/sample/fizzbuzz", "component": lazy("docs_app.pages.demo.fizzbuzz:FizzbuzzPage", __file__)},

@@ -7,6 +7,6 @@ from ...templates.document.signal_stream import SignalStream
 
 @define_component
 def SignalStreamPage(context: ComponentContext[RouterContext]):
-    context.set_title("Signal Stream - WebComPy")
+    context.set_title("Signal Stream - WebComPy Docs")
 
     return html.DIV({}, SignalStream(None))
