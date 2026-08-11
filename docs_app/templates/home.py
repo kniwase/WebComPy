@@ -129,7 +129,6 @@ def Home(_: ComponentContext[None]):
                             "lang": "bash",
                             "code": _code(
                                 """
-                                mkdir webcompy-project && cd webcompy-project
                                 poetry new webcompy-project && cd webcompy-project
                                 poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy"
                                 poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-server"

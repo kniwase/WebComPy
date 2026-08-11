@@ -54,7 +54,6 @@ uv run python -m webcompy start --dev
 If you prefer Poetry, use the following setup:
 
 ```bash
-mkdir webcompy-project && cd webcompy-project
 poetry new webcompy-project && cd webcompy-project
 poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy"
 poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-server"

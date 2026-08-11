@@ -113,7 +113,9 @@ python -m webcompy generate          # build static site
 ### Testing
 
 ```bash
-pip install "webcompy-testing @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-testing"
+pip install "webcompy @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy" \
+            "webcompy-server @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-server" \
+            "webcompy-testing @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-testing"
 ```
 
 ## Documents and Demos
