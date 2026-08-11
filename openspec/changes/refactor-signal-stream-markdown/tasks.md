@@ -18,6 +18,6 @@
 
 ## 4. Verification
 
-- [ ] 4.1 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short`, and `python3 scripts/check-doc-spec-refs.py`
-- [ ] 4.2 Run `scripts/run-e2e-tests.sh docs-documents` and `scripts/run-e2e-tests.sh docs-home` (both serving modes)
-- [ ] 4.3 Run `openspec validate refactor-signal-stream-markdown --strict`
+- [x] 4.1 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short`, and `python3 scripts/check-doc-spec-refs.py`
+- [x] 4.2 Run `scripts/run-e2e-tests.sh docs-documents` and `scripts/run-e2e-tests.sh docs-home` (both serving modes)
+- [x] 4.3 Run `openspec validate refactor-signal-stream-markdown --strict`
