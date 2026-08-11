@@ -31,8 +31,10 @@
 
 ## 6. E2E and docs
 
-- [ ] 6.1 Add an E2E test (Playwright, `e2e/`): a page with a Teleport-based modal — open renders content under `body`, close removes it, sibling content stays stable
-- [ ] 6.2 Add a docs_app demo page for `Teleport` (modal + dropdown reworked onto Teleport) and link it from the docs navigation; document the target-stability constraint and the SSR anchor-only behavior
+- [ ] 6.1 Add an E2E test (Playwright, `e2e/`): a page with a Teleport-based modal — open renders content under `body`, close removes it, sibling content stays stable; register the test file in the `components` group of both `scripts/run-e2e-tests.sh` and `.github/workflows/ci.yml`
+- [ ] 6.2 Add a docs_app demo page for `Teleport` (modal + dropdown reworked onto Teleport) and link it from the docs navigation; document the target-stability constraint and the SSR anchor-only behavior; add a `static/_demos/teleport/app.py` iframe demo registered in `standard.html` `APP_PACKAGES`, and a smoke test for it in `tests/test_docs_demos.py`
+- [ ] 6.3 Add a docs E2E test file `e2e/docs/test_teleport.py` for the new `/sample/teleport` page and register it in the `docs-demos` group of both `scripts/run-e2e-tests.sh` and `.github/workflows/ci.yml`
+- [ ] 6.4 Rebuild the docs_app navbar dropdown onto Teleport: teleport the menu to `body` with `position: fixed` positioning measured on open, preserving aria attributes, menu `id`, `role="menu"`, and the existing docs E2E navigation behavior (no new DOMPort APIs)
 
 ## 7. Validation
 
