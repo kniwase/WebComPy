@@ -80,10 +80,10 @@ The router percent-encodes `#` in `to` and has no fragment concept; `HistoryPort
 async def InstallationPage(context: ComponentContext[RouterContext]):
     doc = await load_markdown_document("documents/installation.md")
     context.set_title(f"{doc.metadata['title']} - WebComPy Docs")
-    return docs_page_template(doc)
+    return docs_page_template(doc, context.props.path)
 ```
 
-`docs_page_template(doc)` renders `<div class="docs-page">` containing `<article class="prose">doc.content</article>` and the TOC aside. Markdown files live in `docs_app/documents/` (inside the app package; the resource allow-list already covers `**/*.md`; SSR reads transfer via the hydration payload).
+`docs_page_template(doc, current_path)` renders `<div class="docs-page">` containing `<article class="prose">doc.content</article>` and the TOC aside. Markdown files live in `docs_app/documents/` (inside the app package; the resource allow-list already covers `**/*.md`; SSR reads transfer via the hydration payload).
 
 - Async setup is first-class (`async-component-setup` spec); SSR/SSG resolves it during the async rendering pipeline, and per investigation `set_title` lands in SSG `<title>` for all `/documents*` paths.
 
