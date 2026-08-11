@@ -2,7 +2,7 @@
 
 ## 1. Markdown Content
 
-- [ ] 1.1 Create `docs_app/documents/signal_stream.md` with frontmatter (`title: Signals and Streams`, `description`) and body converted from the current component: H1 "Signals and Streams" + intro paragraph, H2 sections `to_signal: one-shot values`, `to_reactive_list: accumulating feeds`, `to_async_iter: consuming signal updates`, `Queue policy and lifecycle`; inline code as backticks, the four code examples as `python` fenced blocks, `**`/`*` for strong/emphasis (prose preserved verbatim)
+- [x] 1.1 Create `docs_app/documents/signal_stream.md` with frontmatter (`title: Signals and Streams`, `description`) and body converted from the current component: H1 "Signals and Streams" + intro paragraph, H2 sections `to_signal: one-shot values`, `to_reactive_list: accumulating feeds`, `to_async_iter: consuming signal updates`, `Queue policy and lifecycle`; inline code as backticks, the four code examples as `python` fenced blocks, `**`/`*` for strong/emphasis (prose preserved verbatim)
 
 ## 2. Page and Manifest
 
