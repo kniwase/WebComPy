@@ -42,6 +42,9 @@ def test_markdown_content_rendered_with_ids_and_code(docs_page_on, assert_no_con
     expect(page.locator("article.prose pre.code-block code.language-bash")).to_have_count(4)
     expect(page.locator("article.prose pre.code-block code.language-python")).to_have_count(1)
     expect(page.locator("article.prose pre.code-block code.language-toml")).to_have_count(1)
+    first_block = page.locator("article.prose pre.code-block").first
+    expect(first_block).to_have_css("margin-top", "16px")
+    expect(first_block).to_have_css("margin-bottom", "16px")
 
 
 @pytest.mark.e2e
