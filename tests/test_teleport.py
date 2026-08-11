@@ -7,9 +7,10 @@ import pytest
 from webcompy.components import define_component
 from webcompy.elements import Teleport, html, repeat, switch
 from webcompy.elements.types._element import Element
+from webcompy.elements.types._teleport import TeleportElement
 from webcompy.elements.types._text import TextElement
 from webcompy.signal import ReactiveList, Signal
-from webcompy_testing import TestRenderer
+from webcompy_testing import TestRenderer, create_test_app, render_app_html
 
 
 @pytest.fixture
@@ -233,3 +234,44 @@ class TestTeleportHydration:
         spans = [body.childNodes[i] for i in range(body.childNodes.length) if body.childNodes[i].nodeName == "SPAN"]
         assert len(spans) == 1
         assert spans[0].textContent == "teleported"
+
+
+class TestTeleportSSR:
+    def test_ssr_output_contains_no_teleported_content(self):
+        @define_component
+        def Page(context):
+            return html.DIV(
+                {},
+                html.P({}, "before-marker"),
+                Teleport({"to": "body"}, html.DIV({"id": "ssr-modal"}, "MODAL-SECRET")),
+                html.P({}, "after-marker"),
+            )
+
+        app = create_test_app(root_component=Page)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "MODAL-SECRET" not in html_str
+        assert 'id="ssr-modal"' not in html_str
+        assert "before-marker" in html_str
+        assert "after-marker" in html_str
+
+    @pytest.mark.asyncio
+    async def test_ssr_render_mounts_anchor_only(self, server_di_scope):
+        from tests.conftest import FakeDOMNode
+
+        el = TeleportElement({"to": "body"}, Element("span", {}, {}, None, [TextElement("secret")]))
+        parent = Element("div")
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+        el._parent = parent
+        el._node_idx = 0
+        await el._render()
+        parent_node = parent._get_node()
+        assert parent_node.childNodes.length == 1
+        assert (parent_node.childNodes[0].textContent or "") == ""
+        assert el._children[0]._node_cache is None
