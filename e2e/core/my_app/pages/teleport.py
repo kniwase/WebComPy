@@ -23,6 +23,7 @@ def TeleportPage(context: ComponentContext[None]):
         {"data-testid": "teleport-page"},
         html.H2({}, "Teleport Tests"),
         html.P({"data-testid": "before-marker"}, "before-marker"),
+        Teleport({"to": "body"}, html.DIV({"data-testid": "static-teleport"}, "static-content")),
         switch({"case": open_state, "generator": lambda: Teleport({"to": "body"}, _modal())}, default=None),
         html.P({"data-testid": "after-marker"}, "after-marker"),
         html.BUTTON({"data-testid": "toggle-modal", "@click": _toggle}, "Toggle Modal"),

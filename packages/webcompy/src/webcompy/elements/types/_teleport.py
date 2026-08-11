@@ -20,8 +20,10 @@ class TeleportProps(TypedDict):
 
 
 class TeleportElement(DynamicElement):
+    _ANCHOR_TEXT = "\u200b"
+
     def __init__(self, props: TeleportProps, *children: ElementChildren) -> None:
-        to: object = props.get("to") if props else None
+        to: object = props.get("to") if isinstance(props, dict) else None
         if not isinstance(to, str) or not to:
             raise ValueError("Teleport requires 'to' to be a non-empty static string selector.")
         self._to = to
@@ -70,7 +72,8 @@ class TeleportElement(DynamicElement):
         return self._create_node()
 
     def _create_node(self) -> DOMNode:
-        node = inject(DOM_PORT_KEY).create_text_node("")
+        anchor_text = "" if ENVIRONMENT == "pyscript" else self._ANCHOR_TEXT
+        node = inject(DOM_PORT_KEY).create_text_node(anchor_text)
         self._init_new_node(node)
         return node
 
@@ -127,10 +130,10 @@ class TeleportElement(DynamicElement):
         else:
             self._mount_node()
             if not self._children_rendered:
-                self._children_rendered = True
                 target = self._target_node
                 if target is None:
                     return
+                self._children_rendered = True
                 idx = target.childNodes.length
                 for child in self._children:
                     child._node_idx = idx
@@ -148,6 +151,8 @@ class TeleportElement(DynamicElement):
         ):
             self._adopt_node(existing)
         else:
+            if existing and not getattr(existing, "__webcompy_node__", False):
+                existing.remove()
             self._node_cache = self._create_node()
         if self._mounted:
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
@@ -156,7 +161,7 @@ class TeleportElement(DynamicElement):
             task.add_done_callback(self._on_hydrate_render_done)
 
     def _node_matches_existing(self, existing: DOMNode) -> bool:
-        return existing.nodeName.lower() == "#text"
+        return existing.nodeName.lower() == "#text" and (existing.textContent or "") in ("", self._ANCHOR_TEXT)
 
     def _adopt_node(self, node: DOMNode) -> None:
         self._node_cache = node

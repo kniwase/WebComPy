@@ -35,3 +35,15 @@ def test_sibling_stability_across_toggle(page_on):
     expect(page.locator("[data-testid='before-marker']")).to_have_text("before-marker")
     expect(page.locator("[data-testid='after-marker']")).to_have_text("after-marker")
     expect(page.locator("[data-testid='teleport-page']")).to_be_visible()
+
+
+def test_ssr_static_teleport_mounts_under_body_without_duplication(page_on):
+    page = page_on("/teleport")
+    static = page.locator("[data-testid='static-teleport']")
+    expect(static).to_have_count(1)
+    assert (
+        page.evaluate("document.querySelector('[data-testid=\"static-teleport\"]').parentElement.tagName")
+    ) == "BODY"
+    expect(page.locator("[data-testid='before-marker']")).to_have_count(1)
+    expect(page.locator("[data-testid='after-marker']")).to_have_count(1)
+    expect(page.locator("[data-testid='after-marker']")).to_have_text("after-marker")
