@@ -1,0 +1,84 @@
+# UI Disclosure & Feedback Components Specification (delta)
+
+## ADDED Requirements
+
+### Requirement: Tabs shall implement the tablist accessibility contract
+
+The headless Tabs SHALL render `role="tablist"` containing `role="tab"` elements, each with `aria-selected` and `aria-controls` referencing its `role="tabpanel"`. The active tab state SHALL be reactive (prop-driven) with a change callback. Inactive panels SHALL be hidden but remain rendered, preserving their internal state across switches. Tabs and panels SHALL expose `data-state="active" | "inactive"` on tab elements.
+
+#### Scenario: Panel state survives tab switches
+
+- **WHEN** a user switches from tab A (containing a form input with entered text) to tab B and back to tab A
+- **THEN** the input SHALL retain the entered text because panel A remained rendered (hidden) while inactive
+
+### Requirement: Tabs shall provide arrow-key navigation with automatic activation
+
+While focus is within the tablist, Left/Right arrows SHALL move focus to the previous/next tab with wrapping and SHALL activate it (automatic activation); Home/End SHALL jump to the first/last tab. Activation SHALL update the reactive active state and the visible panel.
+
+#### Scenario: Arrow navigation wraps and activates
+
+- **WHEN** focus is on the last of three tabs and the user presses Right Arrow
+- **THEN** focus SHALL move to the first tab and the first tab SHALL become active
+
+### Requirement: Tab panel switching shall support transition animation
+
+Panel switching SHALL optionally animate through the Transition capability using a default themed class set; animation SHALL be disable-able by prop. When disabled or outside the browser, switching SHALL be instant.
+
+#### Scenario: Animated switch uses transition classes
+
+- **WHEN** a themed Tabs with animation enabled switches panels in the browser
+- **THEN** the incoming panel content SHALL pass through the configured enter class sequence
+
+### Requirement: Collapse shall provide an accessible animated disclosure
+
+The headless Collapse SHALL render a trigger with `aria-expanded` and `aria-controls` and a content region that expands/collapses when the trigger activates. Expand/collapse SHALL animate through the Transition capability (themed default uses a natural-height CSS technique without measurement); animation SHALL be disable-able. Trigger and content SHALL expose `data-state="open" | "closed"`. The open state SHALL be reactive with a change callback.
+
+#### Scenario: Trigger toggles content with state exposure
+
+- **WHEN** a Collapse trigger is activated while closed
+- **THEN** `aria-expanded` SHALL become true, the content SHALL expand with the transition classes applied, and `data-state` SHALL read `open`
+
+### Requirement: Accordion shall compose Collapse items with an open policy
+
+The Accordion SHALL compose multiple Collapse items under a shared open-state and SHALL support a single-open policy (opening one item closes the others) as well as multi-open (default). Item identity SHALL be key-based.
+
+#### Scenario: Single-open policy closes siblings
+
+- **WHEN** an Accordion with the single-open policy has item A open and the user opens item B
+- **THEN** item A SHALL close and item B SHALL be the only open item
+
+### Requirement: Alert shall map variants to announcement roles
+
+The headless Alert SHALL render inline feedback with variant semantics: error and warning variants SHALL use `role="alert"`, info and success variants SHALL use `role="status"`. An accessible message SHALL be announced according to the role's politeness. A dismiss action SHALL be available by prop with an accessible button.
+
+#### Scenario: Error alert announces assertively
+
+- **WHEN** an Alert with the error variant renders
+- **THEN** the element SHALL carry `role="alert"`
+
+### Requirement: Progress shall expose determinate and indeterminate states with correct ARIA
+
+The headless Progress SHALL render `role="progressbar"` with an accessible label. In determinate mode it SHALL set `aria-valuenow`, `aria-valuemin`, and `aria-valuemax` from value props; in indeterminate mode it SHALL omit `aria-valuenow` and expose `data-state="indeterminate"`. Determinate mode SHALL expose `data-state="determinate"`.
+
+#### Scenario: Determinate values are exposed
+
+- **WHEN** a Progress renders with value 40 of 100
+- **THEN** `aria-valuenow` SHALL be 40 with `aria-valuemin` 0 and `aria-valuemax` 100 (or the configured bounds)
+
+### Requirement: Badge, Skeleton, and Card shall provide themed structural primitives
+
+Badge SHALL render a compact status label with variant styling hooks. Skeleton SHALL render loading placeholders marked `aria-hidden="true"` (decorative), with documented guidance to pair them with an accessible loading indicator. Card SHALL provide structural header/body/footer regions with class pass-through. None of the three carries interaction state.
+
+#### Scenario: Skeleton is hidden from assistive technology
+
+- **WHEN** a Skeleton renders inside a loading section
+- **THEN** the placeholder elements SHALL carry `aria-hidden="true"`
+
+### Requirement: Disclosure/feedback components shall ship as headless/themed pairs per the foundation contract
+
+Each component in this family SHALL exist as a headless component honoring the headless contract (behavior-only, `data-state`, class pass-through) and a themed component composing it with token-based defaults in the primitives stylesheet, re-exported at the `webcompy.ui` top level.
+
+#### Scenario: Themed variants consume tokens
+
+- **WHEN** any themed component of this family renders
+- **THEN** its default styles SHALL consume design tokens and be overridable through class pass-through
