@@ -204,6 +204,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md`, `json-rpc/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md` |
 | `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md`, `markdown-document/spec.md` |
+| `docs_app/` | `docs-site-documents/spec.md`, `docs-e2e/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
 
 Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md`.
@@ -318,6 +319,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `dependency-resolver` | Classification of app dependencies for browser deployment |
 | `e2e-testing` | Browser-based validation of WebComPy apps |
 | `docs-e2e` | E2E testing for docs_app pages |
+| `docs-site-documents` | docs_app documentation section: manifest-driven routes, layout, sidebar, Prev/Next, Markdown page template, TOC anchors |
 | `internal-naming` | Correct English spelling of internal/private API identifiers |
 | `package-kind` | `PackageKind` enum for classifying browser dependencies |
 | `lockfile` | Reproducible builds via `webcompy-lock.json` |
