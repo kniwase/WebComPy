@@ -28,10 +28,11 @@
 ## 5. SSR behavior
 
 - [x] 5.1 Verify with the server render path (SSG/SSR test utilities) that SSR output contains only the anchor at the logical position and no teleported content anywhere; add a regression test asserting absence of the teleported markup in generated HTML
+- [x] 5.2 Serialize the SSR anchor as a zero-width-space text node so the placeholder slot survives HTML parsing; harden hydration to adopt the anchor (with strict text-content matching) and to remove mismatched existing nodes like the base element path; add an SSR→hydration round-trip regression test asserting that siblings following the Teleport are neither duplicated nor orphaned after hydration
 
 ## 6. E2E and docs
 
-- [x] 6.1 Add an E2E test (Playwright, `e2e/`): a page with a Teleport-based modal — open renders content under `body`, close removes it, sibling content stays stable; register the test file in the `components` group of both `scripts/run-e2e-tests.sh` and `.github/workflows/ci.yml`
+- [x] 6.1 Add an E2E test (Playwright, `e2e/`): a page with a Teleport-based modal — open renders content under `body`, close removes it, sibling content stays stable; register the test file in the `components` group of both `scripts/run-e2e-tests.sh` and `.github/workflows/ci.yml`. The page also carries an unconditional Teleport between the sibling markers so the real-browser SSR→hydration path (prod and static modes) is covered; the E2E asserts the teleported node lives under `body` and the sibling markers are not duplicated
 - [x] 6.2 Add a docs_app demo page for `Teleport` (modal + dropdown reworked onto Teleport) and link it from the docs navigation; document the target-stability constraint and the SSR anchor-only behavior; add a `static/_demos/teleport/app.py` iframe demo registered in `standard.html` `APP_PACKAGES`, and a smoke test for it in `tests/test_docs_demos.py`
 - [x] 6.3 Add a docs E2E test file `e2e/docs/test_teleport.py` for the new `/sample/teleport` page and register it in the `docs-demos` group of both `scripts/run-e2e-tests.sh` and `.github/workflows/ci.yml`
 - [x] 6.4 Rebuild the docs_app navbar dropdown onto Teleport: teleport the menu to `body` with `position: fixed` positioning measured on open, preserving aria attributes, menu `id`, `role="menu"`, and the existing docs E2E navigation behavior (no new DOMPort APIs)

@@ -42,7 +42,7 @@ The Teleport element SHALL contribute exactly one DOM node — an empty placehol
 
 ### Requirement: Server-side rendering shall emit only the anchor
 
-During server-side rendering and static generation, a Teleport SHALL render only its anchor placeholder at the logical position and SHALL NOT render its children's content anywhere in the document. The browser SHALL mount the children under the target during the client render pass after hydration. Teleported content is therefore absent from SSR HTML by design.
+During server-side rendering and static generation, a Teleport SHALL render only its anchor placeholder at the logical position and SHALL NOT render its children's content anywhere in the document. The browser SHALL mount the children under the target during the client render pass after hydration. Teleported content is therefore absent from SSR HTML by design. The anchor SHALL be serialized in a form that preserves its node slot through HTML parsing (a zero-width-space text node), so that positional hydration adoption of the anchor and of the siblings following the Teleport stays aligned.
 
 #### Scenario: SSR output contains no teleported content
 
@@ -50,11 +50,24 @@ During server-side rendering and static generation, a Teleport SHALL render only
 - **THEN** the SSR HTML SHALL contain the anchor placeholder at the logical position
 - **AND** the SSR HTML SHALL NOT contain the modal markup under `<body>` or anywhere else
 
+#### Scenario: SSR anchor occupies a parseable slot
+
+- **WHEN** a tree containing `[text node, Teleport, text node]` is server-rendered
+- **THEN** the SSR HTML SHALL contain the anchor representation between the two text nodes at the logical position
+- **AND** a browser parsing that HTML SHALL produce a text node for the anchor slot
+
 #### Scenario: Client mounts teleported content after hydration
 
 - **WHEN** the hydrated application completes its client render pass
 - **THEN** the teleported children SHALL be mounted under the target node
 - **AND** the anchor placeholder SHALL remain at the logical position
+
+#### Scenario: Hydration adopts the anchor without duplicating siblings
+
+- **WHEN** the browser hydrates the SSR output of a tree containing `[paragraph, Teleport, paragraph]`
+- **THEN** the anchor SHALL be adopted as the prerendered node at its logical position
+- **AND** each sibling paragraph SHALL appear exactly once in the document (no duplicated or orphaned SSR nodes)
+- **AND** the teleported children SHALL be mounted under the target node
 
 ### Requirement: Teleport shall degrade to inline rendering with a warning when the target is missing
 
