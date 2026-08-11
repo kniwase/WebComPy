@@ -52,7 +52,7 @@ declare -A E2E_GROUPS=(
 # Docs groups are static-only in CI
 declare -A DOCS_GROUPS=(
   ["docs-home"]="e2e/docs/test_home.py e2e/docs/test_documents.py e2e/docs/test_helloworld.py"
-  ["docs-demos"]="e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py"
+  ["docs-demos"]="e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py e2e/docs/test_teleport.py"
   ["docs-matplotlib"]="e2e/docs/test_matplotlib.py"
   ["docs-fetch"]="e2e/docs/test_fetch.py"
 )
