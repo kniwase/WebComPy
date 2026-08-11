@@ -12,9 +12,9 @@
 
 ## 3. E2E Updates
 
-- [ ] 3.1 Update `e2e/docs/test_signal_stream.py`: browser title assertion to "Signals and Streams - WebComPy Docs", keep H1/sidebar assertions, add TOC aside assertions (visible, links to page heading ids)
-- [ ] 3.2 Update `e2e/docs/test_quickstart.py`: pager Next link text and sidebar `aria-current` text to "Signals and Streams"
-- [ ] 3.3 Update `e2e/docs/test_documents.py`: index card link name to "Open Signals and Streams"
+- [x] 3.1 Update `e2e/docs/test_signal_stream.py`: browser title assertion to "Signals and Streams - WebComPy Docs", keep H1/sidebar assertions, add TOC aside assertions (visible, links to page heading ids)
+- [x] 3.2 Update `e2e/docs/test_quickstart.py`: pager Next link text and sidebar `aria-current` text to "Signals and Streams"
+- [x] 3.3 Update `e2e/docs/test_documents.py`: index card link name to "Open Signals and Streams"
 
 ## 4. Verification
 
