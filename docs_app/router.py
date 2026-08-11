@@ -8,10 +8,7 @@ router = Router(
     {
         "path": "/documents",
         "component": lazy("docs_app.layout.document:DocsLayout", __file__),
-        "children": [
-            {"path": "", "component": lazy("docs_app.pages.document.home:DocumentHomePage", __file__)},
-            *route_children(),
-        ],
+        "children": route_children(),
     },
     {"path": "/sample/helloworld", "component": lazy("docs_app.pages.demo.helloworld:HelloWorldPage", __file__)},
     {"path": "/sample/fizzbuzz", "component": lazy("docs_app.pages.demo.fizzbuzz:FizzbuzzPage", __file__)},

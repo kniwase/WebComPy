@@ -21,6 +21,13 @@ class DocsSection(TypedDict):
     pages: list[DocsPageEntry]
 
 
+DOCS_INDEX: DocsPageEntry = {
+    "label": "Documentation",
+    "path": DOCS_ROOT,
+    "component": "docs_app.pages.document.home:DocumentHomePage",
+}
+
+
 DOCS_SECTIONS: list[DocsSection] = [
     {
         "title": "Getting Started",
@@ -60,28 +67,43 @@ def page_component_ref(entry: DocsPageEntry) -> str:
 
 def validate_manifest(sections: list[DocsSection]) -> None:
     paths: set[str] = set()
+
+    def _check_entry(entry: DocsPageEntry) -> None:
+        has_source = "source" in entry
+        has_component = "component" in entry
+        if has_source == has_component:
+            raise WebComPyException(f"Docs manifest entry must set exactly one of 'source'/'component': {entry!r}")
+        if entry["path"] in paths:
+            raise WebComPyException(f"Duplicate docs manifest path: {entry['path']!r}")
+        paths.add(entry["path"])
+
+    _check_entry(DOCS_INDEX)
     for section in sections:
         for entry in section["pages"]:
-            has_source = "source" in entry
-            has_component = "component" in entry
-            if has_source == has_component:
-                raise WebComPyException(f"Docs manifest entry must set exactly one of 'source'/'component': {entry!r}")
-            if entry["path"] in paths:
-                raise WebComPyException(f"Duplicate docs manifest path: {entry['path']!r}")
-            paths.add(entry["path"])
+            _check_entry(entry)
 
 
 def flatten_pages() -> list[DocsPageEntry]:
     return [page for section in DOCS_SECTIONS for page in section["pages"]]
 
 
+def route_pages() -> list[DocsPageEntry]:
+    return [DOCS_INDEX, *flatten_pages()]
+
+
+def _route_path(path: str) -> str:
+    if path == DOCS_ROOT:
+        return ""
+    return path.removeprefix(DOCS_ROOT + "/")
+
+
 def route_children() -> list[dict]:
     return [
         {
-            "path": page["path"].removeprefix(DOCS_ROOT + "/"),
+            "path": _route_path(page["path"]),
             "component": lazy(page_component_ref(page), __file__),
         }
-        for page in flatten_pages()
+        for page in route_pages()
     ]
 
 

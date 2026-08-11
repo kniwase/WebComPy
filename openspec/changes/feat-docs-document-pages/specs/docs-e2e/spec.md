@@ -21,6 +21,16 @@ The docs E2E suite SHALL include tests for the documentation section (`/document
 - **WHEN** the E2E test clicks the Next link on a docs page
 - **THEN** the browser navigates to the manifest-successor page and the sidebar active state follows
 
+#### Scenario: Trailing-slash TOC anchors
+
+- **WHEN** the E2E test visits a docs page URL with a trailing slash and clicks a TOC link
+- **THEN** the TOC href retains the trailing-slash path and the browser scrolls to the heading without a full page reload
+
+#### Scenario: Mobile sidebar toggle
+
+- **WHEN** the E2E test narrows the viewport, opens the sidebar via the toggle, and clicks a sidebar link
+- **THEN** the sidebar closes after the navigation
+
 #### Scenario: Static mode parity
 
 - **WHEN** the same docs section tests run against the statically generated site

@@ -6,12 +6,14 @@ from pathlib import Path
 import pytest
 
 from docs_app.docs_manifest import (
+    DOCS_INDEX,
     DOCS_ROOT,
     DOCS_SECTIONS,
     flatten_pages,
     page_component_ref,
     prev_next,
     route_children,
+    route_pages,
     validate_manifest,
 )
 from webcompy.components._generator import ComponentGenerator
@@ -71,7 +73,7 @@ class TestManifestContent:
                 assert resource.is_file(), f"Missing markdown resource: {resource}"
 
     def test_all_component_references_are_importable(self) -> None:
-        for page in flatten_pages():
+        for page in route_pages():
             module_path, attr_name = page_component_ref(page).rsplit(":", 1)
             module = importlib.import_module(module_path)
             resolved = getattr(module, attr_name)
@@ -88,12 +90,21 @@ class TestManifestContent:
 
     def test_route_children_match_manifest(self) -> None:
         children = route_children()
-        pages = flatten_pages()
+        pages = route_pages()
         assert len(children) == len(pages)
         for child, page in zip(children, pages, strict=True):
-            assert child["path"] == page["path"].removeprefix(DOCS_ROOT + "/")
+            expected_path = "" if page["path"] == DOCS_ROOT else page["path"].removeprefix(DOCS_ROOT + "/")
+            assert child["path"] == expected_path
             assert isinstance(child["component"], LazyComponentGenerator)
             assert child["component"]._import_path == page_component_ref(page)
+
+    def test_route_children_start_with_index_route(self) -> None:
+        children = route_children()
+        assert children[0]["path"] == ""
+        assert children[0]["component"]._import_path == DOCS_INDEX["component"]
+
+    def test_index_excluded_from_nav_and_pager_pages(self) -> None:
+        assert DOCS_INDEX["path"] not in [page["path"] for page in flatten_pages()]
 
 
 class TestPrevNext:

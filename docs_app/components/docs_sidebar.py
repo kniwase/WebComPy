@@ -1,6 +1,3 @@
-from collections.abc import Callable
-from typing import TypedDict
-
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 from webcompy.router import RouterLink
@@ -9,12 +6,8 @@ from webcompy.signal import Signal, use_computed
 from ..docs_manifest import DOCS_SECTIONS
 
 
-class DocsSidebarProps(TypedDict, total=False):
-    on_link_click: Callable[..., None]
-
-
 @define_component
-def DocsSidebar(context: ComponentContext[DocsSidebarProps]):
+def DocsSidebar(_: ComponentContext[None]):
     open_states: dict[int, Signal[bool]] = {}
 
     def _section_state(idx: int) -> Signal[bool]:
@@ -25,11 +18,6 @@ def DocsSidebar(context: ComponentContext[DocsSidebarProps]):
     def _toggle_section(idx: int, _ev):
         state = _section_state(idx)
         state.value = not state.value
-
-    def _on_link_click(_ev):
-        callback = context.props.get("on_link_click")
-        if callback is not None:
-            callback()
 
     sections = tuple(
         html.DIV(
@@ -57,7 +45,6 @@ def DocsSidebar(context: ComponentContext[DocsSidebarProps]):
                             to=page["path"],
                             text=[page["label"]],
                             active_class="docs-sidebar-active",
-                            attrs={"@click": _on_link_click},
                         ),
                     )
                     for page in section["pages"]

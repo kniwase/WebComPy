@@ -238,6 +238,10 @@ jobs:
           - group:
               name: docs-documents
               files: e2e/docs/test_document_pages.py
+            serving_mode: prod
+          - group:
+              name: docs-documents
+              files: e2e/docs/test_document_pages.py
             serving_mode: static
           - group:
               name: docs-demos

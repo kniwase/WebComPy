@@ -38,3 +38,13 @@
 - [x] 6.5 Run `scripts/run-e2e-tests.sh` docs groups
 - [x] 6.6 Update `AGENTS.md` File → Spec Mapping (docs_app row) and Current Specs list (`docs-site-documents`); sync `.opencode/skills/webcompy-review/SKILL.md` references; run `python3 scripts/check-doc-spec-refs.py`
 - [x] 6.7 Run `openspec validate feat-docs-document-pages`
+
+## 7. Review Findings
+
+- [x] 7.1 Make the `/documents` index a manifest-owned entry (`DOCS_INDEX`); generate all route children from the manifest; remove the hardcoded index route from `router.py`
+- [x] 7.2 Preserve the current path's trailing slash in TOC anchor hrefs
+- [x] 7.3 Close the mobile sidebar via a `router.after_route_change` hook instead of the discarded `RouterLink.attrs["@click"]`
+- [x] 7.4 Run docs E2E in both prod and static modes in the CI matrix
+- [x] 7.5 Add unit/E2E tests: manifest index routing, trailing-slash TOC navigation, mobile sidebar close, code-block highlighting
+- [x] 7.6 Update `design.md`, `specs/docs-site-documents/spec.md`, and `specs/docs-e2e/spec.md` to reflect the review fixes
+- [x] 7.7 Re-run verification (ruff, pyright, pytest, generate, E2E, openspec validate)

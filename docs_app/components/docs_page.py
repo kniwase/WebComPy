@@ -4,7 +4,7 @@ from webcompy.template import MarkdownDocument
 
 def _toc_href(current_path: str, heading_id: str) -> str:
     path = current_path if current_path.startswith("/") else "/" + current_path
-    return f"{path.rstrip('/')}#{heading_id}"
+    return f"{path}#{heading_id}"
 
 
 def docs_page_template(doc: MarkdownDocument, current_path: str):

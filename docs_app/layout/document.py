@@ -1,4 +1,6 @@
-from webcompy.components import ComponentContext, define_component
+from contextlib import suppress
+
+from webcompy.components import ComponentContext, define_component, on_before_destroy
 from webcompy.elements import html, switch
 from webcompy.router import RouterContext, RouterLink, RouterView, use_router
 from webcompy.signal import use_computed, use_state
@@ -22,8 +24,15 @@ def DocsLayout(context: ComponentContext[RouterContext]):
     def _toggle_mobile(_ev):
         mobile_open.value = not mobile_open.value
 
-    def _close_mobile():
+    def _close_mobile(_path: str):
         mobile_open.value = False
+
+    router.after_route_change.append(_close_mobile)
+
+    @on_before_destroy
+    def _cleanup():
+        with suppress(ValueError):
+            router.after_route_change.remove(_close_mobile)
 
     return html.DIV(
         {"class": "docs-layout"},
@@ -39,7 +48,7 @@ def DocsLayout(context: ComponentContext[RouterContext]):
         ),
         html.ASIDE(
             {"class": use_computed(lambda: "docs-sidebar open" if mobile_open.value else "docs-sidebar")},
-            DocsSidebar({"on_link_click": _close_mobile}),
+            DocsSidebar(None),
         ),
         html.DIV(
             {"class": "docs-main"},

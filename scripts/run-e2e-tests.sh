@@ -49,7 +49,7 @@ declare -A E2E_GROUPS=(
   ["error-handling"]="e2e/core/test_error_handling.py"
 )
 
-# Docs groups are static-only in CI
+# Docs groups are static-only in CI, except docs-documents (prod + static)
 declare -A DOCS_GROUPS=(
   ["docs-home"]="e2e/docs/test_home.py e2e/docs/test_documents.py e2e/docs/test_helloworld.py"
   ["docs-documents"]="e2e/docs/test_document_pages.py"

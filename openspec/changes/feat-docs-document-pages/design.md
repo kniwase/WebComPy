@@ -53,7 +53,7 @@ class DocsSection(TypedDict):
 DOCS_SECTIONS: list[DocsSection] = [...]
 ```
 
-Exactly one of `source` / `component` is set per entry. Route children, sidebar, Navbar "Documents" dropdown, and Prev/Next ordering all derive from `DOCS_SECTIONS`.
+Exactly one of `source` / `component` is set per entry. A separate `DOCS_INDEX` entry owns the `/documents` index route. Route children (index first, then section pages) derive from the manifest, while the sidebar, Navbar "Documents" dropdown, and Prev/Next ordering derive from the section pages only — the index is generated into the route table but excluded from navigation and paging.
 
 - **Why**: every consumer iterating one list guarantees consistency (Next.js explicitly documented the opposite failure mode — a manifest drifting from files — but here the manifest *is* the route definition, so drift is impossible by construction).
 - Nav labels intentionally live in the manifest while page `<h1>`/`<title>` live in frontmatter: labels are often shorter than titles. A unit test asserts paths are unique, `source` files exist, and generated routes match the manifest — but does not force label==title.
@@ -61,14 +61,14 @@ Exactly one of `source` / `component` is set per entry. Route children, sidebar,
 
 ### 3. Page-side TOC, layout-side Prev/Next
 
-- **TOC** lives in the page template (`docs_page_template(doc)`) because only the page has `doc.toc`. It renders an `<aside>` with plain `<a href="#id">` links. The aside is hidden when `toc` is empty (e.g. component pages like signal-stream don't render it at all).
+- **TOC** lives in the page template (`docs_page_template(doc, current_path)`) because only the page has `doc.toc`. It renders an `<aside>` with plain `<a href="{path}#{id}">` absolute-path fragment links. The aside is hidden when `toc` is empty (e.g. component pages like signal-stream don't render it at all).
 - **Prev/Next** lives in `DocsLayout`: a `Computed` over the router's current path looks up neighbors in the flattened manifest order and renders footer links below the `RouterView`. Component pages get Prev/Next for free.
 - **Why**: this split respects data ownership (child→parent data flow is intentionally avoided; no signal-passing or callbacks) while giving both page kinds consistent chrome.
 - **Alternative rejected**: TOC in the layout populated via a shared signal written by the page — child→parent async write, fragile SSR timing, rejected for the same reasons as in `feat-markdown-document-support`.
 
 ### 4. TOC links are plain anchors, not RouterLinks
 
-The router percent-encodes `#` in `to` and has no fragment concept; `HistoryPort` never treats hash changes as navigations. The docs_app HTML carries a `<base href="/">` tag (injected by the server), so a bare `href="#id"` would resolve against the root path and navigate away. TOC anchors therefore use an **absolute-path fragment** (`href="{current_path}#{id}"`, where `current_path` is the page's `RouterContext.path`) — a native same-document fragment navigation that works in browser, SSR HTML, and the static site, and cannot conflict with scroll restoration (no `navigate()` occurs).
+The router percent-encodes `#` in `to` and has no fragment concept; `HistoryPort` never treats hash changes as navigations. The docs_app HTML carries a `<base href="/">` tag (injected by the server), so a bare `href="#id"` would resolve against the root path and navigate away. TOC anchors therefore use an **absolute-path fragment** (`href="{current_path}#{id}"`, where `current_path` is the page's `RouterContext.path`) — a native same-document fragment navigation that works in browser, SSR HTML, and the static site, and cannot conflict with scroll restoration (no `navigate()` occurs). `current_path` retains its trailing-slash form (the router normalizes non-root paths to `/.../`) so the generated href matches the browser URL.
 
 - **Consequence**: heading ids from `load_markdown_document()` (Unicode-aware slugs) are the anchor contract; the TOC and content ids are guaranteed identical by `collect_headings`.
 - Browser-native anchor jump does not scroll-margin for the fixed navbar; the shared page scoped style adds `scroll-margin-top` on `.prose :is(h1..h6)`.
@@ -107,7 +107,7 @@ Three pages: `/documents` index (section cards, replaces the WIP stub), `getting
 - [Component pages lack TOC, inconsistent right column] → Accepted and spec'd: TOC aside renders only for Markdown pages with headings; content is complete without it.
 - [Prev/Next on a remounted layout could flash stale links] → `Computed` over current path updates reactively; level reuse actually prevents remount on sibling navigation.
 - [Index route `""` → `/documents` title timing] → Verified safe: `/documents` is non-root, so `set_title` reaches SSG HTML.
-- [Sidebar toggle state shared across mobile navigation] → Layout instance reuse keeps it open after navigation; the toggle closes on link activation (same UX as the existing Navbar dropdowns).
+- [Sidebar toggle state shared across mobile navigation] → Layout instance reuse keeps it open after navigation; a `router.after_route_change` hook closes the mobile sidebar on navigation (RouterLink does not forward custom `@click` attrs).
 - [prose.css link added globally affects other pages] → All rules are `.prose`-scoped and `@layer prose`; only docs content opts into the wrapper class.
 
 ## Migration Plan
