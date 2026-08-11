@@ -68,6 +68,8 @@
 Serve the file with any HTTP server and open it in a browser.
 No Python installation required on your machine — PyScript runs entirely in the browser.
 
+> **Note**: PyScript resolves `packages` from PyPI and does not yet support installing directly from a GitHub repository. Until the latest release is published to PyPI, the version loaded in PyScript is the last published one. This is a known limitation to be addressed once PyPI releases are in place.
+
 ### Develop with the CLI
 
 **uv (recommended)**
@@ -105,6 +107,8 @@ python -m webcompy init              # create project structure
 python -m webcompy start --dev       # launch dev server with hot-reload
 python -m webcompy generate          # build static site
 ```
+
+> **Note**: Until the latest release is published to PyPI, the packages are resolved from the GitHub repository via the URLs above. Once the packages are on PyPI, these can be simplified back to `uv add webcompy-cli` / `poetry add webcompy-cli` / `pip install webcompy[cli]`.
 
 ### Testing
 

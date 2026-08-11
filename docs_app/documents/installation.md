@@ -5,6 +5,8 @@ description: How to install WebComPy and set up a project with uv or Poetry.
 
 # Installation
 
+> **Note**: Until the latest release is published to PyPI, the packages are resolved from the GitHub repository via the `git+` URLs below. Once the packages are on PyPI, the install commands can be simplified (e.g. `uv add webcompy-cli` / `poetry add webcompy-cli` / `pip install webcompy[cli]`). PyScript loads `webcompy` from PyPI and does not yet support installing from a GitHub repository, so the version loaded in PyScript is the last published one.
+
 ## Install with uv (Recommended)
 
 Create a new project and set up dependencies using `uv`.
