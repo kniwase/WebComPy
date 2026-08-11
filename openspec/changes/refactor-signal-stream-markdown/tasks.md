@@ -6,9 +6,9 @@
 
 ## 2. Page and Manifest
 
-- [ ] 2.1 Rewrite `docs_app/pages/document/signal_stream.py` as an async component that awaits `load_markdown_document("documents/signal_stream.md")`, sets the title from the frontmatter title, and returns `docs_page_template(doc, context.props.path)` with `DOCS_PAGE_SCOPED_STYLE` (mirroring `installation.py`)
-- [ ] 2.2 Update the Guides entry in `docs_app/docs_manifest.py`: label "Signals and Streams", replace `component` with `source: "documents/signal_stream.md"` (path unchanged)
-- [ ] 2.3 Delete `docs_app/templates/document/signal_stream.py` and confirm no remaining imports of `SignalStream`
+- [x] 2.1 Rewrite `docs_app/pages/document/signal_stream.py` as an async component that awaits `load_markdown_document("documents/signal_stream.md")`, sets the title from the frontmatter title, and returns `docs_page_template(doc, context.props.path)` with `DOCS_PAGE_SCOPED_STYLE` (mirroring `installation.py`)
+- [x] 2.2 Update the Guides entry in `docs_app/docs_manifest.py`: label "Signals and Streams", replace `component` with `source: "documents/signal_stream.md"` (path unchanged)
+- [x] 2.3 Delete `docs_app/templates/document/signal_stream.py` and confirm no remaining imports of `SignalStream`
 
 ## 3. E2E Updates
 
