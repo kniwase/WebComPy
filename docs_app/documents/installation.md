@@ -12,7 +12,9 @@ Create a new project and set up dependencies using `uv`.
 ```bash
 mkdir webcompy-project && cd webcompy-project
 uv init
-uv add webcompy
+uv add "webcompy @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy"
+uv add "webcompy-server @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-server"
+uv add "webcompy-cli @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-cli"
 uv run python -m webcompy init
 ```
 
@@ -52,7 +54,9 @@ If you prefer Poetry, use the following setup:
 ```bash
 mkdir webcompy-project && cd webcompy-project
 poetry new webcompy-project && cd webcompy-project
-poetry add webcompy
+poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy"
+poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-server"
+poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-cli"
 poetry run python -m webcompy init
 ```
 

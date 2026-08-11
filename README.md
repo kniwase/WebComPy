@@ -74,7 +74,9 @@ No Python installation required on your machine — PyScript runs entirely in th
 
 ```bash
 uv init my-project && cd my-project
-uv add webcompy-cli
+uv add "webcompy @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy"
+uv add "webcompy-server @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-server"
+uv add "webcompy-cli @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-cli"
 uv run python -m webcompy init       # create project structure
 uv run python -m webcompy start --dev # launch dev server with hot-reload
 uv run python -m webcompy generate   # build static site
@@ -84,7 +86,9 @@ uv run python -m webcompy generate   # build static site
 
 ```bash
 poetry new my-project && cd my-project
-poetry add webcompy-cli
+poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy"
+poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-server"
+poetry add "git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-cli"
 poetry run python -m webcompy init   # create project structure
 poetry run python -m webcompy start --dev  # launch dev server with hot-reload
 poetry run python -m webcompy generate     # build static site
@@ -94,7 +98,9 @@ poetry run python -m webcompy generate     # build static site
 
 ```bash
 mkdir my-project && cd my-project
-pip install webcompy-cli
+pip install "webcompy @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy" \
+            "webcompy-server @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-server" \
+            "webcompy-cli @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-cli"
 python -m webcompy init              # create project structure
 python -m webcompy start --dev       # launch dev server with hot-reload
 python -m webcompy generate          # build static site
@@ -103,7 +109,7 @@ python -m webcompy generate          # build static site
 ### Testing
 
 ```bash
-pip install webcompy-testing
+pip install "webcompy-testing @ git+https://github.com/kniwase/WebComPy.git#subdirectory=packages/webcompy-testing"
 ```
 
 ## Documents and Demos

@@ -26,6 +26,7 @@ context: |
   ### General
   - Browser detection is binary (Emscripten vs other) — no partial API availability checks
   - Module-level fallbacks (_app_di_scope, _app_instance) hold only one app reference in browser environment, limiting true multi-app isolation
+  - The latest releases are not yet published to PyPI — the docs install guides resolve `webcompy`, `webcompy-server`, `webcompy-cli`, and `webcompy-testing` from GitHub via `#subdirectory=packages/<name>` git URLs. Rewrite the docs to use `webcompy[cli]` extras once the packages are published.
 
 # Per-artifact rules (optional)
 rules:
