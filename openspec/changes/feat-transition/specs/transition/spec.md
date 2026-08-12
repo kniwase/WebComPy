@@ -59,13 +59,20 @@ While an enter or leave sequence runs, the Transition SHALL report its occupied 
 
 ### Requirement: Child replacement shall be sequential, and interruption shall clean up
 
-When the generator's result changes from one element to a different element, the old child SHALL complete or be terminated through its leave handling before the new child's enter sequence starts; the two children SHALL NOT occupy the tree simultaneously. When a new child appears while a leave sequence is in progress, the leaving node SHALL be finalized immediately (classes removed, node removed) before the enter sequence starts.
+When the generator's result changes from one element to a different element, the old child SHALL complete or be terminated through its leave handling before the new child's enter sequence starts; the two children SHALL NOT occupy the tree simultaneously. When a new child appears while a leave sequence is in progress, the leaving node SHALL be finalized immediately (classes removed, node removed) before the enter sequence starts. When the generator re-yields an element with the same tag as the leaving child while a leave sequence is in progress, the leave SHALL NOT be interrupted: the leaving node SHALL remain mounted until the leave duration elapses, and the re-yielded element SHALL then mount and run its enter sequence.
 
 #### Scenario: Replacement leaves then enters
 
 - **WHEN** the generator yields element A and later yields element B without an intervening `None`
 - **THEN** element A's leave sequence SHALL run to completion (or interruption per this requirement) before element B's enter sequence starts
 - **AND** at no point SHALL both A's and B's nodes occupy the Transition's slot simultaneously
+
+#### Scenario: Same-tag update during leave does not interrupt
+
+- **GIVEN** a Transition whose generator yields a `div` element when either of two signals is true, and the child is leaving because both became false
+- **WHEN** the second signal becomes true again while the leave sequence is in progress
+- **THEN** the leaving node SHALL remain mounted until the leave duration elapses
+- **AND** after the leave completes, the element SHALL mount again and run its enter sequence
 
 ### Requirement: Transition shall render the steady state on initial render without an enter sequence
 

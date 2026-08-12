@@ -156,6 +156,9 @@ class TransitionElement(DynamicElement):
             return
 
         if self._sequence == "leave":
+            if current is not None and _is_patchable(current, desired):
+                self._replace_pending_child(desired)
+                return
             self._finalize_leave_now()
             current = None
         elif self._sequence == "enter":

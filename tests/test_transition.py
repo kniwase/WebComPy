@@ -399,6 +399,39 @@ class TestReplacementAndInterruption:
             result.transition_port.advance_time(100)
             assert result.find_by_attribute("data-testid", "box") is None
 
+    def _two_signal_root(self, show: Signal[bool], extra: Signal[bool]):
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                Transition(
+                    {"name": "fade", "duration": 100},
+                    lambda: html.DIV({"data-testid": "box"}, "box") if show.value or extra.value else None,
+                ),
+            )
+
+        return Root
+
+    def test_same_tag_update_during_leave_completes_leave_then_enters(self) -> None:
+        show, extra = Signal(True), Signal(False)
+        with TestRenderer.render(self._two_signal_root(show, extra)) as result:
+            show.value = False
+            result.transition_port.flush_frame()
+            assert "fade-leave-active" in _box_classes(result, "box")
+
+            extra.value = True
+            assert result.find_by_attribute("data-testid", "box") is not None
+            assert "fade-leave-active" in _box_classes(result, "box")
+
+            result.transition_port.advance_time(100)
+            assert result.find_by_attribute("data-testid", "box") is not None
+            assert "fade-enter-from" in _box_classes(result, "box")
+
+            result.transition_port.flush_frame()
+            assert "fade-enter-active" in _box_classes(result, "box")
+            result.transition_port.advance_time(100)
+            assert _box_classes(result, "box") == []
+
     def _switch_root(self, show: Signal[bool], wrap: Signal[bool]):
         from webcompy.elements import switch
 
