@@ -105,6 +105,13 @@ When multiple Teleport elements resolve to the same target node, each SHALL appe
 - **THEN** each teleported node SHALL remain within its own teleport's block under the shared target
 - **AND** B's teleported content SHALL continue to follow A's teleported content in the target node, with no interleaving
 
+#### Scenario: Shared-target order is maintained while a teleported subtree is pending
+
+- **WHEN** Teleport A and Teleport B target the same node and mount in that order, A's teleported subtree contains an async-setup child whose rendering has not completed, and B's teleported subtree changes (e.g. a repeated child gains or loses items) during that window
+- **THEN** B's teleported content SHALL remain positioned after A's block under the shared target, with no interleaving
+- **AND** when A's pending child completes, its nodes SHALL be placed within A's own block, preceding B's content
+- **AND** subsequent changes to B's subtree SHALL keep both teleports' blocks contiguous
+
 ### Requirement: Removing a Teleport shall remove both teleported nodes and the anchor
 
 When a Teleport element is removed from the element tree (conditional removal, parent removal, reconciliation replacement), the framework SHALL remove the teleported child nodes from the target container and the anchor placeholder from the logical parent, and SHALL destroy the element's callback consumers through the standard removal path. No orphaned nodes SHALL remain under the target or at the logical position.
