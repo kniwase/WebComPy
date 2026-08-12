@@ -18,7 +18,7 @@
 
 ## 4. Verification
 
-- [ ] 4.1 Run `uv run ruff check .`, `uv run ruff format --check .`, and `uv run pyright`
-- [ ] 4.2 Run `uv run python -m pytest tests/ --tb=short`
-- [ ] 4.3 Run `uv run python -m webcompy generate` on docs_app and inspect a generated page's `<head>` ordering (scoped styles after index.css link)
-- [ ] 4.4 Run docs E2E group (`scripts/run-e2e-tests.sh <docs-group>`) and confirm scoped styles apply as authored (e.g., `.docs-pager a` computed color matches `var(--color-fg)`); check prod and static modes
+- [x] 4.1 Run `uv run ruff check .`, `uv run ruff format --check .`, and `uv run pyright`
+- [x] 4.2 Run `uv run python -m pytest tests/ --tb=short`
+- [x] 4.3 Run `uv run python -m webcompy generate` on docs_app and inspect a generated page's `<head>` ordering (scoped styles after index.css link)
+- [x] 4.4 Run docs E2E group (`scripts/run-e2e-tests.sh <docs-group>`) and confirm scoped styles apply as authored (e.g., `.docs-pager a` computed color matches `var(--color-fg)`); check prod and static modes
