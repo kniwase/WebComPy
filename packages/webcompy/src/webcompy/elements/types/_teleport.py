@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import TypedDict, cast
 
 from webcompy import logging
 from webcompy.di import inject
@@ -146,7 +146,7 @@ class TeleportElement(DynamicElement):
             self._inline = True
         else:
             self._target_node = target
-            registry = inject(_TELEPORT_REGISTRY_KEY, default=None)
+            registry = cast("_TeleportTargetRegistry", inject(_TELEPORT_REGISTRY_KEY, default=None))
             if registry is not None:
                 registry.register(target, self)
 
@@ -236,7 +236,7 @@ class TeleportElement(DynamicElement):
         target = self._target_node
         if target is None:
             return
-        registry = inject(_TELEPORT_REGISTRY_KEY, default=None)
+        registry = cast("_TeleportTargetRegistry", inject(_TELEPORT_REGISTRY_KEY, default=None))
         if registry is None:
             return
         teleports = registry.shared_target_teleports(target)
@@ -266,7 +266,7 @@ class TeleportElement(DynamicElement):
                 child._remove_element(True, True)
         target = self._target_node
         if target is not None:
-            registry = inject(_TELEPORT_REGISTRY_KEY, default=None)
+            registry = cast("_TeleportTargetRegistry", inject(_TELEPORT_REGISTRY_KEY, default=None))
             if registry is not None:
                 registry.unregister(target, self)
             self._re_index_shared_target()
