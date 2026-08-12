@@ -49,8 +49,10 @@ def TransitionDemoPage(context: ComponentContext[None]):
                 "default": lambda: html.P(
                     {},
                     "The generator yields at most one element (or None); replacing one visible "
-                    "child with another runs leave first, then enter. Initial renders, SSR, and "
-                    "hydration show the steady state without an appear animation.",
+                    "child with another runs leave first, then enter. A content update re-yielding "
+                    "the same element type patches the node in place without restarting a running "
+                    "sequence. Initial renders, SSR, and hydration show the steady state without an "
+                    "appear animation.",
                 )
             },
         ),
