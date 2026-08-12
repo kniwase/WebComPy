@@ -88,12 +88,31 @@ When the `to` selector matches no node at mount time, the Teleport SHALL log a w
 
 ### Requirement: Multiple Teleports targeting the same node shall append in mount order
 
-When multiple Teleport elements resolve to the same target node, each SHALL append its children to the target when it mounts, and no reordering pass SHALL run afterwards. The observable order of teleported content under a shared target SHALL be the mount order of the Teleport elements.
+When multiple Teleport elements resolve to the same target node, each SHALL append its children to the target when it mounts, and no reordering pass SHALL run afterwards. The observable order of teleported content under a shared target SHALL be the mount order of the Teleport elements. Shared-target bookkeeping is scoped per app: the registry tracks Teleports of a single `RenderContext`, so mount-order guarantees apply between Teleports of the same app instance, and the spec's shared-target requirements assume targets are stable nodes outside the app's reactive tree. Shared-target guarantees SHALL apply only to Teleports that are not nested within one another; a Teleport nested inside another Teleport SHALL NOT target the same node as its ancestor, because the shared-target block model cannot represent such nesting.
 
 #### Scenario: Two teleports to body
 
 - **WHEN** Teleport A mounts with content `A` targeting `body`, and afterwards Teleport B mounts with content `B` targeting `body`
 - **THEN** under `<body>`, content `A` SHALL precede content `B` among the teleported nodes
+
+#### Scenario: Same-target nesting is not supported
+
+- **WHEN** a Teleport nested inside another Teleport targets the same node as its ancestor
+- **THEN** the ordering guarantees of this requirement SHALL NOT apply
+- **AND** the nesting SHALL be restructured into sibling Teleports
+
+#### Scenario: Shared-target order is maintained while teleported subtrees change
+
+- **WHEN** Teleport A and Teleport B target the same node and mount in that order, and A's teleported subtree later grows or shrinks (e.g. a repeated child gains or loses items) before B's teleported subtree changes again
+- **THEN** each teleported node SHALL remain within its own teleport's block under the shared target
+- **AND** B's teleported content SHALL continue to follow A's teleported content in the target node, with no interleaving
+
+#### Scenario: Shared-target order is maintained while a teleported subtree is pending
+
+- **WHEN** Teleport A and Teleport B target the same node and mount in that order, A's teleported subtree contains an async-setup child whose rendering has not completed, and B's teleported subtree changes (e.g. a repeated child gains or loses items) during that window
+- **THEN** B's teleported content SHALL remain positioned after A's block under the shared target, with no interleaving
+- **AND** when A's pending child completes, its nodes SHALL be placed within A's own block, preceding B's content
+- **AND** subsequent changes to B's subtree SHALL keep both teleports' blocks contiguous
 
 ### Requirement: Removing a Teleport shall remove both teleported nodes and the anchor
 
