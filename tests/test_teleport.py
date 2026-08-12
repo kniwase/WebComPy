@@ -316,6 +316,76 @@ class TestTeleportSharedTargetReindex:
         b_items.pop(0)
         assert _tags(dom_port.body) == ["aresolved", "bb2"]
 
+    @pytest.mark.asyncio
+    async def test_shared_target_count_treats_nested_teleport_with_other_target_as_anchor(
+        self, teleport_env, fake_browser_full
+    ):
+        import asyncio
+
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.di._scope import _active_di_scope
+
+        dom_port, _, _ = fake_browser_full
+        scope = _active_di_scope.get()
+        scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+        scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+
+        target_a = FakeDOMNode("div")
+        target_a.setAttribute("id", "a")
+        target_b = FakeDOMNode("div")
+        target_b.setAttribute("id", "b")
+        dom_port.body.appendChild(target_a)
+        dom_port.body.appendChild(target_b)
+
+        inner_items = ReactiveList(["i1", "i2"])
+        c_items = ReactiveList(["c1"])
+
+        inner = Teleport({"to": "#b"}, repeat(inner_items, lambda item: html.DIV({"data-t": "inner"}, item)))
+        teleport_a = Teleport({"to": "#a"}, inner)
+        teleport_c = Teleport({"to": "#a"}, repeat(c_items, lambda item: html.DIV({"data-t": "c"}, item)))
+
+        parent = Element("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+
+        class _Root:
+            def _get_belonging_component(self):
+                return ""
+
+            def _get_belonging_components(self):
+                return ()
+
+        parent._parent = _Root()
+        for idx, teleport in enumerate((teleport_a, teleport_c)):
+            teleport._parent = parent
+            teleport._node_idx = idx
+
+        def _a_nodes():
+            return [
+                (target_a.childNodes[i].nodeName, target_a.childNodes[i].textContent or "")
+                for i in range(target_a.childNodes.length)
+            ]
+
+        def _b_texts():
+            return [target_b.childNodes[i].textContent or "" for i in range(target_b.childNodes.length)]
+
+        await teleport_a._render()
+        await teleport_c._render()
+        await asyncio.sleep(0)
+
+        assert _a_nodes() == [("#text", ""), ("DIV", "c1")]
+        assert _b_texts() == ["i1", "i2"]
+
+        assert inner._node_idx == 0
+        assert teleport_c._children[0]._node_idx == 1
+
+        inner_items.append("i3")
+        c_items.append("c2")
+        assert _a_nodes() == [("#text", ""), ("DIV", "c1"), ("DIV", "c2")]
+        assert _b_texts() == ["i1", "i2", "i3"]
+
 
 class TestTeleportRemoval:
     def test_conditional_removal_cleans_target_and_anchor(self, teleport_env):

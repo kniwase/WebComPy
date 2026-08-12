@@ -39,10 +39,19 @@ class _TeleportTargetRegistry:
 
 
 def _mounted_direct_count(target: DOMNode, element: ElementAbstract) -> int:
+    if isinstance(element, TeleportElement):
+        if element._inline:
+            return sum(_mounted_direct_count(target, child) for child in element._children)
+        if element._target_node is not target:
+            node = element._node_cache
+            if node is None or node.parentNode is not target:
+                return 0
+            return 1
+        return sum(_mounted_direct_count(target, child) for child in element._children)
     if isinstance(element, DynamicElement):
         return sum(_mounted_direct_count(target, child) for child in element._children)
     node = element._node_cache
-    if node is None or node.parentNode is None:
+    if node is None or node.parentNode is not target:
         return 0
     return 1
 
@@ -192,6 +201,9 @@ class TeleportElement(DynamicElement):
                 existing.remove()
             self._node_cache = self._create_node()
         if self._mounted:
+            # The adopted anchor schedules its own render; the post-hydration
+            # pass re-renders the tree again, but that second run is a no-op
+            # thanks to the _children_rendered/_mounted guards below.
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
             task = scheduler.schedule(self._render())
             self._pending_render_tasks.append((self, task))
