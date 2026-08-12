@@ -170,6 +170,40 @@ class TestTeleportMultipleTargets:
             assert texts == ["content-A", "content-B"]
 
 
+class TestTeleportSharedTargetReindex:
+    def test_sibling_teleports_stay_ordered_when_shared_target_subtrees_change(self, teleport_env):
+        a_items = ReactiveList(["a1"])
+        b_items = ReactiveList(["b1"])
+
+        @define_component
+        def Page(context):
+            return html.DIV(
+                {},
+                Teleport({"to": "body"}, repeat(a_items, lambda x: html.DIV({"data-t": "a"}, x))),
+                Teleport({"to": "body"}, repeat(b_items, lambda x: html.DIV({"data-t": "b"}, x))),
+            )
+
+        def _teleported_tags(body):
+            return [
+                (body.childNodes[i].getAttribute("data-t") or "") + (body.childNodes[i].textContent or "")
+                for i in range(body.childNodes.length)
+                if body.childNodes[i].getAttribute("data-t") in ("a", "b")
+            ]
+
+        with TestRenderer.render(Page) as result:
+            body = result.body_node
+            assert body is not None
+            assert _teleported_tags(body) == ["aa1", "bb1"]
+            a_items.append("a2")
+            assert _teleported_tags(body) == ["aa1", "aa2", "bb1"]
+            b_items.append("b2")
+            assert _teleported_tags(body) == ["aa1", "aa2", "bb1", "bb2"]
+            a_items.pop(0)
+            assert _teleported_tags(body) == ["aa2", "bb1", "bb2"]
+            b_items.pop(0)
+            assert _teleported_tags(body) == ["aa2", "bb2"]
+
+
 class TestTeleportRemoval:
     def test_conditional_removal_cleans_target_and_anchor(self, teleport_env):
         open_state = Signal(True)
