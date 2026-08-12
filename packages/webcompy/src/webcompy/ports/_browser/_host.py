@@ -21,6 +21,17 @@ class BrowserHostPort(HostPort):
     def schedule_macro_task(self, callback: Callable[..., Any]) -> None:
         self._browser.window.setTimeout(callback, 0)
 
+    def add_window_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        proxy = self._browser.pyscript.ffi.create_proxy(handler)
+        self._browser.window.addEventListener(event_type, proxy)
+
+        def _remove() -> None:
+            self._browser.window.removeEventListener(event_type, proxy)
+            if hasattr(proxy, "destroy"):
+                proxy.destroy()
+
+        return _remove
+
     @overload
     def create_js_global_getter(self, name: str, *, wrapper: Callable[[Any | None], T_co]) -> Callable[[], T_co]: ...
     @overload

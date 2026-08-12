@@ -93,6 +93,9 @@ class FakeBrowserHostPort(HostPort):
     def schedule_macro_task(self, callback: Any) -> None:
         callback()
 
+    def add_window_event_listener(self, event_type: str, handler: Any) -> Any:
+        return lambda: None
+
     def create_js_global_getter(
         self,
         name: str,

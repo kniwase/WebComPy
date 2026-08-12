@@ -97,12 +97,18 @@ The signal effect system SHALL schedule deferred callbacks through `inject(HOST_
 - **AND** fall back to synchronous execution if injection fails
 
 ### Requirement: HostPort provides window-level operations
-A `HostPort` SHALL provide the `schedule_macro_task` and `create_js_global_getter` methods for window-level operations, separate from `DOMPort`'s document-level operations.
+A `HostPort` SHALL provide the `schedule_macro_task`, `create_js_global_getter`, and `add_window_event_listener` methods for window-level operations, separate from `DOMPort`'s document-level operations.
 
 #### Scenario: schedule_macro_task deferred via HostPort
 - **WHEN** framework code calls `host_port.schedule_macro_task(callback)`
 - **THEN** in the browser, the callback SHALL be deferred via `window.setTimeout(callback, 0)`
 - **AND** in the server, the call SHALL be a no-op
+
+#### Scenario: add_window_event_listener registers window listeners
+- **WHEN** framework code calls `host_port.add_window_event_listener("resize", handler)`
+- **THEN** in the browser, the handler SHALL be invoked when the window fires a `resize` event
+- **AND** the returned cleanup function SHALL remove the listener when called
+- **AND** in the server, the call SHALL return a no-op cleanup function
 
 #### Scenario: create_js_global_getter resolves window globals
 - **WHEN** `create_js_global_getter("hljs")` is called in the browser
