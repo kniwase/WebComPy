@@ -71,7 +71,7 @@ def _wait_for_menu_aligned_with_toggle(page, menu_id: str):
         "  const menu_rect = menu.getBoundingClientRect();"
         "  const toggle_rect = toggle.getBoundingClientRect();"
         "  return Math.abs(menu_rect.top - toggle_rect.bottom) < 2"
-        "      && Math.abs(menu_rect.left - toggle_rect.left) < 2;"
+        "      && Math.abs(menu_rect.right - toggle_rect.right) < 2;"
         "}",
         arg=[menu_id],
     )
@@ -104,3 +104,23 @@ def test_home_mobile_dropdown_spans_navbar_width(docs_app_page, assert_no_consol
     assert box is not None
     assert box["x"] == 0
     assert box["width"] == 600
+
+
+@pytest.mark.e2e
+def test_home_dropdown_stays_within_viewport_at_mid_width(docs_app_page, assert_no_console_errors):
+    docs_app_page.set_viewport_size({"width": 1024, "height": 800})
+    dropdown_toggle = docs_app_page.locator("nav li a[aria-haspopup='true']").filter(has_text="Demos")
+    dropdown_toggle.click()
+    dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="HelloWorld")
+    expect(dropdown).to_be_visible()
+    menu_id = _demos_menu_id(docs_app_page)
+    docs_app_page.wait_for_function(
+        "menuId => {"
+        "  const menu = document.getElementById(menuId);"
+        "  if (!menu) return false;"
+        "  const rect = menu.getBoundingClientRect();"
+        "  return rect.width > 0 && rect.left >= 0 && rect.right <= window.innerWidth;"
+        "}",
+        arg=menu_id,
+        timeout=5000,
+    )

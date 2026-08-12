@@ -52,7 +52,7 @@ def Navbar(context: ComponentContext[list[Page]]):
             toggle_el = dom.get_element_by_id(f"navbar-dropdown-{idx}-toggle")
             if toggle_el is not None:
                 rect = toggle_el.getBoundingClientRect()
-                _get_position(idx).value = (float(rect.bottom), float(rect.left))
+                _get_position(idx).value = (float(rect.bottom), float(rect.right))
 
     def _measure_open_menus():
         if not dom:
@@ -63,7 +63,7 @@ def Navbar(context: ComponentContext[list[Page]]):
             toggle_el = dom.get_element_by_id(f"navbar-dropdown-{idx}-toggle")
             if toggle_el is not None:
                 rect = toggle_el.getBoundingClientRect()
-                _get_position(idx).value = (float(rect.bottom), float(rect.left))
+                _get_position(idx).value = (float(rect.bottom), float(rect.right))
 
     def _on_scroll(_ev):
         _measure_open_menus()
@@ -159,7 +159,7 @@ def Navbar(context: ComponentContext[list[Page]]):
                                 lambda idx=idx: (
                                     f"display: {'block' if _is_open(idx) else 'none'}; "
                                     f"--nav-dropdown-top: {_get_position(idx).value[0]}px; "
-                                    f"--nav-dropdown-left: {_get_position(idx).value[1]}px;"
+                                    f"--nav-dropdown-right: {_get_position(idx).value[1]}px;"
                                 )
                             ),
                         },
@@ -298,7 +298,8 @@ Navbar.scoped_style = {
     " .navbar-dropdown": {
         "position": "fixed",
         "top": "var(--nav-dropdown-top)",
-        "left": "var(--nav-dropdown-left)",
+        "left": "auto",
+        "right": "calc(100vw - var(--nav-dropdown-right))",
         "background-color": "var(--color-bg)",
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-md)",
