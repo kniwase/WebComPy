@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging as std_logging
 from html.parser import HTMLParser
 
 import pytest
@@ -90,7 +89,10 @@ class TestTeleportSiblingStability:
 
 
 class TestTeleportMissingTarget:
-    def test_missing_target_falls_back_inline_with_warning(self, teleport_env, caplog):
+    def test_missing_target_falls_back_inline_with_warning(self, teleport_env, monkeypatch):
+        warnings: list[tuple] = []
+        monkeypatch.setattr("webcompy.logging.warning", lambda *values: warnings.append(values))
+
         @define_component
         def Page(context):
             return html.DIV(
@@ -100,10 +102,51 @@ class TestTeleportMissingTarget:
                 html.P({}, "after"),
             )
 
-        with caplog.at_level(std_logging.WARNING, logger="uvicorn"), TestRenderer.render(Page) as result:
+        with TestRenderer.render(Page) as result:
             names = [(c.nodeName, c.textContent or "") for c in result._root_node.childNodes]
             assert names == [("P", "before"), ("SPAN", "inline-content"), ("P", "after")]
-        assert any("Teleport target" in r.message for r in caplog.records)
+        assert any("Teleport target" in str(values) for values in warnings)
+
+
+class TestTeleportInlineFallbackStability:
+    def test_inline_repeat_growth_keeps_trailing_siblings_stable(self, teleport_env):
+        items = ReactiveList(["x", "y"])
+        trailing = ReactiveList(["a"])
+
+        @define_component
+        def Page(context):
+            return html.DIV(
+                {},
+                html.P({"data-testid": "before"}, "before"),
+                Teleport(
+                    {"to": "#nonexistent-root"},
+                    repeat(items, lambda item: html.SPAN({"data-t": "inline"}, item)),
+                ),
+                repeat(trailing, lambda item: html.SPAN({"data-t": "trailing"}, item)),
+                html.P({"data-testid": "after"}, "after"),
+            )
+
+        def _node_names(result):
+            return [(c.nodeName, c.textContent or "") for c in result._root_node.childNodes]
+
+        with TestRenderer.render(Page) as result:
+            assert _node_names(result) == [
+                ("P", "before"),
+                ("SPAN", "x"),
+                ("SPAN", "y"),
+                ("SPAN", "a"),
+                ("P", "after"),
+            ]
+            items.pop(0)
+            assert _node_names(result) == [("P", "before"), ("SPAN", "y"), ("SPAN", "a"), ("P", "after")]
+            trailing.append("b")
+            assert _node_names(result) == [
+                ("P", "before"),
+                ("SPAN", "y"),
+                ("SPAN", "a"),
+                ("SPAN", "b"),
+                ("P", "after"),
+            ]
 
 
 class TestTeleportMultipleTargets:
@@ -403,6 +446,88 @@ class TestTeleportSSRHydrationRoundTrip:
         assert len(after_markers) == 1
         assert children[2] is after_markers[0]
         assert getattr(children[2], "__webcompy_prerendered_node__", False) is True
+        body_children = [dom_port._body.childNodes[i] for i in range(dom_port._body.childNodes.length)]
+        modals = [child for child in body_children if child.getAttribute("id") == "modal"]
+        assert len(modals) == 1
+        assert modals[0].textContent == "MODAL-SECRET"
+
+    @pytest.mark.asyncio
+    async def test_hydration_with_bare_text_siblings_recreates_anchor_in_order(self, monkeypatch, fake_browser_full):
+        from webcompy.di import inject
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        dom_port, _, _ = fake_browser_full
+
+        @define_component
+        def Page(context):
+            return html.DIV(
+                {},
+                "before-marker",
+                Teleport({"to": "body"}, html.DIV({"id": "modal"}, "MODAL-SECRET")),
+                "after-marker",
+            )
+
+        app = create_test_app(root_component=Page)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "\u200b" in html_str
+        parser = _FakeDOMParser()
+        parser.feed(html_str)
+        parser.close()
+        assert parser.root is not None
+        app_div = _find_by_id(parser.root, "webcompy-app")
+        assert app_div is not None
+        page_div = app_div.childNodes[0]
+        assert page_div.childNodes.length == 1
+        merged = page_div.childNodes[0]
+        assert "before-marker" in merged.textContent
+        assert "after-marker" in merged.textContent
+        _mark_prerendered(page_div)
+        dom_port._body.appendChild(page_div)
+
+        monkeypatch.setattr("webcompy.elements.types._teleport.ENVIRONMENT", "pyscript")
+
+        text_before = TextElement("before-marker")
+        teleport = Teleport({"to": "body"}, Element("div", {"id": "modal"}, {}, None, [TextElement("MODAL-SECRET")]))
+        text_after = TextElement("after-marker")
+        div = Element("div", {}, {}, None, None)
+        div._children = [text_before, teleport, text_after]
+        div._node_cache = page_div
+        div._mounted = True
+        for idx, child in enumerate(div._children):
+            child._parent = div
+            child._node_idx = idx
+
+        class _PageRoot:
+            def _get_belonging_component(self):
+                return ""
+
+            def _get_belonging_components(self):
+                return ()
+
+        div._parent = _PageRoot()
+
+        for child in div._children:
+            child._hydrate_node()
+        for child in div._children:
+            await child._render()
+        await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+
+        children = [page_div.childNodes[i] for i in range(page_div.childNodes.length)]
+        assert [child.nodeName for child in children] == ["#text", "#text", "#text"]
+        assert children[0].textContent == "before-marker"
+        assert children[1] is teleport._node_cache
+        assert (children[1].textContent or "") == ""
+        assert children[2].textContent == "after-marker"
+        before_markers = [child for child in children if (child.textContent or "") == "before-marker"]
+        after_markers = [child for child in children if (child.textContent or "") == "after-marker"]
+        assert len(before_markers) == 1
+        assert len(after_markers) == 1
         body_children = [dom_port._body.childNodes[i] for i in range(dom_port._body.childNodes.length)]
         modals = [child for child in body_children if child.getAttribute("id") == "modal"]
         assert len(modals) == 1
