@@ -38,6 +38,15 @@ class _TeleportTargetRegistry:
         return list(self._registrations.get(id(target), ()))
 
 
+def _mounted_direct_count(target: DOMNode, element: ElementAbstract) -> int:
+    if isinstance(element, DynamicElement):
+        return sum(_mounted_direct_count(target, child) for child in element._children)
+    node = element._node_cache
+    if node is None or node.parentNode is None:
+        return 0
+    return 1
+
+
 class TeleportProps(TypedDict):
     to: str
 
@@ -167,6 +176,7 @@ class TeleportElement(DynamicElement):
                     if child._mounted is None:
                         await child._render()
                     idx += child._node_count
+            self._re_index_shared_target()
         self._parent._re_index_children(False)
 
     def _hydrate_node(self) -> None:
@@ -217,12 +227,12 @@ class TeleportElement(DynamicElement):
         teleports = registry.shared_target_teleports(target)
         if not teleports:
             return
-        base = target.childNodes.length - sum(teleport._children_length for teleport in teleports)
+        base = target.childNodes.length - sum(_mounted_direct_count(target, teleport) for teleport in teleports)
         for teleport in teleports:
             idx = base
             for child in teleport._children:
                 child._node_idx = idx
-                idx += child._node_count
+                idx += _mounted_direct_count(target, child)
             for child in teleport._children:
                 if isinstance(child, DynamicElement):
                     child._re_index_children(True)
