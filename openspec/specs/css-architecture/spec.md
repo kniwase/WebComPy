@@ -5,12 +5,12 @@ TBD - created by archiving change feat-ui-toolkit-foundation. Update Purpose aft
 ## Requirements
 ### Requirement: The framework SHALL declare a fixed CSS `@layer` order
 
-The framework SHALL declare, in a single CSS file (`webcompy/ui/_styles/index.css` or equivalent), the cascade order `@layer reset, tokens, components, webcompy-scope;`. This declaration SHALL appear exactly once in the page output, before any rule that uses one of these layers. The layer list is intentionally minimal: the only unlayered style source is dynamic app-level CSS injected via `app.append_style(...)` (rendered as `<style data-webcompy-dynamic="...">`); see `openspec/specs/app-styles/spec.md`. All scoped component CSS — both static `Component.scoped_style` and `reactive_scoped_style` — IS layered (in `@layer webcompy-scope`, see the Requirement below).
+The framework SHALL declare the cascade order `@layer reset, tokens, components, prose, webcompy-scope;` in its shipped stylesheets. The declaration appears in `webcompy/ui/_styles/index.css` and `webcompy/ui/_styles/prose.css`; both declare the same fixed order, so which file is parsed first does not matter (later declarations of the same layer names merge without reordering). The declaration SHALL appear before any rule that uses one of these layers. The layer list is intentionally minimal: the only unlayered style source is dynamic app-level CSS injected via `app.append_style(...)` (rendered as `<style data-webcompy-dynamic="...">`); see `openspec/specs/app-styles/spec.md`. All scoped component CSS — both static `Component.scoped_style` and `reactive_scoped_style` — IS layered (in `@layer webcompy-scope`, see the Requirement below).
 
 #### Scenario: Layer order is fixed
 
 - **WHEN** a page is rendered with the framework's default CSS
-- **THEN** the rendered CSS SHALL contain `@layer reset, tokens, components, webcompy-scope;` as a top-level declaration
+- **THEN** the rendered CSS SHALL contain `@layer reset, tokens, components, prose, webcompy-scope;` as a top-level declaration
 - **AND** no application CSS SHALL be able to reorder these layers (later layer declarations with the same names SHALL merge, not replace)
 
 #### Scenario: Dynamic styles are not in the layer list
@@ -52,7 +52,7 @@ The framework SHALL provide a `components.css` file whose rules are placed in th
 
 - **WHEN** `components.css` defines a rule for `pre` (e.g., `pre { overflow-x: auto; }`)
 - **AND** a component's `scoped_style` defines a rule for its internal `pre` element
-- **THEN** the `components.css` rule SHALL win (because `components` is declared before `webcompy-scope` in the layer order)
+- **THEN** the `components.css` rule SHALL win (because `components` is declared before `webcompy-scope` in the layer order, with `prose` between them)
 
 ### Requirement: The framework SHALL provide a code-block CSS file with `@scope` boundaries
 

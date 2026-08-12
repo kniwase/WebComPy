@@ -42,6 +42,10 @@ def test_markdown_content_rendered_with_ids_and_code(docs_page_on, assert_no_con
     expect(page.locator("article.prose pre.code-block code.language-bash")).to_have_count(4)
     expect(page.locator("article.prose pre.code-block code.language-python")).to_have_count(1)
     expect(page.locator("article.prose pre.code-block code.language-toml")).to_have_count(1)
+    first_block = page.locator("article.prose pre.code-block").first
+    margins = first_block.evaluate("el => [getComputedStyle(el).marginTop, getComputedStyle(el).marginBottom]")
+    assert margins[0] == margins[1], f"code block margins must be symmetric, got {margins}"
+    assert margins[0] != "0px", f"code block margins must be non-zero, got {margins}"
 
 
 @pytest.mark.e2e

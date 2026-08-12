@@ -169,6 +169,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 |---|---|
 | `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md`, `signal-value-transfer/spec.md`, `error-handling/spec.md` |
 | `webcompy/storage/` | `composables/spec.md` |
+| `webcompy/ui/_styles/` | `css-architecture/spec.md` |
 | `webcompy/template/_css_parser.py`, `webcompy/template/_css_template.py` | `template-engine/spec.md` |
 | `webcompy/template/`, `webcompy/template/_expression.py` | `template-engine/spec.md`, `markdown-document/spec.md` |
 | `webcompy/template/_markdown_default.py` | `template-engine/spec.md`, `markdown-conformance/spec.md` |
@@ -337,6 +338,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `scoped-css-incremental` | Per-component `<style data-webcompy-cid="...">` injection |
 | `reactive-scoped-style` | Per-component reactive scoped style via dedicated style element |
 | `app-styles` | App-level reactive style injection via `@layer webcompy-dynamic` |
+| `css-architecture` | Fixed CSS `@layer` order (`reset, tokens, components, prose, webcompy-scope`), layered reset/components/code-block stylesheets, unlayered dynamic styles |
 | `testing-module` | TestRenderer, fake ports, scope helpers for browserless testing |
 | `server-fetch-asgi` | Self-site fetch via ASGI transport during SSR/SSG, page-route blocking |
 | `asgi-embed` | Embedding a WebComPy serving app into a host ASGI application, including fetch-port wiring (`root_app`), `base_url`/prefix alignment, and blocked-path behavior |
