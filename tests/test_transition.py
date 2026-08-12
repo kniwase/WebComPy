@@ -456,6 +456,19 @@ class TestReplacementAndInterruption:
 
         return Root
 
+    def test_staged_pending_child_discarded_when_generator_returns_none(self) -> None:
+        show, extra = Signal(True), Signal(False)
+        with TestRenderer.render(self._two_signal_root(show, extra)) as result:
+            transition = result._instance._children[0]
+            show.value = False
+            result.transition_port.flush_frame()
+            extra.value = True
+            assert transition._pending_child is not None
+            extra.value = False
+            assert transition._pending_child is None
+            result.transition_port.advance_time(100)
+            assert result.find_by_attribute("data-testid", "box") is None
+
     def test_removing_transition_itself_removes_child_immediately(self) -> None:
         show, wrap = Signal(True), Signal(True)
         with TestRenderer.render(self._switch_root(show, wrap)) as result:

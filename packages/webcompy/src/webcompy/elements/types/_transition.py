@@ -149,6 +149,7 @@ class TransitionElement(DynamicElement):
 
         if desired is None:
             if self._sequence == "leave":
+                self._discard_pending_child_if_not(None)
                 return
             if current is not None:
                 self._cancel_sequence_handles()
