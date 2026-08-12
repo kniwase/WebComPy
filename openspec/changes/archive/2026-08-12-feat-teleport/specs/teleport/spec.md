@@ -42,7 +42,7 @@ The Teleport element SHALL contribute exactly one DOM node — an empty placehol
 
 ### Requirement: Server-side rendering shall emit only the anchor
 
-During server-side rendering and static generation, a Teleport SHALL render only its anchor placeholder at the logical position and SHALL NOT render its children's content anywhere in the document. The browser SHALL mount the children under the target during the client render pass after hydration. Teleported content is therefore absent from SSR HTML by design. The anchor SHALL be serialized in a form that preserves its node slot through HTML parsing (a zero-width-space text node), so that positional hydration adoption of the anchor and of the siblings following the Teleport stays aligned.
+During server-side rendering and static generation, a Teleport SHALL render only its anchor placeholder at the logical position and SHALL NOT render its children's content anywhere in the document. The browser SHALL mount the children under the target during the client render pass after hydration. Teleported content is therefore absent from SSR HTML by design. The anchor SHALL be serialized as a zero-width-space text node so that, when it is adjacent to element siblings, its node slot survives HTML parsing and positional hydration adoption of the anchor and of the siblings following the Teleport stays aligned. When the anchor is adjacent to bare text nodes, the HTML parser merges the text runs into a single node; hydration SHALL then recover by adopting the merged node as the preceding text sibling and recreating the anchor and following siblings in index order, so that each sibling appears exactly once in the final document.
 
 #### Scenario: SSR output contains no teleported content
 
@@ -52,9 +52,16 @@ During server-side rendering and static generation, a Teleport SHALL render only
 
 #### Scenario: SSR anchor occupies a parseable slot
 
+- **WHEN** a tree containing `[element, Teleport, element]` is server-rendered
+- **THEN** the SSR HTML SHALL contain the anchor representation between the two elements at the logical position
+- **AND** a browser parsing that HTML SHALL produce a distinct text node for the anchor slot
+
+#### Scenario: Text-adjacent SSR anchors merge on parse and recover on hydration
+
 - **WHEN** a tree containing `[text node, Teleport, text node]` is server-rendered
 - **THEN** the SSR HTML SHALL contain the anchor representation between the two text nodes at the logical position
-- **AND** a browser parsing that HTML SHALL produce a text node for the anchor slot
+- **AND** a browser parsing that HTML SHALL merge the adjacent text runs into a single text node, leaving no distinct anchor slot
+- **AND** hydration SHALL adopt the merged node as the preceding text sibling and recreate the anchor and the following text sibling in index order, so that each sibling appears exactly once in the final document
 
 #### Scenario: Client mounts teleported content after hydration
 
