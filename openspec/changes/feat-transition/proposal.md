@@ -27,11 +27,11 @@ WebComPy can show and hide elements, but it cannot animate them: conditional rem
 
 ## Impact
 
-- **Code**: new `TransitionElement` under `packages/webcompy/src/webcompy/elements/types/`; public export from `webcompy.elements`; additive `prefers_reduced_motion()` on `MediaQueryPort` and its browser/server/testing implementations; unit tests under `tests/`.
-- **APIs**: additive only (`Transition`). No breaking changes.
-- **Dependencies**: none (existing element machinery and DOM port).
+- **Code**: new `TransitionElement` under `packages/webcompy/src/webcompy/elements/types/`; public export from `webcompy.elements`; `prefers_reduced_motion()` on `MediaQueryPort` and its browser/server/testing implementations; a new dedicated `TransitionPort` (frame/timer/computed-style abstraction) with browser, server, and testing implementations, registered in both render contexts and the testing renderer; unit tests under `tests/`; E2E tests under `e2e/`; docs_app demo page.
+- **APIs**: additive element API (`Transition`). `MediaQueryPort` gains an abstract `prefers_reduced_motion()` method; because the framework is still in development, existing third-party `MediaQueryPort` subclasses are not part of the compatibility surface and the abstract extension is accepted.
+- **Dependencies**: none (existing element machinery and DI port provisioning).
 - **Downstream**: used by the planned first-party UI primitives (overlay open/close, disclosure expand/collapse) for polish.
-- **Docs**: new docs_app section demonstrating enter/leave transitions with sample CSS.
+- **Docs**: new docs_app demo page demonstrating enter/leave transitions with sample CSS, linked from the docs navigation.
 
 ## Known Issues Addressed
 

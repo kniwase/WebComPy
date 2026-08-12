@@ -67,9 +67,9 @@ When the generator's result changes from one element to a different element, the
 - **THEN** element A's leave sequence SHALL run to completion (or interruption per this requirement) before element B's enter sequence starts
 - **AND** at no point SHALL both A's and B's nodes occupy the Transition's slot simultaneously
 
-### Requirement: Server rendering and hydration shall render the steady state without transition classes
+### Requirement: Transition shall render the steady state on initial render without an enter sequence
 
-During server-side rendering, static generation, and hydration adoption, a Transition's current child (if any) SHALL be rendered without any transition classes, and no enter sequence SHALL run for content present at hydration time. Enter sequences SHALL run only for children created by client-side state changes after hydration.
+During server-side rendering, static generation, hydration adoption, and the first browser render of the app, a Transition's current child (if any) SHALL be rendered without any transition classes, and no enter sequence SHALL run. Enter sequences SHALL run only for children created by client-side state changes after the initial render.
 
 #### Scenario: SSR output has no transition classes
 
@@ -80,6 +80,26 @@ During server-side rendering, static generation, and hydration adoption, a Trans
 
 - **WHEN** the application hydrates with a Transition whose child is already present
 - **THEN** the child SHALL appear without an enter sequence
+
+#### Scenario: First browser render does not animate
+
+- **WHEN** a Transition with a present child is part of the initial client-side render of the app (no SSR)
+- **THEN** the child SHALL appear without an enter sequence
+
+### Requirement: Transition shall validate the child shape and props
+
+The generator SHALL return either `None` or a single element that owns exactly one real DOM node (`ElementBase`, including `Component` roots). Multi-node shapes (`DynamicElement` subclasses such as `Fragment`, `Teleport`, `switch`, `repeat`, `Suspense`) and non-element shapes (text nodes, signals, raw strings) SHALL raise a framework validation error (`WebComPyException`) when encountered. The `name` prop SHALL be a required non-empty string; the `duration` prop, when provided, SHALL be a non-negative number of milliseconds. Invalid props SHALL raise a framework validation error.
+
+#### Scenario: Invalid child shape is rejected
+
+- **WHEN** a Transition's generator returns a `Fragment` (or another multi-node dynamic element)
+- **THEN** rendering or refreshing the Transition SHALL raise `WebComPyException`
+- **AND** no partial DOM insertion SHALL occur
+
+#### Scenario: Missing name is rejected
+
+- **WHEN** `Transition({}, generator)` is constructed
+- **THEN** construction SHALL raise `WebComPyException`
 
 ### Requirement: Transition shall honor prefers-reduced-motion
 
