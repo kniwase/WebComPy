@@ -386,6 +386,47 @@ class TestReplacementAndInterruption:
             result.transition_port.advance_time(100)
             assert result.find_by_attribute("data-testid", "box") is None
 
+    def _switch_root(self, show: Signal[bool], wrap: Signal[bool]):
+        from webcompy.elements import switch
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                switch(
+                    {
+                        "case": wrap,
+                        "generator": lambda: html.DIV(
+                            {"data-testid": "wrap"},
+                            Transition(
+                                {"name": "fade", "duration": 100},
+                                lambda: html.DIV({"data-testid": "box"}, "b") if show.value else None,
+                            ),
+                        ),
+                    },
+                    default=None,
+                ),
+            )
+
+        return Root
+
+    def test_removing_transition_itself_removes_child_immediately(self) -> None:
+        show, wrap = Signal(True), Signal(True)
+        with TestRenderer.render(self._switch_root(show, wrap)) as result:
+            assert result.find_by_attribute("data-testid", "box") is not None
+            wrap.value = False
+            assert result.find_by_attribute("data-testid", "wrap") is None
+            assert result.find_by_attribute("data-testid", "box") is None
+
+    def test_removing_transition_during_leave_removes_child_immediately(self) -> None:
+        show, wrap = Signal(True), Signal(True)
+        with TestRenderer.render(self._switch_root(show, wrap)) as result:
+            show.value = False
+            result.transition_port.flush_frame()
+            assert "fade-leave-active" in _box_classes(result, "box")
+            wrap.value = False
+            assert result.find_by_attribute("data-testid", "box") is None
+
 
 class TestSsrAndHydration:
     def test_ssr_output_has_no_transition_classes(self) -> None:
