@@ -13,7 +13,7 @@
 - [x] 2.3 Implement the leave sequence: intercept child disappearance, apply `{name}-leave-from`, next-frame swap to `{name}-leave-active` + `{name}-leave-to`, keep node mounted until finalization, then run the standard removal path on the child
 - [x] 2.4 Implement duration resolution: explicit `duration` prop → computed transition/animation styles (browser) → immediate finalization with warning (no warning for explicit zero); end-event listeners (`transitionend`/`animationend`, target-checked) with timeout backup, listeners removed on finalization
 - [x] 2.5 Implement node accounting: report the child's node count during sequences; on leave completion report zero and trigger one parent re-index; handle interruption (new child during leave finalizes the leaving node immediately) and sequential replacement (leave completes before enter starts); wrapper removal cancels sequences and removes the child immediately
-- [ ] 2.6 Implement reduced-motion and environment gates: skip all sequences when `prefers_reduced_motion()` is true or the transition port is disabled (mount/remove immediately)
+- [x] 2.6 Implement reduced-motion and environment gates: skip all sequences when `prefers_reduced_motion()` is true or the transition port is disabled (mount/remove immediately)
 
 ## 3. Public API
 

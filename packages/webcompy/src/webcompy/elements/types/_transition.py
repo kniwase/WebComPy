@@ -16,7 +16,7 @@ from webcompy.elements.types._dynamic import (
 )
 from webcompy.elements.types._element import ElementBase
 from webcompy.exception import WebComPyException
-from webcompy.ports._keys import FFI_PORT_KEY, TRANSITION_PORT_KEY
+from webcompy.ports._keys import FFI_PORT_KEY, MEDIA_QUERY_PORT_KEY, TRANSITION_PORT_KEY
 from webcompy.ports._transition import TransitionStyle
 from webcompy.signal._computed import Computed
 
@@ -185,6 +185,13 @@ class TransitionElement(DynamicElement):
     def _class_name(self, phase: str) -> str:
         return f"{self._name}-{phase}"
 
+    def _should_animate(self) -> bool:
+        port = inject(TRANSITION_PORT_KEY, default=None)
+        if port is None or not port.enabled:
+            return False
+        media = inject(MEDIA_QUERY_PORT_KEY, default=None)
+        return not (media is not None and media.prefers_reduced_motion())
+
     @staticmethod
     def _add_classes(node: DOMNode, classes: list[str]) -> None:
         tokens = (node.getAttribute("class") or "").split()
@@ -204,6 +211,8 @@ class TransitionElement(DynamicElement):
             node.removeAttribute("class")
 
     def _start_enter_sequence(self, child: ElementAbstract) -> None:
+        if not self._should_animate():
+            return
         if self._sequence == "enter":
             return
         self._sequence = "enter"
@@ -228,6 +237,11 @@ class TransitionElement(DynamicElement):
         self._resolve_duration(gen, child, is_enter=True)
 
     def _start_leave(self, child: ElementAbstract) -> None:
+        if not self._should_animate():
+            self._finalize_leave_now()
+            if not self._disposed:
+                _run_refresh_sync(self._refresh)
+            return
         if self._sequence == "leave":
             return
         self._sequence = "leave"
