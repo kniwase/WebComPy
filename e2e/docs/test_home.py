@@ -50,9 +50,16 @@ def test_home_dropdown_follows_toggle_on_scroll(docs_app_page, assert_no_console
     dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="HelloWorld")
     expect(dropdown).to_be_visible()
     docs_app_page.evaluate("window.scrollTo(0, 200)")
-    _wait_for_menu_aligned_with_toggle(docs_app_page, "navbar-dropdown-2")
+    _wait_for_menu_aligned_with_toggle(docs_app_page, _demos_menu_id(docs_app_page))
     docs_app_page.evaluate("window.scrollTo(0, 0)")
-    _wait_for_menu_aligned_with_toggle(docs_app_page, "navbar-dropdown-2")
+    _wait_for_menu_aligned_with_toggle(docs_app_page, _demos_menu_id(docs_app_page))
+
+
+def _demos_menu_id(page) -> str:
+    toggle = page.locator("nav li a[aria-haspopup='true']").filter(has_text="Demos")
+    menu_id = toggle.get_attribute("aria-controls")
+    assert menu_id is not None
+    return menu_id
 
 
 def _wait_for_menu_aligned_with_toggle(page, menu_id: str):
@@ -77,7 +84,7 @@ def test_home_dropdown_follows_toggle_on_resize(docs_app_page, assert_no_console
     dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="HelloWorld")
     expect(dropdown).to_be_visible()
     docs_app_page.set_viewport_size({"width": 1000, "height": 800})
-    _wait_for_menu_aligned_with_toggle(docs_app_page, "navbar-dropdown-2")
+    _wait_for_menu_aligned_with_toggle(docs_app_page, _demos_menu_id(docs_app_page))
 
 
 @pytest.mark.e2e
@@ -88,7 +95,11 @@ def test_home_mobile_dropdown_spans_navbar_width(docs_app_page, assert_no_consol
     dropdown_toggle.click()
     dropdown = docs_app_page.locator("ul.navbar-dropdown").filter(has_text="HelloWorld")
     expect(dropdown).to_be_visible()
-    assert docs_app_page.evaluate("getComputedStyle(document.getElementById('navbar-dropdown-2')).position") == "fixed"
+    menu_id = _demos_menu_id(docs_app_page)
+    assert (
+        docs_app_page.evaluate("menuId => getComputedStyle(document.getElementById(menuId)).position", menu_id)
+        == "fixed"
+    )
     box = dropdown.bounding_box()
     assert box is not None
     assert box["x"] == 0
