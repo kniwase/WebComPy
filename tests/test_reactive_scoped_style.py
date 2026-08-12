@@ -610,10 +610,47 @@ class TestHeadElementSSRPath:
         token = _active_di_scope.set(scope)
         try:
             head_element = HeadElement(head_props)
-            html = head_element.get_head_content_html()
+            html = head_element.get_scoped_styles_html()
             assert "data-webcompy-cid-rx" in html
             assert ".dyn[webcompy-cid-" in html
             assert "color: red" in html
+        finally:
+            _active_di_scope.reset(token)
+
+    def test_scoped_styles_html_split_from_head_content_html(self, monkeypatch):
+        monkeypatch.setattr("webcompy.utils.ENVIRONMENT", "server")
+
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.elements._head import HeadElement
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy_server.ports._dom import ServerDOMPort
+
+        gen = ComponentGenerator("SsrComp", _noop)
+        gen._style = {".static": {"color": "blue"}}
+        style = reactive_scoped_style(lambda: {".dyn": {"color": "red"}})
+        style._bind(gen._id)
+        gen._reactive_styles.append(style)
+
+        port = ServerDOMPort()
+        store = ComponentStore()
+        store.add_component("SsrComp", gen)
+        head_props = HeadPropsStore()
+
+        scope = DIScope()
+        scope.provide(DOM_PORT_KEY, port)
+        scope.provide(_COMPONENT_STORE_KEY, store)
+
+        token = _active_di_scope.set(scope)
+        try:
+            head_element = HeadElement(head_props)
+            scoped_html = head_element.get_scoped_styles_html()
+            assert "data-webcompy-cid-rx" in scoped_html
+            assert 'data-webcompy-cid="' in scoped_html
+            head_html = head_element.get_head_content_html()
+            assert "data-webcompy-cid" not in head_html
+            assert 'id="webcompy-scoped-styles"' in head_html
         finally:
             _active_di_scope.reset(token)
 
