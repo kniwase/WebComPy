@@ -46,7 +46,7 @@ The Teleport element SHALL contribute exactly one DOM node — an empty placehol
 
 ### Requirement: Server-side rendering shall emit only the anchor
 
-During server-side rendering and static generation, a Teleport SHALL render only its anchor placeholder at the logical position and SHALL NOT render its children's content anywhere in the document. The browser SHALL mount the children under the target during the client render pass after hydration. Teleported content is therefore absent from SSR HTML by design. The anchor SHALL be serialized as a zero-width-space text node so that, when it is adjacent to element siblings, its node slot survives HTML parsing and positional hydration adoption of the anchor and of the siblings following the Teleport stays aligned. When the anchor is adjacent to bare text nodes, the HTML parser merges the text runs into a single node; hydration SHALL then recover by adopting the merged node as the preceding text sibling and recreating the anchor and following siblings in index order, so that each sibling appears exactly once in the final document.
+During server-side rendering and static generation, a Teleport SHALL render only its anchor placeholder at the logical position and SHALL NOT render its children's content anywhere in the document. The browser SHALL mount the children under the target during the client render pass after hydration. Teleported content is therefore absent from SSR HTML by design. The anchor SHALL be serialized as a zero-width-space text node so that, when it is adjacent to element siblings, its node slot survives HTML parsing and positional hydration adoption of the anchor and of the siblings following the Teleport stays aligned. When the anchor is adjacent to bare text nodes, the HTML parser merges the text runs into a single node; hydration SHALL then recover by adopting the merged node as the preceding text sibling and recreating the anchor and following siblings in index order, so that each sibling appears exactly once in the final document. During hydration a Teleport SHALL schedule its own client render whenever its children are not yet rendered, including when the anchor had to be recreated instead of adopted; the teleport's mounting SHALL NOT depend on an app-level post-hydration render pass.
 
 #### Scenario: SSR output contains no teleported content
 
@@ -66,6 +66,7 @@ During server-side rendering and static generation, a Teleport SHALL render only
 - **THEN** the SSR HTML SHALL contain the anchor representation between the two text nodes at the logical position
 - **AND** a browser parsing that HTML SHALL merge the adjacent text runs into a single text node, leaving no distinct anchor slot
 - **AND** hydration SHALL adopt the merged node as the preceding text sibling and recreate the anchor and the following text sibling in index order, so that each sibling appears exactly once in the final document
+- **AND** the Teleport SHALL schedule its own client render during hydration even though its anchor was recreated, so that its children mount under the target without relying on a post-hydration render pass
 
 #### Scenario: Client mounts teleported content after hydration
 
