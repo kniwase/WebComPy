@@ -180,6 +180,8 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 `TestRenderer.render(component)` SHALL create a browser-style DI scope with `FakeBrowserDOMPort` (so that `addEventListener` is called on VDOM nodes during rendering), instantiate the component, render it to a `VirtualDOMNode` tree (from `webcompy_server.ports`), and return a `TestRendererResult` wrapping the root `VirtualDOMNode`. `TestRendererResult` SHALL provide query methods (`query_selector`, `query_selector_all`, `find_by_text`, `find_by_attribute`), `to_html()`, and assertion helpers (`assert_element_count`, `assert_has_class`). The `dispatchEvent(VirtualDOMEvent)` mechanism SHALL trigger Signal callbacks that directly mutate the VDOM tree (matching browser behavior), eliminating the need for a separate `rerender()` step. The `close()` method SHALL call `scope.dispose()` (clearing all providers and recursively disposing child scopes) and reset the active DI scope.
 
+The render root SHALL be appended to the fake document's `<body>` (mirroring a real browser mount point, where the mount node is a body child) so that `query_selector` and teleport target resolution can reach it. `TestRendererResult.body_node` SHALL return the fake body node (`FakeBrowserDOMPort.body`).
+
 #### Scenario: Rendering a simple component
 - **WHEN** `result = TestRenderer.render(component)` is called
 - **THEN** `result.query_selector("h1")` SHALL return a `VirtualDOMNode`
