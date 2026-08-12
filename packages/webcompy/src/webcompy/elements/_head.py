@@ -291,7 +291,6 @@ class HeadElement(ElementWithChildren):
 
     def get_head_content_html(self) -> str:
         from webcompy.di import inject
-        from webcompy.di._keys import _COMPONENT_STORE_KEY
         from webcompy.ports._keys import DOM_PORT_KEY
 
         port = inject(DOM_PORT_KEY)
@@ -314,6 +313,28 @@ class HeadElement(ElementWithChildren):
         el.textContent = "*[hidden]{display: none;}"
         parts.append(port.render_html(el))
 
+        for idx, content in enumerate(self._styles):
+            el = port.create_element("style")
+            el.setAttribute("data-webcompy-dynamic", str(idx))
+            el.textContent = _resolve_content(content)
+            parts.append(port.render_html(el))
+
+        for attrs in sorted(self._links, key=lambda a: a.get("href", "")):
+            el = port.create_element("link")
+            for k, v in attrs.items():
+                el.setAttribute(k, v)
+            parts.append(port.render_html(el))
+
+        return "\n".join(parts)
+
+    def get_scoped_styles_html(self) -> str:
+        from webcompy.di import inject
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.ports._keys import DOM_PORT_KEY
+
+        port = inject(DOM_PORT_KEY)
+        parts: list[str] = []
+
         store = inject(_COMPONENT_STORE_KEY)
         for _name in sorted(store.components.keys()):
             gen = store.components[_name]
@@ -333,17 +354,5 @@ class HeadElement(ElementWithChildren):
                 el.setAttribute("data-webcompy-cid-rx", attr_value)
                 el.textContent = rx_style.render_css(cid)
                 parts.append(port.render_html(el))
-
-        for idx, content in enumerate(self._styles):
-            el = port.create_element("style")
-            el.setAttribute("data-webcompy-dynamic", str(idx))
-            el.textContent = _resolve_content(content)
-            parts.append(port.render_html(el))
-
-        for attrs in sorted(self._links, key=lambda a: a.get("href", "")):
-            el = port.create_element("link")
-            for k, v in attrs.items():
-                el.setAttribute(k, v)
-            parts.append(port.render_html(el))
 
         return "\n".join(parts)
