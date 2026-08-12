@@ -89,3 +89,32 @@ def test_color_scheme_meta_tag_present() -> None:
     )
     assert 'name="color-scheme"' in html_str
     assert 'content="light dark"' in html_str
+
+
+def test_scoped_styles_appear_after_index_css_link() -> None:
+    from webcompy.components import define_component
+    from webcompy.elements import html as html_module
+
+    @define_component
+    def _StyledRoot(context):
+        return html_module.DIV({"class": "styled-box"}, "styled")
+
+    _StyledRoot.scoped_style = {".styled-box": {"color": "red"}}
+
+    app = create_test_app(root_component=_StyledRoot)
+    html_str = _generate_html(
+        app,
+        app_package_name="test_pkg",
+        dev_mode=False,
+        prerender=True,
+        wheel_filename="test_pkg-0.0.0-py3-none-any.whl",
+        runtime_serving="cdn",
+    )
+    link_pos = html_str.find("/_webcompy-ui/index.css")
+    cid_pos = html_str.find('data-webcompy-cid="')
+    assert link_pos != -1, "Framework UI CSS link must be present"
+    assert cid_pos != -1, "Scoped style element must be present"
+    assert link_pos < cid_pos, "Scoped styles must be emitted after the index.css layer-order declaration"
+    assert html_str.find('data-webcompy-cid="') < html_str.find("core.css"), (
+        "Scoped styles must be emitted before core.css"
+    )
