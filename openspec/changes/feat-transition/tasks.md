@@ -17,7 +17,7 @@
 
 ## 3. Public API
 
-- [ ] 3.1 Implement the `Transition` constructor accepting a props dict plus a child generator (`Transition({"name": "fade"}, generator)`); export `Transition` from `webcompy.elements` (`__init__.py` + `.pyi` if maintained)
+- [x] 3.1 Implement the `Transition` constructor accepting a props dict plus a child generator (`Transition({"name": "fade"}, generator)`); export `Transition` from `webcompy.elements` (`__init__.py` + `.pyi` if maintained)
 
 ## 4. Unit tests (`tests/test_transition.py`, browserless via TestRenderer)
 
