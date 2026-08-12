@@ -3,7 +3,7 @@ from typing import Any, TypedDict
 from webcompy.components import ComponentContext, define_component, on_before_destroy
 from webcompy.di import InjectionError, inject
 from webcompy.elements import Teleport, html
-from webcompy.ports._keys import DOM_PORT_KEY
+from webcompy.ports._keys import DOM_PORT_KEY, HOST_PORT_KEY
 from webcompy.router import RouterLink
 from webcompy.signal import Signal, use_computed, use_state
 
@@ -54,6 +54,20 @@ def Navbar(context: ComponentContext[list[Page]]):
                 rect = toggle_el.getBoundingClientRect()
                 _get_position(idx).value = (float(rect.bottom), float(rect.left))
 
+    def _measure_open_menus():
+        if not dom:
+            return
+        for idx, state in _open_states.items():
+            if not state.value:
+                continue
+            toggle_el = dom.get_element_by_id(f"navbar-dropdown-{idx}-toggle")
+            if toggle_el is not None:
+                rect = toggle_el.getBoundingClientRect()
+                _get_position(idx).value = (float(rect.bottom), float(rect.left))
+
+    def _on_scroll(_ev):
+        _measure_open_menus()
+
     def _close_all():
         for state in _open_states.values():
             state.value = False
@@ -77,10 +91,20 @@ def Navbar(context: ComponentContext[list[Page]]):
 
     if dom:
         _remove_click = dom.add_document_event_listener("click", _on_click_outside)
+        _remove_scroll = dom.add_document_event_listener("scroll", _on_scroll)
+        _remove_resize = None
+        try:
+            host = inject(HOST_PORT_KEY)
+            _remove_resize = host.add_window_event_listener("resize", _on_scroll)
+        except InjectionError:
+            pass
 
         @on_before_destroy
         def _cleanup():
             _remove_click()
+            _remove_scroll()
+            if _remove_resize is not None:
+                _remove_resize()
 
     def _generate_navitem(page: Page, idx: int):
         if "children" in page:
@@ -134,9 +158,8 @@ def Navbar(context: ComponentContext[list[Page]]):
                             "style": use_computed(
                                 lambda idx=idx: (
                                     f"display: {'block' if _is_open(idx) else 'none'}; "
-                                    f"position: fixed; "
-                                    f"top: {_get_position(idx).value[0]}px; "
-                                    f"left: {_get_position(idx).value[1]}px;"
+                                    f"--nav-dropdown-top: {_get_position(idx).value[0]}px; "
+                                    f"--nav-dropdown-left: {_get_position(idx).value[1]}px;"
                                 )
                             ),
                         },
@@ -273,6 +296,9 @@ Navbar.scoped_style = {
         "background-color": "var(--color-bg-elevated)",
     },
     " .navbar-dropdown": {
+        "position": "fixed",
+        "top": "var(--nav-dropdown-top)",
+        "left": "var(--nav-dropdown-left)",
         "background-color": "var(--color-bg)",
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-md)",
@@ -335,6 +361,16 @@ Navbar.scoped_style = {
         " .navbar-list a": {
             "padding": "var(--space-3) 0",
             "border-radius": "0",
+        },
+        " .navbar-dropdown": {
+            "left": "0",
+            "right": "0",
+            "width": "auto",
+            "border": "none",
+            "border-radius": "0",
+            "box-shadow": "none",
+            "padding-left": "var(--space-4)",
+            "min-width": "auto",
         },
     },
 }
