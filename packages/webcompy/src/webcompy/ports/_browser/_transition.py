@@ -35,10 +35,10 @@ class BrowserTransitionPort(TransitionPort):
         first_id: Any = None
         second_id: Any = None
 
-        def _second() -> None:
+        def _second(*_args: Any) -> None:
             callback()
 
-        def _first() -> None:
+        def _first(*_args: Any) -> None:
             nonlocal first_id
             first_id = window.requestAnimationFrame(_second)
 
