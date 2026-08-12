@@ -16,11 +16,52 @@ from webcompy.elements.types._dynamic import (
 )
 from webcompy.elements.types._element import ElementBase
 from webcompy.exception import WebComPyException
-from webcompy.ports._keys import TRANSITION_PORT_KEY
+from webcompy.ports._keys import FFI_PORT_KEY, TRANSITION_PORT_KEY
+from webcompy.ports._transition import TransitionStyle
 from webcompy.signal._computed import Computed
 
 _ENTER_PHASES = ("enter-from", "enter-active", "enter-to")
 _LEAVE_PHASES = ("leave-from", "leave-active", "leave-to")
+_INVALID_TIMES = frozenset({"none", "initial", "inherit", "unset", "revert", "revert-layer"})
+
+
+def _parse_time(value: str) -> float | None:
+    value = value.strip().lower()
+    if not value or value in _INVALID_TIMES:
+        return None
+    if value.endswith("ms"):
+        try:
+            return float(value[:-2])
+        except ValueError:
+            return None
+    if value.endswith("s"):
+        try:
+            return float(value[:-1]) * 1000
+        except ValueError:
+            return None
+    return None
+
+
+def _parse_style_duration(style: TransitionStyle) -> float:
+    total = 0.0
+    for duration_prop, delay_prop in (
+        ("transition-duration", "transition-delay"),
+        ("animation-duration", "animation-delay"),
+    ):
+        durations = style.get_property_value(duration_prop).split(",")
+        delays = style.get_property_value(delay_prop).split(",")
+        for index, raw in enumerate(durations):
+            ms = _parse_time(raw)
+            if ms is None:
+                continue
+            if index < len(delays):
+                delay_ms = _parse_time(delays[index])
+                if delay_ms is None:
+                    delay_ms = 0.0
+            else:
+                delay_ms = 0.0
+            total = max(total, ms + delay_ms)
+    return total
 
 
 class TransitionElement(DynamicElement):
@@ -49,6 +90,8 @@ class TransitionElement(DynamicElement):
         self._pending_child: ElementAbstract | None = None
         self._cancel_next_frame: Callable[[], None] | None = None
         self._cancel_timeout: Callable[[], None] | None = None
+        self._end_event_node: DOMNode | None = None
+        self._end_event_proxy: Any = None
         super().__init__()
         self._child_computed = Computed(child_generator)
         self.__set_signal_member__("_child_computed", self._child_computed)
@@ -182,7 +225,7 @@ class TransitionElement(DynamicElement):
             return
         self._remove_classes(node, [self._class_name("enter-from")])
         self._add_classes(node, [self._class_name("enter-active"), self._class_name("enter-to")])
-        self._resolve_duration(gen, is_enter=True)
+        self._resolve_duration(gen, child, is_enter=True)
 
     def _start_leave(self, child: ElementAbstract) -> None:
         if self._sequence == "leave":
@@ -206,21 +249,56 @@ class TransitionElement(DynamicElement):
             return
         self._remove_classes(node, [self._class_name("leave-from")])
         self._add_classes(node, [self._class_name("leave-active"), self._class_name("leave-to")])
-        self._resolve_duration(gen, is_enter=False)
+        self._resolve_duration(gen, child, is_enter=False)
 
-    def _resolve_duration(self, gen: int, is_enter: bool) -> None:
+    def _resolve_duration(self, gen: int, child: ElementAbstract, is_enter: bool) -> None:
         duration = self._duration
-        if duration is None or duration <= 0:
-            if duration is None:
+        if duration is None:
+            node = child._node_cache
+            duration = 0.0
+            if node is not None:
+                style = inject(TRANSITION_PORT_KEY).get_computed_style(node)
+                duration = _parse_style_duration(style)
+            if duration <= 0:
                 logging.warning(
                     f"Transition '{self._name}': no transition or animation duration is defined; finishing immediately."
                 )
+                self._finalize_sequence(gen, is_enter)
+                return
+        elif duration <= 0:
             self._finalize_sequence(gen, is_enter)
             return
+        self._arm_end_listeners(gen, child, is_enter, duration)
+
+    def _arm_end_listeners(
+        self,
+        gen: int,
+        child: ElementAbstract,
+        is_enter: bool,
+        duration: float,
+    ) -> None:
+        node = child._node_cache
+        if node is None:
+            self._finalize_sequence(gen, is_enter)
+            return
+        proxy = inject(FFI_PORT_KEY).create_proxy(lambda ev: self._on_end_event(gen, child, is_enter, ev))
+        node.addEventListener("transitionend", proxy, False)
+        node.addEventListener("animationend", proxy, False)
+        self._end_event_node = node
+        self._end_event_proxy = proxy
         self._cancel_timeout = inject(TRANSITION_PORT_KEY).schedule_timeout(
             lambda: self._finalize_sequence(gen, is_enter),
             duration,
         )
+
+    def _on_end_event(self, gen: int, child: ElementAbstract, is_enter: bool, ev: Any) -> None:
+        node = child._node_cache
+        if node is None:
+            return
+        target = getattr(ev, "target", None)
+        if target is not node:
+            return
+        self._finalize_sequence(gen, is_enter)
 
     def _finalize_sequence(self, gen: int, is_enter: bool) -> None:
         if is_enter:
@@ -272,6 +350,14 @@ class TransitionElement(DynamicElement):
         if self._cancel_timeout is not None:
             self._cancel_timeout()
             self._cancel_timeout = None
+        node, proxy = self._end_event_node, self._end_event_proxy
+        self._end_event_node = None
+        self._end_event_proxy = None
+        if node is not None and proxy is not None:
+            node.removeEventListener("transitionend", proxy)
+            node.removeEventListener("animationend", proxy)
+            if hasattr(proxy, "destroy"):
+                proxy.destroy()
         child = self._children[0] if self._children else None
         if child is not None and (node := child._node_cache) is not None:
             self._remove_classes(
