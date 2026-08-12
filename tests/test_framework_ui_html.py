@@ -92,11 +92,12 @@ def test_color_scheme_meta_tag_present() -> None:
 
 
 def test_scoped_styles_appear_after_index_css_link() -> None:
-    from webcompy.components import define_component
+    from webcompy.components import reactive_scoped_style
     from webcompy.elements import html as html_module
 
     @define_component
     def _StyledRoot(context):
+        context.use_reactive_scoped_style(reactive_scoped_style(lambda: {".styled-box-rx": {"color": "blue"}}))
         return html_module.DIV({"class": "styled-box"}, "styled")
 
     _StyledRoot.scoped_style = {".styled-box": {"color": "red"}}
@@ -112,9 +113,13 @@ def test_scoped_styles_appear_after_index_css_link() -> None:
     )
     link_pos = html_str.find("/_webcompy-ui/index.css")
     cid_pos = html_str.find('data-webcompy-cid="')
+    rx_pos = html_str.find('data-webcompy-cid-rx="')
     assert link_pos != -1, "Framework UI CSS link must be present"
     assert cid_pos != -1, "Scoped style element must be present"
+    assert rx_pos != -1, "Reactive scoped style element must be present"
     assert link_pos < cid_pos, "Scoped styles must be emitted after the index.css layer-order declaration"
+    assert link_pos < rx_pos, "Reactive scoped styles must be emitted after the index.css layer-order declaration"
     assert html_str.find('data-webcompy-cid="') < html_str.find("core.css"), (
         "Scoped styles must be emitted before core.css"
     )
+    assert rx_pos < html_str.find("core.css"), "Reactive scoped styles must be emitted before core.css"
