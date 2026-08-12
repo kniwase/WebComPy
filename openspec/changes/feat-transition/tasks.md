@@ -31,7 +31,7 @@
 
 ## 5. E2E and docs
 
-- [ ] 5.1 Add an E2E test (Playwright, `e2e/`): a Transition-driven show/hide with real CSS — verify class sequence in the browser, delayed removal, and computed-style duration path; include a Teleport+Transition combination; register `e2e/core/test_transition.py` in the `dynamic-control` group in `scripts/run-e2e-tests.sh` and `.github/workflows/ci.yml`
+- [x] 5.1 Add an E2E test (Playwright, `e2e/`): a Transition-driven show/hide with real CSS — verify class sequence in the browser, delayed removal, and computed-style duration path; include a Teleport+Transition combination; register `e2e/core/test_transition.py` in the `dynamic-control` group in `scripts/run-e2e-tests.sh` and `.github/workflows/ci.yml`
 - [ ] 5.2 Add a docs_app demo page for `Transition` (fade/slide examples with sample CSS), a static iframe demo under `docs_app/static/_demos/transition/`, a `/sample/transition` route, a navigation link, and an `e2e/docs/test_transition.py` registered in the `docs-demos` group in `scripts/run-e2e-tests.sh` and `.github/workflows/ci.yml`; document the Vue-compatible class protocol, duration resolution order, and the single-child/sequential-replacement semantics
 
 ## 6. Validation
