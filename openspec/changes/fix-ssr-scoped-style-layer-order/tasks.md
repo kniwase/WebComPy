@@ -10,6 +10,7 @@
 - [x] 2.1 Add a test (e.g., in `tests/test_framework_ui_html.py`) asserting that in generated HTML every `data-webcompy-cid` / `data-webcompy-cid-rx` style element appears after the `/_webcompy-ui/index.css` link, for an app with scoped-style components
 - [x] 2.2 Add a test asserting `get_scoped_styles_html()` returns only scoped style elements and `get_head_content_html()` no longer contains `data-webcompy-cid`
 - [x] 2.3 Run existing scoped-CSS test suites (`tests/test_scoped_css.py`, `tests/test_reactive_scoped_style.py`, `tests/test_reactive_app_style.py`, `tests/test_scoped_style_layer.py` if present) and confirm no regressions; update any test that asserts scoped styles appear before stylesheet links
+- [x] 2.4 Remove the resolved SSR scoped-style layer-order known issue entry from `openspec/config.yaml` (Element System section)
 
 ## 3. Spec Updates
 
