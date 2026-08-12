@@ -148,6 +148,58 @@ class TestTeleportInlineFallbackStability:
                 ("P", "after"),
             ]
 
+    def test_inline_repeat_uses_updated_index_after_preceding_sibling_grows(self, teleport_env):
+        leading = ReactiveList(["a"])
+        inner = ReactiveList(["x", "y"])
+
+        @define_component
+        def Page(context):
+            return html.DIV(
+                {},
+                repeat(leading, lambda item: html.SPAN({"data-t": "leading"}, item)),
+                Teleport(
+                    {"to": "#nonexistent-root"},
+                    repeat(inner, lambda item: html.SPAN({"data-t": "inline"}, item)),
+                ),
+                html.P({"data-testid": "after"}, "after"),
+            )
+
+        def _node_names(result):
+            return [(c.nodeName, c.textContent or "") for c in result._root_node.childNodes]
+
+        with TestRenderer.render(Page) as result:
+            assert _node_names(result) == [
+                ("SPAN", "a"),
+                ("SPAN", "x"),
+                ("SPAN", "y"),
+                ("P", "after"),
+            ]
+            leading.append("b")
+            assert _node_names(result) == [
+                ("SPAN", "a"),
+                ("SPAN", "b"),
+                ("SPAN", "x"),
+                ("SPAN", "y"),
+                ("P", "after"),
+            ]
+            inner.append("z")
+            assert _node_names(result) == [
+                ("SPAN", "a"),
+                ("SPAN", "b"),
+                ("SPAN", "x"),
+                ("SPAN", "y"),
+                ("SPAN", "z"),
+                ("P", "after"),
+            ]
+            inner.pop(0)
+            assert _node_names(result) == [
+                ("SPAN", "a"),
+                ("SPAN", "b"),
+                ("SPAN", "y"),
+                ("SPAN", "z"),
+                ("P", "after"),
+            ]
+
 
 class TestTeleportMultipleTargets:
     def test_multiple_teleports_append_in_mount_order(self, teleport_env):

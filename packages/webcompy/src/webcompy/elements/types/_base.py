@@ -190,8 +190,12 @@ class ElementWithChildren(ElementAbstract):
 
         idx = getattr(self, "_node_idx", 0) if isinstance(self, DynamicElement) else 0
         for c_idx in range(len(self._children)):
-            self._children[c_idx]._node_idx = idx
-            idx += self._children[c_idx]._node_count
+            child = self._children[c_idx]
+            old_idx = getattr(child, "_node_idx", 0)
+            child._node_idx = idx
+            if not recursive and isinstance(child, DynamicElement) and child._node_idx != old_idx:
+                child._re_index_children(False)
+            idx += child._node_count
         if recursive:
             for child in self._children:
                 if isinstance(child, ElementWithChildren):
