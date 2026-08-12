@@ -3,7 +3,7 @@
 ## 1. Core Implementation
 
 - [x] 1.1 Split `HeadElement.get_head_content_html()` in `packages/webcompy/src/webcompy/elements/_head.py`: keep title, meta, `*[hidden]` utility style, dynamic styles, and app links in `get_head_content_html()`; move per-component `<style data-webcompy-cid>` and `<style data-webcompy-cid-rx>` generation into a new `get_scoped_styles_html()` method
-- [ ] 1.2 Update `packages/webcompy-server/src/webcompy_server/_html.py` (`_generate_html_impl`): insert `get_head_content_html()` output after `<head>` as today, and insert `get_scoped_styles_html()` output immediately after the `/_webcompy-ui/index.css` link (anchor a `replace` on the rendered link HTML, kept adjacent to the link element definition)
+- [x] 1.2 Update `packages/webcompy-server/src/webcompy_server/_html.py` (`_generate_html_impl`): insert `get_head_content_html()` output after `<head>` as today, and insert `get_scoped_styles_html()` output immediately after the `/_webcompy-ui/index.css` link (anchor a `replace` on the rendered link HTML, kept adjacent to the link element definition)
 
 ## 2. Unit Tests
 

@@ -323,6 +323,11 @@ async def _generate_html_impl(
 
     assert ctx._root is not None
     head_content_html = ctx._root._head_element.get_head_content_html()
+    scoped_styles_html = ctx._root._head_element.get_scoped_styles_html()
+
+    index_css_link_html = (
+        f'<link rel="stylesheet" href="{html_module.escape(base_url, quote=True)}_webcompy-ui/index.css">'
+    )
 
     html_output = "<!doctype html>" + (
         await _HtmlElement(
@@ -356,4 +361,10 @@ async def _generate_html_impl(
     )
 
     html_output = html_output.replace("<head>", f"<head>\n{head_content_html}", 1)
+    if scoped_styles_html:
+        html_output = html_output.replace(
+            index_css_link_html,
+            f"{index_css_link_html}\n{scoped_styles_html}",
+            1,
+        )
     return html_output, app_loader_html
