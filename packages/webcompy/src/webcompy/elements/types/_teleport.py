@@ -127,6 +127,7 @@ class TeleportElement(DynamicElement):
             idx = self._node_idx
             for child in self._children:
                 idx = _position_element_nodes(child, parent_node, idx)
+            self._mounted = True
         else:
             self._mount_node()
             if not self._children_rendered:
@@ -174,6 +175,8 @@ class TeleportElement(DynamicElement):
         if not self._inline and self._target_node is not None:
             return
         super()._re_index_children(recursive)
+        if self._inline:
+            self._parent._re_index_children(False)
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True) -> None:
         self._cancel_pending_render_tasks()
