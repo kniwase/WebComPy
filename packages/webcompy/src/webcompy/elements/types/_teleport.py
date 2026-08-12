@@ -200,10 +200,13 @@ class TeleportElement(DynamicElement):
             if existing and not getattr(existing, "__webcompy_node__", False):
                 existing.remove()
             self._node_cache = self._create_node()
-        if self._mounted:
+        if not self._children_rendered:
             # The adopted anchor schedules its own render; the post-hydration
             # pass re-renders the tree again, but that second run is a no-op
             # thanks to the _children_rendered/_mounted guards below.
+            # Scheduling unconditionally also makes the fresh-anchor path
+            # (parser-merged anchors) self-contained instead of relying on the
+            # app-level post-hydration render pass.
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
             task = scheduler.schedule(self._render())
             self._pending_render_tasks.append((self, task))
