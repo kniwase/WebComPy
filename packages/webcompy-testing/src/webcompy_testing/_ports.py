@@ -11,8 +11,26 @@ from webcompy.ports._fetch import FetchPort, Response
 from webcompy.ports._ffi import FFIPort
 from webcompy.ports._history import HistoryPort
 from webcompy.ports._host import HostPort
+from webcompy.ports._media_query import MediaQueryPort
 from webcompy_server.ports._dom import ServerDOMPort
 from webcompy_testing._dom import FakeDOMNode
+
+
+class FakeMediaQueryPort(MediaQueryPort):
+    def __init__(
+        self,
+        *,
+        prefers_dark: bool = False,
+        prefers_reduced_motion: bool = False,
+    ) -> None:
+        self._prefers_dark = prefers_dark
+        self._prefers_reduced_motion = prefers_reduced_motion
+
+    def prefers_dark(self) -> bool:
+        return self._prefers_dark
+
+    def prefers_reduced_motion(self) -> bool:
+        return self._prefers_reduced_motion
 
 
 class FakeBrowserDOMPort(ServerDOMPort):

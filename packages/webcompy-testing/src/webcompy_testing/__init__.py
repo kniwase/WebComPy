@@ -17,6 +17,7 @@ from webcompy_testing._ports import (
     FakeBrowserHostPort,
     FakeFetchPort,
     FakeHistoryPort,
+    FakeMediaQueryPort,
 )
 from webcompy_testing._renderer import TestRenderer, TestRendererResult
 from webcompy_testing._restore import restore_signal_values
@@ -31,6 +32,7 @@ __all__ = [
     "FakeDOMNode",
     "FakeFetchPort",
     "FakeHistoryPort",
+    "FakeMediaQueryPort",
     "TestRenderer",
     "TestRendererResult",
     "VirtualDOMEvent",
