@@ -188,7 +188,9 @@ def reset_di_scope():
 def fake_browser_full(monkeypatch, reset_di_scope):
     import importlib
 
+    from webcompy.di._keys import _TELEPORT_REGISTRY_KEY
     from webcompy.di._scope import DIScope, _active_di_scope
+    from webcompy.elements.types._teleport import _TeleportTargetRegistry
     from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
     from webcompy_testing import FakeAsyncSchedulerPort
 
@@ -207,6 +209,7 @@ def fake_browser_full(monkeypatch, reset_di_scope):
     scope.provide(DOM_PORT_KEY, dom_port)
     scope.provide(HOST_PORT_KEY, host_port)
     scope.provide(FFI_PORT_KEY, ffi_port)
+    scope.provide(_TELEPORT_REGISTRY_KEY, _TeleportTargetRegistry())
 
     prev_token = _active_di_scope.set(scope)
     yield dom_port, host_port, ffi_port

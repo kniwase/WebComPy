@@ -203,6 +203,67 @@ class TestTeleportSharedTargetReindex:
             b_items.pop(0)
             assert _teleported_tags(body) == ["aa2", "bb2"]
 
+    @pytest.mark.asyncio
+    async def test_shared_target_stays_ordered_while_sibling_subtree_is_pending(self, teleport_env, fake_browser_full):
+        import asyncio
+
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore
+        from webcompy.di import inject
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.di._scope import _active_di_scope
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        dom_port, _, _ = fake_browser_full
+        scope = _active_di_scope.get()
+        scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+        scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+        release = asyncio.Event()
+
+        @define_component
+        async def PendingCmp(context):
+            await release.wait()
+            return html.DIV({"data-t": "a"}, "resolved")
+
+        b_items = ReactiveList(["b1"])
+        teleport_a = Teleport({"to": "body"}, PendingCmp(None))
+        teleport_b = Teleport({"to": "body"}, repeat(b_items, lambda item: html.DIV({"data-t": "b"}, item)))
+        parent = Element("div", {}, {}, None, None)
+        parent._node_cache = FakeDOMNode("div")
+        parent._mounted = True
+
+        class _Root:
+            def _get_belonging_component(self):
+                return ""
+
+            def _get_belonging_components(self):
+                return ()
+
+        parent._parent = _Root()
+        for idx, teleport in enumerate((teleport_a, teleport_b)):
+            teleport._parent = parent
+            teleport._node_idx = idx
+
+        def _tags(body):
+            return [
+                (body.childNodes[i].getAttribute("data-t") or "") + (body.childNodes[i].textContent or "")
+                for i in range(body.childNodes.length)
+                if body.childNodes[i].getAttribute("data-t") in ("a", "b")
+            ]
+
+        task_a = asyncio.create_task(teleport_a._render())
+        await asyncio.sleep(0)
+        await teleport_b._render()
+        assert _tags(dom_port.body) == ["bb1"]
+        b_items.append("b2")
+        assert _tags(dom_port.body) == ["bb1", "bb2"]
+        release.set()
+        await task_a
+        await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
+        assert _tags(dom_port.body) == ["aresolved", "bb1", "bb2"]
+        b_items.pop(0)
+        assert _tags(dom_port.body) == ["aresolved", "bb2"]
+
 
 class TestTeleportRemoval:
     def test_conditional_removal_cleans_target_and_anchor(self, teleport_env):
