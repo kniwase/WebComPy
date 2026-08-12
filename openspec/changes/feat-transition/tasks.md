@@ -40,4 +40,4 @@
 - [x] 6.2 `uv run pyright` passes
 - [x] 6.3 `uv run python -m pytest tests/ --tb=short` passes
 - [x] 6.4 `uv run python -m webcompy generate --config docs_app.webcompy_config` passes and `openspec validate feat-transition --type change --strict` passes
-- [ ] 6.5 All E2E groups pass via `scripts/run-e2e-tests.sh`
+- [x] 6.5 All E2E groups pass via `scripts/run-e2e-tests.sh`
