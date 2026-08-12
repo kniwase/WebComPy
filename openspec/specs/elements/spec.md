@@ -190,6 +190,17 @@ The `_re_index_children` operation SHALL assign child indices using the same bas
 - **WHEN** a dynamic container sits at `_node_idx == 0` (e.g., `RouterView` as the sole child of its parent) and `_re_index_children` runs after a refresh or as part of `RouterView._on_set_parent`
 - **THEN** the assigned child indices SHALL equal the values produced under base `0` (preserving current behavior for the common case)
 
+### Requirement: `_re_index_children` SHALL eagerly propagate a changed base index into dynamic children
+
+A non-recursive `_re_index_children` pass SHALL propagate the newly assigned base index one level into each `DynamicElement` child whose `_node_idx` changed during the pass: the child's subtree SHALL be re-indexed immediately (`child._re_index_children(False)`) before the pass continues with the next sibling. This keeps the subtree of a dynamic child at a non-zero offset aligned when a preceding sibling grows or shrinks, without waiting for the child's next render — for example, an inline-fallback `TeleportElement` inside a `RepeatElement`/`SwitchElement` must re-index against the teleport's updated position. The propagation SHALL terminate: it descends only into children whose `_node_idx` actually changed, and each level propagates at most once per pass, so the re-entrant pass issued by an inline `TeleportElement` (which re-indexes itself against the parent) SHALL find stable indices and stop. A recursive pass (`recursive=True`) SHALL retain its full-depth behavior.
+
+#### Scenario: Inline Teleport subtree re-indexes after preceding sibling growth
+- **WHEN** a container's non-recursive `_re_index_children` pass changes a dynamic child's base index
+- **AND** the dynamic child's subtree contains an inline-fallback `TeleportElement` wrapping a `RepeatElement`
+- **THEN** the changed base index SHALL propagate one level into the dynamic child in the same pass
+- **AND** the inline teleport SHALL re-index its children against the parent's pass
+- **AND** the repeat's children SHALL receive updated `_node_idx` values aligned with the teleport's new position, with no node drift, re-indexing errors, or unbounded recursion
+
 ### Requirement: DynamicElement `_refresh_sync` pattern shall use a shared helper
 
 A `_run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None` helper SHALL be defined in `webcompy/elements/types/_dynamic.py`. The helper SHALL encapsulate the nest_asyncio + loop.run_until_complete sync-wrapping logic. `SwitchElement._refresh_sync` and `RepeatElement._refresh_sync` SHALL delegate to `_run_refresh_sync` instead of containing their own copies of the sync-wrapper logic.
