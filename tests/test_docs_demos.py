@@ -171,6 +171,18 @@ def test_todo_remove_done_items():
             assert any("Create WebComPy project" in (item.textContent or "") for item in items)
 
 
+def test_teleport_demo_renders_controls():
+    with mock_app_run():
+        from static._demos.teleport.app import App
+
+        with TestRenderer.render(App) as result:
+            html = result.to_html()
+            assert "Teleport Demo" in html
+            assert "Open Modal" in html
+            assert "Toggle Dropdown" in html
+            assert "Teleported Modal" not in html
+
+
 @pytest.mark.asyncio
 async def test_fetch_page_loads():
     demo_dir = DOCS_APP_DIR / "static" / "_demos" / "fetch_sample"

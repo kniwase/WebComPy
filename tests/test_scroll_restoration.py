@@ -144,6 +144,9 @@ class QueueHostPort(HostPort):
     def create_js_global_getter(self, *args: Any, **kwargs: Any) -> Any:
         return lambda: None
 
+    def add_window_event_listener(self, event_type: str, handler: Any) -> Any:
+        return lambda: None
+
 
 class TestBrowserScrollManager:
     def test_init_sets_manual(self):

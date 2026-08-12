@@ -17,10 +17,12 @@ from webcompy.elements.generators import (
 from webcompy.elements.types._client_only import ClientOnlyElement
 from webcompy.elements.types._error_boundary import ErrorBoundaryElement
 from webcompy.elements.types._suspense import SuspenseElement
+from webcompy.elements.types._teleport import TeleportElement
 
 ClientOnly = ClientOnlyElement
 ErrorBoundary = ErrorBoundaryElement
 Suspense = SuspenseElement
+Teleport = TeleportElement
 
 __all__ = [
     "ClientOnly",
@@ -30,6 +32,7 @@ __all__ = [
     "ErrorBoundary",
     "HeadElement",
     "Suspense",
+    "Teleport",
     "break_line",
     "client_only",
     "create_element",

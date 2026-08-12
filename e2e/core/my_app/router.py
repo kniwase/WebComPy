@@ -33,6 +33,7 @@ from .pages.storage import StoragePage
 from .pages.storage_tab_sync import StorageTabSyncPage
 from .pages.suspense_test import SuspensePage
 from .pages.switch_test import SwitchPage
+from .pages.teleport import TeleportPage
 from .pages.template import TemplatePage
 from .pages.template_components import TemplateComponentsPage
 from .pages.template_control_flow import TemplateControlFlowPage
@@ -78,6 +79,7 @@ router = Router(
         ],
     },
     {"path": "/two-way-binding", "component": TwoWayBindingPage},
+    {"path": "/teleport", "component": TeleportPage},
     {"path": "/form-fields", "component": FormFieldsPage},
     {"path": "/storage", "component": StoragePage},
     {"path": "/storage-tab-sync", "component": StorageTabSyncPage},

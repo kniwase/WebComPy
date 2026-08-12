@@ -88,6 +88,13 @@ class TestRendererResult:
                     err,
                 )
 
+    @property
+    def body_node(self) -> VirtualDOMNode | None:
+        dom = self._scope.inject(DOM_PORT_KEY, default=None)
+        if isinstance(dom, FakeBrowserDOMPort):
+            return dom.body
+        return None
+
 
 class TestRenderer:
     @staticmethod
@@ -103,16 +110,23 @@ class TestRenderer:
                 ComponentStore,
                 _register_deferred_components,
             )
-            from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+            from webcompy.di._keys import (
+                _COMPONENT_STORE_KEY,
+                _HEAD_PROPS_KEY,
+                _TELEPORT_REGISTRY_KEY,
+            )
+            from webcompy.elements.types._teleport import _TeleportTargetRegistry
 
             scope = DIScope(parent=parent_scope)
             fake_scheduler = FakeAsyncSchedulerPort()
             scope.provide(ASYNC_SCHEDULER_PORT_KEY, fake_scheduler)
-            scope.provide(DOM_PORT_KEY, FakeBrowserDOMPort())
+            dom_port = FakeBrowserDOMPort()
+            scope.provide(DOM_PORT_KEY, dom_port)
             scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
             scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
             scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
             scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+            scope.provide(_TELEPORT_REGISTRY_KEY, _TeleportTargetRegistry())
 
             _active_di_scope.set(scope)
             _register_deferred_components()
@@ -120,6 +134,7 @@ class TestRenderer:
             root_node = VirtualDOMNode("div")
             root_node.__webcompy_node__ = False
             root_node.__webcompy_prerendered_node__ = True
+            dom_port._body.appendChild(root_node)
 
             class _DummyParent:
                 def __init__(self, node):

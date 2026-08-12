@@ -20,6 +20,19 @@ class HostPort(ABC):
         """
         ...
 
+    @abstractmethod
+    def add_window_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        """Register a window-level event listener via ``window.addEventListener``.
+
+        Args:
+            event_type: Event name (e.g. ``"resize"``, ``"scroll"``).
+            handler: Callback invoked when the event fires.
+
+        Returns:
+            A cleanup function; call it to remove the listener.
+        """
+        ...
+
     @overload
     def create_js_global_getter(self, name: str, *, wrapper: Callable[[Any | None], T_co]) -> Callable[[], T_co]:
         """Create a lazy getter with a wrapper transformation.

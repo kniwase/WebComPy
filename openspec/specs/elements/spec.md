@@ -190,6 +190,21 @@ The `_re_index_children` operation SHALL assign child indices using the same bas
 - **WHEN** a dynamic container sits at `_node_idx == 0` (e.g., `RouterView` as the sole child of its parent) and `_re_index_children` runs after a refresh or as part of `RouterView._on_set_parent`
 - **THEN** the assigned child indices SHALL equal the values produced under base `0` (preserving current behavior for the common case)
 
+### Requirement: `_re_index_children` SHALL eagerly propagate a changed base index into inline Teleports
+
+A non-recursive `_re_index_children` pass SHALL propagate the newly assigned base index one level into each `TeleportElement` child whose `_node_idx` changed during the pass: the teleport's subtree SHALL be re-indexed immediately (`child._re_index_children(False)`) before the pass continues with the next sibling. Inline-fallback Teleports are the only dynamic elements that require this: their children are positioned in the parent's slot and must re-index against the teleport's updated position without waiting for the teleport's next render — for example, an inline-fallback `TeleportElement` wrapping a `RepeatElement` must re-index when a preceding sibling grows. Other `DynamicElement` children (RepeatElement, SwitchElement, SuspenseElement, FragmentElement, etc.) SHALL keep their lazy semantics: their subtrees are re-indexed on their own render/refresh paths, and the pass SHALL NOT descend into them. The propagation SHALL terminate: it descends only into teleport children whose `_node_idx` actually changed, and each level propagates at most once per pass, so the re-entrant pass issued by an inline `TeleportElement` (which re-indexes itself against the parent) SHALL find stable indices and stop. A recursive pass (`recursive=True`) SHALL retain its full-depth behavior.
+
+#### Scenario: Inline Teleport subtree re-indexes after preceding sibling growth
+- **WHEN** a container's non-recursive `_re_index_children` pass changes a `TeleportElement` child's base index
+- **AND** the teleport is in inline-fallback mode and its subtree contains a `RepeatElement`
+- **THEN** the changed base index SHALL propagate one level into the teleport in the same pass
+- **AND** the inline teleport SHALL re-index its children against the parent's pass
+- **AND** the repeat's children SHALL receive updated `_node_idx` values aligned with the teleport's new position, with no node drift, re-indexing errors, or unbounded recursion
+
+#### Scenario: Non-teleport dynamic siblings keep lazy re-indexing
+- **WHEN** a container's non-recursive `_re_index_children` pass changes the base index of a `RepeatElement`/`SwitchElement`/`SuspenseElement`/`FragmentElement` child that does not contain an inline Teleport
+- **THEN** the pass SHALL NOT descend into that child's subtree; the child's own render/refresh path SHALL re-index the subtree
+
 ### Requirement: DynamicElement `_refresh_sync` pattern shall use a shared helper
 
 A `_run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None` helper SHALL be defined in `webcompy/elements/types/_dynamic.py`. The helper SHALL encapsulate the nest_asyncio + loop.run_until_complete sync-wrapping logic. `SwitchElement._refresh_sync` and `RepeatElement._refresh_sync` SHALL delegate to `_run_refresh_sync` instead of containing their own copies of the sync-wrapper logic.

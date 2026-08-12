@@ -239,6 +239,24 @@ def _position_element_nodes(
     parent_node: DOMNode,
     start_idx: int,
 ) -> int:
+    from webcompy.elements.types._teleport import TeleportElement
+
+    if isinstance(element, TeleportElement):
+        if element._inline:
+            idx = start_idx
+            for child in element._children:
+                idx = _position_element_nodes(child, parent_node, idx)
+            return idx
+        node = element._get_anchor_node()
+        if start_idx < parent_node.childNodes.length:
+            ref_node = parent_node.childNodes[start_idx]
+            if ref_node is not node:
+                parent_node.insertBefore(node, ref_node)
+        else:
+            parent_node.appendChild(node)
+        if not element._mounted:
+            element._mounted = True
+        return start_idx + 1
     if isinstance(element, DynamicElement):
         idx = start_idx
         for child in element._children:

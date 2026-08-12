@@ -208,7 +208,7 @@ jobs:
           - name: bootstrap-static
             files: e2e/core/test_bootstrap.py e2e/core/test_static_site.py e2e/core/test_signal_value_transfer.py
           - name: components
-            files: e2e/core/test_component.py e2e/core/test_lifecycle.py e2e/core/test_scoped_style.py
+            files: e2e/core/test_client_only.py e2e/core/test_component.py e2e/core/test_lifecycle.py e2e/core/test_scoped_style.py e2e/core/test_teleport.py
           - name: reactive-lists
             files: e2e/core/test_reactive.py e2e/core/test_repeat.py e2e/core/test_keyed_repeat.py e2e/core/test_dict_repeat.py
           - name: dynamic-control
@@ -245,7 +245,7 @@ jobs:
             serving_mode: static
           - group:
               name: docs-demos
-              files: e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py
+              files: e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py e2e/docs/test_teleport.py
             serving_mode: static
           - group:
               name: docs-matplotlib

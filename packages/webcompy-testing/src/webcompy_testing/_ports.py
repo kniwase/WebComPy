@@ -24,6 +24,10 @@ class FakeBrowserDOMPort(ServerDOMPort):
         self._html.appendChild(self._head)
         self._html.appendChild(self._body)
 
+    @property
+    def body(self) -> FakeDOMNode:
+        return self._body
+
     def create_element(self, tag: str) -> FakeDOMNode:
         return FakeDOMNode(tag)
 
@@ -88,6 +92,9 @@ def _find_by_tag_attr(node: FakeDOMNode, tag: str, attr_name: str, attr_value: s
 class FakeBrowserHostPort(HostPort):
     def schedule_macro_task(self, callback: Any) -> None:
         callback()
+
+    def add_window_event_listener(self, event_type: str, handler: Any) -> Any:
+        return lambda: None
 
     def create_js_global_getter(
         self,

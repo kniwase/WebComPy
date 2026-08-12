@@ -12,6 +12,9 @@ class ServerHostPort(HostPort):
     def schedule_macro_task(self, callback: Callable[..., Any]) -> None:
         callback()
 
+    def add_window_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        return lambda: None
+
     @overload
     def create_js_global_getter(self, name: str, *, wrapper: Callable[[Any | None], T_co]) -> Callable[[], T_co]: ...
     @overload

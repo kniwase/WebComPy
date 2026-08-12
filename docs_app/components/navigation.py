@@ -2,8 +2,8 @@ from typing import Any, TypedDict
 
 from webcompy.components import ComponentContext, define_component, on_before_destroy
 from webcompy.di import InjectionError, inject
-from webcompy.elements import html
-from webcompy.ports._keys import DOM_PORT_KEY
+from webcompy.elements import Teleport, html
+from webcompy.ports._keys import DOM_PORT_KEY, HOST_PORT_KEY
 from webcompy.router import RouterLink
 from webcompy.signal import Signal, use_computed, use_state
 
@@ -27,12 +27,18 @@ class Page(_PageRequired, total=False):
 @define_component
 def Navbar(context: ComponentContext[list[Page]]):
     _open_states: dict[int, Signal[bool]] = {}
+    _menu_positions: dict[int, Signal[tuple[float, float]]] = {}
     _mobile_open = use_state(lambda: False)
 
     def _get_state(idx: int) -> Signal[bool]:
         if idx not in _open_states:
             _open_states[idx] = Signal(False)
         return _open_states[idx]
+
+    def _get_position(idx: int) -> Signal[tuple[float, float]]:
+        if idx not in _menu_positions:
+            _menu_positions[idx] = Signal((0.0, 0.0))
+        return _menu_positions[idx]
 
     def _toggle(idx: int, ev: Any):
         if hasattr(ev, "stopPropagation"):
@@ -42,6 +48,25 @@ def Navbar(context: ComponentContext[list[Page]]):
                 state.value = False
         state = _get_state(idx)
         state.value = not state.value
+        if state.value and dom:
+            toggle_el = dom.get_element_by_id(f"navbar-dropdown-{idx}-toggle")
+            if toggle_el is not None:
+                rect = toggle_el.getBoundingClientRect()
+                _get_position(idx).value = (float(rect.bottom), float(rect.right))
+
+    def _measure_open_menus():
+        if not dom:
+            return
+        for idx, state in _open_states.items():
+            if not state.value:
+                continue
+            toggle_el = dom.get_element_by_id(f"navbar-dropdown-{idx}-toggle")
+            if toggle_el is not None:
+                rect = toggle_el.getBoundingClientRect()
+                _get_position(idx).value = (float(rect.bottom), float(rect.right))
+
+    def _on_scroll(_ev):
+        _measure_open_menus()
 
     def _close_all():
         for state in _open_states.values():
@@ -66,10 +91,20 @@ def Navbar(context: ComponentContext[list[Page]]):
 
     if dom:
         _remove_click = dom.add_document_event_listener("click", _on_click_outside)
+        _remove_scroll = dom.add_document_event_listener("scroll", _on_scroll)
+        _remove_resize = None
+        try:
+            host = inject(HOST_PORT_KEY)
+            _remove_resize = host.add_window_event_listener("resize", _on_scroll)
+        except InjectionError:
+            pass
 
         @on_before_destroy
         def _cleanup():
             _remove_click()
+            _remove_scroll()
+            if _remove_resize is not None:
+                _remove_resize()
 
     def _generate_navitem(page: Page, idx: int):
         if "children" in page:
@@ -113,15 +148,24 @@ def Navbar(context: ComponentContext[list[Page]]):
                     },
                     page["title"],
                 ),
-                html.UL(
-                    {
-                        "id": menu_id,
-                        "class": "navbar-dropdown",
-                        "role": "menu",
-                        "style": use_computed(lambda idx=idx: f"display: {'block' if _is_open(idx) else 'none'};"),
-                    },
-                    *main,
-                    *items,
+                Teleport(
+                    {"to": "body"},
+                    html.UL(
+                        {
+                            "id": menu_id,
+                            "class": "navbar-dropdown",
+                            "role": "menu",
+                            "style": use_computed(
+                                lambda idx=idx: (
+                                    f"display: {'block' if _is_open(idx) else 'none'}; "
+                                    f"--nav-dropdown-top: {_get_position(idx).value[0]}px; "
+                                    f"--nav-dropdown-right: {_get_position(idx).value[1]}px;"
+                                )
+                            ),
+                        },
+                        *main,
+                        *items,
+                    ),
                 ),
             )
         if "to" in page:
@@ -252,9 +296,10 @@ Navbar.scoped_style = {
         "background-color": "var(--color-bg-elevated)",
     },
     " .navbar-dropdown": {
-        "position": "absolute",
-        "top": "calc(100% + var(--space-1))",
-        "right": "0",
+        "position": "fixed",
+        "top": "var(--nav-dropdown-top)",
+        "left": "auto",
+        "right": "calc(100vw - var(--nav-dropdown-right))",
         "background-color": "var(--color-bg)",
         "border": "1px solid var(--color-border)",
         "border-radius": "var(--radius-md)",
@@ -263,6 +308,7 @@ Navbar.scoped_style = {
         "list-style": "none",
         "z-index": "1000",
         "box-shadow": "var(--shadow-md)",
+        "margin": "0",
     },
     " .navbar-dropdown a": {
         "padding": "var(--space-2) var(--space-4)",
@@ -318,8 +364,11 @@ Navbar.scoped_style = {
             "border-radius": "0",
         },
         " .navbar-dropdown": {
-            "position": "static",
+            "left": "0",
+            "right": "0",
+            "width": "auto",
             "border": "none",
+            "border-radius": "0",
             "box-shadow": "none",
             "padding-left": "var(--space-4)",
             "min-width": "auto",
