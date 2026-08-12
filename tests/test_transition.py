@@ -389,6 +389,31 @@ class TestReplacementAndInterruption:
             assert "fade-enter-from" in _box_classes(result, "b")
             assert _box_classes(result, "a") == []
 
+    def test_replacement_reindexes_once(self, monkeypatch) -> None:
+        a_show, b_show = Signal(True), Signal(False)
+        with TestRenderer.render(self._replacement_root(a_show, b_show)) as result:
+            transition = result._instance._children[0]
+            root = transition._parent
+            original_reindex = root._re_index_children
+            reindex_calls: list[int] = []
+
+            def counting_reindex(recursive: bool = False) -> None:
+                reindex_calls.append(1)
+                original_reindex(recursive)
+
+            monkeypatch.setattr(root, "_re_index_children", counting_reindex)
+            reindex_calls.clear()
+
+            a_show.value = False
+            result.transition_port.flush_frame()
+            assert reindex_calls == []
+
+            b_show.value = True
+            assert result.find_by_attribute("data-testid", "a") is None
+            assert result.find_by_attribute("data-testid", "b") is not None
+            assert "fade-enter-from" in _box_classes(result, "b")
+            assert reindex_calls == [1]
+
     def test_leave_while_leaving_is_noop(self) -> None:
         show = Signal(True)
         with TestRenderer.render(_toggle_root(show)) as result:

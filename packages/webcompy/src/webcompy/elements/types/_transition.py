@@ -87,6 +87,7 @@ class TransitionElement(DynamicElement):
         self._disposed = False
         self._sequence: str | None = None
         self._generation = 0
+        self._reindex_pending = False
         self._pending_child: ElementAbstract | None = None
         self._cancel_next_frame: Callable[[], None] | None = None
         self._cancel_timeout: Callable[[], None] | None = None
@@ -154,6 +155,10 @@ class TransitionElement(DynamicElement):
             if current is not None:
                 self._cancel_sequence_handles()
                 self._start_leave(current)
+                return
+            if self._reindex_pending:
+                self._reindex_pending = False
+                self._parent._re_index_children(False)
             return
 
         if self._sequence == "leave":
@@ -173,7 +178,7 @@ class TransitionElement(DynamicElement):
             self._children = _patch_children([current], [desired], self._node_idx)
             if desired._mounted is None:
                 await desired._render()
-            self._parent._re_index_children(False)
+            self._reindex_parent()
             return
 
         if current is not None:
@@ -187,7 +192,7 @@ class TransitionElement(DynamicElement):
         self._children = [child]
         if child._mounted is None:
             await child._render()
-        self._parent._re_index_children(False)
+        self._reindex_parent()
         self._start_enter_sequence(child)
 
     def _class_name(self, phase: str) -> str:
@@ -348,7 +353,7 @@ class TransitionElement(DynamicElement):
             child._remove_element(True, True)
         self._children = []
         self._sequence = None
-        self._parent._re_index_children(False)
+        self._reindex_pending = True
         if not self._disposed:
             _run_refresh_sync(self._refresh)
 
@@ -362,6 +367,10 @@ class TransitionElement(DynamicElement):
             child._remove_element(True, True)
         self._children = []
         self._sequence = None
+        self._reindex_pending = True
+
+    def _reindex_parent(self) -> None:
+        self._reindex_pending = False
         self._parent._re_index_children(False)
 
     def _cancel_sequence_handles(self) -> None:
