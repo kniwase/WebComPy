@@ -36,8 +36,8 @@
 
 ## 6. Validation
 
-- [ ] 6.1 `uv run ruff check .` and `uv run ruff format --check .` pass
-- [ ] 6.2 `uv run pyright` passes
-- [ ] 6.3 `uv run python -m pytest tests/ --tb=short` passes
-- [ ] 6.4 `uv run python -m webcompy generate --app docs_app.bootstrap:app` passes and `openspec validate feat-transition --type change --strict` passes
+- [x] 6.1 `uv run ruff check .` and `uv run ruff format --check .` pass
+- [x] 6.2 `uv run pyright` passes
+- [x] 6.3 `uv run python -m pytest tests/ --tb=short` passes
+- [x] 6.4 `uv run python -m webcompy generate --config docs_app.webcompy_config` passes and `openspec validate feat-transition --type change --strict` passes
 - [ ] 6.5 All E2E groups pass via `scripts/run-e2e-tests.sh`
