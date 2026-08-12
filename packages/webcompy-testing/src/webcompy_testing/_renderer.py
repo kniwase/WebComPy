@@ -110,7 +110,12 @@ class TestRenderer:
                 ComponentStore,
                 _register_deferred_components,
             )
-            from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+            from webcompy.di._keys import (
+                _COMPONENT_STORE_KEY,
+                _HEAD_PROPS_KEY,
+                _TELEPORT_REGISTRY_KEY,
+            )
+            from webcompy.elements.types._teleport import _TeleportTargetRegistry
 
             scope = DIScope(parent=parent_scope)
             fake_scheduler = FakeAsyncSchedulerPort()
@@ -121,6 +126,7 @@ class TestRenderer:
             scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
             scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
             scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+            scope.provide(_TELEPORT_REGISTRY_KEY, _TeleportTargetRegistry())
 
             _active_di_scope.set(scope)
             _register_deferred_components()

@@ -4,6 +4,7 @@ from typing import TypedDict
 
 from webcompy import logging
 from webcompy.di import inject
+from webcompy.di._keys import _TELEPORT_REGISTRY_KEY
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
@@ -13,6 +14,28 @@ from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY
 from webcompy.signal import SignalBase
 from webcompy.signal._graph import consumer_destroy
 from webcompy.utils._environment import ENVIRONMENT
+
+
+class _TeleportTargetRegistry:
+    def __init__(self) -> None:
+        self._registrations: dict[int, list[TeleportElement]] = {}
+
+    def register(self, target: DOMNode, teleport: TeleportElement) -> None:
+        registrations = self._registrations.setdefault(id(target), [])
+        if teleport not in registrations:
+            registrations.append(teleport)
+
+    def unregister(self, target: DOMNode, teleport: TeleportElement) -> None:
+        registrations = self._registrations.get(id(target))
+        if registrations is None:
+            return
+        if teleport in registrations:
+            registrations.remove(teleport)
+        if not registrations:
+            del self._registrations[id(target)]
+
+    def shared_target_teleports(self, target: DOMNode) -> list[TeleportElement]:
+        return list(self._registrations.get(id(target), ()))
 
 
 class TeleportProps(TypedDict):
@@ -105,6 +128,9 @@ class TeleportElement(DynamicElement):
             self._inline = True
         else:
             self._target_node = target
+            registry = inject(_TELEPORT_REGISTRY_KEY, default=None)
+            if registry is not None:
+                registry.register(target, self)
 
     async def _render(self) -> None:
         if ENVIRONMENT != "pyscript":
@@ -172,11 +198,35 @@ class TeleportElement(DynamicElement):
             node.textContent = ""
 
     def _re_index_children(self, recursive: bool = False) -> None:
-        if not self._inline and self._target_node is not None:
-            return
-        super()._re_index_children(recursive)
         if self._inline:
+            super()._re_index_children(recursive)
             self._parent._re_index_children(False)
+            return
+        if self._target_node is None:
+            super()._re_index_children(recursive)
+            return
+        self._re_index_shared_target()
+
+    def _re_index_shared_target(self) -> None:
+        target = self._target_node
+        if target is None:
+            return
+        registry = inject(_TELEPORT_REGISTRY_KEY, default=None)
+        if registry is None:
+            return
+        teleports = registry.shared_target_teleports(target)
+        if not teleports:
+            return
+        base = target.childNodes.length - sum(teleport._children_length for teleport in teleports)
+        for teleport in teleports:
+            idx = base
+            for child in teleport._children:
+                child._node_idx = idx
+                idx += child._node_count
+            for child in teleport._children:
+                if isinstance(child, DynamicElement):
+                    child._re_index_children(True)
+            base = idx
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True) -> None:
         self._cancel_pending_render_tasks()
@@ -189,6 +239,12 @@ class TeleportElement(DynamicElement):
         if recursive:
             for child in self._children:
                 child._remove_element(True, True)
+        target = self._target_node
+        if target is not None:
+            registry = inject(_TELEPORT_REGISTRY_KEY, default=None)
+            if registry is not None:
+                registry.unregister(target, self)
+            self._re_index_shared_target()
 
 
 Teleport = TeleportElement
