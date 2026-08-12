@@ -5,7 +5,14 @@ from typing import TYPE_CHECKING
 
 from webcompy import logging
 from webcompy.di._scope import DIScope, _active_di_scope
-from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
+from webcompy.ports._keys import (
+    ASYNC_SCHEDULER_PORT_KEY,
+    DOM_PORT_KEY,
+    FFI_PORT_KEY,
+    HOST_PORT_KEY,
+    MEDIA_QUERY_PORT_KEY,
+    TRANSITION_PORT_KEY,
+)
 from webcompy_server.ports import VirtualDOMNode
 from webcompy_testing._asgi import format_html
 from webcompy_testing._ports import (
@@ -13,6 +20,8 @@ from webcompy_testing._ports import (
     FakeBrowserDOMPort,
     FakeBrowserFFIPort,
     FakeBrowserHostPort,
+    FakeMediaQueryPort,
+    FakeTransitionPort,
 )
 from webcompy_testing._utils import run_sync
 
@@ -95,6 +104,14 @@ class TestRendererResult:
             return dom.body
         return None
 
+    @property
+    def transition_port(self) -> FakeTransitionPort | None:
+        return self._scope.inject(TRANSITION_PORT_KEY, default=None)
+
+    @property
+    def media_query_port(self) -> FakeMediaQueryPort | None:
+        return self._scope.inject(MEDIA_QUERY_PORT_KEY, default=None)
+
 
 class TestRenderer:
     @staticmethod
@@ -124,6 +141,8 @@ class TestRenderer:
             scope.provide(DOM_PORT_KEY, dom_port)
             scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
             scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
+            scope.provide(TRANSITION_PORT_KEY, FakeTransitionPort())
+            scope.provide(MEDIA_QUERY_PORT_KEY, FakeMediaQueryPort())
             scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
             scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
             scope.provide(_TELEPORT_REGISTRY_KEY, _TeleportTargetRegistry())

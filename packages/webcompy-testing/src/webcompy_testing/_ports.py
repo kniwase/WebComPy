@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import asyncio
 import re
-from collections.abc import Coroutine
+from collections.abc import Callable, Coroutine
 from typing import Any, Literal
 from unittest.mock import MagicMock
 
 from webcompy.ports._async_scheduler import AsyncSchedulerPort
+from webcompy.ports._dom import DOMNode
 from webcompy.ports._fetch import FetchPort, Response
 from webcompy.ports._ffi import FFIPort
 from webcompy.ports._history import HistoryPort
 from webcompy.ports._host import HostPort
 from webcompy.ports._media_query import MediaQueryPort
+from webcompy.ports._transition import TransitionPort, TransitionStyle
 from webcompy_server.ports._dom import ServerDOMPort
 from webcompy_testing._dom import FakeDOMNode
 
@@ -207,3 +209,81 @@ class FakeAsyncSchedulerPort(AsyncSchedulerPort):
 
     async def await_pending(self) -> None:
         await self.drain()
+
+
+class FakeTransitionStyle:
+    def __init__(self, values: dict[str, str] | None = None) -> None:
+        self._values = dict(values or {})
+
+    def get_property_value(self, name: str) -> str:
+        return self._values.get(name, "")
+
+
+class FakeTransitionPort(TransitionPort):
+    """Transition port driven by a logical frame queue and virtual clock.
+
+    ``flush_frame()`` executes the callbacks scheduled for the next frame and
+    ``advance_time(ms)`` moves the virtual clock forward, firing due
+    timeouts. Per-node computed styles are registered via ``set_style``.
+    """
+
+    def __init__(self) -> None:
+        self._enabled = True
+        self._frame_callbacks: list[Callable[[], Any]] = []
+        self._timeouts: list[tuple[float, int, Callable[[], Any]]] = []
+        self._timeout_seq = 0
+        self._now = 0.0
+        self._styles: dict[int, dict[str, str]] = {}
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    def set_enabled(self, value: bool) -> None:
+        self._enabled = value
+
+    def schedule_next_frame(self, callback: Callable[[], Any]) -> Callable[[], None]:
+        self._frame_callbacks.append(callback)
+
+        def _cancel() -> None:
+            if callback in self._frame_callbacks:
+                self._frame_callbacks.remove(callback)
+
+        return _cancel
+
+    def schedule_timeout(
+        self,
+        callback: Callable[[], Any],
+        delay_ms: float,
+    ) -> Callable[[], None]:
+        self._timeout_seq += 1
+        seq = self._timeout_seq
+        self._timeouts.append((self._now + delay_ms, seq, callback))
+
+        def _cancel() -> None:
+            self._timeouts = [entry for entry in self._timeouts if entry[1] != seq]
+
+        return _cancel
+
+    def flush_frame(self) -> None:
+        callbacks = list(self._frame_callbacks)
+        self._frame_callbacks.clear()
+        for callback in callbacks:
+            callback()
+
+    def advance_time(self, ms: float) -> None:
+        self._now += ms
+        due = [entry for entry in self._timeouts if entry[0] <= self._now]
+        self._timeouts = [entry for entry in self._timeouts if entry[0] > self._now]
+        for _, _, callback in due:
+            callback()
+
+    def flush_all(self) -> None:
+        self.flush_frame()
+        self.advance_time(10**9)
+
+    def get_computed_style(self, node: DOMNode) -> TransitionStyle:
+        return FakeTransitionStyle(self._styles.get(id(node), {}))
+
+    def set_style(self, node: FakeDOMNode, name: str, value: str) -> None:
+        self._styles.setdefault(id(node), {})[name] = value
