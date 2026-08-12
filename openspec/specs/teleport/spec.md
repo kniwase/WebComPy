@@ -99,6 +99,12 @@ When multiple Teleport elements resolve to the same target node, each SHALL appe
 - **WHEN** Teleport A mounts with content `A` targeting `body`, and afterwards Teleport B mounts with content `B` targeting `body`
 - **THEN** under `<body>`, content `A` SHALL precede content `B` among the teleported nodes
 
+#### Scenario: Shared-target order is maintained while teleported subtrees change
+
+- **WHEN** Teleport A and Teleport B target the same node and mount in that order, and A's teleported subtree later grows or shrinks (e.g. a repeated child gains or loses items) before B's teleported subtree changes again
+- **THEN** each teleported node SHALL remain within its own teleport's block under the shared target
+- **AND** B's teleported content SHALL continue to follow A's teleported content in the target node, with no interleaving
+
 ### Requirement: Removing a Teleport shall remove both teleported nodes and the anchor
 
 When a Teleport element is removed from the element tree (conditional removal, parent removal, reconciliation replacement), the framework SHALL remove the teleported child nodes from the target container and the anchor placeholder from the logical parent, and SHALL destroy the element's callback consumers through the standard removal path. No orphaned nodes SHALL remain under the target or at the logical position.
