@@ -362,6 +362,7 @@ async def _generate_html_impl(
 
     html_output = html_output.replace("<head>", f"<head>\n{head_content_html}", 1)
     if scoped_styles_html:
+        assert index_css_link_html in html_output
         html_output = html_output.replace(
             index_css_link_html,
             f"{index_css_link_html}\n{scoped_styles_html}",
