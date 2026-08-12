@@ -14,8 +14,8 @@
 
 ## 3. Spec Updates
 
-- [ ] 3.1 Sync delta specs to main specs: apply MODIFIED requirements (reset scenario wording, components.css repositioning) and the ADDED SSR emission-order requirement to `openspec/specs/css-architecture/spec.md`; apply the head-content API split to `openspec/specs/head-vdom/spec.md`
-- [ ] 3.2 Update the AGENTS.md File → Spec Mapping / invariant notes if the spec reference structure changed, and run `python3 scripts/check-doc-spec-refs.py`
+- [x] 3.1 Sync delta specs to main specs: apply MODIFIED requirements (reset scenario wording, components.css repositioning) and the ADDED SSR emission-order requirement to `openspec/specs/css-architecture/spec.md`; apply the head-content API split to `openspec/specs/head-vdom/spec.md`
+- [x] 3.2 Update the AGENTS.md File → Spec Mapping / invariant notes if the spec reference structure changed, and run `python3 scripts/check-doc-spec-refs.py`
 
 ## 4. Verification
 
