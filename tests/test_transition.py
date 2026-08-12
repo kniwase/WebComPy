@@ -250,6 +250,19 @@ class TestDurationResolution:
             result.transition_port.advance_time(100)
             assert _box_classes(result, "box") == []
 
+    def test_end_event_on_node_finalizes_early(self) -> None:
+        from webcompy_server.ports import VirtualDOMEvent
+
+        show = Signal(False)
+        with TestRenderer.render(_toggle_root(show)) as result:
+            show.value = True
+            result.transition_port.flush_frame()
+            assert "fade-enter-active" in _box_classes(result, "box")
+            box = result.find_by_attribute("data-testid", "box")
+            assert box is not None
+            box.dispatchEvent(VirtualDOMEvent("transitionend", bubbles=True))
+            assert _box_classes(result, "box") == []
+
     def test_end_event_from_descendant_does_not_finalize(self) -> None:
         from webcompy_server.ports import VirtualDOMEvent
 

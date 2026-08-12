@@ -314,7 +314,7 @@ class TransitionElement(DynamicElement):
         if node is None:
             return
         target = getattr(ev, "target", None)
-        if target is not node:
+        if target != node:
             return
         self._finalize_sequence(gen, is_enter)
 
