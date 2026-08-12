@@ -21,13 +21,13 @@
 
 ## 4. Unit tests (`tests/test_transition.py`, browserless via TestRenderer)
 
-- [ ] 4.1 Enter sequence: class application order (from → active+to → cleaned) with explicit `duration`; node present throughout
-- [ ] 4.2 Leave sequence: node retained during leave classes, removed after duration; callback consumers destroyed; no orphaned nodes
-- [ ] 4.3 Duration resolution: explicit prop honored; missing prop + no computed duration → immediate removal with warning (captured)
-- [ ] 4.4 Node accounting: sibling positions stable during leave; single parent re-index after completion
-- [ ] 4.5 Replacement/interruption: A→B replacement runs leave then enter with no simultaneous occupants; new child during an in-progress leave finalizes the leaving node first
-- [ ] 4.6 SSR/hydration steady state: server-rendered output contains no transition classes; hydrated content does not run enter sequences
-- [ ] 4.7 Reduced motion: fake port reporting reduced motion causes immediate mount/removal without classes
+- [x] 4.1 Enter sequence: class application order (from → active+to → cleaned) with explicit `duration`; node present throughout
+- [x] 4.2 Leave sequence: node retained during leave classes, removed after duration; callback consumers destroyed; no orphaned nodes
+- [x] 4.3 Duration resolution: explicit prop honored; missing prop + no computed duration → immediate removal with warning (captured)
+- [x] 4.4 Node accounting: sibling positions stable during leave; single parent re-index after completion
+- [x] 4.5 Replacement/interruption: A→B replacement runs leave then enter with no simultaneous occupants; new child during an in-progress leave finalizes the leaving node first
+- [x] 4.6 SSR/hydration steady state: server-rendered output contains no transition classes; hydrated content does not run enter sequences
+- [x] 4.7 Reduced motion: fake port reporting reduced motion causes immediate mount/removal without classes
 
 ## 5. E2E and docs
 

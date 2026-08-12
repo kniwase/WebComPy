@@ -111,7 +111,11 @@ class TransitionElement(DynamicElement):
 
     def _build_children(self, value: ElementChildren) -> list[ElementAbstract]:
         child = self._normalize_child(value)
-        return [child] if child is not None else []
+        if child is None:
+            return []
+        child = self._create_child_element(self._parent, None, child)
+        assert child is not None
+        return [child]
 
     async def _render(self) -> None:
         if not self._initial_rendered:

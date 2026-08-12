@@ -34,6 +34,9 @@ class FakeMediaQueryPort(MediaQueryPort):
     def prefers_reduced_motion(self) -> bool:
         return self._prefers_reduced_motion
 
+    def set_prefers_reduced_motion(self, value: bool) -> None:
+        self._prefers_reduced_motion = value
+
 
 class FakeBrowserDOMPort(ServerDOMPort):
     def __init__(self) -> None:
