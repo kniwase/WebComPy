@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, Iterable
 from re import compile as re_compile
 from typing import (
     Any,
@@ -9,6 +9,7 @@ from typing import (
     TypeAlias,
     TypeVar,
     cast,
+    overload,
 )
 
 from webcompy.components._component import Component
@@ -194,6 +195,9 @@ class ComponentGenerator(Generic[PropsType]):
         self,
         name: str,
         component_def: FuncComponentDef[PropsType],
+        *,
+        custom_element_name: str | None = None,
+        observed_attributes: tuple[str, ...] = (),
     ) -> None:
         self._style = {}
         self._reactive_styles: list[ReactiveScopedStyle] = []
@@ -201,12 +205,33 @@ class ComponentGenerator(Generic[PropsType]):
         self._name: str = name
         self._cid = generate_id(name)
         self._registered = False
+        self._custom_element_name = custom_element_name
+        self._observed_attributes = observed_attributes
+        self._observed_prop_keys: dict[str, str] = {attr: attr.replace("-", "_") for attr in observed_attributes}
         if not self._try_register():
             _unregistered_generators.append(self)
 
     @property
     def _id(self) -> str:
         return self._cid
+
+    @property
+    def custom_element_name(self) -> str | None:
+        return self._custom_element_name
+
+    @property
+    def observed_attributes(self) -> tuple[str, ...]:
+        return self._observed_attributes
+
+    @property
+    def observed_prop_keys(self) -> dict[str, str]:
+        return self._observed_prop_keys
+
+    @property
+    def definition_key(self) -> str | None:
+        if self._custom_element_name is None:
+            return None
+        return f"webcompy-v1:{self._custom_element_name}:{','.join(self._observed_attributes)}"
 
     def _try_register(self) -> bool:
         from webcompy.di import inject
@@ -277,12 +302,80 @@ class ComponentGenerator(Generic[PropsType]):
         self._inject_scoped_style_if_new()
 
 
-def define_component(
-    setup: Callable[[ComponentContext[PropsType]], ElementChildren]
-    | Callable[[ComponentContext[PropsType]], Coroutine[Any, Any, ElementChildren]],
+_CUSTOM_ELEMENT_NAME_RE = re_compile(r"^[a-z][a-z0-9._-]*$")
+
+
+def _validate_custom_element_name(name: str) -> None:
+    if not isinstance(name, str) or "-" not in name or _CUSTOM_ELEMENT_NAME_RE.fullmatch(name) is None:
+        raise WebComPyComponentException(
+            f"Invalid custom element name: {name!r}. Custom element names must be lowercase and contain a hyphen."
+        )
+
+
+def _normalize_observed_attributes(observed_attributes: Iterable[str]) -> tuple[str, ...]:
+    seen: list[str] = []
+    seen_set: set[str] = set()
+    for raw in observed_attributes:
+        if not isinstance(raw, str) or not raw:
+            raise WebComPyComponentException("Observed attribute names must be non-empty strings")
+        name = raw.lower()
+        if name in seen_set:
+            raise WebComPyComponentException(f"Duplicate observed attribute: '{name}'")
+        if name.startswith("webcompy-"):
+            raise WebComPyComponentException(f"Framework attribute cannot be observed: '{name}'")
+        seen.append(name)
+        seen_set.add(name)
+    keys: set[str] = set()
+    for name in seen:
+        key = name.replace("-", "_")
+        if key in keys:
+            raise WebComPyComponentException(f"Observed attributes collide on prop key '{key}': '{name}'")
+        keys.add(key)
+    return tuple(seen)
+
+
+def _create_generator(
+    setup: FuncComponentDef[PropsType],
+    custom_element_name: str | None,
+    observed_attributes: tuple[str, ...],
 ) -> ComponentGenerator[PropsType]:
     setup.__webcompy_component_definition__ = True
-    return ComponentGenerator(setup.__name__, setup)
+    return ComponentGenerator(
+        setup.__name__,
+        setup,
+        custom_element_name=custom_element_name,
+        observed_attributes=observed_attributes,
+    )
+
+
+@overload
+def define_component(
+    setup: FuncComponentDef[PropsType],
+) -> ComponentGenerator[PropsType]: ...
+
+
+@overload
+def define_component(
+    setup: str,
+    *,
+    observed_attributes: Iterable[str] = (),
+) -> Callable[[FuncComponentDef[PropsType]], ComponentGenerator[PropsType]]: ...
+
+
+def define_component(
+    setup: FuncComponentDef[PropsType] | str,
+    *,
+    observed_attributes: Iterable[str] = (),
+) -> ComponentGenerator[PropsType] | Callable[[FuncComponentDef[PropsType]], ComponentGenerator[PropsType]]:
+    if callable(setup):
+        return _create_generator(setup, None, ())
+    _validate_custom_element_name(setup)
+    normalized = _normalize_observed_attributes(observed_attributes)
+
+    def _decorator(component_def: FuncComponentDef[PropsType]) -> ComponentGenerator[PropsType]:
+        return _create_generator(component_def, setup, normalized)
+
+    return _decorator
 
 
 def _register_deferred_components() -> None:

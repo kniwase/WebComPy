@@ -31,7 +31,13 @@ if TYPE_CHECKING:
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
 _Lifecyclehooks: TypeAlias = dict[
-    Literal["on_before_rendering", "on_after_rendering", "on_before_destroy"],
+    Literal[
+        "on_before_rendering",
+        "on_after_rendering",
+        "on_before_destroy",
+        "on_mounted",
+        "on_unmounted",
+    ],
     Callable[[], Any],
 ]
 
@@ -46,6 +52,8 @@ class Context(Generic[PropsType]):
     __on_before_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
     __on_after_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
     __on_before_destroy: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
+    __on_mounted: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
+    __on_unmounted: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]] | None
 
     __title_getter: Callable[[], str]
     __meta_getter: Callable[[], dict[str, dict[str, str]]]
@@ -69,6 +77,8 @@ class Context(Generic[PropsType]):
         self.__on_before_rendering = None
         self.__on_after_rendering = None
         self.__on_before_destroy = None
+        self.__on_mounted = None
+        self.__on_unmounted = None
         self.__title_getter = title_getter
         self.__meta_getter = meta_getter
         self.__title_setter = title_setter
@@ -103,6 +113,12 @@ class Context(Generic[PropsType]):
 
     def on_before_destroy(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
         self.__on_before_destroy = func
+
+    def on_mounted(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
+        self.__on_mounted = func
+
+    def on_unmounted(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
+        self.__on_unmounted = func
 
     def on_error_captured(self, func: Callable[[Exception], Any]) -> None:
         self._error_captured_hooks.append(func)
@@ -223,6 +239,10 @@ class Context(Generic[PropsType]):
             hooks["on_after_rendering"] = self.__on_after_rendering
         if self.__on_before_destroy:
             hooks["on_before_destroy"] = self.__on_before_destroy
+        if self.__on_mounted:
+            hooks["on_mounted"] = self.__on_mounted
+        if self.__on_unmounted:
+            hooks["on_unmounted"] = self.__on_unmounted
         return hooks
 
 
@@ -241,6 +261,10 @@ class ComponentContext(Protocol[PropsType]):
     def on_after_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
 
     def on_before_destroy(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
+
+    def on_mounted(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
+
+    def on_unmounted(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
 
     def on_error_captured(self, func: Callable[[Exception], Any]) -> None: ...
 
@@ -267,6 +291,8 @@ class ComponentProperty(TypedDict):
     on_before_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
     on_after_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
     on_before_destroy: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
+    on_mounted: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
+    on_unmounted: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
 
 
 def generate_id(component_name: str) -> str:

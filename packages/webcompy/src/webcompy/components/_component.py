@@ -7,7 +7,12 @@ from typing import TYPE_CHECKING, Any, TypeAlias, TypeGuard, cast
 from uuid import UUID, uuid4
 
 from webcompy.components._context_manager import component_context
-from webcompy.components._libs import ComponentProperty, Context, generate_id
+from webcompy.components._libs import (
+    ComponentProperty,
+    Context,
+    WebComPyComponentException,
+    generate_id,
+)
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._element import Element, ElementBase
@@ -171,6 +176,13 @@ class Component(ElementBase):
             child_di_scope = parent_di_scope._children[-1]
 
         hooks = context.__get_lifecyclehooks__()
+        if (hooks.get("on_mounted") or hooks.get("on_unmounted")) and (
+            self._generator is None or self._generator.custom_element_name is None
+        ):
+            raise WebComPyComponentException(
+                "on_mounted/on_unmounted are only available for named custom-element components; "
+                "pass a custom element name to @define_component"
+            )
         original_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
 
         def on_before_destroy_with_scope_cleanup():
@@ -184,6 +196,8 @@ class Component(ElementBase):
             "on_before_rendering": hooks.get("on_before_rendering", lambda: None),
             "on_after_rendering": hooks.get("on_after_rendering", lambda: None),
             "on_before_destroy": on_before_destroy_with_scope_cleanup,
+            "on_mounted": hooks.get("on_mounted", lambda: None),
+            "on_unmounted": hooks.get("on_unmounted", lambda: None),
         }
 
     def _init_component(self, property: ComponentProperty):
@@ -230,6 +244,13 @@ class Component(ElementBase):
             return
         context = self._render_state.context
         hooks = context.__get_lifecyclehooks__()
+        if (hooks.get("on_mounted") or hooks.get("on_unmounted")) and (
+            self._generator is None or self._generator.custom_element_name is None
+        ):
+            raise WebComPyComponentException(
+                "on_mounted/on_unmounted are only available for named custom-element components; "
+                "pass a custom element name to @define_component"
+            )
         self._property["on_before_rendering"] = hooks.get("on_before_rendering", lambda: None)
         self._property["on_after_rendering"] = hooks.get("on_after_rendering", lambda: None)
         user_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
@@ -240,6 +261,8 @@ class Component(ElementBase):
             user_on_before_destroy()
 
         self._property["on_before_destroy"] = on_before_destroy_with_scope_cleanup
+        self._property["on_mounted"] = hooks.get("on_mounted", lambda: None)
+        self._property["on_unmounted"] = hooks.get("on_unmounted", lambda: None)
         self._async_results = list(context._async_results)
         self._error_captured_hooks = list(context._error_captured_hooks)
         self._merge_transferables(context)
