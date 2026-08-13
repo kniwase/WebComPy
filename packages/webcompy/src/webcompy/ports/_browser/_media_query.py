@@ -15,3 +15,6 @@ class BrowserMediaQueryPort(MediaQueryPort):
 
     def prefers_dark(self) -> bool:
         return bool(self._browser.window.matchMedia("(prefers-color-scheme: dark)").matches)
+
+    def prefers_reduced_motion(self) -> bool:
+        return bool(self._browser.window.matchMedia("(prefers-reduced-motion: reduce)").matches)

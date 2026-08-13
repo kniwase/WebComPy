@@ -8,6 +8,7 @@ from webcompy.elements.types._suspense import SuspenseElement
 from webcompy.elements.types._switch import SwitchCases, SwitchElement
 from webcompy.elements.types._teleport import TeleportElement
 from webcompy.elements.types._text import NewLine, TextElement
+from webcompy.elements.types._transition import TransitionElement
 
 __all__ = [
     "ClientOnlyElement",
@@ -23,4 +24,5 @@ __all__ = [
     "SwitchElement",
     "TeleportElement",
     "TextElement",
+    "TransitionElement",
 ]

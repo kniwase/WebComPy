@@ -103,6 +103,20 @@ class TestElementRemoveElement:
         el._remove_element(remove_node=False)
         assert ref._node is None
 
+    def test_remove_element_on_never_rendered_creates_no_node(self, fake_browser_full, monkeypatch):
+        el = Element("div", {}, {"click": lambda ev: None}, None, None)
+        dom_port = fake_browser_full[0]
+        created = []
+
+        def _spy_create(tag):
+            created.append(tag)
+            return FakeDOMNode(tag)
+
+        monkeypatch.setattr(dom_port, "create_element", _spy_create)
+        el._remove_element()
+        assert created == []
+        assert el._node_cache is None
+
 
 class TestElementNoBrowser:
     def test_init_node_works_with_server_dom_port(self):

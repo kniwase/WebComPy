@@ -212,7 +212,7 @@ jobs:
           - name: reactive-lists
             files: e2e/core/test_reactive.py e2e/core/test_repeat.py e2e/core/test_keyed_repeat.py e2e/core/test_dict_repeat.py
           - name: dynamic-control
-            files: e2e/core/test_nested_dynamic.py e2e/core/test_switch.py e2e/core/test_suspense.py
+            files: e2e/core/test_nested_dynamic.py e2e/core/test_switch.py e2e/core/test_suspense.py e2e/core/test_transition.py
           - name: router
             files: e2e/core/test_router.py e2e/core/test_async_nav.py e2e/core/test_nested_routes.py e2e/core/test_route_guards.py e2e/core/test_scroll_restoration.py
           - name: interaction
@@ -245,7 +245,7 @@ jobs:
             serving_mode: static
           - group:
               name: docs-demos
-              files: e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py e2e/docs/test_teleport.py
+              files: e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py e2e/docs/test_teleport.py e2e/docs/test_transition.py
             serving_mode: static
           - group:
               name: docs-matplotlib

@@ -38,6 +38,7 @@ from .pages.template import TemplatePage
 from .pages.template_components import TemplateComponentsPage
 from .pages.template_control_flow import TemplateControlFlowPage
 from .pages.template_expressions import TemplateExpressionsPage
+from .pages.transition import TransitionPage
 from .pages.two_way_binding import TwoWayBindingPage
 
 router = Router(
@@ -80,6 +81,7 @@ router = Router(
     },
     {"path": "/two-way-binding", "component": TwoWayBindingPage},
     {"path": "/teleport", "component": TeleportPage},
+    {"path": "/transition", "component": TransitionPage},
     {"path": "/form-fields", "component": FormFieldsPage},
     {"path": "/storage", "component": StoragePage},
     {"path": "/storage-tab-sync", "component": StorageTabSyncPage},
