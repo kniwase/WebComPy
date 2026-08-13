@@ -5,6 +5,7 @@ from . import (  # order matters for circular imports
     components,
     di,
     elements,
+    events,
     exception,
     logging,
     router,
@@ -16,6 +17,7 @@ from . import (  # order matters for circular imports
 from ._version import __version__
 from .app._config import WebComPyAppConfig
 from .di import DIScope, InjectionError, InjectKey, inject, provide
+from .events import use_document_event, use_window_event
 from .resources import load_bytes, load_text
 from .signal import use_computed, use_reactive_dict, use_reactive_list, use_readonly_signal, use_state
 from .storage import use_local_storage, use_session_storage
@@ -32,6 +34,7 @@ __all__ = [
     "components",
     "di",
     "elements",
+    "events",
     "exception",
     "inject",
     "load_bytes",
@@ -43,11 +46,13 @@ __all__ = [
     "signal",
     "storage",
     "use_computed",
+    "use_document_event",
     "use_local_storage",
     "use_reactive_dict",
     "use_reactive_list",
     "use_readonly_signal",
     "use_session_storage",
     "use_state",
+    "use_window_event",
     "utils",
 ]

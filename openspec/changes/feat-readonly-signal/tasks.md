@@ -17,10 +17,10 @@
 
 ## 3. Events Package (`webcompy/events`)
 
-- [ ] 3.1 Create `packages/webcompy/src/webcompy/events/` (modeled on `webcompy/storage/`) with a local `on_before_destroy` chaining helper (replicating the storage `_register_destroy_unregister` pattern; no cross-package `_`-import).
-- [ ] 3.2 Implement `use_window_event(event_type, initial, *, transform=None) -> tuple[ReadonlySignal[T], Callable[[T], T]]` — check `_get_active_component_context()` BEFORE `inject(HOST_PORT_KEY, default=None)`; attach only when a component context exists AND a `HostPort` resolves; `transform: Callable[[Any], T] | None` (identity when `None`) with `try/except` → `webcompy.logging.warning` containment scoped to the transform call; register the port cleanup on `on_before_destroy`; `UserWarning` + no-op when no component context; no-op when the port is missing.
-- [ ] 3.3 Implement `use_document_event(event_type, initial, *, transform=None)` with the same semantics using `DOMPort.add_document_event_listener` and `DOM_PORT_KEY`.
-- [ ] 3.4 Export `use_window_event` and `use_document_event` from `webcompy.events.__init__` and add them to the `webcompy` top-level `__init__.py` import/all list (import `events` after `signal`; keep lifecycle/DI imports lazy inside the functions).
+- [x] 3.1 Create `packages/webcompy/src/webcompy/events/` (modeled on `webcompy/storage/`) with a local `on_before_destroy` chaining helper (replicating the storage `_register_destroy_unregister` pattern; no cross-package `_`-import).
+- [x] 3.2 Implement `use_window_event(event_type, initial, *, transform=None) -> tuple[ReadonlySignal[T], Callable[[T], T]]` — check `_get_active_component_context()` BEFORE `inject(HOST_PORT_KEY, default=None)`; attach only when a component context exists AND a `HostPort` resolves; `transform: Callable[[Any], T] | None` (identity when `None`) with `try/except` → `webcompy.logging.warning` containment scoped to the transform call; register the port cleanup on `on_before_destroy`; `UserWarning` + no-op when no component context; no-op when the port is missing.
+- [x] 3.3 Implement `use_document_event(event_type, initial, *, transform=None)` with the same semantics using `DOMPort.add_document_event_listener` and `DOM_PORT_KEY`.
+- [x] 3.4 Export `use_window_event` and `use_document_event` from `webcompy.events.__init__` and add them to the `webcompy` top-level `__init__.py` import/all list (import `events` after `signal`; keep lifecycle/DI imports lazy inside the functions).
 
 ## 4. Test Support (webcompy-testing)
 
