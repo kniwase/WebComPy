@@ -93,6 +93,7 @@ class AppDocumentRoot(Component):
             self._mount_node()
             if self._app and self._app._hydrate and not self.__hydrated:
                 self.__hydrated = True
+                self._ensure_custom_elements_defined()
                 for child in self._children:
                     child._hydrate_node()
 
@@ -151,6 +152,22 @@ class AppDocumentRoot(Component):
         node.__webcompy_prerendered_node__ = True
         for child in getattr(node, "childNodes", []):
             self._mark_as_prerendered(child)
+
+    def _ensure_custom_elements_defined(self) -> None:
+        from webcompy.di import inject
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+
+        store = inject(_COMPONENT_STORE_KEY, default=None)
+        port = inject(CUSTOM_ELEMENT_PORT_KEY, default=None)
+        if store is None or port is None:
+            return
+        for generator in store.components.values():
+            name = generator.custom_element_name
+            if name is None:
+                continue
+            assert generator.definition_key is not None
+            port.ensure_defined(name, generator.observed_attributes, generator.definition_key)
 
     def _mount_node(self):
         if ENVIRONMENT == "pyscript":

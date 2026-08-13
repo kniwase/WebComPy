@@ -422,6 +422,22 @@ class Component(ElementBase):
             return set(self._generator.observed_attributes)
         return set()
 
+    def _create_node(self) -> DOMNode:
+        generator = self._generator
+        if generator is not None and generator.custom_element_name is not None:
+            from webcompy.di import inject
+            from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+
+            port = inject(CUSTOM_ELEMENT_PORT_KEY, default=None)
+            if port is not None:
+                assert generator.definition_key is not None
+                port.ensure_defined(
+                    generator.custom_element_name,
+                    generator.observed_attributes,
+                    generator.definition_key,
+                )
+        return super()._create_node()
+
     def _init_new_node(self, node: DOMNode) -> None:
         super()._init_new_node(node)
         self._bind_custom_element(node)
