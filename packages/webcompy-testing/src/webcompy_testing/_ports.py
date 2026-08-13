@@ -1,17 +1,21 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import re
-from collections.abc import Coroutine
+from collections.abc import Callable, Coroutine
 from typing import Any, Literal
 from unittest.mock import MagicMock
 
 from webcompy.ports._async_scheduler import AsyncSchedulerPort
 from webcompy.ports._custom_element import CustomElementBinding, CustomElementPort
+from webcompy.ports._dom import DOMNode
 from webcompy.ports._fetch import FetchPort, Response
 from webcompy.ports._ffi import FFIPort
 from webcompy.ports._history import HistoryPort
 from webcompy.ports._host import HostPort
+from webcompy.ports._media_query import MediaQueryPort
+from webcompy.ports._transition import TransitionPort, TransitionStyle
 from webcompy_server.ports._dom import ServerDOMPort
 from webcompy_testing._dom import FakeDOMNode
 
@@ -54,6 +58,26 @@ class FakeCustomElementPort(CustomElementPort):
         return False
 
 
+class FakeMediaQueryPort(MediaQueryPort):
+    def __init__(
+        self,
+        *,
+        prefers_dark: bool = False,
+        prefers_reduced_motion: bool = False,
+    ) -> None:
+        self._prefers_dark = prefers_dark
+        self._prefers_reduced_motion = prefers_reduced_motion
+
+    def prefers_dark(self) -> bool:
+        return self._prefers_dark
+
+    def prefers_reduced_motion(self) -> bool:
+        return self._prefers_reduced_motion
+
+    def set_prefers_reduced_motion(self, value: bool) -> None:
+        self._prefers_reduced_motion = value
+
+
 class FakeBrowserDOMPort(ServerDOMPort):
     def __init__(self) -> None:
         super().__init__()
@@ -62,6 +86,7 @@ class FakeBrowserDOMPort(ServerDOMPort):
         self._body = FakeDOMNode("body")
         self._html.appendChild(self._head)
         self._html.appendChild(self._body)
+        self._document_listeners: dict[str, list[Any]] = {}
 
     @property
     def body(self) -> FakeDOMNode:
@@ -90,6 +115,23 @@ class FakeBrowserDOMPort(ServerDOMPort):
 
     def get_element_by_id(self, element_id: str) -> FakeDOMNode | None:
         return _find_by_id(self._html, element_id)
+
+    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        self._document_listeners.setdefault(event_type, []).append(handler)
+
+        def _remove() -> None:
+            listeners = self._document_listeners.get(event_type)
+            if listeners is None:
+                return
+            with contextlib.suppress(ValueError):
+                listeners.remove(handler)
+
+        return _remove
+
+    def dispatch_document_event(self, event_type: str, event: Any = None) -> None:
+        for handler in list(self._document_listeners.get(event_type, ())):
+            if handler in self._document_listeners.get(event_type, ()):
+                handler(event)
 
 
 def _find_by_tag(node: FakeDOMNode, tag: str) -> FakeDOMNode | None:
@@ -129,11 +171,28 @@ def _find_by_tag_attr(node: FakeDOMNode, tag: str, attr_name: str, attr_value: s
 
 
 class FakeBrowserHostPort(HostPort):
+    def __init__(self) -> None:
+        self._window_listeners: dict[str, list[Any]] = {}
+
     def schedule_macro_task(self, callback: Any) -> None:
         callback()
 
-    def add_window_event_listener(self, event_type: str, handler: Any) -> Any:
-        return lambda: None
+    def add_window_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        self._window_listeners.setdefault(event_type, []).append(handler)
+
+        def _remove() -> None:
+            listeners = self._window_listeners.get(event_type)
+            if listeners is None:
+                return
+            with contextlib.suppress(ValueError):
+                listeners.remove(handler)
+
+        return _remove
+
+    def dispatch_window_event(self, event_type: str, event: Any = None) -> None:
+        for handler in list(self._window_listeners.get(event_type, ())):
+            if handler in self._window_listeners.get(event_type, ()):
+                handler(event)
 
     def create_js_global_getter(
         self,
@@ -228,3 +287,81 @@ class FakeAsyncSchedulerPort(AsyncSchedulerPort):
 
     async def await_pending(self) -> None:
         await self.drain()
+
+
+class FakeTransitionStyle:
+    def __init__(self, values: dict[str, str] | None = None) -> None:
+        self._values = dict(values or {})
+
+    def get_property_value(self, name: str) -> str:
+        return self._values.get(name, "")
+
+
+class FakeTransitionPort(TransitionPort):
+    """Transition port driven by a logical frame queue and virtual clock.
+
+    ``flush_frame()`` executes the callbacks scheduled for the next frame and
+    ``advance_time(ms)`` moves the virtual clock forward, firing due
+    timeouts. Per-node computed styles are registered via ``set_style``.
+    """
+
+    def __init__(self) -> None:
+        self._enabled = True
+        self._frame_callbacks: list[Callable[[], Any]] = []
+        self._timeouts: list[tuple[float, int, Callable[[], Any]]] = []
+        self._timeout_seq = 0
+        self._now = 0.0
+        self._styles: dict[int, dict[str, str]] = {}
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    def set_enabled(self, value: bool) -> None:
+        self._enabled = value
+
+    def schedule_next_frame(self, callback: Callable[[], Any]) -> Callable[[], None]:
+        self._frame_callbacks.append(callback)
+
+        def _cancel() -> None:
+            if callback in self._frame_callbacks:
+                self._frame_callbacks.remove(callback)
+
+        return _cancel
+
+    def schedule_timeout(
+        self,
+        callback: Callable[[], Any],
+        delay_ms: float,
+    ) -> Callable[[], None]:
+        self._timeout_seq += 1
+        seq = self._timeout_seq
+        self._timeouts.append((self._now + delay_ms, seq, callback))
+
+        def _cancel() -> None:
+            self._timeouts = [entry for entry in self._timeouts if entry[1] != seq]
+
+        return _cancel
+
+    def flush_frame(self) -> None:
+        callbacks = list(self._frame_callbacks)
+        self._frame_callbacks.clear()
+        for callback in callbacks:
+            callback()
+
+    def advance_time(self, ms: float) -> None:
+        self._now += ms
+        due = [entry for entry in self._timeouts if entry[0] <= self._now]
+        self._timeouts = [entry for entry in self._timeouts if entry[0] > self._now]
+        for _, _, callback in due:
+            callback()
+
+    def flush_all(self) -> None:
+        self.flush_frame()
+        self.advance_time(10**9)
+
+    def get_computed_style(self, node: DOMNode) -> TransitionStyle:
+        return FakeTransitionStyle(self._styles.get(id(node), {}))
+
+    def set_style(self, node: FakeDOMNode, name: str, value: str) -> None:
+        self._styles.setdefault(id(node), {})[name] = value

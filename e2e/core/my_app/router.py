@@ -39,7 +39,9 @@ from .pages.template import TemplatePage
 from .pages.template_components import TemplateComponentsPage
 from .pages.template_control_flow import TemplateControlFlowPage
 from .pages.template_expressions import TemplateExpressionsPage
+from .pages.transition import TransitionPage
 from .pages.two_way_binding import TwoWayBindingPage
+from .pages.window_events import WindowEventsPage
 
 router = Router(
     {"path": "/", "component": HomePage},
@@ -48,6 +50,7 @@ router = Router(
     {"path": "/component/classstyle", "component": ClassStylePage},
     {"path": "/custom-elements", "component": CustomElementPage},
     {"path": "/event", "component": EventPage},
+    {"path": "/window-events", "component": WindowEventsPage},
     {"path": "/switch", "component": SwitchPage},
     {"path": "/repeat", "component": RepeatPage},
     {"path": "/keyed-repeat", "component": KeyedRepeatPage},
@@ -82,6 +85,7 @@ router = Router(
     },
     {"path": "/two-way-binding", "component": TwoWayBindingPage},
     {"path": "/teleport", "component": TeleportPage},
+    {"path": "/transition", "component": TransitionPage},
     {"path": "/form-fields", "component": FormFieldsPage},
     {"path": "/storage", "component": StoragePage},
     {"path": "/storage-tab-sync", "component": StorageTabSyncPage},

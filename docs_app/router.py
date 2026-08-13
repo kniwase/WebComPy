@@ -19,6 +19,7 @@ router = Router(
     },
     {"path": "/sample/fetch", "component": lazy("docs_app.pages.demo.fetch_sample:FetchSamplePage", __file__)},
     {"path": "/sample/teleport", "component": lazy("docs_app.pages.demo.teleport:TeleportDemoPage", __file__)},
+    {"path": "/sample/transition", "component": lazy("docs_app.pages.demo.transition:TransitionDemoPage", __file__)},
     default=NotFound,
     mode="history",
     base_url="",

@@ -10,6 +10,7 @@ from webcompy.ports._host import HostPort
 from webcompy.ports._markdown import MarkdownPort
 from webcompy.ports._media_query import MediaQueryPort
 from webcompy.ports._resource import ResourcePort
+from webcompy.ports._transition import TransitionPort
 
 DOM_PORT_KEY = InjectKey[DOMPort]("webcompy-port-dom")
 FFI_PORT_KEY = InjectKey[FFIPort]("webcompy-port-ffi")
@@ -22,3 +23,4 @@ MEDIA_QUERY_PORT_KEY = InjectKey[MediaQueryPort]("webcompy-port-media-query")
 ASYNC_SCHEDULER_PORT_KEY = InjectKey[AsyncSchedulerPort]("webcompy-port-async-scheduler")
 RESOURCE_PORT_KEY = InjectKey[ResourcePort]("webcompy-port-resource")
 CUSTOM_ELEMENT_PORT_KEY = InjectKey[CustomElementPort]("webcompy-port-custom-element")
+TRANSITION_PORT_KEY = InjectKey[TransitionPort]("webcompy-port-transition")

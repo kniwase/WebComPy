@@ -332,6 +332,9 @@ class _FakeMediaQueryPort:
         self.calls += 1
         return self._prefers_dark
 
+    def prefers_reduced_motion(self) -> bool:
+        return False
+
 
 def _mocked_media_query_scope(
     prefers_dark: bool,

@@ -38,9 +38,9 @@ declare -A E2E_GROUPS=(
   ["bootstrap-static"]="e2e/core/test_bootstrap.py e2e/core/test_static_site.py e2e/core/test_signal_value_transfer.py"
   ["components"]="e2e/core/test_client_only.py e2e/core/test_component.py e2e/core/test_custom_element.py e2e/core/test_lifecycle.py e2e/core/test_scoped_style.py e2e/core/test_teleport.py"
   ["reactive-lists"]="e2e/core/test_reactive.py e2e/core/test_repeat.py e2e/core/test_keyed_repeat.py e2e/core/test_dict_repeat.py"
-  ["dynamic-control"]="e2e/core/test_nested_dynamic.py e2e/core/test_switch.py e2e/core/test_suspense.py"
+  ["dynamic-control"]="e2e/core/test_nested_dynamic.py e2e/core/test_switch.py e2e/core/test_suspense.py e2e/core/test_transition.py"
   ["router"]="e2e/core/test_router.py e2e/core/test_async_nav.py e2e/core/test_nested_routes.py e2e/core/test_route_guards.py e2e/core/test_scroll_restoration.py"
-  ["interaction"]="e2e/core/test_event.py e2e/core/test_di.py e2e/core/test_two_way_binding.py e2e/core/test_form_fields.py e2e/core/test_storage.py e2e/core/test_storage_tab_sync.py"
+  ["interaction"]="e2e/core/test_event.py e2e/core/test_di.py e2e/core/test_two_way_binding.py e2e/core/test_form_fields.py e2e/core/test_storage.py e2e/core/test_storage_tab_sync.py e2e/core/test_readonly_signal.py"
   ["bundled-deps"]="e2e/core/test_bundled_deps.py e2e/core/test_bundled_deps_browser.py"
   ["runtime-local"]="e2e/core/test_runtime_local.py"
   ["standalone"]="e2e/core/test_standalone.py"
@@ -52,8 +52,8 @@ declare -A E2E_GROUPS=(
 # Docs groups are static-only in CI, except docs-documents (prod + static)
 declare -A DOCS_GROUPS=(
   ["docs-home"]="e2e/docs/test_home.py e2e/docs/test_helloworld.py"
-  ["docs-documents"]="e2e/docs/test_documents.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py"
-  ["docs-demos"]="e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py e2e/docs/test_teleport.py"
+  ["docs-documents"]="e2e/docs/test_documents.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py"
+  ["docs-demos"]="e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py e2e/docs/test_teleport.py e2e/docs/test_transition.py"
   ["docs-matplotlib"]="e2e/docs/test_matplotlib.py"
   ["docs-fetch"]="e2e/docs/test_fetch.py"
 )

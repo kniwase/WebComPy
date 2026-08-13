@@ -13,3 +13,14 @@ class MediaQueryPort(ABC):
         cannot know the user's preference at SSG / SSR time without a cookie).
         """
         ...
+
+    @abstractmethod
+    def prefers_reduced_motion(self) -> bool:
+        """Return whether the user prefers reduced motion.
+
+        In the browser this reads the ``(prefers-reduced-motion: reduce)``
+        media query. On the server it returns ``False`` by default (the
+        framework cannot know the user's preference at SSG / SSR time without
+        a cookie).
+        """
+        ...

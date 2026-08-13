@@ -180,9 +180,10 @@ class ElementBase(ElementWithChildren):
         self.__purge_signal_members__()
 
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
-        node = self._get_node()
+        node = self._node_cache
         for name, event_handler in self._event_handlers_added.items():
-            node.removeEventListener(name, event_handler)
+            if node is not None:
+                node.removeEventListener(name, event_handler)
             if hasattr(event_handler, "destroy"):
                 event_handler.destroy()
         if self._ref is not None:

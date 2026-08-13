@@ -121,6 +121,7 @@ _BROWSER_PORT_STUB_MODULES: list[tuple[str, str]] = [
     ("webcompy.ports._browser._host", "BrowserHostPort"),
     ("webcompy.ports._browser._media_query", "BrowserMediaQueryPort"),
     ("webcompy.ports._browser._resource", "BrowserResourcePort"),
+    ("webcompy.ports._browser._transition", "BrowserTransitionPort"),
 ]
 
 

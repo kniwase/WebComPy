@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Coroutine, Mapping
 from contextvars import ContextVar
 from inspect import iscoroutinefunction
@@ -111,6 +112,7 @@ class Component(ElementBase):
         self._head_props: HeadPropsStore | None = None
         self._generator = generator
         self._pending_async_template: Coroutine[Any, Any, ComponentTemplateResult] | None = None
+        self._pending_async_cleanup_done: bool = False
         self._async_results: list = []
         self._async_setup_extracted: bool = False
         self._error_captured_hooks: list[Callable[[Exception], Any]] = []
@@ -270,13 +272,28 @@ class Component(ElementBase):
         self._property = property
 
     def _cleanup_pending_async(self):
+        if self._pending_async_cleanup_done:
+            return
+        self._pending_async_cleanup_done = True
         self._pending_async_template = None
         try:
+            if self._render_state is not None:
+                hooks = self._render_state.context.__get_lifecyclehooks__()
+                user_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
+                framework_cleanup = self._render_state.framework_cleanup
+
+                def on_before_destroy_with_scope_cleanup():
+                    framework_cleanup()
+                    user_on_before_destroy()
+
+                self._property["on_before_destroy"] = on_before_destroy_with_scope_cleanup
             self._property["on_before_destroy"]()
         except Exception as err:
             from webcompy.elements.types._error_boundary import route_error_deferred
 
             route_error_deferred(self, err)
+        finally:
+            self._property["on_before_destroy"] = lambda: None
         self._error_captured_hooks.clear()
         for cb in self._callback_nodes:
             from webcompy.signal._graph import consumer_destroy
@@ -327,7 +344,7 @@ class Component(ElementBase):
                 try:
                     with component_context(self._render_state):
                         template = await self._pending_async_template
-                except Exception:
+                except (asyncio.CancelledError, Exception):
                     self._cleanup_pending_async()
                     try:
                         parent = self._parent

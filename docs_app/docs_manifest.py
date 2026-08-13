@@ -53,6 +53,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "source": "documents/signal_stream.md",
             },
             {
+                "label": "Read-only Signals and Events",
+                "path": "/documents/readonly-signal",
+                "source": "documents/readonly_signal.md",
+            },
+            {
                 "label": "Custom Elements",
                 "path": "/documents/custom-elements",
                 "source": "documents/custom_elements.md",

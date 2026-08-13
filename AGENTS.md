@@ -156,6 +156,7 @@ the per-area reference.
 - **RouterView Depth and Level Reuse** — `router/spec.md`
 - **Teleport Anchor Slot and SSR Anchor** — `teleport/spec.md`
 - **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`
+- **Transition Sequence Contract** — `transition/spec.md`
 - **Composable Usage** — `composables/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
 - **Head VDOM** — `head-vdom/spec.md`
@@ -169,6 +170,8 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | Changed files | Specs to read |
 |---|---|
 | `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md`, `signal-value-transfer/spec.md`, `error-handling/spec.md` |
+| `webcompy/signal/_readonly.py` | `readonly-signal/spec.md`, `reactive/spec.md` |
+| `webcompy/events/` | `readonly-signal/spec.md` |
 | `webcompy/storage/` | `composables/spec.md` |
 | `webcompy/ui/_styles/` | `css-architecture/spec.md` |
 | `webcompy/template/_css_parser.py`, `webcompy/template/_css_template.py` | `template-engine/spec.md` |
@@ -187,6 +190,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/elements/types/_fragment.py` | `elements/spec.md` |
 | `webcompy/elements/types/_switch.py` | `elements/spec.md`, `async-rendering/spec.md` |
 | `webcompy/elements/types/_teleport.py` | `teleport/spec.md`, `async-rendering/spec.md` |
+| `webcompy/elements/types/_transition.py`, `webcompy/ports/_transition.py`, `webcompy/ports/_browser/_transition.py`, `webcompy/ports/_media_query.py`, `webcompy_server/ports/_transition.py` | `transition/spec.md`, `port-abstraction/spec.md` |
 | `webcompy/forms/` | `forms/spec.md` |
 | `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md`, `error-handling/spec.md` |
@@ -346,9 +350,11 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `asgi-embed` | Embedding a WebComPy serving app into a host ASGI application, including fetch-port wiring (`root_app`), `base_url`/prefix alignment, and blocked-path behavior |
 | `suspense` | Declarative async boundary showing fallback while children load, with SSR awaiting and hydration integration |
 | `teleport` | Teleport element relocating a subtree to a target container via a single stable anchor placeholder, with SSR anchor-only emission and hydration adoption |
+| `transition` | CSS-class-driven enter/leave animations for a single conditional child via the `Transition` element, with delayed removal, duration resolution, node accounting, and reduced-motion support |
 | `hydration-data-transfer` | Server-to-browser data transfer for `AsyncResult` states, `FetchPort` response caches, and `Signal` values via versioned payload injection |
 | `signal-value-transfer` | Collection and restoration of `Signal`/`Computed`/`ReactiveList`/`ReactiveDict` values across the hydration boundary via `__signal_members__` |
 | `signal-stream` | Bidirectional conversion between occurrence-based streams and signals: `to_signal`, `to_reactive_list`, `to_async_iter`, with AsyncResult-style error/completion signals, drop-oldest capping, and lifecycle cleanup |
+| `readonly-signal` | Read-only reactive values with an external-only update channel: `use_readonly_signal`, `use_window_event`, `use_document_event`, with lifecycle-bound listener cleanup and no hydration transfer |
 | `transfer-codec` | Layered serialization engine (encode/decode) preserving Python type fidelity across the hydration boundary via `__webcompy_`-tagged JSON |
 | `payload-compression` | Optional gzip compression of the hydration data transfer payload via stdlib `zlib`/`base64`, threshold-based activation, `__webcompy_compressed__` envelope flag |
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |

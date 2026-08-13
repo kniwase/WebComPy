@@ -52,6 +52,10 @@ def Root(_: ComponentContext[None]):
                     "title": "Teleport",
                     "to": "/sample/teleport",
                 },
+                {
+                    "title": "Transition",
+                    "to": "/sample/transition",
+                },
             ],
         },
     ]

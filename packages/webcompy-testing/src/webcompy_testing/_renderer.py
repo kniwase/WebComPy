@@ -11,6 +11,8 @@ from webcompy.ports._keys import (
     DOM_PORT_KEY,
     FFI_PORT_KEY,
     HOST_PORT_KEY,
+    MEDIA_QUERY_PORT_KEY,
+    TRANSITION_PORT_KEY,
 )
 from webcompy_server.ports import VirtualDOMNode
 from webcompy_testing._asgi import format_html
@@ -20,6 +22,8 @@ from webcompy_testing._ports import (
     FakeBrowserFFIPort,
     FakeBrowserHostPort,
     FakeCustomElementPort,
+    FakeMediaQueryPort,
+    FakeTransitionPort,
 )
 from webcompy_testing._utils import run_sync
 
@@ -102,6 +106,14 @@ class TestRendererResult:
             return dom.body
         return None
 
+    @property
+    def transition_port(self) -> FakeTransitionPort | None:
+        return self._scope.inject(TRANSITION_PORT_KEY, default=None)
+
+    @property
+    def media_query_port(self) -> FakeMediaQueryPort | None:
+        return self._scope.inject(MEDIA_QUERY_PORT_KEY, default=None)
+
 
 class TestRenderer:
     @staticmethod
@@ -132,6 +144,8 @@ class TestRenderer:
             scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
             scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
             scope.provide(CUSTOM_ELEMENT_PORT_KEY, FakeCustomElementPort())
+            scope.provide(TRANSITION_PORT_KEY, FakeTransitionPort())
+            scope.provide(MEDIA_QUERY_PORT_KEY, FakeMediaQueryPort())
             scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
             scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
             scope.provide(_TELEPORT_REGISTRY_KEY, _TeleportTargetRegistry())
