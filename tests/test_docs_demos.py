@@ -183,6 +183,42 @@ def test_teleport_demo_renders_controls():
             assert "Teleported Modal" not in html
 
 
+def test_transition_demo_renders_controls():
+    with mock_app_run():
+        from static._demos.transition.app import App
+
+        with TestRenderer.render(App) as result:
+            html = result.to_html()
+            assert "Transition Demo" in html
+            assert "Toggle Fade" in html
+            assert "Toggle Slide" in html
+            assert "Fade content" not in html
+            assert "Slide content" not in html
+
+
+def test_transition_demo_toggle_fade():
+    with mock_app_run():
+        from static._demos.transition.app import App
+
+        with TestRenderer.render(App) as result:
+            toggle = result.find_by_text("Toggle Fade")
+            assert toggle is not None
+            toggle.dispatchEvent(VirtualDOMEvent("click"))
+            box = result.find_by_text("Fade content")
+            assert box is not None
+            assert "fade-enter-from" in (box.getAttribute("class") or "").split()
+
+            result.transition_port.set_style(box, "transition-duration", "400ms")
+            result.transition_port.flush_frame()
+            classes = (box.getAttribute("class") or "").split()
+            assert "fade-enter-from" not in classes
+            assert "fade-enter-active" in classes
+            assert "fade-enter-to" in classes
+
+            result.transition_port.advance_time(400)
+            assert (box.getAttribute("class") or "").split() == ["demo-fade-box"]
+
+
 @pytest.mark.asyncio
 async def test_fetch_page_loads():
     demo_dir = DOCS_APP_DIR / "static" / "_demos" / "fetch_sample"

@@ -191,8 +191,19 @@ def fake_browser_full(monkeypatch, reset_di_scope):
     from webcompy.di._keys import _TELEPORT_REGISTRY_KEY
     from webcompy.di._scope import DIScope, _active_di_scope
     from webcompy.elements.types._teleport import _TeleportTargetRegistry
-    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
-    from webcompy_testing import FakeAsyncSchedulerPort
+    from webcompy.ports._keys import (
+        ASYNC_SCHEDULER_PORT_KEY,
+        DOM_PORT_KEY,
+        FFI_PORT_KEY,
+        HOST_PORT_KEY,
+        MEDIA_QUERY_PORT_KEY,
+        TRANSITION_PORT_KEY,
+    )
+    from webcompy_testing import (
+        FakeAsyncSchedulerPort,
+        FakeMediaQueryPort,
+        FakeTransitionPort,
+    )
 
     modules_with_env: list[str] = []
     for mod_name in modules_with_env:
@@ -209,6 +220,8 @@ def fake_browser_full(monkeypatch, reset_di_scope):
     scope.provide(DOM_PORT_KEY, dom_port)
     scope.provide(HOST_PORT_KEY, host_port)
     scope.provide(FFI_PORT_KEY, ffi_port)
+    scope.provide(TRANSITION_PORT_KEY, FakeTransitionPort())
+    scope.provide(MEDIA_QUERY_PORT_KEY, FakeMediaQueryPort())
     scope.provide(_TELEPORT_REGISTRY_KEY, _TeleportTargetRegistry())
 
     prev_token = _active_di_scope.set(scope)
@@ -219,17 +232,28 @@ def fake_browser_full(monkeypatch, reset_di_scope):
 @pytest.fixture
 def server_di_scope():
     from webcompy.di._scope import DIScope, _active_di_scope
-    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
+    from webcompy.ports._keys import (
+        ASYNC_SCHEDULER_PORT_KEY,
+        DOM_PORT_KEY,
+        FFI_PORT_KEY,
+        HOST_PORT_KEY,
+        MEDIA_QUERY_PORT_KEY,
+        TRANSITION_PORT_KEY,
+    )
     from webcompy_server.ports._async_scheduler import ServerAsyncSchedulerPort
     from webcompy_server.ports._dom import ServerDOMPort
     from webcompy_server.ports._ffi import ServerFFIPort
     from webcompy_server.ports._host import ServerHostPort
+    from webcompy_server.ports._media_query import ServerMediaQueryPort
+    from webcompy_server.ports._transition import ServerTransitionPort
 
     scope = DIScope()
     scope.provide(ASYNC_SCHEDULER_PORT_KEY, ServerAsyncSchedulerPort())
     scope.provide(DOM_PORT_KEY, ServerDOMPort())
     scope.provide(HOST_PORT_KEY, ServerHostPort())
     scope.provide(FFI_PORT_KEY, ServerFFIPort())
+    scope.provide(TRANSITION_PORT_KEY, ServerTransitionPort())
+    scope.provide(MEDIA_QUERY_PORT_KEY, ServerMediaQueryPort())
     token = _active_di_scope.set(scope)
     yield scope
     _active_di_scope.reset(token)

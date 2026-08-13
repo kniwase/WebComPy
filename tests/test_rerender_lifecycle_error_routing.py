@@ -7,7 +7,7 @@ import pytest
 
 from webcompy.components import define_component, on_after_rendering, on_before_destroy, on_before_rendering
 from webcompy.components._component import _active_app_context, _set_app_instance
-from webcompy.elements import ErrorBoundary, html
+from webcompy.elements import ErrorBoundary, Transition, html
 from webcompy.elements.generators import repeat, suspense, switch
 from webcompy.elements.types._error_boundary import ErrorBoundaryElement
 from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
@@ -95,6 +95,42 @@ class TestReactiveRerenderErrors:
 
             assert result.find_by_attribute("data-testid", "switch-fallback") is not None
             assert result.find_by_text("switch refresh boom") is not None
+
+    def test_transition_refresh_error_engages_boundary(self):
+        captured: dict[str, object] = {}
+
+        def bad_generator():
+            raise RuntimeError("transition refresh boom")
+
+        @define_component
+        def Root(context):
+            crash = use_state(lambda: False)
+            captured["crash"] = crash
+            return html.DIV(
+                {},
+                ErrorBoundary(
+                    children=lambda: Transition(
+                        {"name": "fade"},
+                        lambda: bad_generator() if crash.value else html.DIV({"data-testid": "transition-ok"}, "ok"),
+                    ),
+                    fallback=lambda e, r: html.DIV({"data-testid": "transition-fallback"}, str(e)),
+                ),
+            )
+
+        with TestRenderer.render(Root) as result:
+            assert result.find_by_attribute("data-testid", "transition-ok") is not None
+
+            scheduler = result._scope.inject(ASYNC_SCHEDULER_PORT_KEY)
+
+            async def _flip_and_drain() -> None:
+                captured["crash"].value = True
+                await scheduler.drain()
+
+            run_sync(_flip_and_drain())
+
+            assert result.find_by_attribute("data-testid", "transition-fallback") is not None
+            assert result.find_by_text("transition refresh boom") is not None
+            assert result.find_by_attribute("data-testid", "transition-ok") is None
 
 
 class TestLifecycleHookErrors:
