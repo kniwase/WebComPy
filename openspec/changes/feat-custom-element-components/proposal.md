@@ -7,7 +7,7 @@ WebComPy components currently render as their template's single root element and
 - Extend `define_component` with an optional custom element name and declarations for observed attributes.
 - Render named components as one custom-element wrapper node whose children are the component's template output.
 - Allow named components to return multiple root children while preserving the existing one-node boundary seen by parent elements, `repeat`, and `switch`.
-- Register named component elements in the browser and expose document-connection lifecycle hooks for mounted and unmounted custom elements.
+- Register named component elements in the browser and expose document-connection lifecycle hooks for mounted and unmounted custom elements, both as `ComponentContext` methods and as standalone decorators (`@on_mounted` / `@on_unmounted`).
 - Define the browser registration and hydration ordering so server-rendered custom-element tags are upgraded before client hydration.
 - Reflect declared custom-element attribute changes into component props in the attribute-to-props direction only.
 - Preserve the existing `webcompy-component` and `webcompy-cid-*` markers so current scoped CSS and hydration behavior remain compatible.
@@ -38,6 +38,8 @@ WebComPy components currently render as their template's single root element and
 - `app-lifecycle`: Browser registration and custom-element upgrade ordering before hydration.
 - `scoped-css-incremental`: Static scoped-style handling for `:host` in incrementally injected styles.
 - `reactive-scoped-style`: Reactive scoped-style handling for `:host` using the same selector transformation as static styles.
+- `port-abstraction`: A dedicated `CustomElementPort` ABC for custom-element registration and per-node binding.
+- `port-provisioning`: Provisioning of the `CUSTOM_ELEMENT_PORT_KEY` in browser, server, and testing render contexts.
 
 ## Impact
 

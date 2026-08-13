@@ -106,6 +106,16 @@ Named components SHALL allow setup functions to register `on_mounted` and `on_un
 - **WHEN** reconciliation temporarily disconnects and reconnects a named wrapper before lifecycle reactions are coalesced
 - **THEN** neither `on_unmounted` nor a second `on_mounted` callback SHALL run for that move
 
+#### Scenario: Registering document-connection hooks via standalone decorators
+- **WHEN** a named component applies `@on_mounted` and `@on_unmounted` inside its setup function
+- **THEN** both callbacks SHALL be registered for that component instance
+- **AND** they SHALL fire at the same document-connection points as the `ComponentContext` methods
+
+#### Scenario: Rejecting document-connection hooks in an unnamed component
+- **WHEN** an unnamed component registers `on_mounted` or `on_unmounted` via either API form
+- **THEN** component setup SHALL raise `WebComPyComponentException`
+- **AND** no document-connection callback SHALL be registered
+
 ### Requirement: Observed custom-element attributes shall update props in one direction
 
 For a named component with observed attributes, `context.props` SHALL expose a reactive mapping containing the declared attributes under snake-case keys. The mapping SHALL preserve caller-supplied mapping values and update observed keys when the corresponding DOM attribute is added, changed, or removed. Attribute values SHALL be strings; a present valueless attribute SHALL be `""`, and a removed attribute SHALL be `None`. WebComPy SHALL not write prop values back to attributes.

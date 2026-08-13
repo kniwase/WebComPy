@@ -13,11 +13,12 @@ The browser implementation must also bridge native custom-element reactions to P
 - Support both the existing bare `@define_component` form and a named form such as `@define_component("my-card", observed_attributes=("theme",))`.
 - Render a named component as exactly one Light DOM custom-element node.
 - Allow a named setup function to return a sequence of existing renderable children.
-- Provide document-connection lifecycle hooks named `on_mounted` and `on_unmounted`.
+- Provide document-connection lifecycle hooks named `on_mounted` and `on_unmounted`, exposed both as `ComponentContext` methods and as standalone decorators.
 - Reflect declared DOM attributes into a reactive props mapping in the attribute-to-props direction.
 - Register browser custom elements before hydration and handle elements that were parsed before registration.
 - Preserve cid markers, existing scoped-style isolation, SSR output, and unnamed-component behavior.
 - Make `:host` usable in named components' static and reactive scoped styles without changing the cid-based isolation model.
+- Add a dedicated `CustomElementPort` ABC following the existing port-abstraction rules, provisioned in browser, server, and testing render contexts.
 
 **Non-Goals:**
 
@@ -50,9 +51,9 @@ The named wrapper does not inherit attributes, event handlers, refs, or `:preser
 
 **Alternative considered:** Return a fragment directly from the component. This was rejected because a fragment is a dynamic multi-node container and would expose the existing multi-node reconciliation paths to every parent that uses the component.
 
-### 3. Use a browser-only custom-element bridge
+### 3. Use a browser-only custom-element port
 
-The browser port will own registration and per-node binding. Registration creates a small JavaScript `HTMLElement` subclass for each named element, with `connectedCallback`, `disconnectedCallback`, and the declared `observedAttributes`. The bridge is created through the existing PyScript/FFI facilities; it does not add an npm or Python dependency.
+Custom-element registration and per-node binding SHALL be owned by a dedicated `CustomElementPort` ABC in `webcompy.ports`, following the port-abstraction rule that each browser API surface gets its own port. The browser implementation creates a small JavaScript `HTMLElement` subclass for each named element, with `connectedCallback`, `disconnectedCallback`, and the declared `observedAttributes`. The bridge is created through the existing PyScript/FFI facilities; it does not add an npm or Python dependency.
 
 Each WebComPy node receives a bridge binding after creation or hydration adoption. The binding retains the required FFI proxies, forwards lifecycle and attribute reactions to Python, and releases them when the component binding is destroyed. The bridge queues reactions that occur before binding, which is required when SSR markup is upgraded before the component tree is hydrated.
 
@@ -69,6 +70,8 @@ Native custom-element callbacks can be triggered by DOM moves made during reconc
 For a bound component instance, a transition to document-connected invokes `on_mounted` once, and a transition to document-disconnected invokes `on_unmounted` once. A move that disconnects and reconnects the same element before the coalescing point produces neither hook. Binding an already-connected SSR node counts as connected for the newly hydrated component instance, even if no native callback occurs after binding.
 
 The hooks describe DOM document connection, not template completion or logical destruction. `on_before_rendering`, `on_after_rendering`, and `on_before_destroy` keep their existing meanings and ordering. Async mounted/unmounted callbacks use the existing async/error routing path.
+
+The standalone decorators `@on_mounted` and `@on_unmounted` SHALL be available in addition to the `ComponentContext` methods, mirroring the existing lifecycle decorators. Both forms SHALL raise `WebComPyComponentException` during setup when used in an unnamed component, because an unnamed component has no custom-element boundary whose document connection could be observed. Registering silently and never firing is rejected.
 
 **Alternative considered:** Invoke hooks directly from `Component._render` and `_remove_element`. This was rejected because those methods cannot distinguish document attachment from attachment to a detached subtree, and logical destruction is intentionally different from DOM detachment during adoption.
 
@@ -87,6 +90,8 @@ The framework never writes these prop values back to attributes. Framework marke
 On browser startup, the app registers all currently known named component generators before `_hydrate_node()` begins. The registration occurs after the mount subtree can be marked as prerendered but before child hydration, so already-parsed SSR custom elements can be upgraded and bound without replacing their nodes. Components resolved later are registered before their first node is created or adopted.
 
 On the server, registration is skipped completely. The server DOM port creates a virtual node using the custom-element tag, and the existing serializer emits it as an ordinary HTML element. The same component code therefore remains executable in both environments.
+
+The `CustomElementPort` SHALL be provisioned in every render context via the `CUSTOM_ELEMENT_PORT_KEY` DI key: a browser implementation in `BrowserRenderContext`, a no-op implementation in `ServerRenderContext`, and a fake/recording implementation in the testing render path. The port SHALL NOT import `Component`; component-specific callbacks are passed as callables at `bind()` time.
 
 ### 7. Keep cid scoping and add `:host` as a selector alias
 

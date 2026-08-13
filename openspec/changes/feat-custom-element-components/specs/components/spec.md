@@ -38,6 +38,33 @@ An explicitly named component SHALL accept a sequence of renderable children as 
 - **THEN** each existing hook SHALL retain its current trigger and ordering
 - **AND** adding document-connection hooks SHALL not replace or reorder those existing hooks
 
+### Requirement: Document-connection hooks shall be available as standalone decorators
+
+The framework SHALL provide `@on_mounted` and `@on_unmounted` standalone decorators usable inside a named component setup function, equivalent to `context.on_mounted(func)` and `context.on_unmounted(func)`. Using them outside a component setup SHALL raise the same error class as the existing lifecycle decorators.
+
+#### Scenario: Registering hooks via standalone decorators
+- **WHEN** a named component applies `@on_mounted` and `@on_unmounted` inside its setup function
+- **THEN** both callbacks SHALL be registered for that component instance
+- **AND** their behavior SHALL be equivalent to the `ComponentContext` methods
+
+#### Scenario: Using a standalone decorator outside setup
+- **WHEN** `@on_mounted` or `@on_unmounted` is applied outside a component setup function
+- **THEN** an error SHALL be raised indicating the decorator must be used inside component setup
+
+### Requirement: Document-connection hooks shall be rejected for unnamed components
+
+When an unnamed component registers `on_mounted` or `on_unmounted`, either via the `ComponentContext` methods or via the standalone decorators, component setup SHALL raise `WebComPyComponentException`. The framework SHALL not silently accept the registration and never fire the callback.
+
+#### Scenario: Rejecting hooks in an unnamed component
+- **WHEN** an unnamed component calls `context.on_mounted(callback)` during setup
+- **THEN** `WebComPyComponentException` SHALL be raised
+- **AND** no document-connection callback SHALL be registered
+
+#### Scenario: Rejecting decorators in an unnamed component
+- **WHEN** an unnamed component applies `@on_mounted` or `@on_unmounted` during setup
+- **THEN** `WebComPyComponentException` SHALL be raised
+- **AND** no document-connection callback SHALL be registered
+
 ### Requirement: Component scoped styles shall support the named host selector
 
 Scoped styles for a named component SHALL accept `:host` and `:host(<compound-selector>)` as aliases for that component's custom-element wrapper. The generated selector SHALL retain the existing cid attribute scoping and SHALL be shared by static and reactive style paths.

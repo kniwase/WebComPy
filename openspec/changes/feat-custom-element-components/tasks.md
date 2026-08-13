@@ -1,3 +1,8 @@
+## 0. Artifact Amendment
+
+- [ ] 0.1 Update proposal, design, and specs to require standalone `@on_mounted` / `@on_unmounted` decorators and to reject both hook forms in unnamed components.
+- [ ] 0.2 Add `port-abstraction` and `port-provisioning` delta specs for the new `CustomElementPort` and its `CUSTOM_ELEMENT_PORT_KEY`.
+
 ## 1. Browser Bridge Spike
 
 - [ ] 1.1 Verify a minimal Pyodide/PyScript `HTMLElement` subclass factory can call a retained Python proxy from `connectedCallback`, `disconnectedCallback`, and `attributeChangedCallback`.
@@ -7,7 +12,7 @@
 
 - [ ] 2.1 Extend `define_component` with bare-decorator and called-decorator overloads for a validated custom-element name and observed attributes.
 - [ ] 2.2 Store custom-element metadata on `ComponentGenerator` and reject invalid names, duplicate attributes, reserved framework attributes, and attribute-to-prop key collisions.
-- [ ] 2.3 Add `on_mounted` and `on_unmounted` to `Context`, `ComponentContext`, lifecycle state, and component properties while preserving existing lifecycle hooks.
+- [ ] 2.3 Add `on_mounted` and `on_unmounted` to `Context`, `ComponentContext`, lifecycle state, and component properties, plus `@on_mounted` / `@on_unmounted` standalone decorators, while preserving existing lifecycle hooks and rejecting both hook forms in unnamed components.
 
 ## 3. Named Component Rendering
 
@@ -42,7 +47,7 @@
 
 ## 8. Verification and Documentation
 
-- [ ] 8.1 Add unit tests for decorator validation, wrapper node counts, multi-root normalization, nested components, and attribute props.
+- [ ] 8.1 Add unit tests for decorator validation, wrapper node counts, multi-root normalization, nested components, attribute props, and unnamed-component rejection of document-connection hooks.
 - [ ] 8.2 Add browser/E2E tests for registration, SSR upgrade before hydration, mounted/unmounted coalescing, external attribute changes, and repeat/switch reconciliation.
 - [ ] 8.3 Add scoped CSS tests for static and reactive `:host`, nested component isolation, SSR output, and incremental style injection.
 - [ ] 8.4 Add public documentation and examples for named components, multiple roots, lifecycle hooks, observed attributes, and `:host`.
