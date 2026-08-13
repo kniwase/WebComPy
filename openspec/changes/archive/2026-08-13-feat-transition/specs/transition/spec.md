@@ -73,7 +73,7 @@ While an enter or leave sequence runs, the Transition SHALL report its occupied 
 
 ### Requirement: Child replacement shall be sequential, and interruption shall clean up
 
-When the generator's result changes from one element to a different element, the old child SHALL complete or be terminated through its leave handling before the new child's enter sequence starts; the two children SHALL NOT occupy the tree simultaneously. When a new child appears while a leave sequence is in progress, the leaving node SHALL be finalized immediately (classes removed, node removed) before the enter sequence starts. When the generator re-yields an element with the same tag as the leaving child while a leave sequence is in progress, the leave SHALL NOT be interrupted: the leaving node SHALL remain mounted until the leave duration elapses, and the re-yielded element SHALL then mount and run its enter sequence.
+When the generator's result changes from one element to a different element, the old child SHALL complete or be terminated through its leave handling before the new child's enter sequence starts; the two children SHALL NOT occupy the tree simultaneously. When a new child appears while a leave sequence is in progress, the leaving node SHALL be finalized immediately (classes removed, node removed) before the enter sequence starts. When the generator re-yields an element with the same tag as the leaving child while a leave sequence is in progress, the leave SHALL NOT be interrupted: the leaving node SHALL remain mounted until the leave duration elapses, and the re-yielded element SHALL then mount and run its enter sequence. Outside a leave sequence, when the generator result changes between two elements with the same tag, the node SHALL be patched in place without a sequence, and the patched element SHALL call `_render()` so that unmatched new descendants are mounted and patched component lifecycle hooks fire.
 
 #### Scenario: Replacement leaves then enters
 
@@ -87,6 +87,12 @@ When the generator's result changes from one element to a different element, the
 - **WHEN** the second signal becomes true again while the leave sequence is in progress
 - **THEN** the leaving node SHALL remain mounted until the leave duration elapses
 - **AND** after the leave completes, the element SHALL mount again and run its enter sequence
+
+#### Scenario: Same-tag patch renders new inner structure
+
+- **WHEN** a Transition's generator re-yields an element with the same tag whose inner structure changed (for example an inner `span` replaced by an `em`)
+- **THEN** the node SHALL be patched in place without a sequence
+- **AND** the new inner element SHALL appear in the DOM and the replaced one SHALL be removed
 
 ### Requirement: Transition shall render the steady state on initial render without an enter sequence
 
