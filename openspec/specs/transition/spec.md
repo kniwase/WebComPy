@@ -36,6 +36,8 @@ When the generator stops yielding a child (returns `None`) while a child node ex
 
 The enter/leave duration SHALL resolve in this order: (1) an explicit `duration` prop in milliseconds when provided; (2) otherwise, the longest duration parsed from the node's computed transition/animation styles in the browser; (3) otherwise, zero — the node finalizes immediately and a warning SHALL be logged. Regardless of the source, a timeout SHALL finalize each sequence even if `transitionend`/`animationend` events never arrive; end events arriving before the timeout SHALL finalize early. End-event listeners SHALL be removed upon finalization.
 
+Computed-style resolution SHALL count each layer's `transition-delay`/`animation-delay` together with its duration, matching when the end event would fire. Consequently a layer with zero duration and a positive delay still yields a positive resolution (no warning), and the sequence holds the node until the timeout finalizes it. When the delay list is shorter than the duration list, CSS repeat-last semantics SHALL apply: the last declared delay is reused for the remaining layers.
+
 #### Scenario: Explicit duration prop wins
 
 - **WHEN** `Transition({"name": "fade", "duration": 100}, generator)` runs a leave sequence
