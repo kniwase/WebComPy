@@ -873,6 +873,11 @@ class TestValidation:
         with pytest.raises(WebComPyException):
             TransitionElement({"name": "fade", "duration": "fast"}, lambda: None)
 
+    def test_non_finite_duration_raises(self) -> None:
+        for bad in (float("nan"), float("inf"), float("-inf")):
+            with pytest.raises(WebComPyException):
+                TransitionElement({"name": "fade", "duration": bad}, lambda: None)
+
     def test_dynamic_child_shape_rejected(self) -> None:
         from webcompy.elements.types._fragment import FragmentElement
 

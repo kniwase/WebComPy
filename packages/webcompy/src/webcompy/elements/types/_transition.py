@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from typing import Any
 
@@ -108,7 +109,7 @@ class TransitionElement(DynamicElement):
         if duration is not None:
             if isinstance(duration, bool) or not isinstance(duration, (int, float)):
                 raise WebComPyException("Transition 'duration' prop must be a non-negative number of milliseconds.")
-            if duration < 0:
+            if duration < 0 or not math.isfinite(duration):
                 raise WebComPyException("Transition 'duration' prop must be a non-negative number of milliseconds.")
         self._name = name
         self._duration: float | None = float(duration) if duration is not None else None
