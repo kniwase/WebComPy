@@ -46,9 +46,9 @@
 
 ## 8. Docs E2E
 
-- [ ] 8.1 Add `e2e/docs/test_readonly_signal.py`: page title, layout/sidebar, TOC anchors, Prev/Next links (signal-stream → readonly-signal), no console errors.
-- [ ] 8.2 Update `e2e/docs/test_signal_stream.py` (signal-stream is no longer the last page: its next-link assertion changes to point at readonly-signal).
-- [ ] 8.3 Register the new file in the `docs-documents` group in `scripts/run-e2e-tests.sh` AND `.github/workflows/ci.yml` (definitions must match).
+- [x] 8.1 Add `e2e/docs/test_readonly_signal.py`: page title, layout/sidebar, TOC anchors, Prev/Next links (signal-stream → readonly-signal), no console errors.
+- [x] 8.2 Update `e2e/docs/test_signal_stream.py` (signal-stream is no longer the last page: its next-link assertion changes to point at readonly-signal).
+- [x] 8.3 Register the new file in the `docs-documents` group in `scripts/run-e2e-tests.sh` AND `.github/workflows/ci.yml` (definitions must match).
 
 ## 9. Verification
 
