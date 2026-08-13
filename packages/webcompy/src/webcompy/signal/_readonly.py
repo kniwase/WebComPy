@@ -1,9 +1,11 @@
+from collections.abc import Callable
 from typing import TypeVar, final
 
-from webcompy.signal._base import SignalBase
+from webcompy.signal._base import Signal, SignalBase
 from webcompy.signal._computed import Computed
 
 V = TypeVar("V")
+T = TypeVar("T")
 
 
 class ReadonlySignal(Computed[V]):
@@ -23,3 +25,8 @@ class ReadonlySignal(Computed[V]):
 
 def readonly(reactive: SignalBase[V]) -> ReadonlySignal[V]:
     return ReadonlySignal.__create_instance__(reactive)
+
+
+def use_readonly_signal(initial: T) -> tuple[ReadonlySignal[T], Callable[[T], T]]:
+    inner = Signal(initial)
+    return readonly(inner), inner.set_value

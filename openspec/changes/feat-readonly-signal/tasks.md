@@ -11,9 +11,9 @@
 
 ## 2. Core Primitive (`use_readonly_signal`)
 
-- [ ] 2.1 Implement `use_readonly_signal(initial: T) -> tuple[ReadonlySignal[T], Callable[[T], T]]` in `packages/webcompy/src/webcompy/signal/_readonly.py` — create a private `Signal(initial)` (imported from `webcompy.signal._base`), return `(readonly(inner), inner.set_value)`. Context-free: no component-context check, no `UserWarning`, no transfer registration, no lifecycle hooks; a callable `initial` is treated as a plain value.
-- [ ] 2.2 Export `use_readonly_signal` and `ReadonlySignal` from `webcompy.signal.__init__`; add `use_readonly_signal` (only) to the `webcompy` top-level `__init__.py` import/all list.
-- [ ] 2.3 Add `tests/test_readonly_signal.py`: initial value readable immediately, `update` as sole write path, `update` returns the current value (including on equal write), equal consecutive updates do not notify, no value setter / no `set_value` on the returned type, standalone usage emits no `UserWarning`, top-level vs `webcompy.signal` import identity.
+- [x] 2.1 Implement `use_readonly_signal(initial: T) -> tuple[ReadonlySignal[T], Callable[[T], T]]` in `packages/webcompy/src/webcompy/signal/_readonly.py` — create a private `Signal(initial)` (imported from `webcompy.signal._base`), return `(readonly(inner), inner.set_value)`. Context-free: no component-context check, no `UserWarning`, no transfer registration, no lifecycle hooks; a callable `initial` is treated as a plain value.
+- [x] 2.2 Export `use_readonly_signal` and `ReadonlySignal` from `webcompy.signal.__init__`; add `use_readonly_signal` (only) to the `webcompy` top-level `__init__.py` import/all list.
+- [x] 2.3 Add `tests/test_readonly_signal.py`: initial value readable immediately, `update` as sole write path, `update` returns the current value (including on equal write), equal consecutive updates do not notify, no value setter / no `set_value` on the returned type, standalone usage emits no `UserWarning`, top-level vs `webcompy.signal` import identity.
 
 ## 3. Events Package (`webcompy/events`)
 
