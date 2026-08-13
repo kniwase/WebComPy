@@ -1,12 +1,12 @@
 ## 0. Artifact Amendment
 
-- [ ] 0.1 Update proposal, design, and specs to require standalone `@on_mounted` / `@on_unmounted` decorators and to reject both hook forms in unnamed components.
-- [ ] 0.2 Add `port-abstraction` and `port-provisioning` delta specs for the new `CustomElementPort` and its `CUSTOM_ELEMENT_PORT_KEY`.
+- [x] 0.1 Update proposal, design, and specs to require standalone `@on_mounted` / `@on_unmounted` decorators and to reject both hook forms in unnamed components.
+- [x] 0.2 Add `port-abstraction` and `port-provisioning` delta specs for the new `CustomElementPort` and its `CUSTOM_ELEMENT_PORT_KEY`.
 
 ## 1. Browser Bridge Spike
 
-- [ ] 1.1 Verify a minimal Pyodide/PyScript `HTMLElement` subclass factory can call a retained Python proxy from `connectedCallback`, `disconnectedCallback`, and `attributeChangedCallback`.
-- [ ] 1.2 Define the browser custom-element port contract and proxy ownership rules without adding a browser dependency.
+- [x] 1.1 Verify a minimal Pyodide/PyScript `HTMLElement` subclass factory can call a retained Python proxy from `connectedCallback`, `disconnectedCallback`, and `attributeChangedCallback`.
+- [x] 1.2 Define the browser custom-element port contract and proxy ownership rules without adding a browser dependency.
 
 ## 2. Component Metadata and Public API
 

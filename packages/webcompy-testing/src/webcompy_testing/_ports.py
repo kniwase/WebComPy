@@ -7,12 +7,51 @@ from typing import Any, Literal
 from unittest.mock import MagicMock
 
 from webcompy.ports._async_scheduler import AsyncSchedulerPort
+from webcompy.ports._custom_element import CustomElementBinding, CustomElementPort
 from webcompy.ports._fetch import FetchPort, Response
 from webcompy.ports._ffi import FFIPort
 from webcompy.ports._history import HistoryPort
 from webcompy.ports._host import HostPort
 from webcompy_server.ports._dom import ServerDOMPort
 from webcompy_testing._dom import FakeDOMNode
+
+
+class _FakeCustomElementBinding(CustomElementBinding):
+    def __init__(self, port: FakeCustomElementPort) -> None:
+        self._port = port
+
+    def dispose(self) -> None:
+        self._port.disposed_bindings += 1
+
+
+class FakeCustomElementPort(CustomElementPort):
+    def __init__(self) -> None:
+        self.ensure_defined_calls: list[tuple[str, tuple[str, ...], str]] = []
+        self.bind_calls: list[tuple[Any, tuple[str, ...]]] = []
+        self.disposed_bindings: int = 0
+
+    def ensure_defined(
+        self,
+        name: str,
+        observed_attributes: tuple[str, ...],
+        definition_key: str,
+    ) -> None:
+        self.ensure_defined_calls.append((name, observed_attributes, definition_key))
+
+    def bind(
+        self,
+        node: Any,
+        *,
+        observed_attributes: tuple[str, ...],
+        on_connected: Any = None,
+        on_disconnected: Any = None,
+        on_attribute_changed: Any = None,
+    ) -> CustomElementBinding:
+        self.bind_calls.append((node, observed_attributes))
+        return _FakeCustomElementBinding(self)
+
+    def is_document_connected(self, node: Any) -> bool:
+        return False
 
 
 class FakeBrowserDOMPort(ServerDOMPort):
