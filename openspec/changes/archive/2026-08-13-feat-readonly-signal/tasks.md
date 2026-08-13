@@ -78,3 +78,10 @@
 - [x] 12.2 Invoke `_cleanup_pending_pairs(pairs)` in the `SuspenseElement._server_render` timeout branch (children are cancelled by `asyncio.wait_for` on timeout, so the async-setup-failure/cancellation cleanup requirement applies) before replacing `self._children` with the fallback.
 - [x] 12.3 Add regression test `test_server_timeout_runs_destroy_hooks` (server path: destroy hook runs, listener removed, fallback rendered); confirmed it fails without 12.2.
 - [x] 12.4 Verify: ruff, pyright, full unit suite, `check-doc-spec-refs.py`, `webcompy generate`, docs-documents E2E (prod/static).
+
+## 13. Review Follow-up (3rd AI review, PR #253)
+
+- [x] 13.1 Invoke `_cleanup_pending_pairs(pairs)` in the `SuspenseElement._server_render` no-`error_fallback` branch before `raise result`, for symmetry with the timeout and error-fallback branches (the components spec requires destroy hooks when the async body raises; this covers the aborting-render/SSG fail-fast case where no boundary teardown runs).
+- [x] 13.2 Add regression test `test_server_raise_without_error_fallback_runs_destroy_hooks` (server path: Suspense without `error_fallback` so the error aborts the whole render; destroy hook must still run). Confirmed it fails without 13.1; note the boundary-wrapped variant passes even without the fix because boundary teardown cleans up by indirection.
+- [x] 13.3 Add a real-browser E2E for the documented `e.target.innerWidth` / `e.target.hidden` attribute-access contract (previously broken and caught in review): new `/window-events` page in the core `my_app` (prod + static) using `use_window_event("resize", ...)` and `use_document_event("visibilitychange", ...)`; new `e2e/core/test_readonly_signal.py` fires a genuine `resize` via `page.set_viewport_size` and a `visibilitychange` via `document.dispatchEvent`, asserting the rendered values update. Registered in the `interaction` group of `scripts/run-e2e-tests.sh` and the CI matrix in `.github/workflows/ci.yml`.
+- [x] 13.4 Verify: ruff, pyright, full unit suite, `check-doc-spec-refs.py`, interaction E2E (prod/static).

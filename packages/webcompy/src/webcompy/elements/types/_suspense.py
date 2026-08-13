@@ -135,6 +135,7 @@ class SuspenseElement(DynamicElement):
                             self._children = self._generate_children(self._error_fallback_generator)
                             return
                         else:
+                            self._cleanup_pending_pairs(pairs)
                             raise result
                 self._resolve_component_templates(pairs, results)
         finally:

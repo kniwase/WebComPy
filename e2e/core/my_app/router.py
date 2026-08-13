@@ -40,6 +40,7 @@ from .pages.template_control_flow import TemplateControlFlowPage
 from .pages.template_expressions import TemplateExpressionsPage
 from .pages.transition import TransitionPage
 from .pages.two_way_binding import TwoWayBindingPage
+from .pages.window_events import WindowEventsPage
 
 router = Router(
     {"path": "/", "component": HomePage},
@@ -47,6 +48,7 @@ router = Router(
     {"path": "/component", "component": FunctionStylePage},
     {"path": "/component/classstyle", "component": ClassStylePage},
     {"path": "/event", "component": EventPage},
+    {"path": "/window-events", "component": WindowEventsPage},
     {"path": "/switch", "component": SwitchPage},
     {"path": "/repeat", "component": RepeatPage},
     {"path": "/keyed-repeat", "component": KeyedRepeatPage},

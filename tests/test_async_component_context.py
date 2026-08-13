@@ -751,3 +751,33 @@ class TestSuspenseAsyncSetupFailureCleanup:
             assert order == ["user"]
             assert host._window_listeners.get("resize") == []
             assert result.find_by_attribute("data-testid", "timeout-fallback") is not None
+
+    def test_server_raise_without_error_fallback_runs_destroy_hooks(self):
+        from webcompy import use_window_event
+
+        order: list[str] = []
+
+        @define_component
+        async def FailingChild(context):
+            await asyncio.sleep(0)
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            raise RuntimeError("boom")
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                suspense(
+                    fallback=lambda: html.P({}, "loading"),
+                    children=lambda: FailingChild(None),
+                ),
+            )
+
+        with pytest.raises(RuntimeError, match="boom"):
+            TestRenderer.render(Root)
+        assert order == ["user"]
