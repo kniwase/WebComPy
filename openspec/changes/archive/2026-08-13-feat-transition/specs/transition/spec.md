@@ -30,7 +30,7 @@ When the generator stops yielding a child (returns `None`) while a child node ex
 
 ### Requirement: Transition durations shall resolve from prop, computed styles, or immediate removal, always backed by a timeout
 
-The enter/leave duration SHALL resolve in this order: (1) an explicit `duration` prop in milliseconds when provided; (2) otherwise, the longest duration parsed from the node's computed transition/animation styles in the browser; (3) otherwise, zero — the node finalizes immediately and a warning SHALL be logged. Regardless of the source, a timeout SHALL finalize each sequence even if `transitionend`/`animationend` events never arrive. When the duration resolves from computed styles, end events SHALL finalize the sequence only after every counted layer — each layer whose duration plus delay is positive — has delivered an end event for the node; layers with zero duration and zero delay are not counted because their end events fire before the listeners attach. When the `duration` prop is used, the first end event for the node SHALL finalize early. End-event listeners SHALL be removed upon finalization.
+The enter/leave duration SHALL resolve in this order: (1) an explicit `duration` prop in milliseconds when provided; (2) otherwise, the longest duration parsed from the node's computed transition/animation styles in the browser; (3) otherwise, zero — the node finalizes immediately and a warning SHALL be logged. Regardless of the source, a timeout SHALL finalize each sequence even if `transitionend`/`animationend` events never arrive. When the duration resolves from computed styles, end events SHALL finalize the sequence only after every counted layer — each layer whose duration plus delay is positive — has delivered an end event for the node; layers with zero duration and zero delay are not counted because their end events fire before the listeners attach, and animation layers whose `animation-iteration-count` is `infinite` are not counted because their end events never arrive (their durations still contribute to the resolved timeout). When the `duration` prop is used, the first end event for the node SHALL finalize early. End-event listeners SHALL be removed upon finalization.
 
 Computed-style resolution SHALL count each layer's `transition-delay`/`animation-delay` together with its duration, matching when the end event would fire. Consequently a layer with zero duration and a positive delay still yields a positive resolution (no warning), and the sequence holds the node until the timeout finalizes it. When the delay list is shorter than the duration list, CSS repeat-last semantics SHALL apply: the last declared delay is reused for the remaining layers.
 
@@ -54,6 +54,12 @@ Computed-style resolution SHALL count each layer's `transition-delay`/`animation
 - **WHEN** a node's computed styles declare `transition-duration: 400ms, 1000ms` and only the shorter layer's `transitionend` event is delivered
 - **THEN** the sequence SHALL keep the transition classes applied
 - **AND** SHALL finalize only when the longer layer's end event arrives or the timeout elapses
+
+#### Scenario: Infinite animation layers do not block finalization
+
+- **WHEN** a node's computed styles declare `transition-duration: 400ms` alongside `animation: 1s infinite`, and the `transitionend` event is delivered
+- **THEN** the sequence SHALL finalize immediately, without waiting for the never-arriving `animationend`
+- **AND** when no end event is delivered, the timeout at the resolved duration (the longer of the two layers) SHALL finalize the sequence
 
 ### Requirement: Transition shall keep node accounting consistent during sequences
 
@@ -127,6 +133,6 @@ The framework SHALL provide a media-query capability to detect `prefers-reduced-
 
 ## Limitations
 
-End-event finalization waits for every style-resolved layer to complete by counting end events whose target is the transitioned node; it does not match individual `propertyName`/`animationName` values or event types. When `transition-property` is `all` and multiple durations are declared, browsers fire several end events per duration entry, so the counted total can be reached while the longest layer is still running; the timeout then finalizes the sequence at the resolved duration. Counting per event type or matching by property is a possible future improvement.
+End-event finalization waits for every style-resolved layer to complete by counting end events whose target is the transitioned node; it does not match individual `propertyName`/`animationName` values or event types. When `transition-property` is `all` and multiple durations are declared, browsers fire several end events per duration entry, so the counted total can be reached while the longest layer is still running; the timeout then finalizes the sequence at the resolved duration. An `animation-iteration-count: infinite` animation never delivers `animationend`, so a sequence never finalizes early from such a layer — when the infinite animation is defined on the transition classes themselves, finalization removes the classes and stops the animation (a visible snap); animations defined on the node's steady-state styles are unaffected by class removal. Counting per event type or matching by property is a possible future improvement.
 
 A signal-bound `class` attribute on the transitioned child can clobber transition classes mid-sequence. The attribute updater rewrites the entire `class` string when the bound signal changes, silently removing the `-enter-*`/`-leave-*` classes applied by the Transition. Class manipulation (`_add_classes`/`_remove_classes`) reads and writes the full `class` attribute without knowledge of signal-driven attributes, so users SHOULD NOT bind the transitioned child's `class` to a signal that changes while a sequence is active.
