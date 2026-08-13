@@ -52,15 +52,15 @@
 
 ## 9. Verification
 
-- [ ] 9.1 Run `openspec validate feat-readonly-signal --type change`, `openspec validate --specs`, `openspec validate --changes`.
-- [ ] 9.2 Run `uv run ruff check .` and `uv run ruff format --check .`; fix any findings.
-- [ ] 9.3 Run `uv run pyright`; fix any type errors.
-- [ ] 9.4 Run `uv run python -m pytest tests/ --tb=short`; the full unit suite (including new tests) passes.
-- [ ] 9.5 Run `uv run python -m webcompy generate --config docs_app.webcompy_config` (docs changed).
-- [ ] 9.6 Run `uv build --package webcompy` and confirm `webcompy/events/` and `webcompy/signal/_readonly.py` are inside the wheel.
-- [ ] 9.7 Run the full E2E matrix via `scripts/run-e2e-tests.sh` (all core + docs groups, both prod and static modes where applicable; split into per-mode invocations if the runtime requires it, but never skip a group).
+- [x] 9.1 Run `openspec validate feat-readonly-signal --type change`, `openspec validate --specs`, `openspec validate --changes`.
+- [x] 9.2 Run `uv run ruff check .` and `uv run ruff format --check .`; fix any findings.
+- [x] 9.3 Run `uv run pyright`; fix any type errors.
+- [x] 9.4 Run `uv run python -m pytest tests/ --tb=short`; the full unit suite (including new tests) passes.
+- [x] 9.5 Run `uv run python -m webcompy generate --config docs_app.webcompy_config` (docs changed).
+- [x] 9.6 Run `uv build --package webcompy` and confirm `webcompy/events/` and `webcompy/signal/_readonly.py` are inside the wheel.
+- [x] 9.7 Run the full E2E matrix via `scripts/run-e2e-tests.sh` (all core + docs groups, both prod and static modes where applicable; split into per-mode invocations if the runtime requires it, but never skip a group).
 
 ## 10. Verification Report
 
-- [ ] 10.1 Run the openspec-verify-change flow (completeness/correctness/coherence); produce the report; if any CRITICAL issue remains, STOP and report rather than guessing fixes.
-- [ ] 10.2 Final commit recording the verification (e.g. `chore: record readonly signal verification`).
+- [x] 10.1 Run the openspec-verify-change flow (completeness/correctness/coherence); produce the report; if any CRITICAL issue remains, STOP and report rather than guessing fixes.
+- [x] 10.2 Final commit recording the verification (e.g. `chore: record readonly signal verification`).
