@@ -185,7 +185,28 @@ def _raise_nesting_unsupported(selector: str) -> None:
     )
 
 
-def _scope_selector(selector: str, cid: str) -> str:
+def _resolve_host_part(part: str, host_tag: str | None) -> str:
+    if not part.startswith(":host"):
+        return part
+    if host_tag is None:
+        raise WebComPyException(
+            f":host is not available in unnamed components (selector: {part!r}); "
+            "pass a custom element name to @define_component"
+        )
+    rest = part[len(":host") :]
+    if rest == "" or rest.startswith(":") or rest.startswith("["):
+        return host_tag + rest
+    if rest.startswith("(") and rest.endswith(")"):
+        inner = rest[1:-1].strip()
+        if not inner:
+            raise WebComPyException(f"Invalid :host selector: {part!r}")
+        if any(ch in inner for ch in " \t\n>+~,"):
+            raise WebComPyException(f"Unsupported :host form: {part!r}")
+        return host_tag + inner
+    raise WebComPyException(f"Unsupported :host form: {part!r}")
+
+
+def _scope_selector(selector: str, cid: str, *, host_tag: str | None = None) -> str:
     if _contains_top_level_ampersand(selector):
         _raise_nesting_unsupported(selector)
     parts, combinators = _split_selector_parts(selector)
@@ -193,7 +214,8 @@ def _scope_selector(selector: str, cid: str) -> str:
     for idx, part in enumerate(parts):
         combinator = combinators[idx] if idx < len(combinators) else ""
         if part:
-            out.append(_insert_cid(part, cid) + combinator)
+            resolved = _resolve_host_part(part, host_tag)
+            out.append(_insert_cid(resolved, cid) + combinator)
         elif idx == 0:
             out.append(f"*[webcompy-cid-{cid}]{combinator}")
         else:

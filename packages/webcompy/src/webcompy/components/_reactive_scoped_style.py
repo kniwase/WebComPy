@@ -99,13 +99,14 @@ class ReactiveScopedStyle:
             )
         self._func = func
         self._cid = None
+        self._host_tag: str | None = None
         self._dict_computed = None
         self._css_computed = None
         self._ref_count = 0
         self._subscription = None
         self._removed = False
 
-    def _bind(self, cid: str) -> None:
+    def _bind(self, cid: str, host_tag: str | None = None) -> None:
         if self._cid is not None:
             if self._cid != cid:
                 raise WebComPyComponentException(
@@ -114,6 +115,7 @@ class ReactiveScopedStyle:
                 )
             return
         self._cid = cid
+        self._host_tag = host_tag
         self._dict_computed = Computed(self._func)
         self._css_computed = Computed(lambda: self.render_css(self._cid or ""))
 
@@ -179,9 +181,9 @@ class ReactiveScopedStyle:
             if _classify_nested_key(selector.strip()) == "at-rule":
                 processed_selector = selector.strip()
             else:
-                processed_selector = _scope_selector(selector.strip(), cid)
+                processed_selector = _scope_selector(selector.strip(), cid, host_tag=self._host_tag)
             scoped_items.append((processed_selector, _process_style_declaration(declaration)))
-        return _render_scoped_style_css(dict(scoped_items), cid)
+        return _render_scoped_style_css(dict(scoped_items), cid, host_tag=self._host_tag)
 
 
 def reactive_scoped_style(func: ReactiveScopedStyleFunc) -> ReactiveScopedStyle:

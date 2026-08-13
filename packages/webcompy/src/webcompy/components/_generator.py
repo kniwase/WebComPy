@@ -15,9 +15,11 @@ from typing import (
 from webcompy.components._component import Component
 from webcompy.components._css_utils import (
     _contains_top_level_ampersand,
+    _insert_cid,
     _is_declaration_body_at_rule,
     _is_keyframes_rule,
     _raise_nesting_unsupported,
+    _resolve_host_part,
     _scope_selector,
 )
 from webcompy.components._libs import (
@@ -111,7 +113,7 @@ def _render_declaration_at_rule(selector: str, declaration: dict[str, StyleDecla
     return " ".join(parts)
 
 
-def _render_at_rule_inner(style_dict: StyleDict, cid: str) -> list[str]:
+def _render_at_rule_inner(style_dict: StyleDict, cid: str, host_tag: str | None = None) -> list[str]:
     inner_parts: list[str] = []
     for inner_sel, inner_styles in style_dict.items():
         stripped_inner = inner_sel.strip()
@@ -125,13 +127,17 @@ def _render_at_rule_inner(style_dict: StyleDict, cid: str) -> list[str]:
                 _render_declaration_at_rule(stripped_inner, cast("dict[str, StyleDeclaration]", inner_styles))
             )
         elif _classify_nested_key(stripped_inner) == "at-rule":
-            nested_parts = _render_at_rule_inner(cast("StyleDict", inner_styles), cid)
+            nested_parts = _render_at_rule_inner(cast("StyleDict", inner_styles), cid, host_tag)
             inner_parts.append(f"{stripped_inner} {{ {' '.join(nested_parts)} }}")
         elif _classify_nested_key(stripped_inner) == "pseudo":
-            scoped = f"*[webcompy-cid-{cid}]{stripped_inner}"
+            if stripped_inner.startswith(":host"):
+                resolved = _resolve_host_part(stripped_inner, host_tag)
+                scoped = _insert_cid(resolved, cid)
+            else:
+                scoped = f"*[webcompy-cid-{cid}]{stripped_inner}"
             inner_parts.append(_generate_css_recursive(scoped, cast("dict[str, StyleDeclaration]", inner_styles)))
         elif _classify_nested_key(stripped_inner) == "combinator":
-            scoped_inner = _scope_selector(stripped_inner, cid)
+            scoped_inner = _scope_selector(stripped_inner, cid, host_tag=host_tag)
             inner_parts.append(_generate_css_recursive(scoped_inner, cast("dict[str, StyleDeclaration]", inner_styles)))
     return inner_parts
 
@@ -163,7 +169,7 @@ def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaratio
     return result
 
 
-def _render_scoped_style_css(style: dict[str, StyleDict], cid: str) -> str:
+def _render_scoped_style_css(style: dict[str, StyleDict], cid: str, host_tag: str | None = None) -> str:
     parts: list[str] = []
     for selector, style_dict in style.items():
         stripped = selector.strip()
@@ -180,7 +186,7 @@ def _render_scoped_style_css(style: dict[str, StyleDict], cid: str) -> str:
         elif _is_declaration_body_at_rule(stripped):
             parts.append(_render_declaration_at_rule(stripped, cast("dict[str, StyleDeclaration]", style_dict)))
         elif _classify_nested_key(stripped) == "at-rule":
-            inner_parts = _render_at_rule_inner(style_dict, cid)
+            inner_parts = _render_at_rule_inner(style_dict, cid, host_tag)
             parts.append(f"{stripped} {{ {' '.join(inner_parts)} }}")
         else:
             parts.append(_generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", style_dict)))
@@ -290,18 +296,19 @@ class ComponentGenerator(Generic[PropsType]):
 
     @property
     def scoped_style(self) -> str:
-        return _render_scoped_style_css(self._style, self._id)
+        return _render_scoped_style_css(self._style, self._id, host_tag=self.custom_element_name)
 
     @scoped_style.setter
     def scoped_style(self, style: dict[str, StyleDict]):
         cid = self._id
+        host_tag = self.custom_element_name
         style_items: list[tuple[str, dict[str, StyleDeclaration]]] = []
         for selector, declaration in style.items():
             if _classify_nested_key(selector.strip()) == "at-rule":
                 processed_selector = selector.strip()
             else:
                 stripped = selector.strip()
-                processed_selector = _scope_selector(stripped, cid)
+                processed_selector = _scope_selector(stripped, cid, host_tag=host_tag)
             style_items.append((processed_selector, _process_style_declaration(declaration)))
         self._style = dict(style_items)
         self._inject_scoped_style_if_new()

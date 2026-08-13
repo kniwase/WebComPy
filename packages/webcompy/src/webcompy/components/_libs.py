@@ -157,7 +157,7 @@ class Context(Generic[PropsType]):
 
         is_first_use = style not in self._generator._reactive_styles
         if is_first_use:
-            style._bind(self._generator._id)
+            style._bind(self._generator._id, host_tag=self._generator.custom_element_name)
             self._generator._reactive_styles.append(style)
 
         from webcompy.utils import ENVIRONMENT
