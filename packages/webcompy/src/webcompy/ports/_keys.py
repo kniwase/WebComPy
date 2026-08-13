@@ -1,6 +1,7 @@
 from webcompy.di import InjectKey
 from webcompy.ports._async_scheduler import AsyncSchedulerPort
 from webcompy.ports._cookie import CookiePort
+from webcompy.ports._custom_element import CustomElementPort
 from webcompy.ports._dom import DOMPort
 from webcompy.ports._fetch import FetchPort
 from webcompy.ports._ffi import FFIPort
@@ -20,3 +21,4 @@ MARKDOWN_PORT_KEY = InjectKey[MarkdownPort]("webcompy-port-markdown")
 MEDIA_QUERY_PORT_KEY = InjectKey[MediaQueryPort]("webcompy-port-media-query")
 ASYNC_SCHEDULER_PORT_KEY = InjectKey[AsyncSchedulerPort]("webcompy-port-async-scheduler")
 RESOURCE_PORT_KEY = InjectKey[ResourcePort]("webcompy-port-resource")
+CUSTOM_ELEMENT_PORT_KEY = InjectKey[CustomElementPort]("webcompy-port-custom-element")

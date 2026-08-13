@@ -15,6 +15,7 @@ from webcompy_testing._ports import (
     FakeBrowserDOMPort,
     FakeBrowserFFIPort,
     FakeBrowserHostPort,
+    FakeCustomElementPort,
     FakeFetchPort,
     FakeHistoryPort,
 )
@@ -28,6 +29,7 @@ __all__ = [
     "FakeBrowserDOMPort",
     "FakeBrowserFFIPort",
     "FakeBrowserHostPort",
+    "FakeCustomElementPort",
     "FakeDOMNode",
     "FakeFetchPort",
     "FakeHistoryPort",

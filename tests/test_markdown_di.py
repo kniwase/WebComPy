@@ -113,6 +113,7 @@ class TestServerRenderContextMarkdownPortGlobalInject:
 _BROWSER_PORT_STUB_MODULES: list[tuple[str, str]] = [
     ("webcompy.ports._browser._async_scheduler", "BrowserAsyncSchedulerPort"),
     ("webcompy.ports._browser._cookie", "BrowserCookiePort"),
+    ("webcompy.ports._browser._custom_element", "BrowserCustomElementPort"),
     ("webcompy.ports._browser._dom", "BrowserDOMPort"),
     ("webcompy.ports._browser._fetch", "BrowserFetchPort"),
     ("webcompy.ports._browser._ffi", "BrowserFFIPort"),

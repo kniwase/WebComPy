@@ -9,6 +9,7 @@ from webcompy.ports._host import HostPort
 from webcompy.ports._keys import (
     ASYNC_SCHEDULER_PORT_KEY,
     COOKIE_PORT_KEY,
+    CUSTOM_ELEMENT_PORT_KEY,
     DOM_PORT_KEY,
     FETCH_PORT_KEY,
     FFI_PORT_KEY,
@@ -25,6 +26,7 @@ from webcompy.ports._resource import ResourceNotFoundError, ResourcePort
 __all__ = [
     "ASYNC_SCHEDULER_PORT_KEY",
     "COOKIE_PORT_KEY",
+    "CUSTOM_ELEMENT_PORT_KEY",
     "DOM_PORT_KEY",
     "FETCH_PORT_KEY",
     "FFI_PORT_KEY",

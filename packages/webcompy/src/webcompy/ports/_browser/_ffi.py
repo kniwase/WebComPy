@@ -23,7 +23,7 @@ class BrowserFFIPort(FFIPort):
             proxy.destroy()
 
     def is_none(self, obj: Any) -> bool:
-        return obj is None
+        return self._browser.pyscript.ffi.is_none(obj)
 
     def to_js(self, obj: Any) -> Any:
         return self._browser.pyscript.ffi.to_js(obj)
