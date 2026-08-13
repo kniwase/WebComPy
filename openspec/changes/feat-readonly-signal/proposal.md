@@ -4,13 +4,13 @@ WebComPy has no way to hold externally-produced state (window/document events, c
 
 ## What Changes
 
-- Add `use_readonly_signal(initial)` returning a `(ReadonlySignal[T], update: Callable[[T], None])` tuple. The update function is the only write path; the returned signal type guarantees read-only access. Context-free: works outside component setup (standalone) and inside composable implementations. No hydration transfer.
+- Add `use_readonly_signal(initial)` returning a `(ReadonlySignal[T], update: Callable[[T], T])` tuple. The update function is the only write path — it is the private `Signal.set_value` bound method, so it returns the current value after the write — and the returned signal type guarantees read-only access. `ReadonlySignal` is exported from `webcompy.signal` as a public type. Context-free: works outside component setup (standalone) and inside composable implementations. No hydration transfer.
 - Add a new `webcompy.events` package with state-event composables built on the readonly primitive:
   - `use_window_event(event_type, initial, *, transform=identity)` bridged via `HostPort.add_window_event_listener`
   - `use_document_event(event_type, initial, *, transform=identity)` bridged via `DOMPort.add_document_event_listener`
   - Called inside component setup, the listener is attached and automatically unsubscribed on `on_before_destroy`. Called outside component setup (including SSR/SSG and missing DI scope), the composable emits a `UserWarning` and attaches nothing (no listener leak).
 - Export `use_readonly_signal`, `use_window_event`, and `use_document_event` from the `webcompy` top-level package (alongside the existing `use_state`, `use_local_storage`, and friends).
-- Add test-support: the fake ports in `webcompy-testing` gain the ability to record and trigger window/document event listeners so the helpers are testable headlessly.
+- Add test-support: the fake ports in `webcompy-testing` gain the ability to record and trigger window/document event listeners so the helpers are testable headlessly. This extends the `testing-module` capability (fake `DOMPort` gains listener recording/dispatch while `ServerDOMPort`'s no-op behavior is preserved).
 
 ## Capabilities
 
@@ -20,13 +20,15 @@ WebComPy has no way to hold externally-produced state (window/document events, c
 
 ### Modified Capabilities
 
-- None. Existing specs (`reactive`, `composables`, `signal-stream`, `port-abstraction`) keep their requirements unchanged; the new capability layers on top without altering behavior.
+- `components`: async component setup failure cleanup — when an async setup body that registered lifecycle hooks (e.g. event-listener cleanup via `on_before_destroy`) fails or is cancelled, the component's destruction path SHALL invoke the hooks registered inside the async body so listeners cannot leak.
+- `testing-module`: the fake `HostPort`/`DOMPort` implementations gain listener recording/dispatch/removal support for headless testing; server port no-op behavior is unchanged.
+- Existing specs (`reactive`, `composables`, `signal-stream`, `port-abstraction`) keep their requirements unchanged; the new capability layers on top without altering behavior.
 
 ## Impact
 
-- Code: `packages/webcompy/src/webcompy/signal/_readonly.py` gains `use_readonly_signal`; a new `packages/webcompy/src/webcompy/events/` package is introduced; `packages/webcompy/src/webcompy/__init__.py` exports the new composables.
+- Code: `packages/webcompy/src/webcompy/signal/_readonly.py` gains `use_readonly_signal` and exports `ReadonlySignal`; a new `packages/webcompy/src/webcompy/events/` package is introduced; `packages/webcompy/src/webcompy/__init__.py` exports the new composables; `packages/webcompy/src/webcompy/components/_component.py` gains async-setup failure cleanup for registered destroy hooks.
 - Ports: `HostPort.add_window_event_listener` and `DOMPort.add_document_event_listener` are reused as-is (no API change).
-- Testing: `packages/webcompy-testing` fake ports need listener recording/triggering support; new unit tests for the primitive and the helpers.
+- Testing: `packages/webcompy-testing` fake ports need listener recording/triggering support (a `testing-module` spec delta); new unit tests for the primitive and the helpers.
 - Docs: a docs_app page for the capability; `AGENTS.md` "Current Specs" list and File→Spec Mapping table updated; `scripts/check-doc-spec-refs.py` regression must pass.
 - Dependencies: none.
 

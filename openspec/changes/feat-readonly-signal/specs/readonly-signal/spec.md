@@ -10,9 +10,9 @@ Provide a read-only reactive value whose only write path is an external function
 
 The framework SHALL provide `use_readonly_signal(initial)` returning `(ReadonlySignal[T], update)` where:
 
-- `initial: T` is the value assigned to the read-only signal at construction;
+- `initial: T` is the value assigned to the read-only signal at construction (a callable value is treated as a plain value, never as a factory);
 - the first tuple element is a `ReadonlySignal[T]` (via `readonly()`) exposing only `.value` — no setter, no `set_value`;
-- `update: Callable[[T], None]` is the SOLE write path; assigning through `update` mirrors the signal equality contract: an item equal to the current value SHALL NOT notify consumers (state-event semantics, by design — occurrence-type events must not be bridged this way);
+- `update: Callable[[T], T]` is the SOLE write path and SHALL be the private `Signal.set_value` bound method: it returns the current value after the write (the newly assigned value, or the unchanged current value when the equality check suppressed the write); assigning through `update` mirrors the signal equality contract: an item equal to the current value SHALL NOT notify consumers (state-event semantics, by design — occurrence-type events must not be bridged this way);
 - the returned `ReadonlySignal` SHALL always reflect the value last passed to `update`, initialized to `initial`.
 
 `use_readonly_signal` SHALL be context-free: it works without an active component setup context (standalone scripts, helper functions, other composables) and SHALL NOT emit a `UserWarning` when called outside component setup. It SHALL NOT register any transfer entry and SHALL NOT require lifecycle cleanup (it attaches nothing external).
@@ -27,6 +27,12 @@ The framework SHALL provide `use_readonly_signal(initial)` returning `(ReadonlyS
 - **WHEN** `update(42)` is called
 - **THEN** `view.value` SHALL become `42`
 - **AND** reactive consumers of `view` SHALL be notified of the change
+
+#### Scenario: update returns the current value
+
+- **WHEN** `update(42)` is called on a signal whose value becomes `42`
+- **THEN** the return value SHALL be `42`
+- **AND** calling `update(42)` again SHALL return `42` (the current value) without notifying consumers
 
 #### Scenario: Equal consecutive updates are not re-notified
 
@@ -56,7 +62,7 @@ Values created by `use_readonly_signal` are client-side derived state and SHALL 
 
 ### Requirement: use_window_event shall bridge window state events into a read-only signal
 
-The framework SHALL provide `use_window_event(event_type, initial, *, transform=None)` importable from `webcompy` and `webcompy.events`, returning `(ReadonlySignal[T], update)` via the `use_readonly_signal` primitive. When the caller is inside an active component setup context and a `HostPort` is available in the DI scope, the composable SHALL:
+The framework SHALL provide `use_window_event(event_type, initial, *, transform=None)` importable from `webcompy` and `webcompy.events`, returning `(ReadonlySignal[T], update)` via the `use_readonly_signal` primitive. `transform` SHALL be typed `Callable[[Any], T] | None`; when `None`, the raw event object is passed through to `update` unchanged (identity). When the caller is inside an active component setup context and a `HostPort` is available in the DI scope, the composable SHALL:
 
 - obtain a cleanup-returning listener handle via `HostPort.add_window_event_listener(event_type, handler)`;
 - wire `handler` so each firing maps the raw event through `transform` (identity when `transform` is `None`) and passes the result to `update`;
@@ -98,7 +104,7 @@ Signal equality applies: a transformed value equal to the current value SHALL NO
 
 ### Requirement: use_document_event shall bridge document state events into a read-only signal
 
-The framework SHALL provide `use_document_event(event_type, initial, *, transform=None)` importable from `webcompy` and `webcompy.events`, with the same `(ReadonlySignal[T], update)` return shape and lifecycle semantics as `use_window_event`, except the listener SHALL be registered through `DOMPort.add_document_event_listener(event_type, handler)`. Outside an active component setup context a `UserWarning` SHALL be emitted and no listener SHALL be attached; missing `DOMPort` resolution or server rendering SHALL attach nothing and keep the signal at `initial`; `transform` exceptions SHALL be logged and swallowed.
+The framework SHALL provide `use_document_event(event_type, initial, *, transform=None)` importable from `webcompy` and `webcompy.events`, with the same `(ReadonlySignal[T], update)` return shape and lifecycle semantics as `use_window_event` — including the `Callable[[Any], T] | None` transform contract (identity when `None`) — except the listener SHALL be registered through `DOMPort.add_document_event_listener(event_type, handler)`. Outside an active component setup context a `UserWarning` SHALL be emitted and no listener SHALL be attached; missing `DOMPort` resolution or server rendering SHALL attach nothing and keep the signal at `initial`; `transform` exceptions SHALL be logged and swallowed.
 
 #### Scenario: Document-level event updates the signal
 
@@ -119,9 +125,15 @@ The framework SHALL provide `use_document_event(event_type, initial, *, transfor
 - **WHEN** a component uses `use_window_event` and is destroyed after many re-renders
 - **THEN** exactly one unsubscribe SHALL run, removing the listener and destroying its browser proxy, and no duplicate listeners SHALL accumulate across re-renders of the same component
 
+#### Scenario: Async setup failure still runs the registered cleanup
+
+- **WHEN** an async component setup body registers a `use_window_event` listener and the async body subsequently raises or is cancelled
+- **THEN** the component's destruction path SHALL invoke the destroy hooks registered inside the async body — including the listener unsubscribe — so the listener and its browser proxy SHALL NOT leak
+- **AND** the component SHALL be removed from its parent without re-running the failed setup
+
 ### Requirement: Readonly-signal composables shall be importable from the webcompy top-level package
 
-`use_readonly_signal` SHALL be importable from `webcompy` and from `webcompy.signal`; `use_window_event` and `use_document_event` SHALL be importable from `webcompy` and from `webcompy.events`. The top-level `webcompy` imports the project's `use_*` composable family, following the precedent set by `use_state`, `use_local_storage`, and `use_session_storage`.
+`use_readonly_signal` SHALL be importable from `webcompy` and from `webcompy.signal`; `use_window_event` and `use_document_event` SHALL be importable from `webcompy` and from `webcompy.events`. The top-level `webcompy` imports the project's `use_*` composable family, following the precedent set by `use_state`, `use_local_storage`, and `use_session_storage`. `ReadonlySignal` SHALL be importable from `webcompy.signal` as a public type for annotations (e.g. `view: ReadonlySignal[int] = ...`); it SHALL NOT be re-exported from the `webcompy` top-level package (matching the `Computed` precedent).
 
 #### Scenario: Top-level imports resolve
 
@@ -132,3 +144,9 @@ The framework SHALL provide `use_document_event(event_type, initial, *, transfor
 
 - **WHEN** a developer writes `from webcompy.signal import use_readonly_signal` and `from webcompy.events import use_window_event, use_document_event`
 - **THEN** the imports SHALL succeed and refer to the same objects as the top-level imports
+
+#### Scenario: ReadonlySignal is usable as a type annotation
+
+- **WHEN** a developer writes `view: ReadonlySignal[int]` with `from webcompy.signal import ReadonlySignal`
+- **THEN** the import SHALL succeed and the annotation SHALL be valid
+- **AND** `ReadonlySignal` SHALL NOT be importable from the `webcompy` top-level package

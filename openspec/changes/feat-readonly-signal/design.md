@@ -35,13 +35,14 @@ Constraints from the codebase:
 
 ### D1: `use_readonly_signal` returns a `(ReadonlySignal, update)` tuple
 
-**Decision.** `use_readonly_signal(initial: T)` returns `(ReadonlySignal[T], update: Callable[[T], None])`. `update` closes over a private `Signal`; the public view is `readonly(inner)`.
+**Decision.** `use_readonly_signal(initial: T)` returns `(ReadonlySignal[T], update: Callable[[T], T])`. `update` is the bound `set_value` method of a private `Signal`; the public view is `readonly(inner)`. Because `Signal.set_value` returns the current value after the write (the newly assigned value, or the unchanged value when equality suppressed the write), `update` is typed `Callable[[T], T]` rather than `Callable[[T], None]`.
 
 Alternatives considered:
 
 - **StreamResult-style wrapper** (`.value` + `aclose()`): consistent with `to_signal`'s shape, but reintroduces a lifecycle object and three-signal machinery that state events do not need, and the writable-`Signal` precedent we deliberately avoid.
 - **Bare `ReadonlySignal` plus separately returned inner `Signal`**: leaves the writable channel as a first-class object, defeating the "function-only write path" guarantee the user asked for.
 - **HelloState/controller object (`result.view`, `result.update`)**: more discoverable but adds a custom type for no functional gain; the tuple mirrors the composable family (`use_counter`, `use_theme` return tuples).
+- **A `Callable[[T], None]` wrapper around `set_value`**: matches a strict "fire-and-forget" contract but adds an allocation and a layer of indirection for no behavioral difference; the bound method's return value is harmless and useful for tests.
 
 Rationale: the tuple is the minimal honest shape for "read-only signal + external-only write function", matches composable conventions, and stays context-free (nothing to clean, works standalone and inside other composables).
 
@@ -65,8 +66,10 @@ Trade-off accepted: excluding the node helper means duplicate-with-tiny-delta co
 **Decision.** `use_window_event` / `use_document_event`:
 
 - require an active component setup context to attach a listener, registering the port cleanup on `on_before_destroy` (chained via the storage composables pattern);
-- otherwise (no component context) emit a `UserWarning` and attach nothing — leak-free;
+- otherwise (no component context) emit a `UserWarning` and attach nothing — leak-free. The context check SHALL precede any `inject()` lookup, so a standalone browser call that could resolve an app-level DI scope still attaches nothing;
 - inject the port with a `None` default; a missing port (or the server `ServerHostPort` no-op) results in no real listener, keeping SSR/SSG output deterministic (`initial` rendered).
+
+The chaining follows the exact storage/aio pattern: the cleanup is combined with the destroy hook that exists **at registration time**. Lifecycle hook storage in `Context` remains single-slot; a user hook registered *after* the helper overwrites the slot, so helpers and user code must register destroy hooks before any later overwrite. Making the lifecycle layer append-only is out of scope (it would change `components` behavior globally).
 
 Alternatives considered:
 
@@ -81,7 +84,7 @@ Note: during SSR/SSG the component setup context *is* active, so `use_window_eve
 
 ### D5: transform errors are contained by logging
 
-**Decision.** Exceptions from the `transform` callable while handling a fired event are caught, logged via `webcompy.logging.warning`, and swallowed — mirroring the storage composables' non-fatal failure policy. There is no error signal; a thrown transform must not break the browser's event dispatch. The `update` call itself writes a Signal and does not raise.
+**Decision.** `transform` is typed `Callable[[Any], T] | None`; `None` means identity (the raw event object is passed to `update`). Exceptions from the `transform` callable while handling a fired event are caught, logged via `webcompy.logging.warning`, and swallowed — mirroring the storage composables' non-fatal failure policy. The catch is scoped to the transform call only; the `update` call writes a Signal and does not raise, and exceptions from reactive consumers are routed through the framework error pipeline, not swallowed here. There is no error signal; a thrown transform must not break the browser's event dispatch.
 
 ### D6: Not a node-level composable (defer)
 
@@ -89,7 +92,19 @@ Note: during SSR/SSG the component setup context *is* active, so `use_window_eve
 
 ### D7: Test support via fake ports
 
-**Decision.** `webcompy-testing` fakes gain listener recording/triggering so the helpers are unit-testable headlessly: the fake `HostPort`/`DOMPort` should store the handler per event type and expose a way to dispatch synthetic events (so a test can fire a `resize`, assert the signal updated, destroy the component, and assert removal). The primitive itself needs no port at all.
+**Decision.** `webcompy-testing` fakes gain listener recording/triggering so the helpers are unit-testable headlessly: `FakeBrowserHostPort.add_window_event_listener` and a new `FakeBrowserDOMPort.add_document_event_listener` override store the handler per event type in an instance-local registry and expose `dispatch_window_event` / `dispatch_document_event` helpers to fire synthetic events (so a test can fire a `resize`, assert the signal updated, destroy the component, and assert removal). Cleanups are idempotent and remove only the registered handler; dispatch snapshots the handler list. `ServerHostPort`/`ServerDOMPort` no-op behavior is untouched, and this fake extension is recorded as a `testing-module` spec delta. The primitive itself needs no port at all.
+
+### D8: Async setup failure runs hooks registered inside the async body
+
+**Decision.** `Component._cleanup_pending_async()` SHALL refresh the destroy hook from the component's `Context` (which by then contains hooks registered inside the failed async body) and invoke it, so listener cleanups registered by `use_window_event` / `use_document_event` in an async setup run even when the async body fails or is cancelled. The framework cleanup (`EffectScope` + child DI scope disposal) SHALL run first, then the user hook — the same ordering as the success path. This is a small, targeted change to `components/_component.py` and is recorded as a `components` spec delta. It does NOT change hook storage semantics (still single-slot, still overwritten by later registrations).
+
+Alternative considered:
+
+- **Async setup is out of scope**: would leave a real listener-leak path (the pre-async captured hook has no cleanup) and contradict the Event Handler Leaks invariant; rejected.
+
+### D9: `ReadonlySignal` is a public type from `webcompy.signal`
+
+**Decision.** `ReadonlySignal` SHALL be exported from `webcompy.signal` (alongside `Computed`, with which it shares the "internal constructor, public type" precedent) so users can annotate `view: ReadonlySignal[int]`. It SHALL NOT be re-exported from the `webcompy` top-level package — only the `use_readonly_signal` composable is top-level, matching how `Computed` is importable from `webcompy.signal` but not from `webcompy`.
 
 ## Risks / Trade-offs
 
@@ -105,5 +120,5 @@ Pure additive feature: no existing API, data, or storage changes; no dependency 
 
 ## Open Questions
 
-- Doc page placement under `docs_app` (alongside the `signal-stream` page) and whether a single page or a short section is preferred — resolved during implementation in sympathy with the existing markdown-document page structure.
-- Whether `transform` should also be accepted positionally alongside `event_type`/`initial` or remain keyword-only — default choice: keyword-only to keep the two required arguments at the front.
+- Doc page placement under `docs_app` (alongside the `signal-stream` page) and whether a single page or a short section is preferred — resolved in this change: a single `readonly_signal.md` page placed immediately after the `signal-stream` page in the Guides section, with its own lazy page component (`readonly_signal.py`) and docs E2E coverage.
+- `transform` typing — resolved: `Callable[[Any], T] | None` with identity semantics for `None`, keyword-only parameter (the two required arguments `event_type`/`initial` stay positional).
