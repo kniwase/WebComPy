@@ -52,6 +52,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "path": "/documents/signal-stream",
                 "source": "documents/signal_stream.md",
             },
+            {
+                "label": "Read-only Signals and Events",
+                "path": "/documents/readonly-signal",
+                "source": "documents/readonly_signal.md",
+            },
         ],
     },
 ]

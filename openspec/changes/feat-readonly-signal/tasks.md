@@ -39,10 +39,10 @@
 
 ## 7. Docs & Governance
 
-- [ ] 7.1 Add `docs_app/documents/readonly_signal.md` (primitive, window/document helpers, why-not-occurrence-events guidance, standalone pattern, SSR/SSG note), `docs_app/pages/document/readonly_signal.py`, and a manifest entry immediately after the signal-stream page.
-- [ ] 7.2 Update `AGENTS.md`: add `readonly-signal` to the "Current Specs" list; add File→Spec Mapping rows for `webcompy/signal/_readonly.py` and `webcompy/events/`.
-- [ ] 7.3 Sync `.opencode/skills/webcompy-review/SKILL.md` Critical Framework Invariants headings to reference the new `readonly-signal` spec (no duplicated file→spec table; the existing skill delegates that to AGENTS.md).
-- [ ] 7.4 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes.
+- [x] 7.1 Add `docs_app/documents/readonly_signal.md` (primitive, window/document helpers, why-not-occurrence-events guidance, standalone pattern, SSR/SSG note), `docs_app/pages/document/readonly_signal.py`, and a manifest entry immediately after the signal-stream page.
+- [x] 7.2 DEFERRED by user decision to the later spec-sync step: `AGENTS.md` updates ("Current Specs" list entry for `readonly-signal` + File→Spec Mapping rows for `webcompy/signal/_readonly.py` and `webcompy/events/`). Not performed now because `openspec/specs/readonly-signal/spec.md` does not exist yet and `scripts/check-doc-spec-refs.py` would fail on a dangling reference.
+- [x] 7.3 DEFERRED by user decision to the later spec-sync step: `.opencode/skills/webcompy-review/SKILL.md` Critical Framework Invariants heading referencing the new `readonly-signal` spec. Not performed now for the same dangling-reference reason.
+- [x] 7.4 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes (no new spec references were added in this change).
 
 ## 8. Docs E2E
 
