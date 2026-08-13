@@ -271,16 +271,7 @@ class Component(ElementBase):
                 try:
                     with component_context(self._render_state):
                         template = await self._pending_async_template
-                except asyncio.CancelledError:
-                    self._cleanup_pending_async()
-                    try:
-                        parent = self._parent
-                    except AttributeError:
-                        parent = None
-                    if parent is not None and self in parent._children:
-                        parent._children.remove(self)
-                    raise
-                except Exception:
+                except (asyncio.CancelledError, Exception):
                     self._cleanup_pending_async()
                     try:
                         parent = self._parent
