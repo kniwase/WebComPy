@@ -68,7 +68,8 @@ class FakeBrowserDOMPort(ServerDOMPort):
 
     def dispatch_document_event(self, event_type: str, event: Any = None) -> None:
         for handler in list(self._document_listeners.get(event_type, ())):
-            handler(event)
+            if handler in self._document_listeners.get(event_type, ()):
+                handler(event)
 
 
 def _find_by_tag(node: FakeDOMNode, tag: str) -> FakeDOMNode | None:
@@ -128,7 +129,8 @@ class FakeBrowserHostPort(HostPort):
 
     def dispatch_window_event(self, event_type: str, event: Any = None) -> None:
         for handler in list(self._window_listeners.get(event_type, ())):
-            handler(event)
+            if handler in self._window_listeners.get(event_type, ()):
+                handler(event)
 
     def create_js_global_getter(
         self,
