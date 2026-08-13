@@ -358,6 +358,37 @@ class TestDurationResolution:
             box.dispatchEvent(VirtualDOMEvent("transitionend", bubbles=True))
             assert _box_classes(result, "box") == []
 
+    def test_infinite_animation_layer_does_not_block_finalization(self) -> None:
+        from webcompy_server.ports import VirtualDOMEvent
+
+        show = Signal(False)
+        with TestRenderer.render(_toggle_root(show, duration=None)) as result:
+            show.value = True
+            box = result.find_by_attribute("data-testid", "box")
+            assert box is not None
+            result.transition_port.set_style(box, "transition-duration", "400ms")
+            result.transition_port.set_style(box, "animation-duration", "1s")
+            result.transition_port.set_style(box, "animation-iteration-count", "infinite")
+            result.transition_port.flush_frame()
+            assert "fade-enter-active" in _box_classes(result, "box")
+            box.dispatchEvent(VirtualDOMEvent("transitionend", bubbles=True))
+            assert _box_classes(result, "box") == []
+
+    def test_infinite_animation_only_waits_for_timeout(self) -> None:
+        show = Signal(False)
+        with TestRenderer.render(_toggle_root(show, duration=None)) as result:
+            show.value = True
+            box = result.find_by_attribute("data-testid", "box")
+            assert box is not None
+            result.transition_port.set_style(box, "animation-duration", "1s")
+            result.transition_port.set_style(box, "animation-iteration-count", "infinite")
+            result.transition_port.flush_frame()
+            assert "fade-enter-active" in _box_classes(result, "box")
+            result.transition_port.advance_time(999)
+            assert "fade-enter-active" in _box_classes(result, "box")
+            result.transition_port.advance_time(1)
+            assert _box_classes(result, "box") == []
+
 
 class TestNodeAccounting:
     def test_sibling_positions_stable_during_leave_and_reindex_once(self, monkeypatch) -> None:

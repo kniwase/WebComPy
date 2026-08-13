@@ -46,6 +46,7 @@ def _parse_time(value: str) -> float | None:
 def _parse_style_duration(style: TransitionStyle) -> tuple[float, int]:
     total = 0.0
     layer_count = 0
+    iteration_counts = style.get_property_value("animation-iteration-count").split(",")
     for duration_prop, delay_prop in (
         ("transition-duration", "transition-delay"),
         ("animation-duration", "animation-delay"),
@@ -65,8 +66,18 @@ def _parse_style_duration(style: TransitionStyle) -> tuple[float, int]:
             else:
                 delay_ms = 0.0
             total = max(total, ms + delay_ms)
-            if ms + delay_ms > 0:
-                layer_count += 1
+            if ms + delay_ms <= 0:
+                continue
+            if duration_prop == "animation-duration":
+                if index < len(iteration_counts):
+                    count = iteration_counts[index].strip().lower()
+                elif iteration_counts:
+                    count = iteration_counts[-1].strip().lower()
+                else:
+                    count = "1"
+                if count == "infinite":
+                    continue
+            layer_count += 1
     return total, layer_count
 
 
