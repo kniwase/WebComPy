@@ -74,7 +74,7 @@ Signal equality applies: a transformed value equal to the current value SHALL NO
 
 #### Scenario: Resize events update the signal through a transform
 
-- **WHEN** a component calls `use_window_event("resize", 0, transform=lambda e: e.proxy.innerWidth)` and a `resize` event with a new width fires
+- **WHEN** a component calls `use_window_event("resize", 0, transform=lambda e: e.innerWidth)` and a `resize` event with a new width fires
 - **THEN** the first tuple element's `.value` SHALL become the transformed width
 - **AND** reactive consumers of the signal SHALL be notified
 
