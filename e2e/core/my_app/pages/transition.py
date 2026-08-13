@@ -37,46 +37,46 @@ def TransitionPage(context: ComponentContext[None]):
 
 
 TransitionPage.scoped_style = {
-    " .e2e-fade-box": {
+    ".e2e-fade-box": {
         "transition": "opacity 500ms ease",
     },
-    " .fade-enter-from": {
+    ".fade-enter-from": {
         "opacity": "0",
     },
-    " .fade-enter-active": {
+    ".fade-enter-active": {
         "transition": "opacity 500ms ease",
     },
-    " .fade-enter-to": {
+    ".fade-enter-to": {
         "opacity": "1",
     },
-    " .fade-leave-from": {
+    ".fade-leave-from": {
         "opacity": "1",
     },
-    " .fade-leave-active": {
+    ".fade-leave-active": {
         "transition": "opacity 500ms ease",
     },
-    " .fade-leave-to": {
+    ".fade-leave-to": {
         "opacity": "0",
     },
-    " .e2e-slide-box": {
+    ".e2e-slide-box": {
         "transform": "translateX(0)",
     },
-    " .slide-enter-from": {
+    ".slide-enter-from": {
         "transform": "translateX(100%)",
     },
-    " .slide-enter-active": {
+    ".slide-enter-active": {
         "transition": "transform 500ms ease",
     },
-    " .slide-enter-to": {
+    ".slide-enter-to": {
         "transform": "translateX(0)",
     },
-    " .slide-leave-from": {
+    ".slide-leave-from": {
         "transform": "translateX(0)",
     },
-    " .slide-leave-active": {
+    ".slide-leave-active": {
         "transition": "transform 500ms ease",
     },
-    " .slide-leave-to": {
+    ".slide-leave-to": {
         "transform": "translateX(-100%)",
     },
 }

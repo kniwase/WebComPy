@@ -120,3 +120,9 @@ The framework SHALL provide a media-query capability to detect `prefers-reduced-
 
 - **WHEN** the user's media preference is `prefers-reduced-motion: reduce` and a Transition's child appears and later disappears
 - **THEN** the child node SHALL be mounted and removed immediately without any transition classes being applied
+
+## Limitations
+
+End-event finalization is not filtered by event type or CSS property. `_on_end_event` finalizes the sequence on the first `transitionend` or `animationend` whose target is the transitioned node, regardless of which property or animation completed. When a node carries multiple simultaneous transitions or animations with different durations, the resolved duration is the longest, but the first (shortest) end event finalizes early and truncates the longer animation. This is permitted by the design (end events arriving before the timeout SHALL finalize early); filtering by matching `propertyName`/`animationName` is a possible future improvement.
+
+A signal-bound `class` attribute on the transitioned child can clobber transition classes mid-sequence. The attribute updater rewrites the entire `class` string when the bound signal changes, silently removing the `-enter-*`/`-leave-*` classes applied by the Transition. Class manipulation (`_add_classes`/`_remove_classes`) reads and writes the full `class` attribute without knowledge of signal-driven attributes, so users SHOULD NOT bind the transitioned child's `class` to a signal that changes while a sequence is active.
