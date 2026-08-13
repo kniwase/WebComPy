@@ -58,6 +58,8 @@ def _parse_style_duration(style: TransitionStyle) -> float:
                 delay_ms = _parse_time(delays[index])
                 if delay_ms is None:
                     delay_ms = 0.0
+            elif delays:
+                delay_ms = _parse_time(delays[-1]) or 0.0
             else:
                 delay_ms = 0.0
             total = max(total, ms + delay_ms)

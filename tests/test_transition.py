@@ -208,6 +208,32 @@ class TestDurationResolution:
             result.transition_port.advance_time(1)
             assert _box_classes(result, "box") == []
 
+    def test_multi_property_duration_repeats_last_delay(self) -> None:
+        show = Signal(False)
+        with TestRenderer.render(_toggle_root(show, duration=None)) as result:
+            show.value = True
+            box = result.find_by_attribute("data-testid", "box")
+            result.transition_port.set_style(box, "transition-duration", "1s, 2s")
+            result.transition_port.set_style(box, "transition-delay", "500ms")
+            result.transition_port.flush_frame()
+            result.transition_port.advance_time(2499)
+            assert "fade-enter-active" in _box_classes(result, "box")
+            result.transition_port.advance_time(1)
+            assert _box_classes(result, "box") == []
+
+    def test_animation_multi_property_duration_repeats_last_delay(self) -> None:
+        show = Signal(False)
+        with TestRenderer.render(_toggle_root(show, duration=None)) as result:
+            show.value = True
+            box = result.find_by_attribute("data-testid", "box")
+            result.transition_port.set_style(box, "animation-duration", "1s, 2s")
+            result.transition_port.set_style(box, "animation-delay", "500ms")
+            result.transition_port.flush_frame()
+            result.transition_port.advance_time(2499)
+            assert "fade-enter-active" in _box_classes(result, "box")
+            result.transition_port.advance_time(1)
+            assert _box_classes(result, "box") == []
+
     def test_no_duration_finalizes_immediately_with_warning(self, monkeypatch) -> None:
         import webcompy.logging
 
