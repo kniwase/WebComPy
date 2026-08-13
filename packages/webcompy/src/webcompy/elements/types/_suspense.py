@@ -81,6 +81,15 @@ class SuspenseElement(DynamicElement):
             component._refresh_async_setup_results()
             component._init_component(component._property)
 
+    def _cleanup_pending_pairs(
+        self,
+        pairs: list[tuple[Component, Coroutine[Any, Any, Any]]] | None,
+    ) -> None:
+        if pairs is None:
+            return
+        for component, _ in pairs:
+            component._cleanup_pending_async()
+
     async def _render(self):
         if not self._children:
             is_server = ENVIRONMENT != "pyscript"
@@ -121,6 +130,7 @@ class SuspenseElement(DynamicElement):
                                 "Suspense child async setup raised, rendering error_fallback: %s",
                                 result,
                             )
+                            self._cleanup_pending_pairs(pairs)
                             self._children = self._generate_children(self._error_fallback_generator)
                             return
                         else:
@@ -175,7 +185,11 @@ class SuspenseElement(DynamicElement):
             parent_node = self._parent._get_node()
             _position_element_nodes(self, parent_node, self._node_idx)
             self._parent._re_index_children(False)
+        except asyncio.CancelledError:
+            self._cleanup_pending_pairs(pairs)
+            raise
         except Exception as e:
+            self._cleanup_pending_pairs(pairs)
             await self._handle_error(e)
         finally:
             if scope is not None:

@@ -64,3 +64,10 @@
 
 - [x] 10.1 Run the openspec-verify-change flow (completeness/correctness/coherence); produce the report; if any CRITICAL issue remains, STOP and report rather than guessing fixes.
 - [x] 10.2 Final commit recording the verification (e.g. `chore: record readonly signal verification`).
+
+## 11. Review Follow-up (PR #253 AI review)
+
+- [x] 11.1 Fix `SuspenseElement` so pending async components run their destroy hooks when resolution fails or is cancelled: add `_cleanup_pending_pairs` and invoke it in `_browser_resolve` (exception and cancellation branches, before `_handle_error`) and in `_server_render` (error-fallback branch before replacing children). No contract change — this makes the existing async-setup-failure cleanup requirement hold on the Suspense path.
+- [x] 11.2 Add regression tests `TestSuspenseAsyncSetupFailureCleanup` in `tests/test_async_component_context.py`: browser error-fallback path, browser ErrorBoundary routing path, browser removal-while-resolving (cancellation) path, and server error-fallback path; each asserts the `use_window_event` listener and user destroy hook behave as on the direct path.
+- [x] 11.3 Add a docstring to `use_readonly_signal` (public top-level primitive; matches sibling composable convention).
+- [x] 11.4 Verify: ruff, pyright, full unit suite, full core E2E matrix, `openspec validate --changes`.
