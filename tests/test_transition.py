@@ -554,6 +554,30 @@ class TestReplacementAndInterruption:
             result.transition_port.advance_time(100)
             assert result.find_by_attribute("data-testid", "box") is None
 
+    def test_revert_during_leave_completion_discards_staged_child(self, monkeypatch) -> None:
+        show, extra = Signal(True), Signal(False)
+        with TestRenderer.render(self._two_signal_root(show, extra)) as result:
+            transition = result._instance._children[0]
+            show.value = False
+            result.transition_port.flush_frame()
+            extra.value = True
+            assert transition._pending_child is not None
+
+            gated = True
+            original_refresh = TransitionElement._refresh
+
+            async def gated_refresh(self, *args: Any):
+                if gated:
+                    return
+                return await original_refresh(self, *args)
+
+            monkeypatch.setattr(TransitionElement, "_refresh", gated_refresh)
+            extra.value = False
+            gated = False
+            result.transition_port.advance_time(100)
+            assert result.find_by_attribute("data-testid", "box") is None
+            assert transition._pending_child is None
+
     def test_discarding_staged_child_does_not_create_dom_node(self, monkeypatch) -> None:
         from webcompy_testing._dom import FakeDOMNode
 

@@ -190,6 +190,7 @@ class TransitionElement(DynamicElement):
                     return
                 if self._reindex_pending:
                     self._reindex_pending = False
+                    self._discard_pending_child_if_not(None)
                     self._parent._re_index_children(False)
                 return
 
