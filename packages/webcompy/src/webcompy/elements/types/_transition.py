@@ -119,6 +119,8 @@ class TransitionElement(DynamicElement):
         self._sequence: str | None = None
         self._generation = 0
         self._reindex_pending = False
+        self._refresh_running = False
+        self._refresh_pending = False
         self._pending_child: ElementAbstract | None = None
         self._cancel_next_frame: Callable[[], None] | None = None
         self._cancel_timeout: Callable[[], None] | None = None
@@ -179,6 +181,22 @@ class TransitionElement(DynamicElement):
         _run_refresh_sync(self._refresh, *args)
 
     async def _refresh(self, *args: Any) -> None:
+        if self._disposed or not self._initial_rendered:
+            return
+        if self._refresh_running:
+            self._refresh_pending = True
+            return
+        self._refresh_running = True
+        try:
+            while True:
+                self._refresh_pending = False
+                await self._refresh_pass(*args)
+                if not self._refresh_pending:
+                    break
+        finally:
+            self._refresh_running = False
+
+    async def _refresh_pass(self, *args: Any) -> None:
         try:
             if self._disposed or not self._initial_rendered:
                 return

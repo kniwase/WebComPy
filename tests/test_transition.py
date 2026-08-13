@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
@@ -723,6 +724,26 @@ class TestReplacementAndInterruption:
             assert transition._reindex_pending is False
             assert transition._pending_child is None
             assert reindex_calls == [1]
+
+    def test_concurrent_refresh_requests_are_serialized_not_interleaved(self, monkeypatch) -> None:
+        show = Signal(False)
+        entries: list[int] = []
+        counter = 0
+
+        async def stubbed_pass(self: TransitionElement, *args: Any) -> None:
+            nonlocal counter
+            counter += 1
+            entries.append(counter)
+            if counter == 1:
+                self._refresh_sync()
+            await asyncio.sleep(0)
+            entries.append(-counter)
+
+        monkeypatch.setattr(TransitionElement, "_refresh_pass", stubbed_pass)
+        with TestRenderer.render(_toggle_root(show)) as result:
+            transition = result._instance._children[1]
+            transition._refresh_sync()
+            assert entries == [1, -1, 2, -2]
 
     def test_removing_transition_itself_removes_child_immediately(self) -> None:
         show, wrap = Signal(True), Signal(True)
