@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+
+import pytest
 
 from webcompy.components._generator import define_component
 from webcompy.components._hooks import (
@@ -355,3 +358,426 @@ class TestAsyncComponentEffectCleanup:
             assert len(result._instance._render_state.effect_scope._effects) == 1
             result._instance._remove_element()
             assert "clean" in cleaned
+
+
+class TestAsyncComponentSetupFailureCleanup:
+    def _drive_failure(self, component):
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore, _register_deferred_components
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.ports._keys import HOST_PORT_KEY
+        from webcompy_testing import FakeBrowserHostPort
+        from webcompy_testing._utils import run_sync
+
+        host = FakeBrowserHostPort()
+        scope = DIScope()
+        scope.provide(HOST_PORT_KEY, host)
+        scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+        scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+        token = _active_di_scope.set(scope)
+        _register_deferred_components()
+        try:
+            instance = component(None)
+
+            class _RealParent:
+                def __init__(self) -> None:
+                    self._children = [instance]
+
+            instance._parent = _RealParent()
+            instance._node_idx = 0
+            with pytest.raises(RuntimeError, match="boom"):
+                run_sync(instance._render())
+        finally:
+            _active_di_scope.reset(token)
+        return host, instance
+
+    def _drive_cancellation(self, component):
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore, _register_deferred_components
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.ports._keys import HOST_PORT_KEY
+        from webcompy_testing import FakeBrowserHostPort
+
+        host = FakeBrowserHostPort()
+        scope = DIScope()
+        scope.provide(HOST_PORT_KEY, host)
+        scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+        scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+        token = _active_di_scope.set(scope)
+        _register_deferred_components()
+
+        async def _run():
+            instance = component(None)
+
+            class _RealParent:
+                def __init__(self) -> None:
+                    self._children = [instance]
+
+            instance._parent = _RealParent()
+            instance._node_idx = 0
+            task = asyncio.ensure_future(instance._render())
+            while not host._window_listeners.get("resize"):
+                await asyncio.sleep(0)
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+            return instance, host
+
+        try:
+            return asyncio.run(_run())
+        finally:
+            _active_di_scope.reset(token)
+
+    def test_failed_async_setup_removes_event_listener(self):
+        from webcompy import use_window_event
+
+        @define_component
+        async def FailingAsyncCmp(context):
+            await asyncio.sleep(0)
+            use_window_event("resize", 0)
+            raise RuntimeError("boom")
+
+        host, _ = self._drive_failure(FailingAsyncCmp)
+
+        assert host._window_listeners.get("resize") == []
+
+    def test_failed_async_setup_chains_prior_destroy_hook(self):
+        from webcompy import use_window_event
+
+        order: list[str] = []
+
+        @define_component
+        async def FailingAsyncCmp(context):
+            await asyncio.sleep(0)
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            raise RuntimeError("boom")
+
+        host, _ = self._drive_failure(FailingAsyncCmp)
+
+        assert order == ["user"]
+        assert host._window_listeners.get("resize") == []
+
+    def test_failed_async_setup_destroy_hook_fires_only_once(self):
+        order: list[str] = []
+
+        @define_component
+        async def FailingAsyncCmp(context):
+            await asyncio.sleep(0)
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            raise RuntimeError("boom")
+
+        _, instance = self._drive_failure(FailingAsyncCmp)
+
+        assert order == ["user"]
+        instance._detach_from_node()
+        instance._detach_from_node()
+        assert order == ["user"]
+
+    def test_cancelled_async_setup_runs_destroy_hooks(self):
+        from webcompy import use_window_event
+
+        order: list[str] = []
+
+        @define_component
+        async def CancelledAsyncCmp(context):
+            await asyncio.sleep(0)
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            await asyncio.sleep(1)
+
+        instance, host = self._drive_cancellation(CancelledAsyncCmp)
+
+        assert order == ["user"]
+        assert host._window_listeners.get("resize") == []
+        assert instance._parent._children == []
+
+    def test_successful_async_setup_ordering_unchanged(self):
+        from webcompy import use_window_event
+        from webcompy.ports._keys import HOST_PORT_KEY
+
+        order: list[str] = []
+
+        @define_component
+        async def AsyncOkCmp(context):
+            await asyncio.sleep(0)
+            effect(lambda: None, on_cleanup=lambda: order.append("effect"))
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            return html.DIV({}, "ok")
+
+        with TestRenderer.render(AsyncOkCmp) as result:
+            host = result._scope.inject(HOST_PORT_KEY)
+            assert len(host._window_listeners.get("resize", [])) == 1
+            result._instance._remove_element()
+            assert order == ["effect", "user"]
+            assert host._window_listeners.get("resize") == []
+
+
+class TestSuspenseAsyncSetupFailureCleanup:
+    @pytest.mark.asyncio
+    async def test_browser_failure_with_error_fallback_runs_destroy_hooks(self, monkeypatch):
+        from webcompy import use_window_event
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, HOST_PORT_KEY
+
+        monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
+        order: list[str] = []
+
+        @define_component
+        async def FailingChild(context):
+            await asyncio.sleep(0)
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            raise RuntimeError("boom")
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                suspense(
+                    fallback=lambda: html.P({}, "loading"),
+                    children=lambda: FailingChild(None),
+                    error_fallback=lambda: html.P({"data-testid": "error-fallback"}, "error"),
+                ),
+            )
+
+        with TestRenderer.render(Root) as result:
+            scheduler = result._scope.inject(ASYNC_SCHEDULER_PORT_KEY)
+            await scheduler.drain()
+            host = result._scope.inject(HOST_PORT_KEY)
+            assert order == ["user"]
+            assert host._window_listeners.get("resize") == []
+            assert result.find_by_attribute("data-testid", "error-fallback") is not None
+
+    @pytest.mark.asyncio
+    async def test_browser_failure_routed_to_boundary_runs_destroy_hooks(self, monkeypatch):
+        from webcompy import use_window_event
+        from webcompy.elements import ErrorBoundary
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, HOST_PORT_KEY
+
+        monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
+        order: list[str] = []
+
+        @define_component
+        async def FailingChild(context):
+            await asyncio.sleep(0)
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            raise RuntimeError("boom")
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                ErrorBoundary(
+                    children=lambda: suspense(
+                        fallback=lambda: html.P({}, "loading"),
+                        children=lambda: FailingChild(None),
+                    ),
+                    fallback=lambda e, r: html.DIV({"data-testid": "boundary-fallback"}, str(e)),
+                ),
+            )
+
+        with TestRenderer.render(Root) as result:
+            scheduler = result._scope.inject(ASYNC_SCHEDULER_PORT_KEY)
+            await scheduler.drain()
+            host = result._scope.inject(HOST_PORT_KEY)
+            assert order == ["user"]
+            assert host._window_listeners.get("resize") == []
+            assert result.find_by_attribute("data-testid", "boundary-fallback") is not None
+
+    def test_browser_remove_while_resolving_runs_destroy_hooks(self, monkeypatch):
+        from webcompy import use_window_event
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore, _register_deferred_components
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.elements.types._suspense import SuspenseElement
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY, FFI_PORT_KEY, HOST_PORT_KEY
+        from webcompy_server.ports import VirtualDOMNode
+        from webcompy_testing import FakeAsyncSchedulerPort, FakeBrowserDOMPort, FakeBrowserFFIPort, FakeBrowserHostPort
+
+        monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
+
+        @define_component
+        async def SlowChild(context):
+            await asyncio.sleep(0)
+            use_window_event("resize", 0)
+            await asyncio.sleep(30)
+
+        host = FakeBrowserHostPort()
+        scope = DIScope()
+        scope.provide(HOST_PORT_KEY, host)
+        scope.provide(ASYNC_SCHEDULER_PORT_KEY, FakeAsyncSchedulerPort())
+        scope.provide(DOM_PORT_KEY, FakeBrowserDOMPort())
+        scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
+        scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+        scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+        token = _active_di_scope.set(scope)
+        _register_deferred_components()
+
+        class _DummyParent:
+            def __init__(self, node):
+                self._node = node
+                self._node.__webcompy_node__ = False
+                self._node.__webcompy_prerendered_node__ = True
+
+            def _get_node(self):
+                return self._node
+
+            def _get_belonging_component(self):
+                return ""
+
+            def _get_belonging_components(self):
+                return ()
+
+            def _re_index_children(self, recursive):
+                pass
+
+        async def _run():
+            el = SuspenseElement(
+                fallback=lambda: html.P({}, "loading"),
+                children=lambda: SlowChild(None),
+            )
+            parent = _DummyParent(VirtualDOMNode("div"))
+            el._parent = parent
+            el._node_idx = 0
+            await el._render()
+            scheduler = scope.inject(ASYNC_SCHEDULER_PORT_KEY)
+            task = asyncio.ensure_future(scheduler._coroutines.pop(0))
+            el._pending_tasks.append(task)
+            while not host._window_listeners.get("resize"):
+                await asyncio.sleep(0)
+            el._remove_element(recursive=False, remove_node=False)
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+            return host
+
+        try:
+            host = asyncio.run(_run())
+            assert host._window_listeners.get("resize") == []
+        finally:
+            _active_di_scope.reset(token)
+            scope.dispose()
+
+    def test_server_failure_with_error_fallback_runs_destroy_hooks(self):
+        from webcompy import use_window_event
+        from webcompy.ports._keys import HOST_PORT_KEY
+
+        order: list[str] = []
+
+        @define_component
+        async def FailingChild(context):
+            await asyncio.sleep(0)
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            raise RuntimeError("boom")
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                suspense(
+                    fallback=lambda: html.P({}, "loading"),
+                    children=lambda: FailingChild(None),
+                    error_fallback=lambda: html.P({"data-testid": "error-fallback"}, "error"),
+                ),
+            )
+
+        with TestRenderer.render(Root) as result:
+            host = result._scope.inject(HOST_PORT_KEY)
+            assert order == ["user"]
+            assert host._window_listeners.get("resize") == []
+            assert result.find_by_attribute("data-testid", "error-fallback") is not None
+
+    def test_server_timeout_runs_destroy_hooks(self):
+        from webcompy import use_window_event
+        from webcompy.ports._keys import HOST_PORT_KEY
+
+        order: list[str] = []
+
+        @define_component
+        async def SlowChild(context):
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            await asyncio.sleep(30)
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                suspense(
+                    fallback=lambda: html.P({"data-testid": "timeout-fallback"}, "loading"),
+                    children=lambda: SlowChild(None),
+                    timeout=0.05,
+                ),
+            )
+
+        with TestRenderer.render(Root) as result:
+            host = result._scope.inject(HOST_PORT_KEY)
+            assert order == ["user"]
+            assert host._window_listeners.get("resize") == []
+            assert result.find_by_attribute("data-testid", "timeout-fallback") is not None
+
+    def test_server_raise_without_error_fallback_runs_destroy_hooks(self):
+        from webcompy import use_window_event
+
+        order: list[str] = []
+
+        @define_component
+        async def FailingChild(context):
+            await asyncio.sleep(0)
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            raise RuntimeError("boom")
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                suspense(
+                    fallback=lambda: html.P({}, "loading"),
+                    children=lambda: FailingChild(None),
+                ),
+            )
+
+        with pytest.raises(RuntimeError, match="boom"):
+            TestRenderer.render(Root)
+        assert order == ["user"]

@@ -44,7 +44,7 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 
 ### MODIFIED: webcompy.testing package shall provide fake port implementations
 
-`FakeBrowserDOMPort` SHALL be a subclass of `ServerDOMPort` (from `webcompy_server.ports._dom`, formerly `webcompy.ports._server._dom`). It SHALL override `create_element()` to return `FakeDOMNode` instances instead of `VirtualDOMNode`. It SHALL override `create_text_node()` to return a text `FakeDOMNode`. It SHALL maintain an internal document tree consisting of `<html>`, `<head>`, and `<body>` `FakeDOMNode` instances. The `query_selector()` and `get_element_by_id()` methods SHALL search this internal tree instead of returning `None`. It SHALL inherit `create_event()`, `set_title()`, `add_document_event_listener()`, and `render_html()` from `ServerDOMPort`. The internal document tree SHALL preserve mutations across method calls within the same instance — appending elements to the tree SHALL be visible to subsequent `query_selector` and `get_element_by_id` calls. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` calling `callback()` synchronously and `create_js_global_getter()` returning a callable that returns `None`. `FakeBrowserFFIPort` SHALL implement `FFIPort` with all 5 abstract methods: `create_proxy` (returns `MagicMock` wrapping the original), `destroy_proxy`, `is_none`, `to_js`, `assign`. `FakeFetchPort` SHALL implement `FetchPort` with `fetch()` that matches registered responses by `(method, url)` key. It SHALL accept an optional `responses` constructor parameter — a `dict` mapping `(method, url)` tuples to `Response` objects. When `fetch(method, url, *, headers, body)` is called, it SHALL look up `(method, url)` in the responses dict and return the matching `Response`. If no match is found, it SHALL raise `KeyError` with a message listing available keys.
+`FakeBrowserDOMPort` SHALL be a subclass of `ServerDOMPort` (from `webcompy_server.ports._dom`, formerly `webcompy.ports._server._dom`). It SHALL override `create_element()` to return `FakeDOMNode` instances instead of `VirtualDOMNode`. It SHALL override `create_text_node()` to return a text `FakeDOMNode`. It SHALL maintain an internal document tree consisting of `<html>`, `<head>`, and `<body>` `FakeDOMNode` instances. The `query_selector()` and `get_element_by_id()` methods SHALL search this internal tree instead of returning `None`. It SHALL inherit `create_event()`, `set_title()`, and `render_html()` from `ServerDOMPort`, and SHALL override `add_document_event_listener()` to record the handler per event type in an instance-local registry (no module-level state) and return an idempotent cleanup that removes exactly that handler, exposing a `dispatch_document_event(event_type, event)` helper that invokes the recorded handlers for the event type (snapshotting the list so handlers removed during dispatch are not invoked). The internal document tree SHALL preserve mutations across method calls within the same instance — appending elements to the tree SHALL be visible to subsequent `query_selector` and `get_element_by_id` calls. `FakeBrowserHostPort` SHALL implement `HostPort` with `schedule_macro_task()` calling `callback()` synchronously and `create_js_global_getter()` returning a callable that returns `None`. Its `add_window_event_listener(event_type, handler)` SHALL record the handler per event type in an instance-local registry (no module-level state) and return an idempotent cleanup that removes exactly that handler, exposing a `dispatch_window_event(event_type, event)` helper that invokes the recorded handlers for the event type (snapshotting the list so handlers removed during dispatch are not invoked). The no-op behavior of `ServerHostPort.add_window_event_listener` and `ServerDOMPort.add_document_event_listener` SHALL remain unchanged. `FakeBrowserFFIPort` SHALL implement `FFIPort` with all 5 abstract methods: `create_proxy` (returns `MagicMock` wrapping the original), `destroy_proxy`, `is_none`, `to_js`, `assign`. `FakeFetchPort` SHALL implement `FetchPort` with `fetch()` that matches registered responses by `(method, url)` key. It SHALL accept an optional `responses` constructor parameter — a `dict` mapping `(method, url)` tuples to `Response` objects. When `fetch(method, url, *, headers, body)` is called, it SHALL look up `(method, url)` in the responses dict and return the matching `Response`. If no match is found, it SHALL raise `KeyError` with a message listing available keys.
 
 #### Scenario: FakeBrowserDOMPort creates FakeDOMNodes
 - **WHEN** `FakeBrowserDOMPort().create_element("span")` is called
@@ -91,6 +91,27 @@ WebComPy provides a `webcompy.testing` package with reusable test utilities for 
 - **WHEN** `port.query_selector("head").appendChild(el)` is called
 - **AND** `el.setAttribute("data-webcompy-cid", "abc")` is called
 - **THEN** a subsequent `port.query_selector('style[data-webcompy-cid="abc"]')` SHALL return `el`
+
+#### Scenario: FakeBrowserHostPort records and dispatches window listeners
+- **WHEN** `FakeBrowserHostPort().add_window_event_listener("resize", handler)` is called
+- **AND** `port.dispatch_window_event("resize", event)` is called
+- **THEN** `handler` SHALL be invoked with the event
+- **AND** calling the returned cleanup SHALL remove only that handler, so a subsequent dispatch does not invoke it
+
+#### Scenario: FakeBrowserDOMPort records and dispatches document listeners
+- **WHEN** `FakeBrowserDOMPort().add_document_event_listener("visibilitychange", handler)` is called
+- **AND** `port.dispatch_document_event("visibilitychange", event)` is called
+- **THEN** `handler` SHALL be invoked with the event
+- **AND** the cleanup SHALL be idempotent (calling it twice SHALL NOT raise)
+
+#### Scenario: Multiple listeners are dispatched independently
+- **WHEN** two handlers are registered for the same event type
+- **AND** one is removed before a dispatch
+- **THEN** the dispatch SHALL invoke only the remaining handler
+
+#### Scenario: Server no-op behavior is preserved
+- **WHEN** `ServerHostPort().add_window_event_listener(...)` or `ServerDOMPort().add_document_event_listener(...)` is called
+- **THEN** a no-op cleanup SHALL be returned and no handler SHALL be recorded
 
 ### MODIFIED: webcompy.testing package shall provide format_html for canonical HTML comparison
 

@@ -74,6 +74,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **RenderContext Isolation** — `render-context/spec.md`
 - **Reactive Contracts** — `reactive/spec.md`, `effect/spec.md`
 - **Event Handler Leaks** — `elements/spec.md`
+- **Readonly Signal & Event Source Lifecycle** — `readonly-signal/spec.md`
 - **Error Handling** — `error-handling/spec.md`
 - **Lifecycle Ordering** — `components/spec.md`, `async-rendering/spec.md`
 - **Async Rendering Pipeline** — `async-rendering/spec.md`
