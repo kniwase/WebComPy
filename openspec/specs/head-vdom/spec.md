@@ -8,7 +8,7 @@ WebComPy's document head management shall use a VDOM (Virtual DOM) approach inst
 
 ### Requirement: HeadElement SHALL manage head content as VDOM children
 
-A `HeadElement` class SHALL represent the `<head>` element as a VDOM node. The class SHALL receive a `HeadPropsStore` for reactive title and meta access. In the browser, `HeadElement._render()` SHALL inject `<style id="webcompy-scoped-styles">` and per-component `<style data-webcompy-cid="...">` elements into `document.head`. In SSG, `HeadElement.get_head_content_html()` SHALL produce HTML strings for title, meta, scoped style, and link elements.
+A `HeadElement` class SHALL represent the `<head>` element as a VDOM node. The class SHALL receive a `HeadPropsStore` for reactive title and meta access. In the browser, `HeadElement._render()` SHALL inject `<style id="webcompy-scoped-styles">` and per-component `<style data-webcompy-cid="...">` elements into `document.head`. In SSG, head HTML generation SHALL be split into two methods: `HeadElement.get_head_content_html()` SHALL produce HTML strings for title, meta, the `*[hidden]` utility style, dynamic style, and link elements; `HeadElement.get_scoped_styles_html()` SHALL produce HTML strings for per-component scoped style elements (`<style data-webcompy-cid="...">` and `<style data-webcompy-cid-rx="...">`). The split allows the SSG assembler to emit scoped styles after the framework stylesheet link that declares the cascade layer order (see `openspec/specs/css-architecture/spec.md`).
 
 #### Scenario: Initial head rendering in browser
 - **WHEN** a `HeadElement` is first rendered in browser environment
@@ -18,9 +18,9 @@ A `HeadElement` class SHALL represent the `<head>` element as a VDOM node. The c
 
 #### Scenario: SSG head rendering
 - **WHEN** `generate_html()` renders a page during SSG
-- **THEN** `HeadElement.get_head_content_html()` SHALL produce the inner `<head>` HTML string content
-- **AND** the output SHALL include `<title>`, `<meta>`, `<style>` (hidden rule + per-component scoped), and `<link>` elements as appropriate
-- **AND** `<base>`, core `<link>`, `<script>` (pyscript), and plugin scripts SHALL remain the responsibility of `_html.py`
+- **THEN** `HeadElement.get_head_content_html()` SHALL produce the inner `<head>` HTML string content for `<title>`, `<meta>`, the `*[hidden]` utility `<style>`, dynamic `<style>`, and `<link>` elements as appropriate
+- **AND** `HeadElement.get_scoped_styles_html()` SHALL produce the per-component scoped `<style>` elements
+- **AND** `<base>`, framework stylesheet `<link>` elements, core `<link>`, `<script>` (pyscript), plugin scripts, and the final placement of scoped styles SHALL remain the responsibility of `_html.py`
 - **AND** the SSG code SHALL NOT need to manually construct title, meta, style, or app link HTML fragments
 
 #### Scenario: Reactive title update in browser
