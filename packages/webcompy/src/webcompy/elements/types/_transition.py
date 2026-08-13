@@ -230,6 +230,10 @@ class TransitionElement(DynamicElement):
             self._reindex_parent()
             self._start_enter_sequence(child)
         except WebComPyException:
+            if self._reindex_pending:
+                self._reindex_pending = False
+                self._discard_pending_child_if_not(None)
+                self._parent._re_index_children(False)
             raise
         except Exception as err:
             from webcompy.elements.types._error_boundary import route_error_deferred

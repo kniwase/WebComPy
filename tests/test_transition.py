@@ -628,6 +628,67 @@ class TestReplacementAndInterruption:
             result.transition_port.advance_time(100)
             assert result.find_by_attribute("data-testid", "box") is None
 
+    def test_invalid_shape_during_leave_completion_restores_consistency(self, monkeypatch) -> None:
+        from webcompy.elements.types._fragment import FragmentElement
+
+        show = Signal(True)
+        extra = Signal(False)
+        invalid = Signal(False)
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                Transition(
+                    {"name": "fade", "duration": 100},
+                    lambda: (
+                        html.DIV({"data-testid": "box"}, "box")
+                        if (show.value or extra.value) and not invalid.value
+                        else FragmentElement([html.SPAN({}, "a"), html.SPAN({}, "b")])
+                        if invalid.value
+                        else None
+                    ),
+                ),
+            )
+
+        with TestRenderer.render(Root) as result:
+            transition = result._instance._children[0]
+            reindex_calls: list[int] = []
+            root = transition._parent
+            original_reindex = root._re_index_children
+
+            def counting_reindex(recursive: bool = False) -> None:
+                reindex_calls.append(1)
+                original_reindex(recursive)
+
+            monkeypatch.setattr(root, "_re_index_children", counting_reindex)
+            reindex_calls.clear()
+
+            show.value = False
+            result.transition_port.flush_frame()
+            extra.value = True
+            assert transition._pending_child is not None
+
+            gated = True
+            original_refresh = TransitionElement._refresh
+
+            async def gated_refresh(self, *args: Any):
+                if gated:
+                    return
+                return await original_refresh(self, *args)
+
+            monkeypatch.setattr(TransitionElement, "_refresh", gated_refresh)
+            invalid.value = True
+            gated = False
+            with pytest.raises(WebComPyException):
+                result.transition_port.advance_time(100)
+            assert result.find_by_attribute("data-testid", "box") is None
+            assert transition._children == []
+            assert transition._sequence is None
+            assert transition._reindex_pending is False
+            assert transition._pending_child is None
+            assert reindex_calls == [1]
+
     def test_removing_transition_itself_removes_child_immediately(self) -> None:
         show, wrap = Signal(True), Signal(True)
         with TestRenderer.render(self._switch_root(show, wrap)) as result:
@@ -757,6 +818,34 @@ class TestValidation:
 
         with pytest.raises(WebComPyException):
             TestRenderer.render(Root)
+
+    def test_invalid_shape_during_refresh_leaves_tree_intact(self) -> None:
+        from webcompy.elements.types._fragment import FragmentElement
+
+        invalid = Signal(False)
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                Transition(
+                    {"name": "fade", "duration": 100},
+                    lambda: (
+                        html.DIV({"data-testid": "box"}, "box")
+                        if not invalid.value
+                        else FragmentElement([html.SPAN({}, "a"), html.SPAN({}, "b")])
+                    ),
+                ),
+            )
+
+        with TestRenderer.render(Root) as result:
+            transition = result._instance._children[0]
+            invalid.value = True
+            assert result.find_by_attribute("data-testid", "box") is not None
+            assert result.find_by_attribute("data-testid", "box").textContent == "box"
+            assert len(transition._children) == 1
+            assert transition._sequence is None
+            assert transition._pending_child is None
 
 
 class TestReducedMotion:
