@@ -52,7 +52,7 @@ def Page(context):
 
 - `transform: Callable[[Any], T] | None` converts the raw event into the signal's value type; when omitted, the raw event object is stored as-is.
 - An exception raised inside `transform` is logged and swallowed — the signal keeps its previous value and the browser's event dispatch is not interrupted.
-- Inside component setup with a resolvable `HostPort`, the listener is registered and unregistered on `on_before_destroy`.
+- Inside component setup with a resolvable `HostPort`, the listener is registered and unregistered on `on_before_destroy`. The composable occupies the component's single destroy-hook slot, so register your own `on_before_destroy` hook **before** calling it — a hook registered later would overwrite the cleanup and leak the listener.
 - Outside component setup a `UserWarning` is emitted and **nothing is attached** (leak-free). During SSR/SSG the server port is a no-op, so the page renders `initial` and hydration is unaffected.
 
 ## use_document_event: document state events

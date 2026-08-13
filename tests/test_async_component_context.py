@@ -389,7 +389,7 @@ class TestAsyncComponentSetupFailureCleanup:
                 run_sync(instance._render())
         finally:
             _active_di_scope.reset(token)
-        return host
+        return host, instance
 
     def test_failed_async_setup_removes_event_listener(self):
         from webcompy import use_window_event
@@ -400,7 +400,7 @@ class TestAsyncComponentSetupFailureCleanup:
             use_window_event("resize", 0)
             raise RuntimeError("boom")
 
-        host = self._drive_failure(FailingAsyncCmp)
+        host, _ = self._drive_failure(FailingAsyncCmp)
 
         assert host._window_listeners.get("resize") == []
 
@@ -420,10 +420,30 @@ class TestAsyncComponentSetupFailureCleanup:
             use_window_event("resize", 0)
             raise RuntimeError("boom")
 
-        host = self._drive_failure(FailingAsyncCmp)
+        host, _ = self._drive_failure(FailingAsyncCmp)
 
         assert order == ["user"]
         assert host._window_listeners.get("resize") == []
+
+    def test_failed_async_setup_destroy_hook_fires_only_once(self):
+        order: list[str] = []
+
+        @define_component
+        async def FailingAsyncCmp(context):
+            await asyncio.sleep(0)
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            raise RuntimeError("boom")
+
+        _, instance = self._drive_failure(FailingAsyncCmp)
+
+        assert order == ["user"]
+        instance._detach_from_node()
+        instance._detach_from_node()
+        assert order == ["user"]
 
     def test_successful_async_setup_ordering_unchanged(self):
         from webcompy import use_window_event

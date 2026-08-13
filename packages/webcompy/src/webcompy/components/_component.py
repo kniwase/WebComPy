@@ -223,6 +223,8 @@ class Component(ElementBase):
             from webcompy.elements.types._error_boundary import route_error_deferred
 
             route_error_deferred(self, err)
+        finally:
+            self._property["on_before_destroy"] = lambda: None
         self._error_captured_hooks.clear()
         for cb in self._callback_nodes:
             from webcompy.signal._graph import consumer_destroy
