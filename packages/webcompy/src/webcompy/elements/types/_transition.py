@@ -42,8 +42,9 @@ def _parse_time(value: str) -> float | None:
     return None
 
 
-def _parse_style_duration(style: TransitionStyle) -> float:
+def _parse_style_duration(style: TransitionStyle) -> tuple[float, int]:
     total = 0.0
+    layer_count = 0
     for duration_prop, delay_prop in (
         ("transition-duration", "transition-delay"),
         ("animation-duration", "animation-delay"),
@@ -63,7 +64,9 @@ def _parse_style_duration(style: TransitionStyle) -> float:
             else:
                 delay_ms = 0.0
             total = max(total, ms + delay_ms)
-    return total
+            if ms + delay_ms > 0:
+                layer_count += 1
+    return total, layer_count
 
 
 class _ChildComputed(Computed[ElementChildren]):
@@ -121,6 +124,7 @@ class TransitionElement(DynamicElement):
         self._cancel_timeout: Callable[[], None] | None = None
         self._end_event_node: DOMNode | None = None
         self._end_event_proxy: Any = None
+        self._end_events_remaining: int | None = None
         super().__init__()
         self._child_computed = _ChildComputed(child_generator, self._route_child_error)
         self.__set_signal_member__("_child_computed", self._child_computed)
@@ -325,12 +329,13 @@ class TransitionElement(DynamicElement):
 
     def _resolve_duration(self, gen: int, child: ElementAbstract, is_enter: bool) -> None:
         duration = self._duration
+        layer_count = 1
         if duration is None:
             node = child._node_cache
             duration = 0.0
             if node is not None:
                 style = inject(TRANSITION_PORT_KEY).get_computed_style(node)
-                duration = _parse_style_duration(style)
+                duration, layer_count = _parse_style_duration(style)
             if duration <= 0:
                 logging.warning(
                     f"Transition '{self._name}': no transition or animation duration is defined; finishing immediately."
@@ -340,7 +345,7 @@ class TransitionElement(DynamicElement):
         elif duration <= 0:
             self._finalize_sequence(gen, is_enter)
             return
-        self._arm_end_listeners(gen, child, is_enter, duration)
+        self._arm_end_listeners(gen, child, is_enter, duration, layer_count)
 
     def _arm_end_listeners(
         self,
@@ -348,6 +353,7 @@ class TransitionElement(DynamicElement):
         child: ElementAbstract,
         is_enter: bool,
         duration: float,
+        layer_count: int,
     ) -> None:
         node = child._node_cache
         if node is None:
@@ -358,6 +364,7 @@ class TransitionElement(DynamicElement):
         node.addEventListener("animationend", proxy, False)
         self._end_event_node = node
         self._end_event_proxy = proxy
+        self._end_events_remaining = layer_count
         self._cancel_timeout = inject(TRANSITION_PORT_KEY).schedule_timeout(
             lambda: self._finalize_sequence(gen, is_enter),
             duration,
@@ -370,6 +377,10 @@ class TransitionElement(DynamicElement):
         target = getattr(ev, "target", None)
         if target != node:
             return
+        if self._end_events_remaining is not None:
+            self._end_events_remaining -= 1
+            if self._end_events_remaining > 0:
+                return
         self._finalize_sequence(gen, is_enter)
 
     def _finalize_sequence(self, gen: int, is_enter: bool) -> None:
@@ -435,6 +446,7 @@ class TransitionElement(DynamicElement):
         node, proxy = self._end_event_node, self._end_event_proxy
         self._end_event_node = None
         self._end_event_proxy = None
+        self._end_events_remaining = None
         if node is not None and proxy is not None:
             node.removeEventListener("transitionend", proxy)
             node.removeEventListener("animationend", proxy)

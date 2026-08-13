@@ -322,6 +322,41 @@ class TestDurationResolution:
             result.transition_port.advance_time(100)
             assert result.find_by_attribute("data-testid", "box") is None
 
+    def test_multi_layer_end_events_finalize_only_after_last_layer(self) -> None:
+        from webcompy_server.ports import VirtualDOMEvent
+
+        show = Signal(False)
+        with TestRenderer.render(_toggle_root(show, duration=None)) as result:
+            show.value = True
+            box = result.find_by_attribute("data-testid", "box")
+            assert box is not None
+            result.transition_port.set_style(box, "transition-duration", "400ms, 1000ms")
+            result.transition_port.flush_frame()
+            assert "fade-enter-active" in _box_classes(result, "box")
+            box.dispatchEvent(VirtualDOMEvent("transitionend", bubbles=True))
+            assert "fade-enter-active" in _box_classes(result, "box")
+            result.transition_port.advance_time(400)
+            assert "fade-enter-active" in _box_classes(result, "box")
+            box.dispatchEvent(VirtualDOMEvent("transitionend", bubbles=True))
+            assert _box_classes(result, "box") == []
+
+    def test_zero_duration_layer_with_delay_counts_toward_finalization(self) -> None:
+        from webcompy_server.ports import VirtualDOMEvent
+
+        show = Signal(False)
+        with TestRenderer.render(_toggle_root(show, duration=None)) as result:
+            show.value = True
+            box = result.find_by_attribute("data-testid", "box")
+            assert box is not None
+            result.transition_port.set_style(box, "transition-duration", "0s, 1s")
+            result.transition_port.set_style(box, "transition-delay", "500ms, 0ms")
+            result.transition_port.flush_frame()
+            assert "fade-enter-active" in _box_classes(result, "box")
+            box.dispatchEvent(VirtualDOMEvent("transitionend", bubbles=True))
+            assert "fade-enter-active" in _box_classes(result, "box")
+            box.dispatchEvent(VirtualDOMEvent("transitionend", bubbles=True))
+            assert _box_classes(result, "box") == []
+
 
 class TestNodeAccounting:
     def test_sibling_positions_stable_during_leave_and_reindex_once(self, monkeypatch) -> None:
