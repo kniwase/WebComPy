@@ -291,7 +291,7 @@ class TransitionElement(DynamicElement):
         if not self._should_animate():
             self._finalize_leave_now()
             if not self._disposed:
-                _run_refresh_sync(self._refresh)
+                self._finish_leave_completion()
             return
         if self._sequence == "leave":
             return
@@ -391,9 +391,15 @@ class TransitionElement(DynamicElement):
             child._remove_element(True, True)
         self._children = []
         self._sequence = None
-        self._reindex_pending = True
         if not self._disposed:
+            self._finish_leave_completion()
+
+    def _finish_leave_completion(self) -> None:
+        if self._pending_child is not None:
+            self._reindex_pending = True
             _run_refresh_sync(self._refresh)
+            return
+        self._reindex_parent()
 
     def _finalize_leave_now(self) -> None:
         self._generation += 1

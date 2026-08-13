@@ -333,6 +333,28 @@ class TestNodeAccounting:
             texts = [node.textContent for node in root._get_node().childNodes]
             assert texts == ["before", "after"]
 
+    def test_leave_completion_reindexes_without_refresh_reevaluation(self, monkeypatch) -> None:
+        show = Signal(True)
+        with TestRenderer.render(_toggle_root(show)) as result:
+            transition = result._instance._children[1]
+            refresh_calls: list[Any] = []
+            original_refresh = TransitionElement._refresh
+
+            def counting_refresh(self, *args: Any):
+                refresh_calls.append(args)
+                return original_refresh(self, *args)
+
+            monkeypatch.setattr(TransitionElement, "_refresh", counting_refresh)
+
+            show.value = False
+            result.transition_port.flush_frame()
+            refresh_calls.clear()
+
+            result.transition_port.advance_time(100)
+            assert refresh_calls == []
+            assert transition._node_count == 0
+            assert result.find_by_attribute("data-testid", "box") is None
+
 
 class TestReplacementAndInterruption:
     def _replacement_root(self, a_show: Signal[bool], b_show: Signal[bool]):
