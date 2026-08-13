@@ -247,8 +247,7 @@ class TransitionElement(DynamicElement):
                 desired = self._create_child_element(self._parent, self._node_idx, desired)
                 assert desired is not None
                 self._children = _patch_children([current], [desired], self._node_idx)
-                if desired._mounted is None:
-                    await desired._render()
+                await desired._render()
                 self._reindex_parent()
                 return
 

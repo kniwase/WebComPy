@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from tests.conftest import FakeDOMNode
-from webcompy.components import define_component, on_before_destroy
+from webcompy.components import define_component, on_after_rendering, on_before_destroy, on_before_rendering
 from webcompy.elements import Transition, html
 from webcompy.elements.types._element import Element
 from webcompy.elements.types._transition import TransitionElement
@@ -98,6 +98,82 @@ class TestEnterSequence:
             assert _box_classes(result, "box") == []
             assert result.find_by_attribute("data-testid", "box") is box
             assert box.textContent == "b"
+
+    def test_same_tag_patch_renders_structural_inner_change(self) -> None:
+        flag = Signal(True)
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                Transition(
+                    {"name": "fade", "duration": 100},
+                    lambda: html.DIV(
+                        {"data-testid": "box"},
+                        (
+                            html.SPAN({"data-testid": "inner-a"}, "a")
+                            if flag.value
+                            else html.EM({"data-testid": "inner-b"}, "b")
+                        ),
+                    ),
+                ),
+            )
+
+        with TestRenderer.render(Root) as result:
+            box = result.find_by_attribute("data-testid", "box")
+            assert box is not None
+            assert result.find_by_attribute("data-testid", "inner-a") is not None
+            flag.value = False
+            result.transition_port.flush_frame()
+            result.transition_port.advance_time(1000)
+            assert _box_classes(result, "box") == []
+            assert result.find_by_attribute("data-testid", "box") is box
+            assert result.find_by_attribute("data-testid", "inner-a") is None
+            inner_b = result.find_by_attribute("data-testid", "inner-b")
+            assert inner_b is not None
+            assert inner_b.nodeName.lower() == "em"
+            assert inner_b.textContent == "b"
+
+    def test_same_tag_component_patch_fires_lifecycle_hooks(self) -> None:
+        flag = Signal(True)
+        events: list[str] = []
+
+        def make_child(label: str):
+            @define_component
+            def Child(context):
+                @on_before_rendering
+                def _before():
+                    events.append(f"before-{label}")
+
+                @on_after_rendering
+                def _after():
+                    events.append(f"after-{label}")
+
+                return html.SPAN({"data-testid": f"box-{label}"}, label)
+
+            return Child
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                Transition(
+                    {"name": "fade", "duration": 100},
+                    lambda: make_child("a")(None) if flag.value else make_child("b")(None),
+                ),
+            )
+
+        with TestRenderer.render(Root) as result:
+            assert result.find_by_attribute("data-testid", "box-a") is not None
+            assert events == ["before-a", "after-a"]
+            events.clear()
+            flag.value = False
+            result.transition_port.flush_frame()
+            result.transition_port.advance_time(1000)
+            assert _box_classes(result, "box-b") == []
+            assert result.find_by_attribute("data-testid", "box-a") is None
+            assert result.find_by_attribute("data-testid", "box-b") is not None
+            assert events == ["before-b", "after-b"]
 
 
 class TestLeaveSequence:
