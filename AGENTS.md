@@ -168,6 +168,8 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | Changed files | Specs to read |
 |---|---|
 | `webcompy/signal/` | `reactive/spec.md`, `effect/spec.md`, `signal-value-transfer/spec.md`, `error-handling/spec.md` |
+| `webcompy/signal/_readonly.py` | `readonly-signal/spec.md`, `reactive/spec.md` |
+| `webcompy/events/` | `readonly-signal/spec.md` |
 | `webcompy/storage/` | `composables/spec.md` |
 | `webcompy/ui/_styles/` | `css-architecture/spec.md` |
 | `webcompy/template/_css_parser.py`, `webcompy/template/_css_template.py` | `template-engine/spec.md` |
@@ -347,6 +349,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `hydration-data-transfer` | Server-to-browser data transfer for `AsyncResult` states, `FetchPort` response caches, and `Signal` values via versioned payload injection |
 | `signal-value-transfer` | Collection and restoration of `Signal`/`Computed`/`ReactiveList`/`ReactiveDict` values across the hydration boundary via `__signal_members__` |
 | `signal-stream` | Bidirectional conversion between occurrence-based streams and signals: `to_signal`, `to_reactive_list`, `to_async_iter`, with AsyncResult-style error/completion signals, drop-oldest capping, and lifecycle cleanup |
+| `readonly-signal` | Read-only reactive values with an external-only update channel: `use_readonly_signal`, `use_window_event`, `use_document_event`, with lifecycle-bound listener cleanup and no hydration transfer |
 | `transfer-codec` | Layered serialization engine (encode/decode) preserving Python type fidelity across the hydration boundary via `__webcompy_`-tagged JSON |
 | `payload-compression` | Optional gzip compression of the hydration data transfer payload via stdlib `zlib`/`base64`, threshold-based activation, `__webcompy_compressed__` envelope flag |
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
