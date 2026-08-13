@@ -44,6 +44,8 @@ class TestComponentProperty:
             "on_before_rendering": lambda: None,
             "on_after_rendering": lambda: None,
             "on_before_destroy": lambda: None,
+            "on_mounted": lambda: None,
+            "on_unmounted": lambda: None,
         }
         assert prop["component_id"] == "abc"
         assert prop["component_name"] == "test"

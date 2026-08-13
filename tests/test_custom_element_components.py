@@ -1,0 +1,532 @@
+from __future__ import annotations
+
+import re
+
+import pytest
+
+from webcompy.components import (
+    ComponentContext,
+    define_component,
+    on_mounted,
+    on_unmounted,
+    reactive_scoped_style,
+)
+from webcompy.components._generator import ComponentGenerator
+from webcompy.components._libs import WebComPyComponentException
+from webcompy.elements import html
+from webcompy.exception import WebComPyException
+from webcompy_testing import TestRenderer
+
+_CID_RE = re.compile(r"webcompy-cid-\w+")
+
+
+def _normalise_cids(css: str) -> str:
+    return _CID_RE.sub("CID", css)
+
+
+class TestDefineComponentValidation:
+    def test_bare_decorator_has_no_custom_element_name(self) -> None:
+        @define_component
+        def Plain(context: ComponentContext[None]):
+            return html.DIV({}, "plain")
+
+        assert Plain.custom_element_name is None
+
+    def test_named_decorator_stores_name(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        assert Card.custom_element_name == "my-card"
+
+    @pytest.mark.parametrize(
+        "name",
+        ["nocard", "My-Card", "my-card!", "my card", "", "my_card"],
+    )
+    def test_invalid_custom_element_name_rejected(self, name: str) -> None:
+        with pytest.raises(WebComPyComponentException):
+            define_component(name)
+
+    def test_observed_attributes_normalised_to_lowercase(self) -> None:
+        @define_component("my-card", observed_attributes=("Theme-Color",))
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        assert Card.observed_attributes == ("theme-color",)
+        assert Card.observed_prop_keys == {"theme-color": "theme_color"}
+
+    def test_duplicate_observed_attribute_rejected(self) -> None:
+        with pytest.raises(WebComPyComponentException, match="Duplicate"):
+            define_component("my-card", observed_attributes=("theme", "theme"))
+
+    def test_reserved_framework_attribute_rejected(self) -> None:
+        with pytest.raises(WebComPyComponentException, match="Framework attribute"):
+            define_component("my-card", observed_attributes=("webcompy-component",))
+        with pytest.raises(WebComPyComponentException, match="Framework attribute"):
+            define_component("my-card", observed_attributes=("webcompy-cid-abc",))
+
+    def test_prop_key_collision_rejected(self) -> None:
+        with pytest.raises(WebComPyComponentException, match="collide"):
+            define_component("my-card", observed_attributes=("foo-bar", "foo_bar"))
+
+    def test_definition_key_format(self) -> None:
+        @define_component("my-card", observed_attributes=("theme-color",))
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        assert Card.definition_key == "webcompy-v1:my-card:theme-color"
+
+        @define_component
+        def Plain(context: ComponentContext[None]):
+            return html.DIV({}, "plain")
+
+        assert Plain.definition_key is None
+
+    def test_generator_is_callable(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        assert isinstance(Card, ComponentGenerator)
+
+
+class TestNamedComponentRendering:
+    def test_single_root_renders_inside_wrapper(self) -> None:
+        @define_component("e2e-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({"class": "inner"}, "content")
+
+        with TestRenderer.render(Card) as result:
+            root = result._root_node
+            assert root.nodeName.lower() == "e2e-card"
+            assert root.childNodes.length == 1
+            assert root.childNodes[0].nodeName.lower() == "div"
+            assert result.query_selector("div") is not None
+
+    def test_multi_root_renders_ordered_children(self) -> None:
+        @define_component("e2e-card")
+        def Card(context: ComponentContext[None]):
+            return [html.HEADER({}, "H"), html.MAIN({}, "M"), html.FOOTER({}, "F")]
+
+        with TestRenderer.render(Card) as result:
+            root = result._root_node
+            assert root.nodeName.lower() == "e2e-card"
+            tags = [root.childNodes[i].nodeName.lower() for i in range(root.childNodes.length)]
+            assert tags == ["header", "main", "footer"]
+
+    def test_multi_root_tuple_renders(self) -> None:
+        @define_component("e2e-card")
+        def Card(context: ComponentContext[None]):
+            return (html.HEADER({}, "H"), html.MAIN({}, "M"))
+
+        with TestRenderer.render(Card) as result:
+            root = result._root_node
+            assert root.childNodes.length == 2
+
+    def test_empty_sequence_renders_empty_wrapper(self) -> None:
+        @define_component("e2e-card")
+        def Card(context: ComponentContext[None]):
+            return []
+
+        with TestRenderer.render(Card) as result:
+            root = result._root_node
+            assert root.nodeName.lower() == "e2e-card"
+            assert root.childNodes.length == 0
+
+    def test_text_child_renders_inside_wrapper(self) -> None:
+        @define_component("e2e-card")
+        def Card(context: ComponentContext[None]):
+            return "plain text"
+
+        with TestRenderer.render(Card) as result:
+            root = result._root_node
+            assert root.nodeName.lower() == "e2e-card"
+            assert root.childNodes.length == 1
+
+    def test_wrapper_reports_one_parent_facing_node(self) -> None:
+        @define_component("e2e-card")
+        def Card(context: ComponentContext[None]):
+            return [html.HEADER({}, "H"), html.MAIN({}, "M")]
+
+        with TestRenderer.render(Card) as result:
+            assert result._instance._node_count == 1
+
+    def test_template_root_attrs_not_copied_to_wrapper(self) -> None:
+        @define_component("e2e-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({"class": "inner", "data-x": "1"}, "content")
+
+        with TestRenderer.render(Card) as result:
+            root = result._root_node
+            assert root.getAttribute("class") is None
+            assert root.getAttribute("data-x") is None
+            inner = result.query_selector("div")
+            assert inner is not None
+            assert inner.getAttribute("class") == "inner"
+
+    def test_wrapper_carries_framework_markers(self) -> None:
+        @define_component("e2e-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "content")
+
+        with TestRenderer.render(Card) as result:
+            root = result._root_node
+            assert root.getAttribute("webcompy-component") == "Card"
+            assert any(name.startswith("webcompy-cid-") for name in root.getAttributeNames())
+
+    def test_nested_named_components(self) -> None:
+        @define_component("inner-card")
+        def Inner(context: ComponentContext[None]):
+            return html.P({}, "inner")
+
+        @define_component("outer-card")
+        def Outer(context: ComponentContext[None]):
+            return html.DIV({}, Inner({}))
+
+        with TestRenderer.render(Outer) as result:
+            assert result.query_selector("outer-card") is not None
+            inner = result.query_selector("inner-card")
+            assert inner is not None
+            assert inner.parentNode is result.query_selector("div")
+
+    def test_keyed_repeat_preserves_wrapper_per_item(self) -> None:
+        from webcompy.elements import repeat
+        from webcompy.signal import use_reactive_list
+
+        @define_component("item-card")
+        def ItemCard(context: ComponentContext[None]):
+            return [html.SPAN({}, "a"), html.SPAN({}, "b")]
+
+        @define_component
+        def ListPage(context: ComponentContext[None]):
+            items = use_reactive_list(lambda: [{"id": "1"}, {"id": "2"}])
+            return html.UL(
+                {},
+                repeat(items, lambda item, k: ItemCard({}), key=lambda item: item["id"]),
+            )
+
+        with TestRenderer.render(ListPage) as result:
+            cards = result.query_selector_all("item-card")
+            assert len(cards) == 2
+            for card in cards:
+                assert card.childNodes.length == 2
+
+
+class TestUnnamedComponentRestrictions:
+    def test_multi_root_rejected(self) -> None:
+        @define_component
+        def Bad(context: ComponentContext[None]):
+            return [html.DIV({}, "a"), html.DIV({}, "b")]
+
+        with pytest.raises(WebComPyException, match="Root Node"):
+            TestRenderer.render(Bad)
+
+    def test_context_on_mounted_rejected(self) -> None:
+        @define_component
+        def Bad(context: ComponentContext[None]):
+            context.on_mounted(lambda: None)
+            return html.DIV({}, "a")
+
+        with pytest.raises(WebComPyComponentException, match="named"):
+            TestRenderer.render(Bad)
+
+    def test_context_on_unmounted_rejected(self) -> None:
+        @define_component
+        def Bad(context: ComponentContext[None]):
+            context.on_unmounted(lambda: None)
+            return html.DIV({}, "a")
+
+        with pytest.raises(WebComPyComponentException, match="named"):
+            TestRenderer.render(Bad)
+
+    def test_decorator_on_mounted_rejected(self) -> None:
+        @define_component
+        def Bad(context: ComponentContext[None]):
+            @on_mounted
+            def mounted() -> None:
+                pass
+
+            return html.DIV({}, "a")
+
+        with pytest.raises(WebComPyComponentException, match="named"):
+            TestRenderer.render(Bad)
+
+    def test_decorator_on_unmounted_rejected(self) -> None:
+        @define_component
+        def Bad(context: ComponentContext[None]):
+            @on_unmounted
+            def unmounted() -> None:
+                pass
+
+            return html.DIV({}, "a")
+
+        with pytest.raises(WebComPyComponentException, match="named"):
+            TestRenderer.render(Bad)
+
+    def test_decorators_outside_setup_raise(self) -> None:
+        with pytest.raises(LookupError):
+            on_mounted(lambda: None)
+        with pytest.raises(LookupError):
+            on_unmounted(lambda: None)
+
+
+class TestDocumentConnectionHooks:
+    def test_named_component_stores_hooks(self) -> None:
+        @define_component("e2e-card")
+        def Card(context: ComponentContext[None]):
+            @on_mounted
+            def mounted() -> None:
+                pass
+
+            context.on_unmounted(lambda: None)
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            assert result._instance._property["on_mounted"] is not None
+            assert result._instance._property["on_unmounted"] is not None
+
+    def test_named_component_without_hooks_uses_defaults(self) -> None:
+        @define_component("e2e-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            assert result._instance._property["on_mounted"] is not None
+            assert result._instance._property["on_unmounted"] is not None
+
+
+class TestObservedAttributeProps:
+    def test_observed_key_exists_as_none_during_setup(self) -> None:
+        seen: list[object] = []
+
+        @define_component("e2e-card", observed_attributes=("theme-color",))
+        def Card(context: ComponentContext[None]):
+            seen.append(context.props["theme_color"])
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card):
+            pass
+        assert seen == [None]
+
+    def test_caller_mapping_preserved_for_other_keys(self) -> None:
+        from webcompy_testing import create_test_app
+
+        @define_component("e2e-card", observed_attributes=("theme-color",))
+        def Card(context: ComponentContext[None]):
+            return html.SPAN({}, str(context.props["label"]))
+
+        @define_component
+        def Root(context: ComponentContext[None]):
+            return html.DIV({}, "root")
+
+        app = create_test_app(root_component=Root)
+        ctx = app.create_render_context("/")
+        try:
+            with ctx.di_scope:
+                instance = Card({"label": "hello"})
+            assert instance._observed_props is not None
+            assert instance._observed_props.value["label"] == "hello"
+            assert instance._observed_props.value["theme_color"] is None
+        finally:
+            ctx.dispose()
+
+    def test_observed_props_are_reactive_dict(self) -> None:
+        @define_component("e2e-card", observed_attributes=("theme-color",))
+        def Card(context: ComponentContext[None]):
+            return html.SPAN({}, str(context.props["theme_color"]))
+
+        with TestRenderer.render(Card) as result:
+            assert result._instance._observed_props is not None
+
+    def test_non_mapping_props_rejected(self) -> None:
+        from webcompy_testing import create_test_app
+
+        @define_component("e2e-card", observed_attributes=("theme-color",))
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        @define_component
+        def Root(context: ComponentContext[None]):
+            return html.DIV({}, "root")
+
+        app = create_test_app(root_component=Root)
+        ctx = app.create_render_context("/")
+        try:
+            with ctx.di_scope, pytest.raises(WebComPyComponentException, match="mapping props"):
+                Card("not-a-mapping")
+        finally:
+            ctx.dispose()
+
+    def test_preserved_attribute_names(self) -> None:
+        @define_component("e2e-card", observed_attributes=("theme-color",))
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            assert result._instance._get_preserved_attribute_names() == {"theme-color"}
+
+
+class TestCustomElementPorts:
+    def test_port_abc_not_instantiable(self) -> None:
+        from webcompy.ports import CustomElementPort
+
+        with pytest.raises(TypeError):
+            CustomElementPort()  # type: ignore[abstract]
+
+    def test_port_importable_from_ports(self) -> None:
+        from webcompy.ports import CUSTOM_ELEMENT_PORT_KEY, CustomElementPort
+
+        assert CustomElementPort is not None
+        assert CUSTOM_ELEMENT_PORT_KEY is not None
+
+    def test_server_port_is_noop(self) -> None:
+        from webcompy_server.ports._custom_element import ServerCustomElementPort
+
+        port = ServerCustomElementPort()
+        port.ensure_defined("my-card", ("theme-color",), "key")
+        binding = port.bind(
+            None,  # type: ignore[arg-type]
+            observed_attributes=(),
+            on_connected=lambda: None,
+            on_disconnected=lambda: None,
+            on_attribute_changed=lambda name, value: None,
+        )
+        binding.dispose()
+        assert port.is_document_connected(None) is False  # type: ignore[arg-type]
+
+    def test_fake_port_records_calls(self) -> None:
+        from webcompy_testing import FakeCustomElementPort
+
+        port = FakeCustomElementPort()
+        port.ensure_defined("my-card", ("theme-color",), "key")
+        binding = port.bind(
+            object(),
+            observed_attributes=("theme-color",),
+            on_connected=lambda: None,
+            on_disconnected=lambda: None,
+            on_attribute_changed=lambda name, value: None,
+        )
+        assert port.ensure_defined_calls == [("my-card", ("theme-color",), "key")]
+        assert len(port.bind_calls) == 1
+        assert port.bind_calls[0][1] == ("theme-color",)
+        binding.dispose()
+        assert port.disposed_bindings == 1
+
+    def test_browser_port_unavailable_outside_browser(self) -> None:
+        from webcompy.exception import WebComPyException
+        from webcompy.ports._browser._custom_element import BrowserCustomElementPort
+
+        with pytest.raises(WebComPyException):
+            BrowserCustomElementPort()
+
+
+class TestHostSelectorScoping:
+    def test_host_selector(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        Card.scoped_style = {":host": {"display": "block"}}
+        css = Card.scoped_style
+        assert "my-card[webcompy-cid-" in css
+        assert ":host" not in css
+
+    def test_host_compound_selector(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        Card.scoped_style = {":host(.compact)": {"padding": "0"}}
+        css = Card.scoped_style
+        assert "my-card.compact[webcompy-cid-" in css
+
+    def test_host_with_descendant(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        Card.scoped_style = {":host .inner": {"color": "red"}}
+        css = Card.scoped_style
+        assert "my-card[webcompy-cid-" in css
+        assert ".inner[webcompy-cid-" in css
+
+    def test_host_with_pseudo_and_attribute(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        Card.scoped_style = {
+            ":host:hover": {"color": "red"},
+            ":host[data-x]": {"display": "block"},
+        }
+        css = Card.scoped_style
+        assert "my-card" in css
+        assert ":hover" in css
+        assert "[data-x]" in css
+        assert css.count("webcompy-cid-") == 2
+
+    def test_host_inside_media_query(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        Card.scoped_style = {"@media (max-width: 768px)": {":host": {"display": "none"}}}
+        css = Card.scoped_style
+        assert "@media (max-width: 768px)" in css
+        assert "my-card[webcompy-cid-" in css
+        assert ":host" not in css
+
+    @pytest.mark.parametrize(
+        "selector",
+        [":host-context(.dark)", ":host(.a .b)", ":host()"],
+    )
+    def test_unsupported_host_forms_rejected(self, selector: str) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with pytest.raises(WebComPyException, match=":host"):
+            Card.scoped_style = {selector: {"color": "red"}}
+
+    def test_host_rejected_for_unnamed_component(self) -> None:
+        @define_component
+        def Plain(context: ComponentContext[None]):
+            return html.DIV({}, "plain")
+
+        with pytest.raises(WebComPyException, match=":host"):
+            Plain.scoped_style = {":host": {"display": "block"}}
+
+    def test_reactive_host_matches_static(self) -> None:
+        @define_component("rx-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        Card.scoped_style = {
+            ":host": {"color": "blue"},
+            ":host(.active)": {"font-weight": "bold"},
+        }
+        static = _normalise_cids(Card.scoped_style)
+
+        style = reactive_scoped_style(lambda: {":host": {"color": "blue"}, ":host(.active)": {"font-weight": "bold"}})
+        style._bind(Card._id, host_tag="rx-card")
+        reactive = _normalise_cids(style.render_css(Card._id))
+        assert reactive == static
+
+    def test_reactive_host_rejected_for_unnamed(self) -> None:
+        style = reactive_scoped_style(lambda: {":host": {"color": "blue"}})
+        with pytest.raises(WebComPyException, match=":host"):
+            style._bind("cid123")
+
+
+class TestSSRSerialization:
+    def test_ssr_contains_named_wrapper(self) -> None:
+        @define_component("e2e-card")
+        def Card(context: ComponentContext[None]):
+            return [html.HEADER({}, "H"), html.MAIN({}, "M")]
+
+        with TestRenderer.render(Card) as result:
+            html_out = result.to_html()
+            assert "<e2e-card" in html_out
+            assert "<header" in html_out
+            assert "<main" in html_out
+            assert "</e2e-card>" in html_out
