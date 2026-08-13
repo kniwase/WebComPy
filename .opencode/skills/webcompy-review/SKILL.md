@@ -93,6 +93,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **ResourcePort** — `resource-port/spec.md`
 - **RouterView** — `router/spec.md`
 - **Teleport Anchor & SSR Slot** — `teleport/spec.md`
+- **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`, `port-abstraction/spec.md`, `port-provisioning/spec.md`
 - **FragmentElement** — `elements/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
 - **Scoped CSS Incremental** — `scoped-css-incremental/spec.md`
