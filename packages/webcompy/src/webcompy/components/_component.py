@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, Mapping
 from contextvars import ContextVar
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypeAlias, TypeGuard, cast
@@ -19,6 +19,7 @@ from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
+from webcompy.ports._dom import DOMNode
 from webcompy.signal import ReactiveDict, computed_property
 from webcompy.signal._computed import _OwnedComputed
 
@@ -113,6 +114,8 @@ class Component(ElementBase):
         self._async_results: list = []
         self._async_setup_extracted: bool = False
         self._error_captured_hooks: list[Callable[[Exception], Any]] = []
+        self._observed_props: ReactiveDict[str, Any] | None = None
+        self._custom_element_binding: Any = None
         super().__init__()
         property = self.__setup(component_def, props, slots)
         self._property = property
@@ -133,8 +136,9 @@ class Component(ElementBase):
         component_name = component_def.__name__
         head_props = inject(_HEAD_PROPS_KEY)
         self._head_props = head_props
+        props_for_context = self._prepare_props_for_setup(props)
         context = Context(
-            props,
+            props_for_context,
             slots,
             component_name,
             lambda: head_props.title.value,
@@ -212,6 +216,23 @@ class Component(ElementBase):
             "on_mounted": hooks.get("on_mounted", lambda: None),
             "on_unmounted": hooks.get("on_unmounted", lambda: None),
         }
+
+    def _prepare_props_for_setup(self, props: Any) -> Any:
+        if self._generator is None or not self._generator.observed_attributes:
+            return props
+        if props is None:
+            props_for_context: ReactiveDict[str, Any] = ReactiveDict({})
+        elif isinstance(props, ReactiveDict):
+            props_for_context = props
+        elif isinstance(props, Mapping):
+            props_for_context = ReactiveDict(dict(props))
+        else:
+            raise WebComPyComponentException("Components with observed_attributes require mapping props (or None)")
+        for prop_key in self._generator.observed_prop_keys.values():
+            if prop_key not in props_for_context.value:
+                props_for_context[prop_key] = None
+        self._observed_props = props_for_context
+        return props_for_context
 
     def _init_component(self, property: ComponentProperty):
         generator = self._generator
@@ -363,6 +384,7 @@ class Component(ElementBase):
             route_error_deferred(self, err)
         self._error_captured_hooks.clear()
         super()._remove_element(recursive, remove_node)
+        self._dispose_custom_element_binding()
 
     def _detach_from_node(self) -> None:
         if self._pending_async_template is not None:
@@ -381,12 +403,83 @@ class Component(ElementBase):
             route_error_deferred(self, err)
         self._error_captured_hooks.clear()
         super()._detach_from_node()
+        self._dispose_custom_element_binding()
 
     def _get_belonging_component(self):
         return self._property["component_id"]
 
     def _get_belonging_components(self) -> tuple[Component, ...]:
         return (*self._parent._get_belonging_components(), self)
+
+    def _get_preserved_attribute_names(self) -> set[str]:
+        if self._generator is not None:
+            return set(self._generator.observed_attributes)
+        return set()
+
+    def _init_new_node(self, node: DOMNode) -> None:
+        super()._init_new_node(node)
+        self._bind_custom_element(node)
+
+    def _adopt_node(self, node: DOMNode) -> None:
+        super()._adopt_node(node)
+        self._bind_custom_element(node)
+
+    def _bind_custom_element(self, node: DOMNode) -> None:
+        generator = self._generator
+        if generator is None or generator.custom_element_name is None:
+            return
+        from webcompy.di import inject
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+
+        port = inject(CUSTOM_ELEMENT_PORT_KEY, default=None)
+        if port is None:
+            return
+        if self._custom_element_binding is not None:
+            self._custom_element_binding.dispose()
+            self._custom_element_binding = None
+        binding = port.bind(
+            node,
+            observed_attributes=generator.observed_attributes,
+            on_connected=self._on_custom_element_connected,
+            on_disconnected=self._on_custom_element_disconnected,
+            on_attribute_changed=self._on_custom_element_attribute_changed,
+        )
+        self._custom_element_binding = binding
+        self._sync_observed_attributes(node)
+
+    def _dispose_custom_element_binding(self) -> None:
+        binding = self._custom_element_binding
+        self._custom_element_binding = None
+        if binding is not None:
+            binding.dispose()
+
+    def _sync_observed_attributes(self, node: DOMNode) -> None:
+        if self._observed_props is None or self._generator is None:
+            return
+        from webcompy.di import inject
+        from webcompy.ports._keys import FFI_PORT_KEY
+
+        ffi = inject(FFI_PORT_KEY, default=None)
+        for attr_name, prop_key in self._generator.observed_prop_keys.items():
+            raw = node.getAttribute(attr_name)
+            value: str | None = None if raw is None or (ffi is not None and ffi.is_none(raw)) else str(raw)
+            if self._observed_props.value.get(prop_key) != value:
+                self._observed_props[prop_key] = value
+
+    def _on_custom_element_attribute_changed(self, name: str, new_value: str | None) -> None:
+        if self._observed_props is None or self._generator is None:
+            return
+        prop_key = self._generator.observed_prop_keys.get(name)
+        if prop_key is None:
+            return
+        if self._observed_props.value.get(prop_key) != new_value:
+            self._observed_props[prop_key] = new_value
+
+    def _on_custom_element_connected(self) -> None:
+        pass
+
+    def _on_custom_element_disconnected(self) -> None:
+        pass
 
     def _set_title(self, title: str):
         if self._head_props is not None:
