@@ -208,6 +208,16 @@ class Component(ElementBase):
     def _cleanup_pending_async(self):
         self._pending_async_template = None
         try:
+            if self._render_state is not None:
+                hooks = self._render_state.context.__get_lifecyclehooks__()
+                user_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
+                framework_cleanup = self._render_state.framework_cleanup
+
+                def on_before_destroy_with_scope_cleanup():
+                    framework_cleanup()
+                    user_on_before_destroy()
+
+                self._property["on_before_destroy"] = on_before_destroy_with_scope_cleanup
             self._property["on_before_destroy"]()
         except Exception as err:
             from webcompy.elements.types._error_boundary import route_error_deferred

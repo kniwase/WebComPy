@@ -29,8 +29,8 @@
 
 ## 5. Async Setup Failure Cleanup
 
-- [ ] 5.1 Fix `Component._cleanup_pending_async()` in `packages/webcompy/src/webcompy/components/_component.py` so the destroy hook is refreshed from the current `Context` (capturing hooks registered inside the failed async body) and invoked with framework cleanup first, without re-running the failed setup and without masking the original error.
-- [ ] 5.2 Add regression tests in `tests/test_async_component_context.py`: listener cleanup registered in a failed async setup runs exactly once; success-path cleanup ordering (framework before user hook) is unchanged.
+- [x] 5.1 Fix `Component._cleanup_pending_async()` in `packages/webcompy/src/webcompy/components/_component.py` so the destroy hook is refreshed from the current `Context` (capturing hooks registered inside the failed async body) and invoked with framework cleanup first, without re-running the failed setup and without masking the original error.
+- [x] 5.2 Add regression tests in `tests/test_async_component_context.py`: listener cleanup registered in a failed async setup runs exactly once; success-path cleanup ordering (framework before user hook) is unchanged.
 
 ## 6. Event Helper & SSR/SSG Unit Tests
 

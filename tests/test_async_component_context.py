@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from webcompy.components._generator import define_component
 from webcompy.components._hooks import (
     _active_component_context,
@@ -355,3 +357,95 @@ class TestAsyncComponentEffectCleanup:
             assert len(result._instance._render_state.effect_scope._effects) == 1
             result._instance._remove_element()
             assert "clean" in cleaned
+
+
+class TestAsyncComponentSetupFailureCleanup:
+    def _drive_failure(self, component):
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore, _register_deferred_components
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.ports._keys import HOST_PORT_KEY
+        from webcompy_testing import FakeBrowserHostPort
+        from webcompy_testing._utils import run_sync
+
+        host = FakeBrowserHostPort()
+        scope = DIScope()
+        scope.provide(HOST_PORT_KEY, host)
+        scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+        scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+        token = _active_di_scope.set(scope)
+        _register_deferred_components()
+        try:
+            instance = component(None)
+
+            class _RealParent:
+                def __init__(self) -> None:
+                    self._children = [instance]
+
+            instance._parent = _RealParent()
+            instance._node_idx = 0
+            with pytest.raises(RuntimeError, match="boom"):
+                run_sync(instance._render())
+        finally:
+            _active_di_scope.reset(token)
+        return host
+
+    def test_failed_async_setup_removes_event_listener(self):
+        from webcompy import use_window_event
+
+        @define_component
+        async def FailingAsyncCmp(context):
+            await asyncio.sleep(0)
+            use_window_event("resize", 0)
+            raise RuntimeError("boom")
+
+        host = self._drive_failure(FailingAsyncCmp)
+
+        assert host._window_listeners.get("resize") == []
+
+    def test_failed_async_setup_chains_prior_destroy_hook(self):
+        from webcompy import use_window_event
+
+        order: list[str] = []
+
+        @define_component
+        async def FailingAsyncCmp(context):
+            await asyncio.sleep(0)
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            raise RuntimeError("boom")
+
+        host = self._drive_failure(FailingAsyncCmp)
+
+        assert order == ["user"]
+        assert host._window_listeners.get("resize") == []
+
+    def test_successful_async_setup_ordering_unchanged(self):
+        from webcompy import use_window_event
+        from webcompy.ports._keys import HOST_PORT_KEY
+
+        order: list[str] = []
+
+        @define_component
+        async def AsyncOkCmp(context):
+            await asyncio.sleep(0)
+            effect(lambda: None, on_cleanup=lambda: order.append("effect"))
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            return html.DIV({}, "ok")
+
+        with TestRenderer.render(AsyncOkCmp) as result:
+            host = result._scope.inject(HOST_PORT_KEY)
+            assert len(host._window_listeners.get("resize", [])) == 1
+            result._instance._remove_element()
+            assert order == ["effect", "user"]
+            assert host._window_listeners.get("resize") == []
