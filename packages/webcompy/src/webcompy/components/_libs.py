@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
 
 NodeGenerator: TypeAlias = Callable[[], ElementChildren]
+ComponentTemplateResult: TypeAlias = ElementChildren | list[ElementChildren] | tuple[ElementChildren, ...]
 _Lifecyclehooks: TypeAlias = dict[
     Literal[
         "on_before_rendering",
@@ -287,7 +288,7 @@ class ComponentContext(Protocol[PropsType]):
 class ComponentProperty(TypedDict):
     component_id: str
     component_name: str
-    template: ElementChildren | None
+    template: ComponentTemplateResult | None
     on_before_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
     on_after_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
     on_before_destroy: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]

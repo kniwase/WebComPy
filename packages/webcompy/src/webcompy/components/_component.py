@@ -9,12 +9,14 @@ from uuid import UUID, uuid4
 from webcompy.components._context_manager import component_context
 from webcompy.components._libs import (
     ComponentProperty,
+    ComponentTemplateResult,
     Context,
     WebComPyComponentException,
     generate_id,
 )
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements.typealias._element_property import ElementChildren
+from webcompy.elements.typealias._html_tag_names import HtmlTags
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
 from webcompy.signal import ReactiveDict, computed_property
@@ -57,12 +59,23 @@ def end_defer_after_rendering() -> list[Callable[[], None]]:
 
 
 FuncComponentDef: TypeAlias = (
-    Callable[[Context[Any]], ElementChildren] | Callable[[Context[Any]], Coroutine[Any, Any, ElementChildren]]
+    Callable[[Context[Any]], ComponentTemplateResult]
+    | Callable[[Context[Any]], Coroutine[Any, Any, ComponentTemplateResult]]
 )
 
 
 def _is_function_style_component_def(obj: Any) -> TypeGuard[FuncComponentDef]:
     return bool(callable(obj) and getattr(obj, "__webcompy_component_definition__", None))
+
+
+def _normalize_component_template(template: ComponentTemplateResult | None) -> list[ElementChildren]:
+    if template is None:
+        return []
+    if isinstance(template, list):
+        return template
+    if isinstance(template, tuple):
+        return list(template)
+    return [template]
 
 
 class HeadPropsStore:
@@ -96,7 +109,7 @@ class Component(ElementBase):
         self._children = []
         self._head_props: HeadPropsStore | None = None
         self._generator = generator
-        self._pending_async_template: Coroutine[Any, Any, ElementChildren] | None = None
+        self._pending_async_template: Coroutine[Any, Any, ComponentTemplateResult] | None = None
         self._async_results: list = []
         self._async_setup_extracted: bool = False
         self._error_captured_hooks: list[Callable[[Exception], Any]] = []
@@ -158,9 +171,9 @@ class Component(ElementBase):
                 if iscoroutinefunction(component_def):
                     coro = component_def(context)
                     self._pending_async_template = coro
-                    template: ElementChildren | None = None
+                    template: ComponentTemplateResult | None = None
                 else:
-                    template = cast("ElementChildren", component_def(context))
+                    template = cast("ComponentTemplateResult", component_def(context))
         finally:
             if pending_token is not None:
                 _pending_di_parent.reset(pending_token)
@@ -201,6 +214,19 @@ class Component(ElementBase):
         }
 
     def _init_component(self, property: ComponentProperty):
+        generator = self._generator
+        if generator is not None and generator.custom_element_name is not None:
+            self._tag_name = cast("HtmlTags", generator.custom_element_name)
+            self._attrs = {
+                "webcompy-component": property["component_name"],
+                "webcompy-cid-" + property["component_id"]: True,
+            }
+            self._event_handlers = {}
+            self._ref = None
+            self._preserve_children = False
+            self._init_children(_normalize_component_template(property["template"]))
+            self._property = property
+            return
         node = property["template"]
         if not isinstance(node, Element):
             raise WebComPyException("Root Node of Component must be instance of 'Element'")

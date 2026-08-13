@@ -20,9 +20,14 @@ from webcompy.components._css_utils import (
     _raise_nesting_unsupported,
     _scope_selector,
 )
-from webcompy.components._libs import ComponentContext, NodeGenerator, WebComPyComponentException, generate_id
+from webcompy.components._libs import (
+    ComponentContext,
+    ComponentTemplateResult,
+    NodeGenerator,
+    WebComPyComponentException,
+    generate_id,
+)
 from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
-from webcompy.elements.typealias._element_property import ElementChildren
 
 _camel_to_kebab_pattern: Final = re_compile("((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))")
 
@@ -52,8 +57,8 @@ class ComponentStore:
 
 PropsType = TypeVar("PropsType")
 FuncComponentDef: TypeAlias = (
-    Callable[[ComponentContext[PropsType]], ElementChildren]
-    | Callable[[ComponentContext[PropsType]], Coroutine[Any, Any, ElementChildren]]
+    Callable[[ComponentContext[PropsType]], ComponentTemplateResult]
+    | Callable[[ComponentContext[PropsType]], Coroutine[Any, Any, ComponentTemplateResult]]
 )
 
 StyleDeclaration: TypeAlias = str | dict[str, "StyleDeclaration"]
