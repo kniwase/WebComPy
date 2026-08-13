@@ -71,3 +71,10 @@
 - [x] 11.2 Add regression tests `TestSuspenseAsyncSetupFailureCleanup` in `tests/test_async_component_context.py`: browser error-fallback path, browser ErrorBoundary routing path, browser removal-while-resolving (cancellation) path, and server error-fallback path; each asserts the `use_window_event` listener and user destroy hook behave as on the direct path.
 - [x] 11.3 Add a docstring to `use_readonly_signal` (public top-level primitive; matches sibling composable convention).
 - [x] 11.4 Verify: ruff, pyright, full unit suite, full core E2E matrix, `openspec validate --changes`.
+
+## 12. Review Follow-up (2nd AI review, PR #253)
+
+- [x] 12.1 Fix the `use_window_event` docs example defect: `transform=lambda e: e.innerWidth` does not work in a real browser (`innerWidth` is a Window property, not an Event property; the transform exception is swallowed, leaving the signal at `initial`). Change to `e.target.innerWidth` in `docs_app/documents/readonly_signal.md` (both the `use_window_event` example and the standalone `update(...)` example) and in the matching scenario wording of the `readonly-signal` spec (synced main spec and archived delta).
+- [x] 12.2 Invoke `_cleanup_pending_pairs(pairs)` in the `SuspenseElement._server_render` timeout branch (children are cancelled by `asyncio.wait_for` on timeout, so the async-setup-failure/cancellation cleanup requirement applies) before replacing `self._children` with the fallback.
+- [x] 12.3 Add regression test `test_server_timeout_runs_destroy_hooks` (server path: destroy hook runs, listener removed, fallback rendered); confirmed it fails without 12.2.
+- [x] 12.4 Verify: ruff, pyright, full unit suite, `check-doc-spec-refs.py`, `webcompy generate`, docs-documents E2E (prod/static).

@@ -719,3 +719,35 @@ class TestSuspenseAsyncSetupFailureCleanup:
             assert order == ["user"]
             assert host._window_listeners.get("resize") == []
             assert result.find_by_attribute("data-testid", "error-fallback") is not None
+
+    def test_server_timeout_runs_destroy_hooks(self):
+        from webcompy import use_window_event
+        from webcompy.ports._keys import HOST_PORT_KEY
+
+        order: list[str] = []
+
+        @define_component
+        async def SlowChild(context):
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            await asyncio.sleep(30)
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                suspense(
+                    fallback=lambda: html.P({"data-testid": "timeout-fallback"}, "loading"),
+                    children=lambda: SlowChild(None),
+                    timeout=0.05,
+                ),
+            )
+
+        with TestRenderer.render(Root) as result:
+            host = result._scope.inject(HOST_PORT_KEY)
+            assert order == ["user"]
+            assert host._window_listeners.get("resize") == []
+            assert result.find_by_attribute("data-testid", "timeout-fallback") is not None

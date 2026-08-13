@@ -120,6 +120,7 @@ class SuspenseElement(DynamicElement):
                     )
                 except TimeoutError:
                     _logger.warning("Suspense timed out after %ss, rendering fallback", self._timeout)
+                    self._cleanup_pending_pairs(pairs)
                     fallback = self._generate_fallback()
                     self._children = fallback
                     return

@@ -46,7 +46,7 @@ from webcompy import use_window_event
 
 @define_component
 def Page(context):
-    width, _ = use_window_event("resize", 0, transform=lambda e: e.innerWidth)
+    width, _ = use_window_event("resize", 0, transform=lambda e: e.target.innerWidth)
     return html.DIV({}, str(width.value))
 ```
 
@@ -88,7 +88,7 @@ from webcompy import use_readonly_signal
 view, update = use_readonly_signal(0)
 
 def on_resize(event):
-    update(event.innerWidth)
+    update(event.target.innerWidth)
 
 # browser-only setup; remove the listener yourself
 host = ...  # your HostPort (e.g. via inject(HOST_PORT_KEY) inside an app scope)
