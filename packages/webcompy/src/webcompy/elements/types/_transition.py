@@ -64,6 +64,32 @@ def _parse_style_duration(style: TransitionStyle) -> float:
     return total
 
 
+class _ChildComputed(Computed[ElementChildren]):
+    """Computed that routes child-generator evaluation errors to the boundary.
+
+    Computeds re-evaluate eagerly during signal dispatch, so an error raised
+    by the child generator would otherwise be swallowed by the signal layer
+    before ``TransitionElement._refresh`` runs. The error is routed to the
+    error-boundary pipeline at capture time instead.
+    """
+
+    def __init__(
+        self,
+        func: Callable[[], ElementChildren],
+        on_error: Callable[[Exception], None],
+    ) -> None:
+        self._on_error = on_error
+        super().__init__(func)
+
+    def producer_recompute_value(self) -> None:
+        try:
+            super().producer_recompute_value()
+        except WebComPyException:
+            raise
+        except Exception as err:
+            self._on_error(err)
+
+
 class TransitionElement(DynamicElement):
     def __init__(
         self,
@@ -94,8 +120,13 @@ class TransitionElement(DynamicElement):
         self._end_event_node: DOMNode | None = None
         self._end_event_proxy: Any = None
         super().__init__()
-        self._child_computed = Computed(child_generator)
+        self._child_computed = _ChildComputed(child_generator, self._route_child_error)
         self.__set_signal_member__("_child_computed", self._child_computed)
+
+    def _route_child_error(self, err: Exception) -> None:
+        from webcompy.elements.types._error_boundary import route_error_deferred
+
+        route_error_deferred(self, err)
 
     def _on_set_parent(self) -> None:
         pass
@@ -142,58 +173,65 @@ class TransitionElement(DynamicElement):
         _run_refresh_sync(self._refresh, *args)
 
     async def _refresh(self, *args: Any) -> None:
-        if self._disposed or not self._initial_rendered:
-            return
-        self._cancel_pending_render_tasks()
-        desired = self._normalize_child(self._child_computed.value)
-        current = self._children[0] if self._children else None
-
-        if desired is None:
-            if self._sequence == "leave":
-                self._discard_pending_child_if_not(None)
+        try:
+            if self._disposed or not self._initial_rendered:
                 return
-            if current is not None:
-                self._cancel_sequence_handles()
-                self._start_leave(current)
-                return
-            if self._reindex_pending:
-                self._reindex_pending = False
-                self._parent._re_index_children(False)
-            return
-
-        if self._sequence == "leave":
-            if current is not None and _is_patchable(current, desired):
-                self._replace_pending_child(desired)
-                return
-            self._finalize_leave_now()
-            current = None
-        elif self._sequence == "enter":
-            self._cancel_sequence_handles()
+            self._cancel_pending_render_tasks()
+            desired = self._normalize_child(self._child_computed.value)
             current = self._children[0] if self._children else None
 
-        if current is not None and _is_patchable(current, desired):
+            if desired is None:
+                if self._sequence == "leave":
+                    self._discard_pending_child_if_not(None)
+                    return
+                if current is not None:
+                    self._cancel_sequence_handles()
+                    self._start_leave(current)
+                    return
+                if self._reindex_pending:
+                    self._reindex_pending = False
+                    self._parent._re_index_children(False)
+                return
+
+            if self._sequence == "leave":
+                if current is not None and _is_patchable(current, desired):
+                    self._replace_pending_child(desired)
+                    return
+                self._finalize_leave_now()
+                current = None
+            elif self._sequence == "enter":
+                self._cancel_sequence_handles()
+                current = self._children[0] if self._children else None
+
+            if current is not None and _is_patchable(current, desired):
+                self._discard_pending_child_if_not(desired)
+                desired = self._create_child_element(self._parent, self._node_idx, desired)
+                assert desired is not None
+                self._children = _patch_children([current], [desired], self._node_idx)
+                if desired._mounted is None:
+                    await desired._render()
+                self._reindex_parent()
+                return
+
+            if current is not None:
+                self._replace_pending_child(desired)
+                self._start_leave(current)
+                return
+
             self._discard_pending_child_if_not(desired)
-            desired = self._create_child_element(self._parent, self._node_idx, desired)
-            assert desired is not None
-            self._children = _patch_children([current], [desired], self._node_idx)
-            if desired._mounted is None:
-                await desired._render()
+            child = self._create_child_element(self._parent, self._node_idx, desired)
+            assert child is not None
+            self._children = [child]
+            if child._mounted is None:
+                await child._render()
             self._reindex_parent()
-            return
+            self._start_enter_sequence(child)
+        except WebComPyException:
+            raise
+        except Exception as err:
+            from webcompy.elements.types._error_boundary import route_error_deferred
 
-        if current is not None:
-            self._replace_pending_child(desired)
-            self._start_leave(current)
-            return
-
-        self._discard_pending_child_if_not(desired)
-        child = self._create_child_element(self._parent, self._node_idx, desired)
-        assert child is not None
-        self._children = [child]
-        if child._mounted is None:
-            await child._render()
-        self._reindex_parent()
-        self._start_enter_sequence(child)
+            route_error_deferred(self, err)
 
     def _class_name(self, phase: str) -> str:
         return f"{self._name}-{phase}"

@@ -494,6 +494,30 @@ class TestReplacementAndInterruption:
             result.transition_port.advance_time(100)
             assert result.find_by_attribute("data-testid", "box") is None
 
+    def test_discarding_staged_child_does_not_create_dom_node(self, monkeypatch) -> None:
+        from webcompy_testing._dom import FakeDOMNode
+
+        created: list[str] = []
+        original_init = FakeDOMNode.__init__
+
+        def counting_init(self, tag: str = "div", text_content: str | None = None):
+            if not tag.startswith("#text"):
+                created.append(tag)
+            original_init(self, tag, text_content)
+
+        monkeypatch.setattr(FakeDOMNode, "__init__", counting_init)
+
+        show, extra = Signal(True), Signal(False)
+        with TestRenderer.render(self._two_signal_root(show, extra)) as result:
+            show.value = False
+            result.transition_port.flush_frame()
+            before = len(created)
+            extra.value = True
+            extra.value = False
+            assert len(created) == before
+            result.transition_port.advance_time(100)
+            assert result.find_by_attribute("data-testid", "box") is None
+
     def test_removing_transition_itself_removes_child_immediately(self) -> None:
         show, wrap = Signal(True), Signal(True)
         with TestRenderer.render(self._switch_root(show, wrap)) as result:
