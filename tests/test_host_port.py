@@ -21,6 +21,12 @@ class TestFakeBrowserHostPort:
         assert callable(remove)
         remove()
 
+    def test_window_event_listener_cleanup_is_idempotent(self):
+        host = FakeBrowserHostPort()
+        remove = host.add_window_event_listener("resize", lambda _ev: None)
+        remove()
+        remove()
+
     def test_dispatch_window_event_invokes_registered_handlers(self):
         host = FakeBrowserHostPort()
         calls: list[Any] = []
@@ -46,6 +52,18 @@ class TestFakeBrowserHostPort:
 
 
 class TestFakeBrowserDOMPort:
+    def test_add_document_event_listener_returns_cleanup(self):
+        dom = FakeBrowserDOMPort()
+        remove = dom.add_document_event_listener("visibilitychange", lambda _ev: None)
+        assert callable(remove)
+        remove()
+
+    def test_document_event_listener_cleanup_is_idempotent(self):
+        dom = FakeBrowserDOMPort()
+        remove = dom.add_document_event_listener("visibilitychange", lambda _ev: None)
+        remove()
+        remove()
+
     def test_dispatch_document_event_invokes_registered_handlers(self):
         dom = FakeBrowserDOMPort()
         calls: list[Any] = []
