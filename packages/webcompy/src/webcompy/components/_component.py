@@ -116,6 +116,9 @@ class Component(ElementBase):
         self._error_captured_hooks: list[Callable[[Exception], Any]] = []
         self._observed_props: ReactiveDict[str, Any] | None = None
         self._custom_element_binding: Any = None
+        self._mount_delivered: bool = False
+        self._flush_scheduled: bool = False
+        self._destroyed: bool = False
         super().__init__()
         property = self.__setup(component_def, props, slots)
         self._property = property
@@ -371,6 +374,9 @@ class Component(ElementBase):
         if self._pending_async_template is not None:
             self._cleanup_pending_async()
             return
+        if self._mount_delivered:
+            self._mount_delivered = False
+            self._invoke_hook("on_unmounted")
         if self._head_props is not None:
             if self._instance_id in self._head_props.titles:
                 del self._head_props.titles[self._instance_id]
@@ -446,8 +452,11 @@ class Component(ElementBase):
         )
         self._custom_element_binding = binding
         self._sync_observed_attributes(node)
+        if port.is_document_connected(node):
+            self._schedule_connection_flush()
 
     def _dispose_custom_element_binding(self) -> None:
+        self._destroyed = True
         binding = self._custom_element_binding
         self._custom_element_binding = None
         if binding is not None:
@@ -476,10 +485,59 @@ class Component(ElementBase):
             self._observed_props[prop_key] = new_value
 
     def _on_custom_element_connected(self) -> None:
-        pass
+        self._schedule_connection_flush()
 
     def _on_custom_element_disconnected(self) -> None:
-        pass
+        self._schedule_connection_flush()
+
+    def _schedule_connection_flush(self) -> None:
+        if self._destroyed or self._flush_scheduled:
+            return
+        self._flush_scheduled = True
+        from webcompy.di import inject
+        from webcompy.ports._keys import HOST_PORT_KEY
+
+        host_port = inject(HOST_PORT_KEY, default=None)
+        if host_port is not None:
+            host_port.schedule_macro_task(self._flush_connection_state)
+
+    def _flush_connection_state(self) -> None:
+        self._flush_scheduled = False
+        if self._destroyed:
+            return
+        node = self._node_cache
+        if node is None:
+            return
+        from webcompy.di import inject
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+
+        port = inject(CUSTOM_ELEMENT_PORT_KEY, default=None)
+        if port is None:
+            return
+        connected = port.is_document_connected(node)
+        if connected and not self._mount_delivered:
+            self._mount_delivered = True
+            self._invoke_hook("on_mounted")
+        elif not connected and self._mount_delivered:
+            self._mount_delivered = False
+            self._invoke_hook("on_unmounted")
+
+    def _invoke_hook(self, key: str) -> None:
+        hook = self._property.get(key)
+        if hook is None:
+            return
+        if iscoroutinefunction(hook):
+            from webcompy.aio import resolve_async
+            from webcompy.elements.types._error_boundary import route_error_deferred
+
+            resolve_async(hook(), on_error=lambda err: route_error_deferred(self, err))
+            return
+        try:
+            hook()
+        except Exception as err:
+            from webcompy.elements.types._error_boundary import route_error_deferred
+
+            route_error_deferred(self, err)
 
     def _set_title(self, title: str):
         if self._head_props is not None:
