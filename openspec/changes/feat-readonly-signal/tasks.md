@@ -24,8 +24,8 @@
 
 ## 4. Test Support (webcompy-testing)
 
-- [ ] 4.1 Extend `FakeBrowserHostPort.add_window_event_listener` to record handlers per event type in an instance-local registry, return an idempotent cleanup removing exactly that handler, and expose `dispatch_window_event(event_type, event)` (snapshot the handler list; skip handlers removed during dispatch).
-- [ ] 4.2 Override `FakeBrowserDOMPort.add_document_event_listener` with the same recording semantics and expose `dispatch_document_event(event_type, event)`. `ServerHostPort`/`ServerDOMPort` no-op behavior SHALL remain unchanged.
+- [x] 4.1 Extend `FakeBrowserHostPort.add_window_event_listener` to record handlers per event type in an instance-local registry, return an idempotent cleanup removing exactly that handler, and expose `dispatch_window_event(event_type, event)` (snapshot the handler list; skip handlers removed during dispatch).
+- [x] 4.2 Override `FakeBrowserDOMPort.add_document_event_listener` with the same recording semantics and expose `dispatch_document_event(event_type, event)`. `ServerHostPort`/`ServerDOMPort` no-op behavior SHALL remain unchanged.
 
 ## 5. Async Setup Failure Cleanup
 

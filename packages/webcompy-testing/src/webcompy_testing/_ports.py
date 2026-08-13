@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import re
-from collections.abc import Coroutine
+from collections.abc import Callable, Coroutine
 from typing import Any, Literal
 from unittest.mock import MagicMock
 
@@ -23,6 +24,7 @@ class FakeBrowserDOMPort(ServerDOMPort):
         self._body = FakeDOMNode("body")
         self._html.appendChild(self._head)
         self._html.appendChild(self._body)
+        self._document_listeners: dict[str, list[Any]] = {}
 
     @property
     def body(self) -> FakeDOMNode:
@@ -51,6 +53,22 @@ class FakeBrowserDOMPort(ServerDOMPort):
 
     def get_element_by_id(self, element_id: str) -> FakeDOMNode | None:
         return _find_by_id(self._html, element_id)
+
+    def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        self._document_listeners.setdefault(event_type, []).append(handler)
+
+        def _remove() -> None:
+            listeners = self._document_listeners.get(event_type)
+            if listeners is None:
+                return
+            with contextlib.suppress(ValueError):
+                listeners.remove(handler)
+
+        return _remove
+
+    def dispatch_document_event(self, event_type: str, event: Any = None) -> None:
+        for handler in list(self._document_listeners.get(event_type, ())):
+            handler(event)
 
 
 def _find_by_tag(node: FakeDOMNode, tag: str) -> FakeDOMNode | None:
@@ -90,11 +108,27 @@ def _find_by_tag_attr(node: FakeDOMNode, tag: str, attr_name: str, attr_value: s
 
 
 class FakeBrowserHostPort(HostPort):
+    def __init__(self) -> None:
+        self._window_listeners: dict[str, list[Any]] = {}
+
     def schedule_macro_task(self, callback: Any) -> None:
         callback()
 
-    def add_window_event_listener(self, event_type: str, handler: Any) -> Any:
-        return lambda: None
+    def add_window_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        self._window_listeners.setdefault(event_type, []).append(handler)
+
+        def _remove() -> None:
+            listeners = self._window_listeners.get(event_type)
+            if listeners is None:
+                return
+            with contextlib.suppress(ValueError):
+                listeners.remove(handler)
+
+        return _remove
+
+    def dispatch_window_event(self, event_type: str, event: Any = None) -> None:
+        for handler in list(self._window_listeners.get(event_type, ())):
+            handler(event)
 
     def create_js_global_getter(
         self,
