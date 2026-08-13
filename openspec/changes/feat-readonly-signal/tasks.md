@@ -34,8 +34,8 @@
 
 ## 6. Event Helper & SSR/SSG Unit Tests
 
-- [ ] 6.1 Add `tests/test_readonly_event_sources.py` for `use_window_event`/`use_document_event`: transform-driven updates on dispatched events, equality dedup (no notification on equal transformed value), effective removal on destroy (via `result._instance._remove_element()`; `TestRendererResult.close()` does NOT destroy components), no update after destroy, `UserWarning` + no attach outside component setup (even when an app DI scope is active), missing-port no-op without warning, transform-exception containment (logged, signal unchanged), exactly one listener across re-renders, chaining with a pre-existing destroy hook.
-- [ ] 6.2 Add SSR/SSG tests via `render_app_html` (server context, `ServerHostPort`/`ServerDOMPort`): helpers render `initial` with no `UserWarning`; the `__webcompy_data__` script is parseable and its `signals` section contains no readonly state.
+- [x] 6.1 Add `tests/test_readonly_event_sources.py` for `use_window_event`/`use_document_event`: transform-driven updates on dispatched events, equality dedup (no notification on equal transformed value), effective removal on destroy (via `result._instance._remove_element()`; `TestRendererResult.close()` does NOT destroy components), no update after destroy, `UserWarning` + no attach outside component setup (even when an app DI scope is active), missing-port no-op without warning, transform-exception containment (logged, signal unchanged), exactly one listener across re-renders, chaining with a pre-existing destroy hook.
+- [x] 6.2 Add SSR/SSG tests via `render_app_html` (server context, `ServerHostPort`/`ServerDOMPort`): helpers render `initial` with no `UserWarning`; the `__webcompy_data__` script is parseable and its `signals` section contains no readonly state.
 
 ## 7. Docs & Governance
 
