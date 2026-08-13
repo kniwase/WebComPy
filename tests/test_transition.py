@@ -436,6 +436,44 @@ class TestReplacementAndInterruption:
             assert "fade-enter-from" in _box_classes(result, "b")
             assert reindex_calls == [1]
 
+    def test_new_child_during_enter_leaves_then_enters(self) -> None:
+        a_show, b_show = Signal(False), Signal(False)
+        with TestRenderer.render(self._replacement_root(a_show, b_show)) as result:
+            a_show.value = True
+            assert "fade-enter-from" in _box_classes(result, "a")
+
+            b_show.value = True
+            a_show.value = False
+            assert "fade-leave-from" in _box_classes(result, "a")
+            assert result.find_by_attribute("data-testid", "b") is None
+
+            result.transition_port.flush_frame()
+            assert "fade-leave-active" in _box_classes(result, "a")
+            assert result.find_by_attribute("data-testid", "b") is None
+
+            result.transition_port.advance_time(100)
+            assert result.find_by_attribute("data-testid", "a") is None
+            assert "fade-enter-from" in _box_classes(result, "b")
+
+            result.transition_port.flush_frame()
+            assert "fade-enter-active" in _box_classes(result, "b")
+            result.transition_port.advance_time(100)
+            assert _box_classes(result, "b") == []
+
+    def test_none_during_enter_applies_leave_then_removes(self) -> None:
+        show = Signal(False)
+        with TestRenderer.render(_toggle_root(show)) as result:
+            show.value = True
+            assert "fade-enter-from" in _box_classes(result, "box")
+
+            show.value = False
+            assert "fade-leave-from" in _box_classes(result, "box")
+
+            result.transition_port.flush_frame()
+            assert "fade-leave-active" in _box_classes(result, "box")
+            result.transition_port.advance_time(100)
+            assert result.find_by_attribute("data-testid", "box") is None
+
     def test_leave_while_leaving_is_noop(self) -> None:
         show = Signal(True)
         with TestRenderer.render(_toggle_root(show)) as result:
