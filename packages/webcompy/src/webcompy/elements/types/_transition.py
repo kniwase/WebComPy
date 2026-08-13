@@ -229,6 +229,8 @@ class TransitionElement(DynamicElement):
                 current = self._children[0] if self._children else None
 
             if current is not None and _is_patchable(current, desired):
+                if current is desired:
+                    return
                 self._discard_pending_child_if_not(desired)
                 desired = self._create_child_element(self._parent, self._node_idx, desired)
                 assert desired is not None

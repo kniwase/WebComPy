@@ -745,6 +745,40 @@ class TestReplacementAndInterruption:
             transition._refresh_sync()
             assert entries == [1, -1, 2, -2]
 
+    def test_same_instance_refresh_keeps_handlers_and_bindings(self) -> None:
+        from webcompy_server.ports import VirtualDOMEvent
+
+        a = Signal(True)
+        counter = Signal(1)
+        clicks: list[Any] = []
+        box = html.DIV(
+            {"data-testid": "box", "@click": lambda ev: clicks.append(ev), "data-x": counter},
+            "box",
+        )
+
+        @define_component
+        def Root(context):
+            return html.DIV(
+                {},
+                Transition({"name": "fade", "duration": 100}, lambda: box if a.value else None),
+            )
+
+        with TestRenderer.render(Root) as result:
+            transition = result._instance._children[0]
+            box_node = result.find_by_attribute("data-testid", "box")
+            assert box_node is not None
+            transition._refresh_sync()
+            transition._refresh_sync()
+            parent_node = result._instance._node_cache
+            box_count = sum(1 for c in parent_node.childNodes if c.getAttribute("data-testid") == "box")
+            assert box_count == 1
+            assert "click" in box._event_handlers_added
+            counter.value = 2
+            assert box_node.getAttribute("data-x") == "2"
+            clicks.clear()
+            box_node.dispatchEvent(VirtualDOMEvent("click", bubbles=True))
+            assert len(clicks) == 1
+
     def test_removing_transition_itself_removes_child_immediately(self) -> None:
         show, wrap = Signal(True), Signal(True)
         with TestRenderer.render(self._switch_root(show, wrap)) as result:
