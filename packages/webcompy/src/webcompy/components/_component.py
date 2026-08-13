@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Coroutine
 from contextvars import ContextVar
 from inspect import iscoroutinefunction
@@ -92,6 +93,7 @@ class Component(ElementBase):
         self._head_props: HeadPropsStore | None = None
         self._generator = generator
         self._pending_async_template: Coroutine[Any, Any, ElementChildren] | None = None
+        self._pending_async_cleanup_done: bool = False
         self._async_results: list = []
         self._async_setup_extracted: bool = False
         self._error_captured_hooks: list[Callable[[Exception], Any]] = []
@@ -206,6 +208,9 @@ class Component(ElementBase):
         self._property = property
 
     def _cleanup_pending_async(self):
+        if self._pending_async_cleanup_done:
+            return
+        self._pending_async_cleanup_done = True
         self._pending_async_template = None
         try:
             if self._render_state is not None:
@@ -266,6 +271,15 @@ class Component(ElementBase):
                 try:
                     with component_context(self._render_state):
                         template = await self._pending_async_template
+                except asyncio.CancelledError:
+                    self._cleanup_pending_async()
+                    try:
+                        parent = self._parent
+                    except AttributeError:
+                        parent = None
+                    if parent is not None and self in parent._children:
+                        parent._children.remove(self)
+                    raise
                 except Exception:
                     self._cleanup_pending_async()
                     try:

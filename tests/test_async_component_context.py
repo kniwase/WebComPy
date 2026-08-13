@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 
 import pytest
 
@@ -391,6 +392,44 @@ class TestAsyncComponentSetupFailureCleanup:
             _active_di_scope.reset(token)
         return host, instance
 
+    def _drive_cancellation(self, component):
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore, _register_deferred_components
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.ports._keys import HOST_PORT_KEY
+        from webcompy_testing import FakeBrowserHostPort
+
+        host = FakeBrowserHostPort()
+        scope = DIScope()
+        scope.provide(HOST_PORT_KEY, host)
+        scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+        scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+        token = _active_di_scope.set(scope)
+        _register_deferred_components()
+
+        async def _run():
+            instance = component(None)
+
+            class _RealParent:
+                def __init__(self) -> None:
+                    self._children = [instance]
+
+            instance._parent = _RealParent()
+            instance._node_idx = 0
+            task = asyncio.ensure_future(instance._render())
+            while not host._window_listeners.get("resize"):
+                await asyncio.sleep(0)
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+            return instance, host
+
+        try:
+            return asyncio.run(_run())
+        finally:
+            _active_di_scope.reset(token)
+
     def test_failed_async_setup_removes_event_listener(self):
         from webcompy import use_window_event
 
@@ -444,6 +483,28 @@ class TestAsyncComponentSetupFailureCleanup:
         instance._detach_from_node()
         instance._detach_from_node()
         assert order == ["user"]
+
+    def test_cancelled_async_setup_runs_destroy_hooks(self):
+        from webcompy import use_window_event
+
+        order: list[str] = []
+
+        @define_component
+        async def CancelledAsyncCmp(context):
+            await asyncio.sleep(0)
+
+            @on_before_destroy
+            def _user_hook():
+                order.append("user")
+
+            use_window_event("resize", 0)
+            await asyncio.sleep(1)
+
+        instance, host = self._drive_cancellation(CancelledAsyncCmp)
+
+        assert order == ["user"]
+        assert host._window_listeners.get("resize") == []
+        assert instance._parent._children == []
 
     def test_successful_async_setup_ordering_unchanged(self):
         from webcompy import use_window_event

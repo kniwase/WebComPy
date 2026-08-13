@@ -141,9 +141,13 @@ class TestLifecycleGuarantees:
         assert view.value == 0
 
     def test_outside_setup_with_active_di_scope_still_attaches_nothing(self):
+        from webcompy_testing import FakeBrowserDOMPort
+
         host = FakeBrowserHostPort()
+        dom = FakeBrowserDOMPort()
         scope = DIScope()
         scope.provide(HOST_PORT_KEY, host)
+        scope.provide(DOM_PORT_KEY, dom)
         token = _active_di_scope.set(scope)
         try:
             with warnings.catch_warnings(record=True) as w:
@@ -152,7 +156,7 @@ class TestLifecycleGuarantees:
         finally:
             _active_di_scope.reset(token)
         assert any(issubclass(x.category, UserWarning) for x in w)
-        assert host._window_listeners == {}
+        assert dom._document_listeners.get("visibilitychange", []) == []
         assert view.value == "visible"
 
     def test_missing_port_keeps_initial_without_warning(self):
