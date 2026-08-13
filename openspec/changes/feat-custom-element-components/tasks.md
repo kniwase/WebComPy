@@ -48,8 +48,8 @@
 ## 8. Verification and Documentation
 
 - [x] 8.1 Add unit tests for decorator validation, wrapper node counts, multi-root normalization, nested components, attribute props, and unnamed-component rejection of document-connection hooks.
-- [ ] 8.2 Add browser/E2E tests for registration, SSR upgrade before hydration, mounted/unmounted coalescing, external attribute changes, and repeat/switch reconciliation.
-- [ ] 8.3 Add scoped CSS tests for static and reactive `:host`, nested component isolation, SSR output, and incremental style injection.
+- [x] 8.2 Add browser/E2E tests for registration, SSR upgrade before hydration, mounted/unmounted coalescing, external attribute changes, and repeat/switch reconciliation.
+- [x] 8.3 Add scoped CSS tests for static and reactive `:host`, nested component isolation, SSR output, and incremental style injection.
 - [ ] 8.4 Add public documentation and examples for named components, multiple roots, lifecycle hooks, observed attributes, and `:host`.
 - [ ] 8.5 Update `AGENTS.md` and `.opencode/skills/webcompy-review/SKILL.md` spec mappings/invariants for the new capability, then run the documentation reference guardrail.
 - [ ] 8.6 Run the relevant OpenSpec validation, formatter/linter, type checker, unit tests, and targeted E2E groups; record any unresolved bridge-runtime limitation.

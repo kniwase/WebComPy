@@ -52,6 +52,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "path": "/documents/signal-stream",
                 "source": "documents/signal_stream.md",
             },
+            {
+                "label": "Custom Elements",
+                "path": "/documents/custom-elements",
+                "source": "documents/custom_elements.md",
+            },
         ],
     },
 ]
