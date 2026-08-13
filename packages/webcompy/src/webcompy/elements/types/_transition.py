@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
+from inspect import iscoroutinefunction
 from typing import Any
 
 from webcompy import logging
+from webcompy.components._component import end_defer_after_rendering, start_defer_after_rendering
 from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.typealias._element_property import ElementChildren
@@ -17,7 +19,7 @@ from webcompy.elements.types._dynamic import (
 )
 from webcompy.elements.types._element import ElementBase
 from webcompy.exception import WebComPyException
-from webcompy.ports._keys import FFI_PORT_KEY, MEDIA_QUERY_PORT_KEY, TRANSITION_PORT_KEY
+from webcompy.ports._keys import FFI_PORT_KEY, HOST_PORT_KEY, MEDIA_QUERY_PORT_KEY, TRANSITION_PORT_KEY
 from webcompy.ports._transition import TransitionStyle
 from webcompy.signal._computed import Computed
 
@@ -208,6 +210,25 @@ class TransitionElement(DynamicElement):
         finally:
             self._refresh_running = False
 
+    async def _render_child_deferred(self, child: ElementAbstract) -> None:
+        should_defer = self._signal_activated
+        if should_defer:
+            start_defer_after_rendering()
+        try:
+            await child._render()
+        except Exception:
+            if should_defer:
+                end_defer_after_rendering()
+            raise
+        if should_defer:
+            deferred = end_defer_after_rendering()
+            for callback in deferred:
+                if iscoroutinefunction(callback):
+                    from webcompy.aio._aio import aio_run
+
+                    callback = lambda cb=callback: aio_run(cb())
+                inject(HOST_PORT_KEY).schedule_macro_task(callback)
+
     async def _refresh_pass(self, *args: Any) -> None:
         try:
             if self._disposed or not self._initial_rendered:
@@ -247,7 +268,7 @@ class TransitionElement(DynamicElement):
                 desired = self._create_child_element(self._parent, self._node_idx, desired)
                 assert desired is not None
                 self._children = _patch_children([current], [desired], self._node_idx)
-                await desired._render()
+                await self._render_child_deferred(desired)
                 self._reindex_parent()
                 return
 
@@ -261,7 +282,7 @@ class TransitionElement(DynamicElement):
             assert child is not None
             self._children = [child]
             if child._mounted is None:
-                await child._render()
+                await self._render_child_deferred(child)
             self._reindex_parent()
             self._start_enter_sequence(child)
         except WebComPyException:
