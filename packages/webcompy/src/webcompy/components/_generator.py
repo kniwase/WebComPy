@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, Iterable
 from re import compile as re_compile
 from typing import (
     Any,
@@ -9,19 +9,29 @@ from typing import (
     TypeAlias,
     TypeVar,
     cast,
+    overload,
 )
 
 from webcompy.components._component import Component
 from webcompy.components._css_utils import (
     _contains_top_level_ampersand,
+    _insert_cid,
     _is_declaration_body_at_rule,
+    _is_host_syntax,
     _is_keyframes_rule,
     _raise_nesting_unsupported,
+    _reject_host_forms,
+    _resolve_host_part,
     _scope_selector,
 )
-from webcompy.components._libs import ComponentContext, NodeGenerator, WebComPyComponentException, generate_id
+from webcompy.components._libs import (
+    ComponentContext,
+    ComponentTemplateResult,
+    NodeGenerator,
+    WebComPyComponentException,
+    generate_id,
+)
 from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
-from webcompy.elements.typealias._element_property import ElementChildren
 
 _camel_to_kebab_pattern: Final = re_compile("((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))")
 
@@ -51,8 +61,8 @@ class ComponentStore:
 
 PropsType = TypeVar("PropsType")
 FuncComponentDef: TypeAlias = (
-    Callable[[ComponentContext[PropsType]], ElementChildren]
-    | Callable[[ComponentContext[PropsType]], Coroutine[Any, Any, ElementChildren]]
+    Callable[[ComponentContext[PropsType]], ComponentTemplateResult]
+    | Callable[[ComponentContext[PropsType]], Coroutine[Any, Any, ComponentTemplateResult]]
 )
 
 StyleDeclaration: TypeAlias = str | dict[str, "StyleDeclaration"]
@@ -105,7 +115,7 @@ def _render_declaration_at_rule(selector: str, declaration: dict[str, StyleDecla
     return " ".join(parts)
 
 
-def _render_at_rule_inner(style_dict: StyleDict, cid: str) -> list[str]:
+def _render_at_rule_inner(style_dict: StyleDict, cid: str, host_tag: str | None = None) -> list[str]:
     inner_parts: list[str] = []
     for inner_sel, inner_styles in style_dict.items():
         stripped_inner = inner_sel.strip()
@@ -119,13 +129,17 @@ def _render_at_rule_inner(style_dict: StyleDict, cid: str) -> list[str]:
                 _render_declaration_at_rule(stripped_inner, cast("dict[str, StyleDeclaration]", inner_styles))
             )
         elif _classify_nested_key(stripped_inner) == "at-rule":
-            nested_parts = _render_at_rule_inner(cast("StyleDict", inner_styles), cid)
+            nested_parts = _render_at_rule_inner(cast("StyleDict", inner_styles), cid, host_tag)
             inner_parts.append(f"{stripped_inner} {{ {' '.join(nested_parts)} }}")
         elif _classify_nested_key(stripped_inner) == "pseudo":
-            scoped = f"*[webcompy-cid-{cid}]{stripped_inner}"
+            resolved = _resolve_host_part(stripped_inner, host_tag)
+            if _is_host_syntax(stripped_inner):
+                scoped = _insert_cid(resolved, cid)
+            else:
+                scoped = f"*[webcompy-cid-{cid}]{stripped_inner}"
             inner_parts.append(_generate_css_recursive(scoped, cast("dict[str, StyleDeclaration]", inner_styles)))
         elif _classify_nested_key(stripped_inner) == "combinator":
-            scoped_inner = _scope_selector(stripped_inner, cid)
+            scoped_inner = _scope_selector(stripped_inner, cid, host_tag=host_tag)
             inner_parts.append(_generate_css_recursive(scoped_inner, cast("dict[str, StyleDeclaration]", inner_styles)))
     return inner_parts
 
@@ -147,6 +161,7 @@ def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaratio
             inner_css = _generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", nested_styles))
             result += f"{nested_selector} {{ {inner_css} }}"
         elif key_type == "pseudo":
+            _reject_host_forms(nested_selector)
             combined = f"{selector}{nested_selector}"
             result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
         else:
@@ -157,7 +172,7 @@ def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaratio
     return result
 
 
-def _render_scoped_style_css(style: dict[str, StyleDict], cid: str) -> str:
+def _render_scoped_style_css(style: dict[str, StyleDict], cid: str, host_tag: str | None = None) -> str:
     parts: list[str] = []
     for selector, style_dict in style.items():
         stripped = selector.strip()
@@ -174,7 +189,7 @@ def _render_scoped_style_css(style: dict[str, StyleDict], cid: str) -> str:
         elif _is_declaration_body_at_rule(stripped):
             parts.append(_render_declaration_at_rule(stripped, cast("dict[str, StyleDeclaration]", style_dict)))
         elif _classify_nested_key(stripped) == "at-rule":
-            inner_parts = _render_at_rule_inner(style_dict, cid)
+            inner_parts = _render_at_rule_inner(style_dict, cid, host_tag)
             parts.append(f"{stripped} {{ {' '.join(inner_parts)} }}")
         else:
             parts.append(_generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", style_dict)))
@@ -194,6 +209,9 @@ class ComponentGenerator(Generic[PropsType]):
         self,
         name: str,
         component_def: FuncComponentDef[PropsType],
+        *,
+        custom_element_name: str | None = None,
+        observed_attributes: tuple[str, ...] = (),
     ) -> None:
         self._style = {}
         self._reactive_styles: list[ReactiveScopedStyle] = []
@@ -201,12 +219,34 @@ class ComponentGenerator(Generic[PropsType]):
         self._name: str = name
         self._cid = generate_id(name)
         self._registered = False
+        self._custom_element_name = custom_element_name
+        self._observed_attributes = observed_attributes
+        self._observed_prop_keys: dict[str, str] = {attr: attr.replace("-", "_") for attr in observed_attributes}
         if not self._try_register():
             _unregistered_generators.append(self)
 
     @property
     def _id(self) -> str:
         return self._cid
+
+    @property
+    def custom_element_name(self) -> str | None:
+        return self._custom_element_name
+
+    @property
+    def observed_attributes(self) -> tuple[str, ...]:
+        return self._observed_attributes
+
+    @property
+    def observed_prop_keys(self) -> dict[str, str]:
+        return self._observed_prop_keys
+
+    @property
+    def definition_key(self) -> str | None:
+        if self._custom_element_name is None:
+            return None
+        ordered_attributes = ",".join(sorted(self._observed_attributes))
+        return f"webcompy-v1:{self._custom_element_name}:{ordered_attributes}"
 
     def _try_register(self) -> bool:
         from webcompy.di import inject
@@ -260,29 +300,123 @@ class ComponentGenerator(Generic[PropsType]):
 
     @property
     def scoped_style(self) -> str:
-        return _render_scoped_style_css(self._style, self._id)
+        return _render_scoped_style_css(self._style, self._id, host_tag=self.custom_element_name)
 
     @scoped_style.setter
     def scoped_style(self, style: dict[str, StyleDict]):
         cid = self._id
+        host_tag = self.custom_element_name
         style_items: list[tuple[str, dict[str, StyleDeclaration]]] = []
         for selector, declaration in style.items():
             if _classify_nested_key(selector.strip()) == "at-rule":
                 processed_selector = selector.strip()
             else:
                 stripped = selector.strip()
-                processed_selector = _scope_selector(stripped, cid)
+                processed_selector = _scope_selector(stripped, cid, host_tag=host_tag)
             style_items.append((processed_selector, _process_style_declaration(declaration)))
         self._style = dict(style_items)
         self._inject_scoped_style_if_new()
 
 
-def define_component(
-    setup: Callable[[ComponentContext[PropsType]], ElementChildren]
-    | Callable[[ComponentContext[PropsType]], Coroutine[Any, Any, ElementChildren]],
+_CUSTOM_ELEMENT_NAME_RE = re_compile(r"^[a-z][a-z0-9._-]*$")
+
+_RESERVED_CUSTOM_ELEMENT_NAMES = frozenset(
+    {
+        "annotation-xml",
+        "color-profile",
+        "font-face",
+        "font-face-src",
+        "font-face-uri",
+        "font-face-format",
+        "font-face-name",
+        "missing-glyph",
+    }
+)
+
+
+def _validate_custom_element_name(name: str) -> None:
+    if not isinstance(name, str) or "-" not in name or _CUSTOM_ELEMENT_NAME_RE.fullmatch(name) is None:
+        raise WebComPyComponentException(
+            f"Invalid custom element name: {name!r}. Custom element names must be lowercase and contain a hyphen."
+        )
+    if name in _RESERVED_CUSTOM_ELEMENT_NAMES:
+        raise WebComPyComponentException(
+            f"Invalid custom element name: {name!r}. The name is reserved by the custom elements specification."
+        )
+
+
+def _normalize_observed_attributes(observed_attributes: Iterable[str]) -> tuple[str, ...]:
+    if isinstance(observed_attributes, str):
+        raise WebComPyComponentException(
+            "observed_attributes must be an iterable of attribute name strings, not a single string"
+        )
+    seen: list[str] = []
+    seen_set: set[str] = set()
+    for raw in observed_attributes:
+        if not isinstance(raw, str) or not raw:
+            raise WebComPyComponentException("Observed attribute names must be non-empty strings")
+        name = raw.lower()
+        if name in seen_set:
+            raise WebComPyComponentException(f"Duplicate observed attribute: '{name}'")
+        if name.startswith("webcompy-"):
+            raise WebComPyComponentException(f"Framework attribute cannot be observed: '{name}'")
+        seen.append(name)
+        seen_set.add(name)
+    keys: set[str] = set()
+    for name in seen:
+        key = name.replace("-", "_")
+        if key in keys:
+            raise WebComPyComponentException(f"Observed attributes collide on prop key '{key}': '{name}'")
+        keys.add(key)
+    return tuple(seen)
+
+
+def _create_generator(
+    setup: FuncComponentDef[PropsType],
+    custom_element_name: str | None,
+    observed_attributes: tuple[str, ...],
 ) -> ComponentGenerator[PropsType]:
     setup.__webcompy_component_definition__ = True
-    return ComponentGenerator(setup.__name__, setup)
+    return ComponentGenerator(
+        setup.__name__,
+        setup,
+        custom_element_name=custom_element_name,
+        observed_attributes=observed_attributes,
+    )
+
+
+@overload
+def define_component(
+    setup: FuncComponentDef[PropsType],
+) -> ComponentGenerator[PropsType]: ...
+
+
+@overload
+def define_component(
+    setup: str,
+    *,
+    observed_attributes: Iterable[str] = (),
+) -> Callable[[FuncComponentDef[PropsType]], ComponentGenerator[PropsType]]: ...
+
+
+def define_component(
+    setup: FuncComponentDef[PropsType] | str,
+    *,
+    observed_attributes: Iterable[str] = (),
+) -> ComponentGenerator[PropsType] | Callable[[FuncComponentDef[PropsType]], ComponentGenerator[PropsType]]:
+    if callable(setup):
+        if observed_attributes:
+            raise WebComPyComponentException(
+                "observed_attributes requires a named custom element; pass a custom element name to @define_component"
+            )
+        return _create_generator(setup, None, ())
+    _validate_custom_element_name(setup)
+    normalized = _normalize_observed_attributes(observed_attributes)
+
+    def _decorator(component_def: FuncComponentDef[PropsType]) -> ComponentGenerator[PropsType]:
+        return _create_generator(component_def, setup, normalized)
+
+    return _decorator
 
 
 def _register_deferred_components() -> None:

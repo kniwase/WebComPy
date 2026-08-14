@@ -7,6 +7,7 @@ from webcompy import logging
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.ports._keys import (
     ASYNC_SCHEDULER_PORT_KEY,
+    CUSTOM_ELEMENT_PORT_KEY,
     DOM_PORT_KEY,
     FFI_PORT_KEY,
     HOST_PORT_KEY,
@@ -20,6 +21,7 @@ from webcompy_testing._ports import (
     FakeBrowserDOMPort,
     FakeBrowserFFIPort,
     FakeBrowserHostPort,
+    FakeCustomElementPort,
     FakeMediaQueryPort,
     FakeTransitionPort,
 )
@@ -141,6 +143,7 @@ class TestRenderer:
             scope.provide(DOM_PORT_KEY, dom_port)
             scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
             scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
+            scope.provide(CUSTOM_ELEMENT_PORT_KEY, FakeCustomElementPort())
             scope.provide(TRANSITION_PORT_KEY, FakeTransitionPort())
             scope.provide(MEDIA_QUERY_PORT_KEY, FakeMediaQueryPort())
             scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())

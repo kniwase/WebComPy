@@ -185,7 +185,83 @@ def _raise_nesting_unsupported(selector: str) -> None:
     )
 
 
-def _scope_selector(selector: str, cid: str) -> str:
+def _is_host_syntax(part: str) -> bool:
+    return part == ":host" or part.startswith((":host:", ":host[", ":host("))
+
+
+def _has_non_leading_host(part: str) -> bool:
+    i = 0
+    n = len(part)
+    paren = 0
+    bracket = 0
+    quote: str | None = None
+    while i < n:
+        c = part[i]
+        if quote is not None:
+            if c == "\\":
+                i += 2
+                continue
+            if c == quote:
+                quote = None
+            i += 1
+            continue
+        if c in "\"'":
+            quote = c
+            i += 1
+            continue
+        if c == "\\":
+            i += 2
+            continue
+        if c == "(":
+            paren += 1
+        elif c == ")":
+            paren -= 1
+        elif c == "[":
+            bracket += 1
+        elif c == "]":
+            bracket -= 1
+        elif bracket == 0 and part.startswith(":host", i):
+            if i > 0 or paren > 0:
+                return True
+            i += 4
+            continue
+        i += 1
+    return False
+
+
+def _reject_host_forms(part: str) -> None:
+    if _has_non_leading_host(part) or _is_host_syntax(part) or part.startswith(":host-"):
+        raise WebComPyException(f"Unsupported :host form: {part!r}")
+
+
+def _resolve_host_part(part: str, host_tag: str | None) -> str:
+    if _has_non_leading_host(part):
+        raise WebComPyException(f"Unsupported :host form: {part!r}")
+    if _is_host_syntax(part):
+        if host_tag is None:
+            raise WebComPyException(
+                f":host is not available in unnamed components (selector: {part!r}); "
+                "pass a custom element name to @define_component"
+            )
+        rest = part[len(":host") :]
+        if rest == "" or rest.startswith(":") or rest.startswith("["):
+            return host_tag + rest
+        if rest.startswith("(") and rest.endswith(")"):
+            inner = rest[1:-1].strip()
+            if not inner:
+                raise WebComPyException(f"Invalid :host selector: {part!r}")
+            if any(ch in inner for ch in " \t\n>+~,"):
+                raise WebComPyException(f"Unsupported :host form: {part!r}")
+            if inner[0] == "*" or inner[0].isalpha():
+                raise WebComPyException(f"Unsupported :host form: {part!r}")
+            return host_tag + inner
+        raise WebComPyException(f"Unsupported :host form: {part!r}")
+    if part.startswith(":host") and part[5:6] in (".", "#", "-"):
+        raise WebComPyException(f"Unsupported :host form: {part!r}")
+    return part
+
+
+def _scope_selector(selector: str, cid: str, *, host_tag: str | None = None) -> str:
     if _contains_top_level_ampersand(selector):
         _raise_nesting_unsupported(selector)
     parts, combinators = _split_selector_parts(selector)
@@ -193,7 +269,10 @@ def _scope_selector(selector: str, cid: str) -> str:
     for idx, part in enumerate(parts):
         combinator = combinators[idx] if idx < len(combinators) else ""
         if part:
-            out.append(_insert_cid(part, cid) + combinator)
+            if idx > 0 and _is_host_syntax(part):
+                raise WebComPyException(f"Unsupported :host form: {part!r}")
+            resolved = _resolve_host_part(part, host_tag)
+            out.append(_insert_cid(resolved, cid) + combinator)
         elif idx == 0:
             out.append(f"*[webcompy-cid-{cid}]{combinator}")
         else:

@@ -57,6 +57,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "path": "/documents/readonly-signal",
                 "source": "documents/readonly_signal.md",
             },
+            {
+                "label": "Custom Elements",
+                "path": "/documents/custom-elements",
+                "source": "documents/custom_elements.md",
+            },
         ],
     },
 ]

@@ -1,5 +1,6 @@
 from webcompy.ports._async_scheduler import AsyncSchedulerPort
 from webcompy.ports._cookie import CookiePort
+from webcompy.ports._custom_element import CustomElementPort
 from webcompy.ports._dom import DOMNode, DOMNodeList, DOMPort
 from webcompy.ports._fetch import FetchPort
 from webcompy.ports._ffi import FFIPort
@@ -8,6 +9,7 @@ from webcompy.ports._host import HostPort
 from webcompy.ports._keys import (
     ASYNC_SCHEDULER_PORT_KEY,
     COOKIE_PORT_KEY,
+    CUSTOM_ELEMENT_PORT_KEY,
     DOM_PORT_KEY,
     FETCH_PORT_KEY,
     FFI_PORT_KEY,
@@ -26,6 +28,7 @@ from webcompy.ports._transition import TransitionPort
 __all__ = [
     "ASYNC_SCHEDULER_PORT_KEY",
     "COOKIE_PORT_KEY",
+    "CUSTOM_ELEMENT_PORT_KEY",
     "DOM_PORT_KEY",
     "FETCH_PORT_KEY",
     "FFI_PORT_KEY",
@@ -37,6 +40,7 @@ __all__ = [
     "TRANSITION_PORT_KEY",
     "AsyncSchedulerPort",
     "CookiePort",
+    "CustomElementPort",
     "DOMNode",
     "DOMNodeList",
     "DOMPort",

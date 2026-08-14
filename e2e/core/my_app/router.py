@@ -5,6 +5,7 @@ from .pages.bundled_deps import BundledDepsPage
 from .pages.classstyle import ClassStylePage
 from .pages.client_only import ClientOnlyPage
 from .pages.component import FunctionStylePage
+from .pages.custom_element import CustomElementPage
 from .pages.di_test import DiInjectPage, DiProviderWrapper
 from .pages.dict_repeat import DictRepeatPage
 from .pages.error_handling import CatchEventsPage, ErrorBoundaryPage, NestedCrashPage
@@ -47,6 +48,7 @@ router = Router(
     {"path": "/reactive", "component": ReactivePage},
     {"path": "/component", "component": FunctionStylePage},
     {"path": "/component/classstyle", "component": ClassStylePage},
+    {"path": "/custom-elements", "component": CustomElementPage},
     {"path": "/event", "component": EventPage},
     {"path": "/window-events", "component": WindowEventsPage},
     {"path": "/switch", "component": SwitchPage},

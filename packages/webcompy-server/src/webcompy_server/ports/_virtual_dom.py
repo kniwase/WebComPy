@@ -183,6 +183,15 @@ class VirtualDOMNode:
         if self._parent is not None:
             self._parent.removeChild(self)
 
+    @property
+    def isConnected(self) -> bool:
+        node: DOMNode | None = self
+        while node is not None:
+            if getattr(node, "__webcompy_document_root__", False):
+                return True
+            node = node.parentNode
+        return False
+
     def setAttribute(self, name: str, value: str | None) -> None:
         self._attributes[name] = value
 

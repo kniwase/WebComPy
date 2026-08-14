@@ -57,7 +57,10 @@ class ElementBase(ElementWithChildren):
         node.__webcompy_node__ = True
         current_attrs = self._get_processed_attrs()
         existing_attr_names = set(node.getAttributeNames())
+        preserve_all = self._preserves_all_node_attributes()
         for name in existing_attr_names - set(current_attrs.keys()) - _WEBCOMPY_INTERNAL_ATTRS:
+            if preserve_all and not name.startswith("webcompy-"):
+                continue
             node.removeAttribute(name)
         for name, value in current_attrs.items():
             if value is not None:
@@ -80,6 +83,9 @@ class ElementBase(ElementWithChildren):
 
     def _node_matches_existing(self, existing: DOMNode) -> bool:
         return existing.nodeName.lower() == self._tag_name
+
+    def _preserves_all_node_attributes(self) -> bool:
+        return False
 
     def _init_node(self) -> DOMNode:
         existing_node = self._get_existing_node()

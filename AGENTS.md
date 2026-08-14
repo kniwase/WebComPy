@@ -155,6 +155,7 @@ the per-area reference.
 - **JSON-RPC Allowlist Decoding** — `json-rpc/spec.md`
 - **RouterView Depth and Level Reuse** — `router/spec.md`
 - **Teleport Anchor Slot and SSR Anchor** — `teleport/spec.md`
+- **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`
 - **Transition Sequence Contract** — `transition/spec.md`
 - **Composable Usage** — `composables/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
@@ -178,8 +179,8 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/template/_markdown_default.py` | `template-engine/spec.md`, `markdown-conformance/spec.md` |
 | `webcompy/template/_markdown_for.py` | `template-engine/spec.md` |
 | `tests/conformance/` | `markdown-conformance/spec.md`, `template-engine/spec.md`, `test-execution-paths/spec.md` |
-| `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md`, `signal-value-transfer/spec.md`, `typed-api-client/spec.md`, `error-handling/spec.md` |
-| `webcompy/components/_css_utils.py` | `components/spec.md`, `reactive-scoped-style/spec.md` |
+| `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md`, `signal-value-transfer/spec.md`, `typed-api-client/spec.md`, `error-handling/spec.md`, `custom-element-components/spec.md` |
+| `webcompy/components/_css_utils.py` | `components/spec.md`, `reactive-scoped-style/spec.md`, `custom-element-components/spec.md` |
 | `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
 | `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md`, `suspense/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
 | `webcompy/elements/_bind.py` | `elements/spec.md` |
@@ -195,11 +196,11 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md`, `error-handling/spec.md` |
 | `webcompy/router/_scroll.py` | `scroll-restoration/spec.md` |
 | `webcompy/rpc/` | `json-rpc/spec.md` |
-| `webcompy/ports/_browser/` | `browser-api/spec.md` |
-| `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md`, `scroll-restoration/spec.md` |
+| `webcompy/ports/_browser/` | `browser-api/spec.md`, `custom-element-components/spec.md` |
+| `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md`, `scroll-restoration/spec.md`, `custom-element-components/spec.md` |
 | `webcompy/ports/_markdown.py` | `port-abstraction/spec.md` |
 | `webcompy/ports/_resource.py`, `webcompy_server/ports/_resource.py` | `resource-port/spec.md` |
-| `webcompy_server/ports/` | `virtual-dom/spec.md`, `server-fetch-asgi/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md` |
+| `webcompy_server/ports/` | `virtual-dom/spec.md`, `server-fetch-asgi/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
 | `webcompy_server/__init__.py` | `asgi-embed/spec.md`, `server-fetch-asgi/spec.md` |
 | `webcompy_server/_context.py`, `webcompy_server/_html.py` | `async-scheduler/spec.md`, `app-lifecycle/spec.md` |
 | `webcompy_server/contrib/` | `typed-response/spec.md` |
@@ -209,7 +210,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md`, `signal-stream/spec.md` |
 | `webcompy/ajax/_serde.py` | `typed-api-client/spec.md`, `typed-response/spec.md` |
 | `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md`, `json-rpc/spec.md` |
-| `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md` |
+| `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
 | `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md`, `markdown-document/spec.md` |
 | `docs_app/` | `docs-site-documents/spec.md`, `docs-e2e/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
@@ -290,6 +291,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `reactive` | Reactive state primitives and change propagation |
 | `effect` | Side-effecting functions with automatic reactive dependency tracking |
 | `components` | Component definition styles, props, slots, scoped CSS, lifecycle |
+| `custom-element-components` | Named Light DOM custom elements: wrapper boundaries, multiple roots, document-connection hooks, observed attributes, registration/hydration ordering |
 | `composables` | Reusable stateful logic functions for function-style component setup |
 | `template-engine` | HTML template parsing and variable interpolation that produces reactive WebComPy Element trees |
 | `markdown-document` | Markdown frontmatter parsing, `load_markdown_document`, TOC extraction, opt-in `prose.css` typography preset |

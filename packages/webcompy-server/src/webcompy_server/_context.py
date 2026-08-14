@@ -6,6 +6,7 @@ from webcompy.app._render_context import RenderContext
 from webcompy.ports._keys import (
     ASYNC_SCHEDULER_PORT_KEY,
     COOKIE_PORT_KEY,
+    CUSTOM_ELEMENT_PORT_KEY,
     DOM_PORT_KEY,
     FETCH_PORT_KEY,
     FFI_PORT_KEY,
@@ -20,6 +21,7 @@ from webcompy.template._markdown_default import DefaultMarkdownParser
 from webcompy_server._html import generate_html
 from webcompy_server.ports._async_scheduler import ServerAsyncSchedulerPort
 from webcompy_server.ports._cookie import ServerCookiePort
+from webcompy_server.ports._custom_element import ServerCustomElementPort
 from webcompy_server.ports._dom import ServerDOMPort
 from webcompy_server.ports._fetch import ServerFetchPort
 from webcompy_server.ports._ffi import ServerFFIPort
@@ -39,6 +41,7 @@ class ServerRenderContext(RenderContext):
         else:
             self._di_scope.provide(ASYNC_SCHEDULER_PORT_KEY, ServerAsyncSchedulerPort())
         self._di_scope.provide(COOKIE_PORT_KEY, ServerCookiePort(self._cookie_header))
+        self._di_scope.provide(CUSTOM_ELEMENT_PORT_KEY, ServerCustomElementPort())
         self._di_scope.provide(DOM_PORT_KEY, ServerDOMPort())
         fetch_port = self._app._server_fetch_port or ServerFetchPort()
         self._di_scope.provide(FETCH_PORT_KEY, fetch_port)

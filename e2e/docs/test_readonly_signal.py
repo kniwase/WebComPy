@@ -3,11 +3,12 @@ from playwright.sync_api import expect
 
 
 @pytest.mark.e2e
-def test_last_page_omits_next_link(docs_page_on, assert_no_console_errors):
+def test_next_link_points_to_custom_elements(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents/readonly-signal")
     expect(page.locator(".docs-pager-prev")).to_have_count(1)
     expect(page.locator(".docs-pager-prev a")).to_have_text("Signals and Streams")
-    expect(page.locator(".docs-pager-next")).to_have_count(0)
+    expect(page.locator(".docs-pager-next")).to_have_count(1)
+    expect(page.locator(".docs-pager-next a")).to_have_text("Custom Elements")
 
 
 @pytest.mark.e2e
