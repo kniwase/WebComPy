@@ -33,6 +33,7 @@ class FakeCustomElementPort(CustomElementPort):
         self.ensure_defined_calls: list[tuple[str, tuple[str, ...], str]] = []
         self.bind_calls: list[tuple[Any, tuple[str, ...]]] = []
         self.disposed_bindings: int = 0
+        self.connected: bool = False
 
     def ensure_defined(
         self,
@@ -55,7 +56,7 @@ class FakeCustomElementPort(CustomElementPort):
         return _FakeCustomElementBinding(self)
 
     def is_document_connected(self, node: Any) -> bool:
-        return False
+        return self.connected or bool(getattr(node, "isConnected", False))
 
 
 class FakeMediaQueryPort(MediaQueryPort):
@@ -82,6 +83,7 @@ class FakeBrowserDOMPort(ServerDOMPort):
     def __init__(self) -> None:
         super().__init__()
         self._html = FakeDOMNode("html")
+        self._html.__webcompy_document_root__ = True
         self._head = FakeDOMNode("head")
         self._body = FakeDOMNode("body")
         self._html.appendChild(self._head)
