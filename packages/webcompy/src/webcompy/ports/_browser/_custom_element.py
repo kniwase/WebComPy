@@ -4,7 +4,6 @@ import json
 from collections.abc import Callable
 from typing import Any
 
-from webcompy.components._libs import WebComPyComponentException
 from webcompy.exception import WebComPyException
 from webcompy.ports._browser._raw import browser as _raw_browser
 from webcompy.ports._custom_element import CustomElementBinding, CustomElementPort
@@ -71,6 +70,8 @@ class BrowserCustomElementPort(CustomElementPort):
             if marker == definition_key:
                 self._defined[name] = definition_key
                 return
+            from webcompy.components._libs import WebComPyComponentException
+
             raise WebComPyComponentException(f"Custom element '{name}' is already defined with incompatible metadata")
         observed_json = json.dumps(list(observed_attributes))
         key_json = json.dumps(definition_key)

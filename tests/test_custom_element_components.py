@@ -676,3 +676,68 @@ class TestComponentBindingLifecycle:
             card._mount_delivered = True
             result._instance._remove_element()
             assert fired == ["unmounted"]
+
+    def test_named_component_requires_port(self) -> None:
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore
+        from webcompy.di import DIScope
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with DIScope() as scope:
+            scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+            scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+            instance = Card(None)
+            with pytest.raises(WebComPyComponentException, match="port"):
+                instance._create_node()
+
+    def test_named_component_requires_host_port(self) -> None:
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore
+        from webcompy.di import DIScope
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+        from webcompy_testing import FakeCustomElementPort
+        from webcompy_testing._dom import FakeDOMNode
+
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with DIScope() as scope:
+            scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+            scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+            scope.provide(CUSTOM_ELEMENT_PORT_KEY, FakeCustomElementPort())
+            instance = Card(None)
+            with pytest.raises(WebComPyComponentException, match="Host port"):
+                instance._bind_custom_element(FakeDOMNode("my-card"))
+
+    def test_ensure_defined_conflict_propagates(self) -> None:
+        from webcompy.app._root_component import AppDocumentRoot
+        from webcompy.components._generator import ComponentStore
+        from webcompy.di import DIScope
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+        from webcompy_testing import FakeCustomElementPort
+
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        class _ConflictPort(FakeCustomElementPort):
+            def ensure_defined(self, name, observed_attributes, definition_key):
+                raise WebComPyComponentException(
+                    f"Custom element '{name}' is already defined with incompatible metadata"
+                )
+
+        store = ComponentStore()
+        store.add_component("Card", Card)
+        root = object.__new__(AppDocumentRoot)
+        with DIScope() as scope:
+            scope.provide(_COMPONENT_STORE_KEY, store)
+            scope.provide(CUSTOM_ELEMENT_PORT_KEY, _ConflictPort())
+            with pytest.raises(WebComPyComponentException, match="incompatible"):
+                root._ensure_custom_elements_defined()

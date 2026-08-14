@@ -118,6 +118,8 @@ class Component(ElementBase):
         self._error_captured_hooks: list[Callable[[Exception], Any]] = []
         self._observed_props: ReactiveDict[str, Any] | None = None
         self._custom_element_binding: Any = None
+        self._custom_element_port: Any = None
+        self._host_port: Any = None
         self._mount_delivered: bool = False
         self._flush_scheduled: bool = False
         self._destroyed: bool = False
@@ -472,13 +474,16 @@ class Component(ElementBase):
             from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
 
             port = inject(CUSTOM_ELEMENT_PORT_KEY, default=None)
-            if port is not None:
-                assert generator.definition_key is not None
-                port.ensure_defined(
-                    generator.custom_element_name,
-                    generator.observed_attributes,
-                    generator.definition_key,
+            if port is None:
+                raise WebComPyComponentException(
+                    f"Custom element port is not available for named component '{generator.custom_element_name}'"
                 )
+            assert generator.definition_key is not None
+            port.ensure_defined(
+                generator.custom_element_name,
+                generator.observed_attributes,
+                generator.definition_key,
+            )
         return super()._create_node()
 
     def _init_new_node(self, node: DOMNode) -> None:
@@ -494,14 +499,32 @@ class Component(ElementBase):
         if generator is None or generator.custom_element_name is None:
             return
         from webcompy.di import inject
-        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY, HOST_PORT_KEY
 
         port = inject(CUSTOM_ELEMENT_PORT_KEY, default=None)
         if port is None:
-            return
+            raise WebComPyComponentException(
+                f"Custom element port is not available for named component '{generator.custom_element_name}'"
+            )
+        self._custom_element_port = port
+        self._host_port = inject(HOST_PORT_KEY, default=None)
+        if self._host_port is None:
+            raise WebComPyComponentException(
+                f"Host port is not available for named component '{generator.custom_element_name}'"
+            )
         if self._custom_element_binding is not None:
             self._custom_element_binding.dispose()
             self._custom_element_binding = None
+        # Unlike _dispose_custom_element_binding (destroy paths), a re-bind of
+        # the same instance keeps _mount_delivered: the node may have stayed
+        # connected across the re-init, so a move must not re-fire on_mounted.
+        self._destroyed = False
+        assert generator.definition_key is not None
+        port.ensure_defined(
+            generator.custom_element_name,
+            generator.observed_attributes,
+            generator.definition_key,
+        )
         binding = port.bind(
             node,
             observed_attributes=generator.observed_attributes,
@@ -554,12 +577,10 @@ class Component(ElementBase):
         if self._destroyed or self._flush_scheduled:
             return
         self._flush_scheduled = True
-        from webcompy.di import inject
-        from webcompy.ports._keys import HOST_PORT_KEY
-
-        host_port = inject(HOST_PORT_KEY, default=None)
-        if host_port is not None:
-            host_port.schedule_macro_task(self._flush_connection_state)
+        host_port = self._host_port
+        if host_port is None:
+            raise WebComPyComponentException("Host port is not available for custom element connection scheduling")
+        host_port.schedule_macro_task(self._flush_connection_state)
 
     def _flush_connection_state(self) -> None:
         self._flush_scheduled = False
@@ -568,13 +589,8 @@ class Component(ElementBase):
         node = self._node_cache
         if node is None:
             return
-        from webcompy.di import inject
-        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
-
-        port = inject(CUSTOM_ELEMENT_PORT_KEY, default=None)
-        if port is None:
-            return
-        connected = port.is_document_connected(node)
+        port = self._custom_element_port
+        connected = port.is_document_connected(node) if port is not None else bool(getattr(node, "isConnected", False))
         if connected and not self._mount_delivered:
             self._mount_delivered = True
             self._invoke_hook("on_mounted")

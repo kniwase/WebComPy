@@ -91,6 +91,20 @@ def test_switch_adoption_keeps_new_binding_alive(page_on):
     expect(theme).to_have_text("light")
 
 
+def test_foreign_registry_conflict_surfaces_error(browser, server_url):
+    context = browser.new_context()
+    page = context.new_page()
+    page.add_init_script("customElements.define('e2e-card', class extends HTMLElement {});")
+    with page.expect_console_message(
+        lambda msg: msg.type == "error" and "incompatible metadata" in msg.text,
+        timeout=60_000,
+    ):
+        page.goto(f"{server_url}custom-elements")
+    expect(page.locator("#webcompy-loading")).to_be_visible()
+    expect(page.locator("[data-testid='mounted-total']")).to_have_text("0")
+    context.close()
+
+
 def test_host_style_and_reactive_host_style(page_on):
     page = page_on("/custom-elements")
     page.wait_for_function("() => getComputedStyle(document.querySelector('e2e-card')).display === 'block'")
