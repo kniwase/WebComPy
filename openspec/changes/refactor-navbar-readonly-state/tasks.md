@@ -9,7 +9,7 @@
 
 ## 2. Verification
 
-- [ ] 2.1 Run `uv run python -m webcompy generate` on docs_app and confirm the SSG output is unchanged in structure
-- [ ] 2.2 Run `uv run ruff check .` / `uv run ruff format --check` / `uv run pyright`
-- [ ] 2.3 Run `scripts/run-e2e-tests.sh docs-home` (dropdown open/close, navigation, mobile dropdown) and confirm all pass
-- [ ] 2.4 Manually verify with `webcompy inspect` (or browser) that dropdowns re-position on scroll/resize and that clicking outside closes them
+- [x] 2.1 Run `uv run python -m webcompy generate` on docs_app and confirm the SSG output is unchanged in structure
+- [x] 2.2 Run `uv run ruff check .` / `uv run ruff format --check` / `uv run pyright`
+- [x] 2.3 Run `scripts/run-e2e-tests.sh docs-home` (dropdown open/close, navigation, mobile dropdown) and confirm all pass
+- [x] 2.4 Manually verify with `webcompy inspect` (or browser) that dropdowns re-position on scroll/resize and that clicking outside closes them
