@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 
 import pytest
@@ -220,6 +221,21 @@ class TestUnnamedComponentRestrictions:
 
         with pytest.raises(WebComPyException, match="Root Node"):
             TestRenderer.render(Bad)
+
+    def test_invalid_named_children_rejected(self) -> None:
+        @define_component("my-card")
+        def Nested(context: ComponentContext[None]):
+            return [html.DIV({}, "a"), [html.SPAN({}, "b")]]
+
+        with pytest.raises(WebComPyComponentException, match="nested sequences"):
+            TestRenderer.render(Nested)
+
+        @define_component("my-card-2")
+        def NonRenderable(context: ComponentContext[None]):
+            return 42
+
+        with pytest.raises(WebComPyComponentException, match="nested sequences"):
+            TestRenderer.render(NonRenderable)
 
     def test_context_on_mounted_rejected(self) -> None:
         @define_component
@@ -524,6 +540,10 @@ class TestSSRSerialization:
             assert "</e2e-card>" in html_out
 
 
+async def _dummy_async_template():
+    return html.DIV({}, "resolved")
+
+
 class TestComponentBindingLifecycle:
     def test_unmounted_hook_fires_after_node_removed(self) -> None:
         @define_component("my-card")
@@ -542,6 +562,38 @@ class TestComponentBindingLifecycle:
             assert order == ["unmounted", "before_destroy"]
             assert node.parentNode is None
             assert instance._node_cache is None
+
+    def test_pending_async_remove_disposes_binding(self) -> None:
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            instance = result._instance
+            port = result._scope.inject(CUSTOM_ELEMENT_PORT_KEY)
+            assert port is not None
+            instance._pending_async_template = _dummy_async_template()
+            instance._remove_element()
+            assert port.disposed_bindings == 1
+            assert instance._destroyed is True
+
+    def test_pending_async_detach_disposes_binding(self) -> None:
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            instance = result._instance
+            port = result._scope.inject(CUSTOM_ELEMENT_PORT_KEY)
+            assert port is not None
+            instance._pending_async_template = _dummy_async_template()
+            instance._detach_from_node()
+            assert port.disposed_bindings == 1
+            assert instance._destroyed is True
 
     def test_bind_to_connected_node_fires_mount(self) -> None:
         from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
@@ -565,6 +617,94 @@ class TestComponentBindingLifecycle:
             adopted = Card(None)
             adopted._adopt_node(node)
             assert mounted == [1]
+
+    def test_flush_deferred_while_pending_async(self) -> None:
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+
+        @define_component("my-card")
+        async def AsyncCard(context: ComponentContext[None]):
+            await asyncio.sleep(0)
+
+            @on_mounted
+            def mounted_hook() -> None:
+                pass
+
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(AsyncCard) as result:
+            port = result._scope.inject(CUSTOM_ELEMENT_PORT_KEY)
+            assert port is not None
+            node = result._instance._node_cache
+            assert node is not None
+            port.connected = True
+            pending = AsyncCard(None)
+            assert pending._pending_async_template is not None
+            pending._adopt_node(node)
+            pending._flush_connection_state()
+            assert pending._mount_delivered is False
+
+    @pytest.mark.asyncio
+    async def test_async_named_component_hydration_round_trip(self) -> None:
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+        from webcompy_testing._dom import FakeDOMNode
+
+        mounted: list[str] = []
+
+        @define_component("my-card")
+        async def AsyncCard(context: ComponentContext[None]):
+            await asyncio.sleep(0)
+
+            @on_mounted
+            def mounted_hook() -> None:
+                mounted.append("mounted")
+
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(AsyncCard) as result:
+            port = result._scope.inject(CUSTOM_ELEMENT_PORT_KEY)
+            assert port is not None
+            pending = AsyncCard(None)
+            assert pending._pending_async_template is not None
+            parent_node = result._instance._parent._node
+            prerendered = FakeDOMNode("my-card")
+            prerendered.__webcompy_prerendered_node__ = True
+            parent_node.appendChild(prerendered)
+            pending._node_idx = 1
+            pending._parent = result._instance._parent
+            port.connected = True
+            assert pending._hydrate_node() is None
+            assert pending._node_cache is None
+            await pending._render()
+            assert pending._node_cache is prerendered
+            assert mounted == ["mounted"]
+
+    @pytest.mark.asyncio
+    async def test_hydrated_async_named_component_fires_mount_after_await(self) -> None:
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+
+        mounted: list[str] = []
+
+        @define_component("my-card")
+        async def AsyncCard(context: ComponentContext[None]):
+            await asyncio.sleep(0)
+
+            @on_mounted
+            def mounted_hook() -> None:
+                mounted.append("mounted")
+
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(AsyncCard) as result:
+            port = result._scope.inject(CUSTOM_ELEMENT_PORT_KEY)
+            assert port is not None
+            node = result._instance._node_cache
+            assert node is not None
+            port.connected = True
+            adopted = AsyncCard(None)
+            adopted._adopt_node(node)
+            await adopted._render()
+            assert mounted == ["mounted"]
+
     def test_adopt_preserves_wrapper_class(self) -> None:
         @define_component("my-card", observed_attributes=("theme-color",))
         def Card(context: ComponentContext[None]):
@@ -741,3 +881,82 @@ class TestComponentBindingLifecycle:
             scope.provide(CUSTOM_ELEMENT_PORT_KEY, _ConflictPort())
             with pytest.raises(WebComPyComponentException, match="incompatible"):
                 root._ensure_custom_elements_defined()
+
+    def test_async_named_component_renders_multi_root_wrapper(self) -> None:
+        @define_component("my-card")
+        async def AsyncCard(context: ComponentContext[None]):
+            await asyncio.sleep(0)
+            return [html.HEADER({}, "H"), html.MAIN({}, "M")]
+
+        with TestRenderer.render(AsyncCard) as result:
+            assert result._instance._node_count == 1
+            html_out = result.to_html()
+            assert "<my-card" in html_out
+            assert "<header" in html_out
+            assert "<main" in html_out
+
+    def test_async_unnamed_hook_rejection(self) -> None:
+        @define_component
+        async def Plain(context: ComponentContext[None]):
+            @on_mounted
+            def mounted() -> None:
+                pass
+
+            return html.DIV({}, "plain")
+
+        with pytest.raises(WebComPyComponentException, match="named"), TestRenderer.render(Plain):
+            pass
+
+    def test_async_unnamed_hook_rejection_removes_component(self) -> None:
+        captured: list[object] = []
+
+        @define_component
+        async def BadChild(context: ComponentContext[None]):
+            await asyncio.sleep(0)
+
+            @on_mounted
+            def mounted() -> None:
+                pass
+
+            return html.SPAN({}, "bad")
+
+        @define_component
+        def Root(context: ComponentContext[None]):
+            div = html.DIV({}, BadChild(None))
+            captured.append(div)
+            return div
+
+        with pytest.raises(WebComPyComponentException, match="named"), TestRenderer.render(Root):
+            pass
+        bad_child = captured[0]._children[0]
+        parent = bad_child._parent
+        assert bad_child not in parent._children
+
+    def test_unnamed_hook_rejection_disposes_setup(self) -> None:
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._generator import ComponentStore
+        from webcompy.di import DIScope
+        from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+        from webcompy.events import use_window_event
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY, HOST_PORT_KEY
+        from webcompy_testing import FakeBrowserHostPort, FakeCustomElementPort
+
+        @define_component
+        def Plain(context: ComponentContext[None]):
+            use_window_event("resize", 0)
+
+            @on_mounted
+            def mounted() -> None:
+                pass
+
+            return html.DIV({}, "plain")
+
+        host_port = FakeBrowserHostPort()
+        with DIScope() as scope:
+            scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+            scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+            scope.provide(HOST_PORT_KEY, host_port)
+            scope.provide(CUSTOM_ELEMENT_PORT_KEY, FakeCustomElementPort())
+            with pytest.raises(WebComPyComponentException, match="named"):
+                Plain(None)
+            assert all(len(listeners) == 0 for listeners in host_port._window_listeners.values())

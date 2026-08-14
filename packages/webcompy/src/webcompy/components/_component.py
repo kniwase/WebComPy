@@ -18,10 +18,11 @@ from webcompy.components._libs import (
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.typealias._html_tag_names import HtmlTags
+from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._element import Element, ElementBase
 from webcompy.exception import WebComPyException
 from webcompy.ports._dom import DOMNode
-from webcompy.signal import ReactiveDict, computed_property
+from webcompy.signal import ReactiveDict, SignalBase, computed_property
 from webcompy.signal._computed import _OwnedComputed
 
 if TYPE_CHECKING:
@@ -74,10 +75,18 @@ def _normalize_component_template(template: ComponentTemplateResult | None) -> l
     if template is None:
         return []
     if isinstance(template, list):
-        return template
-    if isinstance(template, tuple):
-        return list(template)
-    return [template]
+        normalized: list[ElementChildren] = template
+    elif isinstance(template, tuple):
+        normalized = list(template)
+    else:
+        normalized = [template]
+    for child in normalized:
+        if not isinstance(child, (ElementAbstract, SignalBase, str, type(None))):
+            raise WebComPyComponentException(
+                "Named component children must be elements, text, or signals; "
+                f"nested sequences are not allowed (got {type(child).__name__})"
+            )
+    return normalized
 
 
 class HeadPropsStore:
@@ -111,6 +120,8 @@ class Component(ElementBase):
         self._children = []
         self._head_props: HeadPropsStore | None = None
         self._generator = generator
+        if generator is not None and generator.custom_element_name is not None:
+            self._tag_name = cast("HtmlTags", generator.custom_element_name)
         self._pending_async_template: Coroutine[Any, Any, ComponentTemplateResult] | None = None
         self._pending_async_cleanup_done: bool = False
         self._async_results: list = []
@@ -203,6 +214,9 @@ class Component(ElementBase):
         if (hooks.get("on_mounted") or hooks.get("on_unmounted")) and (
             self._generator is None or self._generator.custom_element_name is None
         ):
+            user_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
+            self._render_state.framework_cleanup()
+            user_on_before_destroy()
             raise WebComPyComponentException(
                 "on_mounted/on_unmounted are only available for named custom-element components; "
                 "pass a custom element name to @define_component"
@@ -316,6 +330,17 @@ class Component(ElementBase):
         if (hooks.get("on_mounted") or hooks.get("on_unmounted")) and (
             self._generator is None or self._generator.custom_element_name is None
         ):
+            user_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
+            self._render_state.framework_cleanup()
+            user_on_before_destroy()
+            try:
+                parent = self._parent
+            except AttributeError:
+                parent = None
+            children = getattr(parent, "_children", None)
+            if children is not None and self in children:
+                children.remove(self)
+            self._dispose_custom_element_binding()
             raise WebComPyComponentException(
                 "on_mounted/on_unmounted are only available for named custom-element components; "
                 "pass a custom element name to @define_component"
@@ -360,6 +385,8 @@ class Component(ElementBase):
                 property["template"] = template
                 self._refresh_async_setup_results()
                 self._init_component(property)
+                if self._node_cache is not None and self._custom_element_binding is not None:
+                    self._schedule_connection_flush()
         if not self._async_setup_extracted and self._render_state is not None:
             self._refresh_async_setup_results()
         on_before = self._property["on_before_rendering"]
@@ -494,6 +521,11 @@ class Component(ElementBase):
         super()._adopt_node(node)
         self._bind_custom_element(node)
 
+    def _hydrate_node(self):
+        if self._pending_async_template is not None:
+            return None
+        return super()._hydrate_node()
+
     def _bind_custom_element(self, node: DOMNode) -> None:
         generator = self._generator
         if generator is None or generator.custom_element_name is None:
@@ -534,7 +566,7 @@ class Component(ElementBase):
         )
         self._custom_element_binding = binding
         self._sync_observed_attributes(node)
-        if port.is_document_connected(node):
+        if port.is_document_connected(node) and self._pending_async_template is None:
             self._schedule_connection_flush()
 
     def _dispose_custom_element_binding(self) -> None:
@@ -585,6 +617,8 @@ class Component(ElementBase):
     def _flush_connection_state(self) -> None:
         self._flush_scheduled = False
         if self._destroyed:
+            return
+        if self._pending_async_template is not None:
             return
         node = self._node_cache
         if node is None:
