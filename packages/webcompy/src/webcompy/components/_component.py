@@ -390,15 +390,30 @@ class Component(ElementBase):
     def _remove_element(self, recursive: bool = True, remove_node: bool = True):
         if self._pending_async_template is not None:
             self._cleanup_pending_async()
+            self._dispose_custom_element_binding()
             return
-        if self._mount_delivered:
-            self._mount_delivered = False
-            self._invoke_hook("on_unmounted")
         if self._head_props is not None:
             if self._instance_id in self._head_props.titles:
                 del self._head_props.titles[self._instance_id]
             if self._instance_id in self._head_props.head_metas:
                 del self._head_props.head_metas[self._instance_id]
+        node = self._node_cache
+        if remove_node and node is not None and self._mount_delivered:
+            node.remove()
+            early_removed = True
+        else:
+            early_removed = False
+        if self._mount_delivered:
+            port = self._custom_element_port
+            connected = False
+            if node is not None:
+                if port is not None:
+                    connected = port.is_document_connected(node)
+                else:
+                    connected = bool(getattr(node, "isConnected", False))
+            self._mount_delivered = False
+            if not connected:
+                self._invoke_hook("on_unmounted")
         try:
             self._property["on_before_destroy"]()
         except Exception as err:
@@ -406,18 +421,31 @@ class Component(ElementBase):
 
             route_error_deferred(self, err)
         self._error_captured_hooks.clear()
-        super()._remove_element(recursive, remove_node)
+        super()._remove_element(recursive, remove_node and not early_removed)
         self._dispose_custom_element_binding()
 
     def _detach_from_node(self) -> None:
         if self._pending_async_template is not None:
             self._cleanup_pending_async()
+            self._dispose_custom_element_binding()
             return
         if self._head_props is not None:
             if self._instance_id in self._head_props.titles:
                 del self._head_props.titles[self._instance_id]
             if self._instance_id in self._head_props.head_metas:
                 del self._head_props.head_metas[self._instance_id]
+        node = self._node_cache
+        if self._mount_delivered:
+            port = self._custom_element_port
+            connected = False
+            if node is not None:
+                if port is not None:
+                    connected = port.is_document_connected(node)
+                else:
+                    connected = bool(getattr(node, "isConnected", False))
+            self._mount_delivered = False
+            if not connected:
+                self._invoke_hook("on_unmounted")
         try:
             self._property["on_before_destroy"]()
         except Exception as err:
@@ -434,10 +462,8 @@ class Component(ElementBase):
     def _get_belonging_components(self) -> tuple[Component, ...]:
         return (*self._parent._get_belonging_components(), self)
 
-    def _get_preserved_attribute_names(self) -> set[str]:
-        if self._generator is not None:
-            return set(self._generator.observed_attributes)
-        return set()
+    def _preserves_all_node_attributes(self) -> bool:
+        return self._generator is not None and self._generator.custom_element_name is not None
 
     def _create_node(self) -> DOMNode:
         generator = self._generator
@@ -490,6 +516,7 @@ class Component(ElementBase):
 
     def _dispose_custom_element_binding(self) -> None:
         self._destroyed = True
+        self._mount_delivered = False
         binding = self._custom_element_binding
         self._custom_element_binding = None
         if binding is not None:

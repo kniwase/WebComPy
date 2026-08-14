@@ -35,15 +35,17 @@ def _bridge_class_source(observed_json: str, key_json: str) -> str:
 
 
 class _BrowserCustomElementBinding(CustomElementBinding):
-    def __init__(self, node: DOMNode, proxy: Any, ffi: Any) -> None:
+    def __init__(self, node: DOMNode, proxy: Any, ffi: Any, marker: Any) -> None:
         self._node = node
         self._proxy = proxy
         self._ffi = ffi
+        self._marker = marker
 
     def dispose(self) -> None:
         if hasattr(self._proxy, "destroy"):
             self._proxy.destroy()
-        setattr(self._node, _BINDING_PROPERTY, None)
+        if getattr(self._node, _BINDING_PROPERTY, None) == self._marker:
+            setattr(self._node, _BINDING_PROPERTY, None)
 
 
 class BrowserCustomElementPort(CustomElementPort):
@@ -99,8 +101,9 @@ class BrowserCustomElementPort(CustomElementPort):
                 on_attribute_changed(name, new_value)
 
         proxy = ffi.create_proxy(notify)
-        setattr(node, _BINDING_PROPERTY, {"notify": proxy})
-        return _BrowserCustomElementBinding(node, proxy, ffi)
+        binding_marker = ffi.to_js({"notify": proxy})
+        setattr(node, _BINDING_PROPERTY, binding_marker)
+        return _BrowserCustomElementBinding(node, proxy, ffi, binding_marker)
 
     def is_document_connected(self, node: DOMNode) -> bool:
         return bool(node.isConnected)

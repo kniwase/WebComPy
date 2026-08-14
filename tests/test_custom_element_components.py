@@ -357,14 +357,6 @@ class TestObservedAttributeProps:
         finally:
             ctx.dispose()
 
-    def test_preserved_attribute_names(self) -> None:
-        @define_component("e2e-card", observed_attributes=("theme-color",))
-        def Card(context: ComponentContext[None]):
-            return html.DIV({}, "card")
-
-        with TestRenderer.render(Card) as result:
-            assert result._instance._get_preserved_attribute_names() == {"theme-color"}
-
 
 class TestCustomElementPorts:
     def test_port_abc_not_instantiable(self) -> None:
@@ -530,3 +522,157 @@ class TestSSRSerialization:
             assert "<header" in html_out
             assert "<main" in html_out
             assert "</e2e-card>" in html_out
+
+
+class TestComponentBindingLifecycle:
+    def test_unmounted_hook_fires_after_node_removed(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            instance = result._instance
+            order: list[str] = []
+            instance._property["on_unmounted"] = lambda: order.append("unmounted")
+            instance._property["on_before_destroy"] = lambda: order.append("before_destroy")
+            instance._mount_delivered = True
+            node = instance._node_cache
+            assert node is not None
+            instance._remove_element()
+            assert order == ["unmounted", "before_destroy"]
+            assert node.parentNode is None
+            assert instance._node_cache is None
+
+    def test_bind_to_connected_node_fires_mount(self) -> None:
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+
+        mounted: list[int] = []
+
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            @on_mounted
+            def mounted_hook():
+                mounted.append(1)
+
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            port = result._scope.inject(CUSTOM_ELEMENT_PORT_KEY)
+            assert port is not None
+            node = result._instance._node_cache
+            assert node is not None
+            port.connected = True
+            adopted = Card(None)
+            adopted._adopt_node(node)
+            assert mounted == [1]
+    def test_adopt_preserves_wrapper_class(self) -> None:
+        @define_component("my-card", observed_attributes=("theme-color",))
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            node = result._instance._node_cache
+            assert node is not None
+            node.setAttribute("class", "compact")
+            adopted = Card(None)
+            adopted._adopt_node(node)
+            assert node.getAttribute("class") == "compact"
+
+    def test_adopt_preserves_non_framework_attributes(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            node = result._instance._node_cache
+            assert node is not None
+            node.setAttribute("aria-label", "card")
+            node.setAttribute("data-role", "summary")
+            adopted = Card(None)
+            adopted._adopt_node(node)
+            assert node.getAttribute("aria-label") == "card"
+            assert node.getAttribute("data-role") == "summary"
+
+    def test_adopt_strips_stale_framework_markers(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            node = result._instance._node_cache
+            assert node is not None
+            node.setAttribute("webcompy-cid-stale", "true")
+            node.setAttribute("aria-label", "card")
+            adopted = Card(None)
+            adopted._adopt_node(node)
+            assert node.getAttribute("webcompy-cid-stale") is None
+            assert node.getAttribute("aria-label") == "card"
+
+    def test_unmounted_suppressed_while_node_connected(self) -> None:
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            instance = result._instance
+            port = result._scope.inject(CUSTOM_ELEMENT_PORT_KEY)
+            assert port is not None
+            fired: list[str] = []
+            instance._property["on_unmounted"] = lambda: fired.append("unmounted")
+            instance._mount_delivered = True
+            port.connected = True
+            instance._remove_element(remove_node=False)
+            assert fired == []
+
+    def test_detached_instance_remove_fires_no_unmount(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            instance = result._instance
+            fired: list[str] = []
+            instance._property["on_unmounted"] = lambda: fired.append("unmounted")
+            instance._mount_delivered = True
+            instance._detach_from_node()
+            instance._remove_element()
+            assert fired == []
+
+    def test_detach_fires_unmount_when_node_disconnected(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            instance = result._instance
+            fired: list[str] = []
+            instance._property["on_unmounted"] = lambda: fired.append("unmounted")
+            instance._mount_delivered = True
+            node = instance._node_cache
+            assert node is not None
+            node.remove()
+            instance._detach_from_node()
+            assert fired == ["unmounted"]
+
+    def test_removing_container_subtree_fires_unmount(self) -> None:
+        captured: list[object] = []
+
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        @define_component
+        def Root(context: ComponentContext[None]):
+            card = Card(None)
+            captured.append(card)
+            return html.DIV({}, card)
+
+        with TestRenderer.render(Root) as result:
+            card = captured[0]
+            fired: list[str] = []
+            card._property["on_unmounted"] = lambda: fired.append("unmounted")
+            card._mount_delivered = True
+            result._instance._remove_element()
+            assert fired == ["unmounted"]

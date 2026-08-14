@@ -5,7 +5,7 @@ from webcompy.components import (
     on_unmounted,
     reactive_scoped_style,
 )
-from webcompy.elements import html, repeat
+from webcompy.elements import html, repeat, switch
 from webcompy.signal import use_computed, use_reactive_list, use_state
 
 
@@ -48,6 +48,20 @@ def CustomElementPage(context: ComponentContext[None]):
     def reverse_items(_):
         items.reverse()
 
+    adopt_on = use_state(lambda: True)
+
+    def toggle_adopt(_):
+        adopt_on.value = not adopt_on.value
+
+    def adopt_card():
+        return E2ECard(
+            {
+                "id": "adopt",
+                "mounted_total": mounted_total,
+                "unmounted_total": unmounted_total,
+            }
+        )
+
     return html.DIV(
         {"data-testid": "custom-element-page"},
         html.H2({}, "Custom Element Tests"),
@@ -68,6 +82,18 @@ def CustomElementPage(context: ComponentContext[None]):
                     }
                 ),
                 key=lambda item: item["id"],
+            ),
+        ),
+        html.H2({}, "Adoption Switch"),
+        html.BUTTON({"data-testid": "adopt-toggle-btn", "@click": toggle_adopt}, "Flip"),
+        html.DIV(
+            {"data-testid": "adopt-area"},
+            switch(
+                {
+                    "case": adopt_on,
+                    "generator": adopt_card,
+                },
+                default=adopt_card,
             ),
         ),
     )
