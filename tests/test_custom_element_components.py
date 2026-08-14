@@ -486,7 +486,20 @@ class TestHostSelectorScoping:
 
     @pytest.mark.parametrize(
         "selector",
-        [":host-context(.dark)", ":host(.a .b)", ":host()"],
+        [
+            ":host-context(.dark)",
+            ":host(.a .b)",
+            ":host()",
+            ":host(article)",
+            ":host(*.dark)",
+            ":host.foo",
+            ":host#id",
+            ":not(:host)",
+            ":is(.a, :host)",
+            ".card:host",
+            "div :host",
+            ".x :host:hover",
+        ],
     )
     def test_unsupported_host_forms_rejected(self, selector: str) -> None:
         @define_component("my-card")
@@ -495,6 +508,46 @@ class TestHostSelectorScoping:
 
         with pytest.raises(WebComPyException, match=":host"):
             Card.scoped_style = {selector: {"color": "red"}}
+
+    def test_host_like_pseudo_not_treated_as_host(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        Card.scoped_style = {":hostel": {"color": "red"}}
+        css = Card.scoped_style
+        assert ":hostel" in css
+        assert "my-card" not in css
+
+    def test_host_forms_rejected_in_nested_and_at_rule(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        Card.scoped_style = {".x": {":host-context(.dark)": {"color": "red"}}}
+        with pytest.raises(WebComPyException, match=":host"):
+            _ = Card.scoped_style
+
+        Card.scoped_style = {"@media (max-width: 768px)": {":host-context(.dark)": {"color": "red"}}}
+        with pytest.raises(WebComPyException, match=":host"):
+            _ = Card.scoped_style
+
+        Card.scoped_style = {".x": {":not(:host)": {"color": "red"}}}
+        with pytest.raises(WebComPyException, match=":host"):
+            _ = Card.scoped_style
+
+        Card.scoped_style = {"@media (max-width: 768px)": {":not(:host)": {"color": "red"}}}
+        with pytest.raises(WebComPyException, match=":host"):
+            _ = Card.scoped_style
+
+    def test_nested_host_key_rejected(self) -> None:
+        @define_component("my-card")
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        Card.scoped_style = {".x": {":host": {"color": "red"}}}
+        with pytest.raises(WebComPyException, match=":host"):
+            _ = Card.scoped_style
 
     def test_host_rejected_for_unnamed_component(self) -> None:
         @define_component

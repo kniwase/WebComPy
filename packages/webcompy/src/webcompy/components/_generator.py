@@ -17,8 +17,10 @@ from webcompy.components._css_utils import (
     _contains_top_level_ampersand,
     _insert_cid,
     _is_declaration_body_at_rule,
+    _is_host_syntax,
     _is_keyframes_rule,
     _raise_nesting_unsupported,
+    _reject_host_forms,
     _resolve_host_part,
     _scope_selector,
 )
@@ -130,8 +132,8 @@ def _render_at_rule_inner(style_dict: StyleDict, cid: str, host_tag: str | None 
             nested_parts = _render_at_rule_inner(cast("StyleDict", inner_styles), cid, host_tag)
             inner_parts.append(f"{stripped_inner} {{ {' '.join(nested_parts)} }}")
         elif _classify_nested_key(stripped_inner) == "pseudo":
-            if stripped_inner.startswith(":host"):
-                resolved = _resolve_host_part(stripped_inner, host_tag)
+            resolved = _resolve_host_part(stripped_inner, host_tag)
+            if _is_host_syntax(stripped_inner):
                 scoped = _insert_cid(resolved, cid)
             else:
                 scoped = f"*[webcompy-cid-{cid}]{stripped_inner}"
@@ -159,6 +161,7 @@ def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaratio
             inner_css = _generate_css_recursive(selector, cast("dict[str, StyleDeclaration]", nested_styles))
             result += f"{nested_selector} {{ {inner_css} }}"
         elif key_type == "pseudo":
+            _reject_host_forms(nested_selector)
             combined = f"{selector}{nested_selector}"
             result += _generate_css_recursive(combined, cast("dict[str, StyleDeclaration]", nested_styles))
         else:
