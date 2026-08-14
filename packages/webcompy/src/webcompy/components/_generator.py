@@ -245,7 +245,8 @@ class ComponentGenerator(Generic[PropsType]):
     def definition_key(self) -> str | None:
         if self._custom_element_name is None:
             return None
-        return f"webcompy-v1:{self._custom_element_name}:{','.join(self._observed_attributes)}"
+        ordered_attributes = ",".join(sorted(self._observed_attributes))
+        return f"webcompy-v1:{self._custom_element_name}:{ordered_attributes}"
 
     def _try_register(self) -> bool:
         from webcompy.di import inject
@@ -319,15 +320,36 @@ class ComponentGenerator(Generic[PropsType]):
 
 _CUSTOM_ELEMENT_NAME_RE = re_compile(r"^[a-z][a-z0-9._-]*$")
 
+_RESERVED_CUSTOM_ELEMENT_NAMES = frozenset(
+    {
+        "annotation-xml",
+        "color-profile",
+        "font-face",
+        "font-face-src",
+        "font-face-uri",
+        "font-face-format",
+        "font-face-name",
+        "missing-glyph",
+    }
+)
+
 
 def _validate_custom_element_name(name: str) -> None:
     if not isinstance(name, str) or "-" not in name or _CUSTOM_ELEMENT_NAME_RE.fullmatch(name) is None:
         raise WebComPyComponentException(
             f"Invalid custom element name: {name!r}. Custom element names must be lowercase and contain a hyphen."
         )
+    if name in _RESERVED_CUSTOM_ELEMENT_NAMES:
+        raise WebComPyComponentException(
+            f"Invalid custom element name: {name!r}. The name is reserved by the custom elements specification."
+        )
 
 
 def _normalize_observed_attributes(observed_attributes: Iterable[str]) -> tuple[str, ...]:
+    if isinstance(observed_attributes, str):
+        raise WebComPyComponentException(
+            "observed_attributes must be an iterable of attribute name strings, not a single string"
+        )
     seen: list[str] = []
     seen_set: set[str] = set()
     for raw in observed_attributes:
@@ -383,6 +405,10 @@ def define_component(
     observed_attributes: Iterable[str] = (),
 ) -> ComponentGenerator[PropsType] | Callable[[FuncComponentDef[PropsType]], ComponentGenerator[PropsType]]:
     if callable(setup):
+        if observed_attributes:
+            raise WebComPyComponentException(
+                "observed_attributes requires a named custom element; pass a custom element name to @define_component"
+            )
         return _create_generator(setup, None, ())
     _validate_custom_element_name(setup)
     normalized = _normalize_observed_attributes(observed_attributes)

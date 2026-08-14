@@ -33,6 +33,13 @@ class TestDefineComponentValidation:
 
         assert Plain.custom_element_name is None
 
+    def test_bare_decorator_rejects_observed_attributes(self) -> None:
+        def Plain(context: ComponentContext[None]):
+            return html.DIV({}, "plain")
+
+        with pytest.raises(WebComPyComponentException, match="observed_attributes"):
+            define_component(Plain, observed_attributes=("theme-color",))  # type: ignore[call-overload]
+
     def test_named_decorator_stores_name(self) -> None:
         @define_component("my-card")
         def Card(context: ComponentContext[None]):
@@ -42,7 +49,18 @@ class TestDefineComponentValidation:
 
     @pytest.mark.parametrize(
         "name",
-        ["nocard", "My-Card", "my-card!", "my card", "", "my_card"],
+        [
+            "nocard",
+            "My-Card",
+            "my-card!",
+            "my card",
+            "",
+            "my_card",
+            "font-face",
+            "annotation-xml",
+            "color-profile",
+            "missing-glyph",
+        ],
     )
     def test_invalid_custom_element_name_rejected(self, name: str) -> None:
         with pytest.raises(WebComPyComponentException):
@@ -59,6 +77,10 @@ class TestDefineComponentValidation:
     def test_duplicate_observed_attribute_rejected(self) -> None:
         with pytest.raises(WebComPyComponentException, match="Duplicate"):
             define_component("my-card", observed_attributes=("theme", "theme"))
+
+    def test_string_observed_attributes_rejected(self) -> None:
+        with pytest.raises(WebComPyComponentException, match="not a single string"):
+            define_component("my-card", observed_attributes="theme")
 
     def test_reserved_framework_attribute_rejected(self) -> None:
         with pytest.raises(WebComPyComponentException, match="Framework attribute"):
@@ -82,6 +104,17 @@ class TestDefineComponentValidation:
             return html.DIV({}, "plain")
 
         assert Plain.definition_key is None
+
+    def test_definition_key_order_independent(self) -> None:
+        @define_component("my-card", observed_attributes=("theme-color", "size"))
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        @define_component("my-card", observed_attributes=("size", "theme-color"))
+        def CardReordered(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        assert Card.definition_key == CardReordered.definition_key
 
     def test_generator_is_callable(self) -> None:
         @define_component("my-card")
@@ -353,6 +386,59 @@ class TestObservedAttributeProps:
 
         with TestRenderer.render(Card) as result:
             assert result._instance._observed_props is not None
+
+    def test_caller_observed_value_preserved_when_attribute_absent(self) -> None:
+        @define_component("my-card", observed_attributes=("theme-color",))
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            node = result._instance._node_cache
+            assert node is not None
+            adopted = Card({"theme_color": "dark"})
+            adopted._adopt_node(node)
+            assert adopted._observed_props is not None
+            assert adopted._observed_props.value["theme_color"] == "dark"
+
+    def test_dom_attribute_wins_at_bind(self) -> None:
+        @define_component("my-card", observed_attributes=("theme-color",))
+        def Card(context: ComponentContext[None]):
+            return html.DIV({}, "card")
+
+        with TestRenderer.render(Card) as result:
+            node = result._instance._node_cache
+            assert node is not None
+            node.setAttribute("theme-color", "light")
+            adopted = Card({"theme_color": "dark"})
+            adopted._adopt_node(node)
+            assert adopted._observed_props is not None
+            assert adopted._observed_props.value["theme_color"] == "light"
+
+    def test_caller_reactive_dict_not_mutated(self) -> None:
+        from webcompy.signal import ReactiveDict
+        from webcompy_testing import create_test_app
+
+        @define_component("e2e-card", observed_attributes=("theme-color",))
+        def Card(context: ComponentContext[None]):
+            return html.SPAN({}, str(context.props["label"]))
+
+        @define_component
+        def Root(context: ComponentContext[None]):
+            return html.DIV({}, "root")
+
+        caller_props = ReactiveDict({"label": "hello"})
+        app = create_test_app(root_component=Root)
+        ctx = app.create_render_context("/")
+        try:
+            with ctx.di_scope:
+                instance = Card(caller_props)
+            assert instance._observed_props is not None
+            assert instance._observed_props is not caller_props
+            assert instance._observed_props.value["label"] == "hello"
+            assert instance._observed_props.value["theme_color"] is None
+            assert caller_props.value == {"label": "hello"}
+        finally:
+            ctx.dispose()
 
     def test_non_mapping_props_rejected(self) -> None:
         from webcompy_testing import create_test_app

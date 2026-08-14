@@ -244,7 +244,7 @@ class Component(ElementBase):
         if props is None:
             props_for_context: ReactiveDict[str, Any] = ReactiveDict({})
         elif isinstance(props, ReactiveDict):
-            props_for_context = props
+            props_for_context = ReactiveDict(dict(props.value))
         elif isinstance(props, Mapping):
             props_for_context = ReactiveDict(dict(props))
         else:
@@ -586,7 +586,9 @@ class Component(ElementBase):
         ffi = inject(FFI_PORT_KEY, default=None)
         for attr_name, prop_key in self._generator.observed_prop_keys.items():
             raw = node.getAttribute(attr_name)
-            value: str | None = None if raw is None or (ffi is not None and ffi.is_none(raw)) else str(raw)
+            if raw is None or (ffi is not None and ffi.is_none(raw)):
+                continue
+            value = str(raw)
             if self._observed_props.value.get(prop_key) != value:
                 self._observed_props[prop_key] = value
 
