@@ -3,9 +3,10 @@ from typing import Any, TypedDict
 from webcompy.components import ComponentContext, define_component, on_before_destroy
 from webcompy.di import InjectionError, inject
 from webcompy.elements import Teleport, html
-from webcompy.ports._keys import DOM_PORT_KEY, HOST_PORT_KEY
+from webcompy.events import use_document_event, use_window_event
+from webcompy.ports._keys import DOM_PORT_KEY
 from webcompy.router import RouterLink
-from webcompy.signal import Signal, use_computed, use_state
+from webcompy.signal import Signal, use_computed, use_readonly_signal, use_state
 
 from .theme_toggle import ThemeToggle
 
@@ -27,18 +28,13 @@ class Page(_PageRequired, total=False):
 @define_component
 def Navbar(context: ComponentContext[list[Page]]):
     _open_states: dict[int, Signal[bool]] = {}
-    _menu_positions: dict[int, Signal[tuple[float, float]]] = {}
+    positions, update_positions = use_readonly_signal({})
     _mobile_open = use_state(lambda: False)
 
     def _get_state(idx: int) -> Signal[bool]:
         if idx not in _open_states:
             _open_states[idx] = Signal(False)
         return _open_states[idx]
-
-    def _get_position(idx: int) -> Signal[tuple[float, float]]:
-        if idx not in _menu_positions:
-            _menu_positions[idx] = Signal((0.0, 0.0))
-        return _menu_positions[idx]
 
     def _toggle(idx: int, ev: Any):
         if hasattr(ev, "stopPropagation"):
@@ -49,24 +45,25 @@ def Navbar(context: ComponentContext[list[Page]]):
         state = _get_state(idx)
         state.value = not state.value
         if state.value and dom:
-            toggle_el = dom.get_element_by_id(f"navbar-dropdown-{idx}-toggle")
-            if toggle_el is not None:
-                rect = toggle_el.getBoundingClientRect()
-                _get_position(idx).value = (float(rect.bottom), float(rect.right))
+            update_positions(_measure_open_menus())
 
-    def _measure_open_menus():
+    def _measure_open_menus() -> dict[int, tuple[float, float]]:
         if not dom:
-            return
+            return {}
+        snap: dict[int, tuple[float, float]] = {}
         for idx, state in _open_states.items():
             if not state.value:
                 continue
             toggle_el = dom.get_element_by_id(f"navbar-dropdown-{idx}-toggle")
             if toggle_el is not None:
                 rect = toggle_el.getBoundingClientRect()
-                _get_position(idx).value = (float(rect.bottom), float(rect.right))
+                snap[idx] = (float(rect.bottom), float(rect.right))
+        return snap
 
-    def _on_scroll(_ev):
-        _measure_open_menus()
+    def _measure(_ev: Any) -> dict[int, tuple[float, float]]:
+        snap = _measure_open_menus()
+        update_positions(snap)
+        return snap
 
     def _close_all():
         for state in _open_states.values():
@@ -91,20 +88,13 @@ def Navbar(context: ComponentContext[list[Page]]):
 
     if dom:
         _remove_click = dom.add_document_event_listener("click", _on_click_outside)
-        _remove_scroll = dom.add_document_event_listener("scroll", _on_scroll)
-        _remove_resize = None
-        try:
-            host = inject(HOST_PORT_KEY)
-            _remove_resize = host.add_window_event_listener("resize", _on_scroll)
-        except InjectionError:
-            pass
 
         @on_before_destroy
         def _cleanup():
             _remove_click()
-            _remove_scroll()
-            if _remove_resize is not None:
-                _remove_resize()
+
+    _, _ = use_document_event("scroll", {}, transform=_measure)
+    _, _ = use_window_event("resize", {}, transform=_measure)
 
     def _generate_navitem(page: Page, idx: int):
         if "children" in page:
@@ -158,8 +148,8 @@ def Navbar(context: ComponentContext[list[Page]]):
                             "style": use_computed(
                                 lambda idx=idx: (
                                     f"display: {'block' if _is_open(idx) else 'none'}; "
-                                    f"--nav-dropdown-top: {_get_position(idx).value[0]}px; "
-                                    f"--nav-dropdown-right: {_get_position(idx).value[1]}px;"
+                                    f"--nav-dropdown-top: {positions.value.get(idx, (0.0, 0.0))[0]}px; "
+                                    f"--nav-dropdown-right: {positions.value.get(idx, (0.0, 0.0))[1]}px;"
                                 )
                             ),
                         },
