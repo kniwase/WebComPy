@@ -55,7 +55,7 @@ The named wrapper does not inherit attributes, event handlers, refs, or `:preser
 
 Custom-element registration and per-node binding SHALL be owned by a dedicated `CustomElementPort` ABC in `webcompy.ports`, following the port-abstraction rule that each browser API surface gets its own port. The browser implementation creates a small JavaScript `HTMLElement` subclass for each named element, with `connectedCallback`, `disconnectedCallback`, and the declared `observedAttributes`. The bridge is created through the existing PyScript/FFI facilities; it does not add an npm or Python dependency.
 
-Each WebComPy node receives a bridge binding after creation or hydration adoption. The binding retains the required FFI proxies, forwards lifecycle and attribute reactions to Python, and releases them when the component binding is destroyed. The bridge queues reactions that occur before binding, which is required when SSR markup is upgraded before the component tree is hydrated.
+Each WebComPy node receives a bridge binding after creation or hydration adoption. The binding retains the required FFI proxies, forwards lifecycle and attribute reactions to Python, and releases them when the component binding is destroyed. Reactions that arrive before binding are dropped; the binding instead synchronizes the node's current connection state and observed attribute values at bind time, which covers the case where SSR markup is upgraded before the component tree is hydrated.
 
 The page-level `customElements` registry is not mirrored by a new Python global. Component generators and app stores retain registration metadata; the browser registry remains the source of truth for whether a tag is defined.
 
@@ -65,7 +65,7 @@ If a tag is already defined, the bridge reuses it only when its WebComPy marker 
 
 ### 4. Coalesce native lifecycle reactions by document connection
 
-Native custom-element callbacks can be triggered by DOM moves made during reconciliation. The bridge therefore coalesces connected and disconnected reactions in a microtask and checks the element's final `isConnected` state before invoking Python hooks.
+Native custom-element callbacks can be triggered by DOM moves made during reconciliation. The binding therefore coalesces connected and disconnected reactions into a scheduled flush that checks the element's final `isConnected` state before invoking Python hooks.
 
 For a bound component instance, a transition to document-connected invokes `on_mounted` once, and a transition to document-disconnected invokes `on_unmounted` once. A move that disconnects and reconnects the same element before the coalescing point produces neither hook. Binding an already-connected SSR node counts as connected for the newly hydrated component instance, even if no native callback occurs after binding.
 
@@ -109,7 +109,7 @@ Tests will cover decorator validation and metadata, one-node wrapper behavior, m
 
 - **[Pyodide cannot construct the required JavaScript subclass through the first attempted FFI path]** → Start with a minimal browser spike that defines one class, upgrades one existing node, and forwards one callback. Keep the bridge behind a port so the construction mechanism can change without changing component code.
 - **[Custom-element names are page-global while component stores are app-local]** → Reuse only compatible WebComPy definitions and reject incompatible definitions. Document that applications sharing a document must coordinate names.
-- **[Native callbacks arrive before Python hydration binding]** → Queue current connection state and latest observed attribute values in the bridge, then synchronize them during node binding.
+- **[Native callbacks arrive before Python hydration binding]** → Drop pre-binding reactions and synchronize the node's current connection state and observed attribute values during node binding.
 - **[DOM moves cause noisy connected/disconnected callbacks]** → Coalesce reactions in a microtask and inspect final `isConnected` state.
 - **[Attribute strings may not match the type expected by application props]** → Define string/`None` semantics explicitly and leave typed deserialization out of scope.
 - **[A custom-element wrapper changes layout because custom elements are inline by default]** → Document that applications may set display behavior through normal CSS, including the new `:host` selector; do not impose a framework default.

@@ -68,6 +68,10 @@ def LiveBadge(context: ComponentContext[None]):
 
 `on_mounted` fires when the wrapper becomes connected to the document; `on_unmounted` fires when it becomes disconnected. Hooks are coalesced: moving an element within the same document (for example, a keyed `repeat` reorder) fires neither hook. These hooks are only available in named components; using them in an unnamed component raises an error.
 
+In the browser, connection hooks are delivered in a scheduled task after the current render completes, so a hook that reads the wrapper's subtree sees the fully rendered content. When testing with `webcompy_testing.TestRenderer`, the fake DOM does not fire native connect reactions and the fake host port executes scheduled tasks immediately: hooks fire only for binds or adoptions of an already-connected node, and a fresh render never delivers `on_mounted`. Write unit tests that do not depend on hook delivery and cover hook behavior with E2E tests.
+
+When a named component is removed, its wrapper is detached from the document before `on_unmounted` runs, and `on_unmounted` runs before `on_before_destroy`, so the hook observes live component state at the moment of disconnection. Because the wrapper is already detached, an `on_before_destroy` hook of a named component sees the node after removal.
+
 ## Observed attributes
 
 Declare `observed_attributes` to receive attribute changes as reactive props:
@@ -88,7 +92,7 @@ Attributes are exposed under snake-case prop keys (`theme-color` → `theme_colo
 document.querySelector("user-card").setAttribute("theme-color", "dark");
 ```
 
-The direction is one-way: the framework never writes prop values back to attributes. Caller-supplied props for keys that are not observed are preserved.
+The direction is one-way: the framework never writes prop values back to attributes. Caller-supplied props for keys that are not observed are preserved. With `observed_attributes`, `context.props` is a snapshot copied from the caller mapping, so later mutations of the original mapping do not propagate into the component; update the component's own reactive values instead.
 
 ## Styling the wrapper with :host
 
