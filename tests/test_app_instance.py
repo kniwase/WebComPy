@@ -178,6 +178,89 @@ class TestPerAppComponentStore:
         ctx2.dispose()
 
 
+class TestDeferredComponentRegistration:
+    def test_import_time_component_registers_into_first_app_only(self):
+        from webcompy.elements import html
+
+        @define_component("deferred-page")
+        def DeferredPage(context):
+            return html.DIV({}, "deferred")
+
+        app1 = WebComPyApp(root_component=DeferredPage, config=WebComPyAppConfig())
+        configure_server_context(app1)
+        ctx1 = app1.create_render_context()
+        assert "DeferredPage" in ctx1._component_store.components
+        ctx1.dispose()
+
+        app2 = WebComPyApp(root_component=DeferredPage, config=WebComPyAppConfig())
+        configure_server_context(app2)
+        ctx2 = app2.create_render_context()
+        assert "DeferredPage" not in ctx2._component_store.components
+        ctx2.dispose()
+
+    def test_same_app_later_contexts_receive_import_time_components(self):
+        from webcompy.elements import html
+
+        @define_component("deferred-page")
+        def DeferredPage(context):
+            return html.DIV({}, "deferred")
+
+        app = WebComPyApp(root_component=DeferredPage, config=WebComPyAppConfig())
+        configure_server_context(app)
+        ctx1 = app.create_render_context()
+        assert "DeferredPage" in ctx1._component_store.components
+        ctx1.dispose()
+
+        ctx2 = app.create_render_context()
+        assert "DeferredPage" in ctx2._component_store.components
+        ctx2.dispose()
+
+    def test_registered_flag_set_after_registration(self):
+        from webcompy.elements import html
+
+        @define_component("deferred-page")
+        def DeferredPage(context):
+            return html.DIV({}, "deferred")
+
+        assert DeferredPage._registered is False
+        app = WebComPyApp(root_component=DeferredPage, config=WebComPyAppConfig())
+        configure_server_context(app)
+        ctx = app.create_render_context()
+        assert DeferredPage._registered is True
+        ctx.dispose()
+
+    def test_manual_scope_registration_preserves_app_record(self):
+        from webcompy.components._generator import ComponentStore
+        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.di._scope import DIScope, _active_di_scope
+        from webcompy.elements import html
+
+        @define_component("deferred-page")
+        def DeferredPage(context):
+            return html.DIV({}, "deferred")
+
+        app1 = WebComPyApp(root_component=DeferredPage, config=WebComPyAppConfig())
+        configure_server_context(app1)
+        ctx1 = app1.create_render_context()
+        assert "DeferredPage" in ctx1._component_store.components
+        ctx1.dispose()
+
+        manual_scope = DIScope()
+        manual_scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
+        token = _active_di_scope.set(manual_scope)
+        try:
+            assert DeferredPage._try_register() is True
+            assert DeferredPage._registered_app is app1
+        finally:
+            _active_di_scope.reset(token)
+
+        app2 = WebComPyApp(root_component=DeferredPage, config=WebComPyAppConfig())
+        configure_server_context(app2)
+        ctx2 = app2.create_render_context()
+        assert "DeferredPage" not in ctx2._component_store.components
+        ctx2.dispose()
+
+
 class TestHtmlAttrs:
     def test_set_html_attr_returns_method(self):
         app = _make_app()

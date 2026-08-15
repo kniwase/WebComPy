@@ -11,6 +11,21 @@ if TYPE_CHECKING:
     from webcompy.components._component import HeadPropsStore
     from webcompy.signal._base import CallbackConsumerNode
 
+_WEBCOMPY_COMPONENT_DEFAULT_ID = "webcompy-component-defaults"
+_WEBCOMPY_COMPONENT_DEFAULT_CSS = "@layer components { [webcompy-component] { display: contents; } }"
+
+
+def _first_component_style_index(head_el: DOMNode) -> int:
+    for i in range(head_el.childNodes.length):
+        child = head_el.childNodes[i]
+        if child.nodeName != "STYLE":
+            continue
+        attr = child.getAttribute("data-webcompy-cid")
+        attr_rx = child.getAttribute("data-webcompy-cid-rx")
+        if attr is not None or attr_rx is not None:
+            return i
+    return -1
+
 
 def _resolve_content(content: str | Computed[str]) -> str:
     if isinstance(content, Computed):
@@ -151,6 +166,16 @@ class HeadElement(ElementWithChildren):
             style_el.setAttribute("id", "webcompy-scoped-styles")
             style_el.textContent = "*[hidden]{display: none;}"
             head_el.appendChild(style_el)
+
+        if not _dom.get_element_by_id(_WEBCOMPY_COMPONENT_DEFAULT_ID):
+            default_el = _dom.create_element("style")
+            default_el.setAttribute("id", _WEBCOMPY_COMPONENT_DEFAULT_ID)
+            default_el.textContent = _WEBCOMPY_COMPONENT_DEFAULT_CSS
+            ref_index = _first_component_style_index(head_el)
+            if ref_index < 0:
+                head_el.appendChild(default_el)
+            else:
+                head_el.insertBefore(default_el, head_el.childNodes[ref_index])
 
         store = inject(_COMPONENT_STORE_KEY)
         for gen in store.components.values():
@@ -334,6 +359,11 @@ class HeadElement(ElementWithChildren):
 
         port = inject(DOM_PORT_KEY)
         parts: list[str] = []
+
+        default_el = port.create_element("style")
+        default_el.setAttribute("id", _WEBCOMPY_COMPONENT_DEFAULT_ID)
+        default_el.textContent = _WEBCOMPY_COMPONENT_DEFAULT_CSS
+        parts.append(port.render_html(default_el))
 
         store = inject(_COMPONENT_STORE_KEY)
         for _name in sorted(store.components.keys()):

@@ -15,6 +15,7 @@ from webcompy.components._generator import (
     _register_deferred_components,
 )
 from webcompy.di._keys import (
+    _APP_KEY,
     _COMPONENT_STORE_KEY,
     _TELEPORT_REGISTRY_KEY,
     RPC_REGISTRY_KEY,
@@ -58,6 +59,7 @@ class RenderContext(ABC):
 
         self._di_scope = DIScope()
         self._component_store = ComponentStore()
+        self._di_scope.provide(_APP_KEY, app)
         self._di_scope.provide(_COMPONENT_STORE_KEY, self._component_store)
         self._di_scope.provide(RPC_REGISTRY_KEY, app._rpc_registry)
         self._di_scope.provide(_TELEPORT_REGISTRY_KEY, _TeleportTargetRegistry())

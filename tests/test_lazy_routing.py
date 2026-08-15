@@ -98,6 +98,32 @@ class TestLazyComponentGenerator:
         finally:
             scope.__exit__(None, None, None)
 
+    def test_display_resolves_lazily_like_custom_element_name(self):
+        scope = DIScope()
+        store = ComponentStore()
+        scope.provide(_COMPONENT_STORE_KEY, store)
+        scope.__enter__()
+
+        try:
+
+            @define_component("display-comp", display="block")
+            def DisplayComp(ctx):
+                return html.DIV({})
+
+            comp = DisplayComp
+            fake_module = types.ModuleType("display_module")
+            fake_module.DisplayComp = comp
+            sys.modules["display_module"] = fake_module
+
+            gen = LazyComponentGenerator("display_module:DisplayComp", __file__)
+            assert gen._resolved is None
+            assert gen.display == "block"
+            assert gen._resolved is comp
+            assert gen.custom_element_name == "display-comp"
+        finally:
+            del sys.modules["display_module"]
+            scope.__exit__(None, None, None)
+
     def test_resolve_non_component_generator_raises(self):
         scope = DIScope()
         scope.__enter__()

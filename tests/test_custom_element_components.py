@@ -141,6 +141,39 @@ class TestNamingConsistency:
             def _TestRoot(context: ComponentContext[None]):
                 return html.DIV({}, "card")
 
+    def test_roundtrip_rename_suggestion_offered(self) -> None:
+        with pytest.raises(WebComPyComponentException) as exc_info:
+
+            @define_component("other-widget")
+            def MyWidget(context: ComponentContext[None]):
+                return html.DIV({}, "card")
+
+        message = str(exc_info.value)
+        assert "Rename the function to 'OtherWidget'" in message
+        assert 'use @define_component("my-widget")' in message
+
+    def test_single_word_mismatch_offers_rename_only(self) -> None:
+        with pytest.raises(WebComPyComponentException) as exc_info:
+
+            @define_component("user-card")
+            def Card(context: ComponentContext[None]):
+                return html.DIV({}, "card")
+
+        message = str(exc_info.value)
+        assert "Rename the function to 'UserCard'" in message
+        assert "use @define_component" not in message
+
+    def test_acronym_mismatch_offers_rename_only(self) -> None:
+        with pytest.raises(WebComPyComponentException) as exc_info:
+
+            @define_component("my-http-client")
+            def MyHTTPClient(context: ComponentContext[None]):
+                return html.DIV({}, "card")
+
+        message = str(exc_info.value)
+        assert "Rename the function to 'MyHttpClient'" in message
+        assert "use @define_component" not in message
+
 
 class TestDisplayArgument:
     def test_display_stored_on_generator(self) -> None:
@@ -193,6 +226,16 @@ class TestDisplayArgument:
     def test_invalid_display_value_rejected(self, value: str) -> None:
         with pytest.raises(WebComPyComponentException, match="Invalid display"):
             define_component("user-card", display=value)  # type: ignore[arg-type]
+
+    def test_invalid_display_value_lists_values_in_declared_order(self) -> None:
+        with pytest.raises(WebComPyComponentException) as exc_info:
+            define_component("user-card", display="bolck")  # type: ignore[arg-type]
+        expected = "contents, block, inline, inline-block, flex, inline-flex, grid, inline-grid, flow-root"
+        assert expected in str(exc_info.value)
+
+    def test_unhashable_display_value_rejected(self) -> None:
+        with pytest.raises(WebComPyComponentException, match="Invalid display"):
+            define_component("user-card", display=[])  # type: ignore[arg-type]
 
     @pytest.mark.parametrize(
         "value",
