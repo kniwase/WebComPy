@@ -57,9 +57,28 @@ This is equivalent to requiring `name == pascal_to_kebab(func.__name__)` AND tha
 
 Add a secondary check in `ComponentStore.add_component` (or at generator registration): a distinct generator whose `custom_element_name` is already claimed by a different generator in the same app raises `WebComPyComponentException`. Rationale: enforced conversion makes `MyHTTPRequest` and `MyHttpRequest` map to the same kebab name while occupying distinct store keys; without this check they would silently share a browser definition via the compatible-reuse path.
 
+### D3b: Deferred registration is per-app (one-time flag enforcement)
+
+The components spec documents `ComponentGenerator.__registered` as a one-time flag: "import-time components will only register into the first app's store." The implementation never sets `_registered`, so import-time components of one app leak into every later app's store in the same process. Enforce the documented semantics with an owning-app record:
+
+- `RenderContext.__init__` provides the app instance via a new `_APP_KEY` DI key alongside `_COMPONENT_STORE_KEY`.
+- `ComponentGenerator._try_register()` records `_registered_app` on first successful registration and sets `_registered`. A later context whose app differs skips the import-time generator entirely.
+- Later contexts of the SAME app re-register into their fresh per-context store — required because SSR requests and SSG routes each create a new `ComponentStore` and need the full component set.
+- Manual DI scopes without `_APP_KEY` (test helpers such as `TestRenderer`) keep the previous always-register behavior, so unit tests are unaffected.
+- `LazyComponentGenerator` mirrors `_registered_app` in `_resolve()` so lazy route components behave identically.
+
+*Alternative considered*: global one-time registration with deferred-list pruning — rejected because it would starve later render contexts of the same app (SSG route N+1 would lose scoped styles and template-tag resolution).
+
 ### D4: Framework default `display: contents` on wrappers
 
 Inject `[webcompy-component] { display: contents; }` in the earliest practical layer (alongside the framework-level `components` layer rules / the existing `<style id="webcompy-scoped-styles">` mechanism), in both SSR and runtime injection paths. The `webcompy-component` attribute is emitted on every component wrapper, so one attribute selector covers all components without enumerating tag names.
+
+**Implementation decision (resolves the open question below):** the rule lives in a dedicated `<style id="webcompy-component-defaults">` element containing `@layer components { [webcompy-component] { display: contents; } }`, emitted exactly once per document:
+- SSR/SSG: prepended to `HeadElement.get_scoped_styles_html()` output, which `webcompy_server/_html.py` inserts *after* the `index.css` link, so the layer-order declaration is the first occurrence of the `components` layer name.
+- Browser runtime: created idempotently by `HeadElement._render()` alongside the existing `webcompy-scoped-styles` element, so manual PyScript pages that do not link the framework UI stylesheet still get the rule.
+- `components.css` does NOT carry the rule (avoids double emission on pages that link `index.css`).
+
+**Runtime ordering resolution (round-2 review):** `_inject_scoped_style_if_new()` injects cid (`@layer webcompy-scope`) style elements into `<head>` at registration time, i.e. before the first `HeadElement._render()` creates the defaults element. On pages that do NOT link `index.css` (manual PyScript pages, docs demo iframes), cascade-layer priority is fixed by the document-order first occurrence of each layer name, so the framework default would otherwise be declared after `webcompy-scope` and outrank author `:host`/`display` rules. `HeadElement._render()` therefore inserts the defaults element before every existing `style[data-webcompy-cid]`/`style[data-webcompy-cid-rx]` element (appending only when none are present), restoring the `components < webcompy-scope` ordering at runtime. Pages that link `index.css` are unaffected because the fixed `@layer` order statement governs there.
 
 Rationale for `contents` over `block`: `contents` is the only default that does not silently damage authors who did nothing unusual. `block` breaks inline components used in text flow (`<p>…<inline-code>…</p>` splits the paragraph) and changes flex/grid item identity (the wrapper, not the template root, becomes the item) and percentage-size resolution. The `contents` failure modes (`:host` background not painting, transitions not running) only affect authors who opted into wrapper-visible behavior, and both are recoverable: the former is documented, the latter gets a runtime warning (D7). Historical `display: contents` accessibility-tree bugs are fixed in modern browsers.
 
@@ -129,5 +148,5 @@ Rollback: revert the change; no data or persisted-state migration is involved (S
 
 ## Open Questions
 
-- Exact home for the framework default rule (`components.css` vs the `webcompy-scoped-styles` style element) — decide at implementation; both satisfy the layering requirement.
+- ~~Exact home for the framework default rule (`components.css` vs the `webcompy-scoped-styles` style element) — decide at implementation; both satisfy the layering requirement.~~ Resolved in D4: a dedicated `webcompy-component-defaults` style element emitted with the scoped-styles output and at runtime; `components.css` does not carry the rule.
 - Whether `display` kwarg rules should also be emitted for the server when no other scoped style exists (lean: emit only when set — trivially satisfied by the pipeline).
