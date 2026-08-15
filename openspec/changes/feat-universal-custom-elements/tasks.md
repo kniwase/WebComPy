@@ -49,10 +49,10 @@
 
 ## 7. Documentation and Final Verification
 
-- [ ] 7.1 Rewrite `docs_app/documents/custom_elements.md`: named-only model, naming-consistency rule with rename guidance, layout-transparent default + `display` kwarg idiom, updated multiple-roots/hooks/observed-attributes sections
-- [ ] 7.2 Update `quickstart.md`, `installation.md`, `README.md`/`README.ja.md`, and other docs samples using bare `@define_component` (including the `_css_template.py` docstring example); add a migration-guide section covering structural pseudo-class/sibling-combinator meaning changes, Transition + `display` requirement, and `lazy()` string updates
-- [ ] 7.3 Update `AGENTS.md` (File → Spec Mapping and Framework Invariants if wording needs it) and run `python3 scripts/check-doc-spec-refs.py`
-- [ ] 7.4 Full local CI: `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short`, `uv run python -m webcompy generate`, `scripts/run-e2e-tests.sh`; run `openspec validate feat-universal-custom-elements`
+- [x] 7.1 Rewrite `docs_app/documents/custom_elements.md`: named-only model, naming-consistency rule with rename guidance, layout-transparent default + `display` kwarg idiom, updated multiple-roots/hooks/observed-attributes sections
+- [x] 7.2 Update `quickstart.md`, `installation.md`, `README.md`/`README.ja.md`, and other docs samples using bare `@define_component` (including the `_css_template.py` docstring example); add a migration-guide section covering structural pseudo-class/sibling-combinator meaning changes, Transition + `display` requirement, and `lazy()` string updates
+- [x] 7.3 Update `AGENTS.md` (File → Spec Mapping and Framework Invariants if wording needs it) and run `python3 scripts/check-doc-spec-refs.py`
+- [x] 7.4 Full local CI: `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short`, `uv run python -m webcompy generate`, `scripts/run-e2e-tests.sh`; run `openspec validate feat-universal-custom-elements`
 
 ## 8. Review-fix hardening (post-review)
 

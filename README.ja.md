@@ -47,8 +47,8 @@
     from webcompy.app import WebComPyApp
     from webcompy.components import define_component, ComponentContext
 
-    @define_component
-    def Counter(context: ComponentContext[None]):
+    @define_component("counter-app")
+    def CounterApp(context: ComponentContext[None]):
         count = Signal(0)
 
         def increment(ev):
@@ -60,7 +60,7 @@
             html.BUTTON({"@click": increment}, "+1"),
         )
 
-    app = WebComPyApp(root_component=Counter)
+    app = WebComPyApp(root_component=CounterApp)
     app.run()
   </py-script>
 </body>
@@ -127,7 +127,7 @@ from webcompy.components import (
 )
 
 
-@define_component
+@define_component("fizzbuzz-list")
 def FizzbuzzList(context: ComponentContext[Signal[int]]):
     @use_computed
     def fizzbuzz():
@@ -170,8 +170,8 @@ FizzbuzzList.scoped_style = {
 }
 
 
-@define_component
-def Fizzbuzz(context: ComponentContext[RouterContext]):
+@define_component("fizzbuzz-page")
+def FizzbuzzPage(context: ComponentContext[RouterContext]):
     opened = use_state(lambda: True)
     count = use_state(lambda: 10)
 
