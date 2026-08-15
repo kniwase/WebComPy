@@ -30,7 +30,7 @@
 - [x] 4.2 Add tests for the `display` kwarg: valid values accepted and emitted (SSR + runtime), invalid value raises with the alias-derived list, `:host` scoped style overrides the kwarg rule
 - [x] 4.3 Add tests for `ComponentStore` custom-element-name collision (`MyHTTPRequest` vs `MyHttpRequest` style pairs)
 - [x] 4.4 Update or remove tests asserting removed behaviors: bare-form definitions, `Root Node of Component must be instance of 'Element'` for multi-root/fragment results, unnamed `on_mounted`/`on_unmounted` rejection, unnamed `:host` rejection, `observed_attributes` without name rejection
-- [ ] 4.5 Add a test for the Transition display warning (contents/none child logs warning, sequence still finalizes via timeout)
+- [x] 4.5 Add a test for the Transition display warning (contents/none child logs warning, sequence still finalizes via timeout)
 - [x] 4.6 Rework `tests/test_custom_element_components.py` for the naming rule (e.g., `my-card`/`Card` → `MyCard`, `e2e-card`/`Card` pairs, `inner-card`/`Inner` → `InnerCard`, `my-card-2`/`NonRenderable` removal or rename)
 
 ## 5. Repo Migration — Rename Map and Test Suite
@@ -59,7 +59,7 @@
 - [x] 8.1 Inject the wrapper `display: contents` default at browser runtime via `HeadElement._render()` and in SSR via `get_scoped_styles_html()` (dedicated `webcompy-component-defaults` element, exactly once per document); remove the rule from `components.css`; add SSR/runtime emission tests
 - [x] 8.2 Enforce per-app deferred component registration per design D3b: `_APP_KEY` DI key + `_registered_app` record in `_try_register()`; same-app later contexts re-register, other apps skip; lazy generators mirror the record; add cross-app and same-app multi-context tests
 - [x] 8.3 Harden the `display` kwarg validation: reject non-string/unhashable values with `WebComPyComponentException` and list valid values in declared `ComponentDisplay` order
-- [ ] 8.4 Add component-wrapper Transition coverage: unit tests with real component children and E2E cases for the default layout-transparent wrapper (warn + timeout finalize) vs `display="block"` (animates, no warning)
+- [x] 8.4 Add component-wrapper Transition coverage: unit tests with real component children and E2E cases for the default layout-transparent wrapper (warn + timeout finalize) vs `display="block"` (animates, no warning)
 
 ## 9. Review-fix hardening (round 2)
 
@@ -70,4 +70,4 @@
 ## 10. Review-fix hardening (round 3)
 
 - [x] 10.1 Fix `LazyComponentGenerator.display` to resolve lazily like `custom_element_name`: remove the `_display = None` initialization so the property falls back to `__getattr__` -> `_resolve()` instead of silently returning `None` before resolution; add a unit test asserting `display` resolves to the component's value and triggers resolution
-- [ ] 10.2 Remove the unused `wrapper_display` parameter and tuple return from the `_component_toggle_root` test helper in `tests/test_transition.py`
+- [x] 10.2 Remove the unused `wrapper_display` parameter and tuple return from the `_component_toggle_root` test helper in `tests/test_transition.py`

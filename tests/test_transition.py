@@ -27,6 +27,14 @@ def _box_classes(result, testid: str) -> list[str]:
     return (node.getAttribute("class") or "").split()
 
 
+def _wrapper_box_classes(result, testid: str) -> list[str]:
+    node = result.find_by_attribute("data-testid", testid)
+    if node is None:
+        return []
+    wrapper = node.parentNode
+    return (wrapper.getAttribute("class") or "").split()
+
+
 def _toggle_root(show: Signal[bool], name: str = "fade", duration: int | None = 100):
     @define_component("test-root")
     def TestRoot(context):
@@ -327,6 +335,118 @@ class TestDurationResolution:
             assert _box_classes(result, "box") == []
             assert len(warnings) == 1
             assert "no transition or animation duration" in str(warnings[0])
+
+    def test_layout_transparent_child_warns_and_finalizes_via_timeout(self, monkeypatch) -> None:
+        import webcompy.logging
+
+        warnings: list[tuple[Any, ...]] = []
+        monkeypatch.setattr(
+            webcompy.logging,
+            "warning",
+            lambda *values: warnings.append(values),
+        )
+        show = Signal(False)
+        with TestRenderer.render(_toggle_root(show, duration=None)) as result:
+            show.value = True
+            box = result.find_by_attribute("data-testid", "box")
+            assert box is not None
+            result.transition_port.set_style(box, "transition-duration", "1s")
+            result.transition_port.set_style(box, "display", "contents")
+            result.transition_port.flush_frame()
+            assert len(warnings) == 1
+            assert "display" in str(warnings[0])
+            assert "contents" in str(warnings[0])
+            assert "fade-enter-active" in _box_classes(result, "box")
+            result.transition_port.advance_time(1000)
+            assert _box_classes(result, "box") == []
+
+    def test_box_generating_child_does_not_warn(self, monkeypatch) -> None:
+        import webcompy.logging
+
+        warnings: list[tuple[Any, ...]] = []
+        monkeypatch.setattr(
+            webcompy.logging,
+            "warning",
+            lambda *values: warnings.append(values),
+        )
+        show = Signal(False)
+        with TestRenderer.render(_toggle_root(show, duration=None)) as result:
+            show.value = True
+            box = result.find_by_attribute("data-testid", "box")
+            assert box is not None
+            result.transition_port.set_style(box, "transition-duration", "1s")
+            result.transition_port.set_style(box, "display", "block")
+            result.transition_port.flush_frame()
+            assert warnings == []
+            result.transition_port.advance_time(1000)
+            assert _box_classes(result, "box") == []
+
+    def _component_toggle_root(self, show: Signal[bool]):
+        @define_component("box-child")
+        def BoxChild(context):
+            return html.SPAN({"data-testid": "box"}, "box")
+
+        @define_component("test-root")
+        def TestRoot(context):
+            return html.DIV(
+                {},
+                Transition(
+                    {"name": "fade", "duration": None},
+                    lambda: BoxChild(None) if show.value else None,
+                ),
+            )
+
+        return TestRoot
+
+    def test_component_child_with_layout_transparent_wrapper_warns_and_finalizes(self, monkeypatch) -> None:
+        import webcompy.logging
+
+        warnings: list[tuple[Any, ...]] = []
+        monkeypatch.setattr(
+            webcompy.logging,
+            "warning",
+            lambda *values: warnings.append(values),
+        )
+        show = Signal(False)
+        root = self._component_toggle_root(show)
+        with TestRenderer.render(root) as result:
+            show.value = True
+            box = result.find_by_attribute("data-testid", "box")
+            assert box is not None
+            wrapper = box.parentNode
+            assert wrapper.nodeName.lower() == "box-child"
+            result.transition_port.set_style(wrapper, "transition-duration", "1s")
+            result.transition_port.set_style(wrapper, "display", "contents")
+            result.transition_port.flush_frame()
+            assert len(warnings) == 1
+            assert "display" in str(warnings[0])
+            assert "contents" in str(warnings[0])
+            assert "fade-enter-active" in _wrapper_box_classes(result, "box")
+            result.transition_port.advance_time(1000)
+            assert _wrapper_box_classes(result, "box") == []
+
+    def test_component_child_with_box_display_does_not_warn(self, monkeypatch) -> None:
+        import webcompy.logging
+
+        warnings: list[tuple[Any, ...]] = []
+        monkeypatch.setattr(
+            webcompy.logging,
+            "warning",
+            lambda *values: warnings.append(values),
+        )
+        show = Signal(False)
+        root = self._component_toggle_root(show)
+        with TestRenderer.render(root) as result:
+            show.value = True
+            box = result.find_by_attribute("data-testid", "box")
+            assert box is not None
+            wrapper = box.parentNode
+            result.transition_port.set_style(wrapper, "transition-duration", "1s")
+            result.transition_port.set_style(wrapper, "display", "block")
+            result.transition_port.flush_frame()
+            assert warnings == []
+            result.transition_port.advance_time(1000)
+            assert _wrapper_box_classes(result, "box") == []
 
     def test_explicit_zero_finalizes_without_warning(self, monkeypatch) -> None:
         import webcompy.logging
