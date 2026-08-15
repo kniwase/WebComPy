@@ -141,10 +141,10 @@ class TestWebComPyBuildConfig:
             "from webcompy.app import WebComPyApp\n"
             "from webcompy.components._generator import define_component\n"
             "from webcompy.elements import html\n\n"
-            "@define_component\n"
-            "def Root(context):\n"
+            '@define_component("app-root")\n'
+            "def AppRoot(context):\n"
             "    return html.DIV({}, 'test')\n\n"
-            "app = WebComPyApp(root_component=Root)\n"
+            "app = WebComPyApp(root_component=AppRoot)\n"
         )
 
     def test_defaults(self, tmp_path):

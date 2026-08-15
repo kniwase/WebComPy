@@ -25,6 +25,7 @@ class LazyComponentGenerator(ComponentGenerator):
         self._style = {}
         self._component_def = None
         self._registered = False
+        self._display = None
 
     def _resolve(self) -> ComponentGenerator:
         if self._resolved is None:
@@ -39,6 +40,7 @@ class LazyComponentGenerator(ComponentGenerator):
             self._cid = resolved._id
             self._style = resolved._style
             self._registered = resolved._registered
+            self._display = resolved._display
         assert self._resolved is not None
         self._resolved._try_register()
         return self._resolved

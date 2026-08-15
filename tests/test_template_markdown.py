@@ -247,11 +247,11 @@ class TestRenderMarkdownComponentTags:
             return Element("span", children=[TextElement(ctx.props.get("title", ""))])
 
         with _markdown_component_di_scope():
-            ComponentGenerator("UserCard", setup)
+            ComponentGenerator("UserCard", setup, custom_element_name="user-card")
             result = render_markdown('<user-card title="Hello" />', {})
         assert captured["title"] == "Hello"
         assert isinstance(result, ElementAbstract)
-        assert result._tag_name == "span"
+        assert result._tag_name == "user-card"
         assert _extract_text(result) == "Hello"
 
     def test_component_tag_in_html_block_alongside_paragraph(self):
@@ -262,7 +262,7 @@ class TestRenderMarkdownComponentTags:
             return Element("strong", children=[TextElement(ctx.props.get("label", ""))])
 
         with _markdown_component_di_scope():
-            ComponentGenerator("MyBadge", setup)
+            ComponentGenerator("MyBadge", setup, custom_element_name="my-badge")
             result = render_markdown(
                 "Hello\n\n<my-badge label='World' />\n",
                 {},
@@ -274,8 +274,8 @@ class TestRenderMarkdownComponentTags:
         assert isinstance(p, Element) and p._tag_name == "p"
         assert p._children[0]._text == "Hello"
         assert isinstance(badge, ElementAbstract)
-        assert badge._tag_name == "strong"
-        assert badge._children[0]._text == "World"
+        assert badge._tag_name == "my-badge"
+        assert _extract_text(badge) == "World"
 
 
 class TestRenderMarkdownFileLoading:
@@ -341,20 +341,20 @@ class TestFragmentTransparency:
 
 class TestComponentRootIntegration:
     def test_multi_root_raises_when_returned_directly_from_component(self):
-        @define_component
+        @define_component("fragment-root")
         def FragmentRoot(context):
             return render_markdown("# Title\n\nText.", {})
 
         with _markdown_component_di_scope():
             FragmentRoot._try_register()
-            with pytest.raises(
-                WebComPyException,
-                match="Root Node of Component must be instance of 'Element'",
-            ):
-                FragmentRoot({})
+            comp = FragmentRoot({})
+        assert isinstance(comp, Component)
+        assert comp._tag_name == "fragment-root"
+        assert len(comp._children) == 1
+        assert isinstance(comp._children[0], FragmentElement)
 
     def test_explicit_element_wrapper_makes_markdown_valid_component_root(self):
-        @define_component
+        @define_component("article-page")
         def ArticlePage(context):
             return Element(
                 "article",
@@ -365,9 +365,10 @@ class TestComponentRootIntegration:
             ArticlePage._try_register()
             comp = ArticlePage({})
         assert isinstance(comp, Component)
-        assert comp._tag_name == "article"
+        assert comp._tag_name == "article-page"
         assert len(comp._children) == 1
-        assert isinstance(comp._children[0], FragmentElement)
+        assert isinstance(comp._children[0], Element)
+        assert comp._children[0]._tag_name == "article"
 
 
 class TestRenderMarkdownCodeBlockTemplateProtection:

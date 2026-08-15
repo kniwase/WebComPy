@@ -10,7 +10,7 @@ from webcompy.router import Router
 from webcompy_server import configure_server_context
 
 
-@define_component
+@define_component("dummy-root")
 def DummyRoot(context):
     from webcompy.elements import html
 

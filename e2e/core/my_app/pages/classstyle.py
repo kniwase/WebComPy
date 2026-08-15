@@ -2,7 +2,7 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 
 
-@define_component
+@define_component("class-style-page")
 def ClassStylePage(context: ComponentContext[None]):
     context.set_title("Class Style - E2E")
 

@@ -3,8 +3,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from tests.conftest import MockHistoryPort
-from webcompy.components import ComponentGenerator
+from webcompy.components import ComponentGenerator, define_component
 from webcompy.di import DIScope
+from webcompy.elements import html
 from webcompy.router._router import Router
 
 
@@ -496,7 +497,12 @@ class TestPreloadDedup:
         scope.__enter__()
 
         try:
-            leaf_gen = _make_test_component("SharedLeaf")
+
+            @define_component("shared-leaf")
+            def SharedLeaf(ctx):
+                return html.DIV({})
+
+            leaf_gen = SharedLeaf
             fake_module = types.ModuleType("shared_leaf_module")
             fake_module.SharedLeaf = leaf_gen
             sys.modules["shared_leaf_module"] = fake_module
@@ -541,7 +547,12 @@ class TestResolvedLazyReRegistration:
         from webcompy.di._keys import _COMPONENT_STORE_KEY
         from webcompy.router._lazy import LazyComponentGenerator
 
-        leaf_gen = _make_test_component("ReRegisteredLeaf")
+        @define_component("re-registered-leaf")
+        def ReRegisteredLeaf(ctx):
+
+            return html.DIV({})
+
+        leaf_gen = ReRegisteredLeaf
         fake_module = types.ModuleType("re_registered_module")
         fake_module.ReRegisteredLeaf = leaf_gen
         sys.modules["re_registered_module"] = fake_module
@@ -587,8 +598,18 @@ class TestPreloadTreeWalk:
         scope.__enter__()
 
         try:
-            layout_gen = _make_test_component("TreeLayout")
-            leaf_gen = _make_test_component("TreeLeaf")
+
+            @define_component("tree-layout")
+            def TreeLayout(ctx):
+                return html.DIV({})
+
+            layout_gen = TreeLayout
+
+            @define_component("tree-leaf")
+            def TreeLeaf(ctx):
+                return html.DIV({})
+
+            leaf_gen = TreeLeaf
             fake_module = types.ModuleType("tree_module")
             fake_module.TreeLayout = layout_gen
             fake_module.TreeLeaf = leaf_gen
@@ -617,14 +638,3 @@ class TestPreloadTreeWalk:
             assert lazy_leaf._resolved is leaf_gen
         finally:
             scope.__exit__(None, None, None)
-
-
-def _make_test_component(name):
-    from webcompy.components import define_component
-    from webcompy.elements import html
-
-    def setup(ctx):
-        return html.DIV({})
-
-    setup.__name__ = name
-    return define_component(setup)

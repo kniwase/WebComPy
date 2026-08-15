@@ -203,7 +203,7 @@ class TestCssTextTemplateSignalTracking:
         factory = css_text_template(".btn { color: {{ color }}; }", {"color": color})
 
         style = reactive_scoped_style(factory)
-        style._bind("test-cid")
+        style._bind("test-cid", host_tag="test-component")
 
         assert style.dict_computed.value == {".btn": {"color": "blue"}}
         color.value = "red"
@@ -224,7 +224,7 @@ class TestCssTextTemplateSignalTracking:
         factory = css_text_template(".btn { color: {{ color }}; }", {"color": color})
 
         style = reactive_scoped_style(factory)
-        style._bind("abc")
+        style._bind("abc", host_tag="test-component")
 
         out = style.render_css("abc")
         assert "color: blue" in out
@@ -244,7 +244,7 @@ class TestCssTextTemplateSignalTracking:
         )
 
         style = reactive_scoped_style(factory)
-        style._bind("multi")
+        style._bind("multi", host_tag="test-component")
 
         assert style.dict_computed.value == {".btn": {"color": "red", "background": "blue"}}
         primary.value = "yellow"
@@ -297,7 +297,7 @@ class TestCssTextTemplateTypeCompatibility:
         factory = css_text_template(".btn { color: {{ color }}; }", {"color": "blue"})
 
         style = reactive_scoped_style(factory)
-        style._bind("cid-x")
+        style._bind("cid-x", host_tag="test-component")
 
         result = style.dict_computed.value
         assert isinstance(result, dict)

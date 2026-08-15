@@ -89,8 +89,8 @@ def _make_mount_fetch_root():
     from webcompy.components import define_component
     from webcompy.elements import html
 
-    @define_component
-    def _MountFetchRoot(context):
+    @define_component("mount-fetch-root")
+    def MountFetchRoot(context):
         from webcompy.ajax import HttpClient
         from webcompy.components._hooks import use_async_result
 
@@ -100,15 +100,15 @@ def _make_mount_fetch_root():
             result.data.value.text if result.data.value else "",
         )
 
-    return _MountFetchRoot
+    return MountFetchRoot
 
 
 def _make_mount_fetch_root_with_query():
     from webcompy.components import define_component
     from webcompy.elements import html
 
-    @define_component
-    def _MountFetchRootWithQuery(context):
+    @define_component("mount-fetch-root-with-query")
+    def MountFetchRootWithQuery(context):
         from webcompy.ajax import HttpClient
         from webcompy.components._hooks import use_async_result
 
@@ -118,7 +118,7 @@ def _make_mount_fetch_root_with_query():
             result.data.value.text if result.data.value else "",
         )
 
-    return _MountFetchRootWithQuery
+    return MountFetchRootWithQuery
 
 
 def _create_serving(app, build_config, *, mode="prod"):
@@ -307,11 +307,11 @@ def _make_page_component():
     from webcompy.components import define_component
     from webcompy.elements import html
 
-    def setup(ctx):
+    @define_component("test-page")
+    def TestPage(ctx):
         return html.DIV({})
 
-    setup.__name__ = "Page"
-    return define_component(setup)
+    return TestPage
 
 
 class TestMountSelfSiteFetchDuringSsr:

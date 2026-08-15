@@ -17,12 +17,12 @@ class _TestApp:
         from webcompy.components._generator import define_component
         from webcompy.elements import html
 
-        @define_component
-        def _TestRoot(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV({}, "test")
 
         config = WebComPyAppConfig(plugins=plugins or [])
-        self.app = WebComPyApp(root_component=_TestRoot, config=config)
+        self.app = WebComPyApp(root_component=TestRoot, config=config)
         configure_server_context(self.app)
 
 

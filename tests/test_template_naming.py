@@ -53,7 +53,9 @@ class TestResolveTag:
     def _store_with(self, *names: str) -> ComponentStore:
         store = ComponentStore()
         for name in names:
-            store.add_component(name, ComponentGenerator(name, lambda ctx: None))
+            store.add_component(
+                name, ComponentGenerator(name, lambda ctx: None, custom_element_name=f"x-{name.lower()}")
+            )
         return store
 
     def test_br_maps_to_newline(self):

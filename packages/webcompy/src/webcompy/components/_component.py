@@ -83,7 +83,7 @@ def _normalize_component_template(template: ComponentTemplateResult | None) -> l
     for child in normalized:
         if not isinstance(child, (ElementAbstract, SignalBase, str, type(None))):
             raise WebComPyComponentException(
-                "Named component children must be elements, text, or signals; "
+                "Component children must be elements, text, or signals; "
                 f"nested sequences are not allowed (got {type(child).__name__})"
             )
     return normalized
@@ -120,7 +120,7 @@ class Component(ElementBase):
         self._children = []
         self._head_props: HeadPropsStore | None = None
         self._generator = generator
-        if generator is not None and generator.custom_element_name is not None:
+        if generator is not None:
             self._tag_name = cast("HtmlTags", generator.custom_element_name)
         self._pending_async_template: Coroutine[Any, Any, ComponentTemplateResult] | None = None
         self._pending_async_cleanup_done: bool = False
@@ -211,16 +211,6 @@ class Component(ElementBase):
             child_di_scope = parent_di_scope._children[-1]
 
         hooks = context.__get_lifecyclehooks__()
-        if (hooks.get("on_mounted") or hooks.get("on_unmounted")) and (
-            self._generator is None or self._generator.custom_element_name is None
-        ):
-            user_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
-            self._render_state.framework_cleanup()
-            user_on_before_destroy()
-            raise WebComPyComponentException(
-                "on_mounted/on_unmounted are only available for named custom-element components; "
-                "pass a custom element name to @define_component"
-            )
         original_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
 
         def on_before_destroy_with_scope_cleanup():
@@ -257,7 +247,7 @@ class Component(ElementBase):
 
     def _init_component(self, property: ComponentProperty):
         generator = self._generator
-        if generator is not None and generator.custom_element_name is not None:
+        if generator is not None:
             self._tag_name = cast("HtmlTags", generator.custom_element_name)
             self._attrs = {
                 "webcompy-component": property["component_name"],
@@ -269,6 +259,9 @@ class Component(ElementBase):
             self._init_children(_normalize_component_template(property["template"]))
             self._property = property
             return
+        # Framework-internal path (AppDocumentRoot only): generator is None.
+        # The mount-point node cannot be a custom element, so this branch
+        # adopts the template root element as the component node.
         node = property["template"]
         if not isinstance(node, Element):
             raise WebComPyException("Root Node of Component must be instance of 'Element'")
@@ -327,24 +320,6 @@ class Component(ElementBase):
             return
         context = self._render_state.context
         hooks = context.__get_lifecyclehooks__()
-        if (hooks.get("on_mounted") or hooks.get("on_unmounted")) and (
-            self._generator is None or self._generator.custom_element_name is None
-        ):
-            user_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
-            self._render_state.framework_cleanup()
-            user_on_before_destroy()
-            try:
-                parent = self._parent
-            except AttributeError:
-                parent = None
-            children = getattr(parent, "_children", None)
-            if children is not None and self in children:
-                children.remove(self)
-            self._dispose_custom_element_binding()
-            raise WebComPyComponentException(
-                "on_mounted/on_unmounted are only available for named custom-element components; "
-                "pass a custom element name to @define_component"
-            )
         self._property["on_before_rendering"] = hooks.get("on_before_rendering", lambda: None)
         self._property["on_after_rendering"] = hooks.get("on_after_rendering", lambda: None)
         user_on_before_destroy = hooks.get("on_before_destroy", lambda: None)
@@ -492,11 +467,11 @@ class Component(ElementBase):
         return (*self._parent._get_belonging_components(), self)
 
     def _preserves_all_node_attributes(self) -> bool:
-        return self._generator is not None and self._generator.custom_element_name is not None
+        return self._generator is not None
 
     def _create_node(self) -> DOMNode:
         generator = self._generator
-        if generator is not None and generator.custom_element_name is not None:
+        if generator is not None:
             from webcompy.di import inject
             from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
 
@@ -505,7 +480,6 @@ class Component(ElementBase):
                 raise WebComPyComponentException(
                     f"Custom element port is not available for named component '{generator.custom_element_name}'"
                 )
-            assert generator.definition_key is not None
             port.ensure_defined(
                 generator.custom_element_name,
                 generator.observed_attributes,
@@ -528,7 +502,7 @@ class Component(ElementBase):
 
     def _bind_custom_element(self, node: DOMNode) -> None:
         generator = self._generator
-        if generator is None or generator.custom_element_name is None:
+        if generator is None:
             return
         from webcompy.di import inject
         from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY, HOST_PORT_KEY
@@ -551,7 +525,6 @@ class Component(ElementBase):
         # the same instance keeps _mount_delivered: the node may have stayed
         # connected across the re-init, so a move must not re-fire on_mounted.
         self._destroyed = False
-        assert generator.definition_key is not None
         port.ensure_defined(
             generator.custom_element_name,
             generator.observed_attributes,

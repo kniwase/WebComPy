@@ -15,13 +15,13 @@ from webcompy.router._lazy import LazyComponentGenerator
 from webcompy_server import configure_server_context
 
 
-@define_component
-def _Root(context):
+@define_component("scoping-root")
+def ScopingRoot(context):
     return html.DIV({}, RouterView())
 
 
-@define_component
-def _Page(context):
+@define_component("scoping-page")
+def ScopingPage(context):
     return html.DIV({}, "page")
 
 
@@ -29,7 +29,7 @@ class TestHooksAcrossRenderContexts:
     def test_hooks_registered_before_context_creation_fire_on_injected_router(self):
         hist = MockHistoryPort(mode="hash")
         router = Router(
-            {"path": "/docs", "component": _Page},
+            {"path": "/docs", "component": ScopingPage},
             history=hist,
             preload=False,
         )
@@ -38,7 +38,7 @@ class TestHooksAcrossRenderContexts:
         router.before_route_change.append(lambda frm, to: guarded.append(to))
         router.after_route_change.append(navigated.append)
 
-        app = WebComPyApp(root_component=_Root, router=router, config=WebComPyAppConfig())
+        app = WebComPyApp(root_component=ScopingRoot, router=router, config=WebComPyAppConfig())
         configure_server_context(app)
 
         ctx = app.create_render_context()
@@ -64,7 +64,7 @@ class TestLazyRegistrationAcrossRenderContexts:
         scope0.__enter__()
         try:
 
-            @define_component
+            @define_component("lazy-page")
             def LazyPage(context):
                 return html.DIV({}, "lazy")
         finally:
@@ -81,7 +81,7 @@ class TestLazyRegistrationAcrossRenderContexts:
             history=MockHistoryPort(mode="hash"),
             preload=True,
         )
-        app = WebComPyApp(root_component=_Root, router=router, config=WebComPyAppConfig())
+        app = WebComPyApp(root_component=ScopingRoot, router=router, config=WebComPyAppConfig())
         configure_server_context(app)
 
         ctx1 = app.create_render_context("/docs")

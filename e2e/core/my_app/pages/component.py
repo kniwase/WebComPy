@@ -2,7 +2,7 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 
 
-@define_component
+@define_component("function-style-page")
 def FunctionStylePage(context: ComponentContext[None]):
     context.set_title("Function Component - E2E")
     msg = "Hello from function component!"

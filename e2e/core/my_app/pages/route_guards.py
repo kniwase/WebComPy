@@ -15,7 +15,7 @@ async def auth_guard(from_path: str, to_path: str):
     return None
 
 
-@define_component
+@define_component("guard-login-page")
 def GuardLoginPage(context: ComponentContext[None]):
     context.set_title("Login - E2E")
     router = use_router()
@@ -31,7 +31,7 @@ def GuardLoginPage(context: ComponentContext[None]):
     )
 
 
-@define_component
+@define_component("guard-admin-page")
 def GuardAdminPage(context: ComponentContext[None]):
     context.set_title("Admin - E2E")
     return html.DIV({"data-testid": "admin-page"}, html.H2({}, "Protected Admin"))

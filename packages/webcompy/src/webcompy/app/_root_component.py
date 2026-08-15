@@ -163,11 +163,11 @@ class AppDocumentRoot(Component):
         if store is None or port is None:
             return
         for generator in store.components.values():
-            name = generator.custom_element_name
-            if name is None:
-                continue
-            assert generator.definition_key is not None
-            port.ensure_defined(name, generator.observed_attributes, generator.definition_key)
+            port.ensure_defined(
+                generator.custom_element_name,
+                generator.observed_attributes,
+                generator.definition_key,
+            )
 
     def _mount_node(self):
         if ENVIRONMENT == "pyscript":

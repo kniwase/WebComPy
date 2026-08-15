@@ -7,6 +7,8 @@ from unittest.mock import patch
 
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import WebComPyAppConfig
+from webcompy.components import define_component
+from webcompy.elements import html
 from webcompy.router._router import Router
 from webcompy_cli._build import BuildArtifacts
 from webcompy_cli.config._build_config import WebComPyBuildConfig
@@ -24,17 +26,6 @@ def _setup_app_pkg(tmp_path: Path):
     spec.loader.exec_module(mod)
     build_config = WebComPyBuildConfig(app_module=mod)
     return pkg, build_config
-
-
-def _make_component(name: str):
-    from webcompy.components import define_component
-    from webcompy.elements import html
-
-    def setup(ctx):
-        return html.DIV({})
-
-    setup.__name__ = name
-    return define_component(setup)
 
 
 def _make_artifacts(tmp_path: Path) -> BuildArtifacts:
@@ -109,8 +100,18 @@ class TestGenerateNestedRouteVariants:
         artifacts = _make_artifacts(tmp_path)
         requested: list[str] = []
 
-        layout = _make_component("UserLayout")
-        leaf = _make_component("DocsPage")
+        @define_component("user-layout")
+        def UserLayout(ctx):
+
+            return html.DIV({})
+
+        layout = UserLayout
+
+        @define_component("docs-page")
+        def DocsPage(ctx):
+            return html.DIV({})
+
+        leaf = DocsPage
         router = Router(
             {
                 "path": "/users/{uid}",
@@ -140,8 +141,18 @@ class TestGenerateNestedRouteVariants:
         artifacts = _make_artifacts(tmp_path)
         requested: list[str] = []
 
-        layout = _make_component("UserLayout")
-        leaf = _make_component("DocPage")
+        @define_component("user-layout")
+        def UserLayout(ctx):
+
+            return html.DIV({})
+
+        layout = UserLayout
+
+        @define_component("doc-page")
+        def DocPage(ctx):
+            return html.DIV({})
+
+        leaf = DocPage
         router = Router(
             {
                 "path": "/users/{uid}",
@@ -176,7 +187,12 @@ class TestGenerateNestedRouteVariants:
         artifacts = _make_artifacts(tmp_path)
         requested: list[str] = []
 
-        comp = _make_component("UserPage")
+        @define_component("user-page")
+        def UserPage(ctx):
+
+            return html.DIV({})
+
+        comp = UserPage
         router = Router(
             {"path": "/users/{uid}", "component": comp, "path_params": [{"uid": "alice"}]},
             mode="history",

@@ -9,6 +9,7 @@ from webcompy.components._component import HeadPropsStore
 from webcompy.components._generator import ComponentStore
 from webcompy.di import DIScope
 from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
+from webcompy.elements import html
 from webcompy.elements.types._dynamic import DynamicElement
 from webcompy.router._lazy import LazyComponentGenerator, lazy
 from webcompy.router._pages import WebComPyRouterException
@@ -17,15 +18,6 @@ from webcompy.router._router import Router
 
 class _FakeComponent:
     pass
-
-
-def _make_test_component(name="TestComponent"):
-    from webcompy.elements import html
-
-    def setup(ctx):
-        return html.DIV({})
-
-    return define_component(setup)
 
 
 class TestLazyValidation:
@@ -90,7 +82,12 @@ class TestLazyComponentGenerator:
         scope.__enter__()
 
         try:
-            comp = _make_test_component("TestComp")
+
+            @define_component("test-comp")
+            def TestComp(ctx):
+                return html.DIV({})
+
+            comp = TestComp
             fake_module = types.ModuleType("fake_module")
             fake_module.TestComp = comp
             sys.modules["fake_module"] = fake_module
@@ -127,7 +124,12 @@ class TestLazyComponentGenerator:
         scope.__enter__()
 
         try:
-            comp = _make_test_component("CachedComp")
+
+            @define_component("cached-comp")
+            def CachedComp(ctx):
+                return html.DIV({})
+
+            comp = CachedComp
             fake_module = types.ModuleType("cached_module")
             fake_module.CachedComp = comp
             sys.modules["cached_module"] = fake_module
@@ -149,7 +151,12 @@ class TestLazyComponentGenerator:
         scope.__enter__()
 
         try:
-            comp = _make_test_component("CallComp")
+
+            @define_component("call-comp")
+            def CallComp(ctx):
+                return html.DIV({})
+
+            comp = CallComp
             fake_module = types.ModuleType("call_module")
             fake_module.CallComp = comp
             sys.modules["call_module"] = fake_module
@@ -167,7 +174,12 @@ class TestLazyComponentGenerator:
         scope.__enter__()
 
         try:
-            comp = _make_test_component("PreloadComp")
+
+            @define_component("preload-comp")
+            def PreloadComp(ctx):
+                return html.DIV({})
+
+            comp = PreloadComp
             fake_module = types.ModuleType("preload_module")
             fake_module.PreloadComp = comp
             sys.modules["preload_module"] = fake_module
@@ -185,7 +197,12 @@ class TestLazyComponentGenerator:
         scope.__enter__()
 
         try:
-            comp = _make_test_component("StyleComp")
+
+            @define_component("style-comp")
+            def StyleComp(ctx):
+                return html.DIV({})
+
+            comp = StyleComp
             comp.scoped_style = {".test": {"color": "red"}}
             fake_module = types.ModuleType("style_module")
             fake_module.StyleComp = comp
@@ -205,7 +222,12 @@ class TestLazyComponentGenerator:
         scope.__enter__()
 
         try:
-            comp = _make_test_component("StyleSetComp")
+
+            @define_component("style-set-comp")
+            def StyleSetComp(ctx):
+                return html.DIV({})
+
+            comp = StyleSetComp
             fake_module = types.ModuleType("styleset_module")
             fake_module.StyleSetComp = comp
             sys.modules["styleset_module"] = fake_module
@@ -269,7 +291,12 @@ class TestRouterPreload:
         scope.__enter__()
 
         try:
-            comp = _make_test_component("PreloadRoute")
+
+            @define_component("preload-route")
+            def PreloadRoute(ctx):
+                return html.DIV({})
+
+            comp = PreloadRoute
             fake_module = types.ModuleType("preload_route_module")
             fake_module.PreloadRoute = comp
             sys.modules["preload_route_module"] = fake_module
@@ -295,7 +322,12 @@ class TestRouterPreload:
         scope = DIScope()
         scope.__enter__()
         try:
-            comp = _make_test_component("SkipPreload")
+
+            @define_component("skip-preload")
+            def SkipPreload(ctx):
+                return html.DIV({})
+
+            comp = SkipPreload
             fake_module = types.ModuleType("skip_module")
             fake_module.SkipPreload = comp
             sys.modules["skip_module"] = fake_module
@@ -316,7 +348,12 @@ class TestRouterGetComponentForPath:
         scope = DIScope()
         scope.__enter__()
         try:
-            comp = _make_test_component("MatchComp")
+
+            @define_component("match-comp")
+            def MatchComp(ctx):
+                return html.DIV({})
+
+            comp = MatchComp
             fake_module = types.ModuleType("match_module")
             fake_module.MatchComp = comp
             sys.modules["match_module"] = fake_module
@@ -340,7 +377,12 @@ class TestRouterGetComponentForPath:
         scope = DIScope()
         scope.__enter__()
         try:
-            comp = _make_test_component("ParamComp")
+
+            @define_component("param-comp")
+            def ParamComp(ctx):
+                return html.DIV({})
+
+            comp = ParamComp
             fake_module = types.ModuleType("param_module")
             fake_module.ParamComp = comp
             sys.modules["param_module"] = fake_module
@@ -364,12 +406,17 @@ class TestLazyPreloadMethod:
         scope.__enter__()
 
         try:
-            comp = _make_test_component("PLMethod")
+
+            @define_component("pl-method")
+            def PlMethod(ctx):
+                return html.DIV({})
+
+            comp = PlMethod
             fake_module = types.ModuleType("pl_method")
-            fake_module.PLMethod = comp
+            fake_module.PlMethod = comp
             sys.modules["pl_method"] = fake_module
 
-            gen = LazyComponentGenerator("pl_method:PLMethod", __file__)
+            gen = LazyComponentGenerator("pl_method:PlMethod", __file__)
             gen._preload()
             assert gen._resolved is comp
         finally:
@@ -387,7 +434,12 @@ class TestRouterLinkMouseenter:
         head_props = HeadPropsStore()
         scope.provide(_HEAD_PROPS_KEY, head_props)
 
-        comp = _make_test_component("HoverComp")
+        @define_component("hover-comp")
+        def HoverComp(ctx):
+
+            return html.DIV({})
+
+        comp = HoverComp
         fake_module = types.ModuleType("hover_module")
         fake_module.HoverComp = comp
         sys.modules["hover_module"] = fake_module
@@ -420,7 +472,12 @@ class TestRouterLinkMouseenter:
         head_props = HeadPropsStore()
         scope.provide(_HEAD_PROPS_KEY, head_props)
 
-        comp = _make_test_component("EagerComp")
+        @define_component("eager-comp")
+        def EagerComp(ctx):
+
+            return html.DIV({})
+
+        comp = EagerComp
         router = Router(
             {"path": "/eager", "component": comp},
             history=MockHistoryPort(mode="hash"),
@@ -446,7 +503,12 @@ class TestRouterLinkMouseenter:
         head_props = HeadPropsStore()
         scope.provide(_HEAD_PROPS_KEY, head_props)
 
-        comp = _make_test_component("QueryComp")
+        @define_component("query-comp")
+        def QueryComp(ctx):
+
+            return html.DIV({})
+
+        comp = QueryComp
         fake_module = types.ModuleType("query_module")
         fake_module.QueryComp = comp
         sys.modules["query_module"] = fake_module
@@ -473,7 +535,12 @@ class TestRouterLinkMouseenter:
         store = ComponentStore()
         scope.provide(_COMPONENT_STORE_KEY, store)
 
-        comp = _make_test_component("BaseComp")
+        @define_component("base-comp")
+        def BaseComp(ctx):
+
+            return html.DIV({})
+
+        comp = BaseComp
         fake_module = types.ModuleType("base_module")
         fake_module.BaseComp = comp
         sys.modules["base_module"] = fake_module

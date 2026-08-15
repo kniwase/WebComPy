@@ -8,8 +8,8 @@ from webcompy.elements import DOMEvent, html, repeat, switch
 from webcompy.signal import use_computed, use_reactive_dict, use_state
 
 
-@define_component
-def App(context: ComponentContext[None]):
+@define_component("fizzbuzz-app")
+def FizzbuzzApp(context: ComponentContext[None]):
     opened = use_state(lambda: True)
     fizzbuzz_dict = use_reactive_dict(lambda: {})
     _next_n = use_state(lambda: 1)
@@ -100,7 +100,7 @@ def App(context: ComponentContext[None]):
     )
 
 
-App.scoped_style = {
+FizzbuzzApp.scoped_style = {
     "ul": {
         "border": "dashed 2px #668ad8",
         "background": "#f1f8ff",
@@ -129,5 +129,5 @@ App.scoped_style = {
     },
 }
 
-app = WebComPyApp(root_component=App)
+app = WebComPyApp(root_component=FizzbuzzApp)
 app.run()

@@ -4,7 +4,7 @@ from webcompy.forms import email, min_length, required, use_field, use_form
 from webcompy.signal import use_computed, use_state
 
 
-@define_component
+@define_component("form-fields-page")
 def FormFieldsPage(context: ComponentContext[None]):
     context.set_title("Form Fields - E2E")
 

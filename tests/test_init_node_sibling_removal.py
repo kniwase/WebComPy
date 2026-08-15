@@ -19,7 +19,7 @@ class TestUnkeyedForRefreshPreservesFollowingSibling:
     def test_following_sibling_preserved_after_append(self):
         items = ReactiveList(["x", "y"])
 
-        @define_component
+        @define_component("sibling-page")
         def SiblingPage(context):
             return render_template(
                 "<div>{% for item in items %}<b>{{ item }}</b>{% endfor %}<span>tail</span></div>",
@@ -39,7 +39,7 @@ class TestKeyedDictRepeatPreservesFollowingSibling:
     def test_following_sibling_preserved_after_dict_insert(self):
         d = ReactiveDict({"a": 1, "b": 2})
 
-        @define_component
+        @define_component("dict-page")
         def DictPage(context):
             return render_template(
                 "<div>{% for k, v in d %}<b>{{ k }}={{ v }}</b>{% endfor %}<span>tail</span></div>",
@@ -59,7 +59,7 @@ class TestIfBranchTogglePreservesFollowingSibling:
     def test_following_sibling_preserved_after_branch_toggle(self):
         flag = Signal(True)
 
-        @define_component
+        @define_component("branch-page")
         def BranchPage(context):
             return render_template(
                 "<div>{% if flag %}<span>on</span>{% else %}<em>off</em>{% endif %}<p>tail</p></div>",

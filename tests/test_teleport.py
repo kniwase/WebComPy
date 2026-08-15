@@ -33,20 +33,20 @@ def _find_by_attr(body, tag: str, attr: str, value: str):
 
 class TestTeleportMount:
     def test_children_mount_under_body_and_anchor_at_logical_position(self, teleport_env):
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV(
                 {},
                 Teleport({"to": "body"}, html.DIV({"id": "modal"}, "modal-content")),
             )
 
-        with TestRenderer.render(Page) as result:
+        with TestRenderer.render(TeleportPage) as result:
             body = result.body_node
             assert body is not None
             modal = _find_by_attr(body, "DIV", "id", "modal")
             assert modal is not None
             assert modal.parentNode is body
-            root_children = result._root_node.childNodes
+            root_children = result._root_node.childNodes[0].childNodes
             assert root_children.length == 1
             assert root_children[0].nodeName == "#text"
             assert (root_children[0].textContent or "") == ""
@@ -56,8 +56,8 @@ class TestTeleportSiblingStability:
     def test_sibling_positions_stable_while_teleported_content_changes(self, teleport_env):
         items = ReactiveList(["x", "y"])
 
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV(
                 {},
                 html.P({}, "before"),
@@ -66,7 +66,7 @@ class TestTeleportSiblingStability:
             )
 
         def _logical_texts(result):
-            return [(c.textContent or "") for c in result._root_node.childNodes]
+            return [(c.textContent or "") for c in result._root_node.childNodes[0].childNodes]
 
         def _teleported_texts(body):
             return [
@@ -75,7 +75,7 @@ class TestTeleportSiblingStability:
                 if body.childNodes[i].getAttribute("data-t") == "teleported"
             ]
 
-        with TestRenderer.render(Page) as result:
+        with TestRenderer.render(TeleportPage) as result:
             body = result.body_node
             assert body is not None
             assert _teleported_texts(body) == ["x", "y"]
@@ -93,8 +93,8 @@ class TestTeleportMissingTarget:
         warnings: list[tuple] = []
         monkeypatch.setattr("webcompy.logging.warning", lambda *values: warnings.append(values))
 
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV(
                 {},
                 html.P({}, "before"),
@@ -102,8 +102,8 @@ class TestTeleportMissingTarget:
                 html.P({}, "after"),
             )
 
-        with TestRenderer.render(Page) as result:
-            names = [(c.nodeName, c.textContent or "") for c in result._root_node.childNodes]
+        with TestRenderer.render(TeleportPage) as result:
+            names = [(c.nodeName, c.textContent or "") for c in result._root_node.childNodes[0].childNodes]
             assert names == [("P", "before"), ("SPAN", "inline-content"), ("P", "after")]
         assert any("Teleport target" in str(values) for values in warnings)
 
@@ -113,8 +113,8 @@ class TestTeleportInlineFallbackStability:
         items = ReactiveList(["x", "y"])
         trailing = ReactiveList(["a"])
 
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV(
                 {},
                 html.P({"data-testid": "before"}, "before"),
@@ -127,9 +127,9 @@ class TestTeleportInlineFallbackStability:
             )
 
         def _node_names(result):
-            return [(c.nodeName, c.textContent or "") for c in result._root_node.childNodes]
+            return [(c.nodeName, c.textContent or "") for c in result._root_node.childNodes[0].childNodes]
 
-        with TestRenderer.render(Page) as result:
+        with TestRenderer.render(TeleportPage) as result:
             assert _node_names(result) == [
                 ("P", "before"),
                 ("SPAN", "x"),
@@ -152,8 +152,8 @@ class TestTeleportInlineFallbackStability:
         leading = ReactiveList(["a"])
         inner = ReactiveList(["x", "y"])
 
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV(
                 {},
                 repeat(leading, lambda item: html.SPAN({"data-t": "leading"}, item)),
@@ -165,9 +165,9 @@ class TestTeleportInlineFallbackStability:
             )
 
         def _node_names(result):
-            return [(c.nodeName, c.textContent or "") for c in result._root_node.childNodes]
+            return [(c.nodeName, c.textContent or "") for c in result._root_node.childNodes[0].childNodes]
 
-        with TestRenderer.render(Page) as result:
+        with TestRenderer.render(TeleportPage) as result:
             assert _node_names(result) == [
                 ("SPAN", "a"),
                 ("SPAN", "x"),
@@ -203,15 +203,15 @@ class TestTeleportInlineFallbackStability:
 
 class TestTeleportMultipleTargets:
     def test_multiple_teleports_append_in_mount_order(self, teleport_env):
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV(
                 {},
                 Teleport({"to": "body"}, html.DIV({"data-t": "teleported"}, "content-A")),
                 Teleport({"to": "body"}, html.DIV({"data-t": "teleported"}, "content-B")),
             )
 
-        with TestRenderer.render(Page) as result:
+        with TestRenderer.render(TeleportPage) as result:
             body = result.body_node
             assert body is not None
             texts = [
@@ -227,8 +227,8 @@ class TestTeleportSharedTargetReindex:
         a_items = ReactiveList(["a1"])
         b_items = ReactiveList(["b1"])
 
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV(
                 {},
                 Teleport({"to": "body"}, repeat(a_items, lambda x: html.DIV({"data-t": "a"}, x))),
@@ -242,7 +242,7 @@ class TestTeleportSharedTargetReindex:
                 if body.childNodes[i].getAttribute("data-t") in ("a", "b")
             ]
 
-        with TestRenderer.render(Page) as result:
+        with TestRenderer.render(TeleportPage) as result:
             body = result.body_node
             assert body is not None
             assert _teleported_tags(body) == ["aa1", "bb1"]
@@ -264,15 +264,18 @@ class TestTeleportSharedTargetReindex:
         from webcompy.di import inject
         from webcompy.di._keys import _COMPONENT_STORE_KEY, _HEAD_PROPS_KEY
         from webcompy.di._scope import _active_di_scope
-        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, CUSTOM_ELEMENT_PORT_KEY, HOST_PORT_KEY
+        from webcompy_testing import FakeBrowserHostPort, FakeCustomElementPort
 
         dom_port, _, _ = fake_browser_full
         scope = _active_di_scope.get()
         scope.provide(_COMPONENT_STORE_KEY, ComponentStore())
         scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+        scope.provide(CUSTOM_ELEMENT_PORT_KEY, FakeCustomElementPort())
+        scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
         release = asyncio.Event()
 
-        @define_component
+        @define_component("pending-cmp")
         async def PendingCmp(context):
             await release.wait()
             return html.DIV({"data-t": "a"}, "resolved")
@@ -297,11 +300,17 @@ class TestTeleportSharedTargetReindex:
             teleport._node_idx = idx
 
         def _tags(body):
-            return [
-                (body.childNodes[i].getAttribute("data-t") or "") + (body.childNodes[i].textContent or "")
-                for i in range(body.childNodes.length)
-                if body.childNodes[i].getAttribute("data-t") in ("a", "b")
-            ]
+            tags: list[str] = []
+            for i in range(body.childNodes.length):
+                node = body.childNodes[i]
+                if node.getAttribute("data-t") in ("a", "b"):
+                    tags.append((node.getAttribute("data-t") or "") + (node.textContent or ""))
+                else:
+                    for j in range(node.childNodes.length):
+                        inner = node.childNodes[j]
+                        if inner.getAttribute("data-t") in ("a", "b"):
+                            tags.append((inner.getAttribute("data-t") or "") + (inner.textContent or ""))
+            return tags
 
         task_a = asyncio.create_task(teleport_a._render())
         await asyncio.sleep(0)
@@ -391,8 +400,8 @@ class TestTeleportRemoval:
     def test_conditional_removal_cleans_target_and_anchor(self, teleport_env):
         open_state = Signal(True)
 
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV(
                 {},
                 html.P({}, "before"),
@@ -409,28 +418,28 @@ class TestTeleportRemoval:
         def _has_modal(body):
             return _find_by_attr(body, "DIV", "id", "modal") is not None
 
-        with TestRenderer.render(Page) as result:
+        with TestRenderer.render(TeleportPage) as result:
             body = result.body_node
             assert body is not None
             assert _has_modal(body)
-            assert result._root_node.childNodes.length == 3
+            assert result._root_node.childNodes[0].childNodes.length == 3
             open_state.value = False
             assert not _has_modal(body)
-            assert result._root_node.childNodes.length == 2
+            assert result._root_node.childNodes[0].childNodes.length == 2
             open_state.value = True
             assert _has_modal(body)
-            assert result._root_node.childNodes.length == 3
+            assert result._root_node.childNodes[0].childNodes.length == 3
 
 
 class TestTeleportReactivity:
     def test_reactive_update_applies_at_target(self, teleport_env):
         message = Signal("initial")
 
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV({}, Teleport({"to": "body"}, html.SPAN({}, message)))
 
-        with TestRenderer.render(Page) as result:
+        with TestRenderer.render(TeleportPage) as result:
             body = result.body_node
             assert body is not None
             spans = _body_children_by_tag(body, "SPAN")
@@ -438,25 +447,31 @@ class TestTeleportReactivity:
             assert spans[0].textContent == "initial"
             message.value = "updated"
             assert spans[0].textContent == "updated"
-            assert result._root_node.childNodes.length == 1
+            assert result._root_node.childNodes[0].childNodes.length == 1
 
     def test_scoped_attrs_and_event_handlers_survive_relocation(self, teleport_env):
         clicked: list[int] = []
 
-        @define_component
-        def Modal(context):
+        @define_component("teleport-modal")
+        def TeleportModal(context):
             return html.BUTTON({"class": "modal-btn", "@click": lambda ev: clicked.append(1)}, "click me")
 
-        Modal.scoped_style = {" .modal-btn": {"color": "red"}}
+        TeleportModal.scoped_style = {" .modal-btn": {"color": "red"}}
 
-        @define_component
-        def Page(context):
-            return html.DIV({}, Teleport({"to": "body"}, Modal(None)))
+        @define_component("teleport-page")
+        def TeleportPage(context):
+            return html.DIV({}, Teleport({"to": "body"}, TeleportModal(None)))
 
-        with TestRenderer.render(Page) as result:
+        with TestRenderer.render(TeleportPage) as result:
             body = result.body_node
             assert body is not None
-            buttons = _body_children_by_tag(body, "BUTTON")
+            wrappers = _body_children_by_tag(body, "TELEPORT-MODAL")
+            assert len(wrappers) == 1
+            buttons = [
+                wrappers[0].childNodes[i]
+                for i in range(wrappers[0].childNodes.length)
+                if wrappers[0].childNodes[i].nodeName == "BUTTON"
+            ]
             assert len(buttons) == 1
             btn = buttons[0]
             assert btn.getAttribute("class") == "modal-btn"
@@ -501,8 +516,8 @@ class TestTeleportHydration:
 
 class TestTeleportSSR:
     def test_ssr_output_contains_no_teleported_content(self):
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV(
                 {},
                 html.P({}, "before-marker"),
@@ -510,7 +525,7 @@ class TestTeleportSSR:
                 html.P({}, "after-marker"),
             )
 
-        app = create_test_app(root_component=Page)
+        app = create_test_app(root_component=TeleportPage)
         html_str = render_app_html(
             app,
             app_package_name="test_pkg",
@@ -598,8 +613,8 @@ class TestTeleportSSRHydrationRoundTrip:
 
         dom_port, _, _ = fake_browser_full
 
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV(
                 {},
                 html.P({"data-testid": "before"}, "before-marker"),
@@ -607,7 +622,7 @@ class TestTeleportSSRHydrationRoundTrip:
                 html.P({"data-testid": "after"}, "after-marker"),
             )
 
-        app = create_test_app(root_component=Page)
+        app = create_test_app(root_component=TeleportPage)
         html_str = render_app_html(
             app,
             app_package_name="test_pkg",
@@ -622,7 +637,7 @@ class TestTeleportSSRHydrationRoundTrip:
         assert parser.root is not None
         app_div = _find_by_id(parser.root, "webcompy-app")
         assert app_div is not None
-        page_div = app_div.childNodes[0]
+        page_div = app_div.childNodes[0].childNodes[0]
         assert page_div.childNodes.length == 3
         _mark_prerendered(page_div)
         dom_port._body.appendChild(page_div)
@@ -675,8 +690,8 @@ class TestTeleportSSRHydrationRoundTrip:
 
         dom_port, _, _ = fake_browser_full
 
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV(
                 {},
                 "before-marker",
@@ -684,7 +699,7 @@ class TestTeleportSSRHydrationRoundTrip:
                 "after-marker",
             )
 
-        app = create_test_app(root_component=Page)
+        app = create_test_app(root_component=TeleportPage)
         html_str = render_app_html(
             app,
             app_package_name="test_pkg",
@@ -757,8 +772,8 @@ class TestTeleportSSRHydrationRoundTrip:
 
         dom_port, _, _ = fake_browser_full
 
-        @define_component
-        def Page(context):
+        @define_component("teleport-page")
+        def TeleportPage(context):
             return html.DIV(
                 {},
                 "before-marker",
@@ -766,7 +781,7 @@ class TestTeleportSSRHydrationRoundTrip:
                 "after-marker",
             )
 
-        app = create_test_app(root_component=Page)
+        app = create_test_app(root_component=TeleportPage)
         html_str = render_app_html(
             app,
             app_package_name="test_pkg",
@@ -780,7 +795,7 @@ class TestTeleportSSRHydrationRoundTrip:
         assert parser.root is not None
         app_div = _find_by_id(parser.root, "webcompy-app")
         assert app_div is not None
-        page_div = app_div.childNodes[0]
+        page_div = app_div.childNodes[0].childNodes[0]
         assert page_div.childNodes.length == 1
         _mark_prerendered(page_div)
         dom_port._body.appendChild(page_div)

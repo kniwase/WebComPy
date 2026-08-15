@@ -28,8 +28,8 @@ def _box_classes(result, testid: str) -> list[str]:
 
 
 def _toggle_root(show: Signal[bool], name: str = "fade", duration: int | None = 100):
-    @define_component
-    def Root(context):
+    @define_component("test-root")
+    def TestRoot(context):
         return html.DIV(
             {},
             html.SPAN({"data-testid": "before"}, "before"),
@@ -40,7 +40,7 @@ def _toggle_root(show: Signal[bool], name: str = "fade", duration: int | None = 
             html.SPAN({"data-testid": "after"}, "after"),
         )
 
-    return Root
+    return TestRoot
 
 
 class TestEnterSequence:
@@ -79,8 +79,8 @@ class TestEnterSequence:
         show = Signal(True)
         text = Signal("a")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 Transition(
@@ -89,7 +89,7 @@ class TestEnterSequence:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             box = result.find_by_attribute("data-testid", "box")
             assert box is not None
             text.value = "b"
@@ -102,8 +102,8 @@ class TestEnterSequence:
     def test_same_tag_patch_renders_structural_inner_change(self) -> None:
         flag = Signal(True)
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 Transition(
@@ -119,7 +119,7 @@ class TestEnterSequence:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             box = result.find_by_attribute("data-testid", "box")
             assert box is not None
             assert result.find_by_attribute("data-testid", "inner-a") is not None
@@ -139,8 +139,8 @@ class TestEnterSequence:
         events: list[str] = []
 
         def make_child(label: str):
-            @define_component
-            def Child(context):
+            @define_component("test-child")
+            def TestChild(context):
                 @on_before_rendering
                 def _before():
                     events.append(f"before-{label}")
@@ -151,10 +151,10 @@ class TestEnterSequence:
 
                 return html.SPAN({"data-testid": f"box-{label}"}, label)
 
-            return Child
+            return TestChild
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 Transition(
@@ -163,7 +163,7 @@ class TestEnterSequence:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "box-a") is not None
             assert events == ["before-a", "after-a"]
             events.clear()
@@ -178,8 +178,8 @@ class TestEnterSequence:
 
 class TestLeaveSequence:
     def _destroy_root(self, show: Signal[bool], destroyed: list[int]):
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             @on_before_destroy
             def _cleanup():
                 destroyed.append(1)
@@ -194,7 +194,7 @@ class TestLeaveSequence:
                 html.SPAN({"data-testid": "after"}, "after"),
             )
 
-        return Root
+        return TestRoot
 
     def test_leave_retains_node_then_removes(self) -> None:
         show = Signal(True)
@@ -220,25 +220,25 @@ class TestLeaveSequence:
         counter = Signal(0)
         destroyed: list[int] = []
 
-        @define_component
-        def Child(context):
+        @define_component("test-child")
+        def TestChild(context):
             @on_before_destroy
             def _cleanup():
                 destroyed.append(1)
 
             return html.SPAN({"data-testid": "box", "data-x": counter}, "box")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 Transition(
                     {"name": "fade", "duration": 100},
-                    lambda: Child(None) if show.value else None,
+                    lambda: TestChild(None) if show.value else None,
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert counter.consumers is not None
             show.value = False
             result.transition_port.flush_frame()
@@ -246,7 +246,7 @@ class TestLeaveSequence:
             assert result.find_by_attribute("data-testid", "box") is None
             assert counter.consumers is None
             assert destroyed == [1]
-            root_node = result._root_node
+            root_node = result._root_node.childNodes[0]
             assert root_node.childNodes.length == 0
 
 
@@ -371,8 +371,8 @@ class TestDurationResolution:
 
         show = Signal(True)
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 Transition(
@@ -388,7 +388,7 @@ class TestDurationResolution:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             show.value = False
             result.transition_port.flush_frame()
             inner = result.find_by_attribute("data-testid", "inner")
@@ -470,7 +470,7 @@ class TestNodeAccounting:
     def test_sibling_positions_stable_during_leave_and_reindex_once(self, monkeypatch) -> None:
         show = Signal(True)
         with TestRenderer.render(_toggle_root(show)) as result:
-            before, transition, after = result._instance._children
+            before, transition, after = result._instance._children[0]._children
 
             reindex_calls: list[int] = []
             root = transition._parent
@@ -505,7 +505,7 @@ class TestNodeAccounting:
     def test_leave_completion_reindexes_without_refresh_reevaluation(self, monkeypatch) -> None:
         show = Signal(True)
         with TestRenderer.render(_toggle_root(show)) as result:
-            transition = result._instance._children[1]
+            transition = result._instance._children[0]._children[1]
             refresh_calls: list[Any] = []
             original_refresh = TransitionElement._refresh
 
@@ -527,8 +527,8 @@ class TestNodeAccounting:
 
 class TestReplacementAndInterruption:
     def _replacement_root(self, a_show: Signal[bool], b_show: Signal[bool]):
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 Transition(
@@ -541,7 +541,7 @@ class TestReplacementAndInterruption:
                 ),
             )
 
-        return Root
+        return TestRoot
 
     def test_replacement_leaves_then_enters(self) -> None:
         a_show, b_show = Signal(True), Signal(False)
@@ -583,7 +583,7 @@ class TestReplacementAndInterruption:
     def test_replacement_reindexes_once(self, monkeypatch) -> None:
         a_show, b_show = Signal(True), Signal(False)
         with TestRenderer.render(self._replacement_root(a_show, b_show)) as result:
-            transition = result._instance._children[0]
+            transition = result._instance._children[0]._children[0]
             root = transition._parent
             original_reindex = root._re_index_children
             reindex_calls: list[int] = []
@@ -654,8 +654,8 @@ class TestReplacementAndInterruption:
             assert result.find_by_attribute("data-testid", "box") is None
 
     def _two_signal_root(self, show: Signal[bool], extra: Signal[bool]):
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 Transition(
@@ -664,7 +664,7 @@ class TestReplacementAndInterruption:
                 ),
             )
 
-        return Root
+        return TestRoot
 
     def test_same_tag_update_during_leave_completes_leave_then_enters(self) -> None:
         show, extra = Signal(True), Signal(False)
@@ -689,8 +689,8 @@ class TestReplacementAndInterruption:
     def _switch_root(self, show: Signal[bool], wrap: Signal[bool]):
         from webcompy.elements import switch
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 switch(
@@ -708,12 +708,12 @@ class TestReplacementAndInterruption:
                 ),
             )
 
-        return Root
+        return TestRoot
 
     def test_staged_pending_child_discarded_when_generator_returns_none(self) -> None:
         show, extra = Signal(True), Signal(False)
         with TestRenderer.render(self._two_signal_root(show, extra)) as result:
-            transition = result._instance._children[0]
+            transition = result._instance._children[0]._children[0]
             show.value = False
             result.transition_port.flush_frame()
             extra.value = True
@@ -726,7 +726,7 @@ class TestReplacementAndInterruption:
     def test_revert_during_leave_completion_discards_staged_child(self, monkeypatch) -> None:
         show, extra = Signal(True), Signal(False)
         with TestRenderer.render(self._two_signal_root(show, extra)) as result:
-            transition = result._instance._children[0]
+            transition = result._instance._children[0]._children[0]
             show.value = False
             result.transition_port.flush_frame()
             extra.value = True
@@ -778,8 +778,8 @@ class TestReplacementAndInterruption:
         extra = Signal(False)
         invalid = Signal(False)
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 Transition(
@@ -794,8 +794,8 @@ class TestReplacementAndInterruption:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
-            transition = result._instance._children[0]
+        with TestRenderer.render(TestRoot) as result:
+            transition = result._instance._children[0]._children[0]
             reindex_calls: list[int] = []
             root = transition._parent
             original_reindex = root._re_index_children
@@ -848,7 +848,7 @@ class TestReplacementAndInterruption:
 
         monkeypatch.setattr(TransitionElement, "_refresh_pass", stubbed_pass)
         with TestRenderer.render(_toggle_root(show)) as result:
-            transition = result._instance._children[1]
+            transition = result._instance._children[0]._children[1]
             transition._refresh_sync()
             assert entries == [1, -1, 2, -2]
 
@@ -863,20 +863,20 @@ class TestReplacementAndInterruption:
             "box",
         )
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 Transition({"name": "fade", "duration": 100}, lambda: box if a.value else None),
             )
 
-        with TestRenderer.render(Root) as result:
-            transition = result._instance._children[0]
+        with TestRenderer.render(TestRoot) as result:
+            transition = result._instance._children[0]._children[0]
             box_node = result.find_by_attribute("data-testid", "box")
             assert box_node is not None
             transition._refresh_sync()
             transition._refresh_sync()
-            parent_node = result._instance._node_cache
+            parent_node = result._instance._node_cache.childNodes[0]
             box_count = sum(1 for c in parent_node.childNodes if c.getAttribute("data-testid") == "box")
             assert box_count == 1
             assert "click" in box._event_handlers_added
@@ -908,7 +908,7 @@ class TestSsrAndHydration:
     def test_ssr_output_has_no_transition_classes(self) -> None:
         show = Signal(True)
 
-        @define_component
+        @define_component("ssr-root")
         def SsrRoot(context):
             return html.DIV(
                 {},
@@ -990,8 +990,8 @@ class TestValidation:
 
         show = Signal(True)
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 Transition(
@@ -1001,15 +1001,15 @@ class TestValidation:
             )
 
         with pytest.raises(WebComPyException):
-            TestRenderer.render(Root)
+            TestRenderer.render(TestRoot)
 
     def test_text_child_shape_rejected(self) -> None:
         from webcompy.elements.types._text import TextElement
 
         show = Signal(True)
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 Transition(
@@ -1019,15 +1019,15 @@ class TestValidation:
             )
 
         with pytest.raises(WebComPyException):
-            TestRenderer.render(Root)
+            TestRenderer.render(TestRoot)
 
     def test_invalid_shape_during_refresh_leaves_tree_intact(self) -> None:
         from webcompy.elements.types._fragment import FragmentElement
 
         invalid = Signal(False)
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 Transition(
@@ -1040,8 +1040,8 @@ class TestValidation:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
-            transition = result._instance._children[0]
+        with TestRenderer.render(TestRoot) as result:
+            transition = result._instance._children[0]._children[0]
             invalid.value = True
             assert result.find_by_attribute("data-testid", "box") is not None
             assert result.find_by_attribute("data-testid", "box").textContent == "box"

@@ -5,7 +5,7 @@ from webcompy.router import RouterContext
 from ...components.demo_display import DemoDisplay
 
 
-@define_component
+@define_component("to-do-list-page")
 def ToDoListPage(context: ComponentContext[RouterContext]):
     context.set_title("ToDo List - WebCompy Demo")
     return html.DIV(

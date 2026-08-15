@@ -72,11 +72,11 @@ def _make_page_component():
     from webcompy.components import define_component
     from webcompy.elements import html
 
-    def setup(ctx):
+    @define_component("test-page")
+    def TestPage(ctx):
         return html.DIV({})
 
-    setup.__name__ = "Page"
-    return define_component(setup)
+    return TestPage
 
 
 def _create_serving(app, build_config, *, mode="prod"):

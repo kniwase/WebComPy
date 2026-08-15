@@ -29,13 +29,13 @@ class TestReactiveScopedStyleBasics:
 
     def test_dict_computed_returns_dict(self):
         style = reactive_scoped_style(lambda: {".x": {"color": "red"}})
-        style._bind("test-cid")
+        style._bind("test-cid", host_tag="test-component")
         assert style.dict_computed.value == {".x": {"color": "red"}}
 
     def test_dict_computed_tracks_signal(self):
         color = Signal("blue")
         style = reactive_scoped_style(lambda: {".x": {"color": color.value}})
-        style._bind("test-cid")
+        style._bind("test-cid", host_tag="test-component")
         assert style.dict_computed.value == {".x": {"color": "blue"}}
         color.value = "red"
         assert style.dict_computed.value == {".x": {"color": "red"}}
@@ -54,7 +54,7 @@ class TestReactiveScopedStyleBasics:
 class TestReactiveScopedStyleRenderCss:
     def test_render_simple_selector(self):
         style = reactive_scoped_style(lambda: {".x": {"color": "red"}})
-        style._bind("abc")
+        style._bind("abc", host_tag="test-component")
         out = style.render_css("abc")
         assert "@layer webcompy-scope" in out
         assert ".x[webcompy-cid-abc]" in out
@@ -62,7 +62,7 @@ class TestReactiveScopedStyleRenderCss:
 
     def test_render_pseudo_class(self):
         style = reactive_scoped_style(lambda: {".btn": {"color": "blue", ":hover": {"background": "yellow"}}})
-        style._bind("c1")
+        style._bind("c1", host_tag="test-component")
         out = style.render_css("c1")
         assert ".btn[webcompy-cid-c1]" in out
         assert ".btn[webcompy-cid-c1]:hover" in out
@@ -71,13 +71,13 @@ class TestReactiveScopedStyleRenderCss:
 
     def test_render_combinator(self):
         style = reactive_scoped_style(lambda: {".menu": {"> li": {"color": "red"}}})
-        style._bind("c2")
+        style._bind("c2", host_tag="test-component")
         out = style.render_css("c2")
         assert ".menu[webcompy-cid-c2] > li" in out
 
     def test_render_at_rule(self):
         style = reactive_scoped_style(lambda: {"@media (max-width: 768px)": {".btn": {"color": "red"}}})
-        style._bind("c3")
+        style._bind("c3", host_tag="test-component")
         out = style.render_css("c3")
         assert "@media (max-width: 768px)" in out
         assert ".btn[webcompy-cid-c3]" in out
@@ -85,7 +85,7 @@ class TestReactiveScopedStyleRenderCss:
 
     def test_render_keyframes(self):
         style = reactive_scoped_style(lambda: {"@keyframes fade": {"from": {"opacity": "0"}, "to": {"opacity": "1"}}})
-        style._bind("c4")
+        style._bind("c4", host_tag="test-component")
         out = style.render_css("c4")
         assert "@keyframes fade" in out
         assert "opacity: 0" in out
@@ -93,13 +93,13 @@ class TestReactiveScopedStyleRenderCss:
 
     def test_render_empty_returns_empty(self):
         style = reactive_scoped_style(lambda: {})
-        style._bind("c5")
+        style._bind("c5", host_tag="test-component")
         assert style.render_css("c5") == ""
 
     def test_render_signal_change_updates_css(self):
         color = Signal("blue")
         style = reactive_scoped_style(lambda: {".x": {"color": color.value}})
-        style._bind("c6")
+        style._bind("c6", host_tag="test-component")
         first = style.render_css("c6")
         assert "color: blue" in first
         color.value = "red"
@@ -110,12 +110,12 @@ class TestReactiveScopedStyleRenderCss:
         def _noop2(ctx):
             pass
 
-        gen = ComponentGenerator("CompareComp", _noop2)
+        gen = ComponentGenerator("CompareComp", _noop2, custom_element_name="compare-comp")
         gen.scoped_style = {".btn": {"color": "blue", ":hover": {"background": "yellow"}}}
         static = gen.scoped_style
 
         style = reactive_scoped_style(lambda: {".btn": {"color": "blue", ":hover": {"background": "yellow"}}})
-        style._bind(gen._id)
+        style._bind(gen._id, host_tag="test-component")
         reactive = style.render_css(gen._id)
 
         assert static == reactive
@@ -135,41 +135,41 @@ class TestReactiveScopedStyleRenderCss:
         def _noop2(ctx):
             pass
 
-        gen = ComponentGenerator("ParityComp", _noop2)
+        gen = ComponentGenerator("ParityComp", _noop2, custom_element_name="parity-comp")
         gen.scoped_style = style_dict
         style = reactive_scoped_style(lambda: style_dict)
-        style._bind(gen._id)
+        style._bind(gen._id, host_tag="test-component")
         assert gen.scoped_style == style.render_css(gen._id)
 
     def test_reactive_ampersand_rejected(self):
         style = reactive_scoped_style(lambda: {".btn": {"&:hover": {"color": "red"}}})
         with pytest.raises(WebComPyException, match="&"):
-            style._bind("rx")
+            style._bind("rx", host_tag="test-component")
 
     def test_double_bind_same_cid_idempotent(self):
         style = reactive_scoped_style(lambda: {".x": {"color": "red"}})
-        style._bind("c7")
+        style._bind("c7", host_tag="test-component")
         c1 = style.css_computed
-        style._bind("c7")
+        style._bind("c7", host_tag="test-component")
         c2 = style.css_computed
         assert c1 is c2
 
     def test_rebind_different_cid_raises(self):
         style = reactive_scoped_style(lambda: {".x": {"color": "red"}})
-        style._bind("c8")
+        style._bind("c8", host_tag="test-component")
         with pytest.raises(WebComPyException, match="different component"):
-            style._bind("c9")
+            style._bind("c9", host_tag="test-component")
 
 
 class TestGeneratorReactiveStylesTracking:
     def test_generator_starts_with_empty_reactive_styles(self):
-        gen = ComponentGenerator("EmptyComp", _noop)
+        gen = ComponentGenerator("EmptyComp", _noop, custom_element_name="empty-comp")
         assert gen._reactive_styles == []
 
     def test_appending_via_use_method(self):
         from webcompy.components._libs import Context
 
-        gen = ComponentGenerator("WithStyle", _noop)
+        gen = ComponentGenerator("WithStyle", _noop, custom_element_name="with-style")
         style = reactive_scoped_style(lambda: {".x": {"color": "red"}})
         context = Context(
             None,
@@ -188,7 +188,7 @@ class TestGeneratorReactiveStylesTracking:
     def test_double_registration_with_same_style_instance_is_noop(self):
         from webcompy.components._libs import Context
 
-        gen = ComponentGenerator("DedupComp", _noop)
+        gen = ComponentGenerator("DedupComp", _noop, custom_element_name="dedup-comp")
         style = reactive_scoped_style(lambda: {".x": {"color": "red"}})
         context = Context(
             None,
@@ -215,7 +215,7 @@ class TestGeneratorReactiveStylesTracking:
         from webcompy.ports._keys import DOM_PORT_KEY
         from webcompy_testing._ports import FakeBrowserDOMPort
 
-        gen = ComponentGenerator("DestroyComp", _noop)
+        gen = ComponentGenerator("DestroyComp", _noop, custom_element_name="destroy-comp")
         style = reactive_scoped_style(lambda: {".x": {"color": "blue"}})
         context = Context(
             None,
@@ -270,7 +270,7 @@ class TestGeneratorReactiveStylesTracking:
         from webcompy.ports._keys import DOM_PORT_KEY
         from webcompy_testing._ports import FakeBrowserDOMPort
 
-        gen = ComponentGenerator("MultiInstance", _noop)
+        gen = ComponentGenerator("MultiInstance", _noop, custom_element_name="multi-instance")
         style = reactive_scoped_style(lambda: {".x": {"color": "blue"}})
 
         def _make_context() -> object:
@@ -348,7 +348,7 @@ class TestGeneratorReactiveStylesTracking:
     def test_use_rejects_non_reactive_scoped_style(self):
         from webcompy.components._libs import Context
 
-        gen = ComponentGenerator("Rejects", _noop)
+        gen = ComponentGenerator("Rejects", _noop, custom_element_name="rejects")
         context = Context(
             None,
             {},
@@ -377,7 +377,7 @@ class TestGeneratorReactiveStylesTracking:
         from webcompy.ports._keys import DOM_PORT_KEY
         from webcompy_testing._ports import FakeBrowserDOMPort
 
-        gen = ComponentGenerator("Removeable", _noop)
+        gen = ComponentGenerator("Removeable", _noop, custom_element_name="removeable")
         style = reactive_scoped_style(lambda: {".x": {"color": "blue"}})
         context = Context(
             None,
@@ -416,7 +416,7 @@ class TestGeneratorReactiveStylesTracking:
     def test_remove_unregistered_style_is_noop(self):
         from webcompy.components._libs import Context
 
-        gen = ComponentGenerator("Unregistered", _noop)
+        gen = ComponentGenerator("Unregistered", _noop, custom_element_name="unregistered")
         context = Context(
             None,
             {},
@@ -428,7 +428,7 @@ class TestGeneratorReactiveStylesTracking:
             generator=gen,
         )
         style = reactive_scoped_style(lambda: {".x": {"color": "red"}})
-        style._bind(gen._id)
+        style._bind(gen._id, host_tag="test-component")
         context.remove_reactive_scoped_style(style)
         assert style.ref_count == 0
         assert style.subscription is None
@@ -452,7 +452,7 @@ class TestGeneratorReactiveStylesTracking:
     def test_remove_rejects_non_reactive_scoped_style(self):
         from webcompy.components._libs import Context
 
-        gen = ComponentGenerator("Rejects", _noop)
+        gen = ComponentGenerator("Rejects", _noop, custom_element_name="rejects")
         context = Context(
             None,
             {},
@@ -469,11 +469,11 @@ class TestGeneratorReactiveStylesTracking:
 
 class TestGeneratorReactiveStylesIntegration:
     def test_multiple_reactive_styles_per_generator(self):
-        gen = ComponentGenerator("MultiStyle", _noop)
+        gen = ComponentGenerator("MultiStyle", _noop, custom_element_name="multi-style")
         s1 = reactive_scoped_style(lambda: {".a": {"color": "red"}})
         s2 = reactive_scoped_style(lambda: {".b": {"color": "blue"}})
-        s1._bind(gen._id)
-        s2._bind(gen._id)
+        s1._bind(gen._id, host_tag="test-component")
+        s2._bind(gen._id, host_tag="test-component")
         gen._reactive_styles.extend([s1, s2])
         assert len(gen._reactive_styles) == 2
         out1 = s1.render_css(gen._id)
@@ -494,9 +494,9 @@ class TestHeadElementBrowserPath:
         from webcompy.ports._keys import DOM_PORT_KEY
         from webcompy_testing._ports import FakeBrowserDOMPort
 
-        gen = ComponentGenerator("RxComp", _noop)
+        gen = ComponentGenerator("RxComp", _noop, custom_element_name="rx-comp")
         style = reactive_scoped_style(lambda: {".dyn": {"color": "red"}})
-        style._bind(gen._id)
+        style._bind(gen._id, host_tag="test-component")
         gen._reactive_styles.append(style)
 
         port = FakeBrowserDOMPort()
@@ -536,7 +536,7 @@ class TestHeadElementBrowserPath:
         from webcompy.ports._keys import DOM_PORT_KEY
         from webcompy_testing._ports import FakeBrowserDOMPort
 
-        gen = ComponentGenerator("SigComp", _noop)
+        gen = ComponentGenerator("SigComp", _noop, custom_element_name="sig-comp")
         color = Signal("blue")
         style = reactive_scoped_style(lambda: {".dyn": {"color": color.value}})
 
@@ -593,9 +593,9 @@ class TestHeadElementSSRPath:
         from webcompy.ports._keys import DOM_PORT_KEY
         from webcompy_server.ports._dom import ServerDOMPort
 
-        gen = ComponentGenerator("SsrComp", _noop)
+        gen = ComponentGenerator("SsrComp", _noop, custom_element_name="ssr-comp")
         style = reactive_scoped_style(lambda: {".dyn": {"color": "red"}})
-        style._bind(gen._id)
+        style._bind(gen._id, host_tag="test-component")
         gen._reactive_styles.append(style)
 
         port = ServerDOMPort()
@@ -627,10 +627,10 @@ class TestHeadElementSSRPath:
         from webcompy.ports._keys import DOM_PORT_KEY
         from webcompy_server.ports._dom import ServerDOMPort
 
-        gen = ComponentGenerator("SsrComp", _noop)
+        gen = ComponentGenerator("SsrComp", _noop, custom_element_name="ssr-comp")
         gen._style = {".static": {"color": "blue"}}
         style = reactive_scoped_style(lambda: {".dyn": {"color": "red"}})
-        style._bind(gen._id)
+        style._bind(gen._id, host_tag="test-component")
         gen._reactive_styles.append(style)
 
         port = ServerDOMPort()

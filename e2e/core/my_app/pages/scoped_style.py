@@ -2,7 +2,7 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 
 
-@define_component
+@define_component("scoped-style-page")
 def ScopedStylePage(context: ComponentContext[None]):
     context.set_title("Scoped Style - E2E")
 

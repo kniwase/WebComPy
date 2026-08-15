@@ -3,7 +3,7 @@ from webcompy.elements import DomNodeRef, html
 from webcompy.signal import use_computed, use_state
 
 
-@define_component
+@define_component("event-page")
 def EventPage(context: ComponentContext[None]):
     context.set_title("Event - E2E")
 

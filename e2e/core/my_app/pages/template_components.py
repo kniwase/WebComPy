@@ -3,7 +3,7 @@ from webcompy.signal import Signal, use_state
 from webcompy.template import render_template
 
 
-@define_component
+@define_component("card-count")
 def CardCount(context):
     start = context.props.get("start")
     initial_value = start.value if isinstance(start, Signal) else start
@@ -25,7 +25,7 @@ def CardCount(context):
     )
 
 
-@define_component
+@define_component("nested-count")
 def NestedCount(context):
     start = context.props.get("start")
     initial_value = start.value if isinstance(start, Signal) else start
@@ -41,7 +41,7 @@ def NestedCount(context):
     )
 
 
-@define_component
+@define_component("template-components-page")
 def TemplateComponentsPage(context: ComponentContext[None]):
     context.set_title("Template Components - E2E")
 

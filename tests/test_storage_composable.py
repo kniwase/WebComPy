@@ -246,13 +246,13 @@ class TestComponentIntegration:
         monkeypatch.setattr(storage_composable, "_local_storage", lambda: fake)
         captured: dict[str, Signal] = {}
 
-        @define_component
-        def Page(context):
+        @define_component("storage-page")
+        def StoragePage(context):
             theme = use_local_storage("theme", lambda: "light")
             captured["theme"] = theme
             return render_template('<span data-testid="t">{{ theme }}</span>', {"theme": theme})
 
-        with TestRenderer.render(Page) as result:
+        with TestRenderer.render(StoragePage) as result:
             el = result.find_by_attribute("data-testid", "t")
             assert el is not None
             assert el.textContent == "light"

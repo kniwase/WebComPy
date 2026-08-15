@@ -306,13 +306,13 @@ class TestHeadElementAppStyle:
         def _noop(_: object) -> None:
             pass
 
-        gen_static = ComponentGenerator("StaticCid", _noop)
+        gen_static = ComponentGenerator("StaticCid", _noop, custom_element_name="static-cid")
         gen_static._style = {".x": {"color": "red"}}
         store.add_component("StaticCid", gen_static)
 
-        gen_rx = ComponentGenerator("ReactiveCid", _noop)
+        gen_rx = ComponentGenerator("ReactiveCid", _noop, custom_element_name="reactive-cid")
         rx_style = reactive_scoped_style(lambda: {".y": {"color": "blue"}})
-        rx_style._bind(gen_rx._id)
+        rx_style._bind(gen_rx._id, host_tag="test-component")
         gen_rx._reactive_styles.append(rx_style)
         store.add_component("ReactiveCid", gen_rx)
 

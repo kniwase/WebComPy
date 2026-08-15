@@ -4,30 +4,15 @@ from enum import Enum
 
 from webcompy.components._generator import ComponentStore
 from webcompy.exception import WebComPyException
+from webcompy.utils._casing import kebab_to_pascal, kebab_to_snake, pascal_to_kebab
 
-
-def kebab_to_pascal(kebab: str) -> str:
-    """Convert kebab-case to PascalCase.
-
-    >>> kebab_to_pascal("user-card")
-    'UserCard'
-    >>> kebab_to_pascal("my-widget")
-    'MyWidget'
-    >>> kebab_to_pascal("a-b-c")
-    'ABC'
-    """
-    return "".join(part.capitalize() for part in kebab.split("-"))
-
-
-def kebab_to_snake(kebab: str) -> str:
-    """Convert kebab-case to snake_case.
-
-    >>> kebab_to_snake("item-count")
-    'item_count'
-    >>> kebab_to_snake("data-value")
-    'data_value'
-    """
-    return kebab.replace("-", "_")
+__all__ = [
+    "TagResolution",
+    "kebab_to_pascal",
+    "kebab_to_snake",
+    "pascal_to_kebab",
+    "resolve_tag",
+]
 
 
 class TagResolution(Enum):

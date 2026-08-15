@@ -8,7 +8,7 @@ from webcompy.signal import use_state
 from webcompy.ui.code_block import CodeBlock
 from webcompy.utils import strip_multiline_text
 
-from .ui import Card
+from .ui import DocsCard
 
 
 class DemoComponentProps(TypedDict):
@@ -17,7 +17,7 @@ class DemoComponentProps(TypedDict):
     demo_path: str
 
 
-@define_component
+@define_component("demo-display")
 def DemoDisplay(context: ComponentContext[DemoComponentProps]):
     source_code = use_state(lambda: "")
 
@@ -41,7 +41,7 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
     return html.DIV(
         {"class": "demo-display-root"},
         html.H3({"class": "demo-display-title"}, context.props["title"]),
-        Card(
+        DocsCard(
             {"title": "Demo"},
             slots={
                 "default": lambda: html.IFRAME(
@@ -52,7 +52,7 @@ def DemoDisplay(context: ComponentContext[DemoComponentProps]):
                 )
             },
         ),
-        Card(
+        DocsCard(
             {"title": "Code"},
             slots={"default": lambda: CodeBlock({"code": source_code, "lang": "python"})},
         ),

@@ -13,12 +13,12 @@ def _make_app(**config_kwargs):
     from webcompy.elements import html
     from webcompy_server import configure_server_context
 
-    @define_component
-    def _TestRoot(context):
+    @define_component("test-root")
+    def TestRoot(context):
         return html.DIV({}, "test")
 
     app = WebComPyApp(
-        root_component=_TestRoot,
+        root_component=TestRoot,
         config=WebComPyAppConfig(**config_kwargs),
     )
     configure_server_context(app)

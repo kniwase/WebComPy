@@ -429,7 +429,7 @@ class TestComponentTagEndToEnd:
             return Element("section", {}, [], None, [TextElement("ok")])
 
         store = ComponentStore()
-        store.add_component("UserCard", ComponentGenerator("UserCard", setup))
+        store.add_component("UserCard", ComponentGenerator("UserCard", setup, custom_element_name="user-card"))
 
         with _store_di_scope(store):
             result = render_template("<div><user-card title='Hi' /></div>")
@@ -440,7 +440,8 @@ class TestComponentTagEndToEnd:
         # The binder yields a Component which has been rendered to its template
         # Element; both share ElementBase so we assert behaviorally.
         first_child = result._children[0]
-        assert first_child._tag_name == "section"
+        assert first_child._tag_name == "user-card"
+        assert first_child._children[0]._tag_name == "section"
 
 
 def _store_di_scope(store):
@@ -487,7 +488,7 @@ class TestNestedComponentTags:
             )
 
         store = ComponentStore()
-        store.add_component("InnerCard", ComponentGenerator("InnerCard", inner))
+        store.add_component("InnerCard", ComponentGenerator("InnerCard", inner, custom_element_name="inner-card"))
 
         with _store_di_scope(store):
             result = render_template(
@@ -496,8 +497,9 @@ class TestNestedComponentTags:
         assert isinstance(result, Element)
         assert result._tag_name == "div"
         inner = result._children[0]
-        assert inner._tag_name == "span"
-        assert inner._children[0]._text == "hi"
+        assert inner._tag_name == "inner-card"
+        assert inner._children[0]._tag_name == "span"
+        assert inner._children[0]._children[0]._text == "hi"
 
 
 class TestReactivePropUpdates:
@@ -514,18 +516,21 @@ class TestReactivePropUpdates:
             return Element("p", {}, [], None, [TextElement(text)])
 
         store = ComponentStore()
-        store.add_component("ReactiveCount", ComponentGenerator("ReactiveCount", renderable))
+        store.add_component(
+            "ReactiveCount", ComponentGenerator("ReactiveCount", renderable, custom_element_name="reactive-count")
+        )
 
         sig = Signal("a")
         with _store_di_scope(store):
             first = render_template("<div><reactive-count :value='v' /></div>", {"v": sig})
         assert isinstance(first, Element)
-        # The component tag renders to its template <p>; navigate into that.
-        assert first._children[0]._tag_name == "p"
-        assert first._children[0]._children[0]._text == "a"
+        # The component tag renders to its template <p> inside the wrapper.
+        assert first._children[0]._tag_name == "reactive-count"
+        assert first._children[0]._children[0]._tag_name == "p"
+        assert first._children[0]._children[0]._children[0]._text == "a"
 
         sig.value = "b"
         with _store_di_scope(store):
             second = render_template("<div><reactive-count :value='v' /></div>", {"v": sig})
         assert isinstance(second, Element)
-        assert second._children[0]._children[0]._text == "b"
+        assert second._children[0]._children[0]._children[0]._text == "b"

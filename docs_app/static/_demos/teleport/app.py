@@ -31,8 +31,8 @@ def _dropdown():
     )
 
 
-@define_component
-def App(_: ComponentContext[None]):
+@define_component("teleport-demo-app")
+def TeleportDemoApp(_: ComponentContext[None]):
     modal_open = use_state(lambda: False)
     dropdown_open = use_state(lambda: False)
 
@@ -56,7 +56,7 @@ def App(_: ComponentContext[None]):
     )
 
 
-App.scoped_style = {
+TeleportDemoApp.scoped_style = {
     ".teleport-demo": {
         "font-family": "sans-serif",
         "padding": "1rem",
@@ -104,5 +104,5 @@ App.scoped_style = {
     },
 }
 
-app = WebComPyApp(root_component=App)
+app = WebComPyApp(root_component=TeleportDemoApp)
 app.run()

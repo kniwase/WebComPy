@@ -3,7 +3,7 @@ from webcompy.elements import html, switch
 from webcompy.signal import use_computed, use_state
 
 
-@define_component
+@define_component("switch-page")
 def SwitchPage(context: ComponentContext[None]):
     context.set_title("Switch - E2E")
 

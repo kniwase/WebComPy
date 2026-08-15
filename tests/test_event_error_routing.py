@@ -51,8 +51,8 @@ class TestSyncEventHandlerErrors:
         received: list[Exception] = []
         fake_ctx = SimpleNamespace(_config=SimpleNamespace(on_error=received.append))
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             def boom(_):
                 raise RuntimeError("sync event boom")
 
@@ -62,7 +62,7 @@ class TestSyncEventHandlerErrors:
                 html.SPAN({"data-testid": "unchanged"}, "still here"),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             btn = result.find_by_attribute("data-testid", "btn")
             assert btn is not None
             html_before = result.to_html()
@@ -76,8 +76,8 @@ class TestSyncEventHandlerErrors:
             assert result.to_html() == html_before
 
     def test_sync_handler_error_engages_catch_events_boundary(self):
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             def boom(_):
                 raise RuntimeError("caught event boom")
 
@@ -90,7 +90,7 @@ class TestSyncEventHandlerErrors:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             btn = result.find_by_attribute("data-testid", "btn")
             assert btn is not None
             btn.dispatchEvent(VirtualDOMEvent("click"))
@@ -104,8 +104,8 @@ class TestSyncEventHandlerErrors:
         received: list[Exception] = []
         fake_ctx = SimpleNamespace(_config=SimpleNamespace(on_error=received.append))
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             def boom(_):
                 raise RuntimeError("uncaught event boom")
 
@@ -117,7 +117,7 @@ class TestSyncEventHandlerErrors:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             btn = result.find_by_attribute("data-testid", "btn")
             assert btn is not None
             token = _use_fake_app(fake_ctx)
@@ -139,15 +139,15 @@ class TestAsyncEventHandlerErrors:
         received: list[Exception] = []
         fake_ctx = SimpleNamespace(_config=SimpleNamespace(on_error=received.append))
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             async def boom(_):
                 await asyncio.sleep(0)
                 raise RuntimeError("async event boom")
 
             return html.DIV({}, html.BUTTON({"data-testid": "btn", "@click": boom}, "boom"))
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             btn = result.find_by_attribute("data-testid", "btn")
             assert btn is not None
             token = _use_fake_app(fake_ctx)
@@ -162,8 +162,8 @@ class TestAsyncEventHandlerErrors:
 
     @pytest.mark.asyncio
     async def test_async_handler_error_engages_catch_events_boundary(self):
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             async def boom(_):
                 await asyncio.sleep(0)
                 raise RuntimeError("async caught boom")
@@ -177,7 +177,7 @@ class TestAsyncEventHandlerErrors:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             btn = result.find_by_attribute("data-testid", "btn")
             assert btn is not None
             btn.dispatchEvent(VirtualDOMEvent("click"))
@@ -191,14 +191,14 @@ class TestAsyncEventHandlerErrors:
 
 class TestProxyLifecycle:
     def test_proxy_destroyed_on_element_removal(self):
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             def noop(_):
                 return None
 
             return html.DIV({}, html.BUTTON({"data-testid": "btn", "@click": noop}, "ok"))
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             btn = _find_element_by_testid(result._instance, "btn")
             assert btn is not None
             proxy = btn._event_handlers_added["click"]

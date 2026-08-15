@@ -7,7 +7,7 @@ def _make_generator(selector: str, style: dict) -> ComponentGenerator:
     def _def(_ctx):
         return None
 
-    gen = ComponentGenerator("TestComponent", _def)
+    gen = ComponentGenerator("TestComponent", _def, custom_element_name="test-component")
     gen.scoped_style = {selector: style}  # type: ignore[assignment]
     return gen
 
@@ -25,7 +25,7 @@ def test_scoped_style_empty_returns_empty_string() -> None:
     def _def(_ctx):
         return None
 
-    gen = ComponentGenerator("EmptyComponent", _def)
+    gen = ComponentGenerator("EmptyComponent", _def, custom_element_name="empty-component")
     assert gen.scoped_style == ""
 
 

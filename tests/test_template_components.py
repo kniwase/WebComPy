@@ -57,7 +57,7 @@ def _make_recorder(name: str, captured: dict[str, Any]) -> ComponentGenerator[An
         captured["slots"] = ctx._Context__slots
         return Element("span", {}, [], None, ["ok"])
 
-    return ComponentGenerator(name, setup)
+    return ComponentGenerator(name, setup, custom_element_name=f"x-{name.lower()}")
 
 
 def _bind(source: str, ctx: dict[str, Any] | None = None) -> Any:
@@ -240,7 +240,7 @@ class TestRealComponentEndToEnd:
     """End-to-end: ``@define_component`` + binder renders a ``Component``."""
 
     def test_define_component_runs_via_template_tag(self):
-        @define_component
+        @define_component("user-card")
         def UserCard(context):
             title = context.props.get("title", "")
             return Element("section", {}, [], None, [f"Card:{title}"])

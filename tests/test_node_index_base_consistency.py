@@ -37,7 +37,7 @@ class TestNonZeroOffsetRegularElementRefresh:
     def test_children_indexed_from_zero_and_order_kept_after_refresh(self):
         items = ReactiveList(["x", "y"])
 
-        @define_component
+        @define_component("sibling-page")
         def SiblingPage(context):
             return render_template(
                 """
@@ -55,7 +55,7 @@ class TestNonZeroOffsetRegularElementRefresh:
             )
 
         with TestRenderer.render(SiblingPage) as result:
-            section = _find_tag(result._instance._children, "section")
+            section = _find_tag(result._instance._children[0]._children, "section")
             assert section._node_idx == 3
             assert [c._node_idx for c in section._children] == [0, 1, 7, 8, 9]
             rep = next(c for c in section._children if c.__class__.__name__ == "RepeatElement")

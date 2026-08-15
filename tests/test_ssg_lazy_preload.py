@@ -8,6 +8,8 @@ from unittest.mock import patch
 
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import WebComPyAppConfig
+from webcompy.components import define_component
+from webcompy.elements import html
 from webcompy.router._lazy import lazy
 from webcompy.router._router import Router
 from webcompy_cli._build import BuildArtifacts
@@ -26,16 +28,6 @@ def _setup_app_pkg(tmp_path: Path):
     spec.loader.exec_module(mod)
     build_config = WebComPyBuildConfig(app_module=mod)
     return pkg, build_config
-
-
-def _make_component(name: str):
-    from webcompy.components import define_component
-    from webcompy.elements import html
-
-    def setup(ctx):
-        return html.DIV({})
-
-    return define_component(setup)
 
 
 def _make_artifacts(tmp_path: Path) -> BuildArtifacts:
@@ -128,7 +120,12 @@ class TestGenerateLazyRoutePreload:
         pkg, build_config = _setup_app_pkg(tmp_path)
         artifacts = _make_artifacts(tmp_path)
 
-        comp = _make_component("LazyPage")
+        @define_component("lazy-page")
+        def LazyPage(ctx):
+
+            return html.DIV({})
+
+        comp = LazyPage
         comp.scoped_style = {".lazy-page": {"color": "red"}}
         fake_module = types.ModuleType("lazy_page_module")
         fake_module.LazyPage = comp
@@ -165,7 +162,12 @@ class TestGenerateLazyRoutePreload:
         pkg, build_config = _setup_app_pkg(tmp_path)
         artifacts = _make_artifacts(tmp_path)
 
-        comp = _make_component("EagerPage")
+        @define_component("eager-page")
+        def EagerPage(ctx):
+
+            return html.DIV({})
+
+        comp = EagerPage
         router = Router(
             {"path": "/", "component": comp},
             mode="history",

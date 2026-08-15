@@ -70,19 +70,19 @@ def _make_page_component():
     from webcompy.components import define_component
     from webcompy.elements import html
 
-    def setup(ctx):
+    @define_component("test-page")
+    def TestPage(ctx):
         return html.DIV({})
 
-    setup.__name__ = "Page"
-    return define_component(setup)
+    return TestPage
 
 
 def _make_fetch_root():
     from webcompy.components import define_component
     from webcompy.elements import html
 
-    @define_component
-    def _FetchRoot(context):
+    @define_component("fetch-root")
+    def FetchRoot(context):
         from webcompy.ajax import HttpClient
         from webcompy.components._hooks import use_async_result
 
@@ -92,7 +92,7 @@ def _make_fetch_root():
             result.data.value.text if result.data.value else "",
         )
 
-    return _FetchRoot
+    return FetchRoot
 
 
 def _make_api_handler():

@@ -27,7 +27,7 @@ Example:
     >>> from webcompy.elements import html
     >>> from webcompy.signal import Signal
     >>>
-    >>> @define_component
+    >>> @define_component("my-component")
     ... def MyComponent(context):
     ...     color = Signal("blue")
     ...     context.use_reactive_scoped_style(
@@ -106,7 +106,7 @@ class ReactiveScopedStyle:
         self._subscription = None
         self._removed = False
 
-    def _bind(self, cid: str, host_tag: str | None = None) -> None:
+    def _bind(self, cid: str, host_tag: str) -> None:
         if self._cid is not None:
             if self._cid != cid:
                 raise WebComPyComponentException(
@@ -167,6 +167,12 @@ class ReactiveScopedStyle:
     def render_css(self, cid: str) -> str:
         if self._dict_computed is None:
             return ""
+        host_tag = self._host_tag
+        if host_tag is None:
+            raise WebComPyComponentException(
+                "ReactiveScopedStyle is bound without a host tag; "
+                "call use_reactive_scoped_style() from inside a @define_component setup"
+            )
         (
             _classify_nested_key,
             _process_style_declaration,
@@ -181,9 +187,9 @@ class ReactiveScopedStyle:
             if _classify_nested_key(selector.strip()) == "at-rule":
                 processed_selector = selector.strip()
             else:
-                processed_selector = _scope_selector(selector.strip(), cid, host_tag=self._host_tag)
+                processed_selector = _scope_selector(selector.strip(), cid, host_tag=host_tag)
             scoped_items.append((processed_selector, _process_style_declaration(declaration)))
-        return _render_scoped_style_css(dict(scoped_items), cid, host_tag=self._host_tag)
+        return _render_scoped_style_css(dict(scoped_items), cid, host_tag=host_tag)
 
 
 def reactive_scoped_style(func: ReactiveScopedStyleFunc) -> ReactiveScopedStyle:

@@ -388,6 +388,14 @@ class TransitionElement(DynamicElement):
             if node is not None:
                 style = inject(TRANSITION_PORT_KEY).get_computed_style(node)
                 duration, layer_count = _parse_style_duration(style)
+                display = style.get_property_value("display").strip()
+                if display in ("contents", "none"):
+                    logging.warning(
+                        f"Transition '{self._name}': child has computed display '{display}', "
+                        "so transitions/animations cannot run and end events will not fire. "
+                        "If the child is a component, declare a box-generating display "
+                        '(e.g. display="block") via @define_component\'s display argument.'
+                    )
             if duration <= 0:
                 logging.warning(
                     f"Transition '{self._name}': no transition or animation duration is defined; finishing immediately."

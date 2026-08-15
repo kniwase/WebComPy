@@ -14,8 +14,8 @@ def _code(code: str) -> str:
     return strip_multiline_text(code).strip()
 
 
-@define_component
-def Home(_: ComponentContext[None]):
+@define_component("home-content")
+def HomeContent(_: ComponentContext[None]):
     return html.DIV(
         {"class": "page-container"},
         Section(
@@ -237,7 +237,7 @@ def Home(_: ComponentContext[None]):
     )
 
 
-Home.scoped_style = {
+HomeContent.scoped_style = {
     ".page-container": {
         "max-width": "1200px",
         "margin": "0 auto",

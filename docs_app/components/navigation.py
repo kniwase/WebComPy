@@ -25,8 +25,8 @@ class Page(_PageRequired, total=False):
     children: list[_SubPage]
 
 
-@define_component
-def Navbar(context: ComponentContext[list[Page]]):
+@define_component("docs-navbar")
+def DocsNavbar(context: ComponentContext[list[Page]]):
     _open_states: dict[int, Signal[bool]] = {}
     positions, update_positions = use_readonly_signal({})
     _mobile_open = use_state(lambda: False)
@@ -203,7 +203,7 @@ def Navbar(context: ComponentContext[list[Page]]):
     )
 
 
-Navbar.scoped_style = {
+DocsNavbar.scoped_style = {
     " .navbar": {
         "display": "flex",
         "align-items": "center",

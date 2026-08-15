@@ -1,11 +1,11 @@
 from webcompy.app import WebComPyApp, WebComPyAppConfig
 
 from .keys import AppThemeKey
-from .layout import Root
+from .layout import AppRoot
 from .router import router
 
 app = WebComPyApp(
-    root_component=Root,
+    root_component=AppRoot,
     router=router,
     config=WebComPyAppConfig(
         base_url="/",

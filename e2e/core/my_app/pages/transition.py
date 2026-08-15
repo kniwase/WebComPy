@@ -11,7 +11,7 @@ def _slide_box():
     return html.DIV({"data-testid": "slide-box", "class": "e2e-slide-box"}, "slide content")
 
 
-@define_component
+@define_component("transition-page")
 def TransitionPage(context: ComponentContext[None]):
     context.set_title("Transition - E2E")
     fade_visible = use_state(lambda: False)

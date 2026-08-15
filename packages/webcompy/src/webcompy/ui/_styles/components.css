@@ -1,4 +1,8 @@
 @layer components {
+  [webcompy-component] {
+    display: contents;
+  }
+
   a {
     color: var(--color-link);
     text-decoration: none;

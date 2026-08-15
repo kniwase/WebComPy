@@ -2,16 +2,16 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 from webcompy.router import RouterContext
 
-from ..components.ui import Section
+from ..components.ui import DocsSection
 
 
-@define_component
+@define_component("not-found")
 def NotFound(context: ComponentContext[RouterContext]):
     context.set_title("NotFound - WebCompy")
 
     return html.DIV(
         {},
-        Section(
+        DocsSection(
             {"heading": "404 - Not Found"},
             slots={
                 "default": lambda: html.DIV(

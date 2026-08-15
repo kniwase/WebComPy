@@ -526,11 +526,11 @@ class TestComponentPatchingDecision:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements import html
 
-        @define_component
+        @define_component("cmp-a")
         def CmpA(context):
             return html.DIV({}, "a")
 
-        @define_component
+        @define_component("cmp-b")
         def CmpB(context):
             return html.DIV({}, "b")
 
@@ -543,7 +543,7 @@ class TestComponentPatchingDecision:
         pending_token = _pending_di_parent.set(scope)
         try:
             c1 = CmpA(None)
-            c2 = CmpB(None)
+            c2 = CmpA(None)
             assert _is_patchable(c1, c2) is True
         finally:
             _active_di_scope.reset(di_token)
@@ -558,11 +558,11 @@ class TestComponentPatchingDecision:
         from webcompy.di._scope import DIScope, _active_di_scope
         from webcompy.elements import html
 
-        @define_component
+        @define_component("cmp-div")
         def CmpDiv(context):
             return html.DIV({}, "div")
 
-        @define_component
+        @define_component("cmp-span")
         def CmpSpan(context):
             return html.SPAN({}, "span")
 

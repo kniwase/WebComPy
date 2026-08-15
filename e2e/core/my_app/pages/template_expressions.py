@@ -7,7 +7,7 @@ from webcompy.signal import use_reactive_list, use_state
 from webcompy.template import render_template
 
 
-@define_component
+@define_component("template-expressions-page")
 def TemplateExpressionsPage(context: ComponentContext[None]):
     context.set_title("Template Expressions - E2E")
 

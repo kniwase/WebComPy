@@ -9,8 +9,8 @@ from webcompy_server import configure_server_context
 from webcompy_server._html import generate_html
 
 
-@define_component
-def _PrerenderTestRoot(context):
+@define_component("prerender-test-root")
+def PrerenderTestRoot(context):
     from webcompy.elements import html
 
     return html.DIV({}, "test content")
@@ -18,7 +18,7 @@ def _PrerenderTestRoot(context):
 
 def _make_app():
     app = WebComPyApp(
-        root_component=_PrerenderTestRoot,
+        root_component=PrerenderTestRoot,
         config=WebComPyAppConfig(),
     )
     configure_server_context(app)

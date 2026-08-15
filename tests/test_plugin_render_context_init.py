@@ -11,8 +11,8 @@ from webcompy_server import configure_server_context
 from webcompy_testing import create_test_app
 
 
-@define_component
-def _PluginTestRoot(context):
+@define_component("plugin-test-root")
+def PluginTestRoot(context):
     from webcompy.elements import html
 
     return html.DIV({}, "test")
@@ -33,7 +33,7 @@ class TestPluginRenderContextInit:
         test_module._InitCountingPlugin = _InitCountingPlugin
         try:
             app = create_test_app(
-                root_component=_PluginTestRoot,
+                root_component=PluginTestRoot,
                 plugins=["tests.test_plugin_render_context_init:_InitCountingPlugin"],
             )
             ctx1 = app.create_render_context()
@@ -58,7 +58,7 @@ class TestPluginRenderContextInit:
                 self.init_count += 1
 
         app = WebComPyApp(
-            root_component=_PluginTestRoot,
+            root_component=PluginTestRoot,
             config=WebComPyAppConfig(),
         )
         configure_server_context(app)

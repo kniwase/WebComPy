@@ -67,15 +67,15 @@ def _make_rpc_fetch_root():
     from webcompy.components._hooks import use_async_result
     from webcompy.elements import html
 
-    @define_component
-    def _RpcFetchRoot(context):
+    @define_component("rpc-fetch-root")
+    def RpcFetchRoot(context):
         result = use_async_result(lambda: rpc_call("add", {"a": 1, "b": 2}, result_type=int))
         return html.DIV(
             {"data-testid": "rpc-root"},
             str(result.data.value) if result.data.value is not None else "",
         )
 
-    return _RpcFetchRoot
+    return RpcFetchRoot
 
 
 def _make_rpc_fetch_root_no_transfer():
@@ -83,15 +83,15 @@ def _make_rpc_fetch_root_no_transfer():
     from webcompy.components._hooks import use_async_result
     from webcompy.elements import html
 
-    @define_component
-    def _RpcFetchRootNoTransfer(context):
+    @define_component("rpc-fetch-root-no-transfer")
+    def RpcFetchRootNoTransfer(context):
         result = use_async_result(lambda: rpc_call("add", {"a": 1, "b": 2}, result_type=int), transfer=False)
         return html.DIV(
             {"data-testid": "rpc-root-no-transfer"},
             str(result.data.value) if result.data.value is not None else "",
         )
 
-    return _RpcFetchRootNoTransfer
+    return RpcFetchRootNoTransfer
 
 
 def _add(a: int, b: int = 0) -> int:

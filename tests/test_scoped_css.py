@@ -121,10 +121,10 @@ class TestHeadElementBrowserPath:
         def _noop(ctx):
             pass
 
-        gen1 = ComponentGenerator("CompA", _noop)
+        gen1 = ComponentGenerator("CompA", _noop, custom_element_name="comp-a")
         gen1.scoped_style = {".foo": {"color": "red"}}
 
-        gen2 = ComponentGenerator("CompB", _noop)
+        gen2 = ComponentGenerator("CompB", _noop, custom_element_name="comp-b")
         gen2.scoped_style = {".bar": {"color": "blue"}}
 
         port = FakeBrowserDOMPort()
@@ -170,7 +170,7 @@ class TestHeadElementBrowserPath:
         def _noop(ctx):
             pass
 
-        gen = ComponentGenerator("NoStyleComp", _noop)
+        gen = ComponentGenerator("NoStyleComp", _noop, custom_element_name="no-style-comp")
 
         port = FakeBrowserDOMPort()
         store = ComponentStore()
@@ -207,7 +207,7 @@ class TestHeadElementBrowserPath:
         def _noop(ctx):
             pass
 
-        gen = ComponentGenerator("TestComp", _noop)
+        gen = ComponentGenerator("TestComp", _noop, custom_element_name="test-comp")
         gen.scoped_style = {".test": {"color": "red"}}
 
         port = FakeBrowserDOMPort()
@@ -251,7 +251,7 @@ class TestHeadElementBrowserPath:
         def _noop(ctx):
             pass
 
-        gen = ComponentGenerator("TestComp", _noop)
+        gen = ComponentGenerator("TestComp", _noop, custom_element_name="test-comp")
         gen.scoped_style = {".test": {"color": "red"}}
 
         port = FakeBrowserDOMPort()
