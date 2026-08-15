@@ -318,24 +318,6 @@ When an async component setup body registers lifecycle hooks (such as `on_before
 - **AND** the change SHALL NOT alter the ordering for components whose async setup succeeds
 
 ### Requirement: Component registration shall enforce unique names with per-app stores
-The framework SHALL maintain a per-app registry of component generators by name. If two components are registered with the same name within the same app, an error SHALL be raised. Each `WebComPyApp` SHALL own its own `ComponentStore` instance, provided into the app's DI scope. `ComponentGenerator` SHALL register into the active app's store via DI when a scope is available. When no DI scope exists (import time), registration SHALL be deferred until an app scope becomes active. No module-level `_default_component_store` global SHALL exist. Note: `ComponentGenerator.__registered` is a one-time flag; import-time components will only register into the first app's store. Subsequent apps will not inherit components defined before either app existed, unless a different registration mechanism is used or components are re-imported.
-
-#### Scenario: Registering duplicate component names within the same app
-- **WHEN** a developer defines two components with the same name in the same application
-- **THEN** `WebComPyComponentException` SHALL be raised with a message about the duplicate
-
-#### Scenario: Per-app component store isolation
-- **WHEN** two `WebComPyApp` instances exist with different component sets
-- **THEN** each app's `ComponentStore` SHALL only contain the components registered for that app
-- **AND** scoped CSS collection SHALL be isolated per app
-
-#### Scenario: Import-time registration without DI scope
-- **WHEN** a `@define_component` decorated function is defined at module level (before any app exists)
-- **THEN** the `ComponentGenerator` SHALL store its registration info locally
-- **AND** when an app is created and its DI scope becomes active, the component SHALL be registered into that app's store
-- **AND** once registered, the `ComponentGenerator.__registered` flag prevents re-registration into a second app's store; only the first app created receives import-time components
-
-### Requirement: Component registration shall enforce unique names with per-app stores
 The framework SHALL maintain a per-app registry of component generators by name. If two components are registered with the same name within the same app, an error SHALL be raised. Two distinct generators within the same app SHALL NOT share a custom-element name, even when their Python names differ (for example `MyHTTPRequest` and `MyHttpRequest` both mapping to `my-http-request`); such a collision SHALL raise an error at registration. Each `WebComPyApp` SHALL own its own `ComponentStore` instance, provided into the app's DI scope. `ComponentGenerator` SHALL register into the active app's store via DI when a scope is available. When no DI scope exists (import time), registration SHALL be deferred until an app scope becomes active. No module-level `_default_component_store` global SHALL exist. Note: `ComponentGenerator.__registered` is a one-time flag; import-time components will only register into the first app's store. Subsequent apps will not inherit components defined before either app existed, unless a different registration mechanism is used or components are re-imported.
 
 #### Scenario: Registering duplicate component names within the same app
