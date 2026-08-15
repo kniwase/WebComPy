@@ -8,26 +8,26 @@ from webcompy.elements import ErrorBoundary, html
 from webcompy_testing import create_test_app, render_app_html
 
 
-@define_component
-def _CrashingChild(context):
+@define_component("crashing-child")
+def CrashingChild(context):
     raise RuntimeError("policy crash")
 
 
-@define_component
-def _ContainedRoot(context):
+@define_component("contained-root")
+def ContainedRoot(context):
     return html.DIV(
         {"data-testid": "policy-root"},
         ErrorBoundary(
-            children=lambda: _CrashingChild(None),
+            children=lambda: CrashingChild(None),
             fallback=lambda e, r: html.DIV({"data-testid": "policy-fallback"}, str(e)),
         ),
         html.SPAN({"data-testid": "policy-sibling"}, "alive"),
     )
 
 
-@define_component
-def _UncontainedRoot(context):
-    return html.DIV({}, _CrashingChild(None))
+@define_component("uncontained-root")
+def UncontainedRoot(context):
+    return html.DIV({}, CrashingChild(None))
 
 
 def _render(app):
@@ -42,7 +42,7 @@ def _render(app):
 
 class TestSsrTolerant:
     def test_ssr_renders_fallback_and_rest_of_page(self):
-        app = create_test_app(root_component=_ContainedRoot)
+        app = create_test_app(root_component=ContainedRoot)
         html_out = _render(app)
         assert "policy-fallback" in html_out
         assert "policy crash" in html_out
@@ -50,24 +50,24 @@ class TestSsrTolerant:
         assert "alive" in html_out
 
     def test_ssr_uncontained_error_still_fails(self):
-        app = create_test_app(root_component=_UncontainedRoot)
+        app = create_test_app(root_component=UncontainedRoot)
         with pytest.raises(RuntimeError, match="policy crash"):
             _render(app)
 
 
 class TestSsgFailFast:
     def test_ssg_policy_fails_build_on_contained_error(self):
-        app = create_test_app(root_component=_ContainedRoot)
+        app = create_test_app(root_component=ContainedRoot)
         app.provide(ERROR_POLICY_KEY, "ssg")
         with pytest.raises(RuntimeError, match="policy crash"):
             _render(app)
 
     def test_ssg_policy_succeeds_without_errors(self):
-        @define_component
-        def _HealthyRoot(context):
+        @define_component("healthy-root")
+        def HealthyRoot(context):
             return html.DIV({"data-testid": "healthy"}, "ok")
 
-        app = create_test_app(root_component=_HealthyRoot)
+        app = create_test_app(root_component=HealthyRoot)
         app.provide(ERROR_POLICY_KEY, "ssg")
         html_out = _render(app)
         assert "healthy" in html_out

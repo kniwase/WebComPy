@@ -58,13 +58,13 @@ class TestBuildArtifactsDataclass:
 
 class TestCreateAsgiAppMode:
     def _make_minimal_app(self) -> WebComPyApp:
-        @define_component
-        def _Root(context):
+        @define_component("build-artifacts-root")
+        def BuildArtifactsRoot(context):
             from webcompy.elements import html
 
             return html.DIV({}, "hello")
 
-        app = WebComPyApp(root_component=_Root)
+        app = WebComPyApp(root_component=BuildArtifactsRoot)
         configure_server_context(app)
         return app
 

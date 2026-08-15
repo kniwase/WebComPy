@@ -8,15 +8,15 @@ from webcompy_server._html import generate_html
 from webcompy_testing import create_test_app, render_app_html
 
 
-@define_component
-def _TestRoot(context):
+@define_component("test-root")
+def TestRoot(context):
     from webcompy.elements import html
 
     return html.DIV({}, "test")
 
 
 def _make_app(**config_kwargs):
-    return create_test_app(root_component=_TestRoot, **config_kwargs)
+    return create_test_app(root_component=TestRoot, **config_kwargs)
 
 
 def _generate_html(app, **kwargs):

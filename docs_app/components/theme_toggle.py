@@ -4,7 +4,7 @@ from webcompy.signal import use_computed
 from webcompy.ui.theme import Theme, use_theme
 
 
-@define_component
+@define_component("theme-toggle")
 def ThemeToggle(_: ComponentContext[None]):
     signal, controller = use_theme()
 

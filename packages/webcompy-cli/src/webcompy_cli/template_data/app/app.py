@@ -1,10 +1,10 @@
 from webcompy.app import WebComPyApp, WebComPyAppConfig
 
-from .components.root import Root
+from .components.root import AppRoot
 from .router import router
 
 app = WebComPyApp(
-    root_component=Root,
+    root_component=AppRoot,
     router=router,
     config=WebComPyAppConfig(base_url="/"),
 )

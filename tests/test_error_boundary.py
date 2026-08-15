@@ -65,12 +65,12 @@ class TestErrorBoundaryRender:
     def test_sync_setup_error_renders_fallback_and_calls_on_error(self):
         errors: list[Exception] = []
 
-        @define_component
+        @define_component("crashing-child")
         def CrashingChild(context):
             raise RuntimeError("sync setup failed")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {"data-testid": "root"},
                 ErrorBoundary(
@@ -81,7 +81,7 @@ class TestErrorBoundaryRender:
                 html.SPAN({"data-testid": "sibling"}, "alive"),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "fallback") is not None
             assert result.find_by_text("sync setup failed") is not None
             assert result.find_by_attribute("data-testid", "sibling") is not None
@@ -92,13 +92,13 @@ class TestErrorBoundaryRender:
             assert boundary._in_fallback
 
     def test_async_setup_error_renders_fallback(self):
-        @define_component
+        @define_component("async-crashing-child")
         async def AsyncCrashingChild(context):
             await asyncio.sleep(0)
             raise RuntimeError("async setup failed")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -107,7 +107,7 @@ class TestErrorBoundaryRender:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "async-fallback") is not None
             assert result.find_by_text("async setup failed") is not None
             boundary = _find_boundary(result._instance)
@@ -115,12 +115,12 @@ class TestErrorBoundaryRender:
             assert boundary._in_fallback
 
     def test_no_error_renders_children_normally(self):
-        @define_component
+        @define_component("healthy-child")
         def HealthyChild(context):
             return html.DIV({"data-testid": "healthy"}, "ok")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -129,7 +129,7 @@ class TestErrorBoundaryRender:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "healthy") is not None
             assert result.find_by_attribute("data-testid", "fallback") is None
             boundary = _find_boundary(result._instance)
@@ -137,12 +137,12 @@ class TestErrorBoundaryRender:
             assert not boundary._in_fallback
 
     def test_nested_boundaries_innermost_engages(self):
-        @define_component
+        @define_component("crashing-child")
         def CrashingChild(context):
             raise RuntimeError("boom")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -154,20 +154,20 @@ class TestErrorBoundaryRender:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "inner-fallback") is not None
             assert result.find_by_attribute("data-testid", "outer-fallback") is None
 
     def test_error_in_fallback_escalates_to_outer_boundary(self):
-        @define_component
+        @define_component("crashing-child")
         def CrashingChild(context):
             raise RuntimeError("original boom")
 
         def failing_fallback(error: Exception, reset):
             raise RuntimeError("fallback failed")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -179,7 +179,7 @@ class TestErrorBoundaryRender:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             outer = result.find_by_attribute("data-testid", "outer-fallback")
             assert outer is not None
             assert "fallback failed" in (outer.textContent or "")
@@ -187,7 +187,7 @@ class TestErrorBoundaryRender:
     def test_fallback_receives_error_and_reset_callable(self):
         captured: dict[str, object] = {}
 
-        @define_component
+        @define_component("crashing-child")
         def CrashingChild(context):
             raise RuntimeError("capture me")
 
@@ -196,11 +196,11 @@ class TestErrorBoundaryRender:
             captured["reset"] = reset
             return html.DIV({"data-testid": "capturing-fallback"}, "fb")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV({}, ErrorBoundary(children=lambda: CrashingChild(None), fallback=fallback))
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "capturing-fallback") is not None
             error = captured["error"]
             assert isinstance(error, RuntimeError)
@@ -210,12 +210,12 @@ class TestErrorBoundaryRender:
     def test_typed_response_error_engages_fallback(self):
         errors: list[Exception] = []
 
-        @define_component
+        @define_component("schema-mismatch-child")
         def SchemaMismatchChild(context):
             raise TypedResponseError("schema mismatch during fetch")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {"data-testid": "root"},
                 ErrorBoundary(
@@ -225,7 +225,7 @@ class TestErrorBoundaryRender:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "fallback") is not None
             assert result.find_by_text("schema mismatch during fetch") is not None
             assert len(errors) == 1
@@ -239,18 +239,18 @@ class TestPropagationWalk:
     def test_hooks_invoked_nearest_first_then_boundary_engages(self):
         calls: list[str] = []
 
-        @define_component
+        @define_component("inner-hook-cmp")
         def InnerHookCmp(context):
             context.on_error_captured(lambda e: calls.append("inner"))
             return html.DIV({"data-testid": "inner-hook"}, "inner")
 
-        @define_component
+        @define_component("outer-hook-cmp")
         def OuterHookCmp(context):
             context.on_error_captured(lambda e: calls.append("outer"))
             return html.DIV({}, InnerHookCmp(None))
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -259,7 +259,7 @@ class TestPropagationWalk:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             source = _find_element_by_testid(result._instance, "inner-hook")
             assert source is not None
             run_sync(route_error(source, RuntimeError("walk error")))
@@ -272,7 +272,7 @@ class TestPropagationWalk:
     def test_hook_veto_prevents_boundary_engagement(self):
         calls: list[str] = []
 
-        @define_component
+        @define_component("inner-hook-cmp")
         def InnerHookCmp(context):
             def veto(e: Exception):
                 calls.append("inner")
@@ -281,13 +281,13 @@ class TestPropagationWalk:
             context.on_error_captured(veto)
             return html.DIV({"data-testid": "inner-hook"}, "inner")
 
-        @define_component
+        @define_component("outer-hook-cmp")
         def OuterHookCmp(context):
             context.on_error_captured(lambda e: calls.append("outer"))
             return html.DIV({}, InnerHookCmp(None))
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -296,7 +296,7 @@ class TestPropagationWalk:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             source = _find_element_by_testid(result._instance, "inner-hook")
             assert source is not None
             run_sync(route_error(source, RuntimeError("vetoed")))
@@ -309,12 +309,12 @@ class TestPropagationWalk:
     def test_hooks_above_engaged_boundary_not_invoked(self):
         calls: list[str] = []
 
-        @define_component
+        @define_component("crashing-child")
         def CrashingChild(context):
             raise RuntimeError("boom")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             context.on_error_captured(lambda e: calls.append("root"))
             return html.DIV(
                 {},
@@ -324,7 +324,7 @@ class TestPropagationWalk:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             boundary = _find_boundary(result._instance)
             assert boundary is not None
             assert boundary._in_fallback
@@ -333,18 +333,18 @@ class TestPropagationWalk:
     def test_destroyed_component_hooks_not_invoked(self):
         calls: list[str] = []
 
-        @define_component
+        @define_component("inner-hook-cmp")
         def InnerHookCmp(context):
             context.on_error_captured(lambda e: calls.append("inner"))
             return html.DIV({"data-testid": "inner-hook"}, "inner")
 
-        @define_component
+        @define_component("outer-hook-cmp")
         def OuterHookCmp(context):
             context.on_error_captured(lambda e: calls.append("outer"))
             return html.DIV({}, InnerHookCmp(None))
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -353,7 +353,7 @@ class TestPropagationWalk:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             inner_cmp = _find_component_by_name(result._instance, "InnerHookCmp")
             assert inner_cmp is not None
             source = _find_element_by_testid(result._instance, "inner-hook")
@@ -367,15 +367,15 @@ class TestReset:
     def test_reset_rebuilds_children_with_fresh_state(self):
         state = {"crash": True, "setup_count": 0}
 
-        @define_component
+        @define_component("flaky-child")
         def FlakyChild(context):
             state["setup_count"] += 1
             if state["crash"]:
                 raise RuntimeError("flaky failure")
             return html.DIV({"data-testid": "flaky-ok"}, f"ok-{state['setup_count']}")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -384,7 +384,7 @@ class TestReset:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             boundary = _find_boundary(result._instance)
             assert boundary is not None
             assert boundary._in_fallback
@@ -403,13 +403,13 @@ class TestReset:
     def test_reset_with_persistent_error_reengages_fallback(self):
         state = {"setup_count": 0}
 
-        @define_component
+        @define_component("always-crashing")
         def AlwaysCrashing(context):
             state["setup_count"] += 1
             raise RuntimeError("persistent failure")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -418,7 +418,7 @@ class TestReset:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             boundary = _find_boundary(result._instance)
             assert boundary is not None
             assert boundary._in_fallback
@@ -433,14 +433,14 @@ class TestReset:
     def test_sync_reset_entry_point_schedules_refresh(self):
         state = {"crash": True}
 
-        @define_component
+        @define_component("flaky-child")
         def FlakyChild(context):
             if state["crash"]:
                 raise RuntimeError("flaky failure")
             return html.DIV({"data-testid": "flaky-ok"}, "ok")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -449,7 +449,7 @@ class TestReset:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             boundary = _find_boundary(result._instance)
             assert boundary is not None
             assert boundary._in_fallback
@@ -459,12 +459,12 @@ class TestReset:
             assert result.find_by_attribute("data-testid", "flaky-ok") is not None
 
     def test_reset_noop_when_not_in_fallback(self):
-        @define_component
+        @define_component("healthy-child")
         def HealthyChild(context):
             return html.DIV({"data-testid": "healthy"}, "ok")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -473,7 +473,7 @@ class TestReset:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             boundary = _find_boundary(result._instance)
             assert boundary is not None
             run_sync(boundary._do_reset())
@@ -483,12 +483,12 @@ class TestReset:
 
 class TestErrorPolicy:
     def test_ssg_policy_reraises_original_error(self):
-        @define_component
+        @define_component("crashing-child")
         def CrashingChild(context):
             raise RuntimeError("ssg crash")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -501,17 +501,17 @@ class TestErrorPolicy:
         scope.provide(ERROR_POLICY_KEY, "ssg")
         try:
             with pytest.raises(RuntimeError, match="ssg crash"):
-                TestRenderer.render(Root, parent_scope=scope)
+                TestRenderer.render(TestRoot, parent_scope=scope)
         finally:
             scope.dispose()
 
     def test_default_policy_is_ssr_tolerant(self):
-        @define_component
+        @define_component("crashing-child")
         def CrashingChild(context):
             raise RuntimeError("ssr crash")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -520,7 +520,7 @@ class TestErrorPolicy:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "ssr-fallback") is not None
 
 

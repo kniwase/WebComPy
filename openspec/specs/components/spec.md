@@ -11,12 +11,13 @@ Components also provide scoped CSS to prevent styles from leaking between unrela
 **What WebComPy does not yet provide:** Component IDs are generated via MD5 hash, which is not collision-proof for very large applications.
 ## Requirements
 ### Requirement: Components shall be defined as reusable, self-contained units
-A component SHALL encapsulate a template (what it renders), optional lifecycle hooks (what it does at key moments), and optional scoped CSS (how it looks). The component SHALL be invocable with props and slots to produce a rendered element.
+A component SHALL encapsulate a template (what it renders), optional lifecycle hooks (what it does at key moments), and optional scoped CSS (how it looks). The component SHALL be invocable with props and slots to produce a rendered element. Every component is defined with a custom-element name (see the naming-consistency requirement) and renders one custom-element wrapper node.
 
 #### Scenario: Creating a function-style component
-- **WHEN** a developer decorates a setup function with `@define_component`
+- **WHEN** a developer decorates a setup function with `@define_component("my-widget")`
 - **THEN** the function SHALL receive a `ComponentContext` with `props`, `slots()`, lifecycle hooks, and head management
 - **AND** the function SHALL return the component's template as an element tree
+- **AND** uses of the component SHALL render a `<my-widget>` custom-element wrapper
 
 #### Scenario: Registering lifecycle hooks via standalone decorators
 - **WHEN** a developer uses `@on_after_rendering` as a decorator inside a function-style component setup
@@ -317,11 +318,15 @@ When an async component setup body registers lifecycle hooks (such as `on_before
 - **AND** the change SHALL NOT alter the ordering for components whose async setup succeeds
 
 ### Requirement: Component registration shall enforce unique names with per-app stores
-The framework SHALL maintain a per-app registry of component generators by name. If two components are registered with the same name within the same app, an error SHALL be raised. Each `WebComPyApp` SHALL own its own `ComponentStore` instance, provided into the app's DI scope. `ComponentGenerator` SHALL register into the active app's store via DI when a scope is available. When no DI scope exists (import time), registration SHALL be deferred until an app scope becomes active. No module-level `_default_component_store` global SHALL exist. Note: `ComponentGenerator.__registered` is a one-time flag; import-time components will only register into the first app's store. Subsequent apps will not inherit components defined before either app existed, unless a different registration mechanism is used or components are re-imported.
+The framework SHALL maintain a per-app registry of component generators by name. If two components are registered with the same name within the same app, an error SHALL be raised. Two distinct generators within the same app SHALL NOT share a custom-element name, even when their Python names differ (for example `MyHTTPRequest` and `MyHttpRequest` both mapping to `my-http-request`); such a collision SHALL raise an error at registration. Each `WebComPyApp` SHALL own its own `ComponentStore` instance, provided into the app's DI scope. `ComponentGenerator` SHALL register into the active app's store via DI when a scope is available. When no DI scope exists (import time), registration SHALL be deferred until an app scope becomes active. No module-level `_default_component_store` global SHALL exist. Note: `ComponentGenerator.__registered` is a one-time flag; import-time components will only register into the first app's store. Subsequent apps will not inherit components defined before either app existed, unless a different registration mechanism is used or components are re-imported.
 
 #### Scenario: Registering duplicate component names within the same app
 - **WHEN** a developer defines two components with the same name in the same application
 - **THEN** `WebComPyComponentException` SHALL be raised with a message about the duplicate
+
+#### Scenario: Registering colliding custom-element names within the same app
+- **WHEN** two distinct generators in the same app resolve to the same custom-element name
+- **THEN** `WebComPyComponentException` SHALL be raised identifying the colliding custom-element name
 
 #### Scenario: Per-app component store isolation
 - **WHEN** two `WebComPyApp` instances exist with different component sets
@@ -333,20 +338,6 @@ The framework SHALL maintain a per-app registry of component generators by name.
 - **THEN** the `ComponentGenerator` SHALL store its registration info locally
 - **AND** when an app is created and its DI scope becomes active, the component SHALL be registered into that app's store
 - **AND** once registered, the `ComponentGenerator.__registered` flag prevents re-registration into a second app's store; only the first app created receives import-time components
-
-### Requirement: Component shall inherit :preserve_children from root element
-
-When a `Component` is created, the `__init_component()` method SHALL copy the `_preserve_children` boolean flag from the root `Element` node (the template root returned by the component setup function), following the same pattern as `_tag_name` and `_ref`. The flag SHALL control whether the component's `_render()` cleanup loop is skipped, just as it does for `Element` instances.
-
-#### Scenario: Component preserves children when root element sets the flag
-- **WHEN** a component's setup function returns `html.DIV({":preserve_children": True}, ...)`
-- **THEN** the `Component` instance SHALL have `_preserve_children = True`
-- **AND** the component's `_render()` SHALL skip the excess-child-node cleanup loop
-
-#### Scenario: Component does not preserve children when root element does not set the flag
-- **WHEN** a component's setup function returns `html.DIV({}, ...)` without `:preserve_children`
-- **THEN** the `Component` instance SHALL have `_preserve_children = False`
-- **AND** the component's `_render()` SHALL execute the cleanup loop normally
 
 ### Requirement: Scoped CSS SHALL be wrapped in `@layer webcompy-scope` automatically
 
@@ -379,7 +370,7 @@ The method SHALL raise a `WebComPyException` if called from outside an active co
 #### Scenario: Calling use_reactive_scoped_style inside a component setup
 - **WHEN** a developer writes:
   ```python
-  @define_component
+  @define_component("my-component")
   def MyComponent(context):
       context.use_reactive_scoped_style(
           reactive_scoped_style(lambda: {".x": {"color": "red"}})
@@ -502,29 +493,71 @@ Component setup SHALL support registering error-capture hooks via `context.on_er
 - **WHEN** a component with captured-error hooks is destroyed
 - **THEN** its hooks SHALL no longer be invoked for subsequent errors
 
-### Requirement: Component definitions may opt into a named custom-element boundary
+### Requirement: Component definitions shall declare a custom-element name consistent with the setup function name
 
-The function-style component API SHALL expose the custom-element name and observed-attribute options through `define_component`. The Python setup function name SHALL remain the component name used for existing component registration and cid generation; the custom-element name SHALL be an explicit separate value.
+`define_component` SHALL require a custom-element name as its first argument; the bare no-argument decorator form SHALL NOT be available. At decoration time the framework SHALL validate that the decorated function's name equals `kebab_to_pascal(custom_element_name)`. A mismatch SHALL raise `WebComPyComponentException` whose message includes the function name, the declared custom-element name, and the expected name derived from the function. The existing custom-element-name validation (lowercase, contains a hyphen, not reserved) SHALL continue to apply, so Python names that cannot yield a valid hyphenated name — single-word names such as `App`, acronym-style names that do not round-trip such as `HTTPRequest` (whose normalized form is `HttpRequest`), and underscore-prefixed names — SHALL be rejected at definition time with guidance.
 
-#### Scenario: Separating Python and DOM names
-- **WHEN** `@define_component("user-card")` decorates `UserCard`
-- **THEN** the component registry SHALL retain `UserCard` as the component definition name
-- **AND** the rendered DOM boundary SHALL use `<user-card>`
-- **AND** existing `webcompy-component` and cid markers SHALL continue to identify `UserCard`
+#### Scenario: Consistent definition is accepted
 
-### Requirement: Named component setup functions may return multiple roots
+- **WHEN** a developer decorates `def UserCard(context)` with `@define_component("user-card")`
+- **THEN** definition SHALL succeed
+- **AND** the generator SHALL retain `user-card` as its custom-element name and `UserCard` as its component name
 
-An explicitly named component SHALL accept a sequence of renderable children as its setup result. The sequence SHALL be rendered in order inside the custom-element boundary. An unnamed component SHALL continue to require its existing single element root.
+#### Scenario: Mismatched name is rejected
 
-#### Scenario: Returning multiple component roots
-- **WHEN** a named component returns an ordered sequence of header, content, and footer elements
-- **THEN** all three elements SHALL be rendered inside the named component
-- **AND** their order SHALL match the returned sequence
+- **WHEN** a developer decorates `def Card(context)` with `@define_component("user-card")`
+- **THEN** definition SHALL raise `WebComPyComponentException`
+- **AND** the message SHALL identify the function name `Card`, the declared name `user-card`, and the expected consistent name
 
-#### Scenario: Rejecting multiple roots for an unnamed component
-- **WHEN** an unnamed component returns a sequence with more than one renderable child
-- **THEN** component initialization SHALL raise the existing component root error
-- **AND** unnamed component DOM behavior SHALL remain unchanged
+#### Scenario: Acronym-style name is rejected in favor of the normalized form
+
+- **WHEN** a developer decorates `def HTTPRequest(context)` with `@define_component("http-request")`
+- **THEN** definition SHALL raise `WebComPyComponentException` because `kebab_to_pascal("http-request")` is `HttpRequest`, not `HTTPRequest`
+- **AND** the message SHALL guide the developer to rename the function to `HttpRequest`
+
+#### Scenario: Single-word name is rejected
+
+- **WHEN** a developer decorates `def App(context)` with `@define_component("app")`
+- **THEN** definition SHALL raise `WebComPyComponentException` because `app` is not a valid custom-element name (no hyphen)
+- **AND** the message SHALL guide the developer toward a multi-word component name
+
+### Requirement: define_component shall accept a display keyword argument for the wrapper element
+
+`define_component` SHALL accept a keyword-only `display` argument, defaulting to `None`, typed as the exported `ComponentDisplay` type alias: a `Literal` of `"contents"`, `"block"`, `"inline"`, `"inline-block"`, `"flex"`, `"inline-flex"`, `"grid"`, `"inline-grid"`, `"flow-root"`. At definition time the framework SHALL validate a provided value against the same `Literal` via `typing.get_args`, using a `TypeGuard` helper so the narrowed type flows into `ComponentGenerator`; an invalid value SHALL raise `WebComPyComponentException` listing the valid values derived from the alias. When `display` is set, the framework SHALL emit one cid-scoped rule `{custom-element-name}[webcompy-cid-{cid}] { display: <value>; }` as the first rule of the component's scoped-style output in both SSR and runtime injection paths. The cascade precedence SHALL be: the framework default `[webcompy-component] { display: contents; }` rule (earliest layer) SHALL lose to the `display` kwarg rule, which SHALL lose to the author's own `:host` scoped styles (same layer and specificity, emitted later).
+
+#### Scenario: Applying a display value
+
+- **WHEN** a developer writes `@define_component("user-card", display="block")`
+- **THEN** the component's cid style output SHALL contain `user-card[webcompy-cid-{cid}] { display: block; }` before any author scoped rules
+- **AND** this SHALL hold identically in SSR `<style data-webcompy-cid>` output and in runtime-injected styles
+
+#### Scenario: Rejecting an invalid display value
+
+- **WHEN** a developer writes `@define_component("user-card", display="bolck")`
+- **THEN** definition SHALL raise `WebComPyComponentException`
+- **AND** the message SHALL list the valid values exactly as declared in the `ComponentDisplay` alias
+
+#### Scenario: Author :host style overrides the kwarg
+
+- **WHEN** a component declares `display="block"` and also sets `scoped_style = {":host": {"display": "flex"}}`
+- **THEN** the author's `:host` rule SHALL be emitted after the kwarg rule in the same layer
+- **AND** the rendered wrapper SHALL compute to `display: flex`
+
+### Requirement: Component setup functions may return multiple renderable roots
+
+Every component SHALL accept a single renderable child, a list or tuple of renderable children, text, signal, and `None` setup results, normalized using the existing child-rendering rules, and SHALL render them in order inside the component's custom-element wrapper. A `FragmentElement` result (for example from a multi-root `render_markdown` call) SHALL be accepted as a single child. The component SHALL continue to report exactly one parent-facing node.
+
+#### Scenario: Returning multiple roots
+
+- **WHEN** a component returns `[html.HEADER({}, "Title"), html.MAIN({}, "Body"), html.FOOTER({}, "Footer")]`
+- **THEN** all three elements SHALL render as ordered light-DOM children of the component's wrapper
+- **AND** the parent container SHALL treat the component as one child node
+
+#### Scenario: Returning a fragment result
+
+- **WHEN** a component returns the `FragmentElement` produced by `render_markdown("# Title\n\nText.", ctx)`
+- **THEN** the fragment's children SHALL render inside the component's wrapper
+- **AND** no component-root type error SHALL be raised
 
 ### Requirement: ComponentContext shall provide document-connection hooks for named components
 
@@ -553,35 +586,16 @@ The framework SHALL provide `@on_mounted` and `@on_unmounted` standalone decorat
 - **WHEN** `@on_mounted` or `@on_unmounted` is applied outside a component setup function
 - **THEN** an error SHALL be raised indicating the decorator must be used inside component setup
 
-### Requirement: Document-connection hooks shall be rejected for unnamed components
-
-When an unnamed component registers `on_mounted` or `on_unmounted`, either via the `ComponentContext` methods or via the standalone decorators, component setup SHALL raise `WebComPyComponentException`. The framework SHALL not silently accept the registration and never fire the callback.
-
-#### Scenario: Rejecting hooks in an unnamed component
-- **WHEN** an unnamed component calls `context.on_mounted(callback)` during setup
-- **THEN** `WebComPyComponentException` SHALL be raised
-- **AND** no document-connection callback SHALL be registered
-
-#### Scenario: Rejecting decorators in an unnamed component
-- **WHEN** an unnamed component applies `@on_mounted` or `@on_unmounted` during setup
-- **THEN** `WebComPyComponentException` SHALL be raised
-- **AND** no document-connection callback SHALL be registered
-
 ### Requirement: Component scoped styles shall support the named host selector
 
-Scoped styles for a named component SHALL accept `:host` and `:host(<compound-selector>)` as aliases for that component's custom-element wrapper. The generated selector SHALL retain the existing cid attribute scoping and SHALL be shared by static and reactive style paths.
+Scoped styles for a component SHALL accept `:host` and `:host(<compound-selector>)` as aliases for that component's custom-element wrapper. The generated selector SHALL retain the existing cid attribute scoping and SHALL be shared by static and reactive style paths. Since every component has a custom-element wrapper, `:host` SHALL always be available.
 
 #### Scenario: Styling the custom-element wrapper
-- **WHEN** a named component declares scoped style `{":host": {"display": "block"}}`
+- **WHEN** a component declares scoped style `{":host": {"display": "block"}}`
 - **THEN** the generated CSS SHALL target the custom-element wrapper
 - **AND** the selector SHALL include the component's existing cid attribute
 
 #### Scenario: Styling a host state
-- **WHEN** a named component declares scoped style `{":host(.compact)": {"padding": "0"}}`
+- **WHEN** a component declares scoped style `{":host(.compact)": {"padding": "0"}}`
 - **THEN** the generated CSS SHALL target the named custom element with the `.compact` class
 - **AND** the selector SHALL remain cid-scoped
-
-#### Scenario: Rejecting host syntax without a named element
-- **WHEN** an unnamed component uses `:host` in its scoped style
-- **THEN** style generation SHALL raise `WebComPyException`
-- **AND** no invalid `:host` selector SHALL be emitted

@@ -131,7 +131,7 @@ class TestLoadMarkdownInComponentSetup:
     def test_async_setup_with_set_title(self) -> None:
         port = _FakeResourcePort({"docs/a.md": "---\ntitle: Getting Started\n---\n# Intro\n"})
 
-        @define_component
+        @define_component("doc-page")
         async def DocPage(context):
             doc = await load_markdown_document("docs/a.md")
             context.set_title(f"{doc.metadata['title']} - WebComPy Docs")

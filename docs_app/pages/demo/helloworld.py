@@ -5,7 +5,7 @@ from webcompy.router import RouterContext
 from ...components.demo_display import DemoDisplay
 
 
-@define_component
+@define_component("hello-world-page")
 def HelloWorldPage(context: ComponentContext[RouterContext]):
     context.set_title("HelloWorld - WebCompy Demo")
     return html.DIV(

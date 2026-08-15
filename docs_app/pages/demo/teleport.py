@@ -2,10 +2,10 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 
 from ...components.demo_display import DemoDisplay
-from ...components.ui import Section
+from ...components.ui import DocsSection
 
 
-@define_component
+@define_component("teleport-demo-page")
 def TeleportDemoPage(context: ComponentContext[None]):
     context.set_title("Teleport - WebCompy Demo")
     return html.DIV(
@@ -17,7 +17,7 @@ def TeleportDemoPage(context: ComponentContext[None]):
             "element tree — the building block for modals, dropdowns, and tooltips.",
         ),
         DemoDisplay({"title": "Teleport", "app_name": "teleport", "demo_path": "/_demos/teleport/app.py"}),
-        Section(
+        DocsSection(
             {"heading": "Using Teleport"},
             slots={
                 "default": lambda: html.P(
@@ -28,7 +28,7 @@ def TeleportDemoPage(context: ComponentContext[None]):
                 )
             },
         ),
-        Section(
+        DocsSection(
             {"heading": "Target selection"},
             slots={
                 "default": lambda: html.P(
@@ -40,7 +40,7 @@ def TeleportDemoPage(context: ComponentContext[None]):
                 )
             },
         ),
-        Section(
+        DocsSection(
             {"heading": "Server-side rendering"},
             slots={
                 "default": lambda: html.P(

@@ -9,8 +9,8 @@ from webcompy_server._html import generate_html
 from webcompy_testing._utils import run_sync
 
 
-@define_component
-def _TestRoot(context):
+@define_component("test-root")
+def TestRoot(context):
     from webcompy.elements import html
 
     return html.DIV({}, "test")
@@ -18,7 +18,7 @@ def _TestRoot(context):
 
 def _make_app(**config_kwargs):
     app = WebComPyApp(
-        root_component=_TestRoot,
+        root_component=TestRoot,
         config=WebComPyAppConfig(**config_kwargs),
     )
     configure_server_context(app)

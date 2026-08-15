@@ -3,7 +3,7 @@ from webcompy.elements import html
 from webcompy.signal import use_computed, use_state
 
 
-@define_component
+@define_component("two-way-binding-page")
 def TwoWayBindingPage(context: ComponentContext[None]):
     context.set_title("Two-Way Binding - E2E")
 

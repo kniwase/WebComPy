@@ -4,8 +4,8 @@ from webcompy.elements import Transition, html
 from webcompy.signal import use_state
 
 
-@define_component
-def App(_: ComponentContext[None]):
+@define_component("transition-demo-app")
+def TransitionDemoApp(_: ComponentContext[None]):
     fade_visible = use_state(lambda: False)
     slide_visible = use_state(lambda: False)
 
@@ -35,7 +35,7 @@ def App(_: ComponentContext[None]):
     )
 
 
-App.scoped_style = {
+TransitionDemoApp.scoped_style = {
     ".transition-demo": {
         "font-family": "sans-serif",
         "padding": "1rem",
@@ -99,5 +99,5 @@ App.scoped_style = {
     },
 }
 
-app = WebComPyApp(root_component=App)
+app = WebComPyApp(root_component=TransitionDemoApp)
 app.run()

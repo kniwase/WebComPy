@@ -2,13 +2,13 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 from webcompy.router import RouterView
 
-from .navigation import Navigation
+from .navigation import SiteNavigation
 
 
-@define_component
-def Root(_: ComponentContext[None]):
+@define_component("app-root")
+def AppRoot(_: ComponentContext[None]):
     return html.DIV(
         {},
-        Navigation(None),
+        SiteNavigation(None),
         RouterView(),
     )

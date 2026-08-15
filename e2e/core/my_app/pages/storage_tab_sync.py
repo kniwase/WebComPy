@@ -3,7 +3,7 @@ from webcompy.elements import html
 from webcompy.storage import use_local_storage
 
 
-@define_component
+@define_component("storage-tab-sync-page")
 def StorageTabSyncPage(context: ComponentContext[None]):
     context.set_title("Storage Tab Sync - E2E")
 

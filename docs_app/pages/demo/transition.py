@@ -2,10 +2,10 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 
 from ...components.demo_display import DemoDisplay
-from ...components.ui import Section
+from ...components.ui import DocsSection
 
 
-@define_component
+@define_component("transition-demo-page")
 def TransitionDemoPage(context: ComponentContext[None]):
     context.set_title("Transition - WebCompy Demo")
     return html.DIV(
@@ -18,7 +18,7 @@ def TransitionDemoPage(context: ComponentContext[None]):
             "supply plain CSS.",
         ),
         DemoDisplay({"title": "Transition", "app_name": "transition", "demo_path": "/_demos/transition/app.py"}),
-        Section(
+        DocsSection(
             {"heading": "Class protocol"},
             slots={
                 "default": lambda: html.P(
@@ -31,7 +31,7 @@ def TransitionDemoPage(context: ComponentContext[None]):
                 )
             },
         ),
-        Section(
+        DocsSection(
             {"heading": "Duration resolution"},
             slots={
                 "default": lambda: html.P(
@@ -43,7 +43,7 @@ def TransitionDemoPage(context: ComponentContext[None]):
                 )
             },
         ),
-        Section(
+        DocsSection(
             {"heading": "Single child"},
             slots={
                 "default": lambda: html.P(

@@ -3,13 +3,16 @@ from __future__ import annotations
 from collections.abc import Callable, Coroutine, Iterable
 from re import compile as re_compile
 from typing import (
+    TYPE_CHECKING,
     Any,
     Final,
     Generic,
+    Literal,
     TypeAlias,
+    TypeGuard,
     TypeVar,
     cast,
-    overload,
+    get_args,
 )
 
 from webcompy.components._component import Component
@@ -32,9 +35,10 @@ from webcompy.components._libs import (
     generate_id,
 )
 from webcompy.components._reactive_scoped_style import ReactiveScopedStyle
+from webcompy.utils._casing import kebab_to_pascal, pascal_to_kebab
 
-_camel_to_kebab_pattern: Final = re_compile("((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))")
-
+if TYPE_CHECKING:
+    from webcompy.app._app import WebComPyApp
 
 T = TypeVar("T")
 
@@ -45,13 +49,22 @@ def _instantiate(cls: type[T]) -> T:
 
 class ComponentStore:
     _components: dict[str, ComponentGenerator[Any]]
+    _custom_element_names: dict[str, str]
 
     def __init__(self) -> None:
         self._components = {}
+        self._custom_element_names = {}
 
     def add_component(self, name: str, component_generator: ComponentGenerator[Any]):
         if name in self._components:
             raise WebComPyComponentException(f"Duplicated Component Name: '{name}'")
+        custom_element_name = component_generator.custom_element_name
+        existing = self._custom_element_names.get(custom_element_name)
+        if existing is not None and existing != name:
+            raise WebComPyComponentException(
+                f"Duplicated Custom Element Name: '{custom_element_name}' (components '{existing}' and '{name}')"
+            )
+        self._custom_element_names[custom_element_name] = name
         self._components[name] = component_generator
 
     @property
@@ -67,6 +80,24 @@ FuncComponentDef: TypeAlias = (
 
 StyleDeclaration: TypeAlias = str | dict[str, "StyleDeclaration"]
 StyleDict: TypeAlias = dict[str, StyleDeclaration]
+
+ComponentDisplay: TypeAlias = Literal[
+    "contents",
+    "block",
+    "inline",
+    "inline-block",
+    "flex",
+    "inline-flex",
+    "grid",
+    "inline-grid",
+    "flow-root",
+]
+
+_VALID_DISPLAY_VALUES: Final = frozenset(get_args(ComponentDisplay))
+
+
+def _is_component_display(value: str) -> TypeGuard[ComponentDisplay]:
+    return value in _VALID_DISPLAY_VALUES
 
 
 _unregistered_generators: list[ComponentGenerator[Any]] = []
@@ -115,7 +146,7 @@ def _render_declaration_at_rule(selector: str, declaration: dict[str, StyleDecla
     return " ".join(parts)
 
 
-def _render_at_rule_inner(style_dict: StyleDict, cid: str, host_tag: str | None = None) -> list[str]:
+def _render_at_rule_inner(style_dict: StyleDict, cid: str, host_tag: str) -> list[str]:
     inner_parts: list[str] = []
     for inner_sel, inner_styles in style_dict.items():
         stripped_inner = inner_sel.strip()
@@ -172,8 +203,14 @@ def _generate_css_recursive(selector: str, style_dict: dict[str, StyleDeclaratio
     return result
 
 
-def _render_scoped_style_css(style: dict[str, StyleDict], cid: str, host_tag: str | None = None) -> str:
-    parts: list[str] = []
+def _render_scoped_style_css(
+    style: dict[str, StyleDict],
+    cid: str,
+    host_tag: str,
+    *,
+    leading_rules: Iterable[str] = (),
+) -> str:
+    parts: list[str] = list(leading_rules)
     for selector, style_dict in style.items():
         stripped = selector.strip()
         if _is_keyframes_rule(stripped):
@@ -204,14 +241,20 @@ class ComponentGenerator(Generic[PropsType]):
     _cid: str
     _style: dict[str, StyleDict]
     _registered: bool
+    _registered_app: WebComPyApp | None
+    _custom_element_name: str
+    _display: ComponentDisplay | None
+    _observed_attributes: tuple[str, ...]
+    _observed_prop_keys: dict[str, str]
 
     def __init__(
         self,
         name: str,
         component_def: FuncComponentDef[PropsType],
         *,
-        custom_element_name: str | None = None,
+        custom_element_name: str,
         observed_attributes: tuple[str, ...] = (),
+        display: ComponentDisplay | None = None,
     ) -> None:
         self._style = {}
         self._reactive_styles: list[ReactiveScopedStyle] = []
@@ -219,7 +262,9 @@ class ComponentGenerator(Generic[PropsType]):
         self._name: str = name
         self._cid = generate_id(name)
         self._registered = False
+        self._registered_app = None
         self._custom_element_name = custom_element_name
+        self._display = display
         self._observed_attributes = observed_attributes
         self._observed_prop_keys: dict[str, str] = {attr: attr.replace("-", "_") for attr in observed_attributes}
         if not self._try_register():
@@ -230,8 +275,12 @@ class ComponentGenerator(Generic[PropsType]):
         return self._cid
 
     @property
-    def custom_element_name(self) -> str | None:
+    def custom_element_name(self) -> str:
         return self._custom_element_name
+
+    @property
+    def display(self) -> ComponentDisplay | None:
+        return self._display
 
     @property
     def observed_attributes(self) -> tuple[str, ...]:
@@ -242,23 +291,27 @@ class ComponentGenerator(Generic[PropsType]):
         return self._observed_prop_keys
 
     @property
-    def definition_key(self) -> str | None:
-        if self._custom_element_name is None:
-            return None
+    def definition_key(self) -> str:
         ordered_attributes = ",".join(sorted(self._observed_attributes))
         return f"webcompy-v1:{self._custom_element_name}:{ordered_attributes}"
 
     def _try_register(self) -> bool:
         from webcompy.di import inject
-        from webcompy.di._keys import _COMPONENT_STORE_KEY
+        from webcompy.di._keys import _APP_KEY, _COMPONENT_STORE_KEY
 
         store = inject(_COMPONENT_STORE_KEY, default=None)
-        if store is not None:
-            if self._name not in store.components:
-                store.add_component(self._name, self)
-                self._inject_scoped_style_if_new()
+        if store is None:
+            return False
+        app = inject(_APP_KEY, default=None)
+        if self._registered_app is not None and app is not None and self._registered_app is not app:
             return True
-        return False
+        if self._name not in store.components:
+            store.add_component(self._name, self)
+            self._inject_scoped_style_if_new()
+        self._registered = True
+        if app is not None:
+            self._registered_app = app
+        return True
 
     def _inject_scoped_style_if_new(self) -> None:
         from webcompy.di import inject
@@ -300,12 +353,20 @@ class ComponentGenerator(Generic[PropsType]):
 
     @property
     def scoped_style(self) -> str:
-        return _render_scoped_style_css(self._style, self._id, host_tag=self.custom_element_name)
+        leading_rules: tuple[str, ...] = ()
+        if self._display is not None:
+            leading_rules = (f"{self._custom_element_name}[webcompy-cid-{self._id}] {{ display: {self._display}; }}",)
+        return _render_scoped_style_css(
+            self._style,
+            self._id,
+            host_tag=self._custom_element_name,
+            leading_rules=leading_rules,
+        )
 
     @scoped_style.setter
     def scoped_style(self, style: dict[str, StyleDict]):
         cid = self._id
-        host_tag = self.custom_element_name
+        host_tag = self._custom_element_name
         style_items: list[tuple[str, dict[str, StyleDeclaration]]] = []
         for selector, declaration in style.items():
             if _classify_nested_key(selector.strip()) == "at-rule":
@@ -337,7 +398,9 @@ _RESERVED_CUSTOM_ELEMENT_NAMES = frozenset(
 def _validate_custom_element_name(name: str) -> None:
     if not isinstance(name, str) or "-" not in name or _CUSTOM_ELEMENT_NAME_RE.fullmatch(name) is None:
         raise WebComPyComponentException(
-            f"Invalid custom element name: {name!r}. Custom element names must be lowercase and contain a hyphen."
+            f"Invalid custom element name: {name!r}. Custom element names must be lowercase and contain a hyphen. "
+            "Single-word component names cannot form a valid custom element name; "
+            "rename the component to a multi-word name (e.g., 'App' -> 'TodoApp' -> 'todo-app')."
         )
     if name in _RESERVED_CUSTOM_ELEMENT_NAMES:
         raise WebComPyComponentException(
@@ -373,8 +436,9 @@ def _normalize_observed_attributes(observed_attributes: Iterable[str]) -> tuple[
 
 def _create_generator(
     setup: FuncComponentDef[PropsType],
-    custom_element_name: str | None,
+    custom_element_name: str,
     observed_attributes: tuple[str, ...],
+    display: ComponentDisplay | None,
 ) -> ComponentGenerator[PropsType]:
     setup.__webcompy_component_definition__ = True
     return ComponentGenerator(
@@ -382,39 +446,41 @@ def _create_generator(
         setup,
         custom_element_name=custom_element_name,
         observed_attributes=observed_attributes,
+        display=display,
     )
 
 
-@overload
 def define_component(
-    setup: FuncComponentDef[PropsType],
-) -> ComponentGenerator[PropsType]: ...
-
-
-@overload
-def define_component(
-    setup: str,
+    name: str,
     *,
     observed_attributes: Iterable[str] = (),
-) -> Callable[[FuncComponentDef[PropsType]], ComponentGenerator[PropsType]]: ...
-
-
-def define_component(
-    setup: FuncComponentDef[PropsType] | str,
-    *,
-    observed_attributes: Iterable[str] = (),
-) -> ComponentGenerator[PropsType] | Callable[[FuncComponentDef[PropsType]], ComponentGenerator[PropsType]]:
-    if callable(setup):
-        if observed_attributes:
-            raise WebComPyComponentException(
-                "observed_attributes requires a named custom element; pass a custom element name to @define_component"
-            )
-        return _create_generator(setup, None, ())
-    _validate_custom_element_name(setup)
+    display: ComponentDisplay | None = None,
+) -> Callable[[FuncComponentDef[PropsType]], ComponentGenerator[PropsType]]:
+    _validate_custom_element_name(name)
     normalized = _normalize_observed_attributes(observed_attributes)
+    if display is not None and (not isinstance(display, str) or not _is_component_display(display)):
+        valid = ", ".join(get_args(ComponentDisplay))
+        raise WebComPyComponentException(f"Invalid display value: {display!r}. Valid values: {valid}")
 
     def _decorator(component_def: FuncComponentDef[PropsType]) -> ComponentGenerator[PropsType]:
-        return _create_generator(component_def, setup, normalized)
+        expected_name = kebab_to_pascal(name)
+        if component_def.__name__ != expected_name:
+            derived = pascal_to_kebab(component_def.__name__)
+            message = (
+                f"Component name mismatch: '{name}' resolves to '{expected_name}' "
+                f"but the setup function is named '{component_def.__name__}'. "
+                f"Rename the function to '{expected_name}'"
+            )
+            try:
+                _validate_custom_element_name(derived)
+            except WebComPyComponentException:
+                derived = None
+            if derived is not None and kebab_to_pascal(derived) == component_def.__name__:
+                message += f' or use @define_component("{derived}").'
+            else:
+                message += "."
+            raise WebComPyComponentException(message)
+        return _create_generator(component_def, name, normalized, display)
 
     return _decorator
 

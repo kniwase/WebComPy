@@ -25,16 +25,16 @@ class User:
     name: str
 
 
-@define_component
-def _TypedFetchRoot(context):
+@define_component("typed-fetch-root")
+def TypedFetchRoot(context):
     from webcompy.components._hooks import use_async_result
 
     result = use_async_result(lambda: HttpClient.get("/api/user", response_type=User))
     return html.DIV({"data-testid": "typed-root"}, result.data.value.name if result.data.value else "")
 
 
-@define_component
-def _NoTransferRoot(context):
+@define_component("no-transfer-root")
+def NoTransferRoot(context):
     from webcompy.components._hooks import use_async_result
 
     result = use_async_result(
@@ -85,7 +85,7 @@ def _extract_payload(html_str: str) -> dict:
 
 class TestTypedFetchDuringSsr:
     def test_typed_self_site_fetch_uses_asgi_transport_and_populates_cache(self):
-        _app, fetch_port, (html_str, _collected) = _render_with_api(_TypedFetchRoot)
+        _app, fetch_port, (html_str, _collected) = _render_with_api(TypedFetchRoot)
 
         assert "typed-root" in html_str
 
@@ -99,7 +99,7 @@ class TestTypedFetchDuringSsr:
 
     def test_transfer_false_absent_from_hydration_payload(self):
         _app, fetch_port, (html_str, _collected) = _render_with_api(
-            _NoTransferRoot,
+            NoTransferRoot,
             api_path="/api/secret",
             payload={"id": 9, "name": "secret-ada"},
         )
@@ -112,6 +112,6 @@ class TestTypedFetchDuringSsr:
         assert payload["async_results"] == {}
 
     def test_collect_transfer_data_after_typed_render(self):
-        _app, fetch_port, (_html_str, collected) = _render_with_api(_TypedFetchRoot)
+        _app, fetch_port, (_html_str, collected) = _render_with_api(TypedFetchRoot)
         assert collected.async_results, "expected a collected async-result entry"
         assert "/api/user" in collected.fetches or "/api/user" in fetch_port._response_cache

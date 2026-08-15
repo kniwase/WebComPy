@@ -21,12 +21,12 @@ def _reset_counts() -> None:
     _setup_counts.clear()
 
 
-@define_component
+@define_component("root-layout")
 def RootLayout(context: ComponentContext[None]):
     return html.DIV({"data-testid": "root"}, RouterView())
 
 
-@define_component
+@define_component("docs-layout")
 def DocsLayout(context: ComponentContext[RouterContext]):
     _count("DocsLayout")
     return html.DIV(
@@ -36,19 +36,19 @@ def DocsLayout(context: ComponentContext[RouterContext]):
     )
 
 
-@define_component
+@define_component("guide-page")
 def GuidePage(context: ComponentContext[RouterContext]):
     _count("GuidePage")
     return html.DIV({"data-testid": "guide-page"}, f"guide-{_setup_counts['GuidePage'][0]}")
 
 
-@define_component
+@define_component("api-page")
 def ApiPage(context: ComponentContext[RouterContext]):
     _count("ApiPage")
     return html.DIV({"data-testid": "api-page"}, f"api-{_setup_counts['ApiPage'][0]}")
 
 
-@define_component
+@define_component("param-page")
 def ParamPage(context: ComponentContext[RouterContext]):
     _count("ParamPage")
     return html.DIV(
@@ -58,19 +58,19 @@ def ParamPage(context: ComponentContext[RouterContext]):
     )
 
 
-@define_component
+@define_component("deep-nested-page")
 def DeepNestedPage(context: ComponentContext[RouterContext]):
     _count("DeepNestedPage")
     return html.DIV({"data-testid": "deep-nested-page"}, "deep")
 
 
-@define_component
+@define_component("not-found-page")
 def NotFoundPage(context: ComponentContext[RouterContext]):
     _count("NotFoundPage")
     return html.DIV({"data-testid": "not-found-page"}, "default")
 
 
-@define_component
+@define_component("deep-layout")
 def DeepLayout(context: ComponentContext[RouterContext]):
     _count("DeepLayout")
     return html.DIV(
@@ -80,7 +80,7 @@ def DeepLayout(context: ComponentContext[RouterContext]):
     )
 
 
-@define_component
+@define_component("level-one-leaf")
 def LevelOneLeaf(context: ComponentContext[RouterContext]):
     _count("LevelOneLeaf")
     return html.DIV(
@@ -329,11 +329,11 @@ class TestRouterViewInFlightNavigation:
 
         fired: list[str] = []
 
-        @define_component
+        @define_component("home-page")
         def HomePage(context: ComponentContext[RouterContext]):
             return html.DIV({"data-testid": "home-page"}, "home")
 
-        @define_component
+        @define_component("slow-page")
         async def SlowPage(context: ComponentContext[RouterContext]):
             @on_after_rendering
             def after():
@@ -342,7 +342,7 @@ class TestRouterViewInFlightNavigation:
             await asyncio.sleep(0.02)
             return html.DIV({"data-testid": "slow-page"}, "slow")
 
-        @define_component
+        @define_component("fast-page")
         async def FastPage(context: ComponentContext[RouterContext]):
             @on_after_rendering
             def after():
@@ -366,7 +366,7 @@ class TestRouterViewInFlightNavigation:
         hist.navigate("/home", None)
         _reset_counts()
         with _render(router) as result:
-            view = result._instance._children[0]
+            view = result._instance._children[0]._children[0]
 
             scratch = Router(*pages, history=MockHistoryPort(mode="hash"), preload=False)
             scratch._history.navigate("/slow", None)

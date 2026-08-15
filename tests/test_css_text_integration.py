@@ -31,7 +31,7 @@ def _noop_setup(ctx):
 
 class TestStaticCssTextGenerator:
     def test_css_text_as_scoped_style_renders_scoped_css(self):
-        gen = ComponentGenerator("CssTextStatic", _noop_setup)
+        gen = ComponentGenerator("CssTextStatic", _noop_setup, custom_element_name="css-text-static")
         gen.scoped_style = css_text(".btn { color: red; }")
         css = gen.scoped_style
 
@@ -40,10 +40,10 @@ class TestStaticCssTextGenerator:
         assert "color: red" in css
 
     def test_css_text_output_equivalent_to_dict_form(self):
-        gen_text = ComponentGenerator("CssTextGen", _noop_setup)
+        gen_text = ComponentGenerator("CssTextGen", _noop_setup, custom_element_name="css-text-gen")
         gen_text.scoped_style = css_text(".btn { color: red; :hover { background: blue; } }")
 
-        gen_dict = ComponentGenerator("DictGen", _noop_setup)
+        gen_dict = ComponentGenerator("DictGen", _noop_setup, custom_element_name="dict-gen")
         gen_dict.scoped_style = {".btn": {"color": "red", ":hover": {"background": "blue"}}}
 
         from re import sub
@@ -54,7 +54,7 @@ class TestStaticCssTextGenerator:
         assert normalised_text == normalised_dict
 
     def test_css_text_at_rule_renders_inside_layer(self):
-        gen = ComponentGenerator("CssTextAtRule", _noop_setup)
+        gen = ComponentGenerator("CssTextAtRule", _noop_setup, custom_element_name="css-text-at-rule")
         gen.scoped_style = css_text("@media (max-width: 768px) { .btn { font-size: 12px; } }")
         css = gen.scoped_style
         assert "@media (max-width: 768px)" in css
@@ -62,7 +62,7 @@ class TestStaticCssTextGenerator:
         assert "font-size: 12px" in css
 
     def test_css_text_keyframes_renders(self):
-        gen = ComponentGenerator("CssTextKf", _noop_setup)
+        gen = ComponentGenerator("CssTextKf", _noop_setup, custom_element_name="css-text-kf")
         gen.scoped_style = css_text(
             "@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }"
         )
@@ -79,7 +79,7 @@ class TestCssTextTemplateRegistration:
         color = Signal("blue")
         registered_ref: dict = {}
 
-        @define_component
+        @define_component("my-comp")
         def MyComp(context):
             style = reactive_scoped_style(css_text_template(".btn { color: {{ color }}; }", {"color": color}))
             context.use_reactive_scoped_style(style)
@@ -113,7 +113,7 @@ class TestReactiveStyleDomUpdate:
 
         color = Signal("blue")
 
-        @define_component
+        @define_component("rx-comp")
         def RxComp(context):
             return html.DIV({}, "")
 
@@ -221,7 +221,7 @@ class TestAsyncFileCssHydration:
 
         captured_server: dict = {}
 
-        @define_component
+        @define_component("server-comp")
         async def ServerComp(_):
             text = await load_text("card.css")
             parsed = css_text(text)
@@ -256,7 +256,7 @@ class TestAsyncFileCssHydration:
 
         captured_browser: dict = {}
 
-        @define_component
+        @define_component("browser-comp")
         async def BrowserComp(_):
             text = await load_text("card.css")
             parsed = css_text(text)
@@ -274,7 +274,7 @@ class TestAsyncFileCssHydration:
 
 class TestDictScopedStyleRegression:
     def test_dict_scoped_style_still_produces_layered_css(self):
-        gen = ComponentGenerator("DictStatic", _noop_setup)
+        gen = ComponentGenerator("DictStatic", _noop_setup, custom_element_name="dict-static")
         gen.scoped_style = {".btn": {"color": "red", ":hover": {"background": "blue"}}}
         css = gen.scoped_style
 
@@ -285,7 +285,7 @@ class TestDictScopedStyleRegression:
         assert "background: blue" in css
 
     def test_dict_keyframes_still_renders(self):
-        gen = ComponentGenerator("DictKf", _noop_setup)
+        gen = ComponentGenerator("DictKf", _noop_setup, custom_element_name="dict-kf")
         gen.scoped_style = {
             "@keyframes fade": {
                 "from": {"opacity": "0"},
@@ -297,14 +297,14 @@ class TestDictScopedStyleRegression:
         assert "opacity: 0" in css or "opacity:0" in css.replace(" ", "")
 
     def test_dict_at_rule_still_emits_combinator_scoped_inner(self):
-        gen = ComponentGenerator("DictMedia", _noop_setup)
+        gen = ComponentGenerator("DictMedia", _noop_setup, custom_element_name="dict-media")
         gen.scoped_style = {"@media (max-width: 768px)": {".btn": {"color": "red"}}}
         css = gen.scoped_style
         assert "@media (max-width: 768px)" in css
         assert f".btn[webcompy-cid-{gen._id}]" in css
 
     def test_dict_scoped_style_setter_rejects_string_assignment(self):
-        gen = ComponentGenerator("DictRejected", _noop_setup)
+        gen = ComponentGenerator("DictRejected", _noop_setup, custom_element_name="dict-rejected")
         with pytest.raises(AttributeError):
             gen.scoped_style = ".btn { color: red; }"  # type: ignore[assignment]
 
@@ -316,19 +316,19 @@ class TestDictFactoryReactiveRegression:
         color = Signal("blue")
         style = reactive_scoped_style(lambda: {".x": {"color": color.value}})
         assert isinstance(style, ReactiveScopedStyle)
-        style._bind("test-dict-cid")
+        style._bind("test-dict-cid", host_tag="test-component")
 
         assert style.dict_computed.value == {".x": {"color": "blue"}}
         color.value = "red"
         assert style.dict_computed.value == {".x": {"color": "red"}}
 
     def test_dict_factory_render_css_matches_static(self):
-        gen = ComponentGenerator("DictReactiveCompare", _noop_setup)
+        gen = ComponentGenerator("DictReactiveCompare", _noop_setup, custom_element_name="dict-reactive-compare")
         gen.scoped_style = {".btn": {"color": "blue"}}
 
         color = Signal("blue")
         style = reactive_scoped_style(lambda: {".btn": {"color": color.value}})
-        style._bind(gen._id)
+        style._bind(gen._id, host_tag="test-component")
 
         import re
 
@@ -348,7 +348,7 @@ class TestDictFactoryReactiveRegression:
 
         color = Signal("blue")
 
-        @define_component
+        @define_component("dict-rx-comp")
         def DictRxComp(context):
             return html.DIV({}, "")
 

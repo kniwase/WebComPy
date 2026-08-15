@@ -8,7 +8,7 @@ from webcompy.router import RouterContext
 from webcompy.signal import Signal, use_computed, use_state
 
 
-@define_component
+@define_component("fizzbuzz-list")
 def FizzbuzzList(context: ComponentContext[Signal[int]]):
     @use_computed
     def numbers():
@@ -51,8 +51,8 @@ FizzbuzzList.scoped_style = {
 }
 
 
-@define_component
-def Fizzbuzz(context: ComponentContext[RouterContext]):
+@define_component("fizzbuzz-page")
+def FizzbuzzPage(context: ComponentContext[RouterContext]):
     context.set_title("FizzBuzz - WebComPy Template")
 
     opened = use_state(lambda: True)

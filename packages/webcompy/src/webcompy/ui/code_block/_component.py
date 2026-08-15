@@ -13,7 +13,7 @@ class CodeBlockProps(TypedDict, total=False):
     lang: str
 
 
-@define_component
+@define_component("code-block")
 def CodeBlock(context: ComponentContext[CodeBlockProps]) -> Any:
     props = context.props or {}
     initial_code = props.get("code", "")

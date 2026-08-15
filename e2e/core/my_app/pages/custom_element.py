@@ -10,7 +10,7 @@ from webcompy.signal import use_computed, use_reactive_list, use_state
 
 
 @define_component("e2e-card", observed_attributes=("theme-color",))
-def E2ECard(context: ComponentContext[dict]):
+def E2eCard(context: ComponentContext[dict]):
     theme = use_computed(lambda: context.props["theme_color"] or "none")
 
     @on_mounted
@@ -30,7 +30,7 @@ def E2ECard(context: ComponentContext[dict]):
     ]
 
 
-@define_component
+@define_component("custom-element-page")
 def CustomElementPage(context: ComponentContext[None]):
     context.set_title("Custom Elements - E2E")
 
@@ -54,7 +54,7 @@ def CustomElementPage(context: ComponentContext[None]):
         adopt_on.value = not adopt_on.value
 
     def adopt_card():
-        return E2ECard(
+        return E2eCard(
             {
                 "id": "adopt",
                 "mounted_total": mounted_total,
@@ -74,7 +74,7 @@ def CustomElementPage(context: ComponentContext[None]):
             {"data-testid": "card-list"},
             repeat(
                 items,
-                lambda item, k: E2ECard(
+                lambda item, k: E2eCard(
                     {
                         "id": item["id"],
                         "mounted_total": mounted_total,

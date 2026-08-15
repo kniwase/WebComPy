@@ -3,7 +3,7 @@ from webcompy.elements import html
 from webcompy.storage import use_local_storage, use_session_storage
 
 
-@define_component
+@define_component("storage-page")
 def StoragePage(context: ComponentContext[None]):
     context.set_title("Storage - E2E")
 

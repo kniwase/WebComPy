@@ -32,7 +32,7 @@ class TestMultiLineForLoopInitialRender:
     def test_renders_all_items_on_initial_render(self):
         items = ReactiveList(["a", "b", "c"])
 
-        @define_component
+        @define_component("loop-page")
         def LoopPage(context):
             return render_template(
                 """
@@ -54,7 +54,7 @@ class TestMultiLineForLoopRefresh:
     def test_items_kept_in_order_after_pop(self):
         items = ReactiveList(["a", "b", "c"])
 
-        @define_component
+        @define_component("loop-page")
         def LoopPage(context):
             return render_template(
                 """
@@ -77,7 +77,7 @@ class TestMultiElementIfBranchToggle:
     def test_branch_toggles_without_losing_nodes(self):
         flag = Signal(True)
 
-        @define_component
+        @define_component("branch-page")
         def BranchPage(context):
             return render_template(
                 """
@@ -106,7 +106,7 @@ class TestKeyedRepeatFragmentChildren:
     def test_dict_repeat_positions_fragments_without_overlap(self):
         d = ReactiveDict({"a": 1, "b": 2, "c": 3})
 
-        @define_component
+        @define_component("dict-page")
         def DictPage(context):
             return render_template(
                 """
@@ -152,7 +152,7 @@ class TestMarkdownForFragmentChildren:
 
 class TestDynamicChildMaterialization:
     def test_client_only_preserves_following_sibling(self):
-        @define_component
+        @define_component("client-only-page")
         def ClientOnlyPage(context):
             return html.DIV(
                 {},
@@ -164,13 +164,13 @@ class TestDynamicChildMaterialization:
             )
 
         with TestRenderer.render(ClientOnlyPage) as result:
-            children = result._root_node.childNodes
+            children = result._root_node.childNodes[0].childNodes
             assert [child.nodeName for child in children] == ["#text", "P"]
             assert children[0].textContent == "fallback"
             assert children[1].textContent == "tail"
 
     def test_suspense_preserves_following_sibling(self):
-        @define_component
+        @define_component("suspense-page")
         def SuspensePage(context):
             return html.DIV(
                 {},
@@ -182,13 +182,13 @@ class TestDynamicChildMaterialization:
             )
 
         with TestRenderer.render(SuspensePage) as result:
-            children = result._root_node.childNodes
+            children = result._root_node.childNodes[0].childNodes
             assert [child.nodeName for child in children] == ["SPAN", "P"]
             assert children[0].textContent == "suspense"
             assert children[1].textContent == "tail"
 
     def test_fragment_materialization_preserves_following_siblings(self):
-        @define_component
+        @define_component("fragment-page")
         def FragmentPage(context):
             return html.DIV(
                 {},
@@ -205,7 +205,7 @@ class TestDynamicChildMaterialization:
             )
 
         with TestRenderer.render(FragmentPage) as result:
-            children = result._root_node.childNodes
+            children = result._root_node.childNodes[0].childNodes
             assert [child.nodeName for child in children] == ["#text", "SPAN", "P"]
             assert [child.textContent for child in children] == ["fallback", "inside", "tail"]
 
@@ -244,7 +244,7 @@ class TestReactiveIfInsideForToggle:
         items = ReactiveList([1, 2, 3])
         flag = Signal(True)
 
-        @define_component
+        @define_component("toggle-page")
         def TogglePage(context):
             return render_template(
                 """
@@ -302,7 +302,7 @@ class TestRepeatRefreshWithFollowingSibling:
     def test_following_sibling_preserved_after_pop(self):
         items = ReactiveList(["x", "y"])
 
-        @define_component
+        @define_component("sibling-page")
         def SiblingPage(context):
             return render_template(
                 """
@@ -333,7 +333,7 @@ class TestNestedForRefresh:
         rows = ReactiveList(["a", "b"])
         cols = ReactiveList([1, 2])
 
-        @define_component
+        @define_component("nested-page")
         def NestedPage(context):
             return render_template(
                 """

@@ -3,8 +3,8 @@ from webcompy.elements import html
 from webcompy.router import RouterLink, RouterView
 
 
-@define_component
-def Root(_: ComponentContext[None]):
+@define_component("app-root")
+def AppRoot(_: ComponentContext[None]):
     return html.DIV(
         {},
         html.NAV(

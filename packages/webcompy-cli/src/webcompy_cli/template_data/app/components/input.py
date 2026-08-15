@@ -4,7 +4,7 @@ from webcompy.router import RouterContext
 from webcompy.signal import use_state
 
 
-@define_component
+@define_component("in-out-sample")
 def InOutSample(context: ComponentContext[RouterContext]):
     context.set_title("Text Input Sample - WebCompy Template")
 

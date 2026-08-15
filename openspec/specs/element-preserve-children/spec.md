@@ -8,7 +8,7 @@ The `:preserve_children` attribute allows elements to declare that external Java
 
 ### Requirement: Element shall accept :preserve_children attribute
 
-An `Element` or `Component` SHALL accept a `:preserve_children` boolean attribute that controls whether the framework's child-node cleanup is suppressed. The attribute SHALL follow the same pattern as `:ref`: extracted in `create_element()`, stored internally as `_preserve_children`, and never rendered as a DOM attribute. The default value SHALL be `False`. Only a literal Python `bool` value SHALL be accepted; passing a `Signal[bool]` SHALL be treated as a regular DOM attribute rather than being extracted as `:preserve_children`.
+An `Element` SHALL accept a `:preserve_children` boolean attribute that controls whether the framework's child-node cleanup is suppressed. The attribute SHALL follow the same pattern as `:ref`: extracted in `create_element()`, stored internally as `_preserve_children`, and never rendered as a DOM attribute. The default value SHALL be `False`. Only a literal Python `bool` value SHALL be accepted; passing a `Signal[bool]` SHALL be treated as a regular DOM attribute rather than being extracted as `:preserve_children`.
 
 #### Scenario: Setting :preserve_children on an element
 - **WHEN** a developer writes `html.CODE({"class": "language-python", ":preserve_children": True})`
@@ -19,9 +19,10 @@ An `Element` or `Component` SHALL accept a `:preserve_children` boolean attribut
 - **WHEN** a developer writes `html.CODE({"class": "language-python"})` without `:preserve_children`
 - **THEN** the resulting `Element` SHALL have `_preserve_children = False`
 
-#### Scenario: Component inherits :preserve_children from root element
-- **WHEN** a component's root `Element` has `_preserve_children = True`
-- **THEN** the `Component` instance SHALL have `_preserve_children = True`
+#### Scenario: Component root element carries its own :preserve_children flag
+- **WHEN** a component's root `Element` has `_preserve_children = True` (the root renders as the custom-element wrapper's child)
+- **THEN** the root element SHALL keep `_preserve_children = True` and skip its own cleanup loop
+- **AND** the custom-element wrapper SHALL NOT inherit the flag from the root element
 
 #### Scenario: Signal[bool] is not extracted as :preserve_children
 - **WHEN** a developer writes `html.CODE({":preserve_children": my_signal})` where `my_signal` is a `Signal[bool]`

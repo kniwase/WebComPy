@@ -836,10 +836,11 @@ Inline parsing SHALL be implemented as a character-scanning tokenizer followed b
 - **THEN** the FragmentElement SHALL render transparently inside `<article>`
 - **AND** no extra `<div>` wrapper SHALL appear in the DOM
 
-#### Scenario: Multi-root Markdown requires explicit wrapper as component root
+#### Scenario: Multi-root Markdown returned directly from a component setup
 - **WHEN** a developer returns `render_markdown("# Title\n\nText.", ctx)` directly from a component setup (producing multiple top-level elements → `FragmentElement`)
-- **THEN** `Component.__init_component` SHALL raise `WebComPyException("Root Node of Component must be instance of 'Element'")` because the root is a `FragmentElement`, not an `Element`
-- **AND** the developer SHALL wrap the result in an explicit root element (e.g., `html.ARTICLE({}, render_markdown(...))`)
+- **THEN** the FragmentElement SHALL be accepted as the component's child content
+- **AND** the fragment's children SHALL render inside the component's custom-element wrapper
+- **AND** no component-root type error SHALL be raised
 
 #### Scenario: {{ }} interpolation in Markdown
 - **WHEN** `render_markdown("## {{ title }}", {"title": Signal("Home")})` is called

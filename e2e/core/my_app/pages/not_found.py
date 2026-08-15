@@ -3,7 +3,7 @@ from webcompy.elements import html
 from webcompy.router import RouterContext
 
 
-@define_component
+@define_component("not-found")
 def NotFound(context: ComponentContext[RouterContext]):
     context.set_title("Not Found - E2E")
     return html.DIV(

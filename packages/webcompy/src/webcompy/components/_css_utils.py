@@ -234,15 +234,10 @@ def _reject_host_forms(part: str) -> None:
         raise WebComPyException(f"Unsupported :host form: {part!r}")
 
 
-def _resolve_host_part(part: str, host_tag: str | None) -> str:
+def _resolve_host_part(part: str, host_tag: str) -> str:
     if _has_non_leading_host(part):
         raise WebComPyException(f"Unsupported :host form: {part!r}")
     if _is_host_syntax(part):
-        if host_tag is None:
-            raise WebComPyException(
-                f":host is not available in unnamed components (selector: {part!r}); "
-                "pass a custom element name to @define_component"
-            )
         rest = part[len(":host") :]
         if rest == "" or rest.startswith(":") or rest.startswith("["):
             return host_tag + rest
@@ -261,7 +256,7 @@ def _resolve_host_part(part: str, host_tag: str | None) -> str:
     return part
 
 
-def _scope_selector(selector: str, cid: str, *, host_tag: str | None = None) -> str:
+def _scope_selector(selector: str, cid: str, *, host_tag: str) -> str:
     if _contains_top_level_ampersand(selector):
         _raise_nesting_unsupported(selector)
     parts, combinators = _split_selector_parts(selector)

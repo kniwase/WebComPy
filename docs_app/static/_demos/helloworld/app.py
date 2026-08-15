@@ -3,8 +3,8 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 
 
-@define_component
-def App(_: ComponentContext[None]):
+@define_component("hello-world-app")
+def HelloWorldApp(_: ComponentContext[None]):
     return html.DIV(
         {},
         html.H1(
@@ -14,5 +14,5 @@ def App(_: ComponentContext[None]):
     )
 
 
-app = WebComPyApp(root_component=App)
+app = WebComPyApp(root_component=HelloWorldApp)
 app.run()

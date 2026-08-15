@@ -4,8 +4,8 @@ from webcompy.components._generator import define_component
 from webcompy_testing import create_test_app
 
 
-@define_component
-def _IsolationRoot(context):
+@define_component("isolation-root")
+def IsolationRoot(context):
     from webcompy.elements import html
 
     return html.DIV({}, "hello")
@@ -13,7 +13,7 @@ def _IsolationRoot(context):
 
 class TestRenderContextIsolation:
     def test_independent_contexts_from_same_app(self):
-        app = create_test_app(root_component=_IsolationRoot)
+        app = create_test_app(root_component=IsolationRoot)
 
         ctx1 = app.create_render_context()
         ctx1.set_title("Title 1")
@@ -43,7 +43,7 @@ class TestRenderContextIsolation:
         ctx2.dispose()
 
     def test_styles_isolated(self):
-        app = create_test_app(root_component=_IsolationRoot)
+        app = create_test_app(root_component=IsolationRoot)
         ctx = app.create_render_context()
         scoped = ctx.scoped_styles
         assert isinstance(scoped, dict)

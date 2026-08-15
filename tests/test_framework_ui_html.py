@@ -4,15 +4,15 @@ from webcompy.components._generator import define_component
 from webcompy_testing import create_test_app, render_app_html
 
 
-@define_component
-def _TestRoot(context):
+@define_component("test-root")
+def TestRoot(context):
     from webcompy.elements import html
 
     return html.DIV({}, "test")
 
 
 def _make_app(**config_kwargs):
-    return create_test_app(root_component=_TestRoot, **config_kwargs)
+    return create_test_app(root_component=TestRoot, **config_kwargs)
 
 
 def _generate_html(app, **kwargs):
@@ -95,14 +95,14 @@ def test_scoped_styles_appear_after_index_css_link() -> None:
     from webcompy.components import reactive_scoped_style
     from webcompy.elements import html as html_module
 
-    @define_component
-    def _StyledRoot(context):
+    @define_component("styled-root")
+    def StyledRoot(context):
         context.use_reactive_scoped_style(reactive_scoped_style(lambda: {".styled-box-rx": {"color": "blue"}}))
         return html_module.DIV({"class": "styled-box"}, "styled")
 
-    _StyledRoot.scoped_style = {".styled-box": {"color": "red"}}
+    StyledRoot.scoped_style = {".styled-box": {"color": "red"}}
 
-    app = create_test_app(root_component=_StyledRoot)
+    app = create_test_app(root_component=StyledRoot)
     html_str = _generate_html(
         app,
         app_package_name="test_pkg",
@@ -128,13 +128,13 @@ def test_scoped_styles_appear_after_index_css_link() -> None:
 def test_scoped_styles_follow_index_css_link_with_escapable_base_url() -> None:
     from webcompy.elements import html as html_module
 
-    @define_component
-    def _StyledRoot(context):
+    @define_component("styled-root")
+    def StyledRoot(context):
         return html_module.DIV({}, "styled")
 
-    _StyledRoot.scoped_style = {".styled-box": {"color": "red"}}
+    StyledRoot.scoped_style = {".styled-box": {"color": "red"}}
 
-    app = create_test_app(root_component=_StyledRoot, base_url="/a&b/")
+    app = create_test_app(root_component=StyledRoot, base_url="/a&b/")
     html_str = _generate_html(
         app,
         app_package_name="test_pkg",

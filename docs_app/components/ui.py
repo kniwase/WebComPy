@@ -8,7 +8,7 @@ class InlineCodeProps(TypedDict, total=False):
     text: str
 
 
-@define_component
+@define_component("inline-code")
 def InlineCode(context: ComponentContext[InlineCodeProps]):
     return html.CODE(
         {"class": "ui-inline-code"},
@@ -20,8 +20,8 @@ class CardProps(TypedDict, total=False):
     title: str
 
 
-@define_component
-def Card(context: ComponentContext[CardProps]):
+@define_component("docs-card")
+def DocsCard(context: ComponentContext[CardProps]):
     body = context.slots("default")
     title = context.props.get("title")
     if title:
@@ -40,8 +40,8 @@ class SectionProps(TypedDict, total=False):
     heading: str
 
 
-@define_component
-def Section(context: ComponentContext[SectionProps]):
+@define_component("docs-section")
+def DocsSection(context: ComponentContext[SectionProps]):
     return html.SECTION(
         {"class": "ui-section"},
         html.H3({"class": "ui-section-heading"}, context.props.get("heading", "")),
@@ -54,8 +54,8 @@ class LinkProps(TypedDict, total=False):
     text: str
 
 
-@define_component
-def Link(context: ComponentContext[LinkProps]):
+@define_component("docs-link")
+def DocsLink(context: ComponentContext[LinkProps]):
     return html.A(
         {"class": "ui-link", "href": context.props.get("href", "#")},
         context.props.get("text", ""),
@@ -75,8 +75,8 @@ class ButtonProps(TypedDict, total=False):
     onclick: object
 
 
-@define_component
-def Button(context: ComponentContext[ButtonProps]):
+@define_component("docs-button")
+def DocsButton(context: ComponentContext[ButtonProps]):
     props = context.props
     variant = props.get("variant", "default")
     classes = "ui-button" + (f" ui-button-{variant}" if variant != "default" else "")
@@ -117,7 +117,7 @@ InlineCode.scoped_style = {
     },
 }
 
-Card.scoped_style = {
+DocsCard.scoped_style = {
     ".ui-card": {
         "background-color": "var(--color-bg-card)",
         "border": "1px solid var(--color-border)",
@@ -139,7 +139,7 @@ Card.scoped_style = {
     },
 }
 
-Section.scoped_style = {
+DocsSection.scoped_style = {
     ".ui-section": {
         "margin": "var(--space-5) auto",
         "padding": "var(--space-4) var(--space-5)",
@@ -161,7 +161,7 @@ Section.scoped_style = {
     },
 }
 
-Link.scoped_style = {
+DocsLink.scoped_style = {
     ".ui-link": {
         "color": "var(--color-link)",
         "text-decoration": "none",
@@ -173,7 +173,7 @@ Link.scoped_style = {
     },
 }
 
-Button.scoped_style = {
+DocsButton.scoped_style = {
     ".ui-button": {
         "display": "inline-block",
         "padding": "var(--space-2) var(--space-4)",

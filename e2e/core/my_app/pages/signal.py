@@ -3,7 +3,7 @@ from webcompy.elements import html
 from webcompy.signal import use_computed, use_reactive_dict, use_reactive_list, use_state
 
 
-@define_component
+@define_component("reactive-page")
 def ReactivePage(context: ComponentContext[None]):
     context.set_title("Signal - E2E")
 

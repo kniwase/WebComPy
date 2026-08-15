@@ -42,6 +42,7 @@ from webcompy.template._naming import (
     TagResolution,
     kebab_to_pascal,
     kebab_to_snake,
+    pascal_to_kebab,
     resolve_tag,
 )
 from webcompy.template._parser import _DIRECTIVE_ARGS
@@ -144,6 +145,7 @@ __all__ = [
     "kebab_to_pascal",
     "kebab_to_snake",
     "load_markdown_document",
+    "pascal_to_kebab",
     "render_markdown",
     "render_template",
     "resolve_holes",

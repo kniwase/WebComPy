@@ -1,10 +1,10 @@
 from webcompy.app import WebComPyApp, WebComPyAppConfig
 
-from .layout import Root
+from .layout import DocsRoot
 from .router import router
 
 app = WebComPyApp(
-    root_component=Root,
+    root_component=DocsRoot,
     router=router,
     config=WebComPyAppConfig(base_url="/", plugins=["docs_app.plugins:ErudaPlugin"]),
 )

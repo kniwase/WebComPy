@@ -11,7 +11,7 @@ def _modal():
     )
 
 
-@define_component
+@define_component("teleport-page")
 def TeleportPage(context: ComponentContext[None]):
     context.set_title("Teleport - E2E")
     open_state = use_state(lambda: False)

@@ -2,11 +2,11 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 from webcompy.router import RouterContext, RouterLink
 
-from ...components.ui import Card
+from ...components.ui import DocsCard
 from ...docs_manifest import DOCS_SECTIONS
 
 
-@define_component
+@define_component("document-home-page")
 def DocumentHomePage(context: ComponentContext[RouterContext]):
     context.set_title("Documents - WebComPy Docs")
 
@@ -21,7 +21,7 @@ def DocumentHomePage(context: ComponentContext[RouterContext]):
                 html.DIV(
                     {"class": "docs-index-cards"},
                     *tuple(
-                        Card(
+                        DocsCard(
                             {"title": page["label"]},
                             slots={
                                 "default": lambda page=page: RouterLink(to=page["path"], text=["Open " + page["label"]])

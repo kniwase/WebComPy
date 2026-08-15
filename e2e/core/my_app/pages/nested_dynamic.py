@@ -3,7 +3,7 @@ from webcompy.elements import html, repeat, switch
 from webcompy.signal import use_computed, use_reactive_list, use_state
 
 
-@define_component
+@define_component("nested-dynamic-page")
 def NestedDynamicPage(context: ComponentContext[None]):
     context.set_title("Nested Dynamic - E2E")
 

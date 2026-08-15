@@ -3,8 +3,8 @@ from webcompy.elements import html
 from webcompy.router import RouterLink
 
 
-@define_component
-def Navigation(context: ComponentContext[None]):
+@define_component("site-navigation")
+def SiteNavigation(context: ComponentContext[None]):
     return html.NAV(
         {},
         html.UL(

@@ -2,12 +2,12 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 from webcompy.router import RouterView
 
-from ..components.navigation import Navbar, Page
+from ..components.navigation import DocsNavbar, Page
 from ..docs_manifest import flatten_pages
 
 
-@define_component
-def Root(_: ComponentContext[None]):
+@define_component("docs-root")
+def DocsRoot(_: ComponentContext[None]):
     pages: list[Page] = [
         {
             "title": "Home",
@@ -61,7 +61,7 @@ def Root(_: ComponentContext[None]):
     ]
     return html.DIV(
         {},
-        Navbar(pages),
+        DocsNavbar(pages),
         html.MAIN(
             {},
             html.ARTICLE(

@@ -211,65 +211,73 @@ class TestInsertCid:
 
 class TestScopeSelector:
     def test_simple(self) -> None:
-        assert _scope_selector(".x", "1") == ".x[webcompy-cid-1]"
+        assert _scope_selector(".x", "1", host_tag="test-component") == ".x[webcompy-cid-1]"
 
     def test_descendant(self) -> None:
-        assert _scope_selector(".a .b", "1") == ".a[webcompy-cid-1] .b[webcompy-cid-1]"
+        assert _scope_selector(".a .b", "1", host_tag="test-component") == ".a[webcompy-cid-1] .b[webcompy-cid-1]"
 
     def test_child(self) -> None:
-        assert _scope_selector(".a > .b", "1") == ".a[webcompy-cid-1] > .b[webcompy-cid-1]"
+        assert _scope_selector(".a > .b", "1", host_tag="test-component") == ".a[webcompy-cid-1] > .b[webcompy-cid-1]"
 
     def test_sibling_no_space(self) -> None:
-        assert _scope_selector("a~b", "1") == "a[webcompy-cid-1]~b[webcompy-cid-1]"
+        assert _scope_selector("a~b", "1", host_tag="test-component") == "a[webcompy-cid-1]~b[webcompy-cid-1]"
 
     def test_adjacent(self) -> None:
-        assert _scope_selector(".a + .b", "1") == ".a[webcompy-cid-1] + .b[webcompy-cid-1]"
+        assert _scope_selector(".a + .b", "1", host_tag="test-component") == ".a[webcompy-cid-1] + .b[webcompy-cid-1]"
 
     def test_pseudo_element(self) -> None:
-        assert _scope_selector(".x::before", "1") == ".x[webcompy-cid-1]::before"
+        assert _scope_selector(".x::before", "1", host_tag="test-component") == ".x[webcompy-cid-1]::before"
 
     def test_pseudo_class_then_pseudo_element(self) -> None:
-        assert _scope_selector(".x:hover::before", "1") == ".x:hover[webcompy-cid-1]::before"
+        assert _scope_selector(".x:hover::before", "1", host_tag="test-component") == ".x:hover[webcompy-cid-1]::before"
 
     def test_nth_child(self) -> None:
-        assert _scope_selector(".x:nth-child(2n+1)", "1") == ".x:nth-child(2n+1)[webcompy-cid-1]"
+        assert (
+            _scope_selector(".x:nth-child(2n+1)", "1", host_tag="test-component")
+            == ".x:nth-child(2n+1)[webcompy-cid-1]"
+        )
 
     def test_attribute_value_with_greater_than(self) -> None:
-        assert _scope_selector('[data-x="a>b"]', "1") == '[data-x="a>b"][webcompy-cid-1]'
+        assert _scope_selector('[data-x="a>b"]', "1", host_tag="test-component") == '[data-x="a>b"][webcompy-cid-1]'
 
     def test_attribute_value_with_comma(self) -> None:
-        assert _scope_selector('[title="Hello, World"]', "1") == '[title="Hello, World"][webcompy-cid-1]'
+        assert (
+            _scope_selector('[title="Hello, World"]', "1", host_tag="test-component")
+            == '[title="Hello, World"][webcompy-cid-1]'
+        )
 
     def test_newline_descendant(self) -> None:
-        assert _scope_selector(".a\n.b", "1") == ".a[webcompy-cid-1]\n.b[webcompy-cid-1]"
+        assert _scope_selector(".a\n.b", "1", host_tag="test-component") == ".a[webcompy-cid-1]\n.b[webcompy-cid-1]"
 
     def test_leading_combinator(self) -> None:
-        assert _scope_selector("> .child", "1") == "*[webcompy-cid-1]> .child[webcompy-cid-1]"
+        assert (
+            _scope_selector("> .child", "1", host_tag="test-component") == "*[webcompy-cid-1]> .child[webcompy-cid-1]"
+        )
 
     def test_has_function_inside(self) -> None:
-        assert _scope_selector(":has(> img)", "1") == ":has(> img)[webcompy-cid-1]"
+        assert _scope_selector(":has(> img)", "1", host_tag="test-component") == ":has(> img)[webcompy-cid-1]"
 
     def test_escaped_class_name(self) -> None:
-        assert _scope_selector(".\\31 23", "1") == ".\\31 23[webcompy-cid-1]"
+        assert _scope_selector(".\\31 23", "1", host_tag="test-component") == ".\\31 23[webcompy-cid-1]"
 
     def test_comma_list(self) -> None:
-        assert _scope_selector(".a, .b", "1") == ".a[webcompy-cid-1], .b[webcompy-cid-1]"
+        assert _scope_selector(".a, .b", "1", host_tag="test-component") == ".a[webcompy-cid-1], .b[webcompy-cid-1]"
 
     def test_ampersand_raises(self) -> None:
         with pytest.raises(WebComPyException) as exc_info:
-            _scope_selector(".btn &", "1")
+            _scope_selector(".btn &", "1", host_tag="test-component")
         assert "&" in str(exc_info.value)
         assert "CSS nesting" in str(exc_info.value)
 
     def test_ampersand_at_start_raises(self) -> None:
         with pytest.raises(WebComPyException):
-            _scope_selector("&:hover", "1")
+            _scope_selector("&:hover", "1", host_tag="test-component")
 
     def test_ampersand_inside_attribute_ignored(self) -> None:
-        assert _scope_selector('[href*="&"]', "1") == '[href*="&"][webcompy-cid-1]'
+        assert _scope_selector('[href*="&"]', "1", host_tag="test-component") == '[href*="&"][webcompy-cid-1]'
 
     def test_ampersand_inside_string_ignored(self) -> None:
-        assert _scope_selector('[data-x="a&b"]', "1") == '[data-x="a&b"][webcompy-cid-1]'
+        assert _scope_selector('[data-x="a&b"]', "1", host_tag="test-component") == '[data-x="a&b"][webcompy-cid-1]'
 
 
 class TestContainsTopLevelAmpersand:

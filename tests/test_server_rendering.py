@@ -5,22 +5,22 @@ from webcompy.signal import ReactiveList, Signal
 from webcompy_testing import create_test_app, render_app_html
 
 
-@define_component
-def _AttrTestRoot(context):
+@define_component("attr-test-root")
+def AttrTestRoot(context):
     from webcompy.elements import html
 
     return html.DIV({"class": "container", "id": "main", "data-value": "42"}, "hello")
 
 
-@define_component
-def _EventTestRoot(context):
+@define_component("event-test-root")
+def EventTestRoot(context):
     from webcompy.elements import html
 
     return html.BUTTON({"@click": lambda e: None}, "click me")
 
 
-@define_component
-def _ConditionalTestRoot(context):
+@define_component("conditional-test-root")
+def ConditionalTestRoot(context):
     from webcompy.elements import html
 
     show = Signal(True)
@@ -30,8 +30,8 @@ def _ConditionalTestRoot(context):
     )
 
 
-@define_component
-def _ListTestRoot(context):
+@define_component("list-test-root")
+def ListTestRoot(context):
     from webcompy.elements import html
 
     items = ReactiveList(["a", "b", "c"])
@@ -41,8 +41,8 @@ def _ListTestRoot(context):
     )
 
 
-@define_component
-def _NestedTestRoot(context):
+@define_component("nested-test-root")
+def NestedTestRoot(context):
     from webcompy.elements import html
 
     return html.SECTION(
@@ -70,32 +70,32 @@ def _generate(root, **kwargs):
 
 class TestServerRenderingAttributes:
     def test_multiple_attributes_rendered(self):
-        html_str = _generate(_AttrTestRoot)
+        html_str = _generate(AttrTestRoot)
         assert 'class="container"' in html_str
         assert 'id="main"' in html_str
         assert 'data-value="42"' in html_str
 
     def test_text_content_rendered(self):
-        html_str = _generate(_AttrTestRoot)
+        html_str = _generate(AttrTestRoot)
         assert "hello" in html_str
 
 
 class TestServerRenderingEventHandlers:
     def test_button_with_event_handler(self):
-        html_str = _generate(_EventTestRoot)
+        html_str = _generate(EventTestRoot)
         assert "<button" in html_str
         assert "click me" in html_str
 
 
 class TestServerRenderingConditional:
     def test_conditional_true_branch(self):
-        html_str = _generate(_ConditionalTestRoot)
+        html_str = _generate(ConditionalTestRoot)
         assert 'data-branch="true"' in html_str
 
 
 class TestServerRenderingList:
     def test_list_items_rendered(self):
-        html_str = _generate(_ListTestRoot)
+        html_str = _generate(ListTestRoot)
         assert "<ul" in html_str
         assert "<li" in html_str
         assert ">a<" in html_str
@@ -105,7 +105,7 @@ class TestServerRenderingList:
 
 class TestServerRenderingNested:
     def test_nested_structure(self):
-        html_str = _generate(_NestedTestRoot)
+        html_str = _generate(NestedTestRoot)
         assert "<section" in html_str
         assert "<h1" in html_str
         assert ">title<" in html_str

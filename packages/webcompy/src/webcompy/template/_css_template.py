@@ -19,10 +19,10 @@ def css_text(source: str) -> dict[str, StyleDict]:
     For file-based CSS, compose with ``await load_text(path)`` inside an
     async component setup:
 
-        @define_component
-        async def Card(ctx):
+        @define_component("card-panel")
+        async def CardPanel(ctx):
             css_src = await load_text("styles/card.css")
-            MyComp.scoped_style = css_text(css_src)
+            CardPanel.scoped_style = css_text(css_src)
             return html.DIV(...)
 
     See ``parse_css`` for parsing details and limitations.

@@ -6,7 +6,7 @@ from webcompy.components._generator import define_component
 from webcompy_server import configure_server_context
 
 
-@define_component
+@define_component("profile-test-root")
 def ProfileTestRoot(context):
     from webcompy.elements import html
 

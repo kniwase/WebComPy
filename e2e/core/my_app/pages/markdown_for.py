@@ -4,7 +4,7 @@ from webcompy.signal import use_reactive_list
 from webcompy.template import render_markdown
 
 
-@define_component
+@define_component("markdown-for-page")
 def MarkdownForPage(context: ComponentContext[None]):
     context.set_title("Markdown For - E2E")
 

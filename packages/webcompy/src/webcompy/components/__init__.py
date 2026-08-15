@@ -4,6 +4,7 @@ from webcompy.components._context_manager import (
     component_context,
 )
 from webcompy.components._generator import (
+    ComponentDisplay,
     ComponentGenerator,
     define_component,
 )
@@ -31,6 +32,7 @@ from webcompy.components._reactive_scoped_style import (
 __all__ = [
     "Component",
     "ComponentContext",
+    "ComponentDisplay",
     "ComponentGenerator",
     "ComponentProperty",
     "ComponentRenderState",

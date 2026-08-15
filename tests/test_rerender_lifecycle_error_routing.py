@@ -34,8 +34,8 @@ class TestReactiveRerenderErrors:
                 raise RuntimeError("repeat refresh boom")
             return html.LI({"data-testid": f"item-{v}"}, v)
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             items = use_reactive_list(lambda: ["a"])
             counter = use_state(lambda: 0)
             captured["items"] = items
@@ -49,7 +49,7 @@ class TestReactiveRerenderErrors:
                 html.SPAN({"data-testid": "counter"}, counter),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "item-a") is not None
 
             captured["items"].append("bad")
@@ -69,8 +69,8 @@ class TestReactiveRerenderErrors:
         def bad_branch():
             raise RuntimeError("switch refresh boom")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             mode = use_state(lambda: "ok")
             captured["mode"] = mode
             is_ok = use_computed(lambda: mode.value == "ok")
@@ -86,7 +86,7 @@ class TestReactiveRerenderErrors:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "switch-ok") is not None
 
             captured["mode"].value = "bad"
@@ -102,8 +102,8 @@ class TestReactiveRerenderErrors:
         def bad_generator():
             raise RuntimeError("transition refresh boom")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             crash = use_state(lambda: False)
             captured["crash"] = crash
             return html.DIV(
@@ -117,7 +117,7 @@ class TestReactiveRerenderErrors:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "transition-ok") is not None
 
             scheduler = result._scope.inject(ASYNC_SCHEDULER_PORT_KEY)
@@ -137,7 +137,7 @@ class TestLifecycleHookErrors:
     def test_on_before_rendering_error_engages_boundary(self):
         captured: dict[str, object] = {}
 
-        @define_component
+        @define_component("hook-crashing")
         def HookCrashing(context):
             @on_before_rendering
             def hook():
@@ -149,8 +149,8 @@ class TestLifecycleHookErrors:
 
             return html.DIV({"data-testid": "hook-content"}, "content")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -159,7 +159,7 @@ class TestLifecycleHookErrors:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "lifecycle-fallback") is not None
             assert result.find_by_text("before render boom") is not None
             assert result.find_by_attribute("data-testid", "hook-content") is None
@@ -169,7 +169,7 @@ class TestLifecycleHookErrors:
         received: list[Exception] = []
         fake_ctx = SimpleNamespace(_config=SimpleNamespace(on_error=received.append))
 
-        @define_component
+        @define_component("destroy-crashing")
         def DestroyCrashing(context):
             @on_before_destroy
             def hook():
@@ -177,8 +177,8 @@ class TestLifecycleHookErrors:
 
             return html.DIV({"data-testid": "destroy-content"}, "content")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -187,7 +187,7 @@ class TestLifecycleHookErrors:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             boundary = _find_boundary(result._instance)
             assert boundary is not None
             token = _active_app_context.set(None)
@@ -205,13 +205,13 @@ class TestLifecycleHookErrors:
 
 class TestSuspenseErrorRouting:
     def test_suspense_server_error_propagates_to_boundary(self):
-        @define_component
+        @define_component("async-crashing")
         async def AsyncCrashing(context):
             await asyncio.sleep(0)
             raise RuntimeError("suspense child boom")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -223,7 +223,7 @@ class TestSuspenseErrorRouting:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             assert result.find_by_attribute("data-testid", "suspense-fallback") is not None
             assert result.find_by_text("suspense child boom") is not None
 
@@ -231,13 +231,13 @@ class TestSuspenseErrorRouting:
     async def test_suspense_browser_error_routes_to_boundary(self, monkeypatch):
         monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
 
-        @define_component
+        @define_component("async-crashing")
         async def AsyncCrashing(context):
             await asyncio.sleep(0)
             raise RuntimeError("browser suspense boom")
 
-        @define_component
-        def Root(context):
+        @define_component("test-root")
+        def TestRoot(context):
             return html.DIV(
                 {},
                 ErrorBoundary(
@@ -249,7 +249,7 @@ class TestSuspenseErrorRouting:
                 ),
             )
 
-        with TestRenderer.render(Root) as result:
+        with TestRenderer.render(TestRoot) as result:
             scheduler = result._scope.inject(ASYNC_SCHEDULER_PORT_KEY)
             await scheduler.drain()
             assert result.find_by_attribute("data-testid", "suspense-fallback") is not None

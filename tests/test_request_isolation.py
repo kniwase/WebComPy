@@ -8,8 +8,8 @@ from webcompy.components._generator import define_component
 from webcompy_testing import create_test_app
 
 
-@define_component
-def _IsolationRoot(context):
+@define_component("isolation-root")
+def IsolationRoot(context):
     from webcompy.elements import html
 
     return html.DIV({}, "content")
@@ -20,7 +20,7 @@ class TestRequestIsolation:
     async def test_contexts_produce_independent_html(self):
         from webcompy_server._html import generate_html
 
-        app = create_test_app(root_component=_IsolationRoot)
+        app = create_test_app(root_component=IsolationRoot)
 
         ctx1 = app.create_render_context("/page-a")
         ctx1.set_title("Page A")
@@ -56,7 +56,7 @@ class TestRequestIsolation:
         assert "/b.css" not in html1
 
     def test_head_props_isolated(self):
-        app = create_test_app(root_component=_IsolationRoot)
+        app = create_test_app(root_component=IsolationRoot)
 
         ctx1 = app.create_render_context()
         ctx1.set_head(
@@ -83,7 +83,7 @@ class TestRequestIsolation:
         ctx2.dispose()
 
     def test_concurrent_contexts(self):
-        app = create_test_app(root_component=_IsolationRoot)
+        app = create_test_app(root_component=IsolationRoot)
 
         contexts = []
         for i in range(10):
@@ -97,7 +97,7 @@ class TestRequestIsolation:
 
     @pytest.mark.asyncio
     async def test_app_proxy_properties_not_corrupted_by_concurrent_contexts(self):
-        app = create_test_app(root_component=_IsolationRoot)
+        app = create_test_app(root_component=IsolationRoot)
 
         async def _with_context(path, lang):
             ctx = app.create_render_context(path)
@@ -121,7 +121,7 @@ class TestRequestIsolation:
         await _main()
 
     def test_create_render_context_not_corrupted_by_sequential_dispose(self):
-        app = create_test_app(root_component=_IsolationRoot)
+        app = create_test_app(root_component=IsolationRoot)
 
         ctx1 = app.create_render_context()
         app.set_html_attr("lang", "ja")

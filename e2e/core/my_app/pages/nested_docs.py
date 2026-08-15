@@ -8,7 +8,7 @@ _api_setup_count = 0
 _item_setup_count = 0
 
 
-@define_component
+@define_component("nested-docs-layout")
 def NestedDocsLayout(context: ComponentContext[RouterContext]):
     sidebar_open = use_state(lambda: True)
     sidebar_label = use_computed(lambda: "open" if sidebar_open.value else "closed")
@@ -50,12 +50,12 @@ def NestedDocsLayout(context: ComponentContext[RouterContext]):
     )
 
 
-@define_component
+@define_component("nested-docs-index-page")
 def NestedDocsIndexPage(context: ComponentContext[RouterContext]):
     return html.DIV({"data-testid": "nested-index-page"}, html.H1({}, "Nested Index"))
 
 
-@define_component
+@define_component("nested-docs-guide-page")
 def NestedDocsGuidePage(context: ComponentContext[RouterContext]):
     global _guide_setup_count
     _guide_setup_count += 1
@@ -66,7 +66,7 @@ def NestedDocsGuidePage(context: ComponentContext[RouterContext]):
     )
 
 
-@define_component
+@define_component("nested-docs-api-page")
 def NestedDocsApiPage(context: ComponentContext[RouterContext]):
     global _api_setup_count
     _api_setup_count += 1
@@ -77,7 +77,7 @@ def NestedDocsApiPage(context: ComponentContext[RouterContext]):
     )
 
 
-@define_component
+@define_component("nested-docs-item-page")
 def NestedDocsItemPage(context: ComponentContext[RouterContext]):
     global _item_setup_count
     _item_setup_count += 1

@@ -2,9 +2,9 @@ from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html
 from webcompy.router import RouterContext
 
-from ..templates.home import Home
+from ..templates.home import HomeContent
 
 
-@define_component
+@define_component("home-page")
 def HomePage(context: ComponentContext[RouterContext]):
-    return html.DIV({}, Home(None))
+    return html.DIV({}, HomeContent(None))
