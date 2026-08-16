@@ -307,10 +307,25 @@ class TestLoadingScreenMarkup:
             }
         )
         html_str = _generate_html(app, prerender=True)
+        assert 'role="status"' in html_str
         assert 'data-wc-mode="content"' in html_str
         assert 'data-wc-interaction="passthrough"' in html_str
         assert 'data-wc-fade="400"' in html_str
         assert "--wc-delay:500ms;--wc-fade:400ms" in html_str
+
+    def test_custom_template_authored_role_preserved(self):
+        template = '<div id="webcompy-loading" role="alert"><span data-wc-status></span></div>'
+        app = _make_app(loading={"template": template})
+        html_str = _generate_html(app)
+        assert 'role="alert"' in html_str
+        assert html_str.count('role="') == 1
+
+    def test_custom_template_aria_roledescription_does_not_block_role_injection(self):
+        template = '<div id="webcompy-loading" aria-roledescription="boot indicator"><span data-wc-status></span></div>'
+        app = _make_app(loading={"template": template})
+        html_str = _generate_html(app)
+        assert 'role="status"' in html_str
+        assert 'aria-roledescription="boot indicator"' in html_str
 
     def test_custom_template_authored_attrs_preserved(self):
         template = '<div id="webcompy-loading" data-wc-fade="300" style="color:red"><span data-wc-status></span></div>'

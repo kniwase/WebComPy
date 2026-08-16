@@ -222,6 +222,7 @@ def test_custom_template_hooks_driven(page, loading_server_factory):
     page.goto(url, wait_until="domcontentloaded")
     _throttle(page, 1500, 700 * 1024)
     page.reload(wait_until="domcontentloaded")
+    expect(page.locator("#webcompy-loading")).to_have_attribute("role", "status")
     expect(page.locator(".my-custom-splash")).to_be_visible()
     expect(page.locator(".my-custom-splash")).to_have_text("Preparing Python runtime…", timeout=15000)
     page.wait_for_selector("#webcompy-loading", state="hidden", timeout=120000)

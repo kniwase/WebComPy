@@ -253,6 +253,8 @@ def _inject_loading_template_attrs(template_html: str, loading: dict, mode: str)
         raise WebComPyException("Custom loading template contains an unclosed #webcompy-loading tag")
     tag = template_html[:tag_end]
     injections: list[str] = []
+    if not re.search(r"role\s*=", tag):
+        injections.append('role="status"')
     if "data-wc-mode" not in tag:
         injections.append(f'data-wc-mode="{mode}"')
     if mode == "content" and "data-wc-interaction" not in tag:
