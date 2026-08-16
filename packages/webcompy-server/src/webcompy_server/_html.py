@@ -109,7 +109,10 @@ class _Loadscreen(_HtmlElement):
                     "div",
                     {"class": "wc-status"},
                     _HtmlElement("span", {"data-wc-status": ""}),
-                    _HtmlElement("span", {"data-wc-substatus": "", "aria-hidden": "true"}),
+                    _HtmlElement(
+                        "span",
+                        {"class": "wc-substatus", "data-wc-substatus": "", "aria-hidden": "true"},
+                    ),
                 )
             )
         children.append(

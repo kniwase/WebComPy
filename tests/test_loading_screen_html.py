@@ -158,6 +158,7 @@ class TestLoadingScreenMarkup:
         assert "data-wc-timeout" in html_str
         assert "data-wc-reload" in html_str
         assert "aria-hidden" in html_str
+        assert 'class="wc-substatus"' in html_str
 
     def test_custom_messages_merged_into_controller(self):
         app = _make_app(loading={"messages": {"runtime_download": "ランタイムを取得中…"}})
