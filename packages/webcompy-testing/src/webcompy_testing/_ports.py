@@ -548,6 +548,8 @@ class FakeWebSocketPort(WebSocketPort):
     ) -> None:
         for reg in list(self._matching(url, protocols)):
             reg.on_close(code, reason, was_clean)
+            with contextlib.suppress(ValueError):
+                self._registrations.remove(reg)
 
     def sent_frames(self, url: str, protocols: tuple[str, ...] | None = None) -> list[str]:
         frames: list[str] = []
