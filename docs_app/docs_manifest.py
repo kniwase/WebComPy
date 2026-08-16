@@ -62,6 +62,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "path": "/documents/custom-elements",
                 "source": "documents/custom_elements.md",
             },
+            {
+                "label": "Server-Sent Events",
+                "path": "/documents/event-source",
+                "source": "documents/event_source.md",
+            },
         ],
     },
 ]

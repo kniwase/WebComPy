@@ -7,7 +7,6 @@ from typing import Any, Generic, TypeVar, cast
 
 from webcompy.aio._aio import aio_run
 from webcompy.signal import ReactiveList, Signal
-from webcompy.signal._composable import _get_active_component_context
 from webcompy.signal._graph import consumer_destroy
 
 T = TypeVar("T")
@@ -60,21 +59,9 @@ async def _consume_iterable(
 
 
 def _register_cleanup(cleanup_fn: Callable[[], None]) -> None:
-    ctx = _get_active_component_context()
-    if ctx is None:
-        return
-    from webcompy.components._hooks import on_before_destroy
+    from webcompy.components._hooks import _register_before_destroy_chained
 
-    previous = ctx.__get_lifecyclehooks__().get("on_before_destroy")
-    if previous is None:
-        on_before_destroy(cleanup_fn)
-        return
-
-    def _combined() -> None:
-        cleanup_fn()
-        previous()
-
-    on_before_destroy(_combined)
+    _register_before_destroy_chained(cleanup_fn)
 
 
 class StreamResult(Generic[T]):

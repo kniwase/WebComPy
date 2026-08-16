@@ -75,6 +75,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Reactive Contracts** — `reactive/spec.md`, `effect/spec.md`
 - **Event Handler Leaks** — `elements/spec.md`
 - **Readonly Signal & Event Source Lifecycle** — `readonly-signal/spec.md`
+- **Realtime Connection Lifecycle** — `sse-composable/spec.md`
 - **Error Handling** — `error-handling/spec.md`
 - **Lifecycle Ordering** — `components/spec.md`, `async-rendering/spec.md`
 - **Async Rendering Pipeline** — `async-rendering/spec.md`

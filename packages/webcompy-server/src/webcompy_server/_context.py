@@ -8,6 +8,7 @@ from webcompy.ports._keys import (
     COOKIE_PORT_KEY,
     CUSTOM_ELEMENT_PORT_KEY,
     DOM_PORT_KEY,
+    EVENT_SOURCE_PORT_KEY,
     FETCH_PORT_KEY,
     FFI_PORT_KEY,
     HISTORY_PORT_KEY,
@@ -23,6 +24,7 @@ from webcompy_server.ports._async_scheduler import ServerAsyncSchedulerPort
 from webcompy_server.ports._cookie import ServerCookiePort
 from webcompy_server.ports._custom_element import ServerCustomElementPort
 from webcompy_server.ports._dom import ServerDOMPort
+from webcompy_server.ports._event_source import ServerEventSourcePort
 from webcompy_server.ports._fetch import ServerFetchPort
 from webcompy_server.ports._ffi import ServerFFIPort
 from webcompy_server.ports._history import ServerHistoryPort
@@ -43,6 +45,7 @@ class ServerRenderContext(RenderContext):
         self._di_scope.provide(COOKIE_PORT_KEY, ServerCookiePort(self._cookie_header))
         self._di_scope.provide(CUSTOM_ELEMENT_PORT_KEY, ServerCustomElementPort())
         self._di_scope.provide(DOM_PORT_KEY, ServerDOMPort())
+        self._di_scope.provide(EVENT_SOURCE_PORT_KEY, ServerEventSourcePort())
         fetch_port = self._app._server_fetch_port or ServerFetchPort()
         self._di_scope.provide(FETCH_PORT_KEY, fetch_port)
         resource_port = getattr(self._app, "_server_resource_port", None)

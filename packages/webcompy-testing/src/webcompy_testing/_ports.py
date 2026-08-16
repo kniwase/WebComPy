@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 from webcompy.ports._async_scheduler import AsyncSchedulerPort
 from webcompy.ports._custom_element import CustomElementBinding, CustomElementPort
 from webcompy.ports._dom import DOMNode
+from webcompy.ports._event_source import EventSourcePort
 from webcompy.ports._fetch import FetchPort, Response
 from webcompy.ports._ffi import FFIPort
 from webcompy.ports._history import HistoryPort
@@ -367,3 +368,73 @@ class FakeTransitionPort(TransitionPort):
 
     def set_style(self, node: FakeDOMNode, name: str, value: str) -> None:
         self._styles.setdefault(id(node), {})[name] = value
+
+
+class _FakeEventSourceRegistration:
+    __slots__ = ("events", "on_close", "on_error", "on_message", "on_open", "url")
+
+    def __init__(
+        self,
+        url: str,
+        events: tuple[str, ...],
+        on_open: Any,
+        on_message: Any,
+        on_error: Any,
+        on_close: Any,
+    ) -> None:
+        self.url = url
+        self.events = events
+        self.on_open = on_open
+        self.on_message = on_message
+        self.on_error = on_error
+        self.on_close = on_close
+
+
+class FakeEventSourcePort(EventSourcePort):
+    def __init__(self) -> None:
+        self._registrations: list[_FakeEventSourceRegistration] = []
+        self.open_calls: list[tuple[str, tuple[str, ...]]] = []
+
+    def open(
+        self,
+        url: str,
+        *,
+        events: tuple[str, ...],
+        on_open: Any = None,
+        on_message: Any = None,
+        on_error: Any = None,
+        on_close: Any = None,
+    ) -> Callable[[], None]:
+        reg = _FakeEventSourceRegistration(url, tuple(events), on_open, on_message, on_error, on_close)
+        self._registrations.append(reg)
+        self.open_calls.append((url, tuple(events)))
+
+        def _cleanup() -> None:
+            with contextlib.suppress(ValueError):
+                self._registrations.remove(reg)
+
+        return _cleanup
+
+    @property
+    def open_connections(self) -> list[tuple[str, tuple[str, ...]]]:
+        return [(reg.url, reg.events) for reg in self._registrations]
+
+    def emit_event(self, url: str, event_type: str, data: str, last_event_id: str = "") -> None:
+        for reg in list(self._registrations):
+            if reg.url == url and event_type in reg.events:
+                reg.on_message(event_type, data, last_event_id)
+
+    def emit_open(self, url: str) -> None:
+        for reg in list(self._registrations):
+            if reg.url == url:
+                reg.on_open()
+
+    def emit_error(self, url: str) -> None:
+        for reg in list(self._registrations):
+            if reg.url == url:
+                reg.on_error()
+
+    def emit_close(self, url: str) -> None:
+        for reg in list(self._registrations):
+            if reg.url == url:
+                reg.on_close()

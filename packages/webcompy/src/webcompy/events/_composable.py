@@ -19,21 +19,9 @@ def _identity(value: T) -> T:
 
 
 def _register_destroy_cleanup(cleanup: Callable[[], None]) -> None:
-    ctx = _get_active_component_context()
-    if ctx is None:
-        return
-    from webcompy.components._hooks import on_before_destroy
+    from webcompy.components._hooks import _register_before_destroy_chained
 
-    previous = ctx.__get_lifecyclehooks__().get("on_before_destroy")
-    if previous is None:
-        on_before_destroy(cleanup)
-        return
-
-    def _combined() -> None:
-        cleanup()
-        previous()
-
-    on_before_destroy(_combined)
+    _register_before_destroy_chained(cleanup)
 
 
 def _build(
