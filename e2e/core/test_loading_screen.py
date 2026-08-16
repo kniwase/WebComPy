@@ -34,6 +34,7 @@ def _free_port():
 def _throttle(page, latency_ms, throughput):
     cdp = page.context.new_cdp_session(page)
     cdp.send("Network.enable")
+    cdp.send("Network.clearBrowserCache")
     cdp.send(
         "Network.emulateNetworkConditions",
         {
@@ -89,6 +90,8 @@ def loading_server_factory(serving_mode):
                 if proc.poll() is not None:
                     pytest.fail(f"Loading server exited prematurely:\n{log_file.name}")
                 time.sleep(1)
+        else:
+            pytest.fail(f"Loading server did not start within 120 seconds:\n{log_file.name}")
         return base_url
 
     yield _spawn
@@ -185,8 +188,10 @@ def test_inert_attribute_during_boot(page, loading_server_factory):
         "() => document.querySelector('#webcompy-app').hasAttribute('inert')",
         timeout=15000,
     )
+    assert page.evaluate("document.querySelector('#webcompy-app').getAttribute('aria-busy') === 'true'")
     page.wait_for_selector("#webcompy-loading", state="hidden", timeout=120000)
     assert page.evaluate("!document.querySelector('#webcompy-app').hasAttribute('inert')")
+    assert page.evaluate("!document.querySelector('#webcompy-app').hasAttribute('aria-busy')")
 
 
 def test_passthrough_allows_navigation(page, loading_server_factory):
@@ -220,3 +225,47 @@ def test_custom_template_hooks_driven(page, loading_server_factory):
     expect(page.locator(".my-custom-splash")).to_be_visible()
     expect(page.locator(".my-custom-splash")).to_have_text("Preparing Python runtime…", timeout=15000)
     page.wait_for_selector("#webcompy-loading", state="hidden", timeout=120000)
+
+
+def test_bar_trickles_during_download(page, server_url):
+    page.goto(server_url, wait_until="domcontentloaded")
+    _throttle(page, 1500, 700 * 1024)
+    page.reload(wait_until="domcontentloaded")
+    page.wait_for_function(
+        "() => {"
+        "var el = document.querySelector('[data-wc-status]');"
+        "return el && el.textContent === 'Downloading Python runtime…';"
+        "}",
+        timeout=30000,
+    )
+
+    def _bar_progress():
+        return page.evaluate(
+            "() => parseFloat(document.querySelector('[data-wc-bar]').style.getPropertyValue('--wc-progress'))"
+        )
+
+    page.wait_for_function(
+        "() => parseFloat(document.querySelector('[data-wc-bar]').style.getPropertyValue('--wc-progress')) > 0.36",
+        timeout=30000,
+    )
+    first = _bar_progress()
+    page.wait_for_timeout(3000)
+    second = _bar_progress()
+    label = page.evaluate("() => document.querySelector('[data-wc-status]').textContent")
+    assert label == "Downloading Python runtime…", f"Stage changed during sampling: {label}"
+    assert second > first, f"Bar did not trickle during download: {first} -> {second}"
+    assert second < 0.60, f"Bar exceeded the download stage ceiling: {second}"
+
+
+def test_custom_template_passthrough_allows_navigation(page, loading_server_factory):
+    template = '<div id="webcompy-loading"><span data-wc-status></span></div>'
+    url = loading_server_factory({"mode": "content", "interaction": "passthrough", "template": template})
+    page.goto(url, wait_until="domcontentloaded")
+    _throttle(page, 1500, 700 * 1024)
+    page.reload(wait_until="domcontentloaded")
+    link = page.locator("[data-testid='nav-link']")
+    link.wait_for(state="visible")
+    box = link.bounding_box()
+    assert box is not None
+    page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    page.wait_for_url("**/other", timeout=30000)
