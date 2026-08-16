@@ -23,14 +23,14 @@
 
 ## 4. Unit tests (`tests/`, browserless)
 
-- [ ] 4.1 Handle contract: ordered iteration including duplicates; `.send` while OPEN sends exactly one frame; binary frame ignored with warning; importable from `webcompy` and `webcompy.realtime`
-- [ ] 4.2 Sharing: same URL+protocols share one socket; different protocols do not share; last detach closes the socket; no-DI-scope fallback warns and isolates
-- [ ] 4.3 Reconnect: abnormal close (1006) schedules a retry with delay within jitter bounds; backoff doubles to the cap; `RECONNECTING` during attempts; success returns to OPEN with transparent continuation
-- [ ] 4.4 Reconnect stop conditions: clean 1000 close → CLOSED with no retry; user `.close()` cancels a pending retry; `reconnect=False` → single failure to CLOSED; `reconnect_max_attempts=2` exhausts to CLOSED
-- [ ] 4.5 `.last_close`: records code/reason/was_clean; persists across a successful reconnect; `None` before any close
-- [ ] 4.6 Send policy: disconnected send warns+discards by default; `buffer_while_disconnected=True` flushes FIFO on open; buffer discarded on terminal CLOSED
-- [ ] 4.7 SSR: no port access, empty iterator, CLOSED, `.last_close is None`, send warns, no transfer payload entry
-- [ ] 4.8 Lifecycle: component destroy detaches and cancels pending reconnect on last detach; abandoned iterator does not leak the reference count
+- [x] 4.1 Handle contract: ordered iteration including duplicates; `.send` while OPEN sends exactly one frame; binary frame ignored with warning; importable from `webcompy` and `webcompy.realtime`
+- [x] 4.2 Sharing: same URL+protocols share one socket; different protocols do not share; last detach closes the socket; no-DI-scope fallback warns and isolates
+- [x] 4.3 Reconnect: abnormal close (1006) schedules a retry with delay within jitter bounds; backoff doubles to the cap; `RECONNECTING` during attempts; success returns to OPEN with transparent continuation
+- [x] 4.4 Reconnect stop conditions: clean 1000 close → CLOSED with no retry; user `.close()` cancels a pending retry; `reconnect=False` → single failure to CLOSED; `reconnect_max_attempts=2` exhausts to CLOSED
+- [x] 4.5 `.last_close`: records code/reason/was_clean; persists across a successful reconnect; `None` before any close
+- [x] 4.6 Send policy: disconnected send warns+discards by default; `buffer_while_disconnected=True` flushes FIFO on open; buffer discarded on terminal CLOSED
+- [x] 4.7 SSR: no port access, empty iterator, CLOSED, `.last_close is None`, send warns, no transfer payload entry
+- [x] 4.8 Lifecycle: component destroy detaches and cancels pending reconnect on last detach; abandoned iterator does not leak the reference count
 
 ## 5. E2E tests (`e2e/core/`)
 

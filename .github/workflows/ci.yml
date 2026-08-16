@@ -216,7 +216,7 @@ jobs:
           - name: router
             files: e2e/core/test_router.py e2e/core/test_async_nav.py e2e/core/test_nested_routes.py e2e/core/test_route_guards.py e2e/core/test_scroll_restoration.py
           - name: interaction
-            files: e2e/core/test_event.py e2e/core/test_event_source.py e2e/core/test_di.py e2e/core/test_two_way_binding.py e2e/core/test_form_fields.py e2e/core/test_storage.py e2e/core/test_storage_tab_sync.py e2e/core/test_readonly_signal.py
+            files: e2e/core/test_event.py e2e/core/test_event_source.py e2e/core/test_websocket.py e2e/core/test_di.py e2e/core/test_two_way_binding.py e2e/core/test_form_fields.py e2e/core/test_storage.py e2e/core/test_storage_tab_sync.py e2e/core/test_readonly_signal.py
           - name: bundled-deps
             files: e2e/core/test_bundled_deps.py e2e/core/test_bundled_deps_browser.py
           - name: runtime-local

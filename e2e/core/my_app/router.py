@@ -42,6 +42,7 @@ from .pages.template_control_flow import TemplateControlFlowPage
 from .pages.template_expressions import TemplateExpressionsPage
 from .pages.transition import TransitionPage
 from .pages.two_way_binding import TwoWayBindingPage
+from .pages.websocket import WebSocketPage
 from .pages.window_events import WindowEventsPage
 
 router = Router(
@@ -52,6 +53,7 @@ router = Router(
     {"path": "/custom-elements", "component": CustomElementPage},
     {"path": "/event", "component": EventPage},
     {"path": "/event-source", "component": EventSourcePage},
+    {"path": "/websocket", "component": WebSocketPage},
     {"path": "/window-events", "component": WindowEventsPage},
     {"path": "/switch", "component": SwitchPage},
     {"path": "/repeat", "component": RepeatPage},
