@@ -158,6 +158,7 @@ the per-area reference.
 - **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`
 - **Transition Sequence Contract** — `transition/spec.md`
 - **Composable Usage** — `composables/spec.md`
+- **Realtime Connection Lifecycle** — `sse-composable/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
 - **Head VDOM** — `head-vdom/spec.md`
 - **Node Cache Strict is-None Check** — `async-rendering/spec.md`
