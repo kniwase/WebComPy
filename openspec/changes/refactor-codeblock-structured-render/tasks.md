@@ -2,9 +2,9 @@
 
 ## 1. Shared Tokenization Foundation (`_highlight.py`)
 
-- [ ] 1.1 Add private `_token_span_classes(token_type) -> str` composing the semantic `tok-{type}` class and the Pygments short class (empty when none), reusing `PYGMENTS_SHORT_CLASS`
-- [ ] 1.2 Add private `_tokenize_with_fallback(code, lang) -> list[Token]` implementing empty-code (`[]`), unknown-language, and no-token fallback (`[Token(IDENTIFIER, code)]`) semantics; keep `LexerNotFoundError` handling inside the helper
-- [ ] 1.3 Rebuild `highlight()` and `_render_token()` on the new helpers so the public HTML output is byte-identical; run `tests/test_code_block_highlight.py` and `tests/test_code_block_lexers.py` to confirm no output change
+- [x] 1.1 Add private `_token_span_classes(token_type) -> str` composing the semantic `tok-{type}` class and the Pygments short class (empty when none), reusing `PYGMENTS_SHORT_CLASS`
+- [x] 1.2 Add private `_tokenize_with_fallback(code, lang) -> list[Token]` implementing empty-code (`[]`), unknown-language, and no-token fallback (`[Token(IDENTIFIER, code)]`) semantics; keep `LexerNotFoundError` handling inside the helper
+- [x] 1.3 Rebuild `highlight()` and `_render_token()` on the new helpers so the public HTML output is byte-identical; run `tests/test_code_block_highlight.py` and `tests/test_code_block_lexers.py` to confirm no output change
 
 ## 2. Structured Component Rendering (`_component.py`)
 
