@@ -40,6 +40,8 @@ es = use_event_source("/events", events=("status", "progress"))
 
 By default only `("message",)` events are delivered.
 
+`events` must be a non-empty tuple of non-empty strings — a bare string (`events="message"`), an empty tuple, or a non-string element is rejected with a `TypeError`/`ValueError` before any connection is opened.
+
 ## Connection handle
 
 The handle exposes three surfaces:
@@ -71,6 +73,8 @@ es = use_event_source("/events", max_queue=100)
 ```
 
 Capping is per subscriber — one capped consumer does not affect others on the same connection.
+
+`max_queue` must be `None` or an integer greater than or equal to 1; other values raise before any connection is opened.
 
 ## Closing
 
