@@ -63,7 +63,7 @@ The loading screen SHALL display staged progress derived from PyScript lifecycle
 
 ### Requirement: Progress bar reflects honest completion
 
-In `content` mode, a progress bar SHALL communicate boot progress. The bar SHALL advance when stages complete and SHALL move smoothly toward the current stage's ceiling while a stage is in flight, without exceeding it. The bar SHALL reach 100% only when the application begins its first render. Bar animation SHALL be driven by compositor-safe properties (transform) so it continues animating during main-thread WASM work.
+In `content` mode, a progress bar SHALL communicate boot progress. The bar SHALL advance when stages complete and SHALL move smoothly toward the current stage's ceiling while a stage is in flight, without exceeding it. The bar SHALL reach 100% only when the application begins its first render. Bar animation SHALL be driven by compositor-safe properties (transform) so it continues animating during main-thread WASM work. When `stages` is `False`, the bar SHALL NOT use stage ceilings; it SHALL progress purely by smooth trickle, remaining below 100% until completion.
 
 #### Scenario: Bar advances on stage completion
 
@@ -74,6 +74,12 @@ In `content` mode, a progress bar SHALL communicate boot progress. The bar SHALL
 
 - **WHEN** boot is in progress but the first render has not begun
 - **THEN** the progress bar SHALL remain below 100%
+
+#### Scenario: Stages disabled leaves the bar as pure trickle
+
+- **WHEN** `stages` is `False` and boot is in progress
+- **THEN** the progress bar SHALL progress smoothly without stage jumps
+- **AND** it SHALL remain below 100% until completion
 
 ### Requirement: Interaction policy during boot
 
@@ -97,7 +103,7 @@ In `content` mode, the loading configuration SHALL support three interaction pol
 
 ### Requirement: Dormant content treatment and wake-up transition
 
-In `content` mode, the pre-rendered application content SHALL be rendered in a visually muted ("dormant") state during boot — subtly reduced opacity and/or saturation, tunable via a CSS custom property. When boot completes, the content SHALL transition to full vibrancy over a short animation (the "wake-up"). The dormant treatment SHALL respect the grace period (it SHALL NOT be applied if boot completes within the grace period) and SHALL leave no persistent styling side effects on application content after removal.
+In `content` mode, the pre-rendered application content SHALL be rendered in a visually muted ("dormant") state during boot — subtly reduced opacity and/or saturation, tunable via a CSS custom property. When boot completes, the content SHALL transition to full vibrancy over a short animation (the "wake-up"). The dormant treatment SHALL respect the grace period (it SHALL NOT be applied if boot completes within the grace period) and SHALL leave no persistent styling side effects on application content after removal. The dormant treatment SHALL be disableable via the `dormant` configuration key (default `True`); when disabled, the content SHALL remain at full vibrancy during boot.
 
 #### Scenario: Content is muted during a slow boot
 
@@ -113,6 +119,12 @@ In `content` mode, the pre-rendered application content SHALL be rendered in a v
 
 - **WHEN** boot completes within the grace period
 - **THEN** the dormant treatment SHALL never have been visually applied
+
+#### Scenario: Dormant treatment disabled
+
+- **WHEN** the loading configuration sets `dormant` to `False`
+- **THEN** the application content SHALL remain at full vibrancy during boot
+- **AND** no wake-up transition SHALL occur
 
 ### Requirement: Removal transition
 

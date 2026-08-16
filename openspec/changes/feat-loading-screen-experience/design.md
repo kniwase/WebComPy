@@ -73,7 +73,7 @@ Rules for the controller:
 
 ### Decision 4: Progress bar = stage ceilings + atan trickle, `transform: scaleX`
 
-No byte-level progress API exists (verified Pyodide discussion). The bar therefore combines: (a) stage completion ceilings (e.g., prepare 15% → download 70% → packages 90% → ready 97% → app_start 99%), and (b) a Nuxt-style `atan` trickle that approaches but never exceeds the current ceiling while a stage is in flight. The bar hits 100% only when the removal sequence begins. Rendering uses `transform: scaleX(var(--wc-progress))` — compositor-driven, so it animates smoothly even through main-thread jank. **Alternative considered:** pure trickle (no stages) — rejected; it lies during the WASM download, the one phase users most need honesty about.
+No byte-level progress API exists (verified Pyodide discussion). The bar therefore combines: (a) stage completion ceilings (e.g., prepare 15% → download 70% → packages 90% → ready 97% → app_start 99%), and (b) a Nuxt-style `atan` trickle that approaches but never exceeds the current ceiling while a stage is in flight. The bar hits 100% only when the removal sequence begins. Rendering uses `transform: scaleX(var(--wc-progress))` — compositor-driven, so it animates smoothly even through main-thread jank. When `stages: false`, stage ceilings are not used at all: the bar progresses purely by trickle toward a fixed 97% ceiling and jumps to 100% only at completion. **Alternative considered:** pure trickle (no stages) — rejected; it lies during the WASM download, the one phase users most need honesty about.
 
 ### Decision 5: Grace period and dormant effect via CSS `animation-delay`, no JS
 
@@ -81,7 +81,7 @@ All loading chrome (bar, spinner, status, dormant content treatment) is suppress
 
 ### Decision 6: Dormant/wake-up lifecycle via body class tri-state
 
-Generated HTML puts `class="wc-booting"` on `<body>` when dormant mode is active. Wake-up sequence (browser removal path): `wc-booting` → `wc-waking` (transition to full vibrancy runs, ~300ms) → class removed. Scoping both dormant styles and the restore transition to these classes leaves **zero persistent side effects** on `#webcompy-app` (no permanent `transition` property that could hijack later app styling). Alternative considered: `body:has(> #webcompy-loading) #webcompy-app` self-removing selector — rejected for the wake-up transition: when `:has()` stops matching, values snap instantly unless a base transition exists, and a base transition on the app root is an unacceptable side effect.
+Generated HTML puts `class="wc-booting"` on `<body>` when dormant mode is active (content mode and `dormant: true`, the default; the `dormant` config key opts out, in which case no boot-state class is emitted and no wake-up runs). Wake-up sequence (browser removal path): `wc-booting` → `wc-waking` (transition to full vibrancy runs, ~300ms) → class removed. Scoping both dormant styles and the restore transition to these classes leaves **zero persistent side effects** on `#webcompy-app` (no permanent `transition` property that could hijack later app styling). Alternative considered: `body:has(> #webcompy-loading) #webcompy-app` self-removing selector — rejected for the wake-up transition: when `:has()` stops matching, values snap instantly unless a base transition exists, and a base transition on the app root is an unacceptable side effect.
 
 ### Decision 7: Interaction policies — `block` (default) / `inert` / `passthrough`
 
