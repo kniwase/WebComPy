@@ -11,14 +11,14 @@
 ## 2. Shared connection registry
 
 - [x] 2.1 Create `packages/webcompy/src/webcompy/realtime/_registry.py`: transport-agnostic registry keyed by `(transport, url)`, stored in the app DI scope via the `_get_app_di_scope()` + inject-or-provide pattern (mirror `storage/_composable.py._get_or_create_registry`); reference-counted open/close; per-subscriber FIFO queues (unbounded default, `max_queue` drop-oldest, reuse `aio/_stream.py._StreamQueue` semantics)
-- [ ] 2.2 Implement subscriber detach (idempotent) and last-detach connection close, including `weakref.finalize` protection for abandoned iterators
+- [x] 2.2 Implement subscriber detach (idempotent) and last-detach connection close, including `weakref.finalize` protection for abandoned iterators
 
 ## 3. Composable
 
-- [ ] 3.1 Create `packages/webcompy/src/webcompy/realtime/_sse.py` with `SSEvent` frozen dataclass, `ConnectionState` enum, and the connection-handle class (AsyncIterator + `.state: Signal[ConnectionState]` + idempotent `.close()` detaching only the caller's subscription)
-- [ ] 3.2 Implement `use_event_source(url, *, events=("message",), max_queue=None)`: DI-scope registry path, no-scope warning + private-connection fallback, native-URL passthrough, component-destroy detach via `on_before_destroy` chaining (mirror `events/_composable.py._register_destroy_cleanup`)
-- [ ] 3.3 Implement SSR behavior: empty finished iterator, `state == CLOSED`, warning, no hydration transfer entry
-- [ ] 3.4 Create `webcompy/realtime/__init__.py` and add public re-exports (`use_event_source`, `SSEvent`, `ConnectionState`) to `webcompy/__init__.py`
+- [x] 3.1 Create `packages/webcompy/src/webcompy/realtime/_sse.py` with `SSEvent` frozen dataclass, `ConnectionState` enum, and the connection-handle class (AsyncIterator + `.state: Signal[ConnectionState]` + idempotent `.close()` detaching only the caller's subscription)
+- [x] 3.2 Implement `use_event_source(url, *, events=("message",), max_queue=None)`: DI-scope registry path, no-scope warning + private-connection fallback, native-URL passthrough, component-destroy detach via `on_before_destroy` chaining (mirror `events/_composable.py._register_destroy_cleanup`)
+- [x] 3.3 Implement SSR behavior: empty finished iterator, `state == CLOSED`, warning, no hydration transfer entry
+- [x] 3.4 Create `webcompy/realtime/__init__.py` and add public re-exports (`use_event_source`, `SSEvent`, `ConnectionState`) to `webcompy/__init__.py`
 
 ## 4. Fake port
 
