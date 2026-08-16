@@ -94,3 +94,66 @@ def test_fake_event_source_port_registrations_are_instance_local() -> None:
     assert received == []
     assert port_a.open_connections == [("/events", ("message",))]
     assert port_b.open_connections == []
+
+
+def test_browser_event_source_port_closes_native_connection_when_listener_setup_fails(monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from webcompy.ports._browser import _event_source as es_mod
+    from webcompy.ports._browser._event_source import BrowserEventSourcePort
+
+    class _FakeProxy:
+        def __init__(self) -> None:
+            self.destroyed = False
+
+        def destroy(self) -> None:
+            self.destroyed = True
+
+    class _FakeFfi:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.proxies: list[_FakeProxy] = []
+
+        def create_proxy(self, func: object) -> object:
+            self.calls += 1
+            proxy = _FakeProxy()
+            self.proxies.append(proxy)
+            if self.calls == 2:
+                raise RuntimeError("proxy boom")
+            return proxy
+
+        def is_none(self, value: object) -> bool:
+            return value is None
+
+    class _FakeEventSource:
+        def __init__(self) -> None:
+            self.closed = False
+
+        def addEventListener(self, event: str, handler: object) -> None:
+            pass
+
+        def close(self) -> None:
+            self.closed = True
+
+    es = _FakeEventSource()
+    ffi = _FakeFfi()
+    fake_browser = SimpleNamespace(
+        pyscript=SimpleNamespace(ffi=ffi),
+        window=SimpleNamespace(EventSource=type("ES", (), {"new": staticmethod(lambda url: es)})),
+    )
+    monkeypatch.setattr(es_mod, "ENVIRONMENT", "pyscript")
+    monkeypatch.setattr(es_mod, "_raw_browser", fake_browser)
+
+    port = BrowserEventSourcePort()
+    with pytest.raises(RuntimeError, match="proxy boom"):
+        port.open(
+            "/events",
+            events=("message",),
+            on_open=lambda: None,
+            on_message=lambda *a: None,
+            on_error=lambda: None,
+            on_close=lambda: None,
+        )
+    assert es.closed is True
+    assert ffi.proxies[0].destroyed is True
+    assert len(ffi.proxies) == 2

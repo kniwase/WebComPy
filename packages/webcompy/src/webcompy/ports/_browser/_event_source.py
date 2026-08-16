@@ -49,13 +49,24 @@ class BrowserEventSourcePort(EventSourcePort):
                 "" if ffi.is_none(last_event_id) else str(last_event_id),
             )
 
-        open_proxy = ffi.create_proxy(_open_handler)
-        error_proxy = ffi.create_proxy(_error_handler)
-        message_proxy = ffi.create_proxy(_message_handler)
-        es.addEventListener("open", open_proxy)
-        es.addEventListener("error", error_proxy)
-        for event_type in events:
-            es.addEventListener(event_type, message_proxy)
+        proxies: list[Any] = []
+        try:
+            open_proxy = ffi.create_proxy(_open_handler)
+            proxies.append(open_proxy)
+            error_proxy = ffi.create_proxy(_error_handler)
+            proxies.append(error_proxy)
+            message_proxy = ffi.create_proxy(_message_handler)
+            proxies.append(message_proxy)
+            es.addEventListener("open", open_proxy)
+            es.addEventListener("error", error_proxy)
+            for event_type in events:
+                es.addEventListener(event_type, message_proxy)
+        except Exception:
+            for proxy in proxies:
+                if hasattr(proxy, "destroy"):
+                    proxy.destroy()
+            es.close()
+            raise
 
         def _cleanup() -> None:
             es.removeEventListener("open", open_proxy)
