@@ -161,6 +161,7 @@ the per-area reference.
 - **Realtime Connection Lifecycle** — `sse-composable/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
 - **Head VDOM** — `head-vdom/spec.md`
+- **Loading Screen DOM Contract** — `loading-screen/spec.md`
 - **Node Cache Strict is-None Check** — `async-rendering/spec.md`
 - **No Overview Gap List** — `overview/spec.md`
 
@@ -182,7 +183,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `tests/conformance/` | `markdown-conformance/spec.md`, `template-engine/spec.md`, `test-execution-paths/spec.md` |
 | `webcompy/components/` | `components/spec.md`, `composables/spec.md`, `async-rendering/spec.md`, `reactive-scoped-style/spec.md`, `async-component-setup/spec.md`, `signal-value-transfer/spec.md`, `typed-api-client/spec.md`, `error-handling/spec.md`, `custom-element-components/spec.md` |
 | `webcompy/components/_css_utils.py` | `components/spec.md`, `reactive-scoped-style/spec.md`, `custom-element-components/spec.md` |
-| `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
+| `webcompy/app/` | `app/spec.md`, `app-lifecycle/spec.md`, `app-config/spec.md`, `render-context/spec.md`, `scoped-css-incremental/spec.md`, `async-rendering/spec.md`, `app-styles/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md`, `loading-screen/spec.md` |
 | `webcompy/elements/` | `elements/spec.md`, `list-reconciliation/spec.md`, `nested-dynamic-element/spec.md`, `dict-repeat-overload/spec.md`, `head-vdom/spec.md`, `element-preserve-children/spec.md`, `async-rendering/spec.md`, `client-only/spec.md`, `suspense/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md` |
 | `webcompy/elements/_bind.py` | `elements/spec.md` |
 | `webcompy/elements/types/_error_boundary.py` | `error-handling/spec.md` |
@@ -204,7 +205,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/ports/_resource.py`, `webcompy_server/ports/_resource.py` | `resource-port/spec.md` |
 | `webcompy_server/ports/` | `virtual-dom/spec.md`, `server-fetch-asgi/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
 | `webcompy_server/__init__.py` | `asgi-embed/spec.md`, `server-fetch-asgi/spec.md` |
-| `webcompy_server/_context.py`, `webcompy_server/_html.py` | `async-scheduler/spec.md`, `app-lifecycle/spec.md` |
+| `webcompy_server/_context.py`, `webcompy_server/_html.py` | `async-scheduler/spec.md`, `app-lifecycle/spec.md`, `loading-screen/spec.md` |
 | `webcompy_server/contrib/` | `typed-response/spec.md` |
 | `webcompy_server/rpc/` | `json-rpc/spec.md` |
 | `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md` |
@@ -215,7 +216,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md`, `json-rpc/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
 | `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md`, `markdown-document/spec.md` |
-| `docs_app/` | `docs-site-documents/spec.md`, `docs-e2e/spec.md` |
+| `docs_app/` | `docs-site-documents/spec.md`, `docs-e2e/spec.md`, `loading-screen/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
 
 Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md`.
@@ -345,6 +346,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `inspect-cli` | CLI tool for browser inspection of WebComPy apps |
 | `json-rpc` | JSON-RPC 2.0 dispatcher, procedure registry, metadata extension, allowlist type decoding, typed browser client |
 | `scoped-css-incremental` | Per-component `<style data-webcompy-cid="...">` injection |
+| `loading-screen` | Boot-time loading experience: presentation modes, interaction policies, staged progress, grace period and fade-out timing, dormant/wake-up treatment, stall watchdog, accessibility, custom-template toolkit contract |
 | `reactive-scoped-style` | Per-component reactive scoped style via dedicated style element |
 | `app-styles` | App-level reactive style injection via `@layer webcompy-dynamic` |
 | `css-architecture` | Fixed CSS `@layer` order (`reset, tokens, components, prose, webcompy-scope`), layered reset/components/code-block stylesheets, unlayered dynamic styles |

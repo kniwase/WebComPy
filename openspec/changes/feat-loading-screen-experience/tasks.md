@@ -45,7 +45,7 @@
 
 ## 6. Documentation Sync and Housekeeping
 
-- [ ] 6.1 Update `AGENTS.md`: File→Spec mapping entries for changed files, Current Specs list with the new `loading-screen` spec, and the Framework Invariants list if a new invariant emerges
-- [ ] 6.2 Add a docs_app guide page for the `loading` configuration (all keys, defaults, examples per mode)
-- [ ] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
-- [ ] 6.4 Run the full local CI gate: `ruff check`, `ruff format --check`, `pyright`, `pytest tests/`, `webcompy generate` on docs_app, and the relevant E2E groups
+- [x] 6.1 Update `AGENTS.md`: File→Spec mapping entries for changed files, Current Specs list with the new `loading-screen` spec, and the Framework Invariants list if a new invariant emerges
+- [x] 6.2 Add a docs_app guide page for the `loading` configuration (all keys, defaults, examples per mode)
+- [x] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+- [x] 6.4 Run the full local CI gate: `ruff check`, `ruff format --check`, `pyright`, `pytest tests/`, `webcompy generate` on docs_app, and the relevant E2E groups
