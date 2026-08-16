@@ -13,12 +13,12 @@ def _make_app(**config_kwargs):
     return create_test_app(root_component=LoadingRoot, **config_kwargs)
 
 
-def _generate_html(app, **kwargs):
+def _generate_html(app, prerender=False, **kwargs):
     return render_app_html(
         app,
         app_package_name="test_pkg",
         dev_mode=False,
-        prerender=False,
+        prerender=prerender,
         wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         **kwargs,
     )
@@ -120,6 +120,63 @@ class TestLoadingScreenMarkup:
         html_str = _generate_html(app)
         assert "<script>(function" in html_str
         assert '"stages": false' in html_str
+
+    def test_default_prerendered_page_uses_content_mode(self):
+        html_str = _generate_html(_make_app(), prerender=True)
+        assert 'data-wc-mode="content"' in html_str
+        assert 'class="wc-booting"' in html_str
+        assert "data-wc-bar" in html_str
+        assert 'class="wc-loader"' not in html_str
+
+    def test_non_prerendered_page_uses_overlay_mode(self):
+        html_str = _generate_html(_make_app(), prerender=False)
+        assert 'data-wc-mode="overlay"' in html_str
+        assert 'class="wc-booting"' not in html_str
+        assert 'class="wc-loader"' in html_str
+        assert 'class="wc-bar"' not in html_str
+
+    def test_explicit_mode_overrides_auto(self):
+        app = _make_app(loading={"mode": "overlay"})
+        html_str = _generate_html(app, prerender=True)
+        assert 'data-wc-mode="overlay"' in html_str
+        assert 'class="wc-loader"' in html_str
+
+    def test_content_inert_attrs_emitted(self):
+        app = _make_app(loading={"mode": "content", "interaction": "inert"})
+        html_str = _generate_html(app, prerender=True)
+        assert 'data-wc-interaction="inert"' in html_str
+        assert 'data-wc-selector="#webcompy-app"' in html_str
+
+    def test_content_block_attrs_emitted(self):
+        app = _make_app(loading={"mode": "content"})
+        html_str = _generate_html(app, prerender=True)
+        assert 'data-wc-interaction="block"' in html_str
+        assert "data-wc-selector" not in html_str
+
+    def test_dormant_false_omits_body_class(self):
+        app = _make_app(loading={"mode": "content", "dormant": False})
+        html_str = _generate_html(app, prerender=True)
+        assert 'class="wc-booting"' not in html_str
+
+    def test_content_mode_css_rules(self):
+        html_str = _generate_html(_make_app(), prerender=True)
+        assert "data-wc-mode='content'" in html_str
+        assert "passthrough" in html_str
+        assert "@keyframes wc-dormant-in" in html_str
+        assert "wc-waking" in html_str
+        assert "[data-wc-complete] .wc-bar-fill" in html_str
+
+    def test_controller_aria_busy_and_inert_application(self):
+        app = _make_app(loading={"mode": "content", "interaction": "inert"})
+        html_str = _generate_html(app, prerender=True)
+        assert '"interaction": "inert"' in html_str
+        assert 'setAttribute("aria-busy", "true")' in html_str
+        assert 'setAttribute("inert", "")' in html_str
+
+    def test_controller_selector_in_config(self):
+        app = _make_app(selector="#my-widget", loading={"mode": "content"})
+        html_str = _generate_html(app, prerender=True)
+        assert '"selector": "#my-widget"' in html_str
 
 
 class _FakeNode:

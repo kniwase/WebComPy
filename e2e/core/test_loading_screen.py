@@ -149,3 +149,54 @@ def test_watchdog_timeout_message(page, loading_server_factory):
     _throttle(page, 8000, 1000 * 1024)
     page.reload(wait_until="domcontentloaded")
     expect(page.locator("[data-wc-timeout]")).to_be_visible(timeout=20000)
+
+
+def test_dormant_treatment_during_boot(page, server_url):
+    page.goto(server_url, wait_until="domcontentloaded")
+    _throttle(page, 1500, 700 * 1024)
+    page.reload(wait_until="domcontentloaded")
+    page.wait_for_function(
+        "() => parseFloat(getComputedStyle(document.querySelector('#webcompy-app')).opacity) < 1",
+        timeout=15000,
+    )
+    page.wait_for_selector("#webcompy-loading", state="hidden", timeout=120000)
+    assert page.evaluate("getComputedStyle(document.querySelector('#webcompy-app')).opacity") == "1"
+
+
+def test_block_policy_intercepts_clicks(page, server_url):
+    page.goto(server_url, wait_until="domcontentloaded")
+    _throttle(page, 1500, 700 * 1024)
+    page.reload(wait_until="domcontentloaded")
+    link = page.locator("[data-testid='nav-reactive']")
+    link.wait_for(state="visible")
+    box = link.bounding_box()
+    assert box is not None
+    page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    page.wait_for_timeout(1000)
+    assert page.url.rstrip("/") == server_url.rstrip("/")
+
+
+def test_inert_attribute_during_boot(page, loading_server_factory):
+    url = loading_server_factory({"mode": "content", "interaction": "inert"})
+    page.goto(url, wait_until="domcontentloaded")
+    _throttle(page, 1500, 700 * 1024)
+    page.reload(wait_until="domcontentloaded")
+    page.wait_for_function(
+        "() => document.querySelector('#webcompy-app').hasAttribute('inert')",
+        timeout=15000,
+    )
+    page.wait_for_selector("#webcompy-loading", state="hidden", timeout=120000)
+    assert page.evaluate("!document.querySelector('#webcompy-app').hasAttribute('inert')")
+
+
+def test_passthrough_allows_navigation(page, loading_server_factory):
+    url = loading_server_factory({"mode": "content", "interaction": "passthrough"})
+    page.goto(url, wait_until="domcontentloaded")
+    _throttle(page, 1500, 700 * 1024)
+    page.reload(wait_until="domcontentloaded")
+    link = page.locator("[data-testid='nav-link']")
+    link.wait_for(state="visible")
+    box = link.bounding_box()
+    assert box is not None
+    page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    page.wait_for_url("**/other", timeout=30000)

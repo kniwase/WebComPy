@@ -78,13 +78,22 @@ class _HtmlElement(Element):
 
 
 class _Loadscreen(_HtmlElement):
-    def __init__(self, loading: dict) -> None:
+    def __init__(self, mode: str, loading: dict, selector: str) -> None:
         delay_ms = loading["reveal_delay_ms"]
         fade_ms = loading["fade_out_ms"]
         children: list[ElementChildren] = [
             _HtmlElement("style", {}, _render_css_block(self._style)),
-            _HtmlElement("div", {"class": "wc-loader"}),
         ]
+        if mode == "content":
+            children.append(
+                _HtmlElement(
+                    "div",
+                    {"class": "wc-bar"},
+                    _HtmlElement("div", {"class": "wc-bar-fill", "data-wc-bar": ""}),
+                )
+            )
+        else:
+            children.append(_HtmlElement("div", {"class": "wc-loader"}))
         if loading["stages"]:
             children.append(
                 _HtmlElement(
@@ -102,16 +111,18 @@ class _Loadscreen(_HtmlElement):
                 _HtmlElement("button", {"class": "wc-reload", "data-wc-reload": ""}, "Reload"),
             )
         )
-        super().__init__(
-            "div",
-            {
-                "id": "webcompy-loading",
-                "role": "status",
-                "data-wc-fade": str(fade_ms),
-                "style": f"--wc-delay:{delay_ms}ms;--wc-fade:{fade_ms}ms",
-            },
-            *children,
-        )
+        attrs: dict[str, str] = {
+            "id": "webcompy-loading",
+            "role": "status",
+            "data-wc-mode": mode,
+            "data-wc-fade": str(fade_ms),
+            "style": f"--wc-delay:{delay_ms}ms;--wc-fade:{fade_ms}ms",
+        }
+        if mode == "content":
+            attrs["data-wc-interaction"] = loading["interaction"]
+            if loading["interaction"] == "inert":
+                attrs["data-wc-selector"] = selector
+        super().__init__("div", attrs, *children)
 
     @property
     def _style(self):
@@ -127,7 +138,32 @@ class _Loadscreen(_HtmlElement):
                 "background": "var(--wc-backdrop, rgba(0, 0, 0, 0.15))",
                 "z-index": "9999",
             },
+            "#webcompy-loading[data-wc-mode='content']": {
+                "background": "transparent",
+            },
+            "#webcompy-loading[data-wc-mode='content'][data-wc-interaction='passthrough']": {
+                "pointer-events": "none",
+            },
             "#webcompy-loading [hidden]": {"display": "none"},
+            ".wc-bar": {
+                "position": "fixed",
+                "top": "0",
+                "left": "0",
+                "right": "0",
+                "height": "3px",
+                "opacity": "0",
+                "animation": "wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
+            },
+            ".wc-bar-fill": {
+                "height": "100%",
+                "background": "var(--wc-accent, light-dark(#1d4ed8, #7dd3fc))",
+                "transform": "scaleX(var(--wc-progress, 0))",
+                "transform-origin": "left top",
+                "transition": "transform 0.2s ease",
+            },
+            "#webcompy-loading[data-wc-complete] .wc-bar-fill": {
+                "transform": "scaleX(1)",
+            },
             ".wc-loader": {
                 "opacity": "0",
                 "width": "40px",
@@ -146,6 +182,13 @@ class _Loadscreen(_HtmlElement):
                 "font-family": "system-ui, sans-serif",
                 "font-size": "14px",
                 "min-height": "1.5em",
+                "pointer-events": "auto",
+            },
+            "#webcompy-loading[data-wc-mode='content'] .wc-status": {
+                "position": "fixed",
+                "left": "16px",
+                "bottom": "16px",
+                "text-align": "left",
             },
             ".wc-substatus": {
                 "display": "block",
@@ -156,6 +199,7 @@ class _Loadscreen(_HtmlElement):
                 "color": "light-dark(#333333, #cccccc)",
                 "font-family": "system-ui, sans-serif",
                 "font-size": "14px",
+                "pointer-events": "auto",
             },
             ".wc-reload": {
                 "background": "none",
@@ -186,6 +230,23 @@ class _Loadscreen(_HtmlElement):
                     "opacity": "1",
                 },
             },
+            "@keyframes wc-dormant-in": {
+                "to": {
+                    "opacity": "var(--wc-dormant-opacity, 0.9)",
+                    "filter": "saturate(var(--wc-dormant-saturation, 0.85))",
+                },
+            },
+            "body.wc-booting #webcompy-app": {
+                "animation": "wc-dormant-in 0.01s linear var(--wc-delay, 350ms) forwards",
+            },
+            "body:is(.wc-booting, .wc-waking) #webcompy-app": {
+                "transition": "opacity 0.3s ease, filter 0.3s ease",
+            },
+            "body.wc-waking #webcompy-app": {
+                "animation": "none",
+                "opacity": "1",
+                "filter": "none",
+            },
             "#webcompy-loading.wc-fading": {
                 "opacity": "0 !important",
                 "transition": "opacity var(--wc-fade, 250ms) ease",
@@ -196,6 +257,12 @@ class _Loadscreen(_HtmlElement):
                 },
                 ".wc-status": {
                     "animation": "wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
+                },
+                ".wc-bar-fill": {
+                    "transition": "none",
+                },
+                "body:is(.wc-booting, .wc-waking) #webcompy-app": {
+                    "transition": "none",
                 },
                 "#webcompy-loading.wc-fading": {
                     "transition": "none",
@@ -226,6 +293,12 @@ def _resolve_loading_config(config: dict | None) -> dict:
     if config:
         merged.update(config)
     return merged
+
+
+def _resolve_loading_mode(loading: dict, prerender: bool) -> str:
+    if loading["mode"] == "auto":
+        return "content" if prerender else "overlay"
+    return loading["mode"]
 
 
 _LOADING_DEFAULT_MESSAGES = {
@@ -330,6 +403,20 @@ _LOADING_CONTROLLER_TEMPLATE = """(function () {
     });
   }
 
+  function applyMountState() {
+    if (!CONFIG.selector) return;
+    var mount = document.querySelector(CONFIG.selector);
+    if (!mount) return;
+    mount.setAttribute("aria-busy", "true");
+    if (CONFIG.interaction === "inert") mount.setAttribute("inert", "");
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyMountState);
+  } else {
+    applyMountState();
+  }
+
   function trickle() {
     if (root.hasAttribute("data-wc-complete")) return;
     var ceiling;
@@ -349,14 +436,17 @@ _LOADING_CONTROLLER_TEMPLATE = """(function () {
 })();"""
 
 
-def _loading_controller_script(loading: dict) -> str:
+def _loading_controller_script(loading: dict, mode: str, selector: str) -> str:
     messages = dict(_LOADING_DEFAULT_MESSAGES)
     if loading["stages"]:
         messages.update(loading.get("messages") or {})
-    config = {
+    config: dict = {
         "stages": loading["stages"],
         "timeoutSeconds": loading["timeout_seconds"],
+        "selector": selector,
     }
+    if mode == "content":
+        config["interaction"] = loading["interaction"]
     if loading["stages"]:
         config["messages"] = messages
     payload = json.dumps(config, ensure_ascii=False).replace("</", "<\\/")
@@ -474,6 +564,10 @@ async def _generate_html_impl(
     base_url = ctx.config.base_url
     selector_id = ctx.config.selector.lstrip("#")
     loading_config = _resolve_loading_config(ctx.config.loading)
+    loading_mode = _resolve_loading_mode(loading_config, prerender)
+    body_attrs: dict[str, str] = {}
+    if loading_mode == "content" and loading_config["dormant"]:
+        body_attrs["class"] = "wc-booting"
     app_root = (
         ctx._root
         if prerender
@@ -584,9 +678,13 @@ async def _generate_html_impl(
             ),
             _HtmlElement(
                 "body",
-                {},
-                _Loadscreen(loading_config),
-                _HtmlElement("script", {}, _loading_controller_script(loading_config)),
+                body_attrs,
+                _Loadscreen(loading_mode, loading_config, ctx.config.selector),
+                _HtmlElement(
+                    "script",
+                    {},
+                    _loading_controller_script(loading_config, loading_mode, ctx.config.selector),
+                ),
                 app_root,
                 *_load_scripts(scripts_body),
                 *plugin_body_scripts,

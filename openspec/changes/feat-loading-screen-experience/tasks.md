@@ -27,13 +27,13 @@
 
 ## 4. Phase 3 — Modes, Interaction Policies, Dormant/Wake-up, Accessibility
 
-- [ ] 4.1 Implement mode resolution at HTML generation: `auto` → `content` when prerendered content exists, else `overlay`; emit the overlay or content markup variant accordingly
-- [ ] 4.2 Implement `content` mode chrome: slim top progress bar and corner status label markup/styles
-- [ ] 4.3 Implement interaction policies: `block` (transparent full-screen interceptor), `inert` (attribute on the mount element), `passthrough` (no interception); all lifted on boot completion
-- [ ] 4.4 Implement the dormant treatment: `wc-booting` body class emitted only when `dormant` is enabled (content mode, default), delayed dormant keyframes honoring the grace period, `--wc-dormant-opacity` and related CSS vars
-- [ ] 4.5 Implement the wake-up sequence in the removal path (`wc-booting` → `wc-waking` → removed) and the mount element `aria-busy` lifecycle
-- [ ] 4.6 Accessibility: `role="status"` on the loading element, `aria-live="polite"` on the stage label, `aria-hidden` sub-status, `prefers-reduced-motion` rules disabling all animations
-- [ ] 4.7 Unit tests for mode/policy/dormant markup; E2E for `block` click interception, `passthrough` native link navigation, dormant visibility on slow boot, wake-up transition on completion
+- [x] 4.1 Implement mode resolution at HTML generation: `auto` → `content` when prerendered content exists, else `overlay`; emit the overlay or content markup variant accordingly
+- [x] 4.2 Implement `content` mode chrome: slim top progress bar and corner status label markup/styles
+- [x] 4.3 Implement interaction policies: `block` (transparent full-screen interceptor), `inert` (attribute on the mount element), `passthrough` (no interception); all lifted on boot completion
+- [x] 4.4 Implement the dormant treatment: `wc-booting` body class emitted only when `dormant` is enabled (content mode, default), delayed dormant keyframes honoring the grace period, `--wc-dormant-opacity` and related CSS vars
+- [x] 4.5 Implement the wake-up sequence in the removal path (`wc-booting` → `wc-waking` → removed) and the mount element `aria-busy` lifecycle
+- [x] 4.6 Accessibility: `role="status"` on the loading element, `aria-live="polite"` on the stage label, `aria-hidden` sub-status, `prefers-reduced-motion` rules disabling all animations
+- [x] 4.7 Unit tests for mode/policy/dormant markup; E2E for `block` click interception, `passthrough` native link navigation, dormant visibility on slow boot, wake-up transition on completion
 
 ## 5. Phase 4 — Custom Templates, Presets, Toolkit
 

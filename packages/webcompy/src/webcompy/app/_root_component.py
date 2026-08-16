@@ -122,8 +122,25 @@ class AppDocumentRoot(Component):
                         loading_el.setAttribute("data-wc-complete", "")
                         cls = (loading_el.getAttribute("class") or "").strip()
                         loading_el.setAttribute("class", f"{cls} wc-fading".strip())
+                        body_el = _dom.query_selector("body")
+                        if body_el is not None:
+                            body_cls = body_el.getAttribute("class") or ""
+                            if "wc-booting" in body_cls.split():
+                                body_el.setAttribute("class", body_cls.replace("wc-booting", "wc-waking"))
+                        mount_el = _dom.query_selector(selector)
+                        if mount_el is not None:
+                            mount_el.removeAttribute("aria-busy")
+                            mount_el.removeAttribute("inert")
                         await asyncio.sleep(fade_ms / 1000)
                         loading_el.remove()
+                        if body_el is not None:
+                            body_cls = body_el.getAttribute("class") or ""
+                            remaining = " ".join(c for c in body_cls.split() if c != "wc-waking")
+                            if remaining != body_cls:
+                                if remaining:
+                                    body_el.setAttribute("class", remaining)
+                                else:
+                                    body_el.removeAttribute("class")
                     if self._router and self._router._preload:
                         self._router.preload_lazy_routes()
                     if self._app:
