@@ -46,6 +46,28 @@ def on_before_destroy(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any,
     return func
 
 
+def _register_before_destroy_chained(cleanup: Callable[[], None]) -> None:
+    """Register ``cleanup`` on ``on_before_destroy``, chaining with any existing hook.
+
+    Composable helpers call this so their cleanup runs before a user-registered
+    ``on_before_destroy`` hook. Outside component setup this is a no-op.
+    """
+    try:
+        ctx = _active_component_context.get()
+    except LookupError:
+        return
+    previous = ctx.__get_lifecyclehooks__().get("on_before_destroy")
+    if previous is None:
+        ctx.on_before_destroy(cleanup)
+        return
+
+    def _combined() -> None:
+        cleanup()
+        previous()
+
+    ctx.on_before_destroy(_combined)
+
+
 def on_mounted(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> Callable[[], Any]:
     try:
         ctx = _active_component_context.get()

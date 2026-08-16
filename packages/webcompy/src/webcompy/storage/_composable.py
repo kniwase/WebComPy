@@ -9,7 +9,7 @@ from webcompy import logging
 from webcompy.di._keys import _STORAGE_SYNC_REGISTRY_KEY
 from webcompy.di._scope import _get_app_di_scope
 from webcompy.signal import Signal
-from webcompy.signal._composable import _get_active_component_context, _validate_factory
+from webcompy.signal._composable import _validate_factory
 from webcompy.utils._environment import ENVIRONMENT
 
 T = TypeVar("T")
@@ -173,24 +173,12 @@ def _register_destroy_unregister(
     callback: Callable[[str | None], None],
     registry: _StorageSyncRegistry,
 ) -> None:
-    ctx = _get_active_component_context()
-    if ctx is None:
-        return
-    from webcompy.components._hooks import on_before_destroy
+    from webcompy.components._hooks import _register_before_destroy_chained
 
     def _unregister() -> None:
         registry.unsubscribe(key, callback)
 
-    previous = ctx.__get_lifecyclehooks__().get("on_before_destroy")
-    if previous is None:
-        on_before_destroy(_unregister)
-        return
-
-    def _combined() -> None:
-        _unregister()
-        previous()
-
-    on_before_destroy(_combined)
+    _register_before_destroy_chained(_unregister)
 
 
 def _make(
