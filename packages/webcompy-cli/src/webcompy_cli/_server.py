@@ -236,6 +236,7 @@ def create_asgi_app(
         lockfile_url=artifacts.lockfile_url,
         runtime_serving=artifacts.runtime_serving,
         extra_wheel_filenames=artifacts.extra_wheel_filenames,
+        app_package_path=build_config.app_package_path,
     )
 
     # Mutable cache for hash-mode pre-rendered HTML

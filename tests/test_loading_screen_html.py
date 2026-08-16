@@ -1,3 +1,5 @@
+import pytest
+
 from webcompy.components._generator import define_component
 from webcompy_testing import create_test_app, render_app_html
 
@@ -177,6 +179,63 @@ class TestLoadingScreenMarkup:
         app = _make_app(selector="#my-widget", loading={"mode": "content"})
         html_str = _generate_html(app, prerender=True)
         assert '"selector": "#my-widget"' in html_str
+
+    def test_splash_preset_structure(self):
+        app = _make_app(loading={"template": "splash"})
+        html_str = _generate_html(app)
+        assert 'class="wc-splash"' in html_str
+        assert 'class="wc-splash-logo"' in html_str
+        assert 'class="wc-loader"' not in html_str
+
+    def test_bar_preset_structure(self):
+        app = _make_app(loading={"template": "bar"})
+        html_str = _generate_html(app)
+        assert 'class="wc-bar"' in html_str
+        assert 'class="wc-loader"' not in html_str
+
+    def test_overlay_preset_structure(self):
+        app = _make_app(loading={"template": "overlay"})
+        html_str = _generate_html(app)
+        assert 'class="wc-loader"' in html_str
+        assert 'class="wc-bar"' not in html_str
+
+    def test_custom_template_injected(self):
+        template = (
+            '<div id="webcompy-loading" data-wc-fade="300">'
+            "<span data-wc-status></span>"
+            "<span data-wc-timeout hidden></span>"
+            "</div>"
+        )
+        app = _make_app(loading={"template": template})
+        html_str = _generate_html(app)
+        assert 'data-wc-fade="300"' in html_str
+        assert "data-wc-status" in html_str
+        assert "data-wc-template-marker" not in html_str
+
+    def test_custom_template_missing_id_fails(self):
+        app = _make_app(loading={"template": "<div>no contract</div>"})
+        with pytest.raises(Exception, match="webcompy-loading"):
+            _generate_html(app)
+
+    def test_custom_template_file_resolution(self, tmp_path):
+        template_path = tmp_path / "splash.html"
+        template_path.write_text(
+            '<div id="webcompy-loading"><span data-wc-status></span></div>',
+            encoding="utf-8",
+        )
+        app = _make_app(loading={"template": "splash.html"})
+        html_str = _generate_html(app, app_package_path=tmp_path)
+        assert "data-wc-status" in html_str
+
+    def test_custom_template_missing_file_fails(self, tmp_path):
+        app = _make_app(loading={"template": "missing.html"})
+        with pytest.raises(Exception, match=r"missing\.html"):
+            _generate_html(app, app_package_path=tmp_path)
+
+    def test_custom_template_without_hooks_warns(self):
+        template = '<div id="webcompy-loading"><p>static splash</p></div>'
+        app = _make_app(loading={"template": template})
+        _generate_html(app)
 
 
 class _FakeNode:

@@ -200,3 +200,23 @@ def test_passthrough_allows_navigation(page, loading_server_factory):
     assert box is not None
     page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
     page.wait_for_url("**/other", timeout=30000)
+
+
+def test_splash_preset_drives_status(page, loading_server_factory):
+    url = loading_server_factory({"template": "splash"})
+    page.goto(url, wait_until="domcontentloaded")
+    _throttle(page, 1500, 700 * 1024)
+    page.reload(wait_until="domcontentloaded")
+    expect(page.locator(".wc-splash")).to_be_visible()
+    expect(page.locator("[data-wc-status]")).to_have_text("Preparing Python runtime…", timeout=15000)
+
+
+def test_custom_template_hooks_driven(page, loading_server_factory):
+    template = '<div id="webcompy-loading" data-wc-fade="250"><div class="my-custom-splash" data-wc-status></div></div>'
+    url = loading_server_factory({"template": template})
+    page.goto(url, wait_until="domcontentloaded")
+    _throttle(page, 1500, 700 * 1024)
+    page.reload(wait_until="domcontentloaded")
+    expect(page.locator(".my-custom-splash")).to_be_visible()
+    expect(page.locator(".my-custom-splash")).to_have_text("Preparing Python runtime…", timeout=15000)
+    page.wait_for_selector("#webcompy-loading", state="hidden", timeout=120000)

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import html as html_module
 import json
+import re
 from logging import getLogger
+from pathlib import Path
 from typing import TYPE_CHECKING, TypeAlias, cast
 
 from webcompy.app._config import _LOADING_DEFAULTS, PluginScript
@@ -11,6 +13,7 @@ from webcompy.di import inject
 from webcompy.elements.typealias import ElementChildren
 from webcompy.elements.types import Element
 from webcompy.elements.types._base import ElementWithChildren
+from webcompy.exception import WebComPyException
 from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY
 
 if TYPE_CHECKING:
@@ -78,18 +81,24 @@ class _HtmlElement(Element):
 
 
 class _Loadscreen(_HtmlElement):
-    def __init__(self, mode: str, loading: dict, selector: str) -> None:
+    def __init__(self, mode: str, structure: str, loading: dict, selector: str) -> None:
         delay_ms = loading["reveal_delay_ms"]
         fade_ms = loading["fade_out_ms"]
-        children: list[ElementChildren] = [
-            _HtmlElement("style", {}, _render_css_block(self._style)),
-        ]
-        if mode == "content":
+        children: list[ElementChildren] = []
+        if structure == "bar":
             children.append(
                 _HtmlElement(
                     "div",
                     {"class": "wc-bar"},
                     _HtmlElement("div", {"class": "wc-bar-fill", "data-wc-bar": ""}),
+                )
+            )
+        elif structure == "splash":
+            children.append(
+                _HtmlElement(
+                    "div",
+                    {"class": "wc-splash"},
+                    _HtmlElement("div", {"class": "wc-splash-logo", "aria-hidden": "true"}),
                 )
             )
         else:
@@ -124,168 +133,87 @@ class _Loadscreen(_HtmlElement):
                 attrs["data-wc-selector"] = selector
         super().__init__("div", attrs, *children)
 
-    @property
-    def _style(self):
-        return {
-            "#webcompy-loading": {
-                "position": "fixed",
-                "inset": "0",
-                "display": "flex",
-                "flex-direction": "column",
-                "align-items": "center",
-                "justify-content": "center",
-                "gap": "16px",
-                "background": "var(--wc-backdrop, rgba(0, 0, 0, 0.15))",
-                "z-index": "9999",
-            },
-            "#webcompy-loading[data-wc-mode='content']": {
-                "background": "transparent",
-            },
-            "#webcompy-loading[data-wc-mode='content'][data-wc-interaction='passthrough']": {
-                "pointer-events": "none",
-            },
-            "#webcompy-loading [hidden]": {"display": "none"},
-            ".wc-bar": {
-                "position": "fixed",
-                "top": "0",
-                "left": "0",
-                "right": "0",
-                "height": "3px",
-                "opacity": "0",
-                "animation": "wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
-            },
-            ".wc-bar-fill": {
-                "height": "100%",
-                "background": "var(--wc-accent, light-dark(#1d4ed8, #7dd3fc))",
-                "transform": "scaleX(var(--wc-progress, 0))",
-                "transform-origin": "left top",
-                "transition": "transform 0.2s ease",
-            },
-            "#webcompy-loading[data-wc-complete] .wc-bar-fill": {
-                "transform": "scaleX(1)",
-            },
-            ".wc-loader": {
-                "opacity": "0",
-                "width": "40px",
-                "height": "40px",
-                "border": "3px solid",
-                "border-color": "light-dark(#d3d3d3, #4b5563)",
-                "border-top-color": "light-dark(#87ceeb, #7dd3fc)",
-                "border-radius": "50%",
-                "animation": "wc-spin 0.8s linear infinite, wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
-            },
-            ".wc-status": {
-                "opacity": "0",
-                "animation": "wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
-                "text-align": "center",
-                "color": "light-dark(#333333, #cccccc)",
-                "font-family": "system-ui, sans-serif",
-                "font-size": "14px",
-                "min-height": "1.5em",
-                "pointer-events": "auto",
-            },
-            "#webcompy-loading[data-wc-mode='content'] .wc-status": {
-                "position": "fixed",
-                "left": "16px",
-                "bottom": "16px",
-                "text-align": "left",
-            },
-            ".wc-substatus": {
-                "display": "block",
-                "font-size": "12px",
-                "opacity": "0.7",
-            },
-            ".wc-timeout": {
-                "color": "light-dark(#333333, #cccccc)",
-                "font-family": "system-ui, sans-serif",
-                "font-size": "14px",
-                "pointer-events": "auto",
-            },
-            ".wc-reload": {
-                "background": "none",
-                "border": "none",
-                "padding": "0",
-                "color": "light-dark(#1d4ed8, #7dd3fc)",
-                "text-decoration": "underline",
-                "cursor": "pointer",
-                "font": "inherit",
-            },
-            "html[data-theme='dark'] .wc-loader": {
-                "--wc-ring": "#4b5563",
-                "--wc-accent": "#7dd3fc",
-            },
-            "html[data-theme='dark'] #webcompy-loading": {
-                "background": "rgba(0, 0, 0, 0.35)",
-            },
-            "@keyframes wc-spin": {
-                "0%": {
-                    "transform": "rotate(0deg)",
-                },
-                "100%": {
-                    "transform": "rotate(360deg)",
-                },
-            },
-            "@keyframes wc-reveal": {
-                "to": {
-                    "opacity": "1",
-                },
-            },
-            "@keyframes wc-dormant-in": {
-                "to": {
-                    "opacity": "var(--wc-dormant-opacity, 0.9)",
-                    "filter": "saturate(var(--wc-dormant-saturation, 0.85))",
-                },
-            },
-            "body.wc-booting #webcompy-app": {
-                "animation": "wc-dormant-in 0.01s linear var(--wc-delay, 350ms) forwards",
-            },
-            "body:is(.wc-booting, .wc-waking) #webcompy-app": {
-                "transition": "opacity 0.3s ease, filter 0.3s ease",
-            },
-            "body.wc-waking #webcompy-app": {
-                "animation": "none",
-                "opacity": "1",
-                "filter": "none",
-            },
-            "#webcompy-loading.wc-fading": {
-                "opacity": "0 !important",
-                "transition": "opacity var(--wc-fade, 250ms) ease",
-            },
-            "@media (prefers-reduced-motion: reduce)": {
-                ".wc-loader": {
-                    "animation": "wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
-                },
-                ".wc-status": {
-                    "animation": "wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
-                },
-                ".wc-bar-fill": {
-                    "transition": "none",
-                },
-                "body:is(.wc-booting, .wc-waking) #webcompy-app": {
-                    "transition": "none",
-                },
-                "#webcompy-loading.wc-fading": {
-                    "transition": "none",
-                },
-            },
-        }
+
+_LOADING_BASE_CSS = (
+    "#webcompy-loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;"
+    "justify-content:center;gap:16px;background:var(--wc-backdrop, rgba(0, 0, 0, 0.15));z-index:9999;} "
+    "#webcompy-loading[data-wc-mode='content']{background:transparent;} "
+    "#webcompy-loading[data-wc-mode='content'][data-wc-interaction='passthrough']{pointer-events:none;} "
+    "#webcompy-loading [hidden]{display:none;} "
+    ".wc-bar{position:fixed;top:0;left:0;right:0;height:3px;opacity:0;"
+    "animation:wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards;} "
+    ".wc-bar-fill{height:100%;background:var(--wc-accent, light-dark(#1d4ed8, #7dd3fc));"
+    "transform:scaleX(var(--wc-progress, 0));transform-origin:left top;transition:transform 0.2s ease;} "
+    "#webcompy-loading[data-wc-complete] .wc-bar-fill{transform:scaleX(1);} "
+    ".wc-loader{opacity:0;width:40px;height:40px;border:3px solid;"
+    "border-color:light-dark(#d3d3d3, #4b5563);border-top-color:light-dark(#87ceeb, #7dd3fc);"
+    "border-radius:50%;animation:wc-spin 0.8s linear infinite, "
+    "wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards;} "
+    ".wc-splash{display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;"
+    "animation:wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards;} "
+    ".wc-splash-logo{width:48px;height:48px;border-radius:12px;"
+    "background:light-dark(#e5e7eb, #374151);} "
+    ".wc-status{opacity:0;animation:wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards;"
+    "text-align:center;color:light-dark(#333333, #cccccc);font-family:system-ui, sans-serif;"
+    "font-size:14px;min-height:1.5em;pointer-events:auto;} "
+    "#webcompy-loading[data-wc-mode='content'] .wc-status{position:fixed;left:16px;bottom:16px;text-align:left;} "
+    ".wc-substatus{display:block;font-size:12px;opacity:0.7;} "
+    ".wc-timeout{color:light-dark(#333333, #cccccc);font-family:system-ui, sans-serif;"
+    "font-size:14px;pointer-events:auto;} "
+    ".wc-reload{background:none;border:none;padding:0;color:light-dark(#1d4ed8, #7dd3fc);"
+    "text-decoration:underline;cursor:pointer;font:inherit;} "
+    "html[data-theme='dark'] .wc-loader{--wc-ring:#4b5563;--wc-accent:#7dd3fc;} "
+    "html[data-theme='dark'] #webcompy-loading{background:rgba(0, 0, 0, 0.35);} "
+    "@keyframes wc-spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}} "
+    "@keyframes wc-reveal{to{opacity:1;}} "
+    "@keyframes wc-dormant-in{to{opacity:var(--wc-dormant-opacity, 0.9);"
+    "filter:saturate(var(--wc-dormant-saturation, 0.85));}} "
+    "body.wc-booting #webcompy-app{animation:wc-dormant-in 0.01s linear var(--wc-delay, 350ms) forwards;} "
+    "body:is(.wc-booting, .wc-waking) #webcompy-app{transition:opacity 0.3s ease, filter 0.3s ease;} "
+    "body.wc-waking #webcompy-app{animation:none;opacity:1;filter:none;} "
+    "#webcompy-loading.wc-fading{opacity:0 !important;transition:opacity var(--wc-fade, 250ms) ease;} "
+    "@media (prefers-reduced-motion: reduce){"
+    ".wc-loader{animation:wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards;}"
+    ".wc-status{animation:wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards;}"
+    ".wc-bar-fill{transition:none;}"
+    "body:is(.wc-booting, .wc-waking) #webcompy-app{transition:none;}"
+    "#webcompy-loading.wc-fading{transition:none;}}"
+)
+
+_LOADING_STRUCTURES = {"overlay": "spinner", "bar": "bar", "splash": "splash"}
+
+_LOADING_TEMPLATE_HOOKS = ("data-wc-status", "data-wc-substatus", "data-wc-bar", "data-wc-timeout", "data-wc-reload")
+
+_LOADING_TEMPLATE_MARKER = '<div id="webcompy-loading" data-wc-template-marker=""></div>'
 
 
-def _render_css_block(style: dict) -> str:
-    return " ".join(
-        f"{selector}{{"
-        + "".join(
-            name
-            + (
-                "{{{}}}".format("".join(f"{n}:{v};" for n, v in value.items()))
-                if isinstance(value, dict)
-                else f":{value};"
-            )
-            for name, value in props.items()
+def _loading_structure(loading: dict, mode: str) -> str:
+    template = loading["template"]
+    if template in _LOADING_STRUCTURES:
+        return _LOADING_STRUCTURES[template]
+    return "bar" if mode == "content" else "spinner"
+
+
+def _resolve_loading_template(template: str | None, app_package_path: Path | None) -> str | None:
+    if template is None or template in _LOADING_STRUCTURES:
+        return None
+    if template.lstrip().startswith("<"):
+        return template
+    base = app_package_path or Path.cwd()
+    path = base / template
+    if not path.is_file():
+        raise WebComPyException(f"Loading template file not found: {path}")
+    return path.read_text(encoding="utf-8")
+
+
+def _validate_loading_template(template_html: str) -> None:
+    matches = re.findall(r'id\s*=\s*["\']webcompy-loading["\']', template_html)
+    if len(matches) != 1:
+        raise WebComPyException(
+            f'Custom loading template must contain exactly one element with id="webcompy-loading", found {len(matches)}'
         )
-        + "}"
-        for selector, props in style.items()
-    )
+    if not any(hook in template_html for hook in _LOADING_TEMPLATE_HOOKS):
+        _logger.warning("Custom loading template contains no documented hooks; progress plumbing will not drive it")
 
 
 def _resolve_loading_config(config: dict | None) -> dict:
@@ -432,6 +360,7 @@ _LOADING_CONTROLLER_TEMPLATE = """(function () {
   }
 
   resetWatchdog();
+  if (CONFIG.stages) setStatus("runtime_prepare");
   trickle();
 })();"""
 
@@ -511,6 +440,7 @@ async def generate_html(
     lockfile_url: str | None = None,
     runtime_serving: str = "cdn",
     extra_wheel_filenames: list[str] | None = None,
+    app_package_path: Path | None = None,
 ):
     token = _active_app_context.set(ctx)
     _set_app_instance(ctx)
@@ -526,6 +456,7 @@ async def generate_html(
             lockfile_url,
             runtime_serving,
             extra_wheel_filenames,
+            app_package_path,
         )
         scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
         await scheduler.await_pending()
@@ -559,6 +490,7 @@ async def _generate_html_impl(
     lockfile_url: str | None = None,
     runtime_serving: str = "cdn",
     extra_wheel_filenames: list[str] | None = None,
+    app_package_path: Path | None = None,
 ):
     app = ctx._app
     base_url = ctx.config.base_url
@@ -656,6 +588,24 @@ async def _generate_html_impl(
         f'<link rel="stylesheet" href="{html_module.escape(base_url, quote=True)}_webcompy-ui/index.css">'
     )
 
+    custom_template = _resolve_loading_template(loading_config["template"], app_package_path)
+    if custom_template is not None:
+        _validate_loading_template(custom_template)
+        loading_body: list[ElementChildren] = [
+            _HtmlElement("style", {}, _LOADING_BASE_CSS),
+            _HtmlElement("div", {"id": "webcompy-loading", "data-wc-template-marker": ""}),
+        ]
+    else:
+        loading_body = [
+            _HtmlElement("style", {}, _LOADING_BASE_CSS),
+            _Loadscreen(
+                loading_mode,
+                _loading_structure(loading_config, loading_mode),
+                loading_config,
+                ctx.config.selector,
+            ),
+        ]
+
     html_output = "<!doctype html>" + (
         await _HtmlElement(
             "html",
@@ -679,7 +629,7 @@ async def _generate_html_impl(
             _HtmlElement(
                 "body",
                 body_attrs,
-                _Loadscreen(loading_mode, loading_config, ctx.config.selector),
+                *loading_body,
                 _HtmlElement(
                     "script",
                     {},
@@ -691,6 +641,10 @@ async def _generate_html_impl(
             ),
         ).render_html()
     )
+
+    if custom_template is not None:
+        assert _LOADING_TEMPLATE_MARKER in html_output
+        html_output = html_output.replace(_LOADING_TEMPLATE_MARKER, custom_template)
 
     html_output = html_output.replace("<head>", f"<head>\n{head_content_html}", 1)
     if scoped_styles_html:

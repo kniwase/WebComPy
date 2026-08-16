@@ -37,11 +37,11 @@
 
 ## 5. Phase 4 — Custom Templates, Presets, Toolkit
 
-- [ ] 5.1 Implement template resolution: preset name, inline HTML string, or file path resolved relative to the app package directory
-- [ ] 5.2 Implement generation-time template validation: exactly one `id="webcompy-loading"` (error), at least one documented hook (warning), missing file (error)
-- [ ] 5.3 Implement the `overlay`, `bar`, and `splash` preset templates using the toolkit hooks
-- [ ] 5.4 Add a docs_app documentation page for the toolkit contract: required ID, `[data-wc-*]` hooks, `--wc-*` CSS custom properties, mechanic attributes, CSP note for the inline controller
-- [ ] 5.5 Unit tests for template resolution and validation paths; E2E with a custom template asserting hooks are driven
+- [x] 5.1 Implement template resolution: preset name, inline HTML string, or file path resolved relative to the app package directory
+- [x] 5.2 Implement generation-time template validation: exactly one `id="webcompy-loading"` (error), at least one documented hook (warning), missing file (error)
+- [x] 5.3 Implement the `overlay`, `bar`, and `splash` preset templates using the toolkit hooks
+- [x] 5.4 Add a docs_app documentation page for the toolkit contract: required ID, `[data-wc-*]` hooks, `--wc-*` CSS custom properties, mechanic attributes, CSP note for the inline controller
+- [x] 5.5 Unit tests for template resolution and validation paths; E2E with a custom template asserting hooks are driven
 
 ## 6. Documentation Sync and Housekeeping
 
