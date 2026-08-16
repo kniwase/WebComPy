@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from webcompy.components._generator import define_component
@@ -253,10 +255,71 @@ class TestLoadingScreenMarkup:
         with pytest.raises(Exception, match=r"missing\.html"):
             _generate_html(app, app_package_path=tmp_path)
 
-    def test_custom_template_without_hooks_warns(self):
+    def test_custom_template_without_hooks_warns(self, caplog):
         template = '<div id="webcompy-loading"><p>static splash</p></div>'
         app = _make_app(loading={"template": template})
-        _generate_html(app)
+        with caplog.at_level(logging.WARNING):
+            _generate_html(app)
+        assert any("no documented hooks" in r.getMessage() for r in caplog.records)
+
+    def test_custom_template_gets_injected_attrs(self):
+        template = '<div id="webcompy-loading"><span data-wc-status></span></div>'
+        app = _make_app(
+            loading={
+                "template": template,
+                "mode": "content",
+                "interaction": "passthrough",
+                "reveal_delay_ms": 500,
+                "fade_out_ms": 400,
+            }
+        )
+        html_str = _generate_html(app, prerender=True)
+        assert 'data-wc-mode="content"' in html_str
+        assert 'data-wc-interaction="passthrough"' in html_str
+        assert 'data-wc-fade="400"' in html_str
+        assert "--wc-delay:500ms;--wc-fade:400ms" in html_str
+
+    def test_custom_template_authored_attrs_preserved(self):
+        template = '<div id="webcompy-loading" data-wc-fade="300" style="color:red"><span data-wc-status></span></div>'
+        app = _make_app(loading={"template": template, "fade_out_ms": 400})
+        html_str = _generate_html(app)
+        assert 'data-wc-fade="300"' in html_str
+        assert 'data-wc-fade="400"' not in html_str
+        assert 'style="color:red"' in html_str
+        assert "--wc-fade:400ms" not in html_str
+        assert 'data-wc-mode="overlay"' in html_str
+
+    def test_custom_template_overlay_omits_interaction_attr(self):
+        template = '<div id="webcompy-loading"><span data-wc-status></span></div>'
+        app = _make_app(loading={"template": template, "mode": "overlay"})
+        html_str = _generate_html(app, prerender=True)
+        assert 'data-wc-mode="overlay"' in html_str
+        assert 'data-wc-interaction="' not in html_str
+
+    def test_custom_template_style_before_id_skips_style_injection(self):
+        template = '<div style="color:red" id="webcompy-loading"><span data-wc-status></span></div>'
+        app = _make_app(loading={"template": template, "fade_out_ms": 400})
+        html_str = _generate_html(app)
+        assert 'style="color:red"' in html_str
+        assert "--wc-fade:400ms" not in html_str
+        assert 'data-wc-mode="overlay"' in html_str
+
+    def test_custom_template_gt_in_attr_value_before_fade(self):
+        template = '<div id="webcompy-loading" aria-label="A > B" data-wc-fade="300"><span data-wc-status></span></div>'
+        app = _make_app(loading={"template": template, "fade_out_ms": 400})
+        html_str = _generate_html(app)
+        assert 'data-wc-fade="300"' in html_str
+        assert 'data-wc-fade="400"' not in html_str
+        assert html_str.count('data-wc-fade="') == 1
+        assert 'id="webcompy-loading" style=' not in html_str
+
+    def test_custom_template_gt_in_attr_value_before_style(self):
+        template = '<div id="webcompy-loading" aria-label="A > B" style="color:red"><span data-wc-status></span></div>'
+        app = _make_app(loading={"template": template, "fade_out_ms": 400})
+        html_str = _generate_html(app)
+        assert 'style="color:red"' in html_str
+        assert "--wc-fade:400ms" not in html_str
+        assert 'data-wc-mode="overlay"' in html_str
 
 
 class TestLoadingConfigResolution:

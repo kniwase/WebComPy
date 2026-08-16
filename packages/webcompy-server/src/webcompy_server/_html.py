@@ -214,6 +214,42 @@ def _validate_loading_template(template_html: str) -> None:
         _logger.warning("Custom loading template contains no documented hooks; progress plumbing will not drive it")
 
 
+def _find_tag_end(html: str, start: int) -> int:
+    quote: str | None = None
+    for i in range(start, len(html)):
+        char = html[i]
+        if quote is not None:
+            if char == quote:
+                quote = None
+        elif char in ('"', "'"):
+            quote = char
+        elif char == ">":
+            return i
+    return -1
+
+
+def _inject_loading_template_attrs(template_html: str, loading: dict, mode: str) -> str:
+    match = re.search(r'id\s*=\s*["\']webcompy-loading["\']', template_html)
+    if match is None:
+        raise WebComPyException('Custom loading template must contain exactly one element with id="webcompy-loading"')
+    tag_end = _find_tag_end(template_html, match.end())
+    if tag_end == -1:
+        raise WebComPyException("Custom loading template contains an unclosed #webcompy-loading tag")
+    tag = template_html[:tag_end]
+    injections: list[str] = []
+    if "data-wc-mode" not in tag:
+        injections.append(f'data-wc-mode="{mode}"')
+    if mode == "content" and "data-wc-interaction" not in tag:
+        injections.append(f'data-wc-interaction="{loading["interaction"]}"')
+    if "data-wc-fade" not in tag:
+        injections.append(f'data-wc-fade="{loading["fade_out_ms"]}"')
+    if "style" not in tag:
+        injections.append(f'style="--wc-delay:{loading["reveal_delay_ms"]}ms;--wc-fade:{loading["fade_out_ms"]}ms"')
+    if not injections:
+        return template_html
+    return template_html[: match.end()] + " " + " ".join(injections) + template_html[match.end() :]
+
+
 def _resolve_loading_config(config: dict | None) -> dict:
     merged = dict(_LOADING_DEFAULTS)
     if config:
@@ -592,6 +628,7 @@ async def _generate_html_impl(
     custom_template = _resolve_loading_template(loading_config["template"], app_package_path)
     if custom_template is not None:
         _validate_loading_template(custom_template)
+        custom_template = _inject_loading_template_attrs(custom_template, loading_config, loading_mode)
         loading_body: list[ElementChildren] = [
             _HtmlElement("style", {}, _LOADING_BASE_CSS),
             _HtmlElement("div", {"id": "webcompy-loading", "data-wc-template-marker": ""}),
@@ -643,7 +680,10 @@ async def _generate_html_impl(
     )
 
     if custom_template is not None:
-        assert _LOADING_TEMPLATE_MARKER in html_output
+        if _LOADING_TEMPLATE_MARKER not in html_output:
+            raise WebComPyException(
+                "Failed to inject custom loading template: contract marker not found in generated HTML"
+            )
         html_output = html_output.replace(_LOADING_TEMPLATE_MARKER, custom_template)
 
     html_output = html_output.replace("<head>", f"<head>\n{head_content_html}", 1)
