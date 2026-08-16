@@ -8,14 +8,14 @@
 
 ## 2. Structured Component Rendering (`_component.py`)
 
-- [ ] 2.1 Static branch: replace `raw_html(highlight(...))` with per-token `create_element("span", {"class": _token_span_classes(...)}, token.value)` children directly under the `code` element; drop the wrapper span
-- [ ] 2.2 Reactive branch: replace the `use_computed(lambda: highlight(...))` raw-HTML signal with `use_computed(lambda: _tokenize_with_fallback(...))` and render the token list via `repeat(..., lambda token: span(...))`
-- [ ] 2.3 Empty-code and fallback paths: confirm the component renders no children for empty code and a single `tok-ident` span for unknown languages/no tokens (per delta spec scenarios)
+- [x] 2.1 Static branch: replace `raw_html(highlight(...))` with per-token `create_element("span", {"class": _token_span_classes(...)}, token.value)` children directly under the `code` element; drop the wrapper span
+- [x] 2.2 Reactive branch: replace the `use_computed(lambda: highlight(...))` raw-HTML signal with `use_computed(lambda: _tokenize_with_fallback(...))` and render the token list via `repeat(..., lambda token: span(...))`
+- [x] 2.3 Empty-code and fallback paths: confirm the component renders no children for empty code and a single `tok-ident` span for unknown languages/no tokens (per delta spec scenarios)
 
 ## 3. Component Unit Tests
 
-- [ ] 3.1 Rewrite `tests/test_code_block_component.py` to assert the structured child shape (span elements with expected classes as `code` children, no wrapper, text as text nodes) for static, reactive, fallback, and empty cases
-- [ ] 3.2 Add unit coverage that class strings match the public `highlight()` output span-for-span (guard against drift between the two renderers)
+- [x] 3.1 Rewrite `tests/test_code_block_component.py` to assert the structured child shape (span elements with expected classes as `code` children, no wrapper, text as text nodes) for static, reactive, fallback, and empty cases
+- [x] 3.2 Add unit coverage that class strings match the public `highlight()` output span-for-span (guard against drift between the two renderers)
 
 ## 4. Docs Maintenance (AGENTS.md Spec References)
 
