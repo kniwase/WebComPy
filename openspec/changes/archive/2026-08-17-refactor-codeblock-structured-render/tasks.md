@@ -1,0 +1,42 @@
+# Tasks: Refactor CodeBlock to Structured Token Rendering
+
+## 1. Shared Tokenization Foundation (`_highlight.py`)
+
+- [x] 1.1 Add private `_token_span_classes(token_type) -> str` composing the semantic `tok-{type}` class and the Pygments short class (empty when none), reusing `PYGMENTS_SHORT_CLASS`
+- [x] 1.2 Add private `_tokenize_with_fallback(code, lang) -> list[Token]` implementing empty-code (`[]`), unknown-language, and no-token fallback (`[Token(IDENTIFIER, code)]`) semantics; keep `LexerNotFoundError` handling inside the helper
+- [x] 1.3 Rebuild `highlight()` and `_render_token()` on the new helpers so the public HTML output is byte-identical; run `tests/test_code_block_highlight.py` and `tests/test_code_block_lexers.py` to confirm no output change
+
+## 2. Structured Component Rendering (`_component.py`)
+
+- [x] 2.1 Static branch: replace `raw_html(highlight(...))` with per-token `create_element("span", {"class": _token_span_classes(...)}, token.value)` children directly under the `code` element; drop the wrapper span
+- [x] 2.2 Reactive branch: replace the `use_computed(lambda: highlight(...))` raw-HTML signal with `use_computed(lambda: _tokenize_with_fallback(...))` and render the token list via `repeat(..., lambda token: span(...))`
+- [x] 2.3 Empty-code and fallback paths: confirm the component renders no children for empty code and a single `tok-ident` span for unknown languages/no tokens (per delta spec scenarios)
+
+## 3. Component Unit Tests
+
+- [x] 3.1 Rewrite `tests/test_code_block_component.py` to assert the structured child shape (span elements with expected classes as `code` children, no wrapper, text as text nodes) for static, reactive, fallback, and empty cases
+- [x] 3.2 Add unit coverage that class strings match the public `highlight()` output span-for-span (guard against drift between the two renderers)
+- [x] 3.3 Add a `TestRenderer`-based test that a signal update re-renders the token spans through the render machinery (old tokens disappear, new tokens appear, classes update)
+
+## 4. Docs Maintenance (AGENTS.md Spec References)
+
+- [x] 4.1 Add `code-block` and `syntax-highlight-lexers` rows to the Current Specs list in `AGENTS.md`
+- [x] 4.2 Add a File→Spec mapping row for `webcompy/ui/code_block/` pointing to `code-block/spec.md` and `syntax-highlight-lexers/spec.md`
+- [x] 4.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+
+## 5. Verification
+
+- [x] 5.1 Run `uv run ruff check .` and `uv run ruff format --check .`; fix findings
+- [x] 5.2 Run `uv run pyright`; fix findings
+- [x] 5.3 Run `uv run python -m pytest tests/ --tb=short` and confirm the full unit suite passes
+- [x] 5.4 Run an SSG smoke build (`webcompy generate` on docs_app) and verify code blocks render with direct token spans and no wrapper element in the generated HTML
+- [x] 5.5 Run the E2E docs groups (`scripts/run-e2e-tests.sh docs-documents docs-home`) plus the template group (`template`) in prod and static modes; confirm no regressions and no new console warnings
+- [x] 5.6 If change `fix-hydration-adopt-and-render` is merged into the base branch, run the browser measurement script and confirm prerendered token spans survive hydration (alive count includes all `tok-*` spans); otherwise record the check as deferred with the dependency noted — **deferred: `fix-hydration-adopt-and-render` is not merged into HEAD or origin/main (verified via `git merge-base --is-ancestor`); the identity-preservation acceptance check runs once that change merges**
+- [x] 5.7 Compare SSG HTML size for a code-heavy docs page before/after to quantify the D6 payload delta; record the result in design.md
+- [x] 5.8 Run `openspec validate refactor-codeblock-structured-render --strict` and confirm the change artifacts are valid
+
+## 6. Review Follow-ups (Spec Corrections)
+
+- [x] 6.1 Clarify empty-code precedence in the code-block delta spec: requirement wording and the "Unknown language" / "Empty code" scenarios now state that empty code renders no spans regardless of language (matches implementation and `test_codeblock_empty_code_unknown_language_renders_no_children`)
+- [x] 6.2 Add a `syntax-highlight-lexers` delta spec correcting the Bash variable-reference requirement to verbatim preservation of `$NAME` / `${NAME}` (D9); update proposal.md, design.md, and tasks.md accordingly
+- [x] 6.3 Re-run `openspec validate refactor-codeblock-structured-render --strict` and `python3 scripts/check-doc-spec-refs.py` after the spec updates

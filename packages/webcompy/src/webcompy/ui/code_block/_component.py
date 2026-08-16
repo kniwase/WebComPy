@@ -3,14 +3,22 @@ from __future__ import annotations
 from typing import Any, TypedDict
 
 from webcompy.components import ComponentContext, define_component
-from webcompy.elements import create_element, raw_html
+from webcompy.elements import create_element, repeat
 from webcompy.signal import SignalBase, use_computed
-from webcompy.ui.code_block._highlight import highlight
+from webcompy.ui.code_block._highlight import (
+    _token_span_classes,
+    _tokenize_with_fallback,
+)
+from webcompy.ui.code_block._tokens import Token
 
 
 class CodeBlockProps(TypedDict, total=False):
     code: str | SignalBase[str]
     lang: str
+
+
+def _token_span(token: Token) -> Any:
+    return create_element("span", {"class": _token_span_classes(token.type)}, token.value)
 
 
 @define_component("code-block")
@@ -20,18 +28,19 @@ def CodeBlock(context: ComponentContext[CodeBlockProps]) -> Any:
     lang = props.get("lang", "text")
 
     if not isinstance(initial_code, SignalBase):
+        tokens = _tokenize_with_fallback(_resolve_static(initial_code), lang)
         return create_element(
             "pre",
             {"class": "code-block"},
             create_element(
                 "code",
                 {"class": f"language-{lang}"},
-                raw_html(highlight(_resolve_static(initial_code), lang)),
+                *(_token_span(token) for token in tokens),
             ),
         )
 
     code_signal: SignalBase[str] = initial_code
-    highlighted = use_computed(lambda: highlight(_resolve_code(code_signal), lang))
+    tokens = use_computed(lambda: _tokenize_with_fallback(_resolve_code(code_signal), lang))
 
     return create_element(
         "pre",
@@ -39,7 +48,7 @@ def CodeBlock(context: ComponentContext[CodeBlockProps]) -> Any:
         create_element(
             "code",
             {"class": f"language-{lang}"},
-            raw_html(highlighted),
+            repeat(tokens, _token_span),
         ),
     )
 
