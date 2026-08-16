@@ -89,7 +89,7 @@ When the underlying socket closes abnormally (any close other than user-initiate
 
 ### Requirement: use_websocket shall expose the most recent close information
 
-`.last_close` SHALL be a read-only signal holding a `CloseInfo` for the most recent close event of the underlying connection, or `None` if it has never closed. It SHALL be updated on every close, including closures that are later recovered by reconnection (it SHALL NOT be reset on reopen).
+`.last_close` SHALL be a signal holding a `CloseInfo` for the most recent close event of the underlying connection, or `None` if it has never closed. It SHALL be updated on every close, including closures that are later recovered by reconnection (it SHALL NOT be reset on reopen).
 
 #### Scenario: Close info is recorded
 

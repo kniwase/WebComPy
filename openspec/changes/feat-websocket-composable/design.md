@@ -43,7 +43,7 @@ A clean close is a deliberate end-of-session signal; reconnecting would fight th
 
 ### D4: `.last_close` exposes close code/reason instead of a callback API
 
-`CloseInfo(code, reason, was_clean)` is surfaced as a read-only signal updated on every close and not reset on reopen. Rationale: close codes are state (latest fact), not occurrences, so a Signal is the correct primitive per the cell/occurrence split; a signal also lets UIs react declaratively. Alternative considered (on_close callback) rejected: callbacks bypass reactivity and reintroduce imperative wiring the framework exists to avoid. The two pre-change open points are resolved here: close info IS exposed (`.last_close`), and reconnect defaults are base 1s / cap 30s / unlimited attempts (D2).
+`CloseInfo(code, reason, was_clean)` is surfaced as a signal updated on every close and not reset on reopen. Rationale: close codes are state (latest fact), not occurrences, so a Signal is the correct primitive per the cell/occurrence split; a signal also lets UIs react declaratively. Alternative considered (on_close callback) rejected: callbacks bypass reactivity and reintroduce imperative wiring the framework exists to avoid. The two pre-change open points are resolved here: close info IS exposed (`.last_close`), and reconnect defaults are base 1s / cap 30s / unlimited attempts (D2).
 
 ### D5: Disconnected sends warn and discard by default; buffer is opt-in
 
