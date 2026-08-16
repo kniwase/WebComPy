@@ -32,6 +32,10 @@ class CloseInfo:
 
 
 _WS_BINARY_MSG = "webcompy realtime: received a binary WebSocket frame; ignoring it"
+_WS_RETRY_OPEN_FAILED_MSG = (
+    "webcompy realtime: use_websocket reconnection attempt failed to open; "
+    "scheduling another attempt or closing per reconnect_max_attempts"
+)
 
 
 class _Subscription:
@@ -307,9 +311,12 @@ class _RealtimeRegistry:
             if _is_stale():
                 return
             conn.last_close = CloseInfo(code, reason, was_clean)
+            old_connection = conn.connection
+            conn.connection = None
+            if old_connection is not None:
+                old_connection.close()
             for sub in list(conn.subscribers):
                 sub.on_close_info(conn.last_close)
-            conn.connection = None
             if self._should_stop_ws(conn, code):
                 self._terminate_ws(conn)
                 if self._connections.get(conn.key) is conn:
@@ -347,7 +354,19 @@ class _RealtimeRegistry:
                 return
             if self._connections.get(conn.key) is not conn:
                 return
-            self._ws_open(conn)
+            try:
+                self._ws_open(conn)
+            except Exception:
+                warnings.warn(_WS_RETRY_OPEN_FAILED_MSG, UserWarning, stacklevel=2)
+                if conn.terminated:
+                    return
+                conn.attempts += 1
+                if conn.max_attempts is not None and conn.attempts >= conn.max_attempts:
+                    self._terminate_ws(conn)
+                    if self._connections.get(conn.key) is conn:
+                        del self._connections[conn.key]
+                    return
+                self._schedule_retry_ws(conn)
 
         aio_run(_retry())
 

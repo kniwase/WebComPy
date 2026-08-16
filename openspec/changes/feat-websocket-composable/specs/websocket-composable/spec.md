@@ -74,6 +74,13 @@ When the underlying socket closes abnormally (any close other than user-initiate
 - **WHEN** `reconnect_max_attempts=2` and both attempts fail
 - **THEN** `.state` SHALL become `CLOSED` and no further attempts SHALL be scheduled
 
+#### Scenario: A retry open failure does not silently stop the loop
+
+- **WHEN** a reconnection attempt fails to open because the underlying connection cannot be constructed (the port raises)
+- **THEN** a warning SHALL be emitted
+- **AND** when `reconnect_max_attempts` is not exhausted another attempt SHALL be scheduled
+- **AND** when `reconnect_max_attempts` is exhausted the connection SHALL transition to `CLOSED` and stop
+
 ### Requirement: use_websocket shall expose the most recent close information
 
 `.last_close` SHALL be a read-only signal holding a `CloseInfo` for the most recent close event of the underlying connection, or `None` if it has never closed. It SHALL be updated on every close, including closures that are later recovered by reconnection (it SHALL NOT be reset on reopen).

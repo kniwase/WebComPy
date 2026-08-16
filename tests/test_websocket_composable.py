@@ -15,6 +15,7 @@ from webcompy.components._libs import Context
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.ports._keys import WEBSOCKET_PORT_KEY
 from webcompy.realtime import CloseInfo, ConnectionState, WebSocketHandle, use_websocket
+from webcompy.realtime._registry import _RealtimeRegistry, _ws_send
 from webcompy_testing import FakeWebSocketPort
 
 
@@ -555,3 +556,181 @@ class TestArgumentValidation:
             buffer_while_disconnected=True,
         )
         ws.close()
+
+
+class TestReviewFixes:
+    @pytest.mark.asyncio
+    async def test_registry_closes_connection_handle_on_remote_close(self) -> None:
+        class _TrackingConnection:
+            def __init__(self) -> None:
+                self.close_calls = 0
+
+            def send(self, data: str) -> None:
+                pass
+
+            def close(self) -> None:
+                self.close_calls += 1
+
+        opened: list[_TrackingConnection] = []
+        captured: dict[str, Any] = {}
+
+        def _open_fn(**callbacks: Any) -> Any:
+            captured.update(callbacks)
+            conn = _TrackingConnection()
+            opened.append(conn)
+            return conn
+
+        registry = _RealtimeRegistry()
+        registry.subscribe_ws(
+            "ws",
+            ("/ws", ()),
+            max_queue=None,
+            on_state=lambda _v: None,
+            on_close_info=lambda _v: None,
+            open_fn=_open_fn,
+            reconnect=False,
+            base_delay=1.0,
+            max_delay=1.0,
+            max_attempts=None,
+            buffer_while_disconnected=False,
+        )
+        captured["on_close"](1006, "abnormal", False)
+        assert opened[0].close_calls == 1
+        registry.dispose()
+
+    @pytest.mark.asyncio
+    async def test_send_from_close_info_callback_does_not_break_reconnect(self) -> None:
+        class _StrictConnection:
+            def __init__(self) -> None:
+                self.closed = False
+                self.sent: list[str] = []
+
+            def send(self, data: str) -> None:
+                if self.closed:
+                    raise RuntimeError("send on a closed connection")
+                self.sent.append(data)
+
+            def close(self) -> None:
+                self.closed = True
+
+        opened: list[_StrictConnection] = []
+        captured: dict[str, Any] = {}
+
+        def _open_fn(**callbacks: Any) -> Any:
+            captured.update(callbacks)
+            conn = _StrictConnection()
+            opened.append(conn)
+            return conn
+
+        registry = _RealtimeRegistry()
+        holder: dict[str, Any] = {}
+
+        def _on_close_info(_value: CloseInfo | None) -> None:
+            if "conn" in holder:
+                _ws_send(holder["conn"], "resync")
+
+        _sub, conn = registry.subscribe_ws(
+            "ws",
+            ("/ws", ()),
+            max_queue=None,
+            on_state=lambda _v: None,
+            on_close_info=_on_close_info,
+            open_fn=_open_fn,
+            reconnect=True,
+            base_delay=0.05,
+            max_delay=1.0,
+            max_attempts=None,
+            buffer_while_disconnected=False,
+        )
+        holder["conn"] = conn
+        captured["on_open"]()
+        opened[0].closed = True
+        captured["on_close"](1006, "abnormal", False)
+        assert conn.state == ConnectionState.RECONNECTING
+        assert opened[0].sent == []
+        await asyncio.sleep(0.2)
+        assert len(opened) == 2
+        registry.dispose()
+
+    @pytest.mark.asyncio
+    async def test_open_failure_during_retry_warns_and_terminates_when_exhausted(self) -> None:
+        class _NoopConnection:
+            def send(self, data: str) -> None:
+                pass
+
+            def close(self) -> None:
+                pass
+
+        calls = {"open": 0}
+        captured: dict[str, Any] = {}
+
+        def _open_fn(**callbacks: Any) -> Any:
+            calls["open"] += 1
+            captured.update(callbacks)
+            if calls["open"] > 1:
+                raise RuntimeError("open boom")
+            return _NoopConnection()
+
+        registry = _RealtimeRegistry()
+        _sub, conn = registry.subscribe_ws(
+            "ws",
+            ("/ws", ()),
+            max_queue=None,
+            on_state=lambda _v: None,
+            on_close_info=lambda _v: None,
+            open_fn=_open_fn,
+            reconnect=True,
+            base_delay=0.05,
+            max_delay=1.0,
+            max_attempts=1,
+            buffer_while_disconnected=False,
+        )
+        captured["on_open"]()
+        captured["on_close"](1006, "abnormal", False)
+        with pytest.warns(UserWarning, match="reconnection attempt failed to open"):
+            await asyncio.sleep(0.2)
+        assert conn.state == ConnectionState.CLOSED
+        assert calls["open"] == 2
+        registry.dispose()
+
+    @pytest.mark.asyncio
+    async def test_open_failure_during_retry_reschedules_when_unlimited(self) -> None:
+        class _NoopConnection:
+            def send(self, data: str) -> None:
+                pass
+
+            def close(self) -> None:
+                pass
+
+        calls = {"open": 0}
+        captured: dict[str, Any] = {}
+
+        def _open_fn(**callbacks: Any) -> Any:
+            calls["open"] += 1
+            captured.update(callbacks)
+            if calls["open"] > 1:
+                raise RuntimeError("open boom")
+            return _NoopConnection()
+
+        registry = _RealtimeRegistry()
+        _sub, conn = registry.subscribe_ws(
+            "ws",
+            ("/ws", ()),
+            max_queue=None,
+            on_state=lambda _v: None,
+            on_close_info=lambda _v: None,
+            open_fn=_open_fn,
+            reconnect=True,
+            base_delay=0.02,
+            max_delay=1.0,
+            max_attempts=None,
+            buffer_while_disconnected=False,
+        )
+        captured["on_open"]()
+        captured["on_close"](1006, "abnormal", False)
+        with pytest.warns(UserWarning, match="reconnection attempt failed to open"):
+            await asyncio.sleep(0.3)
+        assert conn.state == ConnectionState.RECONNECTING
+        assert calls["open"] >= 3
+        registry.dispose()
+        await asyncio.sleep(0.2)
