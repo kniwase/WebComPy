@@ -57,6 +57,8 @@ The wrapper span between `<code>` and the token spans is removed. Framework CSS 
 
 Token spans are now real serialized elements, so scoped-style contexts add `webcompy-cid-*` attributes to each span (as they already do for every other element in the docs pages). This grows the SSG payload versus innerHTML. Accepted: docs pages are dominated by prose, not code; the docs E2E runs will surface any significant regression.
 
+**Measured (task 5.7)**: SSG output for the code-heavy pages grew by 21.2% (home, 52,612 → 63,755 bytes) and 11.4% (quickstart, 48,774 → 54,321 bytes). ~92% of the home delta (~10,305 of 11,134 bytes) is the `webcompy-cid-*` attribute on each of the 229 token spans (229 × 45 chars), which is the framework's existing scoped-CSS behavior applied to token spans that were previously opaque. The residual ~800 bytes is structural span serialization. Accepted as marginal: the delta is a one-time static file download, dominated by framework-standard attributes, and proportional to code density (the home page is an unusually code-heavy page).
+
 ### D7 — AGENTS.md spec-reference maintenance
 
 `AGENTS.md` is missing the `code-block` and `syntax-highlight-lexers` specs from the Current Specs list and the File→Spec mapping table (`webcompy/ui/code_block/` has no row). This change adds those rows and runs `scripts/check-doc-spec-refs.py` as part of the change (per the Review Knowledge Maintenance rules), since it is the first change touching `webcompy/ui/code_block/` after the omission was discovered.

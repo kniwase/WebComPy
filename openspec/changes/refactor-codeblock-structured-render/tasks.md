@@ -25,11 +25,11 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Run `uv run ruff check .` and `uv run ruff format --check .`; fix findings
-- [ ] 5.2 Run `uv run pyright`; fix findings
-- [ ] 5.3 Run `uv run python -m pytest tests/ --tb=short` and confirm the full unit suite passes
-- [ ] 5.4 Run an SSG smoke build (`webcompy generate` on docs_app) and verify code blocks render with direct token spans and no wrapper element in the generated HTML
-- [ ] 5.5 Run the E2E docs groups (`scripts/run-e2e-tests.sh docs-documents docs-home`) plus the template group (`template`) in prod and static modes; confirm no regressions and no new console warnings
-- [ ] 5.6 If change `fix-hydration-adopt-and-render` is merged into the base branch, run the browser measurement script and confirm prerendered token spans survive hydration (alive count includes all `tok-*` spans); otherwise record the check as deferred with the dependency noted
-- [ ] 5.7 Compare SSG HTML size for a code-heavy docs page before/after to quantify the D6 payload delta; record the result in design.md
-- [ ] 5.8 Run `openspec validate refactor-codeblock-structured-render --strict` and confirm the change artifacts are valid
+- [x] 5.1 Run `uv run ruff check .` and `uv run ruff format --check .`; fix findings
+- [x] 5.2 Run `uv run pyright`; fix findings
+- [x] 5.3 Run `uv run python -m pytest tests/ --tb=short` and confirm the full unit suite passes
+- [x] 5.4 Run an SSG smoke build (`webcompy generate` on docs_app) and verify code blocks render with direct token spans and no wrapper element in the generated HTML
+- [x] 5.5 Run the E2E docs groups (`scripts/run-e2e-tests.sh docs-documents docs-home`) plus the template group (`template`) in prod and static modes; confirm no regressions and no new console warnings
+- [x] 5.6 If change `fix-hydration-adopt-and-render` is merged into the base branch, run the browser measurement script and confirm prerendered token spans survive hydration (alive count includes all `tok-*` spans); otherwise record the check as deferred with the dependency noted — **deferred: `fix-hydration-adopt-and-render` is not merged into HEAD or origin/main (verified via `git merge-base --is-ancestor`); the identity-preservation acceptance check runs once that change merges**
+- [x] 5.7 Compare SSG HTML size for a code-heavy docs page before/after to quantify the D6 payload delta; record the result in design.md
+- [x] 5.8 Run `openspec validate refactor-codeblock-structured-render --strict` and confirm the change artifacts are valid
