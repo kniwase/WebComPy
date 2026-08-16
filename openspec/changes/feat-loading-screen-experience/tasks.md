@@ -49,3 +49,43 @@
 - [x] 6.2 Add a docs_app guide page for the `loading` configuration (all keys, defaults, examples per mode)
 - [x] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
 - [x] 6.4 Run the full local CI gate: `ruff check`, `ruff format --check`, `pyright`, `pytest tests/`, `webcompy generate` on docs_app, and the relevant E2E groups
+
+## 7. Review Fixes
+
+- [x] 7.1 Fix the loading controller progress semantics: track the trickle ceiling in a numeric variable and advance the bar to the previous stage's ceiling on stage entry instead of jumping to the current ceiling (repairs the `stage` key-vs-index defect and restores smooth motion toward the in-flight stage's ceiling); harden the trickle loop with an `isConnected` guard
+- [x] 7.2 Add E2E regression coverage: bar trickles during the interpreter download stage; `passthrough` works with custom templates
+- [x] 7.3 Inject resolved loading attributes (`data-wc-mode`, `data-wc-interaction` in content mode, `data-wc-fade`, and `--wc-delay`/`--wc-fade` style variables) into custom templates at generation time, preserving template-authored attributes
+- [x] 7.4 Validate `messages` values are strings and copy the `messages` default to avoid shared mutable state
+- [x] 7.5 Wire `--wc-fg`/`--wc-ring`/`--wc-accent` CSS custom properties into the base stylesheet and extend the dark-theme rules
+- [x] 7.6 Add unit tests for attribute injection, message value validation, CSS variable wiring, and the hook-less template warning
+
+## 8. Second Review Fixes
+
+- [x] 8.1 Embed resolved loading timing into the generated CSS fallbacks so the dormant treatment honors `reveal_delay_ms` and the fade transition honors `fade_out_ms` (`_loading_base_css(loading)`); default output unchanged
+- [x] 8.2 Sync `--wc-fade` from the `data-wc-fade` attribute in the controller so template-authored fade attributes always match the CSS transition duration
+- [x] 8.3 Restrict sub-status rendering to the packages window (`Loaded interpreter` → `Loaded Pyodide`) via a `showSub` flag
+- [x] 8.4 Stop the trickle loop under `prefers-reduced-motion` (`matchMedia` gate); stage-driven bar updates remain
+- [x] 8.5 Guard the watchdog against revealing after boot completion (`data-wc-complete` check in the timer callback)
+- [x] 8.6 Exempt `aria-busy`/`inert` from the mount-element attribute sanitization so the removal sequence remains the sole releaser; extend E2E with `aria-busy` assertions
+- [x] 8.7 Bound `reveal_delay_ms`/`fade_out_ms` (0–10000) and `timeout_seconds` (0–3600) and document the ranges in the app-config delta spec
+- [x] 8.8 Remove the dead `data-wc-selector` attribute and copy `messages` in `_resolve_loading_config`
+- [x] 8.9 Align the cli delta spec serialization wording with the implementation (style variables + controller configuration)
+
+## 9. Third Review Fixes
+
+- [x] 9.1 Scope the dormant/wake-up CSS rules to the configured mount selector (`_loading_base_css(loading, selector)` substitutes `#webcompy-app`); add unit tests for custom-selector CSS emission
+- [x] 9.2 Complete the wake-up transition regardless of `fade_out_ms`: wait for the fixed 300ms transition remainder before removing the `wc-waking` class (`_loading_wake_remaining_ms`); add unit tests for the timing helper
+- [x] 9.3 Drop `pointer-events: auto` from the `.wc-status` rule so `passthrough` mode leaves the status label non-interceptive (`.wc-timeout` keeps it for the reload button)
+- [x] 9.4 Replace the bare marker assert with a `WebComPyException` naming the missing contract marker
+- [x] 9.5 Document that a template-authored `style` attribute skips `--wc-delay`/`--wc-fade` injection in the loading screen docs page
+- [x] 9.6 Extend the loading-screen delta spec with the custom-mount-selector dormant scenario and the wake-up completion guarantee; record the changes in design.md Decisions 6/8
+- [x] 9.7 Run the local CI gate: `ruff check`, `ruff format --check`, `pyright`, `pytest tests/`, `webcompy generate` on docs_app, and the `bootstrap-static` E2E group
+
+## 10. Fourth Review Fixes
+
+- [x] 10.1 Respect quoted attribute values when locating the tag end for loading template attribute injection (`_find_tag_end`); prevents duplicate attribute injection when an attribute value between the `id` and mechanic attributes contains `>`; add unit tests for `data-wc-fade` and `style` preservation
+- [x] 10.2 Bound the browser-side fade duration read from `data-wc-fade` to the configured maximum (10000ms)
+- [x] 10.3 Hide `[data-wc-timeout]` elements on controller init so templates without an initial `hidden` attribute behave per contract; document the behavior in the loading screen docs page
+- [x] 10.4 Fail the loading server readiness wait when it exhausts its attempts (E2E infrastructure)
+- [x] 10.5 Align loading-screen delta spec scenarios with the implementation: `WebComPyAppConfig(loading={})` normalization wording and the `data-wc-reload` hook enumeration (app-config, cli, loading-screen)
+- [x] 10.6 Run the local CI gate: `ruff check`, `ruff format --check`, `pyright`, `pytest tests/`, `webcompy generate` on docs_app, and the `bootstrap-static` + `docs-documents` E2E groups

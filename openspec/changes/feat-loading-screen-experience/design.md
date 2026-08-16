@@ -73,7 +73,7 @@ Rules for the controller:
 
 ### Decision 4: Progress bar = stage ceilings + atan trickle, `transform: scaleX`
 
-No byte-level progress API exists (verified Pyodide discussion). The bar therefore combines: (a) stage completion ceilings (e.g., prepare 15% → download 70% → packages 90% → ready 97% → app_start 99%), and (b) a Nuxt-style `atan` trickle that approaches but never exceeds the current ceiling while a stage is in flight. The bar hits 100% only when the removal sequence begins. Rendering uses `transform: scaleX(var(--wc-progress))` — compositor-driven, so it animates smoothly even through main-thread jank. When `stages: false`, stage ceilings are not used at all: the bar progresses purely by trickle toward a fixed 97% ceiling and jumps to 100% only at completion. **Alternative considered:** pure trickle (no stages) — rejected; it lies during the WASM download, the one phase users most need honesty about.
+No byte-level progress API exists (verified Pyodide discussion). The bar therefore combines: (a) stage completion ceilings (e.g., prepare 35% → download 60% → packages 85% → ready 93% → app_start 97%, calibrated in `calibration.md`), and (b) a Nuxt-style `atan` trickle that approaches but never exceeds the current stage's ceiling while a stage is in flight. On each stage-start event the bar advances to the **previous** stage's ceiling (a floor, so completed stages are acknowledged) and the trickle then animates toward the new stage's ceiling — it never jumps all the way to the new ceiling at stage entry, which is what keeps motion visible during the interpreter download (the longest phase). The bar hits 100% only when the removal sequence begins. Rendering uses `transform: scaleX(var(--wc-progress))` — compositor-driven, so it animates smoothly even through main-thread jank. When `stages: false`, stage ceilings are not used at all: the bar progresses purely by trickle toward a fixed 97% ceiling and jumps to 100% only at completion. **Alternative considered:** pure trickle (no stages) — rejected; it lies during the WASM download, the one phase users most need honesty about.
 
 ### Decision 5: Grace period and dormant effect via CSS `animation-delay`, no JS
 
@@ -81,7 +81,7 @@ All loading chrome (bar, spinner, status, dormant content treatment) is suppress
 
 ### Decision 6: Dormant/wake-up lifecycle via body class tri-state
 
-Generated HTML puts `class="wc-booting"` on `<body>` when dormant mode is active (content mode and `dormant: true`, the default; the `dormant` config key opts out, in which case no boot-state class is emitted and no wake-up runs). Wake-up sequence (browser removal path): `wc-booting` → `wc-waking` (transition to full vibrancy runs, ~300ms) → class removed. Scoping both dormant styles and the restore transition to these classes leaves **zero persistent side effects** on `#webcompy-app` (no permanent `transition` property that could hijack later app styling). Alternative considered: `body:has(> #webcompy-loading) #webcompy-app` self-removing selector — rejected for the wake-up transition: when `:has()` stops matching, values snap instantly unless a base transition exists, and a base transition on the app root is an unacceptable side effect.
+Generated HTML puts `class="wc-booting"` on `<body>` when dormant mode is active (content mode and `dormant: true`, the default; the `dormant` config key opts out, in which case no boot-state class is emitted and no wake-up runs). Wake-up sequence (browser removal path): `wc-booting` → `wc-waking` (transition to full vibrancy runs, ~300ms) → class removed. Scoping both dormant styles and the restore transition to these classes leaves **zero persistent side effects** on `#webcompy-app` (no permanent `transition` property that could hijack later app styling). The dormant/waking CSS rules are generated with the configured mount selector substituted for `#webcompy-app`, so custom-selector apps get the same treatment. Alternative considered: `body:has(> #webcompy-loading) #webcompy-app` self-removing selector — rejected for the wake-up transition: when `:has()` stops matching, values snap instantly unless a base transition exists, and a base transition on the app root is an unacceptable side effect.
 
 ### Decision 7: Interaction policies — `block` (default) / `inert` / `passthrough`
 
@@ -99,7 +99,7 @@ Browser-side, replacing `loading_el.remove()`:
 2. Mark `py:ready`-equivalent completion → bar to 100% (controller exposed hook or direct class).
 3. Add fade class (`opacity → 0` transition, `fade_out_ms`).
 4. Swap body class `wc-booting` → `wc-waking`; clear `aria-busy` on the mount element.
-5. After the fade duration (`await asyncio.sleep(fade_ms / 1000)` — `_render` is already async), remove the element and the `wc-waking` class.
+5. After the fade duration (`await asyncio.sleep(fade_ms / 1000)` — `_render` is already async), remove the element. If the wake-up transition (fixed 300ms) is still running, wait for the remainder before removing the `wc-waking` class, so a short `fade_out_ms` never truncates the wake-up.
 
 E2E compatibility: `opacity: 0` remains Playwright-"visible" until actual `remove()`, so all `state="hidden"` waits keep passing (just ~250ms later). In the server/SSG render path nothing changes (`_Loadscreen` is only markup).
 
@@ -117,9 +117,9 @@ Public contract for custom templates (`template` config: preset name, HTML strin
 
 - **Required:** exactly one element with `id="webcompy-loading"` — validated at HTML generation; missing → build error. This ID is the sole hard dependency of removal logic and E2E.
 - **Driven hooks (optional):** `[data-wc-status]` (stage label target), `[data-wc-substatus]` (micropip lines), `[data-wc-bar]` (receives `--wc-progress: 0–100`), `[data-wc-timeout]` (hidden until watchdog trips). Missing hooks are no-ops; the controller always runs.
-- **CSS custom properties:** `--wc-accent`, `--wc-surface`, `--wc-fg`, `--wc-dormant-opacity`, `--wc-progress`.
+- **CSS custom properties:** `--wc-accent`, `--wc-backdrop`, `--wc-fg`, `--wc-dormant-opacity`, `--wc-progress`.
 - **Presets:** `"overlay"` (refined centered spinner — the `overlay` mode default), `"bar"` (slim top bar — the `content` mode default), `"splash"` (centered brand block).
-- Templates may set their own `data-wc-fade` / `data-wc-mode` attributes to override mechanics.
+- Templates may set their own `data-wc-fade` / `data-wc-mode` attributes to override mechanics. Generation injects the resolved `data-wc-*` attributes and `--wc-delay`/`--wc-fade` style variables onto the template's `#webcompy-loading` element when the template does not set them, so the generated HTML stays self-contained.
 
 **Rationale:** the framework owns behavior (progress, timeout, removal); developers own appearance. Validation catches the one catastrophic failure (missing ID) at build time, not in production.
 

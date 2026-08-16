@@ -2,7 +2,7 @@
 
 ### Requirement: Generated HTML shall serialize the loading configuration onto the loading element
 
-Every generated HTML page SHALL serialize the normalized `WebComPyAppConfig.loading` configuration onto the `#webcompy-loading` element as `data-wc-*` attributes (resolved mode, interaction policy, reveal delay, fade-out duration, timeout). When dormant treatment applies, the generated `<body>` element SHALL carry the boot-state class defined by the `loading-screen` capability. These attributes SHALL make the generated HTML self-contained: browser-side loading behavior SHALL be derivable from the DOM alone.
+Every generated HTML page SHALL serialize the normalized `WebComPyAppConfig.loading` configuration so that browser-side loading behavior is derivable from the DOM alone: the `#webcompy-loading` element SHALL carry `data-wc-mode`, `data-wc-interaction` (content mode), and `data-wc-fade` attributes plus `--wc-delay`/`--wc-fade` style variables (reveal and fade timing), and the loading controller script SHALL embed the resolved timeout in its configuration. When dormant treatment applies, the generated `<body>` element SHALL carry the boot-state class defined by the `loading-screen` capability.
 
 #### Scenario: Default serialization
 
@@ -14,6 +14,12 @@ Every generated HTML page SHALL serialize the normalized `WebComPyAppConfig.load
 
 - **WHEN** a page is generated with `loading={"fade_out_ms": 400, "interaction": "inert"}`
 - **THEN** the `#webcompy-loading` element attributes SHALL reflect those values
+
+#### Scenario: Custom template receives resolved mechanic attributes
+
+- **WHEN** a custom template's `#webcompy-loading` element does not set mechanic attributes
+- **THEN** generation SHALL inject the resolved `data-wc-mode`, `data-wc-interaction` (content mode), and `data-wc-fade` attributes, plus `--wc-delay`/`--wc-fade` style variables, onto the element
+- **AND** attributes set by the template author SHALL be preserved unchanged
 
 ### Requirement: Generated HTML shall include the loading controller script
 
@@ -32,7 +38,7 @@ Every generated HTML page SHALL include an inline classic `<script>` (the loadin
 
 ### Requirement: Custom loading templates shall be validated at generation time
 
-When the loading configuration provides a custom `template` (HTML string or file path), HTML generation SHALL validate that the markup contains exactly one element with `id="webcompy-loading"`. If the contract is violated, generation SHALL fail with a clear error. If the template contains none of the documented progress hooks (`data-wc-status`, `data-wc-substatus`, `data-wc-bar`, `data-wc-timeout`), generation SHALL succeed with a warning. A template given as a file path SHALL be resolved relative to the app package directory; a missing file SHALL fail generation with a clear error.
+When the loading configuration provides a custom `template` (HTML string or file path), HTML generation SHALL validate that the markup contains exactly one element with `id="webcompy-loading"`. If the contract is violated, generation SHALL fail with a clear error. If the template contains none of the documented progress hooks (`data-wc-status`, `data-wc-substatus`, `data-wc-bar`, `data-wc-timeout`, `data-wc-reload`), generation SHALL succeed with a warning. A template given as a file path SHALL be resolved relative to the app package directory; a missing file SHALL fail generation with a clear error.
 
 #### Scenario: Valid custom template
 

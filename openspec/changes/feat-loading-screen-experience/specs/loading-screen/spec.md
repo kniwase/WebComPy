@@ -114,11 +114,18 @@ In `content` mode, the pre-rendered application content SHALL be rendered in a v
 
 - **WHEN** boot completes
 - **THEN** the content SHALL animate to full vibrancy rather than snapping instantly
+- **AND** the wake-up transition SHALL complete even when `fade_out_ms` is shorter than the transition duration
 
 #### Scenario: No dormant flash on fast boot
 
 - **WHEN** boot completes within the grace period
 - **THEN** the dormant treatment SHALL never have been visually applied
+
+#### Scenario: Dormant treatment with a custom mount selector
+
+- **WHEN** the application mounts at a custom selector (e.g., `AppConfig(selector="#my-widget")`) in `content` mode and boot is in progress beyond the grace period
+- **THEN** the application content SHALL appear visually muted compared to its final state
+- **AND** on boot completion the content SHALL transition to full vibrancy
 
 #### Scenario: Dormant treatment disabled
 
@@ -138,7 +145,7 @@ When the application finishes its first render, the loading element SHALL fade o
 
 #### Scenario: aria-busy lifecycle
 
-- **WHEN** the page is booting
+- **WHEN** a page with pre-rendered application content is booting
 - **THEN** the mount element SHALL have `aria-busy="true"`
 - **AND** after the first render completes, the attribute SHALL be removed
 
@@ -181,7 +188,7 @@ The loading element SHALL carry `role="status"`. The stage label SHALL be announ
 
 ### Requirement: Custom loading templates and toolkit contract
 
-Developers SHALL be able to replace the loading screen markup via `template` in the loading configuration, accepting a preset name, an HTML string, or a path to an HTML file resolved relative to the app package. The framework SHALL provide at least three presets: `overlay`, `bar`, and `splash`. A custom template MUST contain exactly one element with `id="webcompy-loading"`; HTML generation SHALL fail with a clear error otherwise. The framework's progress plumbing SHALL drive optional documented hooks when present in the template: `[data-wc-status]` (stage label), `[data-wc-substatus]` (package install lines), `[data-wc-bar]` (receives a `--wc-progress` custom property from 0 to 100), and `[data-wc-timeout]` (revealed by the stall watchdog). Templates without any hooks SHALL still fade and remove correctly. Templates MAY set `data-wc-*` mechanic attributes (such as fade duration) to override behavior.
+Developers SHALL be able to replace the loading screen markup via `template` in the loading configuration, accepting a preset name, an HTML string, or a path to an HTML file resolved relative to the app package. The framework SHALL provide at least three presets: `overlay`, `bar`, and `splash`. A custom template MUST contain exactly one element with `id="webcompy-loading"`; HTML generation SHALL fail with a clear error otherwise. The framework's progress plumbing SHALL drive optional documented hooks when present in the template: `[data-wc-status]` (stage label), `[data-wc-substatus]` (package install lines), `[data-wc-bar]` (receives a `--wc-progress` custom property from 0 to 100), `[data-wc-timeout]` (revealed by the stall watchdog), and `[data-wc-reload]` (click reloads the page). Templates without any hooks SHALL still fade and remove correctly. Templates MAY set `data-wc-*` mechanic attributes (such as fade duration) to override behavior.
 
 #### Scenario: Custom template replaces markup
 

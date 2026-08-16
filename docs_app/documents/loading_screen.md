@@ -56,7 +56,7 @@ If no boot progress event arrives within `timeout_seconds`, a "Taking longer tha
 
 ## Custom templates and the toolkit contract
 
-`template` accepts a preset name (`"overlay"`, `"bar"`, `"splash"`), an inline HTML string, or a path to an HTML file resolved relative to the app package directory. A custom template must contain exactly one element with `id="webcompy-loading"` — generation fails with a clear error otherwise.
+`template` accepts a preset name (`"overlay"`, `"bar"`, `"splash"`), an inline HTML string, or a path to an HTML file resolved relative to the app package directory. A custom template must contain exactly one element with `id="webcompy-loading"` — generation fails with a clear error otherwise. Validation is a lightweight markup scan, so a template that merely mentions the contract ID inside a comment or script may fail the check.
 
 The framework drives documented hooks inside the loading element when present; missing hooks are no-ops:
 
@@ -65,7 +65,7 @@ The framework drives documented hooks inside the loading element when present; m
 | `[data-wc-status]` | current stage label |
 | `[data-wc-substatus]` | package-install detail lines (visual only, `aria-hidden`) |
 | `[data-wc-bar]` | `--wc-progress` custom property (0–100) |
-| `[data-wc-timeout]` | revealed by the stall watchdog |
+| `[data-wc-timeout]` | revealed by the stall watchdog (the controller keeps it hidden until the watchdog trips, so an initial `hidden` attribute is optional) |
 | `[data-wc-reload]` | click reloads the page |
 
 Mechanic attributes you may set on the loading element:
@@ -74,6 +74,8 @@ Mechanic attributes you may set on the loading element:
 |---|---|
 | `data-wc-fade` | fade-out duration in ms (defaults to `fade_out_ms`) |
 | `data-wc-mode` | `content` / `overlay` (affects framework CSS) |
+
+When a custom template does not set these attributes itself, generation injects the resolved values automatically — `data-wc-mode`, `data-wc-interaction` (content mode), and `data-wc-fade`, plus `--wc-delay`/`--wc-fade` style variables. Template-authored values always win. If the loading element already sets its own `style` attribute, the `--wc-delay`/`--wc-fade` variables are not injected and the authored style is preserved unchanged; set `data-wc-fade` in that case so the fade duration stays configuration-driven.
 
 The framework's base stylesheet is always emitted before the loading element, so a custom template can override any rule with its own `<style>`. Colors are theme-aware (`data-theme` on `<html>`, falling back to `prefers-color-scheme`) and overridable via CSS custom properties: `--wc-accent`, `--wc-backdrop`, `--wc-ring`, `--wc-fg`, `--wc-dormant-opacity`, `--wc-dormant-saturation`.
 
