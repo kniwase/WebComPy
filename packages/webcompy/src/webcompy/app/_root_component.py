@@ -135,6 +135,11 @@ class AppDocumentRoot(Component):
                         loading_el.remove()
                         if body_el is not None:
                             body_cls = body_el.getAttribute("class") or ""
+                            if "wc-waking" in body_cls.split():
+                                wake_wait = _loading_wake_remaining_ms(fade_ms)
+                                if wake_wait > 0:
+                                    await asyncio.sleep(wake_wait / 1000)
+                                    body_cls = body_el.getAttribute("class") or ""
                             remaining = " ".join(c for c in body_cls.split() if c != "wc-waking")
                             if remaining != body_cls:
                                 if remaining:
@@ -159,7 +164,7 @@ class AppDocumentRoot(Component):
 
                 raise _WCE(f"Mount point '{selector}' not found in document.")
             for name in tuple(node.getAttributeNames()):
-                if name != "id" and not name.startswith("webcompy"):
+                if name not in ("id", "aria-busy", "inert") and not name.startswith("webcompy"):
                     node.removeAttribute(name)
             node.__webcompy_node__ = True
             self._mark_as_prerendered(node)
@@ -293,3 +298,10 @@ def _loading_fade_ms(loading_el: DOMNode, app: WebComPyApp | None) -> int:
     if app is not None:
         return int((app.config.loading or {}).get("fade_out_ms", 250))
     return 250
+
+
+_LOADING_WAKE_MS = 300
+
+
+def _loading_wake_remaining_ms(fade_ms: int) -> int:
+    return max(0, _LOADING_WAKE_MS - fade_ms)

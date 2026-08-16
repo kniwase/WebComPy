@@ -66,10 +66,42 @@ class TestLoadingScreenMarkup:
         assert "wc-fading" in html_str
         assert "transition:opacity var(--wc-fade, 250ms) ease" in html_str
 
+    def test_dormant_css_uses_resolved_delay(self):
+        app = _make_app(loading={"reveal_delay_ms": 500})
+        html_str = _generate_html(app, prerender=True)
+        assert "var(--wc-delay, 500ms)" in html_str
+        assert "body.wc-booting #webcompy-app" in html_str
+
+    def test_fade_css_uses_resolved_fade(self):
+        app = _make_app(loading={"fade_out_ms": 400})
+        html_str = _generate_html(app)
+        assert "var(--wc-fade, 400ms)" in html_str
+
+    def test_dormant_css_scoped_to_custom_selector(self):
+        app = _make_app(selector="#my-widget")
+        html_str = _generate_html(app, prerender=True)
+        assert "body.wc-booting #my-widget" in html_str
+        assert "body.wc-booting #webcompy-app" not in html_str
+
+    def test_dormant_css_default_selector(self):
+        html_str = _generate_html(_make_app(), prerender=True)
+        assert "body.wc-booting #webcompy-app" in html_str
+
+    def test_default_config_keeps_default_css_fallbacks(self):
+        html_str = _generate_html(_make_app())
+        assert "var(--wc-delay, 350ms)" in html_str
+        assert "var(--wc-fade, 250ms)" in html_str
+
     def test_theme_aware_styles(self):
         html_str = _generate_html(_make_app())
         assert "light-dark" in html_str
         assert "data-theme" in html_str
+
+    def test_theme_css_vars_wired(self):
+        html_str = _generate_html(_make_app())
+        assert "var(--wc-fg" in html_str
+        assert "var(--wc-ring" in html_str
+        assert "var(--wc-accent" in html_str
 
     def test_hidden_utility_rule(self):
         html_str = _generate_html(_make_app())
@@ -387,3 +419,25 @@ class TestLoadingFadeResolution:
         node = _FakeNode({"data-wc-fade": "abc"})
         app = self._app_with_loading(300)
         assert _loading_fade_ms(node, app) == 300
+
+
+class TestLoadingWakeTiming:
+    def test_remaining_when_fade_shorter_than_wake(self):
+        from webcompy.app._root_component import _loading_wake_remaining_ms
+
+        assert _loading_wake_remaining_ms(250) == 50
+
+    def test_zero_remaining_when_fade_equals_wake(self):
+        from webcompy.app._root_component import _loading_wake_remaining_ms
+
+        assert _loading_wake_remaining_ms(300) == 0
+
+    def test_zero_remaining_when_fade_longer_than_wake(self):
+        from webcompy.app._root_component import _loading_wake_remaining_ms
+
+        assert _loading_wake_remaining_ms(400) == 0
+
+    def test_full_remaining_when_fade_zero(self):
+        from webcompy.app._root_component import _loading_wake_remaining_ms
+
+        assert _loading_wake_remaining_ms(0) == 300

@@ -144,7 +144,8 @@ _LOADING_BASE_CSS = (
     "transform:scaleX(var(--wc-progress, 0));transform-origin:left top;transition:transform 0.2s ease;} "
     "#webcompy-loading[data-wc-complete] .wc-bar-fill{transform:scaleX(1);} "
     ".wc-loader{opacity:0;width:40px;height:40px;border:3px solid;"
-    "border-color:light-dark(#d3d3d3, #4b5563);border-top-color:light-dark(#87ceeb, #7dd3fc);"
+    "border-color:var(--wc-ring, light-dark(#d3d3d3, #4b5563));"
+    "border-top-color:var(--wc-accent, light-dark(#87ceeb, #7dd3fc));"
     "border-radius:50%;animation:wc-spin 0.8s linear infinite, "
     "wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards;} "
     ".wc-splash{display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;"
@@ -152,15 +153,18 @@ _LOADING_BASE_CSS = (
     ".wc-splash-logo{width:48px;height:48px;border-radius:12px;"
     "background:light-dark(#e5e7eb, #374151);} "
     ".wc-status{opacity:0;animation:wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards;"
-    "text-align:center;color:light-dark(#333333, #cccccc);font-family:system-ui, sans-serif;"
+    "text-align:center;color:var(--wc-fg, light-dark(#333333, #cccccc));font-family:system-ui, sans-serif;"
     "font-size:14px;min-height:1.5em;} "
     "#webcompy-loading[data-wc-mode='content'] .wc-status{position:fixed;left:16px;bottom:16px;text-align:left;} "
     ".wc-substatus{display:block;font-size:12px;opacity:0.7;} "
-    ".wc-timeout{color:light-dark(#333333, #cccccc);font-family:system-ui, sans-serif;"
+    ".wc-timeout{color:var(--wc-fg, light-dark(#333333, #cccccc));font-family:system-ui, sans-serif;"
     "font-size:14px;pointer-events:auto;} "
-    ".wc-reload{background:none;border:none;padding:0;color:light-dark(#1d4ed8, #7dd3fc);"
+    ".wc-reload{background:none;border:none;padding:0;color:var(--wc-accent, light-dark(#1d4ed8, #7dd3fc));"
     "text-decoration:underline;cursor:pointer;font:inherit;} "
     "html[data-theme='dark'] .wc-loader{--wc-ring:#4b5563;--wc-accent:#7dd3fc;} "
+    "html[data-theme='dark'] .wc-status{--wc-fg:#cccccc;} "
+    "html[data-theme='dark'] .wc-timeout{--wc-fg:#cccccc;} "
+    "html[data-theme='dark'] .wc-reload{--wc-accent:#7dd3fc;} "
     "html[data-theme='dark'] #webcompy-loading{background:rgba(0, 0, 0, 0.35);} "
     "@keyframes wc-spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}} "
     "@keyframes wc-reveal{to{opacity:1;}} "
@@ -177,6 +181,15 @@ _LOADING_BASE_CSS = (
     "body:is(.wc-booting, .wc-waking) #webcompy-app{transition:none;}"
     "#webcompy-loading.wc-fading{transition:none;}}"
 )
+
+
+def _loading_base_css(loading: dict, selector: str) -> str:
+    return (
+        _LOADING_BASE_CSS.replace("var(--wc-delay, 350ms)", f"var(--wc-delay, {loading['reveal_delay_ms']}ms)")
+        .replace("var(--wc-fade, 250ms)", f"var(--wc-fade, {loading['fade_out_ms']}ms)")
+        .replace("#webcompy-app", selector)
+    )
+
 
 _LOADING_STRUCTURES = {"overlay": "spinner", "bar": "bar", "splash": "splash"}
 
@@ -630,12 +643,12 @@ async def _generate_html_impl(
         _validate_loading_template(custom_template)
         custom_template = _inject_loading_template_attrs(custom_template, loading_config, loading_mode)
         loading_body: list[ElementChildren] = [
-            _HtmlElement("style", {}, _LOADING_BASE_CSS),
+            _HtmlElement("style", {}, _loading_base_css(loading_config, ctx.config.selector)),
             _HtmlElement("div", {"id": "webcompy-loading", "data-wc-template-marker": ""}),
         ]
     else:
         loading_body = [
-            _HtmlElement("style", {}, _LOADING_BASE_CSS),
+            _HtmlElement("style", {}, _loading_base_css(loading_config, ctx.config.selector)),
             _Loadscreen(
                 loading_mode,
                 _loading_structure(loading_config, loading_mode),
