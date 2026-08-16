@@ -34,13 +34,13 @@
 
 ## 5. E2E tests (`e2e/core/`)
 
-- [ ] 5.1 Add a test WebSocket endpoint (echo + server-initiated close) to the E2E app via `WebComPyServerConfig.mounts` (asgi-mount)
-- [ ] 5.2 Add an E2E page + Playwright test: send/receive round trip, two consumers sharing one socket, and reconnect visible via `.state` after a server-initiated abnormal close; gate with `WEBCOMPY_RUN_E2E=1` and wire into `scripts/run-e2e-tests.sh`
+- [x] 5.1 Add a test WebSocket endpoint (echo + server-initiated close) to the E2E app via `WebComPyServerConfig.mounts` (asgi-mount)
+- [x] 5.2 Add an E2E page + Playwright test: send/receive round trip, two consumers sharing one socket, and reconnect visible via `.state` after a server-initiated abnormal close; gate with `WEBCOMPY_RUN_E2E=1` and wire into `scripts/run-e2e-tests.sh`
 
 ## 6. Docs (Markdown-driven, per docs-site-documents)
 
-- [ ] 6.1 Add `docs_app/documents/websocket.md`: `use_websocket` usage, sharing/protocols keying, reconnection defaults and tuning, `.last_close`, disconnected-send policy, gap/refetch recipe
-- [ ] 6.2 Register the page in `docs_app/docs_manifest.py` and add the `docs_app/pages/document/websocket.py` stub
+- [x] 6.1 Add `docs_app/documents/websocket.md`: `use_websocket` usage, sharing/protocols keying, reconnection defaults and tuning, `.last_close`, disconnected-send policy, gap/refetch recipe
+- [x] 6.2 Register the page in `docs_app/docs_manifest.py` and add the `docs_app/pages/document/websocket.py` stub
 
 ## 7. Review knowledge sync
 
