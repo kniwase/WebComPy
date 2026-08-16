@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypedDict
 
@@ -117,6 +118,11 @@ class AppDocumentRoot(Component):
                         "webcompy-loading"
                     )
                     if loading_el:
+                        fade_ms = _loading_fade_ms(loading_el, self._app)
+                        loading_el.setAttribute("data-wc-complete", "")
+                        cls = (loading_el.getAttribute("class") or "").strip()
+                        loading_el.setAttribute("class", f"{cls} wc-fading".strip())
+                        await asyncio.sleep(fade_ms / 1000)
                         loading_el.remove()
                     if self._router and self._router._preload:
                         self._router.preload_lazy_routes()
@@ -258,3 +264,15 @@ class AppDocumentRoot(Component):
         payload = collect_transfer_data(self)
         threshold = self._app.config.compression_threshold if self._app else DEFAULT_COMPRESSION_THRESHOLD
         return serialize_payload(payload, compression_threshold=threshold)
+
+
+def _loading_fade_ms(loading_el: DOMNode, app: WebComPyApp | None) -> int:
+    attr = loading_el.getAttribute("data-wc-fade")
+    if attr:
+        try:
+            return max(0, int(attr))
+        except ValueError:
+            pass
+    if app is not None:
+        return int((app.config.loading or {}).get("fade_out_ms", 250))
+    return 250

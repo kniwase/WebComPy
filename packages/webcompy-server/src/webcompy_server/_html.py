@@ -5,7 +5,7 @@ import json
 from logging import getLogger
 from typing import TYPE_CHECKING, TypeAlias, cast
 
-from webcompy.app._config import PluginScript
+from webcompy.app._config import _LOADING_DEFAULTS, PluginScript
 from webcompy.components._component import Component, _active_app_context, _set_app_instance
 from webcompy.di import inject
 from webcompy.elements.typealias import ElementChildren
@@ -78,32 +78,19 @@ class _HtmlElement(Element):
 
 
 class _Loadscreen(_HtmlElement):
-    def __init__(self) -> None:
+    def __init__(self, loading: dict) -> None:
+        delay_ms = loading["reveal_delay_ms"]
+        fade_ms = loading["fade_out_ms"]
         super().__init__(
             "div",
-            {"id": "webcompy-loading"},
-            _HtmlElement(
-                "style",
-                {},
-                " ".join(
-                    f"{selector}{{"
-                    + "".join(
-                        name
-                        + (
-                            "{{{}}}".format("".join(f"{n}:{v};" for n, v in value.items()))
-                            if isinstance(value, dict)
-                            else f":{value};"
-                        )
-                        for name, value in props.items()
-                    )
-                    + "}"
-                    for selector, props in self._style.items()
-                ),
-            ),
-            _HtmlElement(
-                "div",
-                {"class": "wc-loader"},
-            ),
+            {
+                "id": "webcompy-loading",
+                "role": "status",
+                "data-wc-fade": str(fade_ms),
+                "style": f"--wc-delay:{delay_ms}ms;--wc-fade:{fade_ms}ms",
+            },
+            _HtmlElement("style", {}, _render_css_block(self._style)),
+            _HtmlElement("div", {"class": "wc-loader"}),
         )
 
     @property
@@ -115,18 +102,28 @@ class _Loadscreen(_HtmlElement):
                 "display": "flex",
                 "align-items": "center",
                 "justify-content": "center",
-                "background": "rgba(0, 0, 0, 0.5)",
+                "background": "var(--wc-backdrop, rgba(0, 0, 0, 0.15))",
                 "z-index": "9999",
             },
+            "#webcompy-loading[hidden]": {"display": "none"},
             ".wc-loader": {
-                "border": "12px solid lightgray",
+                "opacity": "0",
+                "width": "40px",
+                "height": "40px",
+                "border": "3px solid",
+                "border-color": "light-dark(#d3d3d3, #4b5563)",
+                "border-top-color": "light-dark(#87ceeb, #7dd3fc)",
                 "border-radius": "50%",
-                "border-top": "12px solid skyblue",
-                "width": "100px",
-                "height": "100px",
-                "animation": "spin 1s linear infinite",
+                "animation": "wc-spin 0.8s linear infinite, wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
             },
-            "@keyframes spin": {
+            "html[data-theme='dark'] .wc-loader": {
+                "--wc-ring": "#4b5563",
+                "--wc-accent": "#7dd3fc",
+            },
+            "html[data-theme='dark'] #webcompy-loading": {
+                "background": "rgba(0, 0, 0, 0.35)",
+            },
+            "@keyframes wc-spin": {
                 "0%": {
                     "transform": "rotate(0deg)",
                 },
@@ -134,7 +131,48 @@ class _Loadscreen(_HtmlElement):
                     "transform": "rotate(360deg)",
                 },
             },
+            "@keyframes wc-reveal": {
+                "to": {
+                    "opacity": "1",
+                },
+            },
+            "#webcompy-loading.wc-fading": {
+                "opacity": "0 !important",
+                "transition": "opacity var(--wc-fade, 250ms) ease",
+            },
+            "@media (prefers-reduced-motion: reduce)": {
+                ".wc-loader": {
+                    "animation": "wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
+                },
+                "#webcompy-loading.wc-fading": {
+                    "transition": "none",
+                },
+            },
         }
+
+
+def _render_css_block(style: dict) -> str:
+    return " ".join(
+        f"{selector}{{"
+        + "".join(
+            name
+            + (
+                "{{{}}}".format("".join(f"{n}:{v};" for n, v in value.items()))
+                if isinstance(value, dict)
+                else f":{value};"
+            )
+            for name, value in props.items()
+        )
+        + "}"
+        for selector, props in style.items()
+    )
+
+
+def _resolve_loading_config(config: dict | None) -> dict:
+    merged = dict(_LOADING_DEFAULTS)
+    if config:
+        merged.update(config)
+    return merged
 
 
 def _load_scripts(scripts: Scripts):
@@ -352,7 +390,7 @@ async def _generate_html_impl(
             _HtmlElement(
                 "body",
                 {},
-                _Loadscreen(),
+                _Loadscreen(_resolve_loading_config(ctx.config.loading)),
                 app_root,
                 *_load_scripts(scripts_body),
                 *plugin_body_scripts,

@@ -7,13 +7,13 @@
 
 ## 2. Phase 1 — Refined Default Visual & Removal Transition
 
-- [ ] 2.1 Redesign `_Loadscreen` in `webcompy_server/_html.py`: compact spinner, theme-aware colors keyed off `html[data-theme]` with `light-dark()` fallback, refined translucent backdrop, `--wc-*` CSS custom properties surface
-- [ ] 2.2 Implement the grace period in the loading stylesheet: all chrome starts at `opacity: 0` and is revealed by a delayed forwards-fill animation driven by `reveal_delay_ms`
-- [ ] 2.3 Serialize normalized loading config onto `#webcompy-loading` as `data-wc-*` attributes in generated HTML (mode, interaction, reveal delay, fade-out, timeout)
-- [ ] 2.4 Replace instantaneous `loading_el.remove()` in `AppDocumentRoot._render()` with the sequenced removal: add fade class, await `fade_out_ms`, then remove; read attributes with framework defaults when absent; no-op silently when the element does not exist
-- [ ] 2.5 Sync the static demo iframe copy `docs_app/static/_demos/standard.html` with the refined overlay visual, preserving the `#webcompy-loading` contract
-- [ ] 2.6 Unit tests: generated HTML contains the new markup, inline styles, and `data-wc-*` attributes; removal honors a custom fade duration attribute
-- [ ] 2.7 E2E: assert the fade class is present before the element leaves the DOM; confirm all existing `#webcompy-loading` hidden-wait tests still pass unmodified
+- [x] 2.1 Redesign `_Loadscreen` in `webcompy_server/_html.py`: compact spinner, theme-aware colors keyed off `html[data-theme]` with `light-dark()` fallback, refined translucent backdrop, `--wc-*` CSS custom properties surface
+- [x] 2.2 Implement the grace period in the loading stylesheet: all chrome starts at `opacity: 0` and is revealed by a delayed forwards-fill animation driven by `reveal_delay_ms`
+- [x] 2.3 Serialize normalized loading config onto `#webcompy-loading` as `data-wc-*` attributes in generated HTML (mode, interaction, reveal delay, fade-out, timeout)
+- [x] 2.4 Replace instantaneous `loading_el.remove()` in `AppDocumentRoot._render()` with the sequenced removal: add fade class, await `fade_out_ms`, then remove; read attributes with framework defaults when absent; no-op silently when the element does not exist
+- [x] 2.5 Sync the static demo iframe copy `docs_app/static/_demos/standard.html` with the refined overlay visual, preserving the `#webcompy-loading` contract
+- [x] 2.6 Unit tests: generated HTML contains the new markup, inline styles, and `data-wc-*` attributes; removal honors a custom fade duration attribute
+- [x] 2.7 E2E: assert the fade class is present before the element leaves the DOM; confirm all existing `#webcompy-loading` hidden-wait tests still pass unmodified
 
 ## 3. Phase 2 — Loading Controller: Staged Progress, Bar, Watchdog
 

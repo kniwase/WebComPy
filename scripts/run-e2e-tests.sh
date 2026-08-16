@@ -35,7 +35,7 @@ NC='\033[0m'
 
 # Group definitions — must match .github/workflows/ci.yml e2e-matrix
 declare -A E2E_GROUPS=(
-  ["bootstrap-static"]="e2e/core/test_bootstrap.py e2e/core/test_static_site.py e2e/core/test_signal_value_transfer.py"
+  ["bootstrap-static"]="e2e/core/test_bootstrap.py e2e/core/test_static_site.py e2e/core/test_signal_value_transfer.py e2e/core/test_loading_screen.py"
   ["components"]="e2e/core/test_client_only.py e2e/core/test_component.py e2e/core/test_custom_element.py e2e/core/test_lifecycle.py e2e/core/test_scoped_style.py e2e/core/test_teleport.py"
   ["reactive-lists"]="e2e/core/test_reactive.py e2e/core/test_repeat.py e2e/core/test_keyed_repeat.py e2e/core/test_dict_repeat.py"
   ["dynamic-control"]="e2e/core/test_nested_dynamic.py e2e/core/test_switch.py e2e/core/test_suspense.py e2e/core/test_transition.py"
