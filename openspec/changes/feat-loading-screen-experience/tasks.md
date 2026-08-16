@@ -2,8 +2,8 @@
 
 ## 1. Configuration Foundation
 
-- [ ] 1.1 Add `loading: dict | None` field to `WebComPyAppConfig` with `_normalize_loading_config()` in `__post_init__`, following the `theme` precedent: keys `mode`, `interaction`, `stages`, `dormant`, `messages`, `template`, `reveal_delay_ms`, `fade_out_ms`, `timeout_seconds` with documented defaults and `TypeError`/`ValueError` validation (including unknown `messages` stage keys)
-- [ ] 1.2 Unit tests for loading config normalization: defaults when omitted/None, valid partial dicts, invalid key, invalid mode, invalid value type, unknown stage key in messages
+- [x] 1.1 Add `loading: dict | None` field to `WebComPyAppConfig` with `_normalize_loading_config()` in `__post_init__`, following the `theme` precedent: keys `mode`, `interaction`, `stages`, `dormant`, `messages`, `template`, `reveal_delay_ms`, `fade_out_ms`, `timeout_seconds` with documented defaults and `TypeError`/`ValueError` validation (including unknown `messages` stage keys)
+- [x] 1.2 Unit tests for loading config normalization: defaults when omitted/None, valid partial dicts, invalid key, invalid mode, invalid value type, unknown stage key in messages
 
 ## 2. Phase 1 — Refined Default Visual & Removal Transition
 
