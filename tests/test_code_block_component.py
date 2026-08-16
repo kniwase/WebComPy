@@ -17,6 +17,7 @@ from webcompy.ui.code_block._highlight import highlight
 from webcompy.ui.code_block._tokens import TokenType
 from webcompy.ui.code_block.lexers._registry import (
     register_builtin_lexers,
+    register_lexer,
     reset_lexer_registry,
 )
 from webcompy_testing._ports import FakeBrowserDOMPort
@@ -176,6 +177,28 @@ def test_codeblock_empty_code_unknown_language_renders_no_children() -> None:
     pre = _render({"code": "", "lang": "nonexistent-language"})
     code_el = _code_element(pre)
     assert len(code_el._children) == 0
+
+
+class _NoTokenLexer:
+    name = "no-token-lexer"
+    aliases: tuple[str, ...] = ()
+    file_extensions: tuple[str, ...] = ()
+
+    def tokenize(self, code: str):
+        return iter(())
+
+
+def test_codeblock_no_tokens_falls_back_to_single_tok_ident_span() -> None:
+    """A registered lexer returning no tokens MUST render the same single
+    <span class=\"tok-ident\"> fallback as an unknown language."""
+    register_lexer(_NoTokenLexer())
+    pre = _render({"code": "x = 1", "lang": "no-token-lexer"})
+    code_el = _code_element(pre)
+    assert len(code_el._children) == 1
+    span = code_el._children[0]
+    assert span._tag_name == "span"
+    assert _class(span) == "tok-ident"
+    assert span._children[0]._get_text() == "x = 1"
 
 
 def test_codeblock_spans_match_highlight_output() -> None:
