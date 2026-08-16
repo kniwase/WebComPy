@@ -166,7 +166,7 @@ OpenCode のスキルは `.opencode/skills/` 配下にあり、必要に応じ�
 | エージェント | 責務 |
 |---|---|
 | `webcompy-reviewer` | OpenSpec スペックに基づく自動 PR レビュー（CI 使用） |
-| `webcompy-inspector` | `webcompy inspect` によるブラウザ検証 |
+| `webcompy-inspector` | `webcompy inspect` によるブラウザ検証（サブエージェント専用） |
 
 ### タスク委譲（OpenCode）
 

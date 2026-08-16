@@ -168,7 +168,7 @@ Agents (provide permission sandboxes; load their companion skill):
 | Agent | Responsibility |
 |---|---|
 | `webcompy-reviewer` | Automated pull request review against OpenSpec specs (used by CI) |
-| `webcompy-inspector` | Browser verification via `webcompy inspect` |
+| `webcompy-inspector` | Browser verification via `webcompy inspect` (subagent-only) |
 
 ### Delegating Tasks (OpenCode)
 
