@@ -69,12 +69,57 @@ class TestLoadingScreenMarkup:
 
     def test_hidden_utility_rule(self):
         html_str = _generate_html(_make_app())
-        assert "#webcompy-loading[hidden]{display:none" in html_str
+        assert "#webcompy-loading [hidden]{display:none" in html_str
 
     def test_reduced_motion_rules(self):
         html_str = _generate_html(_make_app())
         assert "prefers-reduced-motion" in html_str
         assert "wc-spin" in html_str
+
+    def test_controller_script_present_as_classic_script(self):
+        html_str = _generate_html(_make_app())
+        assert "<script>(function" in html_str
+        assert 'window.addEventListener("py:progress"' in html_str
+        assert 'window.addEventListener("py:ready"' in html_str
+
+    def test_controller_stage_mapping_emitted(self):
+        html_str = _generate_html(_make_app())
+        assert '"Loading interpreter"' in html_str
+        assert '"runtime_download"' in html_str
+        assert '"Loaded Pyodide"' in html_str
+        assert '"runtime_ready"' in html_str
+
+    def test_controller_ceiling_values_emitted(self):
+        html_str = _generate_html(_make_app())
+        assert '"runtime_download": 60' in html_str
+        assert '"app_start": 97' in html_str
+
+    def test_status_and_timeout_hooks_present(self):
+        html_str = _generate_html(_make_app())
+        assert "data-wc-status" in html_str
+        assert "data-wc-substatus" in html_str
+        assert "data-wc-timeout" in html_str
+        assert "data-wc-reload" in html_str
+        assert "aria-hidden" in html_str
+
+    def test_custom_messages_merged_into_controller(self):
+        app = _make_app(loading={"messages": {"runtime_download": "ランタイムを取得中…"}})
+        html_str = _generate_html(app)
+        assert '"runtime_download": "ランタイムを取得中…"' in html_str
+        assert '"runtime_prepare": "Preparing Python runtime…"' in html_str
+
+    def test_stages_false_omits_status_markup(self):
+        app = _make_app(loading={"stages": False})
+        html_str = _generate_html(app)
+        assert 'class="wc-status"' not in html_str
+        assert 'class="wc-substatus"' not in html_str
+        assert "data-wc-timeout" in html_str
+
+    def test_stages_false_controller_still_emitted(self):
+        app = _make_app(loading={"stages": False})
+        html_str = _generate_html(app)
+        assert "<script>(function" in html_str
+        assert '"stages": false' in html_str
 
 
 class _FakeNode:

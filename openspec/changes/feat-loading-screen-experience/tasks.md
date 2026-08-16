@@ -17,13 +17,13 @@
 
 ## 3. Phase 2 — Loading Controller: Staged Progress, Bar, Watchdog
 
-- [ ] 3.1 Measure real boot phases with `profile=True` instrumentation (cold vs cached) to calibrate stage ceilings, `reveal_delay_ms`, and `timeout_seconds` defaults; record findings in the change directory
-- [ ] 3.2 Emit the inline loading controller `<script>` immediately after `#webcompy-loading` in generated HTML (classic script, dependency-free, `window` listeners for `py:progress`/`py:ready`)
-- [ ] 3.3 Implement the stage mapping table (verified PyScript 2026.3.1 strings → `runtime_prepare`/`runtime_download`/`packages`/`runtime_ready`/`app_start`), default English labels, `messages` overrides, and micropip-line sub-status rendering
-- [ ] 3.4 Implement the progress bar: stage-completion ceilings + atan-style trickle below the current ceiling, `transform: scaleX(var(--wc-progress))`, 100% only when removal begins; when `stages` is false, the bar progresses by pure trickle toward a fixed 97% ceiling without stage jumps
-- [ ] 3.5 Implement the stall watchdog: timer reset on every progress event, `[data-wc-timeout]` reveal with reload affordance on expiry, `0` disables
-- [ ] 3.6 Unit tests: generated controller contains the stage mapping and hook selectors; `stages: false` omits status markup; controller script is classic (not module)
-- [ ] 3.7 E2E: with network throttling on Pyodide assets, assert stage labels appear in order; assert watchdog message appears when progress stalls; assert no watchdog after successful boot
+- [x] 3.1 Measure real boot phases with `profile=True` instrumentation (cold vs cached) to calibrate stage ceilings, `reveal_delay_ms`, and `timeout_seconds` defaults; record findings in the change directory
+- [x] 3.2 Emit the inline loading controller `<script>` immediately after `#webcompy-loading` in generated HTML (classic script, dependency-free, `window` listeners for `py:progress`/`py:ready`)
+- [x] 3.3 Implement the stage mapping table (verified PyScript 2026.3.1 strings → `runtime_prepare`/`runtime_download`/`packages`/`runtime_ready`/`app_start`), default English labels, `messages` overrides, and micropip-line sub-status rendering
+- [x] 3.4 Implement the progress bar: stage-completion ceilings + atan-style trickle below the current ceiling, `transform: scaleX(var(--wc-progress))`, 100% only when removal begins; when `stages` is false, the bar progresses by pure trickle toward a fixed 97% ceiling without stage jumps
+- [x] 3.5 Implement the stall watchdog: timer reset on every progress event, `[data-wc-timeout]` reveal with reload affordance on expiry, `0` disables
+- [x] 3.6 Unit tests: generated controller contains the stage mapping and hook selectors; `stages: false` omits status markup; controller script is classic (not module)
+- [x] 3.7 E2E: with network throttling on Pyodide assets, assert stage labels appear in order; assert watchdog message appears when progress stalls; assert no watchdog after successful boot
 
 ## 4. Phase 3 — Modes, Interaction Policies, Dormant/Wake-up, Accessibility
 

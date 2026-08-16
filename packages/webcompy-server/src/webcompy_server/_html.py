@@ -81,6 +81,27 @@ class _Loadscreen(_HtmlElement):
     def __init__(self, loading: dict) -> None:
         delay_ms = loading["reveal_delay_ms"]
         fade_ms = loading["fade_out_ms"]
+        children: list[ElementChildren] = [
+            _HtmlElement("style", {}, _render_css_block(self._style)),
+            _HtmlElement("div", {"class": "wc-loader"}),
+        ]
+        if loading["stages"]:
+            children.append(
+                _HtmlElement(
+                    "div",
+                    {"class": "wc-status"},
+                    _HtmlElement("span", {"data-wc-status": ""}),
+                    _HtmlElement("span", {"data-wc-substatus": "", "aria-hidden": "true"}),
+                )
+            )
+        children.append(
+            _HtmlElement(
+                "div",
+                {"class": "wc-timeout", "data-wc-timeout": "", "hidden": ""},
+                _HtmlElement("span", {}, "Taking longer than usual… "),
+                _HtmlElement("button", {"class": "wc-reload", "data-wc-reload": ""}, "Reload"),
+            )
+        )
         super().__init__(
             "div",
             {
@@ -89,8 +110,7 @@ class _Loadscreen(_HtmlElement):
                 "data-wc-fade": str(fade_ms),
                 "style": f"--wc-delay:{delay_ms}ms;--wc-fade:{fade_ms}ms",
             },
-            _HtmlElement("style", {}, _render_css_block(self._style)),
-            _HtmlElement("div", {"class": "wc-loader"}),
+            *children,
         )
 
     @property
@@ -100,12 +120,14 @@ class _Loadscreen(_HtmlElement):
                 "position": "fixed",
                 "inset": "0",
                 "display": "flex",
+                "flex-direction": "column",
                 "align-items": "center",
                 "justify-content": "center",
+                "gap": "16px",
                 "background": "var(--wc-backdrop, rgba(0, 0, 0, 0.15))",
                 "z-index": "9999",
             },
-            "#webcompy-loading[hidden]": {"display": "none"},
+            "#webcompy-loading [hidden]": {"display": "none"},
             ".wc-loader": {
                 "opacity": "0",
                 "width": "40px",
@@ -115,6 +137,34 @@ class _Loadscreen(_HtmlElement):
                 "border-top-color": "light-dark(#87ceeb, #7dd3fc)",
                 "border-radius": "50%",
                 "animation": "wc-spin 0.8s linear infinite, wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
+            },
+            ".wc-status": {
+                "opacity": "0",
+                "animation": "wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
+                "text-align": "center",
+                "color": "light-dark(#333333, #cccccc)",
+                "font-family": "system-ui, sans-serif",
+                "font-size": "14px",
+                "min-height": "1.5em",
+            },
+            ".wc-substatus": {
+                "display": "block",
+                "font-size": "12px",
+                "opacity": "0.7",
+            },
+            ".wc-timeout": {
+                "color": "light-dark(#333333, #cccccc)",
+                "font-family": "system-ui, sans-serif",
+                "font-size": "14px",
+            },
+            ".wc-reload": {
+                "background": "none",
+                "border": "none",
+                "padding": "0",
+                "color": "light-dark(#1d4ed8, #7dd3fc)",
+                "text-decoration": "underline",
+                "cursor": "pointer",
+                "font": "inherit",
             },
             "html[data-theme='dark'] .wc-loader": {
                 "--wc-ring": "#4b5563",
@@ -142,6 +192,9 @@ class _Loadscreen(_HtmlElement):
             },
             "@media (prefers-reduced-motion: reduce)": {
                 ".wc-loader": {
+                    "animation": "wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
+                },
+                ".wc-status": {
                     "animation": "wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards",
                 },
                 "#webcompy-loading.wc-fading": {
@@ -173,6 +226,147 @@ def _resolve_loading_config(config: dict | None) -> dict:
     if config:
         merged.update(config)
     return merged
+
+
+_LOADING_DEFAULT_MESSAGES = {
+    "runtime_prepare": "Preparing Python runtime…",
+    "runtime_download": "Downloading Python runtime…",
+    "packages": "Installing packages…",
+    "runtime_ready": "Runtime ready…",
+    "app_start": "Starting app…",
+}
+
+_LOADING_STAGE_CEILINGS = {
+    "runtime_prepare": 35,
+    "runtime_download": 60,
+    "packages": 85,
+    "runtime_ready": 93,
+    "app_start": 97,
+}
+
+_LOADING_STAGE_EVENTS = [
+    ("Loading Pyodide", "runtime_prepare"),
+    ("Loading interpreter", "runtime_download"),
+    ("Loaded interpreter", "packages"),
+    ("Loaded Pyodide", "runtime_ready"),
+]
+
+_LOADING_CONTROLLER_TEMPLATE = """(function () {
+  var root = document.getElementById("webcompy-loading");
+  if (!root) return;
+  var CONFIG = __WC_CONFIG__;
+  var STAGES = __WC_STAGES__;
+  var CEILINGS = __WC_CEILINGS__;
+  var FIXED_CEILING = 97;
+  var statusEl = root.querySelector("[data-wc-status]");
+  var substatusEl = root.querySelector("[data-wc-substatus]");
+  var barEl = root.querySelector("[data-wc-bar]");
+  var timeoutEl = root.querySelector("[data-wc-timeout]");
+  var reloadEl = root.querySelector("[data-wc-reload]");
+  var stage = -1;
+  var progress = 0;
+  var start = Date.now();
+  var watchdog = null;
+
+  function setStatus(key) {
+    stage = key;
+    if (!CONFIG.stages) return;
+    if (statusEl) statusEl.textContent = (CONFIG.messages && CONFIG.messages[key]) || key;
+  }
+
+  function setSub(text) {
+    if (!CONFIG.stages || !substatusEl) return;
+    substatusEl.textContent = text;
+  }
+
+  function setBar(value) {
+    if (!barEl) return;
+    if (value <= progress) return;
+    progress = value;
+    barEl.style.setProperty("--wc-progress", String(value / 100));
+  }
+
+  function resetWatchdog() {
+    if (!CONFIG.timeoutSeconds) return;
+    if (watchdog) clearTimeout(watchdog);
+    watchdog = setTimeout(function () {
+      if (timeoutEl && timeoutEl.hidden) timeoutEl.hidden = false;
+    }, CONFIG.timeoutSeconds * 1000);
+  }
+
+  function onProgress(e) {
+    var detail = e.detail;
+    if (typeof detail !== "string") return;
+    if (CONFIG.stages) {
+      for (var i = 0; i < STAGES.length; i++) {
+        if (STAGES[i][0] === detail) {
+          setStatus(STAGES[i][1]);
+          setBar(CEILINGS[STAGES[i][1]]);
+          resetWatchdog();
+          return;
+        }
+      }
+      setSub(detail);
+    }
+    resetWatchdog();
+  }
+
+  function onReady() {
+    setStatus("app_start");
+    setBar(CEILINGS.app_start);
+    resetWatchdog();
+  }
+
+  if (CONFIG.stages) {
+    window.addEventListener("py:progress", onProgress);
+    window.addEventListener("py:ready", onReady);
+  } else {
+    window.addEventListener("py:progress", resetWatchdog);
+  }
+
+  if (reloadEl) {
+    reloadEl.addEventListener("click", function () {
+      window.location.reload();
+    });
+  }
+
+  function trickle() {
+    if (root.hasAttribute("data-wc-complete")) return;
+    var ceiling;
+    if (CONFIG.stages) {
+      ceiling = stage >= 0 ? CEILINGS[STAGES[stage][1]] : CEILINGS.runtime_prepare;
+    } else {
+      ceiling = FIXED_CEILING;
+    }
+    var elapsed = (Date.now() - start) / 1000;
+    var target = ceiling * (2 / Math.PI) * Math.atan(elapsed / 6);
+    setBar(target);
+    requestAnimationFrame(trickle);
+  }
+
+  resetWatchdog();
+  trickle();
+})();"""
+
+
+def _loading_controller_script(loading: dict) -> str:
+    messages = dict(_LOADING_DEFAULT_MESSAGES)
+    if loading["stages"]:
+        messages.update(loading.get("messages") or {})
+    config = {
+        "stages": loading["stages"],
+        "timeoutSeconds": loading["timeout_seconds"],
+    }
+    if loading["stages"]:
+        config["messages"] = messages
+    payload = json.dumps(config, ensure_ascii=False).replace("</", "<\\/")
+    stages_payload = json.dumps(_LOADING_STAGE_EVENTS).replace("</", "<\\/")
+    ceilings_payload = json.dumps(_LOADING_STAGE_CEILINGS).replace("</", "<\\/")
+    return (
+        _LOADING_CONTROLLER_TEMPLATE.replace("__WC_CONFIG__", payload)
+        .replace("__WC_STAGES__", stages_payload)
+        .replace("__WC_CEILINGS__", ceilings_payload)
+    )
 
 
 def _load_scripts(scripts: Scripts):
@@ -279,6 +473,7 @@ async def _generate_html_impl(
     app = ctx._app
     base_url = ctx.config.base_url
     selector_id = ctx.config.selector.lstrip("#")
+    loading_config = _resolve_loading_config(ctx.config.loading)
     app_root = (
         ctx._root
         if prerender
@@ -390,7 +585,8 @@ async def _generate_html_impl(
             _HtmlElement(
                 "body",
                 {},
-                _Loadscreen(_resolve_loading_config(ctx.config.loading)),
+                _Loadscreen(loading_config),
+                _HtmlElement("script", {}, _loading_controller_script(loading_config)),
                 app_root,
                 *_load_scripts(scripts_body),
                 *plugin_body_scripts,
