@@ -254,14 +254,14 @@ When creating a PR, the body MUST follow the template in `.github/PULL_REQUEST_T
 
 ## Agents and Skills
 
-Two thin agents provide permission-sandboxed execution for the CI AI review job and browser inspection respectively. Each loads its companion skill:
+Two thin agents provide permission-sandboxed execution. `webcompy-reviewer` is invoked by the CI AI review job (subagent via `--agent`); `webcompy-inspector` is subagent-only (it does not appear in the chat agent selector) and is used to offload verbose browser inspection to a sandboxed child session. Each loads its companion skill:
 
 | Agent | Purpose | Loads |
 |---|---|---|
 | `webcompy-reviewer` | PR review (invoked by the CI AI review job via `--agent`) | `webcompy-review` |
-| `webcompy-inspector` | Browser verification via the `webcompy inspect` CLI | `webcompy-inspect` |
+| `webcompy-inspector` | Browser verification via the `webcompy inspect` CLI (subagent-only) | `webcompy-inspect` |
 
-Reusable knowledge lives in skills under `.opencode/skills/`. OpenCode auto-loads a skill when its `description` matches the current task, so prefer invoking a skill directly over going through an agent unless the agent's permission sandbox is required:
+Reusable knowledge lives in skills under `.opencode/skills/`. OpenCode auto-loads a skill when its `description` matches the current task, so prefer invoking a skill directly over going through an agent unless the agent's permission sandbox is required. For browser verification, load the `webcompy-inspect` skill directly, or delegate to the sandboxed `@webcompy-inspector` subagent when you want inspection output kept out of the main session.
 
 | Task | Skill |
 |---|---|

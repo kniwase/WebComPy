@@ -1,7 +1,7 @@
 ---
 name: webcompy-inspector
 description: Inspects and verifies WebComPy applications in a browser using webcompy inspect CLI commands (knowledge in the webcompy-inspect skill).
-mode: all
+mode: subagent
 temperature: 0.1
 permission:
   edit:
