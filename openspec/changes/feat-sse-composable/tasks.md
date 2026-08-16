@@ -10,7 +10,7 @@
 
 ## 2. Shared connection registry
 
-- [ ] 2.1 Create `packages/webcompy/src/webcompy/realtime/_registry.py`: transport-agnostic registry keyed by `(transport, url)`, stored in the app DI scope via the `_get_app_di_scope()` + inject-or-provide pattern (mirror `storage/_composable.py._get_or_create_registry`); reference-counted open/close; per-subscriber FIFO queues (unbounded default, `max_queue` drop-oldest, reuse `aio/_stream.py._StreamQueue` semantics)
+- [x] 2.1 Create `packages/webcompy/src/webcompy/realtime/_registry.py`: transport-agnostic registry keyed by `(transport, url)`, stored in the app DI scope via the `_get_app_di_scope()` + inject-or-provide pattern (mirror `storage/_composable.py._get_or_create_registry`); reference-counted open/close; per-subscriber FIFO queues (unbounded default, `max_queue` drop-oldest, reuse `aio/_stream.py._StreamQueue` semantics)
 - [ ] 2.2 Implement subscriber detach (idempotent) and last-detach connection close, including `weakref.finalize` protection for abandoned iterators
 
 ## 3. Composable
