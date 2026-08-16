@@ -12,6 +12,7 @@ from webcompy.ports._markdown import MarkdownPort
 from webcompy.ports._media_query import MediaQueryPort
 from webcompy.ports._resource import ResourcePort
 from webcompy.ports._transition import TransitionPort
+from webcompy.ports._websocket import WebSocketPort
 
 DOM_PORT_KEY = InjectKey[DOMPort]("webcompy-port-dom")
 FFI_PORT_KEY = InjectKey[FFIPort]("webcompy-port-ffi")
@@ -26,3 +27,4 @@ RESOURCE_PORT_KEY = InjectKey[ResourcePort]("webcompy-port-resource")
 CUSTOM_ELEMENT_PORT_KEY = InjectKey[CustomElementPort]("webcompy-port-custom-element")
 EVENT_SOURCE_PORT_KEY = InjectKey[EventSourcePort]("webcompy-port-event-source")
 TRANSITION_PORT_KEY = InjectKey[TransitionPort]("webcompy-port-transition")
+WEBSOCKET_PORT_KEY = InjectKey[WebSocketPort]("webcompy-port-websocket")
