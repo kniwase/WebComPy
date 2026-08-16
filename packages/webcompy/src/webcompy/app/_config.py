@@ -25,6 +25,11 @@ _LOADING_STAGE_KEYS = (
 
 _LOADING_MODES = ("auto", "overlay", "content")
 _LOADING_INTERACTIONS = ("block", "inert", "passthrough")
+_LOADING_INT_KEY_MAX = {
+    "reveal_delay_ms": 10_000,
+    "fade_out_ms": 10_000,
+    "timeout_seconds": 3_600,
+}
 _LOADING_DEFAULTS: dict = {
     "mode": "auto",
     "interaction": "block",
@@ -91,6 +96,7 @@ def _normalize_loading_config(loading: dict) -> dict:
     if unknown:
         raise ValueError(f"WebComPyAppConfig.loading contains unknown keys: {sorted(unknown)}")
     normalized = dict(_LOADING_DEFAULTS)
+    normalized["messages"] = dict(_LOADING_DEFAULTS["messages"])
     for key, value in loading.items():
         if key == "mode":
             if value not in _LOADING_MODES:
@@ -112,6 +118,12 @@ def _normalize_loading_config(loading: dict) -> dict:
                     f"WebComPyAppConfig.loading['messages'] contains unknown stage keys: {bad}. "
                     f"Valid keys: {_LOADING_STAGE_KEYS}"
                 )
+            for stage_key, label in value.items():
+                if not isinstance(label, str):
+                    raise TypeError(
+                        f"WebComPyAppConfig.loading['messages'] values must be str, "
+                        f"got {type(label).__name__} for {stage_key!r}"
+                    )
             normalized["messages"] = dict(value)
             continue
         elif key == "template":
@@ -122,7 +134,8 @@ def _normalize_loading_config(loading: dict) -> dict:
         elif key in ("reveal_delay_ms", "fade_out_ms", "timeout_seconds"):
             if not isinstance(value, int) or isinstance(value, bool):
                 raise TypeError(f"WebComPyAppConfig.loading['{key}'] must be an int, got {type(value).__name__}")
-            if value < 0:
-                raise ValueError(f"WebComPyAppConfig.loading['{key}'] must be a non-negative int, got {value!r}")
+            max_value = _LOADING_INT_KEY_MAX[key]
+            if value < 0 or value > max_value:
+                raise ValueError(f"WebComPyAppConfig.loading['{key}'] must be between 0 and {max_value}, got {value!r}")
         normalized[key] = value
     return normalized

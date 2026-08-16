@@ -420,6 +420,18 @@ class TestLoadingFadeResolution:
         app = self._app_with_loading(300)
         assert _loading_fade_ms(node, app) == 300
 
+    def test_attr_clamped_to_max(self):
+        from webcompy.app._root_component import _loading_fade_ms
+
+        node = _FakeNode({"data-wc-fade": "999999"})
+        assert _loading_fade_ms(node, None) == 10000
+
+    def test_negative_attr_clamped_to_zero(self):
+        from webcompy.app._root_component import _loading_fade_ms
+
+        node = _FakeNode({"data-wc-fade": "-5"})
+        assert _loading_fade_ms(node, None) == 0
+
 
 class TestLoadingWakeTiming:
     def test_remaining_when_fade_shorter_than_wake(self):

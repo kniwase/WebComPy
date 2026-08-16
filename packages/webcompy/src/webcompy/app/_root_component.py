@@ -4,6 +4,7 @@ import asyncio
 from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypedDict
 
+from webcompy.app._config import _LOADING_INT_KEY_MAX
 from webcompy.components._component import Component, HeadPropsStore
 from webcompy.components._generator import ComponentGenerator
 from webcompy.di import inject
@@ -292,7 +293,7 @@ def _loading_fade_ms(loading_el: DOMNode, app: WebComPyApp | None) -> int:
     attr = loading_el.getAttribute("data-wc-fade")
     if attr:
         try:
-            return max(0, int(attr))
+            return min(_LOADING_INT_KEY_MAX["fade_out_ms"], max(0, int(attr)))
         except ValueError:
             pass
     if app is not None:
