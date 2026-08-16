@@ -42,8 +42,8 @@
 
 ## 7. Docs (Markdown-driven, per docs-site-documents)
 
-- [ ] 7.1 Add `docs_app/documents/event_source.md` (frontmatter + body): `use_event_source` usage, connection sharing, `max_queue`, close semantics, gap/refetch recipe (`state` returns to OPEN → re-pull authoritative state)
-- [ ] 7.2 Register the page in `docs_app/docs_manifest.py` and add the `docs_app/pages/document/event_source.py` stub
+- [x] 7.1 Add `docs_app/documents/event_source.md` (frontmatter + body): `use_event_source` usage, connection sharing, `max_queue`, close semantics, gap/refetch recipe (`state` returns to OPEN → re-pull authoritative state)
+- [x] 7.2 Register the page in `docs_app/docs_manifest.py` and add the `docs_app/pages/document/event_source.py` stub
 
 ## 8. Review knowledge sync
 
