@@ -169,3 +169,25 @@ When `use_event_source` is called inside an active component setup context, the 
 
 - **WHEN** a consumer iterates with `async for` and exits via `break` without calling `.close()`, and the handle is garbage-collected
 - **THEN** the registry reference count SHALL be decremented as if `.close()` had been called
+
+### Requirement: use_event_source shall reject invalid events and max_queue arguments
+
+`use_event_source` SHALL validate its optional arguments before opening or resolving any connection. Passing `events` as a bare `str` SHALL raise `TypeError`; passing `events=()` SHALL raise `ValueError`; an `events` element that is not a non-empty `str` SHALL raise `TypeError`. `max_queue` SHALL be `None` or an `int` greater than or equal to 1; any other value SHALL raise `TypeError`, and an `int` less than 1 SHALL raise `ValueError`. Validation SHALL happen before any connection is opened: an invalid call SHALL NOT open an underlying connection, SHALL NOT resolve a port, and SHALL NOT emit a warning.
+
+#### Scenario: Bare string events is rejected
+
+- **WHEN** a developer calls `use_event_source("/events", events="message")`
+- **THEN** a `TypeError` SHALL be raised
+- **AND** no connection SHALL be opened
+
+#### Scenario: Empty events is rejected
+
+- **WHEN** a developer calls `use_event_source("/events", events=())`
+- **THEN** a `ValueError` SHALL be raised
+- **AND** no connection SHALL be opened
+
+#### Scenario: max_queue below the minimum is rejected
+
+- **WHEN** a developer calls `use_event_source("/events", max_queue=0)` or `max_queue=-1`
+- **THEN** a `ValueError` SHALL be raised
+- **AND** no connection SHALL be opened
