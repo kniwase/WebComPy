@@ -405,6 +405,40 @@ class TestUnionReopen:
         b.close()
         assert rt_env.port.open_connections == []
 
+    @pytest.mark.asyncio
+    async def test_late_close_from_superseded_connection_does_not_terminate(self, rt_env) -> None:
+        a = use_event_source("/events", events=("message",))
+        stale_reg = rt_env.port._registrations[0]
+        rt_env.port.emit_open("/events")
+        b = use_event_source("/events", events=("status",))
+        rt_env.port.emit_open("/events")
+        assert a.state.value == ConnectionState.OPEN
+        assert b.state.value == ConnectionState.OPEN
+        stale_reg.on_close()
+        assert a.state.value == ConnectionState.OPEN
+        assert b.state.value == ConnectionState.OPEN
+        rt_env.port.emit_event("/events", "status", "s1", "2")
+        rt_env.port.emit_event("/events", "message", "m1", "1")
+        got_a = await _collect(a, limit=1)
+        got_b = await _collect(b, limit=1)
+        assert got_a == [SSEvent(event="message", data="m1", last_event_id="1")]
+        assert got_b == [SSEvent(event="status", data="s1", last_event_id="2")]
+        a.close()
+        b.close()
+
+    @pytest.mark.asyncio
+    async def test_late_error_from_superseded_connection_does_not_flicker_state(self, rt_env) -> None:
+        a = use_event_source("/events", events=("message",))
+        stale_reg = rt_env.port._registrations[0]
+        rt_env.port.emit_open("/events")
+        b = use_event_source("/events", events=("status",))
+        rt_env.port.emit_open("/events")
+        assert a.state.value == ConnectionState.OPEN
+        stale_reg.on_error()
+        assert a.state.value == ConnectionState.OPEN
+        a.close()
+        b.close()
+
 
 class TestPortOpenFailure:
     @pytest.mark.asyncio

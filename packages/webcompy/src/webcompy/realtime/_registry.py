@@ -36,6 +36,7 @@ class _Connection:
     __slots__ = (
         "cleanup",
         "event_types",
+        "generation",
         "key",
         "reopening",
         "state",
@@ -45,6 +46,7 @@ class _Connection:
     def __init__(self, key: tuple[str, str]) -> None:
         self.key = key
         self.event_types: set[str] = set()
+        self.generation = 0
         self.subscribers: set[_Subscription] = set()
         self.cleanup: Callable[[], None] | None = None
         self.state = ConnectionState.CONNECTING
@@ -154,16 +156,26 @@ class _RealtimeRegistry:
         ],
         item_factory: Callable[[str, str, str], T],
     ) -> Callable[[], None]:
+        conn.generation += 1
+        gen = conn.generation
+
+        def _is_stale() -> bool:
+            return gen != conn.generation
+
         def on_open() -> None:
+            if _is_stale():
+                return
             conn.state = ConnectionState.OPEN
             self._notify_state(conn)
 
         def on_error() -> None:
+            if _is_stale():
+                return
             conn.state = ConnectionState.CONNECTING
             self._notify_state(conn)
 
         def on_close() -> None:
-            if conn.reopening:
+            if _is_stale() or conn.reopening:
                 return
             conn.state = ConnectionState.CLOSED
             self._notify_state(conn)
@@ -173,6 +185,8 @@ class _RealtimeRegistry:
                 del self._connections[conn.key]
 
         def on_message(event_type: str, data: str, last_event_id: str) -> None:
+            if _is_stale():
+                return
             item = item_factory(event_type, data, last_event_id)
             for sub in list(conn.subscribers):
                 if event_type in sub.events:
