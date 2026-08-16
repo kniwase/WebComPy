@@ -175,6 +175,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/events/` | `readonly-signal/spec.md` |
 | `webcompy/storage/` | `composables/spec.md` |
 | `webcompy/ui/_styles/` | `css-architecture/spec.md` |
+| `webcompy/ui/code_block/` | `code-block/spec.md`, `syntax-highlight-lexers/spec.md` |
 | `webcompy/template/_css_parser.py`, `webcompy/template/_css_template.py` | `template-engine/spec.md` |
 | `webcompy/template/`, `webcompy/template/_expression.py` | `template-engine/spec.md`, `markdown-document/spec.md` |
 | `webcompy/template/_markdown_default.py` | `template-engine/spec.md`, `markdown-conformance/spec.md` |
@@ -364,6 +365,8 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
 | `test-execution-paths` | Physical separation between unit (`tests/`) and E2E (`e2e/`) tests; opt-in `WEBCOMPY_RUN_E2E=1` env var gate; `scripts/run-e2e-tests.sh` canonical entry point |
 | `doc-spec-references` | Governance of how universal docs reference `openspec/specs/`; retired API-name blocklist; `scripts/check-doc-spec-refs.py` guardrail |
+| `code-block` | `CodeBlock` component rendering syntax-highlighted code as framework-managed token spans (direct children of `<code>`, no `raw_html` injection), plus the `highlight()` HTML-string API with dual `tok-*`/Pygments classes |
+| `syntax-highlight-lexers` | `Lexer` protocol, lexer registry (name/alias/file-extension lookup), built-in Python/Bash/TOML lexers, `LexerInfo` introspection, Pygments adapter skeleton |
 
 ## Language Rules
 

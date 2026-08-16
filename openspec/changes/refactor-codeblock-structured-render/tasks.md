@@ -19,9 +19,9 @@
 
 ## 4. Docs Maintenance (AGENTS.md Spec References)
 
-- [ ] 4.1 Add `code-block` and `syntax-highlight-lexers` rows to the Current Specs list in `AGENTS.md`
-- [ ] 4.2 Add a File→Spec mapping row for `webcompy/ui/code_block/` pointing to `code-block/spec.md` and `syntax-highlight-lexers/spec.md`
-- [ ] 4.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+- [x] 4.1 Add `code-block` and `syntax-highlight-lexers` rows to the Current Specs list in `AGENTS.md`
+- [x] 4.2 Add a File→Spec mapping row for `webcompy/ui/code_block/` pointing to `code-block/spec.md` and `syntax-highlight-lexers/spec.md`
+- [x] 4.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
 
 ## 5. Verification
 
