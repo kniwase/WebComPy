@@ -255,6 +255,15 @@ class _RealtimeRegistry:
                 del self._connections[key]
                 conn.terminated = True
                 raise
+        else:
+            _warn_on_reconnect_param_mismatch_ws(
+                conn,
+                reconnect,
+                base_delay,
+                max_delay,
+                max_attempts,
+                buffer_while_disconnected,
+            )
         sub = _WSSubscription(_StreamQueue(max_queue), on_state, on_close_info)
         conn.subscribers.add(sub)
         sub.on_state(conn.state)
@@ -475,4 +484,33 @@ def _ws_send(conn: _WSConnection, data: str) -> None:
             "webcompy realtime: use_websocket.send called while the connection is not open; discarding the message",
             UserWarning,
             stacklevel=2,
+        )
+
+
+def _warn_on_reconnect_param_mismatch_ws(
+    conn: _WSConnection,
+    reconnect: bool,
+    base_delay: float,
+    max_delay: float,
+    max_attempts: int | None,
+    buffer_while_disconnected: bool,
+) -> None:
+    mismatched: list[str] = []
+    if reconnect != conn.reconnect:
+        mismatched.append("reconnect")
+    if base_delay != conn.base_delay:
+        mismatched.append("reconnect_base_delay")
+    if max_delay != conn.max_delay:
+        mismatched.append("reconnect_max_delay")
+    if max_attempts != conn.max_attempts:
+        mismatched.append("reconnect_max_attempts")
+    if buffer_while_disconnected != conn.buffer_while_disconnected:
+        mismatched.append("buffer_while_disconnected")
+    if mismatched:
+        warnings.warn(
+            "webcompy realtime: use_websocket subscribed to a shared connection with different "
+            f"reconnection parameter(s): {', '.join(mismatched)}; the existing connection's "
+            "parameters apply",
+            UserWarning,
+            stacklevel=3,
         )

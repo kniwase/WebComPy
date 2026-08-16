@@ -48,6 +48,12 @@ The handle SHALL NOT register any hydration-transfer entry. Binary frames receiv
 - **WHEN** `use_websocket("/ws")` is called with no app DI scope available
 - **THEN** a `UserWarning` SHALL be emitted and a dedicated non-shared connection SHALL be created for that call
 
+#### Scenario: Differing reconnection parameters warn on a shared connection
+
+- **WHEN** a subsequent subscriber requests the same URL and protocols with reconnection parameters that differ from the existing shared connection
+- **THEN** a `UserWarning` SHALL be emitted
+- **AND** the existing connection's parameters SHALL remain in effect for the shared connection
+
 ### Requirement: use_websocket shall reconnect with exponential backoff and jitter after abnormal closure
 
 When the underlying socket closes abnormally (any close other than user-initiated `.close()` or a clean server close with code `1000`) and `reconnect=True`, the shared connection SHALL attempt reconnection: the delay before attempt *n* SHALL be `min(reconnect_max_delay, reconnect_base_delay * 2**(n-1))` multiplied by a uniform random jitter factor in `[0.5, 1.0]`. Attempts SHALL be unlimited unless `reconnect_max_attempts` is an `int`, after which the connection SHALL transition to `CLOSED` and stop. During a backoff wait or in-flight reconnect attempt, `.state` SHALL be `RECONNECTING`; on success it SHALL become `OPEN` and iteration SHALL continue transparently. No reconnect SHALL occur after user-initiated `.close()`, after a clean `1000` close, or when `reconnect=False` (single failure transitions to `CLOSED`).

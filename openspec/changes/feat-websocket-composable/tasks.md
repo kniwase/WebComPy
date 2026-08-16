@@ -54,3 +54,11 @@
 - [x] 8.2 `uv run pyright` passes
 - [x] 8.3 `uv run python -m pytest tests/ --tb=short -q` passes (full suite, no regressions)
 - [x] 8.4 `openspec validate feat-websocket-composable` passes
+
+## 9. Review fixes
+
+- [x] 9.1 Release the connection handle (`close()`) on server-initiated close before notifying subscribers so browser listeners/proxies are freed deterministically and a close-info effect calling `.send()` cannot reach the closed socket (registry `on_close`)
+- [x] 9.2 Handle `open_fn` exceptions during reconnection: warn, and either reschedule or transition to `CLOSED` when `reconnect_max_attempts` is exhausted (registry `_retry`)
+- [x] 9.3 Emit a `UserWarning` when a subsequent subscriber requests the same URL and protocols with differing reconnection parameters; the existing connection's parameters remain in effect (registry `subscribe_ws`)
+- [x] 9.4 Align the delta-spec/design "read-only signal" wording for `.last_close` with the declared `Signal[CloseInfo | None]` type, and document the mismatch warning in the docs page
+- [x] 9.5 Add regression tests for 9.1–9.3 and re-run the full unit suite plus E2E (`interaction`, `docs-documents`)

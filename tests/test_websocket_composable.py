@@ -309,7 +309,8 @@ class TestSendPolicy:
     @pytest.mark.asyncio
     async def test_first_subscriber_reconnect_params_win_on_shared_connection(self, rt_env) -> None:
         a = use_websocket("/ws", buffer_while_disconnected=True)
-        b = use_websocket("/ws", buffer_while_disconnected=False)
+        with pytest.warns(UserWarning, match="reconnection parameter"):
+            b = use_websocket("/ws", buffer_while_disconnected=False)
         assert len(rt_env.port.open_calls) == 1
         b.send("y")
         a.send("x")
@@ -734,3 +735,23 @@ class TestReviewFixes:
         assert calls["open"] >= 3
         registry.dispose()
         await asyncio.sleep(0.2)
+
+    @pytest.mark.asyncio
+    async def test_param_mismatch_warns_on_shared_connection(self, rt_env) -> None:
+        a = use_websocket("/ws", reconnect_base_delay=1.0, buffer_while_disconnected=True)
+        with pytest.warns(UserWarning, match="reconnection parameter"):
+            b = use_websocket("/ws", reconnect_base_delay=2.0, buffer_while_disconnected=False)
+        a.close()
+        b.close()
+
+    @pytest.mark.asyncio
+    async def test_no_warning_when_params_match(self, rt_env) -> None:
+        import warnings as warnings_module
+
+        a = use_websocket("/ws", reconnect_base_delay=1.0, buffer_while_disconnected=True)
+        with warnings_module.catch_warnings(record=True) as recorded:
+            warnings_module.simplefilter("always")
+            b = use_websocket("/ws", reconnect_base_delay=1.0, buffer_while_disconnected=True)
+        assert not any("reconnection parameter" in str(w.message) for w in recorded)
+        a.close()
+        b.close()

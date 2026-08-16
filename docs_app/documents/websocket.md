@@ -79,7 +79,7 @@ one = use_websocket("/api/chat", protocols=("chat.v2",))
 two = use_websocket("/api/chat")  # a separate socket
 ```
 
-Reconnection settings (`reconnect`, the backoff delays, `reconnect_max_attempts`, `buffer_while_disconnected`) are properties of the shared connection, not of individual subscribers: the **first** call's settings win, and later calls with the same URL and protocols reuse that connection's settings.
+Reconnection settings (`reconnect`, the backoff delays, `reconnect_max_attempts`, `buffer_while_disconnected`) are properties of the shared connection, not of individual subscribers: the **first** call's settings win, and later calls with the same URL and protocols reuse that connection's settings. If a later call specifies different reconnection settings, a `UserWarning` is emitted and the existing connection's settings remain in effect.
 
 ## Reconnection
 
