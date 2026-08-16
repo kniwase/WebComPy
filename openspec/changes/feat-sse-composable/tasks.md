@@ -53,7 +53,7 @@
 
 ## 9. Validation
 
-- [ ] 9.1 `uv run ruff check .` and `uv run ruff format --check .` pass
-- [ ] 9.2 `uv run pyright` passes
-- [ ] 9.3 `uv run python -m pytest tests/ --tb=short -q` passes (full suite, no regressions)
-- [ ] 9.4 `openspec validate feat-sse-composable` passes
+- [x] 9.1 `uv run ruff check .` and `uv run ruff format --check .` pass
+- [x] 9.2 `uv run pyright` passes
+- [x] 9.3 `uv run python -m pytest tests/ --tb=short -q` passes (full suite, no regressions)
+- [x] 9.4 `openspec validate feat-sse-composable` passes
