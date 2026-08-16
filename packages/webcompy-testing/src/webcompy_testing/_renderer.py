@@ -9,6 +9,7 @@ from webcompy.ports._keys import (
     ASYNC_SCHEDULER_PORT_KEY,
     CUSTOM_ELEMENT_PORT_KEY,
     DOM_PORT_KEY,
+    EVENT_SOURCE_PORT_KEY,
     FFI_PORT_KEY,
     HOST_PORT_KEY,
     MEDIA_QUERY_PORT_KEY,
@@ -22,6 +23,7 @@ from webcompy_testing._ports import (
     FakeBrowserFFIPort,
     FakeBrowserHostPort,
     FakeCustomElementPort,
+    FakeEventSourcePort,
     FakeMediaQueryPort,
     FakeTransitionPort,
 )
@@ -114,6 +116,10 @@ class TestRendererResult:
     def media_query_port(self) -> FakeMediaQueryPort | None:
         return self._scope.inject(MEDIA_QUERY_PORT_KEY, default=None)
 
+    @property
+    def event_source_port(self) -> FakeEventSourcePort | None:
+        return self._scope.inject(EVENT_SOURCE_PORT_KEY, default=None)
+
 
 class TestRenderer:
     @staticmethod
@@ -144,6 +150,7 @@ class TestRenderer:
             scope.provide(HOST_PORT_KEY, FakeBrowserHostPort())
             scope.provide(FFI_PORT_KEY, FakeBrowserFFIPort())
             scope.provide(CUSTOM_ELEMENT_PORT_KEY, FakeCustomElementPort())
+            scope.provide(EVENT_SOURCE_PORT_KEY, FakeEventSourcePort())
             scope.provide(TRANSITION_PORT_KEY, FakeTransitionPort())
             scope.provide(MEDIA_QUERY_PORT_KEY, FakeMediaQueryPort())
             scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())

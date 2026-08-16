@@ -2,11 +2,11 @@
 
 ## 1. Port layer
 
-- [ ] 1.1 Create `packages/webcompy/src/webcompy/ports/_event_source.py` with the `EventSourcePort` ABC (callback-based open method taking url + event types + callbacks, returning a cleanup callable; no component imports)
-- [ ] 1.2 Add `EVENT_SOURCE_PORT_KEY = InjectKey[EventSourcePort]("webcompy-port-event-source")` to `webcompy/ports/_keys.py` and export `EventSourcePort` from `webcompy/ports/__init__.py`
-- [ ] 1.3 Implement `BrowserEventSourcePort` in `webcompy/ports/_browser/_event_source.py` wrapping native `EventSource` (register listeners for requested event types, forward events, cleanup closes the connection)
-- [ ] 1.4 Implement the server no-op `EventSourcePort` in `webcompy_server/ports/` (no browser API access, returns no-op cleanup)
-- [ ] 1.5 Wire provisioning: browser context provides the browser port, server context the no-op port, testing path the fake port (mirror `CUSTOM_ELEMENT_PORT_KEY` registration sites)
+- [x] 1.1 Create `packages/webcompy/src/webcompy/ports/_event_source.py` with the `EventSourcePort` ABC (callback-based open method taking url + event types + callbacks, returning a cleanup callable; no component imports)
+- [x] 1.2 Add `EVENT_SOURCE_PORT_KEY = InjectKey[EventSourcePort]("webcompy-port-event-source")` to `webcompy/ports/_keys.py` and export `EventSourcePort` from `webcompy/ports/__init__.py`
+- [x] 1.3 Implement `BrowserEventSourcePort` in `webcompy/ports/_browser/_event_source.py` wrapping native `EventSource` (register listeners for requested event types, forward events, cleanup closes the connection)
+- [x] 1.4 Implement the server no-op `EventSourcePort` in `webcompy_server/ports/` (no browser API access, returns no-op cleanup)
+- [x] 1.5 Wire provisioning: browser context provides the browser port, server context the no-op port, testing path the fake port (mirror `CUSTOM_ELEMENT_PORT_KEY` registration sites)
 
 ## 2. Shared connection registry
 
@@ -22,7 +22,7 @@
 
 ## 4. Fake port
 
-- [ ] 4.1 Implement `FakeEventSourcePort` in `webcompy_testing` (instance-local registry keyed by `(url, events)`, idempotent cleanup, scripted `emit_*` helpers with callback-list snapshotting) and provision it in the testing render path
+- [x] 4.1 Implement `FakeEventSourcePort` in `webcompy_testing` (instance-local registry keyed by `(url, events)`, idempotent cleanup, scripted `emit_*` helpers with callback-list snapshotting) and provision it in the testing render path
 
 ## 5. Unit tests (`tests/`, browserless)
 
