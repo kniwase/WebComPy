@@ -6,12 +6,14 @@ from typing import Any
 
 import pytest
 
+from webcompy.components import define_component
 from webcompy.di import DIScope
 from webcompy.di._scope import _active_di_scope
+from webcompy.elements import create_element
 from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._text import TextElement
-from webcompy.ports._keys import DOM_PORT_KEY
-from webcompy.signal import Computed, Signal, SignalBase
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY
+from webcompy.signal import Computed, Signal, SignalBase, use_state
 from webcompy.ui.code_block._component import CodeBlock
 from webcompy.ui.code_block._highlight import highlight
 from webcompy.ui.code_block._tokens import TokenType
@@ -20,6 +22,7 @@ from webcompy.ui.code_block.lexers._registry import (
     register_lexer,
     reset_lexer_registry,
 )
+from webcompy_testing import TestRenderer, run_sync
 from webcompy_testing._ports import FakeBrowserDOMPort
 
 _SPAN_RE = re.compile(r'<span class="([^"]+)">(.*?)</span>', re.DOTALL)
@@ -139,6 +142,44 @@ def test_codeblock_reactive_path_retokenizes_on_signal_update() -> None:
     updated = rep._sequence.value
     assert any(t.type is TokenType.NUMBER and t.value == "42" for t in updated)
     assert not any(t.value == "def" for t in updated)
+
+
+def test_codeblock_reactive_update_rerenders_token_spans() -> None:
+    """A signal update MUST re-render the token spans through the render
+    machinery: the RepeatElement rebuilds its children and the new tokens
+    replace the old ones in the rendered output."""
+    captured: dict[str, Any] = {}
+
+    @define_component("code-block-render-page")
+    def CodeBlockRenderPage(context):
+        code = use_state(lambda: "def foo(): pass")
+        captured["code"] = code
+        return create_element(
+            "div",
+            {},
+            CodeBlock({"code": code, "lang": "python"}),
+        )
+
+    with TestRenderer.render(CodeBlockRenderPage) as result:
+        code_el = result.query_selector("code")
+        assert code_el is not None
+        assert code_el.getAttribute("class") == "language-python"
+        initial_classes = [span.getAttribute("class") for span in code_el.childNodes]
+        assert len(initial_classes) > 0
+        assert all(c is not None and c.startswith("tok-") for c in initial_classes)
+        assert result.find_by_text("def") is not None
+
+        captured["code"].value = "x = 42"
+        scheduler = result._scope.inject(ASYNC_SCHEDULER_PORT_KEY)
+        run_sync(scheduler.drain())
+
+        assert result.find_by_text("42") is not None
+        assert result.find_by_text("def") is None
+        code_el = result.query_selector("code")
+        assert code_el is not None
+        updated_classes = [span.getAttribute("class") for span in code_el.childNodes]
+        assert len(updated_classes) > 0
+        assert "tok-num m" in updated_classes
 
 
 def test_codeblock_unknown_language_renders_single_tok_ident_span() -> None:
