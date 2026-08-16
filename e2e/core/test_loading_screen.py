@@ -163,7 +163,10 @@ def test_dormant_treatment_during_boot(page, server_url):
         timeout=15000,
     )
     page.wait_for_selector("#webcompy-loading", state="hidden", timeout=120000)
-    assert page.evaluate("getComputedStyle(document.querySelector('#webcompy-app')).opacity") == "1"
+    page.wait_for_function(
+        "() => getComputedStyle(document.querySelector('#webcompy-app')).opacity === '1'",
+        timeout=10000,
+    )
 
 
 def test_block_policy_intercepts_clicks(page, server_url):
