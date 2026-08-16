@@ -47,9 +47,9 @@
 
 ## 8. Review knowledge sync
 
-- [ ] 8.1 Update `AGENTS.md`: File → Spec Mapping rows for `webcompy/realtime/`, `ports/_event_source.py`, `ports/_browser/_event_source.py`; Current Specs entries for `sse-composable`
-- [ ] 8.2 Update `.opencode/skills/webcompy-review/SKILL.md` file→spec mapping and Critical Framework Invariants if a new invariant is introduced
-- [ ] 8.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+- [x] 8.1 Update `AGENTS.md`: File → Spec Mapping rows for `webcompy/realtime/`, `ports/_event_source.py`, `ports/_browser/_event_source.py`; Current Specs entries for `sse-composable`
+- [x] 8.2 Update `.opencode/skills/webcompy-review/SKILL.md` file→spec mapping and Critical Framework Invariants if a new invariant is introduced
+- [x] 8.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
 
 ## 9. Validation
 
