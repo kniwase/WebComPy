@@ -67,6 +67,12 @@ Token spans are now real serialized elements, so scoped-style contexts add `webc
 
 The acceptance check "prerendered token spans are adopted during hydration" (delta spec scenario) relies on the adoption behavior introduced by change `fix-hydration-adopt-and-render`, which is in flight and not merged into main. Task breakdown keeps the unit-level structure tests unconditional; the browser-level identity measurement is performed if that change has merged, otherwise recorded as deferred with the dependency noted.
 
+### D9 — Spec-only correction of the Bash variable-reference contradiction
+
+`openspec/specs/syntax-highlight-lexers/spec.md` requires `BashLexer` to strip the leading `$` (and braces) from `$NAME` / `${NAME}` references, but the implementation (`lexers/_bash.py` yields the full match verbatim), the `code-block` spec ("The `$` prefix is preserved in the token value so the rendered HTML faithfully displays the variable syntax"), and `tests/test_code_block_lexers.py` (asserts `$HOME` and `${PATH}`) all agree on preservation. This change corrects the `syntax-highlight-lexers` requirement to match — a spec-only fix with no lexer code changes, discovered while adding the AGENTS.md rows for this area (D7).
+
+- Alternative considered: leaving the contradiction for a later change. Rejected: this is the first change to touch `webcompy/ui/code_block/` documentation, the user plans to sync and archive these specs, and the correction is confined to a single requirement paragraph plus its two scenarios.
+
 ## Risks / Trade-offs
 
 - [Wrapper removal breaks downstream CSS] → No framework CSS references the wrapper; noted in proposal Impact. Fallback: re-add a plain wrapper `<span>` in the component without `raw_html` if a downstream report surfaces.

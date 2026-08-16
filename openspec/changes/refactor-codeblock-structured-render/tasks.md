@@ -16,6 +16,7 @@
 
 - [x] 3.1 Rewrite `tests/test_code_block_component.py` to assert the structured child shape (span elements with expected classes as `code` children, no wrapper, text as text nodes) for static, reactive, fallback, and empty cases
 - [x] 3.2 Add unit coverage that class strings match the public `highlight()` output span-for-span (guard against drift between the two renderers)
+- [x] 3.3 Add a `TestRenderer`-based test that a signal update re-renders the token spans through the render machinery (old tokens disappear, new tokens appear, classes update)
 
 ## 4. Docs Maintenance (AGENTS.md Spec References)
 
@@ -33,3 +34,9 @@
 - [x] 5.6 If change `fix-hydration-adopt-and-render` is merged into the base branch, run the browser measurement script and confirm prerendered token spans survive hydration (alive count includes all `tok-*` spans); otherwise record the check as deferred with the dependency noted — **deferred: `fix-hydration-adopt-and-render` is not merged into HEAD or origin/main (verified via `git merge-base --is-ancestor`); the identity-preservation acceptance check runs once that change merges**
 - [x] 5.7 Compare SSG HTML size for a code-heavy docs page before/after to quantify the D6 payload delta; record the result in design.md
 - [x] 5.8 Run `openspec validate refactor-codeblock-structured-render --strict` and confirm the change artifacts are valid
+
+## 6. Review Follow-ups (Spec Corrections)
+
+- [x] 6.1 Clarify empty-code precedence in the code-block delta spec: requirement wording and the "Unknown language" / "Empty code" scenarios now state that empty code renders no spans regardless of language (matches implementation and `test_codeblock_empty_code_unknown_language_renders_no_children`)
+- [x] 6.2 Add a `syntax-highlight-lexers` delta spec correcting the Bash variable-reference requirement to verbatim preservation of `$NAME` / `${NAME}` (D9); update proposal.md, design.md, and tasks.md accordingly
+- [x] 6.3 Re-run `openspec validate refactor-codeblock-structured-render --strict` and `python3 scripts/check-doc-spec-refs.py` after the spec updates
