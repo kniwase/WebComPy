@@ -487,4 +487,58 @@ class TestPortOpenFailure:
         rt_env.port.emit_event("/events", "message", "m2", "2")
         got_b = await _collect(b, limit=1)
         assert got_b == [SSEvent(event="message", data="m2", last_event_id="2")]
-        b.close()
+
+
+class TestArgumentValidation:
+    def test_events_rejects_bare_string(self, rt_env) -> None:
+        events: Any = "message"
+        with pytest.raises(TypeError):
+            use_event_source("/events", events=events)
+        assert rt_env.port._registrations == []
+
+    def test_events_rejects_empty(self, rt_env) -> None:
+        with pytest.raises(ValueError):
+            use_event_source("/events", events=())
+        assert rt_env.port._registrations == []
+
+    def test_events_rejects_non_string_element(self, rt_env) -> None:
+        events: Any = ("message", 1)
+        with pytest.raises(TypeError):
+            use_event_source("/events", events=events)
+        assert rt_env.port._registrations == []
+
+    def test_events_rejects_empty_string_element(self, rt_env) -> None:
+        with pytest.raises(TypeError):
+            use_event_source("/events", events=("",))
+        assert rt_env.port._registrations == []
+
+    def test_max_queue_rejects_zero(self, rt_env) -> None:
+        with pytest.raises(ValueError):
+            use_event_source("/events", max_queue=0)
+        assert rt_env.port._registrations == []
+
+    def test_max_queue_rejects_negative(self, rt_env) -> None:
+        with pytest.raises(ValueError):
+            use_event_source("/events", max_queue=-1)
+        assert rt_env.port._registrations == []
+
+    def test_max_queue_rejects_non_int(self, rt_env) -> None:
+        bad_bool: Any = True
+        bad_str: Any = "5"
+        with pytest.raises(TypeError):
+            use_event_source("/events", max_queue=bad_bool)
+        with pytest.raises(TypeError):
+            use_event_source("/events", max_queue=bad_str)
+        assert rt_env.port._registrations == []
+
+    @pytest.mark.asyncio
+    async def test_max_queue_one_keeps_newest_event(self, rt_env) -> None:
+        es = use_event_source("/events", max_queue=1)
+        for i in range(3):
+            rt_env.port.emit_event("/events", "message", f"m{i}", str(i))
+        got = await _collect(es, limit=1)
+        assert [ev.data for ev in got] == ["m2"]
+
+    def test_valid_arguments_are_not_rejected(self, rt_env) -> None:
+        es = use_event_source("/events", events=("message",), max_queue=5)
+        es.close()

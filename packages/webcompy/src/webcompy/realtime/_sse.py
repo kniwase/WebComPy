@@ -212,6 +212,18 @@ def use_event_source(
     """
     from webcompy.di import inject
 
+    if isinstance(events, str):
+        raise TypeError("use_event_source: 'events' must be a tuple of strings, not a bare string")
+    if not events:
+        raise ValueError("use_event_source: 'events' must contain at least one event type")
+    if any(not isinstance(event_type, str) or not event_type for event_type in events):
+        raise TypeError("use_event_source: 'events' must contain only non-empty strings")
+    if max_queue is not None:
+        if isinstance(max_queue, bool) or not isinstance(max_queue, int):
+            raise TypeError("use_event_source: 'max_queue' must be an int greater than or equal to 1 or None")
+        if max_queue < 1:
+            raise ValueError("use_event_source: 'max_queue' must be an int greater than or equal to 1 or None")
+
     port = inject(EVENT_SOURCE_PORT_KEY, default=None)
     if port is None:
         warnings.warn(_NO_PORT_MSG, UserWarning, stacklevel=2)
