@@ -44,9 +44,9 @@
 
 ## 7. Review knowledge sync
 
-- [ ] 7.1 Update `AGENTS.md`: File → Spec Mapping rows for the new realtime/ports files; Current Specs entry for `websocket-composable`
-- [ ] 7.2 Update `.opencode/skills/webcompy-review/SKILL.md` file→spec mapping and Critical Framework Invariants if a new invariant is introduced
-- [ ] 7.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+- [x] 7.1 Update `AGENTS.md`: File → Spec Mapping rows for the new realtime/ports files; Current Specs entry for `websocket-composable`
+- [x] 7.2 Update `.opencode/skills/webcompy-review/SKILL.md` file→spec mapping and Critical Framework Invariants if a new invariant is introduced
+- [x] 7.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
 
 ## 8. Validation
 
