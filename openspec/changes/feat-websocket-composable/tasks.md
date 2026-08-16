@@ -2,24 +2,24 @@
 
 ## 1. Port layer
 
-- [ ] 1.1 Create `packages/webcompy/src/webcompy/ports/_websocket.py` with the `WebSocketPort` ABC (callback-based open returning a handle with `send(text)`/`close()`; no component imports)
-- [ ] 1.2 Add `WEBSOCKET_PORT_KEY = InjectKey[WebSocketPort]("webcompy-port-websocket")` to `webcompy/ports/_keys.py` and export `WebSocketPort` from `webcompy/ports/__init__.py`
-- [ ] 1.3 Implement `BrowserWebSocketPort` in `webcompy/ports/_browser/_websocket.py` wrapping native `WebSocket` (message/close/error forwarding, send, close)
-- [ ] 1.4 Implement the server no-op `WebSocketPort` in `webcompy_server/ports/`
-- [ ] 1.5 Wire provisioning for browser / server (no-op) / testing (fake) render contexts (mirror the `EVENT_SOURCE_PORT_KEY` registration sites)
+- [x] 1.1 Create `packages/webcompy/src/webcompy/ports/_websocket.py` with the `WebSocketPort` ABC (callback-based open returning a handle with `send(text)`/`close()`; no component imports)
+- [x] 1.2 Add `WEBSOCKET_PORT_KEY = InjectKey[WebSocketPort]("webcompy-port-websocket")` to `webcompy/ports/_keys.py` and export `WebSocketPort` from `webcompy/ports/__init__.py`
+- [x] 1.3 Implement `BrowserWebSocketPort` in `webcompy/ports/_browser/_websocket.py` wrapping native `WebSocket` (message/close/error forwarding, send, close)
+- [x] 1.4 Implement the server no-op `WebSocketPort` in `webcompy_server/ports/`
+- [x] 1.5 Wire provisioning for browser / server (no-op) / testing (fake) render contexts (mirror the `EVENT_SOURCE_PORT_KEY` registration sites)
 
 ## 2. Composable
 
-- [ ] 2.1 Add the additive `RECONNECTING` member to the shared `ConnectionState` enum and the `CloseInfo` frozen dataclass in `webcompy/realtime/`
-- [ ] 2.2 Create `packages/webcompy/src/webcompy/realtime/_ws.py` with the WebSocket connection handle (AsyncIterator[str] + `.state` + `.last_close` + `.send()` + idempotent `.close()`), reusing `_registry.py` with the `(url, normalized_protocols)` key component
-- [ ] 2.3 Implement the reconnection loop on the registry-owned connection: exponential backoff `min(max_delay, base * 2**(n-1))` with jitter `[0.5, 1.0]`, unlimited attempts by default, `RECONNECTING` state during backoff/in-flight attempts, stop conditions (user close, clean 1000, `reconnect=False`, exhausted `reconnect_max_attempts` → `CLOSED`)
-- [ ] 2.4 Implement `.last_close` updates on every close (no reset on reopen) and the send policy (warn+discard default; opt-in FIFO buffer flushed on OPEN, discarded on terminal CLOSED)
-- [ ] 2.5 Implement no-DI-scope warning + private-connection fallback, native-URL passthrough, component-destroy detach, `weakref.finalize` protection, binary-frame ignore+warn, and SSR behavior (empty iterator, CLOSED, warning, no transfer)
-- [ ] 2.6 Export `use_websocket` and `CloseInfo` from `webcompy/realtime/__init__.py` and `webcompy/__init__.py`
+- [x] 2.1 Add the additive `RECONNECTING` member to the shared `ConnectionState` enum and the `CloseInfo` frozen dataclass in `webcompy/realtime/`
+- [x] 2.2 Create `packages/webcompy/src/webcompy/realtime/_ws.py` with the WebSocket connection handle (AsyncIterator[str] + `.state` + `.last_close` + `.send()` + idempotent `.close()`), reusing `_registry.py` with the `(url, normalized_protocols)` key component
+- [x] 2.3 Implement the reconnection loop on the registry-owned connection: exponential backoff `min(max_delay, base * 2**(n-1))` with jitter `[0.5, 1.0]`, unlimited attempts by default, `RECONNECTING` state during backoff/in-flight attempts, stop conditions (user close, clean 1000, `reconnect=False`, exhausted `reconnect_max_attempts` → `CLOSED`)
+- [x] 2.4 Implement `.last_close` updates on every close (no reset on reopen) and the send policy (warn+discard default; opt-in FIFO buffer flushed on OPEN, discarded on terminal CLOSED)
+- [x] 2.5 Implement no-DI-scope warning + private-connection fallback, native-URL passthrough, component-destroy detach, `weakref.finalize` protection, binary-frame ignore+warn, and SSR behavior (empty iterator, CLOSED, warning, no transfer)
+- [x] 2.6 Export `use_websocket` and `CloseInfo` from `webcompy/realtime/__init__.py` and `webcompy/__init__.py`
 
 ## 3. Fake port
 
-- [ ] 3.1 Implement `FakeWebSocketPort` in `webcompy_testing` (instance-local registry keyed by `(url, protocols)`, sent-frames log, scripted `emit_message`/`emit_close`/open/error helpers with snapshotting, idempotent close) and provision it in the testing render path
+- [x] 3.1 Implement `FakeWebSocketPort` in `webcompy_testing` (instance-local registry keyed by `(url, protocols)`, sent-frames log, scripted `emit_message`/`emit_close`/open/error helpers with snapshotting, idempotent close) and provision it in the testing render path
 
 ## 4. Unit tests (`tests/`, browserless)
 

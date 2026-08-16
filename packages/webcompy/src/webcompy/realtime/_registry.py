@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
+import random
+import warnings
 from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, TypeVar
 
+from webcompy.aio._aio import aio_run
 from webcompy.aio._stream import _StreamQueue
 
 T = TypeVar("T")
@@ -15,7 +20,18 @@ _STOP: Any = object()
 class ConnectionState(Enum):
     CONNECTING = "connecting"
     OPEN = "open"
+    RECONNECTING = "reconnecting"
     CLOSED = "closed"
+
+
+@dataclass(frozen=True)
+class CloseInfo:
+    code: int
+    reason: str
+    was_clean: bool
+
+
+_WS_BINARY_MSG = "webcompy realtime: received a binary WebSocket frame; ignoring it"
 
 
 class _Subscription:
@@ -55,7 +71,7 @@ class _Connection:
 
 class _RealtimeRegistry:
     def __init__(self) -> None:
-        self._connections: dict[tuple[str, str], _Connection] = {}
+        self._connections: dict[tuple[str, Any], Any] = {}
 
     def subscribe(
         self,
@@ -130,6 +146,9 @@ class _RealtimeRegistry:
         connections = list(self._connections.values())
         self._connections.clear()
         for conn in connections:
+            if isinstance(conn, _WSConnection):
+                self._terminate_ws(conn)
+                continue
             conn.state = ConnectionState.CLOSED
             self._notify_state(conn)
             for sub in list(conn.subscribers):
@@ -194,6 +213,247 @@ class _RealtimeRegistry:
 
         return open_fn(tuple(conn.event_types), on_open, on_message, on_error, on_close)
 
-    def _notify_state(self, conn: _Connection) -> None:
+    def _notify_state(self, conn: _Connection | _WSConnection) -> None:
         for sub in list(conn.subscribers):
             sub.on_state(conn.state)
+
+    def subscribe_ws(
+        self,
+        transport: str,
+        key_component: Any,
+        *,
+        max_queue: int | None,
+        on_state: Callable[[ConnectionState], None],
+        on_close_info: Callable[[CloseInfo | None], None],
+        open_fn: Callable[..., Any],
+        reconnect: bool,
+        base_delay: float,
+        max_delay: float,
+        max_attempts: int | None,
+        buffer_while_disconnected: bool,
+    ) -> tuple[_WSSubscription, _WSConnection]:
+        key = (transport, key_component)
+        conn = self._connections.get(key)
+        if conn is None or not isinstance(conn, _WSConnection):
+            conn = _WSConnection(
+                key,
+                open_fn=open_fn,
+                reconnect=reconnect,
+                base_delay=base_delay,
+                max_delay=max_delay,
+                max_attempts=max_attempts,
+                buffer_while_disconnected=buffer_while_disconnected,
+            )
+            self._connections[key] = conn
+            try:
+                self._ws_open(conn)
+            except Exception:
+                del self._connections[key]
+                conn.terminated = True
+                raise
+        sub = _WSSubscription(_StreamQueue(max_queue), on_state, on_close_info)
+        conn.subscribers.add(sub)
+        sub.on_state(conn.state)
+        sub.on_close_info(conn.last_close)
+        return sub, conn
+
+    def unsubscribe_ws(self, transport: str, key_component: Any, sub: _WSSubscription) -> None:
+        key = (transport, key_component)
+        conn = self._connections.get(key)
+        if conn is None or not isinstance(conn, _WSConnection):
+            return
+        conn.subscribers.discard(sub)
+        if conn.subscribers:
+            return
+        if self._connections.get(conn.key) is conn:
+            del self._connections[conn.key]
+        self._terminate_ws(conn)
+
+    def _ws_open(self, conn: _WSConnection) -> None:
+        conn.generation += 1
+        gen = conn.generation
+
+        def _is_stale() -> bool:
+            return conn.terminated or gen != conn.generation
+
+        def on_open() -> None:
+            if _is_stale():
+                return
+            conn.state = ConnectionState.OPEN
+            conn.attempts = 0
+            self._notify_state(conn)
+            if conn.send_buffer:
+                for data in conn.send_buffer:
+                    if conn.connection is not None:
+                        conn.connection.send(data)
+                conn.send_buffer = []
+
+        def on_message(text: str) -> None:
+            if _is_stale():
+                return
+            for sub in list(conn.subscribers):
+                sub.queue.put_nowait(text)
+
+        def on_binary() -> None:
+            if _is_stale():
+                return
+            warnings.warn(_WS_BINARY_MSG, UserWarning, stacklevel=2)
+
+        def on_error() -> None:
+            if _is_stale():
+                return
+
+        def on_close(code: int, reason: str, was_clean: bool) -> None:
+            if _is_stale():
+                return
+            conn.last_close = CloseInfo(code, reason, was_clean)
+            for sub in list(conn.subscribers):
+                sub.on_close_info(conn.last_close)
+            conn.connection = None
+            if self._should_stop_ws(conn, code):
+                self._terminate_ws(conn)
+                if self._connections.get(conn.key) is conn:
+                    del self._connections[conn.key]
+                return
+            conn.attempts += 1
+            conn.state = ConnectionState.RECONNECTING
+            self._notify_state(conn)
+            self._schedule_retry_ws(conn)
+
+        conn.connection = conn.open_fn(
+            on_open=on_open,
+            on_message=on_message,
+            on_binary=on_binary,
+            on_error=on_error,
+            on_close=on_close,
+        )
+
+    def _should_stop_ws(self, conn: _WSConnection, code: int) -> bool:
+        return (
+            not conn.reconnect or code == 1000 or (conn.max_attempts is not None and conn.attempts >= conn.max_attempts)
+        )
+
+    def _schedule_retry_ws(self, conn: _WSConnection) -> None:
+        conn.retry_token += 1
+        token = conn.retry_token
+        delay = _compute_reconnect_delay(conn.attempts, conn.base_delay, conn.max_delay)
+
+        async def _retry() -> None:
+            try:
+                await asyncio.sleep(delay)
+            except asyncio.CancelledError:
+                return
+            if conn.terminated or token != conn.retry_token:
+                return
+            if self._connections.get(conn.key) is not conn:
+                return
+            self._ws_open(conn)
+
+        aio_run(_retry())
+
+    def _terminate_ws(self, conn: _WSConnection) -> None:
+        conn.terminated = True
+        conn.retry_token += 1
+        conn.state = ConnectionState.CLOSED
+        self._notify_state(conn)
+        for sub in list(conn.subscribers):
+            sub.queue.put_nowait(_STOP)
+        if conn.connection is not None:
+            conn.connection.close()
+            conn.connection = None
+        conn.send_buffer = []
+
+
+class _WSSubscription:
+    __slots__ = ("on_close_info", "on_state", "queue")
+
+    def __init__(
+        self,
+        queue: _StreamQueue[Any],
+        on_state: Callable[[ConnectionState], None],
+        on_close_info: Callable[[CloseInfo | None], None],
+    ) -> None:
+        self.queue = queue
+        self.on_state = on_state
+        self.on_close_info = on_close_info
+
+
+class _WSConnection:
+    __slots__ = (
+        "attempts",
+        "base_delay",
+        "buffer_while_disconnected",
+        "connection",
+        "generation",
+        "key",
+        "last_close",
+        "max_attempts",
+        "max_delay",
+        "open_fn",
+        "reconnect",
+        "retry_token",
+        "send_buffer",
+        "state",
+        "subscribers",
+        "terminated",
+    )
+
+    def __init__(
+        self,
+        key: tuple[str, Any],
+        *,
+        open_fn: Callable[..., Any],
+        reconnect: bool,
+        base_delay: float,
+        max_delay: float,
+        max_attempts: int | None,
+        buffer_while_disconnected: bool,
+    ) -> None:
+        self.key = key
+        self.open_fn = open_fn
+        self.reconnect = reconnect
+        self.base_delay = base_delay
+        self.max_delay = max_delay
+        self.max_attempts = max_attempts
+        self.buffer_while_disconnected = buffer_while_disconnected
+        self.subscribers: set[_WSSubscription] = set()
+        self.state = ConnectionState.CONNECTING
+        self.last_close: CloseInfo | None = None
+        self.connection: Any = None
+        self.generation = 0
+        self.attempts = 0
+        self.retry_token = 0
+        self.send_buffer: list[str] = []
+        self.terminated = False
+
+
+def _compute_reconnect_delay(attempt: int, base_delay: float, max_delay: float) -> float:
+    """Delay before reconnect attempt ``attempt`` (1-based).
+
+    The backoff is ``min(max_delay, base_delay * 2 ** (attempt - 1))``
+    multiplied by a uniform random jitter factor in ``[0.5, 1.0]``.
+    """
+    backoff = min(max_delay, base_delay * (2 ** (attempt - 1)))
+    return backoff * random.uniform(0.5, 1.0)
+
+
+def _ws_send(conn: _WSConnection, data: str) -> None:
+    if conn.terminated or conn.state is ConnectionState.CLOSED:
+        warnings.warn(
+            "webcompy realtime: use_websocket.send called while the connection is closed; discarding the message",
+            UserWarning,
+            stacklevel=2,
+        )
+        return
+    if conn.state is ConnectionState.OPEN:
+        if conn.connection is not None:
+            conn.connection.send(data)
+        return
+    if conn.buffer_while_disconnected:
+        conn.send_buffer.append(data)
+    else:
+        warnings.warn(
+            "webcompy realtime: use_websocket.send called while the connection is not open; discarding the message",
+            UserWarning,
+            stacklevel=2,
+        )
