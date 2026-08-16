@@ -113,7 +113,7 @@ Demo iframes with no extra packages SHALL include `interpreter` and `lockFileURL
 - **AND** bare package names `"numpy"` and `"matplotlib"` SHALL resolve from the CDN
 
 ### Requirement: Demo iframes SHALL display a loading screen during Pyodide initialization
-Each demo iframe SHALL display a loading screen overlay (spinner on semi-transparent background) immediately when the iframe loads, before Pyodide initializes. The loading screen SHALL be automatically removed by the framework when `AppDocumentRoot._render()` completes its first render.
+Each demo iframe SHALL display a loading screen overlay immediately when the iframe loads, before Pyodide initializes. The demo loading screen SHALL visually match the framework's refined default `overlay` presentation (compact spinner on a lightly translucent backdrop) while keeping the `#webcompy-loading` element contract. The loading screen SHALL be automatically removed by the framework when `AppDocumentRoot._render()` completes its first render.
 
 #### Scenario: Loading screen appears before Pyodide starts
 - **WHEN** an iframe loads `standard.html`
