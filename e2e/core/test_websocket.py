@@ -37,8 +37,6 @@ def test_websocket_reconnects_after_server_initiated_close(page_on, serving_mode
 
     page.locator("[data-testid='kill-btn']").click()
 
+    expect(page.locator("[data-testid='conn-a']")).not_to_have_text(conn_a_before, timeout=30_000)
     expect(page.locator("[data-testid='state-a']")).to_have_text("OPEN", timeout=30_000)
-    conn_a_after = page.locator("[data-testid='conn-a']").text_content()
-    assert conn_a_after
-    assert conn_a_after != conn_a_before
     expect(page.locator("[data-testid='last-close-a']")).to_have_text("1011", timeout=30_000)

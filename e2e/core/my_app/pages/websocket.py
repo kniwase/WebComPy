@@ -6,10 +6,11 @@ from webcompy.signal import use_computed
 
 
 def _conn_id(stream) -> str:
+    last = ""
     for item in stream.items.value:
         if item.startswith("conn:"):
-            return item
-    return ""
+            last = item
+    return last
 
 
 def _messages(stream) -> list[str]:
@@ -33,10 +34,10 @@ def WebSocketPage(context: ComponentContext[None]):
     messages_b = use_computed(lambda: _messages(stream_b))
     last_close_a = use_computed(lambda: "" if ws_a.last_close.value is None else str(ws_a.last_close.value.code))
 
-    def _send() -> None:
+    def _send(_) -> None:
         ws_a.send("hello")
 
-    def _kill() -> None:
+    def _kill(_) -> None:
         ws_a.send("kill")
 
     return html.DIV(
@@ -47,8 +48,8 @@ def WebSocketPage(context: ComponentContext[None]):
         html.P({}, "Conn A: ", html.SPAN({"data-testid": "conn-a"}, conn_a)),
         html.P({}, "Conn B: ", html.SPAN({"data-testid": "conn-b"}, conn_b)),
         html.P({}, "Last close A: ", html.SPAN({"data-testid": "last-close-a"}, last_close_a)),
-        html.BUTTON({"data-testid": "send-btn", "onclick": _send}, "Send"),
-        html.BUTTON({"data-testid": "kill-btn", "onclick": _kill}, "Kill"),
+        html.BUTTON({"data-testid": "send-btn", "@click": _send}, "Send"),
+        html.BUTTON({"data-testid": "kill-btn", "@click": _kill}, "Kill"),
         html.H3({}, "Consumer A"),
         html.UL(
             {"data-testid": "messages-a"},
