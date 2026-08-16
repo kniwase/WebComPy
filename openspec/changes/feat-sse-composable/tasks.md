@@ -26,14 +26,14 @@
 
 ## 5. Unit tests (`tests/`, browserless)
 
-- [ ] 5.1 Handle contract: async iteration yields `SSEvent`s in order including duplicates; `.state` transitions CONNECTING → OPEN → CLOSED; importable from `webcompy` and `webcompy.realtime`
-- [ ] 5.2 Event filtering: default delivers only `message`; `events=("status",)` filters named types; `last_event_id` is carried
-- [ ] 5.3 Registry: same-URL subscribers share one connection (one port open call); each receives events independently; slow consumer does not block others; last detach closes the connection; different URLs open separate connections
-- [ ] 5.4 Queue policy: unbounded default preserves all events; `max_queue=2` drops oldest per subscriber without affecting others
-- [ ] 5.5 close semantics: `.close()` detaches only self (shared connection stays open for others), iterator finishes, idempotent
-- [ ] 5.6 Fallback: no app DI scope emits `UserWarning` and creates independent private connections
-- [ ] 5.7 SSR: no port access, empty iterator, `state == CLOSED`, warning, no transfer payload entry
-- [ ] 5.8 Lifecycle: component destroy detaches; `async for` + `break` without close does not leak the reference count (GC-triggered finalize)
+- [x] 5.1 Handle contract: async iteration yields `SSEvent`s in order including duplicates; `.state` transitions CONNECTING → OPEN → CLOSED; importable from `webcompy` and `webcompy.realtime`
+- [x] 5.2 Event filtering: default delivers only `message`; `events=("status",)` filters named types; `last_event_id` is carried
+- [x] 5.3 Registry: same-URL subscribers share one connection (one port open call); each receives events independently; slow consumer does not block others; last detach closes the connection; different URLs open separate connections
+- [x] 5.4 Queue policy: unbounded default preserves all events; `max_queue=2` drops oldest per subscriber without affecting others
+- [x] 5.5 close semantics: `.close()` detaches only self (shared connection stays open for others), iterator finishes, idempotent
+- [x] 5.6 Fallback: no app DI scope emits `UserWarning` and creates independent private connections
+- [x] 5.7 SSR: no port access, empty iterator, `state == CLOSED`, warning, no transfer payload entry
+- [x] 5.8 Lifecycle: component destroy detaches; `async for` + `break` without close does not leak the reference count (GC-triggered finalize)
 
 ## 6. E2E tests (`e2e/core/`)
 
