@@ -37,8 +37,8 @@
 
 ## 6. E2E tests (`e2e/core/`)
 
-- [ ] 6.1 Add a test SSE endpoint to the E2E app via `WebComPyServerConfig.mounts` (asgi-mount) that streams a fixed event sequence
-- [ ] 6.2 Add an E2E page + Playwright test asserting received events render (shared connection visible: two consumers, one connection), gated by `WEBCOMPY_RUN_E2E=1` and wired into `scripts/run-e2e-tests.sh`
+- [x] 6.1 Add a test SSE endpoint to the E2E app via `WebComPyServerConfig.mounts` (asgi-mount) that streams a fixed event sequence
+- [x] 6.2 Add an E2E page + Playwright test asserting received events render (shared connection visible: two consumers, one connection), gated by `WEBCOMPY_RUN_E2E=1` and wired into `scripts/run-e2e-tests.sh`
 
 ## 7. Docs (Markdown-driven, per docs-site-documents)
 

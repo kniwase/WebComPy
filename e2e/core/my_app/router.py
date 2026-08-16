@@ -10,6 +10,7 @@ from .pages.di_test import DiInjectPage, DiProviderWrapper
 from .pages.dict_repeat import DictRepeatPage
 from .pages.error_handling import CatchEventsPage, ErrorBoundaryPage, NestedCrashPage
 from .pages.event import EventPage
+from .pages.event_source import EventSourcePage
 from .pages.form_fields import FormFieldsPage
 from .pages.home import HomePage
 from .pages.html_parser_parity import HtmlParserParityPage
@@ -50,6 +51,7 @@ router = Router(
     {"path": "/component/classstyle", "component": ClassStylePage},
     {"path": "/custom-elements", "component": CustomElementPage},
     {"path": "/event", "component": EventPage},
+    {"path": "/event-source", "component": EventSourcePage},
     {"path": "/window-events", "component": WindowEventsPage},
     {"path": "/switch", "component": SwitchPage},
     {"path": "/repeat", "component": RepeatPage},
