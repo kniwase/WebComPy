@@ -81,7 +81,7 @@ class _HtmlElement(Element):
 
 
 class _Loadscreen(_HtmlElement):
-    def __init__(self, mode: str, structure: str, loading: dict, selector: str) -> None:
+    def __init__(self, mode: str, structure: str, loading: dict) -> None:
         delay_ms = loading["reveal_delay_ms"]
         fade_ms = loading["fade_out_ms"]
         children: list[ElementChildren] = []
@@ -129,8 +129,6 @@ class _Loadscreen(_HtmlElement):
         }
         if mode == "content":
             attrs["data-wc-interaction"] = loading["interaction"]
-            if loading["interaction"] == "inert":
-                attrs["data-wc-selector"] = selector
         super().__init__("div", attrs, *children)
 
 
@@ -155,7 +153,7 @@ _LOADING_BASE_CSS = (
     "background:light-dark(#e5e7eb, #374151);} "
     ".wc-status{opacity:0;animation:wc-reveal 0.01s linear var(--wc-delay, 350ms) forwards;"
     "text-align:center;color:light-dark(#333333, #cccccc);font-family:system-ui, sans-serif;"
-    "font-size:14px;min-height:1.5em;pointer-events:auto;} "
+    "font-size:14px;min-height:1.5em;} "
     "#webcompy-loading[data-wc-mode='content'] .wc-status{position:fixed;left:16px;bottom:16px;text-align:left;} "
     ".wc-substatus{display:block;font-size:12px;opacity:0.7;} "
     ".wc-timeout{color:light-dark(#333333, #cccccc);font-family:system-ui, sans-serif;"
@@ -220,6 +218,7 @@ def _resolve_loading_config(config: dict | None) -> dict:
     merged = dict(_LOADING_DEFAULTS)
     if config:
         merged.update(config)
+    merged["messages"] = dict(merged["messages"])
     return merged
 
 
@@ -255,6 +254,9 @@ _LOADING_STAGE_EVENTS = [
 _LOADING_CONTROLLER_TEMPLATE = """(function () {
   var root = document.getElementById("webcompy-loading");
   if (!root) return;
+  if (root.hasAttribute("data-wc-fade")) {
+    root.style.setProperty("--wc-fade", root.getAttribute("data-wc-fade") + "ms");
+  }
   var CONFIG = __WC_CONFIG__;
   var STAGES = __WC_STAGES__;
   var CEILINGS = __WC_CEILINGS__;
@@ -264,13 +266,20 @@ _LOADING_CONTROLLER_TEMPLATE = """(function () {
   var barEl = root.querySelector("[data-wc-bar]");
   var timeoutEl = root.querySelector("[data-wc-timeout]");
   var reloadEl = root.querySelector("[data-wc-reload]");
-  var stage = -1;
+  if (timeoutEl) timeoutEl.hidden = true;
+  var STAGE_KEYS = Object.keys(CEILINGS);
+  var ceiling = CONFIG.stages ? CEILINGS.runtime_prepare : FIXED_CEILING;
   var progress = 0;
   var start = Date.now();
   var watchdog = null;
+  var showSub = false;
+  var reducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
-  function setStatus(key) {
-    stage = key;
+  function setStage(key) {
+    var index = STAGE_KEYS.indexOf(key);
+    if (index > 0) setBar(CEILINGS[STAGE_KEYS[index - 1]]);
+    ceiling = CEILINGS[key];
+    showSub = key === "packages";
     if (!CONFIG.stages) return;
     if (statusEl) statusEl.textContent = (CONFIG.messages && CONFIG.messages[key]) || key;
   }
@@ -291,7 +300,7 @@ _LOADING_CONTROLLER_TEMPLATE = """(function () {
     if (!CONFIG.timeoutSeconds) return;
     if (watchdog) clearTimeout(watchdog);
     watchdog = setTimeout(function () {
-      if (timeoutEl && timeoutEl.hidden) timeoutEl.hidden = false;
+      if (timeoutEl && timeoutEl.hidden && !root.hasAttribute("data-wc-complete")) timeoutEl.hidden = false;
     }, CONFIG.timeoutSeconds * 1000);
   }
 
@@ -301,20 +310,18 @@ _LOADING_CONTROLLER_TEMPLATE = """(function () {
     if (CONFIG.stages) {
       for (var i = 0; i < STAGES.length; i++) {
         if (STAGES[i][0] === detail) {
-          setStatus(STAGES[i][1]);
-          setBar(CEILINGS[STAGES[i][1]]);
+          setStage(STAGES[i][1]);
           resetWatchdog();
           return;
         }
       }
-      setSub(detail);
+      if (showSub) setSub(detail);
     }
     resetWatchdog();
   }
 
   function onReady() {
-    setStatus("app_start");
-    setBar(CEILINGS.app_start);
+    setStage("app_start");
     resetWatchdog();
   }
 
@@ -346,13 +353,7 @@ _LOADING_CONTROLLER_TEMPLATE = """(function () {
   }
 
   function trickle() {
-    if (root.hasAttribute("data-wc-complete")) return;
-    var ceiling;
-    if (CONFIG.stages) {
-      ceiling = stage >= 0 ? CEILINGS[STAGES[stage][1]] : CEILINGS.runtime_prepare;
-    } else {
-      ceiling = FIXED_CEILING;
-    }
+    if (root.hasAttribute("data-wc-complete") || !root.isConnected || reducedMotion) return;
     var elapsed = (Date.now() - start) / 1000;
     var target = ceiling * (2 / Math.PI) * Math.atan(elapsed / 6);
     setBar(target);
@@ -360,7 +361,7 @@ _LOADING_CONTROLLER_TEMPLATE = """(function () {
   }
 
   resetWatchdog();
-  if (CONFIG.stages) setStatus("runtime_prepare");
+  if (CONFIG.stages) setStage("runtime_prepare");
   trickle();
 })();"""
 
@@ -602,7 +603,6 @@ async def _generate_html_impl(
                 loading_mode,
                 _loading_structure(loading_config, loading_mode),
                 loading_config,
-                ctx.config.selector,
             ),
         ]
 

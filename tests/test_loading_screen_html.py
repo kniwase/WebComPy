@@ -96,6 +96,27 @@ class TestLoadingScreenMarkup:
         assert '"runtime_download": 60' in html_str
         assert '"app_start": 97' in html_str
 
+    def test_controller_syncs_fade_var_from_attribute(self):
+        html_str = _generate_html(_make_app())
+        assert 'setProperty("--wc-fade", root.getAttribute("data-wc-fade") + "ms")' in html_str
+
+    def test_controller_reduced_motion_gate_emitted(self):
+        html_str = _generate_html(_make_app())
+        assert 'matchMedia("(prefers-reduced-motion: reduce)")' in html_str
+
+    def test_controller_watchdog_completion_guard_emitted(self):
+        html_str = _generate_html(_make_app())
+        assert 'hasAttribute("data-wc-complete")' in html_str
+
+    def test_controller_timeout_hidden_on_init_emitted(self):
+        html_str = _generate_html(_make_app())
+        assert "if (timeoutEl) timeoutEl.hidden = true;" in html_str
+
+    def test_controller_substatus_packages_window_emitted(self):
+        html_str = _generate_html(_make_app())
+        assert 'showSub = key === "packages"' in html_str
+        assert "if (showSub) setSub(detail);" in html_str
+
     def test_status_and_timeout_hooks_present(self):
         html_str = _generate_html(_make_app())
         assert "data-wc-status" in html_str
@@ -147,7 +168,7 @@ class TestLoadingScreenMarkup:
         app = _make_app(loading={"mode": "content", "interaction": "inert"})
         html_str = _generate_html(app, prerender=True)
         assert 'data-wc-interaction="inert"' in html_str
-        assert 'data-wc-selector="#webcompy-app"' in html_str
+        assert "data-wc-selector" not in html_str
 
     def test_content_block_attrs_emitted(self):
         app = _make_app(loading={"mode": "content"})
@@ -236,6 +257,26 @@ class TestLoadingScreenMarkup:
         template = '<div id="webcompy-loading"><p>static splash</p></div>'
         app = _make_app(loading={"template": template})
         _generate_html(app)
+
+
+class TestLoadingConfigResolution:
+    def test_resolve_loading_config_copies_messages(self):
+        from webcompy.app._config import _LOADING_DEFAULTS
+        from webcompy_server._html import _resolve_loading_config
+
+        resolved = _resolve_loading_config(None)
+        assert resolved["messages"] is not _LOADING_DEFAULTS["messages"]
+        resolved["messages"]["runtime_download"] = "Mutated"
+        assert _LOADING_DEFAULTS["messages"] == {}
+
+    def test_resolve_loading_config_merges_config(self):
+        from webcompy_server._html import _resolve_loading_config
+
+        resolved = _resolve_loading_config({"mode": "content", "fade_out_ms": 400})
+        assert resolved["mode"] == "content"
+        assert resolved["fade_out_ms"] == 400
+        assert resolved["reveal_delay_ms"] == 350
+        assert resolved["messages"] == {}
 
 
 class _FakeNode:
