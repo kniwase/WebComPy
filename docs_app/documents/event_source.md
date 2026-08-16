@@ -87,6 +87,7 @@ The browser's native `EventSource` reconnects automatically and resumes via `Las
 SSE does not replay the events missed while disconnected. When `.state` returns to `OPEN`, re-pull the authoritative state yourself:
 
 ```python
+from webcompy.realtime import ConnectionState
 from webcompy.signal import effect
 
 def refetch():
