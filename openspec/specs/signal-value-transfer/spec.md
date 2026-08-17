@@ -54,6 +54,7 @@ During browser hydration, the `use_state()`, `use_reactive_list()`, and `use_rea
 1. The framework SHALL compute `component_id = generate_id(context._component_name)`.
 2. If `payload[component_id][key]` exists, the factory SHALL be **skipped** and the signal SHALL be created directly with the restored value: `Signal(restored_value)` (or `ReactiveList(restored_value)` / `ReactiveDict(restored_value)` for collection composables).
 3. If the key is not found (server-side, client-side navigation, or non-transferable context), the factory SHALL run: `Signal(factory())` (or corresponding constructor for collection types).
+4. The restored value SHALL be an **independent copy** of the payload value: mutating the restored `Signal` / `ReactiveList` / `ReactiveDict` value SHALL NOT mutate the hydration payload, and each restore from the same payload entry SHALL yield the original value.
 
 The restored value SHALL be the post-codec-decode Python object (deserialize_payload already applies `decode()`). No additional decoding is needed in composables.
 
@@ -101,6 +102,12 @@ Auto transfer keys SHALL be stable across the SSR environment and the browser en
 - **THEN** the factory SHALL be skipped
 - **AND** a `ReactiveList` SHALL be created with `[1, 2, 3]`
 - **AND** mutation methods (`append`, `pop`, etc.) SHALL work normally on the restored instance
+
+#### Scenario: Mutating a restored collection does not corrupt the payload
+- **WHEN** a `ReactiveList` is restored from a payload entry containing `[1, 2]`
+- **AND** `append(3)` is called on the restored instance
+- **THEN** the payload entry SHALL still contain `[1, 2]`
+- **AND** restoring from the same payload entry again SHALL yield a `ReactiveList` with `[1, 2]`
 
 #### Scenario: Restoration does not trigger notifications
 - **WHEN** a Signal is created with a restored value via `Signal(restored)`
