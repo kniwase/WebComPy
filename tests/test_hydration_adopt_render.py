@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import warnings
 
 import pytest
@@ -10,6 +11,7 @@ from tests.test_hydration_preservation_helpers import (
     prerendered_div,
 )
 from webcompy.elements import html
+from webcompy.elements.types._element import Element
 from webcompy.elements.types._repeat import RepeatElement
 from webcompy.elements.types._suspense import SuspenseElement
 from webcompy.elements.types._switch import SwitchElement
@@ -17,6 +19,32 @@ from webcompy.elements.types._transition import TransitionElement
 from webcompy.signal import ReactiveList, Signal
 
 pytestmark = pytest.mark.usefixtures("fake_browser_full")
+
+
+@pytest.mark.asyncio
+async def test_failed_hydration_render_logs_error_and_cleans_pending(eager_scheduler, caplog):
+    class _BoomDiv(Element):
+        def __init__(self, text: str) -> None:
+            super().__init__("div", {}, {}, None, [text])
+
+        async def _render(self):
+            raise RuntimeError("child render failed")
+
+    rl = ReactiveList(["a"])
+    rep = RepeatElement(rl, lambda item: _BoomDiv(item))
+    parent = make_prerendered_parent()
+    rep._parent = parent
+    rep._node_idx = 0
+    parent._children = [rep]
+
+    rep._hydrate_node()
+    assert len(rep._pending_render_tasks) == 1
+
+    with caplog.at_level(logging.ERROR, logger="uvicorn"):
+        await eager_scheduler.await_pending()
+
+    assert rep._pending_render_tasks == []
+    assert any("child render failed" in r.message for r in caplog.records)
 
 
 @pytest.mark.asyncio

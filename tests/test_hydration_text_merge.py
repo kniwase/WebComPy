@@ -258,6 +258,42 @@ class TestHydrationTextRunNormalization:
         assert prerendered.childNodes[1] is cd_node
         assert cd_node.textContent == "cd"
 
+    def test_non_text_node_at_run_position_records_tag_mismatch(self, fake_browser_full):
+        from webcompy.components._component import _active_app_context
+        from webcompy.hydration._report import HydrationReporter
+
+        class _Ctx:
+            def __init__(self) -> None:
+                self._hydration_in_progress = True
+                self._hydration_reporter = HydrationReporter()
+
+        class _CidRootElement(FakeRootElement):
+            _get_belonging_component = lambda self: "my-comp"
+
+        ctx = _Ctx()
+        token = _active_app_context.set(ctx)
+        try:
+            parent = _CidRootElement("div", {}, {}, None, None)
+            parent._node_cache = FakeDOMNode("div")
+            parent._mounted = True
+            prerendered = FakeDOMNode("div")
+            prerendered.__webcompy_prerendered_node__ = True
+            span = FakeDOMNode("span")
+            span.__webcompy_prerendered_node__ = True
+            prerendered.appendChild(span)
+            parent._node_cache.appendChild(prerendered)
+            el = Element("div", {}, {}, None, [TextElement("a"), TextElement("b")])
+            el._parent = parent
+            el._node_idx = 0
+            el._hydrate_node()
+
+            tag_records = [r for r in ctx._hydration_reporter.records if r.kind == "tag" and r.expected == "#text"]
+            assert len(tag_records) == 1
+            assert tag_records[0].actual == "SPAN"
+            assert tag_records[0].component_id == "my-comp"
+        finally:
+            _active_app_context.reset(token)
+
 
 class TestKeyedReactiveDictHydrationReconcile:
     @pytest.mark.asyncio

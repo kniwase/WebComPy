@@ -73,6 +73,94 @@ class TestFakeAsyncSchedulerPort:
         assert sorted(executed) == ["p", "r"]
         assert scheduler._coroutines == []
 
+    @pytest.mark.asyncio
+    async def test_drain_executes_recursively_scheduled_coroutines(self):
+        scheduler = FakeAsyncSchedulerPort()
+        done: list[int] = []
+
+        async def _nested(value: int):
+            done.append(value)
+            if value < 3:
+                scheduler.schedule(_nested(value + 1))
+
+        scheduler.schedule(_nested(1))
+        await scheduler.drain()
+        assert sorted(done) == [1, 2, 3]
+
+    @pytest.mark.asyncio
+    async def test_render_only_await_pending_drains_recursive_render_tasks(self):
+        scheduler = FakeAsyncSchedulerPort()
+        done: list[int] = []
+
+        async def _nested(value: int):
+            done.append(value)
+            if value < 3:
+                scheduler.schedule(_nested(value + 1), render=True)
+
+        scheduler.schedule(_nested(1), render=True)
+        await scheduler.await_pending(only_render=True)
+        assert sorted(done) == [1, 2, 3]
+
+    @pytest.mark.asyncio
+    async def test_drain_settles_placeholders_and_fires_callbacks(self):
+        scheduler = FakeAsyncSchedulerPort()
+        fired: list[object] = []
+
+        async def _coro():
+            pass
+
+        task = scheduler.schedule(_coro())
+        task.add_done_callback(fired.append)
+        assert not task.done()
+        await scheduler.drain()
+        assert task.done()
+        assert task.cancelled() is False
+        assert task.exception() is None
+        assert fired == [task]
+
+    @pytest.mark.asyncio
+    async def test_drain_records_exception_on_placeholder(self):
+        scheduler = FakeAsyncSchedulerPort()
+
+        async def _boom():
+            raise RuntimeError("boom")
+
+        task = scheduler.schedule(_boom())
+        await scheduler.drain()
+        assert task.done()
+        assert task.cancelled() is False
+        assert isinstance(task.exception(), RuntimeError)
+
+    @pytest.mark.asyncio
+    async def test_cancel_of_executed_placeholder_returns_false(self):
+        scheduler = FakeAsyncSchedulerPort()
+
+        async def _coro():
+            pass
+
+        task = scheduler.schedule(_coro())
+        await scheduler.drain()
+        assert task.cancel() is False
+        assert task.cancelled() is False
+
+    @pytest.mark.asyncio
+    async def test_render_only_drain_does_not_settle_plain_placeholder(self):
+        scheduler = FakeAsyncSchedulerPort()
+
+        async def _render_coro():
+            pass
+
+        async def _plain_coro():
+            pass
+
+        render_task = scheduler.schedule(_render_coro(), render=True)
+        plain_task = scheduler.schedule(_plain_coro())
+        await scheduler.await_pending(only_render=True)
+        assert render_task.done()
+        assert not plain_task.done()
+        await scheduler.drain()
+        assert plain_task.done()
+
 
 class TestBrowserAsyncSchedulerPort:
     @staticmethod

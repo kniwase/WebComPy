@@ -5,9 +5,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from tests.test_hydration_preservation_helpers import make_prerendered_parent
 from webcompy.components._component import _active_app_context
+from webcompy.elements.types._element import Element
 from webcompy.hydration import HydrationMismatchRecord, record_mismatch
 from webcompy.hydration._report import HydrationReporter, emit_report_summary
+from webcompy_testing import FakeDOMNode
 
 
 class _FakeCtx:
@@ -78,6 +81,27 @@ def test_render_context_exposes_hydration_report():
     from webcompy.app._render_context import RenderContext
 
     assert isinstance(RenderContext.hydration_report, property)
+
+
+def test_excess_prerendered_nodes_yield_single_node_count_record(hydration_window):
+    prerendered = FakeDOMNode("div")
+    prerendered.__webcompy_prerendered_node__ = True
+    for _ in range(3):
+        child = FakeDOMNode("div")
+        child.__webcompy_prerendered_node__ = True
+        prerendered.appendChild(child)
+    parent = make_prerendered_parent(prerendered)
+    el = Element("div", {}, {}, None, [])
+    el._parent = parent
+    el._node_idx = 0
+    parent._children = [el]
+
+    el._hydrate_node()
+
+    records = [r for r in hydration_window._hydration_reporter.records if r.kind == "node-count"]
+    assert len(records) == 1
+    assert records[0].expected == 0
+    assert records[0].actual == 3
 
 
 class TestHydrationWindowClose:
