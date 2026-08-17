@@ -21,6 +21,7 @@
 ### Modified Capabilities
 
 - `json-rpc`: Add requirements for the WebSocket transport of the dispatcher (transport-neutral dispatch core; WS endpoint mounting; frame-level envelope handling). HTTP POST behavior is unchanged.
+- `websocket-composable`: Add an additive `force_close(code, reason)` on the WebSocket handle so the RPC heartbeat can engage the reconnect loop with a non-normal close code.
 
 ## Impact
 

@@ -73,6 +73,16 @@ When enabled (default: `heartbeat_interval=30.0`, `heartbeat_timeout=10.0`), the
 - **THEN** the client SHALL force-close the socket abnormally
 - **AND** `.state` SHALL transition through `RECONNECTING` back to `OPEN` on recovery
 
+### Requirement: The WS endpoint shall support server-initiated reconnection via a reserved close notification
+
+The WS endpoint SHALL handle a `_webcompy.close` notification by closing the socket abnormally (code `1011`), so the client reconnect loop engages. Reserved `_webcompy.*` method names SHALL NOT be registrable as user procedures.
+
+#### Scenario: Server-driven reconnection
+
+- **WHEN** the client sends a `_webcompy.close` notification on an open connection
+- **THEN** the server SHALL close the socket with code `1011`
+- **AND** the client SHALL transition through `RECONNECTING` back to `OPEN` on recovery
+
 ### Requirement: RpcWsClient shall be browser-runtime-only with SSR no-op
 
 During SSR/SSG, constructing or using `RpcWsClient` SHALL emit a warning and perform no socket work; SSR-time RPC SHALL continue to use the existing HTTP client and transfer cache. No subscription state, cursors, or in-flight calls SHALL be collected into the hydration transfer payload.

@@ -2,13 +2,15 @@
 
 ## 1. Spike: reconnect resubscribe and state resync
 
-- [ ] 1.1 Time-boxed spike: build a minimal prototype of the rejoin-with-cursor protocol against a real Starlette WebSocket endpoint — validate replay-before-live ordering, buffer overflow → `resync_required`, and cleanup on close; record findings in the design and adjust spec details if needed
+- [x] 1.1 Time-boxed spike: build a minimal prototype of the rejoin-with-cursor protocol against a real Starlette WebSocket endpoint — validate replay-before-live ordering, buffer overflow → `resync_required`, and cleanup on close; record findings in the design and adjust spec details if needed
 
 ## 2. Transport-neutral dispatcher
 
 - [ ] 2.1 Extract the dispatch core in `packages/webcompy-server/src/webcompy_server/rpc/_dispatcher.py` into a transport-neutral function over plain request/response objects (HTTP behavior unchanged)
 - [ ] 2.2 Create `_ws_endpoint.py`: Starlette WebSocket endpoint feeding text frames through the shared core, writing responses back, managing per-connection state, mounted via the same mount mechanism
 - [ ] 2.3 Implement subscription procedure registration (async stream source, per-stream monotonic cursor, bounded replay buffer with configurable size, rejoin with `last_cursor`, `resync_required` on overflow, cleanup on socket close)
+- [ ] 2.4 Add `force_close(code, reason)` to the realtime WebSocket handle (`WebSocketHandle`/`TypedWebSocketHandle` + `_RealtimeRegistry._ws_abort`) with a generation guard so stale socket close events are ignored
+- [ ] 2.5 Handle the reserved `_webcompy.close` notification in the WS endpoint by closing the socket with code `1011`, and reject `_webcompy.*` names in `ProcedureRegistry.register`/`register_subscription`
 
 ## 3. Client
 
@@ -26,6 +28,7 @@
 - [ ] 4.4 Client subscriptions: ordered typed iteration, unsubscribe finishes the iterator, rejoin with last cursor after simulated reconnect, `resync_required` surfaced
 - [ ] 4.5 Heartbeat: timeout forces abnormal close and reconnect; disabled when `heartbeat_interval=None`
 - [ ] 4.6 SSR: no socket work, warning, no transfer payload entries
+- [ ] 4.7 `force_close`: state transitions to `RECONNECTING` then `OPEN`, no-op on closed connections, stale close events ignored, typed handle forwarding
 
 ## 5. E2E tests (`e2e/core/`)
 
