@@ -107,9 +107,9 @@ E2E compatibility: `opacity: 0` remains Playwright-"visible" until actual `remov
 
 Every `py:progress` resets a timer (`timeout_seconds`, default 30, 0 disables). On expiry the controller reveals a `[data-wc-timeout]` element: "Taking longer than usual…" + reload button. This converts the infinite-spinner failure mode (e.g., corporate firewalls blocking WASM — a documented Blazor-community pain) into honest feedback with an escape hatch. It is deliberately a **stall detector**, not an error classifier — PyScript error taxonomy is not stable enough to parse.
 
-### Decision 10: Theme-aware colors keyed off `html[data-theme]`, `light-dark()` fallback
+### Decision 10: Theme-aware colors keyed off theme tokens, `light-dark()` fallback
 
-The app theme is SSR-rendered as `<html data-theme="...">` (theme capability). Loading CSS keys surface/foreground/accent off `[data-theme="dark"]` selectors first, falling back to `prefers-color-scheme` via `light-dark()` (the `<meta name="color-scheme" content="light dark">` is already emitted). All colors are overridable via `--wc-*` custom properties, which is also the toolkit theming surface.
+The theme system renders the active theme via token overrides on `:root` — the `ThemeManager` reactive style (theme signal) or the `tokens.css` `[data-theme]` / `prefers-color-scheme` blocks — rather than a `data-theme` attribute. Loading CSS therefore keys its default surface/foreground/accent colors off the theme design tokens (`--color-*`) with `light-dark()` as the final fallback, so the loading screen follows whichever mechanism the theme system uses (theme signal, `data-theme` attribute, or OS preference). All colors are overridable via `--wc-*` custom properties, which is also the toolkit theming surface.
 
 ### Decision 11: Toolkit contract with build-time validation
 

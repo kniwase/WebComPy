@@ -77,7 +77,7 @@ Mechanic attributes you may set on the loading element:
 
 When a custom template does not set these attributes itself, generation injects the resolved values automatically — `role="status"` (when the template does not set a `role`), `data-wc-mode`, `data-wc-interaction` (content mode), and `data-wc-fade`, plus `--wc-delay`/`--wc-fade` style variables. Template-authored values always win. If the loading element already sets its own `style` attribute, the `--wc-delay`/`--wc-fade` variables are not injected and the authored style is preserved unchanged; set `data-wc-fade` in that case so the fade duration stays configuration-driven.
 
-The framework's base stylesheet is always emitted before the loading element, so a custom template can override any rule with its own `<style>`. Colors are theme-aware (`data-theme` on `<html>`, falling back to `prefers-color-scheme`) and overridable via CSS custom properties: `--wc-accent`, `--wc-backdrop`, `--wc-ring`, `--wc-fg`, `--wc-dormant-opacity`, `--wc-dormant-saturation`.
+The framework's base stylesheet is always emitted before the loading element, so a custom template can override any rule with its own `<style>`. Colors follow the app theme (theme tokens reflecting `data-theme`, the theme signal, or `prefers-color-scheme`) and are overridable via CSS custom properties: `--wc-accent`, `--wc-backdrop`, `--wc-ring`, `--wc-fg`, `--wc-dormant-opacity`, `--wc-dormant-saturation`.
 
 The loading controller is an inline classic script — sites with a strict Content-Security-Policy must allow its inline script (or use `script-src` hashing).
 

@@ -103,6 +103,21 @@ class TestLoadingScreenMarkup:
         assert "var(--wc-ring" in html_str
         assert "var(--wc-accent" in html_str
 
+    def test_theme_colors_follow_theme_tokens(self):
+        html_str = _generate_html(_make_app())
+        assert "var(--color-accent, light-dark(#1d4ed8, #7dd3fc))" in html_str
+        assert "var(--color-border, light-dark(#d3d3d3, #4b5563))" in html_str
+        assert "var(--color-fg, light-dark(#333333, #cccccc))" in html_str
+        assert "var(--color-bg-elevated, light-dark(#e5e7eb, #374151))" in html_str
+
+    def test_dark_backdrop_scoped_to_overlay_mode(self):
+        html_str = _generate_html(_make_app())
+        assert (
+            "html[data-theme='dark'] #webcompy-loading[data-wc-mode='overlay']{background:rgba(0, 0, 0, 0.35);}"
+            in html_str
+        )
+        assert "html[data-theme='dark'] #webcompy-loading{background:rgba(0, 0, 0, 0.35);}" not in html_str
+
     def test_hidden_utility_rule(self):
         html_str = _generate_html(_make_app())
         assert "#webcompy-loading [hidden]{display:none" in html_str

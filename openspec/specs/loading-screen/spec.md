@@ -172,7 +172,7 @@ The loading screen SHALL include a stall watchdog: if no boot progress event is 
 
 ### Requirement: Theme-aware appearance
 
-The default loading screen styles SHALL adapt to the application's theme: colors SHALL follow the `data-theme` attribute on the root `<html>` element when present and fall back to the user's `prefers-color-scheme` otherwise. All loading screen colors SHALL be overridable via documented CSS custom properties.
+The default loading screen styles SHALL adapt to the application's theme: colors SHALL follow the theme design tokens on the root element when present (reflecting the `data-theme` attribute, the theme signal, or the user's `prefers-color-scheme`), and fall back to the user's `prefers-color-scheme` otherwise. All loading screen colors SHALL be overridable via documented CSS custom properties.
 
 #### Scenario: Dark theme applied
 
