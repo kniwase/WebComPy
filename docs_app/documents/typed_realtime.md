@@ -70,6 +70,8 @@ With `strict=False`, unknown fields are ignored and values are coerced leniently
 
 A frame that fails JSON parsing, type-tag validation, or schema reconstruction is skipped — it is never yielded, the subscription and the underlying connection survive, and subsequent valid frames are delivered normally. The failure is surfaced on `.last_error: Signal[Exception | None]` and a warning is logged. A subsequent successful frame resets `.last_error` to `None`.
 
+Only these three categories are treated as malformed frames. A genuine programming error in the decode path — for example a custom decoder raising an unrelated exception — is not swallowed: it propagates to the consumer so it cannot hide behind `.last_error`.
+
 Render an error badge from the signal so failures are visible instead of silent:
 
 ```python

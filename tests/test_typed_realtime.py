@@ -69,6 +69,10 @@ def _decode_money(value: Any) -> Money:
     return Money(amount=value)
 
 
+def _exploding_decode(value: Any) -> Money:
+    raise RuntimeError("decoder exploded")
+
+
 @pytest.fixture
 def rt_env(monkeypatch):
     scope = DIScope()
@@ -212,6 +216,57 @@ class TestSkipOnError:
         assert got_raw == ["not json", '{"user": "ada", "text": "hi"}']
         assert typed.state.value is ConnectionState.OPEN
         assert raw.state.value is ConnectionState.OPEN
+
+
+class TestDecodeErrorSurface:
+    @pytest.mark.asyncio
+    async def test_programming_error_propagates_to_consumer(self, rt_env) -> None:
+        register_realtime_type_handler(Money, _encode_money, _exploding_decode)
+        ws = use_websocket("/ws", message_type=Payment)
+        rt_env.port.emit_open("/ws")
+        bad = (
+            '{"user": "ada", "money": "10",'
+            ' "__webcompy_transfer_meta__": {"/money": "tests.test_typed_realtime.Money"}}'
+        )
+        rt_env.port.emit_message("/ws", bad)
+        with pytest.raises(RuntimeError, match="decoder exploded"):
+            await asyncio.wait_for(anext(ws), timeout=1)
+        assert ws.last_error.value is None
+
+    @pytest.mark.asyncio
+    async def test_falsy_non_mapping_meta_member_is_skipped(self, rt_env) -> None:
+        ws = use_websocket("/ws", message_type=ChatMessage)
+        rt_env.port.emit_open("/ws")
+        errors: list[Exception | None] = []
+        ws.last_error.on_after_updating(errors.append)
+
+        async def pump() -> None:
+            for bad_meta in ('""', "0", "[]"):
+                rt_env.port.emit_message(
+                    "/ws",
+                    f'{{"user": "ada", "text": "hi", "__webcompy_transfer_meta__": {bad_meta}}}',
+                )
+                await asyncio.sleep(0)
+            rt_env.port.emit_message("/ws", '{"user": "ada", "text": "hi"}')
+
+        pump_task = asyncio.create_task(pump())
+        with pytest.warns(UserWarning, match="skipping"):
+            got = await _collect(ws, limit=1)
+        await pump_task
+        assert got == [ChatMessage(user="ada", text="hi")]
+        assert len(errors) == 4
+        assert errors[0] is not None
+        assert errors[1] is not None
+        assert errors[2] is not None
+        assert errors[3] is None
+
+    @pytest.mark.asyncio
+    async def test_empty_mapping_meta_member_accepted(self, rt_env) -> None:
+        ws = use_websocket("/ws", message_type=ChatMessage)
+        rt_env.port.emit_open("/ws")
+        rt_env.port.emit_message("/ws", '{"user": "ada", "text": "hi", "__webcompy_transfer_meta__": {}}')
+        got = await _collect(ws, limit=1)
+        assert got == [ChatMessage(user="ada", text="hi")]
 
 
 class TestStrictness:

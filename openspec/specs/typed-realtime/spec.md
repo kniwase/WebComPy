@@ -55,6 +55,16 @@ A text frame that fails JSON parsing, fails `from_json` reconstruction, or refer
 - **THEN** the frame SHALL be skipped with `.last_error` set
 - **AND** no class SHALL be imported or resolved from the wire tag
 
+#### Scenario: Decode-path programming errors surface to the consumer
+
+- **WHEN** a registered decoder raises an exception outside `ValueError`/`TypeError` (e.g., `RuntimeError`) while decoding a frame
+- **THEN** the exception SHALL propagate to the consumer instead of being skipped or recorded on `.last_error`
+
+#### Scenario: Non-mapping meta member is rejected
+
+- **WHEN** a frame's `__webcompy_transfer_meta__` member is a non-mapping value such as `""`, `0`, or `[]`
+- **THEN** the frame SHALL be skipped with `.last_error` set, exactly as for a truthy non-mapping member
+
 ### Requirement: Typed reconstruction shall be strict by default
 
 Receive-side reconstruction SHALL use `strict=True` unless the caller passes `strict=False`: frames with missing declared fields or undeclared extra fields SHALL be skipped via the skip-on-error path. `strict=False` SHALL use lenient coercion.

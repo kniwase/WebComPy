@@ -100,7 +100,7 @@ def _decode_frame(
         meta_value = data.pop(META_BODY_KEY, None)
         if meta_value is not None:
             meta = meta_value
-    if meta:
+    if meta is not None:
         data = apply_transfer_meta(
             data, meta, strict=True, decoders=registry.meta_decoders if registry is not None else None
         )
@@ -148,7 +148,7 @@ class TypedWebSocketHandle(Generic[T]):
             text = await self._raw.__anext__()
             try:
                 instance = _decode_frame(text, self._message_type, strict=self._strict, registry=self._registry)
-            except Exception as err:
+            except (ValueError, TypeError) as err:
                 self._last_error.value = err
                 warnings.warn(f"{_SKIP_MSG}: {err}", UserWarning, stacklevel=2)
                 continue
