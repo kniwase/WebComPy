@@ -11,6 +11,7 @@ from webcompy_server.ports._media_query import ServerMediaQueryPort
 from webcompy_server.ports._resource import ServerResourcePort
 from webcompy_server.ports._transition import ServerTransitionPort
 from webcompy_server.ports._virtual_dom import VirtualDOMEvent, VirtualDOMNode
+from webcompy_server.ports._websocket import ServerWebSocketPort
 
 __all__ = [
     "ServerAsyncSchedulerPort",
@@ -25,6 +26,7 @@ __all__ = [
     "ServerMediaQueryPort",
     "ServerResourcePort",
     "ServerTransitionPort",
+    "ServerWebSocketPort",
     "VirtualDOMEvent",
     "VirtualDOMNode",
 ]

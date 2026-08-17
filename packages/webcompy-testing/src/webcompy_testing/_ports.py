@@ -17,6 +17,7 @@ from webcompy.ports._history import HistoryPort
 from webcompy.ports._host import HostPort
 from webcompy.ports._media_query import MediaQueryPort
 from webcompy.ports._transition import TransitionPort, TransitionStyle
+from webcompy.ports._websocket import WebSocketConnection, WebSocketPort
 from webcompy_server.ports._dom import ServerDOMPort
 from webcompy_testing._dom import FakeDOMNode
 
@@ -438,3 +439,120 @@ class FakeEventSourcePort(EventSourcePort):
         for reg in list(self._registrations):
             if reg.url == url:
                 reg.on_close()
+
+
+class _FakeWebSocketRegistration:
+    __slots__ = (
+        "on_binary",
+        "on_close",
+        "on_error",
+        "on_message",
+        "on_open",
+        "protocols",
+        "sent",
+        "url",
+    )
+
+    def __init__(
+        self,
+        url: str,
+        protocols: tuple[str, ...],
+        on_open: Any,
+        on_message: Any,
+        on_binary: Any,
+        on_error: Any,
+        on_close: Any,
+    ) -> None:
+        self.url = url
+        self.protocols = protocols
+        self.on_open = on_open
+        self.on_message = on_message
+        self.on_binary = on_binary
+        self.on_error = on_error
+        self.on_close = on_close
+        self.sent: list[str] = []
+
+
+class FakeWebSocketConnection(WebSocketConnection):
+    def __init__(self, port: FakeWebSocketPort, reg: _FakeWebSocketRegistration) -> None:
+        self._port = port
+        self._reg = reg
+        self._closed = False
+
+    def send(self, data: str) -> None:
+        self._reg.sent.append(data)
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        with contextlib.suppress(ValueError):
+            self._port._registrations.remove(self._reg)
+
+
+class FakeWebSocketPort(WebSocketPort):
+    def __init__(self) -> None:
+        self._registrations: list[_FakeWebSocketRegistration] = []
+        self.open_calls: list[tuple[str, tuple[str, ...]]] = []
+
+    def open(
+        self,
+        url: str,
+        *,
+        protocols: tuple[str, ...] = (),
+        on_open: Any = None,
+        on_message: Any = None,
+        on_binary: Any = None,
+        on_error: Any = None,
+        on_close: Any = None,
+    ) -> WebSocketConnection:
+        normalized = tuple(sorted(protocols))
+        reg = _FakeWebSocketRegistration(url, normalized, on_open, on_message, on_binary, on_error, on_close)
+        self._registrations.append(reg)
+        self.open_calls.append((url, normalized))
+        return FakeWebSocketConnection(self, reg)
+
+    @property
+    def open_connections(self) -> list[tuple[str, tuple[str, ...]]]:
+        return [(reg.url, reg.protocols) for reg in self._registrations]
+
+    def _matching(self, url: str, protocols: tuple[str, ...] | None) -> list[_FakeWebSocketRegistration]:
+        if protocols is None:
+            return [reg for reg in self._registrations if reg.url == url]
+        normalized = tuple(sorted(protocols))
+        return [reg for reg in self._registrations if reg.url == url and reg.protocols == normalized]
+
+    def emit_open(self, url: str, protocols: tuple[str, ...] | None = None) -> None:
+        for reg in list(self._matching(url, protocols)):
+            reg.on_open()
+
+    def emit_message(self, url: str, text: str, protocols: tuple[str, ...] | None = None) -> None:
+        for reg in list(self._matching(url, protocols)):
+            reg.on_message(text)
+
+    def emit_binary(self, url: str, protocols: tuple[str, ...] | None = None) -> None:
+        for reg in list(self._matching(url, protocols)):
+            reg.on_binary()
+
+    def emit_error(self, url: str, protocols: tuple[str, ...] | None = None) -> None:
+        for reg in list(self._matching(url, protocols)):
+            reg.on_error()
+
+    def emit_close(
+        self,
+        url: str,
+        code: int = 1000,
+        reason: str = "",
+        was_clean: bool = True,
+        protocols: tuple[str, ...] | None = None,
+    ) -> None:
+        for reg in list(self._matching(url, protocols)):
+            reg.on_close(code, reason, was_clean)
+            with contextlib.suppress(ValueError):
+                self._registrations.remove(reg)
+
+    def sent_frames(self, url: str, protocols: tuple[str, ...] | None = None) -> list[str]:
+        frames: list[str] = []
+        for reg in self._matching(url, protocols):
+            frames.extend(reg.sent)
+        return frames
