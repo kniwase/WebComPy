@@ -16,4 +16,5 @@ HYDRATION_SIGNAL_DATA_KEY = InjectKey[dict[str, dict[str, Any]]]("webcompy-hydra
 RESOURCE_DATA_KEY = InjectKey[dict[str, str]]("webcompy-resource-data")
 _STORAGE_SYNC_REGISTRY_KEY = InjectKey[object]("webcompy-internal-storage-sync-registry")
 _REALTIME_CONNECTION_REGISTRY_KEY = InjectKey[object]("webcompy-internal-realtime-connection-registry")
+_REALTIME_TYPE_REGISTRY_KEY = InjectKey[object]("webcompy-internal-realtime-type-registry")
 _TELEPORT_REGISTRY_KEY = InjectKey[object]("webcompy-internal-teleport-registry")

@@ -19,6 +19,10 @@ META_HEADER_NAME = "X-WebComPy-Transfer-Meta"
 META_BODY_KEY = "__webcompy_transfer_meta__"
 
 
+def _qualified_type_name(cls: type) -> str:
+    return f"{cls.__module__}.{cls.__qualname__}"
+
+
 def encode_with_meta(
     value: Any,
     *,

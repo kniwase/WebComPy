@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from webcompy.hydration._transfer_meta import _qualified_type_name
+
 _logger = getLogger(__name__)
 
 
@@ -21,10 +23,6 @@ _VALUE_KEY = "__webcompy_value__"
 
 _type_handlers: dict[type, tuple[str, Callable[[Any], Any], Callable[[Any], Any]]] = {}
 _type_handlers_by_name: dict[str, Callable[[Any], Any]] = {}
-
-
-def _qualified_type_name(cls: type) -> str:
-    return f"{cls.__module__}.{cls.__qualname__}"
 
 
 def register_type_handler(

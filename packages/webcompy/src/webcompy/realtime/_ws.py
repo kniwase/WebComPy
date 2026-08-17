@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import dataclasses
 import warnings
 import weakref
 from collections.abc import AsyncIterator, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from webcompy.aio._stream import _StreamQueue
 from webcompy.di._keys import _REALTIME_CONNECTION_REGISTRY_KEY
@@ -18,6 +19,11 @@ from webcompy.realtime._registry import (
 )
 from webcompy.signal import Signal
 from webcompy.utils._environment import ENVIRONMENT
+
+if TYPE_CHECKING:
+    from webcompy.realtime._typed import TypedWebSocketHandle
+
+T = TypeVar("T")
 
 _SSR_MSG = "webcompy realtime: use_websocket called outside the browser; returning an empty closed handle"
 _NO_SCOPE_MSG = "webcompy realtime: use_websocket called with no app DI scope; returning a private connection"
@@ -157,6 +163,7 @@ def _build_ssr_handle() -> WebSocketHandle:
     return WebSocketHandle(state, last_close, queue, _detach, _send)
 
 
+@overload
 def use_websocket(
     url: str,
     *,
@@ -167,7 +174,40 @@ def use_websocket(
     reconnect_max_delay: float = 30.0,
     reconnect_max_attempts: int | None = None,
     buffer_while_disconnected: bool = False,
-) -> WebSocketHandle:
+    message_type: None = None,
+    strict: bool = True,
+) -> WebSocketHandle: ...
+
+
+@overload
+def use_websocket(
+    url: str,
+    *,
+    protocols: tuple[str, ...] | None = None,
+    max_queue: int | None = None,
+    reconnect: bool = True,
+    reconnect_base_delay: float = 1.0,
+    reconnect_max_delay: float = 30.0,
+    reconnect_max_attempts: int | None = None,
+    buffer_while_disconnected: bool = False,
+    message_type: type[T],
+    strict: bool = True,
+) -> TypedWebSocketHandle[T]: ...
+
+
+def use_websocket(
+    url: str,
+    *,
+    protocols: tuple[str, ...] | None = None,
+    max_queue: int | None = None,
+    reconnect: bool = True,
+    reconnect_base_delay: float = 1.0,
+    reconnect_max_delay: float = 30.0,
+    reconnect_max_attempts: int | None = None,
+    buffer_while_disconnected: bool = False,
+    message_type: type[T] | None = None,
+    strict: bool = True,
+) -> WebSocketHandle | TypedWebSocketHandle[T]:
     """Open a WebSocket connection and return its connection handle.
 
     The handle is an ``AsyncIterator[str]`` yielding every received text
@@ -187,8 +227,26 @@ def use_websocket(
     ``WebSocketPort`` is a real implementation (e.g., a testing fake); with
     the server no-op port (or no port at all) an immediately-finished empty
     handle with ``state == CLOSED`` is returned and a warning is emitted.
+
+    When ``message_type`` is a dataclass type, the handle becomes an
+    ``AsyncIterator[T]`` and ``.send()`` accepts instances of ``T``: each text
+    frame is a JSON object carrying the payload fields plus the
+    ``__webcompy_transfer_meta__`` member (typed-response body wire mode), and
+    metadata-typed fields are restored on receive. Frames that fail JSON
+    parsing, type-tag validation, or schema reconstruction are skipped and
+    surfaced on ``.last_error`` (a ``Signal[Exception | None]``) with a
+    warning; the subscription and connection survive. Reconstruction uses
+    ``strict=True`` by default (rejecting unknown or missing fields), or
+    ``strict=False`` for lenient coercion. Custom types can be registered via
+    ``register_realtime_type_handler`` within the app DI scope.
     """
     from webcompy.di import inject
+    from webcompy.realtime._typed import TypedWebSocketHandle, _get_or_create_type_registry
+
+    def _wrap(handle: WebSocketHandle) -> WebSocketHandle | TypedWebSocketHandle[T]:
+        if message_type is None:
+            return handle
+        return TypedWebSocketHandle(handle, message_type, strict=strict, registry=_get_or_create_type_registry())
 
     if isinstance(protocols, str):
         raise TypeError("use_websocket: 'protocols' must be a tuple of strings, not a bare string")
@@ -210,29 +268,39 @@ def use_websocket(
         raise TypeError("use_websocket: 'reconnect_max_attempts' must be an int greater than or equal to 1 or None")
     if reconnect_max_attempts is not None and reconnect_max_attempts < 1:
         raise ValueError("use_websocket: 'reconnect_max_attempts' must be an int greater than or equal to 1 or None")
+    if message_type is not None and (not isinstance(message_type, type) or not dataclasses.is_dataclass(message_type)):
+        raise TypeError(
+            "use_websocket: 'message_type' must be a dataclass type, got "
+            f"{getattr(message_type, '__name__', message_type)!r}; typed realtime messages require "
+            "a top-level JSON object (typed-response body wire mode)"
+        )
+    if not isinstance(strict, bool):
+        raise TypeError("use_websocket: 'strict' must be a bool")
 
     protocol_tuple = tuple(protocols or ())
 
     port = inject(WEBSOCKET_PORT_KEY, default=None)
     if port is None:
         warnings.warn(_NO_PORT_MSG, UserWarning, stacklevel=2)
-        return _build_ssr_handle()
+        return _wrap(_build_ssr_handle())
     if ENVIRONMENT != "pyscript" and getattr(port, "noop", False):
         warnings.warn(_SSR_MSG, UserWarning, stacklevel=2)
-        return _build_ssr_handle()
+        return _wrap(_build_ssr_handle())
     registry = _get_or_create_registry()
     if registry is None:
         warnings.warn(_NO_SCOPE_MSG, UserWarning, stacklevel=2)
         registry = _RealtimeRegistry()
-    return _open_shared(
-        registry,
-        url,
-        protocol_tuple,
-        max_queue=max_queue,
-        port=port,
-        reconnect=reconnect,
-        base_delay=reconnect_base_delay,
-        max_delay=reconnect_max_delay,
-        max_attempts=reconnect_max_attempts,
-        buffer_while_disconnected=buffer_while_disconnected,
+    return _wrap(
+        _open_shared(
+            registry,
+            url,
+            protocol_tuple,
+            max_queue=max_queue,
+            port=port,
+            reconnect=reconnect,
+            base_delay=reconnect_base_delay,
+            max_delay=reconnect_max_delay,
+            max_attempts=reconnect_max_attempts,
+            buffer_while_disconnected=buffer_while_disconnected,
+        )
     )

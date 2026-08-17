@@ -202,6 +202,25 @@ class TestTopLevel:
             from_json(User, None)
 
 
+class TestInstancePassThrough:
+    def test_dataclass_instance_passes_through_in_strict_mode(self):
+        user = User(id=1, name="ada")
+        assert from_json(User, user, strict=True) is user
+
+    def test_dataclass_instance_passes_through_in_default_mode(self):
+        user = User(id=1, name="ada")
+        assert from_json(User, user) is user
+
+    def test_nested_instance_field_is_preserved(self):
+        user = User(id=1, name="ada")
+        team = from_json(Team, {"name": "core", "members": [user], "leader": None}, strict=True)
+        assert team.members[0] is user
+
+    def test_dict_input_remains_strictly_validated(self):
+        with pytest.raises(TypeError, match="unknown field"):
+            from_json(User, {"id": 1, "name": "ada", "extra": True}, strict=True)
+
+
 class TestErrorMessages:
     def test_error_names_field_and_expected_type(self):
         with pytest.raises(TypeError) as exc:

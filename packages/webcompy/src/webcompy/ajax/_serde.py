@@ -107,6 +107,8 @@ def _convert(tp: Any, value: Any, *, path: str, strict: bool) -> Any:
         )
 
     if is_dataclass(tp) and isinstance(tp, type):
+        if isinstance(value, tp):
+            return value
         return _convert_dataclass(tp, value, path=path, strict=strict)
 
     return _convert_leaf(tp, value, path=path)
