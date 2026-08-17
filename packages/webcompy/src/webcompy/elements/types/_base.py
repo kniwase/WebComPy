@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from webcompy import logging
 from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.typealias._element_property import (
@@ -53,14 +52,16 @@ def _normalize_text_run(parts: list[str], parent_node: DOMNode, dom_idx: int) ->
         return True, dom_idx + len(parts)
     node = parent_node.childNodes[dom_idx]
     if node.nodeName.lower() != "#text":
-        logging.warning(
-            f"Hydration text-run mismatch: expected {''.join(parts)!r}, found non-text node; skipping split"
-        )
+        from webcompy.hydration import record_mismatch
+
+        record_mismatch("text", "".join(parts), getattr(node, "nodeName", None))
         return False, dom_idx
     content = node.textContent or ""
     expected = "".join(parts)
     if content != expected:
-        logging.warning(f"Hydration text-run mismatch: expected {expected!r}, found {content!r}; skipping split")
+        from webcompy.hydration import record_mismatch
+
+        record_mismatch("text", expected, content)
         return False, dom_idx
     remainder: DOMNode = node
     for part in parts[:-1]:
@@ -127,8 +128,15 @@ class ElementWithChildren(ElementAbstract):
             await child._render()
             idx += child._node_count
         if (node := self._get_node()) is not None and not self._preserve_children:
-            for _ in range(node.childNodes.length - self._children_length):
-                node.childNodes[-1].remove()
+            extra = node.childNodes.length - self._children_length
+            if extra > 0:
+                from webcompy.hydration import record_mismatch
+
+                for _ in range(extra):
+                    record_mismatch(
+                        "node-count", self._children_length, node.childNodes.length, self._get_belonging_component()
+                    )
+                    node.childNodes[-1].remove()
 
     def _hydrate_node(self):
         result = super()._hydrate_node()
@@ -140,8 +148,15 @@ class ElementWithChildren(ElementAbstract):
             child._hydrate_node()
             idx += child._node_count
         if (node := self._get_node()) is not None and not self._preserve_children:
-            for _ in range(node.childNodes.length - self._children_length):
-                node.childNodes[-1].remove()
+            extra = node.childNodes.length - self._children_length
+            if extra > 0:
+                from webcompy.hydration import record_mismatch
+
+                for _ in range(extra):
+                    record_mismatch(
+                        "node-count", self._children_length, node.childNodes.length, self._get_belonging_component()
+                    )
+                    node.childNodes[-1].remove()
         return result
 
     def _get_processed_attrs(self):

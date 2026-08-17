@@ -5,7 +5,7 @@ from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from webcompy.app._config import _LOADING_INT_KEY_MAX
-from webcompy.components._component import Component, HeadPropsStore
+from webcompy.components._component import Component, HeadPropsStore, _active_app_context
 from webcompy.components._generator import ComponentGenerator
 from webcompy.di import inject
 from webcompy.di._keys import _HEAD_PROPS_KEY, _ROUTER_KEY
@@ -15,7 +15,8 @@ from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements._head import HeadElement
 from webcompy.hydration._collect import collect_transfer_data
 from webcompy.hydration._payload import DEFAULT_COMPRESSION_THRESHOLD, serialize_payload
-from webcompy.ports._keys import DOM_PORT_KEY
+from webcompy.hydration._report import emit_report_summary
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
 from webcompy.signal import Computed
@@ -95,6 +96,9 @@ class AppDocumentRoot(Component):
             self._mount_node()
             if self._app and self._app._hydrate and not self.__hydrated:
                 self.__hydrated = True
+                ctx = _active_app_context.get()
+                if ctx is not None:
+                    ctx._hydration_in_progress = True
                 self._ensure_custom_elements_defined()
                 for child in self._children:
                     child._hydrate_node()
@@ -112,6 +116,11 @@ class AppDocumentRoot(Component):
             if ENVIRONMENT == "pyscript":
                 _dom = inject(DOM_PORT_KEY)
                 await self._head_element._render()
+                ctx = _active_app_context.get()
+                if ctx is not None and self._app and self._app._hydrate:
+                    scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+                    await scheduler.await_pending(only_render=True)
+                    emit_report_summary(ctx)
                 if self.__loading:
                     self.__loading = False
                     selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
@@ -153,6 +162,9 @@ class AppDocumentRoot(Component):
                         self._app._record_phase("loading_removed")
                         self._app._emit_profile_summary()
         finally:
+            ctx = _active_app_context.get()
+            if ctx is not None:
+                ctx._hydration_in_progress = False
             if ENVIRONMENT != "pyscript":
                 _active_di_scope.reset(token)
 

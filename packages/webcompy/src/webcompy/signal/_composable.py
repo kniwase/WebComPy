@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dis
 import inspect
+import os
 import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -66,7 +67,9 @@ def _auto_key() -> AutoKey:
     caller_frame = _user_caller_frame()
     if caller_frame is None:
         return AutoKey("_unknown_", 0, None)
-    filename = caller_frame.f_code.co_filename
+    module_name = caller_frame.f_globals.get("__name__", "")
+    if not module_name:
+        module_name = os.path.basename(caller_frame.f_code.co_filename)
     lineno = caller_frame.f_lineno
     col: int | None = None
     lasti = getattr(caller_frame, "f_lasti", -1)
@@ -83,7 +86,7 @@ def _auto_key() -> AutoKey:
                 break
     except Exception:
         pass
-    key = AutoKey(filename, lineno, col)
+    key = AutoKey(module_name, lineno, col)
     del caller_frame
     return key
 

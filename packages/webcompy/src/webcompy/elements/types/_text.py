@@ -31,6 +31,14 @@ class NewLine(ElementAbstract):
                 self._adopt_node(existing_node)
                 return existing_node
             elif not getattr(existing_node, "__webcompy_node__", False):
+                from webcompy.hydration import record_mismatch
+
+                record_mismatch(
+                    "tag",
+                    "br",
+                    getattr(existing_node, "nodeName", None),
+                    str(getattr(self, "_get_belonging_component", lambda: "")() or ""),
+                )
                 existing_node.remove()
         node = self._create_node()
         self._init_new_node(node)
@@ -53,6 +61,14 @@ class TextElement(ElementAbstract):
         node.__webcompy_node__ = True
         current_text = self._get_text()
         if node.textContent != current_text:
+            from webcompy.hydration import record_mismatch
+
+            record_mismatch(
+                "text",
+                current_text,
+                node.textContent,
+                str(getattr(self, "_get_belonging_component", lambda: "")() or ""),
+            )
             node.textContent = current_text
 
     def _node_matches_existing(self, existing: DOMNode) -> bool:
@@ -79,6 +95,14 @@ class TextElement(ElementAbstract):
                 return existing_node
             # preserve framework-managed sibling nodes at this index
             elif not getattr(existing_node, "__webcompy_node__", False):
+                from webcompy.hydration import record_mismatch
+
+                record_mismatch(
+                    "tag",
+                    "#text",
+                    getattr(existing_node, "nodeName", None),
+                    str(getattr(self, "_get_belonging_component", lambda: "")() or ""),
+                )
                 existing_node.remove()
         node = self._create_node()
         self._init_new_node(node)
@@ -108,7 +132,25 @@ class RawHTMLElement(ElementAbstract):
         self._node_cache = node
         self._mounted = True
         node.__webcompy_node__ = True
-        self._apply_html(node)
+        value = self._get_html()
+        current = node.innerHTML if hasattr(node, "innerHTML") else node.textContent
+        if current != value and not self._matches_canonical(node, value):
+            from webcompy.hydration import record_mismatch
+
+            record_mismatch(
+                "raw_html",
+                value,
+                current,
+                str(getattr(self, "_get_belonging_component", lambda: "")() or ""),
+            )
+            self._apply_html(node)
+
+    def _matches_canonical(self, node: DOMNode, value: str) -> bool:
+        if not hasattr(node, "innerHTML"):
+            return False
+        tmp = inject(DOM_PORT_KEY).create_element(self._wrapper)
+        tmp.innerHTML = value
+        return node.innerHTML == tmp.innerHTML
 
     def _node_matches_existing(self, existing: DOMNode) -> bool:
         return existing.nodeName.lower() == self._wrapper
@@ -124,6 +166,14 @@ class RawHTMLElement(ElementAbstract):
                 return existing_node
             # preserve framework-managed sibling nodes at this index
             elif not getattr(existing_node, "__webcompy_node__", False):
+                from webcompy.hydration import record_mismatch
+
+                record_mismatch(
+                    "tag",
+                    self._wrapper,
+                    getattr(existing_node, "nodeName", None),
+                    str(getattr(self, "_get_belonging_component", lambda: "")() or ""),
+                )
                 existing_node.remove()
         node = self._create_node()
         self._init_new_node(node)

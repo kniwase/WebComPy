@@ -16,7 +16,12 @@ class ServerAsyncSchedulerPort(AsyncSchedulerPort):
     def __init__(self) -> None:
         self._registry: list[asyncio.Task[Any]] = []
 
-    def schedule(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
+    def schedule(
+        self,
+        coro: Coroutine[Any, Any, Any],
+        *,
+        render: bool = False,
+    ) -> asyncio.Task[Any]:
         loop = asyncio.get_running_loop()
         task = loop.create_task(coro)
         self._registry.append(task)
@@ -27,7 +32,7 @@ class ServerAsyncSchedulerPort(AsyncSchedulerPort):
         if task in self._registry:
             self._registry.remove(task)
 
-    async def await_pending(self) -> None:
+    async def await_pending(self, *, only_render: bool = False) -> None:
         iteration = 0
         while self._registry:
             tasks = list(self._registry)

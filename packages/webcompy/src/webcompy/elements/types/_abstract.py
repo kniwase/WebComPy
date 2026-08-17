@@ -85,10 +85,25 @@ class ElementAbstract(SignalReceivable):
             return existing
         else:
             if existing and not getattr(existing, "__webcompy_node__", False):
+                from webcompy.hydration import record_mismatch
+
+                record_mismatch(
+                    "tag",
+                    self._get_node_identity(),
+                    getattr(existing, "nodeName", None),
+                    str(getattr(self, "_get_belonging_component", lambda: "")() or ""),
+                )
                 existing.remove()
             node = self._create_node()
             self._init_new_node(node)
+            self._node_cache = node
             return node
+
+    def _get_node_identity(self) -> str:
+        name = getattr(self, "_tag_name", None)
+        if name:
+            return str(name)
+        return self.__class__.__name__
 
     def _node_matches_existing(self, existing: DOMNode) -> bool:
         return True

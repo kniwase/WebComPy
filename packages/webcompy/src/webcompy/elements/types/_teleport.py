@@ -208,7 +208,7 @@ class TeleportElement(DynamicElement):
             # (parser-merged anchors) self-contained instead of relying on the
             # app-level post-hydration render pass.
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
-            task = scheduler.schedule(self._render())
+            task = scheduler.schedule(self._render(), render=True)
             self._pending_render_tasks.append((self, task))
             task.add_done_callback(self._on_hydrate_render_done)
 

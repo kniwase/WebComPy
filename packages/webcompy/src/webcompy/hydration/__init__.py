@@ -3,6 +3,7 @@ from __future__ import annotations
 from webcompy.di import inject
 from webcompy.di._keys import HYDRATION_DATA_KEY
 from webcompy.hydration._codec import decode, encode, register_type_handler
+from webcompy.hydration._report import HydrationMismatchRecord, record_mismatch
 from webcompy.hydration._transfer_meta import (
     META_BODY_KEY,
     META_HEADER_NAME,
@@ -22,11 +23,13 @@ def has_resolved_data(component_id: str) -> bool:
 __all__ = [
     "META_BODY_KEY",
     "META_HEADER_NAME",
+    "HydrationMismatchRecord",
     "apply_transfer_meta",
     "decode",
     "encode",
     "encode_with_meta",
     "has_resolved_data",
     "merge_meta_into_body",
+    "record_mismatch",
     "register_type_handler",
 ]
