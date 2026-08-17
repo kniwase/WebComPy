@@ -10,7 +10,11 @@ from webcompy import logging
 from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
-from webcompy.elements.types._base import ElementWithChildren, _normalize_hydration_text_runs
+from webcompy.elements.types._base import (
+    ElementWithChildren,
+    _normalize_hydration_text_runs,
+    _safe_component_id,
+)
 from webcompy.elements.types._element import ElementBase
 from webcompy.elements.types._text import TextElement
 from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
@@ -125,7 +129,9 @@ class DynamicElement(ElementWithChildren):
 
     def _hydrate_node(self) -> None:
         self._hydrated = True
-        _normalize_hydration_text_runs(self._children, self._parent._get_node(), self._node_idx)
+        _normalize_hydration_text_runs(
+            self._children, self._parent._get_node(), self._node_idx, _safe_component_id(self)
+        )
         idx = self._node_idx
         scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
         for child in self._children:
