@@ -783,6 +783,8 @@ When a `Switch` element's active branch was prerendered by SSR, hydration SHALL 
 
 During hydration, five classes of divergence between the prerendered DOM and the client element tree SHALL be detected and recorded: text mismatch and attribute mismatch (recoverable — the mismatch SHALL be patched by writing the expected value into the adopted node), raw-HTML mismatch (recoverable — when an adopted raw-HTML wrapper's existing content differs from the element's rendered value, the mismatch SHALL be patched by re-applying the rendered value into the adopted node), and tag mismatch and node-count mismatch (structural — the mismatch SHALL be repaired by removing the stale node and creating the expected one). Each record SHALL capture the mismatch class, the expected value, the actual value, and the owning component ID when known. Records SHALL be collected for aggregation and reporting by the app layer (see the async-rendering capability). Records SHALL NOT be emitted as individual console messages.
 
+Leaf element types (`TextElement`, `RawHTMLElement`, `NewLine`) SHALL resolve the owning component ID through their parent chain (`self._parent._get_belonging_component()`), guarded against a missing or broken parent chain (an unresolved chain SHALL yield an empty ID rather than raising), so text, raw-HTML, and tag records attributed to a component are attributable in the aggregated report.
+
 #### Scenario: Recoverable text mismatch is patched and recorded
 - **WHEN** hydration adopts a prerendered `#text` node whose content differs from the client element's expected text
 - **THEN** the node content SHALL be updated to the expected text
@@ -799,6 +801,11 @@ During hydration, five classes of divergence between the prerendered DOM and the
 - **THEN** the wrapper's content SHALL be updated to the rendered value
 - **AND** a raw_html-mismatch record SHALL be created
 - **AND** the wrapper node itself SHALL be preserved (not removed or recreated)
+
+#### Scenario: Leaf text and raw-HTML records carry the owning component ID
+- **WHEN** a `TextElement`, `RawHTMLElement`, or `NewLine` produces a text, raw_html, or tag mismatch record during hydration
+- **THEN** the record's component ID SHALL equal the owning component ID resolved through the parent chain
+- **AND** the component ID SHALL be empty (rather than raising) when no parent chain resolves it
 
 #### Scenario: Matching content produces no records
 - **WHEN** hydration adopts prerendered content that fully matches the client element tree
