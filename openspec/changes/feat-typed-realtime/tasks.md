@@ -14,13 +14,13 @@
 
 ## 3. Unit tests (`tests/`, browserless, using FakeWebSocketPort)
 
-- [ ] 3.1 Typed iteration: valid frames yield dataclass instances; raw handle unchanged when `message_type=None`
-- [ ] 3.2 Typed send: frame is a single JSON object with the `__webcompy_transfer_meta__` member; metadata fields (datetime/UUID/Decimal/Enum) round-trip
-- [ ] 3.3 Skip-on-error: non-JSON frame skipped with `.last_error` set; schema-mismatch frame skipped; unknown type tag skipped without class resolution; next valid frame yields and resets `.last_error`; subscription and shared connection survive
-- [ ] 3.4 Strict default: extra/missing fields skipped; `strict=False` yields leniently
-- [ ] 3.5 Allowlist: registered custom type round-trips; unregistered tag skipped; registration outside a DI scope warns and is not global
-- [ ] 3.6 Non-dataclass `message_type` raises a descriptive error
-- [ ] 3.7 SSR: typed handle falls back like the raw handle; no transfer payload entries
+- [x] 3.1 Typed iteration: valid frames yield dataclass instances; raw handle unchanged when `message_type=None`
+- [x] 3.2 Typed send: frame is a single JSON object with the `__webcompy_transfer_meta__` member; metadata fields (datetime/UUID/Decimal/Enum) round-trip
+- [x] 3.3 Skip-on-error: non-JSON frame skipped with `.last_error` set; schema-mismatch frame skipped; unknown type tag skipped without class resolution; next valid frame yields and resets `.last_error`; subscription and shared connection survive
+- [x] 3.4 Strict default: extra/missing fields skipped; `strict=False` yields leniently
+- [x] 3.5 Allowlist: registered custom type round-trips; unregistered tag skipped; registration outside a DI scope warns and is not global
+- [x] 3.6 Non-dataclass `message_type` raises a descriptive error
+- [x] 3.7 SSR: typed handle falls back like the raw handle; no transfer payload entries
 
 ## 4. E2E tests (`e2e/core/`)
 
