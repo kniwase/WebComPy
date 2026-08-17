@@ -29,8 +29,8 @@
 
 ## 5. Docs (Markdown-driven, per docs-site-documents)
 
-- [ ] 5.1 Add `docs_app/documents/typed_realtime.md`: `message_type` usage, wire envelope, strictness, `.last_error` handling recipe, allowlist registration
-- [ ] 5.2 Register the page in `docs_app/docs_manifest.py` and add the `docs_app/pages/document/typed_realtime.py` stub
+- [x] 5.1 Add `docs_app/documents/typed_realtime.md`: `message_type` usage, wire envelope, strictness, `.last_error` handling recipe, allowlist registration
+- [x] 5.2 Register the page in `docs_app/docs_manifest.py` and add the `docs_app/pages/document/typed_realtime.py` stub
 
 ## 6. Review knowledge sync
 
