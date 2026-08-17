@@ -151,6 +151,9 @@ the per-area reference.
 - **Async Rendering Pipeline** — `async-rendering/spec.md`
 - **DI Scope Rules** — `di-scope/spec.md`
 - **Hydration** — `hydration-data-transfer/spec.md`, `elements/spec.md`, `async-rendering/spec.md`
+- **Hydration Adopt & Render** — `elements/spec.md`, `async-rendering/spec.md`
+- **Hydration Mismatch Diagnostics** — `elements/spec.md`, `async-rendering/spec.md`
+- **Scheduler Render-Task Scoping** — `async-scheduler/spec.md`
 - **Metadata Type-Tag Decoding** — `typed-response/spec.md`, `typed-api-client/spec.md`
 - **JSON-RPC Allowlist Decoding** — `json-rpc/spec.md`
 - **RouterView Depth and Level Reuse** — `router/spec.md`
@@ -324,6 +327,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `resource-port` | Async `ResourcePort` ABC + `ServerResourcePort`/`BrowserResourcePort` for app-package resource files (replaces legacy `load_asset`) |
 | `virtual-dom` | Server-side virtual DOM tree for SSG and testing |
 | `async` | Async operations, HTTP client integration |
+| `async-scheduler` | `AsyncSchedulerPort` task scheduling interface with render-task scoping (`schedule(coro, *, render=False)` / `await_pending(*, only_render=False)`); browser drain gates the hydration reveal while non-render tasks stay fire-and-forget |
 | `typed-api-client` | Schema-driven typed deserialization (`from_json`) and `response_type` typed requests on `HttpClient`, including validation strictness and container/scalar coercion |
 | `typed-response` | Metadata-augmented responses: framework-neutral `encode_with_meta`, JSON Pointer type-tag maps, header (`X-WebComPy-Transfer-Meta`) and body (`__webcompy_transfer_meta__`) wire modes, `TypedJSONResponse` FastAPI contrib, and client-side metadata consumption layered on schema-driven coercion |
 | `async-component-setup` | Async component definition support via two-phase initialization during `_render()` |
