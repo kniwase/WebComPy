@@ -14,11 +14,11 @@
 
 ## 3. Client
 
-- [ ] 3.1 Create `packages/webcompy/src/webcompy/rpc/_ws_client.py`: `RpcWsClient` over the typed realtime handle — id-correlated calls (in-flight map), notifications, `RpcError` mapping, in-flight failure on disconnect
-- [ ] 3.2 Implement `subscribe(method, params, *, event_type=E)`: subscription registry keyed by `subscription_id`, cursor tracking, ordered delivery, unsubscribe notification, component-destroy detach
-- [ ] 3.3 Implement automatic rejoin-with-cursor on reconnect and `resync_required` surfacing on the subscription state
-- [ ] 3.4 Implement the heartbeat (reserved notification method names, configurable interval/timeout, timeout → forced abnormal close; `heartbeat_interval=None` disables)
-- [ ] 3.5 Implement SSR no-op + warning and no hydration transfer; public re-exports from `webcompy/rpc/__init__.py` and `webcompy/__init__.py`
+- [x] 3.1 Create `packages/webcompy/src/webcompy/rpc/_ws_client.py`: `RpcWsClient` over the typed realtime handle — id-correlated calls (in-flight map), notifications, `RpcError` mapping, in-flight failure on disconnect
+- [x] 3.2 Implement `subscribe(method, params, *, event_type=E)`: subscription registry keyed by `subscription_id`, cursor tracking, ordered delivery, unsubscribe notification, component-destroy detach
+- [x] 3.3 Implement automatic rejoin-with-cursor on reconnect and `resync_required` surfacing on the subscription state
+- [x] 3.4 Implement the heartbeat (reserved notification method names, configurable interval/timeout, timeout → forced abnormal close; `heartbeat_interval=None` disables)
+- [x] 3.5 Implement SSR no-op + warning and no hydration transfer; public re-exports from `webcompy/rpc/__init__.py` and `webcompy/__init__.py`
 
 ## 4. Unit tests (`tests/`, browserless)
 
