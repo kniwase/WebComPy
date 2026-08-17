@@ -9,7 +9,7 @@
 - [ ] 2.1 Extract the dispatch core in `packages/webcompy-server/src/webcompy_server/rpc/_dispatcher.py` into a transport-neutral function over plain request/response objects (HTTP behavior unchanged)
 - [ ] 2.2 Create `_ws_endpoint.py`: Starlette WebSocket endpoint feeding text frames through the shared core, writing responses back, managing per-connection state, mounted via the same mount mechanism
 - [ ] 2.3 Implement subscription procedure registration (async stream source, per-stream monotonic cursor, bounded replay buffer with configurable size, rejoin with `last_cursor`, `resync_required` on overflow, cleanup on socket close)
-- [ ] 2.4 Add `force_close(code, reason)` to the realtime WebSocket handle (`WebSocketHandle`/`TypedWebSocketHandle` + `_RealtimeRegistry._ws_abort`) with a generation guard so stale socket close events are ignored
+- [x] 2.4 Add `force_close(code, reason)` to the realtime WebSocket handle (`WebSocketHandle`/`TypedWebSocketHandle` + `_RealtimeRegistry._ws_abort`) with a generation guard so stale socket close events are ignored
 - [ ] 2.5 Handle the reserved `_webcompy.close` notification in the WS endpoint by closing the socket with code `1011`, and reject `_webcompy.*` names in `ProcedureRegistry.register`/`register_subscription`
 
 ## 3. Client
