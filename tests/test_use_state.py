@@ -148,6 +148,24 @@ class TestUseStateInsideComponent:
         finally:
             _active_di_scope.reset(token)
 
+    def test_container_mutation_does_not_leak_into_payload(self):
+        state = make_state()
+        cid = generate_id("TestComp")
+        payload = {cid: {"settings": {"theme": "dark"}}}
+        scope = DIScope()
+        scope.provide(HYDRATION_SIGNAL_DATA_KEY, payload)
+        token = _active_di_scope.set(scope)
+        try:
+            with component_context(state):
+                s = use_state("settings", lambda: {})
+            s.value["theme"] = "light"
+            assert payload[cid]["settings"] == {"theme": "dark"}
+            with component_context(make_state()):
+                s2 = use_state("settings", lambda: {})
+            assert s2.value == {"theme": "dark"}
+        finally:
+            _active_di_scope.reset(token)
+
 
 class TestUseStateOutsideComponent:
     def test_factory_runs_and_warning_emitted(self):
@@ -248,6 +266,24 @@ class TestUseReactiveList:
         finally:
             _active_di_scope.reset(token)
 
+    def test_mutation_does_not_leak_into_payload(self):
+        state = make_state()
+        cid = generate_id("TestComp")
+        payload = {cid: {"items": [1, 2]}}
+        scope = DIScope()
+        scope.provide(HYDRATION_SIGNAL_DATA_KEY, payload)
+        token = _active_di_scope.set(scope)
+        try:
+            with component_context(state):
+                rl1 = use_reactive_list("items", lambda: [])
+            rl1.append(3)
+            assert payload[cid]["items"] == [1, 2]
+            with component_context(make_state()):
+                rl2 = use_reactive_list("items", lambda: [])
+            assert rl2.value == [1, 2]
+        finally:
+            _active_di_scope.reset(token)
+
     def test_outside_component_warning(self):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -289,6 +325,24 @@ class TestUseReactiveDict:
                 rd = use_reactive_dict("s", lambda: {})
             rd["b"] = 2
             assert rd.value == {"a": 1, "b": 2}
+        finally:
+            _active_di_scope.reset(token)
+
+    def test_mutation_does_not_leak_into_payload(self):
+        state = make_state()
+        cid = generate_id("TestComp")
+        payload = {cid: {"s": {"a": 1}}}
+        scope = DIScope()
+        scope.provide(HYDRATION_SIGNAL_DATA_KEY, payload)
+        token = _active_di_scope.set(scope)
+        try:
+            with component_context(state):
+                rd1 = use_reactive_dict("s", lambda: {})
+            rd1["b"] = 2
+            assert payload[cid]["s"] == {"a": 1}
+            with component_context(make_state()):
+                rd2 = use_reactive_dict("s", lambda: {})
+            assert rd2.value == {"a": 1}
         finally:
             _active_di_scope.reset(token)
 
