@@ -2,15 +2,15 @@
 
 ## 1. Allowlist registry
 
-- [ ] 1.1 Create the app-scoped realtime type registry in `packages/webcompy/src/webcompy/realtime/_typed.py` (inject-or-provide pattern mirroring the connection registry; qualified-name tags; closed builtin tag set)
-- [ ] 1.2 Implement `register_realtime_type_handler(cls, encoder, decoder)` with no-DI-scope warning + no-op fallback
+- [x] 1.1 Create the app-scoped realtime type registry in `packages/webcompy/src/webcompy/realtime/_typed.py` (inject-or-provide pattern mirroring the connection registry; qualified-name tags; closed builtin tag set)
+- [x] 1.2 Implement `register_realtime_type_handler(cls, encoder, decoder)` with no-DI-scope warning + no-op fallback
 
 ## 2. Typed layer
 
-- [ ] 2.1 Implement send-side encoding: `encode_with_meta(instance, type_handlers=...)` + `merge_meta_into_body` → JSON text frame via the raw handle's `.send()`
-- [ ] 2.2 Implement receive-side decoding: JSON parse → split `__webcompy_transfer_meta__` → `from_json(T, payload, meta=meta, strict=strict)` with allowlist decoders; dataclass-only target validation with descriptive error
-- [ ] 2.3 Implement the typed handle wrapper (`AsyncIterator[T]` + `.send(T)` + `.last_error: Signal[Exception | None]`) delegating sharing/reconnect/state/lifecycle to the raw handle; skip-on-error with warning and `.last_error` set/reset semantics
-- [ ] 2.4 Wire the `message_type`/`strict` parameters into `use_websocket` (default `None` preserves raw behavior) and export `register_realtime_type_handler` from `webcompy/realtime/__init__.py` and `webcompy/__init__.py`
+- [x] 2.1 Implement send-side encoding: `encode_with_meta(instance, type_handlers=...)` + `merge_meta_into_body` → JSON text frame via the raw handle's `.send()`
+- [x] 2.2 Implement receive-side decoding: JSON parse → split `__webcompy_transfer_meta__` → `from_json(T, payload, meta=meta, strict=strict)` with allowlist decoders; dataclass-only target validation with descriptive error
+- [x] 2.3 Implement the typed handle wrapper (`AsyncIterator[T]` + `.send(T)` + `.last_error: Signal[Exception | None]`) delegating sharing/reconnect/state/lifecycle to the raw handle; skip-on-error with warning and `.last_error` set/reset semantics
+- [x] 2.4 Wire the `message_type`/`strict` parameters into `use_websocket` (default `None` preserves raw behavior) and export `register_realtime_type_handler` from `webcompy/realtime/__init__.py` and `webcompy/__init__.py`
 
 ## 3. Unit tests (`tests/`, browserless, using FakeWebSocketPort)
 
