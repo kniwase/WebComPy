@@ -64,7 +64,7 @@ The framework drives documented hooks inside the loading element when present; m
 |---|---|
 | `[data-wc-status]` | current stage label |
 | `[data-wc-substatus]` | package-install detail lines (visual only, `aria-hidden`) |
-| `[data-wc-bar]` | `--wc-progress` custom property (0–100) |
+| `[data-wc-bar]` | `--wc-progress` custom property as a unitless 0–1 fraction (e.g. `transform: scaleX(var(--wc-progress))`) |
 | `[data-wc-timeout]` | revealed by the stall watchdog (the controller keeps it hidden until the watchdog trips, so an initial `hidden` attribute is optional) |
 | `[data-wc-reload]` | click reloads the page |
 
