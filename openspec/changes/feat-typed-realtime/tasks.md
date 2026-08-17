@@ -34,9 +34,9 @@
 
 ## 6. Review knowledge sync
 
-- [ ] 6.1 Update `AGENTS.md`: File → Spec Mapping row for `webcompy/realtime/_typed.py`; Current Specs entry for `typed-realtime`
-- [ ] 6.2 Update `.opencode/skills/webcompy-review/SKILL.md` file→spec mapping and Critical Framework Invariants if a new invariant is introduced
-- [ ] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
+- [x] 6.1 Update `AGENTS.md`: File → Spec Mapping row for `webcompy/realtime/_typed.py`; Current Specs entry for `typed-realtime`
+- [x] 6.2 Update `.opencode/skills/webcompy-review/SKILL.md` file→spec mapping and Critical Framework Invariants if a new invariant is introduced
+- [x] 6.3 Run `python3 scripts/check-doc-spec-refs.py` and confirm it passes
 
 ## 7. Validation
 
