@@ -63,6 +63,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "source": "documents/custom_elements.md",
             },
             {
+                "label": "Loading Screen",
+                "path": "/documents/loading-screen",
+                "source": "documents/loading_screen.md",
+            },
+            {
                 "label": "Server-Sent Events",
                 "path": "/documents/event-source",
                 "source": "documents/event_source.md",

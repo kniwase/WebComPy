@@ -121,6 +121,103 @@ class TestWebComPyAppConfig:
         with pytest.raises(TypeError, match="theme must be a dict"):
             WebComPyAppConfig(theme="not a dict")
 
+    def test_loading_default_is_none(self):
+        config = WebComPyAppConfig()
+        assert config.loading is None
+
+    def test_loading_defaults_normalized(self):
+        config = WebComPyAppConfig(loading={})
+        assert config.loading == {
+            "mode": "auto",
+            "interaction": "block",
+            "stages": True,
+            "dormant": True,
+            "messages": {},
+            "template": None,
+            "reveal_delay_ms": 350,
+            "fade_out_ms": 250,
+            "timeout_seconds": 30,
+        }
+
+    def test_loading_partial_config_keeps_defaults(self):
+        config = WebComPyAppConfig(loading={"mode": "content", "interaction": "passthrough"})
+        assert config.loading["mode"] == "content"
+        assert config.loading["interaction"] == "passthrough"
+        assert config.loading["stages"] is True
+        assert config.loading["reveal_delay_ms"] == 350
+
+    def test_loading_dormant_false(self):
+        config = WebComPyAppConfig(loading={"dormant": False})
+        assert config.loading["dormant"] is False
+
+    def test_loading_messages_kept(self):
+        config = WebComPyAppConfig(loading={"messages": {"runtime_download": "下載中…"}})
+        assert config.loading["messages"] == {"runtime_download": "下載中…"}
+
+    def test_loading_invalid_mode_raises(self):
+        with pytest.raises(ValueError, match="mode"):
+            WebComPyAppConfig(loading={"mode": "fancy"})
+
+    def test_loading_invalid_interaction_raises(self):
+        with pytest.raises(ValueError, match="interaction"):
+            WebComPyAppConfig(loading={"interaction": "let-go"})
+
+    def test_loading_unknown_key_raises(self):
+        with pytest.raises(ValueError, match="unknown keys"):
+            WebComPyAppConfig(loading={"spinner": True})
+
+    def test_loading_invalid_fade_type_raises(self):
+        with pytest.raises(TypeError, match="fade_out_ms"):
+            WebComPyAppConfig(loading={"fade_out_ms": "250"})
+
+    def test_loading_negative_timeout_raises(self):
+        with pytest.raises(ValueError, match="timeout_seconds"):
+            WebComPyAppConfig(loading={"timeout_seconds": -1})
+
+    def test_loading_reveal_delay_above_max_raises(self):
+        with pytest.raises(ValueError, match="reveal_delay_ms"):
+            WebComPyAppConfig(loading={"reveal_delay_ms": 10001})
+
+    def test_loading_fade_out_above_max_raises(self):
+        with pytest.raises(ValueError, match="fade_out_ms"):
+            WebComPyAppConfig(loading={"fade_out_ms": 10001})
+
+    def test_loading_timeout_above_max_raises(self):
+        with pytest.raises(ValueError, match="timeout_seconds"):
+            WebComPyAppConfig(loading={"timeout_seconds": 3601})
+
+    def test_loading_int_max_values_accepted(self):
+        config = WebComPyAppConfig(loading={"reveal_delay_ms": 10000, "fade_out_ms": 10000, "timeout_seconds": 3600})
+        assert config.loading["reveal_delay_ms"] == 10000
+        assert config.loading["fade_out_ms"] == 10000
+        assert config.loading["timeout_seconds"] == 3600
+
+    def test_loading_bool_rejected_for_int_keys(self):
+        with pytest.raises(TypeError, match="reveal_delay_ms"):
+            WebComPyAppConfig(loading={"reveal_delay_ms": True})
+
+    def test_loading_invalid_dormant_type_raises(self):
+        with pytest.raises(TypeError, match="dormant"):
+            WebComPyAppConfig(loading={"dormant": "yes"})
+
+    def test_loading_unknown_stage_key_raises(self):
+        with pytest.raises(ValueError, match="stage keys"):
+            WebComPyAppConfig(loading={"messages": {"init": "Starting…"}})
+
+    def test_loading_message_value_must_be_str(self):
+        with pytest.raises(TypeError, match="messages"):
+            WebComPyAppConfig(loading={"messages": {"runtime_download": 123}})
+
+    def test_loading_messages_default_not_shared(self):
+        config_a = WebComPyAppConfig(loading={})
+        config_b = WebComPyAppConfig(loading={})
+        config_a.loading["messages"]["runtime_download"] = "Mutated"
+        assert config_b.loading["messages"] == {}
+
+    def test_loading_must_be_dict(self):
+        with pytest.raises(TypeError, match="loading must be a dict"):
+            WebComPyAppConfig(loading="overlay")
+
 
 class TestWebComPyBuildConfig:
     def _make_module(self, tmp_path, code="app = None"):
