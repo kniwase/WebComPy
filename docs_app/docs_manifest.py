@@ -72,6 +72,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "path": "/documents/event-source",
                 "source": "documents/event_source.md",
             },
+            {
+                "label": "WebSocket",
+                "path": "/documents/websocket",
+                "source": "documents/websocket.md",
+            },
         ],
     },
 ]

@@ -288,6 +288,7 @@ class BrowserRenderContext(RenderContext):
         from webcompy.ports._browser._media_query import BrowserMediaQueryPort
         from webcompy.ports._browser._resource import BrowserResourcePort
         from webcompy.ports._browser._transition import BrowserTransitionPort
+        from webcompy.ports._browser._websocket import BrowserWebSocketPort
         from webcompy.ports._keys import (
             ASYNC_SCHEDULER_PORT_KEY,
             COOKIE_PORT_KEY,
@@ -302,6 +303,7 @@ class BrowserRenderContext(RenderContext):
             MEDIA_QUERY_PORT_KEY,
             RESOURCE_PORT_KEY,
             TRANSITION_PORT_KEY,
+            WEBSOCKET_PORT_KEY,
         )
         from webcompy.template._markdown_default import DefaultMarkdownParser
 
@@ -322,6 +324,7 @@ class BrowserRenderContext(RenderContext):
         self._di_scope.provide(MEDIA_QUERY_PORT_KEY, BrowserMediaQueryPort())
         self._di_scope.provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
         self._di_scope.provide(TRANSITION_PORT_KEY, BrowserTransitionPort())
+        self._di_scope.provide(WEBSOCKET_PORT_KEY, BrowserWebSocketPort())
 
         if self._config.scroll_restoration and ENVIRONMENT == "pyscript":
             from webcompy.ports._browser._raw import browser as _raw_browser

@@ -21,11 +21,13 @@ from webcompy.ports._keys import (
     MEDIA_QUERY_PORT_KEY,
     RESOURCE_PORT_KEY,
     TRANSITION_PORT_KEY,
+    WEBSOCKET_PORT_KEY,
 )
 from webcompy.ports._markdown import MarkdownPort
 from webcompy.ports._media_query import MediaQueryPort
 from webcompy.ports._resource import ResourceNotFoundError, ResourcePort
 from webcompy.ports._transition import TransitionPort
+from webcompy.ports._websocket import WebSocketConnection, WebSocketPort
 
 __all__ = [
     "ASYNC_SCHEDULER_PORT_KEY",
@@ -41,6 +43,7 @@ __all__ = [
     "MEDIA_QUERY_PORT_KEY",
     "RESOURCE_PORT_KEY",
     "TRANSITION_PORT_KEY",
+    "WEBSOCKET_PORT_KEY",
     "AsyncSchedulerPort",
     "CookiePort",
     "CustomElementPort",
@@ -57,4 +60,6 @@ __all__ = [
     "ResourceNotFoundError",
     "ResourcePort",
     "TransitionPort",
+    "WebSocketConnection",
+    "WebSocketPort",
 ]

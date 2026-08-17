@@ -20,8 +20,9 @@ def test_event_source_page_toc(docs_page_on, assert_no_console_errors):
 
 
 @pytest.mark.e2e
-def test_event_source_page_pager_omits_next(docs_page_on, assert_no_console_errors):
+def test_event_source_page_pager_links_to_websocket(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents/event-source")
     expect(page.locator(".docs-pager-prev")).to_have_count(1)
     expect(page.locator(".docs-pager-prev a")).to_have_text("Loading Screen")
-    expect(page.locator(".docs-pager-next")).to_have_count(0)
+    expect(page.locator(".docs-pager-next")).to_have_count(1)
+    expect(page.locator(".docs-pager-next a")).to_have_text("WebSocket")

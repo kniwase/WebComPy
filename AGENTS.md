@@ -158,7 +158,7 @@ the per-area reference.
 - **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`
 - **Transition Sequence Contract** — `transition/spec.md`
 - **Composable Usage** — `composables/spec.md`
-- **Realtime Connection Lifecycle** — `sse-composable/spec.md`
+- **Realtime Connection Lifecycle** — `sse-composable/spec.md`, `websocket-composable/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
 - **Head VDOM** — `head-vdom/spec.md`
 - **Loading Screen DOM Contract** — `loading-screen/spec.md`
@@ -201,6 +201,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/rpc/` | `json-rpc/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md`, `custom-element-components/spec.md` |
 | `webcompy/ports/_event_source.py`, `webcompy/ports/_browser/_event_source.py` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `sse-composable/spec.md` |
+| `webcompy/ports/_websocket.py`, `webcompy/ports/_browser/_websocket.py` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `websocket-composable/spec.md` |
 | `webcompy/ports/` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `async-scheduler/spec.md`, `scroll-restoration/spec.md`, `custom-element-components/spec.md` |
 | `webcompy/ports/_markdown.py` | `port-abstraction/spec.md` |
 | `webcompy/ports/_resource.py`, `webcompy_server/ports/_resource.py` | `resource-port/spec.md` |
@@ -212,7 +213,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md` |
 | `webcompy/di/` | `di-scope/spec.md`, `di-injection/spec.md`, `dependency-resolver/spec.md` |
 | `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md`, `signal-stream/spec.md` |
-| `webcompy/realtime/` | `sse-composable/spec.md`, `signal-stream/spec.md`, `reactive/spec.md`, `di-scope/spec.md` |
+| `webcompy/realtime/` | `sse-composable/spec.md`, `websocket-composable/spec.md`, `signal-stream/spec.md`, `reactive/spec.md`, `di-scope/spec.md` |
 | `webcompy/ajax/_serde.py` | `typed-api-client/spec.md`, `typed-response/spec.md` |
 | `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md`, `json-rpc/spec.md`, `loading-screen/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
@@ -361,6 +362,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `signal-value-transfer` | Collection and restoration of `Signal`/`Computed`/`ReactiveList`/`ReactiveDict` values across the hydration boundary via `__signal_members__` |
 | `signal-stream` | Bidirectional conversion between occurrence-based streams and signals: `to_signal`, `to_reactive_list`, `to_async_iter`, with AsyncResult-style error/completion signals, drop-oldest capping, and lifecycle cleanup |
 | `sse-composable` | `use_event_source` composable sharing per-app SSE connections: reference-counted registry keyed by `(transport, url)`, per-subscriber pull-based queues, connection-handle async iterator with `.state` signal and `.close()`, `SSEvent` dataclass, and SSR no-op fallback |
+| `websocket-composable` | `use_websocket` composable for bidirectional text messaging over a shared, reference-counted connection: protocols-aware registry keying, client-side reconnection with exponential backoff and jitter, `.last_close` close introspection, disconnected send policy with opt-in buffering, and SSR no-op fallback |
 | `readonly-signal` | Read-only reactive values with an external-only update channel: `use_readonly_signal`, `use_window_event`, `use_document_event`, with lifecycle-bound listener cleanup and no hydration transfer |
 | `transfer-codec` | Layered serialization engine (encode/decode) preserving Python type fidelity across the hydration boundary via `__webcompy_`-tagged JSON |
 | `payload-compression` | Optional gzip compression of the hydration data transfer payload via stdlib `zlib`/`base64`, threshold-based activation, `__webcompy_compressed__` envelope flag |
