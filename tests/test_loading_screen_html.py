@@ -179,6 +179,14 @@ class TestLoadingScreenMarkup:
         assert "<script>(function" in html_str
         assert '"stages": false' in html_str
 
+    def test_stages_false_controller_resets_watchdog_on_ready(self):
+        app = _make_app(loading={"stages": False})
+        html_str = _generate_html(app)
+        assert (
+            'window.addEventListener("py:progress", resetWatchdog);\n'
+            '    window.addEventListener("py:ready", resetWatchdog);' in html_str
+        )
+
     def test_default_prerendered_page_uses_content_mode(self):
         html_str = _generate_html(_make_app(), prerender=True)
         assert 'data-wc-mode="content"' in html_str

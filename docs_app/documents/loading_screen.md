@@ -52,7 +52,7 @@ All keys are optional. Unknown keys, invalid values, and unknown `messages` stag
 
 ### Stall watchdog
 
-If no boot progress event arrives within `timeout_seconds`, a "Taking longer than usual…" message with a reload button appears. Set `0` to disable.
+If no boot progress event arrives within `timeout_seconds`, a "Taking longer than usual…" message with a reload button appears. Set `0` to disable. The timer resets on every progress event and when the runtime signals ready (`py:ready`), so it only trips while boot is genuinely stalled.
 
 ## Custom templates and the toolkit contract
 

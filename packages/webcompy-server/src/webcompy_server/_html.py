@@ -384,6 +384,7 @@ _LOADING_CONTROLLER_TEMPLATE = """(function () {
     window.addEventListener("py:ready", onReady);
   } else {
     window.addEventListener("py:progress", resetWatchdog);
+    window.addEventListener("py:ready", resetWatchdog);
   }
 
   if (reloadEl) {

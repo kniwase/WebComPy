@@ -153,7 +153,7 @@ When the application finishes its first render, the loading element SHALL fade o
 
 ### Requirement: Stall watchdog
 
-The loading screen SHALL include a stall watchdog: if no boot progress event is observed for `timeout_seconds` (default 30; `0` disables), a "taking longer than usual" message SHALL be shown together with a reload affordance. The watchdog timer SHALL reset on every progress event. After boot completes, the watchdog SHALL NOT fire.
+The loading screen SHALL include a stall watchdog: if no boot progress event is observed for `timeout_seconds` (default 30; `0` disables), a "taking longer than usual" message SHALL be shown together with a reload affordance. The watchdog timer SHALL reset on every progress event and on the `py:ready` event, regardless of the `stages` setting. After boot completes, the watchdog SHALL NOT fire.
 
 #### Scenario: Stall message after prolonged silence
 
@@ -164,6 +164,11 @@ The loading screen SHALL include a stall watchdog: if no boot progress event is 
 
 - **WHEN** progress events keep arriving
 - **THEN** the stall message SHALL NOT appear
+
+#### Scenario: Watchdog reset by runtime-ready signal
+
+- **WHEN** the `py:ready` event is observed after the last progress event with `stages` disabled
+- **THEN** the stall message SHALL NOT appear while the application imports and renders
 
 ### Requirement: Theme-aware appearance
 
