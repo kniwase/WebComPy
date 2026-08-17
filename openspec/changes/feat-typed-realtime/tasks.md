@@ -24,8 +24,8 @@
 
 ## 4. E2E tests (`e2e/core/`)
 
-- [ ] 4.1 Extend the mounted test WebSocket endpoint (asgi-mount) with a typed echo that returns metadata-typed fields
-- [ ] 4.2 Add a Playwright test: typed dataclass round trip renders typed fields; a malformed frame from the server does not break subsequent messages; gate with `WEBCOMPY_RUN_E2E=1`
+- [x] 4.1 Extend the mounted test WebSocket endpoint (asgi-mount) with a typed echo that returns metadata-typed fields
+- [x] 4.2 Add a Playwright test: typed dataclass round trip renders typed fields; a malformed frame from the server does not break subsequent messages; gate with `WEBCOMPY_RUN_E2E=1`
 
 ## 5. Docs (Markdown-driven, per docs-site-documents)
 
