@@ -32,8 +32,8 @@
 
 ## 5. E2E tests (`e2e/core/`)
 
-- [ ] 5.1 Mount the WS RPC endpoint in the E2E app and add a Playwright test: typed call round trip
-- [ ] 5.2 Add a Playwright test: subscription events render; after a server-initiated abnormal close and emitted events, the client reconnects and catch-up delivers the missed events exactly once; gate with `WEBCOMPY_RUN_E2E=1`
+- [x] 5.1 Mount the WS RPC endpoint in the E2E app and add a Playwright test: typed call round trip
+- [x] 5.2 Add a Playwright test: subscription events render; after a server-initiated abnormal close and emitted events, the client reconnects and catch-up delivers the missed events exactly once; gate with `WEBCOMPY_RUN_E2E=1`
 
 ## 6. Docs (Markdown-driven, per docs-site-documents)
 
