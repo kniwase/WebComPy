@@ -37,8 +37,8 @@
 
 ## 6. Docs (Markdown-driven, per docs-site-documents)
 
-- [ ] 6.1 Add `docs_app/documents/rpc_websocket.md`: WS RPC calls, subscriptions with cursors, reconnect/catch-up/`resync_required` semantics with the refetch recipe, heartbeat tuning
-- [ ] 6.2 Register the page in `docs_app/docs_manifest.py` and add the `docs_app/pages/document/rpc_websocket.py` stub
+- [x] 6.1 Add `docs_app/documents/rpc_websocket.md`: WS RPC calls, subscriptions with cursors, reconnect/catch-up/`resync_required` semantics with the refetch recipe, heartbeat tuning
+- [x] 6.2 Register the page in `docs_app/docs_manifest.py` and add the `docs_app/pages/document/rpc_websocket.py` stub
 
 ## 7. Review knowledge sync
 
