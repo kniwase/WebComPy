@@ -23,7 +23,7 @@ When `message_type=T` (a dataclass type) is passed to `use_websocket`, the retur
 
 ### Requirement: Typed frames shall use the typed-response body wire envelope
 
-Send-side encoding SHALL use `encode_with_meta` and SHALL place the metadata map in the top-level `__webcompy_transfer_meta__` member of a single JSON object per frame. Receive-side decoding SHALL split off that member and reconstruct the payload via `from_json(T, payload, meta=meta, strict=strict)`. Metadata-typed fields (`datetime`, `UUID`, `Decimal`, Enum, and allowlist-registered custom types) SHALL round-trip with full type fidelity.
+Send-side encoding SHALL use `encode_with_meta` and SHALL place the metadata map in the top-level `__webcompy_transfer_meta__` member of a single JSON object per frame. Receive-side decoding SHALL split off that member, apply it via `apply_transfer_meta` with the registered decoders (strict tag validation against the closed builtin set and the registered allowlist), and reconstruct the payload via `from_json(T, payload, strict=strict)`. Values restored from registered type decoders are already instances of their target type and SHALL pass through `from_json` unchanged (see the `typed-api-client` delta spec for the pass-through contract). Metadata-typed fields (`datetime`, `UUID`, `Decimal`, Enum, and allowlist-registered custom types) SHALL round-trip with full type fidelity.
 
 #### Scenario: Metadata field round trip
 
