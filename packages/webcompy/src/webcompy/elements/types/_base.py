@@ -258,8 +258,5 @@ class ElementWithChildren(ElementAbstract):
             for child in self._children:
                 child._clear_node_cache(True)
 
-    def _get_belonging_component(self) -> str:
-        return self._parent._get_belonging_component()
-
     def _get_belonging_components(self) -> tuple[Any, ...]:
         return self._parent._get_belonging_components()

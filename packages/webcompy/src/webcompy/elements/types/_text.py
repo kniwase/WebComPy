@@ -37,7 +37,7 @@ class NewLine(ElementAbstract):
                     "tag",
                     "br",
                     getattr(existing_node, "nodeName", None),
-                    str(getattr(self, "_get_belonging_component", lambda: "")() or ""),
+                    self._get_belonging_component(),
                 )
                 existing_node.remove()
         node = self._create_node()
@@ -67,7 +67,7 @@ class TextElement(ElementAbstract):
                 "text",
                 current_text,
                 node.textContent,
-                str(getattr(self, "_get_belonging_component", lambda: "")() or ""),
+                self._get_belonging_component(),
             )
             node.textContent = current_text
 
@@ -101,7 +101,7 @@ class TextElement(ElementAbstract):
                     "tag",
                     "#text",
                     getattr(existing_node, "nodeName", None),
-                    str(getattr(self, "_get_belonging_component", lambda: "")() or ""),
+                    self._get_belonging_component(),
                 )
                 existing_node.remove()
         node = self._create_node()
@@ -141,7 +141,7 @@ class RawHTMLElement(ElementAbstract):
                 "raw_html",
                 value,
                 current,
-                str(getattr(self, "_get_belonging_component", lambda: "")() or ""),
+                self._get_belonging_component(),
             )
             self._apply_html(node)
 
@@ -172,7 +172,7 @@ class RawHTMLElement(ElementAbstract):
                     "tag",
                     self._wrapper,
                     getattr(existing_node, "nodeName", None),
-                    str(getattr(self, "_get_belonging_component", lambda: "")() or ""),
+                    self._get_belonging_component(),
                 )
                 existing_node.remove()
         node = self._create_node()

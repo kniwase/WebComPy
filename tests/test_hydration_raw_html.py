@@ -31,6 +31,10 @@ def hydration_window():
     _active_app_context.reset(token)
 
 
+class _CidRootElement(FakeRootElement):
+    _get_belonging_component = lambda self: "my-comp"
+
+
 def _prerendered_wrapper(inner_html: str) -> tuple[FakeDOMNode, FakeDOMNode]:
     wrapper = FakeDOMNode("span")
     wrapper.__webcompy_prerendered_node__ = True
@@ -93,6 +97,24 @@ def test_raw_html_adoption_skips_write_when_both_empty(hydration_window):
     assert raw._node_cache is wrapper
     assert wrapper.innerHTML == ""
     assert len(hydration_window._hydration_reporter.records) == 0
+
+
+def test_raw_html_mismatch_record_carries_owning_component_id(hydration_window):
+    value = "<span class='tok-kw'>def</span>"
+    wrapper, _ = _prerendered_wrapper("<span>old</span>")
+    parent = _CidRootElement("div", {}, {}, None, None)
+    parent._node_cache = FakeDOMNode("div")
+    parent._mounted = True
+    wrapper.__webcompy_prerendered_node__ = True
+    parent._node_cache.appendChild(wrapper)
+    raw = _make_raw(value, parent)
+
+    raw._hydrate_node()
+
+    records = hydration_window._hydration_reporter.records
+    assert len(records) == 1
+    assert records[0].kind == "raw_html"
+    assert records[0].component_id == "my-comp"
 
 
 @pytest.mark.asyncio

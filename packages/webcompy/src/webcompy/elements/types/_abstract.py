@@ -71,6 +71,18 @@ class ElementAbstract(SignalReceivable):
     @abstractmethod
     def _create_node(self) -> DOMNode: ...
 
+    def _get_belonging_component(self) -> str:
+        parent = getattr(self, "_parent", None)
+        if parent is None:
+            return ""
+        resolver = getattr(parent, "_get_belonging_component", None)
+        if not callable(resolver):
+            return ""
+        try:
+            return str(resolver() or "")
+        except AttributeError:
+            return ""
+
     def _init_new_node(self, node: DOMNode) -> None:
         node.__webcompy_node__ = True
 
@@ -91,7 +103,7 @@ class ElementAbstract(SignalReceivable):
                     "tag",
                     self._get_node_identity(),
                     getattr(existing, "nodeName", None),
-                    str(getattr(self, "_get_belonging_component", lambda: "")() or ""),
+                    self._get_belonging_component(),
                 )
                 existing.remove()
             node = self._create_node()

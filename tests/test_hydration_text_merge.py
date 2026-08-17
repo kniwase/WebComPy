@@ -294,6 +294,74 @@ class TestHydrationTextRunNormalization:
         finally:
             _active_app_context.reset(token)
 
+    def test_text_mismatch_record_carries_owning_component_id(self, fake_browser_full):
+        from webcompy.components._component import _active_app_context
+        from webcompy.hydration._report import HydrationReporter
+
+        class _Ctx:
+            def __init__(self) -> None:
+                self._hydration_in_progress = True
+                self._hydration_reporter = HydrationReporter()
+
+        class _CidRootElement(FakeRootElement):
+            _get_belonging_component = lambda self: "my-comp"
+
+        ctx = _Ctx()
+        token = _active_app_context.set(ctx)
+        try:
+            parent = _CidRootElement("div", {}, {}, None, None)
+            parent._node_cache = FakeDOMNode("div")
+            parent._mounted = True
+            prerendered = FakeDOMNode("div")
+            prerendered.__webcompy_prerendered_node__ = True
+            text = FakeDOMNode("#text", text_content="old")
+            text.__webcompy_prerendered_node__ = True
+            prerendered.appendChild(text)
+            parent._node_cache.appendChild(prerendered)
+            el = Element("div", {}, {}, None, [TextElement("new")])
+            el._parent = parent
+            el._node_idx = 0
+            el._hydrate_node()
+
+            text_records = [r for r in ctx._hydration_reporter.records if r.kind == "text"]
+            assert len(text_records) == 1
+            assert text_records[0].component_id == "my-comp"
+        finally:
+            _active_app_context.reset(token)
+
+    def test_newline_tag_mismatch_record_carries_owning_component_id(self, fake_browser_full):
+        from webcompy.components._component import _active_app_context
+        from webcompy.hydration._report import HydrationReporter
+
+        class _Ctx:
+            def __init__(self) -> None:
+                self._hydration_in_progress = True
+                self._hydration_reporter = HydrationReporter()
+
+        class _CidRootElement(FakeRootElement):
+            _get_belonging_component = lambda self: "my-comp"
+
+        ctx = _Ctx()
+        token = _active_app_context.set(ctx)
+        try:
+            parent = _CidRootElement("div", {}, {}, None, None)
+            parent._node_cache = FakeDOMNode("div")
+            parent._mounted = True
+            span = FakeDOMNode("span")
+            span.__webcompy_prerendered_node__ = True
+            parent._node_cache.appendChild(span)
+            newline = NewLine()
+            newline._parent = parent
+            newline._node_idx = 0
+
+            newline._get_node()
+
+            tag_records = [r for r in ctx._hydration_reporter.records if r.kind == "tag" and r.expected == "br"]
+            assert len(tag_records) == 1
+            assert tag_records[0].component_id == "my-comp"
+        finally:
+            _active_app_context.reset(token)
+
 
 class TestKeyedReactiveDictHydrationReconcile:
     @pytest.mark.asyncio
