@@ -180,14 +180,13 @@ class TestHydrationTextRunNormalization:
         assert prerendered.childNodes.length == 3
         assert [n.textContent for n in prerendered.childNodes] == ["a", "", "b"]
 
-    def test_content_mismatch_falls_back_without_splitting(self, fake_browser_full, caplog):
+    def test_content_mismatch_falls_back_without_splitting(self, fake_browser_full):
         _, prerendered = _hydrate_container(
             ["a", "b"],
             [FakeDOMNode("#text", text_content="xy")],
         )
         assert prerendered.childNodes.length == 1
         assert prerendered.childNodes[0].textContent == "a"
-        assert "Hydration text-run mismatch" in caplog.text
 
     def test_already_split_dom_is_untouched(self, fake_browser_full):
         first = FakeDOMNode("#text", text_content="a")
@@ -244,7 +243,7 @@ class TestHydrationTextRunNormalization:
         assert el._children[1]._node_cache is prerendered.childNodes[1]
         assert first.textContent_write_count == 0
 
-    def test_content_mismatch_halts_normalization_for_later_runs(self, fake_browser_full, caplog):
+    def test_content_mismatch_halts_normalization_for_later_runs(self, fake_browser_full):
         cd_node = FakeDOMNode("#text", text_content="cd")
         _, prerendered = _hydrate_container(
             ["a", "b", Element("span", {}, {}, None, None), "c", "d"],
@@ -254,7 +253,6 @@ class TestHydrationTextRunNormalization:
                 cd_node,
             ],
         )
-        assert "Hydration text-run mismatch" in caplog.text
         assert prerendered.childNodes.length == 2
         assert [n.textContent for n in prerendered.childNodes] == ["a", "cd"]
         assert prerendered.childNodes[1] is cd_node

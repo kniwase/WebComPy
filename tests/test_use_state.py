@@ -323,6 +323,12 @@ class TestAutoKey:
         assert state.context._transferable_signals[keys[0]].value == 1
         assert state.context._transferable_signals[keys[1]].value == 2
 
+    def test_auto_key_is_module_based_not_filesystem_path(self):
+        k = _auto_key()
+        prefix = str(k).split(":", 1)[0]
+        assert prefix == __name__, f"auto-key must be module-based for cross-environment transfer: {k!r}"
+        assert not str(k).startswith("/"), f"auto-key must not embed the filesystem path: {k!r}"
+
 
 class TestRoundTrip:
     def test_signal_ssr_collects_then_browser_restores(self):

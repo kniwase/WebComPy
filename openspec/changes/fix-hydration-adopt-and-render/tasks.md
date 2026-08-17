@@ -2,9 +2,9 @@
 
 ## 1. Pre-verification
 
-- [ ] 1.1 Confirm the "adopted children never render" risk for Suspense (resolved path) and Transition with failing unit tests (fake browser: prerendered content, `_hydrate_node`, then assert children never completed a render; fail first, pass after Phase 2)
-- [ ] 1.2 Investigate the double route-content render observed in browser instrumentation (REM/ADD × 2 on the page root) and record the cause in the design doc's decisions (D1/D7) before implementing the wrapper
-- [ ] 1.3 Add a unit-test helper that measures hydration: count DOM node removals/additions and per-element `_render` invocations during a fake-browser hydration of a prerendered tree (used by all subsequent tasks)
+- [x] 1.1 Confirm the "adopted children never render" risk for Suspense (resolved path) and Transition with failing unit tests (fake browser: prerendered content, `_hydrate_node`, then assert children never completed a render; fail first, pass after Phase 2)
+- [x] 1.2 Investigate the double route-content render observed in browser instrumentation (REM/ADD × 2 on the page root) and record the cause in the design doc's decisions (D1/D7) before implementing the wrapper
+- [x] 1.3 Add a unit-test helper that measures hydration: count DOM node removals/additions and per-element `_render` invocations during a fake-browser hydration of a prerendered tree (used by all subsequent tasks)
 
 ## 2. Hydration contract foundation
 
@@ -32,44 +32,44 @@
 
 ## 5. Unit tests (fake browser)
 
-- [ ] 5.1 RouterView hydration: sync and async route pages preserve all prerendered nodes (survival assertion) and complete exactly one hydration render each
-- [ ] 5.2 Repeat: SSR children survive the first hydration refresh; keyed mutation after hydration reconciles correctly
-- [ ] 5.3 Switch: SSR branch survives first refresh; condition flip after hydration patches correctly
-- [ ] 5.4 Suspense: resolved children survive and react (signal-driven child updates after hydration); fallback path regression
-- [ ] 5.5 Transition: adopted content does not enter; children wiring regression after hydration
-- [ ] 5.6 Mismatch diagnostics: recoverable text/attr patch records; structural tag/node-count repair records; matching content → no records; `hydration_report` contents verified
-- [ ] 5.7 Scheduler drain: `await_pending` completes scheduled renders; overlay-removal ordering covered at `AppDocumentRoot` level
-- [ ] 5.8 Update existing expectations: `test_full_hydration.py`, `test_dynamic_child_node_index.py`, `test_hydration_text_merge.py`, `test_error_boundary_hydration_retry.py`, `test_custom_element_components.py`, `test_suspense.py`, `test_transition.py`, `test_repeat.py`, `test_switch.py`, `test_client_only.py`
+- [x] 5.1 RouterView hydration: sync and async route pages preserve all prerendered nodes (survival assertion) and complete exactly one hydration render each
+- [x] 5.2 Repeat: SSR children survive the first hydration refresh; keyed mutation after hydration reconciles correctly
+- [x] 5.3 Switch: SSR branch survives first refresh; condition flip after hydration patches correctly
+- [x] 5.4 Suspense: resolved children survive and react (signal-driven child updates after hydration); fallback path regression
+- [x] 5.5 Transition: adopted content does not enter; children wiring regression after hydration
+- [x] 5.6 Mismatch diagnostics: recoverable text/attr patch records; structural tag/node-count repair records; matching content → no records; `hydration_report` contents verified
+- [x] 5.7 Scheduler drain: `await_pending` completes scheduled renders; overlay-removal ordering covered at `AppDocumentRoot` level
+- [x] 5.8 Update existing expectations: `test_full_hydration.py`, `test_dynamic_child_node_index.py`, `test_hydration_text_merge.py`, `test_error_boundary_hydration_retry.py`, `test_custom_element_components.py`, `test_suspense.py`, `test_transition.py`, `test_repeat.py`, `test_switch.py`, `test_client_only.py`
 
 ## 6. E2E regression
 
-- [ ] 6.1 Docs pages: MutationObserver-based test asserting zero removals of prerendered `#webcompy-app` content between DOMContentLoaded and loading-indicator removal, and zero hydration-mismatch warnings on the quickstart/installation pages
-- [ ] 6.2 Nested-routes app: existing navigation suite passes (sibling/param/query remount semantics) with the new hydration path
-- [ ] 6.3 Run `scripts/run-e2e-tests.sh` (core + docs groups, prod and static modes)
+- [x] 6.1 Docs pages: MutationObserver-based test asserting zero removals of prerendered `#webcompy-app` content between DOMContentLoaded and loading-indicator removal, and zero hydration-mismatch warnings on the quickstart/installation pages
+- [x] 6.2 Nested-routes app: existing navigation suite passes (sibling/param/query remount semantics) with the new hydration path
+- [x] 6.3 Run `scripts/run-e2e-tests.sh` (core + docs groups, prod and static modes)
 
 ## 7. Verification and measurement
 
-- [ ] 7.1 `ruff check .` + `ruff format --check .` + `pyright`
-- [ ] 7.2 `uv run python -m pytest tests/ --tb=short`
-- [ ] 7.3 SSG smoke: `uv run python -m webcompy generate` produces pages whose prerendered content matches (existing generate check)
-- [ ] 7.4 Re-run the browser instrumentation script: route roots identity-preserved, overlay removed, zero mismatch warnings; residual inner-content rebuild measured (quickstart alive 104/218, home 137/366 — dead-node counts exactly equal the `tok-*` highlight spans in the SSG HTML, see D9). The full `alive ≈ 218/218` acceptance moves to task 8.5
-- [ ] 7.5 Update `.opencode/skills/webcompy-review/SKILL.md` (file→spec mapping and Critical Framework Invariants) and `AGENTS.md` hydration invariant references; run `python3 scripts/check-doc-spec-refs.py` (deferred: main specs unchanged until archive)
+- [x] 7.1 `ruff check .` + `ruff format --check .` + `pyright`
+- [x] 7.2 `uv run python -m pytest tests/ --tb=short`
+- [x] 7.3 SSG smoke: `uv run python -m webcompy generate` produces pages whose prerendered content matches (existing generate check)
+- [x] 7.4 Re-run the browser instrumentation script: route roots identity-preserved, overlay removed, zero mismatch warnings; residual inner-content rebuild measured (quickstart alive 104/218, home 137/366 — dead-node counts exactly equal the `tok-*` highlight spans in the SSG HTML, see D9). The full `alive ≈ 218/218` acceptance moves to task 8.5
+- [x] 7.5 Update `.opencode/skills/webcompy-review/SKILL.md` (file→spec mapping and Critical Framework Invariants) and `AGENTS.md` hydration invariant references; run `python3 scripts/check-doc-spec-refs.py` (deferred: main specs unchanged until archive)
 
 ## 8. RawHTMLElement adoption preservation (D9)
 
 - [x] 8.1 `RawHTMLElement._adopt_node()`: adopt the compare-then-apply pattern of `TextElement._adopt_node()` — when the adopted wrapper's existing content (`innerHTML`, or `textContent` when `innerHTML` is unavailable) equals the rendered value, skip `_apply_html` so prerendered child nodes survive; when it differs, re-apply and record a `raw_html` mismatch
 - [x] 8.2 Add `"raw_html"` to `MismatchKind` in `webcompy/hydration/_report.py`; confirm the aggregated warning summary covers the new kind
-- [ ] 8.3 Unit tests: matching raw-HTML content is adopted without innerHTML writes and with no records; differing content is patched and records a `raw_html` mismatch with expected/actual values; empty wrapper content re-applies
-- [ ] 8.4 E2E: extend the docs preservation regression to assert `tok-*` highlight span identity on the quickstart page (references captured before hydration remain connected after loading-indicator removal)
-- [ ] 8.5 Verification: `ruff` + `pyright` + full `pytest tests/`; E2E groups `template`, `components`, `docs-documents`, `docs-home` (prod + static); browser measurement alive ≈ 218/218 (quickstart) and 366/366 (home) with zero mismatch warnings; `openspec validate`
+- [x] 8.3 Unit tests: matching raw-HTML content is adopted without innerHTML writes and with no records; differing content is patched and records a `raw_html` mismatch with expected/actual values; empty wrapper content re-applies
+- [x] 8.4 E2E: extend the docs preservation regression to assert `tok-*` highlight span identity on the quickstart page (references captured before hydration remain connected after loading-indicator removal)
+- [x] 8.5 Verification: `ruff` + `pyright` + full `pytest tests/`; E2E groups `template`, `components`, `docs-documents`, `docs-home` (prod + static); browser measurement alive ≈ 218/218 (quickstart) and 366/366 (home) with zero mismatch warnings; `openspec validate`
 
 ## 9. Environment-stable auto transfer keys (signal-value-transfer)
 
-- [ ] 9.1 Diagnose the helloworld demo `raw_html` mismatch: `use_state()` auto keys embed the absolute filesystem path, which differs between SSR (checkout path) and browser (wheel `site-packages` path), so restoration misses and the prerendered highlighted content is wiped. All `use_state`/`use_reactive_list`/`use_reactive_dict` call sites are affected in real deployments (unit tests never caught it because both sides run in the same environment)
+- [x] 9.1 Diagnose the helloworld demo `raw_html` mismatch: `use_state()` auto keys embed the absolute filesystem path, which differs between SSR (checkout path) and browser (wheel `site-packages` path), so restoration misses and the prerendered highlighted content is wiped. All `use_state`/`use_reactive_list`/`use_reactive_dict` call sites are affected in real deployments (unit tests never caught it because both sides run in the same environment)
 - [x] 9.2 `_auto_key()` derives keys from the call-site module identity (`__name__`, with basename fallback) plus line/column instead of `co_filename`; keys are environment-independent while remaining distinct per call site
-- [ ] 9.3 Regression test: auto key is module-based and contains no filesystem path (`tests/test_use_state.py::TestAutoKey::test_auto_key_is_module_based_not_filesystem_path`)
-- [ ] 9.4 Verify restoration in the browser: helloworld / todo / fetch / fizzbuzz demo pages all reach 100% SSR node survival (alive = total, tok = total) with zero hydration-mismatch warnings
-- [ ] 9.5 Adjust the lifecycle E2E fixture: `render_count` becomes a plain `Signal` (client-local) instead of `use_state`, because with restoration working the SSR-side hook increments would transfer and make the cross-environment counter display 3 instead of the intended client-side count of 1; `count` remains a transferable `use_state` signal. Components E2E group passes (2/2)
+- [x] 9.3 Regression test: auto key is module-based and contains no filesystem path (`tests/test_use_state.py::TestAutoKey::test_auto_key_is_module_based_not_filesystem_path`)
+- [x] 9.4 Verify restoration in the browser: helloworld / todo / fetch / fizzbuzz demo pages all reach 100% SSR node survival (alive = total, tok = total) with zero hydration-mismatch warnings
+- [x] 9.5 Adjust the lifecycle E2E fixture: `render_count` becomes a plain `Signal` (client-local) instead of `use_state`, because with restoration working the SSR-side hook increments would transfer and make the cross-environment counter display 3 instead of the intended client-side count of 1; `count` remains a transferable `use_state` signal. Components E2E group passes (2/2)
 
 ## 10. Review fixes (code review of this change)
 
@@ -77,15 +77,15 @@
 - [x] 10.2 `RepeatElement`: partial adoption — `_adoption_preserved` uses `any(child._mounted …)`; the first refresh preserves matched adopted nodes and lets the missing positions render via their scheduled tasks. Tests: `test_repeat_len_mismatch_preserves_adopted_nodes`, `test_repeat_partial_adoption_preserves_matched_nodes`
 - [x] 10.3 Scoped drain: `AsyncSchedulerPort.schedule(coro, *, render=False)` and `await_pending(*, only_render=False)`; browser/fake ports track the flag; server accepts and ignores it; render call sites (`_dynamic`, `_teleport`, `_error_boundary`) mark `render=True`; `AppDocumentRoot._render` calls `await_pending(only_render=True)`. Tests: `test_await_pending_render_only_*` (fake + browser ports). Delta specs: async-rendering (drain wording + non-render scenario), async-scheduler (new), elements (partial-adoption + switch-wiring scenarios)
 - [x] 10.4 `AppDocumentRoot._render`: reset `_hydration_in_progress` in the `finally` block so a failed render closes the mismatch window. Tests: `TestHydrationWindowClose`
-- [ ] 10.5 Fix invalid `MismatchKind` string in `tests/test_hydration_report.py` (`"attributes"` → `"attribute"`)
-- [ ] 10.6 Update design decisions (D2/D3/D6 refinements, Risks) and proposal Impact (async-scheduler capability, port API change, `record_mismatch`/`HydrationMismatchRecord` public exports)
-- [ ] 10.7 Verification: `ruff check` + `ruff format --check` + `pyright` pass; full `pytest tests/` (4485 passed); E2E `docs-documents` (prod + static), `docs-demos` (prod + static), `components` (prod + static) all pass
-- [ ] 10.8 Strengthen the E2E mismatch-warning assertion: the aggregated warning surfaces as Playwright console type `error` in the browser (Pyodide stderr mapping), so `test_hydration_preservation.py` now matches `m.type in ("warning", "error")` (the previous `"warning"`-only check could not catch regressions)
+- [x] 10.5 Fix invalid `MismatchKind` string in `tests/test_hydration_report.py` (`"attributes"` → `"attribute"`)
+- [x] 10.6 Update design decisions (D2/D3/D6 refinements, Risks) and proposal Impact (async-scheduler capability, port API change, `record_mismatch`/`HydrationMismatchRecord` public exports)
+- [x] 10.7 Verification: `ruff check` + `ruff format --check` + `pyright` pass; full `pytest tests/` (4485 passed); E2E `docs-documents` (prod + static), `docs-demos` (prod + static), `components` (prod + static) all pass
+- [x] 10.8 Strengthen the E2E mismatch-warning assertion: the aggregated warning surfaces as Playwright console type `error` in the browser (Pyodide stderr mapping), so `test_hydration_preservation.py` now matches `m.type in ("warning", "error")` (the previous `"warning"`-only check could not catch regressions)
 
 ## 11. Review fixes (second code review of this change)
 
 - [x] 11.1 `BrowserAsyncSchedulerPort.await_pending`: remove the registry-rebuild line (`self._registry = [entry for entry in self._registry if entry[0] is current]`) — it dropped non-render tasks from the registry during a render-only drain, so a later unqualified `await_pending()` could not await them (contradicting the "await all registered tasks" contract). The loop termination already relies on the `not task.done()` filter. Regression: `test_await_pending_render_only_keeps_plain_tasks_registered`; async-scheduler delta spec gains a "Render-only drain keeps non-render tasks registered" scenario
 - [x] 11.2 `ElementAbstract._hydrate_node()` fallback: record the created node as `_node_cache` so a later `_get_node()`/render reuses it (previously the fallback created an orphan node and `_get_node()` → `_init_node()` created a second one, duplicating `_init_new_node` side effects — attributes, event handlers, ref binding — per unmatched element; activated by the repeat/switch partial-adoption paths). Regression: `test_hydration_fallback_creates_single_node`, `test_fallback_element_reuses_created_node`; elements delta spec gains a "Hydration fallback creates the node exactly once" scenario
-- [ ] 11.3 signal-value-transfer delta spec: document that module-identity auto keys assume package-structured modules (a `__main__` script's module name differs between the SSR checkout and the browser wheel bundle, so restoration is not guaranteed for single-file apps)
-- [ ] 11.4 Verification: `ruff check` + `ruff format --check` + `pyright` pass; full `pytest tests/`; E2E `docs-documents` (prod + static) passes
+- [x] 11.3 signal-value-transfer delta spec: document that module-identity auto keys assume package-structured modules (a `__main__` script's module name differs between the SSR checkout and the browser wheel bundle, so restoration is not guaranteed for single-file apps)
+- [x] 11.4 Verification: `ruff check` + `ruff format --check` + `pyright` pass; full `pytest tests/`; E2E `docs-documents` (prod + static) passes
 

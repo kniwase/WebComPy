@@ -420,12 +420,17 @@ class _EagerScheduler(AsyncSchedulerPort):
     def __init__(self) -> None:
         self._tasks: list[asyncio.Task[Any]] = []
 
-    def schedule(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
+    def schedule(
+        self,
+        coro: Coroutine[Any, Any, Any],
+        *,
+        render: bool = False,
+    ) -> asyncio.Task[Any]:
         task = asyncio.ensure_future(coro)
         self._tasks.append(task)
         return task
 
-    async def await_pending(self) -> None:
+    async def await_pending(self, *, only_render: bool = False) -> None:
         if self._tasks:
             await asyncio.gather(*self._tasks, return_exceptions=True)
             self._tasks.clear()

@@ -131,7 +131,8 @@ class TestHydrationRetry:
         assert not boundary._in_fallback
         assert boundary._children[0]._node_cache is child_dom
         scheduler = hydration_scope.inject(ASYNC_SCHEDULER_PORT_KEY)
-        assert scheduler._coroutines == []
+        assert len(scheduler._coroutines) == 1
+        await scheduler.drain()
 
     @pytest.mark.asyncio
     async def test_server_engagement_marks_fallback_root(self, hydration_scope):
