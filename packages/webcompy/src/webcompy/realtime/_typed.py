@@ -10,13 +10,13 @@ from webcompy.di._keys import _REALTIME_TYPE_REGISTRY_KEY
 from webcompy.di._scope import _get_app_di_scope
 from webcompy.hydration._transfer_meta import (
     META_BODY_KEY,
+    _qualified_type_name,
     apply_transfer_meta,
     encode_with_meta,
     merge_meta_into_body,
 )
 from webcompy.realtime._registry import CloseInfo, ConnectionState
 from webcompy.realtime._ws import WebSocketHandle
-from webcompy.rpc._registry import _qualified_type_name
 from webcompy.signal import Signal
 
 T = TypeVar("T")

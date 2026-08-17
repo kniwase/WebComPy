@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from webcompy.exception import WebComPyException
-from webcompy.hydration._transfer_meta import BUILTIN_META_TAGS
+from webcompy.hydration._transfer_meta import BUILTIN_META_TAGS, _qualified_type_name
 
 DEFAULT_RPC_PATH = "/_webcompy-rpc"
 
@@ -22,10 +22,6 @@ class ProcedureInfo:
     required: frozenset[str]
     result_schema: Any
     is_async: bool
-
-
-def _qualified_type_name(cls: type) -> str:
-    return f"{cls.__module__}.{cls.__qualname__}"
 
 
 class ProcedureRegistry:
