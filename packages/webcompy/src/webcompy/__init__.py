@@ -19,7 +19,15 @@ from ._version import __version__
 from .app._config import WebComPyAppConfig
 from .di import DIScope, InjectionError, InjectKey, inject, provide
 from .events import use_document_event, use_window_event
-from .realtime import CloseInfo, ConnectionState, SSEvent, use_event_source, use_websocket
+from .realtime import (
+    CloseInfo,
+    ConnectionState,
+    SSEvent,
+    TypedWebSocketHandle,
+    register_realtime_type_handler,
+    use_event_source,
+    use_websocket,
+)
 from .resources import load_bytes, load_text
 from .signal import use_computed, use_reactive_dict, use_reactive_list, use_readonly_signal, use_state
 from .storage import use_local_storage, use_session_storage
@@ -31,6 +39,7 @@ __all__ = [
     "InjectKey",
     "InjectionError",
     "SSEvent",
+    "TypedWebSocketHandle",
     "WebComPyAppConfig",
     "__version__",
     "aio",
@@ -47,6 +56,7 @@ __all__ = [
     "logging",
     "provide",
     "realtime",
+    "register_realtime_type_handler",
     "router",
     "rpc",
     "signal",
