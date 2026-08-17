@@ -70,7 +70,7 @@ The WS endpoint owns a closed set of reserved method names (rejected by `Procedu
 |---|---|---|---|
 | `_webcompy.subscribe` | C→S | call (id) | `{method, params, meta, last_cursor}` → `{subscription_id, resync_required}` |
 | `_webcompy.unsubscribe` | C→S | notification | `{subscription_id}` |
-| `_webcompy.event` | S→C | notification | `{subscription_id, cursor, data}` (`data` carries `__webcompy_transfer_meta__`, body mode) |
+| `_webcompy.event` | S→C | notification | `{subscription_id, cursor, data, meta?}` (`meta` is the JSON-RPC member, pointers relative to `data`) |
 | `_webcompy.ping` / `_webcompy.pong` | C→S / S→C | notification | `{}` |
 | `_webcompy.close` | C→S | notification | server closes the socket with code 1011 (abnormal) so the reconnect loop engages |
 

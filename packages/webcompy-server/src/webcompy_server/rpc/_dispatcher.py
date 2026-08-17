@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, Protocol
 
 from webcompy.ajax._serde import from_json
 from webcompy.hydration._transfer_meta import apply_transfer_meta, encode_with_meta
@@ -13,9 +13,20 @@ from webcompy.rpc._errors import (
     METHOD_NOT_FOUND,
     PARSE_ERROR,
 )
-from webcompy.rpc._registry import ProcedureInfo, ProcedureRegistry
+from webcompy.rpc._registry import ProcedureRegistry
 
 _logger = logging.getLogger(__name__)
+
+
+class _DecodableProcedure(Protocol):
+    @property
+    def param_order(self) -> list[str]: ...
+
+    @property
+    def required(self) -> frozenset[str]: ...
+
+    @property
+    def param_schemas(self) -> dict[str, Any]: ...
 
 
 class _ParamError(Exception):
@@ -34,7 +45,7 @@ def _valid_id(value: Any) -> bool:
 
 
 def _decode_params(
-    info: ProcedureInfo,
+    info: _DecodableProcedure,
     params: Any,
     meta: Any,
     registry: ProcedureRegistry,
