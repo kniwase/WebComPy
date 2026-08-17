@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import dis
 import inspect
 import os
@@ -143,7 +144,10 @@ def _try_resolve_payload_key(ctx: Any, key: AutoKey) -> Any:
     component_data = payload.get(component_id)
     if not component_data:
         return _MISSING
-    return component_data.get(str(key), _MISSING)
+    restored = component_data.get(str(key), _MISSING)
+    if restored is _MISSING:
+        return _MISSING
+    return copy.deepcopy(restored)
 
 
 def _get_active_component_context() -> Any:
