@@ -45,6 +45,8 @@ def create_ws_app() -> Starlette:
                     )
                 elif op == "bad":
                     await websocket.send_text("this is not json")
+                elif op == "extra":
+                    await websocket.send_text(json.dumps({"user": "ada", "text": "hello", "admin": True}))
         except WebSocketDisconnect:
             pass
 

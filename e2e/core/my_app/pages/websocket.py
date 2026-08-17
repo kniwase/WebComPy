@@ -65,6 +65,9 @@ def WebSocketPage(context: ComponentContext[None]):
     def _send_typed_bad(_) -> None:
         ws_typed.send(TypedMessage(op="bad"))
 
+    def _send_typed_extra(_) -> None:
+        ws_typed.send(TypedMessage(op="extra"))
+
     return html.DIV(
         {"data-testid": "ws-page"},
         html.H2({}, "WebSocket Tests"),
@@ -90,6 +93,7 @@ def WebSocketPage(context: ComponentContext[None]):
         html.P({}, "Typed last error: ", html.SPAN({"data-testid": "typed-error"}, typed_error)),
         html.BUTTON({"data-testid": "typed-roundtrip-btn", "@click": _send_typed}, "Typed roundtrip"),
         html.BUTTON({"data-testid": "typed-bad-btn", "@click": _send_typed_bad}, "Send malformed"),
+        html.BUTTON({"data-testid": "typed-extra-btn", "@click": _send_typed_extra}, "Send extra field"),
         html.UL(
             {"data-testid": "typed-messages"},
             repeat(sequence=typed_items, template=lambda m: html.LI({"data-testid": "typed-message-item"}, m)),
