@@ -40,7 +40,7 @@
 
 ## 7. Validation
 
-- [ ] 7.1 `uv run ruff check .` and `uv run ruff format --check .` pass
-- [ ] 7.2 `uv run pyright` passes
-- [ ] 7.3 `uv run python -m pytest tests/ --tb=short -q` passes (full suite, no regressions)
-- [ ] 7.4 `openspec validate feat-typed-realtime` passes
+- [x] 7.1 `uv run ruff check .` and `uv run ruff format --check .` pass
+- [x] 7.2 `uv run pyright` passes
+- [x] 7.3 `uv run python -m pytest tests/ --tb=short -q` passes (full suite, no regressions)
+- [x] 7.4 `openspec validate feat-typed-realtime` passes
