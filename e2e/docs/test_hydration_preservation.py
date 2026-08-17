@@ -15,7 +15,7 @@ from playwright.sync_api import Page
 def test_route_roots_survive_hydration(page: Page, docs_page_on, docs_console_messages):
     page.add_init_script(
         """
-        window.__hydration = { rootsConnected: null, layoutPresent: false, pagePresent: false };
+        window.__hydration = { layoutPresent: false, pagePresent: false };
         document.addEventListener('DOMContentLoaded', () => {
           const layout = document.querySelector('docs-layout');
           const pageEl = document.querySelector('quickstart-page');
