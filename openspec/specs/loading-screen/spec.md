@@ -168,7 +168,7 @@ The loading screen SHALL include a stall watchdog: if no boot progress event is 
 #### Scenario: Watchdog reset by runtime-ready signal
 
 - **WHEN** the `py:ready` event is observed after the last progress event with `stages` disabled
-- **THEN** the stall message SHALL NOT appear while the application imports and renders
+- **THEN** the stall timer SHALL be reset, and the stall message SHALL NOT appear unless no further boot activity is observed for a further `timeout_seconds`
 
 ### Requirement: Theme-aware appearance
 
