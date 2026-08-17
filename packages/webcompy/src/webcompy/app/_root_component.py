@@ -120,6 +120,7 @@ class AppDocumentRoot(Component):
                 if ctx is not None and self._app and self._app._hydrate:
                     scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
                     await scheduler.await_pending(only_render=True)
+                    ctx._hydration_in_progress = False
                     emit_report_summary(ctx)
                 if self.__loading:
                     self.__loading = False

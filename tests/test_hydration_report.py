@@ -171,6 +171,42 @@ class TestHydrationWindowClose:
         finally:
             _active_app_context.reset(token)
 
+    @pytest.mark.asyncio
+    async def test_summary_emitted_after_window_closed(self, monkeypatch):
+        from webcompy.app import _root_component as rc
+
+        ctx = _FakeCtx()
+        token = _active_app_context.set(ctx)
+        try:
+            captured = {}
+            original = rc.emit_report_summary
+
+            def _spy(inner_ctx):
+                captured["window_open"] = bool(getattr(inner_ctx, "_hydration_in_progress", False))
+                return original(inner_ctx)
+
+            monkeypatch.setattr(rc, "emit_report_summary", _spy)
+            root = self._make_root(monkeypatch, ctx)
+            await root._render()
+
+            assert captured["window_open"] is False
+            assert ctx._hydration_in_progress is False
+        finally:
+            _active_app_context.reset(token)
+
+    @pytest.mark.asyncio
+    async def test_records_after_render_are_not_captured(self, monkeypatch):
+        ctx = _FakeCtx()
+        token = _active_app_context.set(ctx)
+        try:
+            root = self._make_root(monkeypatch, ctx)
+            await root._render()
+
+            record_mismatch("text", "a", "b")
+            assert ctx._hydration_reporter.records == []
+        finally:
+            _active_app_context.reset(token)
+
 
 async def _noop_async():
     return None
