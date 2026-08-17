@@ -163,6 +163,7 @@ class RpcWsClient:
         self._last_frame_time = time.monotonic()
         self._last_error: Signal[Exception | None] = Signal(None)
         self._handle: WebSocketHandle | None = None
+        self._closed_state: Signal[ConnectionState] = Signal(ConnectionState.CLOSED)
         port = inject(WEBSOCKET_PORT_KEY, default=None)
         if port is None or (ENVIRONMENT != "pyscript" and getattr(port, "noop", False)):
             warnings.warn(_SSR_MSG, UserWarning, stacklevel=2)
@@ -187,7 +188,7 @@ class RpcWsClient:
     @property
     def state(self) -> Signal[ConnectionState]:
         if self._handle is None:
-            return Signal(ConnectionState.CLOSED)
+            return self._closed_state
         return self._handle.state
 
     @property

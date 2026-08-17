@@ -22,13 +22,13 @@
 
 ## 4. Unit tests (`tests/`, browserless)
 
-- [ ] 4.1 Dispatcher: WS frame round trip matches HTTP semantics (envelope validation, batch, errors); close cleans up subscriptions
-- [ ] 4.2 Server subscriptions: cursor monotonicity, bounded replay, rejoin replay-before-live, overflow → `resync_required`
-- [ ] 4.3 Client calls: id correlation, notification fire-and-forget, `RpcError` mapping, in-flight failure on disconnect
-- [ ] 4.4 Client subscriptions: ordered typed iteration, unsubscribe finishes the iterator, rejoin with last cursor after simulated reconnect, `resync_required` surfaced
-- [ ] 4.5 Heartbeat: timeout forces abnormal close and reconnect; disabled when `heartbeat_interval=None`
-- [ ] 4.6 SSR: no socket work, warning, no transfer payload entries
-- [ ] 4.7 `force_close`: state transitions to `RECONNECTING` then `OPEN`, no-op on closed connections, stale close events ignored, typed handle forwarding
+- [x] 4.1 Dispatcher: WS frame round trip matches HTTP semantics (envelope validation, batch, errors); close cleans up subscriptions
+- [x] 4.2 Server subscriptions: cursor monotonicity, bounded replay, rejoin replay-before-live, overflow → `resync_required`
+- [x] 4.3 Client calls: id correlation, notification fire-and-forget, `RpcError` mapping, in-flight failure on disconnect
+- [x] 4.4 Client subscriptions: ordered typed iteration, unsubscribe finishes the iterator, rejoin with last cursor after simulated reconnect, `resync_required` surfaced
+- [x] 4.5 Heartbeat: timeout forces abnormal close and reconnect; disabled when `heartbeat_interval=None`
+- [x] 4.6 SSR: no socket work, warning, no transfer payload entries
+- [x] 4.7 `force_close`: state transitions to `RECONNECTING` then `OPEN`, no-op on closed connections, stale close events ignored, typed handle forwarding
 
 ## 5. E2E tests (`e2e/core/`)
 

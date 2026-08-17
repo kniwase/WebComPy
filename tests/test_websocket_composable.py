@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import gc
 import random
+from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
 
@@ -262,6 +263,71 @@ class TestLastClose:
         rt_env.port.emit_open("/ws")
         assert ws.state.value == ConnectionState.OPEN
         assert ws.last_close.value == CloseInfo(code=1006, reason="abnormal", was_clean=False)
+        ws.close()
+
+
+class TestForceClose:
+    @pytest.mark.asyncio
+    async def test_force_close_engages_reconnect(self, rt_env) -> None:
+        ws = use_websocket("/ws", reconnect_base_delay=0.05)
+        rt_env.port.emit_open("/ws")
+        ws.force_close(4000, "heartbeat timeout")
+        assert ws.last_close.value == CloseInfo(code=4000, reason="heartbeat timeout", was_clean=False)
+        assert ws.state.value == ConnectionState.RECONNECTING
+        await asyncio.sleep(0.2)
+        rt_env.port.emit_open("/ws")
+        assert ws.state.value == ConnectionState.OPEN
+        ws.close()
+
+    @pytest.mark.asyncio
+    async def test_force_close_defaults(self, rt_env) -> None:
+        ws = use_websocket("/ws", reconnect_base_delay=0.05)
+        rt_env.port.emit_open("/ws")
+        ws.force_close()
+        assert ws.last_close.value == CloseInfo(code=4000, reason="", was_clean=False)
+        ws.close()
+
+    @pytest.mark.asyncio
+    async def test_force_close_noop_on_closed_handle(self, rt_env) -> None:
+        ws = use_websocket("/ws", reconnect_base_delay=0.05)
+        rt_env.port.emit_open("/ws")
+        ws.close()
+        ws.force_close(4000, "x")
+        assert ws.state.value == ConnectionState.CLOSED
+
+    @pytest.mark.asyncio
+    async def test_force_close_noop_when_connection_terminated(self, rt_env) -> None:
+        ws = use_websocket("/ws", reconnect_base_delay=0.05)
+        rt_env.port.emit_open("/ws")
+        rt_env.port.emit_close("/ws", code=1000, reason="clean", was_clean=True)
+        assert ws.state.value == ConnectionState.CLOSED
+        ws.force_close(4000, "x")
+        assert ws.state.value == ConnectionState.CLOSED
+
+    @pytest.mark.asyncio
+    async def test_stale_close_event_after_force_close_is_ignored(self, rt_env) -> None:
+        ws = use_websocket("/ws", reconnect_base_delay=0.05)
+        rt_env.port.emit_open("/ws")
+        reg = rt_env.port._registrations[0]
+        ws.force_close(4000, "hb")
+        assert ws.state.value == ConnectionState.RECONNECTING
+        # the browser fires its own close(1000) after ws.close(); it must be ignored
+        reg.on_close(1000, "", True)
+        await asyncio.sleep(0.01)
+        assert ws.state.value == ConnectionState.RECONNECTING
+        ws.close()
+
+    @pytest.mark.asyncio
+    async def test_typed_handle_forwards_force_close(self, rt_env) -> None:
+        @dataclass
+        class M:
+            x: int
+
+        ws = use_websocket("/ws", message_type=M, reconnect_base_delay=0.05)
+        rt_env.port.emit_open("/ws")
+        ws.force_close(4000, "typed")
+        assert ws.state.value == ConnectionState.RECONNECTING
+        assert ws.last_close.value == CloseInfo(code=4000, reason="typed", was_clean=False)
         ws.close()
 
 
