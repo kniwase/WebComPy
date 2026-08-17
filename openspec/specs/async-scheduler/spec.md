@@ -100,7 +100,7 @@ The framework codebase SHALL NOT contain direct `asyncio.ensure_future()` or `as
 
 ### Requirement: A FakeAsyncSchedulerPort shall be provided for testing
 
-The `webcompy_testing` module SHALL provide a `FakeAsyncSchedulerPort` that collects scheduled coroutines in a list without executing them. The port SHALL track the `render` flag for each scheduled coroutine. `await_pending(only_render=True)` SHALL execute only the render-marked coroutines, leaving the plain coroutines collected; `await_pending()` (no arguments) and `drain()` SHALL execute all collected coroutines. Tests SHALL be able to call `await fake_scheduler.drain()` to execute all collected coroutines, or inspect the list to assert scheduling behavior.
+The `webcompy_testing` module SHALL provide a `FakeAsyncSchedulerPort` that collects scheduled coroutines in a list without executing them. The port SHALL track the `render` flag for each scheduled coroutine. `await_pending(only_render=True)` SHALL execute only the render-marked coroutines, leaving the plain coroutines collected; `await_pending()` (no arguments) and `drain()` SHALL execute all collected coroutines. `drain()` and `await_pending()` SHALL re-check for coroutines scheduled by the coroutines they execute, continuing until no matching coroutines remain (recursive scheduling), with a maximum-iteration guard that logs a warning when exceeded. Executed coroutines SHALL settle their placeholder tasks: the placeholder SHALL be marked done, the executed coroutine's exception (if any) SHALL be recorded and returned by `exception()`, and registered done callbacks SHALL be invoked. Cancelling a placeholder whose coroutine has already been executed SHALL return `False` and SHALL be a no-op. Tests SHALL be able to call `await fake_scheduler.drain()` to execute all collected coroutines, or inspect the list to assert scheduling behavior.
 
 #### Scenario: Fake port collects scheduled coroutines
 - **WHEN** `FakeAsyncSchedulerPort.schedule(coro)` is called
@@ -117,3 +117,20 @@ The `webcompy_testing` module SHALL provide a `FakeAsyncSchedulerPort` that coll
 - **AND** `await_pending(only_render=True)` is called
 - **THEN** only the render-marked coroutine SHALL execute
 - **AND** the plain coroutine SHALL remain collected for a later drain
+
+#### Scenario: Fake port drains recursively scheduled coroutines
+- **WHEN** a scheduled coroutine schedules another coroutine before completing
+- **AND** `drain()` (or `await_pending(only_render=True)` for render-marked coroutines) is called
+- **THEN** the newly scheduled coroutine SHALL also execute before the call returns
+
+#### Scenario: Fake port settles executed placeholders
+- **WHEN** a scheduled coroutine has completed during `drain()` or `await_pending()`
+- **THEN** its placeholder SHALL be marked done
+- **AND** registered done callbacks SHALL be invoked with the placeholder
+- **AND** if the coroutine raised, the exception SHALL be returned by `exception()`
+
+#### Scenario: Cancelling an executed placeholder is a no-op
+- **WHEN** a placeholder's coroutine has already been executed during a drain
+- **AND** `cancel()` is called on the placeholder
+- **THEN** `cancel()` SHALL return `False`
+- **AND** the placeholder SHALL NOT be marked cancelled

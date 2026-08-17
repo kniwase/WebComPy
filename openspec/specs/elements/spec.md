@@ -307,7 +307,7 @@ Normalization SHALL split at **every** boundary of a run, including zero-length 
 
 Normalization SHALL be idempotent: when the DOM already has a 1:1 correspondence (no merging occurred, or splitting has already been applied), no further split SHALL be performed. Normalization SHALL apply only to the hydration path (`_hydrate_node`); server-side rendering, `_render`, refresh, reconcile, and positioning code SHALL remain unchanged.
 
-When the merged DOM text content does not equal the concatenation of the run's expected text contents, hydration SHALL log a warning via `webcompy.logging.warning`, SHALL NOT split the run, and SHALL halt normalization for the remainder of that container so that the affected run (and everything after it) follows the existing per-node create/adopt fallback — the pre-fix behavior — rather than producing a misaligned split. No exception SHALL propagate to the caller.
+When the merged DOM text content does not equal the concatenation of the run's expected text contents, hydration SHALL record a `text` mismatch (see the hydration-mismatch diagnostics requirement below), SHALL NOT split the run, and SHALL halt normalization for the remainder of that container so that the affected run (and everything after it) follows the existing per-node create/adopt fallback — the pre-fix behavior — rather than producing a misaligned split. When a non-`#text` node occupies a text-run position, hydration SHALL record a `tag` mismatch with the expected identity `#text` and the owning component ID when known. No exception SHALL propagate to the caller.
 
 This requirement applies to `ElementWithChildren._hydrate_node` (regular containers indexing from base `0`) and to dynamic-container hydration paths (`DynamicElement._hydrate_node`, `RepeatElement`, `FragmentElement`) that rely on the same index-based `childNodes` adoption. A `NewLine` (`<br>`) or `RawHTML` (wrapper element) child renders a non-`#text` DOM node and SHALL terminate a text run; only consecutive `TextElement` children participate in a run.
 
@@ -339,8 +339,15 @@ This requirement applies to `ElementWithChildren._hydrate_node` (regular contain
 
 #### Scenario: Content mismatch falls back rather than mis-splitting
 - **WHEN** the merged DOM `#text` content does not equal the concatenation of a text run's expected contents (e.g. unexpected prerendered content)
-- **THEN** hydration SHALL skip splitting that run, log a warning, and halt normalization for the remainder of the container (pre-fix create/adopt fallback)
+- **THEN** hydration SHALL skip splitting that run and halt normalization for the remainder of the container (pre-fix create/adopt fallback)
+- **AND** a `text` mismatch record SHALL be created for the run
 - **AND** no exception SHALL propagate to the caller
+
+#### Scenario: A non-text node at a text-run position is a structural mismatch
+- **WHEN** a DOM node whose `nodeName` is not `#text` occupies a text-run position
+- **THEN** hydration SHALL record a `tag` mismatch with expected identity `#text` and the actual node name
+- **AND** the owning component ID SHALL be attached when known
+- **AND** normalization SHALL halt for the remainder of the container
 
 #### Scenario: Keyed ReactiveDict loop hydrates with a composite item body
 - **WHEN** a `ReactiveDict` keyed loop renders items whose body contains multiple elements interleaved with text, and the prerendered HTML is parsed by the browser
@@ -796,3 +803,8 @@ During hydration, five classes of divergence between the prerendered DOM and the
 #### Scenario: Matching content produces no records
 - **WHEN** hydration adopts prerendered content that fully matches the client element tree
 - **THEN** no mismatch records SHALL be created
+
+#### Scenario: Excess prerendered children yield a single node-count record
+- **WHEN** a container's prerendered node has N excess child nodes beyond the element tree's child count
+- **THEN** a SINGLE `node-count` record SHALL be created capturing the element tree's child count as the expected value and the pre-cleanup child node count as the actual value
+- **AND** all N excess nodes SHALL be removed
