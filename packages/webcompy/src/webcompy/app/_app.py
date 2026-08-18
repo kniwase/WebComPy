@@ -55,6 +55,7 @@ class WebComPyApp:
         self._render_context_class = _render_context_class
         self._server_fetch_port: Any = None
         self._server_resource_port: Any = None
+        self._ssg_full_text_resources: dict[str, bytes] | None = None
         self._rpc_registry = ProcedureRegistry(base_url=self._config.base_url)
 
     @property

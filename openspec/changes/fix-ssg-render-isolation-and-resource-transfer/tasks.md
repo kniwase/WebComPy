@@ -29,10 +29,10 @@
 
 ## 5. Full text-resource transfer mode (D4)
 
-- [ ] 5.1 Add `resource_transfer: Literal["used", "all-text"] = "used"` to `WebComPyBuildConfig` with validation in `__post_init__` (invalid values raise a clear error)
-- [ ] 5.2 In `webcompy_cli/_generate.py`, when mode is `"all-text"`, read every allow-listed text resource (extension allowlist: `.md`, `.markdown`, `.txt`, `.json`, `.csv`, `.yaml`, `.yml`, `.toml`, `.svg`, `.html`, `.xml`; warn above 256 KB per file / 1 MB total) and stash the map on the app for collection
-- [ ] 5.3 In `webcompy/hydration/_collect.py`, union the stashed full map into `payload.resources` when present (per-context recorded entries still win on conflict — same content anyway)
-- [ ] 5.4 Add unit tests: default mode payload excludes other pages' resources; `"all-text"` mode embeds all text resources deterministically regardless of generation order; binary allow-listed files are excluded; invalid mode raises
+- [x] 5.1 Add `resource_transfer: Literal["used", "all-text"] = "used"` to `WebComPyBuildConfig` with validation in `__post_init__` (invalid values raise a clear error)
+- [x] 5.2 In `webcompy_cli/_generate.py`, when mode is `"all-text"`, read every allow-listed text resource (extension allowlist: `.md`, `.markdown`, `.txt`, `.json`, `.csv`, `.yaml`, `.yml`, `.toml`, `.svg`, `.html`, `.xml`; warn above 256 KB per file / 1 MB total) and stash the map on the app for collection
+- [x] 5.3 In `webcompy/hydration/_collect.py`, union the stashed full map into `payload.resources` when present (per-context recorded entries still win on conflict — same content anyway)
+- [x] 5.4 Add unit tests: default mode payload excludes other pages' resources; `"all-text"` mode embeds all text resources deterministically regardless of generation order; binary allow-listed files are excluded; invalid mode raises
 
 ## 6. Resource preload API (D6)
 

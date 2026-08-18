@@ -257,3 +257,70 @@ async def test_fetch_payload_isolated_per_render_context():
     assert "/api/two" not in fetches_one, "a page's payload must not carry another page's fetch entries"
     assert "/api/two" in fetches_two
     assert "/api/one" not in fetches_two
+
+
+def _make_resource_app(pkg) -> WebComPyApp:
+    @define_component("iso-res-page")
+    async def IsoResPage(context):
+        text = await load_text("documents/a.md")
+        return html.DIV({}, text)
+
+    @define_component("iso-res-root")
+    def IsoResRoot(context):
+        return html.DIV({}, RouterView())
+
+    router = Router({"path": "/", "component": IsoResPage}, mode="history", base_url="")
+    app = WebComPyApp(root_component=IsoResRoot, router=router, config=WebComPyAppConfig(base_url="/"))
+    configure_server_context(
+        app,
+        resource_port=ServerResourcePort(
+            app_package_path=pkg, allow_list=frozenset({"documents/a.md", "assets/logo.png"})
+        ),
+    )
+    return app
+
+
+@pytest.mark.asyncio
+async def test_all_text_transfer_mode_embeds_unloaded_text_resources(tmp_path):
+    pkg = tmp_path / "resapp"
+    (pkg / "documents").mkdir(parents=True)
+    (pkg / "documents" / "a.md").write_text("# A", encoding="utf-8")
+    (pkg / "documents" / "b.md").write_text("# B", encoding="utf-8")
+
+    app = _make_resource_app(pkg)
+    app._ssg_full_text_resources = {
+        "documents/a.md": b"# A",
+        "documents/b.md": b"# B",
+    }
+
+    html_output = await _render_html(app, "/")
+
+    resources = _decode_payload(html_output)["resources"]
+    assert "documents/a.md" in resources
+    assert "documents/b.md" in resources, "a stashed text resource must be embedded even if the page never loaded it"
+
+
+@pytest.mark.asyncio
+async def test_all_text_transfer_mode_deterministic_across_pages(tmp_path):
+    pkg = tmp_path / "resapp"
+    (pkg / "documents").mkdir(parents=True)
+    (pkg / "documents" / "a.md").write_text("# A", encoding="utf-8")
+    (pkg / "documents" / "b.md").write_text("# B", encoding="utf-8")
+
+    app = _make_resource_app(pkg)
+    app._ssg_full_text_resources = {
+        "documents/a.md": b"# A",
+        "documents/b.md": b"# B",
+    }
+
+    html_1 = await _render_html(app, "/")
+    html_2 = await _render_html(app, "/")
+
+    res_1 = _decode_payload(html_1)["resources"]
+    res_2 = _decode_payload(html_2)["resources"]
+    assert res_1 == {"documents/a.md": _b64(b"# A"), "documents/b.md": _b64(b"# B")}
+    assert res_2 == res_1
+
+
+def _b64(data: bytes) -> str:
+    return base64.b64encode(data).decode("ascii")

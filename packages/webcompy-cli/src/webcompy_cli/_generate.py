@@ -92,6 +92,8 @@ async def generate_static_site(app: WebComPyApp | None = None):
     serving = create_asgi_app(app, build_config, mode="prod")
     artifacts = serving.artifacts
 
+    app._ssg_full_text_resources = _collect_full_text_resources(app, build_config, artifacts)
+
     scripts_dir = dist_dir / "_webcompy-app-package"
     os.mkdir(scripts_dir)
 
@@ -175,3 +177,56 @@ async def generate_static_site(app: WebComPyApp | None = None):
             print(html_path)
 
     print("done")
+
+
+_TEXT_RESOURCE_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".md",
+        ".markdown",
+        ".txt",
+        ".json",
+        ".csv",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".svg",
+        ".html",
+        ".xml",
+    }
+)
+
+_TEXT_RESOURCE_MAX_BYTES = 256 * 1024
+_TEXT_RESOURCE_MAX_TOTAL_BYTES = 1024 * 1024
+
+
+def _collect_full_text_resources(
+    app: WebComPyApp, build_config: WebComPyBuildConfig, artifacts: Any
+) -> dict[str, bytes] | None:
+    if build_config.resource_transfer != "all-text":
+        return None
+    if not artifacts.resource_allow_list:
+        return None
+    from pathlib import PurePosixPath
+
+    full: dict[str, bytes] = {}
+    for rel_path in sorted(artifacts.resource_allow_list):
+        if PurePosixPath(rel_path).suffix.lower() not in _TEXT_RESOURCE_EXTENSIONS:
+            continue
+        data = (build_config.app_package_path / rel_path).read_bytes()
+        if len(data) > _TEXT_RESOURCE_MAX_BYTES:
+            print(
+                f"Warning: text resource {rel_path} ({len(data)} bytes) exceeds "
+                f"{_TEXT_RESOURCE_MAX_BYTES} bytes; it will be embedded in every generated page.",
+                file=sys.stderr,
+                flush=True,
+            )
+        full[rel_path] = data
+    total = sum(len(data) for data in full.values())
+    if total > _TEXT_RESOURCE_MAX_TOTAL_BYTES:
+        print(
+            f"Warning: total text resources ({total} bytes) exceed {_TEXT_RESOURCE_MAX_TOTAL_BYTES} bytes; "
+            "every generated page embeds the full set.",
+            file=sys.stderr,
+            flush=True,
+        )
+    return full
