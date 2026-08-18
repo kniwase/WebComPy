@@ -1,13 +1,24 @@
-from webcompy.components import ComponentContext, define_component
+from webcompy.components import ComponentContext, define_component, on_mounted
+from webcompy.di import inject
 from webcompy.elements import html
+from webcompy.ports import ASYNC_SCHEDULER_PORT_KEY, RESOURCE_PORT_KEY
 from webcompy.router import RouterView
 
 from ..components.navigation import DocsNavbar, Page
-from ..docs_manifest import flatten_pages
+from ..docs_manifest import flatten_pages, route_pages
 
 
 @define_component("docs-root")
 def DocsRoot(_: ComponentContext[None]):
+    @on_mounted
+    def _prefetch_docs_resources():
+        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY, default=None)
+        port = inject(RESOURCE_PORT_KEY, default=None)
+        if scheduler is None or port is None:
+            return
+        sources = [page["source"] for page in route_pages() if "source" in page]
+        scheduler.schedule(port.preload(sources), render=False)
+
     pages: list[Page] = [
         {
             "title": "Home",

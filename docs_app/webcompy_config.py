@@ -6,6 +6,7 @@ config = WebComPyBuildConfig(
     dependencies=[],
     standalone=True,
     wheel_mode="split",
+    resource_transfer="all-text",
     dist="dist",
     cname="webcompy.net",
     static_files_dir="static",

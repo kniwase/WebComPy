@@ -42,8 +42,8 @@
 
 ## 7. docs_app enablement
 
-- [ ] 7.1 Set `resource_transfer="all-text"` in `docs_app/webcompy_config.py`
-- [ ] 7.2 In `docs_app/layout/__init__.py` (`DocsRoot`), schedule an idle non-render task after mount that calls `preload()` with all docs manifest `source` paths
+- [x] 7.1 Set `resource_transfer="all-text"` in `docs_app/webcompy_config.py`
+- [x] 7.2 In `docs_app/layout/__init__.py` (`DocsRoot`), schedule an idle non-render task after mount that calls `preload()` with all docs manifest `source` paths
 
 ## 8. E2E and integration verification
 
