@@ -48,7 +48,7 @@
 
 ## 8. Validation
 
-- [ ] 8.1 `uv run ruff check .` and `uv run ruff format --check .` pass
-- [ ] 8.2 `uv run pyright` passes
-- [ ] 8.3 `uv run python -m pytest tests/ --tb=short -q` passes (full suite, no regressions)
-- [ ] 8.4 `openspec validate feat-rpc-websocket` passes
+- [x] 8.1 `uv run ruff check .` and `uv run ruff format --check .` pass
+- [x] 8.2 `uv run pyright` passes
+- [x] 8.3 `uv run python -m pytest tests/ --tb=short -q` passes (full suite, no regressions)
+- [x] 8.4 `openspec validate feat-rpc-websocket` passes
