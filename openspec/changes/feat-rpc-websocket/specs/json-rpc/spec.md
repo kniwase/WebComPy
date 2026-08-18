@@ -23,7 +23,7 @@ The dispatcher's core logic (envelope validation, batch handling, procedure invo
 
 ### Requirement: Subscription procedures shall be registrable with a bounded replay buffer
 
-The framework SHALL provide a registration API for subscription procedures (producing an async stream of events). The dispatcher SHALL assign a monotonically increasing `cursor` per event per stream, SHALL forward events to subscribers as notification frames, SHALL retain a bounded replay buffer per stream (default 256 events, configurable at registration), SHALL honor rejoin requests carrying `last_cursor` by replaying buffered events with greater cursors before live delivery, and SHALL answer `resync_required` when `last_cursor` is older than the buffer floor.
+The framework SHALL provide a registration API for subscription procedures (producing an async stream of events). The dispatcher SHALL assign a monotonically increasing `cursor` per event per stream, SHALL forward events to subscribers as notification frames, SHALL retain a bounded replay buffer per stream (default 256 events, configurable at registration), SHALL honor rejoin requests carrying `last_cursor` by replaying buffered events with greater cursors before live delivery, and SHALL answer `resync_required` when `last_cursor` is older than the buffer's replayable range (older than the oldest buffered cursor minus one, i.e. when at least one missed event has been evicted).
 
 #### Scenario: Rejoin within the buffer replays missed events
 
@@ -32,5 +32,5 @@ The framework SHALL provide a registration API for subscription procedures (prod
 
 #### Scenario: Rejoin beyond the buffer requires resync
 
-- **WHEN** a subscriber rejoins with a cursor older than the buffer floor
+- **WHEN** a subscriber rejoins with a cursor older than the buffer's replayable range (at least one missed event has been evicted)
 - **THEN** the server SHALL answer `resync_required` and SHALL NOT fabricate or silently skip events

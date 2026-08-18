@@ -33,12 +33,9 @@ The underlying socket is the **shared, reference-counted, auto-reconnecting** co
 Register a subscription procedure on the server as an **async generator**:
 
 ```python
-app.rpc.register_subscription(
-    "ticker",
-    lambda ticker_id: _ticker(ticker_id),   # see below
-)
+app.rpc.register_subscription("ticker", _ticker)
 
-async def _ticker(ticker_id):
+async def _ticker(ticker_id: str):
     import asyncio, itertools
     for i in itertools.count(1):
         await asyncio.sleep(0.1)
@@ -60,25 +57,27 @@ async for event in sub:   # each decoded event, in cursor order
   - `.last_cursor` — a `Signal[int | None]` tracking the last received server cursor.
 - `sub.close()` sends an `_webcompy.unsubscribe` notification and finishes the iterator. Subscriptions are also detached automatically when the owning component is destroyed.
 
+Create the `RpcWsClient` inside component setup so the subscriptions and the shared socket are released automatically on component destroy. When the client is held outside a component (e.g. a module-level service), call `client.close()` explicitly to release the connection.
+
 ## Reconnect, catch-up, and resync
 
 Each event carries a server-assigned monotonic `cursor`. When the connection drops:
 
-1. The client automatically **re-subscribes every live subscription with its last received cursor**.
+1. The client automatically **re-subscribes every live subscription with its last received cursor** (a subscription that has not received any event yet rejoins with cursor `0`).
 2. The server **replays buffered events** (`cursor > last_cursor`) before resuming live delivery — nothing within the replay window is lost, and nothing is delivered twice.
 3. If the client's cursor is **older than the server's bounded replay buffer** (default 256 events, configurable at registration), the server answers `resync_required` instead of silently skipping: the client sets `sub.state` to `RESYNC_REQUIRED` and the iterator ends.
 
 ```python
 async for event in sub:
     ...
-    if sub.state.value == RpcSubscriptionState.RESYNC_REQUIRED:
-        # the replay buffer overflowed: refetch authoritative state and resubscribe fresh
-        await refetch_snapshot()          # your own state fetch (e.g. rpc.call)
-        sub = client.subscribe("ticker", {"ticker_id": "a"})
-        break
+# the iterator ends when the server answers resync_required
+if sub.state.value == RpcSubscriptionState.RESYNC_REQUIRED:
+    # the replay buffer overflowed: refetch authoritative state and resubscribe fresh
+    await refetch_snapshot()          # your own state fetch (e.g. rpc.call)
+    sub = client.subscribe("ticker", {"ticker_id": "a"})
 ```
 
-The replay buffer is bounded per stream to keep server memory in check; overflow is always signalled honestly — never a silent gap. Subscription streams are shared per `(method, params)` and kept alive for a grace period after the last subscriber leaves, so catch-up works across short outages.
+The replay buffer is bounded per stream to keep server memory in check; overflow is always signalled honestly — never a silent gap. Outbound frames are also buffered server-side per connection without a bound, so keep event rates and `replay_size` moderate when many slow consumers share a subscription. Subscription streams are shared per `(method, params)` and kept alive for a grace period after the last subscriber leaves, so catch-up works across short outages.
 
 ## Server-driven reconnection
 

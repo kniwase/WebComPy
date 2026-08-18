@@ -53,8 +53,12 @@ The server keeps the newest N events per subscription stream (default e.g. 256, 
 
 **Buffer boundary rules:** rejoin with `last_cursor`:
 - `last_cursor >= stream.cursor` → nothing missed, attach live only;
-- buffer floor `<= last_cursor < stream.cursor` → replay `(last_cursor, cursor]`, then live;
-- `last_cursor < buffer floor` (or a fresh stream whose buffer cannot cover it) → `resync_required`, no partial replay.
+- buffer floor `- 1 <= last_cursor < stream.cursor` → replay `(last_cursor, cursor]`, then live;
+- `last_cursor < buffer floor - 1` (or a fresh stream whose buffer cannot cover it) → `resync_required`, no partial replay.
+
+Review fix: the replay boundary is one below the oldest buffered cursor — when the client's last cursor is exactly the evicted event (`floor - 1`), every missed event is still buffered, so a full replay recovers without `resync_required`.
+
+Review fix: a subscription that was confirmed but received no event rejoins with `last_cursor: 0` instead of omitting the cursor. The same boundary rules then apply from the buffer's start: the server replays the whole buffer when it still holds event 1, or answers `resync_required` when events were evicted — the client never silently skips its own missed events. (Omitted-cursor subscribe remains reserved for genuinely fresh subscriptions, which attach live only.)
 
 ### D6: Heartbeat is optional and uses JSON-RPC notifications
 
@@ -90,7 +94,7 @@ The spike (a minimal Starlette WS endpoint + stream registry + TestClient) valid
 
 1. **Fresh subscribe** delivers live events with monotonically increasing cursors.
 2. **Rejoin with `last_cursor`** replays buffered events (`cursor > last_cursor`) **before** live events resume, with no interleave — achieved by the single-FIFO-send-queue model: the endpoint synchronously enqueues [response, replay...] into the connection's send queue, then attaches the live fan-out to the same queue. There is no `await` between replay enqueue and live attach.
-3. **Old cursor** (older than the buffer floor) yields `resync_required` with no partial replay; the boundary is `last_cursor < floor` → resync, `last_cursor == floor` → full replay.
+3. **Old cursor** (older than the buffer floor) yields `resync_required` with no partial replay; the boundary is `last_cursor < floor` → resync, `last_cursor == floor` → full replay (amended by review fix: `last_cursor == floor - 1` also full-replays, since every missed event is still buffered).
 4. **Batch array frames** round-trip as a single frame through the shared dispatch core.
 5. **`websocket.close(code=1011)`** is observed by the client as `was_clean=False`, which will drive the reconnect loop (code != 1000).
 6. **Grace-period cleanup** reaps the stream (cancels the source, releases the buffer) once no subscribers remain past the idle timeout.

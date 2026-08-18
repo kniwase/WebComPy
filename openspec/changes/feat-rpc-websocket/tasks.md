@@ -52,3 +52,23 @@
 - [x] 8.2 `uv run pyright` passes
 - [x] 8.3 `uv run python -m pytest tests/ --tb=short -q` passes (full suite, no regressions)
 - [x] 8.4 `openspec validate feat-rpc-websocket` passes
+
+## 9. Review fixes
+
+- [x] 9.1 Client: a subscription answered with `resync_required` (or an error) on rejoin SHALL be removed from the subscription tracking so it is never re-subscribed on later reconnects (`_fail_subscribe` in `_ws_client.py`); stale pending-subscribe id mappings are cleared when in-flight calls fail
+- [x] 9.2 Server: a rejoin that answers `resync_required` on a stream with no subscribers SHALL reap the (possibly freshly created) stream instead of leaving its source task running forever
+- [x] 9.3 Server: a stream whose source has ended SHALL be reaped after the idle grace period, and a subscribe targeting a finished stream SHALL start a fresh stream instead of attaching to the dead one
+- [x] 9.4 Realtime: `force_close` SHALL respect `reconnect=False` and `reconnect_max_attempts` (terminating the connection instead of scheduling a retry)
+- [x] 9.5 Docs: fix the `register_subscription` example (async generator function with typed params) and the `resync_required` recovery recipe (state check after the iterator ends); add server capacity guidance
+- [x] 9.6 Client: `_handle_subscribe_response` SHALL ignore responses for closed subscriptions (a `sub._done` guard) so a rejoin answered after `sub.close()` cannot re-register or re-activate the subscription
+- [x] 9.7 Client: on permanent connection termination (state `CLOSED`), SHALL end every live and pending subscription with state `CLOSED` and finish their iterators
+- [x] 9.8 Server: `check_rejoin` SHALL replay the full buffer when `last_cursor == buffer floor - 1` (every missed event is still buffered); `resync_required` only when a missed event was evicted
+- [x] 9.9 Align the delta specs with the review fixes: replay-boundary wording, the permanent-termination requirement, and the `force_close` wire wording
+
+## 10. Review fixes (round 2)
+
+- [x] 10.1 Client: `subscribe()` on a permanently terminated connection (state `CLOSED`) SHALL return a `CLOSED` subscription instead of hanging in `PENDING` forever
+- [x] 10.2 Client: a rejoin without received events SHALL send `last_cursor: 0` so the server replays the whole buffer (or answers `resync_required` when the buffer no longer covers cursor `0`); a genuinely fresh subscribe SHALL still omit the cursor
+- [x] 10.3 Server: `reap` SHALL remove a stream from the hub only when the hub entry still points to that exact stream, so reaping a finished stream can never evict its replacement
+- [x] 10.4 Server: an id-less `_webcompy.subscribe` notification SHALL be ignored (no response frame, no orphan subscription stream)
+- [x] 10.5 Docs: lifecycle guidance (component-scoped creation or explicit `close()`) in the RPC-WS docs page and `RpcWsClient` docstring; delta spec and design notes for the zero-cursor rejoin
