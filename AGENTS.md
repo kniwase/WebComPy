@@ -153,6 +153,7 @@ the per-area reference.
 - **Hydration** — `hydration-data-transfer/spec.md`, `elements/spec.md`, `async-rendering/spec.md`
 - **Metadata Type-Tag Decoding** — `typed-response/spec.md`, `typed-api-client/spec.md`
 - **JSON-RPC Allowlist Decoding** — `json-rpc/spec.md`
+- **RPC WebSocket Rejoin & Cursor Integrity** — `rpc-websocket/spec.md`, `json-rpc/spec.md`
 - **RouterView Depth and Level Reuse** — `router/spec.md`
 - **Teleport Anchor Slot and SSR Anchor** — `teleport/spec.md`
 - **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`
@@ -199,7 +200,8 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/hydration/` | `hydration-data-transfer/spec.md`, `transfer-codec/spec.md`, `signal-value-transfer/spec.md`, `payload-compression/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md` |
 | `webcompy/router/` | `router/spec.md`, `router-hooks/spec.md`, `error-handling/spec.md` |
 | `webcompy/router/_scroll.py` | `scroll-restoration/spec.md` |
-| `webcompy/rpc/` | `json-rpc/spec.md` |
+| `webcompy/rpc/` | `json-rpc/spec.md`, `rpc-websocket/spec.md` |
+| `webcompy/rpc/_ws_client.py` | `rpc-websocket/spec.md`, `websocket-composable/spec.md`, `typed-realtime/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md`, `json-rpc/spec.md` |
 | `webcompy/ports/_browser/` | `browser-api/spec.md`, `custom-element-components/spec.md` |
 | `webcompy/ports/_event_source.py`, `webcompy/ports/_browser/_event_source.py` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `sse-composable/spec.md` |
 | `webcompy/ports/_websocket.py`, `webcompy/ports/_browser/_websocket.py` | `port-abstraction/spec.md`, `port-provisioning/spec.md`, `websocket-composable/spec.md` |
@@ -210,7 +212,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy_server/__init__.py` | `asgi-embed/spec.md`, `server-fetch-asgi/spec.md` |
 | `webcompy_server/_context.py`, `webcompy_server/_html.py` | `async-scheduler/spec.md`, `app-lifecycle/spec.md`, `loading-screen/spec.md` |
 | `webcompy_server/contrib/` | `typed-response/spec.md` |
-| `webcompy_server/rpc/` | `json-rpc/spec.md` |
+| `webcompy_server/rpc/` | `json-rpc/spec.md`, `rpc-websocket/spec.md` |
 | `webcompy/plugin/` | `plugin-system/spec.md`, `plugin-script/spec.md` |
 | `webcompy/di/` | `di-scope/spec.md`, `di-injection/spec.md`, `dependency-resolver/spec.md` |
 | `webcompy/ajax/`, `webcompy/aio/` | `async/spec.md`, `async-rendering/spec.md`, `async-scheduler/spec.md`, `typed-api-client/spec.md`, `typed-response/spec.md`, `signal-stream/spec.md` |
@@ -349,6 +351,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `demo-iframe-isolation` | Isolated iframe PyScript contexts for demos |
 | `inspect-cli` | CLI tool for browser inspection of WebComPy apps |
 | `json-rpc` | JSON-RPC 2.0 dispatcher, procedure registry, metadata extension, allowlist type decoding, typed browser client |
+| `rpc-websocket` | JSON-RPC 2.0 over WebSocket: WS dispatcher endpoint, `RpcWsClient`, subscription streams with cursors, rejoin/catch-up/`resync_required`, application-level heartbeat, `force_close` |
 | `scoped-css-incremental` | Per-component `<style data-webcompy-cid="...">` injection |
 | `loading-screen` | Boot-time loading experience: presentation modes, interaction policies, staged progress, grace period and fade-out timing, dormant/wake-up treatment, stall watchdog, accessibility, custom-template toolkit contract |
 | `reactive-scoped-style` | Per-component reactive scoped style via dedicated style element |
