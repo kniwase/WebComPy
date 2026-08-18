@@ -9,10 +9,10 @@
 
 ## 2. Post-render head collection (D2)
 
-- [ ] 2.1 In `webcompy_server/_html.py`, move `get_head_content_html()` / `get_scoped_styles_html()` collection and the corresponding `<head>` string insertion out of `_generate_html_impl` and into `generate_html` after `await scheduler.await_pending()`; keep the existing `index.css`-anchor replacement mechanics
-- [ ] 2.2 Add a unit test: a component whose module imports during the current render still gets its scoped style into that page's head (dev-server first-hit scenario, no preload)
-- [ ] 2.3 Add a unit test: a reactive scoped style registered during async component setup appears as `data-webcompy-cid-rx` in prerendered HTML
-- [ ] 2.4 Regression-check title/meta/links and `data-webcompy-dynamic` theme style still render identically (existing tests must pass)
+- [x] 2.1 In `webcompy_server/_html.py`, move `get_head_content_html()` / `get_scoped_styles_html()` collection and the corresponding `<head>` string insertion out of `_generate_html_impl` and into `generate_html` after `await scheduler.await_pending()`; keep the existing `index.css`-anchor replacement mechanics
+- [x] 2.2 Add a unit test: a component whose module imports during the current render still gets its scoped style into that page's head (dev-server first-hit scenario, no preload)
+- [x] 2.3 Add a unit test: a reactive scoped style registered during async component setup appears as `data-webcompy-cid-rx` in prerendered HTML
+- [x] 2.4 Regression-check title/meta/links and `data-webcompy-dynamic` theme style still render identically (existing tests must pass)
 
 ## 3. Per-context transfer state (D3)
 

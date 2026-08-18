@@ -117,3 +117,33 @@ async def test_identical_style_sets_across_render_contexts():
     assert _style_cids(docs_html_a) == _style_cids(docs_html_b)
     assert ".iso-sidebar[webcompy-cid-" in docs_html_a
     assert ".iso-sidebar[webcompy-cid-" in docs_html_b
+
+
+@pytest.mark.asyncio
+async def test_component_imported_during_current_render_style_in_same_page_head():
+    app = _make_isolation_app()
+
+    home_html = await _render_html(app, "/")
+    assert ".iso-sidebar[webcompy-cid-" in home_html, (
+        "a component whose module is first imported while this very page renders "
+        "(RouterView preload) must still land in the same page's head because "
+        "style collection runs after the render settles"
+    )
+    assert ".iso-layout[webcompy-cid-" in home_html
+
+
+@pytest.mark.asyncio
+async def test_reactive_scoped_style_from_async_setup_in_ssg_head():
+    from webcompy.components import reactive_scoped_style
+
+    @define_component("iso-async-rx")
+    async def IsoAsyncRx(context):
+        context.use_reactive_scoped_style(reactive_scoped_style(lambda: {".iso-rx-box": {"color": "blue"}}))
+        return html.DIV({"class": "iso-rx-box"}, "rx")
+
+    app = WebComPyApp(root_component=IsoAsyncRx, config=WebComPyAppConfig(base_url="/"))
+    configure_server_context(app)
+
+    html_output = await _render_html(app, "/")
+    assert 'data-webcompy-cid-rx="' in html_output
+    assert ".iso-rx-box[webcompy-cid-" in html_output
