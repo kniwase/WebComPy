@@ -182,3 +182,64 @@ class TestGenerateLazyRoutePreload:
         _run_generate(build_config, app, artifacts)
 
         assert (pkg / "dist" / "index.html").exists()
+
+    def test_nested_lazy_layout_with_styled_import_preloaded(self, tmp_path: Path) -> None:
+        """A nested layout route (not present in the flattened route list) must
+        still be pre-resolved before route fetching, along with the styled
+        component it imports."""
+        _pkg, build_config = _setup_app_pkg(tmp_path)
+        artifacts = _make_artifacts(tmp_path)
+
+        sidebar_mod = types.ModuleType("nested_sidebar_mod")
+
+        @define_component("nested-sidebar")
+        def NestedSidebar(ctx):
+            return html.DIV({}, "sidebar")
+
+        NestedSidebar.scoped_style = {".nested-sidebar": {"color": "red"}}
+        sidebar_mod.NestedSidebar = NestedSidebar
+        sys.modules["nested_sidebar_mod"] = sidebar_mod
+
+        layout_mod = types.ModuleType("nested_layout_mod")
+        exec(
+            "from webcompy.components import define_component\n"
+            "from webcompy.elements import html\n"
+            "from nested_sidebar_mod import NestedSidebar\n"
+            "@define_component('nested-layout')\n"
+            "def NestedLayout(context):\n"
+            "    return html.DIV({}, NestedSidebar(None))\n",
+            layout_mod.__dict__,
+        )
+        sys.modules["nested_layout_mod"] = layout_mod
+
+        @define_component("nested-page")
+        def NestedPage(ctx):
+            return html.DIV({}, "page")
+
+        layout_lazy = lazy("nested_layout_mod:NestedLayout", __file__)
+        router = Router(
+            {"path": "/", "component": NestedPage},
+            {
+                "path": "/docs",
+                "component": layout_lazy,
+                "children": [{"path": "child", "component": NestedPage}],
+            },
+            mode="history",
+        )
+        app = WebComPyApp(
+            root_component=lambda _: None,
+            router=router,
+            config=WebComPyAppConfig(base_url="/"),
+        )
+
+        assert layout_lazy._resolved is None
+
+        first_request_seen_resolved = _run_generate(
+            build_config,
+            app,
+            artifacts,
+            check_first_request=lambda: layout_lazy._resolved is not None,
+        )
+
+        assert layout_lazy._resolved is layout_mod.NestedLayout
+        assert first_request_seen_resolved is True

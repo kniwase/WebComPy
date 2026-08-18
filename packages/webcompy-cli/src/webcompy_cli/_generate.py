@@ -136,10 +136,14 @@ async def generate_static_site(app: WebComPyApp | None = None):
     url_prefix = f"/{base_url_path}" if base_url_path else ""
 
     if app.router_mode == "history" and app.routes:
-        for _, _, _, _, page in app.routes:
-            component = page["component"]
-            if isinstance(component, LazyComponentGenerator):
-                component._preload()
+        router = app.router
+        if router is not None and getattr(router, "_preload", False):
+            router.preload_lazy_routes()
+        else:
+            for _, _, _, _, page in app.routes:
+                component = page["component"]
+                if isinstance(component, LazyComponentGenerator):
+                    component._preload()
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=serving.asgi),

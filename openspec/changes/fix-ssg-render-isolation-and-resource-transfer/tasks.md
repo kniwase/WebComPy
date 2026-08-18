@@ -24,8 +24,8 @@
 
 ## 4. SSG preload full route tree (D5)
 
-- [ ] 4.1 In `webcompy_cli/_generate.py`, replace the flattened `app.routes` preload loop with `app.router.preload_lazy_routes()` when available (fallback: current loop); confirm layout routes like `docs_app.layout.document:DocsLayout` are pre-resolved
-- [ ] 4.2 Update/extend `tests/test_ssg_lazy_preload.py` to cover a nested route with a lazy layout importing a styled non-route component
+- [x] 4.1 In `webcompy_cli/_generate.py`, replace the flattened `app.routes` preload loop with `app.router.preload_lazy_routes()` when available (fallback: current loop); confirm layout routes like `docs_app.layout.document:DocsLayout` are pre-resolved
+- [x] 4.2 Update/extend `tests/test_ssg_lazy_preload.py` to cover a nested route with a lazy layout importing a styled non-route component
 
 ## 5. Full text-resource transfer mode (D4)
 
