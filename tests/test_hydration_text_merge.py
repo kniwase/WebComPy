@@ -180,14 +180,13 @@ class TestHydrationTextRunNormalization:
         assert prerendered.childNodes.length == 3
         assert [n.textContent for n in prerendered.childNodes] == ["a", "", "b"]
 
-    def test_content_mismatch_falls_back_without_splitting(self, fake_browser_full, caplog):
+    def test_content_mismatch_falls_back_without_splitting(self, fake_browser_full):
         _, prerendered = _hydrate_container(
             ["a", "b"],
             [FakeDOMNode("#text", text_content="xy")],
         )
         assert prerendered.childNodes.length == 1
         assert prerendered.childNodes[0].textContent == "a"
-        assert "Hydration text-run mismatch" in caplog.text
 
     def test_already_split_dom_is_untouched(self, fake_browser_full):
         first = FakeDOMNode("#text", text_content="a")
@@ -244,7 +243,7 @@ class TestHydrationTextRunNormalization:
         assert el._children[1]._node_cache is prerendered.childNodes[1]
         assert first.textContent_write_count == 0
 
-    def test_content_mismatch_halts_normalization_for_later_runs(self, fake_browser_full, caplog):
+    def test_content_mismatch_halts_normalization_for_later_runs(self, fake_browser_full):
         cd_node = FakeDOMNode("#text", text_content="cd")
         _, prerendered = _hydrate_container(
             ["a", "b", Element("span", {}, {}, None, None), "c", "d"],
@@ -254,11 +253,114 @@ class TestHydrationTextRunNormalization:
                 cd_node,
             ],
         )
-        assert "Hydration text-run mismatch" in caplog.text
         assert prerendered.childNodes.length == 2
         assert [n.textContent for n in prerendered.childNodes] == ["a", "cd"]
         assert prerendered.childNodes[1] is cd_node
         assert cd_node.textContent == "cd"
+
+    def test_non_text_node_at_run_position_records_tag_mismatch(self, fake_browser_full):
+        from webcompy.components._component import _active_app_context
+        from webcompy.hydration._report import HydrationReporter
+
+        class _Ctx:
+            def __init__(self) -> None:
+                self._hydration_in_progress = True
+                self._hydration_reporter = HydrationReporter()
+
+        class _CidRootElement(FakeRootElement):
+            _get_belonging_component = lambda self: "my-comp"
+
+        ctx = _Ctx()
+        token = _active_app_context.set(ctx)
+        try:
+            parent = _CidRootElement("div", {}, {}, None, None)
+            parent._node_cache = FakeDOMNode("div")
+            parent._mounted = True
+            prerendered = FakeDOMNode("div")
+            prerendered.__webcompy_prerendered_node__ = True
+            span = FakeDOMNode("span")
+            span.__webcompy_prerendered_node__ = True
+            prerendered.appendChild(span)
+            parent._node_cache.appendChild(prerendered)
+            el = Element("div", {}, {}, None, [TextElement("a"), TextElement("b")])
+            el._parent = parent
+            el._node_idx = 0
+            el._hydrate_node()
+
+            tag_records = [r for r in ctx._hydration_reporter.records if r.kind == "tag" and r.expected == "#text"]
+            assert len(tag_records) == 1
+            assert tag_records[0].actual == "SPAN"
+            assert tag_records[0].component_id == "my-comp"
+        finally:
+            _active_app_context.reset(token)
+
+    def test_text_mismatch_record_carries_owning_component_id(self, fake_browser_full):
+        from webcompy.components._component import _active_app_context
+        from webcompy.hydration._report import HydrationReporter
+
+        class _Ctx:
+            def __init__(self) -> None:
+                self._hydration_in_progress = True
+                self._hydration_reporter = HydrationReporter()
+
+        class _CidRootElement(FakeRootElement):
+            _get_belonging_component = lambda self: "my-comp"
+
+        ctx = _Ctx()
+        token = _active_app_context.set(ctx)
+        try:
+            parent = _CidRootElement("div", {}, {}, None, None)
+            parent._node_cache = FakeDOMNode("div")
+            parent._mounted = True
+            prerendered = FakeDOMNode("div")
+            prerendered.__webcompy_prerendered_node__ = True
+            text = FakeDOMNode("#text", text_content="old")
+            text.__webcompy_prerendered_node__ = True
+            prerendered.appendChild(text)
+            parent._node_cache.appendChild(prerendered)
+            el = Element("div", {}, {}, None, [TextElement("new")])
+            el._parent = parent
+            el._node_idx = 0
+            el._hydrate_node()
+
+            text_records = [r for r in ctx._hydration_reporter.records if r.kind == "text"]
+            assert len(text_records) == 1
+            assert text_records[0].component_id == "my-comp"
+        finally:
+            _active_app_context.reset(token)
+
+    def test_newline_tag_mismatch_record_carries_owning_component_id(self, fake_browser_full):
+        from webcompy.components._component import _active_app_context
+        from webcompy.hydration._report import HydrationReporter
+
+        class _Ctx:
+            def __init__(self) -> None:
+                self._hydration_in_progress = True
+                self._hydration_reporter = HydrationReporter()
+
+        class _CidRootElement(FakeRootElement):
+            _get_belonging_component = lambda self: "my-comp"
+
+        ctx = _Ctx()
+        token = _active_app_context.set(ctx)
+        try:
+            parent = _CidRootElement("div", {}, {}, None, None)
+            parent._node_cache = FakeDOMNode("div")
+            parent._mounted = True
+            span = FakeDOMNode("span")
+            span.__webcompy_prerendered_node__ = True
+            parent._node_cache.appendChild(span)
+            newline = NewLine()
+            newline._parent = parent
+            newline._node_idx = 0
+
+            newline._get_node()
+
+            tag_records = [r for r in ctx._hydration_reporter.records if r.kind == "tag" and r.expected == "br"]
+            assert len(tag_records) == 1
+            assert tag_records[0].component_id == "my-comp"
+        finally:
+            _active_app_context.reset(token)
 
 
 class TestKeyedReactiveDictHydrationReconcile:

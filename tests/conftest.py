@@ -230,6 +230,19 @@ def fake_browser_full(monkeypatch, reset_di_scope):
 
 
 @pytest.fixture
+def eager_scheduler(monkeypatch):
+    from webcompy.di._scope import _active_di_scope
+    from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+    from webcompy_testing import FakeAsyncSchedulerPort
+
+    scheduler = FakeAsyncSchedulerPort()
+    scope = _active_di_scope.get(None)
+    if scope is not None:
+        scope.provide(ASYNC_SCHEDULER_PORT_KEY, scheduler)
+    return scheduler
+
+
+@pytest.fixture
 def server_di_scope():
     from webcompy.di._scope import DIScope, _active_di_scope
     from webcompy.ports._keys import (

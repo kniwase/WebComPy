@@ -10,7 +10,11 @@ from webcompy import logging
 from webcompy.di import inject
 from webcompy.elements._dom_objs import DOMNode
 from webcompy.elements.types._abstract import ElementAbstract
-from webcompy.elements.types._base import ElementWithChildren, _normalize_hydration_text_runs
+from webcompy.elements.types._base import (
+    ElementWithChildren,
+    _normalize_hydration_text_runs,
+    _safe_component_id,
+)
 from webcompy.elements.types._element import ElementBase
 from webcompy.elements.types._text import TextElement
 from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
@@ -33,6 +37,13 @@ def _subtree_needs_render(element: ElementAbstract) -> bool:
     if isinstance(element, DynamicElement):
         return any(_subtree_needs_render(child) for child in element._children)
     return element._node_cache is None
+
+
+def _hydration_render(child: ElementAbstract) -> Coroutine[Any, Any, None]:
+    async def _run() -> None:
+        await child._render()
+
+    return _run()
 
 
 def _run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: Any) -> None:
@@ -118,7 +129,9 @@ class DynamicElement(ElementWithChildren):
 
     def _hydrate_node(self) -> None:
         self._hydrated = True
-        _normalize_hydration_text_runs(self._children, self._parent._get_node(), self._node_idx)
+        _normalize_hydration_text_runs(
+            self._children, self._parent._get_node(), self._node_idx, _safe_component_id(self)
+        )
         idx = self._node_idx
         scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
         for child in self._children:
@@ -126,9 +139,11 @@ class DynamicElement(ElementWithChildren):
             child._hydrate_node()
             idx += child._node_count
             if not child._mounted:
-                task = scheduler.schedule(child._render())
-                self._pending_render_tasks.append((child, task))
-                task.add_done_callback(self._on_hydrate_render_done)
+                task = scheduler.schedule(child._render(), render=True)
+            else:
+                task = scheduler.schedule(_hydration_render(child), render=True)
+            self._pending_render_tasks.append((child, task))
+            task.add_done_callback(self._on_hydrate_render_done)
         self._parent._re_index_children(False)
 
     def _on_hydrate_render_done(self, task: asyncio.Task) -> None:

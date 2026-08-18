@@ -253,7 +253,14 @@ class ErrorBoundaryElement(DynamicElement):
         get_attr = getattr(candidate, "getAttribute", None)
         if get_attr is None:
             return False
-        return get_attr("data-webcompy-error-fallback") is not None
+        from webcompy.di import inject
+        from webcompy.ports._keys import FFI_PORT_KEY
+
+        ffi = inject(FFI_PORT_KEY, default=None)
+        raw = get_attr("data-webcompy-error-fallback")
+        if ffi is not None and ffi.is_none(raw):
+            return False
+        return raw is not None
 
     def _hydrate_node(self) -> None:
         if self._ssr_fallback_in_dom():
@@ -267,9 +274,13 @@ class ErrorBoundaryElement(DynamicElement):
             except Exception as err:
                 route_error_deferred(self, err)
                 return
-            super()._hydrate_node()
+            if self._children:
+                child = self._children[0]
+                child._parent = self
+                child._node_idx = self._node_idx
+                child._hydrate_node()
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
-            task = scheduler.schedule(self._do_reset())
+            task = scheduler.schedule(self._do_reset(), render=True)
             self._pending_render_tasks.append((self, task))
             task.add_done_callback(self._on_hydrate_render_done)
             return
