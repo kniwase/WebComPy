@@ -56,6 +56,21 @@ async def _ticker(interval: float = 0.02) -> object:
         yield {"seq": i}
 
 
+async def _finite(interval: float = 0.01) -> object:
+    for i in range(1, 4):
+        await asyncio.sleep(interval)
+        yield {"seq": i}
+
+
+async def _six_events() -> object:
+    for i in range(1, 7):
+        yield {"seq": i}
+
+
+def _hub_of(endpoint) -> subs_mod.SubscriptionHub:
+    return next(c.cell_contents for c in endpoint.__closure__ if isinstance(c.cell_contents, subs_mod.SubscriptionHub))
+
+
 def _make_registry() -> ProcedureRegistry:
     registry = ProcedureRegistry()
     registry.register("add", _add)
@@ -269,7 +284,39 @@ class TestSubscriptions:
                 assert cursors[0] == last_cursor + 1
                 assert cursors == list(range(cursors[0], cursors[0] + len(cursors))), "no gaps, no duplicates"
 
-    def test_cursor_older_than_buffer_floor_resync(self, app: Starlette) -> None:
+    def test_cursor_older_than_buffer_floor_resync(self) -> None:
+        registry = ProcedureRegistry()
+        registry.register_subscription("ticker", _ticker, replay_size=3)
+        typed_app = Starlette(routes=[WebSocketRoute(_RPC_PATH, create_rpc_ws_endpoint(registry))])
+        with TestClient(typed_app) as client:
+            with client.websocket_connect(_RPC_PATH) as ws:
+                ws.send_json(
+                    {
+                        "jsonrpc": "2.0",
+                        "method": "_webcompy.subscribe",
+                        "params": {"method": "ticker", "params": {"interval": 0.01}},
+                        "id": 1,
+                    }
+                )
+                sub_id = ws.receive_json()["result"]["subscription_id"]
+                last_cursor = _receive_events(ws, sub_id, 2)[-1]
+            # let the tiny buffer evict the client's events: the rejoin cannot
+            # fully recover, so it must answer resync_required
+            time.sleep(0.3)
+            with client.websocket_connect(_RPC_PATH) as ws:
+                ws.send_json(
+                    {
+                        "jsonrpc": "2.0",
+                        "method": "_webcompy.subscribe",
+                        "params": {"method": "ticker", "params": {"interval": 0.01}, "last_cursor": last_cursor},
+                        "id": 2,
+                    }
+                )
+                response = ws.receive_json()
+                assert response["result"]["resync_required"] is True
+                assert response["result"]["subscription_id"] is None
+
+    def test_rejoin_with_cursor_zero_replays_full_buffer(self, app: Starlette) -> None:
         with TestClient(app) as client:
             with client.websocket_connect(_RPC_PATH) as ws:
                 ws.send_json(
@@ -281,8 +328,8 @@ class TestSubscriptions:
                     }
                 )
                 sub_id = ws.receive_json()["result"]["subscription_id"]
-                _receive_events(ws, sub_id, 2)
-            # rejoin with a cursor older than the buffer floor -> resync
+                _receive_events(ws, sub_id, 3)
+            time.sleep(0.1)  # outage: the source keeps emitting into the buffer
             with client.websocket_connect(_RPC_PATH) as ws:
                 ws.send_json(
                     {
@@ -292,9 +339,10 @@ class TestSubscriptions:
                         "id": 2,
                     }
                 )
-                response = ws.receive_json()
-                assert response["result"]["resync_required"] is True
-                assert response["result"]["subscription_id"] is None
+                new_sub = ws.receive_json()["result"]["subscription_id"]
+                cursors = _receive_events(ws, new_sub, 5)
+                assert cursors[0] == 1, "rejoin with cursor 0 replays from the first buffered event"
+                assert cursors == list(range(1, len(cursors) + 1)), "no gaps when replaying from cursor 0"
 
     def test_subscription_decoded_typed_params(self) -> None:
         registry = ProcedureRegistry()
@@ -344,6 +392,25 @@ class TestSubscriptions:
             response = ws.receive_json()
             assert response["error"]["code"] == -32601
 
+    def test_subscribe_notification_is_ignored(self, app: Starlette) -> None:
+        endpoint = app.router.routes[0].endpoint
+        hub = _hub_of(endpoint)
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            # a notification-form subscribe (no id) must produce no response and
+            # must not create a subscription server-side
+            ws.send_json(
+                {
+                    "jsonrpc": "2.0",
+                    "method": "_webcompy.subscribe",
+                    "params": {"method": "ticker", "params": {"interval": 0.01}},
+                }
+            )
+            ws.send_json({"jsonrpc": "2.0", "method": "add", "params": {"a": 1}, "id": 99})
+            frame = ws.receive_json()
+            assert frame["id"] == 99, "the id-less subscribe must not produce a response frame"
+            assert "result" in frame
+            assert hub._streams == {}, "an id-less subscribe must not create a subscription stream"
+
     def test_stream_reaped_after_idle_grace(self, app: Starlette, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(subs_mod, "_STREAM_IDLE_TIMEOUT", 0.3)
         with TestClient(app) as client:
@@ -372,3 +439,145 @@ class TestSubscriptions:
                 )
                 response = ws.receive_json()
                 assert response["result"]["resync_required"] is True
+
+    def test_resync_on_fresh_stream_reaps_the_orphan(self, app: Starlette) -> None:
+        endpoint = app.router.routes[0].endpoint
+        hub = _hub_of(endpoint)
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            # the stream does not exist yet (e.g. server restarted while the client
+            # was disconnected); the rejoin is answered with resync_required and
+            # the freshly created stream must be reaped, not left running forever
+            ws.send_json(
+                {
+                    "jsonrpc": "2.0",
+                    "method": "_webcompy.subscribe",
+                    "params": {"method": "ticker", "params": {"interval": 0.01}, "last_cursor": 5},
+                    "id": 1,
+                }
+            )
+            response = ws.receive_json()
+            assert response["result"]["resync_required"] is True
+            assert hub._streams == {}, "the orphaned stream must be reaped"
+
+    def test_finished_source_stream_reaped_and_not_reused(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(subs_mod, "_STREAM_IDLE_TIMEOUT", 0.1)
+        registry = ProcedureRegistry()
+        registry.register_subscription("finite", _finite)
+        endpoint = create_rpc_ws_endpoint(registry)
+        hub = _hub_of(endpoint)
+        app = Starlette(routes=[WebSocketRoute(_RPC_PATH, endpoint)])
+        with TestClient(app) as client:
+            with client.websocket_connect(_RPC_PATH) as ws:
+                ws.send_json(
+                    {
+                        "jsonrpc": "2.0",
+                        "method": "_webcompy.subscribe",
+                        "params": {"method": "finite", "params": {"interval": 0.01}},
+                        "id": 1,
+                    }
+                )
+                sub_id = ws.receive_json()["result"]["subscription_id"]
+                assert _receive_events(ws, sub_id, 3) == [1, 2, 3]
+            # the source exhausted; after the grace period the stream is reaped
+            time.sleep(0.4)
+            assert hub._streams == {}, "the finished stream must be reaped"
+            # a later subscribe must not attach to the dead stream: a fresh stream
+            # is created and events flow again
+            with client.websocket_connect(_RPC_PATH) as ws:
+                ws.send_json(
+                    {
+                        "jsonrpc": "2.0",
+                        "method": "_webcompy.subscribe",
+                        "params": {"method": "finite", "params": {"interval": 0.01}},
+                        "id": 2,
+                    }
+                )
+                new_sub = ws.receive_json()["result"]["subscription_id"]
+                assert new_sub != sub_id
+                assert _receive_events(ws, new_sub, 1) == [1]
+
+    @pytest.mark.asyncio
+    async def test_reap_does_not_evict_a_replacement_stream(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(subs_mod, "_STREAM_IDLE_TIMEOUT", 0.05)
+        registry = ProcedureRegistry()
+        registry.register_subscription("finite", _finite)
+        hub = subs_mod.SubscriptionHub(registry)
+        key = ("finite", "null")
+
+        class _FakeConn:
+            def __init__(self) -> None:
+                self.queue: asyncio.Queue = asyncio.Queue()
+                self.subscriptions: dict[str, subs_mod._Stream] = {}
+
+            def send(self, frame: Any) -> None:
+                self.queue.put_nowait(frame)
+
+        conn_a = _FakeConn()
+        hub.handle_subscribe(
+            conn_a,
+            {
+                "jsonrpc": "2.0",
+                "method": "_webcompy.subscribe",
+                "params": {"method": "finite", "params": None},
+                "id": 1,
+            },
+        )
+        stream_s1 = hub._streams[key]
+        for _ in range(200):
+            if stream_s1.source_task.done():
+                break
+            await asyncio.sleep(0.001)
+        assert stream_s1.source_task.done()
+        # a fresh subscribe replaces the finished stream while the old one is
+        # still attached (reap early-returns because S1 has a subscriber)
+        conn_b = _FakeConn()
+        hub.handle_subscribe(
+            conn_b,
+            {
+                "jsonrpc": "2.0",
+                "method": "_webcompy.subscribe",
+                "params": {"method": "finite", "params": None},
+                "id": 2,
+            },
+        )
+        stream_s2 = hub._streams[key]
+        assert stream_s2 is not stream_s1
+        # the first subscriber detaches; the old stream's idle timer fires and
+        # must not evict the replacement stream's hub entry
+        sub_id_a = next(iter(conn_a.subscriptions))
+        hub.handle_unsubscribe(
+            conn_a,
+            {
+                "jsonrpc": "2.0",
+                "method": "_webcompy.unsubscribe",
+                "params": {"subscription_id": sub_id_a},
+            },
+        )
+        await asyncio.sleep(0.15)
+        assert hub._streams.get(key) is stream_s2, "reaping the finished stream must not evict its replacement"
+
+    @pytest.mark.asyncio
+    async def test_rejoin_full_replay_at_buffer_floor_minus_one(self) -> None:
+        registry = ProcedureRegistry()
+        registry.register_subscription("six", _six_events, replay_size=3)
+        hub = subs_mod.SubscriptionHub(registry)
+        info = registry.get_subscription("six")
+        assert info is not None
+        stream = subs_mod._Stream(hub, info, "null", {})
+        stream.start_source()
+        for _ in range(200):
+            if stream.cursor >= 6:
+                break
+            await asyncio.sleep(0.001)
+        assert stream.cursor == 6
+        assert stream.buffer[0][0] == 4  # the buffer holds exactly 4, 5, 6
+        # the client's last event was exactly the evicted one: every missed event
+        # is still buffered, so a full replay recovers without resync_required
+        replay, resync = stream.check_rejoin(3)
+        assert resync is False
+        assert [c for c, _, _ in replay] == [4, 5, 6]
+        assert stream.check_rejoin(2) == ([], True)  # a missed evicted event still resyncs
+        assert [c for c, _, _ in stream.check_rejoin(4)[0]] == [5, 6]
+        assert stream.check_rejoin(6) == ([], False)  # nothing missed
+        assert stream.check_rejoin(7) == ([], True)  # cursor ahead of the stream
+        hub.reap(stream)

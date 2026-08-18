@@ -55,6 +55,8 @@ class _Stream:
                 raise
             except Exception:
                 _logger.exception("RPC subscription %r failed", self.info.name)
+            if not self.subscribers:
+                self.schedule_idle()
 
         self.source_task = asyncio.create_task(_run())
 
@@ -64,7 +66,7 @@ class _Stream:
         if last_cursor > self.cursor or not self.buffer:
             return [], True
         oldest = self.buffer[0][0]
-        if last_cursor < oldest:
+        if last_cursor < oldest - 1:
             return [], True
         return [(c, d, m) for c, d, m in self.buffer if c > last_cursor], False
 
@@ -76,7 +78,7 @@ class _Stream:
 
     def detach(self, sub_id: str) -> None:
         self.subscribers.pop(sub_id, None)
-        if not self.subscribers and self.source_task is not None and not self.source_task.done():
+        if not self.subscribers and self.source_task is not None:
             self.schedule_idle()
 
     def schedule_idle(self) -> None:
@@ -103,6 +105,8 @@ class SubscriptionHub:
 
     def handle_subscribe(self, conn: _Connection, payload: dict[str, Any]) -> None:
         req_id = payload.get("id")
+        if req_id is None:
+            return
         params = payload.get("params")
         if not isinstance(params, dict):
             conn.send(_error_body(req_id, INVALID_REQUEST, "Invalid params"))
@@ -131,6 +135,9 @@ class SubscriptionHub:
             return
         params_key = json.dumps(raw_params, sort_keys=True)
         stream = self._streams.get((method, params_key))
+        if stream is not None and stream.source_task is not None and stream.source_task.done():
+            self.reap(stream)
+            stream = None
         if stream is None:
             stream = _Stream(self, info, params_key, kwargs)
             self._streams[(method, params_key)] = stream
@@ -145,6 +152,8 @@ class SubscriptionHub:
                         "id": req_id,
                     }
                 )
+                if not stream.subscribers:
+                    self.reap(stream)
                 return
         else:
             replay = []
@@ -169,7 +178,10 @@ class SubscriptionHub:
     def reap(self, stream: _Stream) -> None:
         if stream.subscribers:
             return
-        self._streams.pop((stream.info.name, stream.params_key), None)
+        key = (stream.info.name, stream.params_key)
+        if self._streams.get(key) is not stream:
+            return
+        self._streams.pop(key, None)
         if stream.source_task is not None:
             stream.source_task.cancel()
         if stream.idle_task is not None:
