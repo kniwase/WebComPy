@@ -36,9 +36,9 @@
 
 ## 6. Resource preload API (D6)
 
-- [ ] 6.1 Add `async def preload(self, paths) -> None` to `webcompy/ports/_resource.py` `ResourcePort` ABC with a default no-op implementation
-- [ ] 6.2 Implement `BrowserResourcePort.preload()` in `webcompy/ports/_browser/_resource.py`: validate paths, skip payload-present ones, prime via `FetchPort.fetch()`; catch and log individual failures without raising
-- [ ] 6.3 Add unit tests (testing-module renderer/fake ports): preload primes the fetch cache so a later `load_text` issues no fetch; server preload is a no-op; missing resource does not raise from `preload` but raises from `load_text`
+- [x] 6.1 Add `async def preload(self, paths) -> None` to `webcompy/ports/_resource.py` `ResourcePort` ABC with a default no-op implementation
+- [x] 6.2 Implement `BrowserResourcePort.preload()` in `webcompy/ports/_browser/_resource.py`: validate paths, skip payload-present ones, prime via `FetchPort.fetch()`; catch and log individual failures without raising
+- [x] 6.3 Add unit tests (testing-module renderer/fake ports): preload primes the fetch cache so a later `load_text` issues no fetch; server preload is a no-op; missing resource does not raise from `preload` but raises from `load_text`
 
 ## 7. docs_app enablement
 

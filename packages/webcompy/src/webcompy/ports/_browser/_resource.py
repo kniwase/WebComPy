@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Iterable
+from logging import getLogger
 
 from webcompy.di import inject
 from webcompy.di._keys import RESOURCE_DATA_KEY
@@ -8,6 +10,8 @@ from webcompy.exception import WebComPyException
 from webcompy.ports._keys import FETCH_PORT_KEY
 from webcompy.ports._resource import ResourceNotFoundError, ResourcePort
 from webcompy.utils._environment import ENVIRONMENT
+
+_logger = getLogger(__name__)
 
 
 class BrowserResourcePort(ResourcePort):
@@ -70,3 +74,16 @@ class BrowserResourcePort(ResourcePort):
         if payload is not None:
             return payload
         return await self._fetch_bytes(path)
+
+    async def preload(self, paths: Iterable[str]) -> None:
+        fetch_port = inject(FETCH_PORT_KEY, default=None)
+        if fetch_port is None:
+            return
+        for path in paths:
+            try:
+                self._validate(path)
+                if self._decode_payload(path) is not None:
+                    continue
+                await fetch_port.fetch(self._resource_url(path))
+            except Exception as exc:
+                _logger.warning("Resource preload failed for %r: %s", path, exc)
