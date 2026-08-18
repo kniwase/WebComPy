@@ -2,10 +2,10 @@
 
 ## 1. Component generator registry (D1)
 
-- [ ] 1.1 In `webcompy/components/_generator.py`, rename `_unregistered_generators` to `_all_component_generators` and append every generator in `ComponentGenerator.__init__` unconditionally (even when `_try_register()` succeeds); update `_register_deferred_components()` to iterate it and any other references
-- [ ] 1.2 Verify `LazyComponentGenerator` still bypasses the registry (no `super().__init__()` call) and that resolved generators register exactly once per store
-- [ ] 1.3 Add a unit test: a component first defined/imported while a render context is active must appear in a later context's store and scoped-style output (reproduces the `DocsSidebar` miss)
-- [ ] 1.4 Add a unit test: two sequential render contexts emit identical `data-webcompy-cid` style sets for the same app state
+- [x] 1.1 In `webcompy/components/_generator.py`, rename `_unregistered_generators` to `_all_component_generators` and append every generator in `ComponentGenerator.__init__` unconditionally (even when `_try_register()` succeeds); update `_register_deferred_components()` to iterate it and any other references
+- [x] 1.2 Verify `LazyComponentGenerator` still bypasses the registry (no `super().__init__()` call) and that resolved generators register exactly once per store
+- [x] 1.3 Add a unit test: a component first defined/imported while a render context is active must appear in a later context's store and scoped-style output (reproduces the `DocsSidebar` miss)
+- [x] 1.4 Add a unit test: two sequential render contexts emit identical `data-webcompy-cid` style sets for the same app state
 
 ## 2. Post-render head collection (D2)
 

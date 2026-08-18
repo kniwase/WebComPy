@@ -94,8 +94,9 @@ class TestLazyRegistrationAcrossRenderContexts:
         ctx2 = app.create_render_context("/docs")
         try:
             assert "LazyPage" in ctx2._component_store.components, (
-                "resolved lazy must re-register into the fresh store of a later render context "
-                "(LazyPage is not in _unregistered_generators, so the automatic RouterView preload is the only path)"
+                "a generator created in an earlier context must still register into the "
+                "fresh store of a later render context (all generators are re-registered "
+                "per context via the global generator registry)"
             )
         finally:
             ctx2.dispose()
