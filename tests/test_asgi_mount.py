@@ -336,6 +336,36 @@ class TestMountSelfSiteFetchDuringSsr:
         assert port._mount_prefixes == ["/api"]
 
     @pytest.mark.asyncio
+    async def test_context_clones_share_asgi_client_but_not_response_cache(self, tmp_path: Path) -> None:
+        from webcompy.ports._keys import FETCH_PORT_KEY
+
+        api_app = _make_api_app()
+        build_config = _make_build_config(tmp_path, mounts=lambda: {"/api": api_app})
+        app = _make_app()
+
+        _create_serving(app, build_config)
+
+        port = app._server_fetch_port
+        assert port is not None
+        assert port._self_site_client is not None
+
+        ctx1 = app.create_render_context("/")
+        ctx2 = app.create_render_context("/")
+        try:
+            port1 = ctx1.di_scope.inject(FETCH_PORT_KEY)
+            port2 = ctx2.di_scope.inject(FETCH_PORT_KEY)
+            assert port1 is not port
+            assert port1._self_site_client is port._self_site_client, (
+                "context clones must share the prototype's ASGI client"
+            )
+            assert port2._self_site_client is port._self_site_client
+            assert port1._response_cache is not port._response_cache
+            assert port2._response_cache is not port1._response_cache
+        finally:
+            ctx1.dispose()
+            ctx2.dispose()
+
+    @pytest.mark.asyncio
     async def test_fetch_to_mount_populates_transfer_cache_under_non_root_base_url(self, tmp_path: Path) -> None:
         from webcompy.app._app import WebComPyApp
         from webcompy.app._config import WebComPyAppConfig

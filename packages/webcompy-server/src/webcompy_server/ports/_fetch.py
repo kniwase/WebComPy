@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import httpx
 
@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 
 class ServerFetchPort(FetchPort):
     def __init__(self, external_client: httpx.AsyncClient | None = None) -> None:
-        self._external_client = external_client or httpx.AsyncClient()
+        self._external_client = external_client
+        self._prototype: ServerFetchPort | None = None
         self._self_site_client: httpx.AsyncClient | None = None
         self._asgi_app: ASGIApp | None = None
         self._blocked_paths: list[str] = []
@@ -22,7 +23,6 @@ class ServerFetchPort(FetchPort):
         self._base_url: str = "/"
         self._embedded: bool = False
         self._response_cache: dict[str, Response] = {}
-        self._configure_args: dict[str, Any] = {}
 
     def is_self_site_url(self, url: str) -> bool:
         if url.startswith("//"):
@@ -40,13 +40,6 @@ class ServerFetchPort(FetchPort):
     ) -> None:
         if self._asgi_app is not None:
             raise WebComPyException("ServerFetchPort is already configured")
-        self._configure_args = {
-            "asgi_app": asgi_app,
-            "blocked_paths": blocked_paths,
-            "base_url": base_url,
-            "mount_prefixes": mount_prefixes,
-            "embedded": embedded,
-        }
         self._asgi_app = asgi_app
         self._blocked_paths = blocked_paths or []
         self._mount_prefixes = ["/" + p.strip("/") for p in (mount_prefixes or []) if p.strip("/")]
@@ -111,6 +104,11 @@ class ServerFetchPort(FetchPort):
                 return key[len(prefix) :].rsplit(":", 1)[0]
         return key
 
+    def _ensure_external_client(self) -> httpx.AsyncClient:
+        if self._external_client is None:
+            self._external_client = httpx.AsyncClient()
+        return self._external_client
+
     async def fetch(
         self,
         url: str,
@@ -120,7 +118,12 @@ class ServerFetchPort(FetchPort):
         body: str | None = None,
     ) -> Response:
         if not self.is_self_site_url(url):
-            res = await self._external_client.request(method, url, headers=headers, content=body)
+            client = (
+                self._prototype._ensure_external_client()
+                if self._prototype is not None
+                else self._ensure_external_client()
+            )
+            res = await client.request(method, url, headers=headers, content=body)
             return Response(
                 text=res.text,
                 content=res.content,
@@ -178,8 +181,13 @@ class ServerFetchPort(FetchPort):
 
     def _clone_for_context(self) -> ServerFetchPort:
         clone = ServerFetchPort(external_client=self._external_client)
-        if self._asgi_app is not None:
-            clone.configure(**self._configure_args)
+        clone._prototype = self
+        clone._asgi_app = self._asgi_app
+        clone._blocked_paths = self._blocked_paths
+        clone._mount_prefixes = self._mount_prefixes
+        clone._base_url = self._base_url
+        clone._embedded = self._embedded
+        clone._self_site_client = self._self_site_client
         return clone
 
     def get_transfer_data(self) -> dict[str, TransferFetchEntry]:
@@ -199,6 +207,7 @@ class ServerFetchPort(FetchPort):
         self._response_cache.clear()
 
     async def close(self) -> None:
-        await self._external_client.aclose()
+        if self._external_client is not None:
+            await self._external_client.aclose()
         if self._self_site_client is not None:
             await self._self_site_client.aclose()
