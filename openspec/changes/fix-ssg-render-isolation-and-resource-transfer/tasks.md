@@ -47,9 +47,9 @@
 
 ## 8. E2E and integration verification
 
-- [ ] 8.1 Add an E2E (or extend docs E2E): open an "early" documents page (e.g., Installation) with network capture and assert no `/_webcompy-resource/*` request fires when navigating to another docs page (with 7.1 enabled)
-- [ ] 8.2 Add an E2E assertion: a documents page's initial HTML styles the sidebar (computed style check on `.docs-sidebar-section-toggle` / `.docs-sidebar-links a` before app boot)
-- [ ] 8.3 Run `uv run python -m webcompy generate` for docs_app and confirm every generated page contains the `DocsSidebar` scoped style and identical style-tag sets across pages
+- [x] 8.1 Add an E2E (or extend docs E2E): open an "early" documents page (e.g., Installation) with network capture and assert no `/_webcompy-resource/*` request fires when navigating to another docs page (with 7.1 enabled)
+- [x] 8.2 Add an E2E assertion: a documents page's initial HTML styles the sidebar (computed style check on `.docs-sidebar-section-toggle` / `.docs-sidebar-links a` before app boot)
+- [x] 8.3 Run `uv run python -m webcompy generate` for docs_app and confirm every generated page contains the `DocsSidebar` scoped style and identical style-tag sets across pages
 
 ## 9. Final checks
 
