@@ -1,0 +1,326 @@
+from __future__ import annotations
+
+import base64
+import html as html_module
+import json
+import re
+import sys
+import types
+import zlib
+
+import pytest
+from starlette.applications import Starlette
+from starlette.responses import JSONResponse
+from starlette.routing import Route
+
+from webcompy import load_text
+from webcompy.app import WebComPyApp, WebComPyAppConfig
+from webcompy.components import define_component
+from webcompy.di import inject
+from webcompy.elements import html
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, FETCH_PORT_KEY
+from webcompy.router import Router, RouterView
+from webcompy.router._lazy import lazy
+from webcompy_server import configure_server_context
+from webcompy_server._html import generate_html
+from webcompy_server.ports._resource import ServerResourcePort
+
+
+async def _render_html(app: WebComPyApp, path: str) -> str:
+    ctx = app.create_render_context(path)
+    try:
+        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+        await scheduler.await_pending()
+        return await generate_html(
+            ctx,
+            app_package_name="iso_app",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="iso.whl",
+        )
+    finally:
+        ctx.dispose()
+
+
+def _make_isolation_app() -> WebComPyApp:
+    """Build an app whose nested layout route lazily imports a styled component.
+
+    The layout module is only reachable through the nested ``/docs`` route, so it
+    is first imported while a render context is active (via the RouterView
+    preload) — the exact pattern that previously left the imported component's
+    generator invisible to every later render context.
+    """
+
+    @define_component("iso-sidebar")
+    def IsoSidebar(context):
+        return html.DIV({}, "sidebar")
+
+    IsoSidebar.scoped_style = {".iso-sidebar": {"color": "red"}}
+
+    sidebar_mod = types.ModuleType("iso_sidebar_mod")
+    sidebar_mod.IsoSidebar = IsoSidebar
+    sys.modules["iso_sidebar_mod"] = sidebar_mod
+
+    layout_mod = types.ModuleType("iso_layout_mod")
+    exec(
+        "from webcompy.components import define_component\n"
+        "from webcompy.elements import html\n"
+        "from iso_sidebar_mod import IsoSidebar\n"
+        "@define_component('iso-layout')\n"
+        "def IsoLayout(context):\n"
+        "    return html.DIV({}, IsoSidebar(None))\n"
+        "IsoLayout.scoped_style = {'.iso-layout': {'color': 'blue'}}\n",
+        layout_mod.__dict__,
+    )
+    sys.modules["iso_layout_mod"] = layout_mod
+
+    @define_component("iso-home")
+    def IsoHome(context):
+        return html.DIV({}, "home", RouterView())
+
+    @define_component("iso-child")
+    def IsoChild(context):
+        return html.DIV({}, "child")
+
+    router = Router(
+        {"path": "/", "component": IsoHome},
+        {
+            "path": "/docs",
+            "component": lazy("iso_layout_mod:IsoLayout", __file__),
+            "children": [{"path": "child", "component": IsoChild}],
+        },
+        mode="history",
+        base_url="",
+    )
+    app = WebComPyApp(root_component=IsoHome, router=router, config=WebComPyAppConfig(base_url="/"))
+    configure_server_context(app)
+    return app
+
+
+def _style_cids(html: str) -> set[str]:
+    return set(re.findall(r'data-webcompy-cid="([^"]+)"', html))
+
+
+def _decode_payload(html_str: str) -> dict:
+    marker = 'id="__webcompy_data__">'
+    start = html_str.index(marker) + len(marker)
+    end = html_str.index("</script>", start)
+    outer = json.loads(html_module.unescape(html_str[start:end]))
+    if outer.get("__webcompy_compressed__"):
+        outer = json.loads(zlib.decompress(base64.b64decode(outer["data"])).decode("utf-8"))
+    return outer
+
+
+@pytest.mark.asyncio
+async def test_lazy_layout_component_registered_in_later_render_contexts():
+    app = _make_isolation_app()
+
+    await _render_html(app, "/")
+
+    docs_html = await _render_html(app, "/docs/child")
+    assert re.search(r"\.iso-sidebar\[webcompy-cid-", docs_html), (
+        "the sidebar's scoped style must appear on a page generated after the "
+        "layout module was first imported with an active DI scope"
+    )
+    assert re.search(r"\.iso-layout\[webcompy-cid-", docs_html)
+
+
+@pytest.mark.asyncio
+async def test_identical_style_sets_across_render_contexts():
+    app = _make_isolation_app()
+
+    await _render_html(app, "/")
+
+    docs_html_a = await _render_html(app, "/docs/child")
+    docs_html_b = await _render_html(app, "/docs/child")
+    assert _style_cids(docs_html_a) == _style_cids(docs_html_b)
+    assert ".iso-sidebar[webcompy-cid-" in docs_html_a
+    assert ".iso-sidebar[webcompy-cid-" in docs_html_b
+
+
+@pytest.mark.asyncio
+async def test_component_imported_during_current_render_style_in_same_page_head():
+    app = _make_isolation_app()
+
+    home_html = await _render_html(app, "/")
+    assert ".iso-sidebar[webcompy-cid-" in home_html, (
+        "a component whose module is first imported while this very page renders "
+        "(RouterView preload) must still land in the same page's head because "
+        "style collection runs after the render settles"
+    )
+    assert ".iso-layout[webcompy-cid-" in home_html
+
+
+@pytest.mark.asyncio
+async def test_reactive_scoped_style_from_async_setup_in_ssg_head():
+    from webcompy.components import reactive_scoped_style
+
+    @define_component("iso-async-rx")
+    async def IsoAsyncRx(context):
+        context.use_reactive_scoped_style(reactive_scoped_style(lambda: {".iso-rx-box": {"color": "blue"}}))
+        return html.DIV({"class": "iso-rx-box"}, "rx")
+
+    app = WebComPyApp(root_component=IsoAsyncRx, config=WebComPyAppConfig(base_url="/"))
+    configure_server_context(app)
+
+    html_output = await _render_html(app, "/")
+    assert 'data-webcompy-cid-rx="' in html_output
+    assert ".iso-rx-box[webcompy-cid-" in html_output
+
+
+@pytest.mark.asyncio
+async def test_resource_payload_isolated_per_render_context(tmp_path):
+    pkg = tmp_path / "resapp"
+    (pkg / "documents").mkdir(parents=True)
+    (pkg / "documents" / "a.md").write_text("# A", encoding="utf-8")
+    (pkg / "documents" / "b.md").write_text("# B", encoding="utf-8")
+
+    @define_component("iso-doc-a")
+    async def IsoDocA(context):
+        text = await load_text("documents/a.md")
+        return html.DIV({}, text)
+
+    @define_component("iso-doc-b")
+    async def IsoDocB(context):
+        text = await load_text("documents/b.md")
+        return html.DIV({}, text)
+
+    @define_component("iso-doc-root")
+    def IsoDocRoot(context):
+        return html.DIV({}, RouterView())
+
+    router = Router(
+        {"path": "/a", "component": IsoDocA},
+        {"path": "/b", "component": IsoDocB},
+        mode="history",
+        base_url="",
+    )
+    app = WebComPyApp(root_component=IsoDocRoot, router=router, config=WebComPyAppConfig(base_url="/"))
+    configure_server_context(
+        app,
+        resource_port=ServerResourcePort(
+            app_package_path=pkg, allow_list=frozenset({"documents/a.md", "documents/b.md"})
+        ),
+    )
+
+    html_a = await _render_html(app, "/a")
+    html_b = await _render_html(app, "/b")
+
+    res_a = _decode_payload(html_a)["resources"]
+    res_b = _decode_payload(html_b)["resources"]
+    assert "documents/a.md" in res_a
+    assert "documents/b.md" not in res_a, "a page's payload must not carry another page's resources"
+    assert "documents/b.md" in res_b
+    assert "documents/a.md" not in res_b
+
+
+@pytest.mark.asyncio
+async def test_fetch_payload_isolated_per_render_context():
+    @define_component("iso-fetch-one")
+    async def IsoFetchOne(context):
+        port = inject(FETCH_PORT_KEY)
+        resp = await port.fetch("/api/one")
+        return html.DIV({}, resp.text)
+
+    @define_component("iso-fetch-two")
+    async def IsoFetchTwo(context):
+        port = inject(FETCH_PORT_KEY)
+        resp = await port.fetch("/api/two")
+        return html.DIV({}, resp.text)
+
+    @define_component("iso-fetch-root")
+    def IsoFetchRoot(context):
+        return html.DIV({}, RouterView())
+
+    api_asgi = Starlette(
+        routes=[
+            Route("/api/one", endpoint=lambda _: JSONResponse({"n": 1})),
+            Route("/api/two", endpoint=lambda _: JSONResponse({"n": 2})),
+        ]
+    )
+
+    router = Router(
+        {"path": "/one", "component": IsoFetchOne},
+        {"path": "/two", "component": IsoFetchTwo},
+        mode="history",
+        base_url="",
+    )
+    app = WebComPyApp(root_component=IsoFetchRoot, router=router, config=WebComPyAppConfig(base_url="/"))
+    configure_server_context(app, root_app=api_asgi)
+
+    html_one = await _render_html(app, "/one")
+    html_two = await _render_html(app, "/two")
+
+    fetches_one = _decode_payload(html_one)["fetches"]
+    fetches_two = _decode_payload(html_two)["fetches"]
+    assert "/api/one" in fetches_one
+    assert "/api/two" not in fetches_one, "a page's payload must not carry another page's fetch entries"
+    assert "/api/two" in fetches_two
+    assert "/api/one" not in fetches_two
+
+
+def _make_resource_app(pkg) -> WebComPyApp:
+    @define_component("iso-res-page")
+    async def IsoResPage(context):
+        text = await load_text("documents/a.md")
+        return html.DIV({}, text)
+
+    @define_component("iso-res-root")
+    def IsoResRoot(context):
+        return html.DIV({}, RouterView())
+
+    router = Router({"path": "/", "component": IsoResPage}, mode="history", base_url="")
+    app = WebComPyApp(root_component=IsoResRoot, router=router, config=WebComPyAppConfig(base_url="/"))
+    configure_server_context(
+        app,
+        resource_port=ServerResourcePort(
+            app_package_path=pkg, allow_list=frozenset({"documents/a.md", "assets/logo.png"})
+        ),
+    )
+    return app
+
+
+@pytest.mark.asyncio
+async def test_all_text_transfer_mode_embeds_unloaded_text_resources(tmp_path):
+    pkg = tmp_path / "resapp"
+    (pkg / "documents").mkdir(parents=True)
+    (pkg / "documents" / "a.md").write_text("# A", encoding="utf-8")
+    (pkg / "documents" / "b.md").write_text("# B", encoding="utf-8")
+
+    app = _make_resource_app(pkg)
+    app._ssg_full_text_resources = {
+        "documents/a.md": b"# A",
+        "documents/b.md": b"# B",
+    }
+
+    html_output = await _render_html(app, "/")
+
+    resources = _decode_payload(html_output)["resources"]
+    assert "documents/a.md" in resources
+    assert "documents/b.md" in resources, "a stashed text resource must be embedded even if the page never loaded it"
+
+
+@pytest.mark.asyncio
+async def test_all_text_transfer_mode_deterministic_across_pages(tmp_path):
+    pkg = tmp_path / "resapp"
+    (pkg / "documents").mkdir(parents=True)
+    (pkg / "documents" / "a.md").write_text("# A", encoding="utf-8")
+    (pkg / "documents" / "b.md").write_text("# B", encoding="utf-8")
+
+    app = _make_resource_app(pkg)
+    app._ssg_full_text_resources = {
+        "documents/a.md": b"# A",
+        "documents/b.md": b"# B",
+    }
+
+    html_1 = await _render_html(app, "/")
+    html_2 = await _render_html(app, "/")
+
+    res_1 = _decode_payload(html_1)["resources"]
+    res_2 = _decode_payload(html_2)["resources"]
+    assert res_1 == {"documents/a.md": _b64(b"# A"), "documents/b.md": _b64(b"# B")}
+    assert res_2 == res_1
+
+
+def _b64(data: bytes) -> str:
+    return base64.b64encode(data).decode("ascii")

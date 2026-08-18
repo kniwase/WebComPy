@@ -37,7 +37,10 @@ class TestServerRenderContextResourcePortInjection:
         ctx = app.create_render_context("/", initial_theme=None)
         try:
             injected = ctx.di_scope.inject(RESOURCE_PORT_KEY)
-            assert injected is port
+            assert isinstance(injected, ServerResourcePort)
+            assert injected is not port, "each context must get its own recording instance"
+            assert injected._app_package_path == port._app_package_path
+            assert injected._allow_list == port._allow_list
         finally:
             ctx.dispose()
 

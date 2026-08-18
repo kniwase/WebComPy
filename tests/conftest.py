@@ -175,13 +175,13 @@ def fake_document(fake_browser):
 
 @pytest.fixture(autouse=True)
 def reset_di_scope():
-    from webcompy.components._generator import _unregistered_generators
+    from webcompy.components._generator import _all_component_generators
 
-    saved = _unregistered_generators[:]
-    _unregistered_generators.clear()
+    saved = _all_component_generators[:]
+    _all_component_generators.clear()
     yield
-    _unregistered_generators.clear()
-    _unregistered_generators.extend(saved)
+    _all_component_generators.clear()
+    _all_component_generators.extend(saved)
 
 
 @pytest.fixture

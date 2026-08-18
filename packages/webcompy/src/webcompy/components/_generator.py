@@ -100,7 +100,7 @@ def _is_component_display(value: str) -> TypeGuard[ComponentDisplay]:
     return value in _VALID_DISPLAY_VALUES
 
 
-_unregistered_generators: list[ComponentGenerator[Any]] = []
+_all_component_generators: list[ComponentGenerator[Any]] = []
 
 
 def _classify_nested_key(key: str) -> str:
@@ -267,8 +267,8 @@ class ComponentGenerator(Generic[PropsType]):
         self._display = display
         self._observed_attributes = observed_attributes
         self._observed_prop_keys: dict[str, str] = {attr: attr.replace("-", "_") for attr in observed_attributes}
-        if not self._try_register():
-            _unregistered_generators.append(self)
+        self._try_register()
+        _all_component_generators.append(self)
 
     @property
     def _id(self) -> str:
@@ -486,5 +486,5 @@ def define_component(
 
 
 def _register_deferred_components() -> None:
-    for gen in _unregistered_generators:
+    for gen in _all_component_generators:
         gen._try_register()

@@ -516,6 +516,18 @@ async def generate_html(
         )
         scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
         await scheduler.await_pending()
+        assert ctx._root is not None
+        head_content_html = ctx._root._head_element.get_head_content_html()
+        scoped_styles_html = ctx._root._head_element.get_scoped_styles_html()
+        html_output = html_output.replace("<head>", f"<head>\n{head_content_html}", 1)
+        if scoped_styles_html:
+            index_css_link_html = f'<link rel="stylesheet" href="{html_module.escape(ctx.config.base_url, quote=True)}_webcompy-ui/index.css">'
+            assert index_css_link_html in html_output
+            html_output = html_output.replace(
+                index_css_link_html,
+                f"{index_css_link_html}\n{scoped_styles_html}",
+                1,
+            )
         if prerender and ctx._root is not None:
             try:
                 payload_json = ctx._root._collect_transfer_data()
@@ -637,13 +649,6 @@ async def _generate_html_impl(
         )
 
     assert ctx._root is not None
-    head_content_html = ctx._root._head_element.get_head_content_html()
-    scoped_styles_html = ctx._root._head_element.get_scoped_styles_html()
-
-    index_css_link_html = (
-        f'<link rel="stylesheet" href="{html_module.escape(base_url, quote=True)}_webcompy-ui/index.css">'
-    )
-
     custom_template = _resolve_loading_template(loading_config["template"], app_package_path)
     if custom_template is not None:
         _validate_loading_template(custom_template)
@@ -705,12 +710,4 @@ async def _generate_html_impl(
             )
         html_output = html_output.replace(_LOADING_TEMPLATE_MARKER, custom_template)
 
-    html_output = html_output.replace("<head>", f"<head>\n{head_content_html}", 1)
-    if scoped_styles_html:
-        assert index_css_link_html in html_output
-        html_output = html_output.replace(
-            index_css_link_html,
-            f"{index_css_link_html}\n{scoped_styles_html}",
-            1,
-        )
     return html_output, app_loader_html

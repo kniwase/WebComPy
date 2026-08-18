@@ -29,6 +29,7 @@ class WebComPyBuildConfig:
     runtime_serving: Literal["cdn", "local"] | None = None
     standalone: bool = False
     wheel_mode: Literal["bundled", "split"] = "bundled"
+    resource_transfer: Literal["used", "all-text"] = "used"
     dist: str = "dist"
     cname: str = ""
     static_files_dir: str = "static"
@@ -36,6 +37,12 @@ class WebComPyBuildConfig:
     server: WebComPyServerConfig = field(default_factory=WebComPyServerConfig)
 
     def __post_init__(self):
+        if self.resource_transfer not in ("used", "all-text"):
+            from webcompy.exception import WebComPyException
+
+            raise WebComPyException(
+                f"Invalid resource_transfer: {self.resource_transfer!r}. Valid values: 'used', 'all-text'"
+            )
         self.app_package_path = Path(self.app_module.__file__).parent  # type: ignore[arg-type]
         self.app = getattr(self.app_module, self.app_var)
         self._explicit_wasm_serving: Literal["cdn", "local"] | _Sentinel = (

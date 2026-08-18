@@ -92,6 +92,8 @@ async def generate_static_site(app: WebComPyApp | None = None):
     serving = create_asgi_app(app, build_config, mode="prod")
     artifacts = serving.artifacts
 
+    app._ssg_full_text_resources = _collect_full_text_resources(app, build_config, artifacts)
+
     scripts_dir = dist_dir / "_webcompy-app-package"
     os.mkdir(scripts_dir)
 
@@ -135,39 +137,99 @@ async def generate_static_site(app: WebComPyApp | None = None):
     base_url_path = app.config.base_url.strip("/")
     url_prefix = f"/{base_url_path}" if base_url_path else ""
 
-    if app.router_mode == "history" and app.routes:
-        for _, _, _, _, page in app.routes:
-            component = page["component"]
-            if isinstance(component, LazyComponentGenerator):
-                component._preload()
-
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=serving.asgi),
-        base_url="http://test",
-    ) as client:
+    try:
         if app.router_mode == "history" and app.routes:
-            route_variants = app.router.__route_variants__ if app.router is not None else None
-            for i, (p, _, _, _, _) in enumerate(app.routes):
-                variants = route_variants[i] if route_variants is not None else None
-                paths = {p} if variants is None else {p.format(**params) for params in variants}
-                for path in paths:
-                    response = await client.get(f"{url_prefix}/{path}")
-                    if not (path_dir := dist_dir / path).exists():
-                        os.makedirs(path_dir)
-                    html_path = path_dir / "index.html"
-                    html_path.open("w", encoding="utf8").write(response.text)
-                    print(html_path)
-            response = await client.get(
-                f"{url_prefix}/_webcompy_404",
-                headers={"Accept": "text/html"},
-            )
-            html_path = dist_dir / "404.html"
-            html_path.open("w", encoding="utf8").write(response.text)
-            print(html_path)
-        else:
-            response = await client.get(f"{url_prefix}/")
-            html_path = dist_dir / "index.html"
-            html_path.open("w", encoding="utf8").write(response.text)
-            print(html_path)
+            router = app.router
+            if router is not None and getattr(router, "preload_lazy_routes", None) is not None:
+                router.preload_lazy_routes(force=True)
+            else:
+                for _, _, _, _, page in app.routes:
+                    component = page["component"]
+                    if isinstance(component, LazyComponentGenerator):
+                        component._preload()
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=serving.asgi),
+            base_url="http://test",
+        ) as client:
+            if app.router_mode == "history" and app.routes:
+                route_variants = app.router.__route_variants__ if app.router is not None else None
+                for i, (p, _, _, _, _) in enumerate(app.routes):
+                    variants = route_variants[i] if route_variants is not None else None
+                    paths = {p} if variants is None else {p.format(**params) for params in variants}
+                    for path in paths:
+                        response = await client.get(f"{url_prefix}/{path}")
+                        if not (path_dir := dist_dir / path).exists():
+                            os.makedirs(path_dir)
+                        html_path = path_dir / "index.html"
+                        html_path.open("w", encoding="utf8").write(response.text)
+                        print(html_path)
+                response = await client.get(
+                    f"{url_prefix}/_webcompy_404",
+                    headers={"Accept": "text/html"},
+                )
+                html_path = dist_dir / "404.html"
+                html_path.open("w", encoding="utf8").write(response.text)
+                print(html_path)
+            else:
+                response = await client.get(f"{url_prefix}/")
+                html_path = dist_dir / "index.html"
+                html_path.open("w", encoding="utf8").write(response.text)
+                print(html_path)
+    finally:
+        app._ssg_full_text_resources = None
 
     print("done")
+
+
+_TEXT_RESOURCE_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".md",
+        ".markdown",
+        ".txt",
+        ".json",
+        ".csv",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".svg",
+        ".html",
+        ".xml",
+    }
+)
+
+_TEXT_RESOURCE_MAX_BYTES = 256 * 1024
+_TEXT_RESOURCE_MAX_TOTAL_BYTES = 1024 * 1024
+
+
+def _collect_full_text_resources(
+    app: WebComPyApp, build_config: WebComPyBuildConfig, artifacts: Any
+) -> dict[str, bytes] | None:
+    if build_config.resource_transfer != "all-text":
+        return None
+    if not artifacts.resource_allow_list:
+        return None
+    from pathlib import PurePosixPath
+
+    full: dict[str, bytes] = {}
+    for rel_path in sorted(artifacts.resource_allow_list):
+        if PurePosixPath(rel_path).suffix.lower() not in _TEXT_RESOURCE_EXTENSIONS:
+            continue
+        data = (build_config.app_package_path / rel_path).read_bytes()
+        if len(data) > _TEXT_RESOURCE_MAX_BYTES:
+            print(
+                f"Warning: text resource {rel_path} ({len(data)} bytes) exceeds "
+                f"{_TEXT_RESOURCE_MAX_BYTES} bytes; it will be embedded in every generated page.",
+                file=sys.stderr,
+                flush=True,
+            )
+        full[rel_path] = data
+    total = sum(len(data) for data in full.values())
+    if total > _TEXT_RESOURCE_MAX_TOTAL_BYTES:
+        print(
+            f"Warning: total text resources ({total} bytes) exceed {_TEXT_RESOURCE_MAX_TOTAL_BYTES} bytes; "
+            "every generated page embeds the full set.",
+            file=sys.stderr,
+            flush=True,
+        )
+    return full

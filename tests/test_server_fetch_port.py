@@ -348,16 +348,172 @@ class TestServerFetchPortBaseUrlResolution:
 
 class TestServerFetchPortClose:
     @pytest.mark.asyncio
-    async def test_close_cleans_up_both_clients(self):
+    async def test_close_cleans_up_both_clients(self, monkeypatch):
+        class _FakeClient:
+            def __init__(self):
+                self.closed = False
+
+            async def request(self, method, url, *, headers=None, content=None):
+                return httpx.Response(200, json={})
+
+            async def aclose(self) -> None:
+                self.closed = True
+
+        monkeypatch.setattr("httpx.AsyncClient", lambda *args, **kwargs: _FakeClient())
+
         port = ServerFetchPort()
         app = Starlette(routes=[])
         port.configure(app)
+        await port.fetch("https://api.example.com/data")
 
         assert port._external_client is not None
         assert port._self_site_client is not None
 
         await port.close()
 
-        client = httpx.AsyncClient()
-        assert not client.is_closed
-        await client.aclose()
+        assert port._external_client.closed is True
+        assert port._self_site_client.closed is True
+
+
+class TestServerFetchPortLazyExternalClient:
+    @pytest.mark.asyncio
+    async def test_no_client_allocated_before_external_fetch(self):
+        port = ServerFetchPort()
+        assert port._external_client is None
+
+    @pytest.mark.asyncio
+    async def test_external_fetch_creates_client_lazily(self, monkeypatch):
+        class _FakeClient:
+            def __init__(self):
+                self.requested_urls: list[str] = []
+
+            async def request(self, method, url, *, headers=None, content=None):
+                self.requested_urls.append(url)
+                return httpx.Response(200, json={"ok": True})
+
+            async def aclose(self) -> None:
+                pass
+
+        fake = _FakeClient()
+        monkeypatch.setattr("httpx.AsyncClient", lambda *args, **kwargs: fake)
+
+        port = ServerFetchPort()
+        assert port._external_client is None
+
+        response = await port.fetch("https://api.example.com/data")
+
+        assert response.ok is True
+        assert port._external_client is fake
+        assert fake.requested_urls == ["https://api.example.com/data"]
+
+    @pytest.mark.asyncio
+    async def test_close_without_external_client_does_not_raise(self):
+        port = ServerFetchPort()
+        await port.close()
+
+    @pytest.mark.asyncio
+    async def test_clone_propagates_unallocated_client(self):
+        port = ServerFetchPort()
+        clone = port._clone_for_context()
+        assert clone._external_client is None
+
+    @pytest.mark.asyncio
+    async def test_clone_shares_lazily_created_client(self, monkeypatch):
+        class _FakeClient:
+            def __init__(self):
+                self.closed = False
+
+            async def request(self, method, url, *, headers=None, content=None):
+                return httpx.Response(200, json={})
+
+            async def aclose(self) -> None:
+                self.closed = True
+
+        fake = _FakeClient()
+        monkeypatch.setattr("httpx.AsyncClient", lambda *args, **kwargs: fake)
+
+        port = ServerFetchPort()
+        await port.fetch("https://api.example.com/data")
+        clone = port._clone_for_context()
+
+        assert clone._external_client is fake
+
+    @pytest.mark.asyncio
+    async def test_unconfigured_render_context_allocates_no_external_client(self, monkeypatch):
+        from webcompy.app import WebComPyApp, WebComPyAppConfig
+        from webcompy.ports._keys import FETCH_PORT_KEY
+        from webcompy_server import configure_server_context
+
+        creations: list[str] = []
+        monkeypatch.setattr("httpx.AsyncClient", lambda *args, **kwargs: creations.append("client") or object())
+
+        app = WebComPyApp(root_component=lambda _: None, config=WebComPyAppConfig())
+        configure_server_context(app)
+
+        ctx = app.create_render_context("/")
+        try:
+            port = ctx.di_scope.inject(FETCH_PORT_KEY)
+            assert port._external_client is None
+        finally:
+            ctx.dispose()
+
+        assert creations == [], "no httpx client may be allocated for an unconfigured render context"
+
+    @pytest.mark.asyncio
+    async def test_clone_external_fetch_shares_prototype_client(self, monkeypatch):
+        class _FakeClient:
+            def __init__(self):
+                self.requested_urls: list[str] = []
+
+            async def request(self, method, url, *, headers=None, content=None):
+                self.requested_urls.append(url)
+                return httpx.Response(200, json={"ok": True})
+
+            async def aclose(self) -> None:
+                pass
+
+        creations: list[str] = []
+        fake = _FakeClient()
+        monkeypatch.setattr(
+            "httpx.AsyncClient",
+            lambda *args, **kwargs: creations.append("client") or fake,
+        )
+
+        prototype = ServerFetchPort()
+        clone = prototype._clone_for_context()
+
+        response = await clone.fetch("https://api.example.com/data")
+
+        assert response.ok is True
+        assert prototype._external_client is fake, "the client must be created on the prototype so all clones share it"
+        assert clone._external_client is None
+        assert creations == ["client"]
+        assert fake.requested_urls == ["https://api.example.com/data"]
+
+    @pytest.mark.asyncio
+    async def test_two_clones_share_single_external_client(self, monkeypatch):
+        class _FakeClient:
+            async def request(self, method, url, *, headers=None, content=None):
+                return httpx.Response(200, json={"ok": True})
+
+            async def aclose(self) -> None:
+                pass
+
+        creations: list[str] = []
+        fake = _FakeClient()
+        monkeypatch.setattr(
+            "httpx.AsyncClient",
+            lambda *args, **kwargs: creations.append("client") or fake,
+        )
+
+        prototype = ServerFetchPort()
+        clone1 = prototype._clone_for_context()
+        clone2 = prototype._clone_for_context()
+
+        await clone1.fetch("https://api.example.com/one")
+        await clone2.fetch("https://api.example.com/two")
+
+        assert creations == ["client"], "a single external client must be shared across clones"
+        assert prototype._external_client is fake
+        assert clone1._prototype is prototype
+        assert clone2._prototype is prototype

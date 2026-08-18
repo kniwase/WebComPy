@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Iterable
+from logging import getLogger
 
 from webcompy.di import inject
 from webcompy.di._keys import RESOURCE_DATA_KEY
@@ -9,12 +11,15 @@ from webcompy.ports._keys import FETCH_PORT_KEY
 from webcompy.ports._resource import ResourceNotFoundError, ResourcePort
 from webcompy.utils._environment import ENVIRONMENT
 
+_logger = getLogger(__name__)
+
 
 class BrowserResourcePort(ResourcePort):
     def __init__(self, base_url: str) -> None:
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("BrowserResourcePort is only available in browser environment")
         self._base_url = base_url.rstrip("/")
+        self._preloaded: dict[str, bytes] = {}
 
     def _validate(self, path: str) -> None:
         if not path:
@@ -36,6 +41,9 @@ class BrowserResourcePort(ResourcePort):
         return base64.b64decode(encoded)
 
     async def _fetch_bytes(self, path: str) -> bytes:
+        preloaded = self._preloaded.get(path)
+        if preloaded is not None:
+            return preloaded
         fetch_port = inject(FETCH_PORT_KEY, default=None)
         if fetch_port is None:
             raise ResourceNotFoundError(path, "browser", reason="no FetchPort in DI scope")
@@ -70,3 +78,18 @@ class BrowserResourcePort(ResourcePort):
         if payload is not None:
             return payload
         return await self._fetch_bytes(path)
+
+    async def preload(self, paths: Iterable[str]) -> None:
+        fetch_port = inject(FETCH_PORT_KEY, default=None)
+        if fetch_port is None:
+            return
+        for path in paths:
+            try:
+                self._validate(path)
+                if self._decode_payload(path) is not None or path in self._preloaded:
+                    continue
+                response = await fetch_port.fetch(self._resource_url(path))
+                if response.ok:
+                    self._preloaded[path] = response.content
+            except Exception as exc:
+                _logger.warning("Resource preload failed for %r: %s", path, exc)

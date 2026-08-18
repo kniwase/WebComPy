@@ -425,8 +425,8 @@ class Router:
         if not self._suppress_route_error(exc):
             _log_error(exc)
 
-    def preload_lazy_routes(self) -> None:
-        if not self._preload:
+    def preload_lazy_routes(self, *, force: bool = False) -> None:
+        if not self._preload and not force:
             return
         from webcompy.di import inject
         from webcompy.ports._keys import HOST_PORT_KEY

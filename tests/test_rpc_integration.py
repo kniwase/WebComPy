@@ -112,6 +112,23 @@ async def _render(app, serving) -> str:
         ctx.dispose()
 
 
+def _render_with_ctx_port(app, serving):
+    from webcompy.ports._keys import FETCH_PORT_KEY
+
+    async def _go() -> tuple[str, object]:
+        ctx = app.create_render_context("/")
+        try:
+            ctx_port = ctx.di_scope.inject(FETCH_PORT_KEY)
+            scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+            await scheduler.await_pending()
+            html_str = await serving.html_generator(ctx)
+            return html_str, ctx_port
+        finally:
+            ctx.dispose()
+
+    return _go()
+
+
 class TestSsrBake:
     @pytest.mark.asyncio
     async def test_rpc_during_ssr_is_baked(self, tmp_path: Path) -> None:
@@ -122,10 +139,7 @@ class TestSsrBake:
         app.rpc.register("add", _add)
         serving = _create_serving(app, build_config)
 
-        html_str = await _render(app, serving)
-
-        port = app._server_fetch_port
-        assert port is not None
+        html_str, port = await _render_with_ctx_port(app, serving)
         cache_keys = list(port._response_cache.keys())
         assert any(key.startswith("POST:/_webcompy-rpc:") for key in cache_keys)
         transfer = port.get_transfer_data()
@@ -145,10 +159,7 @@ class TestSsrBake:
         app.rpc.register("add", _add)
         serving = _create_serving(app, build_config)
 
-        await _render(app, serving)
-
-        port = app._server_fetch_port
-        assert port is not None
+        _html_str, port = await _render_with_ctx_port(app, serving)
         cache_keys = list(port._response_cache.keys())
         assert any(key.startswith("POST:/myapp/_webcompy-rpc:") for key in cache_keys)
 

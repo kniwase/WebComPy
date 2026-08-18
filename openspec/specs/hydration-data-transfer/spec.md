@@ -314,7 +314,7 @@ If the payload is missing or invalid, the function SHALL proceed with an empty p
 
 ### Requirement: SSR shall populate payload.resources from ServerResourcePort
 
-During SSR/SSG, after component rendering completes for a request, `ServerRenderContext` SHALL collect the recorded resources from every active `ServerResourcePort` (via `port.get_recorded_resources()`) and populate `TransferPayload.resources` with the path → bytes mapping. The codec pipeline SHALL base64-encode the bytes prior to JSON serialization.
+During SSR/SSG, after component rendering completes for a request, `ServerRenderContext` SHALL collect the recorded resources from the current render context's `ServerResourcePort` (via `port.get_recorded_resources()`) and populate `TransferPayload.resources` with the path → bytes mapping. Recorded resources SHALL be scoped to the render context: resources loaded while generating other pages or serving other requests SHALL NOT appear. The codec pipeline SHALL base64-encode the bytes prior to JSON serialization.
 
 #### Scenario: Loaded resource appears in hydration payload
 - **WHEN** an async component in an SSR'd page calls `await load_text("templates/card.html")`
@@ -329,6 +329,32 @@ During SSR/SSG, after component rendering completes for a request, `ServerRender
 #### Scenario: Same resource loaded twice appears once in payload
 - **WHEN** two components call `await load_text("templates/card.html")` during the same SSR pass
 - **THEN** the `resources` dict SHALL contain a single entry for `"templates/card.html"` with the latest content
+
+#### Scenario: Previously generated page's resources do not leak
+- **WHEN** SSG generates page A (loading `documents/a.md`) and then page B (loading `documents/b.md`)
+- **THEN** page B's payload `resources` SHALL contain `"documents/b.md"` but NOT `"documents/a.md"` (in the default per-context transfer mode)
+- **AND** page A's payload SHALL contain `"documents/a.md"` only
+
+### Requirement: SSG SHALL support an opt-in full text-resource transfer mode
+
+Static site generation SHALL support an opt-in mode in which every allow-listed text resource is embedded in every generated page's transfer payload, regardless of which resources the page itself loaded. In this mode, client-side navigation SHALL NOT issue resource fetches for allow-listed text resources, because the browser port resolves them from the payload. Text resources SHALL be identified by a framework-fixed extension allowlist (`.md`, `.markdown`, `.txt`, `.json`, `.csv`, `.yaml`, `.yml`, `.toml`, `.svg`, `.html`, `.xml`), and binary resources SHALL be excluded. The transfer mode SHALL be configurable via the build configuration; the text-resource classification is fixed by the framework and may be extended in future framework versions. The default mode SHALL remain per-context ("used") transfer.
+
+#### Scenario: Full text-resource transfer enabled
+- **WHEN** SSG runs with the full text-resource transfer mode enabled
+- **AND** the resource allow-list contains `documents/a.md` through `documents/z.md`
+- **THEN** every generated page's payload SHALL contain all of those markdown resources
+- **AND** the output SHALL be identical regardless of route generation order
+
+#### Scenario: Navigation issues no resource fetch in full-transfer mode
+- **WHEN** a user lands on any generated page of a site built with the full text-resource transfer mode
+- **AND** navigates client-side to another page whose component loads an allow-listed text resource
+- **THEN** the resource SHALL resolve from the transferred payload or browser cache
+- **AND** no request to the resource endpoint SHALL be issued
+
+#### Scenario: Binary resources are excluded from full transfer
+- **WHEN** the resource allow-list contains `assets/logo.png`
+- **AND** the full text-resource transfer mode is enabled
+- **THEN** generated payloads SHALL NOT contain `assets/logo.png`
 
 ### Requirement: Payload compression shall apply to the resources field
 

@@ -255,7 +255,7 @@ class TestEmbeddedSelfSiteFetch:
     @pytest.mark.asyncio
     async def test_fetch_to_host_api_during_ssr(self, tmp_path: Path) -> None:
         from webcompy.di import inject
-        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, FETCH_PORT_KEY
         from webcompy_server import configure_server_context
 
         pkg = _make_app_pkg(tmp_path)
@@ -269,6 +269,7 @@ class TestEmbeddedSelfSiteFetch:
         assert port._embedded is True
 
         ctx = app.create_render_context("/")
+        ctx_port = ctx.di_scope.inject(FETCH_PORT_KEY)
         try:
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
             await scheduler.await_pending()
@@ -276,11 +277,11 @@ class TestEmbeddedSelfSiteFetch:
         finally:
             ctx.dispose()
 
-        assert "/api/items" in port._response_cache
-        cached = port._response_cache["/api/items"]
+        assert "/api/items" in ctx_port._response_cache
+        cached = ctx_port._response_cache["/api/items"]
         assert cached.status_code == 200
         assert cached.json() == {"path": "/api/items"}
-        assert "/api/items" in port.get_transfer_data()
+        assert "/api/items" in ctx_port.get_transfer_data()
         assert "embed-fetch-root" in html_str
 
 

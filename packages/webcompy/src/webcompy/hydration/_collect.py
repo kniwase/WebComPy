@@ -39,6 +39,11 @@ def collect_transfer_data(root: AppDocumentRoot) -> TransferPayload:
         recorded = resource_port.get_recorded_resources()
         resources = {path: base64.b64encode(content).decode("ascii") for path, content in recorded.items()}
 
+    full_text = getattr(getattr(root, "_app", None), "_ssg_full_text_resources", None)
+    if full_text:
+        for path, content in full_text.items():
+            resources.setdefault(path, base64.b64encode(content).decode("ascii"))
+
     for component, async_instances in _walk_component_async_results(root):
         component_id = component._property.get("component_id", "")
         for ar in async_instances:

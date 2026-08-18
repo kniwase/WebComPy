@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 
 
 class ResourceNotFoundError(Exception):
@@ -37,3 +38,15 @@ class ResourcePort(ABC):
     async def load_bytes(self, path: str) -> bytes:
         """Load a resource as raw bytes."""
         ...
+
+    async def preload(self, paths: Iterable[str]) -> None:
+        """Prime client-side caches for the given resource paths.
+
+        The default implementation is a no-op; only browser-side ports need
+        to actually warm caches. Implementations SHALL NOT raise on
+        individual preload failures. Paths outside the resource allow-list
+        (or otherwise unresolvable) are not primed; the browser port issues
+        a fetch the server rejects, so callers should only pass paths known
+        to be allow-listed.
+        """
+        return None

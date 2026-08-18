@@ -336,11 +336,41 @@ class TestMountSelfSiteFetchDuringSsr:
         assert port._mount_prefixes == ["/api"]
 
     @pytest.mark.asyncio
+    async def test_context_clones_share_asgi_client_but_not_response_cache(self, tmp_path: Path) -> None:
+        from webcompy.ports._keys import FETCH_PORT_KEY
+
+        api_app = _make_api_app()
+        build_config = _make_build_config(tmp_path, mounts=lambda: {"/api": api_app})
+        app = _make_app()
+
+        _create_serving(app, build_config)
+
+        port = app._server_fetch_port
+        assert port is not None
+        assert port._self_site_client is not None
+
+        ctx1 = app.create_render_context("/")
+        ctx2 = app.create_render_context("/")
+        try:
+            port1 = ctx1.di_scope.inject(FETCH_PORT_KEY)
+            port2 = ctx2.di_scope.inject(FETCH_PORT_KEY)
+            assert port1 is not port
+            assert port1._self_site_client is port._self_site_client, (
+                "context clones must share the prototype's ASGI client"
+            )
+            assert port2._self_site_client is port._self_site_client
+            assert port1._response_cache is not port._response_cache
+            assert port2._response_cache is not port1._response_cache
+        finally:
+            ctx1.dispose()
+            ctx2.dispose()
+
+    @pytest.mark.asyncio
     async def test_fetch_to_mount_populates_transfer_cache_under_non_root_base_url(self, tmp_path: Path) -> None:
         from webcompy.app._app import WebComPyApp
         from webcompy.app._config import WebComPyAppConfig
         from webcompy.di import inject
-        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, FETCH_PORT_KEY
 
         api_app = _make_api_app()
         build_config = _make_build_config(tmp_path, mounts=lambda: {"/api": api_app})
@@ -357,6 +387,7 @@ class TestMountSelfSiteFetchDuringSsr:
         assert all(not p.startswith("/api") for p in port._blocked_paths)
 
         ctx = app.create_render_context("/")
+        ctx_port = ctx.di_scope.inject(FETCH_PORT_KEY)
         try:
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
             await scheduler.await_pending()
@@ -364,11 +395,11 @@ class TestMountSelfSiteFetchDuringSsr:
         finally:
             ctx.dispose()
 
-        assert "/api/users" in port._response_cache
-        cached = port._response_cache["/api/users"]
+        assert "/api/users" in ctx_port._response_cache
+        cached = ctx_port._response_cache["/api/users"]
         assert cached.status_code == 200
         assert cached.json() == {"path": "/api/users"}
-        assert "/api/users" in port.get_transfer_data()
+        assert "/api/users" in ctx_port.get_transfer_data()
         assert "mount-fetch-root" in html_str
 
     @pytest.mark.asyncio
@@ -376,7 +407,7 @@ class TestMountSelfSiteFetchDuringSsr:
         from webcompy.app._app import WebComPyApp
         from webcompy.app._config import WebComPyAppConfig
         from webcompy.di import inject
-        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, FETCH_PORT_KEY
 
         api_app = _make_api_app()
         build_config = _make_build_config(tmp_path, mounts=lambda: {"/api": api_app})
@@ -391,6 +422,7 @@ class TestMountSelfSiteFetchDuringSsr:
         assert port is not None
 
         ctx = app.create_render_context("/")
+        ctx_port = ctx.di_scope.inject(FETCH_PORT_KEY)
         try:
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
             await scheduler.await_pending()
@@ -398,9 +430,9 @@ class TestMountSelfSiteFetchDuringSsr:
         finally:
             ctx.dispose()
 
-        assert "/api/users" in port._response_cache
-        assert "/api/users" in port.get_transfer_data()
-        assert port._response_cache["/api/users"].json() == {"path": "/api/users"}
+        assert "/api/users" in ctx_port._response_cache
+        assert "/api/users" in ctx_port.get_transfer_data()
+        assert ctx_port._response_cache["/api/users"].json() == {"path": "/api/users"}
         assert "mount-fetch-root" in html_str
 
     @pytest.mark.asyncio
@@ -408,7 +440,7 @@ class TestMountSelfSiteFetchDuringSsr:
         from webcompy.app._app import WebComPyApp
         from webcompy.app._config import WebComPyAppConfig
         from webcompy.di import inject
-        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, FETCH_PORT_KEY
 
         async def users_handler(request):
             return JSONResponse({"path": str(request.url.path), "query": str(request.url.query)})
@@ -427,6 +459,7 @@ class TestMountSelfSiteFetchDuringSsr:
         assert port._mount_prefixes == ["/api"]
 
         ctx = app.create_render_context("/")
+        ctx_port = ctx.di_scope.inject(FETCH_PORT_KEY)
         try:
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
             await scheduler.await_pending()
@@ -434,11 +467,11 @@ class TestMountSelfSiteFetchDuringSsr:
         finally:
             ctx.dispose()
 
-        assert "/api/users?page=2" in port._response_cache
-        cached = port._response_cache["/api/users?page=2"]
+        assert "/api/users?page=2" in ctx_port._response_cache
+        cached = ctx_port._response_cache["/api/users?page=2"]
         assert cached.status_code == 200
         assert cached.json() == {"path": "/api/users", "query": "page=2"}
-        assert "/api/users?page=2" in port.get_transfer_data()
+        assert "/api/users?page=2" in ctx_port.get_transfer_data()
         assert "mount-fetch-root" in html_str
 
 
