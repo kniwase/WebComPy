@@ -14,7 +14,7 @@ from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import FileResponse, HTMLResponse, Response
-from starlette.routing import BaseRoute, Mount, Route
+from starlette.routing import BaseRoute, Mount, Route, WebSocketRoute
 from starlette.types import ASGIApp
 
 from webcompy.app._app import WebComPyApp
@@ -105,6 +105,12 @@ def _make_rpc_route(registry: ProcedureRegistry, path: str) -> Route:
         return Response(content=body, status_code=status, media_type="application/json")
 
     return Route(path, _rpc_endpoint, methods=["POST"])
+
+
+def _make_rpc_ws_route(registry: ProcedureRegistry, path: str) -> WebSocketRoute:
+    from webcompy_server.rpc import create_rpc_ws_endpoint
+
+    return WebSocketRoute(path, create_rpc_ws_endpoint(registry))
 
 
 def create_asgi_app(
@@ -317,9 +323,11 @@ def create_asgi_app(
     rpc_registry = app.rpc
     if rpc_registry.has_procedures:
         rpc_routes.append(_make_rpc_route(rpc_registry, rpc_registry.path))
+        rpc_routes.append(_make_rpc_ws_route(rpc_registry, rpc_registry.path))
         prefixed_rpc_path = app.config.base_url.rstrip("/") + rpc_registry.path
         if prefixed_rpc_path != rpc_registry.path:
             rpc_routes.append(_make_rpc_route(rpc_registry, prefixed_rpc_path))
+            rpc_routes.append(_make_rpc_ws_route(rpc_registry, prefixed_rpc_path))
             rpc_mount_prefixes.append(prefixed_rpc_path)
 
     routes: list[BaseRoute] = [

@@ -29,6 +29,7 @@ from .realtime import (
     use_websocket,
 )
 from .resources import load_bytes, load_text
+from .rpc import RpcSubscription, RpcSubscriptionState, RpcWsClient
 from .signal import use_computed, use_reactive_dict, use_reactive_list, use_readonly_signal, use_state
 from .storage import use_local_storage, use_session_storage
 
@@ -38,6 +39,9 @@ __all__ = [
     "DIScope",
     "InjectKey",
     "InjectionError",
+    "RpcSubscription",
+    "RpcSubscriptionState",
+    "RpcWsClient",
     "SSEvent",
     "TypedWebSocketHandle",
     "WebComPyAppConfig",

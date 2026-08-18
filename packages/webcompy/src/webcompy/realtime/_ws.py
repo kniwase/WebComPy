@@ -39,12 +39,14 @@ class WebSocketHandle:
         queue: _StreamQueue[Any],
         detach: Callable[[], None],
         send: Callable[[str], None],
+        force_close: Callable[[int, str], None] | None = None,
     ) -> None:
         self._state = state
         self._last_close = last_close
         self._queue = queue
         self._detach = detach
         self._send = send
+        self._force_close = force_close
         self._closed = False
         self._finalizer = weakref.finalize(self, detach)
 
@@ -61,6 +63,18 @@ class WebSocketHandle:
             warnings.warn(_CLOSED_SEND_MSG, UserWarning, stacklevel=2)
             return
         self._send(data)
+
+    def force_close(self, code: int = 4000, reason: str = "") -> None:
+        """Force an abnormal close so the reconnect loop engages.
+
+        The underlying socket is closed with a non-normal close code (default
+        ``4000``) while this subscription stays attached; the connection
+        transitions to ``RECONNECTING`` and reconnects. No-op when this handle
+        is already closed. A no-op (with a warning) outside the browser.
+        """
+        if self._closed or self._force_close is None:
+            return
+        self._force_close(code, reason)
 
     def __aiter__(self) -> AsyncIterator[str]:
         return self
@@ -143,7 +157,14 @@ def _open_shared(
     def _detach() -> None:
         registry.unsubscribe_ws("ws", key_component, sub)
 
-    handle = WebSocketHandle(state, last_close, sub.queue, _detach, lambda data: _ws_send(conn, data))
+    handle = WebSocketHandle(
+        state,
+        last_close,
+        sub.queue,
+        _detach,
+        lambda data: _ws_send(conn, data),
+        lambda code, reason: registry._ws_abort(conn, code, reason),
+    )
     _register_destroy_detach(handle.close)
     return handle
 
@@ -160,7 +181,10 @@ def _build_ssr_handle() -> WebSocketHandle:
     def _send(data: str) -> None:
         warnings.warn(_CLOSED_SEND_MSG, UserWarning, stacklevel=2)
 
-    return WebSocketHandle(state, last_close, queue, _detach, _send)
+    def _force_close(code: int, reason: str) -> None:
+        warnings.warn(_CLOSED_SEND_MSG, UserWarning, stacklevel=2)
+
+    return WebSocketHandle(state, last_close, queue, _detach, _send, _force_close)
 
 
 @overload

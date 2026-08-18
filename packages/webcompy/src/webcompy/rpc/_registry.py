@@ -24,11 +24,47 @@ class ProcedureInfo:
     is_async: bool
 
 
+@dataclass(frozen=True)
+class SubscriptionInfo:
+    name: str
+    func: Callable[..., Any]
+    param_schemas: dict[str, Any]
+    param_order: list[str]
+    required: frozenset[str]
+    replay_size: int
+
+
+def _extract_signature(name: str, func: Callable[..., Any]) -> tuple[dict[str, Any], list[str], frozenset[str], Any]:
+    try:
+        hints = typing.get_type_hints(func)
+    except Exception as err:
+        raise WebComPyException(f"RPC procedure {name!r}: failed to resolve type hints: {err}") from err
+    signature = inspect.signature(func)
+    param_schemas: dict[str, Any] = {}
+    param_order: list[str] = []
+    untyped: list[str] = []
+    for param_name, param in signature.parameters.items():
+        if param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL):
+            raise WebComPyException(f"RPC procedure {name!r}: variadic parameter {param_name!r} is not allowed")
+        if param_name not in hints:
+            untyped.append(param_name)
+            continue
+        param_schemas[param_name] = hints[param_name]
+        param_order.append(param_name)
+    if untyped:
+        raise WebComPyException(f"RPC procedure {name!r}: untyped parameter(s): {', '.join(untyped)}")
+    required = frozenset(
+        param_name for param_name, param in signature.parameters.items() if param.default is inspect.Parameter.empty
+    )
+    return param_schemas, param_order, required, hints.get("return")
+
+
 class ProcedureRegistry:
     def __init__(self, *, base_url: str = "/") -> None:
         self._path = DEFAULT_RPC_PATH
         self._base_url = base_url
         self._procedures: dict[str, ProcedureInfo] = {}
+        self._subscriptions: dict[str, SubscriptionInfo] = {}
         self._type_handlers: dict[str, tuple[type, Callable[[Any], Any], Callable[[Any], Any]]] = {}
         self._meta_encoders: dict[type, tuple[str, Callable[[Any], Any]]] = {}
         self._meta_decoders: dict[str, Callable[[Any], Any]] = {}
@@ -51,7 +87,7 @@ class ProcedureRegistry:
 
     @property
     def has_procedures(self) -> bool:
-        return bool(self._procedures)
+        return bool(self._procedures or self._subscriptions)
 
     def next_id(self) -> int:
         return next(self._id_counter)
@@ -59,44 +95,56 @@ class ProcedureRegistry:
     def get(self, name: str) -> ProcedureInfo | None:
         return self._procedures.get(name)
 
+    def get_subscription(self, name: str) -> SubscriptionInfo | None:
+        return self._subscriptions.get(name)
+
     def procedure(self, func: Callable[..., Any]) -> Callable[..., Any]:
         self.register(func.__name__, func)
         return func
 
+    def _validate_name(self, name: str) -> None:
+        if name.startswith("_webcompy."):
+            raise WebComPyException(f"RPC method name {name!r} is reserved for the framework")
+
     def register(self, name: str, func: Callable[..., Any]) -> None:
-        if name in self._procedures:
+        self._validate_name(name)
+        if name in self._procedures or name in self._subscriptions:
             raise WebComPyException(f"RPC procedure {name!r} is already registered")
-        try:
-            hints = typing.get_type_hints(func)
-        except Exception as err:
-            raise WebComPyException(f"RPC procedure {name!r}: failed to resolve type hints: {err}") from err
-        signature = inspect.signature(func)
-        param_schemas: dict[str, Any] = {}
-        param_order: list[str] = []
-        untyped: list[str] = []
-        for param_name, param in signature.parameters.items():
-            if param.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL):
-                raise WebComPyException(f"RPC procedure {name!r}: variadic parameter {param_name!r} is not allowed")
-            if param_name not in hints:
-                untyped.append(param_name)
-                continue
-            param_schemas[param_name] = hints[param_name]
-            param_order.append(param_name)
-        if untyped:
-            raise WebComPyException(f"RPC procedure {name!r}: untyped parameter(s): {', '.join(untyped)}")
-        if "return" not in hints:
+        param_schemas, param_order, required, result_schema = _extract_signature(name, func)
+        if result_schema is None:
             raise WebComPyException(f"RPC procedure {name!r}: missing return type annotation")
-        required = frozenset(
-            param_name for param_name, param in signature.parameters.items() if param.default is inspect.Parameter.empty
-        )
         self._procedures[name] = ProcedureInfo(
             name=name,
             func=func,
             param_schemas=param_schemas,
             param_order=param_order,
             required=required,
-            result_schema=hints["return"],
+            result_schema=result_schema,
             is_async=inspect.iscoroutinefunction(func),
+        )
+
+    def register_subscription(
+        self,
+        name: str,
+        func: Callable[..., Any],
+        *,
+        replay_size: int = 256,
+    ) -> None:
+        self._validate_name(name)
+        if name in self._procedures or name in self._subscriptions:
+            raise WebComPyException(f"RPC subscription {name!r} is already registered")
+        if not inspect.isasyncgenfunction(func):
+            raise WebComPyException(f"RPC subscription {name!r} must be an async generator function")
+        if isinstance(replay_size, bool) or not isinstance(replay_size, int) or replay_size < 1:
+            raise WebComPyException(f"RPC subscription {name!r}: replay_size must be an int greater than or equal to 1")
+        param_schemas, param_order, required, _ = _extract_signature(name, func)
+        self._subscriptions[name] = SubscriptionInfo(
+            name=name,
+            func=func,
+            param_schemas=param_schemas,
+            param_order=param_order,
+            required=required,
+            replay_size=replay_size,
         )
 
     def register_type_handler(
@@ -126,4 +174,5 @@ __all__ = [
     "DEFAULT_RPC_PATH",
     "ProcedureInfo",
     "ProcedureRegistry",
+    "SubscriptionInfo",
 ]

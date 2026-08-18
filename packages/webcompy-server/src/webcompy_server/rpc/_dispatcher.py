@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, Protocol
 
 from webcompy.ajax._serde import from_json
 from webcompy.hydration._transfer_meta import apply_transfer_meta, encode_with_meta
@@ -13,9 +13,20 @@ from webcompy.rpc._errors import (
     METHOD_NOT_FOUND,
     PARSE_ERROR,
 )
-from webcompy.rpc._registry import ProcedureInfo, ProcedureRegistry
+from webcompy.rpc._registry import ProcedureRegistry
 
 _logger = logging.getLogger(__name__)
+
+
+class _DecodableProcedure(Protocol):
+    @property
+    def param_order(self) -> list[str]: ...
+
+    @property
+    def required(self) -> frozenset[str]: ...
+
+    @property
+    def param_schemas(self) -> dict[str, Any]: ...
 
 
 class _ParamError(Exception):
@@ -34,7 +45,7 @@ def _valid_id(value: Any) -> bool:
 
 
 def _decode_params(
-    info: ProcedureInfo,
+    info: _DecodableProcedure,
     params: Any,
     meta: Any,
     registry: ProcedureRegistry,
@@ -120,24 +131,36 @@ def _json_response_body(data: Any) -> tuple[int, bytes]:
     return (200, json.dumps(data).encode("utf-8"))
 
 
+async def dispatch_payload(
+    payload: Any,
+    registry: ProcedureRegistry,
+) -> dict[str, Any] | list[dict[str, Any]] | None:
+    """Dispatch a parsed JSON-RPC payload (transport-neutral).
+
+    ``payload`` is either a single request object or a batch array. Returns
+    the response object(s) as plain JSON-serializable dictionaries, or ``None``
+    when there is nothing to respond (e.g. notifications only). HTTP and
+    WebSocket transports serialize the result to their own wire format.
+    """
+    if isinstance(payload, list):
+        if not payload:
+            return _error_body(None, INVALID_REQUEST, "Invalid Request")
+        responses = [
+            response
+            for response in [await _process_entry(entry, registry) for entry in payload]
+            if response is not None
+        ]
+        return responses or None
+    return await _process_entry(payload, registry)
+
+
 async def dispatch_body(body: bytes, registry: ProcedureRegistry) -> tuple[int, bytes]:
     """Dispatch a raw JSON-RPC request body and return ``(status, response_body)``."""
     try:
         payload = json.loads(body)
     except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
         return _json_response_body(_error_body(None, PARSE_ERROR, "Parse error"))
-    if isinstance(payload, list):
-        if not payload:
-            return _json_response_body(_error_body(None, INVALID_REQUEST, "Invalid Request"))
-        responses = [
-            response
-            for response in [await _process_entry(entry, registry) for entry in payload]
-            if response is not None
-        ]
-        if not responses:
-            return (204, b"")
-        return _json_response_body(responses)
-    response = await _process_entry(payload, registry)
+    response = await dispatch_payload(payload, registry)
     if response is None:
         return (204, b"")
     return _json_response_body(response)
@@ -196,4 +219,4 @@ def create_dispatcher_app(registry: ProcedureRegistry):
     return _app
 
 
-__all__ = ["create_dispatcher_app", "dispatch_body"]
+__all__ = ["create_dispatcher_app", "dispatch_body", "dispatch_payload"]
