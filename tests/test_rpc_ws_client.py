@@ -241,6 +241,200 @@ class TestClientSubscriptions:
             await sub.__anext__()
         client.close()
 
+    @pytest.mark.asyncio
+    async def test_finished_subscription_not_resubscribed_after_reconnect(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        rt_env.port.emit_open(WS_URL)
+        sub = client.subscribe("ticker", {}, event_type=dict)
+        await asyncio.sleep(0)
+        request = _frames(rt_env.port)[-1]
+        rt_env.port.emit_message(
+            WS_URL,
+            json.dumps(
+                {"jsonrpc": "2.0", "result": {"subscription_id": "s1", "resync_required": False}, "id": request["id"]}
+            ),
+        )
+        await asyncio.sleep(0)
+        rt_env.port.emit_message(
+            WS_URL,
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "method": "_webcompy.event",
+                    "params": {"subscription_id": "s1", "cursor": 41, "data": {"seq": 41}},
+                }
+            ),
+        )
+        await asyncio.sleep(0)
+        # drop, reconnect -> rejoin; the server answers resync_required
+        rt_env.port.emit_close(WS_URL, code=1006, reason="abnormal", was_clean=False)
+        await asyncio.sleep(0.1)
+        rt_env.port.emit_open(WS_URL)
+        await asyncio.sleep(0)
+        rejoin = [f for f in _frames(rt_env.port) if f.get("method") == "_webcompy.subscribe"][-1]
+        rt_env.port.emit_message(
+            WS_URL,
+            json.dumps(
+                {"jsonrpc": "2.0", "result": {"subscription_id": None, "resync_required": True}, "id": rejoin["id"]}
+            ),
+        )
+        await asyncio.sleep(0)
+        assert sub.state.value == RpcSubscriptionState.RESYNC_REQUIRED
+        # drop and reconnect again: the finished subscription SHALL NOT be re-subscribed
+        rt_env.port.emit_close(WS_URL, code=1006, reason="abnormal", was_clean=False)
+        await asyncio.sleep(0.1)
+        rt_env.port.emit_open(WS_URL)
+        await asyncio.sleep(0)
+        sub_requests = [f for f in _frames(rt_env.port) if f.get("method") == "_webcompy.subscribe"]
+        assert sub_requests == [], f"finished subscription was re-subscribed: {sub_requests}"
+        assert sub.state.value == RpcSubscriptionState.RESYNC_REQUIRED
+        client.close()
+
+    @pytest.mark.asyncio
+    async def test_active_subscription_finishes_on_permanent_close(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        rt_env.port.emit_open(WS_URL)
+        sub = client.subscribe("ticker", {}, event_type=dict)
+        await asyncio.sleep(0)
+        request = _frames(rt_env.port)[-1]
+        rt_env.port.emit_message(
+            WS_URL,
+            json.dumps(
+                {"jsonrpc": "2.0", "result": {"subscription_id": "s1", "resync_required": False}, "id": request["id"]}
+            ),
+        )
+        await asyncio.sleep(0)
+        assert sub.state.value == RpcSubscriptionState.ACTIVE
+        # a clean close (code 1000) terminates the connection permanently
+        rt_env.port.emit_close(WS_URL, code=1000, reason="clean", was_clean=True)
+        await asyncio.sleep(0)
+        assert sub.state.value == RpcSubscriptionState.CLOSED
+        assert client._subscriptions == {}
+        with pytest.raises(StopAsyncIteration):
+            await sub.__anext__()
+        client.close()
+
+    @pytest.mark.asyncio
+    async def test_pending_subscription_finishes_on_permanent_close(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        sub = client.subscribe("ticker", {}, event_type=dict)  # connection is not open yet
+        assert sub.state.value == RpcSubscriptionState.PENDING
+        rt_env.port.emit_close(WS_URL, code=1000, reason="clean", was_clean=True)
+        await asyncio.sleep(0)
+        assert sub.state.value == RpcSubscriptionState.CLOSED
+        assert client._pending_subs == set()
+        with pytest.raises(StopAsyncIteration):
+            await sub.__anext__()
+        client.close()
+
+    @pytest.mark.asyncio
+    async def test_pending_subscribe_calls_cleared_on_reconnect(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        rt_env.port.emit_open(WS_URL)
+        client.subscribe("ticker", {}, event_type=dict)
+        await asyncio.sleep(0)
+        assert client._pending_subscribe_calls, "subscribe call should be pending"
+        # drop while the subscribe response is pending; the stale id mapping is cleared
+        rt_env.port.emit_close(WS_URL, code=1006, reason="abnormal", was_clean=False)
+        await asyncio.sleep(0.1)
+        assert client._pending_subscribe_calls == {}
+        rt_env.port.emit_open(WS_URL)
+        await asyncio.sleep(0)
+        rejoin = [f for f in _frames(rt_env.port) if f.get("method") == "_webcompy.subscribe"][-1]
+        rt_env.port.emit_message(
+            WS_URL,
+            json.dumps(
+                {"jsonrpc": "2.0", "result": {"subscription_id": "s2", "resync_required": False}, "id": rejoin["id"]}
+            ),
+        )
+        await asyncio.sleep(0)
+        assert client._pending_subscribe_calls == {}
+        client.close()
+
+    @pytest.mark.asyncio
+    async def test_late_rejoin_response_ignored_after_close(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        rt_env.port.emit_open(WS_URL)
+        sub = client.subscribe("ticker", {}, event_type=dict)
+        await asyncio.sleep(0)
+        request = _frames(rt_env.port)[-1]
+        rt_env.port.emit_message(
+            WS_URL,
+            json.dumps(
+                {"jsonrpc": "2.0", "result": {"subscription_id": "s1", "resync_required": False}, "id": request["id"]}
+            ),
+        )
+        await asyncio.sleep(0)
+        assert sub.state.value == RpcSubscriptionState.ACTIVE
+        # drop, reconnect -> a rejoin is sent; close the sub while the response is in flight
+        rt_env.port.emit_close(WS_URL, code=1006, reason="abnormal", was_clean=False)
+        await asyncio.sleep(0.1)
+        rt_env.port.emit_open(WS_URL)
+        await asyncio.sleep(0)
+        rejoin = [f for f in _frames(rt_env.port) if f.get("method") == "_webcompy.subscribe"][-1]
+        sub.close()
+        await asyncio.sleep(0)
+        rt_env.port.emit_message(
+            WS_URL,
+            json.dumps(
+                {"jsonrpc": "2.0", "result": {"subscription_id": "s2", "resync_required": False}, "id": rejoin["id"]}
+            ),
+        )
+        await asyncio.sleep(0)
+        # the late response must not re-register or re-activate the closed subscription
+        assert sub.state.value == RpcSubscriptionState.CLOSED
+        assert client._subscriptions == {}
+        # a later reconnect must not re-subscribe the closed subscription
+        rt_env.port.emit_close(WS_URL, code=1006, reason="abnormal", was_clean=False)
+        await asyncio.sleep(0.1)
+        rt_env.port.emit_open(WS_URL)
+        await asyncio.sleep(0)
+        subscribe_frames = [f for f in _frames(rt_env.port) if f.get("method") == "_webcompy.subscribe"]
+        assert subscribe_frames == [], f"closed subscription was re-subscribed: {subscribe_frames}"
+        client.close()
+
+    @pytest.mark.asyncio
+    async def test_subscribe_after_permanent_termination_returns_closed(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        rt_env.port.emit_open(WS_URL)
+        # a clean close (code 1000) terminates the connection permanently
+        rt_env.port.emit_close(WS_URL, code=1000, reason="clean", was_clean=True)
+        await asyncio.sleep(0)
+        assert client.state.value == ConnectionState.CLOSED
+        # subscribing after the connection terminated must not hang in PENDING
+        sub = client.subscribe("ticker", {}, event_type=dict)
+        assert sub.state.value == RpcSubscriptionState.CLOSED
+        assert client._pending_subs == set()
+        with pytest.raises(StopAsyncIteration):
+            await sub.__anext__()
+        client.close()
+
+    @pytest.mark.asyncio
+    async def test_rejoin_without_received_events_sends_cursor_zero(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        rt_env.port.emit_open(WS_URL)
+        sub = client.subscribe("ticker", {}, event_type=dict)
+        await asyncio.sleep(0)
+        request = _frames(rt_env.port)[-1]
+        assert "last_cursor" not in request["params"], "a fresh subscribe must not carry a cursor"
+        rt_env.port.emit_message(
+            WS_URL,
+            json.dumps(
+                {"jsonrpc": "2.0", "result": {"subscription_id": "s1", "resync_required": False}, "id": request["id"]}
+            ),
+        )
+        await asyncio.sleep(0)
+        assert sub.state.value == RpcSubscriptionState.ACTIVE
+        assert sub.last_cursor.value is None
+        # drop and reconnect: the confirmed-but-eventless subscription rejoins with cursor 0
+        rt_env.port.emit_close(WS_URL, code=1006, reason="abnormal", was_clean=False)
+        await asyncio.sleep(0.1)
+        rt_env.port.emit_open(WS_URL)
+        await asyncio.sleep(0)
+        rejoin = [f for f in _frames(rt_env.port) if f.get("method") == "_webcompy.subscribe"][-1]
+        assert rejoin["params"]["last_cursor"] == 0
+        client.close()
+
 
 class TestHeartbeat:
     @pytest.mark.asyncio

@@ -138,6 +138,11 @@ class RpcWsClient:
     detects dead connections and forces an abnormal close so the reconnect
     loop engages. Browser-runtime only: outside the browser a warning is
     emitted and no socket work is performed.
+
+    Create the client inside component setup so its subscriptions and the
+    shared socket are released automatically on component destroy. When the
+    client is held outside a component (e.g. a module-level service), call
+    ``close()`` explicitly to release the connection.
     """
 
     def __init__(
@@ -240,7 +245,7 @@ class RpcWsClient:
     ) -> RpcSubscription[E]:
         if self._ssr:
             return RpcSubscription(self, method, params, event_type, closed=True)
-        if self._closed or self._handle is None:
+        if self._closed or self._handle is None or self._handle.state.value == ConnectionState.CLOSED:
             return RpcSubscription(self, method, params, event_type, closed=True)
         sub = RpcSubscription(self, method, params, event_type)
         self._pending_subs.add(sub)
@@ -259,8 +264,8 @@ class RpcWsClient:
         inner: dict[str, Any] = {"method": sub._method, "params": json_params}
         if meta:
             inner["meta"] = meta
-        if sub.last_cursor.value is not None:
-            inner["last_cursor"] = sub.last_cursor.value
+        if sub._sub_id is not None:
+            inner["last_cursor"] = sub.last_cursor.value if sub.last_cursor.value is not None else 0
         envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": SUBSCRIBE_METHOD, "params": inner, "id": req_id}
         self._pending_subscribe_calls[req_id] = sub
         self._handle.send(json.dumps(envelope))
@@ -287,24 +292,35 @@ class RpcWsClient:
             if not self._closed:
                 self._send_unsubscribe(sub)
 
+    def _fail_subscribe(self, sub: RpcSubscription[Any], state: RpcSubscriptionState) -> None:
+        """Finish a subscription whose subscribe/rejoin response failed.
+
+        The subscription is removed from both tracking maps so a finished
+        subscription is never re-subscribed on a later reconnect.
+        """
+        self._pending_subs.discard(sub)
+        sub_id = sub._sub_id
+        if sub_id is not None:
+            self._subscriptions.pop(sub_id, None)
+            sub._sub_id = None
+        sub._finish(state)
+
     def _handle_subscribe_response(self, sub: RpcSubscription[Any], frame: Any) -> None:
+        if sub._done:
+            return
         if "error" in frame:
-            self._pending_subs.discard(sub)
-            sub._finish(RpcSubscriptionState.CLOSED)
+            self._fail_subscribe(sub, RpcSubscriptionState.CLOSED)
             return
         result = frame.get("result")
         if not isinstance(result, dict):
-            self._pending_subs.discard(sub)
-            sub._finish(RpcSubscriptionState.CLOSED)
+            self._fail_subscribe(sub, RpcSubscriptionState.CLOSED)
             return
         if result.get("resync_required"):
-            self._pending_subs.discard(sub)
-            sub._finish(RpcSubscriptionState.RESYNC_REQUIRED)
+            self._fail_subscribe(sub, RpcSubscriptionState.RESYNC_REQUIRED)
             return
         sub_id = result.get("subscription_id")
         if not isinstance(sub_id, str):
-            self._pending_subs.discard(sub)
-            sub._finish(RpcSubscriptionState.CLOSED)
+            self._fail_subscribe(sub, RpcSubscriptionState.CLOSED)
             return
         old_id = sub._sub_id
         if old_id is not None:
@@ -323,12 +339,21 @@ class RpcWsClient:
                 self._send_subscribe(sub)
             for sub in list(self._subscriptions.values()):
                 self._send_subscribe(sub)
-        elif state in (ConnectionState.RECONNECTING, ConnectionState.CLOSED):
+        elif state == ConnectionState.RECONNECTING:
             self._fail_in_flight()
+        elif state == ConnectionState.CLOSED:
+            self._fail_in_flight()
+            for sub in list(self._pending_subs):
+                self._pending_subs.discard(sub)
+                sub._finish(RpcSubscriptionState.CLOSED)
+            for sub in list(self._subscriptions.values()):
+                sub._finish(RpcSubscriptionState.CLOSED)
+            self._subscriptions.clear()
 
     def _fail_in_flight(self) -> None:
         futures = list(self._in_flight.values())
         self._in_flight.clear()
+        self._pending_subscribe_calls.clear()
         for fut in futures:
             if not fut.done():
                 fut.set_exception(RpcError(SERVER_ERROR, "RPC WebSocket connection lost"))
