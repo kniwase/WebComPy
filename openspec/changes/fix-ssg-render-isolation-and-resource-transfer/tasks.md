@@ -53,7 +53,7 @@
 
 ## 9. Final checks
 
-- [ ] 9.1 `uv run ruff check . && uv run ruff format --check . && uv run pyright`
-- [ ] 9.2 `uv run python -m pytest tests/ --tb=short`
-- [ ] 9.3 `openspec validate fix-ssg-render-isolation-and-resource-transfer --strict` and `python3 scripts/check-doc-spec-refs.py`
-- [ ] 9.4 Update `AGENTS.md` File → Spec Mapping / invariant tables if any spec references changed
+- [x] 9.1 `uv run ruff check . && uv run ruff format --check . && uv run pyright`
+- [x] 9.2 `uv run python -m pytest tests/ --tb=short`
+- [x] 9.3 `openspec validate fix-ssg-render-isolation-and-resource-transfer --strict` and `python3 scripts/check-doc-spec-refs.py`
+- [x] 9.4 Update `AGENTS.md` File → Spec Mapping / invariant tables if any spec references changed
