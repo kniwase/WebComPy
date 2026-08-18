@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import importlib.util
+import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from webcompy.app import WebComPyApp, WebComPyAppConfig
 from webcompy.exception import WebComPyException
 from webcompy_cli._build import BuildArtifacts
-from webcompy_cli._generate import _collect_full_text_resources
+from webcompy_cli._generate import _collect_full_text_resources, generate_static_site
 from webcompy_cli.config._build_config import WebComPyBuildConfig
 
 
@@ -64,3 +67,60 @@ def test_collect_full_text_resources_filters_binary(tmp_path: Path) -> None:
         _make_artifacts(["documents/a.md", "documents/b.json", "assets/logo.png"]),
     )
     assert full == {"documents/a.md": b"# A", "documents/b.json": b"{}"}
+
+
+class _FakeServingApp:
+    def __init__(self, artifacts: BuildArtifacts) -> None:
+        self.artifacts = artifacts
+        self.asgi = None
+        self.html_generator = None
+        self.hash_cache: list[str] = []
+
+
+def test_full_text_stash_cleared_after_generation(tmp_path: Path) -> None:
+    build_config = _make_build_config(tmp_path, resource_transfer="all-text")
+    pkg = build_config.app_package_path
+    (pkg / "documents").mkdir(parents=True)
+    (pkg / "documents" / "a.md").write_text("# A", encoding="utf-8")
+
+    app = _make_app()
+    build_config.app = app
+
+    artifacts = _make_artifacts(["documents/a.md"])
+    serving = _FakeServingApp(artifacts)
+    stash_seen_during_generation: list[bool] = []
+
+    async def _trivial_asgi(scope, receive, send):
+        if scope["type"] != "http":
+            return
+        stash_seen_during_generation.append(app._ssg_full_text_resources is not None)
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"text/html")],
+            }
+        )
+        await send({"type": "http.response.body", "body": b"<html></html>"})
+
+    serving.asgi = _trivial_asgi
+
+    saved_argv = sys.argv
+    sys.argv = ["webcompy", "generate"]
+    try:
+        with (
+            patch("webcompy_cli._generate.create_asgi_app", return_value=serving),
+            patch("webcompy_cli._generate.discover_config", return_value=build_config),
+            patch("webcompy_cli._generate.get_static_files", return_value=()),
+            patch("webcompy.ui._styles.get_styles_files", return_value={}, create=True),
+        ):
+            asyncio.run(generate_static_site())
+    finally:
+        sys.argv = saved_argv
+
+    assert stash_seen_during_generation and all(stash_seen_during_generation), (
+        "the full-text stash must be populated while routes are generated"
+    )
+    assert app._ssg_full_text_resources is None, (
+        "the stash must be cleared after generation so dev/prod serving stays per-context ('used')"
+    )

@@ -137,44 +137,47 @@ async def generate_static_site(app: WebComPyApp | None = None):
     base_url_path = app.config.base_url.strip("/")
     url_prefix = f"/{base_url_path}" if base_url_path else ""
 
-    if app.router_mode == "history" and app.routes:
-        router = app.router
-        if router is not None and getattr(router, "_preload", False):
-            router.preload_lazy_routes()
-        else:
-            for _, _, _, _, page in app.routes:
-                component = page["component"]
-                if isinstance(component, LazyComponentGenerator):
-                    component._preload()
-
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=serving.asgi),
-        base_url="http://test",
-    ) as client:
+    try:
         if app.router_mode == "history" and app.routes:
-            route_variants = app.router.__route_variants__ if app.router is not None else None
-            for i, (p, _, _, _, _) in enumerate(app.routes):
-                variants = route_variants[i] if route_variants is not None else None
-                paths = {p} if variants is None else {p.format(**params) for params in variants}
-                for path in paths:
-                    response = await client.get(f"{url_prefix}/{path}")
-                    if not (path_dir := dist_dir / path).exists():
-                        os.makedirs(path_dir)
-                    html_path = path_dir / "index.html"
-                    html_path.open("w", encoding="utf8").write(response.text)
-                    print(html_path)
-            response = await client.get(
-                f"{url_prefix}/_webcompy_404",
-                headers={"Accept": "text/html"},
-            )
-            html_path = dist_dir / "404.html"
-            html_path.open("w", encoding="utf8").write(response.text)
-            print(html_path)
-        else:
-            response = await client.get(f"{url_prefix}/")
-            html_path = dist_dir / "index.html"
-            html_path.open("w", encoding="utf8").write(response.text)
-            print(html_path)
+            router = app.router
+            if router is not None and getattr(router, "preload_lazy_routes", None) is not None:
+                router.preload_lazy_routes(force=True)
+            else:
+                for _, _, _, _, page in app.routes:
+                    component = page["component"]
+                    if isinstance(component, LazyComponentGenerator):
+                        component._preload()
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=serving.asgi),
+            base_url="http://test",
+        ) as client:
+            if app.router_mode == "history" and app.routes:
+                route_variants = app.router.__route_variants__ if app.router is not None else None
+                for i, (p, _, _, _, _) in enumerate(app.routes):
+                    variants = route_variants[i] if route_variants is not None else None
+                    paths = {p} if variants is None else {p.format(**params) for params in variants}
+                    for path in paths:
+                        response = await client.get(f"{url_prefix}/{path}")
+                        if not (path_dir := dist_dir / path).exists():
+                            os.makedirs(path_dir)
+                        html_path = path_dir / "index.html"
+                        html_path.open("w", encoding="utf8").write(response.text)
+                        print(html_path)
+                response = await client.get(
+                    f"{url_prefix}/_webcompy_404",
+                    headers={"Accept": "text/html"},
+                )
+                html_path = dist_dir / "404.html"
+                html_path.open("w", encoding="utf8").write(response.text)
+                print(html_path)
+            else:
+                response = await client.get(f"{url_prefix}/")
+                html_path = dist_dir / "index.html"
+                html_path.open("w", encoding="utf8").write(response.text)
+                print(html_path)
+    finally:
+        app._ssg_full_text_resources = None
 
     print("done")
 
