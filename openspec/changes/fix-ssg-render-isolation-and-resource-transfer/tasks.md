@@ -17,7 +17,7 @@
 ## 3. Per-context transfer state (D3)
 
 - [x] 3.1 `webcompy_server/ports/_resource.py`: add a way to derive a fresh `ServerResourcePort` (shared `app_package_path`/`allow_list`, empty `_recorded`)
-- [x] 3.2 `webcompy_server/ports/_fetch.py`: store `configure()` arguments on the instance and add a per-context clone that shares the external client but starts with an empty `_response_cache`
+- [x] 3.2 `webcompy_server/ports/_fetch.py`: add a per-context clone that copies the configured attributes, shares the external client and the prototype's ASGI client, and starts with an empty `_response_cache`
 - [x] 3.3 `webcompy_server/_context.py`: provide the per-context clones from `ServerRenderContext._register_ports()`
 - [x] 3.4 Add a unit test: render page A (loads resource `a.md`), then page B (loads `b.md`) in the same process; B's payload contains `b.md` and not `a.md`
 - [x] 3.5 Add a unit test: fetch transfer entries are likewise per-context (page B's payload excludes page A's cached fetches)
@@ -57,3 +57,16 @@
 - [x] 9.2 `uv run python -m pytest tests/ --tb=short`
 - [x] 9.3 `openspec validate fix-ssg-render-isolation-and-resource-transfer --strict` and `python3 scripts/check-doc-spec-refs.py`
 - [x] 9.4 Update `AGENTS.md` File → Spec Mapping / invariant tables if any spec references changed
+
+## 10. Review fixes
+
+- [x] 10.1 `BrowserResourcePort.preload()` retains successfully fetched bytes in a port-level `_preloaded` cache consulted by `load_text`/`load_bytes` via `_fetch_bytes()` (replaces the broken fetch-cache priming premise); skip payload-present and already-retained paths; failures stay non-fatal
+- [x] 10.2 Update `test_resource_preload.py` to use a non-caching fetch-port double (mirroring the real `BrowserFetchPort`, which never writes network responses to its cache) so retention is verified directly; add a no-refetch-on-second-preload test
+- [x] 10.3 `generate_static_site()` clears `app._ssg_full_text_resources` in a `finally` block after route generation so the stash never leaks into a subsequent in-process serve (dev/prod stays per-context "used")
+- [x] 10.4 Add a generation-level test asserting the full-text stash is populated during route generation and `None` afterwards
+- [x] 10.5 Make `ServerFetchPort`'s external `httpx.AsyncClient` lazy (allocated on first external fetch instead of in `__init__`) so unconfigured render contexts no longer allocate a never-closed client; add tests for lazy allocation, clone propagation/sharing, and `close()` with no client; update the close test to trigger client creation first
+
+## 11. Review fixes (round 2)
+
+- [x] 11.1 Share the external `httpx.AsyncClient` across render-context clones: `ServerFetchPort._clone_for_context()` records the prototype reference and `fetch()` delegates external fetches to `prototype._ensure_external_client()`, so lazy client creation happens once on the prototype and every clone shares it; add tests for prototype-created-client sharing and single-client sharing across two clones
+- [x] 11.2 Make SSG lazy-route pre-resolution independent of the router's `preload` flag: `Router.preload_lazy_routes(force=True)` is called from `generate_static_site()` so nested layout routes are resolved before the per-route loop even for `preload=False` routers (aligning with the unconditional `scoped-css-incremental` SHALL); add a generation-level test with a `preload=False` router and a nested lazy layout
