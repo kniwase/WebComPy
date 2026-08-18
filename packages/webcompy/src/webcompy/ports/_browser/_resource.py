@@ -19,6 +19,7 @@ class BrowserResourcePort(ResourcePort):
         if ENVIRONMENT != "pyscript":
             raise WebComPyException("BrowserResourcePort is only available in browser environment")
         self._base_url = base_url.rstrip("/")
+        self._preloaded: dict[str, bytes] = {}
 
     def _validate(self, path: str) -> None:
         if not path:
@@ -40,6 +41,9 @@ class BrowserResourcePort(ResourcePort):
         return base64.b64decode(encoded)
 
     async def _fetch_bytes(self, path: str) -> bytes:
+        preloaded = self._preloaded.get(path)
+        if preloaded is not None:
+            return preloaded
         fetch_port = inject(FETCH_PORT_KEY, default=None)
         if fetch_port is None:
             raise ResourceNotFoundError(path, "browser", reason="no FetchPort in DI scope")
@@ -82,8 +86,10 @@ class BrowserResourcePort(ResourcePort):
         for path in paths:
             try:
                 self._validate(path)
-                if self._decode_payload(path) is not None:
+                if self._decode_payload(path) is not None or path in self._preloaded:
                     continue
-                await fetch_port.fetch(self._resource_url(path))
+                response = await fetch_port.fetch(self._resource_url(path))
+                if response.ok:
+                    self._preloaded[path] = response.content
             except Exception as exc:
                 _logger.warning("Resource preload failed for %r: %s", path, exc)

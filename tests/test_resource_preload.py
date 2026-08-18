@@ -11,11 +11,12 @@ from webcompy.ports._resource import ResourceNotFoundError
 from webcompy_server.ports._resource import ServerResourcePort
 
 
-class _CachingFetchPort(FetchPort):
-    """Test double mimicking BrowserFetchPort's session response cache."""
+class _FakeFetchPort(FetchPort):
+    """Test double mimicking BrowserFetchPort's actual behavior: it never
+    writes responses into its own cache, so every call issues a network fetch.
+    Retention is the resource port's job, not the fetch port's."""
 
     def __init__(self) -> None:
-        self._cache: dict[str, Response] = {}
         self.network_fetches = 0
 
     async def fetch(
@@ -26,35 +27,30 @@ class _CachingFetchPort(FetchPort):
         headers: dict[str, str] | None = None,
         body: str | None = None,
     ) -> Response:
-        if url in self._cache:
-            return self._cache[url]
         self.network_fetches += 1
         if url.endswith("missing.md"):
-            response = Response(
+            return Response(
                 text="",
                 headers={},
                 status_code=404,
                 status_text="Not Found",
                 ok=False,
             )
-        else:
-            response = Response(
-                text="ok",
-                content=b"ok",
-                headers={},
-                status_code=200,
-                status_text="OK",
-                ok=True,
-            )
-        self._cache[url] = response
-        return response
+        return Response(
+            text="ok",
+            content=b"ok",
+            headers={},
+            status_code=200,
+            status_text="OK",
+            ok=True,
+        )
 
 
 @pytest.fixture
 def browser_scope(monkeypatch):
     monkeypatch.setattr("webcompy.ports._browser._resource.ENVIRONMENT", "pyscript")
     scope = DIScope()
-    fetch_port = _CachingFetchPort()
+    fetch_port = _FakeFetchPort()
     scope.provide(FETCH_PORT_KEY, fetch_port)
     scope.provide(RESOURCE_DATA_KEY, {})
     return scope, fetch_port
@@ -78,7 +74,10 @@ class TestPreloadBrowser:
             await port.preload(["documents/a.md"])
             text = await port.load_text("documents/a.md")
         assert text == "ok"
-        assert fetch_port.network_fetches == 1, "the load must be served from the primed cache"
+        assert fetch_port.network_fetches == 1, (
+            "the load must be served from the preloaded retention without a second fetch "
+            "(the fake fetch port never caches, so only retention can make the load network-free)"
+        )
 
     @pytest.mark.asyncio
     async def test_without_preload_load_fetches(self, browser_scope) -> None:
@@ -98,6 +97,15 @@ class TestPreloadBrowser:
             text = await port.load_text("documents/a.md")
         assert text == "ok"
         assert fetch_port.network_fetches == 0, "payload-present path must not be fetched"
+
+    @pytest.mark.asyncio
+    async def test_preload_twice_does_not_refetch(self, browser_scope) -> None:
+        scope, fetch_port = browser_scope
+        port = BrowserResourcePort("/")
+        with scope:
+            await port.preload(["documents/a.md"])
+            await port.preload(["documents/a.md"])
+        assert fetch_port.network_fetches == 1, "already-preloaded path must not be fetched again"
 
     @pytest.mark.asyncio
     async def test_preload_failure_not_raised_but_load_raises(self, browser_scope) -> None:

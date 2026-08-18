@@ -44,6 +44,9 @@ class ResourcePort(ABC):
 
         The default implementation is a no-op; only browser-side ports need
         to actually warm caches. Implementations SHALL NOT raise on
-        individual preload failures.
+        individual preload failures. Paths outside the resource allow-list
+        (or otherwise unresolvable) are not primed; the browser port issues
+        a fetch the server rejects, so callers should only pass paths known
+        to be allow-listed.
         """
         return None
