@@ -82,6 +82,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "path": "/documents/typed-realtime",
                 "source": "documents/typed_realtime.md",
             },
+            {
+                "label": "RPC over WebSocket",
+                "path": "/documents/rpc-websocket",
+                "source": "documents/rpc_websocket.md",
+            },
         ],
     },
 ]

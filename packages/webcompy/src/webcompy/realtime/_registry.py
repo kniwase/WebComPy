@@ -391,6 +391,34 @@ class _RealtimeRegistry:
             conn.connection = None
         conn.send_buffer = []
 
+    def _ws_abort(self, conn: _WSConnection, code: int, reason: str) -> None:
+        """Force an abnormal close that engages the reconnect loop.
+
+        Records a synthetic ``CloseInfo``, closes the underlying socket, and
+        bumps the generation so any stale lifecycle event from the old socket
+        (e.g. the browser's own close event with code 1000) is ignored. The
+        connection is kept in the registry and a retry is scheduled.
+        """
+        if conn.terminated or conn.state is ConnectionState.CLOSED:
+            return
+        conn.last_close = CloseInfo(code, reason, False)
+        old_connection = conn.connection
+        conn.connection = None
+        conn.generation += 1
+        if old_connection is not None:
+            old_connection.close()
+        for sub in list(conn.subscribers):
+            sub.on_close_info(conn.last_close)
+        if not conn.reconnect or (conn.max_attempts is not None and conn.attempts >= conn.max_attempts):
+            self._terminate_ws(conn)
+            if self._connections.get(conn.key) is conn:
+                del self._connections[conn.key]
+            return
+        conn.attempts += 1
+        conn.state = ConnectionState.RECONNECTING
+        self._notify_state(conn)
+        self._schedule_retry_ws(conn)
+
 
 class _WSSubscription:
     __slots__ = ("on_close_info", "on_state", "queue")

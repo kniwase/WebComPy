@@ -216,7 +216,7 @@ jobs:
           - name: router
             files: e2e/core/test_router.py e2e/core/test_async_nav.py e2e/core/test_nested_routes.py e2e/core/test_route_guards.py e2e/core/test_scroll_restoration.py
           - name: interaction
-            files: e2e/core/test_event.py e2e/core/test_event_source.py e2e/core/test_websocket.py e2e/core/test_di.py e2e/core/test_two_way_binding.py e2e/core/test_form_fields.py e2e/core/test_storage.py e2e/core/test_storage_tab_sync.py e2e/core/test_readonly_signal.py
+            files: e2e/core/test_event.py e2e/core/test_event_source.py e2e/core/test_websocket.py e2e/core/test_rpc_ws.py e2e/core/test_di.py e2e/core/test_two_way_binding.py e2e/core/test_form_fields.py e2e/core/test_storage.py e2e/core/test_storage_tab_sync.py e2e/core/test_readonly_signal.py
           - name: bundled-deps
             files: e2e/core/test_bundled_deps.py e2e/core/test_bundled_deps_browser.py
           - name: runtime-local
@@ -237,11 +237,11 @@ jobs:
             serving_mode: static
           - group:
               name: docs-documents
-              files: e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py
+              files: e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc_websocket.py
             serving_mode: prod
           - group:
               name: docs-documents
-              files: e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py
+              files: e2e/docs/test_documents.py e2e/docs/test_hydration_preservation.py e2e/docs/test_installation.py e2e/docs/test_quickstart.py e2e/docs/test_signal_stream.py e2e/docs/test_readonly_signal.py e2e/docs/test_event_source.py e2e/docs/test_websocket.py e2e/docs/test_typed_realtime.py e2e/docs/test_rpc_websocket.py
             serving_mode: static
           - group:
               name: docs-demos

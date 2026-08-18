@@ -140,6 +140,9 @@ class TypedWebSocketHandle(Generic[T]):
     def close(self) -> None:
         self._raw.close()
 
+    def force_close(self, code: int = 4000, reason: str = "") -> None:
+        self._raw.force_close(code, reason)
+
     def __aiter__(self) -> AsyncIterator[T]:
         return self
 

@@ -28,6 +28,7 @@ from .pages.nested_dynamic import NestedDynamicPage
 from .pages.not_found import NotFound
 from .pages.repeat import RepeatPage
 from .pages.route_guards import GuardAdminPage, GuardLoginPage, auth_guard
+from .pages.rpc_ws import RpcWsPage
 from .pages.scoped_style import ScopedStylePage
 from .pages.scroll_restoration import ScrollLongPage, ScrollTargetPage
 from .pages.signal import ReactivePage
@@ -54,6 +55,7 @@ router = Router(
     {"path": "/event", "component": EventPage},
     {"path": "/event-source", "component": EventSourcePage},
     {"path": "/websocket", "component": WebSocketPage},
+    {"path": "/rpc-ws", "component": RpcWsPage},
     {"path": "/window-events", "component": WindowEventsPage},
     {"path": "/switch", "component": SwitchPage},
     {"path": "/repeat", "component": RepeatPage},
