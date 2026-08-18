@@ -1,20 +1,29 @@
 from __future__ import annotations
 
+import base64
+import html as html_module
+import json
 import re
 import sys
 import types
+import zlib
 
 import pytest
+from starlette.applications import Starlette
+from starlette.responses import JSONResponse
+from starlette.routing import Route
 
+from webcompy import load_text
 from webcompy.app import WebComPyApp, WebComPyAppConfig
 from webcompy.components import define_component
 from webcompy.di import inject
 from webcompy.elements import html
-from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
-from webcompy.router import Router
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, FETCH_PORT_KEY
+from webcompy.router import Router, RouterView
 from webcompy.router._lazy import lazy
 from webcompy_server import configure_server_context
 from webcompy_server._html import generate_html
+from webcompy_server.ports._resource import ServerResourcePort
 
 
 async def _render_html(app: WebComPyApp, path: str) -> str:
@@ -67,7 +76,7 @@ def _make_isolation_app() -> WebComPyApp:
 
     @define_component("iso-home")
     def IsoHome(context):
-        return html.DIV({}, "home")
+        return html.DIV({}, "home", RouterView())
 
     @define_component("iso-child")
     def IsoChild(context):
@@ -90,6 +99,16 @@ def _make_isolation_app() -> WebComPyApp:
 
 def _style_cids(html: str) -> set[str]:
     return set(re.findall(r'data-webcompy-cid="([^"]+)"', html))
+
+
+def _decode_payload(html_str: str) -> dict:
+    marker = 'id="__webcompy_data__">'
+    start = html_str.index(marker) + len(marker)
+    end = html_str.index("</script>", start)
+    outer = json.loads(html_module.unescape(html_str[start:end]))
+    if outer.get("__webcompy_compressed__"):
+        outer = json.loads(zlib.decompress(base64.b64decode(outer["data"])).decode("utf-8"))
+    return outer
 
 
 @pytest.mark.asyncio
@@ -147,3 +166,94 @@ async def test_reactive_scoped_style_from_async_setup_in_ssg_head():
     html_output = await _render_html(app, "/")
     assert 'data-webcompy-cid-rx="' in html_output
     assert ".iso-rx-box[webcompy-cid-" in html_output
+
+
+@pytest.mark.asyncio
+async def test_resource_payload_isolated_per_render_context(tmp_path):
+    pkg = tmp_path / "resapp"
+    (pkg / "documents").mkdir(parents=True)
+    (pkg / "documents" / "a.md").write_text("# A", encoding="utf-8")
+    (pkg / "documents" / "b.md").write_text("# B", encoding="utf-8")
+
+    @define_component("iso-doc-a")
+    async def IsoDocA(context):
+        text = await load_text("documents/a.md")
+        return html.DIV({}, text)
+
+    @define_component("iso-doc-b")
+    async def IsoDocB(context):
+        text = await load_text("documents/b.md")
+        return html.DIV({}, text)
+
+    @define_component("iso-doc-root")
+    def IsoDocRoot(context):
+        return html.DIV({}, RouterView())
+
+    router = Router(
+        {"path": "/a", "component": IsoDocA},
+        {"path": "/b", "component": IsoDocB},
+        mode="history",
+        base_url="",
+    )
+    app = WebComPyApp(root_component=IsoDocRoot, router=router, config=WebComPyAppConfig(base_url="/"))
+    configure_server_context(
+        app,
+        resource_port=ServerResourcePort(
+            app_package_path=pkg, allow_list=frozenset({"documents/a.md", "documents/b.md"})
+        ),
+    )
+
+    html_a = await _render_html(app, "/a")
+    html_b = await _render_html(app, "/b")
+
+    res_a = _decode_payload(html_a)["resources"]
+    res_b = _decode_payload(html_b)["resources"]
+    assert "documents/a.md" in res_a
+    assert "documents/b.md" not in res_a, "a page's payload must not carry another page's resources"
+    assert "documents/b.md" in res_b
+    assert "documents/a.md" not in res_b
+
+
+@pytest.mark.asyncio
+async def test_fetch_payload_isolated_per_render_context():
+    @define_component("iso-fetch-one")
+    async def IsoFetchOne(context):
+        port = inject(FETCH_PORT_KEY)
+        resp = await port.fetch("/api/one")
+        return html.DIV({}, resp.text)
+
+    @define_component("iso-fetch-two")
+    async def IsoFetchTwo(context):
+        port = inject(FETCH_PORT_KEY)
+        resp = await port.fetch("/api/two")
+        return html.DIV({}, resp.text)
+
+    @define_component("iso-fetch-root")
+    def IsoFetchRoot(context):
+        return html.DIV({}, RouterView())
+
+    api_asgi = Starlette(
+        routes=[
+            Route("/api/one", endpoint=lambda _: JSONResponse({"n": 1})),
+            Route("/api/two", endpoint=lambda _: JSONResponse({"n": 2})),
+        ]
+    )
+
+    router = Router(
+        {"path": "/one", "component": IsoFetchOne},
+        {"path": "/two", "component": IsoFetchTwo},
+        mode="history",
+        base_url="",
+    )
+    app = WebComPyApp(root_component=IsoFetchRoot, router=router, config=WebComPyAppConfig(base_url="/"))
+    configure_server_context(app, root_app=api_asgi)
+
+    html_one = await _render_html(app, "/one")
+    html_two = await _render_html(app, "/two")
+
+    fetches_one = _decode_payload(html_one)["fetches"]
+    fetches_two = _decode_payload(html_two)["fetches"]
+    assert "/api/one" in fetches_one
+    assert "/api/two" not in fetches_one, "a page's payload must not carry another page's fetch entries"
+    assert "/api/two" in fetches_two
+    assert "/api/one" not in fetches_two

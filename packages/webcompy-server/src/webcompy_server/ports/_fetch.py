@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
@@ -22,6 +22,7 @@ class ServerFetchPort(FetchPort):
         self._base_url: str = "/"
         self._embedded: bool = False
         self._response_cache: dict[str, Response] = {}
+        self._configure_args: dict[str, Any] = {}
 
     def is_self_site_url(self, url: str) -> bool:
         if url.startswith("//"):
@@ -39,6 +40,13 @@ class ServerFetchPort(FetchPort):
     ) -> None:
         if self._asgi_app is not None:
             raise WebComPyException("ServerFetchPort is already configured")
+        self._configure_args = {
+            "asgi_app": asgi_app,
+            "blocked_paths": blocked_paths,
+            "base_url": base_url,
+            "mount_prefixes": mount_prefixes,
+            "embedded": embedded,
+        }
         self._asgi_app = asgi_app
         self._blocked_paths = blocked_paths or []
         self._mount_prefixes = ["/" + p.strip("/") for p in (mount_prefixes or []) if p.strip("/")]
@@ -167,6 +175,12 @@ class ServerFetchPort(FetchPort):
         )
         self._response_cache[cache_key] = response
         return response
+
+    def _clone_for_context(self) -> ServerFetchPort:
+        clone = ServerFetchPort(external_client=self._external_client)
+        if self._asgi_app is not None:
+            clone.configure(**self._configure_args)
+        return clone
 
     def get_transfer_data(self) -> dict[str, TransferFetchEntry]:
         result: dict[str, TransferFetchEntry] = {}

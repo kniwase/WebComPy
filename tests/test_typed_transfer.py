@@ -52,13 +52,17 @@ def _render_with_api(root, *, api_path="/api/user", payload=None):
     asgi = Starlette(routes=[Route(api_path, endpoint=handler)])
     fetch_port = app._server_fetch_port
     fetch_port.configure(asgi, blocked_paths=[])
-    return app, fetch_port, _render(app)
+    html_str, collected, ctx_port = _render(app)
+    return app, ctx_port, (html_str, collected)
 
 
 def _render(app):
+    from webcompy.ports._keys import FETCH_PORT_KEY
+
     async def _go():
         ctx = app.create_render_context("/")
         try:
+            ctx_port = ctx.di_scope.inject(FETCH_PORT_KEY)
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
             await scheduler.await_pending()
             html_str = await generate_html(
@@ -69,7 +73,7 @@ def _render(app):
                 wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
             )
             collected = collect_transfer_data(ctx._root)
-            return html_str, collected
+            return html_str, collected, ctx_port
         finally:
             ctx.dispose()
 

@@ -56,3 +56,9 @@ class ServerResourcePort(ResourcePort):
 
     def get_recorded_resources(self) -> dict[str, bytes]:
         return dict(self._recorded)
+
+    def fresh(self) -> ServerResourcePort:
+        return ServerResourcePort(
+            app_package_path=self._app_package_path,
+            allow_list=self._allow_list,
+        )

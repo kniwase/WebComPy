@@ -16,11 +16,11 @@
 
 ## 3. Per-context transfer state (D3)
 
-- [ ] 3.1 `webcompy_server/ports/_resource.py`: add a way to derive a fresh `ServerResourcePort` (shared `app_package_path`/`allow_list`, empty `_recorded`)
-- [ ] 3.2 `webcompy_server/ports/_fetch.py`: store `configure()` arguments on the instance and add a per-context clone that shares the external client but starts with an empty `_response_cache`
-- [ ] 3.3 `webcompy_server/_context.py`: provide the per-context clones from `ServerRenderContext._register_ports()`
-- [ ] 3.4 Add a unit test: render page A (loads resource `a.md`), then page B (loads `b.md`) in the same process; B's payload contains `b.md` and not `a.md`
-- [ ] 3.5 Add a unit test: fetch transfer entries are likewise per-context (page B's payload excludes page A's cached fetches)
+- [x] 3.1 `webcompy_server/ports/_resource.py`: add a way to derive a fresh `ServerResourcePort` (shared `app_package_path`/`allow_list`, empty `_recorded`)
+- [x] 3.2 `webcompy_server/ports/_fetch.py`: store `configure()` arguments on the instance and add a per-context clone that shares the external client but starts with an empty `_response_cache`
+- [x] 3.3 `webcompy_server/_context.py`: provide the per-context clones from `ServerRenderContext._register_ports()`
+- [x] 3.4 Add a unit test: render page A (loads resource `a.md`), then page B (loads `b.md`) in the same process; B's payload contains `b.md` and not `a.md`
+- [x] 3.5 Add a unit test: fetch transfer entries are likewise per-context (page B's payload excludes page A's cached fetches)
 
 ## 4. SSG preload full route tree (D5)
 
