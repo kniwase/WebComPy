@@ -237,7 +237,7 @@ A `_run_refresh_sync(refresh: Callable[..., Coroutine[Any, Any, Any]], *args: An
 - **THEN** the refresh SHALL complete synchronously before `_run_refresh_sync` returns (existing behavior preserved)
 
 ### Requirement: Pre-rendered DOM nodes shall be reused during hydration via adopt-and-hydrate
-When full hydration is enabled, elements SHALL use `_hydrate_node()` instead of `_init_node()` for prerendered nodes. `_hydrate_node()` SHALL check for an existing prerendered node and delegate to `_adopt_node()` if found, or fall back to `_init_node()` if not. This enables efficient hydration of server-rendered content. This requirement applies to all node types including `#text` nodes. During hydration, attribute values and text content SHALL only be written if they differ from the prerendered values to avoid redundant DOM operations.
+When full hydration is enabled, elements SHALL use `_hydrate_node()` instead of `_init_node()` for prerendered nodes. `_hydrate_node()` SHALL check for an existing prerendered node and delegate to `_adopt_node()` if found, or fall back to `_init_node()` if not. This enables efficient hydration of server-rendered content. This requirement applies to all node types including `#text` nodes, and to content under dynamic containers (RouterView, Suspense, Transition, ErrorBoundary) whose children are created during the hydration pass. During hydration, attribute values and text content SHALL only be written if they differ from the prerendered values to avoid redundant DOM operations. Adoption SHALL NOT end an element's hydration: adopted elements SHALL still complete exactly one hydration render pass so reactive registrations are established (see "Adopted children of dynamic containers shall complete a hydration render").
 
 #### Scenario: Hydrating an existing prerendered element
 - **WHEN** `_hydrate_node()` is called and a prerendered node with matching tag exists
@@ -247,6 +247,12 @@ When full hydration is enabled, elements SHALL use `_hydrate_node()` instead of 
 #### Scenario: No prerendered node available during hydration
 - **WHEN** `_hydrate_node()` is called and no prerendered node exists
 - **THEN** the element SHALL fall back to `_init_node()` for normal DOM creation and mounting
+
+#### Scenario: Hydration fallback creates the node exactly once
+- **WHEN** `_hydrate_node()` falls back because no matching prerendered node exists (or the existing node's tag mismatches)
+- **THEN** the fallback SHALL create exactly one node for the element
+- **AND** the created node SHALL be recorded as the element's node so a later `_get_node()`/render reuses it (no orphan node)
+- **AND** node initialization (`_init_new_node`: attributes, event handlers, ref binding) SHALL run once on the reused node
 
 #### Scenario: Hydrating a server-rendered page
 - **WHEN** the browser finds an existing DOM node with `__webcompy_prerendered_node__ = True` and a matching tag name
@@ -277,6 +283,20 @@ When full hydration is enabled, elements SHALL use `_hydrate_node()` instead of 
 - **THEN** the TextElement SHALL adopt the existing node and update its content to the Signal's current value
 - **AND** subsequent Signal changes SHALL update the adopted node via the existing `on_after_updating` callback
 
+#### Scenario: Prerendered route content under a dynamic container is reused
+- **WHEN** the browser hydrates a page whose routed content (RouterView subtree) was prerendered by SSR/SSG
+- **AND** the client-side component tree matches the prerendered structure
+- **THEN** the prerendered DOM nodes of the routed content SHALL be adopted
+- **AND** the number of DOM nodes removed during hydration SHALL be zero for the matching content
+
+#### Scenario: Hydrating a raw-HTML wrapper with matching content
+- **WHEN** the browser finds an existing prerendered node for a `RawHTMLElement` (wrapper tag matches)
+- **AND** the node's current content (`innerHTML`, or `textContent` when `innerHTML` is unavailable) equals the element's rendered value
+- **THEN** the wrapper node SHALL be adopted
+- **AND** the framework SHALL NOT rewrite the content
+- **AND** the wrapper's existing child nodes SHALL remain in the document (neither removed nor recreated)
+- **AND** no mismatch record SHALL be created
+
 ### Requirement: Hydration SHALL normalize parser-merged text nodes to element-tree granularity before index-based adoption
 
 `ElementWithChildren._hydrate_node()` SHALL NOT assume a pristine 1:1 correspondence between the element tree's child nodes and the browser DOM's `childNodes`. The HTML parser merges adjacent `#text` nodes during parsing, so a sequence of consecutive `TextElement` children (e.g. whitespace and interpolation holes adjacent in a composite body) can correspond to a single merged DOM `#text` node. Before per-child adoption proceeds by `_node_idx`, hydration SHALL detect a consecutive run of `TextElement` children and SHALL split the merged DOM `#text` node via `splitText(offset)` at the cumulative expected-text boundary of each child in the run, so that each element-tree child once again has a distinct DOM node at its `_node_idx`.
@@ -287,7 +307,7 @@ Normalization SHALL split at **every** boundary of a run, including zero-length 
 
 Normalization SHALL be idempotent: when the DOM already has a 1:1 correspondence (no merging occurred, or splitting has already been applied), no further split SHALL be performed. Normalization SHALL apply only to the hydration path (`_hydrate_node`); server-side rendering, `_render`, refresh, reconcile, and positioning code SHALL remain unchanged.
 
-When the merged DOM text content does not equal the concatenation of the run's expected text contents, hydration SHALL log a warning via `webcompy.logging.warning`, SHALL NOT split the run, and SHALL halt normalization for the remainder of that container so that the affected run (and everything after it) follows the existing per-node create/adopt fallback — the pre-fix behavior — rather than producing a misaligned split. No exception SHALL propagate to the caller.
+When the merged DOM text content does not equal the concatenation of the run's expected text contents, hydration SHALL record a `text` mismatch (see the hydration-mismatch diagnostics requirement below), SHALL NOT split the run, and SHALL halt normalization for the remainder of that container so that the affected run (and everything after it) follows the existing per-node create/adopt fallback — the pre-fix behavior — rather than producing a misaligned split. When a non-`#text` node occupies a text-run position, hydration SHALL record a `tag` mismatch with the expected identity `#text` and the owning component ID when known. No exception SHALL propagate to the caller.
 
 This requirement applies to `ElementWithChildren._hydrate_node` (regular containers indexing from base `0`) and to dynamic-container hydration paths (`DynamicElement._hydrate_node`, `RepeatElement`, `FragmentElement`) that rely on the same index-based `childNodes` adoption. A `NewLine` (`<br>`) or `RawHTML` (wrapper element) child renders a non-`#text` DOM node and SHALL terminate a text run; only consecutive `TextElement` children participate in a run.
 
@@ -319,8 +339,15 @@ This requirement applies to `ElementWithChildren._hydrate_node` (regular contain
 
 #### Scenario: Content mismatch falls back rather than mis-splitting
 - **WHEN** the merged DOM `#text` content does not equal the concatenation of a text run's expected contents (e.g. unexpected prerendered content)
-- **THEN** hydration SHALL skip splitting that run, log a warning, and halt normalization for the remainder of the container (pre-fix create/adopt fallback)
+- **THEN** hydration SHALL skip splitting that run and halt normalization for the remainder of the container (pre-fix create/adopt fallback)
+- **AND** a `text` mismatch record SHALL be created for the run
 - **AND** no exception SHALL propagate to the caller
+
+#### Scenario: A non-text node at a text-run position is a structural mismatch
+- **WHEN** a DOM node whose `nodeName` is not `#text` occupies a text-run position
+- **THEN** hydration SHALL record a `tag` mismatch with expected identity `#text` and the actual node name
+- **AND** the owning component ID SHALL be attached when known
+- **AND** normalization SHALL halt for the remainder of the container
 
 #### Scenario: Keyed ReactiveDict loop hydrates with a composite item body
 - **WHEN** a `ReactiveDict` keyed loop renders items whose body contains multiple elements interleaved with text, and the prerendered HTML is parsed by the browser
@@ -690,3 +717,101 @@ The framework's event-handler wrapper (`_generate_event_handler`) SHALL catch ex
 #### Scenario: Proxy lifecycle unchanged
 - **WHEN** an element with event handlers is removed
 - **THEN** its proxies SHALL still be destroyed exactly as today (no leak introduced by wrapping)
+
+### Requirement: Adopted children of dynamic containers shall complete a hydration render
+
+Every child of a hydrated dynamic container (`DynamicElement` subclasses: RouterView, ErrorBoundary, Switch, Repeat, Suspense, Transition, ClientOnly) SHALL complete exactly one hydration render, even when its DOM node was adopted during `_hydrate_node()` (which marks it mounted). During hydration, the parent SHALL schedule the child's render through the `ASYNC_SCHEDULER_PORT_KEY`, and the hydration render SHALL NOT skip children because they are mounted. The render's mount operations SHALL be no-ops on adopted nodes, and all DOM writes SHALL remain diff-only, so the hydration render is visually neutral when server and client content match. Outside the initial hydration, the existing render-skip semantics for mounted children SHALL be preserved.
+
+#### Scenario: Hydration render is visually neutral for matching content
+- **WHEN** a dynamic container's adopted children complete their hydration render after SSR with matching content
+- **THEN** no DOM node REMOVAL or insertion SHALL occur as a result of the hydration render
+- **AND** the element's reactive registrations (signal callbacks, key maps, rendered-branch state) SHALL be established
+
+#### Scenario: Reactive behavior works after adopting a hydrated switch
+- **WHEN** a `Switch` branch was adopted from prerendered DOM inside a hydrated dynamic container
+- **AND** a user interaction flips the switch condition after hydration completes
+- **THEN** the DOM SHALL update to the new branch
+- **AND** the adopted branch's DOM nodes SHALL be reused when the branch structure matches (patching), preserving node identity
+
+#### Scenario: Adopted switch branch containing a dynamic element stays wired
+- **WHEN** the adopted branch of a hydrated `Switch` contains a dynamic element (e.g., a `Repeat` over a transferred list)
+- **THEN** the branch subtree SHALL complete exactly one hydration render (the scheduled hydration-render wrappers SHALL NOT be cancelled by the unchanged-branch first refresh)
+- **AND** the nested dynamic element's reactive wiring SHALL be established (e.g., list mutations update the DOM after hydration)
+
+#### Scenario: Refresh outside hydration keeps mounted-skip behavior
+- **WHEN** a dynamic container refreshes after hydration (signal-triggered refresh)
+- **THEN** mounted children SHALL NOT be re-rendered merely because they are mounted (existing refresh semantics SHALL be preserved)
+
+### Requirement: Repeat shall preserve adopted SSR children on the first hydration refresh
+
+When a `Repeat` element's children were adopted from prerendered DOM during hydration, the first refresh SHALL NOT remove and re-create them (the pre-change full-rebuild path). Instead, the first refresh SHALL treat adopted children as already-materialized items: it SHALL reposition them to match the current sequence, SHALL rebuild the key map (`_populate_key_map()` equivalent), and SHALL render only children that have no adopted node. Subsequent refreshes SHALL follow the existing keyed-reconciliation semantics.
+
+#### Scenario: Repeat over transferred list value preserves SSR nodes after hydration
+- **WHEN** a `Repeat` renders a `ReactiveList` whose value was transferred from SSR
+- **AND** the repeat's children were adopted from the prerendered DOM during hydration
+- **AND** the hydration render triggers the repeat's first refresh
+- **THEN** the adopted DOM nodes SHALL remain in the document (no removal)
+- **AND** the key map SHALL be populated from the current sequence
+
+#### Scenario: Repeat list mutation after hydration reconciles correctly
+- **WHEN** a `Repeat` with a transferred list value receives a mutation after hydration (e.g., `pop`, `append`)
+- **THEN** the DOM SHALL reconcile to the new sequence
+- **AND** key-based reuse SHALL apply for keyed repeats as before
+
+#### Scenario: Repeat with partial SSR coverage preserves matched nodes
+- **WHEN** a `Repeat`'s SSR DOM covers only a subset of the sequence (fewer nodes than items, or a per-item tag mismatch at one position)
+- **AND** the first hydration refresh runs
+- **THEN** the adopted (matched) DOM nodes SHALL remain in the document
+- **AND** the missing positions SHALL be created and rendered (via the scheduled plain-render tasks), matching the current sequence
+
+### Requirement: Switch shall inherit the rendered branch from SSR content during hydration
+
+When a `Switch` element's active branch was prerendered by SSR, hydration SHALL initialize the switch's rendered-branch state so that the first refresh with an unchanged condition SHALL NOT regenerate the branch. The adopted branch's DOM nodes SHALL be reused. If the condition already changed relative to SSR (e.g., restored state differs), the switch SHALL patch to the new branch via the existing `_patch_children` flow.
+
+#### Scenario: First refresh with unchanged condition does not regenerate
+- **WHEN** a hydrated `Switch` receives a refresh triggered by an unrelated signal (or its own render runs)
+- **AND** the active branch condition matches the SSR-rendered branch
+- **THEN** the branch SHALL NOT be removed and re-generated
+- **AND** the adopted DOM nodes SHALL remain in the document
+
+#### Scenario: Condition changed after hydration patches to the new branch
+- **WHEN** the switch condition changes after hydration so a different branch becomes active
+- **THEN** the DOM SHALL switch to the new branch via patching (existing behavior)
+- **AND** matching single-node branches SHALL reuse their adopted nodes
+
+### Requirement: Hydration mismatches shall be recorded with recovery or repair
+
+During hydration, five classes of divergence between the prerendered DOM and the client element tree SHALL be detected and recorded: text mismatch and attribute mismatch (recoverable — the mismatch SHALL be patched by writing the expected value into the adopted node), raw-HTML mismatch (recoverable — when an adopted raw-HTML wrapper's existing content differs from the element's rendered value, the mismatch SHALL be patched by re-applying the rendered value into the adopted node), and tag mismatch and node-count mismatch (structural — the mismatch SHALL be repaired by removing the stale node and creating the expected one). Each record SHALL capture the mismatch class, the expected value, the actual value, and the owning component ID when known. Records SHALL be collected for aggregation and reporting by the app layer (see the async-rendering capability). Records SHALL NOT be emitted as individual console messages.
+
+Leaf element types (`TextElement`, `RawHTMLElement`, `NewLine`) SHALL resolve the owning component ID through their parent chain (`self._parent._get_belonging_component()`), guarded against a missing or broken parent chain (an unresolved chain SHALL yield an empty ID rather than raising), so text, raw-HTML, and tag records attributed to a component are attributable in the aggregated report.
+
+#### Scenario: Recoverable text mismatch is patched and recorded
+- **WHEN** hydration adopts a prerendered `#text` node whose content differs from the client element's expected text
+- **THEN** the node content SHALL be updated to the expected text
+- **AND** a text-mismatch record SHALL be created
+- **AND** no DOM node SHALL be removed
+
+#### Scenario: Structural tag mismatch is repaired and recorded
+- **WHEN** hydration finds a prerendered node whose tag differs from the client element's tag at the same position
+- **THEN** the stale node SHALL be removed and the expected node SHALL be created (repair)
+- **AND** a tag-mismatch record SHALL be created
+
+#### Scenario: Recoverable raw-HTML mismatch is patched and recorded
+- **WHEN** hydration adopts a prerendered raw-HTML wrapper whose existing content differs from the element's rendered value
+- **THEN** the wrapper's content SHALL be updated to the rendered value
+- **AND** a raw_html-mismatch record SHALL be created
+- **AND** the wrapper node itself SHALL be preserved (not removed or recreated)
+
+#### Scenario: Leaf text and raw-HTML records carry the owning component ID
+- **WHEN** a `TextElement`, `RawHTMLElement`, or `NewLine` produces a text, raw_html, or tag mismatch record during hydration
+- **THEN** the record's component ID SHALL equal the owning component ID resolved through the parent chain
+- **AND** the component ID SHALL be empty (rather than raising) when no parent chain resolves it
+
+#### Scenario: Matching content produces no records
+- **WHEN** hydration adopts prerendered content that fully matches the client element tree
+- **THEN** no mismatch records SHALL be created
+
+#### Scenario: Excess prerendered children yield a single node-count record
+- **WHEN** a container's prerendered node has N excess child nodes beyond the element tree's child count
+- **THEN** a SINGLE `node-count` record SHALL be created capturing the element tree's child count as the expected value and the pre-cleanup child node count as the actual value
+- **AND** all N excess nodes SHALL be removed

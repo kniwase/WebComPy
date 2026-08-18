@@ -13,7 +13,7 @@ from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement, _position_element_nodes
 from webcompy.elements.types._error_boundary import ErrorBoundaryElement
-from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, HOST_PORT_KEY
+from webcompy.ports._keys import HOST_PORT_KEY
 from webcompy.router._context import TypedRouterContext
 from webcompy.router._router import RouteMatch
 from webcompy.signal import Computed
@@ -253,13 +253,4 @@ class RouterView(DynamicElement):
                 component._parent = self
                 component._node_idx = self._node_idx
                 self._children = [component]
-        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
-        idx = self._node_idx
-        for child in self._children:
-            child._node_idx = idx
-            idx += child._node_count
-            if not child._mounted:
-                task = scheduler.schedule(child._render())
-                self._pending_render_tasks.append((child, task))
-                task.add_done_callback(self._on_hydrate_render_done)
-        self._parent._re_index_children(False)
+        super()._hydrate_node()

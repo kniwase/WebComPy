@@ -61,13 +61,22 @@ class ElementBase(ElementWithChildren):
         for name in existing_attr_names - set(current_attrs.keys()) - _WEBCOMPY_INTERNAL_ATTRS:
             if preserve_all and not name.startswith("webcompy-"):
                 continue
+            from webcompy.hydration import record_mismatch
+
+            record_mismatch("attribute", None, node.getAttribute(name), self._get_belonging_component())
             node.removeAttribute(name)
         for name, value in current_attrs.items():
             if value is not None:
                 existing = node.getAttribute(name)
                 if existing != value:
+                    from webcompy.hydration import record_mismatch
+
+                    record_mismatch("attribute", value, existing, self._get_belonging_component())
                     node.setAttribute(name, value)
             elif node.hasAttribute(name):
+                from webcompy.hydration import record_mismatch
+
+                record_mismatch("attribute", None, node.getAttribute(name), self._get_belonging_component())
                 node.removeAttribute(name)
         for name, value in self._attrs.items():
             if isinstance(value, SignalBase):
@@ -98,6 +107,14 @@ class ElementBase(ElementWithChildren):
                 return existing_node
             # preserve framework-managed sibling nodes at this index
             elif not getattr(existing_node, "__webcompy_node__", False):
+                from webcompy.hydration import record_mismatch
+
+                record_mismatch(
+                    "tag",
+                    self._tag_name,
+                    getattr(existing_node, "nodeName", None),
+                    self._get_belonging_component(),
+                )
                 existing_node.remove()
         node = self._create_node()
         self._init_new_node(node)

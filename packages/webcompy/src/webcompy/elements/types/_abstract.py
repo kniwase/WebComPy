@@ -71,6 +71,18 @@ class ElementAbstract(SignalReceivable):
     @abstractmethod
     def _create_node(self) -> DOMNode: ...
 
+    def _get_belonging_component(self) -> str:
+        parent = getattr(self, "_parent", None)
+        if parent is None:
+            return ""
+        resolver = getattr(parent, "_get_belonging_component", None)
+        if not callable(resolver):
+            return ""
+        try:
+            return str(resolver() or "")
+        except AttributeError:
+            return ""
+
     def _init_new_node(self, node: DOMNode) -> None:
         node.__webcompy_node__ = True
 
@@ -85,10 +97,25 @@ class ElementAbstract(SignalReceivable):
             return existing
         else:
             if existing and not getattr(existing, "__webcompy_node__", False):
+                from webcompy.hydration import record_mismatch
+
+                record_mismatch(
+                    "tag",
+                    self._get_node_identity(),
+                    getattr(existing, "nodeName", None),
+                    self._get_belonging_component(),
+                )
                 existing.remove()
             node = self._create_node()
             self._init_new_node(node)
+            self._node_cache = node
             return node
+
+    def _get_node_identity(self) -> str:
+        name = getattr(self, "_tag_name", None)
+        if name:
+            return str(name)
+        return self.__class__.__name__
 
     def _node_matches_existing(self, existing: DOMNode) -> bool:
         return True

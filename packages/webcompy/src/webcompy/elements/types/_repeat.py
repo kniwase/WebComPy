@@ -91,6 +91,7 @@ class RepeatElement(DynamicElement):
         self._key_to_child = {}
         self._children_keys = []
         self._signal_activated = False
+        self._adoption_preserved = False
         super().__init__()
 
     def _call_template(self, v: Any, k: str | int) -> ElementChildren:
@@ -106,6 +107,12 @@ class RepeatElement(DynamicElement):
         self._children = self._generate_children()
         if self._has_key:
             self._populate_key_map()
+
+    def _hydrate_node(self):
+        super()._hydrate_node()
+        if self._has_key:
+            self._populate_key_map()
+        self._adoption_preserved = bool(self._children) and any(child._mounted for child in self._children)
 
     def _populate_key_map(self):
         self._key_to_child = {}
@@ -163,6 +170,11 @@ class RepeatElement(DynamicElement):
                 raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")
             if self._has_key and self._signal_activated and self._children_keys:
                 await self._reconcile_children()
+            elif self._adoption_preserved and self._children and any(c._mounted for c in self._children):
+                self._adoption_preserved = False
+                if self._has_key:
+                    self._populate_key_map()
+                _position_element_nodes(self, parent_node, self._node_idx)
             else:
                 self._cancel_pending_render_tasks()
                 for _ in range(len(self._children)):

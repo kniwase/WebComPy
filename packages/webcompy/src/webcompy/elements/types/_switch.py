@@ -59,9 +59,17 @@ class SwitchElement(DynamicElement):
         ele = self._create_child_element(self._parent, None, generator())
         return [ele] if ele is not None else []
 
+    def _hydrate_node(self):
+        if not self._children:
+            branch_idx, generator = self._select_generator()
+            self._rendered_idx = branch_idx
+            self._children = self._generate_children(generator)
+        super()._hydrate_node()
+
     async def _render(self):
         has_async = bool(self._children) and _subtree_has_async_setup(self)
         if self._children and all(child._mounted is None for child in self._children):
+            self._cancel_pending_render_tasks()
             parent_node = self._parent._get_node()
             idx = self._node_idx
             for child in self._children:
@@ -86,10 +94,10 @@ class SwitchElement(DynamicElement):
 
     async def _refresh(self, *args: Any):
         try:
-            self._cancel_pending_render_tasks()
             branch_idx, generator = self._select_generator()
             if branch_idx == self._rendered_idx:
                 if self._children and all(child._mounted is None for child in self._children):
+                    self._cancel_pending_render_tasks()
                     parent_node = self._parent._get_node()
                     idx = self._node_idx
                     for child in self._children:
@@ -98,6 +106,7 @@ class SwitchElement(DynamicElement):
                         idx += child._node_count
                     _position_element_nodes(self, parent_node, self._node_idx)
                 return
+            self._cancel_pending_render_tasks()
             parent_node = self._parent._get_node()
             if not parent_node:
                 raise WebComPyException(f"'{self.__class__.__name__}' does not have its parent.")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import re
 from collections.abc import Callable, Coroutine
 from typing import Any, Literal
@@ -20,6 +21,10 @@ from webcompy.ports._transition import TransitionPort, TransitionStyle
 from webcompy.ports._websocket import WebSocketConnection, WebSocketPort
 from webcompy_server.ports._dom import ServerDOMPort
 from webcompy_testing._dom import FakeDOMNode
+
+_logger = logging.getLogger(__name__)
+
+_MAX_DRAIN_ITERATIONS = 1000
 
 
 class _FakeCustomElementBinding(CustomElementBinding):
@@ -275,22 +280,132 @@ class FakeHistoryPort(HistoryPort):
         pass
 
 
+class _PendingTask:
+    """Bookkeeping stand-in for a scheduled coroutine.
+
+    The fake never runs a scheduled coroutine itself; it only records it for a
+    later explicit ``drain()``. The returned stand-in satisfies the small
+    ``asyncio.Task`` surface that dynamic-element hydration uses (``done``,
+    ``cancel``, ``cancelled``, ``exception``, ``add_done_callback``) without
+    requiring an event loop at ``schedule()`` time, so sync test contexts do not
+    leak un-awaited placeholder coroutines. ``drain()``/``await_pending()``
+    settle the stand-ins of the coroutines they execute: the stand-in is marked
+    done, the executed coroutine's exception (if any) is recorded, and registered
+    done callbacks are invoked. Cancelling an un-executed stand-in drops the
+    recorded coroutine so a later ``drain()`` does not run it (mirroring real
+    task cancellation in the browser scheduler); cancelling an executed
+    stand-in returns ``False`` and is a no-op.
+    """
+
+    def __init__(self, scheduler: FakeAsyncSchedulerPort, coro: Coroutine[Any, Any, Any]) -> None:
+        self._scheduler = scheduler
+        self._coro = coro
+        self._done = False
+        self._cancelled = False
+        self._exception: BaseException | None = None
+        self._callbacks: list[Any] = []
+
+    def _settle(self, exception: BaseException | None) -> None:
+        if self._done:
+            return
+        self._done = True
+        self._exception = exception
+        callbacks = self._callbacks
+        self._callbacks = []
+        for callback in callbacks:
+            callback(self)
+
+    def add_done_callback(self, callback: Any) -> None:
+        self._callbacks.append(callback)
+
+    def remove_done_callback(self, callback: Any) -> None:
+        with contextlib.suppress(ValueError):
+            self._callbacks.remove(callback)
+
+    def cancel(self) -> bool:
+        if self._done:
+            return False
+        self._cancelled = True
+        self._done = True
+        with contextlib.suppress(ValueError):
+            self._scheduler._coroutines.remove(self._coro)
+        with contextlib.suppress(ValueError):
+            self._scheduler._render_coroutines.remove(self._coro)
+        return True
+
+    def cancelled(self) -> bool:
+        return self._cancelled
+
+    def done(self) -> bool:
+        return self._done
+
+    def exception(self) -> BaseException | None:
+        return self._exception
+
+
 class FakeAsyncSchedulerPort(AsyncSchedulerPort):
     def __init__(self) -> None:
         self._coroutines: list[Coroutine[Any, Any, Any]] = []
+        self._render_coroutines: list[Coroutine[Any, Any, Any]] = []
+        self._tasks: list[_PendingTask] = []
 
-    def schedule(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
+    def schedule(
+        self,
+        coro: Coroutine[Any, Any, Any],
+        *,
+        render: bool = False,
+    ) -> asyncio.Task[Any]:
         self._coroutines.append(coro)
-        return asyncio.ensure_future(asyncio.sleep(0))
+        if render:
+            self._render_coroutines.append(coro)
+        task = _PendingTask(self, coro)
+        self._tasks.append(task)
+        return task  # type: ignore[return-value]
+
+    async def _execute(self, coros: list[Coroutine[Any, Any, Any]]) -> None:
+        results = await asyncio.gather(*coros, return_exceptions=True)
+        for coro, result in zip(coros, results, strict=True):
+            for task in self._tasks:
+                if task._coro is coro:
+                    task._settle(result if isinstance(result, BaseException) else None)
+                    break
 
     async def drain(self) -> None:
-        coros = self._coroutines
-        self._coroutines = []
-        if coros:
-            await asyncio.gather(*coros, return_exceptions=True)
+        iteration = 0
+        while self._coroutines:
+            coros = list(self._coroutines)
+            self._coroutines = []
+            self._render_coroutines = [c for c in self._render_coroutines if c not in coros]
+            await self._execute(coros)
+            iteration += 1
+            if iteration > _MAX_DRAIN_ITERATIONS:
+                _logger.warning(
+                    "FakeAsyncSchedulerPort.drain exceeded %d drain iterations; "
+                    "possible recursive scheduling bug (%d coroutines still collected)",
+                    _MAX_DRAIN_ITERATIONS,
+                    len(self._coroutines),
+                )
+                break
 
-    async def await_pending(self) -> None:
-        await self.drain()
+    async def await_pending(self, *, only_render: bool = False) -> None:
+        if not only_render:
+            await self.drain()
+            return
+        iteration = 0
+        while self._render_coroutines:
+            coros = list(self._render_coroutines)
+            self._render_coroutines = []
+            self._coroutines = [c for c in self._coroutines if c not in coros]
+            await self._execute(coros)
+            iteration += 1
+            if iteration > _MAX_DRAIN_ITERATIONS:
+                _logger.warning(
+                    "FakeAsyncSchedulerPort.await_pending exceeded %d drain iterations; "
+                    "possible recursive scheduling bug (%d render coroutines still collected)",
+                    _MAX_DRAIN_ITERATIONS,
+                    len(self._render_coroutines),
+                )
+                break
 
 
 class FakeTransitionStyle:

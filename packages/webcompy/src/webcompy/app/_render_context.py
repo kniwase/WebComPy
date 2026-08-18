@@ -23,6 +23,7 @@ from webcompy.di._keys import (
 from webcompy.di._scope import DIScope, _active_di_scope, _set_app_di_scope
 from webcompy.elements.types._teleport import _TeleportTargetRegistry
 from webcompy.exception import WebComPyException
+from webcompy.hydration._report import HydrationMismatchRecord, HydrationReporter
 from webcompy.router import Router
 from webcompy.utils import ENVIRONMENT
 
@@ -52,6 +53,8 @@ class RenderContext(ABC):
         self._profile_data: dict[str, float] = {}
         self._defer_depth: int = 0
         self._deferred_callbacks: list = []
+        self._hydration_in_progress: bool = False
+        self._hydration_reporter = HydrationReporter()
         self._initial_theme = initial_theme
         self._cookie_header = cookie_header or ""
 
@@ -131,6 +134,10 @@ class RenderContext(ABC):
 
     async def render_html(self, **kwargs: Any) -> str:
         raise WebComPyException("render_html() is not available in the browser render context")
+
+    @property
+    def hydration_report(self) -> tuple[HydrationMismatchRecord, ...]:
+        return tuple(self._hydration_reporter.records)
 
     @property
     def routes(self):

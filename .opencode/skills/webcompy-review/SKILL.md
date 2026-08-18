@@ -87,6 +87,9 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Node Cache Strict is-None Check** — `async-rendering/spec.md`
 - **DI Scope Rules** — `di-scope/spec.md`
 - **Hydration** — `hydration-data-transfer/spec.md`
+- **Hydration Adopt & Render** — `elements/spec.md`, `async-rendering/spec.md`
+- **Hydration Mismatch Diagnostics** — `elements/spec.md`, `async-rendering/spec.md`
+- **Scheduler Render-Task Scoping** — `async-scheduler/spec.md`
 - **Hydration Text-Node Normalization** — `elements/spec.md`
 - **Transfer Codec** — `transfer-codec/spec.md`
 - **Metadata Type-Tag Decoding** — `typed-response/spec.md`, `typed-api-client/spec.md`
