@@ -330,6 +330,32 @@ class TestForceClose:
         assert ws.last_close.value == CloseInfo(code=4000, reason="typed", was_clean=False)
         ws.close()
 
+    @pytest.mark.asyncio
+    async def test_force_close_terminates_when_reconnect_false(self, rt_env) -> None:
+        ws = use_websocket("/ws", reconnect=False)
+        rt_env.port.emit_open("/ws")
+        ws.force_close(4000, "no reconnect")
+        assert ws.last_close.value == CloseInfo(code=4000, reason="no reconnect", was_clean=False)
+        assert ws.state.value == ConnectionState.CLOSED
+        await asyncio.sleep(0.2)
+        assert len(rt_env.port.open_calls) == 1, "no retry may be scheduled with reconnect=False"
+        ws.close()
+
+    @pytest.mark.asyncio
+    async def test_force_close_terminates_when_max_attempts_exhausted(self, rt_env) -> None:
+        ws = use_websocket("/ws", reconnect_base_delay=0.05, reconnect_max_attempts=1)
+        rt_env.port.emit_open("/ws")
+        # one abnormal close consumes the single attempt budget
+        rt_env.port.emit_close("/ws", code=1006, reason="abnormal", was_clean=False)
+        assert ws.state.value == ConnectionState.RECONNECTING
+        await asyncio.sleep(0.1)
+        assert ws.state.value == ConnectionState.RECONNECTING
+        ws.force_close(4000, "budget spent")
+        assert ws.state.value == ConnectionState.CLOSED
+        await asyncio.sleep(0.2)
+        assert len(rt_env.port.open_calls) == 2, "no further retry may be scheduled"
+        ws.close()
+
 
 class TestSendPolicy:
     @pytest.mark.asyncio

@@ -409,6 +409,11 @@ class _RealtimeRegistry:
             old_connection.close()
         for sub in list(conn.subscribers):
             sub.on_close_info(conn.last_close)
+        if not conn.reconnect or (conn.max_attempts is not None and conn.attempts >= conn.max_attempts):
+            self._terminate_ws(conn)
+            if self._connections.get(conn.key) is conn:
+                del self._connections[conn.key]
+            return
         conn.attempts += 1
         conn.state = ConnectionState.RECONNECTING
         self._notify_state(conn)
