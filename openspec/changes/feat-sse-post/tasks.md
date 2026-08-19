@@ -29,8 +29,8 @@
 
 ## 6. Testing module
 
-- [ ] 6.1 Implement `FakeFetchPort.stream()` with scripted `streams` chunks, canned-response single-chunk fallback, `KeyError` for unregistered keys, and abort recording per the `testing-module` delta
-- [ ] 6.2 Unit-test `FakeFetchPort.stream` scenarios in `tests/`
+- [x] 6.1 Implement `FakeFetchPort.stream()` with scripted `streams` chunks, canned-response single-chunk fallback, `KeyError` for unregistered keys, and abort recording per the `testing-module` delta
+- [x] 6.2 Unit-test `FakeFetchPort.stream` scenarios in `tests/`
 
 ## 7. E2E and docs
 

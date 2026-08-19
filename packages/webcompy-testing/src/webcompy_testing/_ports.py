@@ -12,7 +12,7 @@ from webcompy.ports._async_scheduler import AsyncSchedulerPort
 from webcompy.ports._custom_element import CustomElementBinding, CustomElementPort
 from webcompy.ports._dom import DOMNode
 from webcompy.ports._event_source import EventSourcePort
-from webcompy.ports._fetch import FetchPort, Response
+from webcompy.ports._fetch import FetchPort, FetchStream, Response
 from webcompy.ports._ffi import FFIPort
 from webcompy.ports._history import HistoryPort
 from webcompy.ports._host import HostPort
@@ -238,9 +238,47 @@ class FakeBrowserFFIPort(FFIPort):
         target.update(source)
 
 
+class _FakeFetchStream(FetchStream):
+    def __init__(
+        self,
+        chunks: list[str],
+        status_code: int,
+        headers: dict[str, str],
+        ok: bool,
+        port: FakeFetchPort,
+        key: tuple[str, str],
+    ) -> None:
+        super().__init__(status_code, headers, ok)
+        self._chunks = iter(chunks)
+        self._port = port
+        self._key = key
+        self.aborted = False
+
+    async def __anext__(self) -> str:
+        if self._closed:
+            raise StopAsyncIteration
+        try:
+            return next(self._chunks)
+        except StopIteration:
+            raise StopAsyncIteration from None
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        super().close()
+        self.aborted = True
+        self._port.aborted_streams.append(self._key)
+
+
 class FakeFetchPort(FetchPort):
-    def __init__(self, responses: dict[tuple[str, str], Response] | None = None) -> None:
+    def __init__(
+        self,
+        responses: dict[tuple[str, str], Response] | None = None,
+        streams: dict[tuple[str, str], list[str]] | None = None,
+    ) -> None:
         self._responses = responses or {}
+        self._streams = streams or {}
+        self.aborted_streams: list[tuple[str, str]] = []
 
     async def fetch(
         self,
@@ -255,6 +293,31 @@ class FakeFetchPort(FetchPort):
             return self._responses[key]
         raise KeyError(
             f"No canned response registered for {method} {url}. Registered keys: {list(self._responses.keys())}"
+        )
+
+    async def stream(
+        self,
+        url: str,
+        *,
+        method: str = "GET",
+        headers: dict[str, str] | None = None,
+        body: str | None = None,
+    ) -> FetchStream:
+        key = (method, url)
+        response = self._responses.get(key)
+        if key in self._streams:
+            if response is not None:
+                return _FakeFetchStream(
+                    list(self._streams[key]), response.status_code, response.headers, response.ok, self, key
+                )
+            return _FakeFetchStream(
+                list(self._streams[key]), 200, {"content-type": "text/event-stream"}, True, self, key
+            )
+        if response is not None:
+            return _FakeFetchStream([response.text], response.status_code, response.headers, response.ok, self, key)
+        raise KeyError(
+            f"No scripted stream or canned response registered for {method} {url}. "
+            f"Registered stream keys: {list(self._streams.keys())}; response keys: {list(self._responses.keys())}"
         )
 
 
