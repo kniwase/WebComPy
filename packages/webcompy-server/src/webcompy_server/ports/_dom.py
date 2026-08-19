@@ -37,6 +37,9 @@ class ServerDOMPort(DOMPort):
     def create_text_node(self, text: str) -> DOMNode:
         return VirtualDOMNode("#text", node_type=3, text_content=text)
 
+    def create_comment(self, data: str) -> DOMNode:
+        return VirtualDOMNode("#comment", node_type=8, text_content=data)
+
     def create_event(
         self,
         event_type: str,
@@ -63,6 +66,8 @@ class ServerDOMPort(DOMPort):
 
 
 def _serialize_node(node: DOMNode) -> str:
+    if node.nodeType == 8:
+        return f"<!--{node.textContent or ''}-->"
     if node.nodeType == 3:
         text = node.textContent or ""
         parent = node.parentNode

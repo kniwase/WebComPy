@@ -108,6 +108,8 @@ class VirtualDOMNode:
     def nodeName(self) -> str:
         if self._node_type == 3:
             return "#text"
+        if self._node_type == 8:
+            return "#comment"
         return self._tag_name.upper()
 
     @property

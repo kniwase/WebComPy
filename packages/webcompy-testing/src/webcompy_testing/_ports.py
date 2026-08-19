@@ -107,6 +107,9 @@ class FakeBrowserDOMPort(ServerDOMPort):
     def create_text_node(self, text: str) -> FakeDOMNode:
         return FakeDOMNode("#text", text_content=text)
 
+    def create_comment(self, data: str) -> FakeDOMNode:
+        return FakeDOMNode("#comment", text_content=data)
+
     def query_selector(self, selector: str) -> FakeDOMNode | None:
         if ">" in selector:
             return None
