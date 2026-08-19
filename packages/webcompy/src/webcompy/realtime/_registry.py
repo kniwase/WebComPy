@@ -63,7 +63,7 @@ class _Connection:
         "subscribers",
     )
 
-    def __init__(self, key: tuple[str, str]) -> None:
+    def __init__(self, key: tuple[str, Any]) -> None:
         self.key = key
         self.event_types: set[str] = set()
         self.generation = 0
@@ -80,7 +80,7 @@ class _RealtimeRegistry:
     def subscribe(
         self,
         transport: str,
-        url: str,
+        key_component: Any,
         *,
         events: tuple[str, ...],
         max_queue: int | None,
@@ -96,8 +96,10 @@ class _RealtimeRegistry:
             Callable[[], None],
         ],
         on_state: Callable[[ConnectionState], None],
+        reopen_on_new_types: bool = True,
+        on_error_state: ConnectionState = ConnectionState.CONNECTING,
     ) -> _Subscription:
-        key = (transport, url)
+        key = (transport, key_component)
         requested = frozenset(events)
         conn = self._connections.get(key)
         if conn is None:
@@ -105,12 +107,17 @@ class _RealtimeRegistry:
             self._connections[key] = conn
             conn.event_types = set(requested)
             try:
-                conn.cleanup = self._open(conn, open_fn, item_factory)
+                conn.cleanup = self._open(conn, open_fn, item_factory, on_error_state)
             except Exception:
                 del self._connections[key]
                 raise
         elif not requested <= conn.event_types:
             conn.event_types |= requested
+            if not reopen_on_new_types:
+                sub = _Subscription(requested, _StreamQueue(max_queue), on_state)
+                conn.subscribers.add(sub)
+                sub.on_state(conn.state)
+                return sub
             conn.reopening = True
             try:
                 try:
@@ -120,7 +127,7 @@ class _RealtimeRegistry:
                     conn.reopening = False
                 conn.state = ConnectionState.CONNECTING
                 self._notify_state(conn)
-                conn.cleanup = self._open(conn, open_fn, item_factory)
+                conn.cleanup = self._open(conn, open_fn, item_factory, on_error_state)
             except Exception:
                 del self._connections[key]
                 conn.state = ConnectionState.CLOSED
@@ -133,8 +140,8 @@ class _RealtimeRegistry:
         sub.on_state(conn.state)
         return sub
 
-    def unsubscribe(self, transport: str, url: str, sub: _Subscription) -> None:
-        conn = self._connections.get((transport, url))
+    def unsubscribe(self, transport: str, key_component: Any, sub: _Subscription) -> None:
+        conn = self._connections.get((transport, key_component))
         if conn is None:
             return
         conn.subscribers.discard(sub)
@@ -178,6 +185,7 @@ class _RealtimeRegistry:
             Callable[[], None],
         ],
         item_factory: Callable[[str, str, str], T],
+        on_error_state: ConnectionState = ConnectionState.CONNECTING,
     ) -> Callable[[], None]:
         conn.generation += 1
         gen = conn.generation
@@ -194,7 +202,7 @@ class _RealtimeRegistry:
         def on_error() -> None:
             if _is_stale():
                 return
-            conn.state = ConnectionState.CONNECTING
+            conn.state = on_error_state
             self._notify_state(conn)
 
         def on_close() -> None:

@@ -42,6 +42,37 @@ By default only `("message",)` events are delivered.
 
 `events` must be a non-empty tuple of non-empty strings — a bare string (`events="message"`), an empty tuple, or a non-string element is rejected with a `TypeError`/`ValueError` before any connection is opened.
 
+## POST requests
+
+`use_event_source` opens through the browser-native `EventSource` API by default, which cannot send a request body. Pass `method` (any non-empty string other than `"GET"`), `body`, and `headers` to open a **fetch-based** SSE connection that sends the request body and headers:
+
+```python
+es = use_event_source(
+    "/query",
+    method="POST",
+    body='{"q":"x"}',
+    headers={"Content-Type": "application/json"},
+    events=("result",),
+)
+```
+
+Fetch-based connections send the given URL unchanged (relative URLs resolve against the document) and parse the `text/event-stream` response incrementally. `body`/`headers` together with `method="GET"` raise a `ValueError` before any connection is opened; a `method` that is not a non-empty string raises a `TypeError`. Non-GET connections require a running event loop (the browser or an `asyncio` context); calling them in a synchronous server context raises a `RuntimeError`.
+
+### Fetch-based reconnection
+
+Fetch-based connections follow EventSource-style auto-reconnect: if the request fails to open, the response status is not successful, the body is not `text/event-stream`, or the body stream ends, the connection transitions to `RECONNECTING` and retries with an exponential backoff (1s base, 30s cap, with jitter) until explicitly closed. Reconnect requests carry the `Last-Event-ID` header once any `id:` has been received, so a server that honors it can resume from where the client left off. Only `.close()` (or the equivalent detachment/component-destroy path) terminates the loop.
+
+### Sharing and filtering for fetch-based connections
+
+Fetch-based connections are keyed by `(url, method, body, normalized headers)`, so identical requests (same body and headers, with header names compared case-insensitively) share a single underlying connection while different bodies or headers never do. The full event stream is read once and each subscriber's requested `events` set is filtered per subscriber — a new subscriber asking for additional event types does **not** reopen the underlying connection.
+
+### Non-goals
+
+- There is no typed SSE composable (`use_typed_event_source` does not exist).
+- Reconnection parameters are fixed (1s base / 30s cap); the server's `retry:` field is not honored.
+- Events missed during a disconnect are not replayed beyond what `Last-Event-ID` enables server-side.
+- There is no server-side SSE endpoint helper; mount your own endpoint (e.g. via `asgi-mount`).
+
 ## Connection handle
 
 The handle exposes three surfaces:

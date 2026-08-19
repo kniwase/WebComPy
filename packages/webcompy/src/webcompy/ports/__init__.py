@@ -3,7 +3,7 @@ from webcompy.ports._cookie import CookiePort
 from webcompy.ports._custom_element import CustomElementPort
 from webcompy.ports._dom import DOMNode, DOMNodeList, DOMPort
 from webcompy.ports._event_source import EventSourcePort
-from webcompy.ports._fetch import FetchPort
+from webcompy.ports._fetch import FetchPort, FetchStream
 from webcompy.ports._ffi import FFIPort
 from webcompy.ports._history import HistoryPort
 from webcompy.ports._host import HostPort
@@ -53,6 +53,7 @@ __all__ = [
     "EventSourcePort",
     "FFIPort",
     "FetchPort",
+    "FetchStream",
     "HistoryPort",
     "HostPort",
     "MarkdownPort",

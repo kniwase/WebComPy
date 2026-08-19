@@ -162,7 +162,8 @@ the per-area reference.
 - **Custom Element Components** — `custom-element-components/spec.md`, `components/spec.md`
 - **Transition Sequence Contract** — `transition/spec.md`
 - **Composable Usage** — `composables/spec.md`
-- **Realtime Connection Lifecycle** — `sse-composable/spec.md`, `websocket-composable/spec.md`
+- **Realtime Connection Lifecycle** — `sse-composable/spec.md`, `websocket-composable/spec.md`, `sse-parser/spec.md`
+- **FetchPort Streaming Contract** — `port-abstraction/spec.md`
 - **Realtime Type Allowlist Decoding** — `typed-realtime/spec.md`
 - **Scoped CSS** — `scoped-css-incremental/spec.md`, `reactive-scoped-style/spec.md`
 - **Head VDOM** — `head-vdom/spec.md`
@@ -222,6 +223,9 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy/realtime/` | `sse-composable/spec.md`, `websocket-composable/spec.md`, `signal-stream/spec.md`, `typed-realtime/spec.md`, `reactive/spec.md`, `di-scope/spec.md` |
 | `webcompy/realtime/_typed.py` | `typed-realtime/spec.md`, `typed-response/spec.md`, `typed-api-client/spec.md` |
 | `webcompy/ajax/_serde.py` | `typed-api-client/spec.md`, `typed-response/spec.md` |
+| `webcompy/ajax/_sse.py` | `sse-parser/spec.md` |
+| `webcompy/ports/_fetch.py`, `webcompy/ports/_browser/_fetch.py` | `port-abstraction/spec.md` |
+| `webcompy_server/ports/_fetch.py` | `port-abstraction/spec.md` |
 | `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md`, `json-rpc/spec.md`, `loading-screen/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
 | `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md`, `markdown-document/spec.md` |
@@ -370,7 +374,8 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `hydration-data-transfer` | Server-to-browser data transfer for `AsyncResult` states, `FetchPort` response caches, and `Signal` values via versioned payload injection |
 | `signal-value-transfer` | Collection and restoration of `Signal`/`Computed`/`ReactiveList`/`ReactiveDict` values across the hydration boundary via `__signal_members__` |
 | `signal-stream` | Bidirectional conversion between occurrence-based streams and signals: `to_signal`, `to_reactive_list`, `to_async_iter`, with AsyncResult-style error/completion signals, drop-oldest capping, and lifecycle cleanup |
-| `sse-composable` | `use_event_source` composable sharing per-app SSE connections: reference-counted registry keyed by `(transport, url)`, per-subscriber pull-based queues, connection-handle async iterator with `.state` signal and `.close()`, `SSEvent` dataclass, and SSR no-op fallback |
+| `sse-composable` | `use_event_source` composable sharing per-app SSE connections: reference-counted registry keyed by `(transport, url)`, per-subscriber pull-based queues, connection-handle async iterator with `.state` signal and `.close()`, `SSEvent` dataclass, SSR no-op fallback, and fetch-based POST support with EventSource-style reconnection |
+| `sse-parser` | Framework-internal `text/event-stream` codec: incremental, boundary-safe parser (`event`/`data`/`id`, comments, CRLF, id persistence, trailing-partial discard) and a matching frame formatter, both pure Python |
 | `websocket-composable` | `use_websocket` composable for bidirectional text messaging over a shared, reference-counted connection: protocols-aware registry keying, client-side reconnection with exponential backoff and jitter, `.last_close` close introspection, disconnected send policy with opt-in buffering, and SSR no-op fallback |
 | `typed-realtime` | Typed message send/receive for realtime composables: `message_type` dataclass contract, typed-response body wire envelope, strict-by-default reconstruction, skip-on-error `.last_error` surfacing, and app-scoped realtime type allowlist |
 | `readonly-signal` | Read-only reactive values with an external-only update channel: `use_readonly_signal`, `use_window_event`, `use_document_event`, with lifecycle-bound listener cleanup and no hydration transfer |

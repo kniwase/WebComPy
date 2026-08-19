@@ -11,6 +11,7 @@ from .pages.dict_repeat import DictRepeatPage
 from .pages.error_handling import CatchEventsPage, ErrorBoundaryPage, NestedCrashPage
 from .pages.event import EventPage
 from .pages.event_source import EventSourcePage
+from .pages.event_source_post import EventSourcePostPage
 from .pages.form_fields import FormFieldsPage
 from .pages.home import HomePage
 from .pages.html_parser_parity import HtmlParserParityPage
@@ -54,6 +55,7 @@ router = Router(
     {"path": "/custom-elements", "component": CustomElementPage},
     {"path": "/event", "component": EventPage},
     {"path": "/event-source", "component": EventSourcePage},
+    {"path": "/event-source-post", "component": EventSourcePostPage},
     {"path": "/websocket", "component": WebSocketPage},
     {"path": "/rpc-ws", "component": RpcWsPage},
     {"path": "/window-events", "component": WindowEventsPage},
