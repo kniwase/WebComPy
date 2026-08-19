@@ -12,11 +12,14 @@
 - [x] 2.2 Implement `BrowserDOMPort.create_comment()` via `document.createComment(data)` in `webcompy/ports/_browser/_dom.py`
 - [x] 2.3 Implement `ServerDOMPort.create_comment()` returning `VirtualDOMNode("#comment", node_type=8, text_content=data)` in `webcompy_server/ports/_dom.py`
 - [x] 2.4 Add an explicit `create_comment()` to `FakeBrowserDOMPort` in `webcompy_testing/_ports.py` (same construction as the server port)
+- [x] 2.5 Document in proposal.md that `create_comment` is a required (breaking) interface addition for custom `DOMPort` implementations, and add a corresponding risk entry in design.md (no runtime fallback, to avoid reintroducing the layout shift)
 
 ## 3. Server virtual DOM comment support (D4)
 
 - [x] 3.1 In `webcompy_server/ports/_virtual_dom.py`, make `nodeName` return `"#comment"` for `node_type == 8` (verify `textContent` getter/setter already covers it)
 - [x] 3.2 In `webcompy_server/ports/_dom.py` `_serialize_node()`, add a `nodeType == 8` branch emitting `<!--{textContent}-->` before the element branch
+- [x] 3.3 In `webcompy_server/ports/_virtual_dom.py`, exclude comment children (`nodeType == 8`) from element `textContent` aggregation so it matches browser `Element.textContent` semantics
+- [x] 3.4 In `webcompy_testing/_renderer.py`, skip comment nodes in `_dfs_text` so `find_by_text` cannot match the invisible anchor data
 
 ## 4. Unit test updates
 
@@ -25,6 +28,8 @@
 - [x] 4.3 Update `test_hydration_after_ssr_keeps_siblings_single_and_adopts_anchor` to expect node order `["P", "#comment", "P"]` with the comment adopted (identity + `__webcompy_prerendered_node__`)
 - [x] 4.4 Rewrite `test_hydration_with_bare_text_siblings_recreates_anchor_in_order` for the no-merge semantics: parsed tree has three distinct nodes (text / comment / text), hydration adopts each in index order, each sibling appears exactly once, and the teleport schedules its own render
 - [x] 4.5 Add a regression unit test: SSR-render a teleport whose logical sibling is a block-level element (navbar-like structure) and assert the output contains `<!--webcompy-teleport-anchor-->` and no `\u200b`
+- [x] 4.6 Add unit tests for comment text-content semantics: element `textContent` excludes comment data, a comment-only element reports `""`, a comment node keeps its own data, and `find_by_text("webcompy-teleport-anchor")` returns `None`
+- [x] 4.7 Add a round-trip hydration test that strips `<!--webcompy-teleport-anchor-->` from the SSR HTML before parsing, verifying merged-text recovery (merged parse into one text node, anchor recreation, each sibling exactly once, teleported children mounted under the target)
 
 ## 5. E2E layout regression (D5)
 
@@ -39,3 +44,10 @@
 - [x] 6.4 `openspec validate fix-teleport-anchor-layout-shift --strict` and `python3 scripts/check-doc-spec-refs.py`
 - [ ] 6.5 Sync the three delta specs into `openspec/specs/{teleport,virtual-dom,port-abstraction}/spec.md`
 - [ ] 6.6 Update `AGENTS.md` invariant/spec tables if any spec headings or references changed (run the check script again afterwards)
+
+## 7. Review follow-up hardening
+
+- [x] 7.1 In `webcompy_server/ports/_dom.py` `_serialize_node()`, reject comment data containing `--` or ending with `-` with a `ValueError` (invalid HTML would otherwise be emitted silently)
+- [x] 7.2 Add unit tests in `tests/test_server_dom_port.py` covering the unsafe-comment-data rejection
+- [x] 7.3 Document the serialization-time validation in the virtual-dom delta spec (unsafe-data scenario)
+- [x] 7.4 Strengthen `test_fresh_anchor_teleport_schedules_own_render_during_hydration` to render all children and assert the trailing text sibling is recovered exactly once (not just the anchor and preceding sibling)
