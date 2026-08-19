@@ -102,6 +102,38 @@ client = RpcWsClient(
 
 Pass `heartbeat_interval=None` to disable the heartbeat. The server always answers `_webcompy.ping` with `_webcompy.pong`.
 
+## Streaming calls
+
+Streaming procedures — generator functions annotated `-> AsyncIterator[T]` /
+`AsyncIterable[T]` (async) or `-> Iterator[T]` / `Iterable[T]` (sync) — also
+work over the WebSocket. A call with `"stream": true` is answered with a
+`stream_id`, and each element is delivered as a `_webcompy.event` frame
+carrying the `stream_id` (no cursor), the encoded `data`, and transfer `meta`.
+Exhaustion emits `_webcompy.stream_done`; a mid-stream failure emits
+`_webcompy.stream_error` (`stream_id`, `code`, `message`, `data`).
+
+```python
+stream_handle = await client.stream("count_up", {"n": 5}, result_type=int)
+
+async for item in stream_handle:
+    print(item)
+```
+
+`RpcWsClient.stream(...)` returns the same `RpcStream` as the HTTP
+`rpc.stream` — an `AsyncIterator[T]` with `.state`
+(`OPEN` / `CLOSED` / `FAILED`), idempotent `.close()`, and `async with`
+support. `.close()` sends a `_webcompy.stream_cancel` notification that stops
+the server-side generator.
+
+Per-call streams are never shared, replayed, or rejoined: each call runs its
+own generator instance. If the connection drops, an active stream **fails**
+with `RpcError` from iteration (never silently retried or resubscribed),
+matching in-flight `call()` behavior. Calling `stream()` when the client is
+closed, unavailable outside the browser, or the socket is not `OPEN` fails
+fast with `RpcError`. Streams are not supported in batch requests (each entry
+is rejected) and notifications targeting streaming procedures are not
+executed.
+
 ## SSR / SSG
 
 `RpcWsClient` is browser-runtime-only. During SSR/SSG it emits a warning and performs **no socket work**; SSR-time RPC continues to use the HTTP client and transfer cache. No subscription state, cursors, or in-flight calls are transferred in the hydration payload.

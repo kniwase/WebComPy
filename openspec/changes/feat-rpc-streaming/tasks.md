@@ -38,7 +38,7 @@
 ## 7. E2E and docs
 
 - [x] 7.1 Add browser E2E tests in `e2e/` for HTTP streaming (async-generator procedure over the real dispatcher, typed items, mid-stream error, close/cancel) and WebSocket streaming (stream frames, cancel, disconnect); run via `scripts/run-e2e-tests.sh`
-- [ ] 7.2 Update `docs_app/documents/rpc.md` and `rpc_websocket.md` with streaming sections (registration, `rpc.stream` / `RpcWsClient.stream`, wire formats, cancellation, SSR behavior, non-goals)
+- [x] 7.2 Update `docs_app/documents/rpc.md` and `rpc_websocket.md` with streaming sections (registration, `rpc.stream` / `RpcWsClient.stream`, wire formats, cancellation, SSR behavior, non-goals)
 - [ ] 7.3 Update `AGENTS.md` review-knowledge tables (File → Spec Mapping for the new/changed rpc files and the `rpc-streaming` capability, Current Specs list) and run `python3 scripts/check-doc-spec-refs.py` until it passes
 
 ## 8. Verification
