@@ -249,6 +249,35 @@ def test_toml_lexer_tokenizes_comment() -> None:
     assert any(t.type == TokenType.COMMENT for t in tokens)
 
 
+def test_toml_lexer_date_does_not_swallow_comment() -> None:
+    tokens = list(TomlLexer().tokenize("d = 2024-01-01  # release date\n"))
+    assert any(t.type is TokenType.STRING and t.value == "2024-01-01" for t in tokens)
+    assert any(t.type is TokenType.COMMENT and t.value == "# release date" for t in tokens)
+    assert "".join(t.value for t in tokens) == "d = 2024-01-01  # release date\n"
+
+
+def test_toml_lexer_full_datetime_single_string() -> None:
+    tokens = list(TomlLexer().tokenize("t = 2024-01-01T10:20:30Z\n"))
+    assert any(t.type is TokenType.STRING and t.value == "2024-01-01T10:20:30Z" for t in tokens)
+
+
+def test_toml_lexer_hex_octal_binary_numbers() -> None:
+    for literal in ("0x10", "0o17", "0b101"):
+        tokens = list(TomlLexer().tokenize(f"v = {literal}\n"))
+        assert any(t.type is TokenType.NUMBER and t.value == literal for t in tokens)
+
+
+def test_toml_lexer_underscored_integer() -> None:
+    tokens = list(TomlLexer().tokenize("n = 1_000_000\n"))
+    assert any(t.type is TokenType.NUMBER and t.value == "1_000_000" for t in tokens)
+
+
+def test_toml_lexer_round_trip() -> None:
+    code = 'd = 2024-01-01  # release\nmask = 0x10\nt = 2024-01-01T10:20:30Z\nname = "x"\n'
+    tokens = list(TomlLexer().tokenize(code))
+    assert "".join(t.value for t in tokens) == code
+
+
 def test_registry_register_and_get_by_name() -> None:
     lexer = PythonLexer()
     register_lexer(lexer)
