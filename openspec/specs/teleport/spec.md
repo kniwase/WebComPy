@@ -30,7 +30,7 @@ WebComPy provides a `Teleport` element for relocating a subtree of DOM nodes to 
 
 ### Requirement: Teleport shall occupy exactly one static anchor node at its logical position
 
-The Teleport element SHALL contribute exactly one DOM node — an empty placeholder — at its logical position in the element tree, and SHALL report a node count of one regardless of how many nodes its teleported subtree contains or how that count changes over time. Sibling node-index accounting SHALL therefore remain stable across any change inside the teleported subtree (conditional children, repeated children, async children).
+The Teleport element SHALL contribute exactly one DOM node — a placeholder — at its logical position in the element tree, and SHALL report a node count of one regardless of how many nodes its teleported subtree contains or how that count changes over time. The placeholder SHALL be a comment node whose data is `webcompy-teleport-anchor` in both the server-rendered output and the browser-created anchor, so that the anchor slot survives HTML parsing without creating a layout box. Sibling node-index accounting SHALL therefore remain stable across any change inside the teleported subtree (conditional children, repeated children, async children).
 
 #### Scenario: Sibling indices are stable while teleported content changes
 
@@ -41,12 +41,13 @@ The Teleport element SHALL contribute exactly one DOM node — an empty placehol
 #### Scenario: Anchor is a placeholder, not rendered content
 
 - **WHEN** a Teleport with children is mounted
-- **THEN** the node at the logical position SHALL be an empty placeholder (no element content)
+- **THEN** the node at the logical position SHALL be a comment node with data `webcompy-teleport-anchor`
+- **AND** the anchor SHALL introduce no rendered content or text into the document
 - **AND** the teleported children SHALL exist only under the target container
 
 ### Requirement: Server-side rendering shall emit only the anchor
 
-During server-side rendering and static generation, a Teleport SHALL render only its anchor placeholder at the logical position and SHALL NOT render its children's content anywhere in the document. The browser SHALL mount the children under the target during the client render pass after hydration. Teleported content is therefore absent from SSR HTML by design. The anchor SHALL be serialized as a zero-width-space text node so that, when it is adjacent to element siblings, its node slot survives HTML parsing and positional hydration adoption of the anchor and of the siblings following the Teleport stays aligned. When the anchor is adjacent to bare text nodes, the HTML parser merges the text runs into a single node; hydration SHALL then recover by adopting the merged node as the preceding text sibling and recreating the anchor and following siblings in index order, so that each sibling appears exactly once in the final document. During hydration a Teleport SHALL schedule its own client render whenever its children are not yet rendered, including when the anchor had to be recreated instead of adopted; the teleport's mounting SHALL NOT depend on an app-level post-hydration render pass.
+During server-side rendering and static generation, a Teleport SHALL render only its anchor placeholder at the logical position and SHALL NOT render its children's content anywhere in the document. The browser SHALL mount the children under the target during the client render pass after hydration. Teleported content is therefore absent from SSR HTML by design. The anchor SHALL be serialized as a comment node with data `webcompy-teleport-anchor` (`<!--webcompy-teleport-anchor-->`), so that its node slot survives HTML parsing without creating a layout box and positional hydration adoption of the anchor and of the siblings following the Teleport stays aligned. Because comment nodes break text runs during HTML parsing, bare text siblings adjacent to the anchor SHALL remain distinct nodes after parsing; hydration SHALL adopt the anchor and each sibling in index order, so that each sibling appears exactly once in the final document. When the anchor comment is absent from the parsed DOM at the teleport position (for example a third-party sanitizer stripped comments), the adjacent text runs merge into a single node; hydration SHALL then recover by adopting the merged node as the preceding text sibling and recreating the anchor and following siblings in index order, so that each sibling appears exactly once in the final document. During hydration a Teleport SHALL schedule its own client render whenever its children are not yet rendered, including when the anchor had to be recreated instead of adopted; the teleport's mounting SHALL NOT depend on an app-level post-hydration render pass.
 
 #### Scenario: SSR output contains no teleported content
 
@@ -57,14 +58,21 @@ During server-side rendering and static generation, a Teleport SHALL render only
 #### Scenario: SSR anchor occupies a parseable slot
 
 - **WHEN** a tree containing `[element, Teleport, element]` is server-rendered
-- **THEN** the SSR HTML SHALL contain the anchor representation between the two elements at the logical position
-- **AND** a browser parsing that HTML SHALL produce a distinct text node for the anchor slot
+- **THEN** the SSR HTML SHALL contain `<!--webcompy-teleport-anchor-->` between the two elements at the logical position
+- **AND** a browser parsing that HTML SHALL produce a distinct comment node whose data is `webcompy-teleport-anchor` for the anchor slot
+
+#### Scenario: Text-adjacent SSR anchors preserve sibling order through parsing
+
+- **WHEN** a tree containing `[text node, Teleport, text node]` is server-rendered
+- **THEN** the SSR HTML SHALL contain `<!--webcompy-teleport-anchor-->` between the two text runs at the logical position
+- **AND** a browser parsing that HTML SHALL produce three distinct nodes — text, comment, text — with no merging of the text runs
+- **AND** hydration SHALL adopt the comment anchor and each text sibling in index order, so that each sibling appears exactly once in the final document
+- **AND** the Teleport SHALL schedule its own client render during hydration, so that its children mount under the target without relying on a post-hydration render pass
 
 #### Scenario: Text-adjacent SSR anchors merge on parse and recover on hydration
 
-- **WHEN** a tree containing `[text node, Teleport, text node]` is server-rendered
-- **THEN** the SSR HTML SHALL contain the anchor representation between the two text nodes at the logical position
-- **AND** a browser parsing that HTML SHALL merge the adjacent text runs into a single text node, leaving no distinct anchor slot
+- **WHEN** a tree containing `[text node, Teleport, text node]` is server-rendered and the anchor comment is absent from the parsed DOM at the teleport position (for example a third-party sanitizer stripped comments)
+- **THEN** the adjacent text runs SHALL be merged by the parser into a single text node, leaving no distinct anchor slot
 - **AND** hydration SHALL adopt the merged node as the preceding text sibling and recreate the anchor and the following text sibling in index order, so that each sibling appears exactly once in the final document
 - **AND** the Teleport SHALL schedule its own client render during hydration even though its anchor was recreated, so that its children mount under the target without relying on a post-hydration render pass
 
@@ -77,7 +85,7 @@ During server-side rendering and static generation, a Teleport SHALL render only
 #### Scenario: Hydration adopts the anchor without duplicating siblings
 
 - **WHEN** the browser hydrates the SSR output of a tree containing `[paragraph, Teleport, paragraph]`
-- **THEN** the anchor SHALL be adopted as the prerendered node at its logical position
+- **THEN** the comment anchor SHALL be adopted as the prerendered node at its logical position
 - **AND** each sibling paragraph SHALL appear exactly once in the document (no duplicated or orphaned SSR nodes)
 - **AND** the teleported children SHALL be mounted under the target node
 
