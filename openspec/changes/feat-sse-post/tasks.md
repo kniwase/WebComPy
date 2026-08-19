@@ -17,9 +17,9 @@
 
 ## 4. use_event_source POST path (basic)
 
-- [ ] 4.1 Extend `use_event_source(url, *, method="GET", body=None, headers=None)` with spec'd validation (GET + body/headers → ValueError, method validation) and the GET/non-GET transport branch; `ruff check` + `pyright` clean
-- [ ] 4.2 Implement the fetch-based open path in `webcompy/realtime/_sse.py` (open via `FetchPort.stream`, parser feed, per-subscriber event-type filtering mapped to `SSEvent`, synthesized open/error/close callbacks) without reconnection yet
-- [ ] 4.3 Unit-test the POST path with a fake streaming port (event delivery, event filtering, `last_event_id` on `SSEvent`, SSR empty-handle degradation for non-GET) in `tests/`
+- [x] 4.1 Extend `use_event_source(url, *, method="GET", body=None, headers=None)` with spec'd validation (GET + body/headers → ValueError, method validation) and the GET/non-GET transport branch; `ruff check` + `pyright` clean
+- [x] 4.2 Implement the fetch-based open path in `webcompy/realtime/_sse.py` (open via `FetchPort.stream`, parser feed, per-subscriber event-type filtering mapped to `SSEvent`, synthesized open/error/close callbacks) without reconnection yet
+- [x] 4.3 Unit-test the POST path with a fake streaming port (event delivery, event filtering, `last_event_id` on `SSEvent`, SSR empty-handle degradation for non-GET) in `tests/`
 
 ## 5. Reconnection and registry keying
 

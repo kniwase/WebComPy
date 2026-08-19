@@ -5,7 +5,7 @@ import logging
 
 import pytest
 
-from webcompy.aio._aio import _aio_run_server, aio_run
+from webcompy.aio._aio import _aio_run_server, _aio_run_task, aio_run
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
 from webcompy_server.ports._async_scheduler import ServerAsyncSchedulerPort
@@ -78,5 +78,83 @@ class TestAioRunNoOrphanTasks:
             assert len(scheduler._registry) == 5
             await scheduler.await_pending()
             assert scheduler._registry == []
+        finally:
+            _active_di_scope.reset(token)
+
+
+class TestAioRunTaskDelegation:
+    @pytest.mark.asyncio
+    async def test_within_di_scope_returns_the_scheduler_task(self):
+        scheduler = ServerAsyncSchedulerPort()
+        scope = DIScope()
+        scope.provide(ASYNC_SCHEDULER_PORT_KEY, scheduler)
+        token = _active_di_scope.set(scope)
+        try:
+
+            async def _noop():
+                return None
+
+            task = _aio_run_task(_noop())
+            assert task is not None
+            assert task in scheduler._registry
+            await scheduler.await_pending()
+            assert task.done()
+        finally:
+            _active_di_scope.reset(token)
+
+    @pytest.mark.asyncio
+    async def test_fallback_returns_a_task_on_the_running_loop(self, caplog):
+        scope = DIScope()
+        scope.dispose()
+        token = _active_di_scope.set(scope)
+        try:
+
+            async def _noop():
+                return None
+
+            with caplog.at_level(logging.WARNING, logger="uvicorn"):
+                task = _aio_run_task(_noop())
+            assert task is not None
+            await asyncio.gather(task)
+            assert task.done()
+        finally:
+            _active_di_scope.reset(token)
+
+    @pytest.mark.asyncio
+    async def test_fallback_task_is_cancellable(self, caplog):
+        scope = DIScope()
+        scope.dispose()
+        token = _active_di_scope.set(scope)
+        try:
+
+            async def _hang():
+                await asyncio.sleep(3600)
+
+            with caplog.at_level(logging.WARNING, logger="uvicorn"):
+                task = _aio_run_task(_hang())
+            assert task is not None
+            assert not task.done()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        finally:
+            _active_di_scope.reset(token)
+
+    def test_fallback_without_running_loop_returns_none(self):
+        scope = DIScope()
+        scope.dispose()
+        token = _active_di_scope.set(scope)
+        try:
+
+            async def _noop():
+                return None
+
+            coro = _noop()
+            try:
+                task = _aio_run_task(coro)
+            finally:
+                if task is None:
+                    coro.close()
+            assert task is None
         finally:
             _active_di_scope.reset(token)

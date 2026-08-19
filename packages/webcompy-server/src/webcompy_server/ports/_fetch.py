@@ -13,6 +13,17 @@ if TYPE_CHECKING:
 
 
 class ServerFetchPort(FetchPort):
+    """Server-side ``FetchPort``.
+
+    ``noop = True`` marks this port as a pure no-op for realtime
+    connections: ``use_event_source`` (non-GET) uses it as the signal that
+    SSR/SSG degradation (warning + empty closed handle) applies, rather than
+    issuing a fetch request through the port. The port itself remains fully
+    functional for ordinary ``fetch()`` calls during SSR/SSG.
+    """
+
+    noop = True
+
     def __init__(self, external_client: httpx.AsyncClient | None = None) -> None:
         self._external_client = external_client
         self._prototype: ServerFetchPort | None = None

@@ -83,7 +83,7 @@ For fetch-based connections, the given URL (absolute or relative) SHALL be passe
 
 ### Requirement: A shared connection registry shall multiplex subscribers per app DI scope
 
-The framework SHALL maintain a connection registry scoped to the app DI scope (never module-global), keyed by `(transport, key_component)`, where the SSE transport's key component is the URL for GET connections and `(url, method, body)` for non-GET connections. For a given key:
+The framework SHALL maintain a connection registry scoped to the app DI scope (never module-global), keyed by `(transport, key_component)`, where the SSE transport's key component is the URL for GET connections and `(url, method, body, normalized headers)` for non-GET connections. Header normalization SHALL lower-case header names so equivalent headers spelled differently key identically, and SHALL treat `None` and `{}` as equivalent. For a given key:
 
 - the first subscriber SHALL open one underlying connection through the transport;
 - subsequent `use_event_source` calls with the same key SHALL attach to the same underlying connection without opening another. For `EventSource` (GET) connections, provided they request no event types beyond those already registered; fetch-based (non-GET) connections SHALL filter per subscriber and SHALL never reopen for event-type changes;
@@ -125,4 +125,14 @@ The registry and its keying SHALL be transport-agnostic so that additional realt
 #### Scenario: Identical non-GET requests share
 
 - **WHEN** two components call `use_event_source("/query", method="POST", body="a")` within the same app DI scope
+- **THEN** exactly one underlying fetch connection SHALL be opened
+
+#### Scenario: Non-GET connections with different headers do not share
+
+- **WHEN** `use_event_source("/query", method="POST", body="a", headers={"Authorization": "x"})` and `use_event_source("/query", method="POST", body="a", headers={"Authorization": "y"})` are called within the same app DI scope
+- **THEN** two separate underlying fetch connections SHALL be opened
+
+#### Scenario: Non-GET connections with equivalent headers share
+
+- **WHEN** `use_event_source("/query", method="POST", body="a", headers={"Content-Type": "application/json"})` and `use_event_source("/query", method="POST", body="a", headers={"content-type": "application/json"})` are called within the same app DI scope
 - **THEN** exactly one underlying fetch connection SHALL be opened

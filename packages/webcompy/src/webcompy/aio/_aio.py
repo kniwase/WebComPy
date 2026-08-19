@@ -60,6 +60,25 @@ def _aio_run_server(coro: Coroutine[Any, Any, Any]) -> None:
 aio_run: AsyncResolver = _aio_run_browser if ENVIRONMENT == "pyscript" else _aio_run_server
 
 
+def _aio_run_task(coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any] | None:
+    """Schedule *coro* like ``aio_run`` but return the created task.
+
+    Unlike the ``aio_run`` fallback, it never blocks on ``asyncio.run``:
+    when no event loop is running, ``None`` is returned and the caller
+    decides how to proceed. Long-running coroutines (e.g. realtime pumps)
+    that must be cancellable shall be scheduled through this helper.
+    """
+
+    def _fallback(c: Coroutine[Any, Any, Any]) -> asyncio.Task[Any] | None:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return None
+        return loop.create_task(c)
+
+    return _schedule_via_port_or_fallback(coro, _fallback, "realtime pump")
+
+
 A = ParamSpec("A")
 T = TypeVar("T")
 
