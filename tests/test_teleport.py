@@ -48,8 +48,8 @@ class TestTeleportMount:
             assert modal.parentNode is body
             root_children = result._root_node.childNodes[0].childNodes
             assert root_children.length == 1
-            assert root_children[0].nodeName == "#text"
-            assert (root_children[0].textContent or "") == ""
+            assert root_children[0].nodeName == "#comment"
+            assert (root_children[0].textContent or "") == "webcompy-teleport-anchor"
 
 
 class TestTeleportSiblingStability:
@@ -79,13 +79,13 @@ class TestTeleportSiblingStability:
             body = result.body_node
             assert body is not None
             assert _teleported_texts(body) == ["x", "y"]
-            assert _logical_texts(result) == ["before", "", "after"]
+            assert _logical_texts(result) == ["before", "webcompy-teleport-anchor", "after"]
             items.pop(0)
             assert _teleported_texts(body) == ["y"]
-            assert _logical_texts(result) == ["before", "", "after"]
+            assert _logical_texts(result) == ["before", "webcompy-teleport-anchor", "after"]
             items.append("z")
             assert _teleported_texts(body) == ["y", "z"]
-            assert _logical_texts(result) == ["before", "", "after"]
+            assert _logical_texts(result) == ["before", "webcompy-teleport-anchor", "after"]
 
 
 class TestTeleportMissingTarget:
@@ -384,7 +384,7 @@ class TestTeleportSharedTargetReindex:
         await teleport_c._render()
         await asyncio.sleep(0)
 
-        assert _a_nodes() == [("#text", ""), ("DIV", "c1")]
+        assert _a_nodes() == [("#comment", "webcompy-teleport-anchor"), ("DIV", "c1")]
         assert _b_texts() == ["i1", "i2"]
 
         assert inner._node_idx == 0
@@ -392,7 +392,7 @@ class TestTeleportSharedTargetReindex:
 
         inner_items.append("i3")
         c_items.append("c2")
-        assert _a_nodes() == [("#text", ""), ("DIV", "c1"), ("DIV", "c2")]
+        assert _a_nodes() == [("#comment", "webcompy-teleport-anchor"), ("DIV", "c1"), ("DIV", "c2")]
         assert _b_texts() == ["i1", "i2", "i3"]
 
 
@@ -495,7 +495,7 @@ class TestTeleportHydration:
         parent = _FakeRootElement("div", {}, {}, None, None)
         parent._node_cache = FakeDOMNode("div")
         parent._mounted = True
-        prerendered_anchor = FakeDOMNode("#text", text_content="\u200b")
+        prerendered_anchor = FakeDOMNode("#comment", text_content="webcompy-teleport-anchor")
         prerendered_anchor.__webcompy_prerendered_node__ = True
         parent._node_cache.appendChild(prerendered_anchor)
 
@@ -505,7 +505,7 @@ class TestTeleportHydration:
         teleport._hydrate_node()
         assert teleport._node_cache is prerendered_anchor
         assert teleport._mounted is True
-        assert (prerendered_anchor.textContent or "") == ""
+        assert (prerendered_anchor.textContent or "") == "webcompy-teleport-anchor"
 
         await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
         body = dom_port.body
@@ -537,7 +537,8 @@ class TestTeleportSSR:
         assert 'id="ssr-modal"' not in html_str
         assert "before-marker" in html_str
         assert "after-marker" in html_str
-        assert "\u200b" in html_str
+        assert "<!--webcompy-teleport-anchor-->" in html_str
+        assert "\u200b" not in html_str
 
     @pytest.mark.asyncio
     async def test_ssr_render_mounts_anchor_only(self, server_di_scope):
@@ -552,8 +553,32 @@ class TestTeleportSSR:
         await el._render()
         parent_node = parent._get_node()
         assert parent_node.childNodes.length == 1
-        assert (parent_node.childNodes[0].textContent or "") == "\u200b"
+        assert parent_node.childNodes[0].nodeName == "#comment"
+        assert (parent_node.childNodes[0].textContent or "") == "webcompy-teleport-anchor"
         assert el._children[0]._node_cache is None
+
+    def test_ssr_anchor_emits_comment_without_zero_width_space(self):
+        @define_component("teleport-page")
+        def TeleportPage(context):
+            return html.DIV(
+                {},
+                html.LI(
+                    {"class": "navbar-item-dropdown"},
+                    html.A({}, "Documents"),
+                    Teleport({"to": "body"}, html.UL({}, html.LI({}, "item"))),
+                ),
+            )
+
+        app = create_test_app(root_component=TeleportPage)
+        html_str = render_app_html(
+            app,
+            app_package_name="test_pkg",
+            dev_mode=False,
+            prerender=True,
+            wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
+        )
+        assert "<!--webcompy-teleport-anchor-->" in html_str
+        assert "\u200b" not in html_str
 
 
 class _FakeDOMParser(HTMLParser):
@@ -583,6 +608,10 @@ class _FakeDOMParser(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         if self._stack:
             self._stack.pop()
+
+    def handle_comment(self, data: str) -> None:
+        if self._stack:
+            self._stack[-1].appendChild(FakeDOMNode("#comment", text_content=data))
 
     def handle_data(self, data: str) -> None:
         if self._stack:
@@ -630,7 +659,7 @@ class TestTeleportSSRHydrationRoundTrip:
             prerender=True,
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
-        assert "\u200b" in html_str
+        assert "<!--webcompy-teleport-anchor-->" in html_str
         parser = _FakeDOMParser()
         parser.feed(html_str)
         parser.close()
@@ -671,7 +700,7 @@ class TestTeleportSSRHydrationRoundTrip:
         await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
 
         children = [page_div.childNodes[i] for i in range(page_div.childNodes.length)]
-        assert [child.nodeName for child in children] == ["P", "#text", "P"]
+        assert [child.nodeName for child in children] == ["P", "#comment", "P"]
         assert children[1] is teleport._node_cache
         assert getattr(children[1], "__webcompy_prerendered_node__", False) is True
         after_markers = [child for child in children if child.getAttribute("data-testid") == "after"]
@@ -684,7 +713,9 @@ class TestTeleportSSRHydrationRoundTrip:
         assert modals[0].textContent == "MODAL-SECRET"
 
     @pytest.mark.asyncio
-    async def test_hydration_with_bare_text_siblings_recreates_anchor_in_order(self, monkeypatch, fake_browser_full):
+    async def test_hydration_with_bare_text_siblings_adopts_comment_anchor_in_order(
+        self, monkeypatch, fake_browser_full
+    ):
         from webcompy.di import inject
         from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
 
@@ -707,18 +738,20 @@ class TestTeleportSSRHydrationRoundTrip:
             prerender=True,
             wheel_filename="test_pkg-0+sha.abcdef12-py3-none-any.whl",
         )
-        assert "\u200b" in html_str
+        assert "<!--webcompy-teleport-anchor-->" in html_str
         parser = _FakeDOMParser()
         parser.feed(html_str)
         parser.close()
         assert parser.root is not None
         app_div = _find_by_id(parser.root, "webcompy-app")
         assert app_div is not None
-        page_div = app_div.childNodes[0]
-        assert page_div.childNodes.length == 1
-        merged = page_div.childNodes[0]
-        assert "before-marker" in merged.textContent
-        assert "after-marker" in merged.textContent
+        page_div = app_div.childNodes[0].childNodes[0]
+        assert page_div.childNodes.length == 3
+        parsed = [page_div.childNodes[i] for i in range(page_div.childNodes.length)]
+        assert [child.nodeName for child in parsed] == ["#text", "#comment", "#text"]
+        assert parsed[0].textContent == "before-marker"
+        assert parsed[1].textContent == "webcompy-teleport-anchor"
+        assert parsed[2].textContent == "after-marker"
         _mark_prerendered(page_div)
         dom_port._body.appendChild(page_div)
 
@@ -751,10 +784,11 @@ class TestTeleportSSRHydrationRoundTrip:
         await inject(ASYNC_SCHEDULER_PORT_KEY).await_pending()
 
         children = [page_div.childNodes[i] for i in range(page_div.childNodes.length)]
-        assert [child.nodeName for child in children] == ["#text", "#text", "#text"]
+        assert [child.nodeName for child in children] == ["#text", "#comment", "#text"]
         assert children[0].textContent == "before-marker"
         assert children[1] is teleport._node_cache
-        assert (children[1].textContent or "") == ""
+        assert getattr(children[1], "__webcompy_prerendered_node__", False) is True
+        assert (children[1].textContent or "") == "webcompy-teleport-anchor"
         assert children[2].textContent == "after-marker"
         before_markers = [child for child in children if (child.textContent or "") == "before-marker"]
         after_markers = [child for child in children if (child.textContent or "") == "after-marker"]
@@ -796,7 +830,12 @@ class TestTeleportSSRHydrationRoundTrip:
         app_div = _find_by_id(parser.root, "webcompy-app")
         assert app_div is not None
         page_div = app_div.childNodes[0].childNodes[0]
-        assert page_div.childNodes.length == 1
+        assert page_div.childNodes.length == 3
+        parsed = [page_div.childNodes[i] for i in range(page_div.childNodes.length)]
+        assert [child.nodeName for child in parsed] == ["#text", "#comment", "#text"]
+        comment_anchor = parsed[1]
+        comment_anchor.remove()
+        assert page_div.childNodes.length == 2
         _mark_prerendered(page_div)
         dom_port._body.appendChild(page_div)
 
@@ -829,10 +868,10 @@ class TestTeleportSSRHydrationRoundTrip:
         assert teleport._mounted is True
         assert teleport._children_rendered is True
         children = [page_div.childNodes[i] for i in range(page_div.childNodes.length)]
-        assert [child.nodeName for child in children] == ["#text", "#text"]
+        assert [child.nodeName for child in children] == ["#text", "#comment"]
         assert children[0].textContent == "before-marker"
         assert children[1] is teleport._node_cache
-        assert (children[1].textContent or "") == ""
+        assert (children[1].textContent or "") == "webcompy-teleport-anchor"
         body_children = [dom_port._body.childNodes[i] for i in range(dom_port._body.childNodes.length)]
         modals = [child for child in body_children if child.getAttribute("id") == "modal"]
         assert len(modals) == 1

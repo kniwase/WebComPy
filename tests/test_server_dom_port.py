@@ -113,6 +113,29 @@ class TestServerDOMPortRenderHtml:
         node = VirtualDOMNode("#text", node_type=3, text_content="hello")
         assert self._render(node) == "hello"
 
+    def test_comment_node_only(self):
+        node = VirtualDOMNode("#comment", node_type=8, text_content="webcompy-teleport-anchor")
+        assert self._render(node) == "<!--webcompy-teleport-anchor-->"
+
+    def test_comment_child_between_elements(self):
+        root = VirtualDOMNode("div")
+        p1 = VirtualDOMNode("p")
+        p1.appendChild(VirtualDOMNode("#text", node_type=3, text_content="before"))
+        comment = VirtualDOMNode("#comment", node_type=8, text_content="webcompy-teleport-anchor")
+        p2 = VirtualDOMNode("p")
+        p2.appendChild(VirtualDOMNode("#text", node_type=3, text_content="after"))
+        root.appendChild(p1)
+        root.appendChild(comment)
+        root.appendChild(p2)
+        assert self._render(root) == "<div><p>before</p><!--webcompy-teleport-anchor--><p>after</p></div>"
+
+    def test_comment_child_between_text_runs(self):
+        root = VirtualDOMNode("div")
+        root.appendChild(VirtualDOMNode("#text", node_type=3, text_content="before"))
+        root.appendChild(VirtualDOMNode("#comment", node_type=8, text_content="webcompy-teleport-anchor"))
+        root.appendChild(VirtualDOMNode("#text", node_type=3, text_content="after"))
+        assert self._render(root) == "<div>before<!--webcompy-teleport-anchor-->after</div>"
+
     def test_deeply_nested(self):
         root = VirtualDOMNode("div")
         mid = VirtualDOMNode("section")
@@ -136,6 +159,14 @@ class TestServerDOMPortCreateElement:
         node = port.create_text_node("hello")
         assert node.nodeType == 3
         assert node.textContent == "hello"
+
+    def test_creates_comment_node(self):
+        port = ServerDOMPort()
+        node = port.create_comment("webcompy-teleport-anchor")
+        assert node.nodeType == 8
+        assert node.nodeName == "#comment"
+        assert node.textContent == "webcompy-teleport-anchor"
+        assert port.render_html(node) == "<!--webcompy-teleport-anchor-->"
 
     def test_create_event(self):
         port = ServerDOMPort()
