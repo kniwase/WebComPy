@@ -40,5 +40,12 @@
 
 ## 8. Verification
 
-- [ ] 8.1 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, and `uv run python -m pytest tests/ --tb=short`; fix all failures
-- [ ] 8.2 Run `openspec validate feat-sse-post --strict` and resolve all findings
+- [x] 8.1 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, and `uv run python -m pytest tests/ --tb=short`; fix all failures
+- [x] 8.2 Run `openspec validate feat-sse-post --strict` and resolve all findings
+
+## 9. Review fixes
+
+- [x] 9.1 Key fetch-based connections on canonicalized request headers (`_headers_key`) so different headers never share a connection and equivalent headers (case-insensitive) still do; add unit tests
+- [x] 9.2 Abort the in-flight browser fetch when the stream task is cancelled during the handshake (`BrowserFetchPort.stream`); add unit tests
+- [x] 9.3 Log a debug message when a fetch-based connection fails and schedules a retry
+- [x] 9.4 Update the `sse-composable` delta spec (header-aware keying), add a `testing-module` note on the never-ending pump vs `FakeAsyncSchedulerPort`, and align the `proposal.md` / `design.md` wording with the `ServerFetchPort.noop` reality
