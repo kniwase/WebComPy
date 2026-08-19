@@ -42,8 +42,8 @@
 - [x] 6.2 `uv run python -m pytest tests/ --tb=short` (full suite, teleport subset green)
 - [x] 6.3 `scripts/run-e2e-tests.sh docs-home` and `scripts/run-e2e-tests.sh docs-documents`
 - [x] 6.4 `openspec validate fix-teleport-anchor-layout-shift --strict` and `python3 scripts/check-doc-spec-refs.py`
-- [ ] 6.5 Sync the three delta specs into `openspec/specs/{teleport,virtual-dom,port-abstraction}/spec.md`
-- [ ] 6.6 Update `AGENTS.md` invariant/spec tables if any spec headings or references changed (run the check script again afterwards)
+- [x] 6.5 Sync the three delta specs into `openspec/specs/{teleport,virtual-dom,port-abstraction}/spec.md`
+- [x] 6.6 Update `AGENTS.md` invariant/spec tables if any spec headings or references changed (run the check script again afterwards) — assessed as no-op (no capability added/renamed/removed; `check-doc-spec-refs.py` passes)
 
 ## 7. Review follow-up hardening
 
