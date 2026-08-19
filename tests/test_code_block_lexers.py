@@ -136,6 +136,47 @@ def test_python_lexer_punctuation_vs_operator() -> None:
     assert "".join(t.value for t in tokens) == "x = a[0] + f(b, c)\n"
 
 
+def test_python_lexer_fstring_literal_is_string() -> None:
+    code = 'msg = f"hello {name}"\n'
+    tokens = list(PythonLexer().tokenize(code))
+    assert [t.value for t in tokens if t.type is TokenType.STRING] == ['f"', "hello ", '"']
+    assert any(t.type is TokenType.IDENTIFIER and t.value == "name" for t in tokens)
+    assert "".join(t.value for t in tokens) == code
+
+
+def test_python_lexer_match_as_variable() -> None:
+    tokens = list(PythonLexer().tokenize("match = re.match(pattern, text)\n"))
+    assert all(t.type is not TokenType.KEYWORD for t in tokens if t.value == "match")
+
+
+def test_python_lexer_match_statement_keyword() -> None:
+    tokens = list(PythonLexer().tokenize("match command:\n    case _: pass\n"))
+    keywords = [t for t in tokens if t.type is TokenType.KEYWORD]
+    assert keywords[0].value == "match"
+    assert keywords[1].value == "case"
+
+
+def test_python_lexer_type_is_builtin() -> None:
+    tokens = list(PythonLexer().tokenize("t = type(obj)\n"))
+    assert any(t.type is TokenType.BUILTIN and t.value == "type" for t in tokens)
+
+
+def test_python_lexer_underscore_is_identifier() -> None:
+    tokens = list(PythonLexer().tokenize("for _ in range(3):\n    pass\n"))
+    assert any(t.type is TokenType.IDENTIFIER and t.value == "_" for t in tokens)
+
+
+def test_python_lexer_matmul_is_not_decorator() -> None:
+    tokens = list(PythonLexer().tokenize("c = a @ b\n"))
+    assert all(t.type is not TokenType.DECORATOR for t in tokens)
+    assert any(t.type is TokenType.OPERATOR and t.value == "@" for t in tokens)
+
+
+def test_python_lexer_def_named_match_is_function() -> None:
+    tokens = list(PythonLexer().tokenize("def match(x):\n    pass\n"))
+    assert any(t.type is TokenType.FUNCTION and t.value == "match" for t in tokens)
+
+
 def test_highlight_preserves_newlines_for_python_multiline() -> None:
     from webcompy.ui.code_block._highlight import highlight
 
