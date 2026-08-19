@@ -6,9 +6,9 @@
 
 ## 2. FetchPort streaming primitive
 
-- [ ] 2.1 Add `FetchStream` (upfront `status_code`/`headers`/`ok`, `AsyncIterator[str]`, idempotent `close()`) and the concrete default `FetchPort.stream()` in `webcompy/ports/_fetch.py`; `ruff check` + `pyright` clean
-- [ ] 2.2 Implement real streaming in `BrowserFetchPort` per design decision 2 and spike 1.1 (reader loop, streaming TextDecoder, AbortController); `ruff check` + `pyright` clean
-- [ ] 2.3 Unit-test `FetchPort.stream` default fallback (single chunk, metadata, close idempotency) in `tests/`
+- [x] 2.1 Add `FetchStream` (upfront `status_code`/`headers`/`ok`, `AsyncIterator[str]`, idempotent `close()`) and the concrete default `FetchPort.stream()` in `webcompy/ports/_fetch.py`; `ruff check` + `pyright` clean
+- [x] 2.2 Implement real streaming in `BrowserFetchPort` per design decision 2 and spike 1.1 (reader loop, streaming TextDecoder, AbortController); `ruff check` + `pyright` clean
+- [x] 2.3 Unit-test `FetchPort.stream` default fallback (single chunk, metadata, close idempotency) in `tests/`
 
 ## 3. SSE codec
 

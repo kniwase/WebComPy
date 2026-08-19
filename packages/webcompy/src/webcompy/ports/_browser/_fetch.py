@@ -1,12 +1,53 @@
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 from webcompy.exception import WebComPyException
 from webcompy.hydration._payload import TransferFetchEntry
 from webcompy.ports._browser._raw import browser as _raw_browser
-from webcompy.ports._fetch import FetchPort, Response
+from webcompy.ports._fetch import FetchPort, FetchStream, Response, _BufferedFetchStream
 from webcompy.utils._environment import ENVIRONMENT
+
+
+class _BrowserFetchStream(FetchStream):
+    def __init__(
+        self,
+        status_code: int,
+        headers: dict[str, str],
+        ok: bool,
+        reader: Any,
+        decoder: Any,
+        controller: Any,
+    ) -> None:
+        super().__init__(status_code, headers, ok)
+        self._reader = reader
+        self._decoder = decoder
+        self._controller = controller
+        self._done = False
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        super().close()
+        with contextlib.suppress(Exception):
+            self._reader.cancel()
+        self._controller.abort()
+
+    async def __anext__(self) -> str:
+        while True:
+            if self._closed or self._done:
+                raise StopAsyncIteration
+            result = await self._reader.read()
+            if result.done:
+                self._done = True
+                tail = self._decoder.decode()
+                if tail:
+                    return tail
+                raise StopAsyncIteration
+            text = self._decoder.decode(bytes(result.value), stream=True)
+            if text:
+                return text
 
 
 class BrowserFetchPort(FetchPort):
@@ -82,3 +123,40 @@ class BrowserFetchPort(FetchPort):
                 headers_proxy.destroy()
 
         return response
+
+    async def stream(
+        self,
+        url: str,
+        *,
+        method: str = "GET",
+        headers: dict[str, str] | None = None,
+        body: str | None = None,
+    ) -> FetchStream:
+        controller = self._browser.AbortController.new()
+        options: dict = {"method": method, "signal": controller.signal}
+        headers_proxy: Any = None
+        try:
+            if headers:
+                headers_proxy = self._browser.pyscript.ffi.create_proxy(headers)
+                options["headers"] = headers_proxy
+            if body:
+                options["body"] = body
+
+            res = await self._browser.fetch(url, **options)
+
+            headers_obj = res.headers
+            headers_dict = dict(
+                zip(
+                    list(headers_obj.keys()),
+                    list(headers_obj.values()),
+                    strict=True,
+                )
+            )
+            if res.body is None:
+                return _BufferedFetchStream(res.status, headers_dict, res.ok, "")
+            reader = res.body.getReader()
+            decoder = self._browser.TextDecoder.new("utf-8")
+            return _BrowserFetchStream(res.status, headers_dict, res.ok, reader, decoder, controller)
+        finally:
+            if headers_proxy is not None and hasattr(headers_proxy, "destroy"):
+                headers_proxy.destroy()
