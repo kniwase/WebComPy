@@ -23,9 +23,9 @@
 
 ## 5. Reconnection and registry keying
 
-- [ ] 5.1 Extend the registry key component for the SSE transport to `(url, method, body)` for non-GET connections and skip the event-type-reopen logic for fetch-based connections (per-subscriber filtering)
-- [ ] 5.2 Implement the reconnect loop for fetch-based connections: `RECONNECTING` state, backoff via `_compute_reconnect_delay`, generation/retry-token guards, `Last-Event-ID` header, retry on EOF/error/non-successful status/non-SSE content type, termination only via close/detach
-- [ ] 5.3 Unit-test reconnection (EOF triggers retry, `Last-Event-ID` header content, close during `RECONNECTING` stops the loop, stale-stream completions ignored) and registry keying (different bodies never share, identical POSTs share, new event types do not reopen fetch connections) in `tests/`
+- [x] 5.1 Extend the registry key component for the SSE transport to `(url, method, body)` for non-GET connections and skip the event-type-reopen logic for fetch-based connections (per-subscriber filtering)
+- [x] 5.2 Implement the reconnect loop for fetch-based connections: `RECONNECTING` state, backoff via `_compute_reconnect_delay`, generation/retry-token guards, `Last-Event-ID` header, retry on EOF/error/non-successful status/non-SSE content type, termination only via close/detach
+- [x] 5.3 Unit-test reconnection (EOF triggers retry, `Last-Event-ID` header content, close during `RECONNECTING` stops the loop, stale-stream completions ignored) and registry keying (different bodies never share, identical POSTs share, new event types do not reopen fetch connections) in `tests/`
 
 ## 6. Testing module
 
