@@ -27,8 +27,8 @@
 
 ## 5. HTTP client stream
 
-- [ ] 5.1 Implement `rpc.stream()` in `webcompy/rpc/_client.py`: flagged envelope POST through `FetchPort.stream`, `Content-Type` branching (JSON error → `RpcError` before return, SSE → parse with `sse-parser`), pump task, abort on close; update exports; `ruff check` + `pyright` clean
-- [ ] 5.2 Unit-test the HTTP client stream (JSON error path, chunk-boundary SSE parsing with `FakeFetchPort.stream`, typed decode, close aborts the fetch, SSR no-op) in `tests/`
+- [x] 5.1 Implement `rpc.stream()` in `webcompy/rpc/_client.py`: flagged envelope POST through `FetchPort.stream`, `Content-Type` branching (JSON error → `RpcError` before return, SSE → parse with `sse-parser`), pump task, abort on close; update exports; `ruff check` + `pyright` clean
+- [x] 5.2 Unit-test the HTTP client stream (JSON error path, chunk-boundary SSE parsing with `FakeFetchPort.stream`, typed decode, close aborts the fetch, SSR no-op) in `tests/`
 
 ## 6. WebSocket client stream
 
