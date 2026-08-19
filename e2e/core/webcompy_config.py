@@ -9,7 +9,11 @@ config = WebComPyBuildConfig(
     dependencies=["aiofiles"],
     server=WebComPyServerConfig(
         port=8088,
-        mounts=lambda: {"/sse": my_app.sse_server.create_sse_app(), "/ws": my_app.ws_server.create_ws_app()},
+        mounts=lambda: {
+            "/sse": my_app.sse_server.create_sse_app(),
+            "/sse-post": my_app.sse_server.create_sse_post_app(),
+            "/ws": my_app.ws_server.create_ws_app(),
+        },
     ),
     static_files_dir="../static",
 )
