@@ -11,9 +11,9 @@
 
 ## 2. HTTP dispatcher SSE streaming
 
-- [ ] 2.1 Implement envelope classification in `webcompy_server/rpc/_dispatcher.py` (stream member rules, batch/notification rejection, `-32600` mismatch bodies) shared by both transports
-- [ ] 2.2 Implement the SSE streaming response in the dispatcher (`text/event-stream` + `Cache-Control: no-store`, `item`/`done`/`error` frames via the `sse-parser` formatter, sync-generator async wrapper) and the disconnect watcher that cancels and closes the generator; `ruff check` + `pyright` clean
-- [ ] 2.3 Unit-test the HTTP stream path with the ASGI test client (items + done, mid-stream error event, JSON errors for pre-stream failures, batch/notification rules, disconnect stops the generator) in `tests/`
+- [x] 2.1 Implement envelope classification in `webcompy_server/rpc/_dispatcher.py` (stream member rules, batch/notification rejection, `-32600` mismatch bodies) shared by both transports
+- [x] 2.2 Implement the SSE streaming response in the dispatcher (`text/event-stream` + `Cache-Control: no-store`, `item`/`done`/`error` frames via the `sse-parser` formatter, sync-generator async wrapper) and the disconnect watcher that cancels and closes the generator; `ruff check` + `pyright` clean
+- [x] 2.3 Unit-test the HTTP stream path with the ASGI test client (items + done, mid-stream error event, JSON errors for pre-stream failures, batch/notification rules, disconnect stops the generator) in `tests/`
 
 ## 3. WebSocket endpoint stream calls
 

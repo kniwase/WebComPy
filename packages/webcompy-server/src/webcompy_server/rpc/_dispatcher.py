@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 import logging
+from collections.abc import AsyncGenerator
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 from webcompy.ajax._serde import from_json
+from webcompy.ajax._sse import _format_sse_event
 from webcompy.hydration._transfer_meta import apply_transfer_meta, encode_with_meta
 from webcompy.rpc._errors import (
     INTERNAL_ERROR,
@@ -13,7 +18,7 @@ from webcompy.rpc._errors import (
     METHOD_NOT_FOUND,
     PARSE_ERROR,
 )
-from webcompy.rpc._registry import ProcedureRegistry
+from webcompy.rpc._registry import ProcedureInfo, ProcedureRegistry
 
 _logger = logging.getLogger(__name__)
 
@@ -42,6 +47,70 @@ def _error_body(req_id: Any, code: int, message: str, data: Any = None) -> dict[
 
 def _valid_id(value: Any) -> bool:
     return value is None or (isinstance(value, (str, int, float)) and not isinstance(value, bool))
+
+
+@dataclass(frozen=True)
+class _StreamCall:
+    """A validated single flagged streaming request handed to a transport."""
+
+    info: ProcedureInfo
+    kwargs: dict[str, Any]
+    req_id: Any
+
+
+def _classify_stream_call(
+    payload: Any,
+    registry: ProcedureRegistry,
+) -> _StreamCall | dict[str, Any] | None:
+    """Classify a single entry as a streaming call for a transport.
+
+    Returns a ``_StreamCall`` for a valid single request with ``"stream": true``
+    targeting a streaming procedure, a JSON-RPC error body when the request is a
+    streaming call whose parameters are invalid, and ``None`` for everything else
+    (batch arrays, notifications, mismatch cases, and ordinary requests), which
+    the ordinary dispatch path handles.
+    """
+    if not isinstance(payload, dict) or payload.get("stream") is not True:
+        return None
+    if payload.get("jsonrpc") != "2.0" or not isinstance(payload.get("method"), str):
+        return None
+    req_id = payload.get("id")
+    if "id" not in payload or not _valid_id(req_id):
+        return None
+    info = registry.get(payload["method"])
+    if info is None or not info.is_streaming:
+        return None
+    params = payload.get("params")
+    if params is not None and not isinstance(params, (list, dict)):
+        return _error_body(req_id, INVALID_PARAMS, "Invalid params")
+    meta = payload.get("meta")
+    if meta is not None and not isinstance(meta, dict):
+        return _error_body(req_id, INVALID_PARAMS, "Invalid params")
+    try:
+        kwargs = _decode_params(info, params, meta, registry)
+    except _ParamError as err:
+        return _error_body(req_id, INVALID_PARAMS, "Invalid params", str(err))
+    return _StreamCall(info=info, kwargs=kwargs, req_id=req_id)
+
+
+def _ensure_async_iter(generator: Any) -> AsyncGenerator[Any, None]:
+    """Return an async generator over a streaming procedure's generator.
+
+    Async generators are returned as-is; sync generators are wrapped so
+    cancellation lands as ``GeneratorExit`` at their next yield.
+    """
+    if hasattr(generator, "__aiter__"):
+        return generator
+
+    async def _wrap() -> AsyncGenerator[Any, None]:
+        try:
+            for item in generator:
+                yield item
+                await asyncio.sleep(0)
+        finally:
+            generator.close()
+
+    return _wrap()
 
 
 def _decode_params(
@@ -82,7 +151,7 @@ def _decode_params(
     return decoded
 
 
-async def _process_entry(entry: Any, registry: ProcedureRegistry) -> dict[str, Any] | None:
+async def _process_entry(entry: Any, registry: ProcedureRegistry, *, in_batch: bool = False) -> dict[str, Any] | None:
     if not isinstance(entry, dict):
         return _error_body(None, INVALID_REQUEST, "Invalid Request")
     has_id = "id" in entry
@@ -103,6 +172,28 @@ async def _process_entry(entry: Any, registry: ProcedureRegistry) -> dict[str, A
         if not has_id:
             return None
         return _error_body(req_id, METHOD_NOT_FOUND, "Method not found")
+    if info.is_streaming:
+        if not has_id:
+            return None
+        if in_batch:
+            return _error_body(
+                req_id,
+                INVALID_REQUEST,
+                f"RPC method {method!r} is a streaming procedure; streaming is not supported in batch requests",
+            )
+        if entry.get("stream") is not True:
+            return _error_body(
+                req_id,
+                INVALID_REQUEST,
+                f'RPC method {method!r} is a streaming procedure; send the request with "stream": true',
+            )
+        return _error_body(
+            req_id,
+            INVALID_REQUEST,
+            f"RPC method {method!r} is a streaming procedure; the transport did not handle the stream",
+        )
+    if entry.get("stream") is True and has_id:
+        return _error_body(req_id, INVALID_REQUEST, f"RPC method {method!r} is not a streaming procedure")
     try:
         kwargs = _decode_params(info, params, meta, registry)
     except _ParamError as err:
@@ -147,7 +238,7 @@ async def dispatch_payload(
             return _error_body(None, INVALID_REQUEST, "Invalid Request")
         responses = [
             response
-            for response in [await _process_entry(entry, registry) for entry in payload]
+            for response in [await _process_entry(entry, registry, in_batch=True) for entry in payload]
             if response is not None
         ]
         return responses or None
@@ -196,10 +287,74 @@ async def _send_response(
     await send({"type": "http.response.body", "body": body})
 
 
-def create_dispatcher_app(registry: ProcedureRegistry):
-    """Return the JSON-RPC dispatcher as a bare ASGI application."""
+async def _run_sse_stream(
+    call: _StreamCall,
+    registry: ProcedureRegistry,
+    receive: Any,
+    send: Any,
+) -> None:
+    """Stream a streaming procedure call as Server-Sent Events."""
+    await send(
+        {
+            "type": "http.response.start",
+            "status": 200,
+            "headers": [
+                (b"content-type", b"text/event-stream"),
+                (b"cache-control", b"no-store"),
+            ],
+        }
+    )
+    agen = _ensure_async_iter(call.info.func(**call.kwargs))
 
-    async def _app(scope: dict[str, Any], receive: Any, send: Any) -> None:
+    async def _pump() -> None:
+        try:
+            async for item in agen:
+                json_data, meta = encode_with_meta(item, type_handlers=registry.meta_encoders)
+                frame = _format_sse_event("item", json.dumps({"data": json_data, "meta": meta or None}))
+                await send({"type": "http.response.body", "body": frame.encode("utf-8"), "more_body": True})
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            _logger.exception("RPC streaming procedure %r failed", call.info.name)
+            try:
+                frame = _format_sse_event(
+                    "error",
+                    json.dumps({"code": INTERNAL_ERROR, "message": "Internal error", "data": None}),
+                )
+                await send({"type": "http.response.body", "body": frame.encode("utf-8"), "more_body": True})
+            except Exception:
+                _logger.exception("RPC streaming procedure %r: failed to send error event", call.info.name)
+        else:
+            try:
+                frame = _format_sse_event("done", "null")
+                await send({"type": "http.response.body", "body": frame.encode("utf-8"), "more_body": True})
+            except Exception:
+                _logger.exception("RPC streaming procedure %r: failed to send done event", call.info.name)
+
+    async def _watch_disconnect() -> None:
+        while True:
+            message = await receive()
+            if message["type"] == "http.disconnect":
+                return
+
+    pump_task = asyncio.create_task(_pump())
+    watch_task = asyncio.create_task(_watch_disconnect())
+    try:
+        await asyncio.wait({pump_task, watch_task}, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        pump_task.cancel()
+        watch_task.cancel()
+        await asyncio.gather(pump_task, watch_task, return_exceptions=True)
+        await agen.aclose()
+    with contextlib.suppress(Exception):
+        await send({"type": "http.response.body", "body": b"", "more_body": False})
+
+
+class _DispatcherASGIApp:
+    def __init__(self, registry: ProcedureRegistry) -> None:
+        self._registry = registry
+
+    async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
         if scope["type"] != "http":
             await _send_response(send, 404, b"", media_type="text/plain")
             return
@@ -213,10 +368,40 @@ def create_dispatcher_app(registry: ProcedureRegistry):
             )
             return
         body = await _read_body(receive)
-        status, response_body = await dispatch_body(body, registry)
-        await _send_response(send, status, response_body, media_type="application/json")
+        try:
+            payload = json.loads(body)
+        except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+            await _send_response(
+                send,
+                200,
+                _json_response_body(_error_body(None, PARSE_ERROR, "Parse error"))[1],
+                media_type="application/json",
+            )
+            return
+        classified = _classify_stream_call(payload, self._registry)
+        if isinstance(classified, dict):
+            await _send_response(send, 200, json.dumps(classified).encode("utf-8"), media_type="application/json")
+            return
+        if classified is not None:
+            await _run_sse_stream(classified, self._registry, receive, send)
+            return
+        response = await dispatch_payload(payload, self._registry)
+        if response is None:
+            await _send_response(send, 204, b"", media_type="application/json")
+            return
+        await _send_response(send, 200, json.dumps(response).encode("utf-8"), media_type="application/json")
 
-    return _app
+
+def create_dispatcher_app(registry: ProcedureRegistry):
+    """Return the JSON-RPC dispatcher as a class-based ASGI application.
+
+    The returned app is usable directly as an ASGI application or as the
+    endpoint of a Starlette ``Route`` (which dispatches to class-based ASGI
+    apps verbatim). It serves ordinary JSON-RPC responses as ``application/json``
+    and single ``"stream": true`` calls to streaming procedures as
+    ``text/event-stream``.
+    """
+    return _DispatcherASGIApp(registry)
 
 
 __all__ = ["create_dispatcher_app", "dispatch_body", "dispatch_payload"]
