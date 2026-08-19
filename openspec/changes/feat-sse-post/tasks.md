@@ -12,8 +12,8 @@
 
 ## 3. SSE codec
 
-- [ ] 3.1 Create `webcompy/ajax/_sse.py` with the incremental parser (boundary-safe, comments, multi-`data:` join, `id:` persistence, trailing-partial discard, CRLF) and the frame formatter; `ruff check` + `pyright` clean
-- [ ] 3.2 Unit-test the parser against every `sse-parser` spec scenario (split chunks, multi-line data, named events, id persistence, comments, EOF discard, CRLF, formatter round-trip) in `tests/`
+- [x] 3.1 Create `webcompy/ajax/_sse.py` with the incremental parser (boundary-safe, comments, multi-`data:` join, `id:` persistence, trailing-partial discard, CRLF) and the frame formatter; `ruff check` + `pyright` clean
+- [x] 3.2 Unit-test the parser against every `sse-parser` spec scenario (split chunks, multi-line data, named events, id persistence, comments, EOF discard, CRLF, formatter round-trip) in `tests/`
 
 ## 4. use_event_source POST path (basic)
 
