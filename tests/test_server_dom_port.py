@@ -117,6 +117,16 @@ class TestServerDOMPortRenderHtml:
         node = VirtualDOMNode("#comment", node_type=8, text_content="webcompy-teleport-anchor")
         assert self._render(node) == "<!--webcompy-teleport-anchor-->"
 
+    def test_comment_with_double_hyphen_raises(self):
+        node = VirtualDOMNode("#comment", node_type=8, text_content="a--b")
+        with pytest.raises(ValueError):
+            self._render(node)
+
+    def test_comment_ending_with_hyphen_raises(self):
+        node = VirtualDOMNode("#comment", node_type=8, text_content="trailing-")
+        with pytest.raises(ValueError):
+            self._render(node)
+
     def test_comment_child_between_elements(self):
         root = VirtualDOMNode("div")
         p1 = VirtualDOMNode("p")

@@ -167,6 +167,24 @@ class TestVirtualDOMNodeTextContent:
         assert node.textContent == "hello"
 
 
+class TestVirtualDOMNodeCommentTextContent:
+    def test_comment_data_not_included_in_element_text_content(self):
+        root = VirtualDOMNode("div")
+        root.appendChild(VirtualDOMNode("#text", node_type=3, text_content="before"))
+        root.appendChild(VirtualDOMNode("#comment", node_type=8, text_content="webcompy-teleport-anchor"))
+        root.appendChild(VirtualDOMNode("#text", node_type=3, text_content="after"))
+        assert root.textContent == "beforeafter"
+
+    def test_element_with_only_comment_has_empty_text_content(self):
+        root = VirtualDOMNode("div")
+        root.appendChild(VirtualDOMNode("#comment", node_type=8, text_content="webcompy-teleport-anchor"))
+        assert root.textContent == ""
+
+    def test_comment_node_keeps_its_data_in_text_content(self):
+        node = VirtualDOMNode("#comment", node_type=8, text_content="webcompy-teleport-anchor")
+        assert node.textContent == "webcompy-teleport-anchor"
+
+
 class TestVirtualDOMNodeChildNodes:
     def test_child_nodes_list(self):
         parent = VirtualDOMNode("div")
