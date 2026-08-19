@@ -2,7 +2,7 @@
 
 ## 1. Browser streaming spike
 
-- [ ] 1.1 Verify Pyodide/PyScript FFI mechanics for streaming reads: `res.body.getReader()`, awaiting `reader.read()`, `Uint8Array` → `bytes`, streaming `TextDecoder` with `{stream: true}`, and `AbortController`/`signal` on `fetch`, in a throwaway PyScript page; record any differences from the existing `BrowserFetchPort.fetch` pattern
+- [x] 1.1 Verify Pyodide/PyScript FFI mechanics for streaming reads: `res.body.getReader()`, awaiting `reader.read()`, `Uint8Array` → `bytes`, streaming `TextDecoder` with `{stream: true}`, and `AbortController`/`signal` on `fetch`, in a throwaway PyScript page; record any differences from the existing `BrowserFetchPort.fetch` pattern
 
 ## 2. FetchPort streaming primitive
 
