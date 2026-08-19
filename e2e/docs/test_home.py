@@ -5,6 +5,36 @@ from e2e.docs.conftest import _wait_for_demo_iframe, _wait_for_pyscript_init
 
 
 @pytest.mark.e2e
+def test_navbar_dropdown_items_have_no_layout_shift_before_hydration(
+    page, docs_server_url, docs_console_messages, assert_no_console_errors
+):
+    page.goto(docs_server_url, wait_until="domcontentloaded")
+    heights = page.evaluate(
+        "() => {"
+        "  const home = document.querySelector('li.navbar-item');"
+        "  const dropdowns = [...document.querySelectorAll('li.navbar-item-dropdown')];"
+        "  return {"
+        "    home: home ? home.offsetHeight : null,"
+        "    dropdowns: dropdowns.map(li => {"
+        "      const a = li.querySelector('a');"
+        "      return {li: li.offsetHeight, a: a ? a.offsetHeight : null};"
+        "    }),"
+        "    commentAnchors: dropdowns.filter(li =>"
+        "      [...li.childNodes].some(n => n.nodeType === 8 && n.data === 'webcompy-teleport-anchor')"
+        "    ).length,"
+        "  };"
+        "}"
+    )
+    assert heights["home"] is not None
+    assert heights["dropdowns"], "expected at least one dropdown item"
+    assert heights["commentAnchors"] == len(heights["dropdowns"])
+    for d in heights["dropdowns"]:
+        assert d["li"] == heights["home"]
+        assert d["a"] is not None and d["li"] == d["a"]
+    _wait_for_pyscript_init(page, docs_console_messages)
+
+
+@pytest.mark.e2e
 def test_home_page_heading(docs_app_page, assert_no_console_errors):
     heading = docs_app_page.get_by_role("heading", name="What is WebComPy")
     expect(heading).to_be_visible()
