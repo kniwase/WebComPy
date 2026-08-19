@@ -32,8 +32,8 @@
 
 ## 6. WebSocket client stream
 
-- [ ] 6.1 Implement `RpcWsClient.stream()` in `webcompy/rpc/_ws_client.py`: flagged call, `stream_id` frame dispatch alongside `subscription_id`, `stream_done`/`stream_error` handling, `stream_cancel` on close, fail-fast `RpcError` when unusable, disconnect → `RpcError` (no resubscribe); `ruff check` + `pyright` clean
-- [ ] 6.2 Unit-test the WS client stream (ack → active, event routing by `stream_id`, done/error mapping, cancel notification, fail-fast when closed, disconnect failure) in `tests/`
+- [x] 6.1 Implement `RpcWsClient.stream()` in `webcompy/rpc/_ws_client.py`: flagged call, `stream_id` frame dispatch alongside `subscription_id`, `stream_done`/`stream_error` handling, `stream_cancel` on close, fail-fast `RpcError` when unusable, disconnect → `RpcError` (no resubscribe); `ruff check` + `pyright` clean
+- [x] 6.2 Unit-test the WS client stream (ack → active, event routing by `stream_id`, done/error mapping, cancel notification, fail-fast when closed, disconnect failure) in `tests/`
 
 ## 7. E2E and docs
 
