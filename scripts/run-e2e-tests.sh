@@ -9,7 +9,11 @@
 #   scripts/run-e2e-tests.sh docs-home --serving-mode=static
 #   scripts/run-e2e-tests.sh --console-level=error   # only show console errors in output
 #   scripts/run-e2e-tests.sh --console-file-level=info # save error+warning+info to file
-#   scripts/run-e2e-tests.sh --parallel               # run groups in parallel
+#   scripts/run-e2e-tests.sh --parallel               # run groups in parallel (bounded)
+#
+# In --parallel mode at most half of the available CPUs (minimum 1) run
+# concurrently, so the machine is not overwhelmed by the full matrix. Set
+# WEBCOMPY_E2E_MAX_PARALLEL to override the concurrency limit explicitly.
 #
 # Prerequisites:
 #   uv sync --all-groups
@@ -83,7 +87,8 @@ for arg in "$@"; do
     echo "      Minimum console level to display in output (default: warning)"
     echo "  --console-file-level=off|error|warning|info|log|debug"
     echo "      Minimum console level to save to log files (default: debug)"
-    echo "  --parallel                     Run groups in parallel"
+    echo "  --parallel                     Run groups in parallel (at most half the available CPUs, min 1)"
+    echo "                                 Override the concurrency limit with WEBCOMPY_E2E_MAX_PARALLEL"
     echo ""
     echo "Core E2E groups:"
     for name in "${!E2E_GROUPS[@]}"; do
@@ -104,6 +109,32 @@ done
 
 if [ ${#SELECTED_GROUPS[@]} -eq 0 ]; then
   SELECTED_GROUPS=("${!E2E_GROUPS[@]}" "${!DOCS_GROUPS[@]}")
+fi
+
+# Concurrency limit for --parallel: at most half of the CPUs available to this
+# process (minimum 1), honoring CPU affinity/cgroup limits via `nproc`.
+# Override explicitly with WEBCOMPY_E2E_MAX_PARALLEL.
+if [ -z "${WEBCOMPY_E2E_MAX_PARALLEL:-}" ]; then
+  if command -v nproc >/dev/null 2>&1; then
+    AVAIL_CPUS="$(nproc)"
+  elif command -v getconf >/dev/null 2>&1; then
+    AVAIL_CPUS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
+  else
+    AVAIL_CPUS="1"
+  fi
+  MAX_PARALLEL=$((AVAIL_CPUS >= 2 ? AVAIL_CPUS / 2 : 1))
+else
+  MAX_PARALLEL="$WEBCOMPY_E2E_MAX_PARALLEL"
+fi
+
+case "$MAX_PARALLEL" in
+  '' | *[!0-9]*)
+    echo "error: WEBCOMPY_E2E_MAX_PARALLEL must be a positive integer, got '$MAX_PARALLEL'" >&2
+    exit 1
+    ;;
+esac
+if [ "$MAX_PARALLEL" -lt 1 ]; then
+  MAX_PARALLEL=1
 fi
 
 _find_free_port() {
@@ -326,26 +357,48 @@ _run_single_bg() {
 }
 
 if [ "$PARALLEL" -eq 1 ]; then
+  declare -a TASK_LIST=()
   declare -a PIDS=()
   declare -A PID_TASK=()
 
   while IFS='|' read -r group_name mode files; do
-    _run_single_bg "$group_name" "$mode" "$files" &
-    pid=$!
-    PIDS+=("$pid")
-    PID_TASK["$pid"]="$group_name ($mode)"
+    TASK_LIST+=("$group_name|$mode|$files")
   done < <(_build_run_tasks)
 
   PASSED=0
   FAILED=0
   declare -a FAILED_NAMES=()
 
-  for pid in "${PIDS[@]}"; do
-    if wait "$pid"; then
-      ((PASSED++)) || true
-    else
-      ((FAILED++)) || true
-      FAILED_NAMES+=("${PID_TASK[$pid]}")
+  # Bounded worker pool: never run more than MAX_PARALLEL groups at once.
+  # Reap finished jobs before launching the next ones so the machine is not
+  # overwhelmed by the full matrix.
+  while [ "${#TASK_LIST[@]}" -gt 0 ] || [ "${#PIDS[@]}" -gt 0 ]; do
+    while [ "${#PIDS[@]}" -lt "$MAX_PARALLEL" ] && [ "${#TASK_LIST[@]}" -gt 0 ]; do
+      IFS='|' read -r group_name mode files <<< "${TASK_LIST[0]}"
+      TASK_LIST=("${TASK_LIST[@]:1}")
+      _run_single_bg "$group_name" "$mode" "$files" &
+      pid=$!
+      PIDS+=("$pid")
+      PID_TASK["$pid"]="$group_name ($mode)"
+    done
+
+    NEW_PIDS=()
+    for pid in "${PIDS[@]}"; do
+      if kill -0 "$pid" 2>/dev/null; then
+        NEW_PIDS+=("$pid")
+      else
+        if wait "$pid"; then
+          ((PASSED++)) || true
+        else
+          ((FAILED++)) || true
+          FAILED_NAMES+=("${PID_TASK[$pid]}")
+        fi
+      fi
+    done
+    PIDS=("${NEW_PIDS[@]}")
+
+    if [ "${#PIDS[@]}" -ge "$MAX_PARALLEL" ] && [ "${#TASK_LIST[@]}" -gt 0 ]; then
+      sleep 1
     fi
   done
 
