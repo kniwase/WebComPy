@@ -99,11 +99,13 @@ class BashLexer:
 
     _TOKEN_PATTERN: re.Pattern[str] = re.compile(
         r"""
-        (?P<comment>\#[^\n]*)
+        (?P<comment>(?:\A|(?<=\n)|(?<=[ \t]))\#[^\n]*)
         | (?P<string_dq>"(?:\\.|[^"\\])*")
         | (?P<string_sq>'(?:\\.|[^'\\])*')
         | (?P<variable>\$[A-Za-z_][A-Za-z0-9_]*
-              |\$\{[A-Za-z_][A-Za-z0-9_]*\})
+              |\$\{[A-Za-z_][A-Za-z0-9_]*\}
+              |\$\d
+              |\$[@*#?$!-])
         | (?P<number>\b\d+(?:\.\d+)?\b)
         | (?P<word>[A-Za-z_][A-Za-z0-9_]*)
         | (?P<op>[|&;<>=(){}\[\]!`$\\]

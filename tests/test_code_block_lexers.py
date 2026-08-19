@@ -216,6 +216,36 @@ def test_bash_lexer_tokenizes_comment() -> None:
     assert any(t.type == TokenType.COMMENT and t.value.startswith("#") for t in tokens)
 
 
+def test_bash_lexer_positional_parameter_single_token() -> None:
+    tokens = list(BashLexer().tokenize("echo $1"))
+    assert any(t.type is TokenType.IDENTIFIER and t.value == "$1" for t in tokens)
+
+
+def test_bash_lexer_dollar_ten_is_positional_plus_digit() -> None:
+    tokens = list(BashLexer().tokenize("echo $10"))
+    values = [t.value for t in tokens]
+    assert "$1" in values
+    assert "0" in values
+
+
+def test_bash_lexer_special_variables_single_tokens() -> None:
+    tokens = list(BashLexer().tokenize("echo $$ $@ $? $# $! $- $*"))
+    variables = [t.value for t in tokens if t.type is TokenType.IDENTIFIER and t.value.startswith("$")]
+    assert variables == ["$$", "$@", "$?", "$#", "$!", "$-", "$*"]
+
+
+def test_bash_lexer_hash_in_word_is_not_comment() -> None:
+    code = "echo a#b\n"
+    tokens = list(BashLexer().tokenize(code))
+    assert all(t.type is not TokenType.COMMENT for t in tokens)
+    assert "".join(t.value for t in tokens) == code
+
+
+def test_bash_lexer_comment_after_whitespace() -> None:
+    tokens = list(BashLexer().tokenize("echo a # b\n"))
+    assert any(t.type is TokenType.COMMENT and t.value == "# b" for t in tokens)
+
+
 def test_bash_lexer_empty_input() -> None:
     lexer = BashLexer()
     assert list(lexer.tokenize("")) == []
