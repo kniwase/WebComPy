@@ -121,6 +121,8 @@ class VirtualDOMNode:
         if self._node_type == 1:
             parts: list[str] = []
             for child in self._children:
+                if child.nodeType == 8:
+                    continue
                 text = child.textContent
                 if text is not None:
                     parts.append(text)

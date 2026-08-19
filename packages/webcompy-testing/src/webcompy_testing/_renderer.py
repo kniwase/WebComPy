@@ -228,7 +228,7 @@ def _dfs_all(node: VirtualDOMNode, tag: str) -> list[VirtualDOMNode]:
 
 
 def _dfs_text(node: VirtualDOMNode, text: str) -> VirtualDOMNode | None:
-    if node.textContent == text:
+    if node.nodeType != 8 and node.textContent == text:
         return node
     for i in range(node.childNodes.length):
         child = node.childNodes[i]

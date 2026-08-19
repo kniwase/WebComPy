@@ -67,7 +67,10 @@ class ServerDOMPort(DOMPort):
 
 def _serialize_node(node: DOMNode) -> str:
     if node.nodeType == 8:
-        return f"<!--{node.textContent or ''}-->"
+        data = node.textContent or ""
+        if "--" in data or data.endswith("-"):
+            raise ValueError(f"Comment data must not contain '--' or end with '-': {data!r}")
+        return f"<!--{data}-->"
     if node.nodeType == 3:
         text = node.textContent or ""
         parent = node.parentNode
