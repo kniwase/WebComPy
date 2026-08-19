@@ -17,8 +17,8 @@
 
 ## 3. WebSocket endpoint stream calls
 
-- [ ] 3.1 Add `StreamCallHub` (per-connection, per-call generator tasks, `stream_id` emission, done/error frames, cancel on `stream_cancel` and socket close) in a new `webcompy_server/rpc/_streams.py` and wire flagged calls in `_ws_endpoint.py`; `ruff check` + `pyright` clean
-- [ ] 3.2 Unit-test the WS stream protocol (ack shape, event frames without cursor, done/error ordering, cancel stops the generator, socket close cancels all streams, per-call isolation) in `tests/`
+- [x] 3.1 Add `StreamCallHub` (per-connection, per-call generator tasks, `stream_id` emission, done/error frames, cancel on `stream_cancel` and socket close) in a new `webcompy_server/rpc/_streams.py` and wire flagged calls in `_ws_endpoint.py`; `ruff check` + `pyright` clean
+- [x] 3.2 Unit-test the WS stream protocol (ack shape, event frames without cursor, done/error ordering, cancel stops the generator, socket close cancels all streams, per-call isolation) in `tests/`
 
 ## 4. Client RpcStream object
 
