@@ -2,12 +2,12 @@
 
 ## 0. Preconditions
 
-- [ ] 0.1 Rebase this branch onto the updated base that includes `feat-sse-post` and verify `FetchPort.stream` / `FetchStream` and the `sse-parser` module are available
+- [x] 0.1 Rebase this branch onto the updated base that includes `feat-sse-post` and verify `FetchPort.stream` / `FetchStream` and the `sse-parser` module are available
 
 ## 1. Registry streaming detection
 
-- [ ] 1.1 Add `is_streaming` to `ProcedureInfo` and implement generator/iterable return-annotation detection with element-type extraction and the spec'd validation rejections in `webcompy/rpc/_registry.py`; `ruff check` + `pyright` clean
-- [ ] 1.2 Unit-test registration cases (async gen, sync gen, unsubscripted, non-generator with iterable annotation, name collision) in `tests/`
+- [x] 1.1 Add `is_streaming` to `ProcedureInfo` and implement generator/iterable return-annotation detection with element-type extraction and the spec'd validation rejections in `webcompy/rpc/_registry.py`; `ruff check` + `pyright` clean
+- [x] 1.2 Unit-test registration cases (async gen, sync gen, unsubscripted, non-generator with iterable annotation, name collision) in `tests/`
 
 ## 2. HTTP dispatcher SSE streaming
 
