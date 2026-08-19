@@ -21,7 +21,7 @@
 
 ## 4. BashLexer: special variables and comment position
 
-- [ ] 4.1 Extend the variable pattern with `\$\d+` and `\$[@*#?$!-]`, yielding a single IDENTIFIER with the `$` preserved, in `packages/webcompy/src/webcompy/ui/code_block/lexers/_bash.py` (design D8)
+- [ ] 4.1 Extend the variable pattern with `\$\d` (single digit) and `\$[@*#?$!-]`, yielding a single IDENTIFIER with the `$` preserved, in `packages/webcompy/src/webcompy/ui/code_block/lexers/_bash.py` (design D8; `$10` must stay split as `$1` + `0`)
 - [ ] 4.2 Restrict the comment pattern to line start or after horizontal whitespace with `re.MULTILINE` lookbehind (design D8)
 - [ ] 4.3 Add regression tests: `echo $1` single IDENTIFIER `$1`, `echo a#b` no COMMENT with intact round-trip, `echo a # b` COMMENT `# b`, existing `$NAME`/`${NAME}` scenarios unchanged
 

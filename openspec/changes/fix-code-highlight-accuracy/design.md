@@ -125,13 +125,16 @@ commonly use `_` separators.
 
 ### D8: Bash special variables and comment position
 
-- Variable pattern gains `\$\d+ | \$[@*#?$!-]` alongside the existing
+- Variable pattern gains `\$\d | \$[@*#?$!-]` alongside the existing
   `$NAME`/`${NAME}` alternatives, still yielding a single IDENTIFIER token
-  with the `$` preserved (per the existing requirement).
-- Comment pattern becomes `(?:(?<=^)|(?<=[ \t]))\#[^\n]*` with the pattern
-  compiled with `re.MULTILINE`, so `#` only starts a comment at line start or
-  after horizontal whitespace. An unmatched mid-word `#` falls through to the
-  gap path and round-trips as IDENTIFIER text.
+  with the `$` preserved (per the existing requirement). `\$\d` is a single
+  digit only: POSIX shell semantics make `$10` mean `$1` followed by a literal
+  `0`, so multi-digit `$` runs must stay split.
+- Comment pattern becomes `(?:\A|(?<=\n)|(?<=[ \t]))\#[^\n]*`, so `#` only
+  starts a comment at the start of the string, at line start, or after
+  horizontal whitespace. This needs no `re.MULTILINE` (verified: `\A` and the
+  one-width lookbehinds are sufficient). An unmatched mid-word `#` falls
+  through to the gap path and round-trips as IDENTIFIER text.
 
 ## Risks / Trade-offs
 
