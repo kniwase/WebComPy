@@ -22,8 +22,8 @@
 
 ## 4. Client RpcStream object
 
-- [ ] 4.1 Implement `RpcStream` in `webcompy/rpc/_stream.py`: `AsyncIterator` with typed per-item decode (`from_json` + transfer `meta`), `RpcStreamState {OPEN, CLOSED, FAILED}` signal, idempotent `.close()`, `async with` support, component-destroy hook, SSR degraded empty stream; `ruff check` + `pyright` clean
-- [ ] 4.2 Unit-test `RpcStream` semantics (typed items, mid-stream `RpcError`, exhaustion, close idempotency, `async with`, destroy hook, SSR degradation) in `tests/`
+- [x] 4.1 Implement `RpcStream` in `webcompy/rpc/_stream.py`: `AsyncIterator` with typed per-item decode (`from_json` + transfer `meta`), `RpcStreamState {OPEN, CLOSED, FAILED}` signal, idempotent `.close()`, `async with` support, component-destroy hook, SSR degraded empty stream; `ruff check` + `pyright` clean
+- [x] 4.2 Unit-test `RpcStream` semantics (typed items, mid-stream `RpcError`, exhaustion, close idempotency, `async with`, destroy hook, SSR degradation) in `tests/`
 
 ## 5. HTTP client stream
 
