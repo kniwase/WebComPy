@@ -142,6 +142,18 @@ class DOMPort(ABC):
         ...
 
     @abstractmethod
+    def create_comment(self, data: str) -> DOMNode:
+        """Create a comment node.
+
+        Args:
+            data: Comment data. Callers must supply comment-safe data (no ``--`` sequence).
+
+        Returns:
+            A new comment node.
+        """
+        ...
+
+    @abstractmethod
     def query_selector(self, selector: str) -> DOMNode | None:
         """Query the document for the first element matching a CSS selector.
 

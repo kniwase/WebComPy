@@ -61,7 +61,7 @@ class TeleportProps(TypedDict):
 
 
 class TeleportElement(DynamicElement):
-    _ANCHOR_TEXT = "\u200b"
+    _ANCHOR_DATA = "webcompy-teleport-anchor"
 
     def __init__(self, props: TeleportProps, *children: ElementChildren) -> None:
         to: object = props.get("to") if isinstance(props, dict) else None
@@ -113,8 +113,7 @@ class TeleportElement(DynamicElement):
         return self._create_node()
 
     def _create_node(self) -> DOMNode:
-        anchor_text = "" if ENVIRONMENT == "pyscript" else self._ANCHOR_TEXT
-        node = inject(DOM_PORT_KEY).create_text_node(anchor_text)
+        node = inject(DOM_PORT_KEY).create_comment(self._ANCHOR_DATA)
         self._init_new_node(node)
         return node
 
@@ -213,14 +212,12 @@ class TeleportElement(DynamicElement):
             task.add_done_callback(self._on_hydrate_render_done)
 
     def _node_matches_existing(self, existing: DOMNode) -> bool:
-        return existing.nodeName.lower() == "#text" and (existing.textContent or "") in ("", self._ANCHOR_TEXT)
+        return existing.nodeName.lower() == "#comment" and (existing.textContent or "") == self._ANCHOR_DATA
 
     def _adopt_node(self, node: DOMNode) -> None:
         self._node_cache = node
         self._mounted = True
         node.__webcompy_node__ = True
-        if node.textContent:
-            node.textContent = ""
 
     def _re_index_children(self, recursive: bool = False) -> None:
         if self._inline:

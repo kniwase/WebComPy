@@ -22,6 +22,9 @@ class BrowserDOMPort(DOMPort):
     def create_text_node(self, text: str) -> DOMNode:
         return self._browser.document.createTextNode(text)
 
+    def create_comment(self, data: str) -> DOMNode:
+        return self._browser.document.createComment(data)
+
     def query_selector(self, selector: str) -> DOMNode | None:
         return self._browser.document.querySelector(selector) or None
 

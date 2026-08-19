@@ -5,8 +5,10 @@ from webcompy_server.ports import VirtualDOMNode
 
 
 class FakeDOMNode(VirtualDOMNode):
-    def __init__(self, tag: str = "div", text_content: str | None = None):
-        super().__init__(tag, node_type=3 if tag.startswith("#text") else 1, text_content=text_content)
+    def __init__(self, tag: str = "div", text_content: str | None = None, *, node_type: int | None = None) -> None:
+        if node_type is None:
+            node_type = 8 if tag.startswith("#comment") else (3 if tag.startswith("#text") else 1)
+        super().__init__(tag, node_type=node_type, text_content=text_content)
         self.__webcompy_prerendered_node__: bool = False
         self.textContent_write_count: int = 0
         self.setAttribute_count: int = 0

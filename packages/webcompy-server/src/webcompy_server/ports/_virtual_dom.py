@@ -108,6 +108,8 @@ class VirtualDOMNode:
     def nodeName(self) -> str:
         if self._node_type == 3:
             return "#text"
+        if self._node_type == 8:
+            return "#comment"
         return self._tag_name.upper()
 
     @property
@@ -119,6 +121,8 @@ class VirtualDOMNode:
         if self._node_type == 1:
             parts: list[str] = []
             for child in self._children:
+                if child.nodeType == 8:
+                    continue
                 text = child.textContent
                 if text is not None:
                     parts.append(text)
