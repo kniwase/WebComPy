@@ -28,14 +28,14 @@
 
 ## 5. E2E layout regression (D5)
 
-- [ ] 5.1 In `e2e/docs/test_home.py`, add a test that navigates with `wait_until="domcontentloaded"` (raw `page` fixture, no pyscript-init wait), measures `offsetHeight` of the first `.navbar-item` and of each `.navbar-item-dropdown`, and asserts they are equal
-- [ ] 5.2 Run the docs-home E2E group and confirm the new test passes (and would fail against the old ZWSP anchor)
+- [x] 5.1 In `e2e/docs/test_home.py`, add a test that navigates with `wait_until="domcontentloaded"` (raw `page` fixture, no pyscript-init wait), measures `offsetHeight` of the first `.navbar-item` and of each `.navbar-item-dropdown`, and asserts they are equal
+- [x] 5.2 Run the docs-home E2E group and confirm the new test passes (and would fail against the old ZWSP anchor)
 
 ## 6. Verification and spec sync
 
-- [ ] 6.1 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`
-- [ ] 6.2 `uv run python -m pytest tests/ --tb=short` (full suite, teleport subset green)
-- [ ] 6.3 `scripts/run-e2e-tests.sh docs-home` and `scripts/run-e2e-tests.sh docs-documents`
-- [ ] 6.4 `openspec validate fix-teleport-anchor-layout-shift --strict` and `python3 scripts/check-doc-spec-refs.py`
+- [x] 6.1 `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`
+- [x] 6.2 `uv run python -m pytest tests/ --tb=short` (full suite, teleport subset green)
+- [x] 6.3 `scripts/run-e2e-tests.sh docs-home` and `scripts/run-e2e-tests.sh docs-documents`
+- [x] 6.4 `openspec validate fix-teleport-anchor-layout-shift --strict` and `python3 scripts/check-doc-spec-refs.py`
 - [ ] 6.5 Sync the three delta specs into `openspec/specs/{teleport,virtual-dom,port-abstraction}/spec.md`
 - [ ] 6.6 Update `AGENTS.md` invariant/spec tables if any spec headings or references changed (run the check script again afterwards)
