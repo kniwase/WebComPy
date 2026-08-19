@@ -59,22 +59,29 @@ end-of-stream flush).
   FUNCTION span moves before the whitespace gap instead of after it — the
   concatenated text is identical, only span boundaries shift.
 
-### D2: Classify `OP` as PUNCTUATION, merging only adjacent PUNCTUATION
+### D2: Classify `OP` tokens per Pygments conventions (no merging)
 
-Emit `Token(TokenType.PUNCTUATION, value)` from the OP branch, then wrap the
-token generator in a small post-pass that merges *only* runs of consecutive
-PUNCTUATION tokens (concatenating values). This makes the existing
-`code-block` scenario (`def foo(): pass` → 1st `KEYWORD`, 3rd `FUNCTION`,
-5th `PUNCTUATION ":"`) hold exactly: `( )` merges into one token.
+Emit `Token(TokenType.PUNCTUATION, value)` from the OP branch only when the
+value is one of `( ) [ ] { } : , ;`, and `Token(TokenType.OPERATOR, value)`
+for every other `OP` token. This mirrors the Pygments `Punctuation`/`Operator`
+split (verified against Pygments itself), so Pygments stylesheets — the stated
+reason the dual `tok-*`/short classes exist — color these spans correctly.
 
+- **Why not merge**: the original plan merged consecutive PUNCTUATION tokens to
+  satisfy the `code-block` scenario `def foo(): pass` → 5th token
+  `PUNCTUATION ":"`. During implementation this proved impossible under any
+  uniform rule: `foo():` has `( ) :` directly adjacent, so full merging yields
+  one `():` token (5th = `" "`), no merging yields 5th = `")"`, and only an
+  ad-hoc "merge `()` pairs" rule reaches 5th = `":"`. Investigation also
+  showed the scenario never matched any implementation (it was wrong from
+  PR #178). Per user decision (Plan A), the scenario is corrected instead, and
+  no merge is performed.
 - **Alternative**: merge all consecutive same-type tokens. Rejected — it would
   fuse `"\n"` + `"    "` IDENTIFIER runs and break the documented
   newline-preservation behavior and its tests.
-- **Alternative**: keep OPERATOR and edit the `code-block` spec scenario
-  instead. Rejected by user decision: the spec's token positions are the
-  contract; the implementation aligns to it.
 - Bundled theme maps `--tok-op` and `--tok-punct` to the same color in both
-  the only shipped token set, so the visual output is unchanged.
+  the only shipped token set, so the visual output is unchanged for the nine
+  characters that move from `tok-op` to `tok-punct`.
 
 ### D3: f-strings via the 3.12 token types
 

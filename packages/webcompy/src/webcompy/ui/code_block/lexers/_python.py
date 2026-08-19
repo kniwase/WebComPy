@@ -89,6 +89,8 @@ class PythonLexer:
 
     _DEF_LIKE: frozenset[str] = frozenset({"def", "class", "async"})
 
+    _PUNCTUATION_OPS: frozenset[str] = frozenset({"(", ")", "[", "]", "{", "}", ":", ",", ";"})
+
     def __init__(self) -> None:
         self._keyword_names: frozenset[str] = frozenset(keyword.kwlist)
         self._soft_kw: frozenset[str] = frozenset(getattr(keyword, "softkwlist", ()))
@@ -105,7 +107,6 @@ class PythonLexer:
         pending_def: str | None = None
         pending_decorator: bool = False
         prev_end: tuple[int, int] = (1, 0)
-        pending_function_name: str | None = None
 
         for tok in tokens:
             start_line, start_col = tok.start
@@ -142,10 +143,10 @@ class PythonLexer:
             if tok_type == _py_token.OP:
                 if value == "@":
                     pending_decorator = True
-                if pending_function_name is not None and value == "(":
-                    yield Token(TokenType.FUNCTION, pending_function_name)
-                    pending_function_name = None
-                yield Token(TokenType.OPERATOR, value)
+                yield Token(
+                    TokenType.PUNCTUATION if value in self._PUNCTUATION_OPS else TokenType.OPERATOR,
+                    value,
+                )
                 continue
 
             if tok_type == _py_token.NAME:
@@ -163,7 +164,7 @@ class PythonLexer:
                     yield Token(TokenType.BUILTIN, value)
                 elif pending_def is not None and pending_def in self._DEF_LIKE:
                     pending_def = None
-                    pending_function_name = value
+                    yield Token(TokenType.FUNCTION, value)
                 else:
                     pending_def = None
                     yield Token(TokenType.IDENTIFIER, value)
@@ -173,9 +174,6 @@ class PythonLexer:
             pending_def = None
             if value and value.strip():
                 yield Token(TokenType.IDENTIFIER, value)
-
-        if pending_function_name is not None:
-            yield Token(TokenType.FUNCTION, pending_function_name)
 
     def __call__(self, code: str) -> Iterable[Token]:
         return self.tokenize(code)

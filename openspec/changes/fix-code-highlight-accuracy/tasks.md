@@ -3,8 +3,8 @@
 ## 1. PythonLexer: class/def name emission and punctuation classification
 
 - [ ] 1.1 Remove the `pending_function_name` machinery (variable, `(`-flush in the OP branch, end-of-stream flush) from `packages/webcompy/src/webcompy/ui/code_block/lexers/_python.py` and emit `Token(TokenType.FUNCTION, value)` immediately in the def-like NAME branch (design D1)
-- [ ] 1.2 Emit `OP` tokens as `TokenType.PUNCTUATION` and add a post-pass that merges only consecutive PUNCTUATION tokens (design D2)
-- [ ] 1.3 Add regression tests in `tests/test_code_block_lexers.py`: class name emitted in place (`class Counter:` + `def`), name not displaced by a later call (`class ChatMessage:` + call), name not appended at EOF (`class Event:`), class with bases (`class Foo(Bar):`), round-trip invariant across representative samples, and exact token positions for `def foo(): pass` (1st KEYWORD, 3rd FUNCTION, 5th PUNCTUATION `":"`)
+- [ ] 1.2 Emit `OP` tokens per Pygments conventions: `( ) [ ] { } : , ;` as `TokenType.PUNCTUATION`, all other `OP` tokens as `TokenType.OPERATOR` (no merging; design D2)
+- [ ] 1.3 Add regression tests in `tests/test_code_block_lexers.py`: class name emitted in place (`class Counter:` + `def`), name not displaced by a later call (`class ChatMessage:` + call), name not appended at EOF (`class Event:`), class with bases (`class Foo(Bar):`), round-trip invariant across representative samples, `def foo(): pass` (1st KEYWORD, 3rd FUNCTION, `(`/`)`/`:` as PUNCTUATION), and punctuation-vs-operator split (`=`, `+`, `.` OPERATOR; brackets/`,` PUNCTUATION)
 
 ## 2. PythonLexer: f-strings, soft keywords, decorator position
 

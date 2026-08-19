@@ -52,22 +52,23 @@ When `PythonLexer` encounters a NAME token following the `def`, `class`, or `asy
 - **THEN** a `Token(TokenType.FUNCTION, "Foo")` SHALL be emitted before the `(` token
 - **AND** `Bar` SHALL be emitted as `TokenType.IDENTIFIER`
 
-### Requirement: PythonLexer SHALL classify operator tokens as PUNCTUATION with same-type merging
+### Requirement: PythonLexer SHALL classify operator tokens per Pygments conventions
 
-`PythonLexer` SHALL emit Python `OP` tokens as `TokenType.PUNCTUATION`. Consecutive `PUNCTUATION` tokens with no intervening source text MAY be merged into a single token whose value is the concatenation; the merged output SHALL be textually identical to the unmerged sequence.
+`PythonLexer` SHALL emit Python `OP` tokens whose value is one of `(`, `)`, `[`, `]`, `{`, `}`, `:`, `,`, `;` as `TokenType.PUNCTUATION`, and all other `OP` tokens as `TokenType.OPERATOR`. This mirrors the Pygments `Punctuation`/`Operator` split so Pygments stylesheets color the token spans correctly.
 
-#### Scenario: def statement token positions
+#### Scenario: Punctuation characters in a def statement
 
 - **WHEN** `PythonLexer().tokenize("def foo(): pass")` is called
 - **THEN** the first token SHALL be `Token(TokenType.KEYWORD, "def")`
 - **AND** the third token SHALL be `Token(TokenType.FUNCTION, "foo")`
-- **AND** the fifth token SHALL be `Token(TokenType.PUNCTUATION, ":")`
+- **AND** the tokens for `(`, `)`, and `:` SHALL be `TokenType.PUNCTUATION`
 
-#### Scenario: Merged punctuation preserves text
+#### Scenario: Operators are not punctuation
 
 - **WHEN** `PythonLexer().tokenize("x = a[0] + f(b, c)")` is called
-- **THEN** the concatenation of all token values SHALL equal the input
-- **AND** every `,`, `(`, `)`, `[`, `]`, `+` character SHALL be contained in a `PUNCTUATION` token
+- **THEN** the tokens for `=`, `+`, and `.` SHALL be `TokenType.OPERATOR`
+- **AND** the tokens for `[`, `]`, `(`, `,`, and `)` SHALL be `TokenType.PUNCTUATION`
+- **AND** the concatenation of all token values SHALL equal the input
 
 ### Requirement: PythonLexer SHALL color f-string literal content as STRING
 

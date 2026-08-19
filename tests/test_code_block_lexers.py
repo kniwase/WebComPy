@@ -73,6 +73,69 @@ def test_python_lexer_preserves_newline_after_comment() -> None:
     assert values[comment_idx + 1] == "\n"
 
 
+_ROUND_TRIP_SAMPLES = [
+    "class Counter:\n    def __init__(self):\n        self.count = 0\n",
+    '@dataclass\nclass ChatMessage:\n    user: str\n\nws = use_websocket("/api/chat")\n',
+    "class Event:\n    type: str\n",
+    "class Foo(Bar):\n    pass\n",
+    "def foo(): pass",
+    "async def fetch():\n    return 1\n",
+    "x = a[0] + f(b, c)\n",
+]
+
+
+@pytest.mark.parametrize("code", _ROUND_TRIP_SAMPLES)
+def test_python_lexer_round_trip(code: str) -> None:
+    tokens = list(PythonLexer().tokenize(code))
+    assert "".join(t.value for t in tokens) == code
+
+
+def test_python_lexer_class_name_stays_in_place() -> None:
+    code = "class Counter:\n    def __init__(self):\n        self.count = 0\n"
+    tokens = list(PythonLexer().tokenize(code))
+    assert "".join(t.value for t in tokens) == code
+    assert [t.value for t in tokens if t.type is TokenType.FUNCTION] == ["Counter", "__init__"]
+    values = [t.value for t in tokens]
+    assert values.index("Counter") < values.index(":")
+
+
+def test_python_lexer_class_name_not_displaced_by_later_call() -> None:
+    code = '@dataclass\nclass ChatMessage:\n    user: str\n\nws = use_websocket("/api/chat")\n'
+    tokens = list(PythonLexer().tokenize(code))
+    assert "".join(t.value for t in tokens) == code
+    values = [t.value for t in tokens]
+    assert values.index("ChatMessage") < values.index(":")
+    function_tokens = [t for t in tokens if t.type is TokenType.FUNCTION]
+    assert [t.value for t in function_tokens] == ["ChatMessage"]
+
+
+def test_python_lexer_class_only_not_appended_at_eof() -> None:
+    code = "class Event:\n    type: str\n"
+    tokens = list(PythonLexer().tokenize(code))
+    assert "".join(t.value for t in tokens) == code
+    assert tokens[-1].value != "Event"
+
+
+def test_python_lexer_class_with_bases_highlights_name() -> None:
+    tokens = list(PythonLexer().tokenize("class Foo(Bar):\n    pass\n"))
+    assert any(t.type is TokenType.FUNCTION and t.value == "Foo" for t in tokens)
+    assert any(t.type is TokenType.IDENTIFIER and t.value == "Bar" for t in tokens)
+
+
+def test_python_lexer_def_statement_key_parts() -> None:
+    tokens = list(PythonLexer().tokenize("def foo(): pass"))
+    assert tokens[0] == Token(TokenType.KEYWORD, "def")
+    assert tokens[2] == Token(TokenType.FUNCTION, "foo")
+    assert all(t.type is TokenType.PUNCTUATION for t in tokens if t.value in ("(", ")", ":"))
+
+
+def test_python_lexer_punctuation_vs_operator() -> None:
+    tokens = list(PythonLexer().tokenize("x = a[0] + f(b, c)\n"))
+    assert all(t.type is TokenType.PUNCTUATION for t in tokens if t.value in ("(", ")", "[", "]", ",", ":"))
+    assert all(t.type is TokenType.OPERATOR for t in tokens if t.value in ("=", "+"))
+    assert "".join(t.value for t in tokens) == "x = a[0] + f(b, c)\n"
+
+
 def test_highlight_preserves_newlines_for_python_multiline() -> None:
     from webcompy.ui.code_block._highlight import highlight
 

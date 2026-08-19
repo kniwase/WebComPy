@@ -24,11 +24,13 @@ ordinary expression positions such as `match = re.match(...)` or
   position. Remove the deferred `pending_function_name` machinery that only
   flushed on a later `(` operator (or at end-of-stream), which caused the name
   to be lost, mispositioned, or appended at the end of the block.
-- **PythonLexer — operator classification**: classify `OP` tokens as
-  `PUNCTUATION` (merging only consecutive same-type tokens) so the existing
-  `code-block` spec scenario for `def foo(): pass` holds exactly. Emitted span
-  classes change from `tok-op o` to `tok-punct p`; both map to the same color
-  in the bundled theme, so the bundled visual output is unchanged.
+- **PythonLexer — operator classification**: classify Python `OP` tokens per
+  Pygments conventions: `(`, `)`, `[`, `]`, `{`, `}`, `:`, `,`, `;` as
+  `PUNCTUATION`, all other operators as `OPERATOR`. This satisfies the
+  `code-block` spec scenario's intent (`:` and brackets are `PUNCTUATION`)
+  while matching Pygments stylesheet semantics. Emitted span classes change
+  from `tok-op o` to `tok-punct p` for those nine characters; both map to the
+  same color in the bundled theme, so the bundled visual output is unchanged.
 - **PythonLexer — f-strings**: yield `FSTRING_START`, `FSTRING_MIDDLE`, and
   `FSTRING_END` tokens (Python 3.12+) as `STRING` so f-string literal content
   is colored like other strings.
@@ -65,6 +67,10 @@ ordinary expression positions such as `match = re.match(...)` or
   Python `OP` → `PUNCTUATION` classification with same-type merge, TOML strict
   datetime and extended integer formats, Bash special variables, and Bash
   comment-start positioning.
+- `code-block`: correct the "Python code is tokenized with tokenize" scenario,
+  which asserted a token position (`fifth token SHALL be PUNCTUATION ":"`) that
+  no implementation ever satisfied; the scenario now asserts the Pygments-true
+  classification of `(`, `)`, and `:` as `PUNCTUATION`.
 
 ## Known Issues Addressed
 
