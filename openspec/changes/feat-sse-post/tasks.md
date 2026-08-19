@@ -34,9 +34,9 @@
 
 ## 7. E2E and docs
 
-- [ ] 7.1 Add a browser E2E test in `e2e/` for the POST path: a Starlette SSE endpoint mounted via asgi-mount, POST with body, event delivery, and server-side close triggering client reconnection; run via `scripts/run-e2e-tests.sh`
-- [ ] 7.2 Update the EventSource docs page in `docs_app/documents/` (POST usage, reconnection and `Last-Event-ID` semantics, non-goals) and any docs demo if applicable
-- [ ] 7.3 Update `AGENTS.md` review-knowledge tables (File → Spec Mapping row for `webcompy/ajax/_sse.py` and `webcompy/ports/_fetch.py`, Current Specs list entry for `sse-parser`) and run `python3 scripts/check-doc-spec-refs.py` until it passes
+- [x] 7.1 Add a browser E2E test in `e2e/` for the POST path: a Starlette SSE endpoint mounted via asgi-mount, POST with body, event delivery, and server-side close triggering client reconnection; run via `scripts/run-e2e-tests.sh`
+- [x] 7.2 Update the EventSource docs page in `docs_app/documents/` (POST usage, reconnection and `Last-Event-ID` semantics, non-goals) and any docs demo if applicable
+- [x] 7.3 Update `AGENTS.md` review-knowledge tables (File → Spec Mapping row for `webcompy/ajax/_sse.py` and `webcompy/ports/_fetch.py`, Current Specs list entry for `sse-parser`) and run `python3 scripts/check-doc-spec-refs.py` until it passes
 
 ## 8. Verification
 
