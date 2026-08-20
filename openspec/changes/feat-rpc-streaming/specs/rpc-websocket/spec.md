@@ -54,7 +54,7 @@ Each streaming call SHALL create its own generator instance and stream task (no 
 
 ### Requirement: RpcWsClient shall provide a typed stream call
 
-`RpcWsClient` SHALL provide `stream(method, params=None, *, result_type=None)` returning an `RpcStream` per the `rpc-streaming` capability. It SHALL dispatch `_webcompy.event` frames by `stream_id` (separately from `subscription_id` subscription dispatch), map `stream_done` to exhaustion and `stream_error` to `RpcError`, and send `_webcompy.stream_cancel` on close. Calling `stream()` when the client is closed, unavailable outside the browser, or the socket is not `OPEN` SHALL raise `RpcError` immediately (fail-fast, like `call()`). Frame encoding and params handling SHALL reuse the existing call machinery.
+`RpcWsClient` SHALL provide `stream(method, params=None, *, result_type=None)` returning an `RpcStream` per the `rpc-streaming` capability. It SHALL dispatch `_webcompy.event` frames by `stream_id` (separately from `subscription_id` subscription dispatch), map `stream_done` to exhaustion and `stream_error` to `RpcError`, and send `_webcompy.stream_cancel` on close. Outside the browser `stream()` SHALL return an immediately-finished empty `RpcStream` (mirroring `subscribe()` and the `rpc-streaming` SSR contract); when the client is closed or the socket is not `OPEN` in the browser, `stream()` SHALL raise `RpcError` immediately (fail-fast, like `call()`). Frame encoding and params handling SHALL reuse the existing call machinery.
 
 #### Scenario: stream over an open socket returns an RpcStream
 
