@@ -39,9 +39,9 @@
 
 - [x] 7.1 Add browser E2E tests in `e2e/` for HTTP streaming (async-generator procedure over the real dispatcher, typed items, mid-stream error, close/cancel) and WebSocket streaming (stream frames, cancel, disconnect); run via `scripts/run-e2e-tests.sh`
 - [x] 7.2 Update `docs_app/documents/rpc.md` and `rpc_websocket.md` with streaming sections (registration, `rpc.stream` / `RpcWsClient.stream`, wire formats, cancellation, SSR behavior, non-goals)
-- [ ] 7.3 Update `AGENTS.md` review-knowledge tables (File → Spec Mapping for the new/changed rpc files and the `rpc-streaming` capability, Current Specs list) and run `python3 scripts/check-doc-spec-refs.py` until it passes
+- [x] 7.3 Update `AGENTS.md` review-knowledge tables (File → Spec Mapping for the new/changed rpc files and the `rpc-streaming` capability, Current Specs list) and run `python3 scripts/check-doc-spec-refs.py` until it passes
 
 ## 8. Verification
 
-- [ ] 8.1 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, and `uv run python -m pytest tests/ --tb=short`; fix all failures
-- [ ] 8.2 Run `openspec validate feat-rpc-streaming --strict` and resolve all findings
+- [x] 8.1 Run `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, and `uv run python -m pytest tests/ --tb=short`; fix all failures
+- [x] 8.2 Run `openspec validate feat-rpc-streaming --strict` and resolve all findings
