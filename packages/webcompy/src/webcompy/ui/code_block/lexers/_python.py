@@ -203,13 +203,9 @@ class PythonLexer:
 
 def _next_is_pattern_start(tokens: list[_py_tokenize.TokenInfo], index: int) -> bool:
     for tok in tokens[index + 1 :]:
-        if tok.type in (
-            _py_token.NEWLINE,
-            _py_token.NL,
-            _py_token.INDENT,
-            _py_token.DEDENT,
-            _py_token.COMMENT,
-        ):
+        if tok.type in (_py_token.NEWLINE, _py_token.NL):
+            return False
+        if tok.type == _py_token.COMMENT:
             continue
         if tok.type == _py_token.NAME:
             return not (tok.string in keyword.kwlist and tok.string not in _LITERAL_PATTERN_KEYWORDS)

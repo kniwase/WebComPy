@@ -195,6 +195,16 @@ def test_python_lexer_case_literal_patterns_keep_keyword() -> None:
     assert sum(1 for t in keywords if t.value == "case") == 3
 
 
+def test_python_lexer_match_at_line_end_is_identifier() -> None:
+    samples = [
+        "x = match\nprint(x)\n",
+        "x = case\nprint(x)\n",
+    ]
+    for code in samples:
+        tokens = list(PythonLexer().tokenize(code))
+        assert all(t.type is not TokenType.KEYWORD for t in tokens if t.value in ("match", "case"))
+
+
 def test_python_lexer_def_shadowing_builtin_is_function() -> None:
     tokens = list(PythonLexer().tokenize("def type(x):\n    return x\n"))
     assert any(t.type is TokenType.FUNCTION and t.value == "type" for t in tokens)
