@@ -135,7 +135,7 @@ The framework SHALL ship three built-in lexers that are registered automatically
 - **WHEN** `PythonLexer().tokenize("def foo(): pass")` is called
 - **THEN** the first token SHALL be `Token(TokenType.KEYWORD, "def")`
 - **AND** the third token SHALL be `Token(TokenType.FUNCTION, "foo")` (the function name following `def`)
-- **AND** the fifth token SHALL be `Token(TokenType.PUNCTUATION, ":")`
+- **AND** the tokens for `(`, `)`, and `:` SHALL be `TokenType.PUNCTUATION`
 
 #### Scenario: Bash code is tokenized with regex
 

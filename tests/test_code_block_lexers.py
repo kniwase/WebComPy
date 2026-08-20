@@ -73,6 +73,144 @@ def test_python_lexer_preserves_newline_after_comment() -> None:
     assert values[comment_idx + 1] == "\n"
 
 
+_ROUND_TRIP_SAMPLES = [
+    "class Counter:\n    def __init__(self):\n        self.count = 0\n",
+    '@dataclass\nclass ChatMessage:\n    user: str\n\nws = use_websocket("/api/chat")\n',
+    "class Event:\n    type: str\n",
+    "class Foo(Bar):\n    pass\n",
+    "def foo(): pass",
+    "async def fetch():\n    return 1\n",
+    "x = a[0] + f(b, c)\n",
+]
+
+
+@pytest.mark.parametrize("code", _ROUND_TRIP_SAMPLES)
+def test_python_lexer_round_trip(code: str) -> None:
+    tokens = list(PythonLexer().tokenize(code))
+    assert "".join(t.value for t in tokens) == code
+
+
+def test_python_lexer_class_name_stays_in_place() -> None:
+    code = "class Counter:\n    def __init__(self):\n        self.count = 0\n"
+    tokens = list(PythonLexer().tokenize(code))
+    assert "".join(t.value for t in tokens) == code
+    assert [t.value for t in tokens if t.type is TokenType.FUNCTION] == ["Counter", "__init__"]
+    values = [t.value for t in tokens]
+    assert values.index("Counter") < values.index(":")
+
+
+def test_python_lexer_class_name_not_displaced_by_later_call() -> None:
+    code = '@dataclass\nclass ChatMessage:\n    user: str\n\nws = use_websocket("/api/chat")\n'
+    tokens = list(PythonLexer().tokenize(code))
+    assert "".join(t.value for t in tokens) == code
+    values = [t.value for t in tokens]
+    assert values.index("ChatMessage") < values.index(":")
+    function_tokens = [t for t in tokens if t.type is TokenType.FUNCTION]
+    assert [t.value for t in function_tokens] == ["ChatMessage"]
+
+
+def test_python_lexer_class_only_not_appended_at_eof() -> None:
+    code = "class Event:\n    type: str\n"
+    tokens = list(PythonLexer().tokenize(code))
+    assert "".join(t.value for t in tokens) == code
+    assert tokens[-1].value != "Event"
+
+
+def test_python_lexer_class_with_bases_highlights_name() -> None:
+    tokens = list(PythonLexer().tokenize("class Foo(Bar):\n    pass\n"))
+    assert any(t.type is TokenType.FUNCTION and t.value == "Foo" for t in tokens)
+    assert any(t.type is TokenType.IDENTIFIER and t.value == "Bar" for t in tokens)
+
+
+def test_python_lexer_def_statement_key_parts() -> None:
+    tokens = list(PythonLexer().tokenize("def foo(): pass"))
+    assert tokens[0] == Token(TokenType.KEYWORD, "def")
+    assert tokens[2] == Token(TokenType.FUNCTION, "foo")
+    assert all(t.type is TokenType.PUNCTUATION for t in tokens if t.value in ("(", ")", ":"))
+
+
+def test_python_lexer_punctuation_vs_operator() -> None:
+    tokens = list(PythonLexer().tokenize("x = a[0] + f(b, c)\n"))
+    assert all(t.type is TokenType.PUNCTUATION for t in tokens if t.value in ("(", ")", "[", "]", ",", ":"))
+    assert all(t.type is TokenType.OPERATOR for t in tokens if t.value in ("=", "+"))
+    assert "".join(t.value for t in tokens) == "x = a[0] + f(b, c)\n"
+
+
+def test_python_lexer_fstring_literal_is_string() -> None:
+    code = 'msg = f"hello {name}"\n'
+    tokens = list(PythonLexer().tokenize(code))
+    assert [t.value for t in tokens if t.type is TokenType.STRING] == ['f"', "hello ", '"']
+    assert any(t.type is TokenType.IDENTIFIER and t.value == "name" for t in tokens)
+    assert "".join(t.value for t in tokens) == code
+
+
+def test_python_lexer_match_as_variable() -> None:
+    tokens = list(PythonLexer().tokenize("match = re.match(pattern, text)\n"))
+    assert all(t.type is not TokenType.KEYWORD for t in tokens if t.value == "match")
+
+
+def test_python_lexer_match_statement_keyword() -> None:
+    tokens = list(PythonLexer().tokenize("match command:\n    case _: pass\n"))
+    keywords = [t for t in tokens if t.type is TokenType.KEYWORD]
+    assert keywords[0].value == "match"
+    assert keywords[1].value == "case"
+
+
+def test_python_lexer_type_is_builtin() -> None:
+    tokens = list(PythonLexer().tokenize("t = type(obj)\n"))
+    assert any(t.type is TokenType.BUILTIN and t.value == "type" for t in tokens)
+
+
+def test_python_lexer_underscore_is_identifier() -> None:
+    tokens = list(PythonLexer().tokenize("for _ in range(3):\n    pass\n"))
+    assert any(t.type is TokenType.IDENTIFIER and t.value == "_" for t in tokens)
+
+
+def test_python_lexer_matmul_is_not_decorator() -> None:
+    tokens = list(PythonLexer().tokenize("c = a @ b\n"))
+    assert all(t.type is not TokenType.DECORATOR for t in tokens)
+    assert any(t.type is TokenType.OPERATOR and t.value == "@" for t in tokens)
+
+
+def test_python_lexer_def_named_match_is_function() -> None:
+    tokens = list(PythonLexer().tokenize("def match(x):\n    pass\n"))
+    assert any(t.type is TokenType.FUNCTION and t.value == "match" for t in tokens)
+
+
+def test_python_lexer_match_before_hard_keyword_is_identifier() -> None:
+    samples = [
+        "for match in re.finditer(pattern, text):\n    pass\n",
+        "with match as m:\n    pass\n",
+        "x = match and y\n",
+    ]
+    for code in samples:
+        tokens = list(PythonLexer().tokenize(code))
+        assert all(t.type is not TokenType.KEYWORD for t in tokens if t.value == "match")
+
+
+def test_python_lexer_case_literal_patterns_keep_keyword() -> None:
+    tokens = list(PythonLexer().tokenize('match point:\n    case None: pass\n    case 1: pass\n    case "a": pass\n'))
+    keywords = [t for t in tokens if t.type is TokenType.KEYWORD]
+    assert any(t.value == "match" for t in keywords)
+    assert sum(1 for t in keywords if t.value == "case") == 3
+
+
+def test_python_lexer_match_at_line_end_is_identifier() -> None:
+    samples = [
+        "x = match\nprint(x)\n",
+        "x = case\nprint(x)\n",
+    ]
+    for code in samples:
+        tokens = list(PythonLexer().tokenize(code))
+        assert all(t.type is not TokenType.KEYWORD for t in tokens if t.value in ("match", "case"))
+
+
+def test_python_lexer_def_shadowing_builtin_is_function() -> None:
+    tokens = list(PythonLexer().tokenize("def type(x):\n    return x\n"))
+    assert any(t.type is TokenType.FUNCTION and t.value == "type" for t in tokens)
+    assert all(t.type is not TokenType.BUILTIN for t in tokens if t.value == "type")
+
+
 def test_highlight_preserves_newlines_for_python_multiline() -> None:
     from webcompy.ui.code_block._highlight import highlight
 
@@ -112,6 +250,36 @@ def test_bash_lexer_tokenizes_comment() -> None:
     assert any(t.type == TokenType.COMMENT and t.value.startswith("#") for t in tokens)
 
 
+def test_bash_lexer_positional_parameter_single_token() -> None:
+    tokens = list(BashLexer().tokenize("echo $1"))
+    assert any(t.type is TokenType.IDENTIFIER and t.value == "$1" for t in tokens)
+
+
+def test_bash_lexer_dollar_ten_is_positional_plus_digit() -> None:
+    tokens = list(BashLexer().tokenize("echo $10"))
+    values = [t.value for t in tokens]
+    assert "$1" in values
+    assert "0" in values
+
+
+def test_bash_lexer_special_variables_single_tokens() -> None:
+    tokens = list(BashLexer().tokenize("echo $$ $@ $? $# $! $- $*"))
+    variables = [t.value for t in tokens if t.type is TokenType.IDENTIFIER and t.value.startswith("$")]
+    assert variables == ["$$", "$@", "$?", "$#", "$!", "$-", "$*"]
+
+
+def test_bash_lexer_hash_in_word_is_not_comment() -> None:
+    code = "echo a#b\n"
+    tokens = list(BashLexer().tokenize(code))
+    assert all(t.type is not TokenType.COMMENT for t in tokens)
+    assert "".join(t.value for t in tokens) == code
+
+
+def test_bash_lexer_comment_after_whitespace() -> None:
+    tokens = list(BashLexer().tokenize("echo a # b\n"))
+    assert any(t.type is TokenType.COMMENT and t.value == "# b" for t in tokens)
+
+
 def test_bash_lexer_empty_input() -> None:
     lexer = BashLexer()
     assert list(lexer.tokenize("")) == []
@@ -143,6 +311,35 @@ def test_toml_lexer_tokenizes_comment() -> None:
     lexer = TomlLexer()
     tokens = list(lexer.tokenize("# top-level comment\nname = 'x'"))
     assert any(t.type == TokenType.COMMENT for t in tokens)
+
+
+def test_toml_lexer_date_does_not_swallow_comment() -> None:
+    tokens = list(TomlLexer().tokenize("d = 2024-01-01  # release date\n"))
+    assert any(t.type is TokenType.STRING and t.value == "2024-01-01" for t in tokens)
+    assert any(t.type is TokenType.COMMENT and t.value == "# release date" for t in tokens)
+    assert "".join(t.value for t in tokens) == "d = 2024-01-01  # release date\n"
+
+
+def test_toml_lexer_full_datetime_single_string() -> None:
+    tokens = list(TomlLexer().tokenize("t = 2024-01-01T10:20:30Z\n"))
+    assert any(t.type is TokenType.STRING and t.value == "2024-01-01T10:20:30Z" for t in tokens)
+
+
+def test_toml_lexer_hex_octal_binary_numbers() -> None:
+    for literal in ("0x10", "0o17", "0b101"):
+        tokens = list(TomlLexer().tokenize(f"v = {literal}\n"))
+        assert any(t.type is TokenType.NUMBER and t.value == literal for t in tokens)
+
+
+def test_toml_lexer_underscored_integer() -> None:
+    tokens = list(TomlLexer().tokenize("n = 1_000_000\n"))
+    assert any(t.type is TokenType.NUMBER and t.value == "1_000_000" for t in tokens)
+
+
+def test_toml_lexer_round_trip() -> None:
+    code = 'd = 2024-01-01  # release\nmask = 0x10\nt = 2024-01-01T10:20:30Z\nname = "x"\n'
+    tokens = list(TomlLexer().tokenize(code))
+    assert "".join(t.value for t in tokens) == code
 
 
 def test_registry_register_and_get_by_name() -> None:
