@@ -17,6 +17,7 @@ from webcompy.rpc._errors import (
     INVALID_REQUEST,
     METHOD_NOT_FOUND,
     PARSE_ERROR,
+    RpcError,
 )
 from webcompy.rpc._registry import ProcedureInfo, ProcedureRegistry
 
@@ -304,16 +305,28 @@ async def _run_sse_stream(
             ],
         }
     )
-    agen = _ensure_async_iter(call.info.func(**call.kwargs))
+    agen: AsyncGenerator[Any, None] | None = None
 
     async def _pump() -> None:
+        nonlocal agen
         try:
+            agen = _ensure_async_iter(call.info.func(**call.kwargs))
             async for item in agen:
                 json_data, meta = encode_with_meta(item, type_handlers=registry.meta_encoders)
                 frame = _format_sse_event("item", json.dumps({"data": json_data, "meta": meta or None}))
                 await send({"type": "http.response.body", "body": frame.encode("utf-8"), "more_body": True})
         except asyncio.CancelledError:
             raise
+        except RpcError as err:
+            _logger.warning("RPC streaming procedure %r failed", call.info.name, exc_info=err)
+            try:
+                frame = _format_sse_event(
+                    "error",
+                    json.dumps({"code": err.code, "message": err.message, "data": err.data}),
+                )
+                await send({"type": "http.response.body", "body": frame.encode("utf-8"), "more_body": True})
+            except Exception:
+                _logger.exception("RPC streaming procedure %r: failed to send error event", call.info.name)
         except Exception:
             _logger.exception("RPC streaming procedure %r failed", call.info.name)
             try:
@@ -345,7 +358,8 @@ async def _run_sse_stream(
         pump_task.cancel()
         watch_task.cancel()
         await asyncio.gather(pump_task, watch_task, return_exceptions=True)
-        await agen.aclose()
+        if agen is not None:
+            await agen.aclose()
     with contextlib.suppress(Exception):
         await send({"type": "http.response.body", "body": b"", "more_body": False})
 

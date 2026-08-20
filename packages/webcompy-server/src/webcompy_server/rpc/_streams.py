@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import itertools
 import logging
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from webcompy.hydration._transfer_meta import encode_with_meta
-from webcompy.rpc._errors import INTERNAL_ERROR
+from webcompy.rpc._errors import INTERNAL_ERROR, RpcError
 from webcompy.rpc._registry import ProcedureRegistry
 from webcompy.rpc._stream import STREAM_CANCEL_METHOD, STREAM_DONE_METHOD, STREAM_ERROR_METHOD
 from webcompy_server.rpc._dispatcher import _ensure_async_iter, _StreamCall
@@ -55,14 +56,29 @@ class StreamCallHub:
             task.cancel()
 
     async def _run(self, conn: _Connection, stream_id: str, call: _StreamCall) -> None:
-        agen = _ensure_async_iter(call.info.func(**call.kwargs))
+        agen: AsyncGenerator[Any, None] | None = None
         try:
+            agen = _ensure_async_iter(call.info.func(**call.kwargs))
             async for item in agen:
                 json_data, meta = encode_with_meta(item, type_handlers=self.registry.meta_encoders)
                 conn.send(_stream_event_frame(stream_id, json_data, meta or None))
             conn.send({"jsonrpc": "2.0", "method": STREAM_DONE_METHOD, "params": {"stream_id": stream_id}})
         except asyncio.CancelledError:
             raise
+        except RpcError as err:
+            _logger.warning("RPC streaming procedure %r failed", call.info.name, exc_info=err)
+            conn.send(
+                {
+                    "jsonrpc": "2.0",
+                    "method": STREAM_ERROR_METHOD,
+                    "params": {
+                        "stream_id": stream_id,
+                        "code": err.code,
+                        "message": err.message,
+                        "data": err.data,
+                    },
+                }
+            )
         except Exception:
             _logger.exception("RPC streaming procedure %r failed", call.info.name)
             conn.send(
@@ -73,7 +89,8 @@ class StreamCallHub:
                 }
             )
         finally:
-            await agen.aclose()
+            if agen is not None:
+                await agen.aclose()
 
 
 __all__ = [
