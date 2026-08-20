@@ -230,6 +230,51 @@ jobs:
           - name: error-handling
             files: e2e/core/test_error_handling.py
         serving_mode: [prod, static]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-environment
+        with:
+          uv-sync-args: "--group docs"
+          playwright-install: "true"
+      - name: Run E2E tests
+        run: |
+          max_attempts=3
+          result=1
+          for i in $(seq 1 "$max_attempts"); do
+            set +e
+            scripts/run-e2e-tests.sh ${{ matrix.group.name }} --serving-mode=${{ matrix.serving_mode }} 2>&1 | tee ci-e2e-results.log
+            result=${PIPESTATUS[0]}
+            set -e
+            [ "$result" -eq 0 ] && break
+            echo "E2E tests failed (attempt $i/$max_attempts), retrying in 10s..."
+            sleep 10
+          done
+          exit "$result"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-server-log-${{ matrix.group.name }}-${{ matrix.serving_mode }}
+          path: |
+            e2e/core/.e2e-server.log
+            .tmp/e2e-test-corpus/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-e2e-log-${{ matrix.group.name }}-${{ matrix.serving_mode }}
+          path: ci-e2e-results.log
+
+  docs-e2e:
+    # Docs E2E tests exercise the generated docs site, so they run only when the
+    # site was (re)generated (i.e. docs_app/ or the source packages changed).
+    if: ${{ needs.detect-scope.outputs.has-generate-changes == 'true' && !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
+    needs: [detect-scope, generate]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
+    strategy:
+      fail-fast: false
+      matrix:
         include:
           - group:
               name: docs-home
@@ -262,7 +307,6 @@ jobs:
           uv-sync-args: "--group docs"
           playwright-install: "true"
       - name: Download docs dist artifact
-        if: startsWith(matrix.group.name, 'docs-')
         uses: actions/download-artifact@v7
         with:
           name: docs-dist
@@ -272,9 +316,12 @@ jobs:
           DOCS_DIST_DIR: ${{ github.workspace }}/docs_app/dist
         run: |
           max_attempts=3
+          result=1
           for i in $(seq 1 "$max_attempts"); do
+            set +e
             scripts/run-e2e-tests.sh ${{ matrix.group.name }} --serving-mode=${{ matrix.serving_mode }} 2>&1 | tee ci-e2e-results.log
             result=${PIPESTATUS[0]}
+            set -e
             [ "$result" -eq 0 ] && break
             echo "E2E tests failed (attempt $i/$max_attempts), retrying in 10s..."
             sleep 10
@@ -285,7 +332,6 @@ jobs:
         with:
           name: e2e-server-log-${{ matrix.group.name }}-${{ matrix.serving_mode }}
           path: |
-            e2e/core/.e2e-server.log
             e2e/docs/.e2e-docs-server.log
             .tmp/e2e-test-corpus/
       - uses: actions/upload-artifact@v4
@@ -297,7 +343,7 @@ jobs:
   review:
     name: AI Code Review
     if: ${{ always() && !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
-    needs: [detect-scope, openspec, openspec-check, lint, typecheck, generate, test, e2e-matrix]
+    needs: [detect-scope, openspec, openspec-check, lint, typecheck, generate, test, e2e-matrix, docs-e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
