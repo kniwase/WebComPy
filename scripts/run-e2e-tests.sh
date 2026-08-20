@@ -371,7 +371,10 @@ if [ "$PARALLEL" -eq 1 ]; then
 
   # Bounded worker pool: never run more than MAX_PARALLEL groups at once.
   # Reap finished jobs before launching the next ones so the machine is not
-  # overwhelmed by the full matrix.
+  # overwhelmed by the full matrix. Sleeping whenever a job is still running
+  # (including during the final drain, when TASK_LIST is empty) lets the shell
+  # process SIGCHLD and reap finished background jobs; without it a tight
+  # builtin-only loop can spin forever on a completed (zombie) job.
   while [ "${#TASK_LIST[@]}" -gt 0 ] || [ "${#PIDS[@]}" -gt 0 ]; do
     while [ "${#PIDS[@]}" -lt "$MAX_PARALLEL" ] && [ "${#TASK_LIST[@]}" -gt 0 ]; do
       IFS='|' read -r group_name mode files <<< "${TASK_LIST[0]}"
@@ -397,7 +400,7 @@ if [ "$PARALLEL" -eq 1 ]; then
     done
     PIDS=("${NEW_PIDS[@]}")
 
-    if [ "${#PIDS[@]}" -ge "$MAX_PARALLEL" ] && [ "${#TASK_LIST[@]}" -gt 0 ]; then
+    if [ "${#PIDS[@]}" -gt 0 ]; then
       sleep 1
     fi
   done
