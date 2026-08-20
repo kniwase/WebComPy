@@ -177,6 +177,30 @@ def test_python_lexer_def_named_match_is_function() -> None:
     assert any(t.type is TokenType.FUNCTION and t.value == "match" for t in tokens)
 
 
+def test_python_lexer_match_before_hard_keyword_is_identifier() -> None:
+    samples = [
+        "for match in re.finditer(pattern, text):\n    pass\n",
+        "with match as m:\n    pass\n",
+        "x = match and y\n",
+    ]
+    for code in samples:
+        tokens = list(PythonLexer().tokenize(code))
+        assert all(t.type is not TokenType.KEYWORD for t in tokens if t.value == "match")
+
+
+def test_python_lexer_case_literal_patterns_keep_keyword() -> None:
+    tokens = list(PythonLexer().tokenize('match point:\n    case None: pass\n    case 1: pass\n    case "a": pass\n'))
+    keywords = [t for t in tokens if t.type is TokenType.KEYWORD]
+    assert any(t.value == "match" for t in keywords)
+    assert sum(1 for t in keywords if t.value == "case") == 3
+
+
+def test_python_lexer_def_shadowing_builtin_is_function() -> None:
+    tokens = list(PythonLexer().tokenize("def type(x):\n    return x\n"))
+    assert any(t.type is TokenType.FUNCTION and t.value == "type" for t in tokens)
+    assert all(t.type is not TokenType.BUILTIN for t in tokens if t.value == "type")
+
+
 def test_highlight_preserves_newlines_for_python_multiline() -> None:
     from webcompy.ui.code_block._highlight import highlight
 

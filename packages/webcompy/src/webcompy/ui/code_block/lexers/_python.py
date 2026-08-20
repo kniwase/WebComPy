@@ -18,6 +18,8 @@ _FSTRING_TOKEN_TYPES: frozenset[int] = frozenset(
     if t is not None
 )
 
+_LITERAL_PATTERN_KEYWORDS: frozenset[str] = frozenset({"None", "True", "False"})
+
 
 class PythonLexer:
     name: str = "python"
@@ -178,12 +180,12 @@ class PythonLexer:
                     pending_decorator = False
                     pending_def = None
                     yield Token(TokenType.DECORATOR, value)
-                elif stripped in self._BUILTINS:
-                    pending_def = None
-                    yield Token(TokenType.BUILTIN, value)
                 elif pending_def is not None and pending_def in self._DEF_LIKE:
                     pending_def = None
                     yield Token(TokenType.FUNCTION, value)
+                elif stripped in self._BUILTINS:
+                    pending_def = None
+                    yield Token(TokenType.BUILTIN, value)
                 else:
                     pending_def = None
                     yield Token(TokenType.IDENTIFIER, value)
@@ -209,7 +211,9 @@ def _next_is_pattern_start(tokens: list[_py_tokenize.TokenInfo], index: int) -> 
             _py_token.COMMENT,
         ):
             continue
-        return tok.type in (_py_token.NAME, _py_token.STRING, _py_token.NUMBER)
+        if tok.type == _py_token.NAME:
+            return not (tok.string in keyword.kwlist and tok.string not in _LITERAL_PATTERN_KEYWORDS)
+        return tok.type in (_py_token.STRING, _py_token.NUMBER)
     return False
 
 
