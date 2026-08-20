@@ -58,6 +58,10 @@ end-of-stream flush).
   `def`/`class`/`async def` is always the defined name. For `def foo ():` the
   FUNCTION span moves before the whitespace gap instead of after it — the
   concatenated text is identical, only span boundaries shift.
+- **Precedence**: the defined-name branch sits above builtin classification in
+  the NAME chain, so a definition whose name shadows a builtin (`def type():`,
+  `def list():`, `def str():`) is still emitted as FUNCTION rather than
+  BUILTIN, per the unconditional spec requirement.
 
 ### D2: Classify `OP` tokens per Pygments conventions (no merging)
 
@@ -98,11 +102,15 @@ Remove `type` and `_` from soft-keyword handling entirely (`type` then falls
 through to `_BUILTINS` where it is already listed; `_` becomes IDENTIFIER).
 For `match`/`case`, emit KEYWORD only when the *next significant token* in the
 already-materialized token list (skipping NL/NEWLINE/INDENT/DEDENT/COMMENT) is
-a NAME, STRING, or NUMBER; otherwise emit IDENTIFIER.
+a NAME, STRING, or NUMBER; otherwise emit IDENTIFIER. A NAME that is itself a
+keyword cannot begin a pattern, so hard keywords (`in`, `as`, `and`, `is`,
+`not`, ...) are excluded from the lookahead, with the literal-pattern keywords
+`None`/`True`/`False` kept as valid pattern starts (`case None:` stays KEYWORD).
 
 - **Rationale**: kills the common false positives (`match = ...`,
-  `re.match(`, `x.case`) while keeping the common statement forms
-  (`match command:`, `case 200:`, `case "ok":`, `case Foo():`).
+  `re.match(`, `x.case`, `for match in ...`, `with match as ...`) while keeping
+  the common statement forms (`match command:`, `case 200:`, `case "ok":`,
+  `case Foo():`).
 - **Acknowledged approximation**: patterns starting with punctuation
   (`case [1, x]:`, `match (x, y):`) render the keyword as IDENTIFIER.
   Documented in the spec as acceptable.

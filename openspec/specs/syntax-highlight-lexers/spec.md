@@ -128,6 +128,11 @@ When `PythonLexer` encounters a NAME token following the `def`, `class`, or `asy
 - **THEN** a `Token(TokenType.FUNCTION, "Foo")` SHALL be emitted before the `(` token
 - **AND** `Bar` SHALL be emitted as `TokenType.IDENTIFIER`
 
+#### Scenario: Defined name shadows a builtin
+
+- **WHEN** `PythonLexer().tokenize("def type(x):\n    return x\n")` is called
+- **THEN** `type` SHALL be emitted as `TokenType.FUNCTION`
+
 ### Requirement: PythonLexer SHALL classify operator tokens per Pygments conventions
 
 `PythonLexer` SHALL emit Python `OP` tokens whose value is one of `(`, `)`, `[`, `]`, `{`, `}`, `:`, `,`, `;` as `TokenType.PUNCTUATION`, and all other `OP` tokens as `TokenType.OPERATOR`. This mirrors the Pygments `Punctuation`/`Operator` split so Pygments stylesheets color the token spans correctly.
@@ -159,7 +164,7 @@ For f-strings tokenized by Python 3.12+ into `FSTRING_START`, `FSTRING_MIDDLE`, 
 
 ### Requirement: PythonLexer SHALL classify soft keywords by context
 
-`PythonLexer` SHALL NOT unconditionally color soft keywords as `KEYWORD`. `match` and `case` SHALL be emitted as `KEYWORD` only when the next significant token can begin a pattern (a NAME, STRING, or NUMBER token); otherwise they SHALL be emitted as `IDENTIFIER`. The identifiers `type` and `_` SHALL NOT be treated as keywords: `type` SHALL follow ordinary builtin classification and `_` SHALL be emitted as `IDENTIFIER`.
+`PythonLexer` SHALL NOT unconditionally color soft keywords as `KEYWORD`. `match` and `case` SHALL be emitted as `KEYWORD` only when the next significant token can begin a pattern (a NAME, STRING, or NUMBER token, where a NAME that is itself a keyword other than the literal-pattern keywords `None`/`True`/`False` cannot begin a pattern); otherwise they SHALL be emitted as `IDENTIFIER`. The identifiers `type` and `_` SHALL NOT be treated as keywords: `type` SHALL follow ordinary builtin classification and `_` SHALL be emitted as `IDENTIFIER`.
 
 #### Scenario: match used as a variable
 
@@ -170,6 +175,17 @@ For f-strings tokenized by Python 3.12+ into `FSTRING_START`, `FSTRING_MIDDLE`, 
 
 - **WHEN** `PythonLexer().tokenize("match command:\n    case _: pass\n")` is called
 - **THEN** the first `match` SHALL be emitted as `TokenType.KEYWORD`
+
+#### Scenario: match used before a hard keyword
+
+- **WHEN** `PythonLexer().tokenize("for match in re.finditer(pattern, text):\n    pass\n")` is called
+- **THEN** `match` SHALL be emitted as `TokenType.IDENTIFIER`
+
+#### Scenario: case literal patterns keep the keyword
+
+- **WHEN** `PythonLexer().tokenize('match point:\n    case None: pass\n    case 1: pass\n    case "a": pass\n')` is called
+- **THEN** `match` SHALL be emitted as `TokenType.KEYWORD`
+- **AND** each `case` SHALL be emitted as `TokenType.KEYWORD`
 
 #### Scenario: type builtin call
 

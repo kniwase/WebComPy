@@ -32,3 +32,9 @@
 - [x] 5.3 Re-render `docs_app/documents/typed_realtime.md` through the in-memory SSR pipeline and confirm `ChatMessage`/`Event`/`Money`/`Payment` each appear as `tok-fn` spans at their definition sites with intact round-trip text
 - [x] 5.4 Run `uv run python -m webcompy generate` for `docs_app` and verify the regenerated `docs_app/dist/documents/typed-realtime/index.html` code blocks (plus a spot check of one page each containing f-strings/TOML/Bash samples if present) via the inspect CLI
 - [x] 5.5 Run `python3 scripts/check-doc-spec-refs.py` to confirm doc/spec references stay valid
+
+## 6. Post-review refinements
+
+- [x] 6.1 Exclude hard keywords from the `match`/`case` pattern-start lookahead in `_next_is_pattern_start`, keeping the literal-pattern keywords `None`/`True`/`False` as valid pattern starts (`for match in ...`/`with match as ...`/`match and ...` → IDENTIFIER; `case None:` stays KEYWORD; design D4 refinement)
+- [x] 6.2 Move the defined-name branch above builtin classification in the NAME chain so a name shadowing a builtin (`def type():`, `def list():`, `def str():`) is emitted as FUNCTION (design D1 precedence note)
+- [x] 6.3 Add regression tests in `tests/test_code_block_lexers.py` for the refinements and sync the main and delta specs, design.md, and proposal.md accordingly

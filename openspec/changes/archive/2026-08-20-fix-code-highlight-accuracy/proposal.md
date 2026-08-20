@@ -64,7 +64,7 @@ ordinary expression positions such as `match = re.match(...)` or
 - `syntax-highlight-lexers`: strengthen the source-order requirement into a
   round-trip invariant; add requirements for immediate class/def name emission,
   f-string token classification, contextual soft keywords, decorator-at-line-start,
-  Python `OP` → `PUNCTUATION` classification with same-type merge, TOML strict
+  Python `OP` → `PUNCTUATION` classification per the Pygments split, TOML strict
   datetime and extended integer formats, Bash special variables, and Bash
   comment-start positioning.
 - `code-block`: correct the "Python code is tokenized with tokenize" scenario,
