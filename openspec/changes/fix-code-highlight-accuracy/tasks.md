@@ -27,8 +27,8 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Run `uv run python -m pytest tests/test_code_block_lexers.py tests/test_code_block_highlight.py --tb=short`, then the full `tests/` suite
-- [ ] 5.2 Run `uv run ruff check .`, `uv run ruff format --check .`, and `uv run pyright`
-- [ ] 5.3 Re-render `docs_app/documents/typed_realtime.md` through the in-memory SSR pipeline and confirm `ChatMessage`/`Event`/`Money`/`Payment` each appear as `tok-fn` spans at their definition sites with intact round-trip text
-- [ ] 5.4 Run `uv run python -m webcompy generate` for `docs_app` and verify the regenerated `docs/documents/typed-realtime/index.html` code blocks (plus a spot check of one page each containing f-strings/TOML/Bash samples if present) via the inspect CLI
-- [ ] 5.5 Run `python3 scripts/check-doc-spec-refs.py` to confirm doc/spec references stay valid
+- [x] 5.1 Run `uv run python -m pytest tests/test_code_block_lexers.py tests/test_code_block_highlight.py --tb=short`, then the full `tests/` suite
+- [x] 5.2 Run `uv run ruff check .`, `uv run ruff format --check .`, and `uv run pyright`
+- [x] 5.3 Re-render `docs_app/documents/typed_realtime.md` through the in-memory SSR pipeline and confirm `ChatMessage`/`Event`/`Money`/`Payment` each appear as `tok-fn` spans at their definition sites with intact round-trip text
+- [x] 5.4 Run `uv run python -m webcompy generate` for `docs_app` and verify the regenerated `docs_app/dist/documents/typed-realtime/index.html` code blocks (plus a spot check of one page each containing f-strings/TOML/Bash samples if present) via the inspect CLI
+- [x] 5.5 Run `python3 scripts/check-doc-spec-refs.py` to confirm doc/spec references stay valid
