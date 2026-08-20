@@ -100,17 +100,21 @@ acceptable approximation.
 
 Remove `type` and `_` from soft-keyword handling entirely (`type` then falls
 through to `_BUILTINS` where it is already listed; `_` becomes IDENTIFIER).
-For `match`/`case`, emit KEYWORD only when the *next significant token* in the
-already-materialized token list (skipping NL/NEWLINE/INDENT/DEDENT/COMMENT) is
-a NAME, STRING, or NUMBER; otherwise emit IDENTIFIER. A NAME that is itself a
-keyword cannot begin a pattern, so hard keywords (`in`, `as`, `and`, `is`,
-`not`, ...) are excluded from the lookahead, with the literal-pattern keywords
-`None`/`True`/`False` kept as valid pattern starts (`case None:` stays KEYWORD).
+For `match`/`case`, emit KEYWORD only when the *next significant token on the
+same logical line* in the already-materialized token list (skipping COMMENT,
+stopping at NEWLINE/NL) is a NAME, STRING, or NUMBER; otherwise emit
+IDENTIFIER. A NAME that is itself a keyword cannot begin a pattern, so hard
+keywords (`in`, `as`, `and`, `is`, `not`, ...) are excluded from the
+lookahead, with the literal-pattern keywords `None`/`True`/`False` kept as
+valid pattern starts (`case None:` stays KEYWORD).
 
 - **Rationale**: kills the common false positives (`match = ...`,
-  `re.match(`, `x.case`, `for match in ...`, `with match as ...`) while keeping
-  the common statement forms (`match command:`, `case 200:`, `case "ok":`,
-  `case Foo():`).
+  `re.match(`, `x.case`, `for match in ...`, `with match as ...`,
+  `x = match` at end of a statement) while keeping the common statement forms
+  (`match command:`, `case 200:`, `case "ok":`, `case Foo():`). A pattern
+  always begins on the same logical line as the keyword, so NEWLINE/NL bound
+  the lookahead; explicit line joins (`match \\\n x:`) emit no NL token and
+  keep the keyword.
 - **Acknowledged approximation**: patterns starting with punctuation
   (`case [1, x]:`, `match (x, y):`) render the keyword as IDENTIFIER.
   Documented in the spec as acceptable.

@@ -38,3 +38,8 @@
 - [x] 6.1 Exclude hard keywords from the `match`/`case` pattern-start lookahead in `_next_is_pattern_start`, keeping the literal-pattern keywords `None`/`True`/`False` as valid pattern starts (`for match in ...`/`with match as ...`/`match and ...` → IDENTIFIER; `case None:` stays KEYWORD; design D4 refinement)
 - [x] 6.2 Move the defined-name branch above builtin classification in the NAME chain so a name shadowing a builtin (`def type():`, `def list():`, `def str():`) is emitted as FUNCTION (design D1 precedence note)
 - [x] 6.3 Add regression tests in `tests/test_code_block_lexers.py` for the refinements and sync the main and delta specs, design.md, and proposal.md accordingly
+
+## 7. Post-review refinement: logical-line bound
+
+- [x] 7.1 Stop the `_next_is_pattern_start` scan at NEWLINE/NL (terminator instead of skip) so a `match`/`case` used as a value expression at the end of a statement (`x = match\nprint(x)\n`) is emitted as IDENTIFIER, while explicit line joins keep the keyword (design D4 refinement)
+- [x] 7.2 Add a regression test in `tests/test_code_block_lexers.py` for the logical-line bound and sync the main and delta specs (requirement text "on the same logical line" + scenario), design.md, and tasks.md

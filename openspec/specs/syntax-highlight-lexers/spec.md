@@ -164,12 +164,17 @@ For f-strings tokenized by Python 3.12+ into `FSTRING_START`, `FSTRING_MIDDLE`, 
 
 ### Requirement: PythonLexer SHALL classify soft keywords by context
 
-`PythonLexer` SHALL NOT unconditionally color soft keywords as `KEYWORD`. `match` and `case` SHALL be emitted as `KEYWORD` only when the next significant token can begin a pattern (a NAME, STRING, or NUMBER token, where a NAME that is itself a keyword other than the literal-pattern keywords `None`/`True`/`False` cannot begin a pattern); otherwise they SHALL be emitted as `IDENTIFIER`. The identifiers `type` and `_` SHALL NOT be treated as keywords: `type` SHALL follow ordinary builtin classification and `_` SHALL be emitted as `IDENTIFIER`.
+`PythonLexer` SHALL NOT unconditionally color soft keywords as `KEYWORD`. `match` and `case` SHALL be emitted as `KEYWORD` only when the next significant token on the same logical line can begin a pattern (a NAME, STRING, or NUMBER token, where a NAME that is itself a keyword other than the literal-pattern keywords `None`/`True`/`False` cannot begin a pattern); otherwise they SHALL be emitted as `IDENTIFIER`. The identifiers `type` and `_` SHALL NOT be treated as keywords: `type` SHALL follow ordinary builtin classification and `_` SHALL be emitted as `IDENTIFIER`.
 
 #### Scenario: match used as a variable
 
 - **WHEN** `PythonLexer().tokenize("match = re.match(pattern, text)\n")` is called
 - **THEN** both occurrences of `match` SHALL be emitted as `TokenType.IDENTIFIER`
+
+#### Scenario: match used as a variable at the end of a statement
+
+- **WHEN** `PythonLexer().tokenize("x = match\nprint(x)\n")` is called
+- **THEN** `match` SHALL be emitted as `TokenType.IDENTIFIER`
 
 #### Scenario: match statement keeps the keyword
 
