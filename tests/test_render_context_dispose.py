@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from webcompy.components._component import _active_app_context
 from webcompy.components._generator import define_component
+from webcompy.di._scope import _active_di_scope
 from webcompy_testing import create_test_app
 
 
@@ -48,3 +50,22 @@ class TestRenderContextDispose:
         app = create_test_app(root_component=DisposeTestRoot)
         ctx = app.create_render_context()
         ctx.dispose()
+
+    def test_overlapping_contexts_disposed_lifo_leave_no_active_context(self):
+        app = create_test_app(root_component=DisposeTestRoot)
+        ctx1 = app.create_render_context()
+        ctx2 = app.create_render_context()
+        ctx2.dispose()
+        ctx1.dispose()
+        assert _active_app_context.get() is None
+        assert _active_di_scope.get(None) is None
+        assert app._render_context_cv.get() is None
+
+    def test_overlapping_contexts_disposed_creation_order_leave_context_vars_clear(self):
+        app = create_test_app(root_component=DisposeTestRoot)
+        ctx1 = app.create_render_context()
+        ctx2 = app.create_render_context()
+        ctx1.dispose()
+        ctx2.dispose()
+        assert _active_app_context.get() is None
+        assert app._render_context_cv.get() is None

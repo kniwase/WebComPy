@@ -79,8 +79,8 @@ class TestRequestIsolation:
         assert head1["title"].value == "Isolated A"
         assert head2["title"].value == "Isolated B"
 
-        ctx1.dispose()
         ctx2.dispose()
+        ctx1.dispose()
 
     def test_concurrent_contexts(self):
         app = create_test_app(root_component=IsolationRoot)
@@ -93,6 +93,7 @@ class TestRequestIsolation:
 
         for i, ctx in enumerate(contexts):
             assert ctx.head["title"].value == f"Page {i}"
+        for ctx in reversed(contexts):
             ctx.dispose()
 
     @pytest.mark.asyncio
