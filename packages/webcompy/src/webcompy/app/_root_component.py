@@ -78,8 +78,14 @@ class AppDocumentRoot(Component):
         self._scripts: list[tuple[dict[str, str], str | None]] = []
         self._head_element = HeadElement(head_props)
 
-        with di_scope:
+        if _active_di_scope.get(None) is di_scope:
             super().__init__(_root_template, None, {"root": lambda: root_component(None)})
+        else:
+            token = _active_di_scope.set(di_scope)
+            try:
+                super().__init__(_root_template, None, {"root": lambda: root_component(None)})
+            finally:
+                _active_di_scope.reset(token)
 
     @property
     def render(self):
