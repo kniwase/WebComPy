@@ -25,7 +25,7 @@ Existing infrastructure this design builds on:
 **Non-Goals:**
 
 - Cross-environment creation-order mismatches (environment-conditional trees) stay unsupported, consistent with DOM hydration adoption.
-- `hydrate=False` apps: the payload never closes (no hydration render pass), preserving today's restore-on-first-render behavior.
+- `hydrate=False` apps have no transfer payload (nothing is provided to restore), so the close flag set at the end of the first render pass has no observable effect; today's restore-on-first-render behavior is preserved.
 
 ## Decisions
 

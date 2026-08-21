@@ -71,10 +71,12 @@ class Context(Generic[PropsType]):
         title_setter: Callable[[str], None],
         meta_setter: Callable[[str, dict[str, str]], None],
         generator: ComponentGenerator[PropsType] | None = None,
+        transfer_id: str | None = None,
     ) -> None:
         self.__props = props
         self.__slots = slots
         self._component_name = component_name
+        self._transfer_id = transfer_id or generate_id(component_name)
         self.__on_before_rendering = None
         self.__on_after_rendering = None
         self.__on_before_destroy = None
@@ -288,6 +290,7 @@ class ComponentContext(Protocol[PropsType]):
 class ComponentProperty(TypedDict):
     component_id: str
     component_name: str
+    transfer_id: str
     template: ComponentTemplateResult | None
     on_before_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
     on_after_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]

@@ -166,6 +166,7 @@ class AppDocumentRoot(Component):
             ctx = _active_app_context.get()
             if ctx is not None:
                 ctx._hydration_in_progress = False
+                ctx._hydration_payload_closed = True
             if ENVIRONMENT != "pyscript":
                 _active_di_scope.reset(token)
 

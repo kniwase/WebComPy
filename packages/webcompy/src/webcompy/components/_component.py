@@ -43,6 +43,13 @@ def _get_app_instance() -> Any:
     return _app_instance
 
 
+def _is_hydration_payload_open() -> bool:
+    app = _active_app_context.get() or _get_app_instance()
+    if app is None:
+        return True
+    return not getattr(app, "_hydration_payload_closed", False)
+
+
 def start_defer_after_rendering() -> None:
     app = _active_app_context.get() or _get_app_instance()
     if app is not None:
@@ -155,6 +162,9 @@ class Component(ElementBase):
         head_props = inject(_HEAD_PROPS_KEY)
         self._head_props = head_props
         props_for_context = self._prepare_props_for_setup(props)
+        app_ctx = _active_app_context.get() or _get_app_instance()
+        next_transfer_id = getattr(app_ctx, "_next_transfer_id", None)
+        transfer_id = next_transfer_id(component_name) if next_transfer_id is not None else generate_id(component_name)
         context = Context(
             props_for_context,
             slots,
@@ -164,6 +174,7 @@ class Component(ElementBase):
             self._set_title,
             self._set_meta,
             generator=self._generator,
+            transfer_id=transfer_id,
         )
         scope = create_effect_scope()
 
@@ -220,6 +231,7 @@ class Component(ElementBase):
         return {
             "component_id": generate_id(component_name),
             "component_name": component_name,
+            "transfer_id": transfer_id,
             "template": template,
             "on_before_rendering": hooks.get("on_before_rendering", lambda: None),
             "on_after_rendering": hooks.get("on_after_rendering", lambda: None),

@@ -45,7 +45,7 @@ def collect_transfer_data(root: AppDocumentRoot) -> TransferPayload:
             resources.setdefault(path, base64.b64encode(content).decode("ascii"))
 
     for component, async_instances in _walk_component_async_results(root):
-        component_id = component._property.get("component_id", "")
+        component_id = component._property.get("transfer_id") or component._property.get("component_id", "")
         for ar in async_instances:
             if not getattr(ar, "_transferable", True):
                 continue
@@ -58,7 +58,7 @@ def collect_transfer_data(root: AppDocumentRoot) -> TransferPayload:
     for component in _walk_components(root):
         component_signals = _collect_component_signals(component)
         if component_signals:
-            component_id = component._property.get("component_id", "")
+            component_id = component._property.get("transfer_id") or component._property.get("component_id", "")
             if component_id:
                 signals[component_id] = component_signals
 

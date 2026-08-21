@@ -54,7 +54,9 @@ class RenderContext(ABC):
         self._defer_depth: int = 0
         self._deferred_callbacks: list = []
         self._hydration_in_progress: bool = False
+        self._hydration_payload_closed: bool = False
         self._hydration_reporter = HydrationReporter()
+        self._transfer_ordinal_counters: dict[str, int] = {}
         self._initial_theme = initial_theme
         self._cookie_header = cookie_header or ""
 
@@ -268,6 +270,13 @@ class RenderContext(ABC):
     def _record_phase(self, name: str) -> None:
         if self._profile:
             self._profile_data[name] = time.perf_counter()
+
+    def _next_transfer_id(self, component_name: str) -> str:
+        from webcompy.components._libs import generate_id
+
+        ordinal = self._transfer_ordinal_counters.get(component_name, 0)
+        self._transfer_ordinal_counters[component_name] = ordinal + 1
+        return f"{generate_id(component_name)}#{ordinal}"
 
     @property
     def di_scope(self) -> DIScope:
