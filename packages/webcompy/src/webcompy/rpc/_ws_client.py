@@ -269,10 +269,10 @@ class RpcWsClient:
         return rpc_stream
 
     def _cancel_pending_stream(self, holder: dict[str, str], req_id: Any) -> None:
-        self._pending_stream_calls.pop(req_id, None)
         stream_id = holder.get("id")
         if stream_id is None:
             return
+        self._pending_stream_calls.pop(req_id, None)
         self._send_stream_cancel(stream_id)
 
     def _handle_stream_ack(self, rpc_stream: RpcStream[Any], holder: dict[str, str], frame: Any) -> None:

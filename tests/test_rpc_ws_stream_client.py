@@ -244,6 +244,23 @@ class TestClientStreams:
         client.close()
 
     @pytest.mark.asyncio
+    async def test_close_before_ack_sends_cancel_when_ack_arrives(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        rt_env.port.emit_open(WS_URL)
+        task = asyncio.create_task(client.stream("count", {}, result_type=int))
+        await asyncio.sleep(0)
+        req_id = _frames(rt_env.port)[-1]["id"]
+        rpc_stream = await task
+        rpc_stream.close()
+        rt_env.port.emit_message(WS_URL, json.dumps({"jsonrpc": "2.0", "result": {"stream_id": "st1"}, "id": req_id}))
+        await asyncio.sleep(0)
+        cancels = [f for f in _frames(rt_env.port) if f.get("method") == "_webcompy.stream_cancel"]
+        assert len(cancels) == 1
+        assert cancels[0]["params"] == {"stream_id": "st1"}
+        assert rpc_stream.state.value == RpcStreamState.CLOSED
+        client.close()
+
+    @pytest.mark.asyncio
     async def test_close_sends_stream_cancel(self, rt_env) -> None:
         client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
         rt_env.port.emit_open(WS_URL)
