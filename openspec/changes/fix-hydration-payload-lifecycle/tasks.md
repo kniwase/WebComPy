@@ -16,9 +16,9 @@
 
 ## 3. Tests
 
-- [ ] 3.1 Unit: restore works while the window is open; factory runs after the window closes (use_state + use_async_result)
-- [ ] 3.2 Unit: two instances of the same component collect and restore independent values; transfer id keeps `component_id` (scoped CSS) untouched
-- [ ] 3.3 Unit: fallback to bare `generate_id(name)` when no render context is active
+- [x] 3.1 Unit: restore works while the window is open; factory runs after the window closes (use_state + use_async_result)
+- [x] 3.2 Unit: two instances of the same component collect and restore independent values; transfer id keeps `component_id` (scoped CSS) untouched
+- [x] 3.3 Unit: fallback to bare `generate_id(name)` when no render context is active
 - [ ] 3.4 E2E (docs): SPA navigation helloworld → fizzbuzz updates the code block and issues a main-frame fetch for the new demo source; initial load still restores without refetch
 
 ## 4. Verification
