@@ -44,6 +44,16 @@ def _get_app_instance() -> Any:
 
 
 def _is_hydration_payload_open() -> bool:
+    """Return True if the hydration transfer payload may still be consumed.
+
+    The payload is scoped to the initial hydration window. The window is
+    tracked on the active ``RenderContext`` (``_hydration_payload_closed``).
+    When no ``RenderContext`` is active (unit tests, non-render paths) the
+    fallback ``_get_app_instance()`` is a ``WebComPyApp`` which never has the
+    flag, so the function returns ``True`` — the default open state. The
+    ``getattr`` guard therefore distinguishes the ``RenderContext`` case
+    (gated) from the ``WebComPyApp``/``None`` case (always open).
+    """
     app = _active_app_context.get() or _get_app_instance()
     if app is None:
         return True

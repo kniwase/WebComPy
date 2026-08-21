@@ -56,6 +56,9 @@ class TestRenderContextDispose:
         ctx1 = app.create_render_context()
         ctx2 = app.create_render_context()
         ctx2.dispose()
+        assert _active_app_context.get() is ctx1
+        assert _active_di_scope.get(None) is ctx1._di_scope
+        assert app._render_context_cv.get() is ctx1
         ctx1.dispose()
         assert _active_app_context.get() is None
         assert _active_di_scope.get(None) is None
@@ -66,6 +69,10 @@ class TestRenderContextDispose:
         ctx1 = app.create_render_context()
         ctx2 = app.create_render_context()
         ctx1.dispose()
+        assert _active_app_context.get() is ctx2
+        assert _active_di_scope.get(None) is ctx2._di_scope
+        assert app._render_context_cv.get() is ctx2
         ctx2.dispose()
         assert _active_app_context.get() is None
+        assert _active_di_scope.get(None) is None
         assert app._render_context_cv.get() is None
