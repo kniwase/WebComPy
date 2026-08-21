@@ -15,8 +15,6 @@ from webcompy_server.rpc._subscriptions import EVENT_METHOD, _Connection
 
 _logger = logging.getLogger(__name__)
 
-_stream_counter = itertools.count(1)
-
 
 def _stream_event_frame(stream_id: str, data: Any, meta: dict[str, str] | None) -> dict[str, Any]:
     params: dict[str, Any] = {"stream_id": stream_id, "data": data}
@@ -36,9 +34,10 @@ class StreamCallHub:
 
     def __init__(self, registry: ProcedureRegistry) -> None:
         self.registry = registry
+        self._stream_counter = itertools.count(1)
 
     def start_call(self, conn: _Connection, call: _StreamCall) -> None:
-        stream_id = f"st{next(_stream_counter)}"
+        stream_id = f"st{next(self._stream_counter)}"
         conn.send({"jsonrpc": "2.0", "result": {"stream_id": stream_id}, "id": call.req_id})
         task = asyncio.create_task(self._run(conn, stream_id, call))
         conn.stream_tasks[stream_id] = task
