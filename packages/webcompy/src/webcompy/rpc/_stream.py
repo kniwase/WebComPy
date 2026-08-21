@@ -122,6 +122,7 @@ class RpcStream(Generic[T]):
         if self._finished:
             return
         self._finished = True
+        self._cancel = None
         self.state.value = RpcStreamState.CLOSED
         self._queue.put_nowait(_STOP)
 
@@ -129,6 +130,7 @@ class RpcStream(Generic[T]):
         if self._finished:
             return
         self._finished = True
+        self._cancel = None
         self.state.value = RpcStreamState.FAILED
         self._queue.put_nowait(_Failure(error))
 

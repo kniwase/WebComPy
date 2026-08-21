@@ -198,6 +198,52 @@ class TestClientStreams:
         client.close()
 
     @pytest.mark.asyncio
+    async def test_close_after_done_does_not_send_cancel(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        rt_env.port.emit_open(WS_URL)
+        task = asyncio.create_task(client.stream("count", {}, result_type=int))
+        await asyncio.sleep(0)
+        req_id = _frames(rt_env.port)[-1]["id"]
+        rt_env.port.emit_message(WS_URL, json.dumps({"jsonrpc": "2.0", "result": {"stream_id": "st1"}, "id": req_id}))
+        rpc_stream = await task
+        rt_env.port.emit_message(
+            WS_URL,
+            json.dumps({"jsonrpc": "2.0", "method": "_webcompy.stream_done", "params": {"stream_id": "st1"}}),
+        )
+        await asyncio.sleep(0)
+        rpc_stream.close()
+        cancels = [f for f in _frames(rt_env.port) if f.get("method") == "_webcompy.stream_cancel"]
+        assert cancels == []
+        assert rpc_stream.state.value == RpcStreamState.CLOSED
+        client.close()
+
+    @pytest.mark.asyncio
+    async def test_close_after_error_does_not_send_cancel(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        rt_env.port.emit_open(WS_URL)
+        task = asyncio.create_task(client.stream("count", {}, result_type=int))
+        await asyncio.sleep(0)
+        req_id = _frames(rt_env.port)[-1]["id"]
+        rt_env.port.emit_message(WS_URL, json.dumps({"jsonrpc": "2.0", "result": {"stream_id": "st1"}, "id": req_id}))
+        rpc_stream = await task
+        rt_env.port.emit_message(
+            WS_URL,
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "method": "_webcompy.stream_error",
+                    "params": {"stream_id": "st1", "code": -32603, "message": "boom"},
+                }
+            ),
+        )
+        await asyncio.sleep(0)
+        rpc_stream.close()
+        cancels = [f for f in _frames(rt_env.port) if f.get("method") == "_webcompy.stream_cancel"]
+        assert cancels == []
+        assert rpc_stream.state.value == RpcStreamState.FAILED
+        client.close()
+
+    @pytest.mark.asyncio
     async def test_close_sends_stream_cancel(self, rt_env) -> None:
         client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
         rt_env.port.emit_open(WS_URL)
