@@ -23,7 +23,7 @@
 
 ## 4. Verification
 
-- [ ] 4.1 `ruff check` / `ruff format --check` / `pyright` pass
-- [ ] 4.2 `pytest tests/` passes
-- [ ] 4.3 Browser re-verification of the docs demo flow (dev server + Playwright)
-- [ ] 4.4 `openspec validate fix-hydration-payload-lifecycle --strict` passes
+- [x] 4.1 `ruff check` / `ruff format --check` / `pyright` pass
+- [x] 4.2 `pytest tests/` passes
+- [x] 4.3 Browser re-verification of the docs demo flow (dev server + Playwright)
+- [x] 4.4 `openspec validate fix-hydration-payload-lifecycle --strict` passes
