@@ -246,18 +246,6 @@ async def dispatch_payload(
     return await _process_entry(payload, registry)
 
 
-async def dispatch_body(body: bytes, registry: ProcedureRegistry) -> tuple[int, bytes]:
-    """Dispatch a raw JSON-RPC request body and return ``(status, response_body)``."""
-    try:
-        payload = json.loads(body)
-    except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
-        return _json_response_body(_error_body(None, PARSE_ERROR, "Parse error"))
-    response = await dispatch_payload(payload, registry)
-    if response is None:
-        return (204, b"")
-    return _json_response_body(response)
-
-
 async def _read_body(receive: Any) -> bytes:
     chunks: list[bytes] = []
     more_body = True
@@ -418,4 +406,4 @@ def create_dispatcher_app(registry: ProcedureRegistry):
     return _DispatcherASGIApp(registry)
 
 
-__all__ = ["create_dispatcher_app", "dispatch_body", "dispatch_payload"]
+__all__ = ["create_dispatcher_app", "dispatch_payload"]
