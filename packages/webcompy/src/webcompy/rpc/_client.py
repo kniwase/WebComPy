@@ -1,18 +1,25 @@
 from __future__ import annotations
 
+import asyncio
+import warnings
 from collections.abc import Mapping, Sequence
 from json import JSONDecodeError
 from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Any, TypeVar, overload
 
+from webcompy.aio._aio import _aio_run_task
 from webcompy.ajax._serde import from_json
+from webcompy.ajax._sse import _SSEParser
 from webcompy.di import inject
 from webcompy.di._keys import RPC_REGISTRY_KEY
 from webcompy.hydration._transfer_meta import apply_transfer_meta, encode_with_meta
+from webcompy.ports._fetch import FetchStream
 from webcompy.ports._keys import FETCH_PORT_KEY
 from webcompy.rpc._errors import INTERNAL_ERROR, SERVER_ERROR, RpcError
 from webcompy.rpc._registry import ProcedureRegistry
+from webcompy.rpc._stream import RpcStream, _decode_stream_item
+from webcompy.utils._environment import ENVIRONMENT
 
 T = TypeVar("T")
 
@@ -159,4 +166,125 @@ async def batch(
     return results
 
 
-__all__ = ["batch", "call", "notify"]
+_SSR_STREAM_MSG = "webcompy rpc: rpc.stream called outside the browser; returning an empty closed stream"
+
+
+def _is_event_stream(headers: Mapping[str, str]) -> bool:
+    content_type = next((value for key, value in headers.items() if key.lower() == "content-type"), "")
+    return content_type.split(";")[0].strip().lower() == "text/event-stream"
+
+
+async def _pump_sse(fetch_stream: FetchStream, rpc_stream: RpcStream[Any]) -> None:
+    parser = _SSEParser()
+    try:
+        async for chunk in fetch_stream:
+            for event in parser.feed(chunk):
+                if event.event_type == "item":
+                    try:
+                        payload = json_loads(event.data)
+                    except ValueError:
+                        rpc_stream._fail(RpcError(SERVER_ERROR, "Malformed RPC stream item frame"))
+                        return
+                    if not isinstance(payload, dict) or "data" not in payload:
+                        rpc_stream._fail(RpcError(SERVER_ERROR, "Malformed RPC stream item frame"))
+                        return
+                    rpc_stream._deliver_raw(payload.get("data"), payload.get("meta"))
+                elif event.event_type == "done":
+                    rpc_stream._finish()
+                    return
+                elif event.event_type == "error":
+                    try:
+                        payload = json_loads(event.data)
+                    except ValueError:
+                        rpc_stream._fail(RpcError(SERVER_ERROR, "Malformed RPC stream error frame"))
+                        return
+                    if not isinstance(payload, dict):
+                        rpc_stream._fail(RpcError(SERVER_ERROR, "Malformed RPC stream error frame"))
+                        return
+                    code = payload.get("code")
+                    message = payload.get("message")
+                    if not isinstance(code, int) or not isinstance(message, str):
+                        rpc_stream._fail(RpcError(SERVER_ERROR, "Malformed RPC stream error frame"))
+                        return
+                    rpc_stream._fail(RpcError(code, message, payload.get("data")))
+                    return
+        rpc_stream._fail(RpcError(SERVER_ERROR, "RPC stream ended unexpectedly"))
+    except asyncio.CancelledError:
+        raise
+    except Exception as err:
+        rpc_stream._fail(RpcError(SERVER_ERROR, f"RPC stream failed: {err}"))
+    finally:
+        fetch_stream.close()
+
+
+@overload
+async def stream(
+    method: str,
+    params: Mapping[str, Any] | Sequence[Any] | None = None,
+    *,
+    result_type: None = None,
+) -> RpcStream[Any]: ...
+
+
+@overload
+async def stream(
+    method: str,
+    params: Mapping[str, Any] | Sequence[Any] | None = None,
+    *,
+    result_type: type[T],
+) -> RpcStream[T]: ...
+
+
+async def stream(
+    method: str,
+    params: Mapping[str, Any] | Sequence[Any] | None = None,
+    *,
+    result_type: type[T] | None = None,
+) -> RpcStream[Any]:
+    registry = _registry_or_error()
+    fetch_port = inject(FETCH_PORT_KEY, default=None)
+    if fetch_port is None or (ENVIRONMENT != "pyscript" and getattr(fetch_port, "noop", False)):
+        warnings.warn(_SSR_STREAM_MSG, UserWarning, stacklevel=2)
+        return RpcStream(closed=True)
+    envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": method, "id": registry.next_id(), "stream": True}
+    if params is not None:
+        _encode_params(registry, envelope, params)
+    fetch_stream = await fetch_port.stream(
+        registry.endpoint_url,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+        body=json_dumps(envelope, ensure_ascii=True),
+    )
+    if not fetch_stream.ok:
+        fetch_stream.close()
+        raise RpcError(SERVER_ERROR, f"RPC stream request failed (HTTP {fetch_stream.status_code})")
+    if _is_event_stream(fetch_stream.headers):
+        holder: dict[str, Any] = {}
+
+        def _cancel() -> None:
+            task = holder.get("task")
+            if task is not None:
+                task.cancel()
+            fetch_stream.close()
+
+        rpc_stream: RpcStream[Any] = RpcStream(
+            cancel=_cancel,
+            decode=lambda data, meta: _decode_stream_item(data, meta, result_type, registry),
+        )
+        task = _aio_run_task(_pump_sse(fetch_stream, rpc_stream))
+        if task is None:
+            fetch_stream.close()
+            raise RuntimeError("webcompy rpc: cannot schedule the stream pump without a running event loop")
+        holder["task"] = task
+        return rpc_stream
+    chunks = [chunk async for chunk in fetch_stream]
+    fetch_stream.close()
+    try:
+        data = json_loads("".join(chunks))
+    except JSONDecodeError as err:
+        raise RpcError(SERVER_ERROR, "Invalid JSON-RPC response for stream request") from err
+    _resolve_single(data, result_type, registry)
+    raise RpcError(SERVER_ERROR, "RPC server did not accept the stream request")
+
+
+__all__ = ["batch", "call", "notify", "stream"]

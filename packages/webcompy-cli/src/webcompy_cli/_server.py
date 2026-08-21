@@ -30,7 +30,6 @@ from webcompy_cli._utils import discover_config
 from webcompy_cli.config._build_config import WebComPyBuildConfig
 from webcompy_server._context import ServerRenderContext
 from webcompy_server._html import generate_html
-from webcompy_server.rpc import dispatch_body
 
 
 class _ServingApp:
@@ -98,13 +97,9 @@ def _resolve_mounts(app: WebComPyApp, build_config: WebComPyBuildConfig) -> list
 
 
 def _make_rpc_route(registry: ProcedureRegistry, path: str) -> Route:
-    async def _rpc_endpoint(request: Request) -> Response:
-        status, body = await dispatch_body(await request.body(), registry)
-        if status == 204:
-            return Response(status_code=204)
-        return Response(content=body, status_code=status, media_type="application/json")
+    from webcompy_server.rpc import create_dispatcher_app
 
-    return Route(path, _rpc_endpoint, methods=["POST"])
+    return Route(path, create_dispatcher_app(registry), methods=["POST"])
 
 
 def _make_rpc_ws_route(registry: ProcedureRegistry, path: str) -> WebSocketRoute:

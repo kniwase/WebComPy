@@ -194,6 +194,7 @@ class _Connection:
         self.websocket = websocket
         self.queue: asyncio.Queue = asyncio.Queue()
         self.subscriptions: dict[str, _Stream] = {}
+        self.stream_tasks: dict[str, asyncio.Task] = {}
         self.sender_task: asyncio.Task | None = None
 
     def start_sender(self) -> None:
@@ -215,6 +216,12 @@ class _Connection:
         self.queue.put_nowait(frame)
 
     async def close(self) -> None:
+        stream_tasks = list(self.stream_tasks.values())
+        self.stream_tasks.clear()
+        for task in stream_tasks:
+            task.cancel()
+        if stream_tasks:
+            await asyncio.gather(*stream_tasks, return_exceptions=True)
         for sub_id in list(self.subscriptions):
             stream = self.subscriptions.pop(sub_id, None)
             if stream is not None:
