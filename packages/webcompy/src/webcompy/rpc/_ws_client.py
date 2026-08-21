@@ -171,6 +171,7 @@ class RpcWsClient:
         self._pending_subscribe_calls: dict[Any, RpcSubscription[Any]] = {}
         self._subscriptions: dict[str, RpcSubscription[Any]] = {}
         self._streams: dict[str, RpcStream[Any]] = {}
+        self._pending_stream_calls: dict[Any, tuple[RpcStream[Any], dict[str, str]]] = {}
         self._pending_subs: set[RpcSubscription[Any]] = set()
         self._closed = False
         self._last_frame_time = time.monotonic()
@@ -254,23 +255,46 @@ class RpcWsClient:
         envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": method, "id": req_id, "stream": True}
         if params is not None:
             _encode_params(self._registry, envelope, params)
-        future: asyncio.Future[Any] = asyncio.Future()
-        self._in_flight[req_id] = future
-        handle.send(json.dumps(envelope))
-        try:
-            data = await future
-        finally:
-            self._in_flight.pop(req_id, None)
-        result = _resolve_single(data, None, self._registry)
-        stream_id = result.get("stream_id") if isinstance(result, dict) else None
-        if not isinstance(stream_id, str):
-            raise RpcError(SERVER_ERROR, "Malformed RPC stream response")
+        holder: dict[str, str] = {}
+
+        def _cancel() -> None:
+            self._cancel_pending_stream(holder, req_id)
+
         rpc_stream: RpcStream[Any] = RpcStream(
-            cancel=lambda: self._send_stream_cancel(stream_id),
+            cancel=_cancel,
             decode=lambda data, meta: _decode_stream_item(data, meta, result_type, self._registry),
         )
-        self._streams[stream_id] = rpc_stream
+        self._pending_stream_calls[req_id] = (rpc_stream, holder)
+        handle.send(json.dumps(envelope))
         return rpc_stream
+
+    def _cancel_pending_stream(self, holder: dict[str, str], req_id: Any) -> None:
+        self._pending_stream_calls.pop(req_id, None)
+        stream_id = holder.get("id")
+        if stream_id is None:
+            return
+        self._send_stream_cancel(stream_id)
+
+    def _handle_stream_ack(self, rpc_stream: RpcStream[Any], holder: dict[str, str], frame: Any) -> None:
+        if "error" in frame:
+            rpc_stream._fail(self._stream_ack_error(frame))
+            return
+        result = frame.get("result")
+        stream_id = result.get("stream_id") if isinstance(result, dict) else None
+        if not isinstance(stream_id, str):
+            rpc_stream._fail(RpcError(SERVER_ERROR, "Malformed RPC stream response"))
+            return
+        if rpc_stream._finished:
+            self._send_stream_cancel(stream_id)
+            return
+        holder["id"] = stream_id
+        self._streams[stream_id] = rpc_stream
+
+    def _stream_ack_error(self, frame: Any) -> RpcError:
+        error = frame.get("error")
+        if isinstance(error, dict) and isinstance(error.get("code"), int) and isinstance(error.get("message"), str):
+            return RpcError(error["code"], error["message"], error.get("data"))
+        return RpcError(SERVER_ERROR, "Malformed RPC stream response")
 
     def _send_stream_cancel(self, stream_id: str) -> None:
         self._streams.pop(stream_id, None)
@@ -405,9 +429,13 @@ class RpcWsClient:
         futures = list(self._in_flight.values())
         self._in_flight.clear()
         self._pending_subscribe_calls.clear()
+        pending_streams = list(self._pending_stream_calls.values())
+        self._pending_stream_calls.clear()
         for fut in futures:
             if not fut.done():
                 fut.set_exception(RpcError(SERVER_ERROR, "RPC WebSocket connection lost"))
+        for rpc_stream, _holder in pending_streams:
+            rpc_stream._fail(RpcError(SERVER_ERROR, "RPC WebSocket connection lost"))
 
     def _fail_streams(self) -> None:
         streams = list(self._streams.values())
@@ -444,6 +472,10 @@ class RpcWsClient:
                 sub = self._pending_subscribe_calls.pop(req_id, None)
                 if sub is not None:
                     self._handle_subscribe_response(sub, frame)
+                    continue
+                pending = self._pending_stream_calls.pop(req_id, None)
+                if pending is not None:
+                    self._handle_stream_ack(pending[0], pending[1], frame)
                     continue
                 future = self._in_flight.pop(req_id, None)
                 if future is not None:
@@ -534,6 +566,9 @@ class RpcWsClient:
         for sub in list(self._pending_subs):
             self._pending_subs.discard(sub)
             sub._finish(RpcSubscriptionState.CLOSED)
+        for rpc_stream, _holder in list(self._pending_stream_calls.values()):
+            rpc_stream.close()
+        self._pending_stream_calls.clear()
         self._closed = True
         self._fail_in_flight()
         if self._handle is not None:

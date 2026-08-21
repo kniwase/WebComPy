@@ -42,6 +42,9 @@ def RpcStreamPage(context: ComponentContext[None]):
     async def _ws(_) -> None:
         await _consume(await client.stream("count_up", {"n": 5}, result_type=int))
 
+    async def _ws_sync(_) -> None:
+        await _consume(await client.stream("count_up_sync", {"n": 5}, result_type=int))
+
     async def _ws_error(_) -> None:
         await _consume(await client.stream("fail_midway", {"n": 5}, result_type=int))
 
@@ -54,6 +57,7 @@ def RpcStreamPage(context: ComponentContext[None]):
         html.BUTTON({"data-testid": "rpc-stream-http-sync-btn", "@click": _http_sync}, "HTTP sync stream"),
         html.BUTTON({"data-testid": "rpc-stream-http-error-btn", "@click": _http_error}, "HTTP error stream"),
         html.BUTTON({"data-testid": "rpc-stream-ws-btn", "@click": _ws}, "WS stream"),
+        html.BUTTON({"data-testid": "rpc-stream-ws-sync-btn", "@click": _ws_sync}, "WS sync stream"),
         html.BUTTON({"data-testid": "rpc-stream-ws-error-btn", "@click": _ws_error}, "WS error stream"),
         html.UL(
             {"data-testid": "rpc-stream-items"},
