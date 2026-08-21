@@ -290,7 +290,7 @@ jobs:
             serving_mode: static
           - group:
               name: docs-demos
-              files: e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py e2e/docs/test_teleport.py e2e/docs/test_transition.py
+              files: e2e/docs/test_fizzbuzz.py e2e/docs/test_todo.py e2e/docs/test_teleport.py e2e/docs/test_transition.py e2e/docs/test_demo_navigation.py
             serving_mode: static
           - group:
               name: docs-matplotlib
