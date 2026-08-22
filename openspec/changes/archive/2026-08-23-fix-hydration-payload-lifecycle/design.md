@@ -87,3 +87,27 @@ The CI AI review of PR #271 requested three must-fix items before merge. Design 
 ### C. Suspense must restore the pre-resolution DI scope
 
 `provide()` during component setup switches `_active_di_scope` to the component child scope without a token. The identity-guarded `DIScope.__exit__` (introduced for dispose hygiene) silently no-ops when a descendant scope is active, leaking the child scope into Suspense siblings. A shared `_restore_suspense_di_scope(scope, original_scope)` helper (`_server_render`, `_browser_resolve`, `_hydrate_node`) exits the resolution scope and deterministically restores the pre-Suspense active scope.
+
+## Addendum (round 3): second AI review follow-ups
+
+The second CI AI review of PR #271 raised three must-fix and two should-improve items. Design of the follow-up changes:
+
+### A. Dispose must unwind descendant DI scopes
+
+`RenderContext.dispose()` only reset `_active_di_scope` when the *root* scope was the current value. Because `provide()` binds an untokenized component child scope, disposing while that child was active skipped the reset and then disposed the whole tree with the ContextVar still pointing at a disposed scope. `dispose()` now walks the active scope's parent chain and, when the binding belongs to the disposed tree (root or descendant), resets it to the pre-render value via the stored token (falling back to `set(None)` when the token does not belong to the current context). Active scopes of other live render contexts are left untouched.
+
+### B. Non-hydrating apps must close the payload before loading teardown
+
+The pre-fade closure in `AppDocumentRoot._render()` was guarded by `_app._hydrate`, so `hydrate=False` browser apps kept `_is_hydration_payload_open()` true through the loading fade and lazy-route preload, restoring stale initial-page values there. The closure (and `_hydration_in_progress` reset) now runs immediately after the initial child render for every browser mode; the render-task drain and mismatch summary remain hydrating-mode-only.
+
+### C. Suspense hydration must snapshot the scope before probing
+
+`_hydrate_node()` generated the probe children before capturing `original_scope`, so a probed `provide()` baked its leaked child scope into the snapshot; the fast path's identity-guarded `__exit__` then no-opped and the deferred path restored the leaked scope as its "original". The snapshot is now taken before probe generation, the fast path uses `_restore_suspense_di_scope`, and `_browser_resolve` accepts a pre-captured `original_scope` (also wired from `_browser_render`, with drift restoration added on the synchronous no-pairs path).
+
+### D. Hydration fallback components must not consume transfer ordinals
+
+Both the probe tree and the speculative hydration fallback advanced per-name ordinal counters, although SSR normally constructs only the resolved tree. Same-named components created after the boundary then diverged from SSR ordinals and missed transferred state. `RenderContext._next_transfer_id` now has a probe-depth mode returning provisional bare `generate_id(name)` ids without advancing counters; `_hydrate_node()` wraps fallback generation in that mode. The retained probe branch keeps its SSR-aligned consumed ordinals, and later components continue numbering from the SSR-aligned counter.
+
+### E. Timed-out probe subtrees must be destroyed
+
+The deferred-resolution timeout branch cancelled only the pending coroutines, leaking destroy hooks, effect scopes, and child DI scopes of synchronously-created probe components. The branch now runs the normal `_remove_element` teardown over the discarded probe subtree without touching the live fallback.

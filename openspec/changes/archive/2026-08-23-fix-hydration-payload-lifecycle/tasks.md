@@ -35,3 +35,13 @@
 - [x] 5.3 Suspense DI-scope restore: exit the resolution scope and deterministically restore the pre-Suspense active scope in `_server_render`, `_browser_resolve`, and `_hydrate_node` so a child `provide()` does not leak into siblings
 - [x] 5.4 Tests for 5.1–5.3 (unit, both disposal orders, server + browser resolution, lost-ContextVar path)
 - [x] 5.5 PR body: add the required `Issues:` entry from the template
+
+## 6. AI review follow-ups (round 3)
+
+- [x] 6.1 RenderContext dispose unwinding: walk the active DI scope's parent chain and reset `_active_di_scope` whenever it belongs to the disposed tree (root or descendant), leaving foreign live scopes untouched
+- [x] 6.2 Payload closure for non-hydrating apps: close `_hydration_payload_closed` right after the initial child render (before loading teardown / lazy-route preload) regardless of `_hydrate`; drain + mismatch summary stay on the hydrating path only
+- [x] 6.3 Suspense DI-scope snapshot before probing: capture `original_scope` before probe-children generation; use `_restore_suspense_di_scope` on the hydration fast path; pass the pre-captured scope into `_browser_resolve` (also from `_browser_render`)
+- [x] 6.4 Provisional transfer ordinals: probe-depth mode on `RenderContext._next_transfer_id` gives the hydration fallback non-consuming ids so per-name counters stay aligned with the SSR tree
+- [x] 6.5 Timeout probe destruction: destroy the discarded probe subtree (destroy hooks, effect scopes, child DI scopes) on the deferred-resolution timeout while keeping the live fallback
+- [x] 6.6 Tests for 6.1–6.5 (dispose with active child/grandchild scope, foreign-scope no-op, non-hydrating closure before fade, fast-path + deferred probe scope restore, provisional-transfer-id alignment, timeout destroy)
+- [x] 6.7 Spec sync: `di-scope` (dispose unwinding), `hydration-data-transfer` (window closes before loading teardown in all browser modes), `suspense` (pre-probe snapshot, provisional ordinals, timeout teardown)

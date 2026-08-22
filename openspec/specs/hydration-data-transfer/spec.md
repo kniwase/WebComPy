@@ -249,7 +249,7 @@ Non-serializable values that fail even the codec's extended encoders SHALL be dr
 
 The `HYDRATION_SIGNAL_DATA_KEY` and `RESOURCE_DATA_KEY` SHALL be provided **before** any component creation, so that `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` composable calls during component setup can access the payload via `inject(HYDRATION_SIGNAL_DATA_KEY)`, and `BrowserResourcePort` can access embedded resources via `inject(RESOURCE_DATA_KEY)`.
 
-The `HYDRATION_DATA_KEY` and `HYDRATION_SIGNAL_DATA_KEY` payloads SHALL be valid only during the initial hydration window: the window opens before the initial render pass creates or hydrates the component tree and closes when the initial render pass (including the render-task drain that gates the hydration reveal) completes, whether it succeeds or fails. Component setups running after the window closes SHALL NOT restore from these payloads. The fetch-port response cache (`populate_from_transfer`) and `RESOURCE_DATA_KEY` are URL- and path-keyed respectively and are NOT subject to this lifecycle; they remain available for the app's lifetime. The `AppDocumentRoot` render pass SHALL resolve its render context as `_active_app_context`, falling back to the per-app `_render_context_cv` and then the module-level `_app_instance` fallback, so the window closes and the drain runs even when the render task does not carry `ContextVar` propagation (e.g., a PyScript JavaScript-originated callback).
+The `HYDRATION_DATA_KEY` and `HYDRATION_SIGNAL_DATA_KEY` payloads SHALL be valid only during the initial hydration window: the window opens before the initial render pass creates or hydrates the component tree and closes as soon as the initial child render completes — including the render-task drain that gates the hydration reveal in hydrating mode — before loading-screen teardown and lazy-route preload run, whether the app hydrates or runs in hydrate-disabled browser mode, and whether the render succeeds or fails. Component setups running after the window closes SHALL NOT restore from these payloads. The fetch-port response cache (`populate_from_transfer`) and `RESOURCE_DATA_KEY` are URL- and path-keyed respectively and are NOT subject to this lifecycle; they remain available for the app's lifetime. The `AppDocumentRoot` render pass SHALL resolve its render context as `_active_app_context`, falling back to the per-app `_render_context_cv` and then the module-level `_app_instance` fallback, so the window closes and the drain runs even when the render task does not carry `ContextVar` propagation (e.g., a PyScript JavaScript-originated callback).
 
 If the payload is missing or invalid, the function SHALL proceed with an empty payload (all DI keys unprovided). The script element SHALL be removed from the DOM after reading.
 
@@ -289,6 +289,11 @@ If the payload is missing or invalid, the function SHALL proceed with an empty p
 - **WHEN** the initial hydration render pass raises an error
 - **THEN** the hydration payload SHALL be closed
 - **AND** subsequent component setups SHALL NOT restore from `HYDRATION_SIGNAL_DATA_KEY` or `HYDRATION_DATA_KEY`
+
+#### Scenario: Payload closes before loading teardown for non-hydrating apps
+- **WHEN** the app runs in the browser with `hydrate=False` and the initial child render pass has completed
+- **THEN** the hydration payload SHALL be closed before the loading-screen fade and lazy-route preload begin
+- **AND** component setups running during those post-render startup steps SHALL NOT restore from `HYDRATION_SIGNAL_DATA_KEY` or `HYDRATION_DATA_KEY`
 
 ### Requirement: collect_transfer_data shall collect fetches, async_results, signals, and resources
 
