@@ -7,7 +7,7 @@
 - [x] 1.3 Add ruff D formatting subset (D205, D209, D212, D413, D415) to `pyproject.toml`; run `ruff check --fix` for the ~50 pre-existing formatting violations
 - [x] 1.4 Remove the OpenSpec change-path reference in `packages/webcompy/src/webcompy/app/_app.py:35` (reword the comment to describe the code only)
 - [x] 1.5 Spike: evaluate `pydoclint` for Args/Returns structural validation under the re-export pattern; record outcome in design.md (adopt or stay with AI-review-only)
-- [ ] 1.6 Adopt pydoclint (pending user decision): add dev dependency, `[tool.pydoclint]` tuned config in pyproject.toml, CI lint-job step, baseline; fix the ~10 structural violations
+- [x] 1.6 Adopt pydoclint: dev dependency (`pydoclint>=0.9.1`), tuned `[tool.pydoclint]` config in pyproject.toml (`style=google`, `arg-type-hints-in-docstring=false`, `check-return-types=false`), `ci.yml` lint-job step with artifact log, fixed 10 existing structural violations so the four src trees are clean
 
 ## 2. PR-A: Governance wiring (orchestrator session)
 

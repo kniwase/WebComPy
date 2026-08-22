@@ -5,7 +5,7 @@ async def sleep(delay: float) -> None:
     """Coroutine that completes after a given time (in seconds).
 
     Args:
-        delay (float): seconds
+        delay: seconds to wait.
 
     """
     await asyncio.sleep(delay)

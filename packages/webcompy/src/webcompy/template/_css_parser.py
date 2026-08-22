@@ -235,15 +235,13 @@ def parse_css(text: str) -> dict[str, StyleDict]:
       * Statement at-rules without a block (``@import``, ``@charset``,
         ``@namespace``) are not preserved — they don't fit ``StyleDict`` and are
         not meaningful inside a scoped style.
+      * Unbalanced braces raise ``WebComPyException``.
 
     Args:
         text: CSS source string.
 
     Returns:
         Selector-keyed dict whose values are ``StyleDict`` blocks.
-
-    Raises:
-        WebComPyException: If braces are unbalanced.
 
     """
     cleaned = _strip_comments(text)

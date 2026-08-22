@@ -65,6 +65,13 @@ def reactive_style(selector: str, vars: VarsMapping) -> Computed[str]:
         ...     "--color-bg": "white",
         ... }))
 
+    Args:
+        selector: CSS selector the style rule applies to.
+        vars: Mapping of CSS variable names to reactive values.
+
+    Returns:
+        A ``Computed[str]`` containing the rendered style block.
+
     """
     items = list(vars.items())
 
@@ -86,6 +93,13 @@ def reactive_block(selector: str, content: ReactiveValue) -> Computed[str]:
 
     Example:
         >>> app.append_style(reactive_block("body", Computed(lambda: f"color: {fg.value};")))
+
+    Args:
+        selector: CSS selector the style rule applies to.
+        content: A single CSS block of declarations for the selector.
+
+    Returns:
+        A ``Computed[str]`` containing the rendered style block.
 
     """
     return Computed(lambda: f"{selector} {{\n{_resolve_value(content)}\n}}")

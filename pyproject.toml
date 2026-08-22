@@ -58,6 +58,11 @@ known-first-party = ["webcompy", "webcompy_server", "webcompy_cli", "webcompy_te
 quote-style = "double"
 indent-style = "space"
 
+[tool.pydoclint]
+style = "google"
+arg-type-hints-in-docstring = false
+check-return-types = false
+
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
@@ -98,6 +103,7 @@ dev = [
     "nodeenv>=1.10.0",
     "playwright>=1.58.0",
     "pre-commit>=4.5.1",
+    "pydoclint>=0.9.1",
     "pyright>=1.1.408",
     "pytest>=9.0.3",
     "pytest-asyncio>=0.26.0",
