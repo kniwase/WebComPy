@@ -127,6 +127,7 @@ class AppDocumentRoot(Component):
                     scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
                     await scheduler.await_pending(only_render=True)
                     ctx._hydration_in_progress = False
+                    ctx._hydration_payload_closed = True
                     emit_report_summary(ctx)
                 if self.__loading:
                     self.__loading = False
