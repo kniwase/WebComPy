@@ -3,8 +3,7 @@ from collections.abc import AsyncIterator
 from my_app.rpc_schema import CountUpParams, count_up, count_up_sync, fail_midway
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html, repeat
-from webcompy.rpc import RpcWsClient
-from webcompy.rpc._contracts import RpcHttpClient
+from webcompy.rpc import RpcHttpClient, RpcWsClient
 from webcompy.signal import use_state
 
 

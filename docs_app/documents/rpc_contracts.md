@@ -26,7 +26,7 @@ add = Procedure("add", AddParams, int)
 class CountParams:
     n: int
 
-count_up = StreamingProcedure("count_up", CountUpParams, int)
+count_up = StreamingProcedure("count_up", CountParams, int)
 
 @dataclass
 class TickerParams:
@@ -46,7 +46,9 @@ Schema modules must not import `webcompy_server`, Starlette, or other server-onl
 Server implementations live in a separate server-only module that imports the schema and binds:
 
 ```python
-from my_app.rpc_schema import AddParams, add, count_up, ticker
+from collections.abc import AsyncIterator
+
+from my_app.rpc_schema import AddParams, CountParams, TickerParams, Tick, add, count_up, ticker
 
 def _add(p: AddParams) -> int:
     return p.a + p.b
@@ -55,7 +57,7 @@ app.rpc.bind(add, _add)
 
 # decorator sugar
 @app.rpc.bind(count_up)
-async def _count_up(p: CountUpParams) -> AsyncIterator[int]:
+async def _count_up(p: CountParams) -> AsyncIterator[int]:
     for i in range(1, p.n + 1):
         yield i
 
@@ -85,7 +87,7 @@ Contracts are transport-agnostic. Pass an explicit `RpcTransport`:
 
 ```python
 from webcompy.rpc import batch, notify
-from webcompy.rpc._contracts import RpcHttpClient
+from webcompy.rpc import RpcHttpClient
 
 client = RpcHttpClient()
 value: int = await add(client, AddParams(a=2, b=3))
@@ -99,9 +101,17 @@ Typed batch over `RpcCall`:
 c1 = add(client, AddParams(a=1))
 c2 = add(client, AddParams(a=2))
 results: tuple[int, int] = await batch(c1, c2)  # one POST array / one WS frame
+
 empty: tuple[()] = await batch()                # no I/O
-with_errors: tuple[int | RpcError, ...] = await batch(c1, missing, return_exceptions=True)
+
+with_errors: tuple[int | RpcError, int | RpcError] = await batch(
+    add(client, AddParams(a=1)),
+    add(client, AddParams(a=999)),  # unbound path -> RpcError entry
+    return_exceptions=True,
+)
 ```
+
+Each `RpcCall` is consumed once by `batch`/`notify` — reuse raises `RuntimeError`, so create fresh calls per statement.
 
 Fire-and-forget notify as an id-less array:
 

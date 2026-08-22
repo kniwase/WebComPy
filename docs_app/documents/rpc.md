@@ -37,7 +37,7 @@ app.rpc.bind(add, _add)
 ## Typed calls
 
 ```python
-from webcompy.rpc._contracts import RpcHttpClient
+from webcompy.rpc import RpcHttpClient
 
 client = RpcHttpClient()
 value: int = await add(client, AddParams(a=2, b=3))  # -> 5
@@ -52,12 +52,15 @@ value: int = await add(client, AddParams(a=2, b=3))  # -> 5
 ```python
 from webcompy.rpc import batch, notify
 
+await notify(add(client, AddParams(a=1)))  # one id-less POST
+
 c1 = add(client, AddParams(a=1))
 c2 = add(client, AddParams(a=2))
-await notify(c1)                    # one id-less POST
 results: tuple[int, int] = await batch(c1, c2)  # one POST array
 empty: tuple[()] = await batch()    # no I/O
 ```
+
+Each `RpcCall` can only be consumed once — after `notify` or `batch` uses it, awaiting it again raises `RuntimeError`. Create a fresh call for each statement.
 
 `batch` supports heterogeneous tuple inference (`tuple[R1, R2, ...]` via `0..6` overloads) and `return_exceptions=True` to surface per-call `RpcError`s as `R | RpcError` entries.
 
