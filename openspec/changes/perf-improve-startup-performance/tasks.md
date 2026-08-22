@@ -21,13 +21,13 @@
 
 ## 4. Record measurement conclusions in design.md (no docs_app changes)
 
-- [ ] 4.1 Record the measurement conclusions in this change's `design.md`: custom-element registration measured <50 ms (not a startup bottleneck); dominant cost is PyScript/Pyodide runtime transfer (~12.8 MB) and initialization (~2–3 s); primary evidence lives in `.tmp/measure/report.md` (gitignored, referenced only)
-- [ ] 4.2 Note in `design.md` that future startup work should target runtime transfer/init rather than custom-element registration or binding
+- [x] 4.1 Record the measurement conclusions in this change's `design.md`: custom-element registration measured <50 ms (not a startup bottleneck); dominant cost is PyScript/Pyodide runtime transfer (~12.8 MB) and initialization (~2–3 s); primary evidence lives in `.tmp/measure/report.md` (gitignored, referenced only)
+- [x] 4.2 Note in `design.md` that future startup work should target runtime transfer/init rather than custom-element registration or binding
 
 ## 5. Runtime-transfer investigation (follow-up basis)
 
-- [ ] 5.1 Document delivery-mode options in `design.md` as follow-up candidates: `wasm_serving`/`runtime_serving` (CDN vs local), `standalone`, cache headers, wheel split — with trade-offs; no code change in this change
-- [ ] 5.2 Confirm no delivery behavior changes here (per D4): record explicitly in `design.md` that any material delivery improvement becomes its own change reusing the restored profiler for validation
+- [x] 5.1 Document delivery-mode options in `design.md` as follow-up candidates: `wasm_serving`/`runtime_serving` (CDN vs local), `standalone`, cache headers, wheel split — with trade-offs; no code change in this change
+- [x] 5.2 Confirm no delivery behavior changes here (per D4): record explicitly in `design.md` that any material delivery improvement becomes its own change reusing the restored profiler for validation
 
 ## 6. Validation
 

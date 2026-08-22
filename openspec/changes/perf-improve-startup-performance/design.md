@@ -70,3 +70,23 @@ Do not modify `pyscript-bundle` or CLI delivery behavior in this change. The mea
 
 - ~~Whether `lazy_preloaded` should time the synchronous `_preload()` of each component or the whole scheduled batch~~ — Resolved: batch wall time, recorded at batch completion (D3).
 - Whether to also record the per-`.whl`/`.wasm` resource timings in the summary (browser Performance API) — deferred; external measurement already covers it.
+
+## Measurement Conclusions
+
+Findings from the docs_app startup measurement that motivated this change (primary data: `.tmp/measure/report.md` and sibling JSON in `.tmp/measure/`, which are gitignored and referenced here only):
+
+- **Custom-element registration is NOT a startup bottleneck.** The bulk `customElements.define` pass, per-component `ensure_defined`, FFI binding, and lazy-route preload all measure well under 50 ms combined on both dev and static serving. Any future optimization of registration/binding is de-prioritized.
+- **The dominant startup cost is PyScript/Pyodide runtime transfer and initialization**: roughly 12.8 MB transferred (`pyodide.asm.wasm` ~8.6 MB, `python_stdlib.zip` ~2.4 MB, JS glue ~1.3 MB, app wheel ~393 KB) and ~2–3 s wall clock cold / ~2–2.35 s warm.
+- Future startup work should therefore target **runtime delivery and initialization**, not component machinery.
+
+## Runtime Delivery Options (follow-up basis)
+
+Per D4 no delivery behavior changes in this change; the options below are recorded as candidates for a dedicated follow-up change:
+
+- **`runtime_serving="local"`** (serve Pyodide from `_webcompy-assets/pyodide/`): removes CDN dependency and makes caching deterministic, but ships ~12 MB per deployment and requires the CLI asset pipeline.
+- **CDN (default)**: zero deploy cost, but subject to third-party cache policy and network variability; cache headers cannot be controlled by the app author.
+- **Cache headers for local assets**: when serving locally through the CLI/server, long-lived immutable cache headers on `.wasm`/`.zip` would make warm boots near-instant for repeat visitors. Low risk, but changes HTTP behavior → belongs to a follow-up change.
+- **`standalone` builds**: inlines everything for offline use; largest transfer, only appropriate for specific deployment targets.
+- **Wheel splitting / dependency trimming**: reduces the app-package portion (~393 KB), which is small relative to the runtime — low expected payoff.
+
+Any material improvement selected from these options becomes its own change and reuses the profiler restored by this change for before/after validation.
