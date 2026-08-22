@@ -215,3 +215,80 @@ def test_rpc_call_is_awaitable_and_batch_usable():
             asyncio.run(batch(c))
     finally:
         scope.__exit__(None, None, None)
+
+
+def _in_scope():
+    from webcompy.di import DIScope, provide
+    from webcompy.di._keys import RPC_REGISTRY_KEY
+    from webcompy.ports._keys import FETCH_PORT_KEY
+
+    scope = DIScope()
+    scope.__enter__()
+    provide(RPC_REGISTRY_KEY, ProcedureRegistry())
+    provide(FETCH_PORT_KEY, type("F", (), {"fetch": lambda *a, **k: None})())
+    return scope
+
+
+def test_batch_marks_calls_consumed():
+    import asyncio
+
+    t = FakeTransport()
+    proc = Procedure("add", AddParams, int)
+    c1 = proc(t, AddParams(1, 0))
+    c2 = proc(t, AddParams(2, 0))
+    scope = _in_scope()
+    try:
+        with pytest.raises(RpcError, match="unsupported transport"):
+            asyncio.run(batch(c1, c2))
+        with pytest.raises(RuntimeError, match="already awaited"):
+
+            async def _reawait_c1():
+                await c1
+
+            asyncio.run(_reawait_c1())
+        with pytest.raises(RuntimeError, match="already awaited"):
+
+            async def _reawait_c2():
+                await c2
+
+            asyncio.run(_reawait_c2())
+    finally:
+        scope.__exit__(None, None, None)
+
+
+def test_notify_marks_calls_consumed():
+    import asyncio
+
+    t = FakeTransport()
+    proc = Procedure("add", AddParams, int)
+    c1 = proc(t, AddParams(1, 0))
+    scope = _in_scope()
+    try:
+        with pytest.raises(RpcError, match="unsupported transport"):
+            asyncio.run(notify(c1))
+        with pytest.raises(RuntimeError, match="already awaited"):
+
+            async def _reawait():
+                await c1
+
+            asyncio.run(_reawait())
+    finally:
+        scope.__exit__(None, None, None)
+
+
+def test_mixed_transport_rejection_does_not_consume_calls():
+    import asyncio
+
+    t1 = FakeTransport()
+    t2 = FakeTransport()
+    p1 = Procedure("add", AddParams, int)
+    p2 = Procedure("add", AddParams, int)
+    c1 = p1(t1, AddParams(1, 0))
+    c2 = p2(t2, AddParams(2, 0))
+    with pytest.raises(RpcError, match="same transport"):
+        asyncio.run(batch(c1, c2))
+
+    async def _run():
+        return await c1
+
+    assert asyncio.run(_run()) == 5

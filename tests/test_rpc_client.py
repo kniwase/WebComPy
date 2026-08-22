@@ -11,8 +11,7 @@ from webcompy.di import DIScope, provide
 from webcompy.di._keys import RPC_REGISTRY_KEY
 from webcompy.ports._fetch import Response
 from webcompy.ports._keys import FETCH_PORT_KEY
-from webcompy.rpc import Procedure, batch, notify
-from webcompy.rpc._contracts import RpcHttpClient
+from webcompy.rpc import Procedure, RpcHttpClient, batch, notify
 from webcompy.rpc._errors import RpcError
 from webcompy.rpc._registry import ProcedureRegistry
 
