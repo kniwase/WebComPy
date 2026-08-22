@@ -148,12 +148,14 @@ class AppDocumentRoot(Component):
                 await self._head_element._render()
                 ctx = _resolve_active_render_context(self._app)
                 if ctx is not None and self._app:
-                    if self._app._hydrate:
+                    hydrating = self._app._hydrate
+                    if hydrating:
                         scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
                         await scheduler.await_pending(only_render=True)
-                        emit_report_summary(ctx)
                     ctx._hydration_in_progress = False
                     ctx._hydration_payload_closed = True
+                    if hydrating:
+                        emit_report_summary(ctx)
                 if self.__loading:
                     self.__loading = False
                     selector = self._selector or (self._app.config.selector if self._app else "#webcompy-app")
