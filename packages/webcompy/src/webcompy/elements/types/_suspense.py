@@ -209,6 +209,8 @@ class SuspenseElement(DynamicElement):
                         self._timeout,
                     )
                     self._cleanup_pending_pairs(pairs)
+                    for child in list(children):
+                        child._remove_element(True, False)
                     return
                 for _idx, result in enumerate(results):
                     if isinstance(result, Exception):

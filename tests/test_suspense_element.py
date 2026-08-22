@@ -396,6 +396,76 @@ class TestSuspenseHydrationOrdinals:
             _active_app_context.reset(app_token)
 
 
+class TestSuspenseTimeoutProbeDestroy:
+    @pytest.mark.asyncio
+    async def test_timeout_destroys_probe_subtree_and_keeps_fallback(self, monkeypatch, suspense_scope, caplog):
+        import logging
+
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.components._context_manager import ComponentRenderState
+        from webcompy.di import inject
+        from webcompy.di._keys import _HEAD_PROPS_KEY
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, CUSTOM_ELEMENT_PORT_KEY
+        from webcompy.signal._effect import EffectScope
+        from webcompy_testing import FakeCustomElementPort
+
+        monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
+        suspense_scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+        suspense_scope.provide(CUSTOM_ELEMENT_PORT_KEY, FakeCustomElementPort())
+
+        destroyed: list[str] = []
+
+        @define_component("timeout-destroy-child")
+        def TimeoutDestroyChild(context):
+            from webcompy.components import on_before_destroy
+
+            on_before_destroy(lambda: destroyed.append("child-destroyed"))
+            return html.DIV({}, "probe")
+
+        slow_cid = generate_id("SlowTimeoutComp")
+
+        class _Ctx:
+            _component_name = "SlowTimeoutComp"
+            _transfer_id = f"{slow_cid}#0"
+
+            def __init__(self) -> None:
+                self._transferable_signals = {}
+                self._async_results = []
+
+        state = ComponentRenderState(
+            context=_Ctx(),
+            effect_scope=EffectScope(),
+            framework_cleanup=lambda: None,
+        )
+
+        async def template():
+            await asyncio.sleep(0.5)
+            return html.DIV({}, "late")
+
+        comp = TestSuspenseHydrationFastPath._make_component(slow_cid, f"{slow_cid}#0")
+        comp._pending_async_template = template()
+        comp._render_state = state
+
+        el = SuspenseElement(
+            fallback=lambda: html.P({}, "loading"),
+            children=lambda: html.DIV({}, TimeoutDestroyChild(None), comp),
+            timeout=0.05,
+        )
+        el._parent = _DummyParent()
+        el._node_idx = 0
+
+        el._hydrate_node()
+        children_before = list(el._children)
+
+        scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
+        with caplog.at_level(logging.WARNING, logger="webcompy.elements.types._suspense"):
+            await scheduler.await_pending(only_render=True)
+
+        assert any("timed out" in record.message for record in caplog.records)
+        assert list(el._children) == children_before
+        assert destroyed == ["child-destroyed"]
+
+
 class TestSuspenseHydrationFastPath:
     CID = "fast-child"
 
