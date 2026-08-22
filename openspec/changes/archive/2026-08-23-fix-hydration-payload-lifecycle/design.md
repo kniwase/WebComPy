@@ -71,3 +71,19 @@ transfer_id = app_ctx._next_transfer_id(component_name) if app_ctx else generate
 - **Testing-module / unit-test doubles** that never attach a `RenderContext` → they fall back to bare `generate_id(name)` keys, keeping existing tests and payload fixtures valid.
 - **Suspense-resolved subtrees created after the reveal** (client-side async boundaries) → their `use_state()` runs after the window closes and will not restore; they render factory defaults as if client-navigated. Mitigation: SSR awaits Suspense content, and the browser drain covers render-scoped resolution (bounded by the element's `timeout`, mirroring the SSR-side `wait_for`); post-reveal resolution was already a client-side render.
 - **`hydrate=False` apps may restore without DOM adoption** → when a prerendered page ships a payload, first-render setups can restore transferred values even though the `_hydrate_node` pass is skipped; this mirrors pre-existing behavior, and the window still closes at the end of the first render pass, so no stale-restore window remains.
+
+## Addendum (round 2): AI review follow-ups
+
+The CI AI review of PR #271 requested three must-fix items before merge. Design of the follow-up changes:
+
+### A. Browser fallback must survive overlapping disposes
+
+`RenderContext.__init__` (pyscript) overwrote the module-level `_app_instance` / `_app_di_scope` fallbacks, and `dispose()` cleared them unconditionally. With two overlapping browser contexts, disposing either one erased the surviving context's fallback, breaking callback-side injection. Each context now stores the previous fallback pair on creation; `dispose()` clears/restores only when it is still the current fallback, walking past already-disposed predecessors to re-select the last live context (no new module-level globals).
+
+### B. Payload closure must use the same active-or-fallback context lookup
+
+`AppDocumentRoot._render()` obtained `ctx` only via `_active_app_context.get()`, while `_is_hydration_payload_open()` also falls back to `_get_app_instance()`. A PyScript JS-originated render task without ContextVar propagation would never close the payload and would skip the reveal-gating render drain. `_render()` now resolves the context via `_active_app_context` → per-app `_render_context_cv` → `_app_instance` at hydration start, before the drain, and in the `finally`.
+
+### C. Suspense must restore the pre-resolution DI scope
+
+`provide()` during component setup switches `_active_di_scope` to the component child scope without a token. The identity-guarded `DIScope.__exit__` (introduced for dispose hygiene) silently no-ops when a descendant scope is active, leaking the child scope into Suspense siblings. A shared `_restore_suspense_di_scope(scope, original_scope)` helper (`_server_render`, `_browser_resolve`, `_hydrate_node`) exits the resolution scope and deterministically restores the pre-Suspense active scope.

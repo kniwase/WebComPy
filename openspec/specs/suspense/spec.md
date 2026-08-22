@@ -29,7 +29,7 @@ The `children` parameter SHALL be `Callable[[], ElementChildren]` (a zero-argume
 
 ### Requirement: Suspense shall await children during SSR/SSG
 
-In non-pyscript (server) environments, `SuspenseElement._render()` SHALL wait for all unresolved async child setups before completing its own render. Specifically: the function SHALL provide `SUSPENSE_RESOLVING_KEY=True` in the DI scope, traverse the children subtree to collect each unresolved `Component._pending_async_template` coroutine, and `await asyncio.wait_for(asyncio.gather(*coroutines), timeout=timeout)`. On success, each component's template SHALL be set, `__init_component()` SHALL be called, and `_pending_async_template` SHALL be cleared. On timeout, the fallback SHALL be rendered and a warning SHALL be logged. On exception, if `error_fallback` is provided, it SHALL be rendered; otherwise the exception SHALL propagate to the root render.
+In non-pyscript (server) environments, `SuspenseElement._render()` SHALL wait for all unresolved async child setups before completing its own render. Specifically: the function SHALL provide `SUSPENSE_RESOLVING_KEY=True` in the DI scope, traverse the children subtree to collect each unresolved `Component._pending_async_template` coroutine, and `await asyncio.wait_for(asyncio.gather(*coroutines), timeout=timeout)`. On success, each component's template SHALL be set, `__init_component()` SHALL be called, and `_pending_async_template` SHALL be cleared. On timeout, the fallback SHALL be rendered and a warning SHALL be logged. On exception, if `error_fallback` is provided, it SHALL be rendered; otherwise the exception SHALL propagate to the root render. After resolution completes (success or failure), the active DI scope SHALL be restored to the scope that was active before the Suspense subtree entered resolution, so a child `provide()` during resolution does not leak its scope into Suspense siblings or surrounding code.
 
 #### Scenario: SSR/SSG awaits async children
 - **WHEN** `SuspenseElement._render()` runs in a non-pyscript environment and its children subtree contains `Component` instances with unresolved `_pending_async_template` coroutines
@@ -42,9 +42,15 @@ In non-pyscript (server) environments, `SuspenseElement._render()` SHALL wait fo
 - **THEN** the fallback SHALL be rendered into the output
 - **AND** a warning SHALL be logged indicating which Suspense timed out
 
+#### Scenario: Suspense resolution does not leak a child provide() scope
+- **WHEN** a Suspense child component calls `provide(key, value)` during its setup
+- **AND** a sibling component after the Suspense tries to `inject(key, default)`
+- **THEN** the sibling SHALL receive the `default` (the value SHALL NOT resolve)
+- **AND** the active DI scope after resolution SHALL be the scope active before the Suspense subtree entered resolution
+
 ### Requirement: Suspense shall render fallback first in the browser then swap
 
-In the pyscript (browser) environment, `SuspenseElement._render()` SHALL first check whether children have unresolved async setup. If children have unresolved `_pending_async_template` coroutines, the fallback SHALL be rendered and async child resolution SHALL be scheduled. If children have no unresolved async setup, they SHALL be rendered directly without a fallback.
+In the pyscript (browser) environment, `SuspenseElement._render()` SHALL first check whether children have unresolved async setup. If children have unresolved `_pending_async_template` coroutines, the fallback SHALL be rendered and async child resolution SHALL be scheduled. If children have no unresolved async setup, they SHALL be rendered directly without a fallback. Deferred resolution and hydration adoption SHALL exit with the same DI scope restoration as server resolution — the scope active before the Suspense subtree entered resolution SHALL be restored when resolution completes.
 
 #### Scenario: Browser shows fallback immediately
 - **WHEN** `SuspenseElement._render()` runs in the pyscript environment and its children have unresolved async setup
