@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections.abc
 import inspect
 import itertools
 import typing
@@ -22,6 +23,7 @@ class ProcedureInfo:
     required: frozenset[str]
     result_schema: Any
     is_async: bool
+    is_streaming: bool
 
 
 @dataclass(frozen=True)
@@ -57,6 +59,62 @@ def _extract_signature(name: str, func: Callable[..., Any]) -> tuple[dict[str, A
         param_name for param_name, param in signature.parameters.items() if param.default is inspect.Parameter.empty
     )
     return param_schemas, param_order, required, hints.get("return")
+
+
+_STREAM_ORIGINS = (
+    collections.abc.AsyncIterator,
+    collections.abc.AsyncIterable,
+    collections.abc.Iterator,
+    collections.abc.Iterable,
+)
+_ASYNC_STREAM_ORIGINS = (collections.abc.AsyncIterator, collections.abc.AsyncIterable)
+
+
+def _resolve_streaming(name: str, func: Callable[..., Any], result_schema: Any) -> tuple[bool, Any]:
+    """Resolve whether ``func`` is a streaming procedure and its element schema.
+
+    A generator function whose return annotation is a subscripted
+    ``AsyncIterator[T]`` / ``AsyncIterable[T]`` (async generator) or
+    ``Iterator[T]`` / ``Iterable[T]`` (sync generator) registers as streaming
+    with element schema ``T``. Returns ``(is_streaming, result_schema)`` where
+    ``result_schema`` is the element type for streaming procedures and
+    unchanged otherwise.
+    """
+    is_async_gen = inspect.isasyncgenfunction(func)
+    is_sync_gen = inspect.isgeneratorfunction(func)
+    origin = typing.get_origin(result_schema)
+    if origin in _STREAM_ORIGINS:
+        args = typing.get_args(result_schema)
+        if not args:
+            raise WebComPyException(
+                f"RPC procedure {name!r}: streaming return annotation requires an element type (e.g. AsyncIterator[T])"
+            )
+        is_async_annotation = origin in _ASYNC_STREAM_ORIGINS
+        if is_async_gen and not is_async_annotation:
+            raise WebComPyException(
+                f"RPC procedure {name!r}: async generator function must be annotated with "
+                "AsyncIterator[T] or AsyncIterable[T]"
+            )
+        if is_sync_gen and is_async_annotation:
+            raise WebComPyException(
+                f"RPC procedure {name!r}: sync generator function must be annotated with Iterator[T] or Iterable[T]"
+            )
+        if not (is_async_gen or is_sync_gen):
+            raise WebComPyException(
+                f"RPC procedure {name!r}: streaming return annotation requires a generator function"
+            )
+        return True, args[0]
+    if any(result_schema is stream_origin for stream_origin in _STREAM_ORIGINS):
+        raise WebComPyException(
+            f"RPC procedure {name!r}: streaming return annotation {result_schema!r} requires an element type "
+            "(e.g. AsyncIterator[T])"
+        )
+    if is_async_gen or is_sync_gen:
+        raise WebComPyException(
+            f"RPC procedure {name!r}: generator functions must declare an iterable return annotation "
+            "(e.g. AsyncIterator[T] for async generators, Iterator[T] for sync generators)"
+        )
+    return False, result_schema
 
 
 class ProcedureRegistry:
@@ -113,6 +171,7 @@ class ProcedureRegistry:
         param_schemas, param_order, required, result_schema = _extract_signature(name, func)
         if result_schema is None:
             raise WebComPyException(f"RPC procedure {name!r}: missing return type annotation")
+        is_streaming, result_schema = _resolve_streaming(name, func, result_schema)
         self._procedures[name] = ProcedureInfo(
             name=name,
             func=func,
@@ -121,6 +180,7 @@ class ProcedureRegistry:
             required=required,
             result_schema=result_schema,
             is_async=inspect.iscoroutinefunction(func),
+            is_streaming=is_streaming,
         )
 
     def register_subscription(

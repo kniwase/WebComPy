@@ -4,7 +4,9 @@ import json
 
 from webcompy.rpc._errors import PARSE_ERROR
 from webcompy.rpc._registry import ProcedureRegistry
-from webcompy_server.rpc._dispatcher import _error_body, dispatch_payload
+from webcompy.rpc._stream import STREAM_CANCEL_METHOD
+from webcompy_server.rpc._dispatcher import _classify_stream_call, _error_body, dispatch_payload
+from webcompy_server.rpc._streams import StreamCallHub
 from webcompy_server.rpc._subscriptions import SubscriptionHub
 
 CLOSE_METHOD = "_webcompy.close"
@@ -23,13 +25,16 @@ def create_rpc_ws_endpoint(registry: ProcedureRegistry):
     (single FIFO path guarantees response → replay → live ordering for
     subscriptions). Reserved ``_webcompy.*`` methods are handled here: ping is
     answered with pong, close closes the socket with code 1011 so the client
-    reconnect loop engages, and subscribe/unsubscribe drive the subscription
-    hub. Starlette is imported lazily so this module stays importable outside
-    a Starlette context.
+    reconnect loop engages, subscribe/unsubscribe drive the subscription
+    hub, and stream-cancel stops a per-call stream. Single ``"stream": true``
+    calls to streaming procedures are answered with a ``stream_id`` and
+    streamed by the ``StreamCallHub``. Starlette is imported lazily so this
+    module stays importable outside a Starlette context.
     """
     from starlette.websockets import WebSocket, WebSocketDisconnect
 
     hub = SubscriptionHub(registry)
+    stream_hub = StreamCallHub(registry)
 
     async def endpoint(websocket: WebSocket) -> None:
         await websocket.accept()
@@ -62,6 +67,16 @@ def create_rpc_ws_endpoint(registry: ProcedureRegistry):
                         continue
                     if method == UNSUBSCRIBE_METHOD:
                         hub.handle_unsubscribe(conn, payload)
+                        continue
+                    if method == STREAM_CANCEL_METHOD:
+                        stream_hub.handle_cancel(conn, payload)
+                        continue
+                    classified = _classify_stream_call(payload, registry)
+                    if isinstance(classified, dict):
+                        conn.send(classified)
+                        continue
+                    if classified is not None:
+                        stream_hub.start_call(conn, classified)
                         continue
                 response = await dispatch_payload(payload, registry)
                 if response is not None:

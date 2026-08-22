@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -67,6 +68,20 @@ async def _six_events() -> object:
         yield {"seq": i}
 
 
+async def _count_up(n: int) -> AsyncIterator[int]:
+    for i in range(1, n + 1):
+        yield i
+
+
+def _count_up_sync(n: int) -> Iterator[int]:
+    yield from range(1, n + 1)
+
+
+async def _fail_midway() -> AsyncIterator[int]:
+    yield 1
+    raise RuntimeError("boom")
+
+
 def _hub_of(endpoint) -> subs_mod.SubscriptionHub:
     return next(c.cell_contents for c in endpoint.__closure__ if isinstance(c.cell_contents, subs_mod.SubscriptionHub))
 
@@ -78,6 +93,9 @@ def _make_registry() -> ProcedureRegistry:
     registry.register("boom", _boom)
     registry.register("get_user", _get_user)
     registry.register("get_typed", _get_typed)
+    registry.register("count_up", _count_up)
+    registry.register("count_up_sync", _count_up_sync)
+    registry.register("fail_midway", _fail_midway)
     registry.register_subscription("ticker", _ticker, replay_size=256)
     return registry
 
@@ -581,3 +599,150 @@ class TestSubscriptions:
         assert stream.check_rejoin(6) == ([], False)  # nothing missed
         assert stream.check_rejoin(7) == ([], True)  # cursor ahead of the stream
         hub.reap(stream)
+
+
+def _closed_slow_procedure(closed: list[bool]):
+    async def _slow() -> AsyncIterator[int]:
+        try:
+            yield 1
+            await asyncio.sleep(3600)
+        finally:
+            closed.append(True)
+
+    return _slow
+
+
+def _wait_until(predicate, timeout: float = 2.0) -> None:
+    deadline = time.monotonic() + timeout
+    while not predicate():
+        time.sleep(0.01)
+        assert time.monotonic() < deadline, "condition not met within timeout"
+
+
+class TestStreamCalls:
+    def test_flagged_call_acks_with_stream_id(self, app: Starlette) -> None:
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            ws.send_json({"jsonrpc": "2.0", "method": "count_up", "params": {"n": 2}, "id": 7, "stream": True})
+            response = ws.receive_json()
+            assert response["jsonrpc"] == "2.0"
+            assert response["id"] == 7
+            assert isinstance(response["result"]["stream_id"], str)
+
+    def test_items_flow_as_event_frames_without_cursor(self, app: Starlette) -> None:
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            ws.send_json({"jsonrpc": "2.0", "method": "count_up", "params": {"n": 2}, "id": 1, "stream": True})
+            ack = ws.receive_json()
+            stream_id = ack["result"]["stream_id"]
+            data: list[int] = []
+            done: dict[str, Any] | None = None
+            while len(data) < 2 or done is None:
+                frame = ws.receive_json()
+                if frame.get("method") == "_webcompy.event":
+                    params = frame["params"]
+                    assert params.get("stream_id") == stream_id
+                    assert "cursor" not in params
+                    data.append(params["data"])
+                elif frame.get("method") == "_webcompy.stream_done":
+                    assert frame["params"]["stream_id"] == stream_id
+                    done = frame
+            assert data == [1, 2]
+
+    def test_sync_generator_streams_items(self, app: Starlette) -> None:
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            ws.send_json({"jsonrpc": "2.0", "method": "count_up_sync", "params": {"n": 2}, "id": 1, "stream": True})
+            ack = ws.receive_json()
+            stream_id = ack["result"]["stream_id"]
+            data: list[int] = []
+            done: dict[str, Any] | None = None
+            while len(data) < 2 or done is None:
+                frame = ws.receive_json()
+                if frame.get("method") == "_webcompy.event":
+                    data.append(frame["params"]["data"])
+                elif frame.get("method") == "_webcompy.stream_done":
+                    assert frame["params"]["stream_id"] == stream_id
+                    done = frame
+            assert data == [1, 2]
+
+    def test_mid_stream_exception_emits_error_without_done(self, app: Starlette) -> None:
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            ws.send_json({"jsonrpc": "2.0", "method": "fail_midway", "id": 1, "stream": True})
+            ack = ws.receive_json()
+            stream_id = ack["result"]["stream_id"]
+            frames = [ws.receive_json(), ws.receive_json()]
+            assert [f.get("method") for f in frames] == ["_webcompy.event", "_webcompy.stream_error"]
+            error_params = frames[1]["params"]
+            assert error_params["stream_id"] == stream_id
+            assert error_params["code"] == -32603
+            assert "boom" not in error_params["message"]
+
+    def test_stream_cancel_stops_the_generator(self) -> None:
+        closed: list[bool] = []
+        registry = ProcedureRegistry()
+        registry.register("slow", _closed_slow_procedure(closed))
+        endpoint = create_rpc_ws_endpoint(registry)
+        app = Starlette(routes=[WebSocketRoute(_RPC_PATH, endpoint)])
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            ws.send_json({"jsonrpc": "2.0", "method": "slow", "id": 1, "stream": True})
+            stream_id = ws.receive_json()["result"]["stream_id"]
+            assert ws.receive_json()["params"]["stream_id"] == stream_id
+            ws.send_json({"jsonrpc": "2.0", "method": "_webcompy.stream_cancel", "params": {"stream_id": stream_id}})
+            _wait_until(lambda: bool(closed))
+            assert closed == [True]
+
+    def test_socket_close_cancels_all_streams(self) -> None:
+        closed: list[bool] = []
+        registry = ProcedureRegistry()
+        registry.register("slow", _closed_slow_procedure(closed))
+        endpoint = create_rpc_ws_endpoint(registry)
+        app = Starlette(routes=[WebSocketRoute(_RPC_PATH, endpoint)])
+        with TestClient(app) as client:
+            with client.websocket_connect(_RPC_PATH) as ws:
+                ws.send_json({"jsonrpc": "2.0", "method": "slow", "id": 1, "stream": True})
+                stream_id = ws.receive_json()["result"]["stream_id"]
+                assert ws.receive_json()["params"]["stream_id"] == stream_id
+            _wait_until(lambda: bool(closed))
+            assert closed == [True]
+
+    def test_streams_are_not_shared_across_calls(self, app: Starlette) -> None:
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            ws.send_json({"jsonrpc": "2.0", "method": "count_up", "params": {"n": 2}, "id": 1, "stream": True})
+            ws.send_json({"jsonrpc": "2.0", "method": "count_up", "params": {"n": 2}, "id": 2, "stream": True})
+            stream_ids: set[str] = set()
+            while len(stream_ids) < 2:
+                frame = ws.receive_json()
+                result = frame.get("result")
+                if isinstance(result, dict) and "stream_id" in result:
+                    stream_ids.add(result["stream_id"])
+            assert len(stream_ids) == 2
+
+    def test_stream_mismatch_rules_apply_on_websocket(self, app: Starlette) -> None:
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            ws.send_json({"jsonrpc": "2.0", "method": "count_up", "params": {"n": 1}, "id": 1})
+            assert ws.receive_json()["error"]["code"] == -32600
+            ws.send_json({"jsonrpc": "2.0", "method": "add", "params": {"a": 1, "b": 2}, "id": 2, "stream": True})
+            assert ws.receive_json()["error"]["code"] == -32600
+            ws.send_json({"jsonrpc": "2.0", "method": "missing", "id": 3, "stream": True})
+            assert ws.receive_json()["error"]["code"] == -32601
+            ws.send_json({"jsonrpc": "2.0", "method": "count_up", "params": {"n": "x"}, "id": 4, "stream": True})
+            assert ws.receive_json()["error"]["code"] == -32602
+
+    def test_notification_to_streaming_procedure_does_not_execute(self, app: Starlette) -> None:
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            ws.send_json({"jsonrpc": "2.0", "method": "count_up", "params": {"n": 1}})
+            ws.send_json({"jsonrpc": "2.0", "method": "add", "params": {"a": 9}, "id": 99})
+            response = ws.receive_json()
+            assert response["id"] == 99
+            assert "result" in response
+
+    def test_streaming_entry_in_batch_answers_error_per_entry(self, app: Starlette) -> None:
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            ws.send_json(
+                [
+                    {"jsonrpc": "2.0", "method": "count_up", "params": {"n": 1}, "id": 1, "stream": True},
+                    {"jsonrpc": "2.0", "method": "add", "params": {"a": 1, "b": 2}, "id": 2},
+                ]
+            )
+            body = ws.receive_json()
+            by_id = {entry["id"]: entry for entry in body}
+            assert by_id[1]["error"]["code"] == -32600
+            assert by_id[2]["result"] == 3
