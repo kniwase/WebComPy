@@ -8,7 +8,7 @@ Declarative, statically typed RPC contracts shared between server and browser: `
 
 ### Requirement: Procedure contracts shall declare a typed single-result RPC call
 
-The framework SHALL provide a `Procedure` contract class (importable from `webcompy.rpc`) declaring a named RPC procedure and its parameter and result types. `Procedure(name, params_type, result_type)` SHALL store the name and types and SHALL reject names starting with `_webcompy.` at construction. `params_type` SHALL be a dataclass type — the parameter value is sent over the wire as the JSON object it encodes to — and non-dataclass parameter types SHALL be rejected at construction. `procedure(transport, params)` SHALL return an `RpcCall[P, R]` (importable from `webcompy.rpc`) that is `Awaitable[R]`; `await procedure(transport, params)` SHALL invoke `transport.call(name, params, result_type=result_type)` and SHALL return a value of the declared result type. The contract SHALL contain no encoding or decoding logic — encoding, `meta` handling, and decoding SHALL remain in the transport layer. Construction of the `RpcCall` SHALL NOT perform I/O until awaited, and the same object SHALL be usable as an argument to `batch`.
+The framework SHALL provide a `Procedure` contract class (importable from `webcompy.rpc`) declaring a named RPC procedure and its parameter and result types. `Procedure(name, params_type, result_type)` SHALL store the name and types and SHALL reject names starting with `_webcompy.` at construction. `params_type` SHALL be a dataclass type — the parameter value is sent over the wire as the JSON object it encodes to — and non-dataclass parameter types SHALL be rejected at construction. `procedure(transport, params)` SHALL return an `RpcCall[P, R]` (importable from `webcompy.rpc`) that is `Awaitable[R]`; `await procedure(transport, params)` SHALL invoke `transport.call(name, params, result_type=result_type)` and SHALL return a value of the declared result type. The contract SHALL contain no encoding or decoding logic — encoding, `meta` handling, and decoding SHALL remain in the transport layer. Construction of the `RpcCall` SHALL NOT perform I/O until awaited, and the same object SHALL be usable as an argument to `batch` and `notify`.
 
 #### Scenario: Typed call through a contract
 
@@ -21,7 +21,7 @@ The framework SHALL provide a `Procedure` contract class (importable from `webco
 - **WHEN** `call_obj = add(client, AddParams(2, 3))` is evaluated
 - **THEN** `call_obj` SHALL be an `RpcCall[AddParams, int]` that is awaitable
 - **AND** `await call_obj` SHALL resolve to `5` as an `int`
-- **AND** `call_obj` SHALL also be usable as an argument to `batch`
+- **AND** `call_obj` SHALL also be usable as an argument to `batch` and `notify`
 
 #### Scenario: Reserved names are rejected at construction
 
@@ -62,19 +62,45 @@ The framework SHALL provide a `Subscription` contract class declaring a subscrip
 - **WHEN** `ticker = Subscription("ticker", TickerParams, Tick)` and `sub = ticker(client, TickerParams("a"))` is evaluated with a conforming transport
 - **THEN** `sub` SHALL be an `RpcSubscription[Tick]` produced by `client.subscribe("ticker", TickerParams("a"), event_type=Tick)`
 
-### Requirement: Procedure contracts shall provide a typed notification
+### Requirement: notify shall send RpcCalls as fire-and-forget notifications
 
-`procedure.notify(transport, params)` SHALL send a fire-and-forget JSON-RPC notification for the contract's method name with the given typed params, delegating to `transport.notify(name, params)`. Notifications SHALL NOT be available on streaming or subscription contracts.
+The framework SHALL provide a `notify(*calls: RpcCall)` free function (importable from `webcompy.rpc`) that sends 0 or more `RpcCall`s as JSON-RPC notifications (envelopes without `id`) in a single transport round-trip: over `RpcHttpClient` as one HTTP POST with a JSON array (or no request for 0 calls, returning `None`), over `RpcWsClient` as one WebSocket text frame with a JSON array (no `Future`s). All calls SHALL share the same transport instance; mixed transports SHALL raise `RpcError`. Empty input SHALL be a no-op with no I/O and no hydration transfer entry. Streaming or subscription `RpcCall`s SHALL be rejected. Notifications reuse the existing `dispatch_payload` batch wire as an id-less array (server returns `None` → `204` / no frame).
 
-#### Scenario: Typed notification through a contract
+#### Scenario: Single notify
 
-- **WHEN** `add.notify(client, AddParams(1, 1))` is evaluated with a conforming transport
-- **THEN** `client.notify("add", AddParams(1, 1))` SHALL be invoked
+- **WHEN** `c = add(client, AddParams(1, 1))` and `await notify(c)` is evaluated with a conforming transport
+- **THEN** one JSON-RPC notification SHALL be sent without `id`
 - **AND** no result SHALL be returned
+
+#### Scenario: Multiple notify as one array
+
+- **WHEN** `c1 = add(client, AddParams(1, 0))` and `c2 = add(client, AddParams(2, 0))` and `await notify(c1, c2)` is evaluated
+- **THEN** one HTTP POST with a JSON array of id-less envelopes (or one WebSocket array frame) SHALL be sent
+- **AND** the server SHALL execute both procedures with no response body
+
+#### Scenario: Empty notify is a no-op
+
+- **WHEN** `await notify()` with no calls is evaluated
+- **THEN** no I/O SHALL occur and `None` SHALL be returned
+
+#### Scenario: Mixed transports are rejected in notify
+
+- **WHEN** `c_http = add(http_client, AddParams(1, 0))` and `c_ws = add(ws_client, AddParams(1, 0))` and `await notify(c_http, c_ws)` is evaluated
+- **THEN** `RpcError` SHALL be raised indicating mixed transports
+
+#### Scenario: Streaming call is rejected in notify
+
+- **WHEN** `c = produce(client, ProduceParams(2))` for a `StreamingProcedure` and `await notify(c)` is evaluated
+- **THEN** `RpcError` SHALL be raised indicating streaming calls cannot be sent as notifications
+
+#### Scenario: Subscription call is rejected in notify
+
+- **WHEN** `c = ticker(client, TickerParams("a"))` for a `Subscription` and `await notify(c)` is evaluated
+- **THEN** `RpcError` SHALL be raised indicating subscription calls cannot be sent as notifications
 
 ### Requirement: RpcTransport shall define the transport surface consumed by contracts
 
-The framework SHALL define an `RpcTransport` protocol with the methods contracts consume: `call(method, params=None, *, result_type=None)`, `notify(method, params=None)`, `stream(method, params=None, *, result_type=None) -> RpcStream`, and `subscribe(method, params=None, *, event_type=None) -> RpcSubscription`. `RpcWsClient` SHALL implement all four methods. Transport implementations SHALL own all wire encoding and decoding: they SHALL encode contract params through the existing `encode_with_meta` machinery and SHALL send object-form JSON-RPC params (the params object itself, per the `json-rpc` decode rule). Contracts SHALL remain transport-agnostic.
+The framework SHALL define an `RpcTransport` protocol with the methods contracts consume: `call(method, params=None, *, result_type=None)`, `notify(method, params=None)`, `stream(method, params=None, *, result_type=None) -> RpcStream`, and `subscribe(method, params=None, *, event_type=None) -> RpcSubscription`. `RpcWsClient` SHALL implement all four methods. Transport implementations SHALL own all wire encoding and decoding: they SHALL encode contract params through the existing `encode_with_meta` machinery and SHALL send object-form JSON-RPC params (the params object itself, per the `json-rpc` decode rule). Contracts SHALL remain transport-agnostic. Public callers SHALL use `Procedure`/`batch`/`notify` with `RpcCall`, not `RpcTransport` directly.
 
 #### Scenario: RpcWsClient conforms to the protocol
 
@@ -88,7 +114,7 @@ The framework SHALL define an `RpcTransport` protocol with the methods contracts
 
 ### Requirement: RpcHttpClient shall provide an HTTP transport for browser and server
 
-The framework SHALL provide an `RpcHttpClient` (importable from `webcompy.rpc`) implementing `call`, `notify`, and `stream` over the HTTP JSON-RPC endpoint with the same SSR behavior as the retired module-level client functions: during SSR/SSG, calls and notifications SHALL dispatch in-process via the ASGI transport and SHALL be recorded in the hydration transfer cache, and `stream` SHALL return the immediately-finished empty stream per `rpc-streaming`. `RpcHttpClient.subscribe` SHALL raise `RpcError` (subscriptions are WebSocket-only). `RpcHttpClient` SHALL require no constructor arguments, resolving the registry and ports from the current DI scope like the retired functions.
+The framework SHALL provide an `RpcHttpClient` (importable from `webcompy.rpc`) implementing `call`, `notify`, and `stream` over the HTTP JSON-RPC endpoint with the same SSR behavior as the retired module-level client functions: during SSR/SSG, calls SHALL dispatch in-process via the ASGI transport and SHALL be recorded in the hydration transfer cache, notifications SHALL dispatch in-process but SHALL NOT be recorded (HTTP `204` produces no transfer entry), and `stream` SHALL return the immediately-finished empty stream per `rpc-streaming`. `RpcHttpClient.subscribe` SHALL raise `RpcError` (subscriptions are WebSocket-only). `RpcHttpClient` SHALL require no constructor arguments, resolving the registry and ports from the current DI scope like the retired functions.
 
 #### Scenario: HTTP call through RpcHttpClient bakes during SSR
 
@@ -101,9 +127,9 @@ The framework SHALL provide an `RpcHttpClient` (importable from `webcompy.rpc`) 
 - **WHEN** `http_client.subscribe(...)` is invoked
 - **THEN** `RpcError` SHALL be raised
 
-### Requirement: RpcCall shall be the awaitable unit for Procedure calls and batch
+### Requirement: RpcCall shall be the awaitable unit for Procedure calls, batch and notify
 
-The framework SHALL provide an `RpcCall[P, R]` class (importable from `webcompy.rpc`) that is `Awaitable[R]`. `Procedure(transport, params)` SHALL return an `RpcCall` instance that captures the contract name, params, result type, and transport without performing I/O; `await` on the instance SHALL delegate to `transport.call` and SHALL be awaitable exactly once — awaiting the same instance a second time SHALL raise `RuntimeError` (`RpcCall already awaited`); `batch` consumes the call without prior await. `RpcCall` SHALL be the only accepted element type for `batch`; streaming and subscription contracts SHALL NOT produce `RpcCall` and SHALL be rejected by `batch`.
+The framework SHALL provide an `RpcCall[P, R]` class (importable from `webcompy.rpc`) that is `Awaitable[R]`. `Procedure(transport, params)` SHALL return an `RpcCall` instance that captures the contract name, params, result type, and transport without performing I/O; `await` on the instance SHALL delegate to `transport.call` and SHALL be awaitable exactly once — awaiting the same instance a second time SHALL raise `RuntimeError` (`RpcCall already awaited`); `batch` and `notify` consume the call without prior await. `RpcCall` SHALL be the only accepted element type for `batch` and `notify`; streaming and subscription contracts SHALL NOT produce `RpcCall` and SHALL be rejected by `batch` and `notify`. `RpcCall` SHALL have no truth value: `bool(RpcCall)` and `len(RpcCall)` SHALL raise `TypeError`.
 
 #### Scenario: RpcCall is awaitable once
 
@@ -115,9 +141,14 @@ The framework SHALL provide an `RpcCall[P, R]` class (importable from `webcompy.
 - **WHEN** `c = add(client, AddParams(2, 3))` and `await c` has already been evaluated and `await c` is evaluated again
 - **THEN** `RuntimeError` SHALL be raised indicating the call was already awaited
 
+#### Scenario: Truthiness is not available
+
+- **WHEN** `bool(c)` or `if c:` or `c or fallback` is evaluated for an `RpcCall`
+- **THEN** `TypeError` SHALL be raised indicating the call has no truth value
+
 ### Requirement: batch shall execute multiple RpcCalls in one round-trip
 
-The framework SHALL provide a `batch(*calls: RpcCall, return_exceptions=False)` free function (importable from `webcompy.rpc`) that executes 1 or more `RpcCall`s in a single transport round-trip: over `RpcHttpClient` as one HTTP POST with a JSON array, over `RpcWsClient` as one WebSocket text frame with a JSON array, reusing the existing `dispatch_payload` batch path. All calls SHALL share the same transport instance; mixed transports SHALL raise `RpcError`. Streaming or subscription calls SHALL be rejected. The function SHALL provide 1..6 heterogeneous overloads inferring `tuple[R1, ..., Rn]` (gather-style) with a variadic fallback inferring `tuple[R, ...]`; with `return_exceptions=False` (default) the first per-call `RpcError` SHALL propagate as a raised exception, with `return_exceptions=True` each entry SHALL be `R | RpcError` and the tuple SHALL be returned in input order. Notifications (no `id`) SHALL NOT be batched and `batch` SHALL require at least one call.
+The framework SHALL provide a `batch(*calls: RpcCall, return_exceptions=False)` free function (importable from `webcompy.rpc`) that executes 0 or more `RpcCall`s in a single transport round-trip: over `RpcHttpClient` as one HTTP POST with a JSON array, over `RpcWsClient` as one WebSocket text frame with a JSON array, reusing the existing `dispatch_payload` batch path. 0 calls SHALL be a no-op returning `()` with no I/O and no hydration transfer entry. All calls SHALL share the same transport instance; mixed transports SHALL raise `RpcError`. Streaming or subscription calls SHALL be rejected. The function SHALL provide 0..6 heterogeneous overloads inferring `tuple[()]` / `tuple[R1, ..., Rn]` (gather-style) with a variadic fallback inferring `tuple[R, ...]`; with `return_exceptions=False` (default) the first per-call `RpcError` SHALL propagate as a raised exception, with `return_exceptions=True` each entry SHALL be `R | RpcError` and the tuple SHALL be returned in input order. Notifications (no `id`) SHALL NOT be batched via `batch` (use `notify` instead).
 
 #### Scenario: Heterogeneous batch over HTTP
 
@@ -149,10 +180,10 @@ The framework SHALL provide a `batch(*calls: RpcCall, return_exceptions=False)` 
 - **WHEN** `c = ticker(ws_client, TickerParams("a"))` for a `Subscription` and `await batch(c)` is evaluated
 - **THEN** `RpcError` SHALL be raised indicating subscription calls cannot be batched
 
-#### Scenario: Empty batch is rejected
+#### Scenario: Empty batch is a no-op
 
 - **WHEN** `await batch()` with no calls is evaluated
-- **THEN** `RpcError` SHALL be raised indicating at least one call is required
+- **THEN** no I/O SHALL occur and `()` SHALL be returned
 
 ### Requirement: bind shall register contract implementations with signature validation
 

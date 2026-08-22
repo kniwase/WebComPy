@@ -18,7 +18,7 @@ Everything is fully dynamic today: method names are strings, params/results are 
 
 **Non-Goals:**
 
-- No code generation; no per-parameter call syntax; no `use_rpc` composable; no changes to wire protocols (batch reuses the existing batch wire), codecs, `RpcStream`, `RpcSubscription`, or `register_type_handler`.
+- No code generation; no per-parameter call syntax; no `use_rpc` composable; no changes to wire protocols (batch/notify reuse the existing batch wire; notify as id-less array), codecs, `RpcStream`, `RpcSubscription`, or `register_type_handler`.
 
 ## Assumptions
 
@@ -54,10 +54,10 @@ class Tick: seq: int
 ticker = Subscription("ticker", TickerParams, Tick)
 ```
 
-- `Procedure[P, R]` — `__call__(transport, params: P) -> RpcCall[P, R]` (sync, returns an `Awaitable[R]`; `await` performs the call). `notify(transport, params: P) -> None` (async, fire-and-forget, not batchable).
+- `Procedure[P, R]` — `__call__(transport, params: P) -> RpcCall[P, R]` (sync, returns an `Awaitable[R]`; `await` performs the call). `Procedure` has no `notify` method; notifications go through the `notify(*calls: RpcCall)` free function.
 - `StreamingProcedure[P, T]` — `__call__(transport, params: P) -> RpcStream[T]` (returns the handle, not awaitable; `RpcStream` supports `async with`).
 - `Subscription[P, E]` — `__call__(transport, params: P) -> RpcSubscription[E]`; constructor is `Subscription(name, params_type, event_type, replay_size=256)` with `replay_size: int >=1, bool rejected`, flowing to `SubscriptionInfo`.
-- `RpcCall[P, R]` — public awaitable (`__await__`) capturing `name/params/result_type/transport` without I/O until awaited; also the element type for `batch`. `isinstance(call, RpcCall)` is the batch gate (streaming/subscription handles are rejected).
+- `RpcCall[P, R]` — public awaitable (`__await__`) capturing `name/params/result_type/transport` without I/O until awaited; also the element type for `batch` and `notify`. `isinstance(call, RpcCall)` is the gate for both (streaming/subscription handles are rejected). `RpcCall` has no truth value: `__bool__` and `__len__` raise `TypeError`.
 - Unified `__call__` style (no `.subscribe()` verb on contracts).
 - Contracts are plain runtime objects whose constructor stores `name`, `params_type`, `result_type`/`event_type` (no reliance on `__orig_class__`). PEP 695 generics (`class Procedure[P, R]`) give pyright the static typing; the runtime payload is the same explicit types, so runtime and static behavior cannot disagree.
 - Contract constructors validate: name must be a non-empty `str` not starting with `_webcompy.` (reserved, mirroring the registry rule), `params_type` must be a dataclass type (non-dataclass SHALL be rejected), the type arguments must be `type` instances, and `Subscription` additionally validates `replay_size` (`int` `>=1`, `bool` rejected).
@@ -71,14 +71,18 @@ Rationale: contracts must be creatable outside any app/DI context (schema module
 ```python
 class RpcCall[P, R]:
     def __await__(self) -> Generator[Any, None, R]:
+        if self._awaited: raise RuntimeError("RpcCall already awaited")
+        self._awaited = True
         return (yield from self._transport.call(self._name, self._params, result_type=self._result_type))
+    def __bool__(self) -> bool: raise TypeError("RpcCall has no truth value (did you forget 'await'? Use 'await call' or 'await batch(...)')")
+    def __len__(self) -> int: raise TypeError("RpcCall has no len()")
 
 class Procedure[P, R]:
     def __call__(self, transport: RpcTransport, params: P) -> RpcCall[P, R]:
         return RpcCall(self._name, params, self._result_type, transport)
 ```
 
-`await add(client, p)` delegates to `transport.call`; `await batch(c1, c2)` delegates to the single-array batch path without re-encoding per-call. All encoding (`encode_with_meta` over dataclass params), `meta` handling, and decoding (`from_json`) stay in the transport layer exactly as today (`_encode_params` / `_resolve_single` / `RpcSubscription._deliver`). Contracts contain no serialization logic, so they need no DI scope and work identically in browser and server. A single `await` of the same `RpcCall` instance is supported; awaiting the same instance a second time SHALL raise `RuntimeError` (`RpcCall already awaited`).
+`await add(client, p)` delegates to `transport.call`; `await batch(c1, c2)` and `await notify(c1, c2)` delegate to the single-array batch/notify paths without re-encoding per-call. All encoding (`encode_with_meta` over dataclass params), `meta` handling, and decoding (`from_json`) stay in the transport layer exactly as today (`_encode_params` / `_resolve_single` / `RpcSubscription._deliver`). Contracts contain no serialization logic, so they need no DI scope and work identically in browser and server. A single `await` of the same `RpcCall` instance is supported; awaiting the same instance a second time SHALL raise `RuntimeError` (`RpcCall already awaited`); `bool(RpcCall)` and `len(RpcCall)` SHALL raise `TypeError`.
 
 ### 3. `RpcTransport` protocol and the two transports
 
@@ -91,8 +95,8 @@ class RpcTransport(Protocol):
 ```
 
 - `RpcWsClient` implements all four (existing behavior; re-designated as transport).
-- `RpcHttpClient` (new, in `webcompy/rpc/_contracts.py`) implements `call`/`notify`/`stream` by delegating to the internalized `_client.py` helpers, preserving SSR in-process dispatch and hydration bake for `call`/`notify`, and the `rpc-streaming` SSR degradation for `stream`. Its `subscribe` raises `RpcError` (subscriptions are WebSocket-only).
-- A single protocol keeps contract code simple; `RpcHttpClient.subscribe` failing at runtime is acceptable because subscription contracts over HTTP are a type-legal but runtime-invalid combination documented in the spec.
+- `RpcHttpClient` (new, in `webcompy/rpc/_contracts.py`) implements `call`/`notify`/`stream` by delegating to the internalized `_client.py` helpers, preserving SSR in-process dispatch and hydration bake for `call`/`notify` (notify is not baked due to `204`), and the `rpc-streaming` SSR degradation for `stream`. Its `subscribe` raises `RpcError` (subscriptions are WebSocket-only).
+- A single protocol keeps contract code simple; `RpcHttpClient.subscribe` failing at runtime is acceptable because subscription contracts over HTTP are a type-legal but runtime-invalid combination documented in the spec. Public callers use `batch`/`notify` free functions with `RpcCall`, not `RpcTransport` directly.
 
 ### 4. `bind`: single method with decorator sugar and 3-way validation
 
@@ -121,14 +125,16 @@ Contract modules live inside the app package (which is already shipped to the br
 ### 6. SSR semantics
 
 - `Procedure`/`StreamingProcedure`/`Subscription` contracts are environment-agnostic; behavior is determined by the transport passed in.
-- `RpcHttpClient.call`/`notify` during SSR/SSG use the existing in-process ASGI dispatch and hydration bake (`transfer=False` opt-out as today).
+- `RpcHttpClient.call` during SSR/SSG uses the existing in-process ASGI dispatch and hydration bake (`transfer=False` opt-out as today); `notify` uses the same dispatch but is not baked (HTTP `204`, no transfer entry).
 - `RpcWsClient` in SSR keeps its warning + no-op; `RpcHttpClient.stream` in SSR returns the empty finished stream per `feat-rpc-streaming`.
 - No contract state is transferred in the hydration payload.
 
-### 7. RpcCall and batch (1..6 overloads, return_exceptions, HTTP/WS)
+### 7. RpcCall, batch and notify (0..6 overloads, return_exceptions, HTTP/WS)
 
 ```python
-# webcompy/rpc/_contracts.py — free function, transport-agnostic
+# webcompy/rpc/_contracts.py — free functions, transport-agnostic
+@overload
+async def batch() -> tuple[()]: ...
 @overload
 async def batch(call1: RpcCall[Any, R1], *, return_exceptions: Literal[False] = False) -> tuple[R1]: ...
 @overload
@@ -140,14 +146,23 @@ async def batch(*calls: RpcCall[Any, R], return_exceptions: Literal[False] = Fal
 async def batch(call1: RpcCall[Any, R1], *, return_exceptions: Literal[True]) -> tuple[R1 | RpcError]: ...
 # ... return_exceptions=True overloads mirror the above with R|RpcError
 async def batch(*calls: RpcCall[Any, Any], return_exceptions: bool = False) -> tuple[Any, ...]: ...
+
+@overload
+async def notify() -> None: ...
+@overload
+async def notify(call1: RpcCall[Any, Any]) -> None: ...
+@overload
+async def notify(call1: RpcCall[Any, Any], call2: RpcCall[Any, Any], *calls: RpcCall[Any, Any]) -> None: ...
+async def notify(*calls: RpcCall[Any, Any]) -> None: ...
 ```
 
-- **Awaitable gate**: `Procedure.__call__` returns `RpcCall` synchronously; `batch` accepts only `RpcCall` (via `isinstance`). `StreamingProcedure`/`Subscription` handles are rejected (`RpcError`). Awaiting the same `RpcCall` a second time raises `RuntimeError`; `batch` consumes the call without prior await.
-- **Single round-trip**: `batch` collects `(name, params, result_type, transport)` from each `RpcCall`, validates all share the same transport instance (mixed transports → `RpcError`), then delegates: `RpcHttpClient` → one `POST` with JSON array via `_post_envelope` (single hydration bake entry), `RpcWsClient` → one array text frame with N `Future`s correlated by `id` (reuses the existing `dispatch_payload` batch wire; `_reader` splits the array response and `close`/`_fail_in_flight` handle N futures on disconnect). At least one call is required (`RpcError` if empty). Streaming-procedure entries are not batchable and are rejected before transport (matches `dispatch_payload(in_batch=True)` but fails fast). `batch` accepts only `RpcCall` instances; a future `RpcCall` that wraps a streaming `ProcedureInfo` (should never happen) is rejected at call time.
-- **Import discipline**: `webcompy/rpc/_contracts.py` is the leaf (no top-level import of `ProcedureRegistry` or `RpcWsClient`); `ProcedureRegistry.bind` lazy-imports `Procedure`/`StreamingProcedure`/`Subscription` inside the method, and `batch` lazy-imports `RpcWsClient`/`RpcHttpClient` inside the function to avoid cycles. `_contracts.py` SHALL NOT import `webcompy_server`.
-- **SSR bake for batch**: `batch` via HTTP uses the same `FetchPort` path as single calls; the array body is a single cache key `POST:/_webcompy-rpc:[...]` and is recorded via `ServerFetchPort.get_transfer_data` → `BrowserFetchPort.populate_from_transfer` (single entry). Batched calls have no per-entry `transfer` flag (always baked).
-- **Error policy**: `return_exceptions=False` (default) raises the first per-call `RpcError` (like `gather(return_exceptions=False)`); `return_exceptions=True` returns `tuple[R|RpcError, ...]` in input order without raising.
-- **Typing**: 1..6 heterogeneous overloads give `tuple[R1, R2, ...]` inference (mirrors `asyncio.gather` in `typeshed`); variadic fallback is `tuple[R, ...]`. Implemented in `webcompy/rpc/_contracts.py` with `typing.overload` and `Literal`.
+- **Awaitable gate**: `Procedure.__call__` returns `RpcCall` synchronously; `batch` and `notify` accept only `RpcCall` (via `isinstance`). `StreamingProcedure`/`Subscription` handles are rejected (`RpcError`). Awaiting the same `RpcCall` a second time raises `RuntimeError`; `batch`/`notify` consume the call without prior await. `bool(RpcCall)` and `len(RpcCall)` raise `TypeError`.
+- **Single round-trip**: `batch` collects `(name, params, result_type, transport)` from each `RpcCall`, validates all share the same transport instance (mixed transports → `RpcError`), then delegates: `RpcHttpClient` → one `POST` with JSON array via `_post_envelope` (single hydration bake entry), `RpcWsClient` → one array text frame with N `Future`s correlated by `id` (reuses the existing `dispatch_payload` batch wire; `_reader` splits the array response and `close`/`_fail_in_flight` handle N futures on disconnect). 0 calls is a no-op returning `()` with no I/O and no transport check. Streaming-procedure entries are not batchable and are rejected before transport (matches `dispatch_payload(in_batch=True)` but fails fast). `batch` accepts only `RpcCall` instances; a future `RpcCall` that wraps a streaming `ProcedureInfo` (should never happen) is rejected at call time.
+- **`notify` single round-trip**: `notify` collects the same tuple but builds id-less envelopes (`{"jsonrpc":"2.0","method":..., "params":...}` without `id`); 0 calls is a no-op returning `None` with no I/O and no transport check; 1..n calls share one transport round-trip: `RpcHttpClient` → one `POST` with JSON array via `_post_envelope` (no hydration bake; `204` produces no transfer entry), `RpcWsClient` → one array text frame without `id` (no `Future`s, fire-and-forget, no response). Mixed transports → `RpcError`; streaming/subscription rejected as for `batch`. `notify` reuses the existing `dispatch_payload` batch wire as id-less array (server returns `None` → `204` / no frame).
+- **Import discipline**: `webcompy/rpc/_contracts.py` is the leaf (no top-level import of `ProcedureRegistry` or `RpcWsClient`); `ProcedureRegistry.bind` lazy-imports `Procedure`/`StreamingProcedure`/`Subscription` inside the method, and `batch`/`notify` lazy-import `RpcWsClient`/`RpcHttpClient` inside the function to avoid cycles. `_contracts.py` SHALL NOT import `webcompy_server`.
+- **SSR bake for batch**: `batch` via HTTP uses the same `FetchPort` path as single calls; the array body is a single cache key `POST:/_webcompy-rpc:[...]` and is recorded via `ServerFetchPort.get_transfer_data` → `BrowserFetchPort.populate_from_transfer` (single entry). Batched calls have no per-entry `transfer` flag (always baked). `notify` via HTTP produces no bake entry (`204`).
+- **Error policy**: `return_exceptions=False` (default) raises the first per-call `RpcError` (like `gather(return_exceptions=False)`); `return_exceptions=True` returns `tuple[R|RpcError, ...]` in input order without raising. `notify` has no `return_exceptions` (always fire-and-forget, errors are silent per JSON-RPC notification semantics).
+- **Typing**: `batch` 0..6 heterogeneous overloads give `tuple[()]` / `tuple[R1, R2, ...]` inference (mirrors `asyncio.gather` in `typeshed`); variadic fallback is `tuple[R, ...]`. `notify` overloads are untyped beyond `RpcCall` (returns `None`). Implemented in `webcompy/rpc/_contracts.py` with `typing.overload` and `Literal`.
 
 ### 8. Naming rationale
 
@@ -164,7 +179,7 @@ async def batch(*calls: RpcCall[Any, Any], return_exceptions: bool = False) -> t
 
 ## Migration Plan
 
-Breaking, single-step: remove `register`/`register_subscription` and the module-level client functions; add contracts + `bind` + `RpcHttpClient`; migrate tests, E2E, and docs in the same change. No compatibility shims.
+Breaking, single-step: remove `register`/`register_subscription` and the module-level client functions; add contracts + `bind` + `RpcHttpClient` + `batch`/`notify` free functions over `RpcCall`; migrate tests, E2E, and docs in the same change. No compatibility shims.
 
 ## Explicitly Excluded
 

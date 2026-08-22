@@ -91,7 +91,7 @@ Contract-bound procedures and subscriptions take exactly one parameter, whose sc
 
 ### Requirement: Typed browser client over FetchPort
 
-The framework SHALL provide a typed HTTP client for JSON-RPC via the `RpcHttpClient` transport defined in the `rpc-contracts` capability; RPC calls SHALL be issued through `Procedure` contracts (`await add(http_client, params)`) via `RpcCall`, streaming calls through `StreamingProcedure` contracts, and multiple `Procedure` calls in one round-trip via `batch(*calls: RpcCall, return_exceptions=False)` (importable from `webcompy.rpc`; HTTP array POST and WebSocket array frame per the `rpc-contracts` capability, reusing the existing batch wire). The module-level `rpc.call`, `rpc.notify`, and `rpc.stream` functions SHALL NOT exist as public API (the `batch` name exists only as the typed `batch(*RpcCall)` helper). During SSR/SSG, calls and batch arrays SHALL dispatch self-site in-process via ASGI transport and results SHALL be recorded in the hydration transfer cache (bake) as a single array entry, with the `transfer=False` opt-out applying as for other self-site fetches. JSON-RPC error responses SHALL raise a dedicated `RpcError` carrying `code`, `message`, and `data`. Result decoding SHALL apply `from_json` with response `meta`.
+The framework SHALL provide a typed HTTP client for JSON-RPC via the `RpcHttpClient` transport defined in the `rpc-contracts` capability; RPC calls SHALL be issued through `Procedure` contracts (`await add(http_client, params)`) via `RpcCall`, streaming calls through `StreamingProcedure` contracts, multiple `Procedure` calls in one round-trip via `batch(*calls: RpcCall, return_exceptions=False)` (importable from `webcompy.rpc`; HTTP array POST and WebSocket array frame per the `rpc-contracts` capability, reusing the existing batch wire; `batch()` with 0 calls is a no-op returning `()` with no I/O and no transfer entry), and fire-and-forget notifications via `notify(*calls: RpcCall)` (importable from `webcompy.rpc`; HTTP array POST and WebSocket array frame of id-less envelopes reusing the existing batch wire; `notify()` with 0 calls is a no-op returning `None` with no I/O and no transfer entry). The module-level `rpc.call`, `rpc.notify`, and `rpc.stream` functions SHALL NOT exist as public API (the `batch`/`notify` names exist only as the typed `batch(*RpcCall)`/`notify(*RpcCall)` helpers). During SSR/SSG, calls and batch arrays SHALL dispatch self-site in-process via ASGI transport and results SHALL be recorded in the hydration transfer cache (bake) as a single array entry, with the `transfer=False` opt-out applying as for other self-site fetches; `notify` SHALL dispatch in-process but SHALL NOT be baked (HTTP `204` / no-frame produces no transfer entry). JSON-RPC error responses SHALL raise a dedicated `RpcError` carrying `code`, `message`, and `data`. Result decoding SHALL apply `from_json` with response `meta`.
 
 #### Scenario: RPC during SSR is baked
 
@@ -105,6 +105,22 @@ The framework SHALL provide a typed HTTP client for JSON-RPC via the `RpcHttpCli
 - **THEN** no network I/O SHALL occur
 - **AND** the single array POST SHALL be recorded in the hydration transfer cache so the browser replays it without re-calling
 
+#### Scenario: Notify during SSR is not baked
+
+- **WHEN** a component performs `await notify(add(http_client, p1))` during SSR
+- **THEN** no network I/O SHALL occur
+- **AND** no transfer entry SHALL be recorded (HTTP `204` / no-frame)
+
+#### Scenario: Empty batch is a no-op
+
+- **WHEN** `await batch()` with no calls is evaluated during SSR or in the browser
+- **THEN** no I/O SHALL occur and `()` SHALL be returned with no transfer entry
+
+#### Scenario: Empty notify is a no-op
+
+- **WHEN** `await notify()` with no calls is evaluated during SSR or in the browser
+- **THEN** no I/O SHALL occur and `None` SHALL be returned with no transfer entry
+
 #### Scenario: Error mapping
 
 - **WHEN** the dispatcher returns a JSON-RPC error
@@ -114,7 +130,7 @@ The framework SHALL provide a typed HTTP client for JSON-RPC via the `RpcHttpCli
 
 - **WHEN** a module attempts to import `call`, `notify`, or `stream` from `webcompy.rpc`
 - **THEN** the import SHALL fail (the names are not exported)
-- **AND** `batch` SHALL be importable as `batch(*calls: RpcCall, return_exceptions=False)`
+- **AND** `batch` SHALL be importable as `batch(*calls: RpcCall, return_exceptions=False)` and `notify` SHALL be importable as `notify(*calls: RpcCall)`
 
 ### Requirement: The dispatcher shall support a WebSocket transport
 

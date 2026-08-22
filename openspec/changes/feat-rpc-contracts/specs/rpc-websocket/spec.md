@@ -4,7 +4,7 @@
 
 ### Requirement: RpcWsClient shall perform JSON-RPC calls over a shared WebSocket
 
-The framework SHALL provide an `RpcWsClient` (importable from `webcompy` and `webcompy.rpc`) that runs JSON-RPC 2.0 over the typed realtime WebSocket layer. `RpcWsClient` SHALL be a transport implementing the `RpcTransport` protocol defined in the `rpc-contracts` capability: RPC calls SHALL be issued through `Procedure` contracts (`await add(client, params)`) via `RpcCall`, which delegates to the `RpcWsClient.call` transport method, and multiple `Procedure` calls SHALL be issuable in one round-trip via `batch(*calls: RpcCall, return_exceptions=False)` as a single array text frame reusing the existing batch wire. Calls (and batch entries) SHALL send standard request envelopes as text frames and SHALL correlate responses by `id` via an in-flight map; notifications SHALL fire and forget; error responses SHALL raise the existing `RpcError` with `code`, `message`, and `data`. The underlying socket SHALL be the shared, reference-counted, auto-reconnecting connection from `websocket-composable`. Calls that are in flight when the connection drops SHALL fail with `RpcError` (they are NOT silently retried); subscriptions SHALL heal via the rejoin protocol instead.
+The framework SHALL provide an `RpcWsClient` (importable from `webcompy` and `webcompy.rpc`) that runs JSON-RPC 2.0 over the typed realtime WebSocket layer. `RpcWsClient` SHALL be a transport implementing the `RpcTransport` protocol defined in the `rpc-contracts` capability: RPC calls SHALL be issued through `Procedure` contracts (`await add(client, params)`) via `RpcCall`, which delegates to the `RpcWsClient.call` transport method, multiple `Procedure` calls SHALL be issuable in one round-trip via `batch(*calls: RpcCall, return_exceptions=False)` as a single array text frame reusing the existing batch wire (empty `batch()` is a no-op returning `()` with no I/O), and fire-and-forget notifications SHALL be issuable via `notify(*calls: RpcCall)` as a single array text frame of id-less envelopes (empty `notify()` is a no-op returning `None`). Calls (and batch entries) SHALL send standard request envelopes as text frames and SHALL correlate responses by `id` via an in-flight map; notifications via `notify` SHALL be id-less envelopes sent as a single array frame with no `Future`s and no response; error responses SHALL raise the existing `RpcError` with `code`, `message`, and `data`. The underlying socket SHALL be the shared, reference-counted, auto-reconnecting connection from `websocket-composable`. Calls that are in flight when the connection drops SHALL fail with `RpcError` (they are NOT silently retried); subscriptions SHALL heal via the rejoin protocol instead.
 
 #### Scenario: Call round trip
 - **WHEN** `await add(client, AddParams(2, 3))` is issued through an `add = Procedure("add", AddParams, int)` contract over an open connection
@@ -24,6 +24,21 @@ The framework SHALL provide an `RpcWsClient` (importable from `webcompy` and `we
 
 - **WHEN** `c1 = add(client, AddParams(1, 0))` and `c2 = add(client, AddParams(2, 0))` and `await batch(c1, c2)` is issued over an open `RpcWsClient`
 - **THEN** a single array text frame SHALL be sent and the result SHALL be `tuple[int, int]` in input order via `RpcCall` batch
+
+#### Scenario: Empty batch over WebSocket is a no-op
+
+- **WHEN** `await batch()` with no calls is evaluated over an `RpcWsClient`
+- **THEN** no frame SHALL be sent and `()` SHALL be returned
+
+#### Scenario: Notify over WebSocket
+
+- **WHEN** `c1 = add(client, AddParams(1, 0))` and `c2 = add(client, AddParams(2, 0))` and `await notify(c1, c2)` is issued over an open `RpcWsClient`
+- **THEN** a single array text frame of id-less envelopes SHALL be sent and `None` SHALL be returned with no response expected
+
+#### Scenario: Empty notify over WebSocket is a no-op
+
+- **WHEN** `await notify()` with no calls is evaluated over an `RpcWsClient`
+- **THEN** no frame SHALL be sent and `None` SHALL be returned
 
 ### Requirement: Subscriptions shall deliver server events with cursors as an async iterator
 
