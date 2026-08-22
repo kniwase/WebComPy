@@ -170,7 +170,18 @@ class SuspenseElement(DynamicElement):
                 pairs = self._collect_pending_coroutines(children)
             if pairs:
                 coroutines = [_resolve_with_context(component, coro) for component, coro in pairs]
-                results = await asyncio.gather(*coroutines, return_exceptions=True)
+                try:
+                    results = await asyncio.wait_for(
+                        asyncio.gather(*coroutines, return_exceptions=True),
+                        timeout=self._timeout,
+                    )
+                except TimeoutError:
+                    _logger.warning(
+                        "Suspense resolution timed out after %ss, keeping fallback",
+                        self._timeout,
+                    )
+                    self._cleanup_pending_pairs(pairs)
+                    return
                 for _idx, result in enumerate(results):
                     if isinstance(result, Exception):
                         raise result
@@ -234,8 +245,8 @@ class SuspenseElement(DynamicElement):
 
         def _check_resolved(element: ElementAbstract) -> bool:
             if isinstance(element, Component):
-                cid = element._property.get("component_id", "")
-                if not has_resolved_data(cid):
+                key = element._property.get("transfer_id") or element._property.get("component_id", "")
+                if not has_resolved_data(key):
                     return False
             if hasattr(element, "_children") and isinstance(element._children, (list, tuple)):
                 for child in element._children:
@@ -264,7 +275,7 @@ class SuspenseElement(DynamicElement):
             fallback = self._generate_fallback()
             self._children = fallback
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
-            task = scheduler.schedule(self._browser_resolve())
+            task = scheduler.schedule(self._browser_resolve(test_children), render=True)
             self._pending_tasks.append(task)
             task.add_done_callback(lambda t: self._pending_tasks.remove(t) if t in self._pending_tasks else None)
         super()._hydrate_node()
