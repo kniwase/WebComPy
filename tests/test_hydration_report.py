@@ -115,6 +115,7 @@ class TestHydrationWindowClose:
             ASYNC_SCHEDULER_PORT_KEY,
             DOM_PORT_KEY,
             FFI_PORT_KEY,
+            HOST_PORT_KEY,
         )
         from webcompy_testing import FakeAsyncSchedulerPort
 
@@ -123,6 +124,7 @@ class TestHydrationWindowClose:
         scope = DIScope()
         scope.provide(DOM_PORT_KEY, MagicMock(query_selector=lambda *a, **k: None))
         scope.provide(FFI_PORT_KEY, MagicMock())
+        scope.provide(HOST_PORT_KEY, MagicMock())
         scheduler = FakeAsyncSchedulerPort()
         scope.provide(ASYNC_SCHEDULER_PORT_KEY, scheduler)
         scope.provide(_ROUTER_KEY, None)

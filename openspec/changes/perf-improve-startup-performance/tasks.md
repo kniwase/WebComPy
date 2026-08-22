@@ -14,10 +14,10 @@
 
 ## 3. Tests
 
-- [ ] 3.1 Rewrite `tests/test_profiling.py` for app-owned data: patch target moves to `webcompy.app._app.time.perf_counter`; cover `app.profile_data` dict when enabled / `None` when disabled, `app._record_phase` population, no-op when disabled, first-occurrence-wins, monotonic init phases, and summary output containing the new pair labels plus `Total:`
-- [ ] 3.2 Add a bootstrap-compat test proving `app._profile_data["pyscript_ready"] = ...` (the generated HTML assignment) succeeds without `AttributeError` when `profile=True`
-- [ ] 3.3 Add a unit test that a server-side render with a lazy router records `lazy_preloaded` into `app._profile_data` (reference patterns from `tests/test_ssg_lazy_preload.py`)
-- [ ] 3.4 Run the full unit test suite (`uv run python -m pytest tests/ --tb=short`) and fix any regressions from removing the render-context profile indirection
+- [x] 3.1 Rewrite `tests/test_profiling.py` for app-owned data: patch target moves to `webcompy.app._app.time.perf_counter`; cover `app.profile_data` dict when enabled / `None` when disabled, `app._record_phase` population, no-op when disabled, first-occurrence-wins, monotonic init phases, and summary output containing the new pair labels plus `Total:`
+- [x] 3.2 Add a bootstrap-compat test proving `app._profile_data["pyscript_ready"] = ...` (the generated HTML assignment) succeeds without `AttributeError` when `profile=True`
+- [x] 3.3 Add a unit test that a server-side render with a lazy router records `lazy_preloaded` into `app._profile_data` (reference patterns from `tests/test_ssg_lazy_preload.py`)
+- [x] 3.4 Run the full unit test suite (`uv run python -m pytest tests/ --tb=short`) and fix any regressions from removing the render-context profile indirection
 
 ## 4. Record measurement conclusions in design.md (no docs_app changes)
 
