@@ -25,20 +25,20 @@ Existing infrastructure this design builds on:
 **Non-Goals:**
 
 - Cross-environment creation-order mismatches (environment-conditional trees) stay unsupported, consistent with DOM hydration adoption.
-- `hydrate=False` apps have no transfer payload (nothing is provided to restore), so the close flag set at the end of the first render pass has no observable effect; today's restore-on-first-render behavior is preserved.
+- `hydrate=False` does not change payload provisioning or window semantics: the SSR payload script is emitted for prerendered pages regardless of the browser-side `hydrate` flag, and the browser provides it whenever present; the window spans only the first render pass and closes at its end in all modes.
 
 ## Decisions
 
 ### 1. Close the payload at the hydration window boundary, not consume-once
 
-Add `RenderContext._hydration_payload_closed: bool = False`. `AppDocumentRoot._render()` sets it to `True` in the same `finally` block that resets `_hydration_in_progress`. A small helper (`_is_hydration_payload_open()`) resolves the active render context via `_active_app_context.get() or _get_app_instance()` and returns the negated flag (default: open when no context exists, preserving unit-test behavior).
+Add `RenderContext._hydration_payload_closed: bool = False`. `AppDocumentRoot._render()` sets it to `True` immediately after the reveal-gating render-task drain (alongside the `_hydration_in_progress` reset), so the window closes as soon as the initial render pass completes; the method-level `finally` keeps assigning the flag as an idempotent error-path safety net (render exceptions, non-hydrate first renders). A small helper (`_is_hydration_payload_open()`) resolves the active render context via `_active_app_context.get() or _get_app_instance()` and returns the negated flag (default: open when no context exists, preserving unit-test behavior).
 
 - `_try_resolve_payload_key()` (`signal/_composable.py`) returns `_MISSING` when closed.
 - `use_async_result()` (`components/_hooks.py`) skips the `HYDRATION_DATA_KEY` restore when closed.
 
 **Why over consume-once per entry:** consume-once breaks legitimate double creation during hydration (e.g., error-boundary resets, re-rendered subtrees) and still mis-pairs values for multi-instance pages. Window gating matches the spec's existing intent ("Factory runs on browser client-side navigation") and has exactly one state transition.
 
-**Why the `finally` block:** it covers failure paths (render exceptions) and the non-hydrate first render; setting the flag repeatedly on later re-renders is idempotent. The window deliberately includes the `await scheduler.await_pending(only_render=True)` drain so async component setups and Suspense resolutions that gate the reveal still restore.
+**Why close right after the drain:** the window deliberately includes the `await scheduler.await_pending(only_render=True)` drain so async component setups and Suspense resolutions that gate the reveal still restore; closing at that point matches the delta spec ("closes when the initial render pass (including the render-task drain that gates the hydration reveal) completes"). Anything after the drain — loading fade-out, wake wait, lazy-route preloading, early client-side navigation during boot — runs with the payload closed, so late component setups cannot restore stale values. The `finally` assignment remains as a safety net for failure paths and is idempotent on later re-renders.
 
 **Verified by spike:** this gate alone fixes the docs_app demo bug (code block follows navigation; main-frame fetch resumes) while initial hydration still restores without a network round-trip; all 4955 unit tests pass.
 
@@ -69,5 +69,5 @@ transfer_id = app_ctx._next_transfer_id(component_name) if app_ctx else generate
 
 - **Creation-order drift between SSR and hydration** (e.g., async components resolving at different positions) → instances could restore a sibling's value. Mitigation: ordinals are assigned at construction (pre-order), and both environments construct the tree the same way; mismatched trees already fail DOM hydration adoption. Residual risk accepted and documented in the spec.
 - **Testing-module / unit-test doubles** that never attach a `RenderContext` → they fall back to bare `generate_id(name)` keys, keeping existing tests and payload fixtures valid.
-- **Suspense-resolved subtrees created after the reveal** (client-side async boundaries) → their `use_state()` runs after the window closes and will not restore; they render factory defaults as if client-navigated. Mitigation: SSR awaits Suspense content, and the browser drain covers render-scoped resolution; post-reveal resolution was already a client-side render.
-- **`hydrate=False` apps keep the payload open** → the staleness class persists there. Mitigation: documented; `hydrate=False` is a niche non-hydrating mode.
+- **Suspense-resolved subtrees created after the reveal** (client-side async boundaries) → their `use_state()` runs after the window closes and will not restore; they render factory defaults as if client-navigated. Mitigation: SSR awaits Suspense content, and the browser drain covers render-scoped resolution (bounded by the element's `timeout`, mirroring the SSR-side `wait_for`); post-reveal resolution was already a client-side render.
+- **`hydrate=False` apps may restore without DOM adoption** → when a prerendered page ships a payload, first-render setups can restore transferred values even though the `_hydrate_node` pass is skipped; this mirrors pre-existing behavior, and the window still closes at the end of the first render pass, so no stale-restore window remains.
