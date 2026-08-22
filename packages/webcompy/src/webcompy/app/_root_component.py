@@ -21,7 +21,7 @@ from webcompy.elements._head import HeadElement
 from webcompy.hydration._collect import collect_transfer_data
 from webcompy.hydration._payload import DEFAULT_COMPRESSION_THRESHOLD, serialize_payload
 from webcompy.hydration._report import emit_report_summary
-from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY
+from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, DOM_PORT_KEY, HOST_PORT_KEY
 from webcompy.router._keys import RouterKey
 from webcompy.router._router import Router
 from webcompy.signal import Computed
@@ -130,6 +130,7 @@ class AppDocumentRoot(Component):
                 if ctx is not None:
                     ctx._hydration_in_progress = True
                 self._ensure_custom_elements_defined()
+                self._app._record_phase("custom_elements_defined")
                 for child in self._children:
                     child._hydrate_node()
 
@@ -195,7 +196,7 @@ class AppDocumentRoot(Component):
                         self._router.preload_lazy_routes()
                     if self._app:
                         self._app._record_phase("loading_removed")
-                        self._app._emit_profile_summary()
+                        inject(HOST_PORT_KEY).schedule_macro_task(self._app._emit_profile_summary)
         finally:
             ctx = _resolve_active_render_context(self._app)
             if ctx is not None:
