@@ -2,19 +2,19 @@
 
 ### Requirement: The profiling summary shall include startup cost clusters beyond the core phases
 
-When profiling is enabled (`profile=True`), `WebComPyApp._record_phase` SHALL also record two additional startup phases that account for the measured cost clusters: a custom-element bulk-registration phase named `custom_elements_defined` recorded after the hydration-time bulk `customElements.define` pass completes, and a lazy-preload phase named `lazy_preloaded` recorded when the router's lazy-route preload batch finishes executing (in the browser this is inside the scheduled macro task; on the server it is after the synchronous preload loop). Phases SHALL be recorded at most once each (the first occurrence wins). In the browser the formatted summary SHALL be emitted via a scheduled macro task (rather than synchronously at loading-indicator removal) so that any scheduled lazy-preload batch has completed before the summary prints; the elapsed time between these phases and their adjacent phases SHALL be shown alongside the core lifecycle phases. A pair whose end timestamp precedes its start timestamp SHALL NOT be shown.
+When profiling is enabled (`profile=True`), `WebComPyApp._record_phase` SHALL also record startup phases that account for the measured cost clusters: a custom-element bulk-registration phase named `custom_elements_defined` recorded after the hydration-time bulk `customElements.define` pass completes; a lazy-preload start phase named `lazy_preload_start` recorded when the router's lazy-route preload work is scheduled (or begins synchronously on the server); and a lazy-preload completion phase named `lazy_preloaded` recorded when that preload batch finishes executing (in the browser this is inside the scheduled macro task; on the server it is after the synchronous preload loop). Phases SHALL be recorded at most once each (the first occurrence wins). In the browser the formatted summary SHALL be emitted via a scheduled macro task (rather than synchronously at loading-indicator removal) so that any scheduled lazy-preload batch has completed before the summary prints; the elapsed time between these phases SHALL be shown alongside the core lifecycle phases. A pair whose end timestamp precedes its start timestamp SHALL NOT be shown.
 
 #### Scenario: Profiling summary includes the custom-element bulk-registration phase
 
 - **WHEN** an app runs in the browser with `WebComPyAppConfig(profile=True)` and named components are registered before hydration
-- **THEN** `app._profile_data` SHALL contain a phase recorded around the bulk custom-element registration pass
+- **THEN** `app._profile_data` SHALL contain a phase recorded after the bulk custom-element registration pass
 - **AND** the formatted profile summary SHALL show the elapsed time associated with that phase
 
-#### Scenario: Profiling summary includes the lazy-preload phase
+#### Scenario: Profiling summary includes the lazy-preload span
 
 - **WHEN** an app with lazy routes runs with `profile=True` and `preload=True` (default)
-- **THEN** `app._profile_data` SHALL contain a phase recorded around the lazy-route preload batch
-- **AND** the formatted profile summary SHALL show the elapsed time associated with that phase
+- **THEN** `app._profile_data` SHALL contain `lazy_preload_start` recorded when the preload batch is scheduled and `lazy_preloaded` recorded when the batch completes
+- **AND** the formatted profile summary SHALL show the elapsed time between them
 
 #### Scenario: Phases are recorded at most once
 
@@ -33,12 +33,12 @@ In the browser (PyScript) environment, `app.run(selector)` SHALL mount and rende
 
 #### Scenario: Running an app with profiling enabled
 - **WHEN** a developer creates `WebComPyAppConfig(profile=True)` and calls `app.run()` in the browser
-- **THEN** the application SHALL record timestamps for each startup phase (`pyscript_ready`, `init_start`, `imports_done`, `init_done`, `run_start`, `custom_elements_defined`, `run_done`, `loading_removed`, `lazy_preloaded`)
+- **THEN** the application SHALL record timestamps for each startup phase (`pyscript_ready`, `init_start`, `imports_done`, `init_done`, `run_start`, `custom_elements_defined`, `run_done`, `loading_removed`, `lazy_preload_start`, `lazy_preloaded`)
 - **AND** a formatted profile summary SHALL be printed to the browser console after the loading indicator is removed (in the browser, via a scheduled macro task so any pending lazy-preload batch completes first)
 - **AND** `WebComPyApp._record_phase(name)` SHALL record `time.perf_counter()` into `_profile_data` only when `_profile` is True, and SHALL keep only the first occurrence of each phase name
 - **AND** `_profile_data` SHALL be owned by the `WebComPyApp` instance (created in `WebComPyApp.__init__`) so that the generated bootstrap script can assign `app._profile_data["pyscript_ready"]` before any RenderContext exists; `RenderContext` SHALL NOT own profile state
 - **AND** `WebComPyApp._emit_profile_summary()` SHALL format and output the profile summary — in Emscripten via `browser.console.log()`, otherwise via `print()`
-- **AND** the summary SHALL show elapsed time between phases (`pyscript_ready → imports_done`, `imports_done → init_done`, `init_done → custom_elements_defined`, `custom_elements_defined → run_done`, `run_done → loading_removed`, `run_done → lazy_preloaded`) plus a total; a pair whose end timestamp precedes its start timestamp SHALL NOT be shown
+- **AND** the summary SHALL show elapsed time between phases (`pyscript_ready → imports_done`, `imports_done → init_done`, `init_done → custom_elements_defined`, `custom_elements_defined → run_done`, `run_done → loading_removed`, `lazy_preload_start → lazy_preloaded`) plus a total; a pair whose end timestamp precedes its start timestamp SHALL NOT be shown
 
 #### Scenario: Accessing profile data
 - **WHEN** a developer accesses `app.profile_data` on a `WebComPyApp` with `profile=True`
