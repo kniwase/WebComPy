@@ -78,6 +78,60 @@ class TestRenderContextDispose:
         assert app._render_context_cv.get() is None
 
 
+class TestDisposeUnwindsActiveDescendant:
+    def test_dispose_with_active_child_scope_clears_context_var(self, monkeypatch):
+        monkeypatch.setattr("webcompy.app._render_context.ENVIRONMENT", "pyscript")
+        app = create_test_app(root_component=DisposeTestRoot)
+        ctx = app.create_render_context()
+        child = ctx._di_scope.create_child()
+        child.provide("probe-key", "probe-value")
+        _active_di_scope.set(child)
+
+        ctx.dispose()
+
+        assert _active_di_scope.get(None) is None
+        assert _get_app_di_scope() is None
+        assert child._disposed is True
+
+    def test_dispose_with_active_grandchild_scope_clears_context_var(self, monkeypatch):
+        monkeypatch.setattr("webcompy.app._render_context.ENVIRONMENT", "pyscript")
+        app = create_test_app(root_component=DisposeTestRoot)
+        ctx = app.create_render_context()
+        child = ctx._di_scope.create_child()
+        grandchild = child.create_child()
+        _active_di_scope.set(grandchild)
+
+        ctx.dispose()
+
+        assert _active_di_scope.get(None) is None
+
+    def test_inject_after_dispose_ignores_disposed_scope(self, monkeypatch):
+        monkeypatch.setattr("webcompy.app._render_context.ENVIRONMENT", "pyscript")
+        from webcompy.di import inject
+
+        app = create_test_app(root_component=DisposeTestRoot)
+        ctx = app.create_render_context()
+        child = ctx._di_scope.create_child()
+        _active_di_scope.set(child)
+
+        ctx.dispose()
+
+        assert inject("probe-key", default="fallback") == "fallback"
+
+    def test_dispose_keeps_foreign_active_scope_untouched(self, monkeypatch):
+        monkeypatch.setattr("webcompy.app._render_context.ENVIRONMENT", "pyscript")
+        app = create_test_app(root_component=DisposeTestRoot)
+        ctx1 = app.create_render_context()
+        child1 = ctx1._di_scope.create_child()
+        ctx2 = app.create_render_context()
+        _active_di_scope.set(child1)
+
+        ctx2.dispose()
+
+        assert _active_di_scope.get(None) is child1
+        ctx1.dispose()
+
+
 class TestBrowserFallbackRestore:
     def test_newest_disposed_restores_previous_fallback(self, monkeypatch):
         monkeypatch.setattr("webcompy.app._render_context.ENVIRONMENT", "pyscript")

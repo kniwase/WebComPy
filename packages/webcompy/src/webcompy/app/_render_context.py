@@ -261,8 +261,15 @@ class RenderContext(ABC):
         root = self._root
         assert di_scope is not None
         assert root is not None
-        if _active_di_scope.get(None) is di_scope and self._di_scope_token is not None:
-            _active_di_scope.reset(self._di_scope_token)
+        active_di = _active_di_scope.get(None)
+        node = active_di
+        while node is not None and node is not di_scope:
+            node = getattr(node, "_parent", None)
+        if node is not None and self._di_scope_token is not None:
+            try:
+                _active_di_scope.reset(self._di_scope_token)
+            except (RuntimeError, ValueError):
+                _active_di_scope.set(None)  # type: ignore[arg-type]
             cur_di = _active_di_scope.get(None)
             if cur_di is not None and getattr(cur_di, "_disposed", False):
                 _active_di_scope.set(None)  # type: ignore[arg-type]
