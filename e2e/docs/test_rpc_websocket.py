@@ -14,8 +14,8 @@ def test_rpc_websocket_page_renders_inside_layout(docs_page_on, assert_no_consol
 def test_rpc_websocket_page_toc(docs_page_on, assert_no_console_errors):
     page = docs_page_on("/documents/rpc-websocket")
     expect(page.locator(".docs-toc")).to_be_visible()
-    expect(page.locator('.docs-toc a[href$="#typed-calls"]')).to_be_visible()
-    expect(page.locator('.docs-toc a[href$="#subscriptions"]')).to_be_visible()
+    expect(page.locator('.docs-toc a[href$="#typed-calls-via-contracts"]')).to_be_visible()
+    expect(page.locator('.docs-toc a[href$="#subscriptions-via-contracts"]')).to_be_visible()
     expect(page.locator('.docs-toc a[href$="#reconnect-catch-up-and-resync"]')).to_be_visible()
     expect(page.locator('.docs-toc a[href$="#heartbeat"]')).to_be_visible()
 
