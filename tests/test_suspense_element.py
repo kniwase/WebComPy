@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from webcompy.components._generator import define_component
 from webcompy.components._libs import generate_id
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements import html
@@ -49,6 +50,62 @@ def suspense_scope():
     yield scope
     _active_di_scope.reset(token)
     scope.dispose()
+
+
+@define_component("suspense-provide-child")
+def SuspenseProvideChild(context):
+    from webcompy.di import provide
+
+    provide("leak-key", "leaked")
+    return html.DIV({}, "child")
+
+
+class TestSuspenseScopeRestoration:
+    def _suspense_with_provider(self):
+        return SuspenseElement(
+            fallback=lambda: html.P({}, "loading"),
+            children=lambda: SuspenseProvideChild(None),
+        )
+
+    def _scope_with_head_props(self, suspense_scope):
+        from webcompy.components._component import HeadPropsStore
+        from webcompy.di._keys import _HEAD_PROPS_KEY
+        from webcompy.ports._keys import CUSTOM_ELEMENT_PORT_KEY
+        from webcompy_testing import FakeCustomElementPort
+
+        suspense_scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+        suspense_scope.provide(CUSTOM_ELEMENT_PORT_KEY, FakeCustomElementPort())
+
+    @pytest.mark.asyncio
+    async def test_server_resolution_restores_parent_scope_after_provide(self, suspense_scope):
+        from webcompy.di import inject
+
+        self._scope_with_head_props(suspense_scope)
+        el = self._suspense_with_provider()
+        el._parent = _DummyParent()
+        el._node_idx = 0
+
+        original = _active_di_scope.get(None)
+        await el._server_render()
+
+        assert _active_di_scope.get(None) is original
+        assert inject("leak-key", default=None) is None
+
+    @pytest.mark.asyncio
+    async def test_browser_resolution_restores_parent_scope_after_provide(self, monkeypatch, suspense_scope):
+        from webcompy.di import inject
+
+        monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
+        self._scope_with_head_props(suspense_scope)
+        el = self._suspense_with_provider()
+        el._parent = _DummyParent()
+        el._node_idx = 0
+
+        original = _active_di_scope.get(None)
+        await el._browser_resolve()
+
+        assert _active_di_scope.get(None) is original
+        assert inject("leak-key", default=None) is None
 
 
 class TestSuspenseElement:

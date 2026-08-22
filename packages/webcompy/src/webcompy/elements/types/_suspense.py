@@ -9,7 +9,7 @@ from webcompy.components._component import Component
 from webcompy.components._context_manager import component_context
 from webcompy.di import inject
 from webcompy.di._keys import SUSPENSE_RESOLVING_KEY
-from webcompy.di._scope import _active_di_scope
+from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement, _patch_children, _position_element_nodes
@@ -22,6 +22,26 @@ _logger = getLogger(__name__)
 async def _resolve_with_context(component: Component, coro: Coroutine[Any, Any, Any]) -> Any:
     with component_context(component._render_state):
         return await coro
+
+
+def _restore_suspense_di_scope(
+    scope: DIScope | None,
+    original_scope: DIScope | None,
+) -> None:
+    """Exit the resolution scope and restore the pre-Suspense active scope.
+
+    ``provide()`` during a Suspense child's setup switches ``_active_di_scope``
+    to the component's child scope without a token. ``DIScope.__exit__`` is
+    identity-guarded (it only unwinds when it is the active scope), so it can
+    silently no-op when such a descendant remains active. Restoring the parent
+    scope explicitly prevents the descendant from leaking into Suspense
+    siblings and surrounding code.
+    """
+    if scope is None or original_scope is None:
+        return
+    scope.__exit__(None, None, None)
+    if _active_di_scope.get(None) is not original_scope:
+        _active_di_scope.set(original_scope)
 
 
 class SuspenseElement(DynamicElement):
@@ -140,7 +160,7 @@ class SuspenseElement(DynamicElement):
                 self._resolve_component_templates(pairs, results)
         finally:
             if scope is not None:
-                scope.__exit__(None, None, None)
+                _restore_suspense_di_scope(scope, original_scope)
 
     async def _browser_render(self):
         children = self._generate_children(self._children_generator)
@@ -206,7 +226,7 @@ class SuspenseElement(DynamicElement):
             await self._handle_error(e)
         finally:
             if scope is not None:
-                scope.__exit__(None, None, None)
+                _restore_suspense_di_scope(scope, original_scope)
 
     async def _handle_error(self, error: Exception) -> None:
         if self._error_fallback_generator is not None:
