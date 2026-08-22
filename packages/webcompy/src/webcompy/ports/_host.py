@@ -17,6 +17,7 @@ class HostPort(ABC):
 
         Args:
             callback: Zero-argument callable to execute.
+
         """
         ...
 
@@ -30,6 +31,7 @@ class HostPort(ABC):
 
         Returns:
             A cleanup function; call it to remove the listener.
+
         """
         ...
 
@@ -46,6 +48,7 @@ class HostPort(ABC):
 
         Returns:
             A zero-argument callable that returns the wrapped value.
+
         """
         ...
 
@@ -61,6 +64,7 @@ class HostPort(ABC):
 
         Returns:
             A zero-argument callable that returns the resolved global or ``default``.
+
         """
         ...
 
@@ -77,6 +81,7 @@ class HostPort(ABC):
         Returns:
             A zero-argument callable. Returns the resolved global on success,
             ``None`` when the global is missing.
+
         """
         ...
 
@@ -104,5 +109,6 @@ class HostPort(ABC):
         Returns:
             A zero-argument callable that returns the resolved (and optionally
             wrapped) global, ``default``, or ``None``.
+
         """
         ...

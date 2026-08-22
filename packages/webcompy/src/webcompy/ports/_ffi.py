@@ -17,6 +17,7 @@ class FFIPort(ABC):
 
         Returns:
             A JS-side proxy reference.
+
         """
         ...
 
@@ -26,6 +27,7 @@ class FFIPort(ABC):
 
         Args:
             proxy: The proxy object returned by ``create_proxy``.
+
         """
         ...
 
@@ -38,6 +40,7 @@ class FFIPort(ABC):
 
         Returns:
             ``True`` if the value is ``None`` (JS null/undefined).
+
         """
         ...
 
@@ -50,6 +53,7 @@ class FFIPort(ABC):
 
         Returns:
             JavaScript object equivalent.
+
         """
         ...
 
@@ -62,5 +66,6 @@ class FFIPort(ABC):
         Args:
             target: Destination JavaScript object.
             source: Source JavaScript object whose properties are copied.
+
         """
         ...

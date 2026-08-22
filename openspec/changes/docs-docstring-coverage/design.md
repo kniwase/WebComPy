@@ -34,7 +34,7 @@ Alternatives considered: (a) ruff D only — rejected (blind spot above); (b) `i
 
 ### 2. Public-surface definition: re-export resolution + important-internal allowlist
 
-The checker collects names re-exported by every `__init__.py` of the four packages, follows the import chain to the definition site (handling `as` aliases), and requires docstrings at the definition: class docstring + all public methods/properties for classes; function docstring for functions; PEP 224 attribute docstring (string literal immediately after the assignment) for public module-level constants. Every module under `packages/*/src` also requires a one-line module docstring. A curated `IMPORTANT_INTERNALS` list of dotted paths in the checker adds internal base types that downstream code subclasses or authors interact with; seeded with `Element`, `ComponentStore`, `RenderContext`, `SignalNode` and finalized during PR-A implementation.
+The checker collects names re-exported by every `__init__.py` of the four packages, follows the import chain to the definition site (handling `as` aliases), and requires docstrings at the definition: class docstring + all public methods/properties for classes; function docstring for functions; PEP 224 attribute docstring (string literal immediately after the assignment) for module-level constants that are part of the re-exported surface (or listed in `IMPORTANT_INTERNALS`). Blanket coverage of every public-named constant was measured during implementation and rejected: ~320 of 321 constant gaps are internal (regexes, protocol constants, TypeVars, ~100 mechanically generated HTML tag constants) and only one constant (`THEME_KEY`) is actually re-exported. Every module under `packages/*/src` also requires a one-line module docstring. A curated `IMPORTANT_INTERNALS` list of dotted paths in the checker adds internal base types that downstream code subclasses or authors interact with; seeded with `Element`, `ComponentStore`, `RenderContext`, `SignalNode` and finalized during PR-A implementation.
 
 Alternative considered: "every public-named definition" (~1,300 items incl. never-re-exported helpers) — rejected as over-broad; the re-export surface (~420 names + members) is the contract users see.
 
@@ -80,4 +80,8 @@ Implementation is delegated to the built-in `general` subagent (full tool access
 
 ## Open Questions
 
-- Whether `pydoclint` (or similar) can validate Args/Returns structure against signatures under the re-export pattern well enough to join CI. Spike during PR-A; if unsuitable, AI review remains the structural gate.
+### pydoclint spike (resolved, adoption pending user decision)
+
+Spiked with pydoclint 0.9.1 (transient via uvx, python 3.12): it checks definition sites only (private `_*.py` covered, `__init__.py` re-exports ignored) — a direct fit for the re-export pattern. Default output is ~74% noise for this codebase (type-in-docstring checks); with `--arg-type-hints-in-docstring=False --check-return-types=False` the whole `packages/*/src` tree yields ~10 high-signal violations (missing/mismatched Args, missing Returns, Raises drift), runs in <1s, supports a baseline mode, and is configurable via `[tool.pydoclint]` in pyproject.toml.
+
+Recommendation: ADOPT as a second CI gate (dev dependency alongside ruff/pyright; openspec job stays stdlib-only) enforcing signature-vs-docstring mechanics, while AI review retains the semantic structural gate (Attributes completeness, prose quality, overload/decorator nuances). Adoption requires the user's decision (new dev dependency + CI step).

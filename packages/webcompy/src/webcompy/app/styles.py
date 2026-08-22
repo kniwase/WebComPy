@@ -30,6 +30,7 @@ Example:
     ... }))
     >>>
     >>> # later: accent.value = "#ff0000"  # CSS variable updates everywhere
+
 """
 
 from __future__ import annotations
@@ -63,6 +64,7 @@ def reactive_style(selector: str, vars: VarsMapping) -> Computed[str]:
         ...     "--color-accent": Signal("#0969da"),
         ...     "--color-bg": "white",
         ... }))
+
     """
     items = list(vars.items())
 
@@ -84,6 +86,7 @@ def reactive_block(selector: str, content: ReactiveValue) -> Computed[str]:
 
     Example:
         >>> app.append_style(reactive_block("body", Computed(lambda: f"color: {fg.value};")))
+
     """
     return Computed(lambda: f"{selector} {{\n{_resolve_value(content)}\n}}")
 

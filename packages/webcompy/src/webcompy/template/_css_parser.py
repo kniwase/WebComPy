@@ -244,6 +244,7 @@ def parse_css(text: str) -> dict[str, StyleDict]:
 
     Raises:
         WebComPyException: If braces are unbalanced.
+
     """
     cleaned = _strip_comments(text)
     cleaned = textwrap.dedent(cleaned)

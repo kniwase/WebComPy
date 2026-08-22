@@ -2,11 +2,12 @@
 
 ## 1. PR-A: Checker tooling (delegate to `general` subagent)
 
-- [ ] 1.1 Implement `scripts/check-docstrings.py` per design.md: re-export resolution to definition sites, presence checks (module/class/function/method/property/PEP 224 constant), exemption rules, forbidden OpenSpec-reference scan over docstrings (`ast`) and comments (`tokenize`), `--write-baseline` mode, strict mode when baseline absent. Seed `IMPORTANT_INTERNALS` after reviewing `Element`, `ComponentStore`, `RenderContext`, `SignalNode`
-- [ ] 1.2 Generate the full baseline (`--write-baseline`) and commit it; verify checker exits 0 with baseline and non-zero on a deliberately undocumented test symbol
-- [ ] 1.3 Add ruff D formatting subset (D205, D209, D212, D413, D415) to `pyproject.toml`; run `ruff check --fix` for the ~50 pre-existing formatting violations
-- [ ] 1.4 Remove the OpenSpec change-path reference in `packages/webcompy/src/webcompy/app/_app.py:35` (reword the comment to describe the code only)
-- [ ] 1.5 Spike: evaluate `pydoclint` for Args/Returns structural validation under the re-export pattern; record outcome in design.md (adopt or stay with AI-review-only)
+- [x] 1.1 Implement `scripts/check-docstrings.py` per design.md: re-export resolution to definition sites, presence checks (module/class/function/method/property/PEP 224 constant), exemption rules, forbidden OpenSpec-reference scan over docstrings (`ast`) and comments (`tokenize`), `--write-baseline` mode, strict mode when baseline absent. Seed `IMPORTANT_INTERNALS` after reviewing `Element`, `ComponentStore`, `RenderContext`, `SignalNode`
+- [x] 1.2 Generate the full baseline (`--write-baseline`) and commit it; verify checker exits 0 with baseline and non-zero on a deliberately undocumented test symbol
+- [x] 1.3 Add ruff D formatting subset (D205, D209, D212, D413, D415) to `pyproject.toml`; run `ruff check --fix` for the ~50 pre-existing formatting violations
+- [x] 1.4 Remove the OpenSpec change-path reference in `packages/webcompy/src/webcompy/app/_app.py:35` (reword the comment to describe the code only)
+- [x] 1.5 Spike: evaluate `pydoclint` for Args/Returns structural validation under the re-export pattern; record outcome in design.md (adopt or stay with AI-review-only)
+- [ ] 1.6 Adopt pydoclint (pending user decision): add dev dependency, `[tool.pydoclint]` tuned config in pyproject.toml, CI lint-job step, baseline; fix the ~10 structural violations
 
 ## 2. PR-A: Governance wiring (orchestrator session)
 

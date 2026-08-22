@@ -126,6 +126,7 @@ class DOMPort(ABC):
 
         Returns:
             A new DOM element.
+
         """
         ...
 
@@ -138,6 +139,7 @@ class DOMPort(ABC):
 
         Returns:
             A new text node.
+
         """
         ...
 
@@ -150,6 +152,7 @@ class DOMPort(ABC):
 
         Returns:
             A new comment node.
+
         """
         ...
 
@@ -162,6 +165,7 @@ class DOMPort(ABC):
 
         Returns:
             The first matching element, or ``None`` if none found.
+
         """
         ...
 
@@ -174,6 +178,7 @@ class DOMPort(ABC):
 
         Returns:
             The matching element, or ``None`` if not found.
+
         """
         ...
 
@@ -183,6 +188,7 @@ class DOMPort(ABC):
 
         Args:
             title: New document title.
+
         """
         ...
 
@@ -196,6 +202,7 @@ class DOMPort(ABC):
 
         Returns:
             A cleanup function; call it to remove the listener.
+
         """
         ...
 
@@ -216,5 +223,6 @@ class DOMPort(ABC):
 
         Returns:
             A new DOM event object.
+
         """
         ...

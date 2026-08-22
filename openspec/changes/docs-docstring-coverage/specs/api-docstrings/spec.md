@@ -8,17 +8,22 @@ Governs docstring coverage and content for the public interfaces of the `webcomp
 
 ### Requirement: Public interfaces shall carry docstrings
 
-Every public interface of the four packages under `packages/` SHALL have a docstring. The public interface is defined as: (1) every name re-exported through any package or subpackage `__init__.py`, resolved to its definition site including private `_*.py` modules; (2) all public methods and properties of re-exported classes; (3) a one-line summary docstring on every module under `packages/*/src`; (4) PEP 224-style attribute docstrings on public module-level constants; and (5) an explicit allowlist of important internal interfaces maintained in the checker. Docstrings SHALL be written in English.
+Every public interface of the four packages under `packages/` SHALL have a docstring. The public interface is defined as: (1) every name re-exported through any package or subpackage `__init__.py`, resolved to its definition site including private `_*.py` modules; (2) all public methods and properties of re-exported classes; (3) a one-line summary docstring on every module under `packages/*/src`; (4) PEP 224-style attribute docstrings (a string literal immediately following the assignment) on module-level constants that belong to the public surface — those re-exported through any package or subpackage `__init__.py` — and on constants listed in the important-internal allowlist; and (5) an explicit allowlist of important internal interfaces maintained in the checker. Docstrings SHALL be written in English.
 
 #### Scenario: Re-exported function without docstring
 
 - **WHEN** a name is re-exported from a package `__init__.py` and its definition site has no docstring
 - **THEN** the docstring checker SHALL report a violation and exit non-zero
 
-#### Scenario: Public constant without attribute docstring
+#### Scenario: Re-exported constant without attribute docstring
 
-- **WHEN** a public (non-underscore) module-level constant lacks a string literal immediately following its assignment
+- **WHEN** a module-level constant re-exported through a package `__init__.py` (or listed among important internals) lacks a string literal immediately following its assignment
 - **THEN** the docstring checker SHALL report a violation
+
+#### Scenario: Internal constant in a private module
+
+- **WHEN** a public-named constant is defined in a private (`_*.py`) module and is neither re-exported nor listed among important internals
+- **THEN** the checker SHALL NOT require a docstring for it
 
 #### Scenario: Definition exempted by convention
 

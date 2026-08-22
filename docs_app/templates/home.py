@@ -7,10 +7,7 @@ from ..components.ui import DocsSection, InlineCode
 
 
 def _code(code: str) -> str:
-    """Pre-process Python triple-quoted string literal so that the leading
-    indentation introduced by the template does not appear in the rendered
-    output. Equivalent to the old SyntaxHighlighting wrapper's
-    ``_strip_code`` helper."""
+    """Pre-process Python triple-quoted string literal so that the leading indentation introduced by the template does not appear in the rendered output. Equivalent to the old SyntaxHighlighting wrapper's ``_strip_code`` helper."""
     return strip_multiline_text(code).strip()
 
 

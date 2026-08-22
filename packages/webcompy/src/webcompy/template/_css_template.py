@@ -32,6 +32,7 @@ def css_text(source: str) -> dict[str, StyleDict]:
 
     Returns:
         Selector-keyed dict whose values are ``StyleDict`` blocks.
+
     """
     return parse_css(source)
 
@@ -70,6 +71,7 @@ def css_text_template(
 
     Returns:
         A factory that resolves holes and parses CSS on each call.
+
     """
 
     def factory() -> dict[str, StyleDict]:

@@ -30,6 +30,7 @@ class AsyncSchedulerPort(ABC):
 
         Returns:
             The ``asyncio.Task`` wrapping the scheduled coroutine.
+
         """
         ...
 
@@ -46,5 +47,6 @@ class AsyncSchedulerPort(ABC):
             only_render: When true, only await tasks scheduled with
                 ``schedule(coro, render=True)``. Tasks scheduled without the
                 flag SHALL NOT block the call.
+
         """
         ...

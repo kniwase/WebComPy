@@ -14,6 +14,7 @@ class CookiePort(ABC):
 
         Returns:
             Cookie value, or ``None`` if not set.
+
         """
         ...
 
@@ -43,6 +44,7 @@ class CookiePort(ABC):
             secure: Restrict to HTTPS.
             httponly: Prevent JavaScript access via ``document.cookie``.
             samesite: SameSite attribute (``"Strict"``, ``"Lax"``, ``"None"``).
+
         """
         ...
 
@@ -53,6 +55,7 @@ class CookiePort(ABC):
         Args:
             name: Cookie name.
             path: Path scope of the cookie to delete (must match ``set``).
+
         """
         ...
 
@@ -62,5 +65,6 @@ class CookiePort(ABC):
 
         Returns:
             Mapping of cookie names to values.
+
         """
         ...

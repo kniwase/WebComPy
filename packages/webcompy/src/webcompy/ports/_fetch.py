@@ -87,6 +87,7 @@ class FetchPort(ABC):
 
         Returns:
             A ``Response`` object with text, headers, and status.
+
         """
         ...
 
@@ -113,6 +114,7 @@ class FetchPort(ABC):
         Returns:
             A ``FetchStream`` with response metadata and an async iterator of
             body text chunks.
+
         """
         res = await self.fetch(url, method=method, headers=headers, body=body)
         return _BufferedFetchStream(res.status_code, res.headers, res.ok, res.text)

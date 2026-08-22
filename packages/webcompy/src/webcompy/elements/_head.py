@@ -283,11 +283,7 @@ class HeadElement(ElementWithChildren):
         self._remove_emitted_style_elements()
 
     def _remove_emitted_style_elements(self) -> None:
-        """Remove all <style data-webcompy-cid> and
-        <style data-webcompy-cid-rx> elements that this head element
-        emitted into the document <head>. Called on render-context
-        disposal to prevent orphaned style elements from accumulating
-        across app lifecycle events (re-render, navigation, etc.)."""
+        """Remove all <style data-webcompy-cid> and <style data-webcompy-cid-rx> elements that this head element emitted into the document <head>. Called on render-context disposal to prevent orphaned style elements from accumulating across app lifecycle events (re-render, navigation, etc.)."""
         from webcompy.di import inject
         from webcompy.ports._keys import DOM_PORT_KEY
 
