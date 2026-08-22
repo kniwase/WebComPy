@@ -454,6 +454,23 @@ class RpcWsClient:
                 except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
                     self._set_last_error(RpcError(SERVER_ERROR, "Malformed JSON-RPC WebSocket frame"))
                     continue
+                if isinstance(frame, list):
+                    for entry in frame:
+                        if not isinstance(entry, dict):
+                            continue
+                        req_id = entry.get("id")
+                        sub = self._pending_subscribe_calls.pop(req_id, None)
+                        if sub is not None:
+                            self._handle_subscribe_response(sub, entry)
+                            continue
+                        pending = self._pending_stream_calls.pop(req_id, None)
+                        if pending is not None:
+                            self._handle_stream_ack(pending[0], pending[1], entry)
+                            continue
+                        future = self._in_flight.pop(req_id, None)
+                        if future is not None and not future.done():
+                            future.set_result(entry)
+                    continue
                 if not isinstance(frame, dict):
                     continue
                 method = frame.get("method")
@@ -478,7 +495,7 @@ class RpcWsClient:
                     self._handle_stream_ack(pending[0], pending[1], frame)
                     continue
                 future = self._in_flight.pop(req_id, None)
-                if future is not None:
+                if future is not None and not future.done():
                     future.set_result(frame)
         except StopAsyncIteration:
             pass

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import warnings
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from json import JSONDecodeError
 from json import dumps as json_dumps
 from json import loads as json_loads
@@ -87,26 +87,26 @@ async def _post_envelope(registry: ProcedureRegistry, payload: Any) -> Any:
 
 
 @overload
-async def call(
+async def _call_impl(
     method: str,
-    params: Mapping[str, Any] | Sequence[Any] | None = None,
+    params: Any | None = None,
     *,
     result_type: None = None,
 ) -> Any: ...
 
 
 @overload
-async def call(
+async def _call_impl(
     method: str,
-    params: Mapping[str, Any] | Sequence[Any] | None = None,
+    params: Any | None = None,
     *,
     result_type: type[T],
 ) -> T: ...
 
 
-async def call(
+async def _call_impl(
     method: str,
-    params: Mapping[str, Any] | Sequence[Any] | None = None,
+    params: Any | None = None,
     *,
     result_type: type[T] | None = None,
 ) -> Any:
@@ -120,50 +120,15 @@ async def call(
     return _resolve_single(data, result_type, registry)
 
 
-async def notify(
+async def _notify_impl(
     method: str,
-    params: Mapping[str, Any] | Sequence[Any] | None = None,
+    params: Any | None = None,
 ) -> None:
     registry = _registry_or_error()
     envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": method}
     if params is not None:
         _encode_params(registry, envelope, params)
     await _post_envelope(registry, envelope)
-
-
-async def batch(
-    calls: Sequence[
-        tuple[str, Mapping[str, Any] | Sequence[Any] | None]
-        | tuple[str, Mapping[str, Any] | Sequence[Any] | None, type[Any]]
-    ],
-) -> list[Any]:
-    registry = _registry_or_error()
-    envelopes: list[dict[str, Any]] = []
-    entries: list[tuple[int, type[Any] | None]] = []
-    for call_spec in calls:
-        method = call_spec[0]
-        params = call_spec[1]
-        result_type = call_spec[2] if len(call_spec) > 2 else None
-        req_id = registry.next_id()
-        envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": method, "id": req_id}
-        if params is not None:
-            _encode_params(registry, envelope, params)
-        envelopes.append(envelope)
-        entries.append((req_id, result_type))
-    data = await _post_envelope(registry, envelopes)
-    if not isinstance(data, list):
-        raise RpcError(SERVER_ERROR, "Malformed batch response")
-    by_id: dict[Any, Any] = {}
-    for response in data:
-        if isinstance(response, dict) and "id" in response:
-            by_id[response["id"]] = response
-    results: list[Any] = []
-    for req_id, result_type in entries:
-        response = by_id.get(req_id)
-        if response is None:
-            raise RpcError(SERVER_ERROR, f"Missing batch response for id {req_id}")
-        results.append(_resolve_single(response, result_type, registry))
-    return results
 
 
 _SSR_STREAM_MSG = "webcompy rpc: rpc.stream called outside the browser; returning an empty closed stream"
@@ -218,26 +183,26 @@ async def _pump_sse(fetch_stream: FetchStream, rpc_stream: RpcStream[Any]) -> No
 
 
 @overload
-async def stream(
+async def _stream_impl(
     method: str,
-    params: Mapping[str, Any] | Sequence[Any] | None = None,
+    params: Any | None = None,
     *,
     result_type: None = None,
 ) -> RpcStream[Any]: ...
 
 
 @overload
-async def stream(
+async def _stream_impl(
     method: str,
-    params: Mapping[str, Any] | Sequence[Any] | None = None,
+    params: Any | None = None,
     *,
     result_type: type[T],
 ) -> RpcStream[T]: ...
 
 
-async def stream(
+async def _stream_impl(
     method: str,
-    params: Mapping[str, Any] | Sequence[Any] | None = None,
+    params: Any | None = None,
     *,
     result_type: type[T] | None = None,
 ) -> RpcStream[Any]:
@@ -287,4 +252,4 @@ async def stream(
     raise RpcError(SERVER_ERROR, "RPC server did not accept the stream request")
 
 
-__all__ = ["batch", "call", "notify", "stream"]
+__all__ = ["_call_impl", "_notify_impl", "_post_envelope", "_registry_or_error", "_resolve_single", "_stream_impl"]

@@ -128,28 +128,26 @@ def _decode_params(
             params = apply_transfer_meta(params, meta, strict=True, decoders=registry.meta_decoders)
         except ValueError as err:
             raise _ParamError(str(err)) from err
+    if isinstance(params, list):
+        raise _ParamError("array params not supported for contract procedures")
     if params is None:
-        raw_kwargs: dict[str, Any] = {}
-    elif isinstance(params, list):
-        if len(params) > len(info.param_order):
-            raise _ParamError("too many positional arguments")
-        raw_kwargs = dict(zip(info.param_order, params, strict=False))
-    elif isinstance(params, dict):
-        raw_kwargs = dict(params)
-    else:
-        raise _ParamError("params must be an array or an object")
-    missing = info.required - frozenset(raw_kwargs.keys())
-    if missing:
-        raise _ParamError(f"missing required parameter(s): {', '.join(sorted(missing))}")
-    decoded: dict[str, Any] = {}
-    for name, value in raw_kwargs.items():
-        if name not in info.param_schemas:
-            raise _ParamError(f"unknown parameter {name!r}")
-        try:
-            decoded[name] = from_json(info.param_schemas[name], value, strict=True)
-        except (TypeError, ValueError) as err:
-            raise _ParamError(str(err)) from err
-    return decoded
+        if info.required:
+            raise _ParamError(f"missing required parameter(s): {', '.join(sorted(info.required))}")
+        if not info.param_order:
+            return {}
+        param_name = info.param_order[0]
+        raise _ParamError(f"missing required parameter {param_name!r}")
+    if not isinstance(params, dict):
+        raise _ParamError("params must be an object")
+    if len(info.param_order) != 1:
+        raise _ParamError("contract procedure must have exactly one parameter")
+    param_name = info.param_order[0]
+    schema = info.param_schemas[param_name]
+    try:
+        decoded_value = from_json(schema, params, strict=True)
+    except (TypeError, ValueError) as err:
+        raise _ParamError(str(err)) from err
+    return {param_name: decoded_value}
 
 
 async def _process_entry(entry: Any, registry: ProcedureRegistry, *, in_batch: bool = False) -> dict[str, Any] | None:
