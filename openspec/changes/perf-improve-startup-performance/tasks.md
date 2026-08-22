@@ -2,7 +2,7 @@
 
 - [x] 1.1 Add `_profile_data: dict[str, float]` owned by `WebComPyApp` in `packages/webcompy/src/webcompy/app/_app.py`: declare the class attribute, create the empty dict unconditionally in `__init__`, make `app.profile_data` return `self._profile_data if self._profile else None`, and move `_record_phase`/`_emit_profile_summary` to operate on `self._profile_data` (no ContextVar delegation). `_record_phase` keeps only the first occurrence per phase name and no-ops when `_profile` is False
 - [x] 1.2 Remove the `RenderContext._profile_data` / `RenderContext._record_phase` indirection from `packages/webcompy/src/webcompy/app/_render_context.py`: delete `_profile_data`, `profile_data`, `_record_phase`; route internal phase calls (`init_start`/`imports_done`/`init_done`) through `self._app._record_phase(...)`; drop the now-unused `import time` if nothing else uses it. Do not touch the hydration-reporter state added on main
-- [x] 1.3 Update `_emit_profile_summary` to use the new pair list (`pyscript_ready → imports_done`, `imports_done → init_done`, `init_done → custom_elements_defined`, `custom_elements_defined → run_done`, `run_done → loading_removed`, `run_done → lazy_preloaded`) plus a non-negative guard (skip a pair whose end precedes its start); keep the `[WebComPy Profile]` output via `browser.console.log` in Emscripten and `print()` otherwise
+- [x] 1.3 Update `_emit_profile_summary` to use the new pair list (`pyscript_ready → imports_done`, `imports_done → init_done`, `init_done → custom_elements_defined`, `custom_elements_defined → run_done`, `run_done → loading_removed`, `lazy_preload_start → lazy_preloaded`) plus a non-negative guard (skip a pair whose end precedes its start); keep the `[WebComPy Profile]` output via `browser.console.log` in Emscripten and `print()` otherwise
 - [x] 1.4 Confirm `packages/webcompy-server/src/webcompy_server/_html.py` bootstrap (`app._profile_data["pyscript_ready"] = _pyscript_ready`) works without modification once the app owns the dict
 
 ## 2. Add the two profile phases and deferred emission
@@ -35,3 +35,10 @@
 - [x] 6.2 Run `uv run ruff check .`, `uv run ruff format --check .`, and `uv run pyright`
 - [x] 6.3 Confirm `openspec validate --changes` passes and the delta spec is consistent with `app-lifecycle` and `app-config`
 - [x] 6.4 Run all E2E groups in both serving modes via `scripts/run-e2e-tests.sh --parallel` and confirm success
+
+## 7. Review follow-ups
+
+- [x] 7.1 Add a unit test pinning the deferred-summary ordering contract (lazy-preload batch macro task runs before the summary emit task) via a recording `HostPort` fake
+- [x] 7.2 Add browser E2E coverage for the profiling summary (`e2e/core/test_profiling.py` + `profile_app` fixture app, prod serving mode only)
+- [x] 7.3 Reconcile the delta-spec emission wording with the implementation and document the server-side first-request-per-process semantics in `design.md`
+- [x] 7.4 Add an `architecture` delta scoping the render-state isolation rule so app-owned profiling telemetry is explicitly allowed

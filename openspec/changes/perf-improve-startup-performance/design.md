@@ -38,7 +38,7 @@ Alternatives considered:
 
 ### D2: Phase recording lives behind `_profile` guard
 
-`WebComPyApp._record_phase` SHALL no-op when `self._profile` is False, preserving zero-overhead in default runs. It SHALL also keep only the **first occurrence** of each phase name (`name not in self._profile_data`) — required by the at-most-once scenario in the delta spec, and it makes double scheduling of the lazy-preload batch harmless.
+`WebComPyApp._record_phase` SHALL no-op when `self._profile` is False, preserving zero-overhead in default runs. It SHALL also keep only the **first occurrence** of each phase name (`name not in self._profile_data`) — required by the at-most-once scenario in the delta spec, and it makes double scheduling of the lazy-preload batch harmless. Server-side consequence of app-owned data plus first-occurrence-wins: on SSR/SSG processes the recorded timestamps reflect the **first request handled per process**; subsequent requests record nothing new and `app.profile_data` keeps returning that first-request snapshot. Per-request init-phase timing visibility is therefore lost on the server — accepted, since server paths never emit summaries anyway.
 
 ### D3: New phases in the summary
 
@@ -58,10 +58,9 @@ Do not modify `pyscript-bundle` or CLI delivery behavior in this change. The mea
 
 ## Risks / Trade-offs
 
-- [Removing `RenderContext._profile_data` may break server-side tests that read `ctx.profile_data`] → Keep `app.profile_data` as the public accessor; update `tests/test_profiling.py` to exercise app-owned data; run unit tests to confirm server paths (SSG/dev server) still emit summaries via `print()`.
+- [Removing `RenderContext._profile_data` may break server-side tests that read `ctx.profile_data`] → Keep `app.profile_data` as the public accessor; update `tests/test_profiling.py` to exercise app-owned data; run unit tests to confirm server paths (SSG/dev server) still work. Note that SSR/SSG runs never emit summaries — the only emission site is browser-gated (`_root_component`, pyscript env) and pre-existing; the `print()` branch of `_emit_profile_summary` is exercised by unit tests only.
 - [New phases change profile output format, breaking consumers] → The summary is diagnostic (console), not an API; the delta spec pins the new pair list.
 - [Double call sites for `preload_lazy_routes` (view + root) may double-record or double-print] → `_record_phase` keeps only the first occurrence per phase name, and there is exactly one emission site (root's deferred macro task), so both are structurally prevented.
-- [`run_done → lazy_preloaded` mixes fade duration with actual preload work] → Accepted for a diagnostic stage; the measurement report provides fine-grained external timings when needed.
 - [`asyncio.sleep` yields let JS timers run mid-render] → This is exactly why emission is deferred via the FIFO timer queue rather than emitted inline at loading removal.
 
 ## Migration Plan

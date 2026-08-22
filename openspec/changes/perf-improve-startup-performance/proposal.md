@@ -7,7 +7,7 @@ Startup measurement on the docs_app (see `.tmp/measure/report.md`) shows the int
 ## What Changes
 
 - Fix the `profile=True` browser startup crash: `WebComPyApp` SHALL own a `_profile_data` dict so the generated `<script type="py">` bootstrap can record the `pyscript_ready` timestamp, restoring the `[WebComPy Profile]` console summary.
-- Align the `app-lifecycle` and `cli` specs with the config-based profile API (`WebComPyAppConfig(profile=True)`, not `WebComPyApp(profile=True)`) and with where `_profile_data` lives.
+- Align the `app-lifecycle` spec with the config-based profile API (`WebComPyAppConfig(profile=True)`, not `WebComPyApp(profile=True)`) and with where `_profile_data` lives (the `cli` spec already matches the implementation and needs no delta).
 - Extend the profile summary with custom-element registration and lazy-preload phases so future startup work can attribute cost without probe hacks.
 - Investigate the dominant runtime download/initialization cost (delivery of `pyodide` runtime assets, wheel serving, caching) and record the findings as the basis for a follow-up change; do not modify serving behavior here.
 - Confirm custom-element registration is NOT a target: document that the measured cost is <50 ms and de-prioritize any registration/binding optimization.
@@ -21,6 +21,7 @@ None.
 ### Modified Capabilities
 
 - `app-lifecycle`: Profile data ownership is corrected so `WebComPyApp` SHALL own a `_profile_data` dict (per the existing requirement's method contract), fixing the `profile=True` browser crash; the profiling summary gains two added phases (custom-element bulk-registration and lazy-preload); and the profiling scenario is aligned to the config-based profile API (`WebComPyAppConfig(profile=True)`).
+- `architecture`: The render-state isolation rule is scoped to mutable *rendering* state, explicitly carving out app-owned diagnostic lifecycle telemetry (`_profile_data`) so the spec set stays self-consistent with the `app-lifecycle` delta.
 
 ## Impact
 
@@ -30,7 +31,8 @@ None.
 - `packages/webcompy-server/src/webcompy_server/_html.py` — unchanged bootstrap contract (already emits `app._profile_data[...]`); may need CORS/cache handling if delivery changes.
 - `packages/webcompy-cli/` — runtime asset delivery options **if** the measured improvement requires serving/caching changes (investigated; a follow-up change may modify `pyscript-bundle` delivery requirements).
 - Tests: `tests/test_profiling.py` (extend for new phases/`_profile_data` ownership), `tests/test_cli_*.py` (bootstrap inspection), unit + docs E2E.
-- Docs: `docs_app/documents/` profiling guidance updates.
+- Docs: measurement conclusions and profiling-phase guidance recorded in this change's `design.md` only (no `docs_app/documents/` updates).
+- Specs: `openspec/specs/architecture/spec.md` — render-state isolation rule scoped so app-owned diagnostic telemetry is explicitly allowed.
 
 ## Known Issues Addressed
 
@@ -38,7 +40,7 @@ None.
 
 ## Non-goals
 
-- Custom-element registration optimization (案②/③/④ from the measurement discussion): measured cost is <50 ms; spec changes there are not justified.
+- Custom-element registration optimization (options ②/③/④ from the measurement discussion): measured cost is <50 ms; spec changes there are not justified.
 - General re-rendering/VDOM diffing performance work uncovered by this measurement.
 - Publishing packages to PyPI (handled elsewhere per known issues).
 - Broad changes to the UI theme/stylesheet delivery pipeline not related to startup transfer.

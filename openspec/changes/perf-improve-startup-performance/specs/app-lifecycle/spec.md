@@ -37,7 +37,7 @@ In the browser (PyScript) environment, `app.run(selector)` SHALL mount and rende
 - **AND** a formatted profile summary SHALL be printed to the browser console after the loading indicator is removed (in the browser, via a scheduled macro task so any pending lazy-preload batch completes first)
 - **AND** `WebComPyApp._record_phase(name)` SHALL record `time.perf_counter()` into `_profile_data` only when `_profile` is True, and SHALL keep only the first occurrence of each phase name
 - **AND** `_profile_data` SHALL be owned by the `WebComPyApp` instance (created in `WebComPyApp.__init__`) so that the generated bootstrap script can assign `app._profile_data["pyscript_ready"]` before any RenderContext exists; `RenderContext` SHALL NOT own profile state
-- **AND** `WebComPyApp._emit_profile_summary()` SHALL format and output the profile summary — in Emscripten via `browser.console.log()`, otherwise via `print()`
+- **AND** `WebComPyApp._emit_profile_summary()` SHALL format and output the profile summary — in the browser via `pyscript.context.window.console.log()`, otherwise via `print()`
 - **AND** the summary SHALL show elapsed time between phases (`pyscript_ready → imports_done`, `imports_done → init_done`, `init_done → custom_elements_defined`, `custom_elements_defined → run_done`, `run_done → loading_removed`, `lazy_preload_start → lazy_preloaded`) plus a total; a pair whose end timestamp precedes its start timestamp SHALL NOT be shown
 
 #### Scenario: Accessing profile data
