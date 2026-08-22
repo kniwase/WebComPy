@@ -1,6 +1,8 @@
 import sys
 import types
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from tests.conftest import MockHistoryPort
 from webcompy.app._app import WebComPyApp
@@ -257,6 +259,101 @@ class TestLazyPreloadPhaseRecordedOnServer:
                 ctx2.dispose()
         finally:
             sys.modules.pop("profile_lazy_module_once", None)
+
+
+class _RecordingHostPort:
+    def __init__(self):
+        self.queue: list = []
+
+    def schedule_macro_task(self, callback) -> None:
+        self.queue.append(callback)
+
+
+class TestDeferredSummaryOrdering:
+    @pytest.mark.asyncio
+    async def test_lazy_preload_batch_runs_before_deferred_summary(self, monkeypatch):
+        from webcompy.app import _root_component as rc
+        from webcompy.app._root_component import AppDocumentRoot
+        from webcompy.components._component import _active_app_context
+        from webcompy.di._keys import _APP_KEY, _ROUTER_KEY
+        from webcompy.di._scope import DIScope
+        from webcompy.ports._keys import (
+            ASYNC_SCHEDULER_PORT_KEY,
+            DOM_PORT_KEY,
+            FFI_PORT_KEY,
+            HOST_PORT_KEY,
+        )
+        from webcompy_testing import FakeAsyncSchedulerPort
+
+        monkeypatch.setattr(rc, "ENVIRONMENT", "pyscript")
+        monkeypatch.setattr("webcompy.utils._environment.ENVIRONMENT", "pyscript")
+
+        fake_module = types.ModuleType("profile_lazy_module_ordering")
+        fake_module.ProfileLazyPage = ProfileLazyPage
+        sys.modules["profile_lazy_module_ordering"] = fake_module
+        try:
+            lazy_gen = lazy("profile_lazy_module_ordering:ProfileLazyPage", __file__)
+            router = Router(
+                {"path": "/docs", "component": lazy_gen},
+                history=MockHistoryPort(mode="hash"),
+                preload=True,
+            )
+            app = WebComPyApp(
+                root_component=ProfileRouterRoot,
+                router=router,
+                config=WebComPyAppConfig(profile=True),
+            )
+            host_port = _RecordingHostPort()
+            scope = DIScope()
+            scope.provide(
+                DOM_PORT_KEY,
+                MagicMock(query_selector=lambda *a, **k: None, get_element_by_id=lambda *a, **k: None),
+            )
+            scope.provide(FFI_PORT_KEY, MagicMock())
+            scope.provide(HOST_PORT_KEY, host_port)
+            scope.provide(ASYNC_SCHEDULER_PORT_KEY, FakeAsyncSchedulerPort())
+            scope.provide(_ROUTER_KEY, router)
+            scope.provide(_APP_KEY, app)
+
+            async def _noop_head_render():
+                return None
+
+            root = AppDocumentRoot.__new__(AppDocumentRoot)
+            root._di_scope = scope
+            root._app = app
+            root._AppDocumentRoot__hydrated = True
+            root._AppDocumentRoot__loading = True
+            root._children = []
+            root._router = router
+            root._selector = "#profile-ordering"
+            root._property = {
+                "on_before_rendering": lambda: None,
+                "on_after_rendering": lambda: None,
+            }
+            root._head_element = MagicMock()
+            root._head_element._render = _noop_head_render
+
+            token = _active_app_context.set(None)
+            try:
+                await root._render()
+            finally:
+                _active_app_context.reset(token)
+
+            assert "lazy_preload_start" in app._profile_data
+            assert "loading_removed" in app._profile_data
+            assert "lazy_preloaded" not in app._profile_data
+            assert len(host_port.queue) == 2
+
+            batch, emit_summary = host_port.queue
+            with patch("builtins.print") as mock_print:
+                batch()
+                assert "lazy_preloaded" in app._profile_data
+                assert mock_print.call_count == 0
+                emit_summary()
+                output = mock_print.call_args[0][0]
+            assert "lazy_preload_start → lazy_preloaded" in output
+        finally:
+            sys.modules.pop("profile_lazy_module_ordering", None)
 
 
 class TestAppConfigProfile:
