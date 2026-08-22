@@ -8,6 +8,7 @@ from typing import (
     Any,
     Generic,
     Literal,
+    NotRequired,
     Protocol,
     TypeAlias,
     TypedDict,
@@ -290,7 +291,7 @@ class ComponentContext(Protocol[PropsType]):
 class ComponentProperty(TypedDict):
     component_id: str
     component_name: str
-    transfer_id: str
+    transfer_id: NotRequired[str]
     template: ComponentTemplateResult | None
     on_before_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
     on_after_rendering: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]
