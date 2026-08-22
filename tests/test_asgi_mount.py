@@ -362,8 +362,8 @@ class TestMountSelfSiteFetchDuringSsr:
             assert port1._response_cache is not port._response_cache
             assert port2._response_cache is not port1._response_cache
         finally:
-            ctx1.dispose()
             ctx2.dispose()
+            ctx1.dispose()
 
     @pytest.mark.asyncio
     async def test_fetch_to_mount_populates_transfer_cache_under_non_root_base_url(self, tmp_path: Path) -> None:

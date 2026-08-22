@@ -133,6 +133,7 @@ def _resolve_args(
 
 
 def _try_resolve_payload_key(ctx: Any, key: AutoKey) -> Any:
+    from webcompy.components._component import _is_hydration_payload_open
     from webcompy.components._libs import generate_id
     from webcompy.di import inject
     from webcompy.di._keys import HYDRATION_SIGNAL_DATA_KEY
@@ -140,7 +141,9 @@ def _try_resolve_payload_key(ctx: Any, key: AutoKey) -> Any:
     payload = inject(HYDRATION_SIGNAL_DATA_KEY, default=None)
     if payload is None:
         return _MISSING
-    component_id = generate_id(ctx._component_name)
+    if not _is_hydration_payload_open():
+        return _MISSING
+    component_id = getattr(ctx, "_transfer_id", None) or generate_id(ctx._component_name)
     component_data = payload.get(component_id)
     if not component_data:
         return _MISSING

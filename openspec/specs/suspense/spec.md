@@ -29,7 +29,7 @@ The `children` parameter SHALL be `Callable[[], ElementChildren]` (a zero-argume
 
 ### Requirement: Suspense shall await children during SSR/SSG
 
-In non-pyscript (server) environments, `SuspenseElement._render()` SHALL wait for all unresolved async child setups before completing its own render. Specifically: the function SHALL provide `SUSPENSE_RESOLVING_KEY=True` in the DI scope, traverse the children subtree to collect each unresolved `Component._pending_async_template` coroutine, and `await asyncio.wait_for(asyncio.gather(*coroutines), timeout=timeout)`. On success, each component's template SHALL be set, `__init_component()` SHALL be called, and `_pending_async_template` SHALL be cleared. On timeout, the fallback SHALL be rendered and a warning SHALL be logged. On exception, if `error_fallback` is provided, it SHALL be rendered; otherwise the exception SHALL propagate to the root render.
+In non-pyscript (server) environments, `SuspenseElement._render()` SHALL wait for all unresolved async child setups before completing its own render. Specifically: the function SHALL provide `SUSPENSE_RESOLVING_KEY=True` in the DI scope, traverse the children subtree to collect each unresolved `Component._pending_async_template` coroutine, and `await asyncio.wait_for(asyncio.gather(*coroutines), timeout=timeout)`. On success, each component's template SHALL be set, `__init_component()` SHALL be called, and `_pending_async_template` SHALL be cleared. On timeout, the fallback SHALL be rendered and a warning SHALL be logged. On exception, if `error_fallback` is provided, it SHALL be rendered; otherwise the exception SHALL propagate to the root render. After resolution completes (success or failure), the active DI scope SHALL be restored to the scope that was active before the Suspense subtree entered resolution, so a child `provide()` during resolution does not leak its scope into Suspense siblings or surrounding code.
 
 #### Scenario: SSR/SSG awaits async children
 - **WHEN** `SuspenseElement._render()` runs in a non-pyscript environment and its children subtree contains `Component` instances with unresolved `_pending_async_template` coroutines
@@ -42,9 +42,15 @@ In non-pyscript (server) environments, `SuspenseElement._render()` SHALL wait fo
 - **THEN** the fallback SHALL be rendered into the output
 - **AND** a warning SHALL be logged indicating which Suspense timed out
 
+#### Scenario: Suspense resolution does not leak a child provide() scope
+- **WHEN** a Suspense child component calls `provide(key, value)` during its setup
+- **AND** a sibling component after the Suspense tries to `inject(key, default)`
+- **THEN** the sibling SHALL receive the `default` (the value SHALL NOT resolve)
+- **AND** the active DI scope after resolution SHALL be the scope active before the Suspense subtree entered resolution
+
 ### Requirement: Suspense shall render fallback first in the browser then swap
 
-In the pyscript (browser) environment, `SuspenseElement._render()` SHALL first check whether children have unresolved async setup. If children have unresolved `_pending_async_template` coroutines, the fallback SHALL be rendered and async child resolution SHALL be scheduled. If children have no unresolved async setup, they SHALL be rendered directly without a fallback.
+In the pyscript (browser) environment, `SuspenseElement._render()` SHALL first check whether children have unresolved async setup. If children have unresolved `_pending_async_template` coroutines, the fallback SHALL be rendered and async child resolution SHALL be scheduled. If children have no unresolved async setup, they SHALL be rendered directly without a fallback. Deferred resolution and hydration adoption SHALL exit with the same DI scope restoration as server resolution — the scope active before the Suspense subtree entered resolution SHALL be restored when resolution completes.
 
 #### Scenario: Browser shows fallback immediately
 - **WHEN** `SuspenseElement._render()` runs in the pyscript environment and its children have unresolved async setup
@@ -128,20 +134,43 @@ A `suspense()` function SHALL be exported from `packages/webcompy/src/webcompy/e
 
 ### Requirement: Suspense hydration shall use has_resolved_data
 
-`SuspenseElement._hydrate_node()` SHALL call `has_resolved_data(component_id)` (from the `hydration-data-transfer` capability) for each child component to decide whether to render the children immediately or keep the fallback. If `True` for all children, the children SHALL be hydrated directly: their prerendered DOM nodes SHALL be adopted, and they SHALL complete exactly one hydration render (reactive setup) per the adopt-and-render contract — adoption alone SHALL NOT end their hydration. If `False` (or the payload is missing) for any child, the fallback SHALL be hydrated and async resolution SHALL be scheduled.
+`SuspenseElement._hydrate_node()` SHALL call `has_resolved_data(key)` (from the `hydration-data-transfer` capability) for each descendant component to decide whether to render the children immediately or keep the fallback, where the lookup key SHALL be the component's per-instance transfer id (see the `signal-value-transfer` capability), falling back to the bare `component_id` when no per-instance transfer id is assigned. If `True` for all children, the children SHALL be hydrated directly: their prerendered DOM nodes SHALL be adopted, and they SHALL complete exactly one hydration render (reactive setup) per the adopt-and-render contract — adoption alone SHALL NOT end their hydration. If `False` (or the payload is missing) for any child, the fallback SHALL be hydrated and async resolution SHALL be scheduled; the scheduled resolution SHALL reuse the children generated by the hydration probe instead of regenerating them, so per-instance transfer-id ordinals stay aligned with the SSR-collected payload keys. The active DI scope SHALL be snapshotted **before** the probe children are generated (their setup may call `provide()`), and both the fast path and the deferred resolution path SHALL restore that snapshot via the same scope restoration used elsewhere, so a probed child setup does not leak its scope into Suspense siblings. Component construction triggered by the hydration fallback SHALL use provisional, non-consuming transfer ids so the fallback does not advance per-name ordinal counters that the SSR tree's construction did not advance.
 
 #### Scenario: Suspense hydrates children directly when data is in payload
-- **WHEN** `SuspenseElement._hydrate_node()` runs in the browser and `has_resolved_data(component_id)` returns `True` for all children
+- **WHEN** `SuspenseElement._hydrate_node()` runs in the browser and `has_resolved_data(transfer_id)` returns `True` for all children
 - **THEN** the resolved children SHALL be adopted from the prerendered DOM and rendered directly
 - **AND** their hydration render SHALL run (reactive setup completes)
 - **AND** the fallback SHALL NOT appear in the DOM after hydration
 
 #### Scenario: Resolved suspense children keep their SSR nodes
-- **WHEN** all Suspense children have resolved data in the transfer payload
+- **WHEN** all Suspense children have resolved data in the transfer payload keyed by their per-instance transfer ids (`<generate_id(name)>#<ordinal>`)
 - **AND** the prerendered DOM contains the resolved content
 - **THEN** the prerendered DOM nodes SHALL remain in the document through hydration (no removal and rebuild)
 
+#### Scenario: Bare component ids do not trigger the fast path when ordinals exist
+- **WHEN** a `RenderContext` is active so collected payload keys carry ordinal suffixes
+- **THEN** `SuspenseElement._hydrate_node()` SHALL NOT treat a child as resolved by matching its bare `component_id`
+
 #### Scenario: Suspense hydrates fallback when data is not in payload
-- **WHEN** `SuspenseElement._hydrate_node()` runs in the browser and `has_resolved_data(component_id)` returns `False` for any child
+- **WHEN** `SuspenseElement._hydrate_node()` runs in the browser and `has_resolved_data(transfer_id)` returns `False` for any child
 - **THEN** the fallback SHALL be hydrated
-- **AND** async resolution SHALL be scheduled to swap fallback for resolved children when the data arrives
+- **AND** async resolution SHALL be scheduled as a render-scoped task (so the initial hydration window's render-task drain covers it and deferred setups still restore) to swap fallback for resolved children when the data arrives
+- **AND** the scheduled resolution SHALL receive the probe-generated children instances rather than regenerating the subtree
+
+#### Scenario: Hydration probe does not leak a child provide() scope
+- **WHEN** a probed component's setup calls `provide()` during `SuspenseElement._hydrate_node()`
+- **AND** hydration takes either the fast path (all children resolved) or the deferred path
+- **THEN** the active DI scope after hydration/deferred resolution SHALL be the scope active before the probe children were generated
+
+#### Scenario: Hydration fallback construction does not consume transfer ordinals
+- **WHEN** the hydration fallback generator constructs components of the same name as components rendered elsewhere
+- **THEN** those fallback components SHALL receive provisional transfer ids that SSR never produced
+- **AND** the per-name ordinal counters SHALL remain as they were after the probe tree was generated
+- **AND** a same-named component created after the Suspense boundary SHALL receive the same ordinal it would have received relative to the SSR tree
+
+#### Scenario: Browser-side deferred resolution is bounded by the element timeout
+- **WHEN** the scheduled browser-side resolution exceeds the Suspense element's `timeout`
+- **THEN** the pending setup coroutines SHALL be cleaned up
+- **AND** a warning SHALL be logged
+- **AND** the fallback SHALL remain rendered
+- **AND** the discarded probe subtree SHALL be destroyed (destroy hooks, effect scopes, and child DI scopes released) without removing the live fallback

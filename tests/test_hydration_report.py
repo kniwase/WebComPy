@@ -168,6 +168,7 @@ class TestHydrationWindowClose:
             with pytest.raises(RuntimeError, match="render failed"):
                 await root._render()
             assert ctx._hydration_in_progress is False
+            assert getattr(ctx, "_hydration_payload_closed", False) is True
         finally:
             _active_app_context.reset(token)
 
@@ -191,6 +192,31 @@ class TestHydrationWindowClose:
 
             assert captured["window_open"] is False
             assert ctx._hydration_in_progress is False
+        finally:
+            _active_app_context.reset(token)
+
+    @pytest.mark.asyncio
+    async def test_payload_closed_before_loading_fade(self, monkeypatch):
+        from webcompy.ports._keys import DOM_PORT_KEY
+
+        ctx = _FakeCtx()
+        token = _active_app_context.set(ctx)
+        try:
+            observed: dict[str, bool] = {}
+
+            def _query_selector(*args, **kwargs):
+                observed["payload_closed_at_fade"] = bool(getattr(ctx, "_hydration_payload_closed", False))
+                return None
+
+            root = self._make_root(monkeypatch, ctx)
+            root._di_scope.provide(
+                DOM_PORT_KEY,
+                lambda: MagicMock(query_selector=_query_selector, get_element_by_id=lambda *a, **k: None),
+            )
+            await root._render()
+
+            assert observed["payload_closed_at_fade"] is True
+            assert getattr(ctx, "_hydration_payload_closed", False) is True
         finally:
             _active_app_context.reset(token)
 

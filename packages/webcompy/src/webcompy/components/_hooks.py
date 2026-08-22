@@ -113,13 +113,16 @@ def use_async_result(
 
     if ctx is not None:
         ctx._async_results.append(result)
-        component_id = generate_id(ctx._component_name)
+        from webcompy.components._component import _is_hydration_payload_open
+
         hydration_data = inject(HYDRATION_DATA_KEY, default=None)
-        if hydration_data is not None and component_id in hydration_data:
-            entry = hydration_data[component_id]
-            if isinstance(entry, TransferAsyncResultEntry) and entry.state == "success":
-                result._restore_from_transfer(entry.data)
-                return result
+        if hydration_data is not None and _is_hydration_payload_open():
+            component_id = getattr(ctx, "_transfer_id", None) or generate_id(ctx._component_name)
+            if component_id in hydration_data:
+                entry = hydration_data[component_id]
+                if isinstance(entry, TransferAsyncResultEntry) and entry.state == "success":
+                    result._restore_from_transfer(entry.data)
+                    return result
 
     if immediate:
         on_after_rendering(result.refetch)

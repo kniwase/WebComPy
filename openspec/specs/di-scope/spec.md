@@ -61,6 +61,20 @@ When `provide()` is called during component setup, a child DI scope SHALL be cre
 - **THEN** the `DatabaseConnection` SHALL NOT be automatically closed
 - **AND** the developer SHALL be responsible for cleanup via `on_before_destroy`
 
+### Requirement: RenderContext dispose shall unwind the active DI binding
+
+When `RenderContext.dispose()` disposes its root scope tree, `_active_di_scope` SHALL NOT remain bound to the disposed root or any disposed descendant. The context SHALL reset the ContextVar to its pre-render value whenever the active scope belongs to the disposed tree (the root scope or any descendant created under it), and SHALL leave active scopes belonging to other, surviving render contexts untouched.
+
+#### Scenario: Disposing with a component child scope active
+- **WHEN** a component setup has called `provide()`, making an untokenized child scope the active `_active_di_scope`
+- **AND** the owning `RenderContext` is disposed
+- **THEN** `_active_di_scope` SHALL be reset to the value from before the render context entered (or `None`)
+- **AND** subsequent `inject()`/`provide()` calls SHALL NOT resolve through the disposed scope
+
+#### Scenario: Disposing while a foreign scope is active
+- **WHEN** the active `_active_di_scope` belongs to another, still-live render context's tree
+- **THEN** disposing SHALL leave that foreign scope active
+
 ### Requirement: DIScope shall support initial providers on construction
 `DIScope.__init__` SHALL accept an optional `providers` dict mapping keys to values. These SHALL be registered in the scope immediately.
 
