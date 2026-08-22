@@ -5,7 +5,12 @@ from inspect import iscoroutinefunction
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from webcompy.app._config import _LOADING_INT_KEY_MAX
-from webcompy.components._component import Component, HeadPropsStore, _active_app_context
+from webcompy.components._component import (
+    Component,
+    HeadPropsStore,
+    _active_app_context,
+    _get_app_instance,
+)
 from webcompy.components._generator import ComponentGenerator
 from webcompy.di import inject
 from webcompy.di._keys import _HEAD_PROPS_KEY, _ROUTER_KEY
@@ -24,6 +29,25 @@ from webcompy.utils import ENVIRONMENT
 
 if TYPE_CHECKING:
     from webcompy.app._app import WebComPyApp
+
+
+def _resolve_active_render_context(app: WebComPyApp | None) -> Any:
+    """Resolve the current render context across ContextVar loss.
+
+    ``_active_app_context`` is a ``ContextVar`` that is not reliably propagated
+    when PyScript invokes Python callbacks from JavaScript event handlers. In
+    that case the per-app ``_render_context_cv`` and finally the module-level
+    ``_app_instance`` fallback are consulted so hydrate/drain/close operations
+    target the owning context even when the ``ContextVar`` is unset.
+    """
+    ctx = _active_app_context.get()
+    if ctx is not None:
+        return ctx
+    if app is not None:
+        ctx = app._render_context_cv.get()
+        if ctx is not None:
+            return ctx
+    return _get_app_instance()
 
 
 class Head(TypedDict, total=False):
@@ -102,7 +126,7 @@ class AppDocumentRoot(Component):
             self._mount_node()
             if self._app and self._app._hydrate and not self.__hydrated:
                 self.__hydrated = True
-                ctx = _active_app_context.get()
+                ctx = _resolve_active_render_context(self._app)
                 if ctx is not None:
                     ctx._hydration_in_progress = True
                 self._ensure_custom_elements_defined()
@@ -122,7 +146,7 @@ class AppDocumentRoot(Component):
             if ENVIRONMENT == "pyscript":
                 _dom = inject(DOM_PORT_KEY)
                 await self._head_element._render()
-                ctx = _active_app_context.get()
+                ctx = _resolve_active_render_context(self._app)
                 if ctx is not None and self._app and self._app._hydrate:
                     scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
                     await scheduler.await_pending(only_render=True)
@@ -170,7 +194,7 @@ class AppDocumentRoot(Component):
                         self._app._record_phase("loading_removed")
                         self._app._emit_profile_summary()
         finally:
-            ctx = _active_app_context.get()
+            ctx = _resolve_active_render_context(self._app)
             if ctx is not None:
                 ctx._hydration_in_progress = False
                 ctx._hydration_payload_closed = True

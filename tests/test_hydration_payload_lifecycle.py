@@ -305,3 +305,102 @@ def test_payload_close_flag_isolation_between_apps(closed: bool):
         assert _is_hydration_payload_open() is (not closed)
     finally:
         _active_app_context.reset(token)
+
+
+class TestResolveActiveRenderContext:
+    def test_returns_app_context_when_set(self):
+        from contextvars import ContextVar
+
+        from webcompy.app._root_component import _resolve_active_render_context
+
+        app_ctx = object()
+        app = type("_App", (), {"_render_context_cv": ContextVar("_rt_cv", default=None)})()
+        token = _active_app_context.set(app_ctx)
+        try:
+            assert _resolve_active_render_context(app) is app_ctx
+        finally:
+            _active_app_context.reset(token)
+
+    def test_falls_back_to_app_context_var(self):
+        from contextvars import ContextVar
+
+        from webcompy.app._root_component import _resolve_active_render_context
+
+        cv: ContextVar = ContextVar("_rt_cv", default=None)
+        app_ctx = object()
+        app = type("_App", (), {"_render_context_cv": cv})()
+        cv.set(app_ctx)
+        try:
+            assert _resolve_active_render_context(app) is app_ctx
+        finally:
+            cv.set(None)
+
+    def test_falls_back_to_app_instance_global(self):
+        from contextvars import ContextVar
+
+        from webcompy.app._root_component import _resolve_active_render_context
+
+        app_ctx = object()
+        app = type("_App", (), {"_render_context_cv": ContextVar("_rt_cv", default=None)})()
+        _set_app_instance(app_ctx)
+        try:
+            assert _resolve_active_render_context(app) is app_ctx
+        finally:
+            _set_app_instance(None)
+
+    def test_returns_none_when_all_channels_unset(self):
+        from contextvars import ContextVar
+
+        from webcompy.app._root_component import _resolve_active_render_context
+
+        app = type("_App", (), {"_render_context_cv": ContextVar("_rt_cv", default=None)})()
+        assert _resolve_active_render_context(app) is None
+
+
+class _DummyParent:
+    def __init__(self, node) -> None:
+        self._node = node
+
+    def _get_node(self):
+        return self._node
+
+    def _get_belonging_component(self):
+        return ""
+
+    def _get_belonging_components(self):
+        return ()
+
+    def _re_index_children(self, recursive):
+        pass
+
+
+class TestRenderClosesPayloadViaFallback:
+    @pytest.mark.asyncio
+    async def test_finally_closes_payload_when_contextvars_lost(self):
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy_testing import create_test_app
+
+        @define_component("close-fallback-root")
+        def CloseFallbackRoot(context: ComponentContext[None]):
+            return html.DIV({}, "hello")
+
+        app = create_test_app(root_component=CloseFallbackRoot)
+        ctx = app.create_render_context()
+        assert ctx._hydration_payload_closed is False
+        port = ctx.di_scope.inject(DOM_PORT_KEY)
+        root_node = port.create_element("div")
+        root_node.__webcompy_node__ = False
+        root_node.__webcompy_prerendered_node__ = True
+        ctx._root._parent = _DummyParent(root_node)  # type: ignore[misc]
+        ctx._root._node_idx = 0
+        ac_token = _active_app_context.set(None)
+        cv_token = app._render_context_cv.set(None)
+        _set_app_instance(ctx)
+        try:
+            await ctx._root.render()
+        finally:
+            _active_app_context.reset(ac_token)
+            app._render_context_cv.reset(cv_token)
+            _set_app_instance(None)
+            ctx.dispose()
+        assert ctx._hydration_payload_closed is True
