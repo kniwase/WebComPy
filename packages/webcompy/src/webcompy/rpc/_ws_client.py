@@ -245,7 +245,7 @@ class RpcWsClient:
             _encode_params(self._registry, envelope, params)
         handle.send(json.dumps(envelope))
 
-    async def stream(self, method: str, params: Any = None, *, result_type: Any = None) -> RpcStream[Any]:
+    def stream(self, method: str, params: Any = None, *, result_type: Any = None) -> RpcStream[Any]:
         if self._ssr:
             return RpcStream(closed=True)
         handle = self._check_usable()

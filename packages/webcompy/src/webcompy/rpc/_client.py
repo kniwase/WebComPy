@@ -182,25 +182,7 @@ async def _pump_sse(fetch_stream: FetchStream, rpc_stream: RpcStream[Any]) -> No
         fetch_stream.close()
 
 
-@overload
-async def _stream_impl(
-    method: str,
-    params: Any | None = None,
-    *,
-    result_type: None = None,
-) -> RpcStream[Any]: ...
-
-
-@overload
-async def _stream_impl(
-    method: str,
-    params: Any | None = None,
-    *,
-    result_type: type[T],
-) -> RpcStream[T]: ...
-
-
-async def _stream_impl(
+def _stream_impl(
     method: str,
     params: Any | None = None,
     *,
@@ -214,42 +196,64 @@ async def _stream_impl(
     envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": method, "id": registry.next_id(), "stream": True}
     if params is not None:
         _encode_params(registry, envelope, params)
-    fetch_stream = await fetch_port.stream(
-        registry.endpoint_url,
-        method="POST",
-        headers={"Content-Type": "application/json"},
-        body=json_dumps(envelope, ensure_ascii=True),
+    holder: dict[str, Any] = {}
+
+    def _cancel() -> None:
+        holder["cancelled"] = True
+        task = holder.get("task")
+        if task is not None:
+            task.cancel()
+        fetch_stream = holder.get("fetch_stream")
+        if fetch_stream is not None:
+            fetch_stream.close()
+
+    rpc_stream: RpcStream[Any] = RpcStream(
+        cancel=_cancel,
+        decode=lambda data, meta: _decode_stream_item(data, meta, result_type, registry),
     )
-    if not fetch_stream.ok:
-        fetch_stream.close()
-        raise RpcError(SERVER_ERROR, f"RPC stream request failed (HTTP {fetch_stream.status_code})")
-    if _is_event_stream(fetch_stream.headers):
-        holder: dict[str, Any] = {}
 
-        def _cancel() -> None:
-            task = holder.get("task")
-            if task is not None:
-                task.cancel()
+    async def _setup_and_pump() -> None:
+        try:
+            fetch_stream = await fetch_port.stream(
+                registry.endpoint_url,
+                method="POST",
+                headers={"Content-Type": "application/json"},
+                body=json_dumps(envelope, ensure_ascii=True),
+            )
+            holder["fetch_stream"] = fetch_stream
+            if holder.get("cancelled") or rpc_stream._finished:
+                fetch_stream.close()
+                return
+            if not fetch_stream.ok:
+                fetch_stream.close()
+                rpc_stream._fail(RpcError(SERVER_ERROR, f"RPC stream request failed (HTTP {fetch_stream.status_code})"))
+                return
+            if _is_event_stream(fetch_stream.headers):
+                await _pump_sse(fetch_stream, rpc_stream)
+                return
+            chunks = [chunk async for chunk in fetch_stream]
             fetch_stream.close()
+            try:
+                data = json_loads("".join(chunks))
+            except JSONDecodeError:
+                rpc_stream._fail(RpcError(SERVER_ERROR, "Invalid JSON-RPC response for stream request"))
+                return
+            try:
+                _resolve_single(data, result_type, registry)
+            except RpcError as err:
+                rpc_stream._fail(err)
+                return
+            rpc_stream._fail(RpcError(SERVER_ERROR, "RPC server did not accept the stream request"))
+        except asyncio.CancelledError:
+            raise
+        except Exception as err:
+            rpc_stream._fail(RpcError(SERVER_ERROR, f"RPC stream failed: {err}"))
 
-        rpc_stream: RpcStream[Any] = RpcStream(
-            cancel=_cancel,
-            decode=lambda data, meta: _decode_stream_item(data, meta, result_type, registry),
-        )
-        task = _aio_run_task(_pump_sse(fetch_stream, rpc_stream))
-        if task is None:
-            fetch_stream.close()
-            raise RuntimeError("webcompy rpc: cannot schedule the stream pump without a running event loop")
-        holder["task"] = task
-        return rpc_stream
-    chunks = [chunk async for chunk in fetch_stream]
-    fetch_stream.close()
-    try:
-        data = json_loads("".join(chunks))
-    except JSONDecodeError as err:
-        raise RpcError(SERVER_ERROR, "Invalid JSON-RPC response for stream request") from err
-    _resolve_single(data, result_type, registry)
-    raise RpcError(SERVER_ERROR, "RPC server did not accept the stream request")
+    task = _aio_run_task(_setup_and_pump())
+    if task is None:
+        raise RuntimeError("webcompy rpc: cannot schedule the stream pump without a running event loop")
+    holder["task"] = task
+    return rpc_stream
 
 
 __all__ = ["_call_impl", "_notify_impl", "_post_envelope", "_registry_or_error", "_resolve_single", "_stream_impl"]

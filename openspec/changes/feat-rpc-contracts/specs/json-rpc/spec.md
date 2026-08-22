@@ -158,12 +158,12 @@ The dispatcher's core logic (envelope validation, batch handling, procedure invo
 
 ### Requirement: The HTTP client shall provide a typed stream call
 
-The framework SHALL provide HTTP streaming through the `RpcHttpClient.stream` transport method defined in the `rpc-contracts` capability, invoked through `StreamingProcedure` contracts. The module-level `rpc.stream` function SHALL NOT exist as public API. The HTTP stream wire behavior SHALL be unchanged: a `"stream": true` envelope POST through the streaming fetch capability, `Content-Type` branching (a JSON body resolves as an ordinary JSON-RPC response and SHALL raise `RpcError` for error responses before returning; a `text/event-stream` body returns an `RpcStream` parsed with the `sse-parser` codec), and the `rpc-streaming` capability's item/error/done mapping.
+The framework SHALL provide HTTP streaming through the `RpcHttpClient.stream` transport method defined in the `rpc-contracts` capability, invoked through `StreamingProcedure` contracts. The module-level `rpc.stream` function SHALL NOT exist as public API. The HTTP stream wire behavior SHALL be unchanged: a `"stream": true` envelope POST through the streaming fetch capability, `Content-Type` branching (a JSON body resolves as an ordinary JSON-RPC response whose errors SHALL fail the returned stream with `RpcError` before any item is delivered; a `text/event-stream` body drives the returned `RpcStream`, parsed with the `sse-parser` codec), and the `rpc-streaming` capability's item/error/done mapping.
 
 #### Scenario: JSON-RPC error answered as JSON raises before iteration
 
 - **WHEN** a streaming contract targets an unknown method and the dispatcher responds with a JSON-RPC error body
-- **THEN** `RpcError` SHALL be raised by the contract invocation itself (no stream returned)
+- **THEN** iterating the returned `RpcStream` SHALL raise `RpcError` (the stream SHALL be failed before any item is delivered)
 
 #### Scenario: SSE stream yields typed items
 

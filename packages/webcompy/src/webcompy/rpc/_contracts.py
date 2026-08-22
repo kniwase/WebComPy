@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
 from webcompy.rpc._errors import SERVER_ERROR, RpcError
+
+if TYPE_CHECKING:
+    from webcompy.rpc._stream import RpcStream
+    from webcompy.rpc._ws_client import RpcSubscription
 
 
 class RpcTransport(Protocol):
@@ -102,7 +106,7 @@ class StreamingProcedure[P, T]:
     def result_type(self) -> type[T]:
         return self._result_type
 
-    def __call__(self, transport: RpcTransport, params: P) -> Any:
+    def __call__(self, transport: RpcTransport, params: P) -> RpcStream[T]:
         return transport.stream(self._name, params, result_type=self._result_type)
 
 
@@ -135,7 +139,7 @@ class Subscription[P, E]:
     def replay_size(self) -> int:
         return self._replay_size
 
-    def __call__(self, transport: RpcTransport, params: P) -> Any:
+    def __call__(self, transport: RpcTransport, params: P) -> RpcSubscription[E]:
         return transport.subscribe(self._name, params, event_type=self._event_type)
 
 
@@ -153,7 +157,7 @@ class RpcHttpClient:
 
         await _notify_impl(method, params)
 
-    def stream(self, method: str, params: Any = None, *, result_type: Any = None) -> Any:
+    def stream(self, method: str, params: Any = None, *, result_type: Any = None) -> RpcStream[Any]:
         from webcompy.rpc._client import _stream_impl
 
         return _stream_impl(method, params, result_type=result_type)
@@ -170,59 +174,59 @@ async def batch() -> tuple[()]: ...
 
 
 @overload
-async def batch(call1: RpcCall[Any, Any], *, return_exceptions: Literal[False] = False) -> tuple[Any]: ...
+async def batch[R1](call1: RpcCall[Any, R1], *, return_exceptions: Literal[False] = False) -> tuple[R1]: ...
 
 
 @overload
-async def batch(
-    call1: RpcCall[Any, Any], call2: RpcCall[Any, Any], *, return_exceptions: Literal[False] = False
-) -> tuple[Any, Any]: ...
+async def batch[R1, R2](
+    call1: RpcCall[Any, R1], call2: RpcCall[Any, R2], *, return_exceptions: Literal[False] = False
+) -> tuple[R1, R2]: ...
 
 
 @overload
-async def batch(
-    call1: RpcCall[Any, Any],
-    call2: RpcCall[Any, Any],
-    call3: RpcCall[Any, Any],
+async def batch[R1, R2, R3](
+    call1: RpcCall[Any, R1],
+    call2: RpcCall[Any, R2],
+    call3: RpcCall[Any, R3],
     *,
     return_exceptions: Literal[False] = False,
-) -> tuple[Any, Any, Any]: ...
+) -> tuple[R1, R2, R3]: ...
 
 
 @overload
-async def batch(
-    call1: RpcCall[Any, Any],
-    call2: RpcCall[Any, Any],
-    call3: RpcCall[Any, Any],
-    call4: RpcCall[Any, Any],
+async def batch[R1, R2, R3, R4](
+    call1: RpcCall[Any, R1],
+    call2: RpcCall[Any, R2],
+    call3: RpcCall[Any, R3],
+    call4: RpcCall[Any, R4],
     *,
     return_exceptions: Literal[False] = False,
-) -> tuple[Any, Any, Any, Any]: ...
+) -> tuple[R1, R2, R3, R4]: ...
 
 
 @overload
-async def batch(
-    call1: RpcCall[Any, Any],
-    call2: RpcCall[Any, Any],
-    call3: RpcCall[Any, Any],
-    call4: RpcCall[Any, Any],
-    call5: RpcCall[Any, Any],
+async def batch[R1, R2, R3, R4, R5](
+    call1: RpcCall[Any, R1],
+    call2: RpcCall[Any, R2],
+    call3: RpcCall[Any, R3],
+    call4: RpcCall[Any, R4],
+    call5: RpcCall[Any, R5],
     *,
     return_exceptions: Literal[False] = False,
-) -> tuple[Any, Any, Any, Any, Any]: ...
+) -> tuple[R1, R2, R3, R4, R5]: ...
 
 
 @overload
-async def batch(
-    call1: RpcCall[Any, Any],
-    call2: RpcCall[Any, Any],
-    call3: RpcCall[Any, Any],
-    call4: RpcCall[Any, Any],
-    call5: RpcCall[Any, Any],
-    call6: RpcCall[Any, Any],
+async def batch[R1, R2, R3, R4, R5, R6](
+    call1: RpcCall[Any, R1],
+    call2: RpcCall[Any, R2],
+    call3: RpcCall[Any, R3],
+    call4: RpcCall[Any, R4],
+    call5: RpcCall[Any, R5],
+    call6: RpcCall[Any, R6],
     *,
     return_exceptions: Literal[False] = False,
-) -> tuple[Any, Any, Any, Any, Any, Any]: ...
+) -> tuple[R1, R2, R3, R4, R5, R6]: ...
 
 
 @overload
@@ -230,59 +234,59 @@ async def batch(*calls: RpcCall[Any, Any], return_exceptions: Literal[False] = F
 
 
 @overload
-async def batch(call1: RpcCall[Any, Any], *, return_exceptions: Literal[True]) -> tuple[Any | RpcError]: ...
+async def batch[R1](call1: RpcCall[Any, R1], *, return_exceptions: Literal[True]) -> tuple[R1 | RpcError]: ...
 
 
 @overload
-async def batch(
-    call1: RpcCall[Any, Any], call2: RpcCall[Any, Any], *, return_exceptions: Literal[True]
-) -> tuple[Any | RpcError, Any | RpcError]: ...
+async def batch[R1, R2](
+    call1: RpcCall[Any, R1], call2: RpcCall[Any, R2], *, return_exceptions: Literal[True]
+) -> tuple[R1 | RpcError, R2 | RpcError]: ...
 
 
 @overload
-async def batch(
-    call1: RpcCall[Any, Any],
-    call2: RpcCall[Any, Any],
-    call3: RpcCall[Any, Any],
+async def batch[R1, R2, R3](
+    call1: RpcCall[Any, R1],
+    call2: RpcCall[Any, R2],
+    call3: RpcCall[Any, R3],
     *,
     return_exceptions: Literal[True],
-) -> tuple[Any | RpcError, Any | RpcError, Any | RpcError]: ...
+) -> tuple[R1 | RpcError, R2 | RpcError, R3 | RpcError]: ...
 
 
 @overload
-async def batch(
-    call1: RpcCall[Any, Any],
-    call2: RpcCall[Any, Any],
-    call3: RpcCall[Any, Any],
-    call4: RpcCall[Any, Any],
+async def batch[R1, R2, R3, R4](
+    call1: RpcCall[Any, R1],
+    call2: RpcCall[Any, R2],
+    call3: RpcCall[Any, R3],
+    call4: RpcCall[Any, R4],
     *,
     return_exceptions: Literal[True],
-) -> tuple[Any | RpcError, Any | RpcError, Any | RpcError, Any | RpcError]: ...
+) -> tuple[R1 | RpcError, R2 | RpcError, R3 | RpcError, R4 | RpcError]: ...
 
 
 @overload
-async def batch(
-    call1: RpcCall[Any, Any],
-    call2: RpcCall[Any, Any],
-    call3: RpcCall[Any, Any],
-    call4: RpcCall[Any, Any],
-    call5: RpcCall[Any, Any],
+async def batch[R1, R2, R3, R4, R5](
+    call1: RpcCall[Any, R1],
+    call2: RpcCall[Any, R2],
+    call3: RpcCall[Any, R3],
+    call4: RpcCall[Any, R4],
+    call5: RpcCall[Any, R5],
     *,
     return_exceptions: Literal[True],
-) -> tuple[Any | RpcError, Any | RpcError, Any | RpcError, Any | RpcError, Any | RpcError]: ...
+) -> tuple[R1 | RpcError, R2 | RpcError, R3 | RpcError, R4 | RpcError, R5 | RpcError]: ...
 
 
 @overload
-async def batch(
-    call1: RpcCall[Any, Any],
-    call2: RpcCall[Any, Any],
-    call3: RpcCall[Any, Any],
-    call4: RpcCall[Any, Any],
-    call5: RpcCall[Any, Any],
-    call6: RpcCall[Any, Any],
+async def batch[R1, R2, R3, R4, R5, R6](
+    call1: RpcCall[Any, R1],
+    call2: RpcCall[Any, R2],
+    call3: RpcCall[Any, R3],
+    call4: RpcCall[Any, R4],
+    call5: RpcCall[Any, R5],
+    call6: RpcCall[Any, R6],
     *,
     return_exceptions: Literal[True],
-) -> tuple[Any | RpcError, Any | RpcError, Any | RpcError, Any | RpcError, Any | RpcError, Any | RpcError]: ...
+) -> tuple[R1 | RpcError, R2 | RpcError, R3 | RpcError, R4 | RpcError, R5 | RpcError, R6 | RpcError]: ...
 
 
 @overload
@@ -300,12 +304,14 @@ async def batch(*calls: RpcCall[Any, Any], return_exceptions: bool = False) -> t
     transports = {c._transport for c in calls}
     if len(transports) != 1:
         raise RpcError(SERVER_ERROR, "batch requires all calls to share the same transport")
+    for c in calls:
+        c._awaited = True
     transport = next(iter(transports))
     from webcompy.rpc._client import _encode_params as _http_encode
     from webcompy.rpc._client import _registry_or_error as _reg
 
     registry = _reg()
-    if transport.__class__.__name__ == "RpcHttpClient":
+    if isinstance(transport, RpcHttpClient):
         envelopes: list[dict[str, Any]] = []
         entries: list[tuple[int, Any]] = []
         for c in calls:
@@ -424,11 +430,13 @@ async def notify(*calls: RpcCall[Any, Any]) -> None:  # pyright: ignore[reportIn
     transports = {c._transport for c in calls}
     if len(transports) != 1:
         raise RpcError(SERVER_ERROR, "notify requires all calls to share the same transport")
+    for c in calls:
+        c._awaited = True
     transport = next(iter(transports))
     from webcompy.rpc._client import _registry_or_error as _reg
 
     registry = _reg()
-    if transport.__class__.__name__ == "RpcHttpClient":
+    if isinstance(transport, RpcHttpClient):
         envelopes: list[dict[str, Any]] = []
         for c in calls:
             envelope: dict[str, Any] = {"jsonrpc": "2.0", "method": c._name}
