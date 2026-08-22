@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from webcompy.components._component import _active_app_context
+from webcompy.components._component import _active_app_context, _get_app_instance
 from webcompy.components._generator import define_component
-from webcompy.di._scope import _active_di_scope
+from webcompy.di._scope import _active_di_scope, _get_app_di_scope
 from webcompy_testing import create_test_app
 
 
@@ -76,3 +76,41 @@ class TestRenderContextDispose:
         assert _active_app_context.get() is None
         assert _active_di_scope.get(None) is None
         assert app._render_context_cv.get() is None
+
+
+class TestBrowserFallbackRestore:
+    def test_newest_disposed_restores_previous_fallback(self, monkeypatch):
+        monkeypatch.setattr("webcompy.app._render_context.ENVIRONMENT", "pyscript")
+        app = create_test_app(root_component=DisposeTestRoot)
+        ctx1 = app.create_render_context()
+        ctx2 = app.create_render_context()
+        assert _get_app_instance() is ctx2
+        assert _get_app_di_scope() is ctx2._di_scope
+        ctx2.dispose()
+        assert _get_app_instance() is ctx1
+        assert _get_app_di_scope() is ctx1._di_scope
+        ctx1.dispose()
+        assert _get_app_instance() is None
+        assert _get_app_di_scope() is None
+
+    def test_oldest_disposed_keeps_surviving_fallback(self, monkeypatch):
+        monkeypatch.setattr("webcompy.app._render_context.ENVIRONMENT", "pyscript")
+        app = create_test_app(root_component=DisposeTestRoot)
+        ctx1 = app.create_render_context()
+        ctx2 = app.create_render_context()
+        ctx1.dispose()
+        assert _get_app_instance() is ctx2
+        assert _get_app_di_scope() is ctx2._di_scope
+        ctx2.dispose()
+        assert _get_app_instance() is None
+        assert _get_app_di_scope() is None
+
+    def test_last_dispose_walks_past_disposed_fallback_chain(self, monkeypatch):
+        monkeypatch.setattr("webcompy.app._render_context.ENVIRONMENT", "pyscript")
+        app = create_test_app(root_component=DisposeTestRoot)
+        ctx1 = app.create_render_context()
+        ctx2 = app.create_render_context()
+        ctx1.dispose()
+        ctx2.dispose()
+        assert _get_app_instance() is None
+        assert _get_app_di_scope() is None

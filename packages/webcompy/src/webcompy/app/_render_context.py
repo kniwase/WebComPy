@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.components._component import (
     _active_app_context,
+    _get_app_instance,
     _set_app_instance,
 )
 from webcompy.components._generator import (
@@ -20,7 +21,12 @@ from webcompy.di._keys import (
     _TELEPORT_REGISTRY_KEY,
     RPC_REGISTRY_KEY,
 )
-from webcompy.di._scope import DIScope, _active_di_scope, _set_app_di_scope
+from webcompy.di._scope import (
+    DIScope,
+    _active_di_scope,
+    _get_app_di_scope,
+    _set_app_di_scope,
+)
 from webcompy.elements.types._teleport import _TeleportTargetRegistry
 from webcompy.exception import WebComPyException
 from webcompy.hydration._report import HydrationMismatchRecord, HydrationReporter
@@ -57,6 +63,8 @@ class RenderContext(ABC):
         self._hydration_payload_closed: bool = False
         self._hydration_reporter = HydrationReporter()
         self._transfer_ordinal_counters: dict[str, int] = {}
+        self._prev_app_instance: Any = None
+        self._prev_app_di_scope: DIScope | None = None
         self._initial_theme = initial_theme
         self._cookie_header = cookie_header or ""
 
@@ -80,6 +88,8 @@ class RenderContext(ABC):
         self._render_context_cv_token = self._app._render_context_cv.set(self)
 
         if ENVIRONMENT == "pyscript":
+            self._prev_app_instance = _get_app_instance()
+            self._prev_app_di_scope = _get_app_di_scope()
             _set_app_di_scope(self._di_scope)
             _set_app_instance(self)
 
@@ -246,8 +256,7 @@ class RenderContext(ABC):
             cur = self._app._render_context_cv.get()
             if cur is not None and getattr(cur, "_disposed", False):
                 self._app._render_context_cv.set(None)
-        _set_app_di_scope(None)
-        _set_app_instance(None)
+        self._restore_browser_fallback()
         di_scope = self._di_scope
         root = self._root
         assert di_scope is not None
@@ -267,6 +276,27 @@ class RenderContext(ABC):
         self._di_scope = None
         self._component_store = None
         self._router = None
+
+    def _restore_browser_fallback(self) -> None:
+        """Restore the previous PyScript fallback when disposing the current one.
+
+        The module-level app fallbacks (``_app_instance`` / ``_app_di_scope``)
+        hold only the most recently created context. When a context that is no
+        longer the current fallback is disposed, the surviving fallback is left
+        untouched. When the disposed context IS the current fallback, the
+        previously registered context (walking past any already-disposed
+        contexts) is restored so overlapping browser contexts keep working after
+        disposal in any order.
+        """
+        if _get_app_instance() is not self:
+            return
+        candidate = self._prev_app_instance
+        candidate_scope = self._prev_app_di_scope
+        while candidate is not None and getattr(candidate, "_disposed", False):
+            candidate_scope = candidate._prev_app_di_scope
+            candidate = candidate._prev_app_instance
+        _set_app_instance(candidate)
+        _set_app_di_scope(candidate_scope)
 
     def _check_disposed(self) -> None:
         if self._disposed:
