@@ -165,15 +165,10 @@ class TestProcedureBind:
 
     def test_param_mismatch_rejected(self) -> None:
         registry = ProcedureRegistry()
-
-        @dataclass
-        class OtherParams:
-            x: int
-
         add = Procedure("add", AddParams, int)
 
-        def _wrong(p: OtherParams) -> int:
-            return p.x
+        def _wrong(p: Item) -> int:
+            return p.n
 
         with pytest.raises(WebComPyException, match="parameter type mismatch"):
             registry.bind(add, _wrong)
@@ -359,14 +354,10 @@ class TestStreamingBind:
     def test_streaming_shares_namespace_with_subscription(self) -> None:
         registry = ProcedureRegistry()
 
-        @dataclass
-        class TickerParams:
-            ticker_id: str
-
-        async def _ticker(p: TickerParams) -> AsyncIterator[int]:
+        async def _ticker(p: AddParams) -> AsyncIterator[int]:
             yield 1
 
-        sub = Subscription("ticker", TickerParams, int)
+        sub = Subscription("ticker", AddParams, int)
         registry.bind(sub, _ticker)
         proc = StreamingProcedure("ticker", AddParams, int)
         with pytest.raises(WebComPyException, match="already registered"):
@@ -385,14 +376,9 @@ class TestStreamingBind:
 class TestSubscriptionBind:
     def test_subscription_bind(self) -> None:
         registry = ProcedureRegistry()
+        sub = Subscription("ticker", AddParams, int)
 
-        @dataclass
-        class TickerParams:
-            ticker_id: str
-
-        sub = Subscription("ticker", TickerParams, int)
-
-        async def _ticker(p: TickerParams) -> AsyncIterator[int]:
+        async def _ticker(p: AddParams) -> AsyncIterator[int]:
             yield 1
 
         registry.bind(sub, _ticker)
@@ -402,14 +388,9 @@ class TestSubscriptionBind:
 
     def test_replay_size_propagation(self) -> None:
         registry = ProcedureRegistry()
+        sub = Subscription("ticker", AddParams, int, replay_size=10)
 
-        @dataclass
-        class TickerParams:
-            ticker_id: str
-
-        sub = Subscription("ticker", TickerParams, int, replay_size=10)
-
-        async def _ticker(p: TickerParams) -> AsyncIterator[int]:
+        async def _ticker(p: AddParams) -> AsyncIterator[int]:
             yield 1
 
         registry.bind(sub, _ticker)
@@ -417,14 +398,9 @@ class TestSubscriptionBind:
 
     def test_element_mismatch_rejected(self) -> None:
         registry = ProcedureRegistry()
+        sub = Subscription("ticker", AddParams, int)
 
-        @dataclass
-        class TickerParams:
-            ticker_id: str
-
-        sub = Subscription("ticker", TickerParams, int)
-
-        async def _ticker(p: TickerParams) -> AsyncIterator[str]:
+        async def _ticker(p: AddParams) -> AsyncIterator[str]:
             yield "x"
 
         with pytest.raises(WebComPyException, match="element type mismatch"):
@@ -432,14 +408,9 @@ class TestSubscriptionBind:
 
     def test_unannotated_rejected(self) -> None:
         registry = ProcedureRegistry()
+        sub = Subscription("ticker", AddParams, int)
 
-        @dataclass
-        class TickerParams:
-            ticker_id: str
-
-        sub = Subscription("ticker", TickerParams, int)
-
-        async def _ticker(p: TickerParams):  # type: ignore[no-untyped-def]
+        async def _ticker(p: AddParams):  # type: ignore[no-untyped-def]
             yield 1
 
         with pytest.raises(WebComPyException, match="missing return type annotation"):
