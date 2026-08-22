@@ -11,12 +11,12 @@
 
 ## 2. PR-A: Governance wiring (orchestrator session)
 
-- [ ] 2.1 Amend `AGENTS.md` code conventions: docstring requirement + OpenSpec-reference ban, carving docstrings out of "no comments unless requested" (no spec-path references yet — the spec does not exist in `openspec/specs/` until archive)
-- [ ] 2.2 Update `openspec/config.yaml` context conventions line and add a docstring rule entry
-- [ ] 2.3 Add mandatory 🔴 perspectives to `.opencode/skills/webcompy-review/SKILL.md`: docstring presence + Google-style structural completeness; OpenSpec-reference ban
-- [ ] 2.4 Add the checker step to `.opencode/skills/webcompy-local-ci/SKILL.md`
-- [ ] 2.5 Add a checker step to the openspec job in `.github/workflows/ci.yml`
-- [ ] 2.6 Verify locally: checker green with baseline, `ruff check`, `ruff format --check`, `pyright`, `pytest tests/`, `openspec validate`; open PR-A
+- [x] 2.1 Amend `AGENTS.md` code conventions: docstring requirement + OpenSpec-reference ban, carving docstrings out of "no comments unless requested" (no spec-path references yet — the spec does not exist in `openspec/specs/` until archive)
+- [x] 2.2 Update `openspec/config.yaml` context conventions line and add a docstring rule entry
+- [x] 2.3 Add mandatory 🔴 perspectives to `.opencode/skills/webcompy-review/SKILL.md`: docstring presence + Google-style structural completeness; OpenSpec-reference ban
+- [x] 2.4 Add the checker step to `.opencode/skills/webcompy-local-ci/SKILL.md`
+- [x] 2.5 Add a checker step to the openspec job in `.github/workflows/ci.yml`
+- [x] 2.6 Verify locally: checker green with baseline, `ruff check`, `ruff format --check`, `pyright`, `pytest tests/`, `openspec validate`; open PR-A
 
 ## 3. PR-B: `webcompy` core docstrings (delegate per batch; each batch shrinks the baseline)
 

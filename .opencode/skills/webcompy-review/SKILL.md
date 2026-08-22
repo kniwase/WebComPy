@@ -130,6 +130,8 @@ Consider these cross-cutting concerns for every review. Flag relevant findings a
 
 | Priority | Perspective | What to check |
 |----------|-------------|---------------|
+| 🔴 Must check | Docstring coverage | Every new or modified public interface under `packages/*/src` must carry a docstring (module summary; Google-style function Args/Returns and class Args/Attributes; re-exported constants via PEP 224). Flag missing docstrings and incomplete Google sections (pydoclint + checker are CI gates, AI verifies structural quality). |
+| 🔴 Must check | OpenSpec references in docs | No docstring or comment under `packages/*/src` may reference OpenSpec artifacts (`openspec/` paths, spec/change names, task numbers). External standards (RFC, PEP, CommonMark) remain allowed. Checker enforces mechanically; AI flags any missed case. |
 | 🔴 Must check | Breaking changes | Public API signature changes, export/import modifications, interface or abstract class changes |
 | 🟡 Should check | Performance impact | Hot path modifications, unnecessary object allocation, blocking I/O in async context, DOM operation frequency |
 | 🟡 Should check | Security | Exposure of internal state via new public methods, missing input validation, information leakage in error messages or logs |
