@@ -18,6 +18,8 @@ from webcompy.utils._environment import ENVIRONMENT
 
 _logger = getLogger(__name__)
 
+_UNSET: Any = object()
+
 
 async def _resolve_with_context(component: Component, coro: Coroutine[Any, Any, Any]) -> Any:
     with component_context(component._render_state):
@@ -36,12 +38,15 @@ def _restore_suspense_di_scope(
     silently no-op when such a descendant remains active. Restoring the parent
     scope explicitly prevents the descendant from leaking into Suspense
     siblings and surrounding code.
+
+    The scope argument may be ``None`` (e.g., the browser fast path never
+    enters a resolution scope); the drift check still restores the captured
+    parent scope in that case.
     """
-    if scope is None or original_scope is None:
-        return
-    scope.__exit__(None, None, None)
+    if scope is not None:
+        scope.__exit__(None, None, None)
     if _active_di_scope.get(None) is not original_scope:
-        _active_di_scope.set(original_scope)
+        _active_di_scope.set(original_scope)  # type: ignore[arg-type]
 
 
 class SuspenseElement(DynamicElement):
@@ -163,22 +168,25 @@ class SuspenseElement(DynamicElement):
                 _restore_suspense_di_scope(scope, original_scope)
 
     async def _browser_render(self):
+        original_scope = _active_di_scope.get(None)
         children = self._generate_children(self._children_generator)
         pairs = self._collect_pending_coroutines(children)
         if not pairs:
             self._children = children
             self._resolved = True
+            _restore_suspense_di_scope(None, original_scope)
             return
         fallback = self._generate_fallback()
         self._children = fallback
         self._resolved = False
         scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
-        task = scheduler.schedule(self._browser_resolve(children, pairs))
+        task = scheduler.schedule(self._browser_resolve(children, pairs, original_scope=original_scope))
         self._pending_tasks.append(task)
         task.add_done_callback(lambda t: self._pending_tasks.remove(t) if t in self._pending_tasks else None)
 
-    async def _browser_resolve(self, children=None, pairs=None):
-        original_scope = _active_di_scope.get(None)
+    async def _browser_resolve(self, children=None, pairs=None, *, original_scope: Any = _UNSET):
+        if original_scope is _UNSET:
+            original_scope = _active_di_scope.get(None)
         scope = original_scope.create_child() if original_scope is not None else None
         if scope is not None:
             scope.provide(SUSPENSE_RESOLVING_KEY, True)
@@ -260,6 +268,7 @@ class SuspenseElement(DynamicElement):
         from webcompy.components._component import Component
         from webcompy.hydration import has_resolved_data
 
+        original_scope = _active_di_scope.get(None)
         all_resolved = True
         test_children = self._generate_children(self._children_generator) if not self._children else self._children
 
@@ -280,7 +289,6 @@ class SuspenseElement(DynamicElement):
                 break
 
         if all_resolved:
-            original_scope = _active_di_scope.get(None)
             scope = original_scope.create_child() if original_scope is not None else None
             if scope is not None:
                 scope.provide(SUSPENSE_RESOLVING_KEY, True)
@@ -290,12 +298,12 @@ class SuspenseElement(DynamicElement):
                 self._resolved = True
             finally:
                 if scope is not None:
-                    scope.__exit__(None, None, None)
+                    _restore_suspense_di_scope(scope, original_scope)
         else:
             fallback = self._generate_fallback()
             self._children = fallback
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
-            task = scheduler.schedule(self._browser_resolve(test_children), render=True)
+            task = scheduler.schedule(self._browser_resolve(test_children, original_scope=original_scope), render=True)
             self._pending_tasks.append(task)
             task.add_done_callback(lambda t: self._pending_tasks.remove(t) if t in self._pending_tasks else None)
         super()._hydrate_node()

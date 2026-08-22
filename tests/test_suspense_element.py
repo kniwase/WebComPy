@@ -107,6 +107,64 @@ class TestSuspenseScopeRestoration:
         assert _active_di_scope.get(None) is original
         assert inject("leak-key", default=None) is None
 
+    def test_hydration_fast_path_restores_scope_after_provide(self, monkeypatch, suspense_scope):
+        from webcompy.di import inject
+        from webcompy.di._keys import HYDRATION_DATA_KEY
+
+        monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
+        self._scope_with_head_props(suspense_scope)
+        suspense_scope.provide(HYDRATION_DATA_KEY, {generate_id("SuspenseProvideChild"): {"state": "success"}})
+        el = self._suspense_with_provider()
+        el._parent = _DummyParent()
+        el._node_idx = 0
+
+        original = _active_di_scope.get(None)
+        el._hydrate_node()
+
+        assert el._resolved is True
+        assert _active_di_scope.get(None) is original
+        assert inject("leak-key", default=None) is None
+
+    @pytest.mark.asyncio
+    async def test_deferred_hydration_passes_pre_probe_scope(self, monkeypatch, suspense_scope):
+        from webcompy.di import inject
+        from webcompy.di._keys import HYDRATION_DATA_KEY
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY
+
+        monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
+        self._scope_with_head_props(suspense_scope)
+        suspense_scope.provide(HYDRATION_DATA_KEY, {})
+
+        captured: dict[str, Any] = {}
+
+        async def _noop():
+            return None
+
+        def _spy(inner_self, children=None, pairs=None, *, original_scope=None):
+            captured["original_scope"] = original_scope
+            return _noop()
+
+        monkeypatch.setattr(SuspenseElement, "_browser_resolve", _spy)
+
+        unresolved_cid = generate_id("UnresolvedProvideComp")
+
+        def children_generator():
+            return html.DIV(
+                {},
+                SuspenseProvideChild(None),
+                TestSuspenseHydrationFastPath._make_component(unresolved_cid, f"{unresolved_cid}#0"),
+            )
+
+        el = SuspenseElement(fallback=lambda: html.P({}, "loading"), children=children_generator)
+        el._parent = _DummyParent()
+        el._node_idx = 0
+
+        original = _active_di_scope.get(None)
+        el._hydrate_node()
+
+        assert captured["original_scope"] is original
+        await inject(ASYNC_SCHEDULER_PORT_KEY).drain()
+
 
 class TestSuspenseElement:
     def test_suspense_is_dynamic_element_subclass(self):
@@ -335,7 +393,7 @@ class TestSuspenseHydrationFastPath:
         async def _noop():
             return None
 
-        def _spy(inner_self, children=None, pairs=None):
+        def _spy(inner_self, children=None, pairs=None, **kwargs):
             captured["children"] = children
             return _noop()
 
@@ -377,7 +435,7 @@ class TestSuspenseHydrationFastPath:
 
         sentinels: list[object] = []
 
-        def _spy_browser_resolve(inner_self, children=None, pairs=None):
+        def _spy_browser_resolve(inner_self, children=None, pairs=None, **kwargs):
             coro = _noop()
             sentinels.append(coro)
             return coro
