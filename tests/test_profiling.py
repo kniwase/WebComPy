@@ -143,6 +143,7 @@ class TestEmitProfileSummary:
                 "custom_elements_defined": 0.25,
                 "run_done": 0.4,
                 "loading_removed": 0.501,
+                "lazy_preload_start": 0.55,
                 "lazy_preloaded": 0.6,
             }
         )
@@ -155,13 +156,13 @@ class TestEmitProfileSummary:
         assert "init_done      → custom_elements_defined" in output
         assert "custom_elements_defined → run_done" in output
         assert "run_done       → loading_removed" in output
-        assert "run_done       → lazy_preloaded" in output
+        assert "lazy_preload_start → lazy_preloaded" in output
         assert "Total:" in output
 
     def test_emit_profile_summary_skips_negative_pairs(self):
         config = WebComPyAppConfig(profile=True)
         app = _make_app(config=config)
-        app._profile_data.update({"run_done": 0.5, "lazy_preloaded": 0.4})
+        app._profile_data.update({"lazy_preload_start": 0.5, "lazy_preloaded": 0.4})
         with patch("builtins.print") as mock_print:
             app._emit_profile_summary()
         output = mock_print.call_args[0][0]
@@ -216,7 +217,10 @@ class TestLazyPreloadPhaseRecordedOnServer:
             ctx = app.create_render_context("/docs")
             try:
                 assert lazy_gen._resolved is ProfileLazyPage
+                assert "lazy_preload_start" in app._profile_data
                 assert "lazy_preloaded" in app._profile_data
+                elapsed = app._profile_data["lazy_preloaded"] - app._profile_data["lazy_preload_start"]
+                assert elapsed >= 0
                 assert app._profile_data["init_start"] < app._profile_data["lazy_preloaded"]
             finally:
                 ctx.dispose()

@@ -87,7 +87,7 @@ class WebComPyApp:
             ("init_done", "custom_elements_defined", "init_done      → custom_elements_defined"),
             ("custom_elements_defined", "run_done", "custom_elements_defined → run_done"),
             ("run_done", "loading_removed", "run_done       → loading_removed"),
-            ("run_done", "lazy_preloaded", "run_done       → lazy_preloaded"),
+            ("lazy_preload_start", "lazy_preloaded", "lazy_preload_start → lazy_preloaded"),
         ]
         lines = ["[WebComPy Profile]"]
         total = 0.0
