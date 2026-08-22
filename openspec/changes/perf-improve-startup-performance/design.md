@@ -2,7 +2,13 @@
 
 ## Context
 
-Startup measurement on docs_app (`.tmp/measure/report.md`) established: interaction time is dominated by PyScript/Pyodide runtime download + initialization (~12.8 MB transferred, ~2–3 s wall); custom-element registration/binding is <50 ms; navigation is fast (60–110 ms). A regression blocks further measurement: `profile=True` crashes browser startup because the generated bootstrap (`webcompy_server/_html.py`) writes `app._profile_data["pyscript_ready"]`, but `WebComPyApp` does not expose `_profile_data` (the dict lives on `RenderContext`). See proposal.md for motivation.
+Startup measurement on docs_app (`.tmp/measure/report.md`, gitignored) established: interaction time is dominated by PyScript/Pyodide runtime download + initialization (~12.8 MB transferred, ~2–3 s wall); custom-element registration/binding is <50 ms; navigation is fast (60–110 ms). A regression blocks further measurement: `profile=True` crashes browser startup because the generated bootstrap (`webcompy_server/_html.py`) writes `app._profile_data["pyscript_ready"]`, but `WebComPyApp` does not expose `_profile_data` (the dict lives on `RenderContext`). See proposal.md for motivation.
+
+Additional facts established during implementation planning:
+
+- In the current implementation `run_start` is never actually recorded: `app.run()` calls `_record_phase("run_start")` before any `RenderContext` exists, and the app→ctx delegation silently no-ops. Moving ownership to the app makes this timestamp real — which also means the legacy summary pair `init_done → run_start` would display a negative value (chronologically `run_start` precedes ctx init), so the pair list must be restructured.
+- The loading screen redesign (#259, `loading-screen` spec) fades out the loading element over `fade_out_ms` (default 250 ms) via `await asyncio.sleep(...)` before removing it. This await yields to the JS event loop, so view-scheduled lazy-preload batches (`setTimeout(0)`) typically fire during the fade — i.e. **before** `loading_removed` is recorded. Consequently a `loading_removed → lazy_preloaded` summary pair would usually be negative; the lazy-preload stage is therefore anchored at `run_done` instead.
+- Interplay with `loading-screen/spec.md`: that spec does not mention profiling output; emitting the profile summary slightly later (macro task after removal) still satisfies the app-lifecycle requirement "printed to the browser console after the loading indicator is removed".
 
 ## Goals / Non-Goals
 
@@ -21,26 +27,27 @@ Startup measurement on docs_app (`.tmp/measure/report.md`) established: interact
 
 ### D1: `WebComPyApp` SHALL own `_profile_data`
 
-Move profile data ownership to the app instance: `WebComPyApp.__init__` creates `self._profile_data: dict[str, float] = {}` when `self._profile` is True, and `_record_phase`/`_emit_profile_summary` operate on it directly. The `RenderContext._profile_data` attribute and its `ctx._record_phase` indirection are removed; `app.profile_data` returns `self._profile_data`.
+Move profile data ownership to the app instance: `WebComPyApp.__init__` creates `self._profile_data: dict[str, float] = {}` unconditionally, and `_record_phase`/`_emit_profile_summary` operate on it directly. The `RenderContext._profile_data` attribute and its `ctx._record_phase` indirection are removed; `app.profile_data` returns `self._profile_data` when profiling is enabled, else `None`.
 
-Rationale: the generated HTML writes `app._profile_data["pyscript_ready"]` *before* any `RenderContext` exists (`app.run()` creates it afterwards), so the data cannot live on the context. The `app-lifecycle` spec already requires `WebComPyApp._record_phase` and `_emit_profile_summary` to record into `_profile_data`, so this aligns the implementation with requirements.
+Rationale: the generated HTML writes `app._profile_data["pyscript_ready"]` *before* any `RenderContext` exists (`app.run()` creates it afterwards), so the data cannot live on the context. The `app-lifecycle` spec already requires `WebComPyApp._record_phase` and `_emit_profile_summary` to record into `_profile_data`, so this aligns the implementation with requirements. Creating the empty dict unconditionally (rather than only when profiling is enabled) is defensive and trivially cheap: stray direct assignments like the generated bootstrap line can never raise `AttributeError`.
 
 Alternatives considered:
 - Make `_app.py` create the context first and record later — contradicts bootstrap ordering (timestamp captured before `app.run()`).
 - Change the generated HTML to call a setter (`app._set_pyscript_ready(...)`) — noisier than giving the app the dict its spec already promises.
+- Create `_profile_data` only when `_profile` is True — saves one empty-dict allocation but makes every ungated access a potential `AttributeError`; rejected.
 
 ### D2: Phase recording lives behind `_profile` guard
 
-`WebComPyApp._record_phase` SHALL no-op when `self._profile` is False, preserving zero-overhead in default runs. `WebComPyApp.__init__` SHALL create `_profile_data` only when profiling is enabled.
+`WebComPyApp._record_phase` SHALL no-op when `self._profile` is False, preserving zero-overhead in default runs. It SHALL also keep only the **first occurrence** of each phase name (`name not in self._profile_data`) — required by the at-most-once scenario in the delta spec, and it makes double scheduling of the lazy-preload batch harmless.
 
 ### D3: Two new phases in the summary
 
-- `var custom_elements_defined`: recorded around `AppDocumentRoot._ensure_custom_elements_defined()` (bulk `customElements.define` pass before hydration).
-- `var lazy_preloaded`: recorded around `Router.preload_lazy_routes()` batch execution (the scheduled macro task that resolves lazy route generators).
+- `custom_elements_defined`: recorded right after `AppDocumentRoot._ensure_custom_elements_defined()` completes (bulk `customElements.define` pass before hydration).
+- `lazy_preloaded`: recorded when the router's lazy-route preload batch finishes executing — inside `_batch_preload` in the browser (the scheduled macro task), and after the synchronous preload loop on the server. Recording happens via `inject(_APP_KEY, default=None)`; this is safe because the browser DI scope stays entered for the app lifetime and the server call runs inside the render scope.
 
-The summary pairs extend `_emit_profile_summary` with `run_done → custom_elements_defined` and `custom_elements_defined → lazy_preloaded` (or analogous adjacency once actual call order is confirmed during implementation). `_root_component` and `_router` record via `app._record_phase` so the app instance is the single owner.
+**Summary emission is deferred in the browser**: `_root_component` replaces its synchronous `app._emit_profile_summary()` call with `schedule_macro_task(app._emit_profile_summary)`. Because `schedule_macro_task` uses `window.setTimeout(0)` (FIFO timer queue), every lazy-preload batch scheduled before the emit task runs before it, so the printed summary always reflects `lazy_preloaded` when any batch exists. This also keeps exactly one emission site (double scheduling of batches by `RouterView._on_set_parent` and `_root_component` cannot double-print).
 
-Rationale: these were the two measured cost clusters; making them first-class phases lets future startup work compare against the profile output without probe hacks.
+**Pair list**: `pyscript_ready → imports_done`, `imports_done → init_done`, `init_done → custom_elements_defined`, `custom_elements_defined → run_done`, `run_done → loading_removed`, `run_done → lazy_preloaded`. The legacy pairs `init_done → run_start` / `run_start → run_done` are dropped: with app-owned data `run_start` becomes real but chronologically precedes ctx init, so `init_done → run_start` would go negative; instead the whole first-render span shows up as `init_done → custom_elements_defined → run_done`. The lazy stage is anchored at `run_done` (not `loading_removed`) because the loading-screen fade yields to the event loop and lets preload batches finish before `loading_removed` is recorded. Finally, `_emit_profile_summary` SHALL skip a pair whose end timestamp precedes its start timestamp (guards the rare case where the batch fires even before `run_done`). Note that `run_done → loading_removed` now includes the intentional fade duration from the loading-screen redesign — that is expected and documented here rather than "fixed".
 
 ### D4: Delivery improvement deferred to follow-up
 
@@ -49,8 +56,10 @@ Do not modify `pyscript-bundle` or CLI delivery behavior in this change. The mea
 ## Risks / Trade-offs
 
 - [Removing `RenderContext._profile_data` may break server-side tests that read `ctx.profile_data`] → Keep `app.profile_data` as the public accessor; update `tests/test_profiling.py` to exercise app-owned data; run unit tests to confirm server paths (SSG/dev server) still emit summaries via `print()`.
-- [New phases change profile output format, breaking consumers] → The summary is diagnostic (console), not an API; still update the archived-format doc example in specs/docs to match.
-- [Double call sites for `preload_lazy_routes` (view + root) may double-record] → Use one-time flags keyed by phase name so a phase records its earliest/first occurrence (`_record_phase` sets a key once).
+- [New phases change profile output format, breaking consumers] → The summary is diagnostic (console), not an API; the delta spec pins the new pair list.
+- [Double call sites for `preload_lazy_routes` (view + root) may double-record or double-print] → `_record_phase` keeps only the first occurrence per phase name, and there is exactly one emission site (root's deferred macro task), so both are structurally prevented.
+- [`run_done → lazy_preloaded` mixes fade duration with actual preload work] → Accepted for a diagnostic stage; the measurement report provides fine-grained external timings when needed.
+- [`asyncio.sleep` yields let JS timers run mid-render] → This is exactly why emission is deferred via the FIFO timer queue rather than emitted inline at loading removal.
 
 ## Migration Plan
 
@@ -59,5 +68,5 @@ Do not modify `pyscript-bundle` or CLI delivery behavior in this change. The mea
 
 ## Open Questions
 
-- Whether `lazy_preloaded` should time the synchronous `_preload()` of each component or the whole scheduled batch — resolved during implementation from the scheduling API (the summary can show either; pick the batch wall time for comparability with the measurement report).
+- ~~Whether `lazy_preloaded` should time the synchronous `_preload()` of each component or the whole scheduled batch~~ — Resolved: batch wall time, recorded at batch completion (D3).
 - Whether to also record the per-`.whl`/`.wasm` resource timings in the summary (browser Performance API) — deferred; external measurement already covers it.
