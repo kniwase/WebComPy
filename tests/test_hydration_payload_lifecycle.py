@@ -404,3 +404,46 @@ class TestRenderClosesPayloadViaFallback:
             _set_app_instance(None)
             ctx.dispose()
         assert ctx._hydration_payload_closed is True
+
+    @pytest.mark.asyncio
+    async def test_non_hydrating_app_closes_payload_before_loading_teardown(self, monkeypatch):
+        import asyncio
+
+        from webcompy.ports._keys import DOM_PORT_KEY
+        from webcompy_testing import FakeBrowserDOMPort, create_test_app
+
+        @define_component("close-nonhydrate-root")
+        def CloseNonhydrateRoot(context: ComponentContext[None]):
+            return html.DIV({}, "hello")
+
+        monkeypatch.setattr("webcompy.app._root_component.ENVIRONMENT", "pyscript")
+        app = create_test_app(root_component=CloseNonhydrateRoot, hydrate=False)
+        ctx = app.create_render_context()
+        assert ctx._hydration_payload_closed is False
+
+        dom_port = FakeBrowserDOMPort()
+        mount_node = dom_port.create_element("div")
+        mount_node.setAttribute("id", "webcompy-app")
+        dom_port.body.appendChild(mount_node)
+        loading_el = dom_port.create_element("div")
+        loading_el.setAttribute("id", "webcompy-loading")
+        dom_port.body.appendChild(loading_el)
+        ctx.di_scope.provide(DOM_PORT_KEY, dom_port)
+
+        closed_state_when_fade_starts: list[bool] = []
+        real_sleep = asyncio.sleep
+
+        async def _spy_sleep(seconds: float):
+            closed_state_when_fade_starts.append(ctx._hydration_payload_closed)
+            await real_sleep(0)
+
+        monkeypatch.setattr(asyncio, "sleep", _spy_sleep)
+        _set_app_instance(ctx)
+        try:
+            await ctx._root.render()
+        finally:
+            _set_app_instance(None)
+            ctx.dispose()
+        assert ctx._hydration_payload_closed is True
+        assert closed_state_when_fade_starts
+        assert all(closed_state_when_fade_starts)
