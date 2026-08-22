@@ -210,9 +210,30 @@ class TestPerInstanceTransferId:
 
         ctx = _RenderContextStub.__new__(_RenderContextStub)
         ctx._transfer_ordinal_counters = {}
+        ctx._transfer_probe_depth = 0
         assert ctx._next_transfer_id("Foo") == f"{generate_id('Foo')}#0"
         assert ctx._next_transfer_id("Foo") == f"{generate_id('Foo')}#1"
         assert ctx._next_transfer_id("Bar") == f"{generate_id('Bar')}#0"
+
+    def test_probe_depth_returns_provisional_ids_without_consuming(self):
+        from webcompy.app._render_context import RenderContext
+
+        class _RenderContextStub(RenderContext):
+            def _register_ports(self) -> None:
+                pass
+
+        ctx = _RenderContextStub.__new__(_RenderContextStub)
+        ctx._transfer_ordinal_counters = {}
+        ctx._transfer_probe_depth = 0
+        assert ctx._next_transfer_id("Foo") == f"{generate_id('Foo')}#0"
+        counters_before = dict(ctx._transfer_ordinal_counters)
+        ctx._transfer_probe_depth += 1
+        try:
+            assert ctx._next_transfer_id("Foo") == generate_id("Foo")
+            assert ctx._transfer_ordinal_counters == counters_before
+        finally:
+            ctx._transfer_probe_depth -= 1
+        assert ctx._next_transfer_id("Foo") == f"{generate_id('Foo')}#1"
 
     def test_context_falls_back_to_bare_component_id(self):
         from webcompy.components._libs import Context

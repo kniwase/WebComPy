@@ -63,6 +63,7 @@ class RenderContext(ABC):
         self._hydration_payload_closed: bool = False
         self._hydration_reporter = HydrationReporter()
         self._transfer_ordinal_counters: dict[str, int] = {}
+        self._transfer_probe_depth: int = 0
         self._prev_app_instance: Any = None
         self._prev_app_di_scope: DIScope | None = None
         self._initial_theme = initial_theme
@@ -324,6 +325,8 @@ class RenderContext(ABC):
     def _next_transfer_id(self, component_name: str) -> str:
         from webcompy.components._libs import generate_id
 
+        if self._transfer_probe_depth > 0:
+            return generate_id(component_name)
         ordinal = self._transfer_ordinal_counters.get(component_name, 0)
         self._transfer_ordinal_counters[component_name] = ordinal + 1
         return f"{generate_id(component_name)}#{ordinal}"

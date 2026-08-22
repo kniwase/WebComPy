@@ -265,7 +265,7 @@ class SuspenseElement(DynamicElement):
         super()._remove_element(recursive, remove_node)
 
     def _hydrate_node(self) -> None:
-        from webcompy.components._component import Component
+        from webcompy.components._component import Component, _active_app_context, _get_app_instance
         from webcompy.hydration import has_resolved_data
 
         original_scope = _active_di_scope.get(None)
@@ -300,7 +300,15 @@ class SuspenseElement(DynamicElement):
                 if scope is not None:
                     _restore_suspense_di_scope(scope, original_scope)
         else:
-            fallback = self._generate_fallback()
+            app_ctx = _active_app_context.get() or _get_app_instance()
+            probe_depth = getattr(app_ctx, "_transfer_probe_depth", 0) if app_ctx is not None else 0
+            if app_ctx is not None:
+                app_ctx._transfer_probe_depth = probe_depth + 1
+            try:
+                fallback = self._generate_fallback()
+            finally:
+                if app_ctx is not None:
+                    app_ctx._transfer_probe_depth = probe_depth
             self._children = fallback
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
             task = scheduler.schedule(self._browser_resolve(test_children, original_scope=original_scope), render=True)

@@ -60,6 +60,11 @@ def SuspenseProvideChild(context):
     return html.DIV({}, "child")
 
 
+@define_component("suspense-ordinal-child")
+def SuspenseOrdinalChild(context):
+    return html.DIV({}, "x")
+
+
 class TestSuspenseScopeRestoration:
     def _suspense_with_provider(self):
         return SuspenseElement(
@@ -318,6 +323,77 @@ def _render_to_html(node: VirtualDOMNode) -> str:
 
     port = ServerDOMPort()
     return port.render_html(node)
+
+
+class TestSuspenseHydrationOrdinals:
+    @pytest.mark.asyncio
+    async def test_hydration_fallback_uses_provisional_transfer_ids(self, monkeypatch, suspense_scope):
+        from webcompy.app._render_context import RenderContext
+        from webcompy.components._component import HeadPropsStore, _active_app_context
+        from webcompy.di import inject
+        from webcompy.di._keys import _HEAD_PROPS_KEY, HYDRATION_DATA_KEY
+        from webcompy.ports._keys import ASYNC_SCHEDULER_PORT_KEY, CUSTOM_ELEMENT_PORT_KEY
+        from webcompy_testing import FakeCustomElementPort
+
+        monkeypatch.setattr("webcompy.elements.types._suspense.ENVIRONMENT", "pyscript")
+
+        class _ProbeAppCtx(RenderContext):
+            def _register_ports(self) -> None:
+                pass
+
+        app_ctx = _ProbeAppCtx.__new__(_ProbeAppCtx)
+        app_ctx._transfer_ordinal_counters = {}
+        app_ctx._transfer_probe_depth = 0
+        app_ctx._hydration_payload_closed = False
+        app_token = _active_app_context.set(app_ctx)
+
+        async def _noop():
+            return None
+
+        def _spy(inner_self, children=None, pairs=None, **kwargs):
+            return _noop()
+
+        monkeypatch.setattr(SuspenseElement, "_browser_resolve", _spy)
+
+        try:
+            suspense_scope.provide(_HEAD_PROPS_KEY, HeadPropsStore())
+            suspense_scope.provide(CUSTOM_ELEMENT_PORT_KEY, FakeCustomElementPort())
+            name_id = generate_id("SuspenseOrdinalChild")
+            suspense_scope.provide(HYDRATION_DATA_KEY, {f"{name_id}#0": {"state": "success"}})
+
+            unresolved_cid = generate_id("UnresolvedOrdinalComp")
+            probe: dict[str, Any] = {}
+
+            def children_generator():
+                wrapper = html.DIV(
+                    {},
+                    SuspenseOrdinalChild(None),
+                    TestSuspenseHydrationFastPath._make_component(unresolved_cid, f"{unresolved_cid}#0"),
+                )
+                probe["wrapper"] = wrapper
+                return wrapper
+
+            el = SuspenseElement(
+                fallback=lambda: html.P({}, SuspenseOrdinalChild(None)),
+                children=children_generator,
+            )
+            el._parent = _DummyParent()
+            el._node_idx = 0
+
+            el._hydrate_node()
+
+            probe_child = probe["wrapper"]._children[0]
+            fallback_child = el._children[0]._children[0]
+            assert probe_child._property["transfer_id"] == f"{name_id}#0"
+            assert fallback_child._property["transfer_id"] == name_id
+            assert app_ctx._transfer_ordinal_counters["SuspenseOrdinalChild"] == 1
+
+            later = SuspenseOrdinalChild(None)
+            assert later._property["transfer_id"] == f"{name_id}#1"
+
+            await inject(ASYNC_SCHEDULER_PORT_KEY).drain()
+        finally:
+            _active_app_context.reset(app_token)
 
 
 class TestSuspenseHydrationFastPath:
