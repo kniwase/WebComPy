@@ -31,7 +31,7 @@
 
 ## 6. Validation
 
-- [ ] 6.1 Run the dev/prod server on docs_app with `profile=True` enabled (temporary edit to `docs_app/app.py`, reverted afterwards) and confirm `[WebComPy Profile]` prints to the browser console without crashing and includes the new phases (via `webcompy inspect console`)
-- [ ] 6.2 Run `uv run ruff check .`, `uv run ruff format --check .`, and `uv run pyright`
-- [ ] 6.3 Confirm `openspec validate --changes` passes and the delta spec is consistent with `app-lifecycle` and `app-config`
-- [ ] 6.4 Run all E2E groups in both serving modes via `scripts/run-e2e-tests.sh --parallel` and confirm success
+- [x] 6.1 Run the dev/prod server on docs_app with `profile=True` enabled (temporary edit to `docs_app/app.py`, reverted afterwards) and confirm `[WebComPy Profile]` prints to the browser console without crashing and includes the new phases (via `webcompy inspect console`)
+- [x] 6.2 Run `uv run ruff check .`, `uv run ruff format --check .`, and `uv run pyright`
+- [x] 6.3 Confirm `openspec validate --changes` passes and the delta spec is consistent with `app-lifecycle` and `app-config`
+- [x] 6.4 Run all E2E groups in both serving modes via `scripts/run-e2e-tests.sh --parallel` and confirm success
