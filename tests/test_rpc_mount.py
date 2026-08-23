@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib.util
+from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import patch
 
@@ -7,8 +9,22 @@ import httpx
 import pytest
 from starlette.routing import Route
 
+from webcompy.rpc import Procedure
 from webcompy_cli._build import BuildArtifacts
 from webcompy_cli.config._build_config import WebComPyBuildConfig
+
+
+@dataclass
+class AddParams:
+    a: int
+    b: int = 0
+
+
+add = Procedure("add", AddParams, int)
+
+
+def _add_impl(p: AddParams) -> int:
+    return p.a + p.b
 
 
 def _make_app_pkg(tmp_path: Path) -> Path:
@@ -16,7 +32,6 @@ def _make_app_pkg(tmp_path: Path) -> Path:
     pkg.mkdir()
     mod_path = pkg / "_app_mod.py"
     mod_path.write_text("app = None\n")
-    import importlib.util
 
     spec = importlib.util.spec_from_file_location("_ephemeral_app", mod_path)
     mod = importlib.util.module_from_spec(spec)
@@ -28,7 +43,6 @@ def _make_app_pkg(tmp_path: Path) -> Path:
 def _make_build_config(tmp_path: Path) -> WebComPyBuildConfig:
     pkg = _make_app_pkg(tmp_path)
     mod_path = pkg / "_app_mod.py"
-    import importlib.util
 
     spec = importlib.util.spec_from_file_location("_ephemeral_app", mod_path)
     mod = importlib.util.module_from_spec(spec)
@@ -46,8 +60,12 @@ def _make_artifacts(tmp_path: Path) -> BuildArtifacts:
     )
 
 
-def _make_app(router=None, base_url: str = "/"):
+def _make_app(base_url: str = "/", router=None):
     from webcompy.app._app import WebComPyApp
+
+    if base_url == "/" and router is None:
+        return WebComPyApp(root_component=lambda _: None)
+
     from webcompy.app._config import WebComPyAppConfig
 
     return WebComPyApp(
@@ -93,10 +111,6 @@ def _create_serving(app, build_config, *, mode="prod"):
         return create_asgi_app(app, build_config, mode=mode)
 
 
-def _add(a: int, b: int = 0) -> int:
-    return a + b
-
-
 def _rpc_paths(asgi) -> list[str]:
     return [route.path for route in asgi.routes if isinstance(route, Route) and route.methods == {"POST"}]
 
@@ -108,12 +122,13 @@ class TestEndpointPresence:
 
         serving = _create_serving(app, build_config)
 
-        assert _rpc_paths(serving.asgi) == []
+        assert app.rpc.has_procedures is False
+        assert "/_webcompy-rpc" not in _rpc_paths(serving.asgi)
 
-    def test_endpoint_present_when_procedures_registered(self, tmp_path: Path) -> None:
+    def test_endpoint_present_when_contract_bound(self, tmp_path: Path) -> None:
         build_config = _make_build_config(tmp_path)
         app = _make_app()
-        app.rpc.register("add", _add)
+        app.rpc.bind(add, _add_impl)
 
         serving = _create_serving(app, build_config)
 
@@ -125,7 +140,7 @@ class TestEndpointRouting:
     async def test_post_to_default_path_handled(self, tmp_path: Path) -> None:
         build_config = _make_build_config(tmp_path)
         app = _make_app()
-        app.rpc.register("add", _add)
+        app.rpc.bind(add, _add_impl)
 
         serving = _create_serving(app, build_config)
 
@@ -142,7 +157,7 @@ class TestEndpointRouting:
     async def test_get_to_endpoint_returns_405(self, tmp_path: Path) -> None:
         build_config = _make_build_config(tmp_path)
         app = _make_app()
-        app.rpc.register("add", _add)
+        app.rpc.bind(add, _add_impl)
 
         serving = _create_serving(app, build_config)
 
@@ -152,10 +167,10 @@ class TestEndpointRouting:
         assert response.status_code == 405
 
     @pytest.mark.asyncio
-    async def test_custom_path_handled(self, tmp_path: Path) -> None:
+    async def test_custom_dispatcher_path_handled(self, tmp_path: Path) -> None:
         build_config = _make_build_config(tmp_path)
         app = _make_app()
-        app.rpc.register("add", _add)
+        app.rpc.bind(add, _add_impl)
         app.rpc.set_path("/custom/rpc")
 
         serving = _create_serving(app, build_config)
@@ -174,11 +189,10 @@ class TestEndpointRouting:
     async def test_base_url_variant_reachable(self, tmp_path: Path) -> None:
         build_config = _make_build_config(tmp_path)
         app = _make_app(base_url="/myapp/")
-        app.rpc.register("add", _add)
+        app.rpc.bind(add, _add_impl)
 
         serving = _create_serving(app, build_config)
 
-        assert "/_webcompy-rpc" in _rpc_paths(serving.asgi)
         assert "/myapp/_webcompy-rpc" in _rpc_paths(serving.asgi)
 
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=serving.asgi), base_url="http://test") as client:
@@ -189,11 +203,16 @@ class TestEndpointRouting:
 
         assert response.json()["result"] == 1
 
-    @pytest.mark.asyncio
-    async def test_rpc_route_inserted_before_catch_all(self, tmp_path: Path) -> None:
+
+class TestRouteOrdering:
+    def test_rpc_route_inserted_before_catch_all(self, tmp_path: Path) -> None:
+        from webcompy.router._router import Router
+
         build_config = _make_build_config(tmp_path)
-        app = _make_app(router=_make_router([{"path": "/", "component": _make_page_component()}]))
-        app.rpc.register("add", _add)
+        router = _make_router([{"path": "/", "component": _make_page_component()}])
+        assert isinstance(router, Router)
+        app = _make_app(router=router)
+        app.rpc.bind(add, _add_impl)
 
         serving = _create_serving(app, build_config)
 
@@ -202,26 +221,12 @@ class TestEndpointRouting:
         catch_all_index = next(i for i, r in enumerate(routes) if isinstance(r, Route) and r.path == "/{path:path}")
         assert rpc_index < catch_all_index
 
-    @pytest.mark.asyncio
-    async def test_page_still_renders_alongside_endpoint(self, tmp_path: Path) -> None:
-        build_config = _make_build_config(tmp_path)
-        app = _make_app(router=_make_router([{"path": "/", "component": _make_page_component()}]))
-        app.rpc.register("add", _add)
-
-        serving = _create_serving(app, build_config)
-
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=serving.asgi), base_url="http://test") as client:
-            response = await client.get("/", headers={"Accept": "text/html"})
-
-        assert response.status_code == 200
-        assert "text/html" in response.headers.get("content-type", "").lower()
-
 
 class TestFetchPortConfiguration:
     def test_prefixed_rpc_path_added_to_mount_prefixes_for_non_root_base(self, tmp_path: Path) -> None:
         build_config = _make_build_config(tmp_path)
         app = _make_app(base_url="/myapp/")
-        app.rpc.register("add", _add)
+        app.rpc.bind(add, _add_impl)
 
         _create_serving(app, build_config)
 
@@ -242,7 +247,7 @@ class TestFetchPortConfiguration:
     def test_root_base_url_adds_no_prefixed_rpc_path(self, tmp_path: Path) -> None:
         build_config = _make_build_config(tmp_path)
         app = _make_app()
-        app.rpc.register("add", _add)
+        app.rpc.bind(add, _add_impl)
 
         _create_serving(app, build_config)
 

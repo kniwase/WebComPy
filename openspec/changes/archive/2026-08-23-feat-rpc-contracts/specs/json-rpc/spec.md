@@ -1,10 +1,6 @@
-# JSON-RPC
+# JSON-RPC (delta)
 
-## Purpose
-
-Provide a JSON-RPC 2.0 procedure-call layer for WebComPy applications. Procedures are plain Python functions registered by name on the app; the browser client calls them with typed arguments and results over `FetchPort`, with in-process dispatch and hydration baking during SSR/SSG. A strict allowlist guards server-side decoding of client-controlled typed payloads.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: JSON-RPC 2.0 dispatcher
 
@@ -93,18 +89,6 @@ Contract-bound procedures and subscriptions take exactly one parameter, whose sc
 - **WHEN** request metadata references a type tag outside the closed set and not in the allowlist registry
 - **THEN** the dispatcher SHALL respond with error `-32602` and SHALL NOT attempt class resolution
 
-### Requirement: Metadata extension member
-Requests and responses MAY carry a `meta` member alongside `params`/`result` containing transfer metadata in the `typed-response` wire format (path→type-tag map). The extension SHALL NOT alter standard JSON-RPC members, and peers ignoring `meta` SHALL interoperate normally. Result encoding SHALL use `encode_with_meta` semantics for non-JSON-native values.
-
-#### Scenario: Typed result with metadata
-- **WHEN** a procedure returns a dataclass containing `bytes` and `Decimal` fields
-- **THEN** the response `result` SHALL contain pristine JSON and `meta` SHALL record those types
-- **AND** the framework client SHALL restore the original Python types
-
-#### Scenario: Generic client interoperability
-- **WHEN** a non-WebComPy JSON-RPC client calls a procedure with plain JSON params and ignores `meta`
-- **THEN** the call SHALL succeed per the JSON-RPC 2.0 specification
-
 ### Requirement: Typed browser client over FetchPort
 
 The framework SHALL provide a typed HTTP client for JSON-RPC via the `RpcHttpClient` transport defined in the `rpc-contracts` capability; RPC calls SHALL be issued through `Procedure` contracts (`await add(http_client, params)`) via `RpcCall`, streaming calls through `StreamingProcedure` contracts, multiple `Procedure` calls in one round-trip via `batch(*calls: RpcCall, return_exceptions=False)` (importable from `webcompy.rpc`; HTTP array POST and WebSocket array frame per the `rpc-contracts` capability, reusing the existing batch wire; `batch()` with 0 calls is a no-op returning `()` with no I/O and no transfer entry), and fire-and-forget notifications via `notify(*calls: RpcCall)` (importable from `webcompy.rpc`; HTTP array POST and WebSocket array frame of id-less envelopes reusing the existing batch wire; `notify()` with 0 calls is a no-op returning `None` with no I/O and no transfer entry). The module-level `rpc.call`, `rpc.notify`, and `rpc.stream` functions SHALL NOT exist as public API (the `batch`/`notify` names exist only as the typed `batch(*RpcCall)`/`notify(*RpcCall)` helpers). During SSR/SSG, calls and batch arrays SHALL dispatch self-site in-process via ASGI transport and results SHALL be recorded in the hydration transfer cache (bake) as a single array entry, with the `transfer=False` opt-out applying as for other self-site fetches; `notify` SHALL dispatch in-process but SHALL NOT be baked (HTTP `204` / no-frame produces no transfer entry). JSON-RPC error responses SHALL raise a dedicated `RpcError` carrying `code`, `message`, and `data`. Result decoding SHALL apply `from_json` with response `meta`.
@@ -172,62 +156,6 @@ The dispatcher's core logic (envelope validation, batch handling, procedure invo
 - **WHEN** a socket with active subscription streams closes
 - **THEN** the server SHALL terminate those streams and release their per-connection state
 
-### Requirement: Subscription procedures shall be registrable with a bounded replay buffer
-
-The framework SHALL provide subscription registration via `ProcedureRegistry.bind` with a `Subscription` contract (per the `rpc-contracts` capability), replacing `register_subscription`. All wire and lifecycle semantics SHALL be unchanged: the dispatcher SHALL assign a monotonically increasing `cursor` per event per stream, SHALL forward events to subscribers as notification frames, SHALL retain a bounded replay buffer per stream (default 256 events, configurable at registration via `replay_size`), SHALL honor rejoin requests carrying `last_cursor` by replaying buffered events with greater cursors before live delivery, and SHALL answer `resync_required` when `last_cursor` is older than the buffer's replayable range (older than the oldest buffered cursor minus one, i.e. when at least one missed event has been evicted).
-
-#### Scenario: Rejoin within the buffer replays missed events
-
-- **WHEN** a subscriber rejoins with `last_cursor=10` and the buffer holds cursors `8`–`30`
-- **THEN** the server SHALL deliver cursors `11`–`30` before resuming live events
-
-#### Scenario: Rejoin beyond the buffer requires resync
-
-- **WHEN** a subscriber rejoins with a cursor older than the buffer's replayable range (at least one missed event has been evicted)
-- **THEN** the server SHALL answer `resync_required` and SHALL NOT fabricate or silently skip events
-
-### Requirement: The stream extension member shall select streamed responses
-
-Requests MAY carry a `"stream": true` member alongside the standard JSON-RPC members. A single request with `"stream": true` targeting a streaming procedure SHALL produce a streamed response; a single request WITHOUT the member targeting a streaming procedure SHALL answer error `-32600` with a message indicating a stream request is required; a request WITH the member targeting a non-streaming procedure SHALL answer error `-32600` with a message indicating the method is not a streaming procedure. In a batch request, any entry targeting a streaming procedure SHALL answer `-32600` for that entry (streaming in batches is unsupported). Notifications (no `id`) targeting streaming procedures SHALL NOT execute. The member SHALL NOT alter the handling of ordinary procedures.
-
-#### Scenario: Streaming procedure called without the member errors
-- **WHEN** a client calls a streaming procedure without `"stream": true`
-- **THEN** the response SHALL be a JSON-RPC error with code `-32600`
-
-#### Scenario: Ordinary procedure called with the member errors
-- **WHEN** a client calls an ordinary procedure with `"stream": true`
-- **THEN** the response SHALL be a JSON-RPC error with code `-32600`
-
-#### Scenario: Streaming entry in a batch errors per entry
-- **WHEN** a batch contains a streaming procedure call (with or without the member)
-- **THEN** that entry's response SHALL be a JSON-RPC error with code `-32600`
-- **AND** other entries SHALL be processed normally
-
-#### Scenario: Notification to a streaming procedure does not execute
-- **WHEN** a notification (no `id`) targets a streaming procedure
-- **THEN** the procedure SHALL NOT execute and no response SHALL be produced
-
-### Requirement: The HTTP dispatcher shall answer flagged streaming requests with an SSE stream
-
-When the HTTP dispatcher receives a single request with `"stream": true` targeting a streaming procedure, it SHALL respond `200` with `Content-Type: text/event-stream` and `Cache-Control: no-store`, and SHALL stream events produced by iterating the generator: one `item` event per element whose `data` is a JSON object `{"data": <encoded element>, "meta": <transfer meta or null>}` (encoded with the same `encode_with_meta` semantics as ordinary results), followed by a `done` event on exhaustion. If the generator raises mid-stream, the dispatcher SHALL emit an `error` event whose `data` is `{"code": <int>, "message": <str>, "data": <detail or null>}` and SHALL stop. All pre-stream failures (parse errors, unknown method, invalid params, stream-member mismatches, batch/notification rules) SHALL keep the standard `application/json` JSON-RPC error responses. When the client disconnects mid-stream, the dispatcher SHALL stop iterating and close the generator.
-
-#### Scenario: Successful stream emits items then done
-- **WHEN** a flagged request targets a streaming procedure yielding two elements
-- **THEN** the response SHALL be `text/event-stream` and SHALL emit two `item` events followed by one `done` event
-
-#### Scenario: Mid-stream exception emits error event
-- **WHEN** the generator raises after yielding one element
-- **THEN** the stream SHALL emit the already-produced `item` event followed by an `error` event carrying the failure details
-- **AND** no `done` event SHALL follow
-
-#### Scenario: Invalid params still answer JSON
-- **WHEN** a flagged request targets a streaming procedure with invalid params
-- **THEN** the response SHALL be `application/json` with a JSON-RPC error body (no SSE stream)
-
-#### Scenario: Client disconnect stops the generator
-- **WHEN** the client disconnects while the stream is active
-- **THEN** the dispatcher SHALL stop iterating the generator and SHALL close it
-
 ### Requirement: The HTTP client shall provide a typed stream call
 
 The framework SHALL provide HTTP streaming through the `RpcHttpClient.stream` transport method defined in the `rpc-contracts` capability, invoked through `StreamingProcedure` contracts. The module-level `rpc.stream` function SHALL NOT exist as public API. The HTTP stream wire behavior SHALL be unchanged: a `"stream": true` envelope POST through the streaming fetch capability, `Content-Type` branching (a JSON body resolves as an ordinary JSON-RPC response whose errors SHALL fail the returned stream with `RpcError` before any item is delivered; a `text/event-stream` body drives the returned `RpcStream`, parsed with the `sse-parser` codec), and the `rpc-streaming` capability's item/error/done mapping.
@@ -241,3 +169,17 @@ The framework SHALL provide HTTP streaming through the `RpcHttpClient.stream` tr
 
 - **WHEN** `it = produce(http_client, ProduceParams(2))` for a bound streaming procedure is consumed
 - **THEN** iteration SHALL yield the decoded `Item` instances and then finish
+
+### Requirement: Subscription procedures shall be registrable with a bounded replay buffer
+
+The framework SHALL provide subscription registration via `ProcedureRegistry.bind` with a `Subscription` contract (per the `rpc-contracts` capability), replacing `register_subscription`. All wire and lifecycle semantics SHALL be unchanged: the dispatcher SHALL assign a monotonically increasing `cursor` per event per stream, SHALL forward events to subscribers as notification frames, SHALL retain a bounded replay buffer per stream (default 256 events, configurable at registration via `replay_size`), SHALL honor rejoin requests carrying `last_cursor` by replaying buffered events with greater cursors before live delivery, and SHALL answer `resync_required` when `last_cursor` is older than the buffer's replayable range (older than the oldest buffered cursor minus one, i.e. when at least one missed event has been evicted).
+
+#### Scenario: Rejoin within the buffer replays missed events
+
+- **WHEN** a subscriber rejoins with `last_cursor=10` and the buffer holds cursors `8`–`30`
+- **THEN** the server SHALL deliver cursors `11`–`30` before resuming live events
+
+#### Scenario: Rejoin beyond the buffer requires resync
+
+- **WHEN** a subscriber rejoins with a cursor older than the buffer's replayable range (at least one missed event has been evicted)
+- **THEN** the server SHALL answer `resync_required` and SHALL NOT fabricate or silently skip events

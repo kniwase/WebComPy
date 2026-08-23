@@ -156,56 +156,148 @@ class ProcedureRegistry:
     def get_subscription(self, name: str) -> SubscriptionInfo | None:
         return self._subscriptions.get(name)
 
-    def procedure(self, func: Callable[..., Any]) -> Callable[..., Any]:
-        self.register(func.__name__, func)
-        return func
-
     def _validate_name(self, name: str) -> None:
         if name.startswith("_webcompy."):
             raise WebComPyException(f"RPC method name {name!r} is reserved for the framework")
 
-    def register(self, name: str, func: Callable[..., Any]) -> None:
-        self._validate_name(name)
-        if name in self._procedures or name in self._subscriptions:
-            raise WebComPyException(f"RPC procedure {name!r} is already registered")
-        param_schemas, param_order, required, result_schema = _extract_signature(name, func)
-        if result_schema is None:
-            raise WebComPyException(f"RPC procedure {name!r}: missing return type annotation")
-        is_streaming, result_schema = _resolve_streaming(name, func, result_schema)
-        self._procedures[name] = ProcedureInfo(
-            name=name,
-            func=func,
-            param_schemas=param_schemas,
-            param_order=param_order,
-            required=required,
-            result_schema=result_schema,
-            is_async=inspect.iscoroutinefunction(func),
-            is_streaming=is_streaming,
-        )
+    def bind(self, contract: Any, impl: Callable[..., Any] | None = None) -> Any:
+        from webcompy.rpc._contracts import Procedure, StreamingProcedure, Subscription
 
-    def register_subscription(
-        self,
-        name: str,
-        func: Callable[..., Any],
-        *,
-        replay_size: int = 256,
-    ) -> None:
-        self._validate_name(name)
-        if name in self._procedures or name in self._subscriptions:
-            raise WebComPyException(f"RPC subscription {name!r} is already registered")
-        if not inspect.isasyncgenfunction(func):
-            raise WebComPyException(f"RPC subscription {name!r} must be an async generator function")
-        if isinstance(replay_size, bool) or not isinstance(replay_size, int) or replay_size < 1:
-            raise WebComPyException(f"RPC subscription {name!r}: replay_size must be an int greater than or equal to 1")
-        param_schemas, param_order, required, _ = _extract_signature(name, func)
-        self._subscriptions[name] = SubscriptionInfo(
-            name=name,
-            func=func,
-            param_schemas=param_schemas,
-            param_order=param_order,
-            required=required,
-            replay_size=replay_size,
-        )
+        if impl is None:
+
+            def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
+                self.bind(contract, fn)
+                return fn
+
+            return decorator
+        if isinstance(contract, Procedure):
+            name = contract.name
+            self._validate_name(name)
+            if name in self._procedures or name in self._subscriptions:
+                raise WebComPyException(f"RPC procedure {name!r} is already registered")
+            if inspect.isgeneratorfunction(impl) or inspect.isasyncgenfunction(impl):
+                raise WebComPyException(
+                    f"RPC procedure {name!r}: generator functions must be bound to StreamingProcedure"
+                )
+            param_schemas, param_order, required, result_schema = _extract_signature(name, impl)
+            if result_schema is None:
+                raise WebComPyException(f"RPC procedure {name!r}: missing return type annotation")
+            if len(param_order) != 1:
+                raise WebComPyException(
+                    f"RPC procedure {name!r}: expected exactly one parameter of type {contract.params_type!r}, got {len(param_order)}"
+                )
+            param_type = param_schemas[param_order[0]]
+            if param_type != contract.params_type:
+                raise WebComPyException(
+                    f"RPC procedure {name!r}: parameter type mismatch: expected {contract.params_type!r}, got {param_type!r}"
+                )
+            if result_schema != contract.result_type:
+                raise WebComPyException(
+                    f"RPC procedure {name!r}: return type mismatch: expected {contract.result_type!r}, got {result_schema!r}"
+                )
+            origin = typing.get_origin(result_schema)
+            if origin in _STREAM_ORIGINS:
+                raise WebComPyException(
+                    f"RPC procedure {name!r}: streaming return annotation requires a generator function (use StreamingProcedure)"
+                )
+            if result_schema in _STREAM_ORIGINS:
+                raise WebComPyException(f"RPC procedure {name!r}: streaming return annotation requires an element type")
+            self._procedures[name] = ProcedureInfo(
+                name=name,
+                func=impl,
+                param_schemas=param_schemas,
+                param_order=param_order,
+                required=required,
+                result_schema=result_schema,
+                is_async=inspect.iscoroutinefunction(impl),
+                is_streaming=False,
+            )
+            return None
+        if isinstance(contract, StreamingProcedure):
+            name = contract.name
+            self._validate_name(name)
+            if name in self._procedures or name in self._subscriptions:
+                raise WebComPyException(f"RPC procedure {name!r} is already registered")
+            param_schemas, param_order, required, result_schema = _extract_signature(name, impl)
+            if result_schema is None:
+                raise WebComPyException(f"RPC procedure {name!r}: missing return type annotation")
+            if len(param_order) != 1:
+                raise WebComPyException(
+                    f"RPC procedure {name!r}: expected exactly one parameter of type {contract.params_type!r}"
+                )
+            param_type = param_schemas[param_order[0]]
+            if param_type != contract.params_type:
+                raise WebComPyException(
+                    f"RPC procedure {name!r}: parameter type mismatch: expected {contract.params_type!r}, got {param_type!r}"
+                )
+            is_streaming, element = _resolve_streaming(name, impl, result_schema)
+            if not is_streaming:
+                raise WebComPyException(
+                    f"RPC procedure {name!r}: StreamingProcedure requires a generator function with iterable return annotation"
+                )
+            if element != contract.result_type:
+                raise WebComPyException(
+                    f"RPC procedure {name!r}: element type mismatch: expected {contract.result_type!r}, got {element!r}"
+                )
+            self._procedures[name] = ProcedureInfo(
+                name=name,
+                func=impl,
+                param_schemas=param_schemas,
+                param_order=param_order,
+                required=required,
+                result_schema=element,
+                is_async=inspect.isasyncgenfunction(impl),
+                is_streaming=True,
+            )
+            return None
+        if isinstance(contract, Subscription):
+            name = contract.name
+            self._validate_name(name)
+            if name in self._procedures or name in self._subscriptions:
+                raise WebComPyException(f"RPC subscription {name!r} is already registered")
+            if not inspect.isasyncgenfunction(impl):
+                raise WebComPyException(f"RPC subscription {name!r} must be an async generator function")
+            param_schemas, param_order, required, result_schema = _extract_signature(name, impl)
+            if result_schema is None:
+                raise WebComPyException(f"RPC subscription {name!r}: missing return type annotation")
+            if len(param_order) != 1:
+                raise WebComPyException(
+                    f"RPC subscription {name!r}: expected exactly one parameter of type {contract.params_type!r}"
+                )
+            param_type = param_schemas[param_order[0]]
+            if param_type != contract.params_type:
+                raise WebComPyException(
+                    f"RPC subscription {name!r}: parameter type mismatch: expected {contract.params_type!r}, got {param_type!r}"
+                )
+            origin = typing.get_origin(result_schema)
+            args = typing.get_args(result_schema)
+            if origin not in (collections.abc.AsyncIterator, collections.abc.AsyncGenerator):
+                raise WebComPyException(
+                    f"RPC subscription {name!r}: return annotation must be AsyncIterator[T] or AsyncGenerator[T, None]"
+                )
+            if not args:
+                raise WebComPyException(f"RPC subscription {name!r}: missing element type (e.g. AsyncIterator[T])")
+            element = args[0]
+            if element is object or element is Any:
+                raise WebComPyException(
+                    f"RPC subscription {name!r}: element type must be a concrete type, got {element!r}"
+                )
+            if element != contract.event_type:
+                raise WebComPyException(
+                    f"RPC subscription {name!r}: element type mismatch: expected {contract.event_type!r}, got {element!r}"
+                )
+            if origin is collections.abc.AsyncGenerator and len(args) == 2 and args[1] is not type(None):
+                raise WebComPyException(f"RPC subscription {name!r}: AsyncGenerator second arg must be None")
+            self._subscriptions[name] = SubscriptionInfo(
+                name=name,
+                func=impl,
+                param_schemas=param_schemas,
+                param_order=param_order,
+                required=required,
+                replay_size=contract.replay_size,
+            )
+            return None
+        raise TypeError(f"bind expects Procedure, StreamingProcedure or Subscription, got {type(contract)!r}")
 
     def register_type_handler(
         self,

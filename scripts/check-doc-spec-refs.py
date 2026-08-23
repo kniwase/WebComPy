@@ -28,6 +28,7 @@ DOC_FILES = [
     ROOT / "CONTRIBUTING.md",
     ROOT / "CONTRIBUTING.ja.md",
     *(ROOT / ".opencode" / "skills").glob("*/SKILL.md"),
+    *(ROOT / "docs_app" / "documents").glob("*.md"),
 ]
 
 RETIRED_API_NAMES = [
@@ -42,8 +43,19 @@ RETIRED_API_NAMES = [
     "Reactive[",
 ]
 
+RETIRED_PATTERNS = [
+    r"\bapp\.rpc\.register\b",
+    r"\bapp\.rpc\.procedure\b",
+    r"\brpc\.call\b",
+    r"\brpc\.notify\b",
+    r"\brpc\.stream\b",
+    r"\bregister_subscription\b",
+    r"\bRpcWsClient\.call\b",
+    r"\bRpcWsClient\.subscribe\b",
+]
+
 SPEC_REF_RE = re.compile(r"openspec/specs/([\w-]+)(?:/spec\.md)?")
-RETIRED_RE = re.compile("|".join(re.escape(name) for name in RETIRED_API_NAMES))
+RETIRED_RE = re.compile("|".join(re.escape(name) for name in RETIRED_API_NAMES) + "|" + "|".join(RETIRED_PATTERNS))
 
 
 def main() -> int:

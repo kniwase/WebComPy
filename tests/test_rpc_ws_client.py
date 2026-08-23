@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
 
@@ -12,11 +13,17 @@ from webcompy.di._keys import RPC_REGISTRY_KEY
 from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.ports._keys import WEBSOCKET_PORT_KEY
 from webcompy.realtime import ConnectionState
-from webcompy.rpc import RpcError, RpcSubscriptionState, RpcWsClient
+from webcompy.rpc import Procedure, RpcError, RpcSubscriptionState, RpcWsClient, batch, notify
 from webcompy.rpc._registry import ProcedureRegistry
 from webcompy_testing import FakeWebSocketPort
 
 WS_URL = "/_webcompy-rpc"
+
+
+@dataclass
+class WsAddParams:
+    a: int
+    b: int = 0
 
 
 @pytest.fixture
@@ -489,4 +496,122 @@ class TestHeartbeat:
         pings = [f for f in _frames(rt_env.port) if f.get("method") == "_webcompy.ping"]
         assert pings == []
         assert client.state.value == ConnectionState.OPEN
+        client.close()
+
+
+class TestContractBatchNotifyNoIo:
+    def test_ws_batch_empty_no_io(self):
+        import asyncio
+
+        assert asyncio.run(batch()) == ()
+
+    def test_ws_notify_empty_no_io(self):
+        import asyncio
+
+        assert asyncio.run(notify()) is None
+
+
+def test_contract_call_via_ws_requires_open():
+    # RpcWsClient in non-browser is SSR no-op, call should raise
+    import warnings
+    from dataclasses import dataclass
+
+    from webcompy.rpc import Procedure
+
+    @dataclass
+    class AddParams:
+        a: int
+        b: int = 0
+
+    registry = ProcedureRegistry()
+    scope = DIScope()
+    scope.provide(RPC_REGISTRY_KEY, registry)
+    token = _active_di_scope.set(scope)
+    try:
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            client = RpcWsClient()
+        proc = Procedure("add", AddParams, int)
+        import asyncio
+
+        async def _run():
+            return await proc(client, AddParams(a=1))
+
+        with pytest.raises(RpcError):
+            asyncio.run(_run())
+    finally:
+        _active_di_scope.reset(token)
+
+
+class TestClientBatchNotifyWire:
+    @pytest.mark.asyncio
+    async def test_batch_sends_single_array_frame_and_correlates_responses(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        rt_env.port.emit_open(WS_URL)
+        proc = Procedure("add", WsAddParams, int)
+        c1 = proc(client, WsAddParams(a=1))
+        c2 = proc(client, WsAddParams(a=2))
+        task = asyncio.create_task(batch(c1, c2))
+        await asyncio.sleep(0)
+
+        frames = _frames(rt_env.port)
+        assert isinstance(frames[-1], list), "typed batch must be sent as one array text frame"
+        assert len(frames[-1]) == 2
+        assert [entry["method"] for entry in frames[-1]] == ["add", "add"]
+        assert all(isinstance(entry["id"], int) for entry in frames[-1])
+        assert all(entry["params"] == {"a": i + 1, "b": 0} for i, entry in enumerate(frames[-1]))
+
+        # a single array response frame resolves every future in order
+        responses = [{"jsonrpc": "2.0", "result": entry["params"]["a"] + 10, "id": entry["id"]} for entry in frames[-1]]
+        rt_env.port.emit_message(WS_URL, json.dumps(responses))
+        assert await task == (11, 12)
+        with pytest.raises(RuntimeError, match="already awaited"):
+            await c1
+        client.close()
+
+    @pytest.mark.asyncio
+    async def test_reader_splits_array_response_frames_for_single_calls(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        rt_env.port.emit_open(WS_URL)
+        proc = Procedure("add", WsAddParams, int)
+
+        async def _call1():
+            return await proc(client, WsAddParams(a=4))
+
+        async def _call2():
+            return await proc(client, WsAddParams(a=5))
+
+        t1 = asyncio.create_task(_call1())
+        t2 = asyncio.create_task(_call2())
+        await asyncio.sleep(0)
+        requests = _frames(rt_env.port)[-2:]
+        # answer both calls out of order inside ONE array response frame
+        responses = sorted(
+            ({"jsonrpc": "2.0", "result": req["params"]["a"], "id": req["id"]} for req in requests),
+            key=lambda entry: entry["result"],
+            reverse=True,
+        )
+        rt_env.port.emit_message(WS_URL, json.dumps(responses))
+        assert await t1 == 4
+        assert await t2 == 5
+        client.close()
+
+    @pytest.mark.asyncio
+    async def test_notify_sends_single_idless_array_frame_without_futures(self, rt_env) -> None:
+        client = RpcWsClient(heartbeat_interval=None, reconnect_base_delay=0.01)
+        rt_env.port.emit_open(WS_URL)
+        proc = Procedure("add", WsAddParams, int)
+        c1 = proc(client, WsAddParams(a=1))
+        c2 = proc(client, WsAddParams(a=2))
+        await notify(c1, c2)
+
+        frames = _frames(rt_env.port)
+        last = frames[-1]
+        assert isinstance(last, list), "typed notify must be sent as one id-less array text frame"
+        assert len(last) == 2
+        assert all("id" not in entry for entry in last)
+        assert all(entry["params"] == {"a": i + 1, "b": 0} for i, entry in enumerate(last))
+        assert client._in_flight == {}, "notify must not register response futures"
+        with pytest.raises(RuntimeError, match="already awaited"):
+            await c1
         client.close()

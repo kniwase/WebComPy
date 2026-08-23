@@ -83,6 +83,11 @@ DOCS_SECTIONS: list[DocsSection] = [
                 "source": "documents/typed_realtime.md",
             },
             {
+                "label": "RPC Contracts",
+                "path": "/documents/rpc-contracts",
+                "source": "documents/rpc_contracts.md",
+            },
+            {
                 "label": "RPC",
                 "path": "/documents/rpc",
                 "source": "documents/rpc.md",

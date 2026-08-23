@@ -1,9 +1,9 @@
 from collections.abc import AsyncIterator
 
+from my_app.rpc_schema import CountUpParams, count_up, count_up_sync, fail_midway
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html, repeat
-from webcompy.rpc import RpcWsClient
-from webcompy.rpc import stream as rpc_stream
+from webcompy.rpc import RpcHttpClient, RpcWsClient
 from webcompy.signal import use_state
 
 
@@ -12,6 +12,7 @@ def RpcStreamPage(context: ComponentContext[None]):
     context.set_title("RPC Streaming - E2E")
 
     client = RpcWsClient(reconnect_base_delay=0.2)
+    http_client = RpcHttpClient()
     status = use_state(lambda: "idle")
     items = use_state(lambda: [])
     message = use_state(lambda: "")
@@ -31,22 +32,22 @@ def RpcStreamPage(context: ComponentContext[None]):
             status.value = "failed"
 
     async def _http(_) -> None:
-        await _consume(await rpc_stream("count_up", {"n": 5}, result_type=int))
+        await _consume(count_up(http_client, CountUpParams(n=5)))
 
     async def _http_sync(_) -> None:
-        await _consume(await rpc_stream("count_up_sync", {"n": 3}, result_type=int))
+        await _consume(count_up_sync(http_client, CountUpParams(n=3)))
 
     async def _http_error(_) -> None:
-        await _consume(await rpc_stream("fail_midway", {"n": 5}, result_type=int))
+        await _consume(fail_midway(http_client, CountUpParams(n=5)))
 
     async def _ws(_) -> None:
-        await _consume(await client.stream("count_up", {"n": 5}, result_type=int))
+        await _consume(count_up(client, CountUpParams(n=5)))
 
     async def _ws_sync(_) -> None:
-        await _consume(await client.stream("count_up_sync", {"n": 5}, result_type=int))
+        await _consume(count_up_sync(client, CountUpParams(n=5)))
 
     async def _ws_error(_) -> None:
-        await _consume(await client.stream("fail_midway", {"n": 5}, result_type=int))
+        await _consume(fail_midway(client, CountUpParams(n=5)))
 
     return html.DIV(
         {"data-testid": "rpc-stream-page"},

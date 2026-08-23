@@ -15,22 +15,28 @@ from starlette.routing import WebSocketRoute
 from starlette.testclient import TestClient
 
 import webcompy_server.rpc._subscriptions as subs_mod
+from webcompy.rpc import Procedure, StreamingProcedure, Subscription
 from webcompy.rpc._registry import ProcedureRegistry
+from webcompy_server.rpc._dispatcher import dispatch_payload
 from webcompy_server.rpc._ws_endpoint import create_rpc_ws_endpoint
 
 _RPC_PATH = "/rpc"
 
 
-def _add(a: int, b: int = 0) -> int:
-    return a + b
+@dataclass
+class AddParams:
+    a: int
+    b: int = 0
 
 
-def _echo(value: str = "") -> str:
-    return value
+@dataclass
+class EchoParams:
+    value: str = ""
 
 
-def _boom() -> None:
-    raise RuntimeError("boom")
+@dataclass
+class EmptyParams:
+    pass
 
 
 @dataclass
@@ -39,45 +45,82 @@ class User:
     name: str
 
 
+@dataclass
+class UserTickerParams:
+    user: User
+
+
+@dataclass
+class CountUpParams:
+    n: int
+
+
+@dataclass
+class TickerParams:
+    interval: float = 0.02
+
+
+@dataclass
+class FiniteTickerParams:
+    interval: float = 0.01
+
+
+@dataclass
+class SixParams:
+    pass
+
+
+def _add(p: AddParams) -> int:
+    return p.a + p.b
+
+
+def _echo(p: EchoParams) -> str:
+    return p.value
+
+
+def _boom(p: EmptyParams) -> int:
+    raise RuntimeError("boom")
+
+
 def _get_user(user: User) -> User:
     if not isinstance(user, User):
         raise TypeError(f"expected User instance, got {type(user).__name__}")
     return user
 
 
-def _get_typed() -> dict:
+def _get_typed(p: EmptyParams) -> dict:
     return {"data": b"hello", "price": Decimal("1.5"), "at": datetime(2024, 1, 2, 3, 4, 5)}
 
 
-async def _ticker(interval: float = 0.02) -> object:
+async def _ticker(p: TickerParams) -> AsyncIterator[dict]:
     import itertools
 
     for i in itertools.count(1):
-        await asyncio.sleep(interval)
+        await asyncio.sleep(p.interval)
         yield {"seq": i}
 
 
-async def _finite(interval: float = 0.01) -> object:
+async def _finite(p: FiniteTickerParams) -> AsyncIterator[dict]:
     for i in range(1, 4):
-        await asyncio.sleep(interval)
+        await asyncio.sleep(p.interval)
         yield {"seq": i}
 
 
-async def _six_events() -> object:
+async def _six_events(p: SixParams) -> AsyncIterator[dict]:
     for i in range(1, 7):
         yield {"seq": i}
 
 
-async def _count_up(n: int) -> AsyncIterator[int]:
-    for i in range(1, n + 1):
+async def _count_up(p: CountUpParams) -> AsyncIterator[int]:
+    for i in range(1, p.n + 1):
         yield i
 
 
-def _count_up_sync(n: int) -> Iterator[int]:
-    yield from range(1, n + 1)
+def _count_up_sync(p: CountUpParams) -> Iterator[int]:
+    yield from range(1, p.n + 1)
 
 
-async def _fail_midway() -> AsyncIterator[int]:
+async def _fail_midway(p: EmptyParams) -> AsyncIterator[int]:
     yield 1
     raise RuntimeError("boom")
 
@@ -88,15 +131,15 @@ def _hub_of(endpoint) -> subs_mod.SubscriptionHub:
 
 def _make_registry() -> ProcedureRegistry:
     registry = ProcedureRegistry()
-    registry.register("add", _add)
-    registry.register("echo", _echo)
-    registry.register("boom", _boom)
-    registry.register("get_user", _get_user)
-    registry.register("get_typed", _get_typed)
-    registry.register("count_up", _count_up)
-    registry.register("count_up_sync", _count_up_sync)
-    registry.register("fail_midway", _fail_midway)
-    registry.register_subscription("ticker", _ticker, replay_size=256)
+    registry.bind(Procedure("add", AddParams, int), _add)
+    registry.bind(Procedure("echo", EchoParams, str), _echo)
+    registry.bind(Procedure("boom", EmptyParams, int), _boom)
+    registry.bind(Procedure("get_user", User, User), _get_user)
+    registry.bind(Procedure("get_typed", EmptyParams, dict), _get_typed)
+    registry.bind(StreamingProcedure("count_up", CountUpParams, int), _count_up)
+    registry.bind(StreamingProcedure("count_up_sync", CountUpParams, int), _count_up_sync)
+    registry.bind(StreamingProcedure("fail_midway", EmptyParams, int), _fail_midway)
+    registry.bind(Subscription("ticker", TickerParams, dict, replay_size=256), _ticker)
     return registry
 
 
@@ -113,14 +156,25 @@ class TestWSCalls:
             response = ws.receive_json()
             assert response == {"jsonrpc": "2.0", "result": 5, "id": 1}
 
-    def test_positional_params(self, app: Starlette) -> None:
+    def test_positional_params_rejected(self, app: Starlette) -> None:
         with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
             ws.send_json({"jsonrpc": "2.0", "method": "add", "params": [5], "id": "x"})
+            body = ws.receive_json()
+            assert body["error"]["code"] == -32602
+
+    def test_missing_params_rejected(self, app: Starlette) -> None:
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            ws.send_json({"jsonrpc": "2.0", "method": "add", "id": 1})
+            assert ws.receive_json()["error"]["code"] == -32602
+
+    def test_object_params_relying_on_defaults(self, app: Starlette) -> None:
+        with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
+            ws.send_json({"jsonrpc": "2.0", "method": "add", "params": {"a": 5}, "id": 1})
             assert ws.receive_json()["result"] == 5
 
     def test_typed_result_meta_matches_http(self, app: Starlette) -> None:
         with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
-            ws.send_json({"jsonrpc": "2.0", "method": "get_typed", "id": 1})
+            ws.send_json({"jsonrpc": "2.0", "method": "get_typed", "params": {}, "id": 1})
             body = ws.receive_json()
             assert body["result"] == {"data": "aGVsbG8=", "price": "1.5", "at": "2024-01-02T03:04:05"}
             assert body["meta"] == {"/data": "bytes", "/price": "decimal", "/at": "datetime"}
@@ -134,7 +188,7 @@ class TestWSCalls:
 
     def test_internal_error_hides_details(self, app: Starlette) -> None:
         with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
-            ws.send_json({"jsonrpc": "2.0", "method": "boom", "id": 1})
+            ws.send_json({"jsonrpc": "2.0", "method": "boom", "params": {}, "id": 1})
             body = ws.receive_json()
             assert body["error"]["code"] == -32603
             assert "boom" not in body["error"]["message"]
@@ -304,7 +358,7 @@ class TestSubscriptions:
 
     def test_cursor_older_than_buffer_floor_resync(self) -> None:
         registry = ProcedureRegistry()
-        registry.register_subscription("ticker", _ticker, replay_size=3)
+        registry.bind(Subscription("ticker", TickerParams, dict, replay_size=3), _ticker)
         typed_app = Starlette(routes=[WebSocketRoute(_RPC_PATH, create_rpc_ws_endpoint(registry))])
         with TestClient(typed_app) as client:
             with client.websocket_connect(_RPC_PATH) as ws:
@@ -373,10 +427,10 @@ class TestSubscriptions:
 
         registry.register_type_handler(User, _encode_user, _decode_user)
 
-        async def _user_ticker(user: User) -> object:
-            yield {"user_id": user.id}
+        async def _user_ticker(p: UserTickerParams) -> AsyncIterator[dict]:
+            yield {"user_id": p.user.id}
 
-        registry.register_subscription("user_ticker", _user_ticker)
+        registry.bind(Subscription("user_ticker", UserTickerParams, dict), _user_ticker)
         typed_app = Starlette(routes=[WebSocketRoute(_RPC_PATH, create_rpc_ws_endpoint(registry))])
         with TestClient(typed_app) as client, client.websocket_connect(_RPC_PATH) as ws:
             ws.send_json(
@@ -480,7 +534,7 @@ class TestSubscriptions:
     def test_finished_source_stream_reaped_and_not_reused(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(subs_mod, "_STREAM_IDLE_TIMEOUT", 0.1)
         registry = ProcedureRegistry()
-        registry.register_subscription("finite", _finite)
+        registry.bind(Subscription("finite", FiniteTickerParams, dict), _finite)
         endpoint = create_rpc_ws_endpoint(registry)
         hub = _hub_of(endpoint)
         app = Starlette(routes=[WebSocketRoute(_RPC_PATH, endpoint)])
@@ -518,9 +572,8 @@ class TestSubscriptions:
     async def test_reap_does_not_evict_a_replacement_stream(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(subs_mod, "_STREAM_IDLE_TIMEOUT", 0.05)
         registry = ProcedureRegistry()
-        registry.register_subscription("finite", _finite)
+        registry.bind(Subscription("finite", FiniteTickerParams, dict), _finite)
         hub = subs_mod.SubscriptionHub(registry)
-        key = ("finite", "null")
 
         class _FakeConn:
             def __init__(self) -> None:
@@ -536,11 +589,11 @@ class TestSubscriptions:
             {
                 "jsonrpc": "2.0",
                 "method": "_webcompy.subscribe",
-                "params": {"method": "finite", "params": None},
+                "params": {"method": "finite", "params": {}},
                 "id": 1,
             },
         )
-        stream_s1 = hub._streams[key]
+        stream_s1 = next(iter(hub._streams.values()))
         for _ in range(200):
             if stream_s1.source_task.done():
                 break
@@ -554,11 +607,11 @@ class TestSubscriptions:
             {
                 "jsonrpc": "2.0",
                 "method": "_webcompy.subscribe",
-                "params": {"method": "finite", "params": None},
+                "params": {"method": "finite", "params": {}},
                 "id": 2,
             },
         )
-        stream_s2 = hub._streams[key]
+        stream_s2 = next(iter(hub._streams.values()))
         assert stream_s2 is not stream_s1
         # the first subscriber detaches; the old stream's idle timer fires and
         # must not evict the replacement stream's hub entry
@@ -572,16 +625,18 @@ class TestSubscriptions:
             },
         )
         await asyncio.sleep(0.15)
-        assert hub._streams.get(key) is stream_s2, "reaping the finished stream must not evict its replacement"
+        assert hub._streams.get(("finite", "{}")) is stream_s2, (
+            "reaping the finished stream must not evict its replacement"
+        )
 
     @pytest.mark.asyncio
     async def test_rejoin_full_replay_at_buffer_floor_minus_one(self) -> None:
         registry = ProcedureRegistry()
-        registry.register_subscription("six", _six_events, replay_size=3)
+        registry.bind(Subscription("six", SixParams, dict, replay_size=3), _six_events)
         hub = subs_mod.SubscriptionHub(registry)
         info = registry.get_subscription("six")
         assert info is not None
-        stream = subs_mod._Stream(hub, info, "null", {})
+        stream = subs_mod._Stream(hub, info, "{}", {"p": SixParams()})
         stream.start_source()
         for _ in range(200):
             if stream.cursor >= 6:
@@ -602,7 +657,7 @@ class TestSubscriptions:
 
 
 def _closed_slow_procedure(closed: list[bool]):
-    async def _slow() -> AsyncIterator[int]:
+    async def _slow(p: EmptyParams) -> AsyncIterator[int]:
         try:
             yield 1
             await asyncio.sleep(3600)
@@ -665,7 +720,7 @@ class TestStreamCalls:
 
     def test_mid_stream_exception_emits_error_without_done(self, app: Starlette) -> None:
         with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
-            ws.send_json({"jsonrpc": "2.0", "method": "fail_midway", "id": 1, "stream": True})
+            ws.send_json({"jsonrpc": "2.0", "method": "fail_midway", "params": {}, "id": 1, "stream": True})
             ack = ws.receive_json()
             stream_id = ack["result"]["stream_id"]
             frames = [ws.receive_json(), ws.receive_json()]
@@ -678,11 +733,11 @@ class TestStreamCalls:
     def test_stream_cancel_stops_the_generator(self) -> None:
         closed: list[bool] = []
         registry = ProcedureRegistry()
-        registry.register("slow", _closed_slow_procedure(closed))
+        registry.bind(StreamingProcedure("slow", EmptyParams, int), _closed_slow_procedure(closed))
         endpoint = create_rpc_ws_endpoint(registry)
         app = Starlette(routes=[WebSocketRoute(_RPC_PATH, endpoint)])
         with TestClient(app) as client, client.websocket_connect(_RPC_PATH) as ws:
-            ws.send_json({"jsonrpc": "2.0", "method": "slow", "id": 1, "stream": True})
+            ws.send_json({"jsonrpc": "2.0", "method": "slow", "params": {}, "id": 1, "stream": True})
             stream_id = ws.receive_json()["result"]["stream_id"]
             assert ws.receive_json()["params"]["stream_id"] == stream_id
             ws.send_json({"jsonrpc": "2.0", "method": "_webcompy.stream_cancel", "params": {"stream_id": stream_id}})
@@ -692,12 +747,12 @@ class TestStreamCalls:
     def test_socket_close_cancels_all_streams(self) -> None:
         closed: list[bool] = []
         registry = ProcedureRegistry()
-        registry.register("slow", _closed_slow_procedure(closed))
+        registry.bind(StreamingProcedure("slow", EmptyParams, int), _closed_slow_procedure(closed))
         endpoint = create_rpc_ws_endpoint(registry)
         app = Starlette(routes=[WebSocketRoute(_RPC_PATH, endpoint)])
         with TestClient(app) as client:
             with client.websocket_connect(_RPC_PATH) as ws:
-                ws.send_json({"jsonrpc": "2.0", "method": "slow", "id": 1, "stream": True})
+                ws.send_json({"jsonrpc": "2.0", "method": "slow", "params": {}, "id": 1, "stream": True})
                 stream_id = ws.receive_json()["result"]["stream_id"]
                 assert ws.receive_json()["params"]["stream_id"] == stream_id
             _wait_until(lambda: bool(closed))
@@ -746,3 +801,29 @@ class TestStreamCalls:
             by_id = {entry["id"]: entry for entry in body}
             assert by_id[1]["error"]["code"] == -32600
             assert by_id[2]["result"] == 3
+
+
+@dataclass
+class _LocalAddParams:
+    a: int
+    b: int = 0
+
+
+def _local_add(p: _LocalAddParams) -> int:
+    return p.a + p.b
+
+
+def test_dispatch_payload_single_call_object_params():
+    registry = ProcedureRegistry()
+    registry.bind(Procedure("add", _LocalAddParams, int), _local_add)
+    payload = {"jsonrpc": "2.0", "method": "add", "params": {"a": 2, "b": 3}, "id": 1}
+    result = asyncio.run(dispatch_payload(payload, registry))
+    assert result["result"] == 5
+
+
+def test_dispatch_payload_array_params_rejected():
+    registry = ProcedureRegistry()
+    registry.bind(Procedure("add", _LocalAddParams, int), _local_add)
+    payload = {"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": 1}
+    result = asyncio.run(dispatch_payload(payload, registry))
+    assert result["error"]["code"] == -32602

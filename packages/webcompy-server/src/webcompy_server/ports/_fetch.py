@@ -207,6 +207,8 @@ class ServerFetchPort(FetchPort):
             url = self._extract_url_from_cache_key(key)
             if not self.is_self_site_url(url):
                 continue
+            if response.status_code == 204 or not response.text:
+                continue
             result[key] = TransferFetchEntry(
                 status_code=response.status_code,
                 headers=response.headers,

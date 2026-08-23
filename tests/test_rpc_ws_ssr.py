@@ -4,12 +4,15 @@ import asyncio
 import html
 import json
 import re
+import warnings
+from dataclasses import dataclass
 
 import pytest
 
 from webcompy.components._generator import define_component
+from webcompy.di import DIScope, provide
 from webcompy.di._keys import RPC_REGISTRY_KEY
-from webcompy.di._scope import DIScope, _active_di_scope
+from webcompy.di._scope import _active_di_scope
 from webcompy.ports._keys import WEBSOCKET_PORT_KEY
 from webcompy.realtime import ConnectionState
 from webcompy.rpc import RpcError, RpcSubscriptionState, RpcWsClient
@@ -83,3 +86,38 @@ class TestSsrNoOp:
                 RpcWsClient()
         finally:
             _active_di_scope.reset(token)
+
+
+@dataclass
+class AddParamsContract:
+    a: int
+
+
+@dataclass
+class TickerParams:
+    ticker_id: str
+
+
+def test_ws_ssr_noop():
+    from webcompy.rpc import Procedure, Subscription
+
+    registry = ProcedureRegistry()
+    scope = DIScope()
+    scope.__enter__()
+    try:
+        provide(RPC_REGISTRY_KEY, registry)
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            client = RpcWsClient()
+            proc = Procedure("add", AddParamsContract, int)
+            sub_proc = Subscription("ticker", TickerParams, int)
+            sub = sub_proc(client, TickerParams(ticker_id="a"))
+            assert sub.state.value == RpcSubscriptionState.CLOSED
+
+            async def _run_call():
+                return await proc(client, AddParamsContract(a=1))
+
+            with pytest.raises(RpcError):
+                asyncio.run(_run_call())
+    finally:
+        scope.__exit__(None, None, None)

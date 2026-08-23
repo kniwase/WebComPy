@@ -1,5 +1,6 @@
 import random
 
+from my_app.rpc_schema import AddParams, TickerParams, add, ticker
 from webcompy.aio import to_reactive_list
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import html, repeat
@@ -16,20 +17,21 @@ def RpcWsPage(context: ComponentContext[None]):
     result = use_state(lambda: "")
 
     ticker_id = f"t{random.random()}"
-    sub = client.subscribe("ticker", {"ticker_id": ticker_id}, event_type=dict)
+    sub = ticker(client, TickerParams(ticker_id=ticker_id))
     events = to_reactive_list(sub)
     seqs = use_computed(lambda: [event["seq"] for event in events.items.value])
     count = use_computed(lambda: len(seqs.value))
 
     async def _call(_) -> None:
         try:
-            value = await client.call("add", {"a": 2, "b": 3}, result_type=int)
+            value = await add(client, AddParams(a=2, b=3))
             result.value = f"ok:{value}"
         except Exception as err:
             result.value = f"err:{err}"
 
     async def _close(_) -> None:
         try:
+            # use low-level notify via transport for _webcompy.close (outside contracts)
             await client.notify("_webcompy.close")
         except Exception as err:
             result.value = f"close-err:{err}"

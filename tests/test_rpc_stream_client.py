@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 import pytest
@@ -11,7 +12,7 @@ from webcompy.di import DIScope
 from webcompy.di._keys import RPC_REGISTRY_KEY
 from webcompy.ports._fetch import FetchPort, FetchStream, Response
 from webcompy.ports._keys import FETCH_PORT_KEY
-from webcompy.rpc import RpcError, RpcStreamState, stream
+from webcompy.rpc import RpcError, RpcHttpClient, RpcStream, RpcStreamState, StreamingProcedure
 from webcompy.rpc._registry import ProcedureRegistry
 from webcompy_testing import FakeFetchPort
 
@@ -19,6 +20,16 @@ from webcompy_testing import FakeFetchPort
 @dataclass
 class Item:
     n: int
+
+
+@dataclass
+class CountParams:
+    n: int
+
+
+async def _count_up(p: CountParams) -> AsyncIterator[int]:
+    for i in range(1, p.n + 1):
+        yield i
 
 
 def _sse_text(*events: tuple[str, str]) -> str:
@@ -54,32 +65,59 @@ def rpc_env():
         scope.__exit__(None, None, None)
 
 
+def _client() -> RpcHttpClient:
+    return RpcHttpClient()
+
+
+def _proc() -> StreamingProcedure[CountParams, int]:
+    return StreamingProcedure("count_up", CountParams, int)
+
+
 class TestStreamClient:
     @pytest.mark.asyncio
-    async def test_json_error_raises_before_returning(self, rpc_env) -> None:
+    async def test_contract_call_returns_sync_stream_handle(self, rpc_env) -> None:
+        _, fetch_port = rpc_env
+        text = _sse_text(
+            ("item", _item_event(1)),
+            ("done", "null"),
+        )
+        fetch_port._streams[("POST", "/_webcompy-rpc")] = [text]
+        stream = _proc()(_client(), CountParams(n=1))
+
+        assert isinstance(stream, RpcStream)
+        assert not asyncio.iscoroutine(stream)
+        assert [item async for item in stream] == [1]
+
+    @pytest.mark.asyncio
+    async def test_json_error_fails_stream_before_first_item(self, rpc_env) -> None:
         _, fetch_port = rpc_env
         key = ("POST", "/_webcompy-rpc")
         fetch_port._responses[key] = _json_error_response()
 
+        rpc_stream = _proc()(_client(), CountParams(n=1))
+        assert isinstance(rpc_stream, RpcStream)
+
         with pytest.raises(RpcError) as exc_info:
-            await stream("missing")
+            async for _item in rpc_stream:
+                pass
         assert exc_info.value.code == -32601
+        assert rpc_stream.state.value == RpcStreamState.FAILED
 
     @pytest.mark.asyncio
     async def test_sse_stream_yields_typed_items_across_chunk_boundaries(self, rpc_env) -> None:
         _, fetch_port = rpc_env
         text = _sse_text(
-            ("item", _item_event({"n": 1})),
-            ("item", _item_event({"n": 2})),
+            ("item", _item_event(1)),
+            ("item", _item_event(2)),
             ("done", "null"),
         )
         mid = len(text) // 2
         fetch_port._streams[("POST", "/_webcompy-rpc")] = [text[:mid], text[mid:]]
 
-        rpc_stream = await stream("items", {"n": 2}, result_type=Item)
+        rpc_stream = _proc()(_client(), CountParams(n=2))
         items = [item async for item in rpc_stream]
 
-        assert items == [Item(1), Item(2)]
+        assert items == [1, 2]
         assert rpc_stream.state.value == RpcStreamState.CLOSED
 
     @pytest.mark.asyncio
@@ -91,7 +129,7 @@ class TestStreamClient:
         )
         fetch_port._streams[("POST", "/_webcompy-rpc")] = [text]
 
-        rpc_stream = await stream("count", {}, result_type=int)
+        rpc_stream = _proc()(_client(), CountParams(n=2))
         iterator = rpc_stream.__aiter__()
         assert await iterator.__anext__() == 1
         with pytest.raises(RpcError) as exc_info:
@@ -106,7 +144,7 @@ class TestStreamClient:
         text = _sse_text(("item", _item_event(1)))
         fetch_port._streams[("POST", "/_webcompy-rpc")] = [text]
 
-        rpc_stream = await stream("count", {}, result_type=int)
+        rpc_stream = _proc()(_client(), CountParams(n=2))
         iterator = rpc_stream.__aiter__()
         assert await iterator.__anext__() == 1
         with pytest.raises(RpcError, match="ended unexpectedly"):
@@ -115,6 +153,7 @@ class TestStreamClient:
     @pytest.mark.asyncio
     async def test_close_aborts_the_fetch(self) -> None:
         registry = ProcedureRegistry()
+        registry.bind(_proc(), _count_up)
         release = asyncio.Event()
         port = _ControlledPort(release)
         scope = DIScope()
@@ -122,18 +161,20 @@ class TestStreamClient:
         try:
             scope.provide(FETCH_PORT_KEY, port)
             scope.provide(RPC_REGISTRY_KEY, registry)
-            rpc_stream = await stream("count", {}, result_type=int)
+            rpc_stream = _proc()(_client(), CountParams(n=1))
+            assert isinstance(rpc_stream, RpcStream)
         finally:
             scope.__exit__(None, None, None)
 
-        await asyncio.sleep(0)
+        for _ in range(5):
+            await asyncio.sleep(0)
         rpc_stream.close()
 
         assert port.aborted is True
         assert rpc_stream.state.value == RpcStreamState.CLOSED
 
     @pytest.mark.asyncio
-    async def test_non_json_non_sse_body_raises(self, rpc_env) -> None:
+    async def test_non_json_non_sse_body_fails_the_stream(self, rpc_env) -> None:
         _, fetch_port = rpc_env
         fetch_port._responses[("POST", "/_webcompy-rpc")] = Response(
             text="not json",
@@ -143,8 +184,10 @@ class TestStreamClient:
             ok=True,
         )
 
+        rpc_stream = _proc()(_client(), CountParams(n=1))
         with pytest.raises(RpcError, match="Invalid JSON-RPC response"):
-            await stream("missing")
+            async for _item in rpc_stream:
+                pass
 
 
 class _StaticStream(FetchStream):
@@ -246,13 +289,18 @@ class TestStreamClientEnvelopeAndSsr:
         try:
             scope.provide(FETCH_PORT_KEY, port)
             scope.provide(RPC_REGISTRY_KEY, registry)
-            rpc_stream = await stream("count", {"n": 2})
+            rpc_stream = _proc()(_client(), CountParams(n=2))
         finally:
             scope.__exit__(None, None, None)
 
+        for _ in range(20):
+            await asyncio.sleep(0)
+            if port.bodies:
+                break
+
         envelope = json.loads(port.bodies[0])
         assert envelope["stream"] is True
-        assert envelope["method"] == "count"
+        assert envelope["method"] == "count_up"
         assert envelope["params"] == {"n": 2}
         assert "id" in envelope
         assert [item async for item in rpc_stream] == []
@@ -266,10 +314,15 @@ class TestStreamClientEnvelopeAndSsr:
         try:
             scope.provide(FETCH_PORT_KEY, _NoopPort())
             scope.provide(RPC_REGISTRY_KEY, registry)
-            with pytest.warns(UserWarning, match="outside the browser"):
-                rpc_stream = await stream("count", {})
+            import warnings
+
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("always")
+                rpc_stream = _proc()(_client(), CountParams(n=1))
         finally:
             scope.__exit__(None, None, None)
 
+        assert isinstance(rpc_stream, RpcStream)
+        assert not asyncio.iscoroutine(rpc_stream)
         assert rpc_stream.state.value == RpcStreamState.CLOSED
         assert [item async for item in rpc_stream] == []
