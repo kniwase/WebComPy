@@ -168,11 +168,13 @@ class SuspenseElement(DynamicElement):
                                 "Suspense child async setup raised, rendering error_fallback: %s",
                                 result,
                             )
-                            self._cleanup_pending_pairs(pairs)
+                            for child in list(children):
+                                child._remove_element(True, False)
                             self._children = self._generate_children(self._error_fallback_generator)
                             return
                         else:
-                            self._cleanup_pending_pairs(pairs)
+                            for child in list(children):
+                                child._remove_element(True, False)
                             raise result
                 self._resolve_component_templates(pairs, results)
         finally:
