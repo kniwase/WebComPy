@@ -10,12 +10,13 @@ The application lifecycle defines how a WebComPy application starts, runs, and s
 In the browser (PyScript) environment, `app.run(selector)` SHALL mount and render the application into the DOM element matching the given CSS selector. Calling `run()` in a non-PyScript (server) environment SHALL raise `WebComPyException`. `app.run()` SHALL internally create a single `RenderContext` via `create_render_context()`, which owns the DI scope, Router, AppDocumentRoot, and all rendering state. The `RenderContext`'s DI scope SHALL remain active for the app's lifetime. `on_render_context_init(ctx)` and `on_app_ready(ctx)` SHALL be called on plugins before the first render.
 
 #### Scenario: Running an app with profiling enabled
-- **WHEN** a developer creates `WebComPyApp(..., profile=True)` and calls `app.run()` in the browser
-- **THEN** the application SHALL record timestamps for each startup phase (`pyscript_ready`, `init_start`, `imports_done`, `init_done`, `run_start`, `run_done`, `loading_removed`)
-- **AND** a formatted profile summary SHALL be printed to the browser console after the loading indicator is removed
-- **AND** `WebComPyApp._record_phase(name)` SHALL record `time.perf_counter()` into `_profile_data` only when `_profile` is True
-- **AND** `WebComPyApp._emit_profile_summary()` SHALL format and output the profile summary — in Emscripten via `browser.console.log()`, otherwise via `print()`
-- **AND** the summary SHALL show elapsed time between consecutive phases (`pyscript_ready → imports_done`, `imports_done → init_done`, `init_done → run_start`, `run_start → run_done`, `run_done → loading_removed`) plus a total
+- **WHEN** a developer creates `WebComPyAppConfig(profile=True)` and calls `app.run()` in the browser
+- **THEN** the application SHALL record timestamps for each startup phase (`pyscript_ready`, `init_start`, `imports_done`, `init_done`, `run_start`, `custom_elements_defined`, `run_done`, `loading_removed`, `lazy_preload_start`, `lazy_preloaded`)
+- **AND** a formatted profile summary SHALL be printed to the browser console after the loading indicator is removed (in the browser, via a scheduled macro task so any pending lazy-preload batch completes first)
+- **AND** `WebComPyApp._record_phase(name)` SHALL record `time.perf_counter()` into `_profile_data` only when `_profile` is True, and SHALL keep only the first occurrence of each phase name
+- **AND** `_profile_data` SHALL be owned by the `WebComPyApp` instance (created in `WebComPyApp.__init__`) so that the generated bootstrap script can assign `app._profile_data["pyscript_ready"]` before any RenderContext exists; `RenderContext` SHALL NOT own profile state
+- **AND** `WebComPyApp._emit_profile_summary()` SHALL format and output the profile summary — in the browser via `pyscript.context.window.console.log()`, otherwise via `print()`
+- **AND** the summary SHALL show elapsed time between phases (`pyscript_ready → imports_done`, `imports_done → init_done`, `init_done → custom_elements_defined`, `custom_elements_defined → run_done`, `run_done → loading_removed`, `lazy_preload_start → lazy_preloaded`) plus a total; a pair whose end timestamp precedes its start timestamp SHALL NOT be shown
 
 #### Scenario: Accessing profile data
 - **WHEN** a developer accesses `app.profile_data` on a `WebComPyApp` with `profile=True`
@@ -84,6 +85,27 @@ In the browser (PyScript) environment, `app.run(selector)` SHALL mount and rende
 - **WHEN** a client requests a route from the dev server (`webcompy start`) and the route has a Component child (e.g. `HomePage` inside `RouterView`)
 - **THEN** the HTTP response HTML SHALL contain the full component subtree
 - **AND** the routed component's DIV SHALL have non-empty children
+
+### Requirement: The profiling summary shall include startup cost clusters beyond the core phases
+When profiling is enabled (`profile=True`), `WebComPyApp._record_phase` SHALL also record startup phases that account for the measured cost clusters: a custom-element bulk-registration phase named `custom_elements_defined` recorded after the hydration-time bulk `customElements.define` pass completes; a lazy-preload start phase named `lazy_preload_start` recorded when the router's lazy-route preload work is scheduled (or begins synchronously on the server); and a lazy-preload completion phase named `lazy_preloaded` recorded when that preload batch finishes executing (in the browser this is inside the scheduled macro task; on the server it is after the synchronous preload loop). Phases SHALL be recorded at most once each (the first occurrence wins). In the browser the formatted summary SHALL be emitted via a scheduled macro task (rather than synchronously at loading-indicator removal) so that any scheduled lazy-preload batch has completed before the summary prints; the elapsed time between these phases SHALL be shown alongside the core lifecycle phases. A pair whose end timestamp precedes its start timestamp SHALL NOT be shown.
+
+#### Scenario: Profiling summary includes the custom-element bulk-registration phase
+- **WHEN** an app runs in the browser with `WebComPyAppConfig(profile=True)` and named components are registered before hydration
+- **THEN** `app._profile_data` SHALL contain a phase recorded after the bulk custom-element registration pass
+- **AND** the formatted profile summary SHALL show the elapsed time associated with that phase
+
+#### Scenario: Profiling summary includes the lazy-preload span
+- **WHEN** an app with lazy routes runs with `profile=True` and `preload=True` (default)
+- **THEN** `app._profile_data` SHALL contain `lazy_preload_start` recorded when the preload batch is scheduled and `lazy_preloaded` recorded when the batch completes
+- **AND** the formatted profile summary SHALL show the elapsed time between them
+
+#### Scenario: Phases are recorded at most once
+- **WHEN** a profiled phase's recording site is reached more than once during a run
+- **THEN** only the first occurrence SHALL be recorded in `app._profile_data`
+
+#### Scenario: Profiling remains disabled by default
+- **WHEN** `profile=False` (the default) and an app runs
+- **THEN** no new phase timestamps SHALL be recorded, preserving the zero-overhead default behavior
 
 ### Requirement: The application shall create a RenderContext per request on the server
 On the server, `app.create_render_context(path)` SHALL create a fresh `RenderContext` for each SSR request. The `RenderContext` SHALL own all mutable rendering state: DI scope, Router, AppDocumentRoot, HeadPropsStore, Signal graph state, and deferred rendering state. After rendering, `RenderContext.dispose()` SHALL clean up all request-scoped resources. In the browser, `app.run()` SHALL internally create a single long-lived `RenderContext`.
