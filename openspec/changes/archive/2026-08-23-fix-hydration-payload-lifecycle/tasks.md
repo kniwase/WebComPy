@@ -55,3 +55,11 @@
 - [x] 7.5 Dispose chain walking: `RenderContext` stores `_prev_active_app_context` / `_prev_render_context_cv` / `_prev_active_di_scope` and `dispose()` walks past disposed predecessors to the next live context for all three bindings (`_active_app_context`, `_render_context_cv`, `_active_di_scope`)
 - [x] 7.6 Tests for 7.1–7.5 (caller leak after probe, DIScope leak after provide, timeout single-owner, SSR provisional ordinal, three-context walk) — existing suites extended, no new `Note` item (payload-inject-before-window skipped as low value per plan)
 - [x] 7.7 Spec sync: `di-scope` (context-manager descendant restore, three-context walk), `suspense` (caller restore, single-owner teardown, cancellation, SSR provisional)
+
+## 8. AI review follow-ups (round 5 — Approved polish, Option B)
+
+- [x] 8.1 Hydration payload open 3-level alignment: `_is_hydration_payload_open()` mirrors `_resolve_active_render_context` (`_active_app_context` → `app._render_context_cv` → `_app_instance`) so `ContextVar`-lost but per-app-CV-retained tasks close the window consistently; add unit repro for `ContextVar` loss + per-app CV retained path
+- [x] 8.2 Provisional transfer ids for error/browser fallbacks: wrap `_server_render` error-fallback, `_browser_render` initial fallback, and `_handle_error` fallback in `_transfer_probe_depth` provisional guard so all fallback trees (timeout, hydration, error, browser-only) leave ordinals aligned; harmless while payload closed but completes invariant
+- [x] 8.3 Dispose DI-unwind helper extraction: centralise the three `ContextVar` walks and DI walk in `_next_live_ctx` / `_next_live_render_ctx` / `_find_next_live_di` helpers, deduplicate the predecessor-chain traversal, and clarify that unwind belongs to the disposed tree only (foreign scopes untouched)
+- [x] 8.4 Tests for 8.1–8.3 (payload-open 3-level, error/browser fallback provisional ordinal, dispose helper three-context and active-child cases) — existing suites extended
+- [x] 8.5 Spec sync: `hydration-data-transfer` (payload-open 3-level), `suspense` (provisional for error/browser fallbacks), archived `design.md` Addendum round 5

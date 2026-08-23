@@ -253,26 +253,51 @@ class RenderContext(ABC):
         if self._disposed:
             return
         self._disposed = True
-        if _active_app_context.get() is self:
-            _active_app_context.reset(self._active_app_token)
-            cur = _active_app_context.get()
+
+        def _next_live_ctx(start):
+            cur = start
             while cur is not None and getattr(cur, "_disposed", False):
                 nxt = getattr(cur, "_prev_active_app_context", None)
                 if nxt is None:
                     nxt = getattr(cur, "_prev_app_instance", None)
                 cur = nxt
-            if cur is not _active_app_context.get():
-                _active_app_context.set(cur)
-        if self._app._render_context_cv.get() is self:
-            self._app._render_context_cv.reset(self._render_context_cv_token)
-            cur = self._app._render_context_cv.get()
+            return cur
+
+        def _next_live_render_ctx(start):
+            cur = start
             while cur is not None and getattr(cur, "_disposed", False):
                 nxt = getattr(cur, "_prev_render_context_cv", None)
                 if nxt is None:
                     nxt = getattr(cur, "_prev_app_instance", None)
                 cur = nxt
-            if cur is not self._app._render_context_cv.get():
-                self._app._render_context_cv.set(cur)
+            return cur
+
+        def _find_next_live_di(start_ctx):
+            cur = start_ctx
+            while cur is not None:
+                di = getattr(cur, "_prev_active_di_scope", None)
+                if di is not None and not getattr(di, "_disposed", False):
+                    return di
+                if not getattr(cur, "_disposed", False):
+                    di = getattr(cur, "_di_scope", None)
+                    if di is not None and not getattr(di, "_disposed", False):
+                        return di
+                nxt = getattr(cur, "_prev_active_app_context", None) or getattr(cur, "_prev_app_instance", None)
+                cur = nxt
+            return None
+
+        if _active_app_context.get() is self:
+            _active_app_context.reset(self._active_app_token)
+            cur = _active_app_context.get()
+            live = _next_live_ctx(cur)
+            if live is not cur:
+                _active_app_context.set(live)
+        if self._app._render_context_cv.get() is self:
+            self._app._render_context_cv.reset(self._render_context_cv_token)
+            cur = self._app._render_context_cv.get()
+            live = _next_live_render_ctx(cur)
+            if live is not cur:
+                self._app._render_context_cv.set(live)
         self._restore_browser_fallback()
         di_scope = self._di_scope
         root = self._root
@@ -289,37 +314,8 @@ class RenderContext(ABC):
                 _active_di_scope.set(None)  # type: ignore[arg-type]
             cur_di = _active_di_scope.get(None)
             if cur_di is not None and getattr(cur_di, "_disposed", False):
-                live_ctx = None
-                walk = getattr(self, "_prev_active_app_context", None)
-                while walk is not None:
-                    if not getattr(walk, "_disposed", False):
-                        live_ctx = walk
-                        break
-                    walk = getattr(walk, "_prev_active_app_context", None) or getattr(walk, "_prev_app_instance", None)
-                if live_ctx is not None and getattr(live_ctx, "_di_scope", None) is not None:
-                    candidate_di = getattr(live_ctx, "_di_scope", None)
-                    if candidate_di is not None and not getattr(candidate_di, "_disposed", False):
-                        cur_di = candidate_di
-                    else:
-                        cur_di = None
-                    prev_di = getattr(getattr(self, "_prev_active_app_context", None), "_prev_active_di_scope", None)
-                    if prev_di is not None and not getattr(prev_di, "_disposed", False):
-                        cur_di = prev_di
-                    elif cur_di is None or getattr(cur_di, "_disposed", False):
-                        walk2 = getattr(self, "_prev_active_app_context", None)
-                        while walk2 is not None:
-                            nxt = getattr(walk2, "_prev_active_di_scope", None)
-                            if nxt is not None and not getattr(nxt, "_disposed", False):
-                                cur_di = nxt
-                                break
-                            walk2 = getattr(walk2, "_prev_active_app_context", None) or getattr(
-                                walk2, "_prev_app_instance", None
-                            )
-                        else:
-                            cur_di = None
-                else:
-                    cur_di = None
-                _active_di_scope.set(cur_di)  # type: ignore[arg-type]
+                live_di = _find_next_live_di(self._prev_active_app_context)
+                _active_di_scope.set(live_di)  # type: ignore[arg-type]
         self._di_scope_token = None
         if di_scope._token is not None:
             di_scope._token = None

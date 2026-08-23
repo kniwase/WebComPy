@@ -170,7 +170,17 @@ class SuspenseElement(DynamicElement):
                             )
                             for child in list(children):
                                 child._remove_element(True, False)
-                            self._children = self._generate_children(self._error_fallback_generator)
+                            from webcompy.components._component import _active_app_context, _get_app_instance
+
+                            app_ctx = _active_app_context.get() or _get_app_instance()
+                            probe_depth = getattr(app_ctx, "_transfer_probe_depth", 0) if app_ctx is not None else 0
+                            if app_ctx is not None:
+                                app_ctx._transfer_probe_depth = probe_depth + 1
+                            try:
+                                self._children = self._generate_children(self._error_fallback_generator)
+                            finally:
+                                if app_ctx is not None:
+                                    app_ctx._transfer_probe_depth = probe_depth
                             return
                         else:
                             for child in list(children):
@@ -192,7 +202,17 @@ class SuspenseElement(DynamicElement):
             self._resolved = True
             _restore_suspense_di_scope(None, original_scope)
             return
-        fallback = self._generate_fallback()
+        from webcompy.components._component import _active_app_context, _get_app_instance
+
+        app_ctx = _active_app_context.get() or _get_app_instance()
+        probe_depth = getattr(app_ctx, "_transfer_probe_depth", 0) if app_ctx is not None else 0
+        if app_ctx is not None:
+            app_ctx._transfer_probe_depth = probe_depth + 1
+        try:
+            fallback = self._generate_fallback()
+        finally:
+            if app_ctx is not None:
+                app_ctx._transfer_probe_depth = probe_depth
         if _active_di_scope.get(None) is not original_scope:
             _active_di_scope.set(original_scope)  # type: ignore[arg-type]
         self._children = fallback
@@ -259,7 +279,17 @@ class SuspenseElement(DynamicElement):
 
     async def _handle_error(self, error: Exception) -> None:
         if self._error_fallback_generator is not None:
-            error_fallback = self._generate_children(self._error_fallback_generator)
+            from webcompy.components._component import _active_app_context, _get_app_instance
+
+            app_ctx = _active_app_context.get() or _get_app_instance()
+            probe_depth = getattr(app_ctx, "_transfer_probe_depth", 0) if app_ctx is not None else 0
+            if app_ctx is not None:
+                app_ctx._transfer_probe_depth = probe_depth + 1
+            try:
+                error_fallback = self._generate_children(self._error_fallback_generator)
+            finally:
+                if app_ctx is not None:
+                    app_ctx._transfer_probe_depth = probe_depth
             old_children = self._children
             self._cancel_pending_render_tasks()
             self._children = _patch_children(old_children, error_fallback, self._node_idx)

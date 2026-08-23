@@ -48,17 +48,30 @@ def _is_hydration_payload_open() -> bool:
 
     The payload is scoped to the initial hydration window. The window is
     tracked on the active ``RenderContext`` (``_hydration_payload_closed``).
-    ``_set_app_instance()`` registers the browser's root ``RenderContext``
-    during PyScript startup (and clears it on dispose), so the
-    ``_get_app_instance()`` fallback resolves to that context even outside
-    the task carrying the ContextVar. When neither channel yields a context
-    (e.g., unit tests) the function returns ``True`` — the default open
-    state.
+    Resolution mirrors ``_resolve_active_render_context``: the active
+    ``RenderContext`` is looked up via ``_active_app_context``, falling back
+    to the per-app ``_render_context_cv`` and then the module-level
+    ``_app_instance`` fallback, so the window closes and the check remains
+    consistent even when the render task does not carry ``ContextVar``
+    propagation (e.g., a PyScript JavaScript-originated callback). When no
+    channel yields a context (e.g., unit tests) the function returns
+    ``True`` — the default open state.
     """
-    app = _active_app_context.get() or _get_app_instance()
-    if app is None:
-        return True
-    return not getattr(app, "_hydration_payload_closed", False)
+    ctx = _active_app_context.get()
+    if ctx is not None:
+        return not getattr(ctx, "_hydration_payload_closed", False)
+    fallback = _get_app_instance()
+    if fallback is not None:
+        app = getattr(fallback, "_app", None)
+        if app is not None and hasattr(app, "_render_context_cv"):
+            try:
+                per_app_ctx = app._render_context_cv.get()
+            except LookupError:
+                per_app_ctx = None
+            if per_app_ctx is not None:
+                return not getattr(per_app_ctx, "_hydration_payload_closed", False)
+        return not getattr(fallback, "_hydration_payload_closed", False)
+    return True
 
 
 def start_defer_after_rendering() -> None:

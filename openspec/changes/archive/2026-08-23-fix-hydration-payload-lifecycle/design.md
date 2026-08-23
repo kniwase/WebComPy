@@ -31,7 +31,7 @@ Existing infrastructure this design builds on:
 
 ### 1. Close the payload at the hydration window boundary, not consume-once
 
-Add `RenderContext._hydration_payload_closed: bool = False`. `AppDocumentRoot._render()` sets it to `True` immediately after the reveal-gating render-task drain (alongside the `_hydration_in_progress` reset), so the window closes as soon as the initial render pass completes; the method-level `finally` keeps assigning the flag as an idempotent error-path safety net (render exceptions, non-hydrate first renders). A small helper (`_is_hydration_payload_open()`) resolves the active render context via `_active_app_context.get() or _get_app_instance()` and returns the negated flag (default: open when no context exists, preserving unit-test behavior).
+Add `RenderContext._hydration_payload_closed: bool = False`. `AppDocumentRoot._render()` sets it to `True` immediately after the reveal-gating render-task drain (alongside the `_hydration_in_progress` reset), so the window closes as soon as the initial render pass completes; the method-level `finally` keeps assigning the flag as an idempotent error-path safety net (render exceptions, non-hydrate first renders). A small helper (`_is_hydration_payload_open()`) resolves the active render context via `_active_app_context` → per-app `_render_context_cv` → module-level `_app_instance` (mirroring `AppDocumentRoot._render()`'s `_resolve_active_render_context`) and returns the negated flag (default: open when no context exists, preserving unit-test behavior).
 
 - `_try_resolve_payload_key()` (`signal/_composable.py`) returns `_MISSING` when closed.
 - `use_async_result()` (`components/_hooks.py`) skips the `HYDRATION_DATA_KEY` restore when closed.
@@ -135,3 +135,19 @@ The timeout branch called `_cleanup_pending_pairs()` and then `_remove_element()
 ### E. Dispose must walk the full predecessor chain
 
 `RenderContext.dispose` reset each of `_active_app_context`, `_render_context_cv`, and `_active_di_scope` via their token and then did `if cur is disposed: set(None)`, handling only one disposed predecessor. With three overlapping contexts, disposing the middle and then the newest lost the oldest live context. Each `RenderContext` now stores its predecessor values (`_prev_active_app_context`, `_prev_render_context_cv`, `_prev_active_di_scope`) at creation; dispose walks the chain past disposed entries to the next live context (or `None`) and restores that instead of clearing. The module-level fallback already walked; the ContextVar paths now do the same.
+
+## Addendum (round 5): fourth AI review follow-ups (Option B)
+
+The fourth CI AI review of PR #271 (Approved, 3 Should Improve) requested airtight payload-open resolution, provisional ids for error/browser fallbacks, and dispose DI-unwind simplification.
+
+### A. Hydration payload open check must mirror the three-level fallback
+
+`_is_hydration_payload_open()` previously resolved the active `RenderContext` via `_active_app_context.get() or _get_app_instance()` (two levels), while `AppDocumentRoot._render()` closed the window via `_active_app_context → _render_context_cv → _app_instance` (three levels). In a task that lost the `ContextVar` but still carries the per-app `ContextVar`, the close targeted the correct `RenderContext` while the open check returned `True` (default open) and restored stale state. The helper now mirrors the three-level fallback: `_active_app_context`, then the fallback app's `_render_context_cv`, then the module-level `_app_instance` — the same chain used for payload closure and the render-task drain — so the window check remains consistent even after `ContextVar` loss.
+
+### B. Provisional ids for error and browser fallbacks
+
+`_server_render` timeout and `_hydrate_node` hydration fallback already used `_transfer_probe_depth` provisional ids (bare `generate_id(name)`). The server error-fallback branch and `_browser_render`'s initial fallback path still consumed ordinals, so a fallback containing a same-named component could drift from SSR for browser-only Suspense flows (e.g., error states). Both branches, plus `_handle_error`'s error-fallback generation, now wrap fallback construction in the same provisional guard, so all fallback trees — timeout, hydration, error, and browser-only — leave per-name counters aligned with SSR. This is harmless while the payload is closed (SPA navigations) but completes the spec's provisional invariant.
+
+### C. Dispose DI unwind extracted to helpers
+
+`RenderContext.dispose`'s DI-unwind path recomputed `candidate_di`, `prev_di`, and `walk2` with subtle overwrite ordering and duplicated fallback-chain walks. The three `ContextVar` walks (`_active_app_context`, `_render_context_cv`) and the DI walk are now centralised in small helpers (`_next_live_ctx`, `_next_live_render_ctx`, `_find_next_live_di`) that walk `_prev_active_app_context` / `_prev_render_context_cv` / `_prev_app_instance` and `_prev_active_di_scope` to the next live context/di-scope. Behavior is unchanged (foreign active scopes untouched, three-context walk still exercised), but the unwind belongs explicitly to the disposed tree and is auditable.
