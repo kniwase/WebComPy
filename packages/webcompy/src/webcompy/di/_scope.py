@@ -77,6 +77,9 @@ class DIScope:
         return self
 
     def __exit__(self, *args: object) -> None:
-        if self._token is not None and _active_di_scope.get(None) is self:
-            _active_di_scope.reset(self._token)
+        if self._token is not None:
+            try:
+                _active_di_scope.reset(self._token)
+            except (RuntimeError, ValueError):
+                _active_di_scope.set(None)  # type: ignore[arg-type]
         self._token = None
