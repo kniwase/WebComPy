@@ -22,7 +22,7 @@
 - **THEN** each app SHALL have its own `DIScope`
 - **AND** `inject()` within one app's component tree SHALL NOT resolve values from the other app's scope
 - **AND** in the server/SSG environment, full isolation SHALL be guaranteed through `ContextVar` bindings
-- **AND** in the browser (PyScript) environment, a module-level fallback reference exists for DI resolution when `ContextVar` bindings are lost across JS→Python callbacks; this fallback holds only the most recently created app's scope, so multi-app isolation in the browser has this limitation
+- **AND** in the browser (PyScript) environment, a module-level fallback reference exists for DI resolution when `ContextVar` bindings are lost across JS→Python callbacks; this fallback holds the most recently created live app's scope, and disposing an overlapping browser context restores the previous live scope so multi-app isolation is preserved in either disposal order
 
 #### Scenario: App-owned profiling telemetry does not violate render-state isolation
 - **WHEN** an app runs with `profile=True` in the browser or serves SSR requests on the server
