@@ -1,9 +1,9 @@
 ## 1. Harness server and py-config generation
 
-- [ ] 1.1 Add `webcompy_cli/_browser_test_harness.py` (Starlette app): `/_webcompy-assets/*` served from `runtime-assets/{PYSCRIPT_VERSION}/`, `/_webcompy-test/config.json` (generated harness py-config with `experimental_create_proxy: "auto"`, `interpreter` + `lockFileURL` parity with `webcompy_server._html`), `/_webcompy-test/manifest.json` (test module inventory), and `/testharness` (harness HTML with `core.js`, `core.css`, and single `<script type="py" config="...">` boot).
-- [ ] 1.2 Implement harness py-config builders for both supply modes: wheel mode (`packages=[wheel URLs]` via `webcompy_cli/_wheel_builder`) and source-mount mode (`WEBCOMPY_BROWSER_SOURCE=1` → `files` mappings for `packages/webcompy/src` + `packages/webcompy-testing/src` with `sys.path` prepend in bootstrap).
-- [ ] 1.3 Mount `tests/browser/**` files via `files` mappings in both supply modes (one explicit mapping per file, deterministic repo-relative target paths).
-- [ ] 1.4 Add harness HTML generator with sentinel hook: in-page bootstrap sets `<html data-webcompy-test-ready="1">` only after `window.__webcompy_test__` is assigned and `core.js` is initialized.
+- [x] 1.1 Add `webcompy_cli/_browser_test_harness.py` (Starlette app): `/_webcompy-assets/*` served from `runtime-assets/{PYSCRIPT_VERSION}/`, `/_webcompy-test/config.json` (generated harness py-config with `experimental_create_proxy: "auto"`, `interpreter` + `lockFileURL` parity with `webcompy_server._html`), `/_webcompy-test/manifest.json` (test module inventory), and `/testharness` (harness HTML with `core.js`, `core.css`, and single `<script type="py" config="...">` boot).
+- [x] 1.2 Implement harness py-config builders for both supply modes: wheel mode (`packages=[wheel URLs]` via `webcompy_cli/_wheel_builder`) and source-mount mode (`WEBCOMPY_BROWSER_SOURCE=1` → `files` mappings for `packages/webcompy/src` + `packages/webcompy-testing/src` with `sys.path` prepend in bootstrap).
+- [x] 1.3 Mount `tests/browser/**` files via `files` mappings in both supply modes (one explicit mapping per file, deterministic repo-relative target paths).
+- [x] 1.4 Add harness HTML generator with sentinel hook: in-page bootstrap sets `<html data-webcompy-test-ready="1">` only after `window.__webcompy_test__` is assigned and `core.js` is initialized.
 
 ## 2. In-page runner (browser-side, in webcompy_testing)
 
