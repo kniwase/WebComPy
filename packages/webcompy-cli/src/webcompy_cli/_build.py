@@ -52,11 +52,7 @@ _ALWAYS_EXCLUDED_SUFFIXES: frozenset[str] = frozenset({".pyc", ".tmp"})
 
 
 def _matches_pattern(rel_posix: str, pattern: str) -> bool:
-    """Match a POSIX-relative path against a glob pattern. ``**/`` at the
-    start is treated as "zero or more path components" (matching files at
-    any depth, including the package root); otherwise pure ``pathlib`` glob
-    semantics apply.
-    """
+    """Match a POSIX-relative path against a glob pattern. ``**/`` at the start is treated as "zero or more path components" (matching files at any depth, including the package root); otherwise pure ``pathlib`` glob semantics apply."""
     rel_path = Path(rel_posix)
     if pattern.startswith("**/"):
         suffix = pattern[3:]
@@ -75,9 +71,7 @@ def _detect_resources(
     include_patterns: list[str] | None,
     exclude_patterns: list[str] | None,
 ) -> frozenset[str]:
-    """Walk ``app_package_path`` and return POSIX-relative paths whose
-    filenames match the include patterns and don't match any exclude rule.
-    """
+    """Walk ``app_package_path`` and return POSIX-relative paths whose filenames match the include patterns and don't match any exclude rule."""
     if include_patterns is None:
         include_patterns = _DEFAULT_INCLUDE_PATTERNS
     if include_patterns == []:

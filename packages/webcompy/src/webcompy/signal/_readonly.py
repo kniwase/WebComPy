@@ -42,6 +42,7 @@ def use_readonly_signal(initial: T) -> tuple[ReadonlySignal[T], Callable[[T], T]
 
     Returns:
         A tuple of the read-only signal and its update function.
+
     """
     inner = Signal(initial)
     return readonly(inner), inner.set_value

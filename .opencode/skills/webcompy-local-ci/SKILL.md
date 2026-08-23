@@ -51,6 +51,20 @@ Execute these commands in order. Stop on the first failure unless instructed oth
    - Validates that universal docs reference existing OpenSpec specs and contain no retired API names
    - Run when AGENTS.md, CONTRIBUTING.*, `.opencode/skills/`, or `openspec/` files were changed
 
+8. **Docstring Coverage Check**
+   ```bash
+   python3 scripts/check-docstrings.py
+   ```
+   - Verifies every public interface under `packages/*/src` carries a docstring and no docstring/comment references OpenSpec artifacts
+   - Run when any file under `packages/*/src` or `scripts/check-docstrings.py` was changed
+
+9. **Pydoclint (Google-style structure)**
+   ```bash
+   uv run pydoclint packages/webcompy/src/webcompy packages/webcompy-server/src/webcompy_server packages/webcompy-cli/src/webcompy_cli packages/webcompy-testing/src/webcompy_testing
+   ```
+   - Validates Args/Returns/Raises sections match signatures (Google style, tuned via `[tool.pydoclint]` in `pyproject.toml`)
+   - Run when any file under `packages/*/src` was changed
+
 ## Reporting Format
 
 After all checks complete, produce a summary:

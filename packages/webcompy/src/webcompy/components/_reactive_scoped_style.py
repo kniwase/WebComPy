@@ -43,6 +43,7 @@ Constraints:
       continues to work unchanged. Reactive and static styles coexist and
       render to separate <style> elements (static uses data-webcompy-cid,
       reactive uses data-webcompy-cid-rx).
+
 """
 
 from __future__ import annotations

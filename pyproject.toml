@@ -17,15 +17,20 @@ line-length = 120
 
 [tool.ruff.lint]
 select = [
+    "B",
+    "D205",
+    "D209",
+    "D212",
+    "D413",
+    "D415",
     "E",
-    "W",
     "F",
     "I",
-    "UP",
-    "B",
+    "RUF",
     "SIM",
     "TCH",
-    "RUF",
+    "UP",
+    "W",
 ]
 ignore = [
     "E501",
@@ -36,6 +41,9 @@ ignore = [
     "TC001",
     "TC003",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D205", "D209", "D212", "D413", "D415"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -49,6 +57,15 @@ known-first-party = ["webcompy", "webcompy_server", "webcompy_cli", "webcompy_te
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.pydoclint]
+style = "google"
+arg-type-hints-in-docstring = false
+check-return-types = false
+# _css_parser.parse_css raises transitively via helpers; DOC502 only sees direct
+# raise statements, so that file is excluded from pydoclint (docstring presence
+# there is still enforced by scripts/check-docstrings.py).
+exclude = "(?x)packages/webcompy/src/webcompy/template/_css_parser\\.py"
 
 [tool.pyright]
 pythonVersion = "3.12"
@@ -90,6 +107,7 @@ dev = [
     "nodeenv>=1.10.0",
     "playwright>=1.58.0",
     "pre-commit>=4.5.1",
+    "pydoclint>=0.9.1",
     "pyright>=1.1.408",
     "pytest>=9.0.3",
     "pytest-asyncio>=0.26.0",

@@ -40,6 +40,8 @@ jobs:
           node-version: 24
       - run: npx @fission-ai/openspec@latest validate --specs
       - run: npx @fission-ai/openspec@latest validate --changes
+      - name: Validate docstring coverage
+        run: python3 scripts/check-docstrings.py
       - name: Validate doc spec references
         run: python3 scripts/check-doc-spec-refs.py
 
@@ -99,6 +101,10 @@ jobs:
         run: |
           uv run ruff format --check . 2>&1 | tee ci-lint-format.log
           exit "${PIPESTATUS[0]}"
+      - name: Run pydoclint
+        run: |
+          uv run pydoclint packages/webcompy/src/webcompy packages/webcompy-server/src/webcompy_server packages/webcompy-cli/src/webcompy_cli packages/webcompy-testing/src/webcompy_testing 2>&1 | tee ci-lint-pydoclint.log
+          exit "${PIPESTATUS[0]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -106,6 +112,7 @@ jobs:
           path: |
             ci-lint-ruff.log
             ci-lint-format.log
+            ci-lint-pydoclint.log
 
   typecheck:
     needs: [detect-scope]

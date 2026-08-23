@@ -42,6 +42,7 @@ class TransitionPort(ABC):
 
         Returns:
             A cancel function; calling it prevents ``callback`` from running.
+
         """
         ...
 
@@ -59,6 +60,7 @@ class TransitionPort(ABC):
 
         Returns:
             A cancel function; calling it prevents ``callback`` from running.
+
         """
         ...
 
@@ -71,5 +73,6 @@ class TransitionPort(ABC):
 
         Returns:
             A style view exposing ``get_property_value(name)``.
+
         """
         ...

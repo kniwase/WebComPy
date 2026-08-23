@@ -102,7 +102,8 @@ are skipped — only OpenSpec validation and AI review run.
 - Python 3.12+ (aligned with latest PyScript/Pyodide runtime)
 - Package management with `uv` — use `uv add <package>` to add dependencies, `uv lock` to update lockfile
 - Type annotations throughout (package includes `py.typed` marker and `.pyi` stubs)
-- No comments in code unless explicitly requested
+- Docstrings are required on all public interfaces under `packages/*/src` (re-exported names and their public members, plus the important-internal allowlist; module summary, Google-style function Args/Returns and class Args/Attributes, re-exported constants via PEP 224 attribute docstrings). New or modified public interfaces in `packages/*/src` MUST carry docstrings; `tests/`, `e2e/`, `docs_app/` are out of scope. No OpenSpec artifact references (spec/change names, `openspec/` paths, task numbers) in docstrings or comments — external standards (RFC, PEP, CommonMark) remain allowed.
+- No comments in code unless explicitly requested — docstrings are not comments
 - Component classes use decorators: `@component_template`, `@on_before_rendering`
 - Reactive state primitives are specified in `openspec/specs/reactive/spec.md` and `openspec/specs/composables/spec.md`. New transfer-capable state SHOULD be created via `use_state` / `use_reactive_list` / `use_reactive_dict` composables inside component setup so the SSR transfer path works.
 

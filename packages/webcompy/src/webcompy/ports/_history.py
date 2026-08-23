@@ -38,6 +38,7 @@ class HistoryPort(SignalBase[str]):
 
         Returns:
             State dict associated with the current navigation, or ``None``.
+
         """
         return self._state
 
@@ -47,6 +48,7 @@ class HistoryPort(SignalBase[str]):
 
         Returns:
             The current query string (``""`` if none).
+
         """
         ...
 
@@ -57,6 +59,7 @@ class HistoryPort(SignalBase[str]):
         Returns:
             The state object associated with the current history entry,
             or ``None``.
+
         """
         ...
 
@@ -69,6 +72,7 @@ class HistoryPort(SignalBase[str]):
         Args:
             path: Target URL path.
             state: Optional state dict to store alongside the path.
+
         """
         normalized = path[1:] if self._mode == "hash" and path.startswith("#") else path
         if self._value == normalized and self._state == state:
@@ -85,6 +89,7 @@ class HistoryPort(SignalBase[str]):
         Args:
             manager: An object with ``on_push(from_path, to_path)`` and
                 ``on_pop(from_path, to_path)`` methods, or ``None`` to clear.
+
         """
         self._scroll_manager = manager
 
@@ -98,6 +103,7 @@ class HistoryPort(SignalBase[str]):
         Args:
             path: App-internal path (no mode prefix, no base_url).
             state: Optional history state dict.
+
         """
 
     def replace_url(self, path: str, state: dict[str, Any] | None = None) -> None:
@@ -109,18 +115,19 @@ class HistoryPort(SignalBase[str]):
         Args:
             path: App-internal path (no mode prefix, no base_url).
             state: Optional history state dict.
+
         """
 
     def set_navigation_callback(
         self,
         callback: Callable[[str, dict[str, Any] | None], None] | None,
     ) -> None:
-        """Set a callback invoked on popstate events instead of the default
-        ``_do_navigate()`` path.
+        """Set a callback invoked on popstate events instead of the default ``_do_navigate()`` path.
 
         Args:
             callback: A callable receiving ``(path, state)`` when the browser
                 popstate event fires, or ``None`` to clear.
+
         """
         self._navigation_callback = callback
 
@@ -131,7 +138,5 @@ class HistoryPort(SignalBase[str]):
 
     @abstractmethod
     def refresh_from_window(self) -> None:
-        """Re-read the current URL from ``window.location`` and update the
-        signal value, triggering reactivity.
-        """
+        """Re-read the current URL from ``window.location`` and update the signal value, triggering reactivity."""
         ...

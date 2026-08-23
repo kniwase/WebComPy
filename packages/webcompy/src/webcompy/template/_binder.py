@@ -358,12 +358,7 @@ def bind_for(node: ForNode, ctx: dict[str, Any]) -> list[ElementChildren]:
 
 
 class _DictValueRow(DynamicElement):
-    """Keyed ``ReactiveDict`` row that regenerates its children when the stored
-    value's representation (Element/Component vs scalar) or Element identity
-    changes. Scalar value changes are handled reactively by the inner
-    ``TextElement(Computed(read_value))``; representation changes rebuild the
-    row via ``_refresh``.
-    """
+    """Keyed ``ReactiveDict`` row that regenerates its children when the stored value's representation (Element/Component vs scalar) or Element identity changes. Scalar value changes are handled reactively by the inner ``TextElement(Computed(read_value))``; representation changes rebuild the row via ``_refresh``."""
 
     def __init__(self, token: Computed, generator: Callable[[], ElementChildren]) -> None:
         super().__init__()

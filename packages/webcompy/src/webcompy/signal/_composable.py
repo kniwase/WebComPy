@@ -231,6 +231,7 @@ def use_state(  # type: ignore[no-redef]
     Returns:
         A ``Signal[T]`` registered for SSR transfer when called inside
         component setup.
+
     """
     key, factory = _resolve_args(factory_or_key, maybe_factory)
     _validate_factory(factory)

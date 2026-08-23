@@ -89,6 +89,10 @@ def use_computed(factory: Callable[[], T]) -> Computed[T]:
 
     Returns:
         A ``Computed[T]`` whose value tracks the factory result.
+
+    Raises:
+        TypeError: If ``factory`` is not callable.
+
     """
     if not callable(factory):
         raise TypeError(f"use_computed() requires a zero-argument factory callable, got {type(factory).__name__}")

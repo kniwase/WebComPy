@@ -5,7 +5,7 @@ context: |
   Frontend framework: WebComPy — component-based, reactive, SPA
   Server: Starlette + uvicorn (dev server, SSG)
   Package manager: uv
-  Conventions: conventional commits, type annotations throughout, no comments unless requested
+  Conventions: conventional commits, type annotations throughout, docstrings required on all public interfaces in packages/*/src (Google style; no OpenSpec artifact references in docstrings/comments), no comments unless requested (docstrings are not comments)
 
   ## Known Issues (to be resolved in future changes)
 
