@@ -8,6 +8,7 @@
 - [x] 1.4 Remove the OpenSpec change-path reference in `packages/webcompy/src/webcompy/app/_app.py:35` (reword the comment to describe the code only)
 - [x] 1.5 Spike: evaluate `pydoclint` for Args/Returns structural validation under the re-export pattern; record outcome in design.md (adopt or stay with AI-review-only)
 - [x] 1.6 Adopt pydoclint: dev dependency (`pydoclint>=0.9.1`), tuned `[tool.pydoclint]` config in pyproject.toml (`style=google`, `arg-type-hints-in-docstring=false`, `check-return-types=false`), `ci.yml` lint-job step with artifact log, fixed 10 existing structural violations so the four src trees are clean
+- [x] 1.7 Address PR-A review feedback: restore the `Raises:` section on `parse_css` (transitive raise is contractual; exclude that file from pydoclint DOC502 with rationale) and document the checker/AI-review enforcement split for forbidden OpenSpec references in the checker docstring, spec scenarios, and design.md
 
 ## 2. PR-A: Governance wiring (orchestrator session)
 

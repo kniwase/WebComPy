@@ -13,6 +13,11 @@ site. Requirements enforced:
    ``IMPORTANT_INTERNALS``) carry a PEP 224 attribute docstring.
 4. Docstrings and comments do not reference OpenSpec artifacts.
 
+The mechanical forbidden-reference scan is deliberately narrow (the five patterns
+in ``FORBIDDEN_RES``: the ``openspec`` path and the four artifact file names).
+Policing of change/spec names, requirement/scenario IDs, and task numbers is
+owned by AI code review as a mandatory perspective, not by this script.
+
 Gaps are tracked in a baseline file that ratchets downward: an undocumented
 symbol absent from the baseline fails, and a baseline entry whose symbol now
 has a docstring fails, forcing monotonic shrinkage. A missing baseline file

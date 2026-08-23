@@ -48,6 +48,11 @@ Docstrings and code comments under `packages/*/src` SHALL NOT reference OpenSpec
 - **WHEN** a comment or docstring contains an `openspec/` path or an OpenSpec change or spec reference
 - **THEN** the docstring checker SHALL report a violation and exit non-zero
 
+#### Scenario: Enforcement split between the checker and AI review
+
+- **WHEN** a comment or docstring contains an OpenSpec artifact reference of a kind the checker's mechanical pattern list deliberately does not cover (change or spec names, requirement/scenario identifiers, task numbers)
+- **THEN** AI code review SHALL flag it as a must-fix item, while the checker remains limited to its explicit path/file-name patterns to avoid false positives
+
 ### Requirement: Docstring coverage shall be enforced by a checker with a migration baseline
 
 The repository SHALL provide a stdlib-only checker at `scripts/check-docstrings.py` that verifies this spec's requirements and exits non-zero with a concise report on any violation. During migration, a baseline file SHALL list pre-existing gaps: an undocumented symbol absent from the baseline SHALL fail, and a baseline entry whose symbol now has a docstring SHALL fail (forcing baseline shrinkage). When no gaps remain, the baseline file SHALL be deleted and the checker SHALL run strict. The checker SHALL run in CI and in the documented local CI workflow.

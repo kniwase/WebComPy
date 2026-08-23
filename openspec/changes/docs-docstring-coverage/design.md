@@ -48,7 +48,7 @@ CI verifies a docstring *exists* for every in-scope definition and that no forbi
 
 ### 5. Forbidden OpenSpec references: pattern scan over docstrings AND comments
 
-Docstrings are collected via `ast`; comments via `tokenize` (AST drops comments). Forbidden patterns are an explicit list (`openspec`, `openspec/`, `spec.md`, `tasks.md`, `proposal.md`, `design.md`, change-name references, task numbers) kept small to avoid false positives; references to external standards (RFC, CommonMark, PEP) are explicitly allowed. Exactly one pre-existing violation exists today (`webcompy/app/_app.py:35`) and is removed in PR-A.
+Docstrings are collected via `ast`; comments via `tokenize` (AST drops comments). Forbidden patterns are an explicit list (`openspec`, `openspec/`, `spec.md`, `tasks.md`, `proposal.md`, `design.md`, change-name references, task numbers) kept small to avoid false positives; references to external standards (RFC, CommonMark, PEP) are explicitly allowed. Exactly one pre-existing violation exists today (`webcompy/app/_app.py:35`) and is removed in PR-A. The mechanical checker enforces only the five path/file-name patterns; policing of change/spec names, requirement/scenario IDs, and task numbers is delegated to AI review as a mandatory perspective.
 
 ### 6. Two-PR delivery
 
