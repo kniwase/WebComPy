@@ -230,12 +230,14 @@ When the HTTP dispatcher receives a single request with `"stream": true` targeti
 
 ### Requirement: The HTTP client shall provide a typed stream call
 
-The framework SHALL provide `rpc.stream(method, params=None, *, result_type=None)` (importable alongside `rpc.call`) that POSTs a `"stream": true` envelope through the streaming fetch capability to the RPC endpoint. When the response is a JSON body (not `text/event-stream`), the client SHALL resolve it as an ordinary JSON-RPC response and SHALL raise `RpcError` for error responses before returning. A non-successful status or a non-stream, non-JSON body SHALL raise `RpcError`. When the response is `text/event-stream`, the client SHALL return an `RpcStream` that parses the event stream with the `sse-parser` codec, maps `item` events to typed items, `error` events to `RpcError` raised from iteration, and `done` to normal exhaustion, per the `rpc-streaming` capability.
+The framework SHALL provide HTTP streaming through the `RpcHttpClient.stream` transport method defined in the `rpc-contracts` capability, invoked through `StreamingProcedure` contracts. The module-level `rpc.stream` function SHALL NOT exist as public API. The HTTP stream wire behavior SHALL be unchanged: a `"stream": true` envelope POST through the streaming fetch capability, `Content-Type` branching (a JSON body resolves as an ordinary JSON-RPC response whose errors SHALL fail the returned stream with `RpcError` before any item is delivered; a `text/event-stream` body drives the returned `RpcStream`, parsed with the `sse-parser` codec), and the `rpc-streaming` capability's item/error/done mapping.
 
 #### Scenario: JSON-RPC error answered as JSON raises before iteration
-- **WHEN** `rpc.stream("unknown_method")` receives a JSON-RPC error response with `Content-Type: application/json`
-- **THEN** `RpcError` SHALL be raised by the `stream()` call itself (no iterator returned)
+
+- **WHEN** a streaming contract targets an unknown method and the dispatcher responds with a JSON-RPC error body
+- **THEN** iterating the returned `RpcStream` SHALL raise `RpcError` (the stream SHALL be failed before any item is delivered)
 
 #### Scenario: SSE stream yields typed items
-- **WHEN** `rpc.stream("produce", {"n": 2}, result_type=Item)` is consumed
-- **THEN** iteration SHALL yield two decoded `Item` instances and then finish
+
+- **WHEN** `it = produce(http_client, ProduceParams(2))` for a bound streaming procedure is consumed
+- **THEN** iteration SHALL yield the decoded `Item` instances and then finish
