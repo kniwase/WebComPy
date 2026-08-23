@@ -187,11 +187,11 @@ class ProcedureRegistry:
                     f"RPC procedure {name!r}: expected exactly one parameter of type {contract.params_type!r}, got {len(param_order)}"
                 )
             param_type = param_schemas[param_order[0]]
-            if param_type is not contract.params_type:
+            if param_type != contract.params_type:
                 raise WebComPyException(
                     f"RPC procedure {name!r}: parameter type mismatch: expected {contract.params_type!r}, got {param_type!r}"
                 )
-            if result_schema is not contract.result_type:
+            if result_schema != contract.result_type:
                 raise WebComPyException(
                     f"RPC procedure {name!r}: return type mismatch: expected {contract.result_type!r}, got {result_schema!r}"
                 )
@@ -226,7 +226,7 @@ class ProcedureRegistry:
                     f"RPC procedure {name!r}: expected exactly one parameter of type {contract.params_type!r}"
                 )
             param_type = param_schemas[param_order[0]]
-            if param_type is not contract.params_type:
+            if param_type != contract.params_type:
                 raise WebComPyException(
                     f"RPC procedure {name!r}: parameter type mismatch: expected {contract.params_type!r}, got {param_type!r}"
                 )
@@ -235,7 +235,7 @@ class ProcedureRegistry:
                 raise WebComPyException(
                     f"RPC procedure {name!r}: StreamingProcedure requires a generator function with iterable return annotation"
                 )
-            if element is not contract.result_type:
+            if element != contract.result_type:
                 raise WebComPyException(
                     f"RPC procedure {name!r}: element type mismatch: expected {contract.result_type!r}, got {element!r}"
                 )
@@ -265,7 +265,7 @@ class ProcedureRegistry:
                     f"RPC subscription {name!r}: expected exactly one parameter of type {contract.params_type!r}"
                 )
             param_type = param_schemas[param_order[0]]
-            if param_type is not contract.params_type:
+            if param_type != contract.params_type:
                 raise WebComPyException(
                     f"RPC subscription {name!r}: parameter type mismatch: expected {contract.params_type!r}, got {param_type!r}"
                 )
@@ -282,7 +282,7 @@ class ProcedureRegistry:
                 raise WebComPyException(
                     f"RPC subscription {name!r}: element type must be a concrete type, got {element!r}"
                 )
-            if element is not contract.event_type:
+            if element != contract.event_type:
                 raise WebComPyException(
                     f"RPC subscription {name!r}: element type mismatch: expected {contract.event_type!r}, got {element!r}"
                 )

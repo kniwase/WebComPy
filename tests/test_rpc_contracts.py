@@ -152,6 +152,15 @@ def test_non_type_arg_rejected():
         Procedure("add", AddParams, "not a type")  # type: ignore
 
 
+def test_generic_alias_arg_rejected():
+    with pytest.raises(TypeError):
+        Procedure("add", AddParams, list[int])
+    with pytest.raises(TypeError):
+        StreamingProcedure("produce", AddParams, list[int])
+    with pytest.raises(TypeError):
+        Subscription("ticker", AddParams, dict[str, int])
+
+
 def test_replay_size_validation():
     with pytest.raises(ValueError):
         Subscription("ticker", AddParams, int, replay_size=0)
