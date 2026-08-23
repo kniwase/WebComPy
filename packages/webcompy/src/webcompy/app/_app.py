@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
 class WebComPyApp:
     _config: WebComPyAppConfig
     _profile: bool
+    _profile_data: dict[str, float]
     _render_context_cv: ContextVar[RenderContext | None]
 
     def __init__(
@@ -32,6 +34,7 @@ class WebComPyApp:
     ) -> None:
         self._config = config or WebComPyAppConfig()
         self._profile = self._config.profile
+        self._profile_data = {}
         # Defense-in-depth: the AsyncSchedulerPort (see openspec/changes/feat-async-scheduler-port/design.md)
         # provides the primary structural guarantee that scheduled tasks complete before the
         # render context is disposed (server implementation drains its registry via await_pending()).
@@ -68,29 +71,23 @@ class WebComPyApp:
 
     @property
     def profile_data(self) -> dict[str, float] | None:
-        ctx = self._render_context_cv.get()
-        if ctx is not None:
-            return ctx.profile_data
-        return None
+        return self._profile_data if self._profile else None
 
     def _record_phase(self, name: str) -> None:
-        ctx = self._render_context_cv.get()
-        if ctx is not None:
-            ctx._record_phase(name)
+        if self._profile and name not in self._profile_data:
+            self._profile_data[name] = time.perf_counter()
 
     def _emit_profile_summary(self) -> None:
         if not self._profile:
             return
-        ctx = self._render_context_cv.get()
-        if ctx is None:
-            return
-        data = ctx._profile_data
+        data = self._profile_data
         pairs = [
             ("pyscript_ready", "imports_done", "pyscript_ready → imports_done"),
             ("imports_done", "init_done", "imports_done   → init_done"),
-            ("init_done", "run_start", "init_done      → run_start"),
-            ("run_start", "run_done", "run_start      → run_done"),
+            ("init_done", "custom_elements_defined", "init_done      → custom_elements_defined"),
+            ("custom_elements_defined", "run_done", "custom_elements_defined → run_done"),
             ("run_done", "loading_removed", "run_done       → loading_removed"),
+            ("lazy_preload_start", "lazy_preloaded", "lazy_preload_start → lazy_preloaded"),
         ]
         lines = ["[WebComPy Profile]"]
         total = 0.0
@@ -98,6 +95,8 @@ class WebComPyApp:
         for start_key, end_key, label in pairs:
             if start_key in data and end_key in data:
                 elapsed = data[end_key] - data[start_key]
+                if elapsed < 0:
+                    continue
                 total += elapsed
                 lines.append(f"  {label.ljust(label_width)}: {elapsed:.3f}s")
         lines.append("  " + "─" * (label_width + 8))

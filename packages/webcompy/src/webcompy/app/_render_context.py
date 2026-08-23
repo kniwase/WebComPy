@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import time
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
@@ -54,9 +53,7 @@ class RenderContext(ABC):
     ) -> None:
         self._app = app
         self._config = app._config
-        self._profile = app._profile
         self._disposed = False
-        self._profile_data: dict[str, float] = {}
         self._defer_depth: int = 0
         self._deferred_callbacks: list = []
         self._hydration_in_progress: bool = False
@@ -72,7 +69,7 @@ class RenderContext(ABC):
         self._initial_theme = initial_theme
         self._cookie_header = cookie_header or ""
 
-        self._record_phase("init_start")
+        app._record_phase("init_start")
 
         self._di_scope = DIScope()
         self._component_store = ComponentStore()
@@ -129,7 +126,7 @@ class RenderContext(ABC):
         manager = ThemeManager(self._app, self, theme_value)
         self._di_scope.provide(THEME_KEY, manager)
 
-        self._record_phase("imports_done")
+        self._app._record_phase("imports_done")
 
         from webcompy.app._root_component import AppDocumentRoot
 
@@ -146,7 +143,7 @@ class RenderContext(ABC):
         if self._router and path is not None:
             self._root.set_path(path)
 
-        self._record_phase("init_done")
+        self._app._record_phase("init_done")
 
     @abstractmethod
     def _register_ports(self) -> None: ...
@@ -355,14 +352,6 @@ class RenderContext(ABC):
     @property
     def config(self) -> WebComPyAppConfig:
         return self._config
-
-    @property
-    def profile_data(self) -> dict[str, float] | None:
-        return self._profile_data if self._profile else None
-
-    def _record_phase(self, name: str) -> None:
-        if self._profile:
-            self._profile_data[name] = time.perf_counter()
 
     def _next_transfer_id(self, component_name: str) -> str:
         from webcompy.components._libs import generate_id

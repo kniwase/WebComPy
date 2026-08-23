@@ -429,10 +429,12 @@ class Router:
         if not self._preload and not force:
             return
         from webcompy.di import inject
+        from webcompy.di._keys import _APP_KEY
         from webcompy.ports._keys import HOST_PORT_KEY
         from webcompy.router._lazy import LazyComponentGenerator
         from webcompy.utils._environment import ENVIRONMENT
 
+        app = inject(_APP_KEY, default=None)
         seen: set[int] = set()
 
         def _collect_lazy(pages):
@@ -447,18 +449,24 @@ class Router:
 
         lazy_components = list(_collect_lazy(self.__pages__))
         if lazy_components:
+            if app is not None:
+                app._record_phase("lazy_preload_start")
             if ENVIRONMENT == "pyscript":
 
                 def _batch_preload(components=lazy_components):
                     for c in components:
                         with suppress(Exception):
                             c._preload()
+                    if app is not None:
+                        app._record_phase("lazy_preloaded")
 
                 inject(HOST_PORT_KEY).schedule_macro_task(_batch_preload)
             else:
                 for c in lazy_components:
                     with suppress(Exception):
                         c._preload()
+                if app is not None:
+                    app._record_phase("lazy_preloaded")
 
     def _get_component_for_path(self, path: str) -> ComponentGenerator[RouterContext] | None:
         clean_path = path
