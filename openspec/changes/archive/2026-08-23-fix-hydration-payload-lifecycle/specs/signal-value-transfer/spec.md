@@ -1,14 +1,4 @@
-# Signal Value Transfer
-
-## Purpose
-
-`AsyncResult` states and `FetchPort` response caches are already transferred from server to browser via the hydration data mechanism. However, application-level `Signal` values (the primary state primitive) are not. Components that derive UI state directly from `Signal` values experience a flash of default values during hydration — the browser re-initializes signals with their defaults and only converges to the correct state when user interaction or async data updates them.
-
-This capability extends the hydration data transfer to include `Signal`, `ReactiveList`, and `ReactiveDict` values created via the `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` composables. Composables register created signals in `Context._transferable_signals` during setup, which `Component.__setup()` merges into `__signal_members__` for collection by `collect_transfer_data()`. On the browser, composables skip their factory when a hydration payload exists, restoring the value directly. This eliminates the flash of default values.
-
-> **BREAKING CHANGE**: Computed values are no longer collected for transfer. Only source Signals created via `use_state()` / `use_reactive_list()` / `use_reactive_dict()` are transferred. Browser-side, `Computed` instances are reconstructed from factory execution against the restored source signals.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Signal values shall be collected from __signal_members__ during SSR
 
@@ -144,27 +134,7 @@ Auto transfer keys SHALL be stable across the SSR environment and the browser en
 - **AND** the user navigates client-side to a route whose tree contains a new instance of the same component
 - **THEN** the new instance's `use_state()` SHALL run its factory instead of restoring the initial page's value
 
-### Requirement: Signal collection shall occur after await_pending and before ctx.dispose
-
-On the server, `collect_transfer_data()` SHALL be called after `await scheduler.await_pending()` completes (so that async-resolved Signal values are settled) and before `ctx.dispose()` (so that the component tree and its Signal instances are still accessible).
-
-#### Scenario: Collection timing in generate_html
-- **WHEN** `generate_html()` runs the SSR pipeline
-- **THEN** the call order SHALL be: `await ctx._root._render()` → `await scheduler.await_pending()` → `collect_transfer_data(root)` → `ctx.dispose()`
-
-### Requirement: TransferPayload shall include a signals section at version 2
-
-`TransferPayload` SHALL include a `signals: dict[str, dict[str, Any]]` field mapping component ID to a dict of `{key: encoded_value}`. The `__webcompy_transfer_version__` SHALL be `2` for payloads containing the `signals` section. The `deserialize_payload()` function SHALL accept both version 1 (no `signals` section) and version 2 (with `signals` section) payloads.
-
-#### Scenario: Version 2 payload structure
-- **WHEN** `serialize_payload()` produces a payload with Signal values
-- **THEN** the JSON SHALL include `"__webcompy_transfer_version__": 2`
-- **AND** a `"signals"` key SHALL be present
-
-#### Scenario: Version 1 payload backward compatibility
-- **WHEN** `deserialize_payload()` receives a version 1 JSON string (no `signals` key)
-- **THEN** the `TransferPayload.signals` field SHALL default to an empty dict `{}`
-- **AND** no Signal restoration SHALL occur
+## ADDED Requirements
 
 ### Requirement: Per-instance transfer identity
 

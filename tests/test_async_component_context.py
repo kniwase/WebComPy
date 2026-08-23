@@ -338,7 +338,7 @@ class TestSuspenseAsyncContext:
                     self._children = [child]
 
             payload = collect_transfer_data(_FakeRoot())
-            component_id = child._property.get("component_id", "")
+            component_id = child._property.get("transfer_id", "")
             assert component_id in payload.async_results
             assert payload.async_results[component_id].state == "success"
             assert payload.async_results[component_id].data == "transfer-data"

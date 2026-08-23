@@ -9,7 +9,7 @@ from webcompy.components._component import Component
 from webcompy.components._context_manager import component_context
 from webcompy.di import inject
 from webcompy.di._keys import SUSPENSE_RESOLVING_KEY
-from webcompy.di._scope import _active_di_scope
+from webcompy.di._scope import DIScope, _active_di_scope
 from webcompy.elements.typealias._element_property import ElementChildren
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._dynamic import DynamicElement, _patch_children, _position_element_nodes
@@ -18,10 +18,36 @@ from webcompy.utils._environment import ENVIRONMENT
 
 _logger = getLogger(__name__)
 
+_UNSET: Any = object()
+
 
 async def _resolve_with_context(component: Component, coro: Coroutine[Any, Any, Any]) -> Any:
     with component_context(component._render_state):
         return await coro
+
+
+def _restore_suspense_di_scope(
+    scope: DIScope | None,
+    original_scope: DIScope | None,
+) -> None:
+    """Exit the resolution scope and restore the pre-Suspense active scope.
+
+    ``provide()`` during a Suspense child's setup switches ``_active_di_scope``
+    to the component's child scope without a token. Even though
+    ``DIScope.__exit__`` now unconditionally restores its token, the child
+    scope itself was never entered with a token, so exiting the resolution
+    scope alone would leave the descendant active. Restoring the captured
+    parent scope explicitly prevents the descendant from leaking into Suspense
+    siblings and surrounding code.
+
+    The scope argument may be ``None`` (e.g., the browser fast path never
+    enters a resolution scope); the drift check still restores the captured
+    parent scope in that case.
+    """
+    if scope is not None:
+        scope.__exit__(None, None, None)
+    if _active_di_scope.get(None) is not original_scope:
+        _active_di_scope.set(original_scope)  # type: ignore[arg-type]
 
 
 class SuspenseElement(DynamicElement):
@@ -120,8 +146,19 @@ class SuspenseElement(DynamicElement):
                     )
                 except TimeoutError:
                     _logger.warning("Suspense timed out after %ss, rendering fallback", self._timeout)
-                    self._cleanup_pending_pairs(pairs)
-                    fallback = self._generate_fallback()
+                    for child in list(children):
+                        child._remove_element(True, False)
+                    from webcompy.components._component import _active_app_context, _get_app_instance
+
+                    app_ctx = _active_app_context.get() or _get_app_instance()
+                    probe_depth = getattr(app_ctx, "_transfer_probe_depth", 0) if app_ctx is not None else 0
+                    if app_ctx is not None:
+                        app_ctx._transfer_probe_depth = probe_depth + 1
+                    try:
+                        fallback = self._generate_fallback()
+                    finally:
+                        if app_ctx is not None:
+                            app_ctx._transfer_probe_depth = probe_depth
                     self._children = fallback
                     return
                 for _idx, result in enumerate(results):
@@ -131,34 +168,63 @@ class SuspenseElement(DynamicElement):
                                 "Suspense child async setup raised, rendering error_fallback: %s",
                                 result,
                             )
-                            self._cleanup_pending_pairs(pairs)
-                            self._children = self._generate_children(self._error_fallback_generator)
+                            for child in list(children):
+                                child._remove_element(True, False)
+                            from webcompy.components._component import _active_app_context, _get_app_instance
+
+                            app_ctx = _active_app_context.get() or _get_app_instance()
+                            probe_depth = getattr(app_ctx, "_transfer_probe_depth", 0) if app_ctx is not None else 0
+                            if app_ctx is not None:
+                                app_ctx._transfer_probe_depth = probe_depth + 1
+                            try:
+                                self._children = self._generate_children(self._error_fallback_generator)
+                            finally:
+                                if app_ctx is not None:
+                                    app_ctx._transfer_probe_depth = probe_depth
                             return
                         else:
-                            self._cleanup_pending_pairs(pairs)
+                            for child in list(children):
+                                child._remove_element(True, False)
                             raise result
                 self._resolve_component_templates(pairs, results)
         finally:
             if scope is not None:
-                scope.__exit__(None, None, None)
+                _restore_suspense_di_scope(scope, original_scope)
 
     async def _browser_render(self):
+        original_scope = _active_di_scope.get(None)
         children = self._generate_children(self._children_generator)
+        if _active_di_scope.get(None) is not original_scope:
+            _active_di_scope.set(original_scope)  # type: ignore[arg-type]
         pairs = self._collect_pending_coroutines(children)
         if not pairs:
             self._children = children
             self._resolved = True
+            _restore_suspense_di_scope(None, original_scope)
             return
-        fallback = self._generate_fallback()
+        from webcompy.components._component import _active_app_context, _get_app_instance
+
+        app_ctx = _active_app_context.get() or _get_app_instance()
+        probe_depth = getattr(app_ctx, "_transfer_probe_depth", 0) if app_ctx is not None else 0
+        if app_ctx is not None:
+            app_ctx._transfer_probe_depth = probe_depth + 1
+        try:
+            fallback = self._generate_fallback()
+        finally:
+            if app_ctx is not None:
+                app_ctx._transfer_probe_depth = probe_depth
+        if _active_di_scope.get(None) is not original_scope:
+            _active_di_scope.set(original_scope)  # type: ignore[arg-type]
         self._children = fallback
         self._resolved = False
         scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
-        task = scheduler.schedule(self._browser_resolve(children, pairs))
+        task = scheduler.schedule(self._browser_resolve(children, pairs, original_scope=original_scope))
         self._pending_tasks.append(task)
         task.add_done_callback(lambda t: self._pending_tasks.remove(t) if t in self._pending_tasks else None)
 
-    async def _browser_resolve(self, children=None, pairs=None):
-        original_scope = _active_di_scope.get(None)
+    async def _browser_resolve(self, children=None, pairs=None, *, original_scope: Any = _UNSET):
+        if original_scope is _UNSET:
+            original_scope = _active_di_scope.get(None)
         scope = original_scope.create_child() if original_scope is not None else None
         if scope is not None:
             scope.provide(SUSPENSE_RESOLVING_KEY, True)
@@ -170,7 +236,19 @@ class SuspenseElement(DynamicElement):
                 pairs = self._collect_pending_coroutines(children)
             if pairs:
                 coroutines = [_resolve_with_context(component, coro) for component, coro in pairs]
-                results = await asyncio.gather(*coroutines, return_exceptions=True)
+                try:
+                    results = await asyncio.wait_for(
+                        asyncio.gather(*coroutines, return_exceptions=True),
+                        timeout=self._timeout,
+                    )
+                except TimeoutError:
+                    _logger.warning(
+                        "Suspense resolution timed out after %ss, keeping fallback",
+                        self._timeout,
+                    )
+                    for child in list(children or []):
+                        child._remove_element(True, False)
+                    return
                 for _idx, result in enumerate(results):
                     if isinstance(result, Exception):
                         raise result
@@ -188,18 +266,30 @@ class SuspenseElement(DynamicElement):
             _position_element_nodes(self, parent_node, self._node_idx)
             self._parent._re_index_children(False)
         except asyncio.CancelledError:
-            self._cleanup_pending_pairs(pairs)
+            for child in list(children or []):
+                child._remove_element(True, False)
             raise
         except Exception as e:
-            self._cleanup_pending_pairs(pairs)
+            for child in list(children or []):
+                child._remove_element(True, False)
             await self._handle_error(e)
         finally:
             if scope is not None:
-                scope.__exit__(None, None, None)
+                _restore_suspense_di_scope(scope, original_scope)
 
     async def _handle_error(self, error: Exception) -> None:
         if self._error_fallback_generator is not None:
-            error_fallback = self._generate_children(self._error_fallback_generator)
+            from webcompy.components._component import _active_app_context, _get_app_instance
+
+            app_ctx = _active_app_context.get() or _get_app_instance()
+            probe_depth = getattr(app_ctx, "_transfer_probe_depth", 0) if app_ctx is not None else 0
+            if app_ctx is not None:
+                app_ctx._transfer_probe_depth = probe_depth + 1
+            try:
+                error_fallback = self._generate_children(self._error_fallback_generator)
+            finally:
+                if app_ctx is not None:
+                    app_ctx._transfer_probe_depth = probe_depth
             old_children = self._children
             self._cancel_pending_render_tasks()
             self._children = _patch_children(old_children, error_fallback, self._node_idx)
@@ -226,16 +316,19 @@ class SuspenseElement(DynamicElement):
         super()._remove_element(recursive, remove_node)
 
     def _hydrate_node(self) -> None:
-        from webcompy.components._component import Component
+        from webcompy.components._component import Component, _active_app_context, _get_app_instance
         from webcompy.hydration import has_resolved_data
 
+        original_scope = _active_di_scope.get(None)
         all_resolved = True
         test_children = self._generate_children(self._children_generator) if not self._children else self._children
+        if _active_di_scope.get(None) is not original_scope:
+            _active_di_scope.set(original_scope)  # type: ignore[arg-type]
 
         def _check_resolved(element: ElementAbstract) -> bool:
             if isinstance(element, Component):
-                cid = element._property.get("component_id", "")
-                if not has_resolved_data(cid):
+                key = element._property.get("transfer_id") or element._property.get("component_id", "")
+                if not has_resolved_data(key):
                     return False
             if hasattr(element, "_children") and isinstance(element._children, (list, tuple)):
                 for child in element._children:
@@ -249,7 +342,6 @@ class SuspenseElement(DynamicElement):
                 break
 
         if all_resolved:
-            original_scope = _active_di_scope.get(None)
             scope = original_scope.create_child() if original_scope is not None else None
             if scope is not None:
                 scope.provide(SUSPENSE_RESOLVING_KEY, True)
@@ -259,12 +351,22 @@ class SuspenseElement(DynamicElement):
                 self._resolved = True
             finally:
                 if scope is not None:
-                    scope.__exit__(None, None, None)
+                    _restore_suspense_di_scope(scope, original_scope)
         else:
-            fallback = self._generate_fallback()
+            app_ctx = _active_app_context.get() or _get_app_instance()
+            probe_depth = getattr(app_ctx, "_transfer_probe_depth", 0) if app_ctx is not None else 0
+            if app_ctx is not None:
+                app_ctx._transfer_probe_depth = probe_depth + 1
+            try:
+                fallback = self._generate_fallback()
+            finally:
+                if app_ctx is not None:
+                    app_ctx._transfer_probe_depth = probe_depth
+            if _active_di_scope.get(None) is not original_scope:
+                _active_di_scope.set(original_scope)  # type: ignore[arg-type]
             self._children = fallback
             scheduler = inject(ASYNC_SCHEDULER_PORT_KEY)
-            task = scheduler.schedule(self._browser_resolve())
+            task = scheduler.schedule(self._browser_resolve(test_children, original_scope=original_scope), render=True)
             self._pending_tasks.append(task)
             task.add_done_callback(lambda t: self._pending_tasks.remove(t) if t in self._pending_tasks else None)
         super()._hydrate_node()

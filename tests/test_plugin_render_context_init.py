@@ -43,8 +43,8 @@ class TestPluginRenderContextInit:
             assert len(instances) == 1
             assert instances[0].init_count == 2
 
-            ctx1.dispose()
             ctx2.dispose()
+            ctx1.dispose()
         finally:
             delattr(test_module, "_InitCountingPlugin")
 
@@ -77,7 +77,7 @@ class TestPluginRenderContextInit:
 
             assert pm._plugin_instances[0].init_count == 2
 
-            ctx1.dispose()
             ctx2.dispose()
+            ctx1.dispose()
         finally:
             delattr(test_module, "_ManualInitPlugin")

@@ -195,17 +195,23 @@ Non-serializable values that fail even the codec's extended encoders SHALL be dr
 
 ### Requirement: use_async_result shall check the transfer payload first
 
-`use_async_result` SHALL consult `HYDRATION_DATA_KEY` via `inject(HYDRATION_DATA_KEY, default=None)` before scheduling async execution. If a component ID (generated via `generate_id(component_name)`) is found in the payload with `state == "success"`, the function SHALL call `_restore_from_transfer(data)` and skip execution. If not found, the function SHALL proceed with the normal `PENDING → LOADING → SUCCESS/ERROR` lifecycle.
+`use_async_result` SHALL consult `HYDRATION_DATA_KEY` via `inject(HYDRATION_DATA_KEY, default=None)` before scheduling async execution, but only while the initial hydration window is open (see "app.run shall restore transfer data" for the window definition). If the component's per-instance transfer id (see the `signal-value-transfer` capability) is found in the payload with `state == "success"`, the function SHALL call `_restore_from_transfer(data)` and skip execution. If not found, or if the hydration window has closed (e.g., client-side navigation), the function SHALL proceed with the normal `PENDING → LOADING → SUCCESS/ERROR` lifecycle — even if the payload contains an entry for the same component name.
 
 #### Scenario: use_async_result restores from payload
-- **WHEN** `use_async_result` is called inside a component setup function
-- **AND** `HYDRATION_DATA_KEY` is provided with a payload containing the component's ID with `state == "success"`
+- **WHEN** `use_async_result` is called inside a component setup function during the initial hydration window
+- **AND** `HYDRATION_DATA_KEY` is provided with a payload containing the component instance's transfer id with `state == "success"`
 - **THEN** the `AsyncResult` SHALL be set to `SUCCESS` with the transferred data
 - **AND** the async function SHALL NOT be called
 
 #### Scenario: use_async_result falls through to normal lifecycle
 - **WHEN** `use_async_result` is called inside a component setup function
-- **AND** the component ID is not in the transfer payload
+- **AND** the component's transfer id is not in the transfer payload
+- **THEN** the normal `PENDING → LOADING → SUCCESS/ERROR` lifecycle SHALL run
+- **AND** the async function SHALL be executed
+
+#### Scenario: use_async_result does not restore after the hydration window closed
+- **WHEN** `use_async_result` is called inside a component setup function during client-side navigation
+- **AND** the initial page's payload contains an entry for the same component name
 - **THEN** the normal `PENDING → LOADING → SUCCESS/ERROR` lifecycle SHALL run
 - **AND** the async function SHALL be executed
 
@@ -243,6 +249,8 @@ Non-serializable values that fail even the codec's extended encoders SHALL be dr
 
 The `HYDRATION_SIGNAL_DATA_KEY` and `RESOURCE_DATA_KEY` SHALL be provided **before** any component creation, so that `use_state()`, `use_reactive_list()`, and `use_reactive_dict()` composable calls during component setup can access the payload via `inject(HYDRATION_SIGNAL_DATA_KEY)`, and `BrowserResourcePort` can access embedded resources via `inject(RESOURCE_DATA_KEY)`.
 
+The `HYDRATION_DATA_KEY` and `HYDRATION_SIGNAL_DATA_KEY` payloads SHALL be valid only during the initial hydration window: the window opens before the initial render pass creates or hydrates the component tree and closes as soon as the initial child render completes — including the render-task drain that gates the hydration reveal in hydrating mode — before loading-screen teardown and lazy-route preload run, whether the app hydrates or runs in hydrate-disabled browser mode, and whether the render succeeds or fails. Component setups running after the window closes SHALL NOT restore from these payloads. The fetch-port response cache (`populate_from_transfer`) and `RESOURCE_DATA_KEY` are URL- and path-keyed respectively and are NOT subject to this lifecycle; they remain available for the app's lifetime. The `AppDocumentRoot` render pass SHALL resolve its render context as `_active_app_context`, falling back to the per-app `_render_context_cv` and then the module-level `_app_instance` fallback, so the window closes and the drain runs even when the render task does not carry `ContextVar` propagation (e.g., a PyScript JavaScript-originated callback). The `_is_hydration_payload_open()` helper SHALL resolve its render context via the same three-level fallback (`_active_app_context` → per-app `_render_context_cv` via the fallback app's context variable → `_app_instance`), so the open check and the close/drain target the same `RenderContext` even after `ContextVar` loss.
+
 If the payload is missing or invalid, the function SHALL proceed with an empty payload (all DI keys unprovided). The script element SHALL be removed from the DOM after reading.
 
 #### Scenario: Valid payload is restored during app.run
@@ -271,9 +279,25 @@ If the payload is missing or invalid, the function SHALL proceed with an empty p
 - **THEN** `inject(HYDRATION_SIGNAL_DATA_KEY)` SHALL return the signals payload
 - **AND** `use_state()` SHALL check the payload for a matching key before running the factory
 
+#### Scenario: Signal payload is closed after initial hydration
+- **WHEN** the initial hydration render pass has completed
+- **AND** a new component instance's setup calls `use_state()` (e.g., after client-side navigation)
+- **THEN** `use_state()` SHALL NOT restore from `HYDRATION_SIGNAL_DATA_KEY`
+- **AND** the factory SHALL run
+
+#### Scenario: Payload closes even when the initial render fails
+- **WHEN** the initial hydration render pass raises an error
+- **THEN** the hydration payload SHALL be closed
+- **AND** subsequent component setups SHALL NOT restore from `HYDRATION_SIGNAL_DATA_KEY` or `HYDRATION_DATA_KEY`
+
+#### Scenario: Payload closes before loading teardown for non-hydrating apps
+- **WHEN** the app runs in the browser with `hydrate=False` and the initial child render pass has completed
+- **THEN** the hydration payload SHALL be closed before the loading-screen fade and lazy-route preload begin
+- **AND** component setups running during those post-render startup steps SHALL NOT restore from `HYDRATION_SIGNAL_DATA_KEY` or `HYDRATION_DATA_KEY`
+
 ### Requirement: collect_transfer_data shall collect fetches, async_results, signals, and resources
 
-`collect_transfer_data(root)` SHALL traverse the component tree and populate four sections of the `TransferPayload`: `fetches` (from `FetchPort.get_transfer_data()`), `async_results` (from `Component._async_results`), `signals` (from `Component.__signal_members__`), and `resources` (from `ResourcePort.get_recorded_resources()`). Signal values SHALL be encoded via `encode()` from `webcompy.hydration._codec`. Non-serializable Signal values SHALL be dropped with a warning. Resource content bytes SHALL be base64-encoded for transfer. `AppDocumentRoot` (or `WebComPyApp`) SHALL provide a `_collect_transfer_data() -> TransferPayload` method that wraps `collect_transfer_data(self)`.
+`collect_transfer_data(root)` SHALL traverse the component tree and populate four sections of the `TransferPayload`: `fetches` (from `FetchPort.get_transfer_data()`), `async_results` (from `Component._async_results`), `signals` (from `Component.__signal_members__`), and `resources` (from `ResourcePort.get_recorded_resources()`). Signal values SHALL be encoded via `encode()` from `webcompy.hydration._codec`. Non-serializable Signal values SHALL be dropped with a warning. Resource content bytes SHALL be base64-encoded for transfer. Component-keyed sections (`async_results`, `signals`) SHALL use each component's per-instance transfer id as the key, so multiple instances of the same component produce distinct entries. `AppDocumentRoot` (or `WebComPyApp`) SHALL provide a `_collect_transfer_data() -> TransferPayload` method that wraps `collect_transfer_data(self)`.
 
 #### Scenario: collect_transfer_data gathers all four sections
 - **WHEN** `collect_transfer_data(root)` is called after SSR rendering
@@ -281,7 +305,11 @@ If the payload is missing or invalid, the function SHALL proceed with an empty p
 
 #### Scenario: collect_transfer_data handles components with no signals
 - **WHEN** a component has no `__signal_members__` entries
-- **THEN** that component's ID SHALL not appear in the `signals` dict (or shall map to an empty dict)
+- **THEN** that component's transfer id SHALL not appear in the `signals` dict (or shall map to an empty dict)
+
+#### Scenario: Two instances of the same component produce distinct entries
+- **WHEN** the rendered tree contains two instances of one component with transferable state
+- **THEN** the `signals` (or `async_results`) section SHALL contain one entry per instance, keyed by distinct transfer ids
 
 ### Requirement: serialize_payload and deserialize_payload shall support compressed payloads
 

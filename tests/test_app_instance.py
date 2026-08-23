@@ -146,8 +146,8 @@ class TestPerAppComponentStore:
         ctx1 = app1.create_render_context()
         ctx2 = app2.create_render_context()
         assert ctx1._component_store is not ctx2._component_store
-        ctx1.dispose()
         ctx2.dispose()
+        ctx1.dispose()
 
     def test_app_store_is_provided_in_di(self):
         from webcompy.di._keys import _COMPONENT_STORE_KEY
@@ -174,8 +174,8 @@ class TestPerAppComponentStore:
         ctx2 = app2.create_render_context()
         ctx1._defer_depth = 1
         assert ctx2._defer_depth == 0
-        ctx1.dispose()
         ctx2.dispose()
+        ctx1.dispose()
 
 
 class TestDeferredComponentRegistration:
@@ -320,8 +320,8 @@ class TestHtmlAttrs:
         app2.set_html_attr("lang", "en")
         assert app1.html_attrs["lang"] == "ja"
         assert app2.html_attrs["lang"] == "en"
-        ctx1.dispose()
         ctx2.dispose()
+        ctx1.dispose()
 
     def test_remove_html_attr_removes_computed_consumer(self):
         from webcompy.signal import Signal, use_computed

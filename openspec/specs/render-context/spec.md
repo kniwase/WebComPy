@@ -39,7 +39,7 @@ A `RenderContext` ABC SHALL hold all mutable runtime state needed for a single r
 
 ### MODIFIED: RenderContext shall support disposal of all request-scoped resources
 
-`RenderContext` SHALL provide a `dispose()` method that cleans up all request-scoped resources: DI scope child disposal, EffectScope disposal, Signal graph state reset, and removal of circular references that would prevent garbage collection. Disposal behavior is identical for both `BrowserRenderContext` and `ServerRenderContext`.
+`RenderContext` SHALL provide a `dispose()` method that cleans up all request-scoped resources: DI scope child disposal, EffectScope disposal, Signal graph state reset, and removal of circular references that would prevent garbage collection. Disposal behavior is identical for both `BrowserRenderContext` and `ServerRenderContext`. In the browser (PyScript), the module-level fallback references (`_app_instance` / `_app_di_scope`) SHALL be restored on disposal: a fallback SHALL be cleared only when it still points to the disposed context, in which case the previously registered live context (walking past already-disposed contexts) SHALL become the fallback. Disposing a context that is not the current fallback SHALL leave the surviving fallback untouched.
 
 #### Scenario: Disposing a RenderContext after SSR rendering
 - **WHEN** `ctx = app.create_render_context(path)` then `ctx.render_html(...)` then `ctx.dispose()` is called on the server

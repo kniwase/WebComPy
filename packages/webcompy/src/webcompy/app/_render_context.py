@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from webcompy.app._config import WebComPyAppConfig
 from webcompy.components._component import (
     _active_app_context,
+    _get_app_instance,
     _set_app_instance,
 )
 from webcompy.components._generator import (
@@ -20,7 +21,12 @@ from webcompy.di._keys import (
     _TELEPORT_REGISTRY_KEY,
     RPC_REGISTRY_KEY,
 )
-from webcompy.di._scope import DIScope, _active_di_scope, _set_app_di_scope
+from webcompy.di._scope import (
+    DIScope,
+    _active_di_scope,
+    _get_app_di_scope,
+    _set_app_di_scope,
+)
 from webcompy.elements.types._teleport import _TeleportTargetRegistry
 from webcompy.exception import WebComPyException
 from webcompy.hydration._report import HydrationMismatchRecord, HydrationReporter
@@ -54,7 +60,15 @@ class RenderContext(ABC):
         self._defer_depth: int = 0
         self._deferred_callbacks: list = []
         self._hydration_in_progress: bool = False
+        self._hydration_payload_closed: bool = False
         self._hydration_reporter = HydrationReporter()
+        self._transfer_ordinal_counters: dict[str, int] = {}
+        self._transfer_probe_depth: int = 0
+        self._prev_app_instance: Any = None
+        self._prev_app_di_scope: DIScope | None = None
+        self._prev_active_app_context: Any = None
+        self._prev_render_context_cv: Any = None
+        self._prev_active_di_scope: DIScope | None = None
         self._initial_theme = initial_theme
         self._cookie_header = cookie_header or ""
 
@@ -71,13 +85,18 @@ class RenderContext(ABC):
         if app._router:
             self._router = app._router._clone_for_request()
 
+        self._prev_active_di_scope = _active_di_scope.get(None)
         self._di_scope.__enter__()
         self._di_scope_token = self._di_scope._token
 
+        self._prev_active_app_context = _active_app_context.get()
         self._active_app_token = _active_app_context.set(self)
-        self._render_context_cv_token = app._render_context_cv.set(self)
+        self._prev_render_context_cv = self._app._render_context_cv.get()
+        self._render_context_cv_token = self._app._render_context_cv.set(self)
 
         if ENVIRONMENT == "pyscript":
+            self._prev_app_instance = _get_app_instance()
+            self._prev_app_di_scope = _get_app_di_scope()
             _set_app_di_scope(self._di_scope)
             _set_app_instance(self)
 
@@ -234,17 +253,72 @@ class RenderContext(ABC):
         if self._disposed:
             return
         self._disposed = True
-        _active_app_context.reset(self._active_app_token)
-        self._app._render_context_cv.reset(self._render_context_cv_token)
-        _set_app_di_scope(None)
-        _set_app_instance(None)
+
+        def _next_live_ctx(start):
+            cur = start
+            while cur is not None and getattr(cur, "_disposed", False):
+                nxt = getattr(cur, "_prev_active_app_context", None)
+                if nxt is None:
+                    nxt = getattr(cur, "_prev_app_instance", None)
+                cur = nxt
+            return cur
+
+        def _next_live_render_ctx(start):
+            cur = start
+            while cur is not None and getattr(cur, "_disposed", False):
+                nxt = getattr(cur, "_prev_render_context_cv", None)
+                if nxt is None:
+                    nxt = getattr(cur, "_prev_app_instance", None)
+                cur = nxt
+            return cur
+
+        def _find_next_live_di(start_ctx):
+            cur = start_ctx
+            while cur is not None:
+                di = getattr(cur, "_prev_active_di_scope", None)
+                if di is not None and not getattr(di, "_disposed", False):
+                    return di
+                if not getattr(cur, "_disposed", False):
+                    di = getattr(cur, "_di_scope", None)
+                    if di is not None and not getattr(di, "_disposed", False):
+                        return di
+                nxt = getattr(cur, "_prev_active_app_context", None) or getattr(cur, "_prev_app_instance", None)
+                cur = nxt
+            return None
+
+        if _active_app_context.get() is self:
+            _active_app_context.reset(self._active_app_token)
+            cur = _active_app_context.get()
+            live = _next_live_ctx(cur)
+            if live is not cur:
+                _active_app_context.set(live)
+        if self._app._render_context_cv.get() is self:
+            self._app._render_context_cv.reset(self._render_context_cv_token)
+            cur = self._app._render_context_cv.get()
+            live = _next_live_render_ctx(cur)
+            if live is not cur:
+                self._app._render_context_cv.set(live)
+        self._restore_browser_fallback()
         di_scope = self._di_scope
         root = self._root
         assert di_scope is not None
         assert root is not None
-        if self._di_scope_token is not None and di_scope._token is None:
-            _active_di_scope.reset(self._di_scope_token)
+        active_di = _active_di_scope.get(None)
+        node = active_di
+        while node is not None and node is not di_scope:
+            node = getattr(node, "_parent", None)
+        if node is not None and self._di_scope_token is not None:
+            try:
+                _active_di_scope.reset(self._di_scope_token)
+            except (RuntimeError, ValueError):
+                _active_di_scope.set(None)  # type: ignore[arg-type]
+            cur_di = _active_di_scope.get(None)
+            if cur_di is not None and getattr(cur_di, "_disposed", False):
+                live_di = _find_next_live_di(self._prev_active_app_context)
+                _active_di_scope.set(live_di)  # type: ignore[arg-type]
         self._di_scope_token = None
+        if di_scope._token is not None:
+            di_scope._token = None
         di_scope.__exit__(None, None, None)
         di_scope.dispose()
         root._head_element._cleanup_consumers()
@@ -252,6 +326,27 @@ class RenderContext(ABC):
         self._di_scope = None
         self._component_store = None
         self._router = None
+
+    def _restore_browser_fallback(self) -> None:
+        """Restore the previous PyScript fallback when disposing the current one.
+
+        The module-level app fallbacks (``_app_instance`` / ``_app_di_scope``)
+        hold only the most recently created context. When a context that is no
+        longer the current fallback is disposed, the surviving fallback is left
+        untouched. When the disposed context IS the current fallback, the
+        previously registered context (walking past any already-disposed
+        contexts) is restored so overlapping browser contexts keep working after
+        disposal in any order.
+        """
+        if _get_app_instance() is not self:
+            return
+        candidate = self._prev_app_instance
+        candidate_scope = self._prev_app_di_scope
+        while candidate is not None and getattr(candidate, "_disposed", False):
+            candidate_scope = candidate._prev_app_di_scope
+            candidate = candidate._prev_app_instance
+        _set_app_instance(candidate)
+        _set_app_di_scope(candidate_scope)
 
     def _check_disposed(self) -> None:
         if self._disposed:
@@ -268,6 +363,15 @@ class RenderContext(ABC):
     def _record_phase(self, name: str) -> None:
         if self._profile:
             self._profile_data[name] = time.perf_counter()
+
+    def _next_transfer_id(self, component_name: str) -> str:
+        from webcompy.components._libs import generate_id
+
+        if self._transfer_probe_depth > 0:
+            return generate_id(component_name)
+        ordinal = self._transfer_ordinal_counters.get(component_name, 0)
+        self._transfer_ordinal_counters[component_name] = ordinal + 1
+        return f"{generate_id(component_name)}#{ordinal}"
 
     @property
     def di_scope(self) -> DIScope:
