@@ -298,12 +298,24 @@ class HarnessProcess:
     port: int
 
 
-def serve_harness(harness: HarnessServer, *, host: str = "127.0.0.1") -> HarnessProcess:
-    """Run the harness ASGI app with uvicorn in a daemon thread on a free port."""
+def reserve_port(host: str = "127.0.0.1") -> int:
+    """Reserve an ephemeral TCP port by binding and immediately releasing it."""
     probe = socket.socket()
     probe.bind((host, 0))
     port = probe.getsockname()[1]
     probe.close()
+    return port
+
+
+def serve_harness(
+    harness: HarnessServer,
+    *,
+    host: str = "127.0.0.1",
+    port: int | None = None,
+) -> HarnessProcess:
+    """Run the harness ASGI app with uvicorn in a daemon thread."""
+    if port is None:
+        port = reserve_port(host)
     config = uvicorn.Config(harness.asgi, host=host, port=port, log_level="warning")
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, daemon=True)

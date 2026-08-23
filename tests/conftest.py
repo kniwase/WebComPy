@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import os
 from unittest.mock import MagicMock
 
 import pytest
+
+if os.environ.get("WEBCOMPY_RUN_BROWSER") != "1":
+    collect_ignore_glob = ["browser/*"]
 
 from webcompy_testing import (
     FakeBrowserDOMPort,

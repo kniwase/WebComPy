@@ -14,15 +14,15 @@
 
 ## 3. Pytest integration (CPython side)
 
-- [ ] 3.1 Add pytest integration for `tests/browser/**`: mark every collected item as a browser item; enforce `WEBCOMPY_RUN_BROWSER=1` opt-in (missing gate → collection-time message referencing `scripts/run-browser-tests.sh`, no browser/servers started).
-- [ ] 3.2 Implement `pytest_pyfunc_call` override for browser items: serialize `@pytest.mark.parametrize` parameters into the `test_id`, `await page.evaluate("id => window.__webcompy_test__.run_one(id)", test_id)`, receive JSON, normalize traceback source paths back to repo-relative, and map to pytest outcomes (`passed`/`failed` with remote traceback and captured output/`skipped`).
-- [ ] 3.3 Implement session fixture: start harness server on `port 0`, launch Playwright Chromium, open the harness page, poll `<html data-webcompy-test-ready="1">` with captured console tail on timeout, and expose the `page` to the `pytest_pyfunc_call` path; sequential execution invariant (one `run_one` at a time).
-- [ ] 3.4 Enforce CPython-importability invariant for `tests/browser/**`: ruff lint rule (ban top-level `import js` / `from pyscript` outside `def`/`async def`; ban top-level fake-port imports), CI check with a helpful error explaining the function-local import requirement.
+- [x] 3.1 Add pytest integration for `tests/browser/**`: mark every collected item as a browser item; enforce `WEBCOMPY_RUN_BROWSER=1` opt-in (missing gate → collection-time message referencing `scripts/run-browser-tests.sh`, no browser/servers started).
+- [x] 3.2 Implement `pytest_pyfunc_call` override for browser items: serialize `@pytest.mark.parametrize` parameters into the `test_id`, `await page.evaluate("id => window.__webcompy_test__.run_one(id)", test_id)`, receive JSON, normalize traceback source paths back to repo-relative, and map to pytest outcomes (`passed`/`failed` with remote traceback and captured output/`skipped`).
+- [x] 3.3 Implement session fixture: start harness server on `port 0`, launch Playwright Chromium, open the harness page, poll `<html data-webcompy-test-ready="1">` with captured console tail on timeout, and expose the `page` to the `pytest_pyfunc_call` path; sequential execution invariant (one `run_one` at a time).
+- [x] 3.4 Enforce CPython-importability invariant for `tests/browser/**`: ruff lint rule (ban top-level `import js` / `from pyscript` outside `def`/`async def`; ban top-level fake-port imports), CI check with a helpful error explaining the function-local import requirement.
 
 ## 4. Crash containment and console-error capture
 
-- [ ] 4.1 Implement driver-side crash containment: on `page.evaluate` failure due to page close / wasm abort, report the item as an error with the page console tail attached, restart the browser + page and re-wait for the readiness sentinel, and resume with the next item.
-- [ ] 4.2 Implement per-test console-error capture (at least `type == "error"` messages from harness-page load through test teardown) included in the JSON `console_error_delta` surfaced in pytest reports; strict-mode promotion of non-empty deltas to failure is advisory by default.
+- [x] 4.1 Implement driver-side crash containment: on `page.evaluate` failure due to page close / wasm abort, report the item as an error with the page console tail attached, restart the browser + page and re-wait for the readiness sentinel, and resume with the next item.
+- [x] 4.2 Implement per-test console-error capture (at least `type == "error"` messages from harness-page load through test teardown) included in the JSON `console_error_delta` surfaced in pytest reports; strict-mode promotion of non-empty deltas to failure is advisory by default.
 
 ## 5. Pilot tests
 
