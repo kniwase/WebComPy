@@ -26,7 +26,7 @@ The harness SHALL support two supply modes for the framework packages under test
 
 #### Scenario: Source-mount supply mode
 - **WHEN** `WEBCOMPY_BROWSER_SOURCE=1` is set
-- **THEN** the harness py-config SHALL include a `files` mapping for every file under `packages/webcompy/src`, `packages/webcompy-testing/src`, and the bootstrap SHALL prepend the mapped paths to `sys.path`
+- **THEN** the harness py-config SHALL include a `files` mapping for every file under `packages/webcompy/src`, `packages/webcompy-testing/src`, and `packages/webcompy-server/src`, and the bootstrap SHALL prepend the mapped paths to `sys.path`
 
 #### Scenario: Test files are always source-mounted
 - **WHEN** any harness run executes

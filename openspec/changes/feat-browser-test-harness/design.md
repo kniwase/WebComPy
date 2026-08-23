@@ -72,7 +72,7 @@ The registry is extensible; unknown names raise a structured failure.
 ### D5 — Two supply modes; test files always source-mounted
 
 - **Wheel mode** (CI default): framework code under test (`webcompy`, `webcompy_server`, `webcompy_testing`) is the newly built wheel requested from `webcompy_cli/_wheel_builder`; declared in `packages=[wheel urls]` in the harness py-config.
-- **Source-mount mode** (developer opt-in, env var `WEBCOMPY_BROWSER_SOURCE=1`): framework sources are mounted via PyScript `files` config entries that map the `packages/*/src/` trees into the Emscripten FS. A small convention—prepend to `sys.path` early in bootstrap—makes `import webcompy` resolve to the live checkout without a wheel rebuild.
+- **Source-mount mode** (developer opt-in, env var `WEBCOMPY_BROWSER_SOURCE=1`): framework sources are mounted via PyScript `files` config entries that map the `packages/*/src/` trees into the Emscripten FS. A small convention—prepend to `sys.path` early in bootstrap—makes `import webcompy` resolve to the live checkout without a wheel rebuild. All three trees (`packages/webcompy/src`, `packages/webcompy-testing/src`, `packages/webcompy-server/src`) are mounted: `webcompy_testing/__init__.py` imports from `webcompy_server.ports` at top level, so the runner's parent package requires it to be importable.
 
 Test files themselves (everything under `tests/browser/`) are always source-mounted via the same `files` mechanism, regardless of framework mode. The harness py-config is synthesized per run with one explicit mapping per file, so no zip/unpack step is needed.
 
@@ -92,7 +92,7 @@ The interpreter lives for the whole pytest session. Tests run sequentially in th
 - **Tracer leakage (module-level caches, etc.) across tests** → Mitigation: per-test fresh `WebComPyApp`/`RenderContext` + explicit `dom_root` teardown; evict test modules from `sys.modules` between tests; ship a small allowlist of globals known to be idempotent; restart the page after N tests as a safety valve.
 - **Sentinel race (driver polled too early, PyScript not yet ready)** → Mitigation: the harness HTML sets `<html data-webcompy-test-ready="1">` only after the in-page runner assigns `window.__webcompy_test__`; the driver polls that attribute with the same `WEBCOMPY_BROWSER_SENTINEL_TIMEOUT` conventions used in `e2e/` (visible failure with captured console errors).
 - **Traceback source paths in the Emscripten FS differ from checkout** → Mitigation: source-mount uses deterministic `packages/webcompy/src → /webcompy-src` equivalent that carries repo-relative prefixes into tracebacks; the driver rewrites them back to repo paths before re-raising.
-- **Performance of per-file mounts for large trees** → Mitigation: source-mount mode is opt-in; wheel mode has no per-file penalty; measure with the pilot suite and cap the mount to the minimal set (`packages/webcompy/src`, `packages/webcompy-testing/src`, `tests/browser`) unless benchmarks justify full-tree mounts.
+- **Performance of per-file mounts for large trees** → Mitigation: source-mount mode is opt-in; wheel mode has no per-file penalty; measure with the pilot suite and cap the mount to the minimal set (`packages/webcompy/src`, `packages/webcompy-testing/src`, `packages/webcompy-server/src`, `tests/browser`) unless benchmarks justify full-tree mounts.
 
 ## Migration Plan
 
