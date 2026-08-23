@@ -29,7 +29,7 @@ The `children` parameter SHALL be `Callable[[], ElementChildren]` (a zero-argume
 
 ### Requirement: Suspense shall await children during SSR/SSG
 
-In non-pyscript (server) environments, `SuspenseElement._render()` SHALL wait for all unresolved async child setups before completing its own render. Specifically: the function SHALL provide `SUSPENSE_RESOLVING_KEY=True` in the DI scope, traverse the children subtree to collect each unresolved `Component._pending_async_template` coroutine, and `await asyncio.wait_for(asyncio.gather(*coroutines), timeout=timeout)`. On success, each component's template SHALL be set, `__init_component()` SHALL be called, and `_pending_async_template` SHALL be cleared. On timeout, the fallback SHALL be rendered and a warning SHALL be logged. On exception, if `error_fallback` is provided, it SHALL be rendered; otherwise the exception SHALL propagate to the root render. After resolution completes (success or failure), the active DI scope SHALL be restored to the scope that was active before the Suspense subtree entered resolution, so a child `provide()` during resolution does not leak its scope into Suspense siblings or surrounding code.
+In non-pyscript (server) environments, `SuspenseElement._render()` SHALL wait for all unresolved async child setups before completing its own render. Specifically: the function SHALL provide `SUSPENSE_RESOLVING_KEY=True` in the DI scope, traverse the children subtree to collect each unresolved `Component._pending_async_template` coroutine, and `await asyncio.wait_for(asyncio.gather(*coroutines), timeout=timeout)`. On success, each component's template SHALL be set, `__init_component()` SHALL be called, and `_pending_async_template` SHALL be cleared. On timeout, the discarded probe subtree SHALL be destroyed (destroy hooks, effect scopes, and child DI scopes released) and the fallback SHALL be rendered with provisional, non-consuming transfer ids (see the `signal-value-transfer` capability) so per-name ordinal counters stay aligned with the browser's provisional hydration fallback; a warning SHALL be logged. On exception, if `error_fallback` is provided, it SHALL be rendered; otherwise the exception SHALL propagate to the root render. After resolution completes (success or failure), the active DI scope SHALL be restored to the scope that was active before the Suspense subtree entered resolution, so a child `provide()` during resolution does not leak its scope into Suspense siblings or surrounding code.
 
 #### Scenario: SSR/SSG awaits async children
 - **WHEN** `SuspenseElement._render()` runs in a non-pyscript environment and its children subtree contains `Component` instances with unresolved `_pending_async_template` coroutines
@@ -50,7 +50,7 @@ In non-pyscript (server) environments, `SuspenseElement._render()` SHALL wait fo
 
 ### Requirement: Suspense shall render fallback first in the browser then swap
 
-In the pyscript (browser) environment, `SuspenseElement._render()` SHALL first check whether children have unresolved async setup. If children have unresolved `_pending_async_template` coroutines, the fallback SHALL be rendered and async child resolution SHALL be scheduled. If children have no unresolved async setup, they SHALL be rendered directly without a fallback. Deferred resolution and hydration adoption SHALL exit with the same DI scope restoration as server resolution — the scope active before the Suspense subtree entered resolution SHALL be restored when resolution completes.
+In the pyscript (browser) environment, `SuspenseElement._render()` SHALL first check whether children have unresolved async setup. If children have unresolved `_pending_async_template` coroutines, the fallback SHALL be rendered and async child resolution SHALL be scheduled. If children have no unresolved async setup, they SHALL be rendered directly without a fallback. The active DI scope SHALL be snapshotted before the probe children are generated; after probe generation the caller SHALL be restored to that snapshot before constructing the fallback, and again after fallback construction before scheduling deferred resolution, so a probed child `provide()` does not leak into the fallback or the caller. Deferred resolution and hydration adoption SHALL exit with the same DI scope restoration as server resolution — the scope active before the Suspense subtree entered resolution SHALL be restored when resolution completes. Discarded probe subtrees on timeout, cancellation, or error replacement SHALL be destroyed via a single-owner recursive teardown that releases destroy hooks, effect scopes, and child DI scopes exactly once without touching the live fallback; timeout and cancellation SHALL both use this path so a sync probe component is not leaked and a pending component's cleanup is not invoked twice.
 
 #### Scenario: Browser shows fallback immediately
 - **WHEN** `SuspenseElement._render()` runs in the pyscript environment and its children have unresolved async setup
@@ -161,6 +161,13 @@ A `suspense()` function SHALL be exported from `packages/webcompy/src/webcompy/e
 - **WHEN** a probed component's setup calls `provide()` during `SuspenseElement._hydrate_node()`
 - **AND** hydration takes either the fast path (all children resolved) or the deferred path
 - **THEN** the active DI scope after hydration/deferred resolution SHALL be the scope active before the probe children were generated
+- **AND** the fallback SHALL be constructed under that original scope (not under the leaked descendant)
+
+#### Scenario: Deferred probe _browser_render does not leak into caller
+- **WHEN** `SuspenseElement._browser_render()` generates probe children that call `provide()`
+- **AND** the children contain unresolved async setup so a fallback is rendered and deferred resolution is scheduled
+- **THEN** `_active_di_scope` immediately after `_browser_render()` returns SHALL be the scope active before probe generation
+- **AND** the fallback subtree SHALL be parented under that original scope
 
 #### Scenario: Hydration fallback construction does not consume transfer ordinals
 - **WHEN** the hydration fallback generator constructs components of the same name as components rendered elsewhere
@@ -173,4 +180,14 @@ A `suspense()` function SHALL be exported from `packages/webcompy/src/webcompy/e
 - **THEN** the pending setup coroutines SHALL be cleaned up
 - **AND** a warning SHALL be logged
 - **AND** the fallback SHALL remain rendered
-- **AND** the discarded probe subtree SHALL be destroyed (destroy hooks, effect scopes, and child DI scopes released) without removing the live fallback
+- **AND** the discarded probe subtree SHALL be destroyed via the single-owner recursive path (destroy hooks, effect scopes, and child DI scopes released exactly once) without removing the live fallback
+
+#### Scenario: Cancelled deferred resolution destroys the sync probe subtree
+- **WHEN** the scheduled browser-side resolution (`_browser_resolve`) is cancelled (e.g., the `SuspenseElement` is removed during a route change)
+- **THEN** the discarded probe subtree SHALL be destroyed recursively (including synchronously-created probe components and their effect/DI scopes) without touching the live fallback
+
+#### Scenario: SSR timeout fallback uses provisional transfer ids
+- **WHEN** `SuspenseElement._server_render()` times out and renders the fallback
+- **THEN** the fallback components SHALL receive provisional, non-consuming transfer ids (bare `generate_id(name)`)
+- **AND** the per-name ordinal counters SHALL remain as they were after the probe tree was generated
+- **AND** a same-named component created after the Suspense boundary SHALL receive the same ordinal it would have received relative to the SSR tree without the timeout fallback

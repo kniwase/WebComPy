@@ -111,3 +111,27 @@ Both the probe tree and the speculative hydration fallback advanced per-name ord
 ### E. Timed-out probe subtrees must be destroyed
 
 The deferred-resolution timeout branch cancelled only the pending coroutines, leaking destroy hooks, effect scopes, and child DI scopes of synchronously-created probe components. The branch now runs the normal `_remove_element` teardown over the discarded probe subtree without touching the live fallback.
+
+## Addendum (round 4): third AI review follow-ups
+
+The third CI AI review of PR #271 raised three must-fix and two should-improve items that were regressions of the round-2/3 fixes.
+
+### A. Deferred Suspense must restore the caller
+
+`_browser_render()` and the deferred branch of `_hydrate_node()` captured `original_scope` and passed it to the scheduled `_browser_resolve()` task, but the resolver runs in a separate `AsyncScheduler` task, so its `finally` cannot repair the caller's `ContextVar`. If a probed child called `provide()`, the caller remained bound to that descendant, and the fallback was constructed under the leaked scope. The synchronous caller now restores `original_scope` immediately after probe generation and again after fallback construction, before scheduling.
+
+### B. DIScope context manager must not leak descendants
+
+`DIScope.__exit__` was changed to `if token is not None and get is self: reset`, so a `with scope:` block that contained a `provide()` (which `set()`s a child without a token) left the child active after the block. `__exit__` is restored to unconditional `reset(token)` with a `try/except` fallback to `set(None)`, preserving the normal context-manager contract. Overlapping-dispose safety remains in `RenderContext.dispose`, which already guards foreign active scopes via the `get is self` check before touching ContextVars.
+
+### C. Probe teardown must be single-owner and cancellation-safe
+
+The timeout branch called `_cleanup_pending_pairs()` and then `_remove_element()` on the same probe subtree, so pending components ran their destroy path twice (once via the pending-cleanup flag and once via the normal destroy path). Cancellation only cleaned pending pairs, leaking synchronously-created probe components. Both paths now use a single recursive `_remove_element` loop over `children`, without a separate `_cleanup_pending_pairs` call; the loop is reused for timeout, cancellation, and error replacement, and the live fallback is never touched.
+
+### D. SSR timeout fallback must use provisional ordinals
+
+`_server_render()` created timeout fallback components with normal consuming ordinals, while the hydration fallback path is explicitly provisional and non-consuming. For an SSR timeout, the fallback's transferable state was collected under an ordinal that the browser's provisional fallback did not use. `_server_render()` now wraps fallback generation in the same `_transfer_probe_depth` provisional guard as `_hydrate_node()`, so both sides use bare `generate_id(name)` for fallback and later same-named components stay aligned.
+
+### E. Dispose must walk the full predecessor chain
+
+`RenderContext.dispose` reset each of `_active_app_context`, `_render_context_cv`, and `_active_di_scope` via their token and then did `if cur is disposed: set(None)`, handling only one disposed predecessor. With three overlapping contexts, disposing the middle and then the newest lost the oldest live context. Each `RenderContext` now stores its predecessor values (`_prev_active_app_context`, `_prev_render_context_cv`, `_prev_active_di_scope`) at creation; dispose walks the chain past disposed entries to the next live context (or `None`) and restores that instead of clearing. The module-level fallback already walked; the ContextVar paths now do the same.

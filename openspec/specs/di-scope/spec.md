@@ -29,6 +29,11 @@ DI scopes define the resolution boundary and lifecycle for provided values. The 
 - **THEN** `inject()` inside the inner scope SHALL resolve from the inner scope first, then the outer
 - **AND** exiting the inner scope SHALL restore the outer scope as active
 
+#### Scenario: Context manager restores even when descendant is active
+- **WHEN** a `with DIScope():` block contains component setup that calls `provide()` and makes a descendant child scope active (via `_pending_di_parent`)
+- **THEN** exiting the `with` block SHALL restore `_active_di_scope` to the value active before the block was entered
+- **AND** `inject()` after the block SHALL NOT resolve values from the descendant child scope
+
 ### Requirement: DIScope shall lazily create child scopes for components
 When `provide()` is called during component setup, a child DI scope SHALL be created lazily (if not already created for this component). Subsequent `provide()` calls in the same component SHALL add to the same child scope.
 
@@ -63,7 +68,7 @@ When `provide()` is called during component setup, a child DI scope SHALL be cre
 
 ### Requirement: RenderContext dispose shall unwind the active DI binding
 
-When `RenderContext.dispose()` disposes its root scope tree, `_active_di_scope` SHALL NOT remain bound to the disposed root or any disposed descendant. The context SHALL reset the ContextVar to its pre-render value whenever the active scope belongs to the disposed tree (the root scope or any descendant created under it), and SHALL leave active scopes belonging to other, surviving render contexts untouched.
+When `RenderContext.dispose()` disposes its root scope tree, `_active_di_scope` SHALL NOT remain bound to the disposed root or any disposed descendant. The context SHALL reset the ContextVar to its pre-render value whenever the active scope belongs to the disposed tree (the root scope or any descendant created under it), and SHALL leave active scopes belonging to other, surviving render contexts untouched. If the immediate predecessor ContextVar value is itself already disposed (three overlapping contexts where the middle was disposed before the newest), the implementation SHALL walk the predecessor chain (`_prev_active_app_context` / `_prev_render_context_cv` / `_prev_active_di_scope` or the module fallback chain) to the next live context instead of clearing to `None`; this applies equally to `_active_app_context`, the per-app `_render_context_cv`, and `_active_di_scope`.
 
 #### Scenario: Disposing with a component child scope active
 - **WHEN** a component setup has called `provide()`, making an untokenized child scope the active `_active_di_scope`
@@ -74,6 +79,14 @@ When `RenderContext.dispose()` disposes its root scope tree, `_active_di_scope` 
 #### Scenario: Disposing while a foreign scope is active
 - **WHEN** the active `_active_di_scope` belongs to another, still-live render context's tree
 - **THEN** disposing SHALL leave that foreign scope active
+
+#### Scenario: Disposing with three overlapping contexts restores the oldest live context
+- **WHEN** three render contexts are created in order `ctx1 < ctx2 < ctx3` (each sets `_active_app_context`, `_render_context_cv`, and `_active_di_scope`)
+- **AND** the middle context `ctx2` is disposed while `ctx3` is still active
+- **AND** the newest context `ctx3` is then disposed
+- **THEN** `_active_app_context`, the app's `_render_context_cv`, and `_active_di_scope` SHALL be bound to `ctx1` (the oldest still-live context)
+- **AND** the module-level browser fallbacks (`_app_instance` / `_app_di_scope`) SHALL also be `ctx1` / `ctx1._di_scope`
+- **AND** disposing `ctx1` finally SHALL clear all three bindings to `None`
 
 ### Requirement: DIScope shall support initial providers on construction
 `DIScope.__init__` SHALL accept an optional `providers` dict mapping keys to values. These SHALL be registered in the scope immediately.

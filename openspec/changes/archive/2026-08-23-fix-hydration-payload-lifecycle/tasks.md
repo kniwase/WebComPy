@@ -45,3 +45,13 @@
 - [x] 6.5 Timeout probe destruction: destroy the discarded probe subtree (destroy hooks, effect scopes, child DI scopes) on the deferred-resolution timeout while keeping the live fallback
 - [x] 6.6 Tests for 6.1–6.5 (dispose with active child/grandchild scope, foreign-scope no-op, non-hydrating closure before fade, fast-path + deferred probe scope restore, provisional-transfer-id alignment, timeout destroy)
 - [x] 6.7 Spec sync: `di-scope` (dispose unwinding), `hydration-data-transfer` (window closes before loading teardown in all browser modes), `suspense` (pre-probe snapshot, provisional ordinals, timeout teardown)
+
+## 7. AI review follow-ups (round 4)
+
+- [x] 7.1 Deferred Suspense caller restore: `_browser_render` and `_hydrate_node` restore `original_scope` immediately after probe generation and after fallback generation before scheduling, so `provide()` inside the probe does not leak into fallback or caller
+- [x] 7.2 DIScope context manager: restore `DIScope.__exit__` to unconditional `reset(token)` (with `try/except` fallback) so a `with` block containing `provide()` correctly restores the previous scope
+- [x] 7.3 Probe teardown single-owner: timeout, cancellation, and error paths destroy the discarded probe subtree via a single recursive `_remove_element` loop without a separate `_cleanup_pending_pairs` call, keeping the live fallback untouched and avoiding double `on_before_destroy`
+- [x] 7.4 SSR provisional fallback: `_server_render` timeout fallback wrapped in `_transfer_probe_depth` provisional guard so SSR and browser fallback ordinals align
+- [x] 7.5 Dispose chain walking: `RenderContext` stores `_prev_active_app_context` / `_prev_render_context_cv` / `_prev_active_di_scope` and `dispose()` walks past disposed predecessors to the next live context for all three bindings (`_active_app_context`, `_render_context_cv`, `_active_di_scope`)
+- [x] 7.6 Tests for 7.1–7.5 (caller leak after probe, DIScope leak after provide, timeout single-owner, SSR provisional ordinal, three-context walk) — existing suites extended, no new `Note` item (payload-inject-before-window skipped as low value per plan)
+- [x] 7.7 Spec sync: `di-scope` (context-manager descendant restore, three-context walk), `suspense` (caller restore, single-owner teardown, cancellation, SSR provisional)
