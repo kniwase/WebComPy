@@ -2,7 +2,7 @@
 
 ## 0. Preconditions
 
-- [x] 0.1 Confirm `feat-sse-post` (`0d65127e`) and `feat-rpc-streaming` (`7e029e69`) are merged into origin/main; rebase `feat/rpc-contracts` onto the updated base — completed via rebase to `ded3285f` onto `7e029e69`
+- [x] 0.1 Confirm `feat-sse-post` (`0d65127e`) and `feat-rpc-streaming` (`7e029e69`) are merged into origin/main; rebase `feat/rpc-contracts` onto the updated base — completed via rebase to `ded3285f` onto `7e029e69`; re-integrated onto `52ebe5e8` (adds hydration payload lifecycle fix and CI update) with zero file conflicts
 - [x] 0.2 Re-run `openspec validate feat-rpc-contracts` and `openspec validate --specs` after the rebase and confirm both pass; verify the `rpc-streaming` delta requirement titles still match the archived spec headings — verified: the `rpc-streaming` delta title `"Streaming procedures shall register from generator functions with an iterable return annotation"` matches the archived spec; no drift
 
 ## 1. Contract classes

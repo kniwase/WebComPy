@@ -22,7 +22,7 @@ Everything is fully dynamic today: method names are strings, params/results are 
 
 ## Assumptions
 
-- `feat-sse-post` (`0d65127e`) and `feat-rpc-streaming` (`7e029e69`) are implemented and merged into the base branch (rebase completed at `ded3285f`; validation confirmed no title drift).
+- `feat-sse-post` (`0d65127e`) and `feat-rpc-streaming` (`7e029e69`) are implemented and merged into the base branch (rebase completed at `ded3285f`; validation confirmed no title drift; re-integrated onto `52ebe5e8` — hydration payload lifecycle fix — with no conflicts).
 - The `rpc-streaming` capability's requirement titles match those in the committed delta after its archive (verified).
 
 ## Decisions
