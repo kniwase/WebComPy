@@ -7,10 +7,10 @@
 
 ## 2. In-page runner (browser-side, in webcompy_testing)
 
-- [ ] 2.1 Add `webcompy_testing/browser_runner/` (importable inside PyScript): manifest-driven discovery (reads `/_webcompy-test/manifest.json` fallback) enumerating test modules under `tests/browser/`.
-- [ ] 2.2 Implement in-page fixture registry with at least `app` (fresh `WebComPyApp` + `BrowserRenderContext` provisioning real browser ports) and `dom_root` (fresh `<div>` mounted in `document.body`); unknown fixture name returns structured failure naming the fixture.
-- [ ] 2.3 Implement per-test isolation protocol: clear `document.body` children (except harness chrome), create a fresh `WebComPyApp`/DI scope, capture `stdout`/`stderr` and per-test console-error delta, and teardown `dom_root` + proxies created for the test.
-- [ ] 2.4 Implement entrypoint `window.__webcompy_test__.run_one(test_id: str)` as `async def` proxied via `create_proxy`, awaiting coroutine tests, resolving parametrize payloads from the `test_id` suffix, and returning the JSON result `{status, duration_ms, exc_type, traceback, stdout, stderr, console_error_delta}` with source paths carried repo-relatively.
+- [x] 2.1 Add `webcompy_testing/browser_runner/` (importable inside PyScript): manifest-driven discovery (reads `/_webcompy-test/manifest.json` fallback) enumerating test modules under `tests/browser/`.
+- [x] 2.2 Implement in-page fixture registry with at least `app` (fresh `WebComPyApp` + `BrowserRenderContext` provisioning real browser ports) and `dom_root` (fresh `<div>` mounted in `document.body`); unknown fixture name returns structured failure naming the fixture.
+- [x] 2.3 Implement per-test isolation protocol: clear `document.body` children (except harness chrome), create a fresh `WebComPyApp`/DI scope, capture `stdout`/`stderr` and per-test console-error delta, and teardown `dom_root` + proxies created for the test.
+- [x] 2.4 Implement entrypoint `window.__webcompy_test__.run_one(test_id: str)` as `async def` proxied via `create_proxy`, awaiting coroutine tests, resolving parametrize payloads from the `test_id` suffix, and returning the JSON result `{status, duration_ms, exc_type, traceback, stdout, stderr, console_error_delta}` with source paths carried repo-relatively.
 
 ## 3. Pytest integration (CPython side)
 
