@@ -102,7 +102,7 @@ are skipped — only OpenSpec validation and AI review run.
 - Python 3.12+ (aligned with latest PyScript/Pyodide runtime)
 - Package management with `uv` — use `uv add <package>` to add dependencies, `uv lock` to update lockfile
 - Type annotations throughout (package includes `py.typed` marker and `.pyi` stubs)
-- Docstrings are required on all public interfaces under `packages/*/src` (re-exported names and their public members, plus the important-internal allowlist; module summary, Google-style function Args/Returns and class Args/Attributes, re-exported constants via PEP 224 attribute docstrings). New or modified public interfaces in `packages/*/src` MUST carry docstrings; `tests/`, `e2e/`, `docs_app/` are out of scope. No OpenSpec artifact references (spec/change names, `openspec/` paths, task numbers) in docstrings or comments — external standards (RFC, PEP, CommonMark) remain allowed.
+- Docstrings are required on all public interfaces under `packages/*/src` (re-exported names and their public members, plus the important-internal allowlist; module summary, Google-style function Args/Returns and class Args/Attributes, re-exported constants via PEP 224 attribute docstrings). New or modified public interfaces in `packages/*/src` MUST carry docstrings; `tests/`, `e2e/`, `docs_app/` are out of scope. No OpenSpec artifact references (spec/change names, `openspec/` paths, task numbers) in docstrings or comments — external standards (RFC, PEP, CommonMark) remain allowed. When modifying any public interface under `packages/*/src`, update its docstring in the same change to keep implementation and documentation in sync.
 - No comments in code unless explicitly requested — docstrings are not comments
 - Component classes use decorators: `@component_template`, `@on_before_rendering`
 - Reactive state primitives are specified in `openspec/specs/reactive/spec.md` and `openspec/specs/composables/spec.md`. New transfer-capable state SHOULD be created via `use_state` / `use_reactive_list` / `use_reactive_dict` composables inside component setup so the SSR transfer path works.
@@ -394,6 +394,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
 | `test-execution-paths` | Physical separation between unit (`tests/`) and E2E (`e2e/`) tests; opt-in `WEBCOMPY_RUN_E2E=1` env var gate; `scripts/run-e2e-tests.sh` canonical entry point |
 | `doc-spec-references` | Governance of how universal docs reference `openspec/specs/`; retired API-name blocklist; `scripts/check-doc-spec-refs.py` guardrail |
+| `api-docstrings` | Docstring-implementation consistency for public interfaces under `packages/*/src`: same-PR docstring updates, must-fix inconsistency blocking approval (pydoclint structural checks + AI semantic review) |
 | `code-block` | `CodeBlock` component rendering syntax-highlighted code as framework-managed token spans (direct children of `<code>`, no `raw_html` injection), plus the `highlight()` HTML-string API with dual `tok-*`/Pygments classes |
 | `syntax-highlight-lexers` | `Lexer` protocol, lexer registry (name/alias/file-extension lookup), built-in Python/Bash/TOML lexers, `LexerInfo` introspection, Pygments adapter skeleton |
 
