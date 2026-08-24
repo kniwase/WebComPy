@@ -1,3 +1,5 @@
+"""JSON serializability helpers."""
+
 from typing import Any
 
 
@@ -12,4 +14,15 @@ def _is_json_seriarizable_value(obj: Any) -> bool:
 
 
 def is_json_seriarizable(obj: Any) -> bool:
+    """Return whether ``obj`` is JSON-serializable as a top-level list or dict.
+
+    Args:
+        obj: Value to test.
+
+    Returns:
+        ``True`` if ``obj`` is a ``list`` or ``dict`` whose contents are
+        recursively JSON-serializable (string-keyed dicts, primitives,
+        ``None``, and nested lists/dicts).
+
+    """
     return isinstance(obj, (list, dict)) and _is_json_seriarizable_value(obj)  # type: ignore

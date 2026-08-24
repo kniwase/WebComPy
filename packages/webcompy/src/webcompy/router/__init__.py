@@ -1,3 +1,5 @@
+"""Client-side routing: ``Router``, ``RouterLink``, ``RouterView``, and helpers."""
+
 from webcompy.router._component import RoutedComponent, create_typed_route
 from webcompy.router._composables import use_router
 from webcompy.router._context import RouterContext

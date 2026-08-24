@@ -1,3 +1,5 @@
+"""Server-side detection of the theme preference from a Cookie header."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -9,6 +11,20 @@ from webcompy.ui.theme._theme import THEME_COOKIE_NAME, Theme
 def read_theme_from_cookie(
     headers: Mapping[str, str] | Sequence[tuple[str, str]] | None,
 ) -> Theme:
+    """Extract the theme preference from request headers.
+
+    Searches the ``Cookie`` header for the ``webcompy-theme`` cookie and
+    decodes its value.
+
+    Args:
+        headers: Request headers as a mapping or a sequence of
+            ``(name, value)`` pairs.
+
+    Returns:
+        The requested theme, or ``Theme.SYSTEM`` when the cookie is
+        absent, empty, or contains an unrecognized value.
+
+    """
     if headers is None:
         return Theme.SYSTEM
     cookie_header: str | None = None

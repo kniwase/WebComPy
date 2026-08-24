@@ -1,3 +1,5 @@
+"""Pygments adapter skeleton for optional Pygments-backed lexers."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -7,7 +9,7 @@ from webcompy.ui.code_block.lexers._base import Lexer
 
 
 class PygmentsLexerWrapper:
-    """Adapter for a Pygments lexer.
+    """Adapter mapping a Pygments lexer to the framework ``Lexer`` contract.
 
     This file is intentionally not imported by any other framework module.
     Adopting Pygments in a future change requires only adding `pygments` to
@@ -26,6 +28,16 @@ class PygmentsLexerWrapper:
         self.file_extensions = tuple(getattr(pygments_lexer, "filenames", ()))
 
     def tokenize(self, code: str) -> Iterable[Token]:
+        """Tokenize source text, mapping Pygments token kinds to ``TokenType``.
+
+        Args:
+            code: Source text to tokenize.
+
+        Yields:
+            Token: Tokens in source order, reclassified into framework
+                token types.
+
+        """
         from pygments.token import (  # type: ignore[import-untyped]
             Comment,
             Keyword,
@@ -77,7 +89,11 @@ class PygmentsLexerWrapper:
 
 
 def register_pygments_lexer(name_or_class, *, aliases=(), file_extensions=()) -> None:
-    """Register a Pygments-backed lexer under one or more lookup names."""
+    """Register a Pygments-backed lexer under one or more lookup names.
+
+    A class given as ``name_or_class`` is instantiated without arguments;
+    a string is resolved through Pygments' own lexer lookup.
+    """
     from webcompy.ui.code_block.lexers._registry import register_lexer
 
     if isinstance(name_or_class, str):

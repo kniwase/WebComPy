@@ -1,3 +1,5 @@
+"""Thin logging facade routing to the browser console or ``uvicorn``."""
+
 from logging import getLogger as _getLogger
 from typing import Any, Protocol
 

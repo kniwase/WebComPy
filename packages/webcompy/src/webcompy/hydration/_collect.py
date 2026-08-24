@@ -1,3 +1,5 @@
+"""Collection of transfer data from the server-rendered component tree."""
+
 from __future__ import annotations
 
 import base64

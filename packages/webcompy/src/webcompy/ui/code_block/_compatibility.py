@@ -1,3 +1,5 @@
+"""Pygments short-class compatibility for rendered token spans."""
+
 from __future__ import annotations
 
 from webcompy.ui.code_block._tokens import TokenType
@@ -14,3 +16,7 @@ PYGMENTS_SHORT_CLASS: dict[TokenType, str] = {
     TokenType.PUNCTUATION: "p",
     TokenType.IDENTIFIER: "",
 }
+"""Pygments short class emitted alongside each semantic ``tok-*`` class.
+
+An empty string means no Pygments class is emitted for that token type.
+"""
