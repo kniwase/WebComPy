@@ -64,6 +64,7 @@ uv run python -m pytest tests/ --tb=short  # Unit tests only (E2E tests live in 
 uv run python -m pytest tests/ --tb=short --cov=webcompy --cov-report=term-missing  # With coverage
 scripts/run-e2e-tests.sh                   # All E2E tests (core + docs, prod + static)
 scripts/run-e2e-tests.sh <group-name>      # Single E2E group (e.g., components, docs-home)
+scripts/run-browser-tests.sh               # Browser unit tier inside a real PyScript runtime
 ```
 
 ### Inspect CLI
@@ -87,10 +88,11 @@ uv run python -m webcompy inspect verify <url> --expect "h1=Title"              
 |---|---|
 | OpenSpec validation | Validates spec schemas and change artifacts |
 | OpenSpec check | Detects completed-but-unarchived changes; validates naming conventions |
-| Lint | `ruff check` + `ruff format --check` |
+| Lint | `ruff check` + `ruff format --check` + browser import-invariant checker |
 | TypeCheck | `pyright` |
 | Generate | `webcompy generate` on docs_app |
 | Test | `pytest` with coverage |
+| Browser Tests | `scripts/run-browser-tests.sh`: tests/browser/** inside a real PyScript runtime (allowed to fail initially) |
 | E2E | Playwright-based E2E tests (matrix per group/mode) |
 | AI Review | `webcompy-reviewer` agent does spec-driven diff review |
 
@@ -171,6 +173,7 @@ the per-area reference.
 - **Head VDOM** — `head-vdom/spec.md`
 - **Loading Screen DOM Contract** — `loading-screen/spec.md`
 - **Node Cache Strict is-None Check** — `async-rendering/spec.md`
+- **Browser Test Tier Importability** — `browser-test-harness/spec.md`
 - **No Overview Gap List** — `overview/spec.md`
 
 ## File → Spec Mapping
@@ -237,6 +240,8 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy_cli/` | `cli/spec.md`, `project-config/spec.md`, `config-separation/spec.md`, `inspect-cli/spec.md`, `ssg-via-ssr/spec.md`, `asgi-embed/spec.md`, `async-scheduler/spec.md`, `error-handling/spec.md`, `json-rpc/spec.md`, `loading-screen/spec.md` |
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
 | `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md`, `markdown-document/spec.md` |
+| `tests/browser/`, `webcompy_testing/browser_runner/` | `browser-test-harness/spec.md`, `test-execution-paths/spec.md` |
+| `webcompy_cli/_browser_test_harness.py` | `browser-test-harness/spec.md`, `cli/spec.md` |
 | `docs_app/` | `docs-site-documents/spec.md`, `docs-e2e/spec.md`, `loading-screen/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
 
@@ -392,7 +397,8 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `transfer-codec` | Layered serialization engine (encode/decode) preserving Python type fidelity across the hydration boundary via `__webcompy_`-tagged JSON |
 | `payload-compression` | Optional gzip compression of the hydration data transfer payload via stdlib `zlib`/`base64`, threshold-based activation, `__webcompy_compressed__` envelope flag |
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
-| `test-execution-paths` | Physical separation between unit (`tests/`) and E2E (`e2e/`) tests; opt-in `WEBCOMPY_RUN_E2E=1` env var gate; `scripts/run-e2e-tests.sh` canonical entry point |
+| `test-execution-paths` | Physical separation between unit (`tests/`), browser (`tests/browser/`), and E2E (`e2e/`) tiers; opt-in `WEBCOMPY_RUN_E2E=1` / `WEBCOMPY_RUN_BROWSER=1` gates; `scripts/run-e2e-tests.sh` and `scripts/run-browser-tests.sh` canonical entry points |
+| `browser-test-harness` | PyScript-native in-browser unit testing: harness server (runtime assets, py-config, manifest, harness page), in-page runner with `app`/`dom_root` fixtures and per-test isolation, pytest dispatch over `window.__webcompy_test__.run_one`, wheel vs source-mount supply modes, crash containment, and console-error capture |
 | `doc-spec-references` | Governance of how universal docs reference `openspec/specs/`; retired API-name blocklist; `scripts/check-doc-spec-refs.py` guardrail |
 | `code-block` | `CodeBlock` component rendering syntax-highlighted code as framework-managed token spans (direct children of `<code>`, no `raw_html` injection), plus the `highlight()` HTML-string API with dual `tok-*`/Pygments classes |
 | `syntax-highlight-lexers` | `Lexer` protocol, lexer registry (name/alias/file-extension lookup), built-in Python/Bash/TOML lexers, `LexerInfo` introspection, Pygments adapter skeleton |

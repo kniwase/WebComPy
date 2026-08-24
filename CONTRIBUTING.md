@@ -236,10 +236,18 @@ See [AGENTS.md](AGENTS.md#framework-invariants) for critical invariants
 
 ### Testing
 
-Unit tests and E2E tests live in physically separate directories and use distinct
-invocation paths:
+Unit tests, browser tests, and E2E tests live in physically separate directories
+and use distinct invocation paths:
 
 - Unit tests: `uv run python -m pytest tests/ --tb=short` (runs only tests under `tests/`)
+- Browser tests: `scripts/run-browser-tests.sh` (canonical entry point; auto-sets `WEBCOMPY_RUN_BROWSER=1`)
+  - Executes `tests/browser/**` inside a real PyScript runtime in headless Chromium
+  - Source-mount dev loop: `WEBCOMPY_BROWSER_SOURCE=1 scripts/run-browser-tests.sh`
+  - Direct invocation (`uv run pytest tests/browser/`) fails with `pytest.UsageError`
+    unless the `WEBCOMPY_RUN_BROWSER=1` environment variable is set
+  - Top-level imports in browser test modules must be CPython-importable;
+    `import js` / `from pyscript import ...` belong inside function bodies
+    (enforced by `scripts/check-browser-imports.py`)
 - E2E tests: `scripts/run-e2e-tests.sh` (canonical entry point; auto-sets `WEBCOMPY_RUN_E2E=1`)
 - E2E for a single group: `scripts/run-e2e-tests.sh <group-name>`
 - Direct invocation of E2E tests (`uv run pytest e2e/`) fails with `pytest.UsageError`

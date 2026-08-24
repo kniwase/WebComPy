@@ -33,7 +33,7 @@
 
 ## 6. Entry point, CI, and docs
 
-- [ ] 6.1 Add `scripts/run-browser-tests.sh`: the canonical entry point that sets `WEBCOMPY_RUN_BROWSER=1` and forwards optional path/k selectors to pytest.
-- [ ] 6.2 Wire a `browser-tests` CI job (Playwright Chromium, pre-downloaded local runtime via the existing lockflow), initially allowed-to-fail or as a parallel of the `Test` job gated on `WEBCOMPY_RUN_BROWSER=1`.
-- [ ] 6.3 Update `AGENTS.md` File → Spec Mapping, Framework Invariants, and Current Specs list; update `CONTRIBUTING.md` and any universal skill docs that reference spec names; run `python3 scripts/check-doc-spec-refs.py` and confirm it passes.
-- [ ] 6.4 Update `.opencode/skills/webcompy-review/SKILL.md` file→spec mapping and Critical Framework Invariants to reflect the new `browser-test-harness` spec and the modified `test-execution-paths` tier.
+- [x] 6.1 Add `scripts/run-browser-tests.sh`: the canonical entry point that sets `WEBCOMPY_RUN_BROWSER=1` and forwards optional path/k selectors to pytest.
+- [x] 6.2 Wire a `browser-tests` CI job (Playwright Chromium, pre-downloaded local runtime via the existing lockflow), initially allowed-to-fail or as a parallel of the `Test` job gated on `WEBCOMPY_RUN_BROWSER=1`.
+- [x] 6.3 Update `AGENTS.md` File → Spec Mapping, Framework Invariants, and Current Specs list; update `CONTRIBUTING.md` and any universal skill docs that reference spec names; run `python3 scripts/check-doc-spec-refs.py` and confirm it passes.
+- [x] 6.4 Update `.opencode/skills/webcompy-review/SKILL.md` file→spec mapping and Critical Framework Invariants to reflect the new `browser-test-harness` spec and the modified `test-execution-paths` tier.

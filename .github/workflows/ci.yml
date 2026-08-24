@@ -105,6 +105,10 @@ jobs:
         run: |
           uv run pydoclint packages/webcompy/src/webcompy packages/webcompy-server/src/webcompy_server packages/webcompy-cli/src/webcompy_cli packages/webcompy-testing/src/webcompy_testing 2>&1 | tee ci-lint-pydoclint.log
           exit "${PIPESTATUS[0]}"
+      - name: Check browser test import invariant
+        run: |
+          python3 scripts/check-browser-imports.py 2>&1 | tee ci-lint-browser-imports.log
+          exit "${PIPESTATUS[0]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -113,6 +117,7 @@ jobs:
             ci-lint-ruff.log
             ci-lint-format.log
             ci-lint-pydoclint.log
+            ci-lint-browser-imports.log
 
   typecheck:
     needs: [detect-scope]
@@ -176,6 +181,31 @@ jobs:
         with:
           name: ci-test-logs
           path: ci-test-results.log
+
+  browser-tests:
+    # Browser unit tier: executes tests/browser/** inside a real PyScript runtime.
+    # Initially allowed to fail while the flake budget is being evaluated.
+    needs: [detect-scope, lint, typecheck, test]
+    if: ${{ needs.detect-scope.outputs.has-code-changes == 'true' && !failure() && !cancelled() && (github.event_name != 'pull_request' || github.event.action == 'ready_for_review' || !github.event.pull_request.draft) }}
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-environment
+        with:
+          playwright-install: "true"
+      - name: Run browser tests
+        run: |
+          scripts/run-browser-tests.sh --tb=short 2>&1 | tee ci-browser-tests.log
+          exit "${PIPESTATUS[0]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-browser-tests-log
+          path: ci-browser-tests.log
 
   wheel-smoke:
     needs: [detect-scope]
