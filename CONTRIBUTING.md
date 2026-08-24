@@ -245,6 +245,12 @@ and use distinct invocation paths:
   - Source-mount dev loop: `WEBCOMPY_BROWSER_SOURCE=1 scripts/run-browser-tests.sh`
   - Direct invocation (`uv run pytest tests/browser/`) fails with `pytest.UsageError`
     unless the `WEBCOMPY_RUN_BROWSER=1` environment variable is set
+  - Browser tests are excluded from default discovery even when
+    `WEBCOMPY_RUN_BROWSER=1` is set, unless a path argument explicitly selects
+    `tests/browser/**` (a gated bare `uv run pytest` stays on the unit tier)
+  - Browser test functions must be plain module-level functions: class-based
+    tests are not supported, and stacked `@pytest.mark.parametrize` marks are
+    rejected by both the driver and the in-page runner
   - Top-level imports in browser test modules must be CPython-importable;
     `import js` / `from pyscript import ...` belong inside function bodies
     (enforced by `scripts/check-browser-imports.py`)
