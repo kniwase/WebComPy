@@ -1,3 +1,5 @@
+"""Parses HTML template source into template AST nodes."""
+
 from __future__ import annotations
 
 import re

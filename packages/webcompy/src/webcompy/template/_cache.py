@@ -1,3 +1,5 @@
+"""LRU cache of parsed template sources."""
+
 from __future__ import annotations
 
 import textwrap
@@ -20,6 +22,21 @@ def get_or_compile(
     source: str,
     parse_fn: Callable[[str], list[TemplateNode]] | None = None,
 ) -> list[TemplateNode]:
+    """Return parsed nodes for ``source``, compiling on a cache miss.
+
+    Sources are dedented and stripped before cache lookup, and entries are
+    keyed by both the normalized source and the parse function. The cache
+    holds at most ``_TEMPLATE_CACHE_MAX_SIZE`` entries, evicting the least
+    recently used entry on overflow.
+
+    Args:
+        source: Template source text.
+        parse_fn: Optional custom parser; defaults to ``parse_template``.
+
+    Returns:
+        Parsed template nodes for the source.
+
+    """
     compile_fn: Callable[[str], list[TemplateNode]] = parse_fn or parse_template
     normalized = _normalize(source)
     key = (normalized, compile_fn)

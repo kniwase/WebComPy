@@ -1,3 +1,5 @@
+"""Parses CSS text into selector-keyed style declaration blocks."""
+
 from __future__ import annotations
 
 import textwrap

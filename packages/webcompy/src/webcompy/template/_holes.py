@@ -1,3 +1,5 @@
+"""Interpolation-hole splitting and resolution for template text."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -27,11 +29,33 @@ def restore_protected(text: str) -> str:
 
 @dataclass
 class LiteralText:
+    """A static text part adjacent to interpolation holes.
+
+    Args:
+        text: Static text content.
+
+    Attributes:
+        text: Static text content.
+
+    """
+
     text: str
 
 
 @dataclass
 class Hole:
+    """An interpolation hole (``{{ ... }}``) found in template text.
+
+    Args:
+        expr_source: Raw expression source between the braces.
+        plan: Compiled expression plan used for evaluation.
+
+    Attributes:
+        expr_source: Raw expression source between the braces.
+        plan: Compiled expression plan used for evaluation.
+
+    """
+
     expr_source: str
     plan: ExpressionPlan
 
@@ -63,6 +87,27 @@ def _scan_hole_end(text: str, start: int) -> int | None:
 
 
 def split_text(text: str, *, strict: bool = False) -> list[LiteralText | Hole]:
+    """Split template text into literal parts and ``{{ }}`` holes.
+
+    In non-strict mode, unbalanced or malformed hole candidates are kept
+    as literal text. In strict mode they raise instead, guaranteeing that
+    no ``{{ }}`` sequence survives into the output.
+
+    Args:
+        text: Template text to split.
+        strict: Whether malformed or unclosed holes raise an error instead
+            of being treated as literal text.
+
+    Returns:
+        Interleaved ``LiteralText`` and ``Hole`` parts. Text without any
+        hole yields a single ``LiteralText``; empty input yields an empty
+        list.
+
+    Raises:
+        WebComPyException: If ``strict`` is True and a hole is unbalanced,
+            contains an invalid expression, or is left unclosed.
+
+    """
     parts: list[LiteralText | Hole] = []
     buf: list[str] = []
     i = 0
@@ -152,6 +197,21 @@ def _resolve_segments_with_signal(segments: list[str], ctx: Mapping[str, Any]) -
 
 
 def resolve_var(path: str, ctx: dict[str, Any]) -> Any:
+    """Resolve a dotted path against ``ctx``.
+
+    Traverses the path segment by segment. When a signal is encountered on
+    an intermediate segment, returns an owned ``Computed`` that re-resolves
+    from that point, so updates to the signal propagate reactively.
+
+    Args:
+        path: Dotted attribute path.
+        ctx: Template context mapping variable names to values.
+
+    Returns:
+        The resolved value, or an owned ``Computed`` when the path crosses
+        a signal.
+
+    """
     segments = path.split(".")
     current: Any = ctx
     for segment in segments:
@@ -185,7 +245,7 @@ def format_value(value: Any) -> str:
 
     Used by three consumers that must agree on edge-case rendering:
 
-    * ``resolve_holes`` for CSS text (Change 5 ``css_text_template``)
+    * ``resolve_holes`` for CSS text (via ``css_text_template``)
     * ``resolve_attr`` for static attribute values
     * ``resolve_attr`` for reactive attribute ``Computed`` closures
 
@@ -197,6 +257,14 @@ def format_value(value: Any) -> str:
     * ``SignalBase`` whose ``.value`` is a string → ``.value``
     * ``SignalBase`` whose ``.value`` is anything else → ``str(value)``
     * anything else → ``str(value)``
+
+    Args:
+        value: Interpolated value to format.
+
+    Returns:
+        The formatted string representation, or an empty string for ``None``
+        and for signals holding ``None``.
+
     """
     if value is None:
         return ""
@@ -209,6 +277,16 @@ def format_value(value: Any) -> str:
 
 
 def resolve_holes(text: str, ctx: dict[str, Any]) -> str:
+    """Interpolate ``{{ }}`` holes in ``text`` with values from ``ctx``.
+
+    Args:
+        text: Template text containing optional holes.
+        ctx: Template context mapping variable names to values.
+
+    Returns:
+        The rendered string with holes replaced by formatted values.
+
+    """
     parts = split_text(text)
     if not parts:
         return ""

@@ -22,7 +22,7 @@
 ## 3. PR-B: `webcompy` core docstrings (delegate per batch; each batch shrinks the baseline)
 
 - [x] 3.1 Batch `ports` (~125 docstrings incl. module docstrings); checker delta verified
-- [ ] 3.2 Batch `template` (~125)
+- [x] 3.2 Batch `template` (~125)
 - [ ] 3.3 Batch `signal` + `components` (~165)
 - [ ] 3.4 Batch `app` + `elements` (~145)
 - [ ] 3.5 Batch `ajax` + `aio` + `rpc` + `realtime` (~190; includes the new `rpc/_contracts.py` module merged to main — split rpc into its own batch if it runs long)
