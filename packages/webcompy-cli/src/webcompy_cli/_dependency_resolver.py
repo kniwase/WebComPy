@@ -1,3 +1,5 @@
+"""Classification of application dependencies for browser deployment."""
+
 from __future__ import annotations
 
 import importlib.metadata

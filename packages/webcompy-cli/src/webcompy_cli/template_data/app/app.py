@@ -1,3 +1,5 @@
+"""Template application entry point."""
+
 from webcompy.app import WebComPyApp, WebComPyAppConfig
 
 from .components.root import AppRoot

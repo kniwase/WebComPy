@@ -31,7 +31,7 @@
 ## 4. PR-B: Server-side packages (delegate per batch)
 
 - [x] 4.1 Batch `webcompy_server` (~150 incl. module docstrings)
-- [ ] 4.2 Batch `webcompy_cli` (~140 incl. module docstrings)
+- [x] 4.2 Batch `webcompy_cli` (~140 incl. module docstrings)
 - [ ] 4.3 Batch `webcompy_testing` (~115 incl. module docstrings)
 
 ## 5. PR-B: Finalization

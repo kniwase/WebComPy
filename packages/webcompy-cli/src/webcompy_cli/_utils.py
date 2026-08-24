@@ -1,3 +1,5 @@
+"""Shared utilities for config discovery and runtime directories."""
+
 from __future__ import annotations
 
 import pathlib
@@ -8,6 +10,20 @@ from webcompy_cli.config._build_config import WebComPyBuildConfig
 
 
 def discover_config(module_path: str | None = None) -> WebComPyBuildConfig:
+    """Discover and return the build configuration.
+
+    Args:
+        module_path: Dotted import path of the config module. When
+            ``None``, ``webcompy_config`` is imported.
+
+    Returns:
+        The ``WebComPyBuildConfig`` instance found in the module.
+
+    Raises:
+        WebComPyCliException: If the module cannot be imported, or the
+            ``config`` attribute is missing or has the wrong type.
+
+    """
     if module_path:
         try:
             config_module = import_module(module_path)

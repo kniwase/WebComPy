@@ -1,3 +1,5 @@
+"""Synchronization helpers between the lock file and project manifests."""
+
 # ruff: noqa: RUF001
 from __future__ import annotations
 

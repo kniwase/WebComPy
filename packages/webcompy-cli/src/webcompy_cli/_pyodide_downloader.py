@@ -1,3 +1,5 @@
+"""Download helpers for Pyodide wheels."""
+
 from __future__ import annotations
 
 import hashlib

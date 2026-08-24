@@ -1,3 +1,5 @@
+"""Command-line argument parsing for the ``webcompy`` CLI."""
+
 import sys
 from argparse import ArgumentParser
 from typing import Any, Literal

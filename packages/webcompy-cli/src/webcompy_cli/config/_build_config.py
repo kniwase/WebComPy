@@ -1,3 +1,5 @@
+"""Build configuration for WebComPy projects."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -17,6 +19,71 @@ _UNSET: _Sentinel = _Sentinel()
 
 @dataclass
 class WebComPyBuildConfig:
+    """Build configuration for a WebComPy application package.
+
+    Collects all options controlling dependency resolution, wheel
+    building, resource handling, and serving. ``app_package_path`` and
+    ``app`` are derived from ``app_module``/``app_var`` in
+    ``__post_init__``.
+
+    Args:
+        app_module: Python module containing the application instance.
+        app_var: Attribute name of the application inside ``app_module``.
+        dependencies: Explicit browser dependency names, or ``None`` to
+            discover from ``pyproject.toml``.
+        dependencies_from: Optional dependency group name in
+            ``pyproject.toml`` to resolve ``dependencies`` from.
+        resources: Glob patterns selecting resource files, or ``None`` for
+            the default includes. An empty list disables resources.
+        resource_exclude: Glob patterns excluding resource files.
+        version: Application version string, or ``None`` for ``"0.0.0"``.
+        serve_all_deps: Whether to bundle all pure-Python dependencies
+            into the app wheel.
+        wasm_serving: How WASM packages are served, or ``None`` to
+            resolve from ``standalone``.
+        runtime_serving: How the PyScript/Pyodide runtime is served, or
+            ``None`` to resolve from ``standalone``.
+        standalone: Whether to serve all assets locally.
+        wheel_mode: Wheel bundling mode.
+        resource_transfer: How resource files are transferred to the
+            browser.
+        dist: Output directory for the static site.
+        cname: Value written to the ``CNAME`` file, when any.
+        static_files_dir: Directory housing static files relative to the
+            app package path.
+        lockfile_sync_config: Configuration for lock file synchronization.
+        server: Server configuration.
+
+    Attributes:
+        app_module: Python module containing the application instance.
+        app_var: Attribute name of the application inside ``app_module``.
+        app: The application instance resolved from ``app_module``/
+            ``app_var``.
+        app_package_path: Directory containing the application package,
+            derived from ``app_module``.
+        dependencies: Explicit browser dependency names, or ``None`` to
+            discover from ``pyproject.toml``.
+        dependencies_from: Optional dependency group name in
+            ``pyproject.toml`` to resolve ``dependencies`` from.
+        resources: Glob patterns selecting resource files, or ``None`` for
+            the default includes.
+        resource_exclude: Glob patterns excluding resource files.
+        version: Application version string, or ``None`` for ``"0.0.0"``.
+        serve_all_deps: Whether to bundle all pure-Python dependencies
+            into the app wheel.
+        wasm_serving: How WASM packages are served.
+        runtime_serving: How the PyScript/Pyodide runtime is served.
+        standalone: Whether to serve all assets locally.
+        wheel_mode: Wheel bundling mode.
+        resource_transfer: How resource files are transferred.
+        dist: Output directory for the static site.
+        cname: Value written to the ``CNAME`` file, when any.
+        static_files_dir: Directory housing static files.
+        lockfile_sync_config: Configuration for lock file synchronization.
+        server: Server configuration.
+
+    """
+
     app_module: ModuleType
     app_var: str = "app"
     dependencies: list[str] | None = None
@@ -54,6 +121,8 @@ class WebComPyBuildConfig:
         self.resolve_standalone()
 
     def resolve_standalone(self):
+        """Resolve implicit serving modes from the ``standalone`` flag."""
+
         if self.standalone:
             import sys
 

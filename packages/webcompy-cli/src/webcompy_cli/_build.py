@@ -1,3 +1,5 @@
+"""Build artifact resolution for the dev server, SSG, and wheel packaging."""
+
 from __future__ import annotations
 
 import pathlib
