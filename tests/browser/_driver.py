@@ -1,14 +1,21 @@
-"""Playwright driver dispatching browser test ids to the harness page."""
+"""Playwright driver dispatching browser test ids to the harness page.
+
+All Playwright objects live on a dedicated worker thread: the sync Playwright
+API leaves an event loop running in whichever thread starts it, which would
+poison subsequent asyncio-based unit tests in the same pytest session.
+"""
 
 from __future__ import annotations
 
 import json
 import os
+import queue
 import re
+import threading
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
-
-from playwright.sync_api import ConsoleMessage, Page, sync_playwright
+from typing import Any
 
 _SENTINEL_SELECTOR = "html[data-webcompy-test-ready='1']"
 _DEFAULT_SENTINEL_TIMEOUT_SECONDS = 120.0
@@ -72,8 +79,11 @@ class BrowserCrashError(RuntimeError):
         return f"browser page crashed during test. Console tail:\n{tail}"
 
 
+_STOP = object()
+
+
 class BrowserHarnessDriver:
-    """Owns the Playwright browser/page and executes ``run_one`` dispatches."""
+    """Owns the Playwright browser/page on a worker thread and dispatches ``run_one``."""
 
     def __init__(
         self,
@@ -86,60 +96,27 @@ class BrowserHarnessDriver:
             os.environ.get("WEBCOMPY_BROWSER_STRICT_CONSOLE") == "1" if strict_console is None else strict_console
         )
         self._console_messages: list[str] = []
-        self._playwright = sync_playwright().start()
-        self._browser = self._playwright.chromium.launch(headless=True)
-        self._context = self._browser.new_context()
-        self.page: Page | None = None
-        self.open()
+        self._mailbox: queue.Queue[tuple[Callable[[Any], Any], queue.Queue]] = queue.Queue()
+        self._boot_error: BaseException | None = None
+        self._ready = threading.Event()
+        self._thread = threading.Thread(target=self._worker_main, daemon=True)
+        self._thread.start()
+        if not self._ready.wait(timeout=sentinel_timeout_seconds() + 60):
+            raise RuntimeError(f"browser worker thread failed to boot. Boot error: {self._boot_error!r}")
+        if self._boot_error is not None:
+            raise self._boot_error
 
     @property
     def console_messages(self) -> list[str]:
         return list(self._console_messages)
-
-    def open(self) -> Page:
-        if self.page is not None:
-            return self.page
-        page = self._context.new_page()
-        page.on("console", self._on_console)
-        page.goto(f"{self._base_url}/testharness")
-        timeout_ms = int(sentinel_timeout_seconds() * 1000)
-        try:
-            page.wait_for_selector(_SENTINEL_SELECTOR, state="attached", timeout=timeout_ms)
-        except Exception as e:
-            tail = self.console_tail()
-            raise RuntimeError(f"Harness page did not become ready within {timeout_ms}ms. Console tail:\n{tail}") from e
-        self.page = page
-        return page
-
-    def restart(self) -> Page:
-        """Tear down and relaunch the page (and context), then wait for the sentinel."""
-        self.close_page()
-        with suppress(Exception):
-            self._context.close()
-        self._context = self._browser.new_context()
-        return self.open()
-
-    def close_page(self) -> None:
-        if self.page is not None:
-            with suppress(Exception):
-                self.page.close()
-            self.page = None
 
     def console_tail(self, size: int = _CRASH_TAIL_SIZE) -> list[str]:
         return self._console_messages[-size:]
 
     def run_one(self, test_id: str) -> dict:
         """Dispatch one test id to the page and normalize its JSON result."""
-        assert self.page is not None
         start = len(self._console_messages)
-        try:
-            raw = self.page.evaluate("id => window.__webcompy_test__.run_one(id)", test_id)
-        except Exception as e:
-            tail = self._console_messages[start:] or self._console_messages
-            if classify_crash(str(e), tail):
-                self.restart()
-                raise BrowserCrashError(console_tail=list(tail)) from e
-            raise
+        raw = self._call(lambda page: self._evaluate(page, test_id))
         result = json.loads(raw)
         if not result.get("console_error_delta"):
             result["console_error_delta"] = [message for message in self._console_messages[start:]]
@@ -151,19 +128,72 @@ class BrowserHarnessDriver:
                 result["traceback"] = "console errors captured during a passing test:\n" + "\n".join(delta)
         return result
 
-    def _on_console(self, message: ConsoleMessage) -> None:
+    def close(self) -> None:
+        self._mailbox.put((_STOP, queue.Queue()))
+        self._thread.join(timeout=30)
+
+    def _call(self, fn: Callable[[Any], Any]) -> Any:
+        result_q: queue.Queue = queue.Queue()
+        self._mailbox.put((fn, result_q))
+        kind, payload = result_q.get(timeout=sentinel_timeout_seconds() * 2 + 120)
+        if kind == "err":
+            raise payload
+        return payload
+
+    def _worker_main(self) -> None:
+        try:
+            from playwright.sync_api import sync_playwright
+
+            with sync_playwright() as pw:
+                browser = pw.chromium.launch(headless=True)
+                context = browser.new_context()
+                page = self._open_page(context)
+                self._ready.set()
+
+                def _rebuild() -> Any:
+                    with suppress(Exception):
+                        context.close()
+                    fresh_context = browser.new_context()
+                    return self._open_page(fresh_context), fresh_context
+
+                while True:
+                    item = self._mailbox.get()
+                    fn = item[0]
+                    if fn is _STOP:
+                        with suppress(Exception):
+                            browser.close()
+                        return
+                    result_q: queue.Queue = item[1]
+                    try:
+                        result_q.put(("ok", fn(page)))
+                    except Exception as e:
+                        tail = list(self._console_messages)
+                        if classify_crash(str(e), tail):
+                            page, context = _rebuild()
+                            e = BrowserCrashError(console_tail=tail[-_CRASH_TAIL_SIZE:])
+                        result_q.put(("err", e))
+        except BaseException as e:
+            self._boot_error = e
+            self._ready.set()
+
+    def _open_page(self, context: Any) -> Any:
+        page = context.new_page()
+        page.on("console", self._on_console)
+        page.goto(f"{self._base_url}/testharness")
+        timeout_ms = int(sentinel_timeout_seconds() * 1000)
+        try:
+            page.wait_for_selector(_SENTINEL_SELECTOR, state="attached", timeout=timeout_ms)
+        except Exception as e:
+            tail = self.console_tail()
+            raise RuntimeError(f"Harness page did not become ready within {timeout_ms}ms. Console tail:\n{tail}") from e
+        return page
+
+    def _evaluate(self, page: Any, test_id: str) -> str:
+        return page.evaluate("id => window.__webcompy_test__.run_one(id)", test_id)
+
+    def _on_console(self, message: Any) -> None:
         if message.type == "error":
             self._console_messages.append(message.text)
-
-    def close(self) -> None:
-        self.close_page()
-        for closer in (
-            lambda: self._context.close(),
-            lambda: self._browser.close(),
-            lambda: self._playwright.stop(),
-        ):
-            with suppress(Exception):
-                closer()
 
 
 _PARAM_SUFFIX_RE = re.compile(r"\[p(\d+)\]$")

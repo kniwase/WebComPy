@@ -17,7 +17,14 @@ cd "$ROOT_DIR"
 
 export WEBCOMPY_RUN_BROWSER=1
 
-if [ "$#" -gt 0 ]; then
+has_path=0
+for arg in "$@"; do
+  case "$arg" in
+    tests/*|/*|*::*) has_path=1 ;;
+  esac
+done
+
+if [ "$has_path" -eq 1 ]; then
   exec uv run python -m pytest "$@"
 fi
-exec uv run python -m pytest tests/browser
+exec uv run python -m pytest tests/browser "$@"

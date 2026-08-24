@@ -73,6 +73,7 @@ def test_build_py_config_wheel_mode():
         "micropip",
         "httpx",
         "starlette",
+        "anyio",
         "http://127.0.0.1:8123/_webcompy-test/wheels/webcompy-0+sha.abcd-py3-none-any.whl",
     ]
     assert config["files"] == {
@@ -92,7 +93,7 @@ def test_build_py_config_source_mode():
         framework_files=framework_files,
     )
 
-    assert config["packages"] == ["micropip", "httpx", "starlette"]
+    assert config["packages"] == ["micropip", "httpx", "starlette", "anyio"]
     files = config["files"]
     assert (
         files["http://127.0.0.1:8123/_webcompy-test/files/webcompy/webcompy/signal/__init__.py"]
