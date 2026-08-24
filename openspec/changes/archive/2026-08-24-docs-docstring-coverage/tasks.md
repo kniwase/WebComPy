@@ -22,11 +22,11 @@
 ## 3. PR-B: `webcompy` core docstrings (delegate per batch; each batch shrinks the baseline)
 
 - [x] 3.1 Batch `ports` (~125 docstrings incl. module docstrings); checker delta verified
-- [x] 3.2 Batch `template` (~125)
-- [x] 3.3 Batch `signal` + `components` (~165)
-- [x] 3.4 Batch `app` + `elements` (~145)
-- [x] 3.5 Batch `ajax` + `aio` + `rpc` + `realtime` (~190; includes the new `rpc/_contracts.py` module merged to main — split rpc into its own batch if it runs long)
-- [x] 3.6 Batch `forms` + `router` + `hydration` + `ui` + `di` + `plugin` + `storage` + `exception` + `utils` + `events` (~150)
+- [x] 3.2 Batch `template` (~27)
+- [x] 3.3 Batch `signal` + `components` (112)
+- [x] 3.4 Batch `app` (55; `elements` split into its own batches)
+- [x] 3.5 Batch `ajax` + `aio` + `rpc` + `realtime` (132; includes `rpc/_contracts.py`)
+- [x] 3.6 Batch `forms` + `router` + `hydration` (62) + `ui` (50) + remaining `webcompy` core: `di`/`plugin`/`storage`/`exception`/`utils`/`events`/root files (~56)
 
 ## 4. PR-B: Server-side packages (delegate per batch)
 
@@ -37,6 +37,6 @@
 ## 5. PR-B: Finalization
 
 - [x] 5.1 Sweep: checker reports zero violations; delete the baseline file (strict mode)
-- [x] 5.2 AST-equivalence verification (strip docstrings/comments from base and head, compare ASTs) as PR-B review evidence
-- [x] 5.3 Full local CI: ruff, pyright, pytest, `webcompy generate`; open PR-B
-- [ ] 5.4 Archive this change; then add `api-docstrings` rows to AGENTS.md File → Spec mapping, Framework Invariants, and Current Specs; run `python3 scripts/check-doc-spec-refs.py`
+- [x] 5.2 AST-equivalence verification (strip docstrings/comments from base and head, compare ASTs) as PR-B review evidence — 244 files docstring-only (Pass/Ellipsis normalized, PEP 224 stripped); fixed duplicated body in `resources.py`
+- [x] 5.3 Full local CI: ruff, pyright, pytest, `webcompy generate`; open PR-B — all green (5126 passed, generate done); pydoclint exclude extended for `resources.py` transitive Raises
+- [x] 5.4 Archive this change; then add `api-docstrings` rows to AGENTS.md File → Spec mapping, Framework Invariants, and Current Specs; run `python3 scripts/check-doc-spec-refs.py`
