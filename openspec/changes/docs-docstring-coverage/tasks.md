@@ -36,7 +36,7 @@
 
 ## 5. PR-B: Finalization
 
-- [ ] 5.1 Sweep: checker reports zero violations; delete the baseline file (strict mode)
-- [ ] 5.2 AST-equivalence verification (strip docstrings/comments from base and head, compare ASTs) as PR-B review evidence
-- [ ] 5.3 Full local CI: ruff, pyright, pytest, `webcompy generate`; open PR-B
+- [x] 5.1 Sweep: checker reports zero violations; delete the baseline file (strict mode)
+- [x] 5.2 AST-equivalence verification (strip docstrings/comments from base and head, compare ASTs) as PR-B review evidence
+- [x] 5.3 Full local CI: ruff, pyright, pytest, `webcompy generate`; open PR-B
 - [ ] 5.4 Archive this change; then add `api-docstrings` rows to AGENTS.md File → Spec mapping, Framework Invariants, and Current Specs; run `python3 scripts/check-doc-spec-refs.py`
