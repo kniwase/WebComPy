@@ -1,3 +1,5 @@
+"""Testing utilities for WebComPy applications."""
+
 from __future__ import annotations
 
 from webcompy_server.ports import VirtualDOMEvent

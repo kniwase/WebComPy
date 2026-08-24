@@ -1,3 +1,5 @@
+"""Async execution helpers for synchronous test contexts."""
+
 import asyncio
 from collections.abc import Coroutine
 from typing import Any, TypeVar
@@ -6,7 +8,15 @@ T = TypeVar("T")
 
 
 def run_sync(coro: Coroutine[Any, Any, T]) -> T:
-    """Run a coroutine, handling nested event loops from pytest-asyncio."""
+    """Run a coroutine, handling nested event loops from pytest-asyncio.
+
+    Args:
+        coro: Coroutine to execute.
+
+    Returns:
+        The coroutine's result.
+
+    """
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:

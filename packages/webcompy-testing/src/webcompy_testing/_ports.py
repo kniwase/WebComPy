@@ -1,3 +1,5 @@
+"""Fake port implementations for browserless testing."""
+
 from __future__ import annotations
 
 import asyncio
@@ -36,6 +38,19 @@ class _FakeCustomElementBinding(CustomElementBinding):
 
 
 class FakeCustomElementPort(CustomElementPort):
+    """Record custom-element registrations and bindings for assertions.
+
+    Attributes:
+        ensure_defined_calls: Recorded ``(name, observed_attributes,
+            definition_key)`` definition requests.
+        bind_calls: Recorded ``(node, observed_attributes)`` binding
+            requests.
+        disposed_bindings: Number of bindings disposed so far.
+        connected: Connection state returned by
+            ``is_document_connected``.
+
+    """
+
     def __init__(self) -> None:
         self.ensure_defined_calls: list[tuple[str, tuple[str, ...], str]] = []
         self.bind_calls: list[tuple[Any, tuple[str, ...]]] = []
@@ -48,6 +63,14 @@ class FakeCustomElementPort(CustomElementPort):
         observed_attributes: tuple[str, ...],
         definition_key: str,
     ) -> None:
+        """Record a custom-element definition request.
+
+        Args:
+            name: Custom element tag name.
+            observed_attributes: Attributes observed by the element.
+            definition_key: Deduplication key for the definition.
+
+        """
         self.ensure_defined_calls.append((name, observed_attributes, definition_key))
 
     def bind(
@@ -59,14 +82,45 @@ class FakeCustomElementPort(CustomElementPort):
         on_disconnected: Any = None,
         on_attribute_changed: Any = None,
     ) -> CustomElementBinding:
+        """Record a binding and return a disposable handle.
+
+        Args:
+            node: DOM node to bind.
+            observed_attributes: Attributes observed by the binding.
+            on_connected: Callback invoked when connected.
+            on_disconnected: Callback invoked when disconnected.
+            on_attribute_changed: Callback invoked on attribute changes.
+
+        Returns:
+            A binding handle whose ``dispose`` increments the counter.
+
+        """
         self.bind_calls.append((node, observed_attributes))
         return _FakeCustomElementBinding(self)
 
     def is_document_connected(self, node: Any) -> bool:
+        """Report whether a node is considered document-connected.
+
+        Args:
+            node: Node to check.
+
+        Returns:
+            ``True`` if the fake is configured as connected or the node reports
+            ``isConnected``.
+
+        """
         return self.connected or bool(getattr(node, "isConnected", False))
 
 
 class FakeMediaQueryPort(MediaQueryPort):
+    """Provide controllable media-query values for tests.
+
+    Args:
+        prefers_dark: Initial value for ``prefers_dark``.
+        prefers_reduced_motion: Initial value for ``prefers_reduced_motion``.
+
+    """
+
     def __init__(
         self,
         *,
@@ -77,16 +131,41 @@ class FakeMediaQueryPort(MediaQueryPort):
         self._prefers_reduced_motion = prefers_reduced_motion
 
     def prefers_dark(self) -> bool:
+        """Return the configured dark-mode preference.
+
+        Returns:
+            ``True`` if dark mode is preferred.
+
+        """
         return self._prefers_dark
 
     def prefers_reduced_motion(self) -> bool:
+        """Return the configured reduced-motion preference.
+
+        Returns:
+            ``True`` if reduced motion is preferred.
+
+        """
         return self._prefers_reduced_motion
 
     def set_prefers_reduced_motion(self, value: bool) -> None:
+        """Update the reduced-motion preference.
+
+        Args:
+            value: New preference value.
+
+        """
         self._prefers_reduced_motion = value
 
 
 class FakeBrowserDOMPort(ServerDOMPort):
+    """Provide an in-memory DOM with synthetic document listeners.
+
+    Attributes:
+        body: Document body node.
+
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self._html = FakeDOMNode("html")
@@ -99,18 +178,56 @@ class FakeBrowserDOMPort(ServerDOMPort):
 
     @property
     def body(self) -> FakeDOMNode:
+        """Return the document body node."""
         return self._body
 
     def create_element(self, tag: str) -> FakeDOMNode:
+        """Create an element node.
+
+        Args:
+            tag: Tag name for the new element.
+
+        Returns:
+            A new ``FakeDOMNode`` with the given tag.
+
+        """
         return FakeDOMNode(tag)
 
     def create_text_node(self, text: str) -> FakeDOMNode:
+        """Create a text node.
+
+        Args:
+            text: Text content for the node.
+
+        Returns:
+            A new text ``FakeDOMNode``.
+
+        """
         return FakeDOMNode("#text", text_content=text)
 
     def create_comment(self, data: str) -> FakeDOMNode:
+        """Create a comment node.
+
+        Args:
+            data: Comment text.
+
+        Returns:
+            A new comment ``FakeDOMNode``.
+
+        """
         return FakeDOMNode("#comment", text_content=data)
 
     def query_selector(self, selector: str) -> FakeDOMNode | None:
+        """Find the first node matching a simple selector.
+
+        Args:
+            selector: CSS selector supporting tag, ``#id``, or
+                ``tag[attr="value"]``.
+
+        Returns:
+            The first matching node or ``None`` when no match exists.
+
+        """
         if ">" in selector:
             return None
         tag_match = re.match(r"([a-zA-Z][a-zA-Z0-9]*)", selector)
@@ -126,9 +243,28 @@ class FakeBrowserDOMPort(ServerDOMPort):
         return None
 
     def get_element_by_id(self, element_id: str) -> FakeDOMNode | None:
+        """Return the element with the given identifier.
+
+        Args:
+            element_id: Value of the ``id`` attribute to search for.
+
+        Returns:
+            The matching node or ``None``.
+
+        """
         return _find_by_id(self._html, element_id)
 
     def add_document_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        """Register a document-level event listener.
+
+        Args:
+            event_type: Event type to listen for.
+            handler: Callback invoked when the event is dispatched.
+
+        Returns:
+            A callable that removes the listener.
+
+        """
         self._document_listeners.setdefault(event_type, []).append(handler)
 
         def _remove() -> None:
@@ -141,6 +277,13 @@ class FakeBrowserDOMPort(ServerDOMPort):
         return _remove
 
     def dispatch_document_event(self, event_type: str, event: Any = None) -> None:
+        """Dispatch a synthetic document event.
+
+        Args:
+            event_type: Event type to dispatch.
+            event: Payload forwarded to registered handlers.
+
+        """
         for handler in list(self._document_listeners.get(event_type, ())):
             if handler in self._document_listeners.get(event_type, ()):
                 handler(event)
@@ -183,13 +326,31 @@ def _find_by_tag_attr(node: FakeDOMNode, tag: str, attr_name: str, attr_value: s
 
 
 class FakeBrowserHostPort(HostPort):
+    """Provide synthetic window events and macro-task scheduling."""
+
     def __init__(self) -> None:
         self._window_listeners: dict[str, list[Any]] = {}
 
     def schedule_macro_task(self, callback: Any) -> None:
+        """Execute a macro task immediately.
+
+        Args:
+            callback: Callable to invoke synchronously.
+
+        """
         callback()
 
     def add_window_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        """Register a window-level event listener.
+
+        Args:
+            event_type: Event type to listen for.
+            handler: Callback invoked when the event is dispatched.
+
+        Returns:
+            A callable that removes the listener.
+
+        """
         self._window_listeners.setdefault(event_type, []).append(handler)
 
         def _remove() -> None:
@@ -202,6 +363,13 @@ class FakeBrowserHostPort(HostPort):
         return _remove
 
     def dispatch_window_event(self, event_type: str, event: Any = None) -> None:
+        """Dispatch a synthetic window event.
+
+        Args:
+            event_type: Event type to dispatch.
+            event: Payload forwarded to registered handlers.
+
+        """
         for handler in list(self._window_listeners.get(event_type, ())):
             if handler in self._window_listeners.get(event_type, ()):
                 handler(event)
@@ -213,6 +381,18 @@ class FakeBrowserHostPort(HostPort):
         wrapper: Any = None,
         default: Any = None,
     ) -> Any:
+        """Create a getter for a synthetic JavaScript global.
+
+        Args:
+            name: Global name.
+            wrapper: Optional wrapper applied to the retrieved value.
+            default: Value returned when no wrapper is provided.
+
+        Returns:
+            A zero-argument getter returning the wrapped or default value.
+
+        """
+
         def _getter() -> Any:
             if wrapper is not None:
                 return wrapper(None)
@@ -222,22 +402,65 @@ class FakeBrowserHostPort(HostPort):
 
 
 class FakeBrowserFFIPort(FFIPort):
+    """Provide ``FFIPort`` behavior without a JavaScript bridge."""
+
     def create_proxy(self, func: Any) -> Any:
+        """Create a mock proxy that forwards calls to ``func``.
+
+        Args:
+            func: Callable to wrap.
+
+        Returns:
+            A ``MagicMock`` proxy with a ``destroy`` method.
+
+        """
         proxy = MagicMock(side_effect=func)
         proxy.destroy = MagicMock()
         return proxy
 
     def destroy_proxy(self, proxy: Any) -> None:
+        """Destroy a proxy created by ``create_proxy``.
+
+        Args:
+            proxy: Proxy to destroy.
+
+        """
         if hasattr(proxy, "destroy"):
             proxy.destroy()
 
     def is_none(self, value: Any) -> bool:
+        """Check whether a value is ``None``.
+
+        Args:
+            value: Value to test.
+
+        Returns:
+            ``True`` when ``value`` is ``None``.
+
+        """
         return value is None
 
     def to_js(self, value: Any, **kwargs: Any) -> Any:
+        """Return the value unchanged as a JS equivalent.
+
+        Args:
+            value: Value to convert.
+            **kwargs: Additional conversion options.
+
+        Returns:
+            ``value`` unchanged.
+
+        """
         return value
 
     def assign(self, target: Any, source: Any) -> None:
+        """Merge ``source`` into ``target``.
+
+        Args:
+            target: Mapping to update.
+            source: Mapping whose entries are copied into ``target``.
+
+        """
         target.update(source)
 
 
@@ -274,6 +497,18 @@ class _FakeFetchStream(FetchStream):
 
 
 class FakeFetchPort(FetchPort):
+    """Serve canned fetch responses and streams for assertions.
+
+    Args:
+        responses: Mapping from ``(method, url)`` to canned ``Response``.
+        streams: Mapping from ``(method, url)`` to scripted chunk lists.
+
+    Attributes:
+        aborted_streams: Recorded ``(method, url)`` pairs of streams
+            closed before completion.
+
+    """
+
     def __init__(
         self,
         responses: dict[tuple[str, str], Response] | None = None,
@@ -291,6 +526,21 @@ class FakeFetchPort(FetchPort):
         headers: dict[str, str] | None = None,
         body: str | None = None,
     ) -> Response:
+        """Return a canned response for the requested URL.
+
+        Args:
+            url: Target URL.
+            method: HTTP method.
+            headers: Optional request headers.
+            body: Optional request body.
+
+        Returns:
+            The canned ``Response`` for ``(method, url)``.
+
+        Raises:
+            KeyError: If no response is registered for the key.
+
+        """
         key = (method, url)
         if key in self._responses:
             return self._responses[key]
@@ -306,6 +556,21 @@ class FakeFetchPort(FetchPort):
         headers: dict[str, str] | None = None,
         body: str | None = None,
     ) -> FetchStream:
+        """Return a scripted stream for the requested URL.
+
+        Args:
+            url: Target URL.
+            method: HTTP method.
+            headers: Optional request headers.
+            body: Optional request body.
+
+        Returns:
+            A ``FetchStream`` yielding the scripted chunks.
+
+        Raises:
+            KeyError: If no stream or response is registered for the key.
+
+        """
         key = (method, url)
         response = self._responses.get(key)
         if key in self._streams:
@@ -325,24 +590,65 @@ class FakeFetchPort(FetchPort):
 
 
 class FakeHistoryPort(HistoryPort):
+    """Record history navigation calls for assertions.
+
+    Args:
+        mode: Router mode to simulate.
+        initial_path: Initial path for the history.
+
+    Attributes:
+        pushed_urls: Recorded ``(path, state)`` pairs passed to
+            ``push_url``.
+        replaced_urls: Recorded ``(path, state)`` pairs passed to
+            ``replace_url``.
+
+    """
+
     def __init__(self, *, mode: Literal["hash", "history"] = "history", initial_path: str = "/") -> None:
         super().__init__(initial_path, mode=mode)
         self.pushed_urls: list[tuple[str, dict[str, Any] | None]] = []
         self.replaced_urls: list[tuple[str, dict[str, Any] | None]] = []
 
     def push_url(self, path: str, state: dict[str, Any] | None = None) -> None:
+        """Record a push navigation.
+
+        Args:
+            path: Path to push.
+            state: Optional navigation state.
+
+        """
         self.pushed_urls.append((path, state))
 
     def replace_url(self, path: str, state: dict[str, Any] | None = None) -> None:
+        """Record a replace navigation.
+
+        Args:
+            path: Path to replace the current entry with.
+            state: Optional navigation state.
+
+        """
         self.replaced_urls.append((path, state))
 
     def current_search(self) -> str:
+        """Return the current search string.
+
+        Returns:
+            An empty search string in the fake implementation.
+
+        """
         return ""
 
     def history_state(self) -> object | None:
+        """Return the current history state.
+
+        Returns:
+            The stored navigation state.
+
+        """
         return self._state
 
     def refresh_from_window(self) -> None:
+        """Synchronize the fake history with the window location."""
         pass
 
 
@@ -410,6 +716,8 @@ class _PendingTask:
 
 
 class FakeAsyncSchedulerPort(AsyncSchedulerPort):
+    """Queue coroutines and expose a drainable pending-task surface."""
+
     def __init__(self) -> None:
         self._coroutines: list[Coroutine[Any, Any, Any]] = []
         self._render_coroutines: list[Coroutine[Any, Any, Any]] = []
@@ -421,6 +729,16 @@ class FakeAsyncSchedulerPort(AsyncSchedulerPort):
         *,
         render: bool = False,
     ) -> asyncio.Task[Any]:
+        """Schedule a coroutine without running it.
+
+        Args:
+            coro: Coroutine to queue.
+            render: Whether the coroutine is part of the render phase.
+
+        Returns:
+            A pending-task stand-in resembling ``asyncio.Task``.
+
+        """
         self._coroutines.append(coro)
         if render:
             self._render_coroutines.append(coro)
@@ -437,6 +755,7 @@ class FakeAsyncSchedulerPort(AsyncSchedulerPort):
                     break
 
     async def drain(self) -> None:
+        """Execute all queued coroutines, including those scheduled recursively."""
         iteration = 0
         while self._coroutines:
             coros = list(self._coroutines)
@@ -454,6 +773,13 @@ class FakeAsyncSchedulerPort(AsyncSchedulerPort):
                 break
 
     async def await_pending(self, *, only_render: bool = False) -> None:
+        """Await pending coroutines.
+
+        Args:
+            only_render: When ``True``, await only render-phase coroutines;
+                otherwise drain all.
+
+        """
         if not only_render:
             await self.drain()
             return
@@ -488,6 +814,11 @@ class FakeTransitionPort(TransitionPort):
     ``flush_frame()`` executes the callbacks scheduled for the next frame and
     ``advance_time(ms)`` moves the virtual clock forward, firing due
     timeouts. Per-node computed styles are registered via ``set_style``.
+
+    Attributes:
+        enabled: Whether transition callbacks run; toggled with
+            ``set_enabled``.
+
     """
 
     def __init__(self) -> None:
@@ -500,12 +831,28 @@ class FakeTransitionPort(TransitionPort):
 
     @property
     def enabled(self) -> bool:
+        """Return whether transitions are enabled."""
         return self._enabled
 
     def set_enabled(self, value: bool) -> None:
+        """Enable or disable transition callbacks.
+
+        Args:
+            value: ``True`` to enable transitions.
+
+        """
         self._enabled = value
 
     def schedule_next_frame(self, callback: Callable[[], Any]) -> Callable[[], None]:
+        """Schedule a callback for the next frame.
+
+        Args:
+            callback: Callable invoked on the next flushed frame.
+
+        Returns:
+            A callable that cancels the scheduled frame callback.
+
+        """
         self._frame_callbacks.append(callback)
 
         def _cancel() -> None:
@@ -519,6 +866,16 @@ class FakeTransitionPort(TransitionPort):
         callback: Callable[[], Any],
         delay_ms: float,
     ) -> Callable[[], None]:
+        """Schedule a callback after a delay on the virtual clock.
+
+        Args:
+            callback: Callable to invoke when the timeout fires.
+            delay_ms: Delay in milliseconds.
+
+        Returns:
+            A callable that cancels the scheduled timeout.
+
+        """
         self._timeout_seq += 1
         seq = self._timeout_seq
         self._timeouts.append((self._now + delay_ms, seq, callback))
@@ -529,12 +886,19 @@ class FakeTransitionPort(TransitionPort):
         return _cancel
 
     def flush_frame(self) -> None:
+        """Execute callbacks scheduled for the next frame."""
         callbacks = list(self._frame_callbacks)
         self._frame_callbacks.clear()
         for callback in callbacks:
             callback()
 
     def advance_time(self, ms: float) -> None:
+        """Advance the virtual clock and fire due timeouts.
+
+        Args:
+            ms: Milliseconds to advance.
+
+        """
         self._now += ms
         due = [entry for entry in self._timeouts if entry[0] <= self._now]
         self._timeouts = [entry for entry in self._timeouts if entry[0] > self._now]
@@ -542,13 +906,31 @@ class FakeTransitionPort(TransitionPort):
             callback()
 
     def flush_all(self) -> None:
+        """Flush one frame and advance the clock to fire all timeouts."""
         self.flush_frame()
         self.advance_time(10**9)
 
     def get_computed_style(self, node: DOMNode) -> TransitionStyle:
+        """Return the fake computed style for a node.
+
+        Args:
+            node: Node whose style is requested.
+
+        Returns:
+            A ``TransitionStyle`` reflecting values set via ``set_style``.
+
+        """
         return FakeTransitionStyle(self._styles.get(id(node), {}))
 
     def set_style(self, node: FakeDOMNode, name: str, value: str) -> None:
+        """Set a CSS property in the fake computed-style table.
+
+        Args:
+            node: Node to associate the style with.
+            name: CSS property name.
+            value: CSS property value.
+
+        """
         self._styles.setdefault(id(node), {})[name] = value
 
 
@@ -573,6 +955,15 @@ class _FakeEventSourceRegistration:
 
 
 class FakeEventSourcePort(EventSourcePort):
+    """Track server-sent-event subscriptions and allow synthetic events.
+
+    Attributes:
+        open_calls: Recorded ``(url, events)`` subscription requests.
+        open_connections: Currently active ``(url, events)``
+            subscriptions.
+
+    """
+
     def __init__(self) -> None:
         self._registrations: list[_FakeEventSourceRegistration] = []
         self.open_calls: list[tuple[str, tuple[str, ...]]] = []
@@ -587,6 +978,20 @@ class FakeEventSourcePort(EventSourcePort):
         on_error: Any = None,
         on_close: Any = None,
     ) -> Callable[[], None]:
+        """Register a synthetic event-source subscription.
+
+        Args:
+            url: Event source URL.
+            events: Event types to subscribe to.
+            on_open: Callback invoked when the connection opens.
+            on_message: Callback invoked for incoming messages.
+            on_error: Callback invoked on connection error.
+            on_close: Callback invoked when the connection closes.
+
+        Returns:
+            A callable that unregisters the subscription.
+
+        """
         reg = _FakeEventSourceRegistration(url, tuple(events), on_open, on_message, on_error, on_close)
         self._registrations.append(reg)
         self.open_calls.append((url, tuple(events)))
@@ -599,24 +1004,52 @@ class FakeEventSourcePort(EventSourcePort):
 
     @property
     def open_connections(self) -> list[tuple[str, tuple[str, ...]]]:
+        """Return active event-source subscriptions."""
         return [(reg.url, reg.events) for reg in self._registrations]
 
     def emit_event(self, url: str, event_type: str, data: str, last_event_id: str = "") -> None:
+        """Emit a message event to matching subscriptions.
+
+        Args:
+            url: Event source URL.
+            event_type: Event type.
+            data: Event payload.
+            last_event_id: Last event identifier.
+
+        """
         for reg in list(self._registrations):
             if reg.url == url and event_type in reg.events:
                 reg.on_message(event_type, data, last_event_id)
 
     def emit_open(self, url: str) -> None:
+        """Trigger ``on_open`` for subscriptions to ``url``.
+
+        Args:
+            url: Event source URL.
+
+        """
         for reg in list(self._registrations):
             if reg.url == url:
                 reg.on_open()
 
     def emit_error(self, url: str) -> None:
+        """Trigger ``on_error`` for subscriptions to ``url``.
+
+        Args:
+            url: Event source URL.
+
+        """
         for reg in list(self._registrations):
             if reg.url == url:
                 reg.on_error()
 
     def emit_close(self, url: str) -> None:
+        """Trigger ``on_close`` for subscriptions to ``url``.
+
+        Args:
+            url: Event source URL.
+
+        """
         for reg in list(self._registrations):
             if reg.url == url:
                 reg.on_close()
@@ -672,6 +1105,15 @@ class FakeWebSocketConnection(WebSocketConnection):
 
 
 class FakeWebSocketPort(WebSocketPort):
+    """Track WebSocket connections and allow synthetic message injection.
+
+    Attributes:
+        open_calls: Recorded ``(url, protocols)`` connection requests.
+        open_connections: Currently active ``(url, protocols)``
+            registrations.
+
+    """
+
     def __init__(self) -> None:
         self._registrations: list[_FakeWebSocketRegistration] = []
         self.open_calls: list[tuple[str, tuple[str, ...]]] = []
@@ -687,6 +1129,21 @@ class FakeWebSocketPort(WebSocketPort):
         on_error: Any = None,
         on_close: Any = None,
     ) -> WebSocketConnection:
+        """Register a synthetic WebSocket connection.
+
+        Args:
+            url: WebSocket URL.
+            protocols: Subprotocols requested for the connection.
+            on_open: Callback invoked when the connection opens.
+            on_message: Callback invoked for text messages.
+            on_binary: Callback invoked for binary messages.
+            on_error: Callback invoked on connection error.
+            on_close: Callback invoked when the connection closes.
+
+        Returns:
+            A connection handle that records sent frames.
+
+        """
         normalized = tuple(sorted(protocols))
         reg = _FakeWebSocketRegistration(url, normalized, on_open, on_message, on_binary, on_error, on_close)
         self._registrations.append(reg)
@@ -695,6 +1152,7 @@ class FakeWebSocketPort(WebSocketPort):
 
     @property
     def open_connections(self) -> list[tuple[str, tuple[str, ...]]]:
+        """Return active WebSocket registrations."""
         return [(reg.url, reg.protocols) for reg in self._registrations]
 
     def _matching(self, url: str, protocols: tuple[str, ...] | None) -> list[_FakeWebSocketRegistration]:
@@ -704,18 +1162,47 @@ class FakeWebSocketPort(WebSocketPort):
         return [reg for reg in self._registrations if reg.url == url and reg.protocols == normalized]
 
     def emit_open(self, url: str, protocols: tuple[str, ...] | None = None) -> None:
+        """Trigger ``on_open`` for matching WebSocket registrations.
+
+        Args:
+            url: WebSocket URL.
+            protocols: Protocols to match or ``None`` for any.
+
+        """
         for reg in list(self._matching(url, protocols)):
             reg.on_open()
 
     def emit_message(self, url: str, text: str, protocols: tuple[str, ...] | None = None) -> None:
+        """Deliver a text message to matching registrations.
+
+        Args:
+            url: WebSocket URL.
+            text: Message payload.
+            protocols: Protocols to match or ``None`` for any.
+
+        """
         for reg in list(self._matching(url, protocols)):
             reg.on_message(text)
 
     def emit_binary(self, url: str, protocols: tuple[str, ...] | None = None) -> None:
+        """Trigger ``on_binary`` for matching registrations.
+
+        Args:
+            url: WebSocket URL.
+            protocols: Protocols to match or ``None`` for any.
+
+        """
         for reg in list(self._matching(url, protocols)):
             reg.on_binary()
 
     def emit_error(self, url: str, protocols: tuple[str, ...] | None = None) -> None:
+        """Trigger ``on_error`` for matching registrations.
+
+        Args:
+            url: WebSocket URL.
+            protocols: Protocols to match or ``None`` for any.
+
+        """
         for reg in list(self._matching(url, protocols)):
             reg.on_error()
 
@@ -727,12 +1214,32 @@ class FakeWebSocketPort(WebSocketPort):
         was_clean: bool = True,
         protocols: tuple[str, ...] | None = None,
     ) -> None:
+        """Close matching registrations and trigger ``on_close``.
+
+        Args:
+            url: WebSocket URL.
+            code: Close status code.
+            reason: Close reason.
+            was_clean: Whether the close was clean.
+            protocols: Protocols to match or ``None`` for any.
+
+        """
         for reg in list(self._matching(url, protocols)):
             reg.on_close(code, reason, was_clean)
             with contextlib.suppress(ValueError):
                 self._registrations.remove(reg)
 
     def sent_frames(self, url: str, protocols: tuple[str, ...] | None = None) -> list[str]:
+        """Return payloads sent via matching WebSocket registrations.
+
+        Args:
+            url: WebSocket URL.
+            protocols: Protocols to match or ``None`` for any.
+
+        Returns:
+            Concatenated list of sent text frames.
+
+        """
         frames: list[str] = []
         for reg in self._matching(url, protocols):
             frames.extend(reg.sent)
