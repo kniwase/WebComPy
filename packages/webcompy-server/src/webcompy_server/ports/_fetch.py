@@ -1,3 +1,5 @@
+"""Server-side fetch port with self-site ASGI support."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -36,6 +38,15 @@ class ServerFetchPort(FetchPort):
         self._response_cache: dict[str, Response] = {}
 
     def is_self_site_url(self, url: str) -> bool:
+        """Return whether ``url`` targets the same site.
+
+        Args:
+            url: URL to check.
+
+        Returns:
+            ``True`` for relative URLs starting with ``/`` or ``.``.
+
+        """
         if url.startswith("//"):
             return False
         return url.startswith("/") or url.startswith(".")
@@ -49,6 +60,22 @@ class ServerFetchPort(FetchPort):
         *,
         embedded: bool = False,
     ) -> None:
+        """Configure the ASGI app and routing for self-site fetches.
+
+        Args:
+            asgi_app: ASGI application handling self-site requests.
+            blocked_paths: Page routes blocked during SSR to avoid recursion.
+            base_url: Base URL prefix for resolving relative paths.
+            mount_prefixes: Mount prefixes considered self-site.
+            embedded: Whether the app is embedded under a host app.
+
+        Returns:
+            ``None``.
+
+        Raises:
+            WebComPyException: If the port is already configured.
+
+        """
         if self._asgi_app is not None:
             raise WebComPyException("ServerFetchPort is already configured")
         self._asgi_app = asgi_app
@@ -128,6 +155,18 @@ class ServerFetchPort(FetchPort):
         headers: dict[str, str] | None = None,
         body: str | None = None,
     ) -> Response:
+        """Fetch ``url`` via external client or in-process ASGI transport.
+
+        Args:
+            url: Target URL.
+            method: HTTP method.
+            headers: Optional request headers.
+            body: Optional request body.
+
+        Returns:
+            HTTP ``Response``.
+
+        """
         if not self.is_self_site_url(url):
             client = (
                 self._prototype._ensure_external_client()
@@ -202,6 +241,12 @@ class ServerFetchPort(FetchPort):
         return clone
 
     def get_transfer_data(self) -> dict[str, TransferFetchEntry]:
+        """Collect cache entries eligible for hydration transfer.
+
+        Returns:
+            Mapping of cache keys to transfer entries for self-site responses.
+
+        """
         result: dict[str, TransferFetchEntry] = {}
         for key, response in self._response_cache.items():
             url = self._extract_url_from_cache_key(key)
@@ -217,9 +262,21 @@ class ServerFetchPort(FetchPort):
         return result
 
     def clear_cache(self) -> None:
+        """Clear the response cache.
+
+        Returns:
+            ``None``.
+
+        """
         self._response_cache.clear()
 
     async def close(self) -> None:
+        """Close underlying HTTP clients.
+
+        Returns:
+            ``None``.
+
+        """
         if self._external_client is not None:
             await self._external_client.aclose()
         if self._self_site_client is not None:

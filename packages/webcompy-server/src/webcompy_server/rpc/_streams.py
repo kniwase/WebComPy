@@ -1,3 +1,5 @@
+"""WebSocket streaming RPC hub."""
+
 from __future__ import annotations
 
 import asyncio
