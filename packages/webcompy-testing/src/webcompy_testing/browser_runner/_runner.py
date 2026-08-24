@@ -102,17 +102,17 @@ def BrowserTestDefaultRoot(context):
     return html.DIV({})
 
 
-_default_app: WebComPyApp | None = None
+def _make_default_app() -> WebComPyApp:
+    """Create a fresh application instance for tests without a ``get_app`` hook.
 
-
-def _get_default_app() -> WebComPyApp:
-    global _default_app
-    if _default_app is None:
-        _default_app = WebComPyApp(
-            root_component=BrowserTestDefaultRoot,
-            config=WebComPyAppConfig(),
-        )
-    return _default_app
+    A new ``WebComPyApp`` per test keeps app-owned state (RPC procedure
+    registry, deferred operations, plugin manager) from leaking between
+    test executions sharing the harness interpreter.
+    """
+    return WebComPyApp(
+        root_component=BrowserTestDefaultRoot,
+        config=WebComPyAppConfig(),
+    )
 
 
 class _TrackingFFIPort(BrowserFFIPort):
@@ -241,7 +241,7 @@ def _make_dom_root() -> Any:
 
 def _make_test_context(module: ModuleType) -> tuple[WebComPyApp, Any, _TrackingFFIPort]:
     factory = getattr(module, "get_app", None)
-    app: WebComPyApp = cast("WebComPyApp", factory()) if callable(factory) else _get_default_app()
+    app: WebComPyApp = cast("WebComPyApp", factory()) if callable(factory) else _make_default_app()
     ctx: Any = app.create_render_context()
     tracking_port = _TrackingFFIPort()
     ctx.di_scope.provide(FFI_PORT_KEY, tracking_port)
