@@ -21,7 +21,7 @@
 
 ## 3. PR-B: `webcompy` core docstrings (delegate per batch; each batch shrinks the baseline)
 
-- [ ] 3.1 Batch `ports` (~125 docstrings incl. module docstrings); checker delta verified
+- [x] 3.1 Batch `ports` (~125 docstrings incl. module docstrings); checker delta verified
 - [ ] 3.2 Batch `template` (~125)
 - [ ] 3.3 Batch `signal` + `components` (~165)
 - [ ] 3.4 Batch `app` + `elements` (~145)

@@ -1,3 +1,5 @@
+"""Reactive routing-history port."""
+
 from __future__ import annotations
 
 from abc import abstractmethod
@@ -14,6 +16,26 @@ class ScrollManager(Protocol):
 
 
 class HistoryPort(SignalBase[str]):
+    """Reactive view of the current route path with history integration.
+
+    Wraps a ``SignalBase[str]`` holding the current path and adds browser
+    history support: push/replace operations, popstate reaction, navigation
+    state, and scroll-management hooks. Browser implementations perform real
+    ``history`` manipulation; the base class is a portable no-op used by
+    server and testing runtimes.
+
+    Args:
+        initial_path: Path value the signal starts with.
+        mode: Routing mode (``"hash"`` or ``"history"``).
+
+    Attributes:
+        mode: Configured routing mode (``"hash"`` or ``"history"``).
+        value: Current path value (reactive).
+        state: State dict associated with the current navigation, or
+            ``None``.
+
+    """
+
     def __init__(self, initial_path: str, *, mode: Literal["hash", "history"]) -> None:
         super().__init__(initial_path)
         self._mode: Literal["hash", "history"] = mode
@@ -24,10 +46,12 @@ class HistoryPort(SignalBase[str]):
 
     @property
     def mode(self) -> Literal["hash", "history"]:
+        """Configured routing mode (``"hash"`` or ``"history"``)."""
         return self._mode
 
     @property
     def value(self) -> str:
+        """Current path value (reactive)."""
         producer_accessed(self)
         return self._value
 

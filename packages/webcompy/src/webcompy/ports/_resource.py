@@ -1,3 +1,5 @@
+"""Async package-resource loading port."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -9,6 +11,18 @@ class ResourceNotFoundError(Exception):
 
     The message includes the requested package-relative path and the
     implementation context (e.g., ``"server"`` or ``"browser"``).
+
+    Args:
+        path: Requested package-relative resource path.
+        context: Implementation context the load failed in.
+        reason: Reason the resource could not be loaded.
+
+    Attributes:
+        path: Requested package-relative resource path.
+        context: Implementation context the load failed in. ``reason`` is
+            consumed only while building the message and is not kept as
+            an attribute.
+
     """
 
     def __init__(self, path: str, context: str, reason: str = "") -> None:

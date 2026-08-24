@@ -1,3 +1,5 @@
+"""Cookie port for reading and writing cookies in the current environment."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -5,6 +7,12 @@ from datetime import datetime
 
 
 class CookiePort(ABC):
+    """Cookie read/write surface.
+
+    Browser implementations serialize to and parse from
+    ``document.cookie``; server implementations may operate on plain stores.
+    """
+
     @abstractmethod
     def get(self, name: str) -> str | None:
         """Read a single cookie value by name.

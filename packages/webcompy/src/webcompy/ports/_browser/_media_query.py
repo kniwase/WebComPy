@@ -1,3 +1,5 @@
+"""Browser media query port using ``window.matchMedia``."""
+
 from __future__ import annotations
 
 from webcompy.exception import WebComPyException

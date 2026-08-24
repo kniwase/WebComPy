@@ -1,3 +1,5 @@
+"""HTTP fetch port with buffered and streaming responses."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -27,12 +29,23 @@ class Response:
 class FetchStream(ABC):
     """A streaming HTTP response.
 
-    ``status_code`` / ``headers`` / ``ok`` are available immediately after
-    the request is opened, without consuming the response body. Iteration
-    yields text chunks whose concatenation equals the complete body text.
-    ``close()`` (and ``aclose()``) abort the underlying request, are
-    idempotent, and finish in-flight iteration without yielding further
+    Metadata (``status_code``, ``headers``, ``ok``) is available immediately
+    after the request is opened, without consuming the response body.
+    Iteration yields text chunks whose concatenation equals the complete
+    body text. ``close()`` and ``aclose()`` abort the underlying request,
+    are idempotent, and finish in-flight iteration without yielding further
     chunks.
+
+    Args:
+        status_code: HTTP status code of the streamed response.
+        headers: Response headers.
+        ok: Whether the response status code indicates success.
+
+    Attributes:
+        status_code: HTTP status code of the streamed response.
+        headers: Response headers.
+        ok: Whether the response status code indicates success.
+
     """
 
     def __init__(self, status_code: int, headers: dict[str, str], ok: bool) -> None:
@@ -42,9 +55,15 @@ class FetchStream(ABC):
         self._closed = False
 
     def close(self) -> None:
+        """Abort the underlying request and mark the stream closed.
+
+        Idempotent; in-flight async iteration finishes without yielding
+        further chunks.
+        """
         self._closed = True
 
     async def aclose(self) -> None:
+        """Asynchronous counterpart of ``close()``."""
         self.close()
 
     def __aiter__(self) -> AsyncIterator[str]:
@@ -68,6 +87,12 @@ class _BufferedFetchStream(FetchStream):
 
 
 class FetchPort(ABC):
+    """HTTP client surface for buffered and streaming requests.
+
+    Implementations perform real network requests (browser ``fetch``) or go
+    through an in-process transport (server-side ASGI self-fetch).
+    """
+
     @abstractmethod
     async def fetch(
         self,
@@ -125,5 +150,12 @@ class FetchPort(ABC):
         The default implementation returns ``False`` for all URLs.
         Subclasses (e.g. ``ServerFetchPort``) override this to return
         ``True`` for URLs starting with ``/`` or ``.``.
+
+        Args:
+            url: URL to classify.
+
+        Returns:
+            True if ``url`` is a self-site URL, False otherwise.
+
         """
         return False
