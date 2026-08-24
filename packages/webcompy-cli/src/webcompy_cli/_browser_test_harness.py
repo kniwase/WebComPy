@@ -24,7 +24,8 @@ from starlette.routing import Route
 if TYPE_CHECKING:
     from starlette.requests import Request
 
-from webcompy_cli._pyodide_lock import get_pyodide_version
+from webcompy_cli._pyodide_downloader import download_pyodide_wheel
+from webcompy_cli._pyodide_lock import fetch_pyodide_lock, get_pyodide_version
 from webcompy_cli._runtime_downloader import download_runtime_assets
 from webcompy_cli._utils import get_webcompy_packge_dir
 from webcompy_cli._wheel_builder import make_browser_webcompy_wheel, make_wheel
@@ -33,6 +34,7 @@ from webcompy_server._html import PYSCRIPT_VERSION
 SUPPLY_MODE_ENV_VAR = "WEBCOMPY_BROWSER_SOURCE"
 BROWSER_TEST_DIR = "tests/browser"
 _HARNESS_WHEEL_VERSION = "0+harness"
+_HARNESS_PYODIDE_PACKAGES: tuple[str, ...] = ("micropip", "httpx", "starlette", "anyio")
 _WC_SRC_MOUNT_ROOT = "/home/pyodide/_wc_src"
 _TESTS_MOUNT_PARENT = "/home/pyodide"
 _FRAMEWORK_TREES: dict[str, str] = {
@@ -94,6 +96,7 @@ def build_py_config(
     wheel_names: list[str],
     test_relpaths: list[str],
     framework_files: dict[str, list[str]] | None = None,
+    pyodide_package_names: tuple[str, ...] = _HARNESS_PYODIDE_PACKAGES,
 ) -> dict:
     """Generate the harness py-config dictionary with parity to ``webcompy_server._html``."""
     normalized = base_url.rstrip("/")
@@ -101,12 +104,14 @@ def build_py_config(
     files: dict[str, str] = {}
     for rel in test_relpaths:
         files[f"{normalized}/_webcompy-test/files/{rel}"] = f"{_TESTS_MOUNT_PARENT}/{rel}"
+    wheel_urls = [f"{normalized}/_webcompy-test/wheels/{name}" for name in wheel_names]
     if supply_mode == "wheel":
-        config["packages"] = [f"{normalized}/_webcompy-test/wheels/{name}" for name in wheel_names]
+        config["packages"] = [*pyodide_package_names, *wheel_urls]
     elif framework_files is not None:
         for pkg_name, rels in framework_files.items():
             for rel in rels:
                 files[f"{normalized}/_webcompy-test/files/{pkg_name}/{rel}"] = f"{_WC_SRC_MOUNT_ROOT}/{rel}"
+        config["packages"] = list(pyodide_package_names)
     if files:
         config["files"] = files
     config["interpreter"] = f"{normalized}/_webcompy-assets/pyodide/pyodide.mjs"
@@ -178,6 +183,86 @@ def _build_harness_wheels() -> dict[str, bytes]:
     return wheels
 
 
+def resolve_pyodide_package_closure(
+    pyodide_version: str,
+    cache_dir: Path,
+    *,
+    package_names: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Expand seed package names to their transitive dependency closure per the lock."""
+    pyodide_lock = fetch_pyodide_lock(pyodide_version, cache_dir)
+    packages = pyodide_lock.get("packages", {})
+    pending = list(package_names)
+    seen: set[str] = set()
+    while pending:
+        name = pending.pop()
+        if name in seen:
+            continue
+        seen.add(name)
+        info = packages.get(name)
+        if info is None:
+            continue
+        pending.extend(info.get("depends", []))
+    return tuple(sorted(seen))
+
+
+def _pure_python_installable(info: dict) -> bool:
+    """Whether micropip can install this lock entry by name (pure Python wheel)."""
+    file_name = info.get("file_name", "")
+    return file_name.endswith("py3-none-any.whl")
+
+
+def _installable_pyodide_packages(
+    cache_dir: Path,
+    pyodide_version: str,
+    closure: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Filter a package closure to entries installable by name via micropip."""
+    packages = fetch_pyodide_lock(pyodide_version, cache_dir).get("packages", {})
+    return tuple(
+        name for name in closure if (info := packages.get(name)) is not None and _pure_python_installable(info)
+    )
+
+
+def _ensure_pyodide_package_files(
+    runtime_assets: dict[str, tuple[Path, str]],
+    pyodide_version: str,
+    cache_dir: Path,
+    *,
+    package_names: tuple[str, ...],
+) -> None:
+    """Fetch the Pyodide-distribution wheels needed by the harness page locally.
+
+    ``micropip`` installs URL packages, while the framework's import chain
+    (``webcompy_testing`` -> ``webcompy_server.ports`` -> ``httpx`` /
+    ``starlette``) needs its third-party imports present in the interpreter.
+    ``package_names`` must already be a resolved dependency closure.
+    """
+    packages = fetch_pyodide_lock(pyodide_version, cache_dir).get("packages", {})
+    dest_dir = cache_dir / "runtime-assets" / PYSCRIPT_VERSION / "pyodide"
+    for name in package_names:
+        info = packages.get(name)
+        if info is None:
+            continue
+        file_name = info.get("file_name")
+        sha256 = info.get("sha256")
+        if not file_name or not sha256:
+            continue
+        rel_key = f"pyodide/{file_name}"
+        if rel_key in runtime_assets:
+            continue
+        try:
+            wheel_path = download_pyodide_wheel(file_name, pyodide_version, sha256, cache_dir)
+        except Exception as e:
+            print(f"Warning: failed to fetch pyodide package {name}: {e}", flush=True)
+            continue
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / file_name
+        if dest != wheel_path:
+            dest.write_bytes(wheel_path.read_bytes())
+        runtime_assets[rel_key] = (dest, sha256)
+
+
 @dataclass
 class HarnessServer:
     """Harness Starlette application plus the metadata drivers need."""
@@ -202,10 +287,23 @@ def create_harness_app(
         f"[webcompy-browser-harness] preparing runtime assets ({mode} mode)...",
         flush=True,
     )
+    pyodide_version = get_pyodide_version(PYSCRIPT_VERSION)
     runtime_assets = download_runtime_assets(
-        get_pyodide_version(PYSCRIPT_VERSION),
+        pyodide_version,
         PYSCRIPT_VERSION,
         cache_dir,
+    )
+    package_closure = resolve_pyodide_package_closure(
+        pyodide_version,
+        cache_dir,
+        package_names=_HARNESS_PYODIDE_PACKAGES,
+    )
+    installable = _installable_pyodide_packages(cache_dir, pyodide_version, package_closure)
+    _ensure_pyodide_package_files(
+        runtime_assets,
+        pyodide_version,
+        cache_dir,
+        package_names=package_closure,
     )
     test_paths = discover_test_modules(repo_root)
     test_rels = [p.as_posix() for p in test_paths]
@@ -226,6 +324,7 @@ def create_harness_app(
         wheel_names=wheel_names,
         test_relpaths=test_rels,
         framework_files=framework_files,
+        pyodide_package_names=installable,
     )
     harness_html = generate_harness_html(
         py_config,

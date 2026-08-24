@@ -23,11 +23,11 @@ class TestParseTestId:
         assert qualname == "Class::method"
         assert index == 3
 
-    def test_pytest_display_ids_are_preserved(self):
+    def test_pytest_display_ids_are_stripped(self):
         module_name, qualname, _ = parse_test_id("tests/browser/test_x.py::test_foo[a-b][p1]")
 
         assert module_name == "tests.browser.test_x"
-        assert qualname == "test_foo[a-b]"
+        assert qualname == "test_foo"
 
     def test_malformed_id_raises(self):
         with pytest.raises(ValueError, match="malformed test id"):

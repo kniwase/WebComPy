@@ -26,10 +26,10 @@
 
 ## 5. Pilot tests
 
-- [ ] 5.1 Add `tests/browser/test_signal_browser.py`: pure reactive propagation via the `app` fixture (no DOM, validates WebLoop-independent signal path under Emscripten).
-- [ ] 5.2 Add `tests/browser/test_dom_browser.py`: real-port DOM manipulation — `BrowserDOMPort` creates real `DivElement`/`TextElement` nodes verified via `js.document` inside the test function.
-- [ ] 5.3 Add `tests/browser/test_event_browser.py`: real `FFIPort.create_proxy` / event dispatch (`addEventListener` → `dispatchEvent`) and proxy destruction.
-- [ ] 5.4 Add `tests/browser/test_async_browser.py`: `async def` test awaiting an `asyncio.sleep(0)` round-trip and a scheduler microtask, proving WebLoop semantics under Emscripten.
+- [x] 5.1 Add `tests/browser/test_signal_browser.py`: pure reactive propagation via the `app` fixture (no DOM, validates WebLoop-independent signal path under Emscripten).
+- [x] 5.2 Add `tests/browser/test_dom_browser.py`: real-port DOM manipulation — `BrowserDOMPort` creates real `DivElement`/`TextElement` nodes verified via `js.document` inside the test function.
+- [x] 5.3 Add `tests/browser/test_event_browser.py`: real `FFIPort.create_proxy` / event dispatch (`addEventListener` → `dispatchEvent`) and proxy destruction.
+- [x] 5.4 Add `tests/browser/test_async_browser.py`: `async def` test awaiting an `asyncio.sleep(0)` round-trip and a scheduler microtask, proving WebLoop semantics under Emscripten.
 
 ## 6. Entry point, CI, and docs
 

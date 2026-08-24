@@ -69,7 +69,12 @@ def test_build_py_config_wheel_mode():
     )
 
     assert config["experimental_create_proxy"] == "auto"
-    assert config["packages"] == ["http://127.0.0.1:8123/_webcompy-test/wheels/webcompy-0+sha.abcd-py3-none-any.whl"]
+    assert config["packages"] == [
+        "micropip",
+        "httpx",
+        "starlette",
+        "http://127.0.0.1:8123/_webcompy-test/wheels/webcompy-0+sha.abcd-py3-none-any.whl",
+    ]
     assert config["files"] == {
         "http://127.0.0.1:8123/_webcompy-test/files/tests/browser/test_a.py": ("/home/pyodide/tests/browser/test_a.py")
     }
@@ -87,7 +92,7 @@ def test_build_py_config_source_mode():
         framework_files=framework_files,
     )
 
-    assert "packages" not in config
+    assert config["packages"] == ["micropip", "httpx", "starlette"]
     files = config["files"]
     assert (
         files["http://127.0.0.1:8123/_webcompy-test/files/webcompy/webcompy/signal/__init__.py"]

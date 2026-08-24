@@ -25,6 +25,7 @@ from webcompy.utils import ENVIRONMENT
 
 _MANIFEST_URL = "/_webcompy-test/manifest.json"
 _PARAM_SUFFIX_RE = re.compile(r"\[p(\d+)\]$")
+_DISPLAY_ID_SUFFIX_RE = re.compile(r"\[[^\[\]]*\]$")
 _FIXTURE_NAMES = ("app", "dom_root")
 _TESTS_MOUNT_ROOT = "/home/pyodide/tests/browser/"
 _WC_SRC_MOUNT_ROOT = "/home/pyodide/_wc_src/"
@@ -153,6 +154,9 @@ def parse_test_id(test_id: str) -> tuple[str, str, int | None]:
     module_path, sep, qualname = node_id.partition("::")
     if not sep or not qualname:
         raise ValueError(f"malformed test id: {test_id!r}")
+    display_group = _DISPLAY_ID_SUFFIX_RE.search(qualname)
+    if display_group is not None:
+        qualname = qualname[: display_group.start()]
     module_name = module_path.removesuffix(".py").replace("/", ".")
     return module_name, qualname, param_index
 
@@ -244,10 +248,12 @@ def _make_test_context(module: ModuleType) -> tuple[WebComPyApp, Any, _TrackingF
     return app, ctx, tracking_port
 
 
-def _fixture_kwargs(func: Any, app: WebComPyApp, dom_root: Any) -> dict[str, Any]:
+def _fixture_kwargs(func: Any, app: WebComPyApp, dom_root: Any, exclude: set[str]) -> dict[str, Any]:
     registry: dict[str, Any] = {"app": app, "dom_root": dom_root}
     kwargs: dict[str, Any] = {}
     for name in inspect.signature(func).parameters:
+        if name in exclude:
+            continue
         if name not in registry:
             raise UnknownFixtureError(name)
         kwargs[name] = registry[name]
@@ -300,7 +306,7 @@ async def run_one(test_id: str) -> str:
         _module, ctx, tracking_port = _make_test_context(sys.modules[module_name])
         dom_root = _make_dom_root()
         kwargs = resolve_parametrize_payload(func, param_index)
-        kwargs.update(_fixture_kwargs(func, _module, dom_root))
+        kwargs.update(_fixture_kwargs(func, _module, dom_root, exclude=set(kwargs)))
         with redirect_stdout(stdout_io), redirect_stderr(stderr_io):
             outcome = func(**kwargs)
             if inspect.iscoroutine(outcome):

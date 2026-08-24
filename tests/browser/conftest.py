@@ -44,18 +44,42 @@ def _format_remote_failure(result: dict) -> str:
     return "\n".join(sections)
 
 
+def _parametrize_index(pyfuncitem: pytest.Function) -> int | None:
+    """Derive the machine suffix index from the item's resolved parametrize call."""
+    callspec = getattr(pyfuncitem, "callspec", None)
+    if callspec is None:
+        return None
+    marks = [mark for mark in getattr(pyfuncitem.function, "pytestmark", []) if mark.name == "parametrize"]
+    if not marks:
+        return None
+    if len(marks) > 1:
+        raise RuntimeError("stacked @pytest.mark.parametrize marks are not supported in the browser test tier")
+    raw_names, values = marks[0].args
+    names = [name.strip() for name in raw_names.split(",")] if isinstance(raw_names, str) else list(raw_names)
+    actual = tuple(callspec.params[name] for name in names)
+    for index, value in enumerate(values):
+        candidate = (value,) if len(names) == 1 else tuple(value)
+        expected = (actual[0],) if len(names) == 1 else actual
+        if candidate == expected:
+            return index
+    raise RuntimeError(f"could not match callspec params {actual!r} to parametrize values")
+
+
 def pytest_pyfunc_call(pyfuncitem: pytest.Function) -> bool | None:
     if "browser" not in pyfuncitem.keywords:
         return None
     driver = getattr(pyfuncitem.session, "_browser_driver", None)
     if driver is None:
-        driver = pyfuncitem.session.getfixturevalue("browser_harness")
+        raise RuntimeError(
+            "browser harness driver was not initialized; the autouse "
+            "browser_harness fixture should have run before this test"
+        )
     test_id = pyfuncitem.nodeid
-    callspec = getattr(pyfuncitem, "callspec", None)
-    if callspec is not None:
+    index = _parametrize_index(pyfuncitem)
+    if index is not None:
         from tests.browser._driver import append_param_index
 
-        test_id = append_param_index(test_id, callspec.index)
+        test_id = append_param_index(test_id, index)
     result = driver.run_one(test_id)
     status = result.get("status")
     if status == "passed":
@@ -66,6 +90,22 @@ def pytest_pyfunc_call(pyfuncitem: pytest.Function) -> bool | None:
 
 
 @pytest.fixture(scope="session")
+def app() -> None:
+    """Placeholder for the in-page ``app`` fixture resolved by the harness runner.
+
+    The test function is executed inside the PyScript page, never locally;
+    this exists only so standard pytest fixture resolution succeeds.
+    """
+    return None
+
+
+@pytest.fixture(scope="session")
+def dom_root() -> None:
+    """Placeholder for the in-page ``dom_root`` fixture resolved by the harness runner."""
+    return None
+
+
+@pytest.fixture(scope="session", autouse=True)
 def browser_harness(request: pytest.FixtureRequest):
     from pathlib import Path
 
@@ -84,7 +124,7 @@ def browser_harness(request: pytest.FixtureRequest):
     port = reserve_port()
     base_url = f"http://127.0.0.1:{port}/"
     harness = create_harness_app(repo_root, cache_dir, base_url=base_url)
-    process = serve_harness(harness.asgi, port=port)
+    process = serve_harness(harness, port=port)
     driver = BrowserHarnessDriver(base_url)
     request.session._browser_driver = driver  # type: ignore[attr-defined]
     try:
