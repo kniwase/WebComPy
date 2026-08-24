@@ -34,7 +34,7 @@
 
 - [ ] Change type matches branch name prefix
 - [ ] PR title and body are written in English
-- [ ] OpenSpec change is archived (if applicable)
+- [ ] All completed OpenSpec changes have specs synced and are archived (if applicable)
 - [ ] Tests added/updated for changed code
 - [ ] E2E tests pass (if UI-affecting change)
 - [ ] Dual environment verified (browser + server)
