@@ -1,3 +1,5 @@
+"""Hydration data transfer and decoding utilities."""
+
 from __future__ import annotations
 
 from webcompy.di import inject
@@ -14,6 +16,16 @@ from webcompy.hydration._transfer_meta import (
 
 
 def has_resolved_data(component_id: str) -> bool:
+    """Return whether hydration payload data exists for a component.
+
+    Args:
+        component_id: Transfer ID of the component.
+
+    Returns:
+        ``True`` when the injected hydration payload contains data for
+        ``component_id``.
+
+    """
     payload = inject(HYDRATION_DATA_KEY, default=None)
     if payload is None:
         return False

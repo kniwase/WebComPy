@@ -8,6 +8,7 @@ from webcompy.elements.types._base import ElementWithChildren
 from webcompy.signal import Computed
 
 if TYPE_CHECKING:
+    from webcompy.app._root_component import Head
     from webcompy.components._component import HeadPropsStore
     from webcompy.signal._base import CallbackConsumerNode
 
@@ -118,7 +119,7 @@ class HeadElement(ElementWithChildren):
 
                 self._style_callbacks[idx] = content.on_after_updating(_subscribe_callback)
 
-    def set_head(self, head):
+    def set_head(self, head: Head) -> None:
         self.set_title(head.get("title", ""))
         for key, value in head.get("meta", {}).items():
             self.set_meta(key, value)

@@ -334,11 +334,11 @@ async def batch(*calls: RpcCall[Any, Any], return_exceptions: bool = False) -> t
         for req_id, result_type in entries:
             response = by_id.get(req_id)
             if response is None:
-                err = RpcError(SERVER_ERROR, f"Missing batch response for id {req_id}")
+                missing = f"Missing batch response for id {req_id}"
                 if return_exceptions:
-                    results.append(err)
+                    results.append(RpcError(SERVER_ERROR, missing))
                     continue
-                raise err
+                raise RpcError(SERVER_ERROR, missing)
             try:
                 results.append(_resolve(response, result_type, registry))
             except RpcError as err:

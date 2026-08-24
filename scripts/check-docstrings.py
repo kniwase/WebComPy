@@ -312,6 +312,7 @@ class _Checker:
                 self.add_gap(path, 1, module)
             if path.name == "__init__.py":
                 self.collect_re_exports(path, module)
+                self.collect_init_definitions(path, module)
         for entry in IMPORTANT_INTERNALS:
             module, _, name = entry.partition(":")
             resolved = self.resolve(module, name, frozenset())
@@ -334,6 +335,24 @@ class _Checker:
                 resolved = self.resolve(target, alias.name, frozenset())
                 if resolved is not None:
                     self.check_definition(*resolved)
+
+    def collect_init_definitions(self, path: Path, module: str) -> None:
+        """Require docstrings on public functions and classes defined in ``__init__.py``.
+
+        Names defined directly inside a package ``__init__.py`` are part of
+        the public surface even though they are not re-exported through an
+        ``ImportFrom``, so the re-export walk alone cannot see them.
+        Overload stubs follow the same exemption as class methods: the
+        docstring lives on the implementation.
+        """
+        tree = self.index.tree(path)
+        for stmt in _top_level_statements(tree):
+            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)) and _is_exempt_method(stmt):
+                continue
+            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and not stmt.name.startswith(
+                "_"
+            ):
+                self.check_definition(path, module, stmt)
 
     def forbidden_references(self) -> list[tuple[Path, int]]:
         violations: list[tuple[Path, int]] = []
