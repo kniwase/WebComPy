@@ -1,3 +1,5 @@
+"""The ``Component`` element node hosting user-defined component setup functions."""
+
 from __future__ import annotations
 
 import asyncio
@@ -137,6 +139,29 @@ class HeadPropsStore:
 
 
 class Component(ElementBase):
+    """Element node that runs a component definition and renders its result.
+
+    A ``Component`` wraps a function-style component definition: it creates
+    the component ``Context`` (props, slots, lifecycle hooks, title/meta
+    access), runs the setup function to obtain the template, and drives the
+    lifecycle hooks (``on_before_rendering``, ``on_after_rendering``,
+    ``on_before_destroy``, ``on_mounted``, ``on_unmounted``) around
+    rendering, mounting, and removal. Async setup functions are supported
+    through a two-phase render pipeline.
+
+    Normally obtained by calling a ``ComponentGenerator`` (the object
+    returned by ``define_component``); the framework constructs one per
+    component instantiation site.
+
+    Args:
+        component_def: The component setup function.
+        props: Props object passed to the setup function.
+        slots: Mapping of slot names to child generators.
+        generator: The ``ComponentGenerator`` producing custom element
+            metadata for named components.
+
+    """
+
     def __init__(
         self,
         component_def: FuncComponentDef,

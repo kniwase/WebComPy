@@ -1,3 +1,5 @@
+"""Reactive dictionary wrapper: ``DictMutation`` and ``ReactiveDict``."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -11,12 +13,40 @@ V = TypeVar("V")
 
 @dataclass
 class DictMutation:
+    """Record of the most recent mutating operation on a ``ReactiveDict``.
+
+    Args:
+        op: Operation name (e.g. ``"set"``, ``"delete"``, ``"clear"``).
+        key: Key the operation targeted, when applicable.
+        value: Value set by the mutation, when applicable.
+
+    Attributes:
+        op: Operation name (e.g. ``"set"``, ``"delete"``, ``"clear"``).
+        key: Key the operation targeted, when applicable.
+        value: Value set by the mutation, when applicable.
+
+    """
+
     op: str
     key: str | int | None
     value: Any
 
 
 class ReactiveDict(Signal[dict[K, V]]):
+    """Reactive wrapper around a ``dict`` behaving like ``Signal[dict]``.
+
+    Mutation methods (``__setitem__``, ``__delitem__``, ``pop``,
+    ``clear``) propagate change notifications to consumers; read methods
+    (``__getitem__``, ``get``, ``keys``, ``values``, ``items``,
+    ``__len__``, ``__iter__``) record a read dependency. Each mutation
+    stores a ``DictMutation`` describing it.
+
+    Args:
+        init_value: Initial dictionary contents. Defaults to an empty
+            dictionary.
+
+    """
+
     _last_mutation: DictMutation | None
 
     def __init__(self, init_value: dict[K, V] | None = None) -> None:
@@ -40,12 +70,22 @@ class ReactiveDict(Signal[dict[K, V]]):
 
     @SignalBase._change_event
     def pop(self, key: K):
+        """Remove ``key`` and return its value, notifying consumers.
+
+        Args:
+            key: Key to remove.
+
+        Returns:
+            The removed value.
+
+        """
         val = self._value.pop(key)
         self._last_mutation = DictMutation(op="pop", key=key, value=val)  # type: ignore[arg-type]
         return val
 
     @SignalBase._change_event
     def clear(self):
+        """Remove all entries, notifying consumers."""
         self._value.clear()
         self._last_mutation = DictMutation(op="clear", key=None, value=None)
 
@@ -59,16 +99,29 @@ class ReactiveDict(Signal[dict[K, V]]):
 
     @SignalBase._get_event
     def get(self, key: K, default: Any = None):
+        """Return the value for ``key``, recording a read dependency.
+
+        Args:
+            key: Key to look up.
+            default: Value returned when ``key`` is absent.
+
+        Returns:
+            The mapped value or ``default``.
+
+        """
         return self._value.get(key, default)
 
     @SignalBase._get_event
     def keys(self):
+        """Return the dictionary keys, recording a read dependency."""
         return self._value.keys()
 
     @SignalBase._get_event
     def values(self):
+        """Return the dictionary values, recording a read dependency."""
         return self._value.values()
 
     @SignalBase._get_event
     def items(self):
+        """Return the dictionary items, recording a read dependency."""
         return self._value.items()

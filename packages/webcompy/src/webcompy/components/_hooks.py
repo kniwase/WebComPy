@@ -1,3 +1,5 @@
+"""Lifecycle hooks and async helpers callable inside component setup functions."""
+
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine, Iterable
@@ -20,6 +22,18 @@ T = TypeVar("T")
 
 
 def on_before_rendering(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> Callable[[], Any]:
+    """Register a hook invoked before the component renders.
+
+    Args:
+        func: Hook callback; may be a coroutine function.
+
+    Returns:
+        The registered callback.
+
+    Raises:
+        LookupError: If called outside a component setup function.
+
+    """
     try:
         ctx = _active_component_context.get()
     except LookupError as err:
@@ -29,6 +43,18 @@ def on_before_rendering(func: Callable[[], Any] | Callable[[], Coroutine[Any, An
 
 
 def on_after_rendering(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> Callable[[], Any]:
+    """Register a hook invoked after the component renders.
+
+    Args:
+        func: Hook callback; may be a coroutine function.
+
+    Returns:
+        The registered callback.
+
+    Raises:
+        LookupError: If called outside a component setup function.
+
+    """
     try:
         ctx = _active_component_context.get()
     except LookupError as err:
@@ -38,6 +64,18 @@ def on_after_rendering(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any
 
 
 def on_before_destroy(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> Callable[[], Any]:
+    """Register a hook invoked before the component is destroyed.
+
+    Args:
+        func: Hook callback; may be a coroutine function.
+
+    Returns:
+        The registered callback.
+
+    Raises:
+        LookupError: If called outside a component setup function.
+
+    """
     try:
         ctx = _active_component_context.get()
     except LookupError as err:
@@ -69,6 +107,18 @@ def _register_before_destroy_chained(cleanup: Callable[[], None]) -> None:
 
 
 def on_mounted(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> Callable[[], Any]:
+    """Register a hook invoked when the component's node enters the DOM.
+
+    Args:
+        func: Hook callback; may be a coroutine function.
+
+    Returns:
+        The registered callback.
+
+    Raises:
+        LookupError: If called outside a component setup function.
+
+    """
     try:
         ctx = _active_component_context.get()
     except LookupError as err:
@@ -78,6 +128,18 @@ def on_mounted(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]])
 
 
 def on_unmounted(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> Callable[[], Any]:
+    """Register a hook invoked when the component's node leaves the DOM.
+
+    Args:
+        func: Hook callback; may be a coroutine function.
+
+    Returns:
+        The registered callback.
+
+    Raises:
+        LookupError: If called outside a component setup function.
+
+    """
     try:
         ctx = _active_component_context.get()
     except LookupError as err:
@@ -87,6 +149,18 @@ def on_unmounted(func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]
 
 
 def on_error_captured(func: Callable[[Exception], Any]) -> Callable[[Exception], Any]:
+    """Register a hook invoked when a descendant error is captured.
+
+    Args:
+        func: Hook callback receiving the raised exception.
+
+    Returns:
+        The registered callback.
+
+    Raises:
+        LookupError: If called outside a component setup function.
+
+    """
     try:
         ctx = _active_component_context.get()
     except LookupError as err:
@@ -103,6 +177,24 @@ def use_async_result(
     watch: Iterable[SignalBase[Any]] = (),
     transfer: bool = True,
 ) -> AsyncResult[T]:
+    """Expose an async operation's state as an ``AsyncResult``.
+
+    Called inside a component setup function, the result is registered
+    with the component so its state can be transferred from SSR. Unless
+    ``immediate`` is ``False``, the operation starts right after the
+    first render; listed ``watch`` signals refetch whenever they change.
+
+    Args:
+        func: Async operation factory; run without arguments.
+        default: Value exposed while the operation is pending.
+        immediate: Whether to start the operation after first render.
+        watch: Signals that trigger a refetch upon change.
+        transfer: Whether the result state transfers from SSR.
+
+    Returns:
+        The ``AsyncResult`` tracking the operation's lifecycle.
+
+    """
     result = AsyncResult(func, default=default)
     result._transferable = transfer
 
@@ -146,5 +238,15 @@ def use_async_result(
 def use_async(
     func: Callable[[], Coroutine[Any, Any, Any]],
 ) -> None:
+    """Run an async operation after every component render.
+
+    The wrapped operation is executed after each rendering; results are
+    fire-and-forget. Use ``use_async_result()`` when the pending/error
+    state must be observable.
+
+    Args:
+        func: Async operation factory; run without arguments.
+
+    """
     wrapped = AsyncWrapper()(func)
     on_after_rendering(wrapped)

@@ -1,3 +1,5 @@
+"""Core reactive state primitives: ``SignalBase`` and the mutable ``Signal``."""
+
 from __future__ import annotations
 
 from abc import abstractmethod
@@ -80,6 +82,23 @@ class CallbackConsumerNode(SignalNode, _CallbackMixin):
 
 
 class SignalBase(SignalNode, Generic[V]):
+    """Base class of all reactive value containers.
+
+    A ``SignalBase`` holds a current value and participates in the
+    reactive graph: reading ``value`` registers the active consumer as a
+    dependent, and value changes notify registered consumers. Subclasses
+    define how and when values change: ``Signal`` exposes user-facing
+    mutation while ``Computed`` derives values from other signals.
+
+    Args:
+        init_value: Initial value exposed by ``value``.
+
+    Attributes:
+        value: The current value; reading it registers the active
+            consumer as a dependent of this node.
+
+    """
+
     _value: V
 
     def __init__(self, init_value: V) -> None:
@@ -88,15 +107,42 @@ class SignalBase(SignalNode, Generic[V]):
 
     @property
     @abstractmethod
-    def value(self) -> V: ...
+    def value(self) -> V:
+        """Return the current value, recording a read dependency.
+
+        Returns:
+            The current value.
+
+        """
+        ...
 
     @final
     def on_after_updating(self, func: Callable[[V], Any]) -> CallbackConsumerNode:
+        """Register a callback that runs after each value change.
+
+        Args:
+            func: Callback receiving the new value.
+
+        Returns:
+            The callback consumer node created for the registration.
+
+        """
         consumer = CallbackConsumerNode(func, self, is_before=False)
         return consumer
 
     @final
     def on_before_updating(self, func: Callable[[V], Any]) -> CallbackConsumerNode:
+        """Register a callback that runs before each value change.
+
+        The callback receives the value that is about to be replaced.
+
+        Args:
+            func: Callback receiving the previous value.
+
+        Returns:
+            The callback consumer node created for the registration.
+
+        """
         consumer = CallbackConsumerNode(func, self, is_before=True)
         return consumer
 
@@ -141,8 +187,37 @@ def _notify_before_callbacks(producer: SignalNode, value: Any) -> None:
 
 
 class Signal(SignalBase[V]):
+    """Mutable reactive value container.
+
+    ``Signal`` is the core state primitive. Assigning through the
+    ``value`` setter or calling ``set_value`` stores a new value and
+    notifies dependent ``Computed`` nodes, effects, and DOM bindings.
+    Writes equal to the current value (under ``==`` or identity) are
+    no-ops and do not propagate.
+
+    Args:
+        init_value: Initial value of the signal.
+
+    Attributes:
+        value: The current value; reading it records a read dependency
+            and assigning it stores and propagates the new value.
+
+    """
+
     @final
     def set_value(self, new_value: V) -> V:
+        """Set the value, notifying consumers when it actually changes.
+
+        Assigning through the ``value`` setter delegates here. The call
+        is a no-op when ``new_value`` equals the current value.
+
+        Args:
+            new_value: The new value to store.
+
+        Returns:
+            The stored value after the call.
+
+        """
         old_value = self._value
         if old_value is new_value or old_value == new_value:
             return self._value
@@ -156,6 +231,12 @@ class Signal(SignalBase[V]):
     @final
     @property
     def value(self) -> V:
+        """Return the current value, recording a read dependency.
+
+        Returns:
+            The current value.
+
+        """
         producer_accessed(self)
         return self._value
 

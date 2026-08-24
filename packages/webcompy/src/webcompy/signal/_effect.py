@@ -1,3 +1,5 @@
+"""Side-effecting functions that re-run when their tracked signals change."""
+
 from __future__ import annotations
 
 import contextlib
@@ -80,12 +82,19 @@ class EffectNode(SignalNode, _CallbackMixin):
 
 
 class EffectHandle:
+    """Handle to a running effect, used to stop it."""
+
     _node: EffectNode
 
     def __init__(self, node: EffectNode) -> None:
         self._node = node
 
     def dispose(self) -> None:
+        """Stop the effect permanently.
+
+        The effect will not re-run for future signal changes; a pending
+        cleanup function is invoked once.
+        """
         if not self._node._disposed:
             self._node._disposed = True
             self._node._cleanup()
@@ -93,12 +102,15 @@ class EffectHandle:
 
 
 class EffectScope:
+    """Container that collects effects and disposes them together."""
+
     _effects: list[EffectNode]
 
     def __init__(self) -> None:
         self._effects: list[EffectNode] = []
 
     def dispose(self) -> None:
+        """Dispose all effects collected in this scope."""
         for effect in self._effects:
             if not effect._disposed:
                 effect._disposed = True
@@ -111,6 +123,22 @@ def effect(
     fn: Callable[[], Any],
     on_cleanup: Callable[[], Any] | None = None,
 ) -> EffectHandle:
+    """Run ``fn`` and re-run it whenever a signal it read changes.
+
+    Dependencies are tracked dynamically: each run records the signals
+    the function reads, and a change to any of them schedules the next
+    run. A callable returned by ``fn`` is treated as a cleanup function
+    invoked before the next run and on disposal.
+
+    Args:
+        fn: The effect function. May return a cleanup callable.
+        on_cleanup: Fallback cleanup callback used when ``fn`` returns a
+            non-callable result.
+
+    Returns:
+        A handle that can stop the effect via ``dispose()``.
+
+    """
     node = EffectNode(fn, on_cleanup)
     return EffectHandle(node)
 

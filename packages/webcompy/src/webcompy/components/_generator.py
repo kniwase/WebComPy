@@ -1,3 +1,5 @@
+"""Component generators: ``define_component`` decorator, registry, and scoped style rendering."""
+
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine, Iterable
@@ -48,6 +50,14 @@ def _instantiate(cls: type[T]) -> T:
 
 
 class ComponentStore:
+    """Registry of named components.
+
+    Attributes:
+        components: Mapping of registered component names to their
+            generators.
+
+    """
+
     _components: dict[str, ComponentGenerator[Any]]
     _custom_element_names: dict[str, str]
 
@@ -56,6 +66,17 @@ class ComponentStore:
         self._custom_element_names = {}
 
     def add_component(self, name: str, component_generator: ComponentGenerator[Any]):
+        """Register a component generator under ``name``.
+
+        Args:
+            name: Registered name of the component.
+            component_generator: Generator to associate with the name.
+
+        Raises:
+            WebComPyComponentException: If the component name or its
+                custom element name is already registered.
+
+        """
         if name in self._components:
             raise WebComPyComponentException(f"Duplicated Component Name: '{name}'")
         custom_element_name = component_generator.custom_element_name
@@ -69,6 +90,12 @@ class ComponentStore:
 
     @property
     def components(self) -> dict[str, ComponentGenerator[Any]]:
+        """Return the mapping of component names to generators.
+
+        Returns:
+            The name-to-generator registry contents.
+
+        """
         return self._components
 
 
@@ -92,6 +119,7 @@ ComponentDisplay: TypeAlias = Literal[
     "inline-grid",
     "flow-root",
 ]
+"""Supported CSS ``display`` modes for named components."""
 
 _VALID_DISPLAY_VALUES: Final = frozenset(get_args(ComponentDisplay))
 
@@ -237,6 +265,33 @@ def _render_scoped_style_css(
 
 
 class ComponentGenerator(Generic[PropsType]):
+    """Component instance factory created by ``define_component``.
+
+    Calling a generator (``MyComponent(props, slots={...})``) produces a
+    ``Component`` element node. The generator also owns the component's
+    scoped style declarations, custom element name, observed attribute
+    list, and ``display`` mode, and registers itself in the active
+    ``ComponentStore``.
+
+    Args:
+        name: Custom element name assigned to the component.
+        component_def: The component setup function.
+        custom_element_name: Validated custom element tag name.
+        observed_attributes: Attribute names mirrored into props.
+        display: CSS ``display`` mode applied to the component element.
+
+    Attributes:
+        custom_element_name: Validated custom element tag name.
+        observed_attributes: Attribute names mirrored into props.
+        observed_prop_keys: Mapping of attribute names to prop keys.
+        definition_key: Key identifying this generator's custom element
+            definition for registry compatibility checks.
+        display: CSS ``display`` mode applied to the component element.
+        scoped_style: Compiled scoped style declarations of the
+            component.
+
+    """
+
     _name: str
     _cid: str
     _style: dict[str, StyleDict]
@@ -276,22 +331,53 @@ class ComponentGenerator(Generic[PropsType]):
 
     @property
     def custom_element_name(self) -> str:
+        """Return the custom element tag name.
+
+        Returns:
+            The custom element tag name.
+
+        """
         return self._custom_element_name
 
     @property
     def display(self) -> ComponentDisplay | None:
+        """Return the assigned CSS ``display`` mode.
+
+        Returns:
+            The ``display`` mode, or ``None`` when not assigned.
+
+        """
         return self._display
 
     @property
     def observed_attributes(self) -> tuple[str, ...]:
+        """Return the attribute names mirrored into props.
+
+        Returns:
+            A tuple of observed attribute names.
+
+        """
         return self._observed_attributes
 
     @property
     def observed_prop_keys(self) -> dict[str, str]:
+        """Return the mapping of attribute names to props keys.
+
+        Returns:
+            Mapping of observed attribute name to its props key.
+
+        """
         return self._observed_prop_keys
 
     @property
     def definition_key(self) -> str:
+        """Return a stable identifier of the custom element definition.
+
+        Returns:
+            A versioned key combining the tag name and sorted observed
+            attributes.
+
+        """
         ordered_attributes = ",".join(sorted(self._observed_attributes))
         return f"webcompy-v1:{self._custom_element_name}:{ordered_attributes}"
 
@@ -353,6 +439,16 @@ class ComponentGenerator(Generic[PropsType]):
 
     @property
     def scoped_style(self) -> str:
+        """Return the rendered component-scoped CSS.
+
+        Includes the leading ``display`` rule when a display mode is
+        assigned. Assigning a style declaration to this property scopes
+        every selector with the component id.
+
+        Returns:
+            The rendered ``@layer webcompy-scope`` CSS text.
+
+        """
         leading_rules: tuple[str, ...] = ()
         if self._display is not None:
             leading_rules = (f"{self._custom_element_name}[webcompy-cid-{self._id}] {{ display: {self._display}; }}",)
@@ -456,6 +552,30 @@ def define_component(
     observed_attributes: Iterable[str] = (),
     display: ComponentDisplay | None = None,
 ) -> Callable[[FuncComponentDef[PropsType]], ComponentGenerator[PropsType]]:
+    """Decorate a setup function into a named component generator.
+
+    The component setup function receives the ``ComponentContext`` and
+    returns the component template. The decorated function keeps its
+    name and becomes callable as ``ComponentName(props, slots={...})``.
+    The assigned ``name`` forms the custom element tag and is validated;
+    the setup function's name must match the Pascal-case form of it.
+
+    Args:
+        name: Custom element name for the component (lowercase, must
+            contain a hyphen).
+        observed_attributes: Attribute names mirrored into the props
+            mapping.
+        display: CSS ``display`` mode applied to the component element.
+
+    Returns:
+        A decorator producing a ``ComponentGenerator`` for the component.
+
+    Raises:
+        WebComPyComponentException: If the custom element name or the
+            ``display`` value is invalid, or if the decorated function's
+            name does not match the element name.
+
+    """
     _validate_custom_element_name(name)
     normalized = _normalize_observed_attributes(observed_attributes)
     if display is not None and (not isinstance(display, str) or not _is_component_display(display)):

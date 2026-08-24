@@ -1,3 +1,5 @@
+"""Mixin registering ``SignalBase`` attributes for framework-owned cleanup."""
+
 from typing import Any
 
 from webcompy.signal._base import SignalBase

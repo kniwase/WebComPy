@@ -1,3 +1,5 @@
+"""Read-only reactive views: ``ReadonlySignal`` and the ``readonly`` converter."""
+
 from collections.abc import Callable
 from typing import TypeVar, final
 
@@ -9,6 +11,14 @@ T = TypeVar("T")
 
 
 class ReadonlySignal(Computed[V]):
+    """Read-only reactive view over an underlying ``SignalBase``.
+
+    Broadcasting the current value of the wrapped signal without
+    exposing a write path. Instances are created via ``readonly()``
+    (internally ``__create_instance__``); the constructor raises.
+
+    """
+
     @final
     def __init__(self) -> None:
         raise NotImplementedError("ReadonlySignal cannot generate an instance by constructor")
@@ -24,6 +34,15 @@ class ReadonlySignal(Computed[V]):
 
 
 def readonly(reactive: SignalBase[V]) -> ReadonlySignal[V]:
+    """Wrap ``reactive`` in a read-only view of its value.
+
+    Args:
+        reactive: The signal to observe.
+
+    Returns:
+        A ``ReadonlySignal`` mirroring the wrapped value reactively.
+
+    """
     return ReadonlySignal.__create_instance__(reactive)
 
 
