@@ -1,3 +1,5 @@
+"""Locate and load the framework's bundled CSS stylesheet files."""
+
 from __future__ import annotations
 
 from importlib.resources import files
@@ -20,6 +22,7 @@ _STYLES_FILES: tuple[str, ...] = (
 
 
 def get_styles_dir() -> Traversable:
+    """Return the directory containing the framework stylesheet files."""
     return files("webcompy").joinpath("ui", "_styles")  # type: ignore[return-value]
 
 
@@ -42,6 +45,16 @@ def get_styles_files() -> dict[str, bytes]:
 
 
 def get_styles_file(name: str) -> bytes | None:
+    """Return the content of one framework stylesheet file.
+
+    Args:
+        name: Filename relative to the styles directory.
+
+    Returns:
+        The file content as bytes, or ``None`` when ``name`` is not one of
+        the bundled framework stylesheets or the file is missing.
+
+    """
     if name not in _STYLES_FILES:
         return None
     entry = get_styles_dir().joinpath(name)
