@@ -1,3 +1,5 @@
+"""Project scaffolding from the bundled template."""
+
 import os
 import pathlib
 import shutil

@@ -172,6 +172,7 @@ the per-area reference.
 - **Loading Screen DOM Contract** — `loading-screen/spec.md`
 - **Node Cache Strict is-None Check** — `async-rendering/spec.md`
 - **No Overview Gap List** — `overview/spec.md`
+- **Docstring Coverage & OpenSpec Reference Ban** — `api-docstrings/spec.md`
 
 ## File → Spec Mapping
 
@@ -238,6 +239,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `webcompy_testing/` | `testing-module/spec.md`, `async-scheduler/spec.md`, `custom-element-components/spec.md` |
 | `tests/` (unit), `e2e/` (E2E) | `test-execution-paths/spec.md`, `markdown-document/spec.md` |
 | `docs_app/` | `docs-site-documents/spec.md`, `docs-e2e/spec.md`, `loading-screen/spec.md` |
+| `scripts/check-docstrings.py`, `[tool.pydoclint]` in `pyproject.toml` | `api-docstrings/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
 
 Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md`.
@@ -394,7 +396,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
 | `test-execution-paths` | Physical separation between unit (`tests/`) and E2E (`e2e/`) tests; opt-in `WEBCOMPY_RUN_E2E=1` env var gate; `scripts/run-e2e-tests.sh` canonical entry point |
 | `doc-spec-references` | Governance of how universal docs reference `openspec/specs/`; retired API-name blocklist; `scripts/check-doc-spec-refs.py` guardrail |
-| `api-docstrings` | Docstring-implementation consistency for public interfaces under `packages/*/src`: same-PR docstring updates, must-fix inconsistency blocking approval (pydoclint structural checks + AI semantic review) |
+| `api-docstrings` | Docstring coverage and Google-style structure for public interfaces of all four packages; ban on OpenSpec artifact references in docstrings and comments; stdlib-only strict checker with migration baseline (`scripts/check-docstrings.py`); same-PR docstring-implementation sync with must-fix inconsistency blocking approval |
 | `code-block` | `CodeBlock` component rendering syntax-highlighted code as framework-managed token spans (direct children of `<code>`, no `raw_html` injection), plus the `highlight()` HTML-string API with dual `tok-*`/Pygments classes |
 | `syntax-highlight-lexers` | `Lexer` protocol, lexer registry (name/alias/file-extension lookup), built-in Python/Bash/TOML lexers, `LexerInfo` introspection, Pygments adapter skeleton |
 

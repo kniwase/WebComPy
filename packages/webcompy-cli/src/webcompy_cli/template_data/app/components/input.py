@@ -1,3 +1,5 @@
+"""Template text input demo component."""
+
 from webcompy.components import ComponentContext, define_component
 from webcompy.elements import DOMEvent, html
 from webcompy.router import RouterContext

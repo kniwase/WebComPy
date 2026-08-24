@@ -1,3 +1,5 @@
+"""RPC subscription hub for WebSocket connections."""
+
 from __future__ import annotations
 
 import asyncio

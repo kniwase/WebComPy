@@ -1,3 +1,5 @@
+"""Bash lexer built on a single token regular expression."""
+
 from __future__ import annotations
 
 import re
@@ -7,6 +9,20 @@ from webcompy.ui.code_block._tokens import Token, TokenType
 
 
 class BashLexer:
+    """Tokenize bash/shell source with a single grouped regular expression.
+
+    Words are classified as keywords or builtins against fixed sets; shell
+    variable references like ``$NAME`` and ``${NAME}`` are preserved
+    verbatim as identifier tokens.
+
+    Attributes:
+        name: Primary name ``"bash"``.
+        aliases: Alternative lookup names (``"sh"``, ``"shell"``, ``"zsh"``).
+        file_extensions: Registered file extensions (``.sh``, ``.bash``,
+            ``.zsh``).
+
+    """
+
     name: str = "bash"
     aliases: tuple[str, ...] = ("sh", "shell", "zsh")
     file_extensions: tuple[str, ...] = (".sh", ".bash", ".zsh")
@@ -118,6 +134,16 @@ class BashLexer:
     )
 
     def tokenize(self, code: str) -> Iterable[Token]:
+        """Tokenize bash source in source order.
+
+        Args:
+            code: Source text to tokenize; empty input yields no tokens.
+
+        Yields:
+            Token: Classified spans whose concatenated values equal
+                ``code`` exactly.
+
+        """
         if not code:
             return
         pos = 0

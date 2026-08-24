@@ -1,3 +1,5 @@
+"""Browser Server-Sent Events port using the native ``EventSource``."""
+
 from __future__ import annotations
 
 from collections.abc import Callable

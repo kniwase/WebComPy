@@ -1,3 +1,5 @@
+"""Abstract base of the virtual DOM node hierarchy."""
+
 from __future__ import annotations
 
 from abc import abstractmethod
@@ -11,6 +13,14 @@ from webcompy.signal._graph import consumer_destroy
 
 
 class ElementAbstract(SignalReceivable):
+    """Base class of all virtual DOM nodes.
+
+    Manages the lifecycle shared by every element node: DOM node creation,
+    mounting into the parent, hydration adoption of server-rendered nodes,
+    and callback cleanup on removal.
+
+    """
+
     _node_idx: int
     _node_cache: DOMNode | None = None
     _mounted: bool | None = None

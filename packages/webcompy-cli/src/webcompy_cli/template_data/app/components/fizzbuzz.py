@@ -1,3 +1,5 @@
+"""Template FizzBuzz demo component."""
+
 from webcompy.components import (
     ComponentContext,
     define_component,

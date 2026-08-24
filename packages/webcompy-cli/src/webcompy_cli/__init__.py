@@ -1,3 +1,5 @@
+"""Public entry points for the ``webcompy_cli`` package."""
+
 from webcompy_cli._generate import generate_static_site
 from webcompy_cli._inspect import run_inspect
 from webcompy_cli._server import create_asgi_app, run_server

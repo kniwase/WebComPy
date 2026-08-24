@@ -1,3 +1,5 @@
+"""Converters between occurrence-based sources and reactive signals."""
+
 from __future__ import annotations
 
 import asyncio
@@ -65,6 +67,20 @@ def _register_cleanup(cleanup_fn: Callable[[], None]) -> None:
 
 
 class StreamResult(Generic[T]):
+    """Signals tracking the latest item of a consumed source.
+
+    Args:
+        initial: Initial value of the ``value`` signal.
+
+    Attributes:
+        value: Signal holding the latest item emitted by the source.
+        error: Signal holding the exception that terminated the source,
+            or ``None``.
+        finished: Signal that becomes ``True`` when the source is
+            exhausted (or failed).
+
+    """
+
     def __init__(self, initial: T) -> None:
         self._value: Signal[T] = Signal(initial)
         self._error: Signal[Exception | None] = Signal(None)
@@ -73,22 +89,56 @@ class StreamResult(Generic[T]):
 
     @property
     def value(self) -> Signal[T]:
+        """The latest item emitted by the source.
+
+        Returns:
+            A signal holding the latest item.
+
+        """
         return self._value
 
     @property
     def error(self) -> Signal[Exception | None]:
+        """The exception that terminated the source, if any.
+
+        Returns:
+            A signal holding the exception, or ``None``.
+
+        """
         return self._error
 
     @property
     def finished(self) -> Signal[bool]:
+        """Whether the source finished successfully.
+
+        Returns:
+            A signal that becomes ``True`` when the source is exhausted.
+
+        """
         return self._finished
 
     async def aclose(self) -> None:
+        """Cancel consumption of the source and detach the stream handle."""
         if self._cancel is not None:
             self._cancel()
 
 
 def to_signal(source: AsyncIterable[T] | Iterable[T], initial: T) -> StreamResult[T]:
+    """Track the latest item of an async or sync iterable in a signal.
+
+    Consumption starts immediately. Update the returned
+    :class:`StreamResult`: ``value`` follows each emitted item, ``error``
+    records the terminating exception, and ``finished`` marks exhaustion.
+    Call ``aclose()`` to stop consuming.
+
+    Args:
+        source: Async or sync iterable whose items are tracked.
+        initial: Initial value of the ``value`` signal.
+
+    Returns:
+        A :class:`StreamResult` exposing the tracked signals.
+
+    """
     result = StreamResult[T](initial)
     cancelled = False
 
@@ -120,6 +170,17 @@ def to_signal(source: AsyncIterable[T] | Iterable[T], initial: T) -> StreamResul
 
 
 class StreamListResult(Generic[T]):
+    """Signals tracking the accumulated items of a consumed source.
+
+    Attributes:
+        items: Reactive list that grows as items arrive from the source.
+        error: Signal holding the exception that terminated the source,
+            or ``None``.
+        finished: Signal that becomes ``True`` when the source is
+            exhausted (or failed).
+
+    """
+
     def __init__(self) -> None:
         self._items: ReactiveList[T] = ReactiveList([])
         self._error: Signal[Exception | None] = Signal(None)
@@ -128,17 +189,36 @@ class StreamListResult(Generic[T]):
 
     @property
     def items(self) -> ReactiveList[T]:
+        """The items accumulated from the source so far.
+
+        Returns:
+            A reactive list that grows as items arrive.
+
+        """
         return self._items
 
     @property
     def error(self) -> Signal[Exception | None]:
+        """The exception that terminated the source, if any.
+
+        Returns:
+            A signal holding the exception, or ``None``.
+
+        """
         return self._error
 
     @property
     def finished(self) -> Signal[bool]:
+        """Whether the source finished successfully.
+
+        Returns:
+            A signal that becomes ``True`` when the source is exhausted.
+
+        """
         return self._finished
 
     async def aclose(self) -> None:
+        """Cancel consumption of the source and detach the stream handle."""
         if self._cancel is not None:
             self._cancel()
 
@@ -148,6 +228,21 @@ def to_reactive_list(
     *,
     maxlen: int | None = None,
 ) -> StreamListResult[T]:
+    """Append the items of an async or sync iterable to a reactive list.
+
+    Consumption starts immediately. Items are appended to ``items`` in
+    arrival order until the source finishes; call ``aclose()`` to stop
+    consuming.
+
+    Args:
+        source: Async or sync iterable whose items are collected.
+        maxlen: When given, drop the oldest items so the list never grows
+            beyond this length.
+
+    Returns:
+        A :class:`StreamListResult` exposing the accumulated items.
+
+    """
     result = StreamListResult[T]()
     cancelled = False
 
@@ -181,6 +276,15 @@ def to_reactive_list(
 
 
 class StreamAsyncIterator(Generic[T]):
+    """An async iterator that disposes its generator source on close.
+
+    Args:
+        generator: Async generator yielding the iterator's items.
+        dispose: Cleanup callback invoked exactly once, when the iterator
+            is closed or garbage collected.
+
+    """
+
     def __init__(
         self,
         generator: AsyncGenerator[T, None],
@@ -198,6 +302,7 @@ class StreamAsyncIterator(Generic[T]):
         return await self._generator.__anext__()
 
     async def aclose(self) -> None:
+        """Dispose the source generator and close the iterator."""
         self._dispose()
         await self._generator.aclose()
 
@@ -208,6 +313,22 @@ def to_async_iter(
     emit_initial: bool = False,
     maxlen: int | None = None,
 ) -> StreamAsyncIterator[T]:
+    """Convert the updates of a signal into an async iterator.
+
+    Yields each new value of ``sig`` as an occurrence. Queueing is
+    drop-oldest: while the consumer falls behind, older values are dropped
+    so the next yield is always the newest available value. The iterator
+    stops when closed or when the surrounding component is destroyed.
+
+    Args:
+        sig: The signal whose updated values are yielded.
+        emit_initial: When ``True``, yield the current value first.
+        maxlen: Optional bound on the queue of pending values.
+
+    Returns:
+        A :class:`StreamAsyncIterator` yielding the signal's updated values.
+
+    """
     queue: _StreamQueue[T] = _StreamQueue(maxlen)
     consumer = sig.on_after_updating(lambda v: queue.put_nowait(v))
     closed = False

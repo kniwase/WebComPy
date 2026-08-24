@@ -1,3 +1,5 @@
+"""Sequence-to-children repetition elements with keyed reconciliation."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -25,6 +27,25 @@ V = TypeVar("V")
 
 
 class RepeatElement(DynamicElement):
+    """Element rendering one child per item of a reactive sequence.
+
+    A ``ReactiveList`` or ``ReactiveDict`` signal drives the children. When
+    keys are available (dict items, or list items through ``key``), updates
+    reconcile by key and reuse DOM nodes instead of rebuilding them.
+
+    Args:
+        sequence: Reactive list or dict signal providing the items.
+        template: Callable building children for one item, optionally
+            receiving the key as a second argument.
+        key: Callable deriving a stable key from a list item; disallowed
+            for dict sequences.
+
+    Raises:
+        ValueError: When ``sequence`` is not a signal, or ``key`` is given
+            for a dict sequence.
+
+    """
+
     _key_to_child: dict[str | int, ElementAbstract]
     _children_keys: list[str | int]
 
@@ -268,6 +289,17 @@ class RepeatElement(DynamicElement):
 
 
 class MultiLineTextElement(RepeatElement):
+    """Text element rendering each line of a multi-line value as a separate node.
+
+    The string (or reactive value) is split on ``\\n`` and each line becomes
+    a text node followed by a ``NewLine`` element, so the line breaks react
+    to value changes through the underline repeat machinery.
+
+    Args:
+        text: Static string or reactive value whose multi-line text is rendered.
+
+    """
+
     def __init__(self, text: str | SignalBase[Any]) -> None:
         super().__init__(
             Computed(

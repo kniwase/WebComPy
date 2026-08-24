@@ -1,3 +1,5 @@
+"""``ThemeManager``: reactive light/dark/system theme state with persistence."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -16,6 +18,25 @@ if TYPE_CHECKING:
 
 
 class ThemeManager:
+    """Reactive theme state holding a ``Signal[Theme]`` and a derived CSS style.
+
+    The derived style emits dark-token overrides for the active theme and
+    is registered with the app via ``register_style``. Theme changes are
+    persisted through the theme cookie unless persistence is disabled in
+    the app configuration.
+
+    Args:
+        app: Owning application, used to register the reactive style.
+        render_context: Active render context.
+        initial: Starting preference; a ``Theme`` member, a matching
+            string, or any other value normalized to ``Theme.SYSTEM``.
+
+    Attributes:
+        signal: Reactive signal holding the current theme.
+        value: Current theme.
+
+    """
+
     def __init__(self, app: WebComPyApp, render_context: Any, initial: Theme) -> None:
         self._app = app
         self._render_context = render_context
@@ -26,10 +47,12 @@ class ThemeManager:
 
     @property
     def signal(self) -> Signal[Theme]:
+        """Reactive signal holding the current theme."""
         return self._signal
 
     @property
     def value(self) -> Theme:
+        """Current theme."""
         return self._signal.value
 
     def register_style(self) -> None:
@@ -42,6 +65,12 @@ class ThemeManager:
         self._app.append_style(self._css)
 
     def set(self, theme: Theme) -> None:
+        """Set the active theme and persist it when persistence is enabled.
+
+        Args:
+            theme: Theme to activate.
+
+        """
         self._signal.value = theme
         if self._is_persist_enabled():
             write_theme_cookie_value(theme)
@@ -56,9 +85,11 @@ class ThemeManager:
         return bool(theme_cfg.get("persist", True))
 
     def toggle(self) -> None:
+        """Toggle light and dark, resolving ``SYSTEM`` against the OS preference."""
         self.set(self._resolved_toggle_target())
 
     def cycle(self) -> None:
+        """Advance the theme through light, dark, then system, wrapping around."""
         order: tuple[Theme, ...] = (Theme.LIGHT, Theme.DARK, Theme.SYSTEM)
         current = self._signal.value
         try:

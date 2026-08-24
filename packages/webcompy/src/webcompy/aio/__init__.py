@@ -1,3 +1,5 @@
+"""Async operation helpers and stream-to-signal converters."""
+
 from webcompy.aio._aio import AsyncWrapper, resolve_async
 from webcompy.aio._async_result import AsyncResult, AsyncState
 from webcompy.aio._stream import (

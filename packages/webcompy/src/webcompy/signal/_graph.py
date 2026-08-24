@@ -1,3 +1,5 @@
+"""Dependency-graph nodes and edges backing the reactive system."""
+
 from __future__ import annotations
 
 from contextvars import ContextVar
@@ -35,6 +37,26 @@ class SignalEdge:
 
 
 class SignalNode:
+    """Node of the reactive dependency graph.
+
+    Every reactive value is a node connected to the nodes it reads
+    (producers) and the nodes that read it (consumers) via
+    ``SignalEdge`` links. Framework code interacts with this base type
+    to recompute consumers and propagate invalidation.
+
+    Attributes:
+        version: Monotonic counter bumped whenever the value changes.
+        last_clean_epoch: Epoch in which this node was last brought up to date.
+        dirty: Whether the node's cached state is invalidated.
+        recomputing: Whether a recomputation is currently in progress.
+        producers: First incoming edge from a node this one read.
+        producers_tail: Last incoming edge from a producer.
+        consumers: First outgoing edge to a node that read this one.
+        consumers_tail: Last outgoing edge to a consumer.
+        consumer_is_always_live: Whether consumers are tracked continuously.
+
+    """
+
     version: int
     last_clean_epoch: int
     dirty: bool
@@ -57,9 +79,22 @@ class SignalNode:
         self.consumer_is_always_live = False
 
     def producer_must_recompute(self) -> bool:
+        """Return ``True`` when this node's value is stale.
+
+        Returns:
+            ``True`` if the node is dirty or was never computed.
+
+        """
         return self.dirty or self._value is _SENTINEL  # type: ignore[attr-defined]
 
     def producer_recompute_value(self) -> None:
+        """Recompute the value of this producer node.
+
+        Raises:
+            NotImplementedError: Always; subclasses must provide the
+                actual recomputation strategy.
+
+        """
         raise NotImplementedError
 
 

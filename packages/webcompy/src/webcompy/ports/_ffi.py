@@ -1,3 +1,5 @@
+"""Foreign-function-interface port bridging Python and JavaScript."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -5,6 +7,13 @@ from typing import Any
 
 
 class FFIPort(ABC):
+    """FFI bridge between Python callables and JavaScript values.
+
+    Implementations wrap the runtime's FFI layer (Pyodide/PyScript FFI in
+    the browser) for proxy creation, destruction, null checks, and ordinary
+    object conversion.
+    """
+
     @abstractmethod
     def create_proxy(self, obj: Any) -> Any:
         """Wrap a Python callable for use in JavaScript.

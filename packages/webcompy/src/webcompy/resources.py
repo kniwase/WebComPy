@@ -1,3 +1,5 @@
+"""App-package resource loading via ``ResourcePort``."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -32,12 +34,48 @@ def _get_port():
 
 
 async def load_text(source: str | Path) -> str:
+    """Load a text resource from the app package.
+
+    Resolves ``source`` relative to the application package root and
+    delegates to the active ``ResourcePort``.
+
+    Args:
+        source: Resource path as a string or relative ``Path``; absolute
+            paths and ``..`` segments are rejected.
+
+    Returns:
+        The decoded text content of the resource.
+
+    Raises:
+        WebComPyException: If ``source`` is absolute, contains ``..``,
+            has an unsupported type, or no ``ResourcePort`` is available
+            in the current DI scope.
+
+    """
     path = _normalize_source(source)
     port = _get_port()
     return await port.load_text(path)
 
 
 async def load_bytes(source: str | Path) -> bytes:
+    """Load a binary resource from the app package.
+
+    Resolves ``source`` relative to the application package root and
+    delegates to the active ``ResourcePort``.
+
+    Args:
+        source: Resource path as a string or relative ``Path``; absolute
+            paths and ``..`` segments are rejected.
+
+    Returns:
+        The raw bytes of the resource.
+
+    Raises:
+        WebComPyException: If ``source`` is absolute, contains ``..``,
+            has an unsupported type, or no ``ResourcePort`` is available
+            in the current DI scope.
+
+    """
     path = _normalize_source(source)
     port = _get_port()
     return await port.load_bytes(path)

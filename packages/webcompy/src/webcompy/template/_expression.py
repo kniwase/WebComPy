@@ -1,3 +1,5 @@
+"""Safe compilation and evaluation of template ``{{ }}`` expressions."""
+
 from __future__ import annotations
 
 import ast

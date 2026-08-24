@@ -1,3 +1,5 @@
+"""Shared component types: the context protocol, exceptions, and type aliases."""
+
 from __future__ import annotations
 
 import hashlib
@@ -21,6 +23,8 @@ from webcompy.exception import WebComPyException
 
 
 class WebComPyComponentException(WebComPyException):
+    """Error raised for invalid component definitions or usage."""
+
     pass
 
 
@@ -251,44 +255,186 @@ class Context(Generic[PropsType]):
 
 
 class ComponentContext(Protocol[PropsType]):
+    """Interface the component setup function receives.
+
+    The framework passes an implementation of this protocol as the
+    setup function's argument: it exposes props, named slots, lifecycle
+    hook registration, document head helpers, DI provisioning, and
+    reactive scoped style registration.
+
+    Attributes:
+        props: The props object passed to the component.
+
+    """
+
     @property
-    def props(self) -> PropsType: ...
+    def props(self) -> PropsType:
+        """Return the props object passed to the component.
+
+        Returns:
+            The component props.
+
+        """
+        ...
 
     def slots(
         self,
         name: str,
         fallback: NodeGenerator | None = None,
-    ) -> ElementChildren: ...
+    ) -> ElementChildren:
+        """Render the named slot contents.
 
-    def on_before_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
+        Args:
+            name: Name of the slot to render.
+            fallback: Contents rendered when the slot is not provided.
 
-    def on_after_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
+        Returns:
+            The rendered slot children, or the fallback children.
 
-    def on_before_destroy(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
+        """
+        ...
 
-    def on_mounted(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
+    def on_before_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
+        """Register a hook invoked before the component renders.
 
-    def on_unmounted(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None: ...
+        Args:
+            func: Hook callback; may be a coroutine function.
 
-    def on_error_captured(self, func: Callable[[Exception], Any]) -> None: ...
+        """
+        ...
 
-    def get_title(self) -> str: ...
+    def on_after_rendering(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
+        """Register a hook invoked after the component renders.
 
-    def get_meta(self) -> dict[str, dict[str, str]]: ...
+        Args:
+            func: Hook callback; may be a coroutine function.
 
-    def set_title(self, title: str) -> None: ...
+        """
+        ...
 
-    def set_meta(self, key: str, attributes: dict[str, str]) -> None: ...
+    def on_before_destroy(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
+        """Register a hook invoked before the component is destroyed.
 
-    def provide(self, key: object, value: Any) -> None: ...
+        Args:
+            func: Hook callback; may be a coroutine function.
 
-    def use_reactive_scoped_style(self, style: ReactiveScopedStyle) -> None: ...
+        """
+        ...
 
-    def remove_reactive_scoped_style(self, style: ReactiveScopedStyle) -> None: ...
+    def on_mounted(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
+        """Register a hook invoked when the component enters the DOM.
+
+        Args:
+            func: Hook callback; may be a coroutine function.
+
+        """
+        ...
+
+    def on_unmounted(self, func: Callable[[], Any] | Callable[[], Coroutine[Any, Any, Any]]) -> None:
+        """Register a hook invoked when the component leaves the DOM.
+
+        Args:
+            func: Hook callback; may be a coroutine function.
+
+        """
+        ...
+
+    def on_error_captured(self, func: Callable[[Exception], Any]) -> None:
+        """Register a hook invoked when a descendant error is captured.
+
+        Args:
+            func: Hook callback receiving the raised exception.
+
+        """
+        ...
+
+    def get_title(self) -> str:
+        """Return the current document title.
+
+        Returns:
+            The document title.
+
+        """
+        ...
+
+    def get_meta(self) -> dict[str, dict[str, str]]:
+        """Return the collected document head meta entries.
+
+        Returns:
+            Mapping of meta key to its attribute mapping.
+
+        """
+        ...
+
+    def set_title(self, title: str) -> None:
+        """Set the document title while this component exists.
+
+        Args:
+            title: New document title.
+
+        """
+        ...
+
+    def set_meta(self, key: str, attributes: dict[str, str]) -> None:
+        """Set a document head meta entry while this component exists.
+
+        Args:
+            key: Unique key of the meta entry.
+            attributes: Mapping of attribute names to values.
+
+        """
+        ...
+
+    def provide(self, key: object, value: Any) -> None:
+        """Provide a dependency value in the component's DI scope.
+
+        Args:
+            key: Dependency key the value is registered under.
+            value: Value to provide.
+
+        """
+        ...
+
+    def use_reactive_scoped_style(self, style: ReactiveScopedStyle) -> None:
+        """Register a reactive scoped style for this component.
+
+        Args:
+            style: Reactive scoped style created by
+                ``reactive_scoped_style()``.
+
+        """
+        ...
+
+    def remove_reactive_scoped_style(self, style: ReactiveScopedStyle) -> None:
+        """Remove a previously registered reactive scoped style.
+
+        Args:
+            style: Reactive scoped style previously registered via
+                ``use_reactive_scoped_style()``.
+
+        """
+        ...
 
 
 @final
 class ComponentProperty(TypedDict):
+    """Bundle of a component instance's resolved setup results and hooks.
+
+    Attributes:
+        component_id: Stable identifier of the component instance.
+        component_name: Registered name of the component.
+        transfer_id: Optional stable id used for hydration value
+            transfer; present when a custom transfer key is assigned.
+        template: Rendered template result, or ``None`` before render.
+        on_before_rendering: Hook invoked before the component renders.
+        on_after_rendering: Hook invoked after the component renders.
+        on_before_destroy: Hook invoked before the component is
+            destroyed.
+        on_mounted: Hook invoked when the component enters the DOM.
+        on_unmounted: Hook invoked when the component leaves the DOM.
+
+    """
+
     component_id: str
     component_name: str
     transfer_id: NotRequired[str]

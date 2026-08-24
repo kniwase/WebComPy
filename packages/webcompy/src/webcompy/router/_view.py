@@ -1,3 +1,5 @@
+"""``RouterView`` element rendering the matched route chain."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -20,6 +22,13 @@ from webcompy.signal import Computed
 
 
 class RouterView(DynamicElement):
+    """Dynamic element rendering the component for the currently matched route level.
+
+    Each ``RouterView`` renders one level of the matched route chain and
+    reuses the mounted component while that level's identity is
+    unchanged across navigations.
+    """
+
     _mounted_depth: int | None
     _mounted_component: ElementAbstract | None
     _mounted_identity: tuple | None

@@ -1,3 +1,5 @@
+"""Environment-abstracted ports for the browser APIs the framework relies on."""
+
 from webcompy.ports._async_scheduler import AsyncSchedulerPort
 from webcompy.ports._cookie import CookiePort
 from webcompy.ports._custom_element import CustomElementPort

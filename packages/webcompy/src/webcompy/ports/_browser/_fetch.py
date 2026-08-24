@@ -1,3 +1,5 @@
+"""Browser fetch port on PyScript's ``fetch`` with streaming support."""
+
 from __future__ import annotations
 
 import contextlib

@@ -1,3 +1,5 @@
+"""Server-side render context wiring all server ports."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -36,6 +38,8 @@ from webcompy_server.ports._websocket import ServerWebSocketPort
 
 
 class ServerRenderContext(RenderContext):
+    """Server-side ``RenderContext`` that provides server port implementations."""
+
     def _register_ports(self) -> None:
         assert self._di_scope is not None
         router_mode = self._router.__mode__ if self._router else "history"
@@ -62,9 +66,24 @@ class ServerRenderContext(RenderContext):
         self._di_scope.provide(WEBSOCKET_PORT_KEY, ServerWebSocketPort())
 
     async def render_html(self, **kwargs: Any) -> str:
+        """Render the application to an HTML string.
+
+        Args:
+            **kwargs: Forwarded to ``generate_html``.
+
+        Returns:
+            Rendered HTML string.
+
+        """
         return await generate_html(self, **kwargs)
 
     def get_pending_set_cookie_headers(self) -> list[str]:
+        """Collect pending ``Set-Cookie`` header values.
+
+        Returns:
+            List of serialized ``Set-Cookie`` header strings pending for the response.
+
+        """
         self._check_disposed()
         assert self._di_scope is not None
         port = self._di_scope.inject(COOKIE_PORT_KEY)

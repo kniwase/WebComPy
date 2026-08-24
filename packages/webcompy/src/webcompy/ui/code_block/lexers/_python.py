@@ -1,3 +1,5 @@
+"""Python lexer built on the standard library ``tokenize`` module."""
+
 from __future__ import annotations
 
 import io
@@ -22,6 +24,20 @@ _LITERAL_PATTERN_KEYWORDS: frozenset[str] = frozenset({"None", "True", "False"})
 
 
 class PythonLexer:
+    """Tokenize Python source on top of the ``tokenize`` module.
+
+    Emits the defined name after ``class``/``def`` as a function token,
+    classifies operators per Pygments conventions, and colors f-string
+    literal parts as strings. Syntactically invalid input falls back to a
+    single identifier token containing the whole source.
+
+    Attributes:
+        name: Primary name ``"python"``.
+        aliases: Alternative lookup names (``"py"``, ``"python3"``).
+        file_extensions: Registered file extensions (``.py``, ``.pyw``).
+
+    """
+
     name: str = "python"
     aliases: tuple[str, ...] = ("py", "python3")
     file_extensions: tuple[str, ...] = (".py", ".pyw")
@@ -107,6 +123,17 @@ class PythonLexer:
         self._keyword_names: frozenset[str] = frozenset(keyword.kwlist)
 
     def tokenize(self, code: str) -> Iterable[Token]:
+        """Tokenize Python source in source order.
+
+        Args:
+            code: Source text to tokenize; empty input yields no tokens.
+
+        Yields:
+            Token: Classified spans whose concatenated values equal
+                ``code`` exactly; syntactically invalid input is yielded
+                as a single identifier token.
+
+        """
         if not code:
             return
         try:

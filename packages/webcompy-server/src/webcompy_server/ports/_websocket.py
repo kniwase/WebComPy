@@ -1,3 +1,5 @@
+"""Server-side websocket port."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -34,4 +36,19 @@ class ServerWebSocketPort(WebSocketPort):
         on_error: Callable[[], None],
         on_close: Callable[[int, str, bool], None],
     ) -> WebSocketConnection:
+        """Open a websocket connection.
+
+        Args:
+            url: WebSocket URL.
+            protocols: Optional subprotocols.
+            on_open: Callback when the connection opens.
+            on_message: Callback for incoming text messages.
+            on_binary: Callback for incoming binary messages.
+            on_error: Callback for errors.
+            on_close: Callback when the connection closes.
+
+        Returns:
+            No-op connection.
+
+        """
         return ServerWebSocketConnection()

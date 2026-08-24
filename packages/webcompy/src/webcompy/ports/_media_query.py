@@ -1,9 +1,13 @@
+"""Media query port for user-preference reads."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
 
 class MediaQueryPort(ABC):
+    """User-preference media queries (dark color scheme and reduced motion)."""
+
     @abstractmethod
     def prefers_dark(self) -> bool:
         """Return whether the user prefers a dark color scheme.

@@ -1,3 +1,5 @@
+"""Reactive state primitives: signals, computed values, collections, effects, and composables."""
+
 from webcompy.signal._base import Signal, SignalBase
 from webcompy.signal._composable import (
     use_reactive_dict,

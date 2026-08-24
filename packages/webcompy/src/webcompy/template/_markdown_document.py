@@ -1,3 +1,5 @@
+"""Loads Markdown files into rendered document objects with TOC support."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -16,6 +18,12 @@ class HeadingInfo:
     ``level`` is the heading depth (1-6), ``text`` is the resolved heading
     text with interpolated values, and ``id`` is the slug id injected into
     the corresponding heading element.
+
+    Attributes:
+        level: Heading depth (1-6).
+        text: Resolved heading text with interpolated values.
+        id: Slug id injected into the corresponding heading element.
+
     """
 
     level: int
@@ -25,7 +33,14 @@ class HeadingInfo:
 
 @dataclass(frozen=True)
 class MarkdownDocument:
-    """A loaded Markdown document: rendered content, frontmatter, and TOC."""
+    """A loaded Markdown document: rendered content, frontmatter, and TOC.
+
+    Attributes:
+        content: Rendered element tree of the Markdown body.
+        metadata: Frontmatter key-to-value mapping.
+        toc: Heading entries extracted from the rendered document.
+
+    """
 
     content: ElementAbstract
     metadata: Mapping[str, Any]
@@ -40,6 +55,27 @@ async def load_markdown_document(
     classes: Mapping[str, str] | None = None,
     context: Mapping[str, Any] | None = None,
 ) -> MarkdownDocument:
+    """Load a Markdown file into a rendered document with TOC metadata.
+
+    Reads the source text, splits off frontmatter, renders the body through
+    ``render_markdown``, and collects heading information for tables of
+    contents.
+
+    Args:
+        source: Resource path or file path of the Markdown source.
+        heading_ids: Whether heading elements receive slug ``id``
+            attributes.
+        code_blocks: Whether fenced code blocks are replaced with
+            ``CodeBlock`` components.
+        classes: Optional mapping from tag name to CSS class applied to
+            matching elements.
+        context: Optional template context for ``{{ }}`` interpolation
+            inside the Markdown body.
+
+    Returns:
+        The rendered document with frontmatter metadata and heading list.
+
+    """
     from webcompy.template import render_markdown
     from webcompy.template._frontmatter import split_frontmatter
     from webcompy.template._markdown_transforms import collect_headings

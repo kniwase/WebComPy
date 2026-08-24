@@ -1,3 +1,5 @@
+"""Plugin discovery and lifecycle management: ``PluginManager``."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -11,12 +13,42 @@ if TYPE_CHECKING:
 
 
 class PluginManager:
+    """Discover plugin classes and drive their lifecycle hooks for one app.
+
+    Plugin paths are resolved with ``discover``, instantiated with
+    ``init_all``, and then called back per render context
+    (``init_render_context``) and once the app is ready
+    (``call_on_app_ready``).
+
+    Args:
+        app: Application instance the plugins extend.
+
+    Attributes:
+        scripts: Aggregated scripts contributed by all discovered
+            plugins.
+
+    """
+
     def __init__(self, app: WebComPyApp) -> None:
         self._app = app
         self._plugin_classes: list[type[WebComPyPlugin]] = []
         self._plugin_instances: list[WebComPyPlugin] = []
 
     def discover(self, plugin_paths: list[str]) -> None:
+        """Resolve ``"module:ClassName"`` paths to plugin subclasses.
+
+        Imported classes are validated as ``WebComPyPlugin`` subclasses
+        and recorded for later initialization.
+
+        Args:
+            plugin_paths: Plugin references formatted as
+                ``"module:ClassName"``.
+
+        Raises:
+            WebComPyPluginException: If a path is malformed or does not
+                point to a ``WebComPyPlugin`` subclass.
+
+        """
         for path in plugin_paths:
             if ":" not in path:
                 raise WebComPyPluginException(
@@ -34,12 +66,20 @@ class PluginManager:
             self._plugin_classes.append(plugin_cls)
 
     def init_all(self) -> None:
+        """Instantiate all discovered plugins and call their ``on_app_init`` hooks."""
         for plugin_cls in self._plugin_classes:
             instance = plugin_cls()
             instance.on_app_init(self._app)
             self._plugin_instances.append(instance)
 
     def init_render_context(self, ctx: RenderContext) -> None:
+        """Provide plugin DI values and initialize plugins for a render context.
+
+        Args:
+            ctx: Render context receiving the plugin providers and
+                lifecycle callbacks.
+
+        """
         for plugin_cls in self._plugin_classes:
             for key, value in plugin_cls.get_providers().items():
                 ctx.di_scope.provide(key, value)
@@ -47,11 +87,18 @@ class PluginManager:
             instance.on_render_context_init(ctx)
 
     def call_on_app_ready(self, ctx: RenderContext) -> None:
+        """Notify all plugins that the application is ready.
+
+        Args:
+            ctx: Render context active when the application becomes ready.
+
+        """
         for instance in self._plugin_instances:
             instance.on_app_ready(ctx)
 
     @property
     def scripts(self) -> list[PluginScript]:
+        """Aggregate scripts contributed by all discovered plugins."""
         result: list[PluginScript] = []
         for plugin_cls in self._plugin_classes:
             result.extend(plugin_cls.get_scripts())

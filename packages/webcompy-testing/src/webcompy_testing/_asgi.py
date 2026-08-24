@@ -1,3 +1,5 @@
+"""ASGI test helpers for rendering WebComPy apps to HTML."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -20,6 +22,15 @@ if TYPE_CHECKING:
 
 
 def format_html(html: str) -> str:
+    """Format raw HTML for readable output.
+
+    Args:
+        html: Raw HTML string to format.
+
+    Returns:
+        Pretty-printed HTML string produced by BeautifulSoup.
+
+    """
     from bs4 import BeautifulSoup
 
     soup = BeautifulSoup(html, "html.parser")
@@ -40,10 +51,30 @@ async def render_app_html(app: WebComPyApp, path: str = "/", **kwargs: Any) -> s
 
 
 def render_app_html_sync(app: WebComPyApp, path: str = "/", **kwargs: Any) -> str:
+    """Render an app to an HTML string synchronously.
+
+    Args:
+        app: Application to render.
+        path: Route path to render.
+        **kwargs: Additional options forwarded to ``generate_html``.
+
+    Returns:
+        Rendered HTML string for the requested path.
+
+    """
     return run_sync(render_app_html(app, path, **kwargs))
 
 
 def create_test_asgi_app(app: WebComPyApp) -> ASGIApp:
+    """Create a Starlette ASGI app that renders the WebComPy app.
+
+    Args:
+        app: Application to serve via the test ASGI app.
+
+    Returns:
+        An ``ASGIApp`` that renders the WebComPy app for incoming requests.
+
+    """
 
     configure_server_context(app)
 

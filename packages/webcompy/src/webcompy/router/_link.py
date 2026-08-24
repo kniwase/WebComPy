@@ -1,3 +1,5 @@
+"""``RouterLink`` anchor element for client-side navigation."""
+
 from __future__ import annotations
 
 import logging
@@ -186,3 +188,4 @@ class TypedRouterLink(Generic[ParamsType, QueryParamsType, PathParamsType], Elem
 
 
 RouterLink: TypeAlias = TypedRouterLink[dict[str, Any], dict[str, str], dict[str, str]]
+"""Type alias of ``TypedRouterLink`` with untyped parameter dicts."""

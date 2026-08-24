@@ -1,3 +1,5 @@
+"""Reference handle granting access to a mounted DOM node."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -7,6 +9,18 @@ from webcompy.exception import WebComPyException
 
 
 class DomNodeRef:
+    """Handle to the DOM node mounted for an element created with ``noderef``.
+
+    Attribute access and assignment transparently proxy to the underlying
+    DOM node, so most DOM APIs can be used on the handle directly.
+
+    Attributes:
+        element: The captured DOM node; raises
+            :class:`WebComPyException` when the referenced element is not
+            mounted yet.
+
+    """
+
     _node: DOMNode | None
 
     def __init__(self) -> None:
@@ -14,6 +28,15 @@ class DomNodeRef:
 
     @property
     def element(self) -> DOMNode:
+        """Return the captured DOM node.
+
+        Raises:
+            WebComPyException: When the referenced element is not mounted.
+
+        Returns:
+            The captured DOM node.
+
+        """
         if self._node is None:
             raise WebComPyException("DomNodeRef is not initialized yet.")
         return self._node

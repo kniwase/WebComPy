@@ -1,3 +1,5 @@
+"""Custom-element registration and per-node reaction binding port."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -40,6 +42,14 @@ class CustomElementPort(ABC):
         reused; an incompatible or foreign definition raises
         :class:`WebComPyComponentException`. This SHALL be called before a
         named component creates or adopts its DOM node.
+
+        Args:
+            name: Custom element name to define.
+            observed_attributes: Attribute names observed by the generated
+                element class and forwarded to bound reactions.
+            definition_key: Key identifying the WebComPy definition, used
+                to detect incompatible redefinitions.
+
         """
         ...
 
@@ -59,10 +69,33 @@ class CustomElementPort(ABC):
         connection state is inspected separately via
         :meth:`is_document_connected` so callers can synchronize a node that
         was already connected before binding (e.g. SSR upgrade).
+
+        Args:
+            node: DOM node to bind.
+            observed_attributes: Attribute names whose changes are reported
+                through ``on_attribute_changed``.
+            on_connected: Called when the node becomes connected.
+            on_disconnected: Called when the node is disconnected.
+            on_attribute_changed: Called with ``(attribute_name,
+                new_value)``; ``new_value`` is ``None`` when the attribute
+                was removed.
+
+        Returns:
+            A ``CustomElementBinding`` handle that releases the FFI proxies
+            on ``dispose()``.
+
         """
         ...
 
     @abstractmethod
     def is_document_connected(self, node: DOMNode) -> bool:
-        """Return whether ``node`` is currently connected to a document."""
+        """Return whether ``node`` is currently connected to a document.
+
+        Args:
+            node: DOM node to inspect.
+
+        Returns:
+            True if ``node`` is connected to a document, False otherwise.
+
+        """
         ...

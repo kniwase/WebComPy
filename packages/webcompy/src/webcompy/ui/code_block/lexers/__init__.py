@@ -1,3 +1,5 @@
+"""Lexer protocol, built-in lexers, and the lexer registry."""
+
 from webcompy.ui.code_block.lexers._base import Lexer
 from webcompy.ui.code_block.lexers._bash import BashLexer
 from webcompy.ui.code_block.lexers._python import PythonLexer

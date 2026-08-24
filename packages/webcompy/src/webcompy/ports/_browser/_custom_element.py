@@ -1,3 +1,5 @@
+"""Browser custom-element port (registry definition and reaction binding)."""
+
 from __future__ import annotations
 
 import json

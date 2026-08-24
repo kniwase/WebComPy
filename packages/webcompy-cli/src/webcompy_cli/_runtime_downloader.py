@@ -1,3 +1,5 @@
+"""Download helpers for PyScript and Pyodide runtime assets."""
+
 from __future__ import annotations
 
 import hashlib

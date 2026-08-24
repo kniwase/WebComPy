@@ -85,6 +85,31 @@ def _get_helpers():
 
 
 class ReactiveScopedStyle:
+    """Reactive per-component scoped style.
+
+    Wraps a synchronous callable returning the scoped-style declaration
+    shape (selector to declarations). The callable runs inside a
+    ``Computed``; register the instance with
+    ``context.use_reactive_scoped_style(style)`` inside a
+    ``@define_component`` setup function so the framework updates the
+    emitted ``<style>`` element whenever a tracked signal changes.
+
+    Args:
+        func: Zero-argument callable returning the style dictionary.
+
+    Raises:
+        TypeError: If ``func`` is a coroutine function.
+
+    Attributes:
+        ref_count: How many component instances use this style.
+        subscription: Consumer node updating the emitted style element,
+            or ``None`` before registration.
+        is_removed: Whether the style was removed from its component.
+        dict_computed: The ``Computed`` holding the raw style dictionary.
+        css_computed: The ``Computed`` holding the rendered, scoped CSS.
+
+    """
+
     _func: ReactiveScopedStyleFunc
     _cid: str | None
     _dict_computed: Computed[Any] | None
@@ -121,34 +146,81 @@ class ReactiveScopedStyle:
         self._css_computed = Computed(lambda: self.render_css(self._cid or ""))
 
     def increment_ref(self) -> int:
+        """Record one more component instance using this style.
+
+        Returns:
+            The new reference count.
+
+        """
         self._ref_count += 1
         return self._ref_count
 
     def decrement_ref(self) -> int:
+        """Record that one component instance released this style.
+
+        Returns:
+            The new reference count.
+
+        """
         if self._ref_count > 0:
             self._ref_count -= 1
         return self._ref_count
 
     @property
     def ref_count(self) -> int:
+        """Return how many component instances use this style.
+
+        Returns:
+            The current reference count.
+
+        """
         return self._ref_count
 
     @property
     def subscription(self) -> Any | None:
+        """Return the consumer node updating the emitted style element.
+
+        Returns:
+            The subscription node, or ``None`` before registration.
+
+        """
         return self._subscription
 
     def set_subscription(self, subscription: Any) -> None:
+        """Store the consumer node updating the emitted style element.
+
+        Args:
+            subscription: The consumer node to store.
+
+        """
         self._subscription = subscription
 
     def mark_removed(self) -> None:
+        """Mark the style as removed from its component."""
         self._removed = True
 
     @property
     def is_removed(self) -> bool:
+        """Return whether the style was removed from its component.
+
+        Returns:
+            ``True`` after ``mark_removed()`` was called.
+
+        """
         return self._removed
 
     @property
     def dict_computed(self) -> Computed[Any]:
+        """Return the computed holding the raw style dictionary.
+
+        Returns:
+            The ``Computed`` wrapping the style callable.
+
+        Raises:
+            WebComPyComponentException: If the style is not yet bound to
+                a component.
+
+        """
         if self._dict_computed is None:
             raise WebComPyComponentException(
                 "ReactiveScopedStyle is not bound to a component; "
@@ -158,6 +230,16 @@ class ReactiveScopedStyle:
 
     @property
     def css_computed(self) -> Computed[str]:
+        """Return the computed holding the rendered, scoped CSS.
+
+        Returns:
+            The ``Computed`` wrapping ``render_css()``.
+
+        Raises:
+            WebComPyComponentException: If the style is not yet bound to
+                a component.
+
+        """
         if self._css_computed is None:
             raise WebComPyComponentException(
                 "ReactiveScopedStyle is not bound to a component; "
@@ -166,6 +248,20 @@ class ReactiveScopedStyle:
         return self._css_computed
 
     def render_css(self, cid: str) -> str:
+        """Render the current style dictionary as scoped CSS text.
+
+        Args:
+            cid: Component id used to scope the selectors.
+
+        Returns:
+            The rendered ``@layer webcompy-scope`` CSS text, or an empty
+            string when the style dictionary is empty.
+
+        Raises:
+            WebComPyComponentException: If the style is bound without a
+                host tag.
+
+        """
         if self._dict_computed is None:
             return ""
         host_tag = self._host_tag
@@ -194,6 +290,19 @@ class ReactiveScopedStyle:
 
 
 def reactive_scoped_style(func: ReactiveScopedStyleFunc) -> ReactiveScopedStyle:
+    """Create a reactive scoped style from a style callable.
+
+    Register the returned style with
+    ``context.use_reactive_scoped_style(style)`` inside a
+    ``@define_component`` setup function.
+
+    Args:
+        func: Zero-argument callable returning the style dictionary.
+
+    Returns:
+        A ``ReactiveScopedStyle`` wrapping ``func`` in a ``Computed``.
+
+    """
     return ReactiveScopedStyle(func)
 
 

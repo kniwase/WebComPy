@@ -1,3 +1,5 @@
+"""Server-side host port."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -9,10 +11,31 @@ T_co = TypeVar("T_co", covariant=True)
 
 
 class ServerHostPort(HostPort):
+    """Server-side host port with synchronous task execution."""
+
     def schedule_macro_task(self, callback: Callable[..., Any]) -> None:
+        """Schedule ``callback`` as a macro task.
+
+        Args:
+            callback: Callback to execute.
+
+        Returns:
+            ``None``.
+
+        """
         callback()
 
     def add_window_event_listener(self, event_type: str, handler: Any) -> Callable[[], None]:
+        """Add a window event listener.
+
+        Args:
+            event_type: Event type.
+            handler: Event handler.
+
+        Returns:
+            Callable that removes the listener.
+
+        """
         return lambda: None
 
     @overload
@@ -28,6 +51,18 @@ class ServerHostPort(HostPort):
         wrapper: Callable[[Any | None], Any] | None = None,
         default: Any = None,
     ) -> Callable[[], Any]:
+        """Create a getter for a JavaScript global.
+
+        Args:
+            name: Global name.
+            wrapper: Optional wrapper for the global value.
+            default: Default value when the global is absent.
+
+        Returns:
+            Callable that returns the global value or ``default``.
+
+        """
+
         def _getter() -> Any:
             if wrapper is not None:
                 return wrapper(None)

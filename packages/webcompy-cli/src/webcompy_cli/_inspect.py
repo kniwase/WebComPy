@@ -1,3 +1,5 @@
+"""Browser inspection utilities for launching servers and running Playwright checks."""
+
 from __future__ import annotations
 
 import contextlib
@@ -718,6 +720,15 @@ def get_inspect_parser() -> ArgumentParser:
 
 
 def run_inspect() -> None:
+    """Run the ``webcompy inspect`` CLI command.
+
+    Parses ``sys.argv`` for the inspect subcommands and dispatches to
+    the selected handler.
+
+    Returns:
+        ``None``.
+
+    """
     parser = get_inspect_parser()
     args = parser.parse_args(sys.argv[2:])
     if not hasattr(args, "func") or args.func is None:

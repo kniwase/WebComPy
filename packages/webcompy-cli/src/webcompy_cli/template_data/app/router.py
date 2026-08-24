@@ -1,3 +1,5 @@
+"""Template router configuration."""
+
 from webcompy.router import Router
 
 from .components.fizzbuzz import FizzbuzzPage

@@ -1,3 +1,5 @@
+"""Recording and reporting of hydration mismatches."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -11,6 +13,22 @@ _logger = getLogger("webcompy.hydration")
 
 @dataclass(frozen=True)
 class HydrationMismatchRecord:
+    """One server/client hydration mismatch observation.
+
+    Args:
+        kind: Kind of mismatch observed.
+        expected: Server-rendered value the client expected.
+        actual: Value actually found in the client DOM.
+        component_id: Component the mismatch occurred in, when known.
+
+    Attributes:
+        kind: Kind of mismatch observed.
+        expected: Server-rendered value the client expected.
+        actual: Value actually found in the client DOM.
+        component_id: Component the mismatch occurred in, when known.
+
+    """
+
     kind: MismatchKind
     expected: Any
     actual: Any
@@ -58,6 +76,17 @@ def record_mismatch(
     actual: Any,
     component_id: str = "",
 ) -> None:
+    """Record a hydration mismatch with the active reporter, if any.
+
+    Mismatches observed outside an active hydration window are ignored.
+
+    Args:
+        kind: Kind of mismatch observed.
+        expected: Server-rendered value the client expected.
+        actual: Value actually found in the client DOM.
+        component_id: Component the mismatch occurred in, when known.
+
+    """
     ctx = _active_hydration_window()
     if ctx is None:
         return

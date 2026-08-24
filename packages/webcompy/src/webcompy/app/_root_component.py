@@ -1,3 +1,5 @@
+"""Document root component mounting the application root and finalizing boot."""
+
 from __future__ import annotations
 
 import asyncio

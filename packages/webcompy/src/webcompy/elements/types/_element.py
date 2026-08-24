@@ -1,3 +1,5 @@
+"""Concrete DOM element nodes with attributes, event handlers, and two-way binding."""
+
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
@@ -46,6 +48,14 @@ _WEBCOMPY_INTERNAL_ATTRS = frozenset(_WEBCOMPY_INTERNAL_ATTRS)
 
 
 class ElementBase(ElementWithChildren):
+    """Base of concrete DOM element nodes.
+
+    Handles DOM node creation and hydration adoption, applying the
+    processed attributes, reactive attribute updates, event listeners, and
+    two-way bind property callbacks to the underlying node.
+
+    """
+
     _ref: DomNodeRef | None
     _event_handlers_added: dict[str, Any]
     _bind_property_attrs: set[str]
@@ -211,6 +221,23 @@ class ElementBase(ElementWithChildren):
 
 
 class Element(ElementBase):
+    """A DOM element node with attributes, events, children, and a ``:bind`` option.
+
+    Attribute values may be reactive signals, events bind via ``event()``
+    keys, ``:ref`` captures the node in a ``DomNodeRef``, and ``:bind`` sets
+    up two-way form control binding.
+
+    Args:
+        tag_name: HTML tag name rendered by this element.
+        attrs: Attribute name-to-value mapping; values may be reactive.
+        events: Event name-to-handler mapping.
+        ref: Reference receiving the created DOM node.
+        children: Child elements, strings, or reactive values.
+        preserve_children: When ``True`` the element's DOM children are
+            managed externally and never reconciled by the framework.
+
+    """
+
     def __init__(
         self,
         tag_name: HtmlTags,

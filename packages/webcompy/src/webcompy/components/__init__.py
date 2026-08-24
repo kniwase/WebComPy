@@ -1,3 +1,5 @@
+"""Component system: definitions, lifecycle hooks, context, and scoped styles."""
+
 from webcompy.components._component import Component
 from webcompy.components._context_manager import (
     ComponentRenderState,

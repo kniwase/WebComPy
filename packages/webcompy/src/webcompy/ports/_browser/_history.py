@@ -1,3 +1,5 @@
+"""Browser history port driving ``history.pushState`` and popstate handling."""
+
 from __future__ import annotations
 
 import contextlib

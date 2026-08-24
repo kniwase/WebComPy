@@ -1,3 +1,5 @@
+"""Transfer-capable state composables: ``use_state``, ``use_reactive_list``, and ``use_reactive_dict``."""
+
 from __future__ import annotations
 
 import copy
@@ -272,6 +274,18 @@ def use_reactive_list(  # type: ignore[no-redef]
     Same factory-skip semantics as ``use_state()`` but returns a
     ``ReactiveList[V]`` with working mutation methods (``append``,
     ``pop``, etc.).  Call inside a component setup function.
+
+    Args:
+        factory_or_key: A zero-argument factory callable returning a list,
+            or an explicit string key when ``maybe_factory`` is also
+            provided.
+        maybe_factory: The zero-argument factory when the first argument
+            is an explicit key.
+
+    Returns:
+        A ``ReactiveList[V]`` registered for SSR transfer when called
+        inside component setup.
+
     """
     key, factory = _resolve_args(factory_or_key, maybe_factory)
     _validate_factory(factory)
@@ -312,6 +326,18 @@ def use_reactive_dict(  # type: ignore[no-redef]
     Same factory-skip semantics as ``use_state()`` but returns a
     ``ReactiveDict[K, V]`` with working mutation methods (``__setitem__``,
     ``pop``, etc.).  Call inside a component setup function.
+
+    Args:
+        factory_or_key: A zero-argument factory callable returning a dict,
+            or an explicit string key when ``maybe_factory`` is also
+            provided.
+        maybe_factory: The zero-argument factory when the first argument
+            is an explicit key.
+
+    Returns:
+        A ``ReactiveDict[K, V]`` registered for SSR transfer when called
+        inside component setup.
+
     """
     key, factory = _resolve_args(factory_or_key, maybe_factory)
     _validate_factory(factory)

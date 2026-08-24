@@ -1,3 +1,5 @@
+"""Extracts and parses frontmatter blocks from Markdown documents."""
+
 from __future__ import annotations
 
 import tomllib

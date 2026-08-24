@@ -1,3 +1,5 @@
+"""Post-render transforms applied to Markdown element trees."""
+
 from __future__ import annotations
 
 import re

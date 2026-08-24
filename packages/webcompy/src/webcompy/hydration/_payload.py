@@ -1,3 +1,5 @@
+"""Hydration payload models and JSON serialization."""
+
 from __future__ import annotations
 
 import base64

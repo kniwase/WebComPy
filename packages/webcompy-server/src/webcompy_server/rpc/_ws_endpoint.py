@@ -1,3 +1,5 @@
+"""WebSocket endpoint for JSON-RPC with subscriptions and streaming."""
+
 from __future__ import annotations
 
 import json
@@ -30,6 +32,14 @@ def create_rpc_ws_endpoint(registry: ProcedureRegistry):
     calls to streaming procedures are answered with a ``stream_id`` and
     streamed by the ``StreamCallHub``. Starlette is imported lazily so this
     module stays importable outside a Starlette context.
+
+    Args:
+        registry: Procedure registry serving the dispatched calls and
+            backing the subscription/stream hubs.
+
+    Returns:
+        The async Starlette WebSocket endpoint handler for ``registry``.
+
     """
     from starlette.websockets import WebSocket, WebSocketDisconnect
 

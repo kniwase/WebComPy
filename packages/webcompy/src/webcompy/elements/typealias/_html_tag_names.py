@@ -1,3 +1,5 @@
+"""Literal union of all HTML tag names supported by ``create_element``."""
+
 from typing import Literal, TypeAlias
 
 HtmlTags: TypeAlias = Literal[
@@ -114,3 +116,4 @@ HtmlTags: TypeAlias = Literal[
     "dialog",
     "summary",
 ]
+"""All HTML tag names accepted by ``create_element``, grouped by content category."""

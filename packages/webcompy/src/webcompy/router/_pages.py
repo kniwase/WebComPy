@@ -1,3 +1,5 @@
+"""Type declarations for router page tables."""
+
 from typing import Any, TypedDict
 
 from webcompy.components import ComponentGenerator, WebComPyComponentException

@@ -1,3 +1,5 @@
+"""Browser cookie port backed by ``document.cookie``."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

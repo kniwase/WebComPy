@@ -1,14 +1,5 @@
-# Content sectioning
-# Text content
-# Inline text semantics
-# Image and multimedia
-# Embedded content
-# SVG and MathML
-# Scripting
-# Demarcating edits
-# Table content
-# Forms
-# Interactive elements
+"""HTML tag name constants for creating elements per tag."""
+
 from webcompy.elements.html.html_tags import (
     ABBR,
     ADDRESS,

@@ -1,3 +1,5 @@
+"""Type aliases for element attributes, children, event handlers, and tag names."""
+
 from webcompy.elements.typealias._element_property import (
     AttrValue,
     ElementChildren,

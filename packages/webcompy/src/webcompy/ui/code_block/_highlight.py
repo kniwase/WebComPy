@@ -1,3 +1,5 @@
+"""String-based syntax highlighting of code via the lexer registry."""
+
 from __future__ import annotations
 
 import html as html_module
@@ -8,6 +10,20 @@ from webcompy.ui.code_block.lexers._registry import LexerNotFoundError, get_lexe
 
 
 def highlight(code: str, lang: str) -> str:
+    """Highlight source code as an HTML string of token spans.
+
+    Escapes HTML special characters in token text. When the language is
+    unknown or the lexer yields no tokens, emits a single
+    ``<span class="tok-ident">`` containing the escaped code.
+
+    Args:
+        code: Source code to highlight.
+        lang: Language name, alias, or file extension for lexer lookup.
+
+    Returns:
+        A string of ``<span class="...">`` token spans.
+
+    """
     return _render_tokens(_tokenize_with_fallback(code, lang))
 
 

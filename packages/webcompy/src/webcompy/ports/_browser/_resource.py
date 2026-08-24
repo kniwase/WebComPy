@@ -1,3 +1,5 @@
+"""Browser resource port (payload decoding plus fetch-based fallback)."""
+
 from __future__ import annotations
 
 import base64

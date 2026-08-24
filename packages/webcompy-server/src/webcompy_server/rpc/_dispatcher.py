@@ -1,3 +1,5 @@
+"""JSON-RPC dispatcher for HTTP and WebSocket transports."""
+
 from __future__ import annotations
 
 import asyncio
@@ -231,6 +233,14 @@ async def dispatch_payload(
     the response object(s) as plain JSON-serializable dictionaries, or ``None``
     when there is nothing to respond (e.g. notifications only). HTTP and
     WebSocket transports serialize the result to their own wire format.
+
+    Args:
+        payload: Parsed JSON-RPC request object, or a batch array of them.
+        registry: Procedure registry resolving method names to handlers.
+
+    Returns:
+        The JSON-RPC response object, list of responses, or None if no response.
+
     """
     if isinstance(payload, list):
         if not payload:
@@ -400,6 +410,13 @@ def create_dispatcher_app(registry: ProcedureRegistry):
     apps verbatim). It serves ordinary JSON-RPC responses as ``application/json``
     and single ``"stream": true`` calls to streaming procedures as
     ``text/event-stream``.
+
+    Args:
+        registry: Procedure registry serving the dispatched calls.
+
+    Returns:
+        The dispatcher ASGI app.
+
     """
     return _DispatcherASGIApp(registry)
 

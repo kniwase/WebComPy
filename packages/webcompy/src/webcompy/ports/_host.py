@@ -1,3 +1,5 @@
+"""Host-level browser API port (macrotasks, window events, JS globals)."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -8,6 +10,13 @@ T_co = TypeVar("T_co", covariant=True)
 
 
 class HostPort(ABC):
+    """Host-level browser APIs (macrotask scheduling, window events, globals).
+
+    Browser implementations delegate to ``window``; server implementations
+    degrade to no-ops or inert getters so framework code can call the port
+    unconditionally.
+    """
+
     @abstractmethod
     def schedule_macro_task(self, callback: Callable[..., Any]) -> None:
         """Defer a callback to the next macrotask (via ``setTimeout(callback, 0)``).

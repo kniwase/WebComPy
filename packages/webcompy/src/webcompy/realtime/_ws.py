@@ -1,3 +1,5 @@
+"""WebSocket composable and its connection handles."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -32,6 +34,27 @@ _CLOSED_SEND_MSG = "webcompy realtime: use_websocket.send called on a closed han
 
 
 class WebSocketHandle:
+    """Async iterator and connection handle for a WebSocket subscription.
+
+    Iterating yields received text messages in arrival order. ``close()``
+    detaches only this handle's subscription.
+
+    Args:
+        state: Signal exposing the shared connection state.
+        last_close: Signal exposing the most recent close information.
+        queue: Per-subscription queue of received messages.
+        detach: Callback releasing this handle's subscription.
+        send: Callback forwarding text messages to the shared connection.
+        force_close: Optional callback forcing an abnormal close.
+
+    Attributes:
+        state: Signal exposing the :class:`ConnectionState` of the
+            shared connection.
+        last_close: Signal exposing the most recent close information,
+            or ``None`` before the first close.
+
+    """
+
     def __init__(
         self,
         state: Signal[ConnectionState],
@@ -52,13 +75,32 @@ class WebSocketHandle:
 
     @property
     def state(self) -> Signal[ConnectionState]:
+        """The state of the underlying connection.
+
+        Returns:
+            A signal exposing :class:`ConnectionState`.
+
+        """
         return self._state
 
     @property
     def last_close(self) -> Signal[CloseInfo | None]:
+        """Information about the most recent close event.
+
+        Returns:
+            A signal holding a :class:`CloseInfo`, or ``None`` before the
+            first close.
+
+        """
         return self._last_close
 
     def send(self, data: str) -> None:
+        """Send a text message over the shared connection.
+
+        Args:
+            data: The message to send.
+
+        """
         if self._closed:
             warnings.warn(_CLOSED_SEND_MSG, UserWarning, stacklevel=2)
             return
@@ -71,6 +113,11 @@ class WebSocketHandle:
         ``4000``) while this subscription stays attached; the connection
         transitions to ``RECONNECTING`` and reconnects. No-op when this handle
         is already closed. A no-op (with a warning) outside the browser.
+
+        Args:
+            code: Close code to report. Defaults to ``4000``.
+            reason: Close reason text.
+
         """
         if self._closed or self._force_close is None:
             return
@@ -89,6 +136,10 @@ class WebSocketHandle:
         return item
 
     def close(self) -> None:
+        """Detach this subscription and stop iteration.
+
+        Idempotent: closing an already closed handle is a no-op.
+        """
         if self._closed:
             return
         self._closed = True
@@ -263,6 +314,33 @@ def use_websocket(
     ``strict=True`` by default (rejecting unknown or missing fields), or
     ``strict=False`` for lenient coercion. Custom types can be registered via
     ``register_realtime_type_handler`` within the app DI scope.
+
+    Args:
+        url: Endpoint URL of the WebSocket.
+        protocols: Optional subprotocols offered during the handshake.
+        max_queue: Optional bound on the per-subscription message queue.
+        reconnect: When ``True`` (default), reconnect after a drop.
+        reconnect_base_delay: Base delay in seconds before reconnecting.
+            Defaults to 1.
+        reconnect_max_delay: Maximum delay in seconds before reconnecting.
+            Defaults to 30.
+        reconnect_max_attempts: Optional bound on reconnection attempts.
+        buffer_while_disconnected: When ``True``, buffer sends while
+            disconnected and flush them on reopening.
+        message_type: When a dataclass type is given, exchange typed messages
+            of that type instead of raw text.
+        strict: For typed messaging, reject unknown or missing fields when
+            ``True`` (default).
+
+    Returns:
+        A :class:`WebSocketHandle`, or a typed ``TypedWebSocketHandle[T]``
+        when ``message_type`` is given.
+
+    Raises:
+        TypeError: If ``message_type`` is not a dataclass type, or another
+            parameter has an invalid type.
+        ValueError: If a numeric reconnection parameter is not positive.
+
     """
     from webcompy.di import inject
     from webcompy.realtime._typed import TypedWebSocketHandle, _get_or_create_type_registry
