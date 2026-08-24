@@ -1,3 +1,5 @@
+"""Server-Sent Events composable and its connection handles."""
+
 from __future__ import annotations
 
 import asyncio
@@ -43,12 +45,42 @@ def _headers_key(headers: dict[str, str] | None) -> frozenset[tuple[str, str]]:
 
 @dataclass(frozen=True)
 class SSEvent:
+    """A parsed Server-Sent Event.
+
+    Args:
+        event: The event type (defaults to ``"message"``).
+        data: The event payload.
+        last_event_id: The ``id`` value persisted by the stream.
+
+    Attributes:
+        event: The event type (defaults to ``"message"``).
+        data: The event payload.
+        last_event_id: The ``id`` value persisted by the stream.
+
+    """
+
     event: str
     data: str
     last_event_id: str
 
 
 class EventSourceHandle:
+    """Async iterator and connection handle for a Server-Sent Events subscription.
+
+    Iterating yields :class:`SSEvent` occurrences in arrival order.
+    ``close()`` detaches only this handle's subscription.
+
+    Args:
+        state: Signal exposing the shared connection state.
+        queue: Per-subscription queue of parsed events.
+        detach: Callback releasing this handle's subscription.
+
+    Attributes:
+        state: Signal exposing the :class:`ConnectionState` of the
+            shared connection.
+
+    """
+
     def __init__(
         self,
         state: Signal[ConnectionState],
@@ -63,6 +95,12 @@ class EventSourceHandle:
 
     @property
     def state(self) -> Signal[ConnectionState]:
+        """The state of the underlying connection.
+
+        Returns:
+            A signal exposing :class:`ConnectionState`.
+
+        """
         return self._state
 
     def __aiter__(self) -> AsyncIterator[SSEvent]:
@@ -78,6 +116,10 @@ class EventSourceHandle:
         return item
 
     def close(self) -> None:
+        """Detach this subscription and stop iteration.
+
+        Idempotent: closing an already closed handle is a no-op.
+        """
         if self._closed:
             return
         self._closed = True
@@ -402,7 +444,7 @@ def use_event_source(
     The handle is an ``AsyncIterator[SSEvent]`` yielding every received event
     in arrival order (occurrence semantics). ``.state`` is a signal exposing
     ``ConnectionState``; ``.close()`` detaches only the caller's own
-    subscription.     Subscriptions with the same URL inside one app DI scope share
+    subscription. Subscriptions with the same URL inside one app DI scope share
     a single underlying connection; a later subscriber requesting event types
     not yet registered reopens the shared connection with the union of types.
 
@@ -419,6 +461,25 @@ def use_event_source(
     implementation (e.g., a testing fake); with the server no-op port (or no
     port at all) an immediately-finished empty handle with
     ``state == CLOSED`` is returned and a warning is emitted.
+
+    Args:
+        url: Endpoint URL of the event stream.
+        events: Event types to subscribe to. Defaults to ``("message",)``.
+        max_queue: Optional bound on the per-subscription event queue.
+        method: HTTP method used to open the connection; anything other than
+            ``"GET"`` selects the fetch-based transport.
+        body: Request body for fetch-based connections.
+        headers: Request headers for fetch-based connections.
+
+    Returns:
+        An :class:`EventSourceHandle` yielding received events.
+
+    Raises:
+        TypeError: If ``events``, ``max_queue``, or ``method`` has an
+            invalid type, or if an event type is empty.
+        ValueError: If ``events`` is empty, ``max_queue`` is less than 1,
+            or ``body``/``headers`` are supplied with ``method="GET"``.
+
     """
     from webcompy.di import inject
 

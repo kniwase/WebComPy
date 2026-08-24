@@ -25,7 +25,7 @@
 - [x] 3.2 Batch `template` (~125)
 - [x] 3.3 Batch `signal` + `components` (~165)
 - [x] 3.4 Batch `app` + `elements` (~145)
-- [ ] 3.5 Batch `ajax` + `aio` + `rpc` + `realtime` (~190; includes the new `rpc/_contracts.py` module merged to main — split rpc into its own batch if it runs long)
+- [x] 3.5 Batch `ajax` + `aio` + `rpc` + `realtime` (~190; includes the new `rpc/_contracts.py` module merged to main — split rpc into its own batch if it runs long)
 - [ ] 3.6 Batch `forms` + `router` + `hydration` + `ui` + `di` + `plugin` + `storage` + `exception` + `utils` + `events` (~150)
 
 ## 4. PR-B: Server-side packages (delegate per batch)

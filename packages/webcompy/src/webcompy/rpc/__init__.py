@@ -1,3 +1,5 @@
+"""Client-side JSON-RPC contracts, transports, and streaming helpers."""
+
 from __future__ import annotations
 
 from webcompy.rpc._contracts import (

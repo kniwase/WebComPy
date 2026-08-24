@@ -1,3 +1,5 @@
+"""Browser-side JSON-RPC 2.0 messaging over HTTP fetch and SSE."""
+
 from __future__ import annotations
 
 import asyncio

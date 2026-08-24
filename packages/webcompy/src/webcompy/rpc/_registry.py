@@ -1,3 +1,5 @@
+"""Registry binding RPC contracts to their implementation functions."""
+
 from __future__ import annotations
 
 import collections.abc
@@ -118,6 +120,22 @@ def _resolve_streaming(name: str, func: Callable[..., Any], result_schema: Any) 
 
 
 class ProcedureRegistry:
+    """Registry of RPC procedures and subscriptions for an application.
+
+    Args:
+        base_url: Base URL path used to compute the HTTP endpoint.
+
+    Attributes:
+        path: The absolute URL path serving the RPC endpoint.
+        endpoint_url: The base URL joined with the endpoint path.
+        has_procedures: ``True`` when at least one procedure or
+            subscription is registered.
+        meta_encoders: Mapping of Python types to ``(tag, encoder)``
+            pairs.
+        meta_decoders: Mapping of meta tags to decoder callables.
+
+    """
+
     def __init__(self, *, base_url: str = "/") -> None:
         self._path = DEFAULT_RPC_PATH
         self._base_url = base_url
@@ -130,30 +148,81 @@ class ProcedureRegistry:
 
     @property
     def path(self) -> str:
+        """The RPC endpoint path.
+
+        Returns:
+            The absolute URL path serving the RPC endpoint.
+
+        """
         return self._path
 
     @property
     def endpoint_url(self) -> str:
+        """The full RPC endpoint URL.
+
+        Returns:
+            The base URL joined with the endpoint path.
+
+        """
         if self._base_url == "/":
             return self._path
         return self._base_url.rstrip("/") + self._path
 
     def set_path(self, path: str) -> None:
+        """Set the RPC endpoint path.
+
+        Args:
+            path: An absolute, non-root URL path.
+
+        Raises:
+            WebComPyException: If ``path`` is not an absolute non-root path.
+
+        """
         if not path.startswith("/") or path == "/":
             raise WebComPyException(f"RPC path must be an absolute non-root path, got {path!r}")
         self._path = path
 
     @property
     def has_procedures(self) -> bool:
+        """Whether any procedure or subscription is registered.
+
+        Returns:
+            ``True`` if at least one procedure or subscription is registered.
+
+        """
         return bool(self._procedures or self._subscriptions)
 
     def next_id(self) -> int:
+        """Return the next monotonic JSON-RPC request id.
+
+        Returns:
+            The next available request id.
+
+        """
         return next(self._id_counter)
 
     def get(self, name: str) -> ProcedureInfo | None:
+        """Return the registered procedure with the given name.
+
+        Args:
+            name: Name of the procedure.
+
+        Returns:
+            The :class:`ProcedureInfo` for ``name``, or ``None`` if unknown.
+
+        """
         return self._procedures.get(name)
 
     def get_subscription(self, name: str) -> SubscriptionInfo | None:
+        """Return the registered subscription with the given name.
+
+        Args:
+            name: Name of the subscription.
+
+        Returns:
+            The :class:`SubscriptionInfo` for ``name``, or ``None`` if unknown.
+
+        """
         return self._subscriptions.get(name)
 
     def _validate_name(self, name: str) -> None:
@@ -161,6 +230,28 @@ class ProcedureRegistry:
             raise WebComPyException(f"RPC method name {name!r} is reserved for the framework")
 
     def bind(self, contract: Any, impl: Callable[..., Any] | None = None) -> Any:
+        """Register an implementation for an RPC contract.
+
+        With ``impl`` given the procedure is registered immediately. When
+        ``impl`` is ``None`` this method acts as a decorator factory and the
+        decorated function is registered upon decoration.
+
+        Args:
+            contract: A :class:`Procedure`, :class:`StreamingProcedure`, or
+                :class:`Subscription` declaring the contract.
+            impl: The implementation function, or ``None`` to use as a
+                decorator factory.
+
+        Returns:
+            ``None`` when binding directly, or a decorator that registers
+            ``impl`` when called without one.
+
+        Raises:
+            TypeError: If ``contract`` is not a recognized RPC contract type.
+            WebComPyException: If the implementation does not satisfy the
+                contract's requirements.
+
+        """
         from webcompy.rpc._contracts import Procedure, StreamingProcedure, Subscription
 
         if impl is None:
@@ -305,6 +396,14 @@ class ProcedureRegistry:
         encoder: Callable[[Any], Any],
         decoder: Callable[[Any], Any],
     ) -> None:
+        """Register a custom codec for RPC parameter and result values.
+
+        Args:
+            cls: Custom type handled by this codec.
+            encoder: Converts an instance of ``cls`` to a JSON-serializable value.
+            decoder: Restores an instance of ``cls`` from the encoded value.
+
+        """
         tag = _qualified_type_name(cls)
         self._type_handlers[tag] = (cls, encoder, decoder)
         self._meta_encoders[cls] = (tag, encoder)
@@ -312,13 +411,34 @@ class ProcedureRegistry:
 
     @property
     def meta_encoders(self) -> dict[type, tuple[str, Callable[[Any], Any]]]:
+        """The registered type encoders.
+
+        Returns:
+            A mapping from custom types to ``(tag, encoder)`` pairs.
+
+        """
         return self._meta_encoders
 
     @property
     def meta_decoders(self) -> dict[str, Callable[[Any], Any]]:
+        """The registered type decoders.
+
+        Returns:
+            A mapping from meta tags to decoder callables.
+
+        """
         return self._meta_decoders
 
     def is_known_meta_tag(self, tag: str) -> bool:
+        """Whether a meta tag is builtin or registered.
+
+        Args:
+            tag: The meta tag to check.
+
+        Returns:
+            ``True`` if ``tag`` is a builtin meta tag or a registered type tag.
+
+        """
         return tag in BUILTIN_META_TAGS or tag in self._type_handlers
 
 
