@@ -1,3 +1,5 @@
+"""Element node classes backing the generator functions."""
+
 from webcompy.elements.types._abstract import ElementAbstract
 from webcompy.elements.types._client_only import ClientOnlyElement
 from webcompy.elements.types._element import Element

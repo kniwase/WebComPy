@@ -1,3 +1,5 @@
+"""Reactive DOM element construction: generators, element types, and HTML tags."""
+
 from webcompy.elements.types._refference import DomNodeRef  # noqa: I001
 from webcompy.elements import html, typealias, types
 from webcompy.elements._dom_objs import DOMEvent, DOMNode

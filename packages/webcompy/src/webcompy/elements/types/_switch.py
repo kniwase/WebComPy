@@ -1,3 +1,5 @@
+"""Conditional branch selection element driven by reactive cases."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -25,9 +27,23 @@ NodeGenerator: TypeAlias = Callable[[], ElementChildren]
 SwitchCasesSignal: TypeAlias = list[tuple[Any, NodeGenerator]]
 SwitchCasesSignalList: TypeAlias = SignalBase[list[tuple[Any, NodeGenerator]]]
 SwitchCases: TypeAlias = SwitchCasesSignal | SwitchCasesSignalList
+"""Case list: a static ``(condition, generator)`` list or a reactive signal of it."""
 
 
 class SwitchElement(DynamicElement):
+    """Element rendering the first case whose condition is truthy.
+
+    Conditions may be reactive values or plain values; when any signals
+    change, the first matching branch re-renders, patching reused DOM nodes
+    and swapping the rest.
+
+    Args:
+        cases: Static list of ``(condition, generator)`` pairs, or a
+            reactive signal providing it.
+        default: Generator rendered when no case condition is truthy.
+
+    """
+
     _rendered_idx: int | None
 
     def __init__(

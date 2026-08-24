@@ -1,3 +1,5 @@
+"""Teleport element relocating its children to a remote DOM target."""
+
 from __future__ import annotations
 
 from typing import TypedDict, cast
@@ -61,6 +63,23 @@ class TeleportProps(TypedDict):
 
 
 class TeleportElement(DynamicElement):
+    """Element rendering its children inside a remote DOM target.
+
+    The children are mounted into the first element matching the ``to`` CSS
+    selector, while an anchor comment node marks the position in the source
+    tree (or the children render inline when no target matches). Targets
+    shared by multiple teleports interleave their children by registration.
+
+    Args:
+        props: Mapping holding the ``to`` CSS selector.
+        *children: Child elements, strings, or reactive values moved to the
+            target container.
+
+    Raises:
+        ValueError: When the ``to`` selector is not a non-empty static string.
+
+    """
+
     _ANCHOR_DATA = "webcompy-teleport-anchor"
 
     def __init__(self, props: TeleportProps, *children: ElementChildren) -> None:
