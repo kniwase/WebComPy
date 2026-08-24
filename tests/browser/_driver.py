@@ -49,25 +49,6 @@ def classify_crash(exc_text: str, console_tail: list[str]) -> bool:
     return any(marker in console_text for marker in ("aborted(", "runtime exited", "out of memory"))
 
 
-def normalize_traceback_paths(text: str) -> str:
-    """Defensively rewrite Emscripten FS paths in driver-received tracebacks."""
-    rewrites = (
-        ("/home/pyodide/tests/browser/", "tests/browser/"),
-        ("/home/pyodide/_wc_src/webcompy/", "packages/webcompy/src/webcompy/"),
-        (
-            "/home/pyodide/_wc_src/webcompy_testing/",
-            "packages/webcompy-testing/src/webcompy_testing/",
-        ),
-        (
-            "/home/pyodide/_wc_src/webcompy_server/",
-            "packages/webcompy-server/src/webcompy_server/",
-        ),
-    )
-    for mounted, repo_relative in rewrites:
-        text = text.replace(mounted, repo_relative)
-    return text
-
-
 @dataclass
 class BrowserCrashError(RuntimeError):
     """Raised when the harness page crashed while executing a test."""
@@ -80,6 +61,8 @@ class BrowserCrashError(RuntimeError):
 
 
 _STOP = object()
+
+_CALL_TIMEOUT_BASE_SECONDS = 120.0
 
 
 class BrowserHarnessDriver:
@@ -98,6 +81,8 @@ class BrowserHarnessDriver:
         self._console_messages: list[str] = []
         self._mailbox: queue.Queue[tuple[Callable[[Any], Any], queue.Queue]] = queue.Queue()
         self._boot_error: BaseException | None = None
+        self._dead = threading.Event()
+        self._last_error: BaseException | None = None
         self._ready = threading.Event()
         self._thread = threading.Thread(target=self._worker_main, daemon=True)
         self._thread.start()
@@ -132,10 +117,26 @@ class BrowserHarnessDriver:
         self._mailbox.put((_STOP, queue.Queue()))
         self._thread.join(timeout=30)
 
+    def _fail_fast_if_dead(self) -> None:
+        if self._dead.is_set():
+            raise RuntimeError(
+                f"harness worker thread has exited; no further browser tests can run. Last error: {self._last_error!r}"
+            ) from self._last_error
+
     def _call(self, fn: Callable[[Any], Any]) -> Any:
+        self._fail_fast_if_dead()
         result_q: queue.Queue = queue.Queue()
         self._mailbox.put((fn, result_q))
-        kind, payload = result_q.get(timeout=sentinel_timeout_seconds() * 2 + 120)
+        timeout = sentinel_timeout_seconds() * 2 + _CALL_TIMEOUT_BASE_SECONDS
+        try:
+            kind, payload = result_q.get(timeout=timeout)
+        except queue.Empty as e:
+            detail = (
+                "harness worker thread died"
+                if self._dead.is_set()
+                else "no response from the harness page; a hanging in-page test may be wedging the session"
+            )
+            raise RuntimeError(f"browser harness did not respond within {timeout:.0f}s: {detail}") from e
         if kind == "err":
             raise payload
         return payload
@@ -173,7 +174,9 @@ class BrowserHarnessDriver:
                             e = BrowserCrashError(console_tail=tail[-_CRASH_TAIL_SIZE:])
                         result_q.put(("err", e))
         except BaseException as e:
+            self._last_error = e
             self._boot_error = e
+            self._dead.set()
             self._ready.set()
 
     def _open_page(self, context: Any) -> Any:

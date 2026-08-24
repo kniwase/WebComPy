@@ -1,6 +1,8 @@
 import html
 import json
 
+import pytest
+
 from webcompy_cli._browser_test_harness import (
     bootstrap_lines,
     build_py_config,
@@ -106,6 +108,16 @@ def test_build_py_config_source_mode():
     for key, dest in files.items():
         assert key.startswith("http://")
         assert dest.startswith("/home/pyodide/")
+
+
+def test_build_py_config_source_mode_requires_inventory():
+    with pytest.raises(ValueError, match="framework_files"):
+        build_py_config(
+            base_url=BASE_URL,
+            supply_mode="source",
+            wheel_names=[],
+            test_relpaths=["tests/browser/test_a.py"],
+        )
 
 
 def test_generate_harness_html_parity_and_order():

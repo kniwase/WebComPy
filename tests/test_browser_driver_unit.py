@@ -1,9 +1,13 @@
+import queue
+import threading
+
 import pytest
 
+from tests.browser import _driver
 from tests.browser._driver import (
+    BrowserHarnessDriver,
     append_param_index,
     classify_crash,
-    normalize_traceback_paths,
     sentinel_timeout_seconds,
     strip_param_suffix,
 )
@@ -29,23 +33,52 @@ class TestClassifyCrash:
         assert classify_crash("AssertionError", []) is False
 
 
-class TestNormalizeTracebackPaths:
-    def test_tests_root(self):
-        assert (
-            normalize_traceback_paths('File "/home/pyodide/tests/browser/test_a.py"')
-            == 'File "tests/browser/test_a.py"'
-        )
+def _bare_driver() -> BrowserHarnessDriver:
+    driver = object.__new__(BrowserHarnessDriver)
+    driver._base_url = "http://127.0.0.1:0/"
+    driver._strict_console = False
+    driver._console_messages = []
+    driver._mailbox = queue.Queue()
+    driver._boot_error = None
+    driver._dead = threading.Event()
+    driver._last_error = None
+    driver._ready = threading.Event()
+    return driver
 
-    def test_framework_trees(self):
-        rewritten = normalize_traceback_paths(
-            "/home/pyodide/_wc_src/webcompy/signal/_graph.py "
-            "/home/pyodide/_wc_src/webcompy_testing/browser_runner/x.py "
-            "/home/pyodide/_wc_src/webcompy_server/ports/y.py"
-        )
 
-        assert "packages/webcompy/src/webcompy/signal/_graph.py" in rewritten
-        assert "packages/webcompy-testing/src/webcompy_testing/browser_runner/x.py" in rewritten
-        assert "packages/webcompy-server/src/webcompy_server/ports/y.py" in rewritten
+class TestDeadWorkerFailFast:
+    def test_call_raises_immediately_when_worker_dead(self):
+        driver = _bare_driver()
+        driver._last_error = RuntimeError("playwright exploded")
+        driver._dead.set()
+
+        with pytest.raises(RuntimeError, match="worker thread has exited"):
+            driver._call(lambda page: None)
+
+    def test_fail_fast_guard_passes_for_live_worker(self):
+        driver = _bare_driver()
+
+        driver._fail_fast_if_dead()
+
+        assert driver._last_error is None
+
+    def test_timeout_reports_hanging_page(self, monkeypatch):
+        monkeypatch.setattr(_driver, "_CALL_TIMEOUT_BASE_SECONDS", 0.01)
+        monkeypatch.setattr(_driver, "sentinel_timeout_seconds", lambda: 0.01)
+        driver = _bare_driver()
+
+        with pytest.raises(RuntimeError, match=r"did not respond.*hanging in-page test"):
+            driver._call(lambda page: None)
+
+    def test_timeout_reports_dead_worker(self, monkeypatch):
+        monkeypatch.setattr(_driver, "_CALL_TIMEOUT_BASE_SECONDS", 0.01)
+        monkeypatch.setattr(_driver, "sentinel_timeout_seconds", lambda: 0.01)
+        driver = _bare_driver()
+        # The worker dies while a request is already in flight.
+        threading.Timer(0.005, driver._dead.set).start()
+
+        with pytest.raises(RuntimeError, match=r"did not respond.*worker thread died"):
+            driver._call(lambda page: None)
 
 
 class TestParamIndexSuffix:

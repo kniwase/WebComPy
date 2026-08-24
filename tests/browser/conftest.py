@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import os
 import re
+from pathlib import Path
 
 import pytest
 
 _BROWSER_TARGET_RE = re.compile(r"(^|/)tests/browser(/|$)")
+_BROWSER_DIR = Path(__file__).resolve().parent
 
 
 def _invocation_targets_browser_tier(args: list[str]) -> bool:
@@ -27,7 +29,8 @@ def pytest_configure(config: pytest.Config) -> None:
 
 def pytest_collection_modifyitems(session: pytest.Session, config: pytest.Config, items: list[pytest.Item]) -> None:
     for item in items:
-        item.add_marker(pytest.mark.browser)
+        if item.path.is_relative_to(_BROWSER_DIR):
+            item.add_marker(pytest.mark.browser)
 
 
 def _format_remote_failure(result: dict) -> str:
@@ -80,7 +83,11 @@ def pytest_pyfunc_call(pyfuncitem: pytest.Function) -> bool | None:
         from tests.browser._driver import append_param_index
 
         test_id = append_param_index(test_id, index)
+    from webcompy_testing.browser_runner import normalize_traceback
+
     result = driver.run_one(test_id)
+    if result.get("traceback"):
+        result["traceback"] = normalize_traceback(result["traceback"])
     status = result.get("status")
     if status == "passed":
         return True

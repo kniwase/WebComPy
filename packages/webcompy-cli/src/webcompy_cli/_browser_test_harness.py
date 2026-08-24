@@ -99,6 +99,8 @@ def build_py_config(
     pyodide_package_names: tuple[str, ...] = _HARNESS_PYODIDE_PACKAGES,
 ) -> dict:
     """Generate the harness py-config dictionary with parity to ``webcompy_server._html``."""
+    if supply_mode == "source" and framework_files is None:
+        raise ValueError("supply_mode='source' requires the framework source inventory (framework_files)")
     normalized = base_url.rstrip("/")
     config: dict = {"experimental_create_proxy": "auto"}
     files: dict[str, str] = {}
