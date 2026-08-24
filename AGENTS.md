@@ -394,6 +394,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `ssg-via-ssr` | SSG via SSR: shared build artifacts, ASGITransport route fetching, prod/dev ASGI app modes |
 | `test-execution-paths` | Physical separation between unit (`tests/`) and E2E (`e2e/`) tests; opt-in `WEBCOMPY_RUN_E2E=1` env var gate; `scripts/run-e2e-tests.sh` canonical entry point |
 | `doc-spec-references` | Governance of how universal docs reference `openspec/specs/`; retired API-name blocklist; `scripts/check-doc-spec-refs.py` guardrail |
+| `api-docstrings` | Docstring-implementation consistency for public interfaces under `packages/*/src`: same-PR docstring updates, must-fix inconsistency blocking approval (pydoclint structural checks + AI semantic review) |
 | `code-block` | `CodeBlock` component rendering syntax-highlighted code as framework-managed token spans (direct children of `<code>`, no `raw_html` injection), plus the `highlight()` HTML-string API with dual `tok-*`/Pygments classes |
 | `syntax-highlight-lexers` | `Lexer` protocol, lexer registry (name/alias/file-extension lookup), built-in Python/Bash/TOML lexers, `LexerInfo` introspection, Pygments adapter skeleton |
 
