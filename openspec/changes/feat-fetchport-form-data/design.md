@@ -51,7 +51,7 @@ The DOM-dependent path cannot be made transport-portable (no DOM during SSR). It
 
 - [Hand-rolled encoder deviates from browser `FormData` edge cases, e.g. filename parts] → Out of scope by design: `form_data` values are `str | bytes` name/value pairs only; the encoder targets exactly RFC 7578's simple-field subset, covered by unit tests against a golden format.
 - [Widening the ABC breaks external `FetchPort` implementations that override `fetch`/`stream` with `body: str | None`] → First-party implementations updated in the same change; the widening is contravariant-compatible for callers. Documented as **BREAKING** in the proposal.
-- [Multipart bodies bypass the hydration response cache keying assumptions] → Cache keys remain `(method, url, hashed-body)`; POST responses were never transferred via hydration transfer (self-site GET focus), unchanged.
+- [Multipart bodies enter the hydration cache/transfer] → Cache keys remain `(method, url, hashed-body)` (bytes bodies hashed via SHA-256). Previously `form_data` bypassed `FetchPort` so its SSR responses were never cached or transferred; now they are, like any other self-site non-GET via `ServerFetchPort.get_transfer_data()` (cf. `test_get_transfer_data_includes_non_get`). Each request carries a fresh random boundary, so keys never collide and no stale replay occurs; the payload grows by one entry per SSR form submission, which is acceptable for the current scope. A future change may consider excluding non-idempotent form submissions from transfer if payload bloat becomes a concern.
 - [Boundary collision with payload content] → Probability negligible with 128-bit random hex; no mitigation needed beyond standard practice.
 
 ## Migration Plan
