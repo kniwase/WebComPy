@@ -1,3 +1,5 @@
+"""Transition timing and computed-style port."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -20,6 +22,11 @@ class TransitionPort(ABC):
     scheduling (double ``requestAnimationFrame``), real-time timeouts with
     cancellation, and computed-style reads. The server port reports
     ``enabled == False`` so transitions degrade to immediate mount/removal.
+
+    Attributes:
+        enabled: Whether class sequences can run in this environment;
+            ``False`` on the server port, where transitions are skipped.
+
     """
 
     @property

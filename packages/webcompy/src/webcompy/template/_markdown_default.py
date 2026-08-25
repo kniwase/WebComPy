@@ -1,3 +1,5 @@
+"""Default CommonMark-based Markdown renderer implementation."""
+
 from __future__ import annotations
 
 from webcompy.ports._markdown import MarkdownPort

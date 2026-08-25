@@ -1,3 +1,5 @@
+"""Routing context object passed to route components."""
+
 from typing import Any, Generic, NoReturn, TypeAlias, TypeVar, final
 
 ParamsType = TypeVar("ParamsType")
@@ -56,3 +58,4 @@ class TypedRouterContext(Generic[ParamsType, QueryParamsType, PathParamsType]):
 
 
 RouterContext: TypeAlias = TypedRouterContext[dict[str, Any], dict[str, str], dict[str, str]]
+"""Type alias of ``TypedRouterContext`` with untyped parameter dicts."""

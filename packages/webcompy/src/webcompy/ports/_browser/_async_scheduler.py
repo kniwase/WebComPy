@@ -1,3 +1,5 @@
+"""Browser async scheduling port on the PyScript page event loop."""
+
 from __future__ import annotations
 
 import asyncio

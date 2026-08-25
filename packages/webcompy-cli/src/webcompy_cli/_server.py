@@ -1,3 +1,5 @@
+"""ASGI application factory and development server runner."""
+
 import asyncio
 import mimetypes
 import sys
@@ -114,6 +116,20 @@ def create_asgi_app(
     *,
     mode: Literal["prod", "dev"] = "prod",
 ) -> _ServingApp:
+    """Create the ASGI application for serving the WebComPy app.
+
+    Resolves build artifacts, wires static, asset, and resource routes,
+    and mounts the HTML and optional RPC and dev-reload routes.
+
+    Args:
+        app: Application instance to serve.
+        build_config: Build configuration controlling artifact resolution.
+        mode: Serving mode, ``"prod"`` or ``"dev"``.
+
+    Returns:
+        A ``_ServingApp`` wrapping the ASGI app and its artifacts.
+
+    """
     build_config.server.dev = mode == "dev"
     artifacts = resolve_build_artifacts(app, build_config, dev_mode=build_config.server.dev)
 
@@ -373,6 +389,14 @@ def _read_initial_theme(cookie_header: str) -> Any:
 
 
 def run_server(app: WebComPyApp | None = None):
+    """Run the development or production ASGI server.
+
+    Args:
+        app: Application instance to serve. When ``None``, the
+            configuration is discovered via ``discover_config`` and CLI
+            flags override the build and server options.
+
+    """
     _, args = get_params()
     if app is None:
         build_config = discover_config(args.get("config"))

@@ -1,3 +1,5 @@
+"""Shared per-app connection registry for SSE and WebSocket subscriptions."""
+
 from __future__ import annotations
 
 import asyncio
@@ -18,6 +20,13 @@ _STOP: Any = object()
 
 
 class ConnectionState(Enum):
+    """Lifecycle stages of a realtime connection.
+
+    ``CONNECTING`` while establishing, ``OPEN`` while active,
+    ``RECONNECTING`` while re-establishing after a drop, and ``CLOSED``
+    after termination.
+    """
+
     CONNECTING = "connecting"
     OPEN = "open"
     RECONNECTING = "reconnecting"
@@ -26,6 +35,20 @@ class ConnectionState(Enum):
 
 @dataclass(frozen=True)
 class CloseInfo:
+    """Information about a WebSocket close event.
+
+    Args:
+        code: The close code reported by the browser.
+        reason: The close reason text.
+        was_clean: Whether the close was a clean, protocol-level close.
+
+    Attributes:
+        code: The close code reported by the browser.
+        reason: The close reason text.
+        was_clean: Whether the close was a clean, protocol-level close.
+
+    """
+
     code: int
     reason: str
     was_clean: bool

@@ -1,3 +1,5 @@
+"""Fetch and cache the Pyodide lock file."""
+
 from __future__ import annotations
 
 import json

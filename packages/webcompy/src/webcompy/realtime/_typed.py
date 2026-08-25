@@ -1,3 +1,5 @@
+"""Typed realtime messaging layered on top of raw WebSocket text frames."""
+
 from __future__ import annotations
 
 import json
@@ -73,6 +75,12 @@ def register_realtime_type_handler(
     decoder restores it. Tags use the qualified type name; only builtin tags
     and registered tags are accepted on receive. Outside an app DI scope the
     registration is a no-op and a ``UserWarning`` is emitted.
+
+    Args:
+        cls: Custom type handled by this codec.
+        encoder: Converts an instance of ``cls`` to a JSON-serializable value.
+        decoder: Restores an instance of ``cls`` from the encoded value.
+
     """
     registry = _get_or_create_type_registry()
     if registry is None:
@@ -108,6 +116,28 @@ def _decode_frame(
 
 
 class TypedWebSocketHandle(Generic[T]):
+    """Async iterator and typed messaging facade over a :class:`WebSocketHandle`.
+
+    Iterating yields received messages decoded into instances of ``T``;
+    frames that fail decoding are skipped and surfaced on ``last_error``.
+    ``send()`` encodes ``T`` instances with attached transfer metadata.
+
+    Args:
+        raw: The underlying text-message handle.
+        message_type: Dataclass type messages are decoded as.
+        strict: When ``True``, reject unknown or missing fields on decode.
+        registry: Optional app-scoped registry of custom type handlers.
+
+    Attributes:
+        state: Signal exposing the :class:`ConnectionState` of the
+            underlying connection.
+        last_close: Signal with the most recent close information, or
+            ``None`` before the first close.
+        last_error: Signal holding the most recent decode error, or
+            ``None`` when every received frame decoded successfully.
+
+    """
+
     def __init__(
         self,
         raw: WebSocketHandle,
@@ -124,23 +154,55 @@ class TypedWebSocketHandle(Generic[T]):
 
     @property
     def state(self) -> Signal[ConnectionState]:
+        """The state of the underlying connection.
+
+        Returns:
+            A signal exposing :class:`ConnectionState`.
+
+        """
         return self._raw.state
 
     @property
     def last_close(self) -> Signal[CloseInfo | None]:
+        """Information about the most recent close event.
+
+        Returns:
+            The underlying handle's close information signal.
+
+        """
         return self._raw.last_close
 
     @property
     def last_error(self) -> Signal[Exception | None]:
+        """The most recent decode error, if any.
+
+        Returns:
+            A signal holding the last error, or ``None``.
+
+        """
         return self._last_error
 
     def send(self, message: T) -> None:
+        """Encode and send a typed message.
+
+        Args:
+            message: An instance of the configured ``message_type``.
+
+        """
         self._raw.send(_encode_frame(message, self._registry))
 
     def close(self) -> None:
+        """Close the underlying connection for this subscription."""
         self._raw.close()
 
     def force_close(self, code: int = 4000, reason: str = "") -> None:
+        """Force an abnormal close of the underlying connection.
+
+        Args:
+            code: Close code to report. Defaults to ``4000``.
+            reason: Close reason text.
+
+        """
         self._raw.force_close(code, reason)
 
     def __aiter__(self) -> AsyncIterator[T]:

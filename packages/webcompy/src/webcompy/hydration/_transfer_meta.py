@@ -1,3 +1,5 @@
+"""Metadata side channel for typed response deserialization."""
+
 from __future__ import annotations
 
 import base64
@@ -16,7 +18,9 @@ from webcompy.exception import WebComPyException
 _logger = logging.getLogger(__name__)
 
 META_HEADER_NAME = "X-WebComPy-Transfer-Meta"
+"""HTTP header carrying the transfer meta map in header mode."""
 META_BODY_KEY = "__webcompy_transfer_meta__"
+"""Body key carrying the transfer meta map in body mode."""
 
 
 def _qualified_type_name(cls: type) -> str:
@@ -28,12 +32,44 @@ def encode_with_meta(
     *,
     type_handlers: Mapping[type, tuple[str, Callable[[Any], Any]]] | None = None,
 ) -> tuple[Any, dict[str, str]]:
+    """Encode a value for JSON alongside a map of type-tag metadata.
+
+    Non-JSON types are converted into JSON-friendly forms, and each
+    conversion is recorded as a JSON Pointer path-to-type-tag entry in
+    the returned metadata map.
+
+    Args:
+        value: Value to encode.
+        type_handlers: Optional mapping of types to ``(tag, encoder)``
+            pairs for custom types.
+
+    Returns:
+        A tuple of the encoded JSON-friendly value and the metadata map
+        of JSON Pointer paths to type tags.
+
+    """
     meta: dict[str, str] = {}
     json_data = _encode_value(value, path="", meta=meta, _seen=set(), type_handlers=type_handlers)
     return json_data, meta
 
 
 def merge_meta_into_body(json_data: Any, meta: Mapping[str, str]) -> dict[str, Any]:
+    """Merge the transfer meta map into a JSON response body.
+
+    Body mode requires a top-level JSON object so the meta map can be
+    embedded under ``META_BODY_KEY``.
+
+    Args:
+        json_data: Response body to attach the meta map to.
+        meta: Map of JSON Pointer paths to type tags.
+
+    Returns:
+        A dict combining ``json_data`` with the embedded meta map.
+
+    Raises:
+        WebComPyException: If ``json_data`` is not a dict.
+
+    """
     if not isinstance(json_data, dict):
         raise WebComPyException(
             "Body transfer mode requires a top-level JSON object payload, got "
@@ -49,6 +85,27 @@ def apply_transfer_meta(
     strict: bool = False,
     decoders: Mapping[str, Callable[[Any], Any]] | None = None,
 ) -> Any:
+    """Apply transfer meta type tags to decoded JSON data.
+
+    Walks the meta map in order of path depth and decodes each tagged
+    value, rebuilding the structure without mutating ``data``.
+
+    Args:
+        data: JSON-decoded response value.
+        meta: Map of JSON Pointer paths to type tags, or ``None`` for a
+            no-op.
+        strict: Whether unknown tags raise instead of warning.
+        decoders: Optional mapping of type tags to decoder callables,
+            merged over the built-in decoders.
+
+    Returns:
+        The decoded value with tagged entries converted.
+
+    Raises:
+        ValueError: If ``meta`` is not a mapping or a meta path does not
+            exist in ``data``.
+
+    """
     if meta is None:
         return data
     if not isinstance(meta, Mapping):

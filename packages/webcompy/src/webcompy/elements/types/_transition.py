@@ -1,3 +1,5 @@
+"""CSS-transition element animating a single conditional child."""
+
 from __future__ import annotations
 
 import math
@@ -110,6 +112,25 @@ class _ChildComputed(Computed[ElementChildren]):
 
 
 class TransitionElement(DynamicElement):
+    """Element animating enter/leave transitions for a single conditional child.
+
+    The child generator must yield at most one element with a single DOM
+    node. When it changes, CSS classes named after the ``name`` prop drive
+    the enter/leave phases (``{name}-enter-from`` etc.), and the leaving
+    node is removed only after its transition or animation finishes.
+
+    Args:
+        props: Mapping with the ``name`` (class prefix) and optional
+            ``duration`` (milliseconds) props.
+        child_generator: Zero-argument callable producing the single child
+            element, or ``None`` to remove it.
+
+    Raises:
+        WebComPyException: When the ``name`` prop is missing or the
+            ``duration`` prop is not a non-negative finite number.
+
+    """
+
     def __init__(
         self,
         props: dict[str, Any],

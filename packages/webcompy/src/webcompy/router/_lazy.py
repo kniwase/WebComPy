@@ -1,3 +1,5 @@
+"""Lazy route resolution creating component generators on demand."""
+
 from __future__ import annotations
 
 import importlib
@@ -9,6 +11,23 @@ from webcompy.utils._environment import ENVIRONMENT
 
 
 class LazyComponentGenerator(ComponentGenerator):
+    """A ``ComponentGenerator`` that resolves its real generator on demand.
+
+    The underlying generator is imported lazily at ``"module:Attribute"``
+    on first use, keeping the route module out of the initial bundle.
+    Attribute lookups and style handling delegate to the resolved
+    generator.
+
+    Args:
+        import_path: ``"module:Attribute"`` path of the generator.
+        caller_file: Path of the file that declared the lazy route.
+
+    Attributes:
+        scoped_style: Compiled scoped style declarations, resolved from
+            the underlying generator.
+
+    """
+
     _import_path: str
     _caller_file: str
     _resolved: ComponentGenerator | None
@@ -65,6 +84,12 @@ class LazyComponentGenerator(ComponentGenerator):
 
     @property
     def scoped_style(self):
+        """Scoped component style of the resolved generator.
+
+        Returns:
+            The scoped style mapping of the underlying generator.
+
+        """
         return self._resolve().scoped_style
 
     @scoped_style.setter
@@ -73,6 +98,22 @@ class LazyComponentGenerator(ComponentGenerator):
 
 
 def lazy(import_path: str, caller_file: str) -> ComponentGenerator:
+    """Create a lazily-resolved component generator for a route.
+
+    Args:
+        import_path: ``"module:Attribute"`` path of the generator to
+            resolve on demand.
+        caller_file: Path of the file declaring the lazy route.
+
+    Returns:
+        A ``LazyComponentGenerator`` resolving ``import_path`` on first use.
+
+    Raises:
+        WebComPyRouterException: If ``import_path`` is not in the
+            ``"module:Attribute"`` form, uses a relative module path, or
+            ``caller_file`` is empty.
+
+    """
     if ":" not in import_path:
         raise WebComPyRouterException(f"lazy() import_path must be 'module:Attribute' format, got: {import_path!r}")
     module_path, attr_name = import_path.rsplit(":", 1)

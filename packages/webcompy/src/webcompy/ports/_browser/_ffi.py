@@ -1,3 +1,5 @@
+"""Browser FFI port delegating to PyScript's ``pyscript.ffi``."""
+
 from __future__ import annotations
 
 from typing import Any

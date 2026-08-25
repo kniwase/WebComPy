@@ -1,3 +1,5 @@
+"""Expands ``{% for %}`` directives inside Markdown into dynamic elements."""
+
 from __future__ import annotations
 
 import ast

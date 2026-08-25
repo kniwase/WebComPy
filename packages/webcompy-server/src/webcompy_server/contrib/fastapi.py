@@ -1,3 +1,5 @@
+"""FastAPI integration providing typed JSON responses."""
+
 from __future__ import annotations
 
 from json import dumps as json_dumps
@@ -14,6 +16,15 @@ from webcompy.hydration._transfer_meta import META_HEADER_NAME, encode_with_meta
 
 
 class TypedJSONResponse(JSONResponse):
+    """JSON response that encodes Python values with transfer metadata.
+
+    Args:
+        content: Value to serialize with metadata support.
+        transfer_mode: Where to place metadata (``"header"`` or ``"body"``).
+        **kwargs: Forwarded to ``JSONResponse``.
+
+    """
+
     def __init__(
         self,
         content: Any,

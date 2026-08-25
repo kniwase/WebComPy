@@ -1,3 +1,5 @@
+"""Read and write the theme preference cookie through the cookie port."""
+
 from __future__ import annotations
 
 from webcompy.di import inject
@@ -6,6 +8,11 @@ from webcompy.ui.theme._theme import THEME_COOKIE_MAX_AGE, THEME_COOKIE_NAME, Th
 
 
 def read_theme_cookie_value() -> Theme | None:
+    """Return the theme stored in the cookie, or ``None`` when unset.
+
+    Returns ``None`` when the ``CookiePort`` is not available in the
+    current DI scope or the cookie value does not match a ``Theme``.
+    """
     port = inject(COOKIE_PORT_KEY, default=None)
     if port is None:
         return None
@@ -16,6 +23,12 @@ def read_theme_cookie_value() -> Theme | None:
 
 
 def write_theme_cookie_value(theme: Theme) -> None:
+    """Persist the theme in the cookie, deleting it for ``Theme.SYSTEM``.
+
+    Args:
+        theme: Theme to persist.
+
+    """
     port = inject(COOKIE_PORT_KEY, default=None)
     if port is None:
         return

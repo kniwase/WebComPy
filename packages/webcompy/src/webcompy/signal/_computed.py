@@ -1,3 +1,5 @@
+"""Derived reactive values: the ``Computed`` node and the ``computed_property`` decorator."""
+
 from collections.abc import Callable
 from typing import Any, TypeVar
 
@@ -18,6 +20,24 @@ T = TypeVar("T")
 
 
 class Computed(SignalBase[V]):
+    """Reactive value derived from a computation over other signals.
+
+    The computation function runs eagerly on construction and again
+    whenever a signal it read during the last run changes. Reading
+    ``value`` returns the cached result: recomputation is pull-based and
+    skipped while all producers are unchanged.
+
+    Args:
+        func: Zero-argument callable computing the derived value.
+
+    Attributes:
+        value: The cached derived value, recomputed lazily when an
+            upstream producer has changed.
+        last_clean_epoch: Reactive-graph bookkeeping epoch in which this
+            node was last brought up to date.
+
+    """
+
     def __init__(
         self,
         func: Callable[[], V],
@@ -40,6 +60,13 @@ class Computed(SignalBase[V]):
             edge = edge.next_producer
 
     def producer_must_recompute(self) -> bool:
+        """Return ``True`` when the cached value must be recomputed.
+
+        Returns:
+            ``True`` if the node is dirty, has never computed a value,
+            or an upstream producer changed since the last computation.
+
+        """
         if self.dirty:
             return True
         if self._value is _SENTINEL:
@@ -47,6 +74,7 @@ class Computed(SignalBase[V]):
         return consumer_poll_producers_for_change(self)
 
     def producer_recompute_value(self) -> None:
+        """Recompute the derived value and bump the version on change."""
         prev_consumer = consumer_before_computation(self)
         old_value = self._value
         try:
@@ -62,6 +90,12 @@ class Computed(SignalBase[V]):
 
     @property
     def value(self) -> V:
+        """Return the current derived value, recomputing when necessary.
+
+        Returns:
+            The cached computation result.
+
+        """
         producer_update_value_version(self)
         producer_accessed(self)
         return self._value
@@ -101,6 +135,19 @@ def use_computed(factory: Callable[[], T]) -> Computed[T]:
 
 
 def computed_property(method: Callable[[Any], V]) -> Computed[V]:
+    """Turn a method into a per-instance cached ``Computed`` property.
+
+    The wrapped method is evaluated lazily on first access; the result
+    is cached per instance and recomputed only when the signals it read
+    change.
+
+    Args:
+        method: The method whose result is memoized.
+
+    Returns:
+        A property exposing a per-instance ``Computed[V]``.
+
+    """
     name = method.__name__
 
     def getter(instance: Any) -> Computed[V]:

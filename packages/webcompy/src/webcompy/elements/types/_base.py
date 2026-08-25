@@ -1,3 +1,5 @@
+"""Element base with children: rendering, hydration, and child bookkeeping."""
+
 from __future__ import annotations
 
 from typing import Any

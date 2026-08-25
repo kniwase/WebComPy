@@ -1,3 +1,5 @@
+"""WebSocket connection port (callback surface)."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -14,7 +16,12 @@ class WebSocketConnection(ABC):
 
     @abstractmethod
     def send(self, data: str) -> None:
-        """Send one text frame."""
+        """Send one text frame.
+
+        Args:
+            data: Text payload of the frame to send.
+
+        """
         ...
 
     @abstractmethod

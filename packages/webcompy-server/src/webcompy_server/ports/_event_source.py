@@ -1,3 +1,5 @@
+"""Server-side event source port."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -25,6 +27,21 @@ class ServerEventSourcePort(EventSourcePort):
         on_error: Callable[[], None],
         on_close: Callable[[], None],
     ) -> Callable[[], None]:
+        """Open an event source connection.
+
+        Args:
+            url: Event source URL.
+            events: Event types to listen for.
+            on_open: Callback when the connection opens.
+            on_message: Callback for incoming messages.
+            on_error: Callback for errors.
+            on_close: Callback when the connection closes.
+
+        Returns:
+            Callable that closes the connection.
+
+        """
+
         def _noop() -> None:
             pass
 

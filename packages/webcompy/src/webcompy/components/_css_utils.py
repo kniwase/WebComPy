@@ -1,3 +1,5 @@
+"""Internal helpers for scoping component CSS selectors with a component id."""
+
 from __future__ import annotations
 
 import re

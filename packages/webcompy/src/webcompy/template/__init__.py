@@ -70,6 +70,33 @@ def render_markdown(
     code_blocks: bool = False,
     classes: Mapping[str, str] | None = None,
 ) -> ElementAbstract:
+    """Render a Markdown source string into WebComPy elements.
+
+    The source is split into plain segments and ``{% for %}`` directive
+    blocks; plain segments are rendered through the injected
+    ``MarkdownPort`` and bound against ``context`` like templates, while
+    directive blocks expand into reactive loops. Optional post-processing
+    adds slug ids to headings, replaces fenced code blocks with
+    ``CodeBlock`` components, or applies a tag-to-class mapping. A single
+    resulting element is returned as-is; multiple roots are wrapped in a
+    fragment.
+
+    Args:
+        source: Markdown source text; common leading indentation is
+            stripped from multi-line sources.
+        context: Template context used for variable interpolation inside
+            the Markdown.
+        heading_ids: When ``True``, add deduplicated slug ids to headings.
+        code_blocks: When ``True``, replace fenced code blocks with
+            ``CodeBlock`` components.
+        classes: Mapping of HTML tag names to CSS classes applied to the
+            matching rendered elements.
+
+    Returns:
+        The rendered element, or a fragment when rendering produced
+        multiple roots.
+
+    """
     from webcompy.template._markdown_for import (
         MarkdownForElement,
         _ForBlock,
@@ -117,6 +144,24 @@ def render_markdown(
 
 
 def render_template(source: str, context: Mapping[str, Any] | None = None) -> Element:
+    """Compile an HTML template source into a single reactive element.
+
+    The source is parsed and bound against ``context``; interpolation
+    holes, control-flow directives, and component tags resolve the same
+    way as in component templates.
+
+    Args:
+        source: HTML template source with exactly one root element.
+        context: Template context used for variable interpolation.
+
+    Returns:
+        The bound root element.
+
+    Raises:
+        WebComPyException: When the rendered source does not have exactly
+            one root element.
+
+    """
     nodes = _render_nodes(source, context)
     if len(nodes) == 1 and isinstance(nodes[0], Element):
         return nodes[0]

@@ -1,3 +1,5 @@
+"""Server-side port implementations for WebComPy."""
+
 from webcompy_server.ports._async_scheduler import ServerAsyncSchedulerPort
 from webcompy_server.ports._cookie import ServerCookiePort
 from webcompy_server.ports._custom_element import ServerCustomElementPort

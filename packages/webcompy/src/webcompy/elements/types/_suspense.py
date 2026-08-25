@@ -1,3 +1,5 @@
+"""Async boundary element showing fallback content while children resolve."""
+
 from __future__ import annotations
 
 import asyncio
@@ -51,6 +53,24 @@ def _restore_suspense_di_scope(
 
 
 class SuspenseElement(DynamicElement):
+    """Element awaiting async child setup, showing fallback content meanwhile.
+
+    The fallback renders while the children generator and any pending async
+    component setup inside it resolve; once resolved (or timed out or
+    failed with an error fallback) the appropriate content replaces the
+    fallback, patching the DOM to reuse untouched nodes.
+
+    Args:
+        fallback: Zero-argument callable producing the pending placeholder.
+        children: Zero-argument callable producing the content shown once
+            all async setup resolves.
+        error_fallback: Zero-argument callable producing content shown when
+            child async setup raises.
+        timeout: Seconds to await async resolution before using the
+            fallback (or error fallback) instead.
+
+    """
+
     _resolved: bool
 
     def __init__(

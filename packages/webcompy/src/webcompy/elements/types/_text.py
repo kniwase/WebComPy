@@ -1,3 +1,5 @@
+"""Text, line break, and raw HTML leaf elements."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -10,6 +12,8 @@ from webcompy.signal import SignalBase
 
 
 class NewLine(ElementAbstract):
+    """Element rendering as a ``<br>`` DOM node."""
+
     def __init__(self) -> None:
         super().__init__()
 
@@ -49,6 +53,14 @@ class NewLine(ElementAbstract):
 
 
 class TextElement(ElementAbstract):
+    """Text node element whose content may track a reactive value.
+
+    Args:
+        text: Static string rendered as a single text node, or a reactive
+            value whose changes update the node's text content.
+
+    """
+
     def __init__(self, text: str | SignalBase[Any]) -> None:
         self._text = text
         super().__init__()

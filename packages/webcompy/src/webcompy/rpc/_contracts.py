@@ -1,3 +1,5 @@
+"""Declarative RPC contracts and transport-agnostic call helpers."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -11,13 +13,63 @@ if TYPE_CHECKING:
 
 
 class RpcTransport(Protocol):
-    async def call(self, method: str, params: Any = None, *, result_type: Any = None) -> Any: ...
+    """Transport-neutral JSON-RPC operations implemented by RPC clients.
 
-    async def notify(self, method: str, params: Any = None) -> None: ...
+    Contract classes invoke these methods to issue calls, notifications,
+    streams, and subscriptions through whichever client they are bound to.
+    """
 
-    def stream(self, method: str, params: Any = None, *, result_type: Any = None) -> Any: ...
+    async def call(self, method: str, params: Any = None, *, result_type: Any = None) -> Any:
+        """Perform a request/response JSON-RPC call.
 
-    def subscribe(self, method: str, params: Any = None, *, event_type: Any = None) -> Any: ...
+        Args:
+            method: Name of the RPC method.
+            params: Parameters object for the method.
+            result_type: When given, deserialize the result as this type.
+
+        Returns:
+            The method result.
+
+        """
+        ...
+
+    async def notify(self, method: str, params: Any = None) -> None:
+        """Send a JSON-RPC notification without waiting for a result.
+
+        Args:
+            method: Name of the RPC method.
+            params: Parameters object for the method.
+
+        """
+        ...
+
+    def stream(self, method: str, params: Any = None, *, result_type: Any = None) -> Any:
+        """Start a finite streaming JSON-RPC call.
+
+        Args:
+            method: Name of the RPC method.
+            params: Parameters object for the method.
+            result_type: When given, deserialize each item as this type.
+
+        Returns:
+            A stream of items from the server.
+
+        """
+        ...
+
+    def subscribe(self, method: str, params: Any = None, *, event_type: Any = None) -> Any:
+        """Subscribe to a server-side event stream.
+
+        Args:
+            method: Name of the subscription method.
+            params: Parameters object for the subscription.
+            event_type: When given, deserialize each event as this type.
+
+        Returns:
+            A subscription yielding server events.
+
+        """
+        ...
 
 
 def _validate_name(name: str) -> None:
@@ -38,6 +90,20 @@ def _validate_params_type(params_type: Any) -> None:
 
 
 class RpcCall[P, R]:
+    """An awaitable describing one typed JSON-RPC call.
+
+    Awaiting the instance issues the call through its transport and yields
+    the typed result. Instances are single-use: awaiting one twice, or
+    passing the same instance to a batch twice, raises ``RuntimeError``.
+
+    Args:
+        name: Name of the RPC method.
+        params: Parameters object for the method.
+        result_type: Type the result is deserialized as.
+        transport: Transport executing the call.
+
+    """
+
     def __init__(self, name: str, params: P, result_type: type[R], transport: RpcTransport) -> None:
         self._name = name
         self._params = params
@@ -59,6 +125,23 @@ class RpcCall[P, R]:
 
 
 class Procedure[P, R]:
+    """Declaration of a request/response RPC method.
+
+    Calling a procedure with a transport and parameters builds an awaitable
+    :class:`RpcCall`.
+
+    Args:
+        name: Name of the RPC method.
+        params_type: Dataclass type of the request parameters.
+        result_type: Dataclass type of the response.
+
+    Attributes:
+        name: Name this declaration was created with.
+        params_type: Dataclass type of the request parameters.
+        result_type: Dataclass type of the response.
+
+    """
+
     def __init__(self, name: str, params_type: type[P], result_type: type[R]) -> None:
         _validate_name(name)
         _validate_type_arg(params_type, "params_type")
@@ -70,14 +153,32 @@ class Procedure[P, R]:
 
     @property
     def name(self) -> str:
+        """The RPC method name.
+
+        Returns:
+            The name this declaration was created with.
+
+        """
         return self._name
 
     @property
     def params_type(self) -> type[P]:
+        """The dataclass type of the request parameters.
+
+        Returns:
+            The parameters dataclass type.
+
+        """
         return self._params_type
 
     @property
     def result_type(self) -> type[R]:
+        """The dataclass type of the response.
+
+        Returns:
+            The result dataclass type.
+
+        """
         return self._result_type
 
     def __call__(self, transport: RpcTransport, params: P) -> RpcCall[P, R]:
@@ -85,6 +186,23 @@ class Procedure[P, R]:
 
 
 class StreamingProcedure[P, T]:
+    """Declaration of a finite streaming RPC method.
+
+    Calling a streaming procedure with a transport and parameters starts a
+    call-scoped :class:`RpcStream`.
+
+    Args:
+        name: Name of the RPC method.
+        params_type: Dataclass type of the request parameters.
+        result_type: Dataclass type of each stream item.
+
+    Attributes:
+        name: Name this declaration was created with.
+        params_type: Dataclass type of the request parameters.
+        result_type: Dataclass type of each stream item.
+
+    """
+
     def __init__(self, name: str, params_type: type[P], result_type: type[T]) -> None:
         _validate_name(name)
         _validate_type_arg(params_type, "params_type")
@@ -96,14 +214,32 @@ class StreamingProcedure[P, T]:
 
     @property
     def name(self) -> str:
+        """The RPC method name.
+
+        Returns:
+            The name this declaration was created with.
+
+        """
         return self._name
 
     @property
     def params_type(self) -> type[P]:
+        """The dataclass type of the request parameters.
+
+        Returns:
+            The parameters dataclass type.
+
+        """
         return self._params_type
 
     @property
     def result_type(self) -> type[T]:
+        """The dataclass type of each stream item.
+
+        Returns:
+            The item dataclass type.
+
+        """
         return self._result_type
 
     def __call__(self, transport: RpcTransport, params: P) -> RpcStream[T]:
@@ -111,6 +247,30 @@ class StreamingProcedure[P, T]:
 
 
 class Subscription[P, E]:
+    """Declaration of a server-side event subscription.
+
+    Calling a subscription with a transport and parameters starts an
+    :class:`RpcSubscription` yielding typed events.
+
+    Args:
+        name: Name of the subscription method.
+        params_type: Dataclass type of the request parameters.
+        event_type: Dataclass type of each event.
+        replay_size: Suggested number of events the server replays to a
+            rejoining client. Defaults to 256.
+
+    Raises:
+        ValueError: If ``replay_size`` is less than 1.
+
+    Attributes:
+        name: Name this declaration was created with.
+        params_type: Dataclass type of the request parameters.
+        event_type: Dataclass type of each event.
+        replay_size: Suggested number of events the server replays to a
+            rejoining client.
+
+    """
+
     def __init__(self, name: str, params_type: type[P], event_type: type[E], replay_size: int = 256) -> None:
         _validate_name(name)
         _validate_type_arg(params_type, "params_type")
@@ -125,18 +285,42 @@ class Subscription[P, E]:
 
     @property
     def name(self) -> str:
+        """The RPC method name.
+
+        Returns:
+            The name this declaration was created with.
+
+        """
         return self._name
 
     @property
     def params_type(self) -> type[P]:
+        """The dataclass type of the request parameters.
+
+        Returns:
+            The parameters dataclass type.
+
+        """
         return self._params_type
 
     @property
     def event_type(self) -> type[E]:
+        """The dataclass type of each event.
+
+        Returns:
+            The event dataclass type.
+
+        """
         return self._event_type
 
     @property
     def replay_size(self) -> int:
+        """The suggested event replay size for rejoin.
+
+        Returns:
+            The configured replay size.
+
+        """
         return self._replay_size
 
     def __call__(self, transport: RpcTransport, params: P) -> RpcSubscription[E]:
@@ -144,25 +328,74 @@ class Subscription[P, E]:
 
 
 class RpcHttpClient:
+    """JSON-RPC transport dispatching calls over HTTP.
+
+    Streams are delivered over SSE; subscriptions are not supported and
+    always raise :class:`RpcError`.
+    """
+
     def __init__(self) -> None:
         pass
 
     async def call(self, method: str, params: Any = None, *, result_type: Any = None) -> Any:
+        """Perform a request/response JSON-RPC call over HTTP.
+
+        Args:
+            method: Name of the RPC method.
+            params: Parameters object for the method.
+            result_type: When given, deserialize the result as this type.
+
+        Returns:
+            The method result.
+
+        """
         from webcompy.rpc._client import _call_impl
 
         return await _call_impl(method, params, result_type=result_type)
 
     async def notify(self, method: str, params: Any = None) -> None:
+        """Send a JSON-RPC notification over HTTP.
+
+        Args:
+            method: Name of the RPC method.
+            params: Parameters object for the method.
+
+        """
         from webcompy.rpc._client import _notify_impl
 
         await _notify_impl(method, params)
 
     def stream(self, method: str, params: Any = None, *, result_type: Any = None) -> RpcStream[Any]:
+        """Start a finite streaming JSON-RPC call over HTTP.
+
+        Args:
+            method: Name of the RPC method.
+            params: Parameters object for the method.
+            result_type: When given, deserialize each item as this type.
+
+        Returns:
+            A :class:`RpcStream` of items from the server.
+
+        """
         from webcompy.rpc._client import _stream_impl
 
         return _stream_impl(method, params, result_type=result_type)
 
     def subscribe(self, method: str, params: Any = None, *, event_type: Any = None) -> Any:
+        """Unavailable on the HTTP transport.
+
+        Args:
+            method: Name of the subscription method.
+            params: Parameters object for the subscription.
+            event_type: Type of the expected events.
+
+        Returns:
+            Never; this method always raises.
+
+        Raises:
+            RpcError: Always, because subscriptions require a WebSocket.
+
+        """
         raise RpcError(SERVER_ERROR, "subscriptions are WebSocket-only")
 
 
@@ -294,6 +527,30 @@ async def batch(*calls: RpcCall[Any, Any], return_exceptions: Literal[True]) -> 
 
 
 async def batch(*calls: RpcCall[Any, Any], return_exceptions: bool = False) -> tuple[Any, ...]:  # pyright: ignore[reportInconsistentOverload]
+    """Await several RPC calls issued through the same transport and return their results.
+
+    ``return_exceptions=False`` (default) propagates the first failure; with
+    ``True`` each failure is collected as an ``RpcError`` in the result
+    tuple. Each occurrence of an ``RpcCall`` in the argument list is
+    dispatched as its own request; reusing a call that was already awaited
+    elsewhere raises ``RuntimeError``.
+
+    Args:
+        *calls: RPC calls created from the same transport instance.
+        return_exceptions: When ``True``, collect failures as ``RpcError``
+            entries instead of raising on the first one.
+
+    Returns:
+        A tuple holding each call's result in call order; entries are
+        ``RpcError`` instances when ``return_exceptions`` is ``True``.
+
+    Raises:
+        RuntimeError: If any call was already awaited.
+        RpcError: If the calls are invalid, use different transports,
+            target an unsupported or non-open connection, or the batch
+            response is malformed.
+
+    """
     if not calls:
         return ()
     for c in calls:
@@ -334,11 +591,11 @@ async def batch(*calls: RpcCall[Any, Any], return_exceptions: bool = False) -> t
         for req_id, result_type in entries:
             response = by_id.get(req_id)
             if response is None:
-                err = RpcError(SERVER_ERROR, f"Missing batch response for id {req_id}")
+                missing = f"Missing batch response for id {req_id}"
                 if return_exceptions:
-                    results.append(err)
+                    results.append(RpcError(SERVER_ERROR, missing))
                     continue
-                raise err
+                raise RpcError(SERVER_ERROR, missing)
             try:
                 results.append(_resolve(response, result_type, registry))
             except RpcError as err:
@@ -420,6 +677,16 @@ async def notify(call1: RpcCall[Any, Any], call2: RpcCall[Any, Any], *calls: Rpc
 
 
 async def notify(*calls: RpcCall[Any, Any]) -> None:  # pyright: ignore[reportInconsistentOverload]
+    """Send JSON-RPC notifications for the given calls without waiting.
+
+    Args:
+        *calls: RPC calls created from the same transport instance.
+
+    Raises:
+        RuntimeError: If any call was already awaited.
+        RpcError: If the calls are invalid or use different transports.
+
+    """
     if not calls:
         return None
     for c in calls:

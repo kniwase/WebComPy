@@ -1,3 +1,5 @@
+"""Reactive form state primitives: ``Field``, ``Form``, and validators."""
+
 from webcompy.forms._field import Field, use_field
 from webcompy.forms._form import Form, use_form
 from webcompy.forms._validators import (

@@ -1,3 +1,5 @@
+"""In-memory virtual DOM for server-side rendering."""
+
 from __future__ import annotations
 
 import time
@@ -8,6 +10,26 @@ from webcompy.ports._dom import DOMEvent, DOMNode, DOMNodeList
 
 
 class VirtualDOMEvent:
+    """Virtual DOM event for server-side testing and rendering.
+
+    Args:
+        event_type: Event type name.
+        bubbles: Whether the event bubbles.
+        cancelable: Whether the event is cancelable.
+
+    Attributes:
+        type: Event type name.
+        bubbles: Whether the event bubbles.
+        cancelable: Whether the event is cancelable.
+        target: Node the event was dispatched to, or ``None``.
+        currentTarget: Node whose listener is processing the event, or
+            ``None``.
+        defaultPrevented: Whether ``preventDefault()`` was called.
+        eventPhase: Current phase of the event flow.
+        timeStamp: Creation time of the event in milliseconds.
+
+    """
+
     def __init__(
         self,
         event_type: str,
@@ -27,41 +49,61 @@ class VirtualDOMEvent:
 
     @property
     def type(self) -> str:
+        """Return the event type."""
         return self._type
 
     @property
     def bubbles(self) -> bool:
+        """Return whether the event bubbles."""
         return self._bubbles
 
     @property
     def cancelable(self) -> bool:
+        """Return whether the event is cancelable."""
         return self._cancelable
 
     @property
     def target(self) -> DOMNode | None:
+        """Return the event target."""
         return self._target
 
     @property
     def currentTarget(self) -> DOMNode | None:
+        """Return the current event target."""
         return self._current_target
 
     @property
     def defaultPrevented(self) -> bool:
+        """Return whether ``preventDefault`` was called."""
         return self._default_prevented
 
     @property
     def eventPhase(self) -> int:
+        """Return the current event phase."""
         return self._event_phase
 
     @property
     def timeStamp(self) -> int:
+        """Return the event timestamp."""
         return self._time_stamp
 
     def preventDefault(self) -> None:
+        """Prevent the default action if the event is cancelable.
+
+        Returns:
+            ``None``.
+
+        """
         if self._cancelable:
             self._default_prevented = True
 
     def stopPropagation(self) -> None:
+        """Stop event propagation.
+
+        Returns:
+            ``None``.
+
+        """
         self._propagation_stopped = True
 
     def __getattr__(self, _: str) -> Any:
@@ -69,6 +111,29 @@ class VirtualDOMEvent:
 
 
 class VirtualDOMNode:
+    """Virtual DOM node used for server-side rendering.
+
+    Args:
+        tag_name: Tag name or ``#text``/``#comment`` marker.
+        node_type: DOM node type.
+        text_content: Initial text content for text/comment nodes.
+
+    Attributes:
+        __webcompy_node__: Marker flag identifying framework-created
+            nodes; always ``True`` on virtual nodes.
+        __webcompy_prerendered_node__: Marker flag for nodes adopted from
+            pre-rendered markup; always ``False`` on virtual nodes.
+        nodeName: Uppercased tag name, or ``#text``/``#comment`` for
+            text and comment nodes.
+        nodeType: DOM node type number.
+        textContent: Concatenated descendant text content; assignment
+            replaces all children of an element node.
+        childNodes: Child nodes of this node.
+        parentNode: Parent node, or ``None`` when unattached.
+        isConnected: Whether the node is attached to a root document.
+
+    """
+
     def __init__(
         self,
         tag_name: str,
@@ -106,6 +171,7 @@ class VirtualDOMNode:
 
     @property
     def nodeName(self) -> str:
+        """Return the node name."""
         if self._node_type == 3:
             return "#text"
         if self._node_type == 8:
@@ -114,10 +180,12 @@ class VirtualDOMNode:
 
     @property
     def nodeType(self) -> int:
+        """Return the DOM node type."""
         return self._node_type
 
     @property
     def textContent(self) -> str | None:
+        """Return the concatenated text content."""
         if self._node_type == 1:
             parts: list[str] = []
             for child in self._children:
@@ -142,13 +210,24 @@ class VirtualDOMNode:
 
     @property
     def childNodes(self) -> DOMNodeList:
+        """Return the child node list."""
         return DOMNodeList(self._children)
 
     @property
     def parentNode(self) -> DOMNode | None:
+        """Return the parent node."""
         return self._parent
 
     def appendChild(self, child: DOMNode) -> None:
+        """Append ``child`` as the last child.
+
+        Args:
+            child: Node to append.
+
+        Returns:
+            ``None``.
+
+        """
         child_v = _as_virtual(child)
         if child_v._parent is not None:
             child_v._parent.removeChild(child)
@@ -156,12 +235,37 @@ class VirtualDOMNode:
         self._children.append(child)
 
     def removeChild(self, child: DOMNode) -> None:
+        """Remove ``child`` from this node.
+
+        Args:
+            child: Child to remove.
+
+        Returns:
+            ``None``.
+
+        Raises:
+            ValueError: If ``child`` is not a child of this node.
+
+        """
         if child not in self._children:
             raise ValueError("Node is not a child of this element")
         self._children.remove(child)
         _as_virtual(child)._parent = None
 
     def insertBefore(self, new_node: DOMNode, ref_node: DOMNode) -> None:
+        """Insert ``new_node`` before ``ref_node``.
+
+        Args:
+            new_node: Node to insert.
+            ref_node: Reference child node.
+
+        Returns:
+            ``None``.
+
+        Raises:
+            ValueError: If ``ref_node`` is not a child of this node.
+
+        """
         new_v = _as_virtual(new_node)
         if new_v._parent is not None:
             new_v._parent.removeChild(new_node)
@@ -172,6 +276,19 @@ class VirtualDOMNode:
         self._children.insert(idx, new_node)
 
     def replaceChild(self, new_node: DOMNode, old_node: DOMNode) -> None:
+        """Replace ``old_node`` with ``new_node``.
+
+        Args:
+            new_node: Replacement node.
+            old_node: Node to replace.
+
+        Returns:
+            ``None``.
+
+        Raises:
+            ValueError: If ``old_node`` is not a child of this node.
+
+        """
         new_v = _as_virtual(new_node)
         old_v = _as_virtual(old_node)
         if new_v._parent is not None:
@@ -184,11 +301,18 @@ class VirtualDOMNode:
         old_v._parent = None
 
     def remove(self) -> None:
+        """Remove this node from its parent.
+
+        Returns:
+            ``None``.
+
+        """
         if self._parent is not None:
             self._parent.removeChild(self)
 
     @property
     def isConnected(self) -> bool:
+        """Return whether the node is connected to the document."""
         node: DOMNode | None = self
         while node is not None:
             if getattr(node, "__webcompy_document_root__", False):
@@ -197,18 +321,61 @@ class VirtualDOMNode:
         return False
 
     def setAttribute(self, name: str, value: str | None) -> None:
+        """Set attribute ``name`` to ``value``.
+
+        Args:
+            name: Attribute name.
+            value: Attribute value or ``None`` for boolean attributes.
+
+        Returns:
+            ``None``.
+
+        """
         self._attributes[name] = value
 
     def getAttribute(self, name: str) -> str | None:
+        """Return the value of attribute ``name``.
+
+        Args:
+            name: Attribute name.
+
+        Returns:
+            Attribute value or ``None`` when not present.
+
+        """
         return self._attributes.get(name)
 
     def removeAttribute(self, name: str) -> None:
+        """Remove attribute ``name``.
+
+        Args:
+            name: Attribute name.
+
+        Returns:
+            ``None``.
+
+        """
         self._attributes.pop(name, None)
 
     def hasAttribute(self, name: str) -> bool:
+        """Return whether attribute ``name`` exists.
+
+        Args:
+            name: Attribute name.
+
+        Returns:
+            ``True`` if the attribute exists.
+
+        """
         return name in self._attributes
 
     def getAttributeNames(self) -> list[str]:
+        """Return a list of attribute names.
+
+        Returns:
+            Attribute name list.
+
+        """
         return list(self._attributes.keys())
 
     def addEventListener(
@@ -217,6 +384,17 @@ class VirtualDOMNode:
         handler: Any,
         options_or_capture: Any = False,
     ) -> None:
+        """Add an event listener.
+
+        Args:
+            event_type: Event type.
+            handler: Event handler.
+            options_or_capture: Options or capture flag.
+
+        Returns:
+            ``None``.
+
+        """
         self._event_listeners.append((event_type, handler))
 
     def removeEventListener(
@@ -225,9 +403,29 @@ class VirtualDOMNode:
         handler: Any,
         options_or_capture: Any = False,
     ) -> None:
+        """Remove an event listener.
+
+        Args:
+            event_type: Event type.
+            handler: Event handler.
+            options_or_capture: Options or capture flag.
+
+        Returns:
+            ``None``.
+
+        """
         self._event_listeners = [(et, h) for et, h in self._event_listeners if not (et == event_type and h is handler)]
 
     def dispatchEvent(self, event: DOMEvent) -> bool:
+        """Dispatch ``event`` to this node and its ancestors.
+
+        Args:
+            event: Event to dispatch.
+
+        Returns:
+            ``False`` when ``preventDefault`` was called.
+
+        """
         # VirtualDOMNode and VirtualDOMEvent live in the same module, so
         # we directly access the event's private attributes (_target,
         # _propagation_stopped, etc.) to implement DOM-spec event phases.

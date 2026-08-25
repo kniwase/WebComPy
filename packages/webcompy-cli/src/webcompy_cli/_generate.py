@@ -1,3 +1,5 @@
+"""Static site generation via the ASGI transport."""
+
 import os
 import pathlib
 import shutil
@@ -16,6 +18,18 @@ from webcompy_cli.config._build_config import WebComPyBuildConfig
 
 
 async def generate_static_site(app: WebComPyApp | None = None):
+    """Generate static HTML files for the application.
+
+    Builds the wheel and assets, copies static and resource files, and
+    fetches each route via the ASGI app to write ``index.html`` files
+    into the distribution directory.
+
+    Args:
+        app: Application instance to generate. When ``None``, the
+            configuration is discovered via ``discover_config`` and CLI
+            flags override the build options.
+
+    """
     _, args = get_params()
     if app is None:
         build_config = discover_config(args.get("config"))

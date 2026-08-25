@@ -1,3 +1,5 @@
+"""WebComPy framework public API re-exports."""
+
 from . import (  # order matters for circular imports
     aio,
     ajax,

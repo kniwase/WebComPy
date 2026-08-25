@@ -1,3 +1,5 @@
+"""Server-Sent Events connection port (callback surface)."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -28,5 +30,18 @@ class EventSourcePort(ABC):
 
         ``on_message`` receives ``(event_type, data, last_event_id)``.
         The returned cleanup callable closes the underlying connection.
+
+        Args:
+            url: SSE endpoint URL to connect to.
+            events: Named event types delivered through ``on_message``.
+            on_open: Called when the connection is established.
+            on_message: Called with ``(event_type, data, last_event_id)``
+                for each received event.
+            on_error: Called when a connection-level error occurs.
+            on_close: Called when the connection closes.
+
+        Returns:
+            A cleanup callable closing the underlying connection.
+
         """
         ...

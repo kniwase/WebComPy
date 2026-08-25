@@ -1,3 +1,5 @@
+"""Template build configuration."""
+
 import app.app as app_module
 
 from webcompy_cli.config import WebComPyBuildConfig, WebComPyServerConfig

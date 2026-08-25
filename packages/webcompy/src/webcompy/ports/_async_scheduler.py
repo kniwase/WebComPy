@@ -1,3 +1,5 @@
+"""Async task scheduling port for browser and server runtimes."""
+
 from __future__ import annotations
 
 import asyncio
@@ -7,6 +9,14 @@ from typing import Any
 
 
 class AsyncSchedulerPort(ABC):
+    """Scheduling and draining surface for background and render tasks.
+
+    Implementations wrap the ``asyncio`` event loop of the current runtime.
+    Browser implementations run tasks fire-and-forget on the persistent page
+    event loop; server implementations additionally keep a registry so
+    rendering can await pending work before the render context is disposed.
+    """
+
     @abstractmethod
     def schedule(
         self,

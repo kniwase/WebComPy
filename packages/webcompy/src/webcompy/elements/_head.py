@@ -1,3 +1,5 @@
+"""App-level ``<head>`` management element: title, metas, links, scripts, and styles."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -8,6 +10,7 @@ from webcompy.elements.types._base import ElementWithChildren
 from webcompy.signal import Computed
 
 if TYPE_CHECKING:
+    from webcompy.app._root_component import Head
     from webcompy.components._component import HeadPropsStore
     from webcompy.signal._base import CallbackConsumerNode
 
@@ -34,6 +37,26 @@ def _resolve_content(content: str | Computed[str]) -> str:
 
 
 class HeadElement(ElementWithChildren):
+    """Virtual element collecting document head content for an app.
+
+    Aggregates the title, meta tags, links, scripts, and styles declared
+    by the application and components, then renders them into the document
+    ``<head>`` on the browser or as HTML strings during server rendering.
+    Supported for direct configuration or via ``app.head(...)``.
+
+    Args:
+        head_props: Store shared by the owning app holding the current
+            title and meta state.
+
+    Attributes:
+        head_data: Collected head configuration: reactive ``title`` and
+            ``meta`` entries plus accumulated ``link`` and ``script``
+            lists.
+        html_attrs: Attribute name-to-value mapping currently set on the
+            ``<html>`` element, with reactive values resolved.
+
+    """
+
     __parent: ElementWithChildren
 
     def __init__(self, head_props: HeadPropsStore) -> None:
@@ -76,16 +99,35 @@ class HeadElement(ElementWithChildren):
         self.__parent = parent
 
     def set_title(self, title: str):
+        """Set the document title.
+
+        Args:
+            title: New title text.
+
+        """
         if self._head_props is not None:
             self._head_props._app_title = title
 
     def set_meta(self, key: str, attributes: dict[str, str]):
+        """Set the attributes of a meta element registered under ``key``.
+
+        Args:
+            key: Registry key identifying the meta element.
+            attributes: Attribute name-to-value mapping for the meta tag.
+
+        """
         if self._head_props is not None:
             meta = self._head_props.head_metas.get(self._app_meta_id, {})
             meta[key] = attributes
             self._head_props.head_metas[self._app_meta_id] = meta
 
     def append_link(self, attributes: dict[str, str]):
+        """Append a ``<link>`` element with the given attributes.
+
+        Args:
+            attributes: Attribute name-to-value mapping for the link tag.
+
+        """
         self._links.append(attributes)
 
     def append_script(
@@ -93,9 +135,22 @@ class HeadElement(ElementWithChildren):
         attributes: dict[str, str],
         script: str | None = None,
     ):
+        """Append a ``<script>`` element.
+
+        Args:
+            attributes: Attribute name-to-value mapping for the script tag.
+            script: Inline script source, or ``None`` for an external script.
+
+        """
         self._scripts_head.append((attributes, script))
 
     def append_style(self, content: str | Computed[str]) -> None:
+        """Append a ``<style>`` element to the head.
+
+        Args:
+            content: Style sheet content, either static or reactive.
+
+        """
         idx = len(self._styles)
         self._styles.append(content)
         if isinstance(content, Computed):
@@ -118,7 +173,22 @@ class HeadElement(ElementWithChildren):
 
                 self._style_callbacks[idx] = content.on_after_updating(_subscribe_callback)
 
-    def set_head(self, head):
+    def set_head(self, head: Head) -> None:
+        """Set title, links, scripts, and replace-or-add meta entries.
+
+        The ``head`` mapping holds optional ``title``, ``meta``,
+        ``link``, and ``script`` keys. ``meta`` entries are merged by key
+        into the current configuration (existing keys not listed are
+        kept); ``title``, ``link``, and ``script`` replace the current
+        configuration entirely, and an omitted ``title`` resets it to an
+        empty string.
+
+        Args:
+            head: Mapping with optional ``title`` (str), ``meta``
+                (name-to-content mapping), ``link`` (attribute mappings),
+                and ``script`` ( ``(attributes, source)`` pairs ) entries.
+
+        """
         self.set_title(head.get("title", ""))
         for key, value in head.get("meta", {}).items():
             self.set_meta(key, value)
@@ -127,7 +197,19 @@ class HeadElement(ElementWithChildren):
         self._scripts_head.clear()
         self._scripts_head.extend(head.get("script", []))
 
-    def update_head(self, head):
+    def update_head(self, head: Head) -> None:
+        """Merge the given head configuration into the current one.
+
+        The ``head`` mapping holds optional ``title``, ``meta``, ``link``,
+        and ``script`` keys appended on top of the current configuration.
+
+        Args:
+            head: Mapping with optional ``title`` (str), ``meta``
+                (name-to-content mapping), ``link`` (attribute mappings),
+                and ``script`` ( ``(attributes, source)`` pairs ) entries;
+                absent keys leave the current configuration untouched.
+
+        """
         if "title" in head:
             self.set_title(head["title"])
         for key, meta in head.get("meta", {}).items():
@@ -139,6 +221,13 @@ class HeadElement(ElementWithChildren):
 
     @property
     def head_data(self) -> dict:
+        """Return the collected head configuration.
+
+        Returns:
+            Mapping holding the reactive ``title`` and ``meta`` entries
+            plus the accumulated ``link`` and ``script`` lists.
+
+        """
         assert self._head_props is not None
         return {
             "title": self._head_props.title,
@@ -224,6 +313,13 @@ class HeadElement(ElementWithChildren):
                 html_el.setAttribute(key, expected)
 
     def set_html_attr(self, key: str, value: str | Computed[str]):
+        """Set an attribute on the document ``<html>`` element.
+
+        Args:
+            key: Attribute name.
+            value: Attribute value, either static or reactive.
+
+        """
         from webcompy.signal._graph import consumer_destroy
         from webcompy.utils import ENVIRONMENT
 
@@ -249,6 +345,12 @@ class HeadElement(ElementWithChildren):
                 html_el.setAttribute(key, value.value if isinstance(value, Computed) else value)
 
     def remove_html_attr(self, key: str):
+        """Remove a previously set attribute from the ``<html>`` element.
+
+        Args:
+            key: Attribute name.
+
+        """
         from webcompy.signal._graph import consumer_destroy
         from webcompy.utils import ENVIRONMENT
 
@@ -308,9 +410,22 @@ class HeadElement(ElementWithChildren):
 
     @property
     def html_attrs(self) -> dict[str, str]:
+        """Return resolved attributes currently set on the ``<html>`` element.
+
+        Returns:
+            Attribute name-to-value mapping with reactive values resolved.
+
+        """
         return {k: (v.value if isinstance(v, Computed) else v) for k, v in self._html_attrs.items()}
 
     def get_head_content_html(self) -> str:
+        """Render the collected head content as HTML.
+
+        Returns:
+            Multi-line HTML string with the title, meta tags, default
+            styles, dynamic styles, and link elements.
+
+        """
         from webcompy.di import inject
         from webcompy.ports._keys import DOM_PORT_KEY
 
@@ -349,6 +464,13 @@ class HeadElement(ElementWithChildren):
         return "\n".join(parts)
 
     def get_scoped_styles_html(self) -> str:
+        """Render the scoped component style sheets as HTML.
+
+        Returns:
+            Multi-line HTML string with the component default style plus
+            one ``<style>`` element per registered component style.
+
+        """
         from webcompy.di import inject
         from webcompy.di._keys import _COMPONENT_STORE_KEY
         from webcompy.ports._keys import DOM_PORT_KEY

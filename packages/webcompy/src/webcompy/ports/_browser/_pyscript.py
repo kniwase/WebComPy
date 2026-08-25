@@ -1,3 +1,5 @@
+"""Aggregate PyScript browser module exposing ``js``, ``pyscript``, and ``pyodide`` names."""
+
 from importlib import import_module
 from types import ModuleType
 

@@ -1,3 +1,5 @@
+"""Converts parsed template nodes into bound WebComPy element trees."""
+
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
@@ -511,6 +513,24 @@ def _bind_for_reactive(
 
 
 def bind_children(nodes: list[TemplateNode], ctx: dict[str, Any]) -> list[ElementChildren]:
+    """Bind template nodes into concrete child elements using ``ctx``.
+
+    Dispatches on node kind: text nodes interpolate holes into strings,
+    ``SignalBase`` values, or ``ElementAbstract`` children; element nodes
+    resolve to ``Element`` instances or component generators; ``if`` nodes
+    evaluate branches (reactively via a ``SwitchElement`` when signals are
+    involved); ``for`` nodes expand the iterable (reactively via ``repeat``
+    when it is a signal).
+
+    Args:
+        nodes: Parsed template nodes to bind.
+        ctx: Template context mapping variable names to values.
+
+    Returns:
+        Children ready for element constructors, mixing ``ElementAbstract``
+        instances, strings, and signals.
+
+    """
     result: list[ElementChildren] = []
     for node in nodes:
         if isinstance(node, TemplateText):

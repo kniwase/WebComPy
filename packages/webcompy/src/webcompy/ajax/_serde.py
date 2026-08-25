@@ -1,3 +1,5 @@
+"""Schema-driven JSON deserialization into typed Python values."""
+
 from __future__ import annotations
 
 import types
@@ -14,6 +16,8 @@ T = TypeVar("T")
 
 
 class TypedResponseError(Exception):
+    """Raised when a response body cannot be converted to the requested schema."""
+
     pass
 
 
@@ -31,6 +35,22 @@ def _type_hints(cls: type) -> dict[str, Any]:
 
 
 def from_json(cls: type[T], data: Any, *, strict: bool = False, meta: Mapping[str, str] | None = None) -> T:
+    """Deserialize ``data`` into an instance of the annotated type ``cls``.
+
+    Converts plain JSON values into dataclass, enum, container, and scalar
+    types declared by the target's annotations. ``meta`` carries transfer
+    metadata (e.g. custom type tags) applied to ``data`` before conversion.
+
+    Args:
+        cls: Target type, typically a dataclass.
+        data: JSON-parsed value to convert.
+        strict: When ``True``, reject unknown fields instead of ignoring them.
+        meta: Optional transfer metadata mapping applied to ``data`` beforehand.
+
+    Returns:
+        An instance of ``cls`` produced from ``data``.
+
+    """
     if meta:
         data = apply_transfer_meta(data, meta, strict=strict)
     return _convert(cls, data, path=_type_name(cls), strict=strict)

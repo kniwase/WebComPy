@@ -1,3 +1,5 @@
+"""Type-faithful serialization codec for hydration data transfer."""
+
 from __future__ import annotations
 
 import base64
@@ -30,6 +32,14 @@ def register_type_handler(
     encoder: Callable[[Any], Any],
     decoder: Callable[[Any], Any],
 ) -> None:
+    """Register a custom encoder/decoder pair for a type in the transfer codec.
+
+    Args:
+        cls: Type whose instances the handlers apply to.
+        encoder: Callable turning an instance into an encodable payload.
+        decoder: Callable turning the encoded payload back into a value.
+
+    """
     type_name = _qualified_type_name(cls)
     _type_handlers[cls] = (type_name, encoder, decoder)
     _type_handlers_by_name[type_name] = decoder
@@ -200,6 +210,23 @@ def encode(
     _seen: set[int] | None = None,
     _flag: _FailureFlag | None = None,
 ) -> Any:
+    """Encode a value into a JSON-compatible structure with type tags.
+
+    Values covered by JSON pass through unchanged; dicts and lists are
+    encoded recursively; supported Python types become ``__webcompy_``
+    tagged envelopes. Unencodable values are dropped and reported via
+    logging.
+
+    Args:
+        value: Value to encode.
+        _seen: Object ids currently being encoded, for cycle detection.
+        _flag: Failure flag marking the payload as lossy when a value
+            cannot be encoded.
+
+    Returns:
+        A JSON-compatible representation of ``value``.
+
+    """
     if value is None or (isinstance(value, (bool, int, float, str)) and not isinstance(value, Enum)):
         return value
 
@@ -272,6 +299,18 @@ def _decode_type_tag(value: dict[str, Any]) -> Any:
 
 
 def decode(value: Any) -> Any:
+    """Decode an encoded structure back into Python values.
+
+    Type-tagged dicts are decoded through the registered handlers;
+    plain dicts and lists are decoded recursively.
+
+    Args:
+        value: Encoded JSON-compatible value.
+
+    Returns:
+        The decoded Python value.
+
+    """
     if isinstance(value, dict):
         if _TYPE_TAG_KEY in value:
             return _decode_type_tag(value)

@@ -1,3 +1,5 @@
+"""Browser transition port (animation frames, timeouts, computed style)."""
+
 from __future__ import annotations
 
 from collections.abc import Callable

@@ -1,3 +1,5 @@
+"""``CodeBlock`` component rendering syntax-highlighted code as token spans."""
+
 from __future__ import annotations
 
 from typing import Any, TypedDict
@@ -23,6 +25,25 @@ def _token_span(token: Token) -> Any:
 
 @define_component("code-block")
 def CodeBlock(context: ComponentContext[CodeBlockProps]) -> Any:
+    """Render source code with syntax highlighting inside ``pre``/``code``.
+
+    Tokenizes the code with the lexer registered for ``lang`` and renders
+    one ``<span>`` per token as a direct child of the ``<code>`` element.
+    When the language is unknown or tokenization produces no tokens, the
+    whole code is rendered as a single ``tok-ident`` span. Empty code
+    renders no token spans. When ``code`` is a ``Signal``, the spans
+    re-render from a reactive token list whenever the signal value changes.
+
+    Args:
+        context: Component context carrying the ``code`` and ``lang``
+            props.
+
+    Returns:
+        The rendered element tree: a ``pre.code-block`` wrapping a
+        ``code.language-{lang}`` element whose direct children are the
+        token spans.
+
+    """
     props = context.props or {}
     initial_code = props.get("code", "")
     lang = props.get("lang", "text")

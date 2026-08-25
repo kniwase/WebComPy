@@ -1,3 +1,5 @@
+"""Fragment element grouping children without a DOM wrapper."""
+
 from __future__ import annotations
 
 from webcompy.elements.types._abstract import ElementAbstract
@@ -5,6 +7,13 @@ from webcompy.elements.types._dynamic import DynamicElement
 
 
 class FragmentElement(DynamicElement):
+    """Container rendering its children inline without a DOM wrapper.
+
+    Args:
+        children: Child elements placed directly into the parent's DOM node.
+
+    """
+
     def __init__(self, children: list[ElementAbstract] | None = None) -> None:
         self._pending_children: list[ElementAbstract] = list(children) if children else []
         super().__init__()

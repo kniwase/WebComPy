@@ -1,3 +1,5 @@
+"""Code block component, tokens, and the syntax-highlighting lexer registry."""
+
 from __future__ import annotations
 
 from webcompy.ui.code_block._compatibility import PYGMENTS_SHORT_CLASS

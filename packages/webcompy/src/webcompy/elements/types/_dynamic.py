@@ -1,3 +1,5 @@
+"""Childrenless container elements that render descendants in place."""
+
 from __future__ import annotations
 
 import asyncio

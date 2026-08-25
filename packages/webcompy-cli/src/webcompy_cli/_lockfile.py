@@ -1,3 +1,5 @@
+"""Lock file schema and helpers for reproducible browser dependencies."""
+
 from __future__ import annotations
 
 import json

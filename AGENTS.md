@@ -104,7 +104,7 @@ are skipped — only OpenSpec validation and AI review run.
 - Python 3.12+ (aligned with latest PyScript/Pyodide runtime)
 - Package management with `uv` — use `uv add <package>` to add dependencies, `uv lock` to update lockfile
 - Type annotations throughout (package includes `py.typed` marker and `.pyi` stubs)
-- Docstrings are required on all public interfaces under `packages/*/src` (re-exported names and their public members, plus the important-internal allowlist; module summary, Google-style function Args/Returns and class Args/Attributes, re-exported constants via PEP 224 attribute docstrings). New or modified public interfaces in `packages/*/src` MUST carry docstrings; `tests/`, `e2e/`, `docs_app/` are out of scope. No OpenSpec artifact references (spec/change names, `openspec/` paths, task numbers) in docstrings or comments — external standards (RFC, PEP, CommonMark) remain allowed.
+- Docstrings are required on all public interfaces under `packages/*/src` (re-exported names and their public members, plus the important-internal allowlist; module summary, Google-style function Args/Returns and class Args/Attributes, re-exported constants via PEP 224 attribute docstrings). New or modified public interfaces in `packages/*/src` MUST carry docstrings; `tests/`, `e2e/`, `docs_app/` are out of scope. No OpenSpec artifact references (spec/change names, `openspec/` paths, task numbers) in docstrings or comments — external standards (RFC, PEP, CommonMark) remain allowed. When modifying any public interface under `packages/*/src`, update its docstring in the same change to keep implementation and documentation in sync.
 - No comments in code unless explicitly requested — docstrings are not comments
 - Component classes use decorators: `@component_template`, `@on_before_rendering`
 - Reactive state primitives are specified in `openspec/specs/reactive/spec.md` and `openspec/specs/composables/spec.md`. New transfer-capable state SHOULD be created via `use_state` / `use_reactive_list` / `use_reactive_dict` composables inside component setup so the SSR transfer path works.
@@ -175,6 +175,7 @@ the per-area reference.
 - **Node Cache Strict is-None Check** — `async-rendering/spec.md`
 - **Browser Test Tier Importability** — `browser-test-harness/spec.md`
 - **No Overview Gap List** — `overview/spec.md`
+- **Docstring Coverage & OpenSpec Reference Ban** — `api-docstrings/spec.md`
 
 ## File → Spec Mapping
 
@@ -243,6 +244,7 @@ When modifying code, read the relevant specs from `openspec/specs/`:
 | `tests/browser/`, `webcompy_testing/browser_runner/` | `browser-test-harness/spec.md`, `test-execution-paths/spec.md` |
 | `webcompy_cli/_browser_test_harness.py` | `browser-test-harness/spec.md`, `cli/spec.md` |
 | `docs_app/` | `docs-site-documents/spec.md`, `docs-e2e/spec.md`, `loading-screen/spec.md` |
+| `scripts/check-docstrings.py`, `[tool.pydoclint]` in `pyproject.toml` | `api-docstrings/spec.md` |
 | other directories (`exception/`, `utils/`) | `overview/spec.md`, `architecture/spec.md` |
 
 Always start with `openspec/specs/overview/spec.md` and `openspec/specs/architecture/spec.md`.
@@ -400,6 +402,7 @@ When a public API is renamed, add the retired name to the blocklist in `scripts/
 | `test-execution-paths` | Physical separation between unit (`tests/`), browser (`tests/browser/`), and E2E (`e2e/`) tiers; opt-in `WEBCOMPY_RUN_E2E=1` / `WEBCOMPY_RUN_BROWSER=1` gates; `scripts/run-e2e-tests.sh` and `scripts/run-browser-tests.sh` canonical entry points |
 | `browser-test-harness` | PyScript-native in-browser unit testing: harness server (runtime assets, py-config, manifest, harness page), in-page runner with `app`/`dom_root` fixtures and per-test isolation, pytest dispatch over `window.__webcompy_test__.run_one`, wheel vs source-mount supply modes, crash containment, and console-error capture |
 | `doc-spec-references` | Governance of how universal docs reference `openspec/specs/`; retired API-name blocklist; `scripts/check-doc-spec-refs.py` guardrail |
+| `api-docstrings` | Docstring coverage and Google-style structure for public interfaces of all four packages; ban on OpenSpec artifact references in docstrings and comments; stdlib-only strict checker with migration baseline (`scripts/check-docstrings.py`); same-PR docstring-implementation sync with must-fix inconsistency blocking approval |
 | `code-block` | `CodeBlock` component rendering syntax-highlighted code as framework-managed token spans (direct children of `<code>`, no `raw_html` injection), plus the `highlight()` HTML-string API with dual `tok-*`/Pygments classes |
 | `syntax-highlight-lexers` | `Lexer` protocol, lexer registry (name/alias/file-extension lookup), built-in Python/Bash/TOML lexers, `LexerInfo` introspection, Pygments adapter skeleton |
 

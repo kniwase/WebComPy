@@ -1,3 +1,5 @@
+"""Browser-only rendering element with a server-side fallback."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -10,6 +12,19 @@ from webcompy.utils._environment import ENVIRONMENT
 
 
 class ClientOnlyElement(DynamicElement):
+    """Element whose children render only in the browser environment.
+
+    During server rendering and static generation the fallback generator
+    (or an empty text node) is rendered instead; the children generator is
+    evaluated only when client-side rendering and hydration run.
+
+    Args:
+        children: Zero-argument callable producing the browser-only children.
+        fallback: Zero-argument callable producing server-side placeholder
+            children.
+
+    """
+
     def __init__(
         self,
         children: Callable[[], ElementChildren],

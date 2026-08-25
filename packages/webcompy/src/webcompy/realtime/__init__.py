@@ -1,3 +1,5 @@
+"""Realtime connection composables: Server-Sent Events and WebSocket messaging."""
+
 from webcompy.realtime._registry import CloseInfo, ConnectionState
 from webcompy.realtime._sse import EventSourceHandle, SSEvent, use_event_source
 from webcompy.realtime._typed import TypedWebSocketHandle, register_realtime_type_handler

@@ -122,6 +122,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Template Binder Component Tag Resolution** — `template-engine/spec.md`
 - **Forms** — `forms/spec.md`
 - **No Overview Gap List** — `overview/spec.md`
+- **Docstring Coverage & OpenSpec Reference Ban** — `api-docstrings/spec.md`
 
 UI/theme review guidance (runtime CSS generation, repeated class strings, FOUC via client-side highlighters, `<html>`/`<body>` outside scoped CSS reach, DOM re-injection hacks) is covered by `css-architecture/spec.md` and `theme-system/spec.md`.
 
@@ -131,7 +132,7 @@ Consider these cross-cutting concerns for every review. Flag relevant findings a
 
 | Priority | Perspective | What to check |
 |----------|-------------|---------------|
-| 🔴 Must check | Docstring coverage | Every new or modified public interface under `packages/*/src` must carry a docstring (module summary; Google-style function Args/Returns and class Args/Attributes; re-exported constants via PEP 224). Flag missing docstrings and incomplete Google sections (pydoclint + checker are CI gates, AI verifies structural quality). |
+| 🔴 Must check | Docstring coverage | Every new or modified public interface under `packages/*/src` must carry a docstring (module summary; Google-style function Args/Returns and class Args/Attributes; re-exported constants via PEP 224). Flag missing docstrings and incomplete Google sections (pydoclint + checker are CI gates, AI verifies structural quality). When any public interface is modified, verify its docstring was updated in the same change to keep implementation and documentation in sync; flag stale summaries, outdated Args/Returns/Raises, or behavior mismatches as must-fix. A PR with docstring-implementation inconsistency SHALL NOT be approved. |
 | 🔴 Must check | OpenSpec references in docs | No docstring or comment under `packages/*/src` may reference OpenSpec artifacts (`openspec/` paths, spec/change names, task numbers). External standards (RFC, PEP, CommonMark) remain allowed. Checker enforces mechanically; AI flags any missed case. |
 | 🔴 Must check | Breaking changes | Public API signature changes, export/import modifications, interface or abstract class changes |
 | 🟡 Should check | Performance impact | Hot path modifications, unnecessary object allocation, blocking I/O in async context, DOM operation frequency |

@@ -1,3 +1,5 @@
+"""Composable helpers bridging DOM and window events to ``ReadonlySignal`` values."""
+
 from __future__ import annotations
 
 import warnings
@@ -77,6 +79,19 @@ def use_window_event(
     component destroy. Outside component setup a ``UserWarning`` is emitted
     and nothing is attached; a missing port (or the server ``ServerHostPort``
     no-op) keeps the signal at ``initial``.
+
+    Args:
+        event_type: DOM event type name to listen for (e.g. ``"resize"``).
+        initial: Signal value used before any event fires (and whenever no
+            listener could be attached).
+        transform: Optional callable converting each raw event object into
+            the stored value. When ``None``, the raw event object itself is
+            stored.
+
+    Returns:
+        A ``(view, update)`` pair where ``view`` is a ``ReadonlySignal[T]``
+        fed by the event listener and ``update`` is the internal setter.
+
     """
     return _use_event(
         event_type,
@@ -97,6 +112,20 @@ def use_document_event(
 
     Same semantics as :func:`use_window_event` but the listener is attached
     via ``DOMPort.add_document_event_listener``.
+
+    Args:
+        event_type: DOM event type name to listen for (e.g.
+            ``"visibilitychange"``).
+        initial: Signal value used before any event fires (and whenever no
+            listener could be attached).
+        transform: Optional callable converting each raw event object into
+            the stored value. When ``None``, the raw event object itself is
+            stored.
+
+    Returns:
+        A ``(view, update)`` pair where ``view`` is a ``ReadonlySignal[T]``
+        fed by the event listener and ``update`` is the internal setter.
+
     """
     return _use_event(
         event_type,

@@ -1,3 +1,5 @@
+"""Conditional import of the PyScript browser aggregate (``None`` off-browser)."""
+
 from webcompy.utils._environment import ENVIRONMENT as _ENVIRONMENT
 
 if _ENVIRONMENT == "pyscript":

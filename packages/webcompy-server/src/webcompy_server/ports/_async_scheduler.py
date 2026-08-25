@@ -1,3 +1,5 @@
+"""Server-side async scheduler port."""
+
 from __future__ import annotations
 
 import asyncio
@@ -13,6 +15,11 @@ _MAX_DRAIN_ITERATIONS = 20
 
 
 class ServerAsyncSchedulerPort(AsyncSchedulerPort):
+    """Server-side async task scheduler for SSR.
+
+    Tracks scheduled tasks and drains them during ``await_pending``.
+    """
+
     def __init__(self) -> None:
         self._registry: list[asyncio.Task[Any]] = []
 
@@ -22,6 +29,16 @@ class ServerAsyncSchedulerPort(AsyncSchedulerPort):
         *,
         render: bool = False,
     ) -> asyncio.Task[Any]:
+        """Schedule a coroutine for execution.
+
+        Args:
+            coro: Coroutine to schedule.
+            render: Whether the task is render-scoped.
+
+        Returns:
+            Created ``asyncio.Task``.
+
+        """
         loop = asyncio.get_running_loop()
         task = loop.create_task(coro)
         self._registry.append(task)
@@ -33,6 +50,15 @@ class ServerAsyncSchedulerPort(AsyncSchedulerPort):
             self._registry.remove(task)
 
     async def await_pending(self, *, only_render: bool = False) -> None:
+        """Wait for pending scheduled tasks to complete.
+
+        Args:
+            only_render: If ``True``, wait only for render-scoped tasks.
+
+        Returns:
+            ``None``.
+
+        """
         iteration = 0
         while self._registry:
             tasks = list(self._registry)

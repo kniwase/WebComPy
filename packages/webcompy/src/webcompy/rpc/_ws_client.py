@@ -1,3 +1,5 @@
+"""JSON-RPC 2.0 client over a shared auto-reconnecting WebSocket."""
+
 from __future__ import annotations
 
 import asyncio
@@ -44,6 +46,13 @@ _CLOSED_MSG = "webcompy rpc: RpcWsClient is closed"
 
 
 class RpcSubscriptionState(Enum):
+    """Lifecycle stages of an :class:`RpcSubscription`.
+
+    ``PENDING`` until the server confirms, ``ACTIVE`` while events flow,
+    ``RESYNC_REQUIRED`` when the server's replay buffer overflowed, and
+    ``CLOSED`` after unsubscribe or close.
+    """
+
     PENDING = "pending"
     ACTIVE = "active"
     RESYNC_REQUIRED = "resync_required"
@@ -59,6 +68,20 @@ class RpcSubscription(Generic[E]):
     authoritative state and resubscribe), and ``CLOSED`` after unsubscribe or
     close. ``.last_cursor`` is a ``Signal[int | None]`` tracking the last
     received cursor, used for automatic rejoin after reconnects.
+
+    Args:
+        client: The client this subscription belongs to.
+        method: Name of the subscription method.
+        params: Parameters object for the subscription.
+        event_type: When given, deserialize events as this type.
+        closed: When ``True``, the subscription starts already closed.
+
+    Attributes:
+        state: ``Signal[RpcSubscriptionState]`` tracking the
+            subscription lifecycle.
+        last_cursor: ``Signal[int | None]`` tracking the last received
+            cursor, used for automatic rejoin after reconnects.
+
     """
 
     def __init__(
@@ -127,6 +150,10 @@ class RpcSubscription(Generic[E]):
         self._queue.put_nowait(_STOP)
 
     def close(self) -> None:
+        """End the subscription and detach it from the client.
+
+        Idempotent: closing an already closed subscription is a no-op.
+        """
         if self._done:
             return
         self._done = True
@@ -150,6 +177,27 @@ class RpcWsClient:
     shared socket are released automatically on component destroy. When the
     client is held outside a component (e.g. a module-level service), call
     ``close()`` explicitly to release the connection.
+
+    Args:
+        url: WebSocket endpoint URL. Defaults to the app's RPC endpoint.
+        heartbeat_interval: Seconds between application-level pings, or
+            ``None`` to disable the heartbeat. Defaults to 30.
+        heartbeat_timeout: Seconds without any frame after which the
+            connection is force-closed. Defaults to 10.
+        reconnect_base_delay: Base delay in seconds before reconnecting.
+            Defaults to 1.
+        reconnect_max_delay: Maximum delay in seconds before reconnecting.
+            Defaults to 30.
+        reconnect_max_attempts: Optional bound on the number of reconnection
+            attempts.
+        max_queue: Optional bound on the per-subscription message queue.
+
+    Attributes:
+        state: Signal holding the :class:`ConnectionState` of the
+            underlying WebSocket connection.
+        last_error: Signal holding the most recent decode or protocol
+            error, or ``None``.
+
     """
 
     def __init__(
@@ -201,12 +249,24 @@ class RpcWsClient:
 
     @property
     def state(self) -> Signal[ConnectionState]:
+        """The state of the underlying WebSocket connection.
+
+        Returns:
+            A signal holding :class:`ConnectionState`.
+
+        """
         if self._handle is None:
             return self._closed_state
         return self._handle.state
 
     @property
     def last_error(self) -> Signal[Exception | None]:
+        """The most recent decode or protocol error, if any.
+
+        Returns:
+            A signal holding the last error, or ``None``.
+
+        """
         return self._last_error
 
     def _set_last_error(self, error: Exception | None) -> None:
@@ -220,6 +280,20 @@ class RpcWsClient:
         return self._handle
 
     async def call(self, method: str, params: Any = None, *, result_type: Any = None) -> Any:
+        """Perform a request/response JSON-RPC call over the WebSocket.
+
+        Args:
+            method: Name of the RPC method.
+            params: Parameters object for the method.
+            result_type: When given, deserialize the result as this type.
+
+        Returns:
+            The method result.
+
+        Raises:
+            RpcError: If the client is unusable or the connection is not open.
+
+        """
         handle = self._check_usable()
         if handle.state.value != ConnectionState.OPEN:
             raise RpcError(SERVER_ERROR, "RPC WebSocket connection is not open")
@@ -237,6 +311,16 @@ class RpcWsClient:
         return _resolve_single(data, result_type, self._registry)
 
     async def notify(self, method: str, params: Any = None) -> None:
+        """Send a JSON-RPC notification over the WebSocket.
+
+        Args:
+            method: Name of the RPC method.
+            params: Parameters object for the method.
+
+        Raises:
+            RpcError: If the client is unusable or the connection is not open.
+
+        """
         handle = self._check_usable()
         if handle.state.value != ConnectionState.OPEN:
             raise RpcError(SERVER_ERROR, "RPC WebSocket connection is not open")
@@ -246,6 +330,21 @@ class RpcWsClient:
         handle.send(json.dumps(envelope))
 
     def stream(self, method: str, params: Any = None, *, result_type: Any = None) -> RpcStream[Any]:
+        """Start a finite streaming JSON-RPC call over the WebSocket.
+
+        Args:
+            method: Name of the RPC method.
+            params: Parameters object for the method.
+            result_type: When given, deserialize each item as this type.
+
+        Returns:
+            An :class:`RpcStream` items from the server. Outside the browser
+            an already closed stream is returned.
+
+        Raises:
+            RpcError: If the client is unusable or the connection is not open.
+
+        """
         if self._ssr:
             return RpcStream(closed=True)
         handle = self._check_usable()
@@ -316,6 +415,20 @@ class RpcWsClient:
         *,
         event_type: type[E] | None = None,
     ) -> RpcSubscription[E]:
+        """Subscribe to server-side events over the WebSocket.
+
+        Outside the browser, or when the connection is closed, an already
+        closed subscription is returned.
+
+        Args:
+            method: Name of the subscription method.
+            params: Parameters object for the subscription.
+            event_type: When given, deserialize events as this type.
+
+        Returns:
+            An :class:`RpcSubscription` yielding the server's events.
+
+        """
         if self._ssr:
             return RpcSubscription(self, method, params, event_type, closed=True)
         if self._closed or self._handle is None or self._handle.state.value == ConnectionState.CLOSED:
@@ -570,6 +683,10 @@ class RpcWsClient:
             return
 
     def close(self) -> None:
+        """Close the client and all its streams and subscriptions.
+
+        Idempotent: closing an already closed client is a no-op.
+        """
         if self._closed:
             return
         for stream_id, stream in list(self._streams.items()):

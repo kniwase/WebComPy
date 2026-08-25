@@ -1,3 +1,5 @@
+"""CSS text helpers for component scoped and reactive styles."""
+
 from __future__ import annotations
 
 from collections.abc import Callable

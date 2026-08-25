@@ -1,3 +1,5 @@
+"""Error boundary element and the error propagation pipeline."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -115,6 +117,23 @@ def route_error_deferred(
 
 
 class ErrorBoundaryElement(DynamicElement):
+    """Element catching render errors from its children and rendering a fallback.
+
+    When child generation or rendering raises, the fallback generator runs
+    with the caught exception and a reset callable, and the fallback
+    children replace the failing tree. ``reset()`` retries the original
+    children.
+
+    Args:
+        children: Zero-argument callable producing the guarded children.
+        fallback: Callable receiving the caught exception and the ``reset``
+            callable, producing replacement children.
+        on_error: Optional callback invoked with each caught exception.
+        catch_events: When ``True`` errors raised by event handlers of
+            descendant elements are also captured by this boundary.
+
+    """
+
     def __init__(
         self,
         children: Callable[[], ElementChildren],
@@ -209,6 +228,7 @@ class ErrorBoundaryElement(DynamicElement):
         self._parent._re_index_children(False)
 
     def reset(self) -> None:
+        """Retry rendering the original children after a fallback was shown."""
         if not self._in_fallback:
             return
         from webcompy.elements.types._dynamic import _run_refresh_sync

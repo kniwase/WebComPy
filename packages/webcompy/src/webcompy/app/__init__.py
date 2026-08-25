@@ -1,3 +1,5 @@
+"""Application bootstrapping, configuration, rendering, and reactive app styles."""
+
 from webcompy.app._app import WebComPyApp
 from webcompy.app._config import PluginScript, WebComPyAppConfig
 from webcompy.app._render_context import RenderContext

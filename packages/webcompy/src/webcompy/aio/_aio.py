@@ -1,3 +1,5 @@
+"""Async execution helpers routed through the framework scheduler."""
+
 from __future__ import annotations
 
 import asyncio
@@ -102,6 +104,16 @@ def resolve_async(
     on_done: Callable[[T], Any] | None = None,
     on_error: Callable[[Exception], Any] | None = _log_error,
 ):
+    """Schedule a coroutine and invoke callbacks when it settles.
+
+    Args:
+        coroutine: Coroutine to run.
+        on_done: Called with the resolved value when the coroutine succeeds.
+        on_error: Called with the exception when the coroutine fails.
+            Defaults to logging the error.
+
+    """
+
     async def resolve(
         coroutine: Coroutine[Any, Any, T],
         resolver: Callable[[T], None] | None,
@@ -119,6 +131,23 @@ def resolve_async(
 
 
 class AsyncWrapper(Generic[T]):
+    """Wrap an async callable to run fire-and-forget when invoked.
+
+    Calling the wrapped callable schedules the produced coroutine through
+    ``aio_run`` and resolves it through the configured callbacks.
+
+    Args:
+        resolver: Called with the resolved value on success.
+        error: Called with the exception on failure. Defaults to logging
+            the error.
+
+    Attributes:
+        resolver: Success callback invoked with the resolved value, or
+            ``None`` when no callback was supplied.
+        error: Failure callback invoked with the raised exception.
+
+    """
+
     def __init__(
         self,
         resolver: Callable[[T], Any] | None = None,

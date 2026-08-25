@@ -1,3 +1,5 @@
+"""Browser WebSocket port using the native ``WebSocket``."""
+
 from __future__ import annotations
 
 from collections.abc import Callable

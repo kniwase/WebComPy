@@ -1,3 +1,5 @@
+"""Browser host port wrapping ``window``-level APIs."""
+
 from __future__ import annotations
 
 from collections.abc import Callable

@@ -1,3 +1,5 @@
+"""Application router with nested pages, guards, and history integration."""
+
 from __future__ import annotations
 
 import inspect
@@ -67,6 +69,36 @@ _get_path_params = re_compile(r"{([^\{\}/]+)}").findall
 
 
 class Router:
+    """Route table with nested page chains and navigation hooks.
+
+    Builds flat route matchers from nested ``RouterPage`` declarations,
+    resolves the current match reactively, and runs an async-capable
+    guard pipeline before committing navigations through the history
+    port.
+
+    Args:
+        *pages: Route page declarations.
+        default: Component rendered when no route matches, or ``None``
+            for a "Not Found" fallback.
+        history: History port driving the current path. When ``None``,
+            the port is resolved from the DI scope on first use.
+        mode: Routing mode (``"hash"`` or ``"history"``). Ignored when
+            ``history`` is provided.
+        base_url: Leading path segment stripped from paths in
+            ``"history"`` mode.
+        preload: Whether lazy routes are preloaded when the router
+            starts.
+
+    Attributes:
+        before_route_change: Hooks run before a route change commits.
+        after_route_change: Hooks run after a route change committed.
+        on_route_error: Handlers invoked when route resolution or guard
+            execution fails.
+        current_match: ``Computed[RouteMatch | None]`` for the active
+            path; ``None`` when no route matches.
+
+    """
+
     _history: HistoryPort | None
     __mode__: Literal["hash", "history"]
     __routes__: list[RouteType]
@@ -114,6 +146,18 @@ class Router:
 
     @computed_property
     def current_match(self):
+        """Current match for the active path.
+
+        Returns:
+            A ``Computed[RouteMatch | None]`` whose ``.value`` is the
+            matching ``RouteMatch``, or ``None`` when no route matches
+            the current path.
+
+        Raises:
+            Exception: If route matching raises and no ``on_route_error``
+                handler suppresses the error.
+
+        """
         try:
             return self._compute_current_match()
         except Exception as e:
@@ -426,6 +470,16 @@ class Router:
             _log_error(exc)
 
     def preload_lazy_routes(self, *, force: bool = False) -> None:
+        """Resolve lazy route components ahead of navigation.
+
+        Resolves all ``LazyComponentGenerator`` pages so their modules
+        load without delaying later navigations.
+
+        Args:
+            force: Resolve even when ``preload`` was disabled at
+                construction.
+
+        """
         if not self._preload and not force:
             return
         from webcompy.di import inject

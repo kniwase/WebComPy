@@ -1,3 +1,5 @@
+"""Incremental ``text/event-stream`` parsing and framing helpers."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

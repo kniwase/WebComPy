@@ -1,3 +1,5 @@
+"""TOML lexer built on a single token regular expression."""
+
 from __future__ import annotations
 
 import re
@@ -7,6 +9,19 @@ from webcompy.ui.code_block._tokens import Token, TokenType
 
 
 class TomlLexer:
+    """Tokenize TOML source with a single grouped regular expression.
+
+    Recognizes sections, strings, dates, numbers, booleans, and operators;
+    section headers are additionally classified from a dedicated section
+    pattern.
+
+    Attributes:
+        name: Primary name ``"toml"``.
+        aliases: Alternative lookup names (none).
+        file_extensions: Registered file extensions (``.toml``).
+
+    """
+
     name: str = "toml"
     aliases: tuple[str, ...] = ()
     file_extensions: tuple[str, ...] = (".toml",)
@@ -35,6 +50,16 @@ class TomlLexer:
     )
 
     def tokenize(self, code: str) -> Iterable[Token]:
+        """Tokenize TOML source in source order.
+
+        Args:
+            code: Source text to tokenize; empty input yields no tokens.
+
+        Yields:
+            Token: Classified spans whose concatenated values equal
+                ``code`` exactly.
+
+        """
         if not code:
             return
 

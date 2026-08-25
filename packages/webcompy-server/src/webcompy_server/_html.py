@@ -1,3 +1,5 @@
+"""HTML generation for server-side rendering and hydration payload injection."""
+
 from __future__ import annotations
 
 import html as html_module
@@ -498,6 +500,25 @@ async def generate_html(
     extra_wheel_filenames: list[str] | None = None,
     app_package_path: Path | None = None,
 ):
+    """Generate the full HTML document for the application.
+
+    Args:
+        ctx: Render context providing app config and DI scope.
+        app_package_name: Importable name of the app package.
+        dev_mode: Whether to inject dev-server reload support.
+        prerender: Whether to prerender the app root and inject hydration data.
+        wheel_filename: Filename of the app package wheel.
+        pyodide_package_names: Extra Pyodide packages to include.
+        wasm_local_urls: Mapping of package names to local WASM URLs.
+        lockfile_url: URL of the Pyodide lock file when serving remotely.
+        runtime_serving: How the PyScript runtime is served.
+        extra_wheel_filenames: Additional wheel filenames to preload.
+        app_package_path: Filesystem path of the app package for template resolution.
+
+    Returns:
+        Rendered HTML string for the document.
+
+    """
     token = _active_app_context.set(ctx)
     _set_app_instance(ctx)
     try:

@@ -1,3 +1,5 @@
+"""Client-side typed RPC streams with lifecycle states."""
+
 from __future__ import annotations
 
 import asyncio
@@ -44,6 +46,12 @@ def _decode_stream_item(data: Any, meta: Any, result_type: Any, registry: Proced
 
 
 class RpcStreamState(Enum):
+    """Lifecycle stages of an :class:`RpcStream`.
+
+    ``OPEN`` while active, ``CLOSED`` after normal exhaustion or explicit
+    closure, and ``FAILED`` when the stream failed.
+    """
+
     OPEN = "open"
     CLOSED = "closed"
     FAILED = "failed"
@@ -57,6 +65,17 @@ class RpcStream(Generic[T]):
     ``FAILED`` when the stream failed. ``.close()`` is idempotent, terminates
     the stream, and cancels the underlying transport. Streams created inside
     component setup are closed automatically on component destroy.
+
+    Args:
+        cancel: Optional callback cancelling the underlying transport.
+        decode: Optional two-argument function decoding each raw item.
+        closed: When ``True``, the stream starts already closed.
+
+    Attributes:
+        state: ``Signal[RpcStreamState]`` — ``OPEN`` while active,
+            ``CLOSED`` after normal exhaustion or explicit close, and
+            ``FAILED`` when the stream failed.
+
     """
 
     def __init__(
@@ -95,6 +114,10 @@ class RpcStream(Generic[T]):
         return item
 
     def close(self) -> None:
+        """Terminate the stream and cancel the underlying transport.
+
+        Idempotent: closing an already closed stream is a no-op.
+        """
         if self._done:
             return
         self._done = True

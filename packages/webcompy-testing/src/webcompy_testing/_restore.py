@@ -1,3 +1,5 @@
+"""Signal value restoration helpers for hydration testing."""
+
 from __future__ import annotations
 
 from logging import getLogger
@@ -27,6 +29,13 @@ def restore_signal_values(
 
     Callers that construct signals_data by hand should run ``decode()``
     on each value before passing it in.
+
+    Args:
+        component: Component instance exposing ``__signal_members__``;
+            values are assigned to the signals found there.
+        signals_data: Mapping of signal attribute names to already-decoded
+            values. ``None`` or empty skips restoration entirely.
+
     """
     if not signals_data:
         return

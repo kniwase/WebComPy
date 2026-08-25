@@ -1,3 +1,5 @@
+"""Browser scroll management across route navigations."""
+
 from __future__ import annotations
 
 from typing import Any

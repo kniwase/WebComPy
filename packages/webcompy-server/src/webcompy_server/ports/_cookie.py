@@ -1,3 +1,5 @@
+"""Server-side cookie port."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -23,6 +25,13 @@ class _PendingCookieWrite:
 
 
 class ServerCookiePort(CookiePort):
+    """Server-side cookie storage backed by request headers and pending writes.
+
+    Args:
+        cookie_header: Raw ``Cookie`` header value from the request.
+
+    """
+
     def __init__(self, cookie_header: str = "") -> None:
         self._cookies: dict[str, str] = {}
         self._pending: dict[tuple[str, str], _PendingCookieWrite] = {}
@@ -33,6 +42,15 @@ class ServerCookiePort(CookiePort):
                     self._cookies[unquote(key)] = unquote(value)
 
     def get(self, name: str) -> str | None:
+        """Return the value of ``name`` if present.
+
+        Args:
+            name: Cookie name.
+
+        Returns:
+            Cookie value or ``None`` when not set.
+
+        """
         return self._cookies.get(name)
 
     def set(
@@ -48,6 +66,23 @@ class ServerCookiePort(CookiePort):
         httponly: bool = False,
         samesite: str | None = None,
     ) -> None:
+        """Set a cookie and record a pending ``Set-Cookie`` header.
+
+        Args:
+            name: Cookie name.
+            value: Cookie value.
+            max_age: Max-Age in seconds.
+            expires: Expiration datetime.
+            path: Cookie path.
+            domain: Cookie domain.
+            secure: Whether to set the ``Secure`` flag.
+            httponly: Whether to set the ``HttpOnly`` flag.
+            samesite: ``SameSite`` attribute value.
+
+        Returns:
+            ``None``.
+
+        """
         self._cookies[name] = value
         self._pending[(name, path)] = _PendingCookieWrite(
             name=name,
@@ -62,13 +97,35 @@ class ServerCookiePort(CookiePort):
         )
 
     def delete(self, name: str, path: str = "/") -> None:
+        """Delete a cookie and record a clearing ``Set-Cookie`` header.
+
+        Args:
+            name: Cookie name.
+            path: Cookie path.
+
+        Returns:
+            ``None``.
+
+        """
         self._cookies.pop(name, None)
         self._pending[(name, path)] = _PendingCookieWrite(name=name, value="", max_age=0, path=path)
 
     def get_all(self) -> dict[str, str]:
+        """Return a copy of all cookies.
+
+        Returns:
+            Mapping of cookie names to values.
+
+        """
         return dict(self._cookies)
 
     def get_pending_set_cookie_headers(self) -> list[str]:
+        """Build pending ``Set-Cookie`` header strings.
+
+        Returns:
+            List of serialized ``Set-Cookie`` header values.
+
+        """
         headers: list[str] = []
         for write in self._pending.values():
             cookie = SimpleCookie()

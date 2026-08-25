@@ -1,3 +1,5 @@
+"""Persistent ``Signal`` helpers backed by browser storage APIs."""
+
 from __future__ import annotations
 
 import contextlib
@@ -265,6 +267,20 @@ def use_local_storage(
     type (for example an optional value), annotate the variable::
 
         theme: Signal[str | None] = use_local_storage("theme", None)
+
+    Args:
+        key: Storage key read at creation time and written back on every
+            subsequent signal update.
+        default: Initial value used when ``key`` is absent, or a
+            zero-argument factory producing it.
+        sync_tabs: When ``True`` (browser only), the signal also reacts to
+            ``storage`` events fired by other tabs of the same origin.
+
+    Returns:
+        A ``Signal[T]`` persisted to ``localStorage`` in the browser; a
+        plain signal seeded with ``default`` in any non-PyScript
+        environment.
+
     """
     if callable(default):
         _validate_factory(default)
@@ -285,6 +301,18 @@ def use_session_storage(key: str, default: T | Callable[[], T]) -> Signal[T]:
 
     Same semantics as :func:`use_local_storage` but backed by
     ``sessionStorage`` (per-tab lifetime).
+
+    Args:
+        key: Storage key read at creation time and written back on every
+            subsequent signal update.
+        default: Initial value used when ``key`` is absent, or a
+            zero-argument factory producing it.
+
+    Returns:
+        A ``Signal[T]`` persisted to ``sessionStorage`` in the browser; a
+        plain signal seeded with ``default`` in any non-PyScript
+        environment.
+
     """
     if callable(default):
         _validate_factory(default)

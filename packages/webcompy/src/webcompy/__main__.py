@@ -1,3 +1,5 @@
+"""Command-line entry point delegating to ``webcompy-cli``."""
+
 import sys
 
 
