@@ -86,6 +86,7 @@ Watch for these WebComPy-specific issues that generic reviewers miss. The author
 - **Async Dynamic Element Refresh** — `async-rendering/spec.md`
 - **Hydration Guard** — `async-rendering/spec.md`, `hydration-data-transfer/spec.md`
 - **Node Cache Strict is-None Check** — `async-rendering/spec.md`
+- **Browser Test Tier Importability** — `browser-test-harness/spec.md`
 - **DI Scope Rules** — `di-scope/spec.md`
 - **Hydration** — `hydration-data-transfer/spec.md`
 - **Hydration Adopt & Render** — `elements/spec.md`, `async-rendering/spec.md`

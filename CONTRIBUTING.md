@@ -236,10 +236,28 @@ See [AGENTS.md](AGENTS.md#framework-invariants) for critical invariants
 
 ### Testing
 
-Unit tests and E2E tests live in physically separate directories and use distinct
-invocation paths:
+Unit tests, browser tests, and E2E tests live in physically separate directories
+and use distinct invocation paths:
 
 - Unit tests: `uv run python -m pytest tests/ --tb=short` (runs only tests under `tests/`)
+- Browser tests: `scripts/run-browser-tests.sh` (canonical entry point; auto-sets `WEBCOMPY_RUN_BROWSER=1`)
+  - Executes `tests/browser/**` inside a real PyScript runtime in headless Chromium
+  - Source-mount dev loop: `WEBCOMPY_BROWSER_SOURCE=1 scripts/run-browser-tests.sh`
+  - Direct invocation (`uv run pytest tests/browser/`) fails with `pytest.UsageError`
+    unless the `WEBCOMPY_RUN_BROWSER=1` environment variable is set
+  - Browser tests are excluded from default discovery even when
+    `WEBCOMPY_RUN_BROWSER=1` is set, unless a path argument explicitly selects
+    `tests/browser/**` (a gated bare `uv run pytest` stays on the unit tier)
+  - Browser test functions are plain module-level functions in pilots;
+    class-based tests are technically supported via `::` qualname resolution
+    but not exercised, while stacked `@pytest.mark.parametrize` marks and
+    duplicate parameter values within a single mark are rejected by both the
+    driver and the in-page runner (ambiguous payload dispatch)
+  - Top-level imports in browser test modules must be CPython-importable;
+    `import js` / `from pyscript import ...` belong inside function bodies
+    and `Fake*` symbol imports from `webcompy_testing` are forbidden at top
+    level (`webcompy_testing.browser_runner` is allowed as the tier API)
+    (enforced by `scripts/check-browser-imports.py`)
 - E2E tests: `scripts/run-e2e-tests.sh` (canonical entry point; auto-sets `WEBCOMPY_RUN_E2E=1`)
 - E2E for a single group: `scripts/run-e2e-tests.sh <group-name>`
 - Direct invocation of E2E tests (`uv run pytest e2e/`) fails with `pytest.UsageError`

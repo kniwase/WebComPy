@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,6 +13,30 @@ from webcompy_testing import (
     FakeDOMNode,
     FakeHistoryPort,
 )
+
+_BROWSER_TARGET_RE = re.compile(r"(^|/)tests/browser(/|$)")
+_TESTS_DIR = Path(__file__).resolve().parent
+
+
+def _invocation_targets_browser_tier(args: list[str]) -> bool:
+    return any(_BROWSER_TARGET_RE.search(arg.replace("\\", "/").rstrip("/")) for arg in args)
+
+
+def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool | None:
+    """Exclude the browser tier unless the invocation explicitly targets it.
+
+    Default discovery (``uv run pytest``, no path arguments) never collects
+    ``tests/browser/**`` — even when ``WEBCOMPY_RUN_BROWSER=1`` is set — so a
+    gated bare run stays on the unit tier. Explicitly selecting the directory,
+    one of its files, or a node id inside it bypasses the exclusion.
+    """
+    try:
+        relative = collection_path.relative_to(_TESTS_DIR)
+    except ValueError:
+        return None
+    if relative.parts[:1] == ("browser",) and not _invocation_targets_browser_tier(list(config.args)):
+        return True
+    return None
 
 
 class FakePyScriptFfi:
