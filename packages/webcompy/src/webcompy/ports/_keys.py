@@ -12,6 +12,7 @@ from webcompy.ports._history import HistoryPort
 from webcompy.ports._host import HostPort
 from webcompy.ports._markdown import MarkdownPort
 from webcompy.ports._media_query import MediaQueryPort
+from webcompy.ports._middleware import FetchMiddlewareRegistry
 from webcompy.ports._resource import ResourcePort
 from webcompy.ports._transition import TransitionPort
 from webcompy.ports._websocket import WebSocketPort
@@ -44,3 +45,5 @@ TRANSITION_PORT_KEY = InjectKey[TransitionPort]("webcompy-port-transition")
 """Injection key for the ``TransitionPort`` implementation."""
 WEBSOCKET_PORT_KEY = InjectKey[WebSocketPort]("webcompy-port-websocket")
 """Injection key for the ``WebSocketPort`` implementation."""
+FETCH_MIDDLEWARE_KEY = InjectKey[FetchMiddlewareRegistry]("webcompy-fetch-middleware")
+"""Injection key for the per-context ``FetchMiddlewareRegistry``."""

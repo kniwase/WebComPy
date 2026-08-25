@@ -2,10 +2,10 @@
 
 ## 1. Fetch Middleware Foundation
 
-- [ ] 1.1 Define `FetchMiddleware` type, request view object (`url`/`method`/`headers`/`body`), and `FetchMiddlewareRegistry` (additive `use()`, ordered read-only view) in `packages/webcompy/src/webcompy/ports/_fetch.py`; add `FETCH_MIDDLEWARE_KEY` to `ports/_keys.py`
-- [ ] 1.2 Implement `_MiddlewareFetchPort(FetchPort)` wrapping `fetch` and `stream` with reversed-order chain composition; delegate `populate_from_transfer`, `get_transfer_data`, `clear_cache`, `close`, `is_self_site_url`, `noop`
-- [ ] 1.3 Support the interceptor paths: return-without-`next` and `next(request, response=...)` / stream equivalent
-- [ ] 1.4 Add unit tests: pass-through, request mutation, ordering (`[a,b,c]` → a→b→c→port), interception, synthetic response via `next(response=...)`
+- [x] 1.1 Define `FetchMiddleware` type, request view object (`url`/`method`/`headers`/`body`), and `FetchMiddlewareRegistry` (additive `use()`, ordered read-only view) in `packages/webcompy/src/webcompy/ports/_fetch.py`; add `FETCH_MIDDLEWARE_KEY` to `ports/_keys.py`
+- [x] 1.2 Implement `_MiddlewareFetchPort(FetchPort)` wrapping `fetch` and `stream` with reversed-order chain composition; delegate `populate_from_transfer`, `get_transfer_data`, `clear_cache`, `close`, `is_self_site_url`, `noop`
+- [x] 1.3 Support the interceptor paths: return-without-`next` and `next(request, response=...)` / stream equivalent
+- [x] 1.4 Add unit tests: pass-through, request mutation, ordering (`[a,b,c]` → a→b→c→port), interception, synthetic response via `next(response=...)`
 
 ## 2. RPC Middleware Foundation
 
