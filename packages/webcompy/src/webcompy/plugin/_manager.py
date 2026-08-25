@@ -85,6 +85,29 @@ class PluginManager:
                 ctx.di_scope.provide(key, value)
         for instance in self._plugin_instances:
             instance.on_render_context_init(ctx)
+        from webcompy.di._keys import RPC_MIDDLEWARE_KEY
+        from webcompy.ports._keys import FETCH_MIDDLEWARE_KEY
+
+        for plugin_cls in self._plugin_classes:
+            fetch_middlewares = plugin_cls.get_fetch_middlewares()
+            if fetch_middlewares:
+                fetch_registry = ctx.di_scope.inject(
+                    FETCH_MIDDLEWARE_KEY,  # type: ignore[type-var]
+                    default=None,
+                )
+                if fetch_registry is not None:
+                    for middleware in fetch_middlewares:
+                        fetch_registry.use(middleware)  # type: ignore[attr-defined]
+        for plugin_cls in self._plugin_classes:
+            rpc_middlewares = plugin_cls.get_rpc_middlewares()
+            if rpc_middlewares:
+                rpc_registry = ctx.di_scope.inject(
+                    RPC_MIDDLEWARE_KEY,  # type: ignore[type-var]
+                    default=None,
+                )
+                if rpc_registry is not None:
+                    for middleware in rpc_middlewares:
+                        rpc_registry.use(middleware)  # type: ignore[attr-defined]
 
     def call_on_app_ready(self, ctx: RenderContext) -> None:
         """Notify all plugins that the application is ready.

@@ -137,6 +137,8 @@ class RenderContext(ABC):
 
         app._plugin_manager.init_render_context(self)
 
+        self._assemble_fetch_middleware()
+
         from webcompy.ui.theme._manager import ThemeManager
         from webcompy.ui.theme._theme import THEME_KEY, Theme
 
@@ -181,6 +183,18 @@ class RenderContext(ABC):
 
     @abstractmethod
     def _register_ports(self) -> None: ...
+
+    def _assemble_fetch_middleware(self) -> None:
+        """Wrap the fetch port in the registry's middleware chain."""
+
+        from webcompy.ports._keys import FETCH_MIDDLEWARE_KEY, FETCH_PORT_KEY
+        from webcompy.ports._middleware import _MiddlewareFetchPort
+
+        registry = self._di_scope.inject(FETCH_MIDDLEWARE_KEY, default=None)  # type: ignore[type-var]
+        port = self._di_scope.inject(FETCH_PORT_KEY, default=None)  # type: ignore[type-var]
+        if registry is None or port is None:
+            return
+        self._di_scope.provide(FETCH_PORT_KEY, _MiddlewareFetchPort(port, registry))  # type: ignore[type-var]
 
     async def render_html(self, **kwargs: Any) -> str:
         """Render the document into an HTML string.
@@ -579,6 +593,7 @@ class BrowserRenderContext(RenderContext):
             CUSTOM_ELEMENT_PORT_KEY,
             DOM_PORT_KEY,
             EVENT_SOURCE_PORT_KEY,
+            FETCH_MIDDLEWARE_KEY,
             FETCH_PORT_KEY,
             FFI_PORT_KEY,
             HISTORY_PORT_KEY,
@@ -609,6 +624,13 @@ class BrowserRenderContext(RenderContext):
         self._di_scope.provide(MARKDOWN_PORT_KEY, DefaultMarkdownParser())
         self._di_scope.provide(TRANSITION_PORT_KEY, BrowserTransitionPort())
         self._di_scope.provide(WEBSOCKET_PORT_KEY, BrowserWebSocketPort())
+
+        from webcompy.di._keys import RPC_MIDDLEWARE_KEY
+        from webcompy.ports._middleware import FetchMiddlewareRegistry
+        from webcompy.rpc._middleware import RpcMiddlewareRegistry
+
+        self._di_scope.provide(FETCH_MIDDLEWARE_KEY, FetchMiddlewareRegistry())
+        self._di_scope.provide(RPC_MIDDLEWARE_KEY, RpcMiddlewareRegistry())
 
         if self._config.scroll_restoration and ENVIRONMENT == "pyscript":
             from webcompy.ports._browser._raw import browser as _raw_browser

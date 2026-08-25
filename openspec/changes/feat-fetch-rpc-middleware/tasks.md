@@ -16,10 +16,10 @@
 
 ## 3. Assembly and Plugin Hooks
 
-- [ ] 3.1 Create fresh registries in both `BrowserRenderContext._register_ports` and `ServerRenderContext._register_ports` (`webcompy_server/_context.py`)
-- [ ] 3.2 Add `get_fetch_middlewares()` / `get_rpc_middlewares()` default-empty hooks to `WebComPyPlugin`; aggregate in declaration order in `PluginManager.init_render_context` onto the registries
-- [ ] 3.3 Assemble chains after plugin initialization in `RenderContext.__init__`: wrap `FETCH_PORT_KEY` (and resolve RPC registry wrapping) only when middlewares are non-empty; re-provide keys
-- [ ] 3.4 Add tests: zero-middleware requests incur only a generation check and behave identically to the bare port (delegation verified), plugin hook order matches `AppConfig.plugins` order, hydration cache seeded through wrapper, blocked-path guard intact under middleware, late `use()` after boot takes effect on subsequent fetches
+- [x] 3.1 Create fresh registries in both `BrowserRenderContext._register_ports` and `ServerRenderContext._register_ports` (`webcompy_server/_context.py`)
+- [x] 3.2 Add `get_fetch_middlewares()` / `get_rpc_middlewares()` default-empty hooks to `WebComPyPlugin`; aggregate in declaration order in `PluginManager.init_render_context` onto the registries
+- [x] 3.3 Assemble chains after plugin initialization in `RenderContext.__init__`: wrap `FETCH_PORT_KEY` (and resolve RPC registry wrapping) only when middlewares are non-empty; re-provide keys
+- [x] 3.4 Add tests: zero-middleware requests incur only a generation check and behave identically to the bare port (delegation verified), plugin hook order matches `AppConfig.plugins` order, hydration cache seeded through wrapper, blocked-path guard intact under middleware, late `use()` after boot takes effect on subsequent fetches
 
 ## 4. Utilities and Exports
 
