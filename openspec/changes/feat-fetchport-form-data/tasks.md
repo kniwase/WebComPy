@@ -12,13 +12,13 @@
 
 ## 3. HttpClient integration
 
-- [ ] 3.1 Rewrite the form branch in `HttpClient.request()` (`packages/webcompy/src/webcompy/ajax/_fetch.py`) so `form_data` is multipart-encoded and dispatched through `inject(FETCH_PORT_KEY).fetch(...)`; set `Content-Type` only when the caller did not supply one
-- [ ] 3.2 Remove the direct `_raw_browser` import and `FFI_PORT_KEY` usage from the `form_data` path; keep a slim browser-only branch for `form_element` that raises `WebComPyHttpClientException` with a descriptive message outside the browser
-- [ ] 3.3 Add unit tests using `FakeFetchPort`: SSR-style self-site POST with `form_data`, explicit caller `Content-Type` preserved, and non-browser `form_element` error message
-- [ ] 3.4 Verify no remaining references to `_raw_browser` / `FFI_PORT_KEY` in `webcompy/ajax/`
+- [x] 3.1 Rewrite the form branch in `HttpClient.request()` (`packages/webcompy/src/webcompy/ajax/_fetch.py`) so `form_data` is multipart-encoded and dispatched through `inject(FETCH_PORT_KEY).fetch(...)`; set `Content-Type` only when the caller did not supply one
+- [x] 3.2 Remove the direct `_raw_browser` import and `FFI_PORT_KEY` usage from the `form_data` path; keep a slim browser-only branch for `form_element` that raises `WebComPyHttpClientException` with a descriptive message outside the browser
+- [x] 3.3 Add unit tests using `FakeFetchPort`: SSR-style self-site POST with `form_data`, explicit caller `Content-Type` preserved, and non-browser `form_element` error message
+- [x] 3.4 Verify no remaining references to `_raw_browser` / `FFI_PORT_KEY` in `webcompy/ajax/`
 
 ## 4. Specs, docs, and validation
 
-- [ ] 4.1 Run `scripts/check-docstrings.py` and fix any coverage or style gaps introduced by this change
-- [ ] 4.2 Run local CI checks: `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short`
-- [ ] 4.3 Run `openspec validate feat-fetchport-form-data --strict` and resolve any issues
+- [x] 4.1 Run `scripts/check-docstrings.py` and fix any coverage or style gaps introduced by this change
+- [x] 4.2 Run local CI checks: `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run python -m pytest tests/ --tb=short`
+- [x] 4.3 Run `openspec validate feat-fetchport-form-data --strict` and resolve any issues
