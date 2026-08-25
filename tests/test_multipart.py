@@ -1,3 +1,5 @@
+import pytest
+
 from webcompy.ajax._multipart import encode_multipart
 
 
@@ -43,3 +45,9 @@ class TestEncodeMultipart:
     def test_multibyte_text_values_are_utf8_encoded(self):
         body, _ = encode_multipart({"greeting": "こんにちは"})
         assert "こんにちは".encode() in body
+
+    def test_field_name_with_quote_or_crlf_raises(self):
+        with pytest.raises(ValueError, match="form field name"):
+            encode_multipart({'"bad"': "1"})
+        with pytest.raises(ValueError, match="form field name"):
+            encode_multipart({"a\r\nb": "1"})

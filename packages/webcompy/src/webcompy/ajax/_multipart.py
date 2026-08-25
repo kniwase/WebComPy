@@ -15,10 +15,15 @@ def encode_multipart(fields: dict[str, str | bytes]) -> tuple[bytes, str]:
         A tuple of the encoded body bytes and the ``Content-Type`` header
         value carrying the generated boundary.
 
+    Raises:
+        ValueError: If a field name contains ``"``, ``\\r``, or ``\\n``.
+
     """
     boundary = secrets.token_hex(_BOUNDARY_LENGTH)
     parts: list[bytes] = []
     for name, value in fields.items():
+        if '"' in name or "\r" in name or "\n" in name:
+            raise ValueError("form field name must not contain '\"', CR or LF")
         payload = value.encode("utf-8") if isinstance(value, str) else value
         parts.append(
             f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n'.encode() + payload + b"\r\n"
