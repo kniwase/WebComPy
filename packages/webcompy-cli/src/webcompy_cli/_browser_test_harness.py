@@ -282,6 +282,7 @@ def _ensure_pyodide_package_files(
     cache_dir: Path,
     *,
     package_names: tuple[str, ...],
+    pyscript_version: str,
 ) -> None:
     """Fetch the Pyodide-distribution wheels needed by the harness page locally.
 
@@ -289,9 +290,17 @@ def _ensure_pyodide_package_files(
     (``webcompy_testing`` -> ``webcompy_server.ports`` -> ``httpx`` /
     ``starlette``) needs its third-party imports present in the interpreter.
     ``package_names`` must already be a resolved dependency closure.
+
+    Args:
+        runtime_assets: Asset map (filename -> (path, sha256)) to extend.
+        pyodide_version: Pyodide distribution version.
+        cache_dir: Runtime asset cache root.
+        package_names: Resolved pyodide dependency closure.
+        pyscript_version: PyScript version key selecting the cache directory.
+
     """
     packages = fetch_pyodide_lock(pyodide_version, cache_dir).get("packages", {})
-    dest_dir = cache_dir / "runtime-assets" / PYSCRIPT_VERSION / "pyodide"
+    dest_dir = cache_dir / "runtime-assets" / pyscript_version / "pyodide"
     for name in package_names:
         info = packages.get(name)
         if info is None:
@@ -333,17 +342,34 @@ def create_harness_app(
     base_url: str,
     supply_mode: Literal["wheel", "source"] | None = None,
     dual_test_relpaths: list[str] | None = None,
+    pyscript_version: str | None = None,
 ) -> HarnessServer:
-    """Assemble the harness application serving assets, files, config, manifest, and page."""
+    """Assemble the harness application serving assets, files, config, manifest, and page.
+
+    Args:
+        repo_root: Repository root containing tests and framework sources.
+        cache_dir: Runtime asset cache root.
+        base_url: Base URL the harness page is served under.
+        supply_mode: Framework supply mode override (default resolved from
+            ``WEBCOMPY_BROWSER_SOURCE``).
+        dual_test_relpaths: Extra eligible test modules to mount and expose
+            via the manifest for the dual-run sweep.
+        pyscript_version: PyScript version to serve runtime assets for;
+            defaults to the pinned ``PYSCRIPT_VERSION``. Used by the
+            version-bump sweep to boot a candidate interpreter without
+            changing the pin.
+
+    """
     mode = supply_mode or resolve_supply_mode()
+    version = pyscript_version or PYSCRIPT_VERSION
     print(
-        f"[webcompy-browser-harness] preparing runtime assets ({mode} mode)...",
+        f"[webcompy-browser-harness] preparing runtime assets ({mode} mode, pyscript {version})...",
         flush=True,
     )
-    pyodide_version = get_pyodide_version(PYSCRIPT_VERSION)
+    pyodide_version = get_pyodide_version(version)
     runtime_assets = download_runtime_assets(
         pyodide_version,
-        PYSCRIPT_VERSION,
+        version,
         cache_dir,
     )
     package_closure = resolve_pyodide_package_closure(
@@ -358,6 +384,7 @@ def create_harness_app(
         pyodide_version,
         cache_dir,
         package_names=package_closure,
+        pyscript_version=version,
     )
     test_rels = merge_test_relpaths(repo_root, dual_test_relpaths)
     manifest_modules = [rel[: -len(".py")].replace("/", ".") for rel in test_rels]

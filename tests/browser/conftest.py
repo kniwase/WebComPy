@@ -155,7 +155,13 @@ def browser_harness(request: pytest.FixtureRequest):
 
     port = reserve_port()
     base_url = f"http://127.0.0.1:{port}/"
-    harness = create_harness_app(repo_root, cache_dir, base_url=base_url, dual_test_relpaths=dual_rels)
+    harness = create_harness_app(
+        repo_root,
+        cache_dir,
+        base_url=base_url,
+        dual_test_relpaths=dual_rels,
+        pyscript_version=os.environ.get("WEBCOMPY_PYSCRIPT_CANDIDATE") or None,
+    )
     process = serve_harness(harness, port=port)
     driver = BrowserHarnessDriver(base_url)
     request.session._browser_driver = driver  # type: ignore[attr-defined]

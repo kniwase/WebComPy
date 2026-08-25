@@ -15,7 +15,7 @@
 
 ## 4. Version-bump sweep
 
-- [ ] 4.1 Implement version-bump sweep orchestration: with `WEBCOMPY_PYSCRIPT_CANDIDATE=<version>` (populated from `workflow_dispatch` `pyscript_candidate_version`), re-download `runtime-assets/{candidate}/` via the existing runtime downloader, execute probes (and, when requested, the dual-run tier) at the pinned and candidate versions in the same harness code, diff probes into `{only_pinned_pass, only_candidate_pass, both_pass, both_fail}` (and dual-run buckets likewise), and write `artifacts/browser-version-sweep.json`; fail the CI job when any `probes` probe regresses.
+- [x] 4.1 Implement version-bump sweep orchestration: with `WEBCOMPY_PYSCRIPT_CANDIDATE=<version>` (populated from `workflow_dispatch` `pyscript_candidate_version`), re-download `runtime-assets/{candidate}/` via the existing runtime downloader, execute probes (and, when requested, the dual-run tier) at the pinned and candidate versions in the same harness code, diff probes into `{only_pinned_pass, only_candidate_pass, both_pass, both_fail}` (and dual-run buckets likewise), and write `artifacts/browser-version-sweep.json`; fail the CI job when any `probes` probe regresses.
 
 ## 5. inspect pyexec (inspect-pyexec, independent from inspect-cli,案B)
 
