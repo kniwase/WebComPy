@@ -30,10 +30,18 @@ def RpcMockPage(context: ComponentContext[None]):
             {"@click": call_fetch, "data-testid": "mock-fetch-button"},
             "Call fetch",
         ),
-        html.DIV({"data-testid": "mock-fetch-result"}, f"Fetch: {fetch_result}"),
+        html.DIV(
+            {"data-testid": "mock-fetch-result"},
+            html.SPAN({}, "Fetch: "),
+            html.SPAN({}, fetch_result),
+        ),
         html.BUTTON(
             {"@click": call_rpc, "data-testid": "mock-rpc-button"},
             "Call RPC",
         ),
-        html.DIV({"data-testid": "mock-rpc-result"}, f"RPC: {rpc_result}"),
+        html.DIV(
+            {"data-testid": "mock-rpc-result"},
+            html.SPAN({}, "RPC: "),
+            html.SPAN({}, rpc_result),
+        ),
     )

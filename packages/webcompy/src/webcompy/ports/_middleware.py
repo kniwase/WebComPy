@@ -232,6 +232,18 @@ class _MiddlewareFetchPort(FetchPort):
         """
         return self._inner.is_self_site_url(url)
 
+    def __getattr__(self, name: str) -> Any:
+        """Delegate attribute access to the wrapped port.
+
+        Args:
+            name: Attribute name.
+
+        Returns:
+            The wrapped port's attribute.
+
+        """
+        return getattr(self._inner, name)
+
     @property
     def noop(self) -> bool:
         """Whether the wrapped port degrades streaming operations.
