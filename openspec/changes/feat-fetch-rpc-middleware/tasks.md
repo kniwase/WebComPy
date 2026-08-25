@@ -28,8 +28,8 @@
 
 ## 5. Sample Plugins and E2E
 
-- [ ] 5.1 Create sample plugins used by tests/demo: URL-pattern fetch interceptor plugin and procedure-mocking RPC plugin (browser-runnable, no server)
-- [ ] 5.2 Add E2E scenario exercising a mocked RPC call inside a PyScript page without an RPC server route registered, asserting identical behavior on prod and static serving modes
+- [x] 5.1 Create sample plugins used by tests/demo: URL-pattern fetch interceptor plugin and procedure-mocking RPC plugin (browser-runnable, no server)
+- [x] 5.2 Add E2E scenario exercising a mocked RPC call inside a PyScript page without an RPC server route registered, asserting identical behavior on prod and static serving modes
 
 ## 6. Verification
 

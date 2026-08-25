@@ -45,7 +45,11 @@ app = WebComPyApp(
     router=router,
     config=WebComPyAppConfig(
         base_url="/",
-        plugins=["my_app.plugins:ErudaPlugin"],
+        plugins=[
+            "my_app.plugins:ErudaPlugin",
+            "my_app.plugins:MockFetchPlugin",
+            "my_app.plugins:MockRpcPlugin",
+        ],
     ),
 )
 app.provide(AppThemeKey, "app-dark-theme")
