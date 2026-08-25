@@ -59,16 +59,22 @@ di_scope.provide(FETCH_PORT_KEY, inner)
 
 - Fetch layer: returning without `next`, or calling `next(request, response=synthetic_response)`, skips the inner port. Synthetic responses at this layer remain safe: RPC callers still run `json_loads` + `_resolve_single` on them.
 - RPC layer: `next(ctx, response={"result": ..., "meta": ...})` short-circuits `_post_envelope` but the chain runner feeds the synthetic fragment through the same `_resolve_single(result_type, ...)` path (and `_decode_stream_item` for streams), preserving `apply_transfer_meta` + `from_json` guarantees. Returning a bare value without `next` is **not** supported (would bypass validation); the runner documents this.
-- Batch: middleware wraps the batch dispatch as a whole (`ctx.method` reflects `"__batch__"`-style metadata plus entries) — per-entry validation stays in the existing batch resolution loop.
-- Streaming: `await next(request_or_ctx)` resolves to a `FetchStream`/`RpcStream` once headers/status are committed, before body consumption; interceptors may synthesize a stream (e.g. buffered single-chunk) and downstream item decoding still applies.
+- Batch: middleware wraps the batch dispatch as a whole (`ctx.is_batch=True`, `ctx.batch_entries=[(method, params, result_type), ...]`) — per-entry validation stays in the existing batch resolution loop; a synthesized `response=` list is resolved positionally against those entries.
+- Streaming (fetch): `await next(request)` resolves to a `FetchStream` once headers/status are committed, before body consumption; interceptors may substitute a stream and downstream consumption still applies.
+- Streaming (RPC): `_stream_impl` is synchronous and pumps inside a background task, so the RPC middleware chain for streams executes when the pump task starts (`_setup_and_pump`). `next` therefore resolves at header-commit time, matching the contract, but middleware side effects occur later than for `call`/`notify`. Substitution uses `next(ctx, stream=synthetic)`; per-item decoding (`_decode_stream_item`) is unchanged.
+- Normalization: `_resolve_single` requires `jsonrpc == "2.0"`, so the chain runner normalizes a synthesized fragment via `{"jsonrpc": "2.0", **fragment}` before validation. Middleware authors write only `{"result": ..., "meta": ...}`.
 
 ### 5. Wrapper delegation contract
 
 `_MiddlewareFetchPort` delegates `populate_from_transfer`, `get_transfer_data` (server), `clear_cache`, `close`, `is_self_site_url`, and `noop` to the innermost concrete port so hydration transfer, blocked-path guards, and SSE degradation keep working unchanged. Middleware never receives these internal methods.
 
+### 6. Late registration via generation counter
+
+A browser app lives in a single render context for its lifetime, so an eagerly assembled chain would freeze out later registrations. The fetch wrapper is instead installed **always** (even with zero middlewares) and consults a monotonically increasing `generation` counter on the registry: `use()` bumps the counter and the wrapper rebuilds its cached sub-chains only when the counter changed — one integer comparison per request on the steady-state path. RPC middleware reads the registry snapshot at each operation, so late registration is naturally effective there. This supersedes the earlier "zero-wrapper fast path" idea (which would have made post-boot registration inert).
+
 ## Risks / Trade-offs
 
-- [Eager assembly misses post-init child-scope registrations] → Documented limitation; utilities called during component setup target the next request/render context (browser: reload-free navigations reuse context; tests create contexts explicitly).
+- [Always-wrap adds a per-request generation check] → Single integer comparison on the steady-state path; sub-chains are rebuilt only when the registry changes.
 - [Plugin replaces FETCH_PORT_KEY entirely, dropping middleware] → Assembly runs last, so replacement becomes innermost; middleware still applies. Whole-port replacement + middleware interplay documented.
 - [`Content-Type` clobbered by middleware] → Runner forces `application/json` after merging user headers.
 - [Synthetic RPC fragments malformed] → `_resolve_single` raises `RpcError(INTERNAL_ERROR/SERVER_ERROR)`; unit tests cover error surfacing.
@@ -77,7 +83,7 @@ di_scope.provide(FETCH_PORT_KEY, inner)
 
 ## Migration Plan
 
-Purely additive; no existing call sites change behavior when no middleware is registered (zero-wrapper fast path: empty registry returns the inner port unwrapped). Rollback = revert. Specs synced at archive.
+Purely additive; no existing call sites change behavior when no middleware is registered (the always-installed wrapper performs only a generation comparison and delegates everything to the inner port). Rollback = revert. Specs synced at archive.
 
 ## Open Questions
 
