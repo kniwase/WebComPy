@@ -311,6 +311,72 @@ class TestHttpClientFormData:
         assert port.requests == []
 
 
+class TestHttpClientRawBody:
+    def _scope(self, responses):
+        scope = DIScope()
+        port = FakeFetchPort(responses=responses)
+        scope.provide(FETCH_PORT_KEY, port)
+        return scope, port
+
+    @pytest.mark.asyncio
+    async def test_bytes_body_preserved(self):
+        scope, port = self._scope({("POST", "/api/blob"): _port_response("{}")})
+        with scope:
+            await HttpClient.post("/api/blob", body_data=b"\x00\x01\xff")
+        assert port.requests[0].body == b"\x00\x01\xff"
+        assert isinstance(port.requests[0].body, bytes)
+
+    @pytest.mark.asyncio
+    async def test_non_utf8_bytes_does_not_raise(self):
+        scope, port = self._scope({("POST", "/api/blob"): _port_response("{}")})
+        with scope:
+            await HttpClient.post("/api/blob", body_data=b"\xff\xfe")
+        assert port.requests[0].body == b"\xff\xfe"
+
+    @pytest.mark.asyncio
+    async def test_str_body_preserved(self):
+        scope, port = self._scope({("POST", "/api/text"): _port_response("{}")})
+        with scope:
+            await HttpClient.post("/api/text", body_data="hello")
+        assert port.requests[0].body == "hello"
+        assert isinstance(port.requests[0].body, str)
+
+
+class TestHttpClientHeaderFidelity:
+    def _scope(self, responses):
+        scope = DIScope()
+        port = FakeFetchPort(responses=responses)
+        scope.provide(FETCH_PORT_KEY, port)
+        return scope, port
+
+    @pytest.mark.asyncio
+    async def test_explicit_multipart_content_type_not_quoted(self):
+        scope, port = self._scope({("POST", "/api/submit"): _port_response("{}")})
+        with scope:
+            await HttpClient.post(
+                "/api/submit",
+                headers={"Content-Type": "multipart/form-data; boundary=custom"},
+                form_data={"a": "1"},
+            )
+        content_type = next(v for k, v in port.requests[0].headers.items() if k.lower() == "content-type")
+        assert content_type == "multipart/form-data; boundary=custom"
+        assert "%3B" not in content_type
+        assert "%20" not in content_type
+
+    @pytest.mark.asyncio
+    async def test_charset_content_type_not_quoted(self):
+        scope, port = self._scope({("POST", "/api/json"): _port_response("{}")})
+        with scope:
+            await HttpClient.post(
+                "/api/json",
+                headers={"Content-Type": "application/json; charset=utf-8"},
+                json={"a": 1},
+            )
+        content_type = next(v for k, v in port.requests[0].headers.items() if k.lower() == "content-type")
+        assert content_type == "application/json; charset=utf-8"
+        assert "%3B" not in content_type
+
+
 def _port_response(text, status_code=200, ok=True, headers=None):
     from webcompy.ports._fetch import Response as PortResponse
 
