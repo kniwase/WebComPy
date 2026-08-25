@@ -6,7 +6,7 @@ Two independent interception needs converge on the same mechanism: production cr
 
 Current state on `origin/main`:
 
-- `FetchPort.fetch(url, *, method, headers, body) -> Response` and `.stream(...) -> FetchStream` (`ports/_fetch.py`). All HTTP traffic funnels through `inject(FETCH_PORT_KEY)` — `HttpClient.request` (`ajax/_fetch.py:277`), `_post_envelope`/`_stream_impl` (`rpc/_client.py:73,194`), SSE fetch (`realtime/_sse.py`), resource fallback (`ports/_browser/_resource.py:49`).
+- `FetchPort.fetch(url, *, method, headers, body) -> Response` and `.stream(...) -> FetchStream` (`ports/_fetch.py`). All HTTP traffic funnels through `inject(FETCH_PORT_KEY)` — `HttpClient.request` (`ajax/_fetch.py:277`), `_post_envelope`/`_stream_impl` (`rpc/_client.py:73,194`), SSE fetch (`realtime/_sse.py`), resource fallback (`ports/_browser/_resource.py:49`). Note: since upstream #280, `body` accepts `str | bytes | None` and `HttpClient(form_data=...)` is routed through the port as a multipart body (previously an FFI bypass), so fetch middleware intercepts multipart submissions too.
 - The RPC client has **no per-call header API**: `_post_envelope` hardcodes `headers={"Content-Type": "application/json"}` (`rpc/_client.py:70`, also `:222` for streams). Validation lives solely in `_resolve_single` (`rpc/_client.py:43`: `apply_transfer_meta` + `from_json`) and `_decode_stream_item` (`rpc/_stream.py`) for streams.
 - DI is last-wins per key (`di/_scope.py:38`); no priority/order fields anywhere. Plugins register in `AppConfig.plugins` declaration order; `PluginManager.init_render_context` runs **after** `_register_ports()` (guaranteed by `port-provisioning` spec), so plugins can override ports.
 - Hydration coupling: `BrowserFetchPort.populate_from_transfer` seeds the response cache from the SSR payload; `ServerFetchPort.get_transfer_data` exports self-site responses for hydration. Any wrapper must delegate these or hydration breaks.
@@ -21,7 +21,7 @@ Current state on `origin/main`:
 - Additive registration via DI registries, declarative plugin hooks, and utility functions.
 - Streaming supported: `next` resolves when headers are committed and body consumption has not started.
 
-**Non-Goals:** WebSocket middleware; multipart/form-data interception; per-procedure registration; changes to `webcompy_testing`.
+**Non-Goals:** WebSocket middleware; interception of the `HttpClient` `form_element` path (a browser-only DOM-node submission that bypasses `FetchPort` via FFI; note that `form_data=` multipart bodies ARE routed through `FetchPort` since upstream #280 and therefore are interceptable); per-procedure registration; changes to `webcompy_testing`.
 
 ## Decisions
 

@@ -4,7 +4,7 @@
 
 ### Requirement: FetchMiddleware shall wrap fetch and stream with a next function
 
-`FetchMiddleware` SHALL be an async callable receiving a request object exposing `url: str`, `method: str`, `headers: dict[str, str] | None`, and `body: str | None`, plus a `next` function. Calling `await next(request)` SHALL invoke the next layer (the following middleware, or the concrete `FetchPort`). The middleware SHALL return a `Response` (for `fetch`) or a `FetchStream` (for `stream`). Middleware SHALL be applicable to both `fetch` and `stream` paths of `FetchPort`.
+`FetchMiddleware` SHALL be an async callable receiving a request object exposing `url: str`, `method: str`, `headers: dict[str, str] | None`, and `body: str | bytes | None`, plus a `next` function. Calling `await next(request)` SHALL invoke the next layer (the following middleware, or the concrete `FetchPort`). The middleware SHALL return a `Response` (for `fetch`) or a `FetchStream` (for `stream`). Middleware SHALL be applicable to both `fetch` and `stream` paths of `FetchPort`.
 
 #### Scenario: Pass-through middleware
 

@@ -20,20 +20,20 @@ class FetchRequest:
         url: Target URL.
         method: HTTP method.
         headers: Mutable request headers, or ``None``.
-        body: Request body text, or ``None``.
+        body: Request body as text or bytes, or ``None``.
 
     Attributes:
         url: Target URL.
         method: HTTP method.
         headers: Mutable request headers, or ``None``.
-        body: Request body text, or ``None``.
+        body: Request body as text or bytes, or ``None``.
 
     """
 
     url: str
     method: str
     headers: dict[str, str] | None
-    body: str | None
+    body: str | bytes | None
 
 
 class FetchNext(Protocol):
@@ -178,7 +178,7 @@ class _MiddlewareFetchPort(FetchPort):
         *,
         method: str = "GET",
         headers: dict[str, str] | None = None,
-        body: str | None = None,
+        body: str | bytes | None = None,
     ) -> Response:
         """Run the fetch chain for one buffered request.
 
@@ -186,7 +186,7 @@ class _MiddlewareFetchPort(FetchPort):
             url: Target URL.
             method: HTTP method.
             headers: Optional request headers.
-            body: Optional request body.
+            body: Optional request body as text or bytes.
 
         Returns:
             The response produced by the outermost middleware.
@@ -202,7 +202,7 @@ class _MiddlewareFetchPort(FetchPort):
         *,
         method: str = "GET",
         headers: dict[str, str] | None = None,
-        body: str | None = None,
+        body: str | bytes | None = None,
     ) -> FetchStream:
         """Run the streaming chain for one streamed request.
 
@@ -210,7 +210,7 @@ class _MiddlewareFetchPort(FetchPort):
             url: Target URL.
             method: HTTP method.
             headers: Optional request headers.
-            body: Optional request body.
+            body: Optional request body as text or bytes.
 
         Returns:
             The stream produced by the outermost middleware.

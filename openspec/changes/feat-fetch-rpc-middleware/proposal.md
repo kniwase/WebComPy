@@ -45,5 +45,5 @@ None directly; this provides the foundation that makes browser-side mock testing
 
 - WebSocket middleware (browser `WebSocket` API cannot carry custom headers; only `protocols` exist)
 - Per-procedure middleware registration (scoping is done inside middleware using `ctx` metadata such as method name)
-- Intercepting the `HttpClient` multipart/form-data path (bypasses `FetchPort` via FFI)
+- Intercepting the `HttpClient` form_element path (a browser-only DOM-node submission that bypasses `FetchPort` via FFI). Note: since upstream #280, `form_data=` submissions are encoded as multipart bodies and routed through `FetchPort`, so fetch middleware intercepts them like any other request.
 - Playwright-level network mocking or changes to `webcompy_testing`

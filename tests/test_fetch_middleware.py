@@ -92,6 +92,21 @@ def test_no_middleware_delegates_unchanged() -> None:
     assert wrapped.is_self_site_url("http://example.test/") is False
 
 
+def test_bytes_body_passes_through_unchanged() -> None:
+    port = _RecordingPort()
+    registry = FetchMiddlewareRegistry()
+
+    async def passthrough(request: FetchRequest, next):  # type: ignore[name-defined]
+        return await next(request)
+
+    registry.use(passthrough)
+    body = b"\x89PNG\r\n\x1a\n-binary"
+    _run(_MiddlewareFetchPort(port, registry).fetch("http://example.test/bin", method="POST", body=body))
+
+    assert len(port.calls) == 1
+    assert port.calls[0]["body"] == body
+
+
 def test_middleware_mutates_request_before_next() -> None:
     port = _RecordingPort()
     registry = FetchMiddlewareRegistry()
